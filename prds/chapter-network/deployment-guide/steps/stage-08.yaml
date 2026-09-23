@@ -1,65 +1,61 @@
 stage: 8
 name: Fill in the chapter information form
-version: "0.3"
-updated: "09-19-26 14:45"
+version: "0.4"
+updated: "09-23-26 11:45"
 why: >-
-  The chapter information form holds the roughly thirty-five values that differ
-  from one chapter to the next: its name, its addresses, its Google details, its
-  feature switches and the names of its secrets. Everything after this stage is
-  built from the form, so a wrong or missing value here becomes a fault in every
-  later stage. In the onboarding app, this stage is the interview.
+  The chapter information form holds the roughly forty answers that differ from
+  one chapter to the next: its name, its addresses, its Google details and its
+  feature switches. Everything after this stage is built from the form, so a
+  wrong or missing answer here becomes a fault in every later stage. The form is
+  a web page: each question says what it means, where to find the answer and
+  what goes wrong if the answer is wrong, and the answers are saved as they are
+  typed.
 who: >-
-  The chapter's setup contact and someone from the central support organization,
-  together. The form uses the names the software uses, so a chapter cannot fill in
-  most of it alone.
+  The chapter's setup contact answers the questions about the chapter. The
+  central support organization answers the technical ones. Both work in the same
+  page, and each can see what is still waiting for the other.
 time: >-
-  One to two hours, once the website, the policy documents and Google Workspace
-  exist.
+  About an hour of answering, once the website, the policy documents and Google
+  Workspace exist. It does not have to be done in one sitting.
 before_you_start:
   - The agreement is signed (step 2.6)
-  - The chapter's vault exists (step 2.7)
   - Google Workspace is set up (stage 4)
-  - The website is published and the four policy documents have their addresses (stages 6 and 7)
+  - The website is published and the four policy documents have their addresses (stages 6 and 7). A question whose answer does not exist yet can be marked "not known yet" and answered later, except the four policy addresses
 unlocks: >-
   Building the CRM (stage 9). Nothing after this stage can start until the form is
-  complete, and everything after it becomes routine once it is.
+  complete and reviewed, and everything after it becomes routine once it is.
 steps:
   - id: "8.1"
     name: Obtain the blank form
-    why: Everyone has to work from the same current form, and each part needs a named person to fill it in.
-    who: both — the central support organization supplies the form; the chapter names the people
+    why: Everyone works from one page, built from this guide, so the questions can never fall behind the software.
+    who: both — the central support organization publishes the page; the chapter's setup contact opens it
     first: ["2.6"]
     needs: []
     produces: []
     mode: automated
     actions:
-      - do: Copy the block of text under "The blank form" at the end of prds/chapter-network/chapter-values.md into a new file named CHAPTER-SLUG-values.yaml, for example akron-values.yaml.
-        see:
-          - A chapter section
-          - A web section
-          - A google section
-          - A zoom section
-          - A crm section
-          - A secrets section
-          - A flags section
-      - do: Send the trial chapter's filled-in form, prds/chapter-network/rehearsal-2026-08-31/lakeside-values.yaml, alongside it as a worked example.
-      - do: "Add a comment line at the top of each section naming who fills it in:"
+      - do: "The central support organization: in a Claude Code session in the folder ~/Dropbox/Projects/cbm-client-intake, type this request, with the chapter's name in place of CHAPTER-NAME:"
         items:
-          - "chapter and web: the chapter's setup contact"
-          - "google and zoom: the chapter's setup contact, checked by the central support organization"
-          - "crm, secrets and flags: the central support organization"
-        see: Every section with a name at its top.
+          - "Build and publish the chapter information page for CHAPTER-NAME with scripts/chapter_form/build_page.py."
+        see: A link to a page titled with the chapter's short name followed by Chapter Information.
+      - do: Open the link. In the page's Share menu, invite the chapter's setup contact by their email address, with permission to edit. The page cannot save answers for anyone opening it through a plain link.
+        see: The setup contact listed as able to edit.
+      - do: Send the link to the chapter's setup contact, with this guide's stage 8 page.
+      - do: "The chapter's setup contact: open the link."
+        see: The page, with a line at the top reading how many questions are answered, and each question marked either For the chapter or For central support.
     done_when: >-
       The chapter has the current blank form and knows who fills in each part.
     check:
-      how: Every section of the form has a name beside it.
-      probe: The app opens the interview with each section assigned to a named person.
+      how: The setup contact opens the page, types an answer into one question, and the page shows it as saved with their name.
+      probe: The page records who saved each answer.
+    if_not: If the page says it cannot save answers, the invitation is missing or gives view-only permission. The central support organization invites the setup contact again, with permission to edit.
     goes_wrong: >-
-      The blank form falls behind the software. A new setting that differs by
-      chapter gets added to the software but not to the form. Run the information
-      check in the plan again whenever the software gains a per-chapter setting.
-    later: The onboarding app asks these questions on screen and checks each answer as it is typed.
-    status: done-for-real — the trial chapter's form was filled in from this blank.
+      Inviting someone outside the central support organization's claude.ai
+      organization has not been tried before the Boston chapter. If the setup
+      contact cannot open the page or cannot save, fall back to filling in the
+      form on a call, with the central support organization typing the answers.
+    later: The onboarding app in CRMBuilder replaces the page and asks the same questions from the same source.
+    status: not-yet-tried — the page is new for the Boston chapter; the trial chapter's form was a file typed by hand.
     source: 5-Methods-Form-Accounts-Checks.md#8.1
 
   - id: "8.2"
@@ -71,14 +67,58 @@ steps:
     produces: [chapter_slug, timezone, currency, locale]
     mode: guided
     actions:
-      - do: "Fill in the chapter section, key by key:"
-        items:
-          - "name: the chapter's name exactly as it should appear on every page, capital letters included. Example: Lakeside Business Mentors. It becomes the setting ORGANIZATION_NAME."
-          - "slug: one lower-case word with no spaces, used to name the chapter's servers and secrets. Example: lakeside."
-          - "timezone: the time zone's standard name. Examples: America/New_York, America/Chicago, America/Denver, America/Phoenix."
-          - "currency: USD"
-          - "locale: en_US"
-      - do: If the time zone is not America/New_York, add the comment "not supported yet" beside it. The software has Eastern time written into its code (work list item 17).
+      - do: Answer every question in the section "Fill in the chapter's name and identity" on the page. Each question is explained below, and the same explanation is beside it on the page.
+        see: Every question in the section marked as saved.
+    fields:
+      - key: chapter.name
+        label: Chapter name
+        by: chapter
+        kind: text
+        required: true
+        example: Boston Business Mentors
+        meaning: The chapter's name, exactly as it should appear on every page, email and screen the software shows. Capital letters count.
+        source: The chapter's legal name from step 1.1, or the trading name the board chose.
+        wrong: Every page title, page footer and email shows the wrong name until it is corrected and the applications are deployed again.
+      - key: chapter.slug
+        label: Short label
+        by: chapter
+        kind: slug
+        required: true
+        example: boston
+        meaning: One short lower-case word that names the chapter's server, applications and secrets. Letters, digits and hyphens only, starting with a letter.
+        source: Choose it now. The city's name is usual.
+        wrong: The label becomes part of the names of the chapter's server and applications. Changing it after stage 9 means renaming them.
+      - key: chapter.timezone
+        label: Time zone
+        by: chapter
+        kind: choice
+        required: true
+        default: America/New_York
+        options: [America/New_York, America/Chicago, America/Denver, America/Phoenix, America/Los_Angeles, America/Anchorage, Pacific/Honolulu]
+        example: America/New_York
+        meaning: The time zone the chapter works in. America/New_York is Eastern time.
+        source: Where the chapter operates.
+        wrong: Dates on birthday greetings, mentor assignments and the public events page come out a day off. The software supports only Eastern time today (work list item 17), so any other choice must be raised with the central support organization before stage 9.
+      - key: chapter.currency
+        label: Currency
+        by: chapter
+        kind: choice
+        required: true
+        default: USD
+        options: [USD]
+        meaning: The currency of every money amount in the CRM, such as grants and contributions.
+        source: US dollars for every chapter today.
+        wrong: The CRM refuses to save any amount.
+      - key: chapter.locale
+        label: Language and number format
+        by: chapter
+        kind: choice
+        required: true
+        default: en_US
+        options: [en_US]
+        meaning: The language the CRM's screens use, and how it writes dates and numbers.
+        source: US English for every chapter today.
+        wrong: The CRM's screens and dates appear in the wrong language or format.
     done_when:
       - "The chapter name is filled in."
       - "The short label is filled in."
@@ -87,7 +127,7 @@ steps:
       - "The language is filled in."
     check:
       how: The name matches the legal name, or the trading name the board chose, letter for letter.
-      probe: The app compares the name with the legal name recorded in stage 1, and warns when the time zone is not Eastern.
+      probe: The page refuses a short label with capital letters, spaces or punctuation, and warns when the time zone is not Eastern.
     goes_wrong: >-
       The time zone. A chapter outside the Eastern United States gets wrong dates on
       birthday greetings, assignment dates and the public events page, and nothing
@@ -98,25 +138,87 @@ steps:
 
   - id: "8.3"
     name: Fill in the web addresses
-    why: The software links to the website, the events page, the help documentation and the four policy documents, and a broken link on the consent box is a legal problem.
+    why: The software links to the website, the help documentation and the four policy documents, and a broken link on the consent box is a legal problem.
     who: chapter, checked by the central support organization
     first: ["6.2", "6.7", "7.6", "8.1"]
     needs: [website_base_url, docs_site_url, chapter_tokens_url, policy_client_conduct_url, policy_mentor_ethics_url, policy_terms_url, policy_privacy_url]
     produces: [app_base_url, events_public_base_url]
     mode: guided
     actions:
-      - do: "Fill in the web section, key by key, copying every address from a browser's address bar:"
-        items:
-          - "app_base_url: https://apps.CHAPTER-DOMAIN/ — the address the applications will have. It does not answer until step 11.10."
-          - "website_base_url: the website's home address from step 6.2. Example: https://lakesidebusinessmentors.org"
-          - "events_public_base_url: leave empty. Empty means the applications' own events page, APP-ADDRESS/webinars/, which is what every chapter now uses."
-          - "docs_site_url: the answer from step 6.7."
-          - "policy_client_conduct_url, policy_mentor_ethics_url, policy_terms_url and policy_privacy_url: the four addresses from stage 7, one per key."
-          - "chapter_tokens_url: the colour file's address from step 6.5."
-      - do: "In a terminal, run this once for each address except app_base_url, putting the address in place of ADDRESS:"
+      - do: Answer every question in the section "Fill in the web addresses" on the page. Copy each address from a browser's address bar rather than typing it.
+        see: Every question in the section marked as saved, or marked not known yet where that is allowed.
+      - do: "The central support organization: in a terminal, run the line below once for each address in the section except the applications' address, with the address in place of ADDRESS:"
         items:
           - "curl -sI ADDRESS"
         see: A first line of HTTP/2 200 for every one.
+    fields:
+      - key: web.website_base_url
+        label: Website address
+        by: chapter
+        kind: url
+        required: true
+        example: https://bbmentors.org
+        meaning: The home page address of the chapter's public website.
+        source: The website published in step 6.2. Open it in a browser and copy the address bar.
+        wrong: The link back to the website and the website menu on the software's public pages point somewhere else.
+      - key: web.app_base_url
+        label: Applications' address
+        by: central
+        kind: url
+        required: true
+        example: https://apps.bbmentors.org
+        meaning: The address the chapter's applications will have. It does not open yet; it starts working at step 11.10.
+        source: https://apps. followed by the chapter's domain, unless the chapter and the central support organization agree another name.
+        wrong: Links in emails the software sends point to the wrong place, and signing in can fail because the software only trusts its own address.
+      - key: web.docs_site_url
+        label: Help documentation address
+        by: chapter
+        kind: url
+        required: false
+        example: https://docs.bbmentors.org
+        meaning: The address of the chapter's help and documentation site, linked from the applications' home page and the CRM's menu.
+        source: The decision in step 6.7. If the chapter has no documentation site yet, mark this not known yet.
+        wrong: The Documentation link leads nowhere. Marked not known yet, the link is simply left out.
+      - key: web.policy_client_conduct_url
+        label: Client code of conduct address
+        by: chapter
+        kind: url
+        required: true
+        meaning: The address of the chapter's client code of conduct. Every public application form links to it from its consent box.
+        source: The policy documents published in stage 7.
+        wrong: Applicants agree to a document that is not the chapter's, which is a legal problem, not a cosmetic one.
+      - key: web.policy_mentor_ethics_url
+        label: Mentor code of ethics address
+        by: chapter
+        kind: url
+        required: true
+        meaning: The address of the chapter's mentor code of ethics. The volunteer application form links to it from its consent box.
+        source: The policy documents published in stage 7.
+        wrong: Volunteers agree to a document that is not the chapter's.
+      - key: web.policy_terms_url
+        label: Terms of use address
+        by: chapter
+        kind: url
+        required: true
+        meaning: The address of the chapter's terms of use, linked from every public form.
+        source: The policy documents published in stage 7.
+        wrong: Applicants agree to terms that are not the chapter's.
+      - key: web.policy_privacy_url
+        label: Privacy policy address
+        by: chapter
+        kind: url
+        required: true
+        meaning: The address of the chapter's privacy policy, linked from every public form.
+        source: The policy documents published in stage 7.
+        wrong: Applicants are shown a privacy policy that is not the chapter's, which is a legal exposure.
+      - key: web.chapter_tokens_url
+        label: Colour file address
+        by: chapter
+        kind: url
+        required: false
+        meaning: The address of a small file that sets the chapter's colours on the software's pages.
+        source: The colour file published in step 6.5. Most chapters start without one; mark this not known yet.
+        wrong: The pages keep the standard colours. Nothing breaks.
     done_when:
       - "The application address is filled in."
       - "The website address is filled in."
@@ -124,9 +226,10 @@ steps:
       - "The documentation address is filled in."
       - "The colour file address is filled in."
       - "The four policy addresses are filled in."
+    note: "The events page address is not asked. Left empty, it means the applications' own events page, APP-ADDRESS/webinars/, which is what every chapter now uses. The documentation and colour file addresses count as filled in when they are marked not known yet."
     check:
       how: Every address, opened in a private browser window, shows the right page.
-      probe: The app requests every address and reports any that does not answer.
+      probe: The page accepts only addresses beginning with https://.
     goes_wrong: >-
       A policy address that does not load. The public application form links to all
       four policies from its consent box.
@@ -143,22 +246,111 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: "Fill in the google section, key by key, copying each address from the Google Workspace admin console:"
-        items:
-          - "primary_domain: the chapter's email domain. Example: cbmentors.org is Cleveland's."
-          - "ops_mailbox: the shared operations mailbox from step 4.7. Example: info@CHAPTER-DOMAIN"
-          - "alert_email_from: the alert sending mailbox from step 4.8. It must be a mailbox with a licence, never a group."
-          - "alert_email_to: the address that receives warnings, from step 4.9. It may be a group."
-          - "members_group: the members group from step 4.10. Example: members@CHAPTER-DOMAIN"
-          - "mentor_email_domain: the domain mentors' mailboxes are made on. Usually the same as primary_domain. It becomes the setting MENTOR_EMAIL_DOMAIN."
-          - "shared_drive_id: leave empty for now. The shared drive is created in step 10.5, which writes its identifier here: the part of the drive's web address after /drive/folders/."
-          - "zoom_host_email: the Zoom host address from step 5.5, or leave empty for a chapter with no webinars. The default is Cleveland's host, so a webinar chapter must set it."
-      - do: "Fill in the zoom section from step 5.5, or leave both empty for a chapter with no webinars:"
-        items:
-          - "account_id: the Zoom app's account identifier."
-          - "client_id: the Zoom app's client identifier."
-      - do: In the Google Workspace admin console, open Users and find ops_mailbox and alert_email_from.
+      - do: Answer every question in the section "Fill in the Google details" on the page, copying each address from the Google Workspace admin console at admin.google.com. The Zoom questions appear only once the webinar question in step 8.6 is answered yes.
+        see: Every question in the section marked as saved, apart from the shared drive, which step 10.5 answers.
+      - do: "The central support organization: in the Google Workspace admin console, open Users and find the shared operations mailbox and the alert sending mailbox."
         see: Both listed as users with a licence. Neither is a group.
+    fields:
+      - key: google.primary_domain
+        label: Staff email domain
+        by: chapter
+        kind: domain
+        required: true
+        example: bbmentors.org
+        meaning: The part after the @ in the chapter's staff email addresses.
+        source: The Google Workspace admin console, under Account, then Domains.
+        wrong: Email between the chapter's own people is treated as client email and filed on client records.
+      - key: google.ops_mailbox
+        label: Shared operations mailbox
+        by: chapter
+        kind: email
+        required: true
+        example: info@bbmentors.org
+        meaning: The shared mailbox where public enquiries arrive. The software reads it and sends replies from it.
+        source: The mailbox created in step 4.7. It must be a user with a licence, never a group or an alias.
+        wrong: A group or alias makes reading and sending fail with an error that does not name the cause. If any other system reads the same mailbox, each one gets about half the messages.
+      - key: google.alert_email_from
+        label: Alert sending mailbox
+        by: chapter
+        kind: email
+        required: true
+        example: alerts@bbmentors.org
+        meaning: The mailbox the software sends its warning messages from.
+        source: The mailbox created in step 4.8. It must be a user with a licence, never a group.
+        wrong: A group is refused, and the refusal reads as though the software has no permission at all.
+      - key: google.alert_email_to
+        label: Alert receiving address
+        by: chapter
+        kind: email
+        required: true
+        example: support@bbmentors.org
+        meaning: Who receives the software's warning messages. It may be a group.
+        source: The decision in step 4.9.
+        wrong: Warnings about failed submissions reach nobody.
+      - key: google.members_group
+        label: Members group
+        by: chapter
+        kind: email
+        required: false
+        example: allmembers@bbmentors.org
+        meaning: The Google group every member of the chapter belongs to. A new mentor's mailbox is added to it automatically.
+        source: The group created in step 4.10. Mark not known yet if the chapter has none; the software then skips adding mentors to a group.
+        wrong: New mentors are added to the wrong group, or to none.
+      - key: google.mentor_email_domain
+        label: Mentor email domain
+        by: chapter
+        kind: domain
+        required: true
+        example: bbmentors.org
+        meaning: The domain the software creates mentors' mailboxes and CRM sign-ins on, as firstname.lastname@ this domain. Usually the same as the staff email domain.
+        source: The Google Workspace admin console, under Account, then Domains.
+        wrong: Mentors get addresses on a domain the chapter does not own, and their mailboxes cannot be created.
+      - key: google.delegated_admin
+        label: Google administrator the software acts as
+        by: chapter
+        kind: email
+        required: true
+        example: admin@bbmentors.org
+        meaning: A Google Workspace administrator account. The software acts as this account when it checks and creates mentors' mailboxes.
+        source: The chapter's own administrator account from step 4.5.
+        wrong: Checking and creating mentors' mailboxes fails, so new mentors are left without one.
+      - key: google.shared_drive_id
+        label: Shared drive identifier
+        by: central
+        kind: text
+        required: false
+        later: "10.5"
+        meaning: The identifier of the shared drive where the software files each record's documents.
+        source: Step 10.5 creates the drive and writes its identifier here. It is the part of the drive's web address after /drive/folders/. Leave it until then.
+        wrong: Documents cannot be filed. The settings generator refuses to switch document filing on without it.
+      - key: google.zoom_host_email
+        label: Zoom webinar host address
+        by: chapter
+        kind: email
+        required: true
+        show_if: flags.zoom_events
+        example: webinars@bbmentors.org
+        meaning: The Zoom user that hosts the chapter's public webinars.
+        source: The Zoom account set up in step 5.5.
+        wrong: Webinars are created under Cleveland's host, which the chapter's Zoom app cannot reach.
+      - key: zoom.account_id
+        label: Zoom app account identifier
+        by: central
+        kind: text
+        required: true
+        show_if: flags.zoom_events
+        meaning: The account identifier of the chapter's Zoom app, which the software uses to create webinars.
+        source: The Zoom app created in step 5.5, on its App Credentials screen.
+        wrong: Creating webinars fails.
+      - key: zoom.client_id
+        label: Zoom app client identifier
+        by: central
+        kind: text
+        required: true
+        show_if: flags.zoom_events
+        meaning: The client identifier of the chapter's Zoom app. Its secret is never typed here; it goes in the vault.
+        source: The Zoom app created in step 5.5, on its App Credentials screen.
+        wrong: Creating webinars fails.
     done_when:
       - "The main domain is filled in."
       - "The shared operations mailbox is filled in."
@@ -166,9 +358,10 @@ steps:
       - "The alert receiving address is filled in."
       - "The members group is filled in."
       - "The mentor email domain is filled in."
+    note: "The members group counts as filled in when it is marked not known yet. The shared drive identifier is filled in at step 10.5, not here."
     check:
       how: Each mailbox named on the form is listed as a mailbox, with a licence, in the Google Workspace admin console.
-      probe: Once the Google connection works (stage 10), the app looks up each address in the chapter's directory and confirms it is a licensed mailbox, not a group.
+      probe: Once the Google connection works (stage 10), the software looks up each address in the chapter's directory and confirms it is a licensed mailbox, not a group.
     goes_wrong: >-
       Writing a group where a mailbox is needed. The alert sending address and the
       shared operations mailbox must both be real licensed mailboxes. A group fails
@@ -186,13 +379,54 @@ steps:
     produces: [crm_base_url, crm_application_name, crm_outbound_from_name, crm_outbound_from_address]
     mode: guided
     actions:
-      - do: "Fill in the crm section, key by key:"
-        items:
-          - "base_url: the CRM's address, published in step 9.6. Example: https://crm.CHAPTER-DOMAIN — Cleveland's is https://crm.clevelandbusinessmentors.org"
-          - "application_name: the name shown inside the CRM. Usually the chapter's name."
-          - "outbound_from_name: the name on mail the CRM sends. Usually the chapter's name."
-          - "outbound_from_address: a mailbox from stage 4 that the CRM sends from. Example: info@CHAPTER-DOMAIN"
-          - "logo_file: the logo's file name from step 6.6. Example: lakeside-logo.png"
+      - do: Answer every question in the section "Fill in the CRM details" on the page.
+        see: Every question in the section marked as saved.
+    fields:
+      - key: crm.base_url
+        label: CRM address
+        by: central
+        kind: url
+        required: true
+        example: https://crm.bbmentors.org
+        meaning: The address of the chapter's CRM. It does not open yet; it starts working at step 9.6.
+        source: https://crm. followed by the chapter's domain, unless agreed otherwise.
+        wrong: The applications cannot reach the CRM, and nothing works.
+      - key: crm.application_name
+        label: Name shown inside the CRM
+        by: central
+        kind: text
+        required: true
+        example: Boston Business Mentors
+        meaning: The name the CRM shows at the top of its own screens.
+        source: Usually the chapter name from step 8.2.
+        wrong: The CRM's screens show the wrong name.
+      - key: crm.outbound_from_name
+        label: Sending name for the CRM's own emails
+        by: central
+        kind: text
+        required: true
+        example: Boston Business Mentors
+        meaning: The sender name on email the CRM sends by itself, such as password resets.
+        source: Usually the chapter name from step 8.2.
+        wrong: Those emails arrive under the wrong name.
+      - key: crm.outbound_from_address
+        label: Sending address for the CRM's own emails
+        by: central
+        kind: email
+        required: true
+        example: info@bbmentors.org
+        meaning: The address email the CRM sends by itself comes from.
+        source: Usually the shared operations mailbox from step 8.4.
+        wrong: Password resets and other CRM emails bounce or land in spam.
+      - key: crm.logo_file
+        label: Logo file name
+        by: central
+        kind: text
+        required: false
+        example: boston-logo.png
+        meaning: The file name of the chapter's logo, shown on the CRM's sign-in screen and menu.
+        source: The logo from step 6.6. No build script sets the logo yet (work list G1, item 2); it is uploaded by hand in the CRM.
+        wrong: The CRM shows no logo. Nothing else is affected.
     done_when:
       - "The CRM address is filled in."
       - "The name shown inside the CRM is filled in."
@@ -201,7 +435,7 @@ steps:
       - "The logo file is filled in."
     check:
       how: The section is complete, and the sending address is a real mailbox.
-      probe: The app confirms the CRM address is under the chapter's domain and that the logo file is attached.
+      probe: The page checks the CRM address begins with https://.
     goes_wrong: nothing known yet
     later: unchanged
     status: done-for-real — apart from the sending address and the logo; the trial chapter had neither.
@@ -210,39 +444,170 @@ steps:
   - id: "8.6"
     name: Decide every feature switch
     why: Each switch turns a part of the software on or off, and a switch left blank gives a chapter behaviour nobody chose.
-    who: both — the central support organization proposes; the chapter agrees
+    who: both — the chapter answers the three questions about what it will do; the central support organization confirms the rest
     first: ["8.2", "8.3", "8.4", "8.5"]
     needs: []
     produces: [flags]
     mode: guided
     actions:
-      - do: "Fill in the flags section. Write true or false for each switch; never leave one blank. These are the starting values for a new chapter, which the central support organization proposes and the chapter agrees:"
-        items:
-          - "analytics_enabled: true"
-          - "events_enabled: true"
-          - "events_public_api: true once the chapter runs public events, otherwise false"
-          - "gmail_sync: false until step 11.14 passes"
-          - "gcal_events: false until step 11.16 passes"
-          - "gdrive_docs: false until step 11.17 passes"
-          - "mentor_provision_users: true"
-          - "google_directory_check: false until step 11.18 passes"
-          - "google_create_mailbox: false until step 11.18 passes"
-          - "gdrive_identity: service (this one is a word, not true or false)"
-          - "zoom_events: false until the chapter's Zoom app is working"
-          - "record_quick_add: true"
-          - "setup_enabled: true"
-          - "async_delivery: true"
-          - "espo_dry_run: false"
-          - "deploy_on_push: false"
-        see: Sixteen switches, none blank.
-      - do: Add the comment "follows the release branch" beside deploy_on_push. The application follows the release branch, never the development branch (step 11.9).
+      - do: "The chapter's setup contact: answer the three switch questions marked For the chapter."
+        see: The three marked as saved.
+      - do: "The central support organization: check the recommended answer on each remaining switch, change any that should differ, and save each one. The page's button Save every recommended switch saves the recommended answer on every switch not yet answered."
+        see: Every switch marked as saved. None left blank.
+    fields:
+      - key: flags.events_public_api
+        label: Publish workshops and webinars on the public events page?
+        by: chapter
+        kind: bool
+        required: true
+        default: false
+        meaning: Whether the applications' public page lists the chapter's upcoming workshops and recorded webinars, with sign-up.
+        source: The chapter's own plan. It can be switched on later.
+        wrong: Switched on with nothing published, the page is simply empty.
+      - key: flags.zoom_events
+        label: Run public webinars through the chapter's own Zoom account?
+        by: chapter
+        kind: bool
+        required: true
+        default: false
+        meaning: Whether the software creates the chapter's public webinars in Zoom. Answering yes shows three Zoom questions in the Google details section.
+        source: Whether step 5.5 set up a Zoom account for webinars.
+        wrong: Switched on without a working Zoom app, creating a webinar fails.
+      - key: flags.google_create_mailbox
+        label: Create a Google mailbox automatically for each new mentor?
+        by: chapter
+        kind: bool
+        required: true
+        default: true
+        meaning: Whether the software creates a mentor's Google mailbox when their application is accepted. Each mailbox takes a paid Google licence.
+        source: The chapter's own decision about licence costs.
+        wrong: Switched off, someone creates each mentor's mailbox by hand before the mentor can be given a CRM sign-in.
+      - key: flags.gmail_sync
+        label: Read and file email
+        by: central
+        kind: bool
+        required: true
+        default: true
+        meaning: The software reads the shared operations mailbox and mentors' mail, and files messages on the right records.
+        source: On for every chapter, because every chapter has its own Google Workspace. It needs stage 10 finished before step 11.2; the settings generator refuses otherwise.
+        wrong: Switched off, enquiries sent to the shared mailbox never appear in the software.
+      - key: flags.gcal_events
+        label: Put mentoring sessions on Google calendars
+        by: central
+        kind: bool
+        required: true
+        default: true
+        meaning: A scheduled session is put on the mentor's Google calendar with the client invited.
+        source: On for every chapter.
+        wrong: Switched off, mentors add every session to their calendars by hand.
+      - key: flags.gdrive_docs
+        label: File documents on the shared drive
+        by: central
+        kind: bool
+        required: true
+        default: true
+        meaning: Documents attached to records are kept on the chapter's shared drive.
+        source: On for every chapter. It needs the shared drive identifier from step 10.5.
+        wrong: Switched off, the Documents tab on records cannot store anything.
+      - key: flags.gdrive_identity
+        label: Account the shared drive is used as
+        by: central
+        kind: choice
+        required: true
+        default: service
+        options: [service]
+        meaning: The software uses the shared drive as its own machine account, never as a person.
+        source: Always service.
+        wrong: Nothing else is supported.
+      - key: flags.google_directory_check
+        label: Check a mentor's mailbox exists before creating their sign-in
+        by: central
+        kind: bool
+        required: true
+        default: true
+        meaning: Before a mentor gets a CRM sign-in, the software confirms their Google mailbox exists, so the welcome email does not bounce.
+        source: On for every chapter. Creating mailboxes automatically needs it on.
+        wrong: Switched off, a mentor can be given a sign-in whose welcome email bounces.
+      - key: flags.mentor_provision_users
+        label: Create mentors' CRM sign-ins
+        by: central
+        kind: bool
+        required: true
+        default: true
+        meaning: The software creates a CRM sign-in when a mentor is approved.
+        source: On for every chapter.
+        wrong: Switched off, every mentor's sign-in is created by hand.
+      - key: flags.analytics_enabled
+        label: Analytics pages
+        by: central
+        kind: bool
+        required: true
+        default: true
+        meaning: The reporting dashboards in the applications.
+        source: On for every chapter.
+        wrong: Switched off, the dashboards are missing.
+      - key: flags.events_enabled
+        label: Events page for staff
+        by: central
+        kind: bool
+        required: true
+        default: true
+        meaning: The staff page for creating and managing workshops and webinars.
+        source: On for every chapter.
+        wrong: Switched off, events cannot be managed.
+      - key: flags.record_quick_add
+        label: Quick add for partners and funders
+        by: central
+        kind: bool
+        required: true
+        default: true
+        meaning: Staff can add a partner or funder from its list, without the public form.
+        source: On for every chapter.
+        wrong: Switched off, partners and funders arrive only through the public forms.
+      - key: flags.setup_enabled
+        label: System Settings page
+        by: central
+        kind: bool
+        required: true
+        default: true
+        meaning: The administrators' page for changing the applications' settings without a redeployment.
+        source: On for every chapter.
+        wrong: Switched off, every settings change needs the central support organization to redeploy.
+      - key: flags.async_delivery
+        label: Deliver submissions in the background
+        by: central
+        kind: bool
+        required: true
+        default: true
+        meaning: A public form is answered at once, and the background worker delivers it to the CRM, retrying if the CRM is down.
+        source: On for every chapter.
+        wrong: Switched off, a CRM outage loses the applicant's wait time and can show them an error.
+      - key: flags.espo_dry_run
+        label: Practice mode with no CRM
+        by: central
+        kind: bool
+        required: true
+        default: false
+        meaning: Runs the applications without writing to any CRM. Only for the development copy.
+        source: Always off for a chapter.
+        wrong: Switched on, nothing a chapter does is saved in its CRM.
+      - key: flags.deploy_on_push
+        label: Take each release automatically
+        by: central
+        kind: bool
+        required: true
+        default: true
+        meaning: The applications follow the release branch and update themselves when a release is cut (step 11.9).
+        source: On for every chapter. The settings generator refuses the development branch.
+        wrong: Switched off, the chapter falls behind every release until someone updates it by hand.
     done_when: >-
       Each switch has been deliberately set to on or off, and the branch the
       application follows is recorded as the release branch rather than the
       development branch.
+    note: "Until 09-23-26 the starting values switched the Google features off until each check in stage 11 passed. The background worker reads its mail switches only when it starts, so a switch turned on later at the settings page never reached it. The switches are now decided here and go into the deployment at step 11.2."
     check:
-      how: No switch on the form is blank.
-      probe: The app refuses to finish the interview while any switch is unanswered.
+      how: No switch on the page is blank.
+      probe: The values file cannot be written while any switch is unanswered.
     goes_wrong: >-
       A switch in the software that the form does not list. Until 09-18-26 the blank
       form was missing five switches the trial chapter needed, and it can fall behind
@@ -260,7 +625,8 @@ steps:
     produces: [secret_list]
     mode: guided
     actions:
-      - do: "Fill in the secrets section with these names, exactly as written, and nothing else:"
+      - do: Nothing to type. The page lists the secrets the chapter will have, by name only, and the values file written in step 8.10 includes the list. A chapter that answered yes to webinars in step 8.6 has an eighth, ZOOM_CLIENT_SECRET.
+        see: "The section The secrets on the page, listing these names:"
         items:
           - "ESPO_API_KEY — the CRM key the applications use. Created in step 9.17."
           - "ESPO_PROVISION_USERNAME — the name of the administrator account that creates logins. Created in step 9.18."
@@ -269,17 +635,15 @@ steps:
           - "SESSION_SECRET — created in step 11.1."
           - "APP_ENCRYPTION_KEY — the encryption key for stored data. Created in step 11.2, and never changed afterwards."
           - "GOOGLE_SERVICE_ACCOUNT_JSON — the Google key. Created in step 10.2."
-      - do: For a chapter that runs public webinars, add ZOOM_CLIENT_SECRET, the Zoom app's secret from step 5.5, as an eighth.
-      - do: Add a comment beside each name with its holder. Write no secret value anywhere on the form.
-        see: Seven or eight names, each with a holder, and no values.
+      - do: Never type a secret's value into the page. The page is not a secrets store.
     done_when:
       - "All seven are listed by name with the holder named beside each."
       - "The video meeting app's secret is listed too, for a chapter that runs webinars."
       - "No secret value is written on the form."
-    note: "Seven, not six: besides the six the planning documents name, the applications use an encryption key for stored data that the settings generator creates quietly on first run. Changing it later destroys the data it protects, so it is permanent from the moment it exists."
+    note: "Seven, not six: besides the six the planning documents name, the applications use an encryption key for stored data that the settings generator creates on first run. Changing it later destroys the data it protects, so it is permanent from the moment it exists. The holder of every secret is the chapter's Operations vault (step 8.8)."
     check:
-      how: Seven names, or eight for a webinar chapter, each with a holder, and no values.
-      probe: The app checks the list against the software's own list of secret settings.
+      how: The page lists seven names, or eight for a webinar chapter, and no values.
+      probe: The values file is written with the software's own list of secret names.
     goes_wrong: >-
       Listing six and missing the encryption key. Changing that key later makes every
       stored secret permanently unreadable.
@@ -325,23 +689,21 @@ steps:
     produces: []
     mode: offline
     actions:
-      - do: Sit down together, the chapter's setup contact and someone from the central support organization, with the form open.
-      - do: Read every key and its value aloud, section by section.
-      - do: "Run the curl check from step 8.3 on every address again:"
+      - do: Meet, in person or on a call, with the page open on both screens.
+      - do: Read every question and its answer aloud, section by section.
+        see: The line at the top of the page reading that every question is answered, apart from the shared drive identifier.
+      - do: "The central support organization: run the curl check from step 8.3 on every address again:"
         items:
           - "curl -sI ADDRESS"
-        see: A first line of HTTP/2 200 for every address except app_base_url.
-      - do: Read every switch aloud with its value.
-      - do: "Add two comment lines at the top of the form:"
-        items:
-          - "# reviewed by: NAME-ONE and NAME-TWO"
-          - "# reviewed on: MM-DD-YY"
+        see: A first line of HTTP/2 200 for every address except the applications' address and the CRM address, which do not exist yet.
+      - do: At the bottom of the page, in the section Sign-off, each of the two people types their own name and clicks Sign off.
+        see: Both names listed with the date.
     done_when: >-
       Two people have read the whole form together in one sitting and both have
       signed it off.
     check:
-      how: Both names and the date are at the top of the form.
-      probe: The app records who signed off, and when.
+      how: Both names and the date are in the page's Sign-off section.
+      probe: The page records who signed off, and when.
     goes_wrong: nothing known yet
     later: unchanged — a person still signs it off.
     status: not-yet-tried — the trial chapter's form was written and used by one person.
@@ -356,8 +718,11 @@ steps:
     produces: []
     mode: automated
     actions:
-      - do: Check the form holds no secret value. Every line under secrets must be a name only.
-      - do: "Save the form in the software's code repository at exactly this path, beside the trial chapter's form's folder: prds/chapter-network/chapters/CHAPTER-SLUG-values.yaml"
+      - do: "In a Claude Code session in the folder ~/Dropbox/Projects/cbm-client-intake, type this request, with the page's link in place of PAGE-LINK:"
+        items:
+          - "Write the chapter values file from the chapter information page PAGE-LINK with scripts/chapter_form/to_values.py."
+        see: "A message naming the file written, prds/chapter-network/chapters/CHAPTER-SLUG-values.yaml, and reading that the check passed. If the check names a question, the answer on the page is wrong or missing: correct it on the page and ask again."
+      - do: Open the file and check it holds no secret value. Every line under secrets must be a name only.
       - do: 'Commit it with the message "docs(chapter-network): CHAPTER-SLUG chapter information form", and push it.'
       - do: Ask a second person at the central support organization to open the file from the remote repository.
         see: The file opens, with both reviewers' names at the top.
@@ -366,15 +731,20 @@ steps:
       confirmed it can open it.
     check:
       how: A second person at the central support organization opens it.
-      probe: The app stores the form itself and refuses any secret value in it.
+      probe: The values file is written by a script that runs the settings generator's own checks and refuses any secret value.
+    if_not: If an answer changes after the file is written, change it on the page and write the file again. The page is the record; the file is always produced from it.
     goes_wrong: >-
-      A secret pasted into the form by mistake. The code repository is not a
-      secrets store.
+      Editing the file by hand. The page and the file then disagree, and the next
+      time the file is written the hand edit is lost.
     later: The onboarding app holds the form.
-    status: done-for-real
+    status: not-yet-tried — the file used to be typed by hand; writing it from the page is new for the Boston chapter.
     source: 5-Methods-Form-Accounts-Checks.md#8.10
 
 changes:
+  - version: "0.4"
+    date: "09-23-26 11:45"
+    change: >-
+      The form becomes a web page, built from this stage's data (Doug, 09-23-26). Each question now carries what it means, where to find the answer and what goes wrong if it is wrong, in a new fields list the guide and the page both read. Step 8.1 publishes the page and invites the setup contact; step 8.9 signs off on the page; step 8.10 writes the values file from the page's answers instead of by hand. New questions: the Google administrator the software acts as (it was on no step), and whether the chapter runs Zoom webinars and creates mentors' mailboxes automatically. The switches' starting values changed: the Google features and deploy_on_push are on, because the worker reads its mail switches only at start-up.
   - version: "0.3"
     date: "09-19-26 14:45"
     change: >-

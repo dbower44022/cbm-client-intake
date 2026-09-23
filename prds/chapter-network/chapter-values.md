@@ -1,5 +1,11 @@
 # The per-chapter values — everything that differs between cities
 
+> **Filling in a chapter's information?** This is not the place. Go to the
+> deployment guide's stage 8, `deployment-guide/guide/08-fill-in-the-chapter-information-form.md`:
+> it walks through the chapter information page question by question. This file
+> is the engineers' inventory behind that form: where each value lands in the
+> software and whether it is configurable yet.
+
 **One document holding every value that is specific to a chapter**, so that
 "configure this for Akron" means filling in one file rather than remembering
 sixty places across an app spec, a CRM settings page and four source files.
@@ -220,82 +226,14 @@ The honest gap list, in the order I would fix it.
 
 ## The blank form
 
-What a chapter actually fills in. Everything not listed here is standard and is
-supplied by the release train.
-
-```yaml
-chapter:
-  name:                 # e.g. "Akron Business Mentors" -> ORGANIZATION_NAME
-  slug:                 # short id for spec + secret names, e.g. "akron"
-  timezone:             # IANA, e.g. "America/New_York"  (§ C — not yet wired)
-  currency: USD
-  locale: en_US
-
-web:
-  app_base_url:         # https://apps.<chapter domain>/
-  website_base_url:     # the chapter's WordPress root
-  events_public_base_url:   # leave EMPTY: the software then uses its own /webinars/ page
-  docs_site_url:
-  policy_client_conduct_url:
-  policy_mentor_ethics_url:
-  policy_terms_url:
-  policy_privacy_url:
-  chapter_tokens_url:   # optional; colours only
-
-google:
-  primary_domain:       # e.g. cbmentors.org
-  ops_mailbox:          # shared info@ — ONE deployment may poll it
-  alert_email_from:     # must be a real licensed mailbox, never a group
-  alert_email_to:
-  members_group:        # optional; empty disables the group step
-  mentor_email_domain:  # -> MENTOR_EMAIL_DOMAIN; the domain mentors' mailboxes are made on
-  delegated_admin:      # -> GOOGLE_DELEGATED_ADMIN; a Workspace administrator the software acts as for directory reads
-  shared_drive_id:      # filled in at deployment guide step 10.5, when the shared drive is created
-  zoom_host_email:      # public webinars only; the default is Cleveland's host, so set it
-
-zoom:                   # public webinars only — the chapter's Zoom Server-to-Server OAuth app
-  account_id:
-  client_id:
-
-crm:
-  base_url:
-  application_name:     # usually the chapter name
-  outbound_from_name:   # usually the chapter name
-  outbound_from_address:
-  logo_file:            # the one per-city image asset
-
-secrets:                # names only — values live in the store, never here
-  - ESPO_API_KEY
-  - ESPO_PROVISION_USERNAME
-  - ESPO_PROVISION_PASSWORD
-  - DATABASE_URL
-  - SESSION_SECRET
-  - APP_ENCRYPTION_KEY    # generated once; never rotated — rotation destroys stored secrets
-  - GOOGLE_SERVICE_ACCOUNT_JSON  # given to the spec script as GOOGLE_SERVICE_ACCOUNT_KEY_FILE, the key file's path
-  - ZOOM_CLIENT_SECRET    # only for a chapter that runs public webinars
-
-flags:                  # state each one deliberately
-  analytics_enabled:
-  events_enabled:
-  events_public_api:
-  gmail_sync:
-  gcal_events:
-  gdrive_docs:
-  mentor_provision_users:
-  google_directory_check:
-  google_create_mailbox:    # creates mentors' mailboxes; needs google_directory_check
-  gdrive_identity:          # "service" — Drive runs as the machine account
-  zoom_events:              # public webinars through the chapter's Zoom app
-  record_quick_add:
-  setup_enabled:
-  async_delivery:
-  espo_dry_run: false       # true only on a deployment with no CRM
-  deploy_on_push: true      # ON, following the release branch — guide step 11.9
-```
-
-**That is the whole per-city surface: about 35 values, seven of them secrets, one
-of them an image.** Small enough to review in one sitting, which is the point —
-the danger was never the number, it was that nobody could see them all at once.
+**Replaced on 09-23-26.** The form is now the chapter information page, built
+from the `fields` lists in `deployment-guide/steps/stage-08.yaml` by
+`scripts/chapter_form/build_page.py`, and the values file is written from the
+page's answers by `scripts/chapter_form/to_values.py`. The questions, what each
+means, where each answer comes from and how each is checked live in stage 8 and
+nowhere else, so a list here would only fall behind it. A new per-chapter
+setting is added as a question in stage 8; `tests/test_chapter_form.py` fails
+until every setting the build reads is asked.
 
 ---
 
@@ -303,6 +241,7 @@ the danger was never the number, it was that nobody could see them all at once.
 
 | Date | Change |
 |---|---|
+| 09-23-26 12:03 | The blank form is replaced by the chapter information page built from stage 8 of the deployment guide; this file becomes the engineers' inventory and says so at the top (Doug, 09-23-26: the file explained nothing about the process). |
 | 09-23-26 00:55 | `deploy_on_push` corrected to ON (following `release`), matching guide step 11.9. The Google key is handed to the spec script by file path. Found reviewing the guide before the first real chapter. |
 | 09-19-26 00:30 | `delegated_admin` added (GOOGLE_DELEGATED_ADMIN, which no step or form set); `events_public_base_url` now says to leave it empty; `shared_drive_id` notes it is filled in at step 10.5. Found by the precision sweep. |
 | 09-19-26 00:10 | The Google branch field removed from the form, and § D rewritten: every chapter hosts its own Google Workspace (Doug, 09-18-26). |

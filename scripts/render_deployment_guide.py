@@ -77,6 +77,12 @@ def render_stage(stage: dict) -> str:
             elif see:
                 out.append(f"   *You should see:* {see.strip()}")
         out.append("")
+        fields = s.get("fields") or []
+        if fields:
+            out.append("**The questions in this step:**\n")
+            for f in fields:
+                out.extend(render_field(f))
+            out.append("")
         dw = s["done_when"]
         if isinstance(dw, list):
             out.append("**Done when all of these are true:**\n")
@@ -100,6 +106,31 @@ def render_stage(stage: dict) -> str:
         out.append(f"| {c['version']} | {c['date']} | {c['change'].strip()} |")
     out.append("")
     return "\n".join(out)
+
+
+BY = {"chapter": "the chapter", "central": "the central support organization"}
+
+
+def render_field(f: dict) -> list[str]:
+    """One question of the chapter information form, as the guide prints it.
+    The same entry drives the web page (scripts/chapter_form/build_page.py)."""
+    flags = [f"answered by {BY.get(f['by'], f['by'])}"]
+    flags.append("required" if f.get("required") else "may be marked not known yet")
+    if f.get("later"):
+        flags.append(f"filled in at step {f['later']}")
+    if f.get("show_if"):
+        flags.append("asked only for a chapter that runs Zoom webinars")
+    lines = [f"- **{f['label']}** (`{f['key']}`) — {'; '.join(flags)}."]
+    lines.append(f"  - *What it is:* {f['meaning'].strip()}")
+    lines.append(f"  - *Where to find it:* {f['source'].strip()}")
+    lines.append(f"  - *If it is wrong:* {f['wrong'].strip()}")
+    if "default" in f:
+        d = f["default"]
+        shown = ("yes" if d else "no") if isinstance(d, bool) else d
+        lines.append(f"  - *Recommended:* {shown}")
+    elif f.get("example"):
+        lines.append(f"  - *Example:* {f['example']}")
+    return lines
 
 
 def render_index(stages: list[dict]) -> str:

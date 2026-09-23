@@ -1,0 +1,389 @@
+<title>{{TITLE}}</title>
+<meta name="description" content="The chapter information form for {{CHAPTER}}.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --ground:#f4f6f5;--card:#ffffff;--ink:#17211f;--mute:#56645f;--line:#d5ddda;
+  --accent:#0e6b66;--accent-ink:#ffffff;--accent-soft:#e2f0ee;
+  --chap:#8a5200;--chap-bg:#fbefd9;--cent:#34488a;--cent-bg:#e6eaf7;
+  --ok:#1d7a46;--ok-bg:#e3f3e9;--bad:#b3261e;--bad-bg:#fbe9e7;--warn:#8a5200;--warn-bg:#fbefd9;
+  --field:#ffffff;--shadow:0 1px 2px rgba(23,33,31,.06);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#101615;--card:#172020;--ink:#e3ebe9;--mute:#9aaba6;--line:#2a3735;
+  --accent:#4fb3ab;--accent-ink:#0b1413;--accent-soft:#16302e;
+  --chap:#f0b75c;--chap-bg:#33260f;--cent:#9fb2f0;--cent-bg:#1c2440;
+  --ok:#6fd49a;--ok-bg:#12301f;--bad:#ff8a80;--bad-bg:#3a1714;--warn:#f0b75c;--warn-bg:#33260f;
+  --field:#101817;--shadow:none;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --ground:#101615;--card:#172020;--ink:#e3ebe9;--mute:#9aaba6;--line:#2a3735;
+  --accent:#4fb3ab;--accent-ink:#0b1413;--accent-soft:#16302e;
+  --chap:#f0b75c;--chap-bg:#33260f;--cent:#9fb2f0;--cent-bg:#1c2440;
+  --ok:#6fd49a;--ok-bg:#12301f;--bad:#ff8a80;--bad-bg:#3a1714;--warn:#f0b75c;--warn-bg:#33260f;
+  --field:#101817;--shadow:none;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:15px/1.55 "Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;padding:0 16px}
+.wrap{padding-block:28px 72px}
+h1{font-size:28px;line-height:1.2;margin:0 0 6px;text-wrap:balance}
+h2{font-size:19px;margin:0;text-wrap:balance}
+p{margin:0 0 10px;max-width:72ch}
+code,.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:13px}
+.lede{color:var(--mute);max-width:80ch}
+.top{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));margin:18px 0 22px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;box-shadow:var(--shadow)}
+.panel h3{margin:0 0 8px;font-size:14px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute)}
+.meter{display:grid;gap:10px}
+.meter .row{display:grid;grid-template-columns:150px 1fr auto;gap:10px;align-items:center;font-variant-numeric:tabular-nums}
+.bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+.badge{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;white-space:nowrap}
+.b-chapter{color:var(--chap);background:var(--chap-bg)}
+.b-central{color:var(--cent);background:var(--cent-bg)}
+.toolbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--ground);padding-block:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-bottom:1px solid var(--line);margin-bottom:18px}
+.seg{display:flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{border:0;border-right:1px solid var(--line);background:var(--card);color:var(--ink);padding:7px 12px;font:inherit;font-size:14px;cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.spacer{flex:1}
+.btn{font:inherit;font-size:14px;font-weight:600;border-radius:6px;padding:8px 14px;cursor:pointer;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:var(--card);color:var(--accent)}
+.btn.small{padding:4px 10px;font-size:13px;font-weight:500}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+section.step{margin:0 0 30px}
+.stephead{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;margin-bottom:12px}
+.stephead .num{font-family:"IBM Plex Mono",monospace;color:var(--mute);font-size:13px}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(min(100%,440px),1fr))}
+.q{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:8px;padding:14px 16px;display:grid;gap:8px;align-content:start;box-shadow:var(--shadow)}
+.q.done{border-left-color:var(--ok)}
+.q.bad{border-left-color:var(--bad)}
+.q .head{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.q label.lbl{font-weight:600;font-size:15.5px}
+.q .key{color:var(--mute)}
+.tag{font-size:12px;color:var(--mute)}
+input[type=text],select,textarea{width:100%;font:inherit;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+textarea{font-family:"IBM Plex Mono",monospace;font-size:12.5px;min-height:150px}
+.yn{display:flex;gap:16px}
+.yn label,.nk{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+.status{font-size:13.5px;border-radius:5px;padding:4px 8px}
+.status.ok{color:var(--ok);background:var(--ok-bg)}
+.status.bad{color:var(--bad);background:var(--bad-bg)}
+.status.idle{color:var(--mute);background:transparent;padding-left:0}
+.status.warn{color:var(--warn);background:var(--warn-bg)}
+dl{margin:0;display:grid;gap:6px;font-size:14px}
+dt{font-weight:600;color:var(--mute);font-size:12px;letter-spacing:.04em;text-transform:uppercase}
+dd{margin:0}
+details summary{cursor:pointer;color:var(--accent);font-size:14px}
+details[open] summary{margin-bottom:6px}
+.rec{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px;color:var(--mute)}
+.note{background:var(--accent-soft);border-radius:8px;padding:12px 14px;margin:0 0 14px;max-width:90ch}
+.secrets li{margin-bottom:4px}
+.msg{font-size:14px;margin-top:8px}
+.msg.ok{color:var(--ok)}.msg.bad{color:var(--bad)}
+.signoffs{margin:10px 0 0;padding-left:18px}
+.row2{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.row2 input{flex:1;min-width:200px}
+.hide{display:none!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>{{TITLE}}</h1>
+    <p class="lede">The chapter information form for <strong>{{CHAPTER}}</strong>. Every question below says what it means, where to find the answer, and what goes wrong if the answer is wrong. Your answers are saved in this browser as you type. When you are done, or want to hand over, press <strong>Copy all answers</strong> and paste the result into an email to the central support organization.</p>
+  </header>
+
+  <div class="top">
+    <div class="panel">
+      <h3>Answered so far</h3>
+      <div class="meter" id="meter"></div>
+    </div>
+    <div class="panel">
+      <h3>How this page works</h3>
+      <p>Questions marked <span class="badge b-chapter">For the chapter</span> are yours. Questions marked <span class="badge b-central">For central support</span> are answered by the central support organization.</p>
+      <p>Answers stay in this browser only. On another computer or browser, use <strong>Copy all answers</strong> here and <strong>Load answers</strong> there.</p>
+      <p class="tag" id="storageNote"></p>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="seg" role="group" aria-label="Show questions">
+      <button type="button" data-filter="all" aria-pressed="true">All</button>
+      <button type="button" data-filter="chapter" aria-pressed="false">For the chapter</button>
+      <button type="button" data-filter="central" aria-pressed="false">For central support</button>
+      <button type="button" data-filter="open" aria-pressed="false">Still to answer</button>
+    </div>
+    <span class="spacer"></span>
+    <button type="button" class="btn ghost" id="loadBtn">Load answers</button>
+    <button type="button" class="btn" id="copyBtn">Copy all answers</button>
+  </div>
+
+  <div class="panel hide" id="copyPanel" style="margin-bottom:18px">
+    <h3>Your answers</h3>
+    <p id="copyMsg"></p>
+    <textarea id="copyText" readonly aria-label="All answers as text"></textarea>
+  </div>
+
+  <div class="panel hide" id="loadPanel" style="margin-bottom:18px">
+    <h3>Load answers</h3>
+    <p>Paste a block of answers copied from this page, then press <strong>Load these answers</strong>. For each question, the more recent answer is kept.</p>
+    <textarea id="loadText" aria-label="Paste answers here"></textarea>
+    <div class="row2" style="margin-top:8px"><button type="button" class="btn" id="loadGo">Load these answers</button></div>
+    <p class="msg" id="loadMsg" role="status"></p>
+  </div>
+
+  <main id="form"></main>
+
+  <section class="step" id="secretsSec">
+    <div class="stephead"><span class="num">Step 8.7</span><h2>The secrets</h2></div>
+    <div class="note">Nothing to type here. These are the secrets the chapter will have, listed by name so nobody forgets one. Never type a secret's value anywhere on this page.</div>
+    <ul class="secrets" id="secretList"></ul>
+  </section>
+
+  <section class="step" id="signSec">
+    <div class="stephead"><span class="num">Step 8.9</span><h2>Sign-off</h2></div>
+    <div class="note">When every question is answered, the chapter's setup contact and someone from the central support organization read the whole form together. Then each types their own name and presses Sign off.</div>
+    <div class="panel">
+      <div class="row2"><input type="text" id="signName" aria-label="Your name" placeholder="Your full name"><button type="button" class="btn" id="signBtn">Sign off</button></div>
+      <p class="msg" id="signMsg" role="status"></p>
+      <ul class="signoffs" id="signList"></ul>
+    </div>
+  </section>
+</div>
+
+<script type="application/json" id="data">{{DATA}}</script>
+<script>
+(function(){
+  var D = JSON.parse(document.getElementById('data').textContent);
+  var FIELDS = [];
+  D.sections.forEach(function(s){ s.fields.forEach(function(f){ f.step = s.id; FIELDS.push(f); }); });
+  var BYLABEL = {chapter:'For the chapter', central:'For central support'};
+  var filter = 'all';
+  var storeOk = true;
+
+  function load(){
+    try { var raw = localStorage.getItem(D.storageKey); if (raw) { var s = JSON.parse(raw); if (s && s.answers) { s.signoffs = s.signoffs || []; return s; } } } catch (e) { storeOk = false; }
+    return {answers:{}, signoffs:[]};
+  }
+  var state = load();
+  function persist(){
+    try { localStorage.setItem(D.storageKey, JSON.stringify(state)); storeOk = true; } catch (e) { storeOk = false; }
+    document.getElementById('storageNote').textContent = storeOk ? '' :
+      'This browser is not keeping answers (a private window or blocked storage). Copy all answers before you close the page.';
+  }
+
+  function shown(f){ if (!f.show_if) return true; var a = state.answers[f.show_if]; return !!(a && a.value === true); }
+  function problem(f, a){
+    a = a || {}; var v = a.value;
+    if (a.notYet) { return (f.required && !f.later) ? 'This question must be answered; it cannot be marked not known yet.' : null; }
+    if (v === undefined || v === null || v === '') { if (f.later) return null; return f.required ? 'Not answered yet.' : 'Not answered yet. Answer it, or mark it not known yet.'; }
+    if (f.kind === 'bool') return typeof v === 'boolean' ? null : 'Answer yes or no.';
+    if (f.kind === 'choice') return (f.options || []).indexOf(v) >= 0 ? null : 'Choose one of the listed answers.';
+    var c = D.checks[f.kind]; return new RegExp(c.pattern).test(String(v)) ? null : c.message;
+  }
+  function isOpen(f){ return shown(f) && !f.later && !!problem(f, state.answers[f.key]); }
+
+  function setAnswer(key, patch){
+    var a = Object.assign({}, state.answers[key] || {}, patch, {at: new Date().toISOString()});
+    state.answers[key] = a; persist();
+  }
+
+  function el(tag, attrs, text){ var e = document.createElement(tag); if (attrs) for (var k in attrs) { if (k === 'class') e.className = attrs[k]; else e.setAttribute(k, attrs[k]); } if (text != null) e.textContent = text; return e; }
+
+  function fmtDefault(d){ return typeof d === 'boolean' ? (d ? 'Yes' : 'No') : String(d); }
+
+  function buildField(f){
+    var id = 'f-' + f.key.replace(/[^a-z0-9]/gi, '-');
+    var card = el('div', {'class':'q', 'data-key':f.key, 'data-by':f.by});
+    var head = el('div', {'class':'head'});
+    var lbl = el('label', {'class':'lbl', 'for':id}, f.label);
+    head.appendChild(lbl);
+    head.appendChild(el('span', {'class':'badge b-' + f.by}, BYLABEL[f.by] || f.by));
+    var tags = [];
+    tags.push(f.required ? 'Required' : 'May be marked not known yet');
+    if (f.later) tags.push('Answered at step ' + f.later);
+    head.appendChild(el('span', {'class':'tag'}, tags.join(' · ')));
+    card.appendChild(head);
+    card.appendChild(el('code', {'class':'key'}, f.key));
+
+    var a = state.answers[f.key] || {};
+    var input;
+    if (f.kind === 'bool') {
+      input = el('div', {'class':'yn', role:'radiogroup', 'aria-label':f.label, id:id});
+      [['Yes', true], ['No', false]].forEach(function(p){
+        var l = el('label'); var r = el('input', {type:'radio', name:id, value:String(p[1])});
+        if (a.value === p[1]) r.checked = true;
+        r.addEventListener('change', function(){ setAnswer(f.key, {value:p[1], notYet:false}); refresh(); });
+        l.appendChild(r); l.appendChild(document.createTextNode(p[0])); input.appendChild(l);
+      });
+    } else if (f.kind === 'choice') {
+      input = el('select', {id:id});
+      input.appendChild(el('option', {value:''}, 'Choose…'));
+      (f.options || []).forEach(function(o){ var op = el('option', {value:o}, o); if (a.value === o) op.selected = true; input.appendChild(op); });
+      input.addEventListener('change', function(){ setAnswer(f.key, {value:input.value || null, notYet:false}); refresh(); });
+    } else {
+      input = el('input', {type:'text', id:id, autocomplete:'off', spellcheck:'false', placeholder: f.example ? 'For example ' + f.example : ''});
+      input.value = a.value || '';
+      var timer = null;
+      var commit = function(){ var v = input.value.trim(); var cur = (state.answers[f.key] || {}).value || ''; if (v !== cur) { setAnswer(f.key, {value:v, notYet: v ? false : !!(state.answers[f.key] || {}).notYet}); refresh(); } };
+      input.addEventListener('input', function(){ clearTimeout(timer); timer = setTimeout(commit, 700); });
+      input.addEventListener('change', function(){ clearTimeout(timer); commit(); });
+    }
+    card.appendChild(input);
+
+    if (!f.required || f.later) {
+      var nk = el('label', {'class':'nk'}); var cb = el('input', {type:'checkbox'});
+      cb.checked = !!a.notYet;
+      cb.addEventListener('change', function(){ setAnswer(f.key, {notYet: cb.checked}); refresh(); });
+      nk.appendChild(cb); nk.appendChild(document.createTextNode('Not known yet'));
+      card.appendChild(nk);
+    }
+    if (f.default !== undefined) {
+      var rec = el('div', {'class':'rec'}, 'Recommended: ' + fmtDefault(f.default));
+      var use = el('button', {type:'button', 'class':'btn ghost small'}, 'Use recommended');
+      use.addEventListener('click', function(){ setAnswer(f.key, {value:f.default, notYet:false}); rerender(); });
+      rec.appendChild(use); card.appendChild(rec);
+    }
+    card.appendChild(el('div', {'class':'status idle', 'data-status':''}));
+
+    var det = el('details'); if (!a.value && !a.notYet) det.open = true;
+    det.appendChild(el('summary', null, 'What this is and where to find it'));
+    var dl = el('dl');
+    [['What it is', f.meaning], ['Where to find it', f.source], ['If it is wrong', f.wrong]].forEach(function(p){ dl.appendChild(el('dt', null, p[0])); dl.appendChild(el('dd', null, p[1])); });
+    if (f.example && f.default === undefined) { dl.appendChild(el('dt', null, 'Example')); var dd = el('dd'); dd.appendChild(el('code', null, f.example)); dl.appendChild(dd); }
+    det.appendChild(dl); card.appendChild(det);
+    return card;
+  }
+
+  function rerender(){
+    var root = document.getElementById('form'); root.textContent = '';
+    D.sections.forEach(function(s){
+      var sec = el('section', {'class':'step', 'data-step':s.id});
+      var h = el('div', {'class':'stephead'});
+      h.appendChild(el('span', {'class':'num'}, 'Step ' + s.id)); h.appendChild(el('h2', null, s.name));
+      sec.appendChild(h);
+      if (s.id === '8.6') {
+        var bar = el('div', {'class':'row2', style:'margin-bottom:12px'});
+        var all = el('button', {type:'button', 'class':'btn ghost'}, 'Save every recommended switch');
+        var m = el('span', {'class':'msg'});
+        all.addEventListener('click', function(){
+          var n = 0;
+          s.fields.forEach(function(f){ var a = state.answers[f.key]; if (f.by === 'central' && f.default !== undefined && (!a || a.value === undefined || a.value === null || a.value === '')) { setAnswer(f.key, {value:f.default, notYet:false}); n++; } });
+          rerender(); flash('Saved the recommended answer on ' + n + ' switch' + (n === 1 ? '' : 'es') + ' marked For central support.');
+        });
+        bar.appendChild(all); bar.appendChild(m); sec.appendChild(bar);
+      }
+      var grid = el('div', {'class':'grid'});
+      s.fields.forEach(function(f){ grid.appendChild(buildField(f)); });
+      sec.appendChild(grid); root.appendChild(sec);
+    });
+    refresh();
+  }
+
+  function flash(text){ var m = document.querySelector('[data-step="8.6"] .msg'); if (m) { m.textContent = text; m.className = 'msg ok'; } }
+
+  function refresh(){
+    FIELDS.forEach(function(f){
+      var card = document.querySelector('.q[data-key="' + f.key + '"]'); if (!card) return;
+      var vis = shown(f);
+      var open = isOpen(f);
+      var hidden = !vis || (filter === 'chapter' && f.by !== 'chapter') || (filter === 'central' && f.by !== 'central') || (filter === 'open' && !open);
+      card.classList.toggle('hide', hidden);
+      var a = state.answers[f.key] || {};
+      var st = card.querySelector('[data-status]');
+      var p = problem(f, a);
+      var touched = a.at !== undefined;
+      card.classList.toggle('done', !p && touched);
+      card.classList.toggle('bad', !!p && touched && a.value !== '' && a.value != null);
+      if (!p && touched) {
+        st.className = 'status ok';
+        st.textContent = a.notYet ? 'Marked not known yet. Saved in this browser.' : 'Saved in this browser.';
+        if (f.key === 'chapter.timezone' && a.value && a.value !== 'America/New_York') { st.className = 'status warn'; st.textContent = 'Saved. The software supports only Eastern time today: tell the central support organization before stage 9.'; }
+      } else if (p && touched && !(a.value === '' || a.value == null)) { st.className = 'status bad'; st.textContent = p; }
+      else if (f.later && !a.value) { st.className = 'status idle'; st.textContent = 'Answered at step ' + f.later + '.'; }
+      else { st.className = 'status idle'; st.textContent = 'Not answered yet.'; }
+    });
+    document.querySelectorAll('section.step[data-step]').forEach(function(sec){
+      var any = sec.querySelector('.q:not(.hide)'); sec.classList.toggle('hide', !any);
+    });
+    meter();
+  }
+
+  function meter(){
+    var m = document.getElementById('meter'); m.textContent = '';
+    ['chapter', 'central'].forEach(function(by){
+      var fs = FIELDS.filter(function(f){ return f.by === by && shown(f) && !f.later; });
+      var done = fs.filter(function(f){ return !problem(f, state.answers[f.key]); }).length;
+      var row = el('div', {'class':'row'});
+      row.appendChild(el('span', {'class':'badge b-' + by}, BYLABEL[by]));
+      var bar = el('div', {'class':'bar'}); var i = el('i'); i.style.width = (fs.length ? Math.round(100 * done / fs.length) : 100) + '%'; bar.appendChild(i);
+      row.appendChild(bar); row.appendChild(el('span', null, done + ' of ' + fs.length));
+      m.appendChild(row);
+    });
+  }
+
+  document.querySelectorAll('.seg button').forEach(function(b){
+    b.addEventListener('click', function(){
+      filter = b.getAttribute('data-filter');
+      document.querySelectorAll('.seg button').forEach(function(x){ x.setAttribute('aria-pressed', String(x === b)); });
+      refresh();
+    });
+  });
+
+  function block(){
+    return D.header + '\n' + JSON.stringify({chapter:D.chapter, copied:new Date().toISOString(), guideVersion:D.guideVersion, answers:state.answers, signoffs:state.signoffs}, null, 1);
+  }
+  document.getElementById('copyBtn').addEventListener('click', function(){
+    var panel = document.getElementById('copyPanel'), ta = document.getElementById('copyText'), msg = document.getElementById('copyMsg');
+    var text = block(); ta.value = text; panel.classList.remove('hide'); document.getElementById('loadPanel').classList.add('hide');
+    var open = FIELDS.filter(isOpen).length;
+    var tail = open ? ' ' + open + ' question' + (open === 1 ? ' is' : 's are') + ' still to answer; that is fine for a hand-over.' : '';
+    function selectAll(){ ta.focus(); ta.select(); }
+    try {
+      navigator.clipboard.writeText(text).then(function(){ msg.textContent = 'Copied. Paste it into an email to the central support organization.' + tail; },
+        function(){ selectAll(); msg.textContent = 'Select all the text below and copy it, then paste it into an email to the central support organization.' + tail; });
+    } catch (e) { selectAll(); msg.textContent = 'Select all the text below and copy it, then paste it into an email to the central support organization.' + tail; }
+  });
+  document.getElementById('loadBtn').addEventListener('click', function(){
+    document.getElementById('loadPanel').classList.remove('hide'); document.getElementById('copyPanel').classList.add('hide');
+    document.getElementById('loadText').focus();
+  });
+  document.getElementById('loadGo').addEventListener('click', function(){
+    var msg = document.getElementById('loadMsg'); var raw = document.getElementById('loadText').value.trim();
+    var nl = raw.indexOf('\n'); var head = nl < 0 ? raw : raw.slice(0, nl);
+    if (head.trim() !== D.header) { msg.className = 'msg bad'; msg.textContent = 'This is not a block of answers from this page. Its first line must read ' + D.header + '.'; return; }
+    var data; try { data = JSON.parse(raw.slice(nl + 1)); } catch (e) { msg.className = 'msg bad'; msg.textContent = 'The block is incomplete. Copy the whole block again, from its first line to its last.'; return; }
+    if (data.chapter !== D.chapter) { msg.className = 'msg bad'; msg.textContent = 'These answers are for ' + data.chapter + ', not ' + D.chapter + '. Nothing was loaded.'; return; }
+    var n = 0;
+    Object.keys(data.answers || {}).forEach(function(k){
+      var inc = data.answers[k], cur = state.answers[k];
+      if (!cur || !cur.at || (inc.at && inc.at > cur.at)) { state.answers[k] = inc; n++; }
+    });
+    var seen = {}; state.signoffs.concat(data.signoffs || []).forEach(function(s){ seen[s.name + '|' + s.date] = s; });
+    state.signoffs = Object.keys(seen).map(function(k){ return seen[k]; });
+    persist(); rerender(); renderSign();
+    msg.className = 'msg ok'; msg.textContent = 'Loaded. ' + n + ' answer' + (n === 1 ? '' : 's') + ' taken from the block; newer answers already here were kept.';
+  });
+
+  function today(){ var d = new Date(); function p(x){ return (x < 10 ? '0' : '') + x; } return p(d.getMonth() + 1) + '-' + p(d.getDate()) + '-' + String(d.getFullYear()).slice(2); }
+  function renderSign(){
+    var ul = document.getElementById('signList'); ul.textContent = '';
+    state.signoffs.forEach(function(s){ ul.appendChild(el('li', null, s.name + ', ' + s.date)); });
+  }
+  document.getElementById('signBtn').addEventListener('click', function(){
+    var name = document.getElementById('signName').value.trim(), msg = document.getElementById('signMsg');
+    if (!name) { msg.className = 'msg bad'; msg.textContent = 'Type your full name first.'; return; }
+    var open = FIELDS.filter(isOpen);
+    if (open.length) { msg.className = 'msg bad'; msg.textContent = 'Not yet: ' + open.length + ' question' + (open.length === 1 ? ' is' : 's are') + ' still to answer. Choose Still to answer at the top to see ' + (open.length === 1 ? 'it' : 'them') + '.'; return; }
+    state.signoffs.push({name:name, date:today()}); persist(); renderSign();
+    document.getElementById('signName').value = '';
+    msg.className = 'msg ok'; msg.textContent = state.signoffs.length >= 2 ? 'Signed off by two people. Press Copy all answers and send the block to the central support organization.' : 'Signed off. A second person now signs off too.';
+  });
+
+  var sl = document.getElementById('secretList');
+  D.secrets.forEach(function(s){ sl.appendChild(el('li', null, s)); });
+  sl.appendChild(el('li', null, D.webinarSecret + ' — the Zoom app’s secret, only for a chapter that runs webinars. Created in step 5.5.'));
+
+  persist(); rerender(); renderSign();
+})();
+</script>

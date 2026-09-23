@@ -21,7 +21,7 @@ The guide takes a new chapter from nothing to a running system. Work through the
 7. [Write and publish the policy documents](07-write-and-publish-the-policy-documents.md)
    Every public form carries one required consent box that links to four documents.
 8. [Fill in the chapter information form](08-fill-in-the-chapter-information-form.md)
-   The chapter information form holds the roughly thirty-five values that differ from one chapter to the next: its name, its addresses, its Google details, its feature switches and the names of its secrets.
+   The chapter information form holds the roughly forty answers that differ from one chapter to the next: its name, its addresses, its Google details and its feature switches.
 9. [Build the CRM system](09-build-the-crm-system.md)
    The CRM is the chapter's system of record: every client, mentor, partner, funder and meeting lives in it, and every application reads and writes it.
 10. [Set up the Google permissions the software needs](10-set-up-the-google-permissions-the-software-needs.md)

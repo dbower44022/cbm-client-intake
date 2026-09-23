@@ -1,9 +1,9 @@
 # The deployment guide as data
 
-**Version:** 0.1
+**Version:** 0.2
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 16:50
+**Last Updated:** 09-23-26 12:03
 
 ---
 
@@ -61,6 +61,7 @@ steps: [...]
 | `goes_wrong` | The known failure and how to recognise it, or `nothing known yet`. |
 | `later` | The automation that will replace a manual method, or `unchanged`. |
 | `status` | `done-for-real` or `not-yet-tried`, plus a short note. |
+| `fields` | Stage 8 only: the questions of the chapter information form, one entry per answer. Each has `key` (where the answer sits in the values file, e.g. `web.website_base_url`), `label`, `by` (`chapter` or `central`), `kind` (`text`, `slug`, `url`, `email`, `domain`, `bool` or `choice`), `required`, and the three explanations `meaning`, `source` and `wrong`. Optional: `example`, `default` (the recommended answer), `options` (for `choice`), `later` (the step that answers it), `show_if` (a switch that must be yes for it to be asked). The guide prints them; `scripts/chapter_form/` builds the web page and the values file from them. |
 | `source` | Where the history lives, e.g. `3-Methods-CRM-Google-Applications.md#9.2`. |
 
 The readable guide shows `why`, `who`, `first`, `actions`, `done_when`,
@@ -83,4 +84,5 @@ screen is not known, say so in the action.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.2 | 09-23-26 12:03 | The `fields` list added, for the chapter information form's questions (Doug, 09-23-26: the form becomes a web page built from stage 8). |
 | 0.1 | 09-18-26 16:50 | First version. The guide becomes structured data that drives both the readable guide and the onboarding app CRMBuilder is asked to build (Doug, 09-18-26). |
