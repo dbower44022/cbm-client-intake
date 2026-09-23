@@ -60,8 +60,8 @@ Each line was checked against the code and the step files on 09-23-26.
 **Can wait until after Boston's build:**
 
 6. ~~**Item 6 — the chapter training accounts.**~~ **Ruled 09-23-26 (Doug):** no
-   new accounts; chapters use the existing generic training users. Steps 16.1
-   and 16.6 still describe the old plan and are being rewritten.
+   new accounts; chapters use the existing generic training users, and their
+   passwords are not changed after each chapter. Stage 16 is rewritten to match.
 7. **Item 12 — loading existing records.** Needed only if Boston has records to
    bring in (step 15.4).
 8. **Item 8 — ClickUp access for chapter people.** Needed before Boston's
@@ -227,7 +227,8 @@ same objection the existing documents already make about the leaving procedure.
 
 **Changed 09-23-26 (Doug).** The 09-18-26 ruling below is reversed: adding a set of
 training accounts for every chapter is too much work. Chapters sign in as the six
-generic training users Cleveland's own trainers use. Nothing is built. What
+generic training users Cleveland's own trainers use, and the passwords are not
+changed after each chapter. Nothing is built. What
 remains is the note to trainees and the decision about when this machine stops
 being the answer, both below.
 
@@ -486,7 +487,7 @@ own records (finding F7 of the August build).
 
 | Version | Date | Change |
 |---|---|---|
-| 0.14 | 09-23-26 13:33 | Item 6 changed: chapters use the existing generic training users, reversing the 09-18-26 ruling for separate chapter accounts (Doug, 09-23-26). Nothing is built. |
+| 0.14 | 09-23-26 13:33 | Item 6 changed: chapters use the existing generic training users, reversing the 09-18-26 ruling for separate chapter accounts (Doug, 09-23-26). The passwords stay unchanged after each chapter, and stage 16 is rewritten to match. Nothing is built. |
 | 0.13 | 09-23-26 13:23 | Item 2 ruled: Boston runs the current EspoCRM release, and Cleveland moves up to it later (Doug, 09-23-26). Nothing now needs an answer before Boston's build. |
 | 0.12 | 09-23-26 13:21 | Brought up to date the day Boston is built. A new list at the top sorts every open item by what Boston needs: one needs an answer before the build (item 2, the CRM version), four have workarounds (items 15, 16, 1, 18), and the rest wait. Items 2, 4, 15 and 16 carry an update: the add-ons are ruled in, the colour file comes from the form, the applier's decision date passed with no recorded outcome, and the settings generator is mostly built. The 09-18-26 ranking is kept below the new list. |
 | 0.11 | 09-19-26 00:10 | Item 14 closed: every chapter hosts its own Google Workspace, so there is no provided branch (Doug, 09-18-26). |

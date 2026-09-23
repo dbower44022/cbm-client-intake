@@ -1,23 +1,23 @@
 # Stage 16 — Train the chapter's staff
 
-**Version:** 0.2  
-**Last Updated:** 09-19-26 00:04  
+**Version:** 0.3  
+**Last Updated:** 09-23-26 13:35  
 **Generated from** `steps/stage-16.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
 
 ## Why this stage
 
-Staff learn the system on invented records before they touch real ones. Training happens on Cleveland's shared training system, which clears itself every night, using shared training accounts set up specifically for chapter training (ruled 09-14-26 and 09-18-26).
+Staff learn the system on invented records before they touch real ones. Training happens on Cleveland's shared training system, which clears itself every night, signed in as the six generic training users Cleveland's own trainers use (ruled 09-14-26 and 09-23-26).
 
-**Who:** The chapter's trainer runs the sessions; the central support organization sets up the training accounts and hands over the guides.  
+**Who:** The chapter's trainer runs the sessions; the central support organization hands over the training users' sign-in details and the guides.  
 **Time:** One session per role. The mentor session is the longest, at 30 to 40 minutes.  
 **When this stage is done:** The final checks before going live (stage 17), with staff who know what they are checking.
 
 **Before you start:**
 
 - The staff accounts (stage 14)
-- The chapter training accounts on the shared training system (work list item 6 — they do not exist yet)
+- The six training users on the shared training system, which already exist
 
 **Steps in this stage:**
 
@@ -26,13 +26,13 @@ Staff learn the system on invented records before they touch real ones. Training
 - 16.3 Train each role
 - 16.4 Hand over the written guides
 - 16.5 Name the chapter's own first point of contact
-- 16.6 Change the training account passwords
+- 16.6 Record that training has ended
 
 ---
 
 ## 16.1 Get the chapter's staff onto the shared practice system
 
-**Why:** Trainees need working sign-ins, and fresh passwords stop the previous chapter keeping access.
+**Why:** Trainees need working sign-ins to a system that holds only invented records.
 
 **Who:** The central support organization
 
@@ -47,46 +47,30 @@ Staff learn the system on invented records before they touch real ones. Training
 1. Know the addresses first. The shared training system is Cleveland's test system:
    - The CRM: https://crm-test.clevelandbusinessmentors.org
    - The applications: https://cbm-client-intake-svxs3.ondigitalocean.app/
-   - The server that holds its nightly reset: root@104.131.45.208
-2. Know which accounts to change. There is one chapter training account per team that opens a page in the applications. Their user names are not known yet: they are chosen when the accounts are built (work list item 6). Until then, this step cannot be completed. The seven teams are:
-   - Client Administration Team
-   - Mentor Administration Team
-   - Mentor Team
-   - Partner Management Team
-   - Sponsor Management Team
-   - Marketing Admin Team
-   - Analytics Admin Team
-3. For each chapter training account, make a new password of 20 letters and digits only, with no punctuation. Store it straight away in the central support organization's own vault, in an entry named TRAINING-ACCOUNT-USER-NAME training password. That vault is not set up yet (work list item 1).
-4. Sign in to https://crm-test.clevelandbusinessmentors.org as an administrator. Open Administration, then Users, then the chapter training account, and set its password to the new one. The exact label of the password action on the user screen is not verified; look for the action that changes the user's password.
-   *You should see:* The password saved with no error, for each of the seven accounts.
-5. In a terminal, go to the software's code folder:
-   - cd ~/Dropbox/Projects/cbm-client-intake
-6. Refresh the training data, so its dates are current before they are frozen:
-   - uv run python scripts/sandbox/seed_training_data.py --apply
-   *You should see:* The script finishing without an error. On a second run the same day it reports everything current and writes nothing.
-7. Re-capture the shared training system's fixed copy, so the new passwords survive the nightly reset:
-   - ssh root@104.131.45.208 'python3 /usr/local/sbin/reset_crm_sandbox.py baseline --apply'
-   *You should see:* The script finishing without an error. Without this, the new passwords undo themselves at midnight.
-8. Confirm the fixed copy was taken:
-   - ssh root@104.131.45.208 'python3 /usr/local/sbin/reset_crm_sandbox.py status'
-   *You should see:* The status reporting a baseline captured today.
-9. Give the chapter's trainer the seven user names and passwords by a private route, such as a shared entry in a vault or a one-to-one message. Never send them in an email to a group.
-10. The next morning, have one person from the chapter open https://cbm-client-intake-svxs3.ondigitalocean.app/ and sign in with one of the new passwords.
+2. Know the six training users. They are the ones Cleveland's own trainers use, one per role:
+   - Mentors: Joe Mentor
+   - Client administrators: Kitty Cat
+   - Mentor administrators: Mentor Admin
+   - Partner managers: Partner Manager
+   - Funder managers: Sally Sponsor
+   - The person handling submissions: Mark Marketing
+3. Get the six training users' sign-in names and passwords from the person who holds them for Cleveland's trainers.
+4. Give the chapter's trainer the six sign-in names and passwords by a private route, such as a shared entry in a vault or a one-to-one message. Never send them in an email to a group, and never put them on a public page.
+5. Have one person from the chapter open https://cbm-client-intake-svxs3.ondigitalocean.app/ and sign in as one of the six training users.
    *You should see:* The portal, with "(Test)" after the version number in the footer.
 
 **Done when all of these are true:**
 
-- The chapter's trainer holds the sign-in details for the chapter training accounts.
-- The passwords were set fresh for this chapter.
+- The chapter's trainer holds the sign-in details for the six training users.
 - One person from the chapter has signed in once.
 
-**Note:** Ruled 09-14-26: chapters train on the existing test system rather than on their own live system or on a practice system built for them. Ruled 09-18-26: they sign in with shared training accounts set up specifically for chapter training, never with accounts of their own.
+**Note:** Ruled 09-14-26: chapters train on the existing test system rather than on their own live system or on a practice system built for them. Ruled 09-23-26: they sign in as the six generic training users Cleveland's own trainers use, never with accounts of their own, and the passwords are not changed for each chapter.
 
-**How to check:** The morning after, someone from the chapter signs in with a new password, and the footer reads "(Test)".
+**How to check:** Someone from the chapter signs in as a training user, and the footer reads "(Test)".
 
-**If it didn't work:** If a new password fails the next morning, the re-capture was skipped or failed. Run the status command above, set the passwords again, and re-capture again.
+**If it didn't work:** Stop, and ask the central support organization before going on.
 
-**What usually goes wrong:** Skipping the re-capture. The new passwords work all afternoon and stop at midnight, and the old ones, which the previous chapter holds, come back.
+**What usually goes wrong:** A trainee signs in with their own chapter account instead of a training user. Their own account's email address is real, so a practice email could reach a real person.
 
 ---
 
@@ -109,8 +93,8 @@ Staff learn the system on invented records before they touch real ones. Training
    - "You are not expected to save anything. If you do, it is fine: no email is sent, no calendar invitation goes out, and nothing reaches a real mailbox."
    - "Everything you create or change today is gone tomorrow morning, because the system resets itself every night. We finish each walkthrough today."
    - "Every page says Cleveland, because this is Cleveland's training system. Our own system will show our own name."
-2. Check every trainee is signed in with a chapter training account, never with their own chapter account. Only the training accounts' addresses lead nowhere.
-   *You should see:* Every trainee's portal showing a chapter training account's name.
+2. Check every trainee is signed in as one of the six training users, never with their own chapter account. Only the training users' addresses lead nowhere.
+   *You should see:* Every trainee's portal showing a training user's name.
 3. If a session must run over two days, ask the central support organization, before the first evening, to pause that night's reset. They run:
    - ssh root@104.131.45.208 'touch /var/www/espocrm/.sandbox-hold'
    - and the next day, to resume: ssh root@104.131.45.208 'rm /var/www/espocrm/.sandbox-hold'
@@ -139,34 +123,34 @@ Staff learn the system on invented records before they touch real ones. Training
 
 **Do this:**
 
-1. Before any session, sign in at https://cbm-client-intake-svxs3.ondigitalocean.app/ as the Mentor Team chapter training account and open Client Management.
-   *You should see:* The account's list of invented clients. If it is empty, the chapter training mentor has not yet been given clients of its own (work list item 6); stop and ask the central support organization.
-2. Mentors, 30 to 40 minutes, signed in as the Mentor Team chapter training account:
+1. Before any session, sign in at https://cbm-client-intake-svxs3.ondigitalocean.app/ as the training user Joe Mentor and open Client Management.
+   *You should see:* Seven invented clients. If the list is empty or short, stop and ask the central support organization.
+2. Mentors, 30 to 40 minutes, signed in as the training user Joe Mentor:
    - Open Client Management (the address ending /mentorsessions/) and show the status filter and the search box.
    - Open the first client in the list and land on its Overview tab.
    - Open the Sessions tab, open a completed session, and have each trainee read its notes and next steps.
    - Open the Communications tab and show that the email history lives on the record.
    - Open My Mentor Profile (the address ending /mentorprofile/) and show the live preview.
-3. Client administrators, signed in as the Client Administration Team chapter training account:
+3. Client administrators, signed in as the training user Kitty Cat:
    - Open Client Administration (the address ending /assignments/).
    - Filter the status to Submitted.
    - Have each trainee assign one engagement to a mentor.
    - When the email to the mentor opens, show it and close it without sending.
-4. Mentor administrators, signed in as the Mentor Administration Team chapter training account:
+4. Mentor administrators, signed in as the training user Mentor Admin:
    - Open Mentor Administration (the address ending /mentoradmin/).
    - Open one mentor marked Complete and one marked Incomplete, and read the reasons.
    - Have each trainee run Update Mentor Status.
-5. Partner managers, signed in as the Partner Management Team chapter training account:
+5. Partner managers, signed in as the training user Partner Manager:
    - Open Partner Management (the address ending /partnersessions/).
    - Open a partner record and have each trainee open its Sessions tab and its Communications tab.
-6. Funder managers, signed in as the Sponsor Management Team chapter training account:
+6. Funder managers, signed in as the training user Sally Sponsor:
    - Open Funder Management (the address ending /sponsorsessions/).
    - Open a funder record and have each trainee open its Contributions tab, its Sessions tab and its Communications tab.
-7. The person handling submissions, signed in as the Marketing Admin Team chapter training account:
+7. The person handling submissions, signed in as the training user Mark Marketing:
    - Open Submission Admin (the address ending /ops/).
    - Have the trainee open one submission and read its two status columns.
    *You should see:* Submissions in the queue. The queue is empty unless the central support organization filled it before the session; ask for that at least a day ahead.
-8. Analytics: there is no walkthrough for the Analytics Admin Team yet. Show the Analytics page (the address ending /analytics/) and say so.
+8. Analytics: skip it. None of the six training users is in the Analytics Admin Team, so none can open the Analytics page.
 
 **Done when:** Every person has been shown the parts of the system their own team uses, and has done each main task once themselves.
 
@@ -174,7 +158,7 @@ Staff learn the system on invented records before they touch real ones. Training
 
 **If it didn't work:** Stop, and ask the central support organization before going on.
 
-**What usually goes wrong:** Two gaps in the walkthroughs. The Submission Admin queue is empty unless filled beforehand. And there is no walkthrough for the Analytics Admin Team. The record names in Cleveland's trainer's guide belong to Cleveland's own training accounts, so the chapter training accounts may show different records.
+**What usually goes wrong:** Two gaps in the walkthroughs. The Submission Admin queue is empty unless filled beforehand. And there is no analytics training, because no training user can open the Analytics page.
 
 ---
 
@@ -240,9 +224,9 @@ Staff learn the system on invented records before they touch real ones. Training
 
 ---
 
-## 16.6 Change the training account passwords
+## 16.6 Record that training has ended
 
-**Why:** People from one chapter must not keep standing access to a system another chapter also uses.
+**Why:** The training users' passwords stay unchanged after a chapter trains, so a written record of who holds them is the only account of it.
 
 **Who:** The central support organization
 
@@ -254,30 +238,18 @@ Staff learn the system on invented records before they touch real ones. Training
 
 **Do this:**
 
-1. When training ends, repeat the password actions of step 16.1 for all seven chapter training accounts:
-   - Make a new password of 20 letters and digits for each account, and store it in the central support organization's vault.
-   - Set it on the account at https://crm-test.clevelandbusinessmentors.org, under Administration, then Users.
-   - cd ~/Dropbox/Projects/cbm-client-intake
-   - uv run python scripts/sandbox/seed_training_data.py --apply
-   - ssh root@104.131.45.208 'python3 /usr/local/sbin/reset_crm_sandbox.py baseline --apply'
-2. Do not give the new passwords to the chapter.
-3. The next morning, open https://cbm-client-intake-svxs3.ondigitalocean.app/ and try one old password.
-   *You should see:* The sign-in refused.
-4. Add the date the passwords were changed to the chapter's entry in the list of watched systems (step 12.5).
+1. When training ends, add two things to the chapter's entry in the list of watched systems (step 12.5):
+   - The date training ended
+   - That the chapter's staff hold the six training users' passwords
+   *You should see:* Both lines in the chapter's entry.
 
-**Done when all of these are true:**
+**Done when:** The date training ended, and that the chapter holds the training passwords, are written in the chapter's entry.
 
-- The chapter training account passwords are changed once training ends.
-- The change has survived a nightly reset.
-- It is written down when this was done.
+**Note:** Ruled 09-23-26: the training users' passwords are not changed after each chapter. The shared training system holds only invented records and sends no real email, so a former trainee keeping access exposes nothing real.
 
-**Note:** People from one chapter do not keep standing access to a system another chapter also uses.
-
-**How to check:** The morning after, the old password is refused.
+**How to check:** The chapter's entry in the list of watched systems shows the date.
 
 **If it didn't work:** Stop, and ask the central support organization before going on.
-
-**What usually goes wrong:** Skipping the re-capture. The old password comes back at midnight, and the chapter keeps its access indefinitely.
 
 ---
 
@@ -285,5 +257,6 @@ Staff learn the system on invented records before they touch real ones. Training
 
 | Version | Date | Change |
 |---|---|---|
+| 0.3 | 09-23-26 13:35 | Chapters train as the six generic training users Cleveland's trainers use, and the passwords are not changed for each chapter (Doug, 09-23-26), reversing the 09-18-26 ruling for separate chapter training accounts. Step 16.1 now hands over the six existing sign-ins; step 16.6 records that training ended instead of changing passwords; the walkthroughs name the training users; analytics is skipped, because no training user can open it. |
 | 0.2 | 09-19-26 00:04 | Actions made precise (Doug, 09-19-26): the shared training system's exact addresses, the exact commands to refresh the training data, re-capture and check the fixed copy, and to pause and resume the reset; the words to say to the room; a page and task per role; the file name of each written guide. The training account user names are not known until work list item 6 builds them, and step 16.1 says so. |
 | 0.1 | 09-18-26 17:30 | First version as data, converted from the methods for training the chapter's staff (7-Methods-Training.md, version 0.1) with the step list's finishing tests. |
