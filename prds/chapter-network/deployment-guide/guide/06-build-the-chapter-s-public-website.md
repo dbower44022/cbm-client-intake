@@ -1,7 +1,7 @@
 # Stage 6 — Build the chapter's public website
 
-**Version:** 0.2  
-**Last Updated:** 09-19-26 00:04  
+**Version:** 0.3  
+**Last Updated:** 09-23-26 12:49  
 **Generated from** `steps/stage-06.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -181,12 +181,12 @@ The public website is the chapter's own marketing site. The software does not bu
 
 **Do this:**
 
-1. The chapter chooses four colours, each as a six-digit colour code. Cleveland's are shown for comparison:
+1. The chapter chooses four colours, each as a six-digit colour code, and enters them in the four colour questions on the chapter information page (step 8.3). Cleveland's are shown for comparison:
    - Primary colour, used for headings. Cleveland: #173B60 (navy).
    - Button colour. Cleveland: #CB963B (gold).
    - Button colour when the mouse is over it, about ten per cent darker. Cleveland: #b8842f.
    - Body text colour. Cleveland: #7A7A7A (grey).
-2. The central support organization writes a file named chapter-tokens.css containing exactly these lines, with the chapter's four colour codes in place of the capitalised words:
+2. The central support organization writes a file named chapter-tokens.css containing exactly these lines, with the chapter's four colour codes in place of the capitalised words. The values-file writer in step 8.10 produces this file from the page's answers, as prds/chapter-network/chapters/CHAPTER-SLUG-chapter-tokens.css:
    - :root {
    - --cbm-navy: PRIMARY-COLOUR;
    - --cbm-gold: BUTTON-COLOUR;
@@ -200,7 +200,7 @@ The public website is the chapter's own marketing site. The software does not bu
    *You should see:*
    - A first line of HTTP/2 200.
    - A line content-type: text/css. Browsers ignore a stylesheet from another site served with any other type.
-6. Write the file's full address on the chapter information form, under web: chapter_tokens_url. It becomes the setting CHAPTER_TOKENS_URL.
+6. Enter the file's full address on the chapter information page, in the question Web address (URL) of the colour file. It becomes the setting CHAPTER_TOKENS_URL.
 
 **Done when all of these are true:**
 
@@ -284,5 +284,6 @@ The public website is the chapter's own marketing site. The software does not bu
 
 | Version | Date | Change |
 |---|---|---|
+| 0.3 | 09-23-26 12:49 | Step 6.5: the chapter enters its four colours on the chapter information page, and the values-file writer produces the colour file from them (Doug, 09-23-26). |
 | 0.2 | 09-19-26 00:04 | Every action made precise (Doug, 09-19-26): the three things the platform must do, the exact curl checks for the site, the redirect test at /redirect-test and the colour file, the exact lines of chapter-tokens.css with the four --cbm- colour names, the logo file name, and the form keys each value is written under. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for the public website (9-Methods-Hosting-Website-Policies.md, version 0.4, including the redirect version of step 6.3) with the step list's finishing tests. |

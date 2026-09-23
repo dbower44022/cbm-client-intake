@@ -1,7 +1,7 @@
 # Stage 8 — Fill in the chapter information form
 
-**Version:** 0.10  
-**Last Updated:** 09-23-26 12:38  
+**Version:** 0.11  
+**Last Updated:** 09-23-26 12:49  
 **Generated from** `steps/stage-08.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -196,10 +196,31 @@ The chapter information form holds the roughly forty answers that differ from on
   - *If it is wrong:* Applicants are shown a privacy policy that is not the chapter's, which is a legal exposure. Left out altogether, the forms link to Cleveland's privacy policy instead.
   - *If not known yet:* needed by step 17.3, before the public forms are used. Once known, it is entered at the applications' settings page; no redeployment is needed.
   - *Example:* https://www.yourchapter.org/privacy-policy/
-- **Web address (URL) of your colour file** (`web.chapter_tokens_url`) — answered by the chapter; optional.
-  - *What it is:* The web address of a small file that sets your chapter's colours on the software's pages.
-  - *Where to find it:* The colour file published in step 6.5. Most chapters start without one; mark this not known yet.
-  - *If it is wrong:* The pages keep the standard colours. Nothing breaks.
+- **Main colour, used for headings** (`web.colour_primary`) — answered by the chapter; optional.
+  - *What it is:* The colour of headings and the top bar on the applications' pages. Written as a six-character colour code starting with #. Cleveland's is #173B60 (navy).
+  - *Where to find it:* Your chapter's brand colours, from your logo or website designer. A colour picker on any computer shows a colour's code. If you are not sure, mark this not known yet.
+  - *If it is wrong:* The applications show a colour that does not match your chapter. Marked not known yet, Cleveland's colour is used, and it can be changed later.
+  - *Example:* #173B60
+- **Button colour** (`web.colour_button`) — answered by the chapter; optional.
+  - *What it is:* The colour of the buttons people press, such as Submit. Written as a six-character colour code starting with #. Cleveland's is #CB963B (gold).
+  - *Where to find it:* Your chapter's brand colours, from your logo or website designer. A colour picker on any computer shows a colour's code. If you are not sure, mark this not known yet.
+  - *If it is wrong:* The applications show a colour that does not match your chapter. Marked not known yet, Cleveland's colour is used, and it can be changed later.
+  - *Example:* #CB963B
+- **Button colour when the mouse is over it** (`web.colour_button_hover`) — answered by the chapter; optional.
+  - *What it is:* The colour a button turns while the mouse is over it. Usually the button colour made about ten per cent darker. Written as a six-character colour code starting with #. Cleveland's is #b8842f.
+  - *Where to find it:* Your chapter's brand colours, from your logo or website designer. A colour picker on any computer shows a colour's code. If you are not sure, mark this not known yet.
+  - *If it is wrong:* The applications show a colour that does not match your chapter. Marked not known yet, Cleveland's colour is used, and it can be changed later.
+  - *Example:* #b8842f
+- **Text colour** (`web.colour_text`) — answered by the chapter; optional.
+  - *What it is:* The colour of ordinary paragraph text. Written as a six-character colour code starting with #. Cleveland's is #7A7A7A (grey).
+  - *Where to find it:* Your chapter's brand colours, from your logo or website designer. A colour picker on any computer shows a colour's code. If you are not sure, mark this not known yet.
+  - *If it is wrong:* The applications show a colour that does not match your chapter. Marked not known yet, Cleveland's colour is used, and it can be changed later.
+  - *Example:* #7A7A7A
+- **Web address (URL) of the colour file** (`web.chapter_tokens_url`) — answered by the central support organization; optional.
+  - *What it is:* The web address of the small file that carries the four colours above into the applications' pages. The software loads it on every page after its standard colours.
+  - *Where to find it:* The central support organization writes the file from the four colours above and publishes it (step 6.5). The values-file writer produces the file itself, as prds/chapter-network/chapters/CHAPTER-SLUG-chapter-tokens.css. Mark not known yet until it is published.
+  - *If it is wrong:* The applications keep Cleveland's colours. Nothing breaks.
+  - *Example:* https://www.yourchapter.org/chapter-tokens.css
 
 **Done when all of these are true:**
 
@@ -207,7 +228,8 @@ The chapter information form holds the roughly forty answers that differ from on
 - The website address is filled in.
 - The events page address is left empty, so the software uses its own events page.
 - The documentation address is filled in.
-- The colour file address is filled in.
+- The four colours are filled in, or marked not known yet.
+- The colour file address is filled in, or marked not known yet.
 - The four policy addresses are filled in, or marked not known yet and listed as owed.
 
 **Note:** The events page address is not asked. Left empty, it means the applications' own events page, APP-ADDRESS/webinars/, which is what every chapter now uses. The documentation and colour file addresses count as filled in when they are marked not known yet.
@@ -637,6 +659,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 | Version | Date | Change |
 |---|---|---|
+| 0.11 | 09-23-26 12:49 | The chapter now gives its four colours instead of the colour file's web address (Doug, 09-23-26): main, button, button under the mouse, and text, each with Cleveland's for comparison. The colour file's address becomes a question for the central support organization, and the values-file writer produces the file from the four colours. |
 | 0.10 | 09-23-26 12:38 | New question, the chapter abbreviation (Doug, 09-23-26): Cleveland's pages say CBM in about 90 places, and each chapter needs its own. The software does not read the answer yet (work list G1, item 15). |
 | 0.9 | 09-23-26 12:33 | The short label question says why it must be lower case (Doug, 09-23-26): the hosting platform and Google accept only lower-case names, and the label becomes the application, database and Google project names. The limit is now 25 characters, the longest that fits those names. The page lower-cases the label as it is typed, and every question with a required format shows that format under its box instead of only in the collapsed explanation. |
 | 0.8 | 09-23-26 12:28 | Every question can be marked not known yet (Doug, 09-23-26: "There should always be an option of not known yet"). A question marked so is written to the values file as owed, naming the step that needs it: the four policy addresses by step 17.3, before the public forms are used; the others by the step that builds from them. Only the short label must be known to write the file, because it names the file. |

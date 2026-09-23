@@ -31,7 +31,7 @@ form = _load("scripts/chapter_form/fields.py", "fields")
 to_values = _load("scripts/chapter_form/to_values.py", "to_values_under_test")
 build_page = _load("scripts/chapter_form/build_page.py", "build_page_under_test")
 
-KINDS = {"text", "abbreviation", "slug", "url", "email", "domain", "bool", "choice"}
+KINDS = {"text", "colour", "abbreviation", "slug", "url", "email", "domain", "bool", "choice"}
 
 # Every form key a build script reads (render_spec.build_spec, apply_api_half.chapter_settings).
 READ_BY_BUILD = {
@@ -79,6 +79,7 @@ def test_every_switch_has_a_recommended_answer():
     ("slug", "boston-mentors", "a" * 26),
     ("slug", "b2", "boston-"),
     ("abbreviation", "BBM", "B B M"),
+    ("colour", "#173B60", "navy"),
     ("url", "https://bbmentors.org/privacy/", "bbmentors.org"),
     ("email", "info@bbmentors.org", "info at bbmentors"),
     ("domain", "bbmentors.org", "https://bbmentors.org"),
@@ -109,6 +110,8 @@ def _answers(**over):
             v = "info@bbmentors.org"
         elif f["kind"] == "domain":
             v = "bbmentors.org"
+        elif f["kind"] == "colour":
+            v = "#12AB34"
         elif f["kind"] == "abbreviation":
             v = "BBM"
         elif f["kind"] == "slug":
@@ -140,6 +143,8 @@ def test_a_complete_page_writes_a_values_file_the_generator_accepts(tmp_path, mo
     assert values["flags"]["gmail_sync"] is True and values["flags"]["deploy_on_push"] is True
     assert "ZOOM_CLIENT_SECRET" not in values["secrets"] and "APP_ENCRYPTION_KEY" in values["secrets"]
     assert to_values.generator_problems(values) == ([], [])
+    css = (tmp_path / "boston-chapter-tokens.css").read_text()
+    assert "--cbm-navy: #12AB34;" in css and css.count("--cbm-") == 4
 
 
 def test_a_missing_answer_is_named_by_its_label(tmp_path, capsys):

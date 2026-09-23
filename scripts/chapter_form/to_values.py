@@ -138,6 +138,23 @@ def header(data: dict, now: dt.datetime) -> str:
     return "\n".join(lines) + "\n"
 
 
+COLOUR_TOKENS = [("colour_primary", "--cbm-navy"), ("colour_button", "--cbm-gold"),
+                 ("colour_button_hover", "--cbm-btn-bg-hover"), ("colour_text", "--cbm-text")]
+
+
+def tokens_css(values: dict) -> str | None:
+    """The chapter's colour file (deployment guide step 6.5), or None when no
+    colour is known. Only --cbm- names on :root, as CHAPTER_TOKENS_URL allows;
+    a colour left out keeps Cleveland's value."""
+    web = values.get("web") or {}
+    lines = [f"  {name}: {web[key]};" for key, name in COLOUR_TOKENS if web.get(key)]
+    if not lines:
+        return None
+    return ("/* Colour file for " + values["chapter"].get("name", "") + ", written from its chapter\n"
+            "   information page (deployment guide steps 6.5 and 8.10). Publish it and enter\n"
+            "   its address as the colour file's web address. */\n:root {\n" + "\n".join(lines) + "\n}\n")
+
+
 def _shown(path: Path) -> str:
     try:
         return str(path.relative_to(form.ROOT))
@@ -178,6 +195,11 @@ def main(argv: list[str]) -> int:
     CHAPTERS.mkdir(parents=True, exist_ok=True)
     out.write_text(header(data, dt.datetime.now()) + yaml.safe_dump(values, sort_keys=False, allow_unicode=True))
     print(f"check passed; wrote {_shown(out)}")
+    css = tokens_css(values)
+    if css:
+        tok = CHAPTERS / f"{values['chapter']['slug']}-chapter-tokens.css"
+        tok.write_text(css)
+        print(f"wrote {_shown(tok)} — publish it for the colour file's web address (step 6.5)")
     return 0
 
 

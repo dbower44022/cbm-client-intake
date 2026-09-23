@@ -30,6 +30,8 @@ CHECKS: dict[str, tuple[str, str]] = {
              "Lower-case letters, digits and hyphens only, starting with a letter, not ending with a hyphen, at most 25 characters."),
     "abbreviation": (r"^[A-Za-z0-9&]{2,8}$",
                      "Two to eight letters or digits, no spaces, such as LBM."),
+    "colour": (r"^#[0-9A-Fa-f]{6}$",
+               "A six-character colour code starting with #, such as #173B60."),
     "url": (r"^https://[A-Za-z0-9.-]+\.[A-Za-z]{2,}(:[0-9]+)?(/[^\s]*)?$",
             "A full address beginning with https://, copied from the browser's address bar."),
     "email": (r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$",

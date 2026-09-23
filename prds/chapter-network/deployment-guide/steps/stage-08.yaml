@@ -1,7 +1,7 @@
 stage: 8
 name: Fill in the chapter information form
-version: "0.10"
-updated: "09-23-26 12:38"
+version: "0.11"
+updated: "09-23-26 12:49"
 why: >-
   The chapter information form holds the roughly forty answers that differ from
   one chapter to the next: its name, its addresses, its Google details and its
@@ -231,20 +231,58 @@ steps:
         meaning: The web address of the page on your website that shows your privacy policy. Every public form links to it from its consent box.
         source: Open that page on your website in a browser and copy the web address from the address bar. If your website has no such page yet, or you are not sure, mark this not known yet. Stage 7 is where the document is written and published, and the public forms must not be put on the website until this is answered.
         wrong: Applicants are shown a privacy policy that is not the chapter's, which is a legal exposure. Left out altogether, the forms link to Cleveland's privacy policy instead.
-      - key: web.chapter_tokens_url
-        label: Web address (URL) of your colour file
+      - key: web.colour_primary
+        label: "Main colour, used for headings"
         by: chapter
+        kind: colour
+        required: false
+        example: "#173B60"
+        meaning: "The colour of headings and the top bar on the applications' pages. Written as a six-character colour code starting with #. Cleveland's is #173B60 (navy)."
+        source: "Your chapter's brand colours, from your logo or website designer. A colour picker on any computer shows a colour's code. If you are not sure, mark this not known yet."
+        wrong: "The applications show a colour that does not match your chapter. Marked not known yet, Cleveland's colour is used, and it can be changed later."
+      - key: web.colour_button
+        label: "Button colour"
+        by: chapter
+        kind: colour
+        required: false
+        example: "#CB963B"
+        meaning: "The colour of the buttons people press, such as Submit. Written as a six-character colour code starting with #. Cleveland's is #CB963B (gold)."
+        source: "Your chapter's brand colours, from your logo or website designer. A colour picker on any computer shows a colour's code. If you are not sure, mark this not known yet."
+        wrong: "The applications show a colour that does not match your chapter. Marked not known yet, Cleveland's colour is used, and it can be changed later."
+      - key: web.colour_button_hover
+        label: "Button colour when the mouse is over it"
+        by: chapter
+        kind: colour
+        required: false
+        example: "#b8842f"
+        meaning: "The colour a button turns while the mouse is over it. Usually the button colour made about ten per cent darker. Written as a six-character colour code starting with #. Cleveland's is #b8842f."
+        source: "Your chapter's brand colours, from your logo or website designer. A colour picker on any computer shows a colour's code. If you are not sure, mark this not known yet."
+        wrong: "The applications show a colour that does not match your chapter. Marked not known yet, Cleveland's colour is used, and it can be changed later."
+      - key: web.colour_text
+        label: "Text colour"
+        by: chapter
+        kind: colour
+        required: false
+        example: "#7A7A7A"
+        meaning: "The colour of ordinary paragraph text. Written as a six-character colour code starting with #. Cleveland's is #7A7A7A (grey)."
+        source: "Your chapter's brand colours, from your logo or website designer. A colour picker on any computer shows a colour's code. If you are not sure, mark this not known yet."
+        wrong: "The applications show a colour that does not match your chapter. Marked not known yet, Cleveland's colour is used, and it can be changed later."
+      - key: web.chapter_tokens_url
+        label: Web address (URL) of the colour file
+        by: central
         kind: url
         required: false
-        meaning: The web address of a small file that sets your chapter's colours on the software's pages.
-        source: The colour file published in step 6.5. Most chapters start without one; mark this not known yet.
-        wrong: The pages keep the standard colours. Nothing breaks.
+        example: https://www.yourchapter.org/chapter-tokens.css
+        meaning: The web address of the small file that carries the four colours above into the applications' pages. The software loads it on every page after its standard colours.
+        source: The central support organization writes the file from the four colours above and publishes it (step 6.5). The values-file writer produces the file itself, as prds/chapter-network/chapters/CHAPTER-SLUG-chapter-tokens.css. Mark not known yet until it is published.
+        wrong: The applications keep Cleveland's colours. Nothing breaks.
     done_when:
       - "The application address is filled in."
       - "The website address is filled in."
       - "The events page address is left empty, so the software uses its own events page."
       - "The documentation address is filled in."
-      - "The colour file address is filled in."
+      - "The four colours are filled in, or marked not known yet."
+      - "The colour file address is filled in, or marked not known yet."
       - "The four policy addresses are filled in, or marked not known yet and listed as owed."
     note: "The events page address is not asked. Left empty, it means the applications' own events page, APP-ADDRESS/webinars/, which is what every chapter now uses. The documentation and colour file addresses count as filled in when they are marked not known yet."
     check:
@@ -761,6 +799,10 @@ steps:
     source: 5-Methods-Form-Accounts-Checks.md#8.10
 
 changes:
+  - version: "0.11"
+    date: "09-23-26 12:49"
+    change: >-
+      The chapter now gives its four colours instead of the colour file's web address (Doug, 09-23-26): main, button, button under the mouse, and text, each with Cleveland's for comparison. The colour file's address becomes a question for the central support organization, and the values-file writer produces the file from the four colours.
   - version: "0.10"
     date: "09-23-26 12:38"
     change: >-

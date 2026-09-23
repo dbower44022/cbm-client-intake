@@ -83,6 +83,7 @@ details[open] summary{margin-bottom:6px}
 .signoffs{margin:10px 0 0;padding-left:18px}
 .row2{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .row2 input{flex:1;min-width:200px}
+.swatch{width:38px;height:38px;border-radius:6px;border:1px solid var(--line);flex:none}
 .hide{display:none!important}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -229,7 +230,12 @@ details[open] summary{margin-bottom:6px}
       input.addEventListener('input', function(){ clearTimeout(timer); timer = setTimeout(commit, 700); });
       input.addEventListener('change', function(){ clearTimeout(timer); commit(); });
     }
-    card.appendChild(input);
+    if (f.kind === 'colour') {
+      var wrapC = el('div', {'class':'row2'}); var sw = el('span', {'class':'swatch', 'aria-hidden':'true'});
+      var paint = function(){ var v = input.value.trim(); sw.style.background = /^#[0-9A-Fa-f]{6}$/.test(v) ? v : 'transparent'; };
+      input.addEventListener('input', paint); paint();
+      wrapC.appendChild(input); wrapC.appendChild(sw); card.appendChild(wrapC);
+    } else card.appendChild(input);
     if (D.checks[f.kind] && f.kind !== 'text') card.appendChild(el('div', {'class':'tag'}, 'Format: ' + D.checks[f.kind].message));
 
     {
