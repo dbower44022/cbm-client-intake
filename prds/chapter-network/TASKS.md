@@ -74,6 +74,9 @@ same review and left, because none stops the build. Each one names the file.
     depend on one personal GitHub account (the open question of moving the
     repository to an organization with two owners). Steps:
     https://claude.ai/artifact/Xy8TFAbhH3hCtuBDSbTY7m
+    **Boston done 09-23:** Doug linked Boston's team to GitHub from the Create
+    App screen; `dbower44022/cbm-client-intake` and its `release` branch are
+    visible there, nothing was created. Still owed: the guide step itself.
 13. **The guide assumes Cloudflare DNS and a WordPress site.** Boston is on
     Squarespace for both, with DNSSEC on. Stages 3, 6, 9, 11 and 13 need a
     non-Cloudflare path (see DECISIONS 2026-09-23), and any DNS move must switch
