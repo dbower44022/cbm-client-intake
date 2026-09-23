@@ -1,7 +1,7 @@
 stage: 9
 name: Build the CRM system
-version: "0.3"
-updated: "09-19-26 00:50"
+version: "0.4"
+updated: "09-23-26 00:55"
 why: >-
   The CRM is the chapter's system of record: every client, mentor, partner,
   funder and meeting lives in it, and every application reads and writes it. This
@@ -360,15 +360,30 @@ steps:
     produces: []
     mode: automated
     actions:
-      - do: Nothing extra to run. The script in step 9.10 creates the roles, checking each one against what this CRM has before writing it.
-        see: Every role reported applied and read back identical, and no entries reported removed.
+      - do: Nothing extra to run for the roles themselves. The script in step 9.10 creates the roles, checking each one against what this CRM has before writing it.
+        see: "Every role reported applied and read back identical. Lines marked unapplyable are explained under If it didn't work."
+      - do: "Give the Client Assignment Role the User permission it needs to assign a mentor. The roles captured on 31 August predate this ruling (Doug, 09-07-26). In the folder ~/Dropbox/Projects/cbm-client-intake, type the line below and press Enter. It changes nothing:"
+        items:
+          - "env $(grep -v '^#' ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env | xargs) uv run python scripts/migrate_client_assignment_role.py"
+        see: "A plan to raise Client Assignment Role, User, to read all and edit own."
+      - do: "Type the line below and press Enter:"
+        items:
+          - "env $(grep -v '^#' ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env | xargs) uv run python scripts/migrate_client_assignment_role.py --apply"
+        see: The grant reported applied. Running the first line again reports nothing to do.
     done_when: >-
       Every role the standard names exists, and reading each one back matches what
       was sent.
     check:
       how: The script reports every role read back identical, with nothing removed.
       probe: The conformance check compares each role with the standard.
-    if_not: If the script reports entries it had to remove, the run is incomplete. Install the add-on products (step 9.7) and run it again.
+    if_not: >-
+      The script ends with exit 4 whenever it had to leave an entry out, and it
+      always does here. Read the unapplyable lines. A roleField line, such as
+      Standard User: Account.cCompanyPartnerProfile, names a field the source CRM
+      has since deleted; it is expected, and leaving it out is correct. A roleScope
+      line names a whole feature the CRM does not have, which means an add-on
+      product is missing: install it (step 9.7) and run step 9.10's apply line
+      again. Exit 4 with only roleField lines is a finished run.
     goes_wrong: >-
       Two things, both seen in August. An entry naming a feature the CRM does not
       have: the CRM refuses the entire role, not just that entry. And an entry naming
@@ -638,6 +653,10 @@ steps:
     source: 3-Methods-CRM-Google-Applications.md#9.20
 
 changes:
+  - version: "0.4"
+    date: "09-23-26 00:55"
+    change: >-
+      Step 9.11 now runs scripts/migrate_client_assignment_role.py. The roles captured on 31 August give the Client Assignment Role no User permission, so a client administrator on that team alone was refused on Assign (ruled 09-07-26). Its If it didn't work now tells an expected exit 4 (a field the source deleted) from a real one (an add-on missing); the old advice to install the add-ons and run again never ended. Found in the review before the first real chapter.
   - version: "0.3"
     date: "09-19-26 00:50"
     change: >-

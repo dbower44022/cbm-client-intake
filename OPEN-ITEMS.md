@@ -6,6 +6,27 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+32. **The worker reads its mail switches only at start-up, from the
+    environment** (found 2026-09-23, reviewing the deployment guide before the
+    first real chapter). `worker.py` decides `inbound_on` (the info@ poller) and
+    `comms_store` (Gmail sync) around lines 300–318, before the `/setup`
+    override layer is loaded at ~399, and never re-evaluates them. So
+    `GMAIL_SYNC` / `OPS_MAILBOX` set at `/setup` never start either loop on the
+    worker, restart or not — while `/setup` shows them as in force. Cleveland
+    never saw it because both overlays set both as environment variables.
+    **Worked around for chapters, not fixed:** `scripts/rehearsal/render_spec.py`
+    now puts every Google and mail setting in the spec, and guide steps
+    11.14–11.18 confirm at `/setup` rather than set there. The real fix is to load
+    the boot overrides before those decisions (as `core/boot_overrides.load_at_boot`
+    does for the web process) or to re-evaluate them on each settings refresh —
+    a runtime change, so it ships dark and is reviewed on crm-test first. Until
+    then, `/setup` should not offer these two as live-editable on the worker.
+    **Related, owed:** Lakeside's `APP_ENCRYPTION_KEY` was minted by the old
+    `render_spec.py` as `secrets.token_urlsafe(32)`, which is not a Fernet key
+    (inferred from the script, not checked on the deployment). If so, Lakeside's
+    `/setup` refuses every secret. Nothing is stored encrypted there, so it can
+    be replaced with a valid key without loss.
+
 31. **A settings-store test reads the developer's own `.env`** (found
     2026-09-13). `tests/test_settings_store_pg.py::test_override_round_trip_and_
     history` asserts the override history is exactly `["30", "25"]`; with a real

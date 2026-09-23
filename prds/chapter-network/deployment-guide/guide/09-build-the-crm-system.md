@@ -1,7 +1,7 @@
 # Stage 9 — Build the CRM system
 
-**Version:** 0.3  
-**Last Updated:** 09-19-26 00:50  
+**Version:** 0.4  
+**Last Updated:** 09-23-26 00:55  
 **Generated from** `steps/stage-09.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -392,14 +392,20 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Do this:**
 
-1. Nothing extra to run. The script in step 9.10 creates the roles, checking each one against what this CRM has before writing it.
-   *You should see:* Every role reported applied and read back identical, and no entries reported removed.
+1. Nothing extra to run for the roles themselves. The script in step 9.10 creates the roles, checking each one against what this CRM has before writing it.
+   *You should see:* Every role reported applied and read back identical. Lines marked unapplyable are explained under If it didn't work.
+2. Give the Client Assignment Role the User permission it needs to assign a mentor. The roles captured on 31 August predate this ruling (Doug, 09-07-26). In the folder ~/Dropbox/Projects/cbm-client-intake, type the line below and press Enter. It changes nothing:
+   - env $(grep -v '^#' ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env | xargs) uv run python scripts/migrate_client_assignment_role.py
+   *You should see:* A plan to raise Client Assignment Role, User, to read all and edit own.
+3. Type the line below and press Enter:
+   - env $(grep -v '^#' ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env | xargs) uv run python scripts/migrate_client_assignment_role.py --apply
+   *You should see:* The grant reported applied. Running the first line again reports nothing to do.
 
 **Done when:** Every role the standard names exists, and reading each one back matches what was sent.
 
 **How to check:** The script reports every role read back identical, with nothing removed.
 
-**If it didn't work:** If the script reports entries it had to remove, the run is incomplete. Install the add-on products (step 9.7) and run it again.
+**If it didn't work:** The script ends with exit 4 whenever it had to leave an entry out, and it always does here. Read the unapplyable lines. A roleField line, such as Standard User: Account.cCompanyPartnerProfile, names a field the source CRM has since deleted; it is expected, and leaving it out is correct. A roleScope line names a whole feature the CRM does not have, which means an add-on product is missing: install it (step 9.7) and run step 9.10's apply line again. Exit 4 with only roleField lines is a finished run.
 
 **What usually goes wrong:** Two things, both seen in August. An entry naming a feature the CRM does not have: the CRM refuses the entire role, not just that entry. And an entry naming a field since deleted on the source: the target refuses the whole role for it, so the source needs cleaning.
 
@@ -685,6 +691,7 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 | Version | Date | Change |
 |---|---|---|
+| 0.4 | 09-23-26 00:55 | Step 9.11 now runs scripts/migrate_client_assignment_role.py. The roles captured on 31 August give the Client Assignment Role no User permission, so a client administrator on that team alone was refused on Assign (ruled 09-07-26). Its If it didn't work now tells an expected exit 4 (a field the source deleted) from a real one (an add-on missing); the old advice to install the add-ons and run again never ended. Found in the review before the first real chapter. |
 | 0.3 | 09-19-26 00:50 | The script now reads the chapter's name, CRM settings and provisioning account (CHAPTER-SLUG.provision) from the chapter information form through --values; the step that edited Lakeside's name out of the script by hand is gone. |
 | 0.2 | 09-19-26 00:07 | Every command-line action made exact (Doug, 09-19-26: sweep every step): the ssh, docker, find, rsync, chown and rebuild commands for copying the configuration; the trial scripts' exact options, including the name the provisioning account takes and the production option the version record needs; the test request for the applications' key; and the conformance check with its exit codes. Two traps written in: the scripts fill missing values from the repository's own settings, which are Cleveland's, and the settings file's password must be letters and numbers only. |
 | 0.1 | 09-18-26 17:05 | First version as data, converted from the methods for building the CRM (3-Methods-CRM-Google-Applications.md, version 0.5) with the step list's finishing tests. Numbered actions, a reason per step, and a check an app can run were added. |

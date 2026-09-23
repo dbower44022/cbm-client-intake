@@ -170,8 +170,12 @@ deliberately: `ANALYTICS_ENABLED`, `EVENTS_ENABLED`, `EVENTS_PUBLIC_API`,
 `MENTOR_PROVISION_USERS`, `RECORD_QUICK_ADD`, `SETUP_ENABLED`,
 `ASYNC_DELIVERY`, `ESPO_DRY_RUN`.
 
-**`deploy_on_push` must be OFF** on a chapter app once the release train exists.
-It is named in the risk register as one of the ways this plan fails quietly.
+**`deploy_on_push` is ON, and the branch is `release`.** This used to say OFF,
+which was right while the release tag travelled in each deployment's spec. Since
+v0.228.0 the tag is stamped into the software at cut time, so an app following
+`release` with `deploy_on_push` on updates itself correctly (guide step 11.9).
+The danger that remains is `deploy_on_push` from `main`, which `render_spec.py`
+refuses.
 
 ---
 
@@ -267,7 +271,7 @@ secrets:                # names only — values live in the store, never here
   - DATABASE_URL
   - SESSION_SECRET
   - APP_ENCRYPTION_KEY    # generated once; never rotated — rotation destroys stored secrets
-  - GOOGLE_SERVICE_ACCOUNT_JSON
+  - GOOGLE_SERVICE_ACCOUNT_JSON  # given to the spec script as GOOGLE_SERVICE_ACCOUNT_KEY_FILE, the key file's path
   - ZOOM_CLIENT_SECRET    # only for a chapter that runs public webinars
 
 flags:                  # state each one deliberately
@@ -286,7 +290,7 @@ flags:                  # state each one deliberately
   setup_enabled:
   async_delivery:
   espo_dry_run: false       # true only on a deployment with no CRM
-  deploy_on_push: false     # OFF once the release train exists
+  deploy_on_push: true      # ON, following the release branch — guide step 11.9
 ```
 
 **That is the whole per-city surface: about 35 values, seven of them secrets, one
@@ -299,6 +303,7 @@ the danger was never the number, it was that nobody could see them all at once.
 
 | Date | Change |
 |---|---|
+| 09-23-26 00:55 | `deploy_on_push` corrected to ON (following `release`), matching guide step 11.9. The Google key is handed to the spec script by file path. Found reviewing the guide before the first real chapter. |
 | 09-19-26 00:30 | `delegated_admin` added (GOOGLE_DELEGATED_ADMIN, which no step or form set); `events_public_base_url` now says to leave it empty; `shared_drive_id` notes it is filled in at step 10.5. Found by the precision sweep. |
 | 09-19-26 00:10 | The Google branch field removed from the form, and § D rewritten: every chapter hosts its own Google Workspace (Doug, 09-18-26). |
 | 09-18-26 17:45 | `mentor_email_domain` added to the form's Google section, and three switches added: `google_create_mailbox`, `gdrive_identity`, `zoom_events`. Found by the information check when the deployment guide was turned into data. |

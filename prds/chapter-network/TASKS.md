@@ -20,6 +20,64 @@ is a table at the end of this file linking to them.
 
 # Part 1 — Ruled, and what follows
 
+## G1. Guide defects left from the 09-23 review — fix after the first real chapter
+
+### What this is
+
+The review of the deployment guide on 2026-09-23, the night before the first
+real chapter, fixed the defects that would stop the build (the encryption key,
+the settings the spec script left out, the Client Assignment Role grant, and the
+stage 17 checks — `render_spec.py`, stages 9, 11 and 17). These were found in the
+same review and left, because none stops the build. Each one names the file.
+
+1. **Roles come from the wrong source.** Step 9.11 replays
+   `rehearsal-2026-08-31/crmtest-capture/roles.json`; the ruled standard is
+   `roles-standard/prod-capture-2026-08-31.json`, and step 9.8 copies today's
+   crm-test files beside 08-31 roles, so an entity added since has no grants.
+   Recapture from crm-test (aligned to the standard 09-13) or point the script
+   at the standard.
+2. **Step 9.14 overclaims and step 9.15 cannot pass.** `apply_api_half.py` sets
+   neither the logo nor a site address (9.14), and it removes Cleveland's
+   documentation tab without adding the chapter's own (9.15 step 2).
+3. **Step 9.19 expects the wrong output.** The file copy already delivers
+   `CNetworkStandard`, so `build_networkstandard.py` should report nothing to do.
+4. **The guide over-gates.** Stage 8 requires stages 4, 6 and 7 finished, and
+   stages 9 and 11 require stage 8 "complete and reviewed", so the website and
+   legally reviewed policies block the CRM build. Everything they feed is
+   editable at `/setup`. Also: 2.7 (vault) and 3.1 (founding email) wait on each
+   other; 5.8 names tokens with the slug from 8.2; 6.6 and 7.5 save to a shared
+   drive not created until 10.5.
+5. **8.10 commits and pushes the form** — a push to `main` redeploys all of
+   Cleveland. It should be stored in the vault or a chapter-owned place instead.
+6. **The paid add-ons are "not decided"** in `stage-02.yaml:88` and
+   `stage-09.yaml:242`; R7 ruled them in on 08-31.
+7. **Inconsistencies.** The members group is `allmembers@` in 4.10 and
+   `members@` in 8.4; 4.2 stores a password in the Board vault; `apps.` and
+   `crm.CHAPTER-DOMAIN` do not say which domain; 8.4 demands `alert_email_from`
+   where 4.8 allows it empty; `chapter-values.md` says
+   `EVENTS_PUBLIC_BASE_URL` defaults to Cleveland (it is empty).
+8. **The worked example is stale.** `rehearsal-2026-08-31/lakeside-values.yaml`
+   still has `google.branch` and lacks `mentor_email_domain`, `delegated_admin`,
+   the zoom section and three switches.
+9. **Stage 12 and 15 details.** 12.4's success line logs at INFO and a bare
+   `python -c` prints no INFO (go by the email arriving); 12.3 and 15.4 boot a full
+   copy of the live CRM, whose scheduled jobs may send or collect real mail;
+   14.2 step 4 never says to set a status, yet only Approved/Active links the
+   account; 17.1 never names `scripts/rehearsal/stage4_users.py`.
+10. **Missing checks.** 4.4 waits for DKIM without checking it; nothing checks
+    that `apps.` and `crm.` are DNS only (grey cloud).
+11. **Public form still says CBM** — `forms/client_intake/frontend/index.html`
+    lines 70 and 159 ("about CBM", "from CBM"). An applicant sees Cleveland's
+    initials (`OPEN-ITEMS.md` #28).
+
+### Steps
+
+1. Note what the first chapter's build actually hit, and fold it in here.
+2. Fix each in the stage YAML, re-render with
+   `scripts/render_deployment_guide.py`, and confirm `--check` is clean.
+
+---
+
 **Doug ruled D1, D2 and D3 on 2026-08-26, and the cadence half of D4 the same
 day.** They are recorded in [DECISIONS.md](DECISIONS.md); what each one now
 *obliges* is below. **No decision is currently blocking work** — the one still

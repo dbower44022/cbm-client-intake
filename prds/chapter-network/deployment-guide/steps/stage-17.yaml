@@ -1,7 +1,7 @@
 stage: 17
 name: Check everything works before going live
-version: "0.2"
-updated: "09-19-26 00:04"
+version: "0.3"
+updated: "09-23-26 00:55"
 why: >-
   This stage proves the chapter's system works end to end before any real client
   uses it: each team reaches its own pages and nobody else's, and a public
@@ -17,7 +17,7 @@ time: >-
 before_you_start:
   - The staff accounts exist (stage 14)
   - The mentor accounts exist (steps 15.8 to 15.10)
-  - The chapter's pages are on its website (stage 13)
+  - The chapter's pages are on its website (stage 13). Only step 17.8 and the website half of step 17.3 need it; everything else can run without it
 unlocks: >-
   The handover to normal support (stage 18). The chapter can take real clients.
 steps:
@@ -46,8 +46,10 @@ steps:
           - "Active: yes"
           - "A password of 20 letters and digits, stored first in the chapter's vault under the user name"
         see: Six accounts in the Users list, each with one team.
-      - do: "Create the seventh, the Mentor Team test user, through Mentor Administration so it is linked to a mentor record (step 15.9). Sign in to APP-ADDRESS/mentoradmin/ as a mentor administrator, add a mentor named Test Mentor SLUG, fill in the required fields, and set the status to Active."
+      - do: "Create the seventh, the Mentor Team test user, through Mentor Administration so it is linked to a mentor record (step 15.9). Sign in to APP-ADDRESS/mentoradmin/ as a mentor administrator, add a mentor named Test Mentor SLUG, fill in the required fields, set Accepting New Clients to yes, and set the status to Active. The exact label of the accepting field on screen is not verified."
         see: The mentor marked Complete, with a login created. Its user name is set by the software from the mentor's name; write it down.
+      - do: "Accepting new clients matters: the Assign list in step 17.4 offers only mentors who are Active, accepting new clients and linked to a login. Without it the list is empty and step 17.4 looks broken."
+      - do: "If the chapter has Create missing mailboxes switched on, setting the status creates a real Google mailbox for the test mentor, which takes a paid licence. Write the address down; step 17.9 deletes it."
       - do: Store the seventh account's password in the chapter's vault under its user name.
     done_when: >-
       There is one non-administrator test account for each team.
@@ -95,7 +97,7 @@ steps:
           - "SLUG.test.marketing: ops and events"
           - "SLUG.test.analytics: analytics only"
           - "setup: refused for all seven"
-        see: The same pattern as the trial chapter's record, prds/chapter-network/rehearsal-2026-08-31/nonadmin-gate-matrix.json.
+        see: "The same pattern as the trial chapter's record, prds/chapter-network/rehearsal-2026-08-31/nonadmin-gate-matrix.json, for the first eleven addresses. That record shows Not Found for the setup address, which is not the right answer; the next action says what is."
       - do: "For the setup address, read the refusal. The right answer, when the settings page is switched on, is a refusal saying System Settings is restricted to administrators."
         see: That refusal, not "Not Found".
     done_when: >-
@@ -120,12 +122,12 @@ steps:
     name: Submit the public application form
     why: The public form is how clients arrive, so it is tested from the chapter's own website the way a client would use it.
     who: both — the central support organization, or anyone at the chapter
-    first: ["17.2", "13.2"]
+    first: ["17.2"]
     needs: [website_base_url]
     produces: [test_submission]
     mode: guided
     actions:
-      - do: Open the chapter's website address in a private browser window and follow its link to the client application form.
+      - do: Open the chapter's website address in a private browser window and follow its link to the client application form. If stage 13 has not put the link on the website yet, open APP-ADDRESS/client-intake/ directly, carry on, and follow the website's link once stage 13 is done.
         see: The form at APP-ADDRESS/client-intake/.
       - do: Open each of the four policy links beside the consent box.
         see: Each of the chapter's own four policy documents, not Cleveland's.
@@ -315,6 +317,7 @@ steps:
           - SLUG.test.marketing
           - SLUG.test.analytics
       - do: In Mentor Administration, set Test Mentor SLUG's status to Inactive.
+      - do: If step 17.1 created a Google mailbox for the test mentor, delete it in admin.google.com, so it stops taking a licence.
       - do: "Write in the chapter's handover notes: the date, the four records deleted, and the seven users set inactive."
     done_when:
       - "The test submissions created for this stage are gone or disabled."
@@ -332,6 +335,10 @@ steps:
     source: 5-Methods-Form-Accounts-Checks.md#17.9
 
 changes:
+  - version: "0.3"
+    date: "09-23-26 00:55"
+    change: >-
+      Three corrections from the review before the first real chapter. Step 17.1 sets the test mentor to accepting new clients, without which the Assign list in step 17.4 is empty, and step 17.9 deletes any Google mailbox that created. Step 17.2 no longer points at a record whose settings-page answer the next action calls wrong. Step 17.3 no longer waits on stage 13: the website link is checked once it exists, and the rest of the form check runs without it.
   - version: "0.2"
     date: "09-19-26 00:04"
     change: >-

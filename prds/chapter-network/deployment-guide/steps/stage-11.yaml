@@ -1,7 +1,7 @@
 stage: 11
 name: Deploy the chapter's applications
-version: "0.4"
-updated: "09-19-26 14:45"
+version: "0.5"
+updated: "09-23-26 00:55"
 why: >-
   The applications are what the chapter's staff, mentors and the public actually
   use: the intake forms, the staff tools and the public events page. This stage
@@ -50,7 +50,7 @@ steps:
     why: The deployment settings are what the hosting platform builds the applications from, and every value must come from the reviewed form, not from memory.
     who: central
     first: ["8.9", "9.17"]
-    needs: [chapter_name, chapter_slug, timezone, app_base_url, website_base_url, events_public_base_url, docs_site_url, policy_client_conduct_url, policy_mentor_ethics_url, policy_terms_url, policy_privacy_url, chapter_tokens_url, primary_domain, ops_mailbox, alert_email_from, alert_email_to, members_group, shared_drive_id, zoom_host_email, crm_base_url, flags, ZOOM_CLIENT_SECRET, zoom_account_id, zoom_client_id, mentor_email_domain]
+    needs: [GOOGLE_SERVICE_ACCOUNT_JSON, chapter_name, chapter_slug, timezone, app_base_url, website_base_url, events_public_base_url, docs_site_url, policy_client_conduct_url, policy_mentor_ethics_url, policy_terms_url, policy_privacy_url, chapter_tokens_url, primary_domain, ops_mailbox, alert_email_from, alert_email_to, members_group, shared_drive_id, zoom_host_email, crm_base_url, flags, ZOOM_CLIENT_SECRET, zoom_account_id, zoom_client_id, mentor_email_domain]
     produces: [APP_ENCRYPTION_KEY]
     mode: automated
     actions:
@@ -59,15 +59,20 @@ steps:
           - "ESPO_API_KEY="
           - "ESPO_PROVISION_USERNAME="
           - "ESPO_PROVISION_PASSWORD="
+      - do: "Download the Google machine account key from the chapter's Operations vault (step 10.2) and save it as ~/.config/cbm-CHAPTER-SLUG/google-key.json. Then add this line to the end of CHAPTER-ENV-FILE. The file is named rather than pasted because the key runs over several lines, which would break the build commands that read CHAPTER-ENV-FILE:"
+        items:
+          - "GOOGLE_SERVICE_ACCOUNT_KEY_FILE=~/.config/cbm-CHAPTER-SLUG/google-key.json"
+      - do: "Check the form's flags section names every switch deliberately, as true or false. The Google switches (gmail_sync, gcal_events, gdrive_docs, google_directory_check, google_create_mailbox) go into the deployment from here, not from the settings page: the background worker decides at start-up whether to read the mailbox, and a switch set later at /setup never reaches it. Set gdrive_identity to service, and set deploy_on_push to true so the application follows the release branch from its first build."
       - do: "In a terminal, in the folder ~/Dropbox/Projects/cbm-client-intake, type the line below and press Enter. CHAPTER-VALUES-FILE is the filled-in chapter information form saved as YAML (the trial chapter's is prds/chapter-network/rehearsal-2026-08-31/lakeside-values.yaml):"
         items:
           - "uv run python scripts/rehearsal/render_spec.py CHAPTER-VALUES-FILE ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG-app.yaml"
-        see: "A line reading: wrote ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG-app.yaml following branch release with 10 shared + N web-only env vars. If it reads secrets not yet minted, step 9.10 has not run."
+        see: "A line reading: wrote ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG-app.yaml following branch release with N shared + N web-only env vars. If it reads secrets not yet minted, step 9.10 has not run. If it names GOOGLE_SERVICE_ACCOUNT_KEY_FILE or shared_drive_id, a Google switch is on before stage 10 has produced what it needs."
       - do: "Open CHAPTER-SLUG-app.yaml and check three things. The generator sets them itself; this is a check, not an edit:"
         items:
           - "There is no ENV_LABEL line."
           - "ALLOWED_ORIGINS is https://APP-ADDRESS, or absent if the application address is not known yet."
           - "Every branch line reads branch: release (the web part, the worker and the migrate job)."
+          - "No value names Cleveland or cbmentors.org. The chapter's own website, mentor email domain and mailbox addresses appear instead."
       - do: "Open CHAPTER-ENV-FILE and copy the value after APP_ENCRYPTION_KEY= into a new item in the chapter's Operations vault named Stored-data encryption key. This value must never change."
         see: The Stored-data encryption key item in the Operations vault.
       - do: Never commit CHAPTER-SLUG-app.yaml anywhere. It holds secrets in plain text. It is deleted in step 11.3.
@@ -82,8 +87,9 @@ steps:
       The stored-data encryption key. The generator creates it quietly on first run,
       and changing it later destroys the data it protects, so it is permanent from
       the moment it exists. Also, the trial script asks for a development database,
-      which takes no backups (see step 11.4), and it does not know the Google or
-      Zoom values.
+      which takes no backups (see step 11.4). A form field written as "none yet" is
+      left out of the settings, so the software's own default applies until the
+      field is filled in and the settings are generated again.
     later: The settings generator (work list item 16) reads the form and the vault and writes no file.
     status: done-for-real — with the trial script, not a finished generator.
     source: 3-Methods-CRM-Google-Applications.md#11.2
@@ -100,7 +106,7 @@ steps:
       - do: Nothing to run. The settings file from step 11.2 carries every secret into the deployment when step 11.5 creates the application. The database connection is supplied by the hosting platform and never appears in the file.
       - do: "After step 11.5 has succeeded, type the line below and press Enter, to delete the settings file:"
         items:
-          - "rm ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG-app.yaml"
+          - "rm ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG-app.yaml ~/.config/cbm-CHAPTER-SLUG/google-key.json"
         see: The prompt again, with no message.
       - do: Check every secret in CHAPTER-ENV-FILE also has an item in the Operations vault. Then delete CHAPTER-ENV-FILE too, once the vault holds everything.
         see: No settings file and no secrets file left on the computer.
@@ -230,8 +236,8 @@ steps:
       - do: "Open https://APP-ADDRESS/healthz in a browser. Until step 11.10, use the address DigitalOcean gave the application, shown by doctl apps get APP-ID under Default Ingress."
         see:
           - "status: ok"
-          - "version: the current release's number, for example 0.231.1"
-          - "releaseTag: the same release, for example v0.231.1. It reads null until step 11.8 moves the application to the release branch."
+          - "version: the current release's number, the one the release branch holds today"
+          - "releaseTag: the same release with a v in front. The application follows the release branch from its first build, so it reads the tag straight away. A null here means the release branch's latest commit is not a cut release."
     done_when: >-
       The application is running the version the release schedule names, and it
       reports that version when asked.
@@ -377,7 +383,7 @@ steps:
         items:
           - "status: ok"
           - "organization: the chapter's own name, not Cleveland's"
-          - "releaseTag: the current release, for example v0.231.1"
+          - "releaseTag: the current release"
           - "database: ok"
           - "worker, then lastHeartbeatAgeSeconds: under 180"
         see: All five as listed.
@@ -437,17 +443,18 @@ steps:
     mode: guided
     actions:
       - do: Confirm no other deployment reads the same shared operations mailbox. Only one deployment may read a given mailbox.
-      - do: "Sign in to https://APP-ADDRESS/setup as a CRM administrator. Set these settings, one at a time, saving each:"
+      - do: "Every Google setting in steps 11.14 to 11.18 reached the application from the form in step 11.2. Sign in to https://APP-ADDRESS/setup as a CRM administrator and confirm these show the chapter's values:"
         items:
-          - "GOOGLE_SERVICE_ACCOUNT_JSON: the whole content of the key file from the Operations vault (step 10.2)"
+          - "GOOGLE_SERVICE_ACCOUNT_JSON: shown as set"
           - "OPS_MAILBOX: the shared operations mailbox address"
-          - "COMMS_INTERNAL_DOMAINS: the chapter's email domain"
+          - "COMMS_INTERNAL_DOMAINS: the chapter's email domain, and the mentors' domain when it differs"
           - "GMAIL_SYNC: true"
-        see: Each setting shown with its new value. The key is shown as set, never as its value.
-      - do: "Restart the worker: type the line below and press Enter:"
+        see: Each value as listed. Do not change them here.
+      - do: "If a value is missing or wrong, correct the form, run step 11.2 again, then type the two lines below, pressing Enter after each. The first loads the new settings; the second restarts the worker, which reads its mail switches only at start-up:"
         items:
+          - "doctl apps update APP-ID --spec ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG-app.yaml"
           - "doctl apps create-deployment APP-ID"
-        see: A new deployment reaching ACTIVE.
+        see: A new deployment reaching ACTIVE. Delete the settings file and the key file again afterwards, as in step 11.3.
       - do: In the hosting account, open Apps, then CHAPTER-SLUG-intake, then Runtime Logs, and choose the delivery-worker component.
         see: A line naming the mailbox the worker acts as, and it is the shared operations mailbox. If that line is absent or names another address, stop; the cause is in stage 10.
       - do: From an outside address, send a message to the shared operations mailbox.
@@ -474,7 +481,7 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: "At https://APP-ADDRESS/setup, set:"
+      - do: "At https://APP-ADDRESS/setup, confirm these show the chapter's values. If not, correct them the way step 11.14 describes:"
         items:
           - "ALERT_EMAIL_FROM: the alert sending mailbox (step 4.8)"
           - "ALERT_EMAIL_TO: the alert receiving address (step 4.9)"
@@ -502,9 +509,10 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: "At https://APP-ADDRESS/setup, set:"
+      - do: "At https://APP-ADDRESS/setup, confirm this shows true. If not, correct it the way step 11.14 describes:"
         items:
           - "GCAL_EVENTS: true"
+      - do: "This check needs a mentor with a login and an assigned client, and none exists until stage 15. Create them now: the test mentor from step 17.1, then a test application and its assignment from steps 17.3 and 17.4, using the made-up values those steps give. Step 17.9 removes them."
       - do: Sign in as a mentor, open a client in Client Management, and create a session with Status Scheduled and a start time tomorrow.
         see: The meeting on the mentor's Google calendar, with the client's contacts invited and a Meet link attached.
     done_when: >-
@@ -529,7 +537,7 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: "At https://APP-ADDRESS/setup, set:"
+      - do: "At https://APP-ADDRESS/setup, confirm these show the chapter's values. If not, correct them the way step 11.14 describes:"
         items:
           - "GDRIVE_SHARED_DRIVE_ID: the shared drive identifier (step 10.5)"
           - "GDRIVE_IDENTITY: service"
@@ -557,11 +565,11 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: "At https://APP-ADDRESS/setup, set:"
+      - do: "At https://APP-ADDRESS/setup, confirm these show the chapter's values. If not, correct them the way step 11.14 describes:"
         items:
           - "MENTOR_EMAIL_DOMAIN: the domain mentors' mailboxes are made on"
           - "GOOGLE_DELEGATED_ADMIN: the chapter's Google administrator address (step 4.5). The directory calls act as this administrator."
-          - "GOOGLE_MEMBERS_GROUP: the members group address (step 4.10), or leave empty to skip the group step"
+          - "GOOGLE_MEMBERS_GROUP: the members group address (step 4.10), or empty to skip the group step"
           - "GOOGLE_DIRECTORY_CHECK: true"
           - "GOOGLE_CREATE_MAILBOX: true"
           - "MENTOR_PROVISION_USERS: true"
@@ -570,6 +578,10 @@ steps:
       - do: Sign in at mail.google.com as the new mentor address, with the temporary password.
         see: The mailbox opens and asks for a new password.
       - do: Delete the test mentor's mailbox in admin.google.com, then the test mentor record and its contact in the CRM.
+      - do: "Switch doctl back to the account you use for Cleveland, so the next doctl command does not act on the chapter's account. Type the line below to see the account names, then the second with the right one:"
+        items:
+          - "doctl auth list"
+          - "doctl auth switch --context CLEVELAND-CONTEXT"
     done_when: >-
       A mentor taken through approval ends up with a real working mailbox on the
       chapter's mentor email domain.
@@ -586,6 +598,10 @@ steps:
     source: 3-Methods-CRM-Google-Applications.md#11.18
 
 changes:
+  - version: "0.5"
+    date: "09-23-26 00:55"
+    change: >-
+      From the review before the first real chapter. Every Google, mail, Drive, website and Zoom setting now goes into the deployment in step 11.2, from the form, and steps 11.14 to 11.18 confirm them at /setup instead of setting them there: the background worker decides at start-up from its own settings whether to read the mailbox, so a switch set at /setup never reached it. The Google key is named by file (GOOGLE_SERVICE_ACCOUNT_KEY_FILE), and step 11.3 deletes the file. The stored-data encryption key the generator creates is now one the software accepts; before, /setup refused to store any secret. Step 11.7 no longer names a release that does not exist, and step 11.16 creates the test mentor and client it needs. Step 11.18 switches doctl back.
   - version: "0.4"
     date: "09-19-26 14:45"
     change: >-
