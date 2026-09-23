@@ -20,6 +20,26 @@ is a table at the end of this file linking to them.
 
 # Part 1 — Ruled, and what follows
 
+## C1. Upgrade Cleveland's two CRMs to EspoCRM 10
+
+### What this is
+
+Ruled 2026-09-23: Boston runs the current EspoCRM release (10.x), and Cleveland
+moves up to it later (DECISIONS). Until then the network runs two major CRM
+versions — crm-test is on 9.3.4, and production's version is unverified — which
+ruling 4 says must not last. The applications have run against 10.0.6 on the
+Lakeside rehearsal, so the upgrade is expected to need no application change, but
+that is not proven against Cleveland's data or its two paid add-ons.
+
+### Steps
+
+1. Read production's EspoCRM version (Administration → About, as an admin).
+2. Confirm the two paid add-on versions installed on both CRMs support EspoCRM 10.
+3. Upgrade crm-test first, following `crm-update-runbook.md`, and re-capture the
+   training sandbox's fixed copy afterwards, or the nightly reset restores 9.3.4.
+4. Run the conformance check and a live pass as a real non-admin on crm-test.
+5. Upgrade production at the Sunday 17:00 UTC slot.
+
 ## G1. Guide defects left from the 09-23 review — fix after the first real chapter
 
 ### What this is

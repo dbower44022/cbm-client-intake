@@ -138,7 +138,7 @@ Learned on the 2026-08-31 rehearsal, and not on the list above until then:
 | | Cleveland's value | Notes |
 |---|---|---|
 | **The `tabList` url item** | *CBM Documentation* → `docs.clevelandbusinessmentors.org` | The one per-chapter item inside an otherwise-standard tab list; it is `DOCS_SITE_URL`'s twin inside the CRM |
-| **EspoCRM version** | crm-test 9.3.4, prod (unverified) | The CRMBuilder deploy installs the current release (10.0.6 on 2026-08-31). Not a value a chapter picks — but until the deploy pins one, it *is* per-instance, and it must not be |
+| **EspoCRM version** | crm-test 9.3.4, prod (unverified) | The CRMBuilder deploy installs the current release (10.0.6 on 2026-08-31). Not a value a chapter picks. **Ruled 2026-09-23:** a new chapter takes the current release and Cleveland moves up to it (`TASKS.md` C1), so the difference is temporary |
 
 Also per-chapter inside the CRM, and not configuration:
 
@@ -241,6 +241,7 @@ until every setting the build reads is asked.
 
 | Date | Change |
 |---|---|
+| 09-23-26 13:23 | EspoCRM version row: a new chapter takes the current release and Cleveland moves up to it (Doug, 09-23-26). |
 | 09-23-26 12:03 | The blank form is replaced by the chapter information page built from stage 8 of the deployment guide; this file becomes the engineers' inventory and says so at the top (Doug, 09-23-26: the file explained nothing about the process). |
 | 09-23-26 00:55 | `deploy_on_push` corrected to ON (following `release`), matching guide step 11.9. The Google key is handed to the spec script by file path. Found reviewing the guide before the first real chapter. |
 | 09-19-26 00:30 | `delegated_admin` added (GOOGLE_DELEGATED_ADMIN, which no step or form set); `events_public_base_url` now says to leave it empty; `shared_drive_id` notes it is filled in at step 10.5. Found by the precision sweep. |

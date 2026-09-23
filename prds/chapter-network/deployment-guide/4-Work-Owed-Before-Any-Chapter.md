@@ -2,10 +2,10 @@
 
 **Document:** Things the central support organization has to build, decide or write
 before the New Chapter Deployment Guide can actually be followed
-**Version:** 0.12
+**Version:** 0.13
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-23-26 13:21
+**Last Updated:** 09-23-26 13:23
 
 ---
 
@@ -34,11 +34,10 @@ Each line was checked against the code and the step files on 09-23-26.
 
 **Needs an answer before Boston's build reaches it:**
 
-1. **Item 2 — which CRM version Boston installs.** Nothing pins a version.
-   CRMBuilder's deploy installs the current release (10.0.6 on 08-31), while
-   Cleveland's test system runs 9.3.4. Boston starts a major version ahead of
-   Cleveland unless someone decides otherwise. The add-on half of this item was
-   ruled on 08-31 (R7): both add-ons are in the standard.
+1. ~~**Item 2 — which CRM version Boston installs.**~~ **Ruled 09-23-26 (Doug):**
+   Boston runs the current release CRMBuilder installs, and Cleveland moves up to
+   it later (`TASKS.md` C1). Nothing is left that needs an answer before the
+   build.
 
 **Boston builds around it, with a known workaround:**
 
@@ -152,6 +151,11 @@ second chapter ever appears.
 the standard (R7, 08-31-26). The version half is still open, and Boston's build
 reaches it at step 9.3. Steps 2.2 and 9.7 still call the add-ons undecided
 (`TASKS.md` G1 item 6).
+
+**Ruled 09-23-26 (Doug).** A new chapter installs the current EspoCRM release
+that CRMBuilder's deploy installs, and Cleveland moves up to it later
+(`TASKS.md` C1). Still missing: a published statement naming the versions, for
+step 9.1.
 
 **What is missing.** No document says which CRM version a new chapter installs,
 which versions of the two paid add-on products, or which release of the standard
@@ -475,6 +479,7 @@ own records (finding F7 of the August build).
 
 | Version | Date | Change |
 |---|---|---|
+| 0.13 | 09-23-26 13:23 | Item 2 ruled: Boston runs the current EspoCRM release, and Cleveland moves up to it later (Doug, 09-23-26). Nothing now needs an answer before Boston's build. |
 | 0.12 | 09-23-26 13:21 | Brought up to date the day Boston is built. A new list at the top sorts every open item by what Boston needs: one needs an answer before the build (item 2, the CRM version), four have workarounds (items 15, 16, 1, 18), and the rest wait. Items 2, 4, 15 and 16 carry an update: the add-ons are ruled in, the colour file comes from the form, the applier's decision date passed with no recorded outcome, and the settings generator is mostly built. The 09-18-26 ranking is kept below the new list. |
 | 0.11 | 09-19-26 00:10 | Item 14 closed: every chapter hosts its own Google Workspace, so there is no provided branch (Doug, 09-18-26). |
 | 0.10 | 09-18-26 14:30 | Item 1 ruled: a chapter-owned Proton Pass business organization with central support members (Doug, 09-18-26). What remains is the central support organization's own vault and moving existing secrets off one laptop. |
