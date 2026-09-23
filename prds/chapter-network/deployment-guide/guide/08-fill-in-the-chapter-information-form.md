@@ -1,7 +1,7 @@
 # Stage 8 — Fill in the chapter information form
 
-**Version:** 0.11  
-**Last Updated:** 09-23-26 12:49  
+**Version:** 0.12  
+**Last Updated:** 09-23-26 14:27  
 **Generated from** `steps/stage-08.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -97,7 +97,7 @@ The chapter information form holds the roughly forty answers that differ from on
   - *If it is wrong:* Pages and messages show the wrong initials. Until the software reads this answer, they show Cleveland's CBM (work list G1, item 15).
   - *Example:* LBM
 - **Short label** (`chapter.slug`) — answered by the chapter; required.
-  - *What it is:* A short name, in lower case, that the software uses to name the chapter's server, applications and secrets. It has to be lower case because the hosting platform and Google accept only lower-case names: a label of boston becomes the application boston-intake, the database boston-db and the Google project boston-apps. Letters, digits and hyphens only, starting with a letter, at most 25 characters.
+  - *What it is:* Not the chapter's name and not its abbreviation: a third answer, which people never see. For Boston the three are Boston Business Mentors, BBM and boston. The short label is a short name, in lower case, that the software uses to name the chapter's server, applications and secrets. It has to be lower case because the hosting platform and Google accept only lower-case names: a label of boston becomes the application boston-intake, the database boston-db and the Google project boston-apps. Letters, digits and hyphens only, starting with a letter, at most 25 characters.
   - *Where to find it:* Choose it now. The city's name is usual. The page turns capitals into lower case and spaces into hyphens for you.
   - *If it is wrong:* The label becomes part of the names of the chapter's server and applications. Changing it after stage 9 means renaming them.
   - *Example:* lakeside
@@ -218,7 +218,7 @@ The chapter information form holds the roughly forty answers that differ from on
   - *Example:* #7A7A7A
 - **Web address (URL) of the colour file** (`web.chapter_tokens_url`) — answered by the central support organization; optional.
   - *What it is:* The web address of the small file that carries the four colours above into the applications' pages. The software loads it on every page after its standard colours.
-  - *Where to find it:* The central support organization writes the file from the four colours above and publishes it (step 6.5). The values-file writer produces the file itself, as prds/chapter-network/chapters/CHAPTER-SLUG-chapter-tokens.css. Mark not known yet until it is published.
+  - *Where to find it:* The central support organization writes the file from the four colours above and publishes it (step 6.5). The values-file writer produces the file itself, as prds/chapter-network/chapters/SHORT-LABEL-chapter-tokens.css. Mark not known yet until it is published.
   - *If it is wrong:* The applications keep Cleveland's colours. Nothing breaks.
   - *Example:* https://www.yourchapter.org/chapter-tokens.css
 
@@ -639,9 +639,9 @@ The chapter information form holds the roughly forty answers that differ from on
 
 1. In a Claude Code session in the folder ~/Dropbox/Projects/cbm-client-intake, type this request, with the page's link in place of PAGE-LINK:
    - Write the chapter values file from the chapter information page PAGE-LINK with scripts/chapter_form/to_values.py.
-   *You should see:* A message naming the file written, prds/chapter-network/chapters/CHAPTER-SLUG-values.yaml, and reading that the check passed. If the check names a question, the answer on the page is wrong or missing: correct it on the page and ask again.
+   *You should see:* A message naming the file written, prds/chapter-network/chapters/SHORT-LABEL-values.yaml, and reading that the check passed. If the check names a question, the answer on the page is wrong or missing: correct it on the page and ask again.
 2. Open the file and check it holds no secret value. Every line under secrets must be a name only.
-3. Commit it with the message "docs(chapter-network): CHAPTER-SLUG chapter information form", and push it.
+3. Commit it with the message "docs(chapter-network): SHORT-LABEL chapter information form", and push it.
 4. Ask a second person at the central support organization to open the file from the remote repository.
    *You should see:* The file opens, with both reviewers' names at the top.
 
@@ -659,6 +659,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 | Version | Date | Change |
 |---|---|---|
+| 0.12 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. The Short label question now says it is neither the chapter's name nor its abbreviation, with Boston's three answers as the example. |
 | 0.11 | 09-23-26 12:49 | The chapter now gives its four colours instead of the colour file's web address (Doug, 09-23-26): main, button, button under the mouse, and text, each with Cleveland's for comparison. The colour file's address becomes a question for the central support organization, and the values-file writer produces the file from the four colours. |
 | 0.10 | 09-23-26 12:38 | New question, the chapter abbreviation (Doug, 09-23-26): Cleveland's pages say CBM in about 90 places, and each chapter needs its own. The software does not read the answer yet (work list G1, item 15). |
 | 0.9 | 09-23-26 12:33 | The short label question says why it must be lower case (Doug, 09-23-26): the hosting platform and Google accept only lower-case names, and the label becomes the application, database and Google project names. The limit is now 25 characters, the longest that fits those names. The page lower-cases the label as it is typed, and every question with a required format shows that format under its box instead of only in the collapsed explanation. |

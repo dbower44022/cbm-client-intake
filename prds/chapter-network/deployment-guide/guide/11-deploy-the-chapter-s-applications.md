@@ -1,7 +1,7 @@
 # Stage 11 — Deploy the chapter's applications
 
-**Version:** 0.7  
-**Last Updated:** 09-23-26 13:54  
+**Version:** 0.8  
+**Last Updated:** 09-23-26 14:27  
 **Generated from** `steps/stage-11.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -57,7 +57,7 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **Do this:**
 
-1. Nothing to run by hand. The settings generator in step 11.2 creates the session secret the first time it runs, as a random value of 48 bytes, and appends it to the chapter's settings file (CHAPTER-ENV-FILE, which is ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env).
+1. Nothing to run by hand. The settings generator in step 11.2 creates the session secret the first time it runs, as a random value of 48 bytes, and appends it to the chapter's settings file (CHAPTER-ENV-FILE, which is ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env).
 2. After step 11.2, open CHAPTER-ENV-FILE in a text editor, copy the value after SESSION_SECRET= into a new item in the chapter's Operations vault named Session secret, and save.
    *You should see:* The Session secret item in the Operations vault.
 
@@ -88,20 +88,20 @@ The applications are what the chapter's staff, mentors and the public actually u
    - ESPO_API_KEY=
    - ESPO_PROVISION_USERNAME=
    - ESPO_PROVISION_PASSWORD=
-2. Download the Google machine account key from the chapter's Operations vault (step 10.2) and save it as ~/.config/cbm-CHAPTER-SLUG/google-key.json. Then add this line to the end of CHAPTER-ENV-FILE. The file is named rather than pasted because the key runs over several lines, which would break the build commands that read CHAPTER-ENV-FILE:
-   - GOOGLE_SERVICE_ACCOUNT_KEY_FILE=~/.config/cbm-CHAPTER-SLUG/google-key.json
+2. Download the Google machine account key from the chapter's Operations vault (step 10.2) and save it as ~/.config/cbm-SHORT-LABEL/google-key.json. Then add this line to the end of CHAPTER-ENV-FILE. The file is named rather than pasted because the key runs over several lines, which would break the build commands that read CHAPTER-ENV-FILE:
+   - GOOGLE_SERVICE_ACCOUNT_KEY_FILE=~/.config/cbm-SHORT-LABEL/google-key.json
 3. Check the form's flags section names every switch deliberately, as true or false. The Google switches (gmail_sync, gcal_events, gdrive_docs, google_directory_check, google_create_mailbox) go into the deployment from here, not from the settings page: the background worker decides at start-up whether to read the mailbox, and a switch set later at /setup never reaches it. Set gdrive_identity to service, and set deploy_on_push to true so the application follows the release branch from its first build.
 4. In a terminal, in the folder ~/Dropbox/Projects/cbm-client-intake, type the line below and press Enter. CHAPTER-VALUES-FILE is the filled-in chapter information form saved as YAML (the trial chapter's is prds/chapter-network/rehearsal-2026-08-31/lakeside-values.yaml):
-   - uv run python scripts/rehearsal/render_spec.py CHAPTER-VALUES-FILE ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG-app.yaml
-   *You should see:* A line reading: wrote ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG-app.yaml following branch release with N shared + N web-only env vars. If it reads secrets not yet minted, step 9.10 has not run. If it names GOOGLE_SERVICE_ACCOUNT_KEY_FILE or shared_drive_id, a Google switch is on before stage 10 has produced what it needs.
-5. Open CHAPTER-SLUG-app.yaml and check three things. The generator sets them itself; this is a check, not an edit:
+   - uv run python scripts/rehearsal/render_spec.py CHAPTER-VALUES-FILE ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env ~/.config/cbm-SHORT-LABEL/SHORT-LABEL-app.yaml
+   *You should see:* A line reading: wrote ~/.config/cbm-SHORT-LABEL/SHORT-LABEL-app.yaml following branch release with N shared + N web-only env vars. If it reads secrets not yet minted, step 9.10 has not run. If it names GOOGLE_SERVICE_ACCOUNT_KEY_FILE or shared_drive_id, a Google switch is on before stage 10 has produced what it needs.
+5. Open SHORT-LABEL-app.yaml and check three things. The generator sets them itself; this is a check, not an edit:
    - There is no ENV_LABEL line.
    - ALLOWED_ORIGINS is https://APP-ADDRESS, or absent if the application address is not known yet.
    - Every branch line reads branch: release (the web part, the worker and the migrate job).
    - No value names Cleveland or cbmentors.org. The chapter's own website, mentor email domain and mailbox addresses appear instead.
 6. Open CHAPTER-ENV-FILE and copy the value after APP_ENCRYPTION_KEY= into a new item in the chapter's Operations vault named Stored-data encryption key. This value must never change.
    *You should see:* The Stored-data encryption key item in the Operations vault.
-7. Never commit CHAPTER-SLUG-app.yaml anywhere. It holds secrets in plain text. It is deleted in step 11.3.
+7. Never commit SHORT-LABEL-app.yaml anywhere. It holds secrets in plain text. It is deleted in step 11.3.
 
 **Done when:** The settings are produced from the chapter information form and every value in them traces back to a line on that form.
 
@@ -127,7 +127,7 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 1. Nothing to run. The settings file from step 11.2 carries every secret into the deployment when step 11.5 creates the application. The database connection is supplied by the hosting platform and never appears in the file.
 2. After step 11.5 has succeeded, type the line below and press Enter, to delete the settings file:
-   - rm ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG-app.yaml ~/.config/cbm-CHAPTER-SLUG/google-key.json
+   - rm ~/.config/cbm-SHORT-LABEL/SHORT-LABEL-app.yaml ~/.config/cbm-SHORT-LABEL/google-key.json
    *You should see:* The prompt again, with no message.
 3. Check every secret in CHAPTER-ENV-FILE also has an item in the Operations vault. Then delete CHAPTER-ENV-FILE too, once the vault holds everything.
    *You should see:* No settings file and no secrets file left on the computer.
@@ -161,8 +161,8 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **Do this:**
 
-1. Nothing to run. Step 11.5 creates the database with the application, named CHAPTER-SLUG-db.
-2. Straight after step 11.5, sign in to the chapter's hosting account at cloud.digitalocean.com and open Apps, then CHAPTER-SLUG-intake, then Settings, then the component CHAPTER-SLUG-db. The path is the one Cleveland used on 23 July 2026 (DEPLOYMENT.md).
+1. Nothing to run. Step 11.5 creates the database with the application, named SHORT-LABEL-db.
+2. Straight after step 11.5, sign in to the chapter's hosting account at cloud.digitalocean.com and open Apps, then SHORT-LABEL-intake, then Settings, then the component SHORT-LABEL-db. The path is the one Cleveland used on 23 July 2026 (DEPLOYMENT.md).
    *You should see:* Either a managed database, or a development database with an option to convert it.
 3. If it is a development database, choose Database Type and Scale, then Convert to a Managed Database, and choose:
    - Plan: the smallest node size (db-s-1vcpu-1gb)
@@ -199,13 +199,13 @@ The applications are what the chapter's staff, mentors and the public actually u
 **Do this:**
 
 1. If this computer has never been signed in to the chapter's hosting account, type the line below and press Enter, then paste the chapter's DigitalOcean token from the Operations vault when asked:
-   - doctl auth init --context CHAPTER-SLUG
+   - doctl auth init --context SHORT-LABEL
    *You should see:* A message that the token was validated.
 2. Type the line below and press Enter, so every following doctl command acts on the chapter's account and not Cleveland's:
-   - doctl auth switch --context CHAPTER-SLUG
+   - doctl auth switch --context SHORT-LABEL
 3. Type the line below and press Enter:
-   - doctl apps create --spec ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG-app.yaml
-   *You should see:* A table with the new application's ID and the name CHAPTER-SLUG-intake. Copy the ID into the Operations vault as a note named Application ID; later steps call it APP-ID.
+   - doctl apps create --spec ~/.config/cbm-SHORT-LABEL/SHORT-LABEL-app.yaml
+   *You should see:* A table with the new application's ID and the name SHORT-LABEL-intake. Copy the ID into the Operations vault as a note named Application ID; later steps call it APP-ID.
 4. Type the line below and press Enter:
    - doctl apps get APP-ID
    *You should see:* The application listed. In the hosting account's web page, its Components show web, delivery-worker and migrate.
@@ -358,7 +358,7 @@ The applications are what the chapter's staff, mentors and the public actually u
    - TTL: Auto
    *You should see:* The record listed with a grey cloud.
 3. With manual DNS (step 3.7), add the same CNAME record in the chapter's DNS provider account instead, with any proxy or forwarding off. Its screens differ by provider and are not given here; the Name and Target are the same.
-4. In the hosting account, open Apps, then CHAPTER-SLUG-intake, then Settings, then Domains, and add APP-ADDRESS. Choose to manage DNS yourself and make it the primary domain. Labels are not checked on screen for this guide.
+4. In the hosting account, open Apps, then SHORT-LABEL-intake, then Settings, then Domains, and add APP-ADDRESS. Choose to manage DNS yourself and make it the primary domain. Labels are not checked on screen for this guide.
    *You should see:* The domain listed, moving to Active once the certificate is issued.
 
 **Done when:** The domain name record for the application address resolves to it.
@@ -485,10 +485,10 @@ The applications are what the chapter's staff, mentors and the public actually u
    - GMAIL_SYNC: true
    *You should see:* Each value as listed. Do not change them here.
 3. If a value is missing or wrong, correct the form, run step 11.2 again, then type the two lines below, pressing Enter after each. The first loads the new settings; the second restarts the worker, which reads its mail switches only at start-up:
-   - doctl apps update APP-ID --spec ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG-app.yaml
+   - doctl apps update APP-ID --spec ~/.config/cbm-SHORT-LABEL/SHORT-LABEL-app.yaml
    - doctl apps create-deployment APP-ID
    *You should see:* A new deployment reaching ACTIVE. Delete the settings file and the key file again afterwards, as in step 11.3.
-4. In the hosting account, open Apps, then CHAPTER-SLUG-intake, then Runtime Logs, and choose the delivery-worker component.
+4. In the hosting account, open Apps, then SHORT-LABEL-intake, then Runtime Logs, and choose the delivery-worker component.
    *You should see:* A line naming the mailbox the worker acts as, and it is the shared operations mailbox. If that line is absent or names another address, stop; the cause is in stage 10.
 5. From an outside address, send a message to the shared operations mailbox.
    *You should see:* Within about five minutes, the message in Submission Admin as a new email submission.
@@ -640,6 +640,7 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 | Version | Date | Change |
 |---|---|---|
+| 0.8 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. |
 | 0.7 | 09-23-26 13:54 | Manual DNS added (Doug, 09-23-26): step 11.10 adds the application's CNAME record at the chapter's own DNS provider when the chapter kept it. |
 | 0.6 | 09-23-26 12:25 | Step 11.5 now waits for step 5.9, the hosting account's link to the code repository on GitHub, without which creating the application fails. |
 | 0.5 | 09-23-26 00:55 | From the review before the first real chapter. Every Google, mail, Drive, website and Zoom setting now goes into the deployment in step 11.2, from the form, and steps 11.14 to 11.18 confirm them at /setup instead of setting them there: the background worker decides at start-up from its own settings whether to read the mailbox, so a switch set at /setup never reached it. The Google key is named by file (GOOGLE_SERVICE_ACCOUNT_KEY_FILE), and step 11.3 deletes the file. The stored-data encryption key the generator creates is now one the software accepts; before, /setup refused to store any secret. Step 11.7 no longer names a release that does not exist, and step 11.16 creates the test mentor and client it needs. Step 11.18 switches doctl back. |

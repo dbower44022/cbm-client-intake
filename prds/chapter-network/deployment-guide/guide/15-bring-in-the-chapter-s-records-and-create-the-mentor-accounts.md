@@ -1,7 +1,7 @@
 # Stage 15 — Bring in the chapter's records and create the mentor accounts
 
-**Version:** 0.2  
-**Last Updated:** 09-19-26 00:15  
+**Version:** 0.3  
+**Last Updated:** 09-23-26 14:27  
 **Generated from** `steps/stage-15.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -154,7 +154,7 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **Do this:**
 
-1. Create a new server from the CRM server's latest backup, exactly as in step 12.3: `doctl compute droplet backups SERVER-ID`, then `doctl compute droplet create load-trial-CHAPTER-SLUG --image BACKUP-IMAGE-ID --region REGION --size SIZE --wait`. This also completes the CRM server half of the restore test.
+1. Create a new server from the CRM server's latest backup, exactly as in step 12.3: `doctl compute droplet backups SERVER-ID`, then `doctl compute droplet create load-trial-SHORT-LABEL --image BACKUP-IMAGE-ID --region REGION --size SIZE --wait`. This also completes the CRM server half of the restore test.
    *You should see:* A new server, NEW-SERVER-IP, holding a copy of the chapter's CRM.
 2. Load the records into the copy at https://NEW-SERVER-IP, in this order, so each record's link already exists when it is loaded:
    - Companies.
@@ -168,7 +168,7 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
    *You should see:* The same counts as step 15.2, with any difference explained.
 5. Open five records of each kind and compare them with the file.
 6. Delete the copy the same day and write down when:
-   - doctl compute droplet delete load-trial-CHAPTER-SLUG --force
+   - doctl compute droplet delete load-trial-SHORT-LABEL --force
 
 **Done when:** The load has been run somewhere that is not the live system, and the result has been looked at.
 
@@ -378,5 +378,6 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 | Version | Date | Change |
 |---|---|---|
+| 0.3 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. |
 | 0.2 | 09-19-26 00:15 | Every action made precise (Doug, 09-19-26): exact file naming, the mapping table's columns, the load order, the restore-copy commands, the audit script run inside the application's web part, and exact addresses for Mentor Administration and the volunteer form. |
 | 0.1 | 09-18-26 17:30 | First version as data, converted from the methods for loading records (10-Methods-Website-Pages-Records.md, version 0.2) and for the mentor steps (5-Methods-Form-Accounts-Checks.md, version 0.4) with the step list's finishing tests. |

@@ -1,7 +1,7 @@
 # Stage 17 — Check everything works before going live
 
-**Version:** 0.3  
-**Last Updated:** 09-23-26 00:55  
+**Version:** 0.4  
+**Last Updated:** 09-23-26 14:27  
 **Generated from** `steps/stage-17.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -47,21 +47,21 @@ This stage proves the chapter's system works end to end before any real client u
 
 **Do this:**
 
-1. In these steps, CRM-ADDRESS is the chapter's CRM address, APP-ADDRESS is the chapter's application address, and SLUG is the chapter's short label, all from the chapter information form.
+1. In these steps, CRM-ADDRESS is the chapter's CRM address, APP-ADDRESS is the chapter's application address, and SHORT-LABEL is the chapter's short label, all from the chapter information form.
 2. Sign in to CRM-ADDRESS as the central support organization's administrator. Open Administration, then Users, and create these six accounts. The exact labels on the create-user screen are not verified. Use these values:
-   - User name SLUG.test.clientadmin, team Client Administration Team
-   - User name SLUG.test.mentoradmin, team Mentor Administration Team
-   - User name SLUG.test.partner, team Partner Management Team
-   - User name SLUG.test.funder, team Sponsor Management Team
-   - User name SLUG.test.marketing, team Marketing Admin Team
-   - User name SLUG.test.analytics, team Analytics Admin Team
+   - User name SHORT-LABEL.test.clientadmin, team Client Administration Team
+   - User name SHORT-LABEL.test.mentoradmin, team Mentor Administration Team
+   - User name SHORT-LABEL.test.partner, team Partner Management Team
+   - User name SHORT-LABEL.test.funder, team Sponsor Management Team
+   - User name SHORT-LABEL.test.marketing, team Marketing Admin Team
+   - User name SHORT-LABEL.test.analytics, team Analytics Admin Team
 3. For each of the six, also set:
    - Type: Regular, never Admin
    - Exactly one team, the one named above
    - Active: yes
    - A password of 20 letters and digits, stored first in the chapter's vault under the user name
    *You should see:* Six accounts in the Users list, each with one team.
-4. Create the seventh, the Mentor Team test user, through Mentor Administration so it is linked to a mentor record (step 15.9). Sign in to APP-ADDRESS/mentoradmin/ as a mentor administrator, add a mentor named Test Mentor SLUG, fill in the required fields, set Accepting New Clients to yes, and set the status to Active. The exact label of the accepting field on screen is not verified.
+4. Create the seventh, the Mentor Team test user, through Mentor Administration so it is linked to a mentor record (step 15.9). Sign in to APP-ADDRESS/mentoradmin/ as a mentor administrator, add a mentor named Test Mentor SHORT-LABEL, fill in the required fields, set Accepting New Clients to yes, and set the status to Active. The exact label of the accepting field on screen is not verified.
    *You should see:* The mentor marked Complete, with a login created. Its user name is set by the software from the mentor's name; write it down.
 5. Accepting new clients matters: the Assign list in step 17.4 offers only mentors who are Active, accepting new clients and linked to a login. Without it the list is empty and step 17.4 looks broken.
 6. If the chapter has Create missing mailboxes switched on, setting the status creates a real Google mailbox for the test mentor, which takes a paid licence. Write the address down; step 17.9 deletes it.
@@ -104,13 +104,13 @@ This stage proves the chapter's system works end to end before any real client u
    - APP-ADDRESS/setup/api/settings
 2. For the first test user, open a private browser window, sign in at APP-ADDRESS/, then open each of the twelve addresses in the same window. Write down for each whether it answered with information or refused. Close the window, and repeat for each of the other six test users.
 3. Compare what you wrote with what each test user must be allowed. Every address not listed for a user must be refused:
-   - SLUG.test.clientadmin: assignments only
-   - SLUG.test.mentoradmin: mentoradmin only
+   - SHORT-LABEL.test.clientadmin: assignments only
+   - SHORT-LABEL.test.mentoradmin: mentoradmin only
    - The Mentor Team test user: mentorprofile, mentorsessions, directory and myemail
-   - SLUG.test.partner: partnersessions and myemail
-   - SLUG.test.funder: sponsorsessions and myemail
-   - SLUG.test.marketing: ops and events
-   - SLUG.test.analytics: analytics only
+   - SHORT-LABEL.test.partner: partnersessions and myemail
+   - SHORT-LABEL.test.funder: sponsorsessions and myemail
+   - SHORT-LABEL.test.marketing: ops and events
+   - SHORT-LABEL.test.analytics: analytics only
    - setup: refused for all seven
    *You should see:* The same pattern as the trial chapter's record, prds/chapter-network/rehearsal-2026-08-31/nonadmin-gate-matrix.json, for the first eleven addresses. That record shows Not Found for the setup address, which is not the right answer; the next action says what is.
 4. For the setup address, read the refusal. The right answer, when the settings page is switched on, is a refusal saying System Settings is restricted to administrators.
@@ -173,18 +173,18 @@ This stage proves the chapter's system works end to end before any real client u
 
 **Do this:**
 
-1. Sign in at APP-ADDRESS/ as SLUG.test.clientadmin and open Client Administration at APP-ADDRESS/assignments/.
+1. Sign in at APP-ADDRESS/ as SHORT-LABEL.test.clientadmin and open Client Administration at APP-ADDRESS/assignments/.
 2. Find the row for Test Bakery DELETE-ME. Its status is Submitted.
-3. Use the row's Assign action and choose the Mentor Team test user's mentor, Test Mentor SLUG.
+3. Use the row's Assign action and choose the Mentor Team test user's mentor, Test Mentor SHORT-LABEL.
    *You should see:*
-   - The row showing Test Mentor SLUG
+   - The row showing Test Mentor SHORT-LABEL
    - The status Pending Acceptance
    - The email to the mentor opening, ready to send
 4. Close the email without sending it.
 
 **Done when:** A client administrator test user assigns it to a mentor.
 
-**How to check:** The engagement shows Test Mentor SLUG and the status Pending Acceptance.
+**How to check:** The engagement shows Test Mentor SHORT-LABEL and the status Pending Acceptance.
 
 **If it didn't work:** Stop, and ask the central support organization before going on.
 
@@ -207,7 +207,7 @@ This stage proves the chapter's system works end to end before any real client u
 1. In a new private browser window, sign in at APP-ADDRESS/ as the Mentor Team test user and open Client Management at APP-ADDRESS/mentorsessions/.
    *You should see:* Test Bakery DELETE-ME in the list, and it opens.
 2. Open My Mentor Profile at APP-ADDRESS/mentorprofile/.
-   *You should see:* Test Mentor SLUG's own details.
+   *You should see:* Test Mentor SHORT-LABEL's own details.
 
 **Done when:** The mentor test user finds the assignment and can open their own profile.
 
@@ -231,7 +231,7 @@ This stage proves the chapter's system works end to end before any real client u
 
 **Do this:**
 
-1. In a new private browser window, sign in at APP-ADDRESS/ as SLUG.test.marketing and open Submission Admin at APP-ADDRESS/ops/.
+1. In a new private browser window, sign in at APP-ADDRESS/ as SHORT-LABEL.test.marketing and open Submission Admin at APP-ADDRESS/ops/.
 2. Find the submission by the reference number from step 17.3.
    *You should see:*
    - Intake status: Completed
@@ -258,7 +258,7 @@ This stage proves the chapter's system works end to end before any real client u
 
 **Do this:**
 
-1. In a new private browser window, open CRM-ADDRESS and sign in as SLUG.test.clientadmin.
+1. In a new private browser window, open CRM-ADDRESS and sign in as SHORT-LABEL.test.clientadmin.
    *You should see:* The CRM's home screen, with the navigation bar across the top.
 
 **Done when:** A non-administrator signs in to the CRM itself and sees a working screen.
@@ -330,14 +330,14 @@ This stage proves the chapter's system works end to end before any real client u
    - The company Test Bakery DELETE-ME
 2. Leave the submission in Submission Admin, closed. It is the record that the path worked.
 3. In the CRM, open Administration, then Users, and set each of the seven test users to inactive, so the check can be repeated after a later release:
-   - SLUG.test.clientadmin
-   - SLUG.test.mentoradmin
+   - SHORT-LABEL.test.clientadmin
+   - SHORT-LABEL.test.mentoradmin
    - The Mentor Team test user
-   - SLUG.test.partner
-   - SLUG.test.funder
-   - SLUG.test.marketing
-   - SLUG.test.analytics
-4. In Mentor Administration, set Test Mentor SLUG's status to Inactive.
+   - SHORT-LABEL.test.partner
+   - SHORT-LABEL.test.funder
+   - SHORT-LABEL.test.marketing
+   - SHORT-LABEL.test.analytics
+4. In Mentor Administration, set Test Mentor SHORT-LABEL's status to Inactive.
 5. If step 17.1 created a Google mailbox for the test mentor, delete it in admin.google.com, so it stops taking a licence.
 6. Write in the chapter's handover notes: the date, the four records deleted, and the seven users set inactive.
 
@@ -360,6 +360,7 @@ This stage proves the chapter's system works end to end before any real client u
 
 | Version | Date | Change |
 |---|---|---|
+| 0.4 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG (and SLUG) is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. |
 | 0.3 | 09-23-26 00:55 | Three corrections from the review before the first real chapter. Step 17.1 sets the test mentor to accepting new clients, without which the Assign list in step 17.4 is empty, and step 17.9 deletes any Google mailbox that created. Step 17.2 no longer points at a record whose settings-page answer the next action calls wrong. Step 17.3 no longer waits on stage 13: the website link is checked once it exists, and the rest of the form check runs without it. |
 | 0.2 | 09-19-26 00:04 | Actions made precise (Doug, 09-19-26): exact test user names and teams, the twelve session-check addresses and the expected result per test user from the August table, exact made-up values for the test application, the pages and statuses to look for at each step, and the records and users to remove. The exact labels of the CRM's user screens are not verified, and the steps say so. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for checking everything works before going live (5-Methods-Form-Accounts-Checks.md, version 0.4) with the step list's finishing tests. |

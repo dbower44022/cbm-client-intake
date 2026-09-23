@@ -1,7 +1,7 @@
 # Stage 9 — Build the CRM system
 
-**Version:** 0.9  
-**Last Updated:** 09-23-26 13:54  
+**Version:** 0.10  
+**Last Updated:** 09-23-26 14:27  
 **Generated from** `steps/stage-09.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -100,10 +100,10 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 1. Work at the build computer: the central support organization's own computer, the one with CRMBuilder installed. Every command in this step is typed in a terminal window on the build computer.
 2. Create an SSH key for the central support organization. An SSH key is the file that lets a person open a command line on the server. Type the line below, press Enter, then press Enter twice more to leave the key without a passphrase:
-   - ssh-keygen -t ed25519 -f ~/.ssh/crm-CHAPTER-SLUG -C crm-CHAPTER-SLUG
-   *You should see:* Two new files on the build computer: ~/.ssh/crm-CHAPTER-SLUG, the private key, which later steps call KEY-FILE; and ~/.ssh/crm-CHAPTER-SLUG.pub, the public key.
-3. Register the public key in the chapter's DigitalOcean account: open Settings, then Security, then add an SSH key. Paste the contents of ~/.ssh/crm-CHAPTER-SLUG.pub, and name the key crm-CHAPTER-SLUG. DigitalOcean's exact screen wording has not been checked for this guide.
-   *You should see:* The key crm-CHAPTER-SLUG in the account's list of SSH keys.
+   - ssh-keygen -t ed25519 -f ~/.ssh/crm-SHORT-LABEL -C crm-SHORT-LABEL
+   *You should see:* Two new files on the build computer: ~/.ssh/crm-SHORT-LABEL, the private key, which later steps call KEY-FILE; and ~/.ssh/crm-SHORT-LABEL.pub, the public key.
+3. Register the public key in the chapter's DigitalOcean account: open Settings, then Security, then add an SSH key. Paste the contents of ~/.ssh/crm-SHORT-LABEL.pub, and name the key crm-SHORT-LABEL. DigitalOcean's exact screen wording has not been checked for this guide.
+   *You should see:* The key crm-SHORT-LABEL in the account's list of SSH keys.
 4. Create the CRM administrator password in Proton Pass: a new item in the chapter's Operations vault, named CRM administrator, with the user name admin and a generated password of 24 characters, letters and numbers only (symbols off).
    *You should see:* A password of letters and numbers only. Step 9.10 cannot use any other character, which is why CRMBuilder's own Generate button is not used: it can add - or _.
 5. Go to CRMBuilder's folder. Type the line below and press Enter:
@@ -120,16 +120,16 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
    - Manual DNS — I add the record at the domain's own DNS provider: the chapter kept its own DNS provider.
    *You should see:* The DNS list showing the entry that matches the vault.
 10. Step 1, Providers. Confirm both lines name the chapter's own tokens, by the label given in step 5.8, then click Next. With manual DNS, only the DigitalOcean line matters; the Cloudflare line may read Not set:
-   - DigitalOcean: ✓ Configured — crmbuilder-CHAPTER-SLUG
-   - Cloudflare: ✓ Configured — crmbuilder-CHAPTER-SLUG
+   - DigitalOcean: ✓ Configured — crmbuilder-SHORT-LABEL
+   - Cloudflare: ✓ Configured — crmbuilder-SHORT-LABEL
    *You should see:* Both labels exactly as above. Any other label, or Not set, means the server would be built in the wrong account: click Set credentials… and repeat step 5.8's token actions first.
 11. Step 2, Server. Fill in each box, then click Next. The lists come from the chapter's DigitalOcean account and take a moment to fill.
-   - Instance name: CHAPTER-SLUG CRM, using the chapter's short label from step 8.2
+   - Instance name: SHORT-LABEL CRM, using the chapter's short label from step 8.2
    - Region: the region nearest the chapter; for Boston, New York
    - Size: s-2vcpu-4gb (2 vCPU, 4096 MB), a recommendation not yet ruled
    - Image: the newest Ubuntu LTS release in the list
-   - Extra SSH keys: tick crm-CHAPTER-SLUG
-   *You should see:* crm-CHAPTER-SLUG ticked. Without it, nobody can open a command line on the server, and steps 9.4 and 9.8 cannot be done.
+   - Extra SSH keys: tick crm-SHORT-LABEL
+   *You should see:* crm-SHORT-LABEL ticked. Without it, nobody can open a command line on the server, and steps 9.4 and 9.8 cannot be done.
 12. Step 3, Domain. Fill in each box from the chapter information form, then click Next:
    - Cloudflare zone: the chapter's domain that the CRM's address ends in
    - Subdomain: the CRM's address up to the first dot; for crm.example.org, crm
@@ -146,7 +146,7 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
    - Generate database passwords automatically (recommended): leave ticked
    *You should see:* A reminder to record the administrator password. It is already in the vault; CRMBuilder never shows it again.
 15. Step 5, Review. Check every line against what was entered, then click Deploy.
-   *You should see:* Extra SSH keys reading crm-CHAPTER-SLUG, not (generated key only). With manual DNS, the line DNS reading manual DNS — you add the A record when the run shows it. Then a window titled Deploy run DEP-NNN, with a progress bar and a log.
+   *You should see:* Extra SSH keys reading crm-SHORT-LABEL, not (generated key only). With manual DNS, the line DNS reading manual DNS — you add the A record when the run shows it. Then a window titled Deploy run DEP-NNN, with a progress bar and a log.
 16. With manual DNS, the run stops at Waiting for DNS until the CRM's record exists, so add it by hand while the run waits. When the status line reads Waiting for DNS, it also shows the record, in the words Add this DNS record at the domain's DNS provider: type A, name, then the CRM's address, value, then the server's address. The log shows the same line. In the chapter's DNS provider account, add a record with exactly:
    - Type: A
    - Name or host: the CRM's address, or only its first part (for crm.bbmentors.org, crm), whichever the provider's screen asks for
@@ -176,7 +176,7 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **If it didn't work:** The run keeps what it built, names the stage that failed, and bills for the server until it is finished or deleted. Do not delete anything. If the failed stage is Preparing server and the log mentions Could not get lock, the new server was still setting itself up: wait five minutes and click Retry, which starts again at the stage that failed. With manual DNS, a failure at Waiting for DNS means the record was not seen within 30 minutes: check the record at the chapter's DNS provider against the status line, character by character, then click Retry, which waits again on the same server. Deployment complete with verification gaps means the CRM is installed but a check failed: read the log, and stop and ask before going on. Anything else: stop, and ask the central support organization to retry from the failed stage.
 
-**What usually goes wrong:** Not ticking crm-CHAPTER-SLUG under Extra SSH keys. The run then leaves nobody with a command line on the server, because CRMBuilder's own key never leaves its service, and steps 9.4 and 9.8 become impossible. The August build hit this and had to paste a key through the hosting provider's own console as a rescue. Also, a run left on CRMBuilder's own tokens builds the server in CRMBuilder's hosting account, and nothing says so until someone looks.
+**What usually goes wrong:** Not ticking crm-SHORT-LABEL under Extra SSH keys. The run then leaves nobody with a command line on the server, because CRMBuilder's own key never leaves its service, and steps 9.4 and 9.8 become impossible. The August build hit this and had to paste a key through the hosting provider's own console as a rescue. Also, a run left on CRMBuilder's own tokens builds the server in CRMBuilder's hosting account, and nothing says so until someone looks.
 
 ---
 
@@ -223,7 +223,7 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Do this:**
 
-1. In a terminal, type the line below and press Enter, with SERVER-IP the server's address and KEY-FILE the private key ~/.ssh/crm-CHAPTER-SLUG, both from step 9.2:
+1. In a terminal, type the line below and press Enter, with SERVER-IP the server's address and KEY-FILE the private key ~/.ssh/crm-SHORT-LABEL, both from step 9.2:
    - ssh -i KEY-FILE root@SERVER-IP
    *You should see:* The server's prompt, ending root@ followed by the server's name.
 2. Type the line below and press Enter, to confirm the CRM is running in its container:
@@ -421,16 +421,16 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Do this:**
 
-1. Make the chapter's settings file, CHAPTER-ENV-FILE, at ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env, outside the code repository. Put these three lines in it, using the administrator account the deployment wizard created:
+1. Make the chapter's settings file, CHAPTER-ENV-FILE, at ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env, outside the code repository. Put these three lines in it, using the administrator account the deployment wizard created:
    - ESPO_ADMIN_BASE=https://CRM-ADDRESS
    - ESPO_ADMIN_USER=the wizard's administrator user name
    - ESPO_ADMIN_PASS=the wizard's administrator password
 2. The administrator password must be letters and numbers only, because later steps pass this file's values on a command line. If the wizard's password has any other character, change it in the CRM first (Administration, then Users), and put the new one in the file.
 3. Type the line below and press Enter. It changes nothing, and reports what it would do:
-   - uv run python scripts/rehearsal/apply_api_half.py --env ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env --values CHAPTER-VALUES-FILE
+   - uv run python scripts/rehearsal/apply_api_half.py --env ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env --values CHAPTER-VALUES-FILE
    *You should see:* A list of teams, roles, attachments, email templates, two accounts and settings it would create.
 4. Type the line below and press Enter. It creates everything in steps 9.10 to 9.14, 9.17 and 9.18:
-   - uv run python scripts/rehearsal/apply_api_half.py --env ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env --values CHAPTER-VALUES-FILE --apply
+   - uv run python scripts/rehearsal/apply_api_half.py --env ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env --values CHAPTER-VALUES-FILE --apply
    *You should see:* Nine teams reported applied, and the new values ESPO_API_KEY, ESPO_PROVISION_USERNAME and ESPO_PROVISION_PASSWORD added to the end of CHAPTER-ENV-FILE.
 5. Put CHAPTER-ENV-FILE's contents in the chapter's Operations vault as an item named CRM build settings.
 
@@ -460,10 +460,10 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 1. Nothing extra to run for the roles themselves. The script in step 9.10 creates the roles, checking each one against what this CRM has before writing it.
    *You should see:* Every role reported applied and read back identical. Lines marked unapplyable are explained under If it didn't work.
 2. Give the Client Assignment Role the User permission it needs to assign a mentor. The roles captured on 31 August predate this ruling (Doug, 09-07-26). In the folder ~/Dropbox/Projects/cbm-client-intake, type the line below and press Enter. It changes nothing:
-   - env $(grep -v '^#' ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env | xargs) uv run python scripts/migrate_client_assignment_role.py
+   - env $(grep -v '^#' ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env | xargs) uv run python scripts/migrate_client_assignment_role.py
    *You should see:* A plan to raise Client Assignment Role, User, to read all and edit own.
 3. Type the line below and press Enter:
-   - env $(grep -v '^#' ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env | xargs) uv run python scripts/migrate_client_assignment_role.py --apply
+   - env $(grep -v '^#' ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env | xargs) uv run python scripts/migrate_client_assignment_role.py --apply
    *You should see:* The grant reported applied. Running the first line again reports nothing to do.
 
 **Done when:** Every role the standard names exists, and reading each one back matches what was sent.
@@ -668,7 +668,7 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Do this:**
 
-1. Nothing extra to run. The script in step 9.10 created the administrator account CHAPTER-SLUG.provision and added its name and password to CHAPTER-ENV-FILE as ESPO_PROVISION_USERNAME and ESPO_PROVISION_PASSWORD.
+1. Nothing extra to run. The script in step 9.10 created the administrator account SHORT-LABEL.provision and added its name and password to CHAPTER-ENV-FILE as ESPO_PROVISION_USERNAME and ESPO_PROVISION_PASSWORD.
 2. Copy both values into a new item in the chapter's Operations vault named CRM provisioning administrator.
    *You should see:* The item in the Operations vault, with the user name and password.
 3. Sign in at https://CRM-ADDRESS with that name and password once, then sign out.
@@ -697,10 +697,10 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 **Do this:**
 
 1. In ~/Dropbox/Projects/cbm-client-intake, type the line below and press Enter. It reads the four values it needs from CHAPTER-ENV-FILE, and changes nothing. Every value must come from that file: the script fills any missing value from the repository's own .env file, which holds Cleveland's settings.
-   - env $(grep -v '^#' ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env | xargs) uv run python scripts/build_networkstandard.py
+   - env $(grep -v '^#' ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env | xargs) uv run python scripts/build_networkstandard.py
    *You should see:* A plan and a line giving its fingerprint, sixteen letters and numbers. Later actions call it FINGERPRINT.
 2. Type the line below and press Enter. The production option is required for any system that is not Cleveland's test system:
-   - env $(grep -v '^#' ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env | xargs) uv run python scripts/build_networkstandard.py --apply --production --expect FINGERPRINT
+   - env $(grep -v '^#' ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env | xargs) uv run python scripts/build_networkstandard.py --apply --production --expect FINGERPRINT
    *You should see:* The record created and read back by the applications' key. If it says the plan moved, run the first line again and read the new plan.
 
 **Done when:** The record that says which version of the standard this CRM holds exists and can be read by the applications' own key.
@@ -735,10 +735,10 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 **Do this:**
 
 1. In ~/Dropbox/Projects/cbm-client-intake, type the line below and press Enter. Pass both the address and the key: with either missing, the script uses Cleveland's own settings instead.
-   - env $(grep -v '^#' ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env | xargs) sh -c 'uv run python scripts/preflight_crm.py --url "$ESPO_ADMIN_BASE" --key "$ESPO_API_KEY" --json' > ~/.config/cbm-CHAPTER-SLUG/preflight.json; echo exit $?
+   - env $(grep -v '^#' ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env | xargs) sh -c 'uv run python scripts/preflight_crm.py --url "$ESPO_ADMIN_BASE" --key "$ESPO_API_KEY" --json' > ~/.config/cbm-SHORT-LABEL/preflight.json; echo exit $?
    *You should see:* exit 0 (conformant), exit 1 (something differs) or exit 3 (could not be checked, usually a key or network problem).
 2. Type the line below and press Enter, to read the result as a report:
-   - env $(grep -v '^#' ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env | xargs) sh -c 'uv run python scripts/preflight_crm.py --url "$ESPO_ADMIN_BASE" --key "$ESPO_API_KEY"'
+   - env $(grep -v '^#' ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env | xargs) sh -c 'uv run python scripts/preflight_crm.py --url "$ESPO_ADMIN_BASE" --key "$ESPO_API_KEY"'
    *You should see:* A last line beginning RESULT: CONFORMANT, DRIFT or UNCHECKED. Today the expected result is DRIFT, with only the five missing event email templates listed.
 3. Write each difference that is allowed on purpose, with its reason, into the chapter's entry in the list of watched systems (step 12.5). Keep preflight.json in the chapter's Operations vault.
 
@@ -756,12 +756,13 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 | Version | Date | Change |
 |---|---|---|
+| 0.10 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. |
 | 0.9 | 09-23-26 13:54 | Manual DNS added (Doug, 09-23-26): CRMBuilder's wizard now asks on its first page whether the CRM's address is managed through Cloudflare or by hand at the chapter's own DNS provider. Step 9.2 chooses from the DNS provider item in the vault, fills in the CRM address box that manual DNS shows, and adds the A record by hand when the run shows it; its failure advice covers the 30-minute wait and Retry. Step 9.5 checks the record at the chapter's DNS provider. Screen labels read from CRMBuilder's code (commit 7b1a5062); the first page's DNS list was seen on screen by Doug on 09-23-26. |
 | 0.8 | 09-23-26 13:51 | Step 9.2 rewritten in executive register (Doug, 09-23-26: it said "this computer" without saying which). It names the build computer, the central support organization's own computer with CRMBuilder installed, and uses that name for every command; defines an SSH key at first use; gives the change of folder its own action; and moves explanations out of the actions into what the reader should see. Step 9.8's two "this computer" now say the build computer. |
 | 0.7 | 09-23-26 13:41 | Steps 9.1 and 9.3 brought in line with the ruling that a new chapter runs the current CRM release and Cleveland moves up later (Doug, 09-23-26). Step 9.1 writes down "the current release CRMBuilder installs" rather than Cleveland's version, and checks each add-on supports version 10. Step 9.3 records the exact number instead of comparing it, since CRMBuilder cannot install any other. Both finishing tests changed with the step list (version 0.18). |
 | 0.6 | 09-23-26 13:39 | Step 9.2 points to step 5.8 for the chapter's engagement, which 5.8 now creates, instead of stopping to ask. |
 | 0.5 | 09-23-26 13:35 | Step 9.2 rewritten click by click from CRMBuilder's deploy wizard (Doug, 09-23-26: the step was not clear). Named every screen, box and stage, and three facts the old text hid: CRMBuilder's own sign-in key never leaves its service, so the key ticked under Extra SSH keys must first be made and added to the chapter's DigitalOcean account; the wizard's Generate button can put - or _ in the password, which step 9.10 cannot take; and a Preparing server failure on a fast run is cured by Retry. Step 9.4 now names that key. |
 | 0.4 | 09-23-26 00:55 | Step 9.11 now runs scripts/migrate_client_assignment_role.py. The roles captured on 31 August give the Client Assignment Role no User permission, so a client administrator on that team alone was refused on Assign (ruled 09-07-26). Its If it didn't work now tells an expected exit 4 (a field the source deleted) from a real one (an add-on missing); the old advice to install the add-ons and run again never ended. Found in the review before the first real chapter. |
-| 0.3 | 09-19-26 00:50 | The script now reads the chapter's name, CRM settings and provisioning account (CHAPTER-SLUG.provision) from the chapter information form through --values; the step that edited Lakeside's name out of the script by hand is gone. |
+| 0.3 | 09-19-26 00:50 | The script now reads the chapter's name, CRM settings and provisioning account (SHORT-LABEL.provision) from the chapter information form through --values; the step that edited Lakeside's name out of the script by hand is gone. |
 | 0.2 | 09-19-26 00:07 | Every command-line action made exact (Doug, 09-19-26: sweep every step): the ssh, docker, find, rsync, chown and rebuild commands for copying the configuration; the trial scripts' exact options, including the name the provisioning account takes and the production option the version record needs; the test request for the applications' key; and the conformance check with its exit codes. Two traps written in: the scripts fill missing values from the repository's own settings, which are Cleveland's, and the settings file's password must be letters and numbers only. |
 | 0.1 | 09-18-26 17:05 | First version as data, converted from the methods for building the CRM (3-Methods-CRM-Google-Applications.md, version 0.5) with the step list's finishing tests. Numbered actions, a reason per step, and a check an app can run were added. |

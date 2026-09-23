@@ -1,7 +1,7 @@
 stage: 8
 name: Fill in the chapter information form
-version: "0.11"
-updated: "09-23-26 12:49"
+version: "0.12"
+updated: "09-23-26 14:27"
 why: >-
   The chapter information form holds the roughly forty answers that differ from
   one chapter to the next: its name, its addresses, its Google details and its
@@ -96,7 +96,7 @@ steps:
         kind: slug
         required: true
         example: lakeside
-        meaning: "A short name, in lower case, that the software uses to name the chapter's server, applications and secrets. It has to be lower case because the hosting platform and Google accept only lower-case names: a label of boston becomes the application boston-intake, the database boston-db and the Google project boston-apps. Letters, digits and hyphens only, starting with a letter, at most 25 characters."
+        meaning: "Not the chapter's name and not its abbreviation: a third answer, which people never see. For Boston the three are Boston Business Mentors, BBM and boston. The short label is a short name, in lower case, that the software uses to name the chapter's server, applications and secrets. It has to be lower case because the hosting platform and Google accept only lower-case names: a label of boston becomes the application boston-intake, the database boston-db and the Google project boston-apps. Letters, digits and hyphens only, starting with a letter, at most 25 characters."
         source: Choose it now. The city's name is usual. The page turns capitals into lower case and spaces into hyphens for you.
         wrong: The label becomes part of the names of the chapter's server and applications. Changing it after stage 9 means renaming them.
       - key: chapter.timezone
@@ -274,7 +274,7 @@ steps:
         required: false
         example: https://www.yourchapter.org/chapter-tokens.css
         meaning: The web address of the small file that carries the four colours above into the applications' pages. The software loads it on every page after its standard colours.
-        source: The central support organization writes the file from the four colours above and publishes it (step 6.5). The values-file writer produces the file itself, as prds/chapter-network/chapters/CHAPTER-SLUG-chapter-tokens.css. Mark not known yet until it is published.
+        source: The central support organization writes the file from the four colours above and publishes it (step 6.5). The values-file writer produces the file itself, as prds/chapter-network/chapters/SHORT-LABEL-chapter-tokens.css. Mark not known yet until it is published.
         wrong: The applications keep Cleveland's colours. Nothing breaks.
     done_when:
       - "The application address is filled in."
@@ -779,9 +779,9 @@ steps:
       - do: "In a Claude Code session in the folder ~/Dropbox/Projects/cbm-client-intake, type this request, with the page's link in place of PAGE-LINK:"
         items:
           - "Write the chapter values file from the chapter information page PAGE-LINK with scripts/chapter_form/to_values.py."
-        see: "A message naming the file written, prds/chapter-network/chapters/CHAPTER-SLUG-values.yaml, and reading that the check passed. If the check names a question, the answer on the page is wrong or missing: correct it on the page and ask again."
+        see: "A message naming the file written, prds/chapter-network/chapters/SHORT-LABEL-values.yaml, and reading that the check passed. If the check names a question, the answer on the page is wrong or missing: correct it on the page and ask again."
       - do: Open the file and check it holds no secret value. Every line under secrets must be a name only.
-      - do: 'Commit it with the message "docs(chapter-network): CHAPTER-SLUG chapter information form", and push it.'
+      - do: 'Commit it with the message "docs(chapter-network): SHORT-LABEL chapter information form", and push it.'
       - do: Ask a second person at the central support organization to open the file from the remote repository.
         see: The file opens, with both reviewers' names at the top.
     done_when: >-
@@ -799,6 +799,10 @@ steps:
     source: 5-Methods-Form-Accounts-Checks.md#8.10
 
 changes:
+  - version: "0.12"
+    date: "09-23-26 14:27"
+    change: >-
+      The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. The Short label question now says it is neither the chapter's name nor its abbreviation, with Boston's three answers as the example.
   - version: "0.11"
     date: "09-23-26 12:49"
     change: >-

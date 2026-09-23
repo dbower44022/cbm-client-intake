@@ -1,7 +1,7 @@
 stage: 10
 name: Set up the Google permissions the software needs
-version: "0.2"
-updated: "09-19-26 00:07"
+version: "0.3"
+updated: "09-23-26 14:27"
 why: >-
   The applications read and send the chapter's email, keep calendars in step,
   file documents on the shared drive and create mentor mailboxes. They do all of
@@ -34,7 +34,7 @@ steps:
       - do: "In a browser, go to console.cloud.google.com and sign in as the chapter's Google administrator (the account from step 4.5). Labels below are Google Cloud's wording as of 2026, not checked on screen for this guide; if one differs, use the search box at the top of the console."
       - do: "Open the project picker at the top of the page and choose New project. Enter:"
         items:
-          - "Project name: CHAPTER-SLUG-apps"
+          - "Project name: SHORT-LABEL-apps"
           - "Organization: the chapter's own domain"
         see: The new project selected in the project picker.
       - do: "Open APIs and services, then Library. Search for each of these and choose Enable on each:"
@@ -47,10 +47,10 @@ steps:
         see: Each API shown as enabled under APIs and services, then Enabled APIs and services.
       - do: "Open IAM and admin, then Service accounts, and choose Create service account. Enter:"
         items:
-          - "Service account name: CHAPTER-SLUG-apps"
-          - "Service account ID: CHAPTER-SLUG-apps (filled in for you)"
+          - "Service account name: SHORT-LABEL-apps"
+          - "Service account ID: SHORT-LABEL-apps (filled in for you)"
           - "Roles: none. Skip the optional steps and choose Done."
-        see: "The service account listed, with an email address ending @CHAPTER-SLUG-apps.iam.gserviceaccount.com."
+        see: "The service account listed, with an email address ending @SHORT-LABEL-apps.iam.gserviceaccount.com."
       - do: Open the service account. Copy its Unique ID, a number of about twenty digits, into the chapter's Operations vault as a note named Google machine account client ID. Step 10.3 needs it.
         see: The Unique ID on the service account's details page.
     done_when: >-
@@ -76,7 +76,7 @@ steps:
         items:
           - "Key type: JSON"
         see: One file ending .json downloaded to the computer.
-      - do: "If Google refuses to create the key, the organization has the policy that blocks service account keys switched on. That is the default for Google Cloud organizations created since 2024. The chapter's Google administrator must allow keys for this one project: open IAM and admin, then Organization policies, find Disable service account key creation, and override it for project CHAPTER-SLUG-apps only. Then create the key again."
+      - do: "If Google refuses to create the key, the organization has the policy that blocks service account keys switched on. That is the default for Google Cloud organizations created since 2024. The chapter's Google administrator must allow keys for this one project: open IAM and admin, then Organization policies, find Disable service account key creation, and override it for project SHORT-LABEL-apps only. Then create the key again."
       - do: In Proton Pass, open the chapter's Operations vault and add a new item named Google machine account key. Attach the downloaded .json file to it.
         see: The item in the Operations vault with the file attached, and a second named person able to open it.
       - do: Delete the downloaded .json file from the computer, and empty the computer's bin.
@@ -180,7 +180,7 @@ steps:
         items:
           - "Name: CHAPTER-NAME Documents"
         see: The new shared drive open, and empty.
-      - do: "Open the shared drive's menu, choose Manage members, and add the service account's email address from step 10.1 (ending @CHAPTER-SLUG-apps.iam.gserviceaccount.com). Choose:"
+      - do: "Open the shared drive's menu, choose Manage members, and add the service account's email address from step 10.1 (ending @SHORT-LABEL-apps.iam.gserviceaccount.com). Choose:"
         items:
           - "Access: Manager (Cleveland's service account is a Manager of its shared drive, because it grants people access to folders)"
           - "Notify people: off (the service account has no mailbox)"
@@ -200,6 +200,10 @@ steps:
     source: 3-Methods-CRM-Google-Applications.md#10.5
 
 changes:
+  - version: "0.3"
+    date: "09-23-26 14:27"
+    change: >-
+      The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder.
   - version: "0.2"
     date: "09-19-26 00:07"
     change: >-

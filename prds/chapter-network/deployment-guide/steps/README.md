@@ -1,9 +1,9 @@
 # The deployment guide as data
 
-**Version:** 0.2
+**Version:** 0.3
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-23-26 12:03
+**Last Updated:** 09-23-26 14:27
 
 ---
 
@@ -69,6 +69,16 @@ The readable guide shows `why`, `who`, `first`, `actions`, `done_when`,
 done for real. `mode`, `needs`, `produces`, `probe`, `later` and `source` are for
 the app and the people maintaining the guide.
 
+## Words in capitals
+
+A word in capitals inside a command, such as SHORT-LABEL or CRM-ADDRESS, stands
+for a value the reader types in its place. Every one used in more than one stage
+is listed in `placeholders.yaml` (`name`, `means`, `from`), which the renderer
+prints at the foot of the guide's index page. A new shared placeholder goes
+there. One used in a single step is explained in that step. A placeholder uses
+the form's own name for the value, never a developer's word: SHORT-LABEL, not
+CHAPTER-SLUG (Doug, 09-23-26).
+
 ## Writing rules
 
 The guide's language rules apply (section 3 of `1-How-We-Will-Build-The-Guide.md`):
@@ -84,5 +94,6 @@ screen is not known, say so in the action.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.3 | 09-23-26 14:27 | `placeholders.yaml` added: the shared words in capitals, printed on the guide's index page. CHAPTER-SLUG renamed SHORT-LABEL, the form's own name (Doug, 09-23-26). |
 | 0.2 | 09-23-26 12:03 | The `fields` list added, for the chapter information form's questions (Doug, 09-23-26: the form becomes a web page built from stage 8). |
 | 0.1 | 09-18-26 16:50 | First version. The guide becomes structured data that drives both the readable guide and the onboarding app CRMBuilder is asked to build (Doug, 09-18-26). |

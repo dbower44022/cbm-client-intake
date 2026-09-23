@@ -1,7 +1,7 @@
 # Stage 10 — Set up the Google permissions the software needs
 
-**Version:** 0.2  
-**Last Updated:** 09-19-26 00:07  
+**Version:** 0.3  
+**Last Updated:** 09-23-26 14:27  
 **Generated from** `steps/stage-10.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -45,7 +45,7 @@ The applications read and send the chapter's email, keep calendars in step, file
 
 1. In a browser, go to console.cloud.google.com and sign in as the chapter's Google administrator (the account from step 4.5). Labels below are Google Cloud's wording as of 2026, not checked on screen for this guide; if one differs, use the search box at the top of the console.
 2. Open the project picker at the top of the page and choose New project. Enter:
-   - Project name: CHAPTER-SLUG-apps
+   - Project name: SHORT-LABEL-apps
    - Organization: the chapter's own domain
    *You should see:* The new project selected in the project picker.
 3. Open APIs and services, then Library. Search for each of these and choose Enable on each:
@@ -56,10 +56,10 @@ The applications read and send the chapter's email, keep calendars in step, file
    - Google Meet REST API (only if meeting transcripts will be switched on)
    *You should see:* Each API shown as enabled under APIs and services, then Enabled APIs and services.
 4. Open IAM and admin, then Service accounts, and choose Create service account. Enter:
-   - Service account name: CHAPTER-SLUG-apps
-   - Service account ID: CHAPTER-SLUG-apps (filled in for you)
+   - Service account name: SHORT-LABEL-apps
+   - Service account ID: SHORT-LABEL-apps (filled in for you)
    - Roles: none. Skip the optional steps and choose Done.
-   *You should see:* The service account listed, with an email address ending @CHAPTER-SLUG-apps.iam.gserviceaccount.com.
+   *You should see:* The service account listed, with an email address ending @SHORT-LABEL-apps.iam.gserviceaccount.com.
 5. Open the service account. Copy its Unique ID, a number of about twenty digits, into the chapter's Operations vault as a note named Google machine account client ID. Step 10.3 needs it.
    *You should see:* The Unique ID on the service account's details page.
 
@@ -89,7 +89,7 @@ The applications read and send the chapter's email, keep calendars in step, file
 1. In the same service account, open the Keys tab, choose Add key, then Create new key. Choose:
    - Key type: JSON
    *You should see:* One file ending .json downloaded to the computer.
-2. If Google refuses to create the key, the organization has the policy that blocks service account keys switched on. That is the default for Google Cloud organizations created since 2024. The chapter's Google administrator must allow keys for this one project: open IAM and admin, then Organization policies, find Disable service account key creation, and override it for project CHAPTER-SLUG-apps only. Then create the key again.
+2. If Google refuses to create the key, the organization has the policy that blocks service account keys switched on. That is the default for Google Cloud organizations created since 2024. The chapter's Google administrator must allow keys for this one project: open IAM and admin, then Organization policies, find Disable service account key creation, and override it for project SHORT-LABEL-apps only. Then create the key again.
 3. In Proton Pass, open the chapter's Operations vault and add a new item named Google machine account key. Attach the downloaded .json file to it.
    *You should see:* The item in the Operations vault with the file attached, and a second named person able to open it.
 4. Delete the downloaded .json file from the computer, and empty the computer's bin.
@@ -193,7 +193,7 @@ The applications read and send the chapter's email, keep calendars in step, file
 1. Sign in at drive.google.com as the chapter's Google administrator. Open Shared drives and choose New. Enter:
    - Name: CHAPTER-NAME Documents
    *You should see:* The new shared drive open, and empty.
-2. Open the shared drive's menu, choose Manage members, and add the service account's email address from step 10.1 (ending @CHAPTER-SLUG-apps.iam.gserviceaccount.com). Choose:
+2. Open the shared drive's menu, choose Manage members, and add the service account's email address from step 10.1 (ending @SHORT-LABEL-apps.iam.gserviceaccount.com). Choose:
    - Access: Manager (Cleveland's service account is a Manager of its shared drive, because it grants people access to folders)
    - Notify people: off (the service account has no mailbox)
    *You should see:* The service account in the member list as Manager.
@@ -214,5 +214,6 @@ The applications read and send the chapter's email, keep calendars in step, file
 
 | Version | Date | Change |
 |---|---|---|
+| 0.3 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. |
 | 0.2 | 09-19-26 00:07 | Every action made exact (Doug, 09-19-26: sweep every step): the Google Cloud project, the five APIs, the service account, the JSON key (including the organization policy that blocks keys by default), the domain-wide delegation entry with the exact scope list read from the software's code, one per line and as one pasteable line, and the shared drive with the Manager role Cleveland's own service account holds. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for the Google permissions (3-Methods-CRM-Google-Applications.md, version 0.5) with the step list's finishing tests. Numbered actions, a reason per step, and a check an app can run were added. |

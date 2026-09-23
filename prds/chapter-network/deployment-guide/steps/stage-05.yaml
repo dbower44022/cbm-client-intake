@@ -1,7 +1,7 @@
 stage: 5
 name: Open the hosting and video meeting accounts
-version: "0.7"
-updated: "09-23-26 13:54"
+version: "0.8"
+updated: "09-23-26 14:27"
 why: >-
   The chapter's CRM server, its applications and their database all run in a
   hosting account, and the public webinar programme runs through a video meeting
@@ -272,7 +272,7 @@ steps:
       - do: "In the chapter's DigitalOcean account, open API, then Tokens, and choose to generate a new token. The exact wording of DigitalOcean's screens has not been checked for this guide."
       - do: "Enter:"
         items:
-          - "Token name: crmbuilder-CHAPTER-SLUG, using the chapter's short label from step 8.2"
+          - "Token name: crmbuilder-SHORT-LABEL, using the chapter's short label from step 8.2"
           - "Expiration: the longest the screen offers, or no expiry"
           - "Scopes: full read and write access"
         see: "A new token, shown once only."
@@ -281,7 +281,7 @@ steps:
       - do: "In Cloudflare, open My Profile, then API Tokens, and choose Create Token. Use the Edit zone DNS template."
       - do: "Set exactly:"
         items:
-          - "Token name: crmbuilder-CHAPTER-SLUG"
+          - "Token name: crmbuilder-SHORT-LABEL"
           - "Permissions: Zone, DNS, Edit (the template sets this)"
           - "A second permission line: Zone, Zone, Read. CRMBuilder lists the chapter's zones with it, and the template does not add it."
           - "Zone resources: Include, Specific zone, and each of the chapter's domain names; never All zones"
@@ -301,15 +301,15 @@ steps:
         see: A window titled New engagement, with four boxes.
       - do: "Fill in each box, then save:"
         items:
-          - "Code: the chapter's short label from step 8.2 in capital letters, for Boston BOSTON. Two to ten capital letters and digits, starting with a letter. It cannot be changed later."
+          - "Code: the chapter's short label from step 8.2, in capital letters: for Boston, BOSTON. Two to ten capital letters and digits, starting with a letter. It cannot be changed later."
           - "Name: the chapter's full name from step 8.2"
           - "Purpose: Build and run the chapter's CRM and applications."
           - "Status: active"
         see: "The new engagement listed with an identifier of the form ENG-NNN, and named in the strip across the top of the window. If another engagement is named there, click the strip and choose the chapter's."
       - do: "Open the tab 11 · CRM Deployment, click Instances in the side bar, then Deploy new…, and on Step 1 of 5 — Providers click Set credentials…."
         see: A window titled Provider credentials, with one box for DigitalOcean and one for Cloudflare.
-      - do: "In each box, paste the token into Token, type crmbuilder-CHAPTER-SLUG into Label, and click Save token. Then click Close, and click Cancel to leave the deploy window; step 9.2 runs it."
-        see: "Step 1 reading DigitalOcean: ✓ Configured — crmbuilder-CHAPTER-SLUG, and the same for Cloudflare. The token itself is never shown again."
+      - do: "In each box, paste the token into Token, type crmbuilder-SHORT-LABEL into Label, and click Save token. Then click Close, and click Cancel to leave the deploy window; step 9.2 runs it."
+        see: "Step 1 reading DigitalOcean: ✓ Configured — crmbuilder-SHORT-LABEL, and the same for Cloudflare. The token itself is never shown again."
     done_when:
       - "A DigitalOcean API token from the chapter's hosting account exists."
       - "A Cloudflare API token limited to editing DNS in the chapter's zones exists, unless the chapter uses manual DNS."
@@ -380,6 +380,10 @@ steps:
     source: TASKS.md § work owed, item 12
 
 changes:
+  - version: "0.8"
+    date: "09-23-26 14:27"
+    change: >-
+      The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. The engagement code is described as the short label in capital letters.
   - version: "0.7"
     date: "09-23-26 13:54"
     change: >-

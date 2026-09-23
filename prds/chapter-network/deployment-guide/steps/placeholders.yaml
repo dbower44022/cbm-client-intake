@@ -1,0 +1,44 @@
+# Placeholders the guide's commands use across more than one step.
+# Rendered into guide/README.md. A placeholder used in one step only is
+# explained in that step.
+- name: SHORT-LABEL
+  means: >-
+    The chapter's short label: a short lower-case name, such as boston, built into
+    the names of everything the software creates for the chapter (the application
+    boston-intake, the database boston-db, the Google project boston-apps). People
+    never see it. It is not the chapter's name (Boston Business Mentors) and not its
+    abbreviation (BBM).
+  from: Step 8.2, the question Short label.
+- name: CHAPTER-NAME
+  means: The chapter's full name, exactly as people see it.
+  from: Step 8.2, the question Chapter name.
+- name: WEBSITE-DOMAIN
+  means: The domain name of the chapter's public website, such as lakesidebusinessmentors.org.
+  from: Stage 3, recorded on the chapter information form in step 8.3.
+- name: EMAIL-DOMAIN
+  means: The domain name the chapter's email addresses end in.
+  from: Step 4.2.
+- name: CRM-ADDRESS
+  means: The CRM's web address, without https://.
+  from: Step 8.5, the question Web address (URL) the CRM will use.
+- name: APP-ADDRESS
+  means: The applications' web address.
+  from: Step 8.3, the question Web address (URL) the applications will use.
+- name: ALERT-ADDRESS
+  means: The email address that receives the system's alerts.
+  from: Step 8.4, the question Alert receiving address.
+- name: CHAPTER-VALUES-FILE
+  means: The filled-in chapter information form, saved as prds/chapter-network/chapters/SHORT-LABEL-values.yaml.
+  from: Step 8.10.
+- name: KEY-FILE
+  means: The private SSH key that opens a command line on the CRM server, ~/.ssh/crm-SHORT-LABEL on the build computer.
+  from: Step 9.2.
+- name: SERVER-IP
+  means: The CRM server's internet address.
+  from: Step 9.2.
+- name: CHAPTER-ENV-FILE
+  means: The chapter's settings file on the build computer, ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env.
+  from: Step 9.10.
+- name: APP-ID
+  means: The chapter application's identifier on the hosting platform.
+  from: Step 11.5.

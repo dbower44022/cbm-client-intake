@@ -144,6 +144,13 @@ def render_index(stages: list[dict]) -> str:
     for st in stages:
         out.append(f"{st['stage']}. [{st['name']}]({_slug(st)}.md)")
         out.append(f"   {st['why'].strip().split('. ')[0].rstrip('.')}.")
+    placeholders = STEPS / "placeholders.yaml"
+    if placeholders.exists():
+        out += ["", "---\n", "## Words in capitals\n",
+                "A word in capitals inside a command stands for a value to type in its place. "
+                "These are used in more than one stage. One used in a single step is explained in that step.\n"]
+        for ph in yaml.safe_load(placeholders.read_text()):
+            out.append(f"- **{ph['name']}**: {ph['means'].strip()} *Comes from:* {ph['from']}")
     out.append("")
     return "\n".join(out)
 

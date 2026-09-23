@@ -42,3 +42,22 @@ The guide takes a new chapter from nothing to a running system. Work through the
    This stage proves the chapter's system works end to end before any real client uses it: each team reaches its own pages and nobody else's, and a public application travels from the website through assignment to a mentor.
 18. [Hand over and start normal support](18-hand-over-and-start-normal-support.md)
    This stage moves the chapter from being set up to being supported, and proves the chapter can reach everything it owns without help.
+
+---
+
+## Words in capitals
+
+A word in capitals inside a command stands for a value to type in its place. These are used in more than one stage. One used in a single step is explained in that step.
+
+- **SHORT-LABEL**: The chapter's short label: a short lower-case name, such as boston, built into the names of everything the software creates for the chapter (the application boston-intake, the database boston-db, the Google project boston-apps). People never see it. It is not the chapter's name (Boston Business Mentors) and not its abbreviation (BBM). *Comes from:* Step 8.2, the question Short label.
+- **CHAPTER-NAME**: The chapter's full name, exactly as people see it. *Comes from:* Step 8.2, the question Chapter name.
+- **WEBSITE-DOMAIN**: The domain name of the chapter's public website, such as lakesidebusinessmentors.org. *Comes from:* Stage 3, recorded on the chapter information form in step 8.3.
+- **EMAIL-DOMAIN**: The domain name the chapter's email addresses end in. *Comes from:* Step 4.2.
+- **CRM-ADDRESS**: The CRM's web address, without https://. *Comes from:* Step 8.5, the question Web address (URL) the CRM will use.
+- **APP-ADDRESS**: The applications' web address. *Comes from:* Step 8.3, the question Web address (URL) the applications will use.
+- **ALERT-ADDRESS**: The email address that receives the system's alerts. *Comes from:* Step 8.4, the question Alert receiving address.
+- **CHAPTER-VALUES-FILE**: The filled-in chapter information form, saved as prds/chapter-network/chapters/SHORT-LABEL-values.yaml. *Comes from:* Step 8.10.
+- **KEY-FILE**: The private SSH key that opens a command line on the CRM server, ~/.ssh/crm-SHORT-LABEL on the build computer. *Comes from:* Step 9.2.
+- **SERVER-IP**: The CRM server's internet address. *Comes from:* Step 9.2.
+- **CHAPTER-ENV-FILE**: The chapter's settings file on the build computer, ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env. *Comes from:* Step 9.10.
+- **APP-ID**: The chapter application's identifier on the hosting platform. *Comes from:* Step 11.5.

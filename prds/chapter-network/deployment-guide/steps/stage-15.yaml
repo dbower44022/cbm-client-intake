@@ -1,7 +1,7 @@
 stage: 15
 name: Bring in the chapter's records and create the mentor accounts
-version: "0.2"
-updated: "09-19-26 00:15"
+version: "0.3"
+updated: "09-23-26 14:27"
 why: >-
   A chapter arrives with clients, companies, partners, funders and mentors it
   already knows about. This stage moves those records into the CRM without
@@ -129,7 +129,7 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: "Create a new server from the CRM server's latest backup, exactly as in step 12.3: `doctl compute droplet backups SERVER-ID`, then `doctl compute droplet create load-trial-CHAPTER-SLUG --image BACKUP-IMAGE-ID --region REGION --size SIZE --wait`. This also completes the CRM server half of the restore test."
+      - do: "Create a new server from the CRM server's latest backup, exactly as in step 12.3: `doctl compute droplet backups SERVER-ID`, then `doctl compute droplet create load-trial-SHORT-LABEL --image BACKUP-IMAGE-ID --region REGION --size SIZE --wait`. This also completes the CRM server half of the restore test."
         see: A new server, NEW-SERVER-IP, holding a copy of the chapter's CRM.
       - do: "Load the records into the copy at https://NEW-SERVER-IP, in this order, so each record's link already exists when it is loaded:"
         items:
@@ -145,7 +145,7 @@ steps:
       - do: Open five records of each kind and compare them with the file.
       - do: "Delete the copy the same day and write down when:"
         items:
-          - "doctl compute droplet delete load-trial-CHAPTER-SLUG --force"
+          - "doctl compute droplet delete load-trial-SHORT-LABEL --force"
     done_when: >-
       The load has been run somewhere that is not the live system, and the result
       has been looked at.
@@ -339,6 +339,10 @@ steps:
     source: 5-Methods-Form-Accounts-Checks.md#15.10
 
 changes:
+  - version: "0.3"
+    date: "09-23-26 14:27"
+    change: >-
+      The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder.
   - version: "0.2"
     date: "09-19-26 00:15"
     change: >-

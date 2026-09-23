@@ -1,7 +1,7 @@
 stage: 6
 name: Build the chapter's public website
-version: "0.3"
-updated: "09-23-26 12:49"
+version: "0.4"
+updated: "09-23-26 14:27"
 why: >-
   The public website is the chapter's own marketing site. The software does not
   build it, but it needs four things from it. The policy documents need addresses
@@ -164,7 +164,7 @@ steps:
           - "Button colour. Cleveland: #CB963B (gold)."
           - "Button colour when the mouse is over it, about ten per cent darker. Cleveland: #b8842f."
           - "Body text colour. Cleveland: #7A7A7A (grey)."
-      - do: "The central support organization writes a file named chapter-tokens.css containing exactly these lines, with the chapter's four colour codes in place of the capitalised words. The values-file writer in step 8.10 produces this file from the page's answers, as prds/chapter-network/chapters/CHAPTER-SLUG-chapter-tokens.css:"
+      - do: "The central support organization writes a file named chapter-tokens.css containing exactly these lines, with the chapter's four colour codes in place of the capitalised words. The values-file writer in step 8.10 produces this file from the page's answers, as prds/chapter-network/chapters/SHORT-LABEL-chapter-tokens.css:"
         items:
           - ":root {"
           - "  --cbm-navy: PRIMARY-COLOUR;"
@@ -208,7 +208,7 @@ steps:
     produces: [crm_logo_file]
     mode: offline
     actions:
-      - do: Produce the chapter's logo as a PNG image file, the type Cleveland's CRM logo uses. Name it CHAPTER-SLUG-logo.png, for example lakeside-logo.png.
+      - do: Produce the chapter's logo as a PNG image file, the type Cleveland's CRM logo uses. Name it SHORT-LABEL-logo.png, for example lakeside-logo.png.
       - do: The best size and shape are not specified yet (work list item 4). Until they are, open Cleveland's CRM, note the size the logo shows at, and make the chapter's the same shape.
         see: A PNG file that opens.
       - do: "Put the file in the chapter's shared drive folder, and write its file name on the chapter information form under crm: logo_file. It is loaded into the CRM as its company logo in step 9.14."
@@ -261,6 +261,10 @@ steps:
     source: 9-Methods-Hosting-Website-Policies.md#6.7
 
 changes:
+  - version: "0.4"
+    date: "09-23-26 14:27"
+    change: >-
+      The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder.
   - version: "0.3"
     date: "09-23-26 12:49"
     change: >-

@@ -1,7 +1,7 @@
 # Stage 12 — Set up backups and monitoring
 
-**Version:** 0.2  
-**Last Updated:** 09-19-26 00:15  
+**Version:** 0.3  
+**Last Updated:** 09-23-26 14:27  
 **Generated from** `steps/stage-12.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -123,11 +123,11 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 1. Database first. Find the application database's ID:
    - doctl databases list --format ID,Name
 2. Restore it into a new database, putting that ID in place of DATABASE-ID. The output is thrown away on purpose, because it includes the new database's password:
-   - doctl databases fork restore-test-CHAPTER-SLUG --restore-from-cluster-id DATABASE-ID --wait > /dev/null
+   - doctl databases fork restore-test-SHORT-LABEL --restore-from-cluster-id DATABASE-ID --wait > /dev/null
    *You should see:* The prompt returns after five to fifteen minutes, with nothing printed.
 3. Find the new database's ID:
    - doctl databases list --format ID,Name,Status
-   *You should see:* A row named restore-test-CHAPTER-SLUG with status online. Note its ID as RESTORED-ID.
+   *You should see:* A row named restore-test-SHORT-LABEL with status online. Note its ID as RESTORED-ID.
 4. Let your own computer through the new database's firewall, which copies the live one and admits only the application. Putting your computer's public address in place of YOUR-IP (find it with `curl -s https://api.ipify.org`):
    - doctl databases firewalls append RESTORED-ID --rule ip_addr:YOUR-IP
 5. Count the submissions in the copy, without ever printing its address. This needs `psql` installed. The application's database is named after the chapter's short label, so put it in place of DATABASE-NAME (list it with `doctl databases db list RESTORED-ID`):
@@ -140,12 +140,12 @@ This stage makes sure the chapter's records can be got back after a mistake or a
    - doctl compute droplet backups SERVER-ID
    *You should see:* One backup image per day. Note the newest image's ID as BACKUP-IMAGE-ID.
 8. Create a new server from that backup, in the same region and size as the CRM server (read both from `doctl compute droplet get SERVER-ID --format Region,SizeSlug`):
-   - doctl compute droplet create restore-test-CHAPTER-SLUG --image BACKUP-IMAGE-ID --region REGION --size SIZE --wait
+   - doctl compute droplet create restore-test-SHORT-LABEL --image BACKUP-IMAGE-ID --region REGION --size SIZE --wait
    *You should see:* A new server with its own public address, NEW-SERVER-IP.
 9. Open https://NEW-SERVER-IP in a browser. The certificate warning is expected, because the certificate is for the CRM's real address. Sign in as the central support organization's administrator and open one record changed recently.
    *You should see:* The record, as it was at the time of the backup.
 10. Delete the new server:
-   - doctl compute droplet delete restore-test-CHAPTER-SLUG --force
+   - doctl compute droplet delete restore-test-SHORT-LABEL --force
 11. Write down on the chapter's entry in the list of watched systems:
    - The date.
    - What was checked in each copy.
@@ -178,16 +178,16 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 1. The alert address must belong to a member of the chapter's DigitalOcean team; DigitalOcean refuses any other. Check it is listed under the chapter's team members in the DigitalOcean web console.
 2. Create the uptime check on the application's health page, putting the application's address in place of APP-ADDRESS:
-   - doctl monitoring uptime create CHAPTER-SLUG-app-up --target https://APP-ADDRESS/healthz --type https --regions us_east
+   - doctl monitoring uptime create SHORT-LABEL-app-up --target https://APP-ADDRESS/healthz --type https --regions us_east
    *You should see:* A new uptime check with its ID. Note it as APP-CHECK-ID.
 3. Add its alert, putting the alert address in place of ALERT-ADDRESS:
-   - doctl monitoring uptime alert create APP-CHECK-ID --name CHAPTER-SLUG-app-down --type down --threshold 1 --comparison less_than --period 2m --emails ALERT-ADDRESS
+   - doctl monitoring uptime alert create APP-CHECK-ID --name SHORT-LABEL-app-down --type down --threshold 1 --comparison less_than --period 2m --emails ALERT-ADDRESS
    *You should see:* The alert with type down and period 2m. These are exactly the settings on Cleveland's production application.
 4. Create the uptime check on the CRM's own address, putting it in place of CRM-ADDRESS:
-   - doctl monitoring uptime create CHAPTER-SLUG-crm-up --target https://CRM-ADDRESS/ --type https --regions us_east
+   - doctl monitoring uptime create SHORT-LABEL-crm-up --target https://CRM-ADDRESS/ --type https --regions us_east
    *You should see:* A second uptime check with its ID. Note it as CRM-CHECK-ID.
 5. Add its alert:
-   - doctl monitoring uptime alert create CRM-CHECK-ID --name CHAPTER-SLUG-crm-down --type down --threshold 1 --comparison less_than --period 2m --emails ALERT-ADDRESS
+   - doctl monitoring uptime alert create CRM-CHECK-ID --name SHORT-LABEL-crm-down --type down --threshold 1 --comparison less_than --period 2m --emails ALERT-ADDRESS
 6. Add the three database alerts, putting the application database's ID in place of DATABASE-ID. Run each line on its own:
    - doctl monitoring alert create --type v1/dbaas/alerts/cpu_alerts --compare GreaterThan --value 90 --window 5m --entities DATABASE-ID --emails ALERT-ADDRESS --description 'CPU is running high'
    - doctl monitoring alert create --type v1/dbaas/alerts/memory_utilization_alerts --compare GreaterThan --value 90 --window 5m --entities DATABASE-ID --emails ALERT-ADDRESS --description 'Memory Utilization is running high'
@@ -252,5 +252,6 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 | Version | Date | Change |
 |---|---|---|
+| 0.3 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. |
 | 0.2 | 09-19-26 00:15 | Every action made precise (Doug, 09-19-26): exact doctl commands with named placeholders for backups, the restore test and the uptime and database alerts, flags checked against doctl's own help, and the restore copy's password never printed. |
 | 0.1 | 09-18-26 17:30 | First version as data, converted from the methods for backups and monitoring (6-Methods-Backups-Monitoring.md, version 0.4) with the step list's finishing tests. |

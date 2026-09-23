@@ -1,7 +1,7 @@
 # Stage 5 — Open the hosting and video meeting accounts
 
-**Version:** 0.7  
-**Last Updated:** 09-23-26 13:54  
+**Version:** 0.8  
+**Last Updated:** 09-23-26 14:27  
 **Generated from** `steps/stage-05.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -313,7 +313,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 1. In the chapter's DigitalOcean account, open API, then Tokens, and choose to generate a new token. The exact wording of DigitalOcean's screens has not been checked for this guide.
 2. Enter:
-   - Token name: crmbuilder-CHAPTER-SLUG, using the chapter's short label from step 8.2
+   - Token name: crmbuilder-SHORT-LABEL, using the chapter's short label from step 8.2
    - Expiration: the longest the screen offers, or no expiry
    - Scopes: full read and write access
    *You should see:* A new token, shown once only.
@@ -321,7 +321,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 4. With manual DNS (step 3.7), skip every Cloudflare action below: there is no Cloudflare token to make, and the Cloudflare box in CRMBuilder stays empty. Go on to the action that begins Work at the build computer.
 5. In Cloudflare, open My Profile, then API Tokens, and choose Create Token. Use the Edit zone DNS template.
 6. Set exactly:
-   - Token name: crmbuilder-CHAPTER-SLUG
+   - Token name: crmbuilder-SHORT-LABEL
    - Permissions: Zone, DNS, Edit (the template sets this)
    - A second permission line: Zone, Zone, Read. CRMBuilder lists the chapter's zones with it, and the template does not add it.
    - Zone resources: Include, Specific zone, and each of the chapter's domain names; never All zones
@@ -338,15 +338,15 @@ The chapter's CRM server, its applications and their database all run in a hosti
 11. Create the chapter's engagement, which holds the two tokens. Click the strip across the top of the window, which names the current engagement, then Manage engagements… at the bottom of the list. On the Engagements page, click New Engagement.
    *You should see:* A window titled New engagement, with four boxes.
 12. Fill in each box, then save:
-   - Code: the chapter's short label from step 8.2 in capital letters, for Boston BOSTON. Two to ten capital letters and digits, starting with a letter. It cannot be changed later.
+   - Code: the chapter's short label from step 8.2, in capital letters: for Boston, BOSTON. Two to ten capital letters and digits, starting with a letter. It cannot be changed later.
    - Name: the chapter's full name from step 8.2
    - Purpose: Build and run the chapter's CRM and applications.
    - Status: active
    *You should see:* The new engagement listed with an identifier of the form ENG-NNN, and named in the strip across the top of the window. If another engagement is named there, click the strip and choose the chapter's.
 13. Open the tab 11 · CRM Deployment, click Instances in the side bar, then Deploy new…, and on Step 1 of 5 — Providers click Set credentials….
    *You should see:* A window titled Provider credentials, with one box for DigitalOcean and one for Cloudflare.
-14. In each box, paste the token into Token, type crmbuilder-CHAPTER-SLUG into Label, and click Save token. Then click Close, and click Cancel to leave the deploy window; step 9.2 runs it.
-   *You should see:* Step 1 reading DigitalOcean: ✓ Configured — crmbuilder-CHAPTER-SLUG, and the same for Cloudflare. The token itself is never shown again.
+14. In each box, paste the token into Token, type crmbuilder-SHORT-LABEL into Label, and click Save token. Then click Close, and click Cancel to leave the deploy window; step 9.2 runs it.
+   *You should see:* Step 1 reading DigitalOcean: ✓ Configured — crmbuilder-SHORT-LABEL, and the same for Cloudflare. The token itself is never shown again.
 
 **Done when all of these are true:**
 
@@ -420,6 +420,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 | Version | Date | Change |
 |---|---|---|
+| 0.8 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. The engagement code is described as the short label in capital letters. |
 | 0.7 | 09-23-26 13:54 | Manual DNS added (Doug, 09-23-26): step 5.7's account list names the chapter's DNS provider when the chapter kept its own, and step 5.8 makes only the DigitalOcean token for a chapter on manual DNS. The finishing test changed with the step list (version 0.19). |
 | 0.6 | 09-23-26 13:51 | Step 5.8 names the build computer, the central support organization's own computer with CRMBuilder installed, instead of "this computer", and gives the change of folder its own action. |
 | 0.5 | 09-23-26 13:39 | Step 5.8 now opens CRMBuilder and creates the chapter's engagement (Code, Name, Purpose, Status) before entering the tokens, because the tokens are stored on the engagement and no step created it (Doug, 09-23-26: in 5.8, code BOSTON for Boston). |

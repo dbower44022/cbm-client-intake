@@ -1,7 +1,7 @@
 stage: 12
 name: Set up backups and monitoring
-version: "0.2"
-updated: "09-19-26 00:15"
+version: "0.3"
+updated: "09-23-26 14:27"
 why: >-
   This stage makes sure the chapter's records can be got back after a mistake or a
   failure, and that a person finds out when the system stops working. It comes
@@ -111,12 +111,12 @@ steps:
           - "doctl databases list --format ID,Name"
       - do: "Restore it into a new database, putting that ID in place of DATABASE-ID. The output is thrown away on purpose, because it includes the new database's password:"
         items:
-          - "doctl databases fork restore-test-CHAPTER-SLUG --restore-from-cluster-id DATABASE-ID --wait > /dev/null"
+          - "doctl databases fork restore-test-SHORT-LABEL --restore-from-cluster-id DATABASE-ID --wait > /dev/null"
         see: The prompt returns after five to fifteen minutes, with nothing printed.
       - do: "Find the new database's ID:"
         items:
           - "doctl databases list --format ID,Name,Status"
-        see: A row named restore-test-CHAPTER-SLUG with status online. Note its ID as RESTORED-ID.
+        see: A row named restore-test-SHORT-LABEL with status online. Note its ID as RESTORED-ID.
       - do: "Let your own computer through the new database's firewall, which copies the live one and admits only the application. Putting your computer's public address in place of YOUR-IP (find it with `curl -s https://api.ipify.org`):"
         items:
           - "doctl databases firewalls append RESTORED-ID --rule ip_addr:YOUR-IP"
@@ -134,13 +134,13 @@ steps:
         see: One backup image per day. Note the newest image's ID as BACKUP-IMAGE-ID.
       - do: "Create a new server from that backup, in the same region and size as the CRM server (read both from `doctl compute droplet get SERVER-ID --format Region,SizeSlug`):"
         items:
-          - "doctl compute droplet create restore-test-CHAPTER-SLUG --image BACKUP-IMAGE-ID --region REGION --size SIZE --wait"
+          - "doctl compute droplet create restore-test-SHORT-LABEL --image BACKUP-IMAGE-ID --region REGION --size SIZE --wait"
         see: A new server with its own public address, NEW-SERVER-IP.
       - do: "Open https://NEW-SERVER-IP in a browser. The certificate warning is expected, because the certificate is for the CRM's real address. Sign in as the central support organization's administrator and open one record changed recently."
         see: The record, as it was at the time of the backup.
       - do: "Delete the new server:"
         items:
-          - "doctl compute droplet delete restore-test-CHAPTER-SLUG --force"
+          - "doctl compute droplet delete restore-test-SHORT-LABEL --force"
       - do: "Write down on the chapter's entry in the list of watched systems:"
         items:
           - The date.
@@ -173,19 +173,19 @@ steps:
       - do: "The alert address must belong to a member of the chapter's DigitalOcean team; DigitalOcean refuses any other. Check it is listed under the chapter's team members in the DigitalOcean web console."
       - do: "Create the uptime check on the application's health page, putting the application's address in place of APP-ADDRESS:"
         items:
-          - "doctl monitoring uptime create CHAPTER-SLUG-app-up --target https://APP-ADDRESS/healthz --type https --regions us_east"
+          - "doctl monitoring uptime create SHORT-LABEL-app-up --target https://APP-ADDRESS/healthz --type https --regions us_east"
         see: A new uptime check with its ID. Note it as APP-CHECK-ID.
       - do: "Add its alert, putting the alert address in place of ALERT-ADDRESS:"
         items:
-          - "doctl monitoring uptime alert create APP-CHECK-ID --name CHAPTER-SLUG-app-down --type down --threshold 1 --comparison less_than --period 2m --emails ALERT-ADDRESS"
+          - "doctl monitoring uptime alert create APP-CHECK-ID --name SHORT-LABEL-app-down --type down --threshold 1 --comparison less_than --period 2m --emails ALERT-ADDRESS"
         see: The alert with type down and period 2m. These are exactly the settings on Cleveland's production application.
       - do: "Create the uptime check on the CRM's own address, putting it in place of CRM-ADDRESS:"
         items:
-          - "doctl monitoring uptime create CHAPTER-SLUG-crm-up --target https://CRM-ADDRESS/ --type https --regions us_east"
+          - "doctl monitoring uptime create SHORT-LABEL-crm-up --target https://CRM-ADDRESS/ --type https --regions us_east"
         see: A second uptime check with its ID. Note it as CRM-CHECK-ID.
       - do: "Add its alert:"
         items:
-          - "doctl monitoring uptime alert create CRM-CHECK-ID --name CHAPTER-SLUG-crm-down --type down --threshold 1 --comparison less_than --period 2m --emails ALERT-ADDRESS"
+          - "doctl monitoring uptime alert create CRM-CHECK-ID --name SHORT-LABEL-crm-down --type down --threshold 1 --comparison less_than --period 2m --emails ALERT-ADDRESS"
       - do: "Add the three database alerts, putting the application database's ID in place of DATABASE-ID. Run each line on its own:"
         items:
           - "doctl monitoring alert create --type v1/dbaas/alerts/cpu_alerts --compare GreaterThan --value 90 --window 5m --entities DATABASE-ID --emails ALERT-ADDRESS --description 'CPU is running high'"
@@ -251,6 +251,10 @@ steps:
     source: 6-Methods-Backups-Monitoring.md#12.5
 
 changes:
+  - version: "0.3"
+    date: "09-23-26 14:27"
+    change: >-
+      The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder.
   - version: "0.2"
     date: "09-19-26 00:15"
     change: >-
