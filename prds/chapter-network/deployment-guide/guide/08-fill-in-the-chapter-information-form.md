@@ -1,7 +1,7 @@
 # Stage 8 — Fill in the chapter information form
 
-**Version:** 0.6  
-**Last Updated:** 09-23-26 12:20  
+**Version:** 0.7  
+**Last Updated:** 09-23-26 12:26  
 **Generated from** `steps/stage-08.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -90,12 +90,12 @@ The chapter information form holds the roughly forty answers that differ from on
   - *What it is:* The chapter's name, exactly as it should appear on every page, email and screen the software shows. Capital letters count.
   - *Where to find it:* The chapter's legal name from step 1.1, or the trading name the board chose.
   - *If it is wrong:* Every page title, page footer and email shows the wrong name until it is corrected and the applications are deployed again.
-  - *Example:* Boston Business Mentors
+  - *Example:* Lakeside Business Mentors
 - **Short label** (`chapter.slug`) — answered by the chapter; required.
   - *What it is:* One short lower-case word that names the chapter's server, applications and secrets. Letters, digits and hyphens only, starting with a letter.
   - *Where to find it:* Choose it now. The city's name is usual.
   - *If it is wrong:* The label becomes part of the names of the chapter's server and applications. Changing it after stage 9 means renaming them.
-  - *Example:* boston
+  - *Example:* lakeside
 - **Time zone** (`chapter.timezone`) — answered by the chapter; required.
   - *What it is:* The time zone the chapter works in. America/New_York is Eastern time.
   - *Where to find it:* Where the chapter operates.
@@ -151,39 +151,43 @@ The chapter information form holds the roughly forty answers that differ from on
 
 **The questions in this step:**
 
-- **Website address** (`web.website_base_url`) — answered by the chapter; required.
-  - *What it is:* The home page address of the chapter's public website.
-  - *Where to find it:* The website published in step 6.2. Open it in a browser and copy the address bar.
+- **Web address (URL) of your website's home page** (`web.website_base_url`) — answered by the chapter; required.
+  - *What it is:* The web address of your chapter's public website, the page people land on when they visit it.
+  - *Where to find it:* Open your website's home page in a browser and copy the web address from the address bar (step 6.2).
   - *If it is wrong:* The link back to the website and the website menu on the software's public pages point somewhere else.
-  - *Example:* https://bbmentors.org
-- **Applications' address** (`web.app_base_url`) — answered by the central support organization; required.
-  - *What it is:* The address the chapter's applications will have. It does not open yet; it starts working at step 11.10.
+  - *Example:* https://www.yourchapter.org
+- **Web address (URL) the applications will use** (`web.app_base_url`) — answered by the central support organization; required.
+  - *What it is:* The web address where the chapter's staff tools and public forms will be. It does not open yet; it starts working at step 11.10.
   - *Where to find it:* https://apps. followed by the chapter's domain, unless the chapter and the central support organization agree another name.
   - *If it is wrong:* Links in emails the software sends point to the wrong place, and signing in can fail because the software only trusts its own address.
-  - *Example:* https://apps.bbmentors.org
-- **Help documentation address** (`web.docs_site_url`) — answered by the chapter; may be marked not known yet.
-  - *What it is:* The address of the chapter's help and documentation site, linked from the applications' home page and the CRM's menu.
-  - *Where to find it:* The decision in step 6.7. If the chapter has no documentation site yet, mark this not known yet.
+  - *Example:* https://apps.yourchapter.org
+- **Web address (URL) of your help documentation site** (`web.docs_site_url`) — answered by the chapter; may be marked not known yet.
+  - *What it is:* The web address of a website holding help and how-to guides for your staff and mentors. The applications' home page and the CRM's menu link to it.
+  - *Where to find it:* The decision in step 6.7. Most chapters do not have one at first; mark this not known yet.
   - *If it is wrong:* The Documentation link leads nowhere. Marked not known yet, the link is simply left out.
-  - *Example:* https://docs.bbmentors.org
-- **Client code of conduct address** (`web.policy_client_conduct_url`) — answered by the chapter; required.
-  - *What it is:* The address of the chapter's client code of conduct. Every public application form links to it from its consent box.
-  - *Where to find it:* The policy documents published in stage 7.
-  - *If it is wrong:* Applicants agree to a document that is not the chapter's, which is a legal problem, not a cosmetic one.
-- **Mentor code of ethics address** (`web.policy_mentor_ethics_url`) — answered by the chapter; required.
-  - *What it is:* The address of the chapter's mentor code of ethics. The volunteer application form links to it from its consent box.
-  - *Where to find it:* The policy documents published in stage 7.
-  - *If it is wrong:* Volunteers agree to a document that is not the chapter's.
-- **Terms of use address** (`web.policy_terms_url`) — answered by the chapter; required.
-  - *What it is:* The address of the chapter's terms of use, linked from every public form.
-  - *Where to find it:* The policy documents published in stage 7.
-  - *If it is wrong:* Applicants agree to terms that are not the chapter's.
-- **Privacy policy address** (`web.policy_privacy_url`) — answered by the chapter; required.
-  - *What it is:* The address of the chapter's privacy policy, linked from every public form.
-  - *Where to find it:* The policy documents published in stage 7.
-  - *If it is wrong:* Applicants are shown a privacy policy that is not the chapter's, which is a legal exposure.
-- **Colour file address** (`web.chapter_tokens_url`) — answered by the chapter; may be marked not known yet.
-  - *What it is:* The address of a small file that sets the chapter's colours on the software's pages.
+  - *Example:* https://docs.yourchapter.org
+- **Web address (URL) of your client code of conduct page** (`web.policy_client_conduct_url`) — answered by the chapter; required.
+  - *What it is:* The web address of the page on your website that shows your client code of conduct. Every public application form links to it from its consent box, so applicants can read what they are agreeing to.
+  - *Where to find it:* Open that page on your website in a browser and copy the web address from the address bar. If your website has no such page yet, stage 7 is where the document is written and published; this question cannot be skipped.
+  - *If it is wrong:* Applicants agree to a document that is not the chapter's, which is a legal problem, not a cosmetic one. Left out altogether, the forms link to Cleveland's client code of conduct instead.
+  - *Example:* https://www.yourchapter.org/client-code-of-conduct/
+- **Web address (URL) of your mentor code of ethics page** (`web.policy_mentor_ethics_url`) — answered by the chapter; required.
+  - *What it is:* The web address of the page on your website that shows your mentor code of ethics. The volunteer application form links to it from its consent box, so volunteers can read what they are agreeing to.
+  - *Where to find it:* Open that page on your website in a browser and copy the web address from the address bar. If your website has no such page yet, stage 7 is where the document is written and published; this question cannot be skipped.
+  - *If it is wrong:* Volunteers agree to a document that is not the chapter's. Left out altogether, the forms link to Cleveland's mentor code of ethics instead.
+  - *Example:* https://www.yourchapter.org/mentor-code-of-ethics/
+- **Web address (URL) of your terms of use page** (`web.policy_terms_url`) — answered by the chapter; required.
+  - *What it is:* The web address of the page on your website that shows your terms of use. Every public form links to it from its consent box.
+  - *Where to find it:* Open that page on your website in a browser and copy the web address from the address bar. If your website has no such page yet, stage 7 is where the document is written and published; this question cannot be skipped.
+  - *If it is wrong:* Applicants agree to terms that are not the chapter's. Left out altogether, the forms link to Cleveland's terms of use instead.
+  - *Example:* https://www.yourchapter.org/terms-of-use/
+- **Web address (URL) of your privacy policy page** (`web.policy_privacy_url`) — answered by the chapter; required.
+  - *What it is:* The web address of the page on your website that shows your privacy policy. Every public form links to it from its consent box.
+  - *Where to find it:* Open that page on your website in a browser and copy the web address from the address bar. If your website has no such page yet, stage 7 is where the document is written and published; this question cannot be skipped.
+  - *If it is wrong:* Applicants are shown a privacy policy that is not the chapter's, which is a legal exposure. Left out altogether, the forms link to Cleveland's privacy policy instead.
+  - *Example:* https://www.yourchapter.org/privacy-policy/
+- **Web address (URL) of your colour file** (`web.chapter_tokens_url`) — answered by the chapter; may be marked not known yet.
+  - *What it is:* The web address of a small file that sets your chapter's colours on the software's pages.
   - *Where to find it:* The colour file published in step 6.5. Most chapters start without one; mark this not known yet.
   - *If it is wrong:* The pages keep the standard colours. Nothing breaks.
 
@@ -236,37 +240,37 @@ The chapter information form holds the roughly forty answers that differ from on
   - *What it is:* The part after the @ in the chapter's staff email addresses.
   - *Where to find it:* The Google Workspace admin console, under Account, then Domains.
   - *If it is wrong:* Email between the chapter's own people is treated as client email and filed on client records.
-  - *Example:* bbmentors.org
+  - *Example:* yourchapter.org
 - **Shared operations mailbox** (`google.ops_mailbox`) — answered by the chapter; required.
   - *What it is:* The shared mailbox where public enquiries arrive. The software reads it and sends replies from it.
   - *Where to find it:* The mailbox created in step 4.7. It must be a user with a licence, never a group or an alias.
   - *If it is wrong:* A group or alias makes reading and sending fail with an error that does not name the cause. If any other system reads the same mailbox, each one gets about half the messages.
-  - *Example:* info@bbmentors.org
+  - *Example:* info@yourchapter.org
 - **Alert sending mailbox** (`google.alert_email_from`) — answered by the chapter; required.
   - *What it is:* The mailbox the software sends its warning messages from.
   - *Where to find it:* The mailbox created in step 4.8. It must be a user with a licence, never a group.
   - *If it is wrong:* A group is refused, and the refusal reads as though the software has no permission at all.
-  - *Example:* alerts@bbmentors.org
+  - *Example:* alerts@yourchapter.org
 - **Alert receiving address** (`google.alert_email_to`) — answered by the chapter; required.
   - *What it is:* Who receives the software's warning messages. It may be a group.
   - *Where to find it:* The decision in step 4.9.
   - *If it is wrong:* Warnings about failed submissions reach nobody.
-  - *Example:* support@bbmentors.org
+  - *Example:* support@yourchapter.org
 - **Members group** (`google.members_group`) — answered by the chapter; may be marked not known yet.
   - *What it is:* The Google group every member of the chapter belongs to. A new mentor's mailbox is added to it automatically.
   - *Where to find it:* The group created in step 4.10. Mark not known yet if the chapter has none; the software then skips adding mentors to a group.
   - *If it is wrong:* New mentors are added to the wrong group, or to none.
-  - *Example:* allmembers@bbmentors.org
+  - *Example:* allmembers@yourchapter.org
 - **Mentor email domain** (`google.mentor_email_domain`) — answered by the chapter; required.
   - *What it is:* The domain the software creates mentors' mailboxes and CRM sign-ins on, as firstname.lastname@ this domain. Usually the same as the staff email domain.
   - *Where to find it:* The Google Workspace admin console, under Account, then Domains.
   - *If it is wrong:* Mentors get addresses on a domain the chapter does not own, and their mailboxes cannot be created.
-  - *Example:* bbmentors.org
+  - *Example:* yourchapter.org
 - **Google administrator the software acts as** (`google.delegated_admin`) — answered by the chapter; required.
   - *What it is:* A Google Workspace administrator account. The software acts as this account when it checks and creates mentors' mailboxes.
   - *Where to find it:* The chapter's own administrator account from step 4.5.
   - *If it is wrong:* Checking and creating mentors' mailboxes fails, so new mentors are left without one.
-  - *Example:* admin@bbmentors.org
+  - *Example:* admin@yourchapter.org
 - **Shared drive identifier** (`google.shared_drive_id`) — answered by the central support organization; may be marked not known yet; filled in at step 10.5.
   - *What it is:* The identifier of the shared drive where the software files each record's documents.
   - *Where to find it:* Step 10.5 creates the drive and writes its identifier here. It is the part of the drive's web address after /drive/folders/. Leave it until then.
@@ -275,7 +279,7 @@ The chapter information form holds the roughly forty answers that differ from on
   - *What it is:* The Zoom user that hosts the chapter's public webinars.
   - *Where to find it:* The Zoom account set up in step 5.5.
   - *If it is wrong:* Webinars are created under Cleveland's host, which the chapter's Zoom app cannot reach.
-  - *Example:* webinars@bbmentors.org
+  - *Example:* webinars@yourchapter.org
 - **Zoom app account identifier** (`zoom.account_id`) — answered by the central support organization; required; asked only for a chapter that runs Zoom webinars.
   - *What it is:* The account identifier of the chapter's Zoom app, which the software uses to create webinars.
   - *Where to find it:* The Zoom app created in step 5.5, on its App Credentials screen.
@@ -322,31 +326,31 @@ The chapter information form holds the roughly forty answers that differ from on
 
 **The questions in this step:**
 
-- **CRM address** (`crm.base_url`) — answered by the central support organization; required.
-  - *What it is:* The address of the chapter's CRM. It does not open yet; it starts working at step 9.6.
+- **Web address (URL) the CRM will use** (`crm.base_url`) — answered by the central support organization; required.
+  - *What it is:* The web address of the chapter's CRM, the system that holds every client, mentor and meeting. It does not open yet; it starts working at step 9.6.
   - *Where to find it:* https://crm. followed by the chapter's domain, unless agreed otherwise.
   - *If it is wrong:* The applications cannot reach the CRM, and nothing works.
-  - *Example:* https://crm.bbmentors.org
+  - *Example:* https://crm.yourchapter.org
 - **Name shown inside the CRM** (`crm.application_name`) — answered by the central support organization; required.
   - *What it is:* The name the CRM shows at the top of its own screens.
   - *Where to find it:* Usually the chapter name from step 8.2.
   - *If it is wrong:* The CRM's screens show the wrong name.
-  - *Example:* Boston Business Mentors
+  - *Example:* Lakeside Business Mentors
 - **Sending name for the CRM's own emails** (`crm.outbound_from_name`) — answered by the central support organization; required.
   - *What it is:* The sender name on email the CRM sends by itself, such as password resets.
   - *Where to find it:* Usually the chapter name from step 8.2.
   - *If it is wrong:* Those emails arrive under the wrong name.
-  - *Example:* Boston Business Mentors
+  - *Example:* Lakeside Business Mentors
 - **Sending address for the CRM's own emails** (`crm.outbound_from_address`) — answered by the central support organization; required.
   - *What it is:* The address email the CRM sends by itself comes from.
   - *Where to find it:* Usually the shared operations mailbox from step 8.4.
   - *If it is wrong:* Password resets and other CRM emails bounce or land in spam.
-  - *Example:* info@bbmentors.org
+  - *Example:* info@yourchapter.org
 - **Logo file name** (`crm.logo_file`) — answered by the central support organization; may be marked not known yet.
   - *What it is:* The file name of the chapter's logo, shown on the CRM's sign-in screen and menu.
   - *Where to find it:* The logo from step 6.6. No build script sets the logo yet (work list G1, item 2); it is uploaded by hand in the CRM.
   - *If it is wrong:* The CRM shows no logo. Nothing else is affected.
-  - *Example:* boston-logo.png
+  - *Example:* lakeside-logo.png
 
 **Done when all of these are true:**
 
@@ -623,6 +627,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 | Version | Date | Change |
 |---|---|---|
+| 0.7 | 09-23-26 12:26 | Every web-address question now says plainly that it asks for the web address (URL) of a page, and which page (Doug, 09-23-26: "Why doesn't it say that?"). The four policy questions say what to do when the page does not exist yet, and that leaving one out links the forms to Cleveland's document. Examples use yourchapter.org rather than Boston's own domain, because this stage serves every chapter. The page no longer shows each question's internal name; the guide still does. |
 | 0.6 | 09-23-26 12:20 | Step 8.6's page button renamed Use recommended answers, and the step now says exactly what it does (Doug, 09-23-26). |
 | 0.5 | 09-23-26 12:10 | Step 8.1 shares the page by link instead of by email invitation. A published page starts private and shows a signed-out visitor a sign-in page; opened to anyone with the link, the Boston chapter's page worked with no claude.ai account (Doug, 09-23-26). |
 | 0.4 | 09-23-26 11:45 | The form becomes a web page, built from this stage's data (Doug, 09-23-26). Each question now carries what it means, where to find the answer and what goes wrong if it is wrong, in a new fields list the guide and the page both read. Step 8.1 publishes the page and invites the setup contact; step 8.9 signs off on the page; step 8.10 writes the values file from the page's answers instead of by hand. New questions: the Google administrator the software acts as (it was on no step), and whether the chapter runs Zoom webinars and creates mentors' mailboxes automatically. The switches' starting values changed: the Google features and deploy_on_push are on, because the worker reads its mail switches only at start-up. |

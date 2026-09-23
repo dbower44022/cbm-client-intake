@@ -143,7 +143,7 @@ def test_a_missing_answer_is_named_by_its_label(tmp_path, capsys):
     src = tmp_path / "answers.txt"
     src.write_text(_block(a))
     assert to_values.main(["x", str(src), "--check"]) == 1
-    assert "Privacy policy address (web.policy_privacy_url): Not answered yet." in capsys.readouterr().out
+    assert "Web address (URL) of your privacy policy page (web.policy_privacy_url): Not answered yet." in capsys.readouterr().out
 
 
 def test_the_shared_drive_is_owed_later_not_a_failure(tmp_path, capsys):

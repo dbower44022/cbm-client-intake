@@ -204,7 +204,6 @@ details[open] summary{margin-bottom:6px}
     if (f.later) tags.push('Answered at step ' + f.later);
     head.appendChild(el('span', {'class':'tag'}, tags.join(' · ')));
     card.appendChild(head);
-    card.appendChild(el('code', {'class':'key'}, f.key));
 
     var a = state.answers[f.key] || {};
     var input;

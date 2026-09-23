@@ -1,7 +1,7 @@
 stage: 8
 name: Fill in the chapter information form
-version: "0.6"
-updated: "09-23-26 12:20"
+version: "0.7"
+updated: "09-23-26 12:26"
 why: >-
   The chapter information form holds the roughly forty answers that differ from
   one chapter to the next: its name, its addresses, its Google details and its
@@ -77,7 +77,7 @@ steps:
         by: chapter
         kind: text
         required: true
-        example: Boston Business Mentors
+        example: Lakeside Business Mentors
         meaning: The chapter's name, exactly as it should appear on every page, email and screen the software shows. Capital letters count.
         source: The chapter's legal name from step 1.1, or the trading name the board chose.
         wrong: Every page title, page footer and email shows the wrong name until it is corrected and the applications are deployed again.
@@ -86,7 +86,7 @@ steps:
         by: chapter
         kind: slug
         required: true
-        example: boston
+        example: lakeside
         meaning: One short lower-case word that names the chapter's server, applications and secrets. Letters, digits and hyphens only, starting with a letter.
         source: Choose it now. The city's name is usual.
         wrong: The label becomes part of the names of the chapter's server and applications. Changing it after stage 9 means renaming them.
@@ -155,70 +155,74 @@ steps:
         see: A first line of HTTP/2 200 for every one.
     fields:
       - key: web.website_base_url
-        label: Website address
+        label: Web address (URL) of your website's home page
         by: chapter
         kind: url
         required: true
-        example: https://bbmentors.org
-        meaning: The home page address of the chapter's public website.
-        source: The website published in step 6.2. Open it in a browser and copy the address bar.
+        example: https://www.yourchapter.org
+        meaning: The web address of your chapter's public website, the page people land on when they visit it.
+        source: Open your website's home page in a browser and copy the web address from the address bar (step 6.2).
         wrong: The link back to the website and the website menu on the software's public pages point somewhere else.
       - key: web.app_base_url
-        label: Applications' address
+        label: Web address (URL) the applications will use
         by: central
         kind: url
         required: true
-        example: https://apps.bbmentors.org
-        meaning: The address the chapter's applications will have. It does not open yet; it starts working at step 11.10.
+        example: https://apps.yourchapter.org
+        meaning: The web address where the chapter's staff tools and public forms will be. It does not open yet; it starts working at step 11.10.
         source: https://apps. followed by the chapter's domain, unless the chapter and the central support organization agree another name.
         wrong: Links in emails the software sends point to the wrong place, and signing in can fail because the software only trusts its own address.
       - key: web.docs_site_url
-        label: Help documentation address
+        label: Web address (URL) of your help documentation site
         by: chapter
         kind: url
         required: false
-        example: https://docs.bbmentors.org
-        meaning: The address of the chapter's help and documentation site, linked from the applications' home page and the CRM's menu.
-        source: The decision in step 6.7. If the chapter has no documentation site yet, mark this not known yet.
+        example: https://docs.yourchapter.org
+        meaning: The web address of a website holding help and how-to guides for your staff and mentors. The applications' home page and the CRM's menu link to it.
+        source: The decision in step 6.7. Most chapters do not have one at first; mark this not known yet.
         wrong: The Documentation link leads nowhere. Marked not known yet, the link is simply left out.
       - key: web.policy_client_conduct_url
-        label: Client code of conduct address
+        label: Web address (URL) of your client code of conduct page
         by: chapter
         kind: url
         required: true
-        meaning: The address of the chapter's client code of conduct. Every public application form links to it from its consent box.
-        source: The policy documents published in stage 7.
-        wrong: Applicants agree to a document that is not the chapter's, which is a legal problem, not a cosmetic one.
+        example: https://www.yourchapter.org/client-code-of-conduct/
+        meaning: The web address of the page on your website that shows your client code of conduct. Every public application form links to it from its consent box, so applicants can read what they are agreeing to.
+        source: Open that page on your website in a browser and copy the web address from the address bar. If your website has no such page yet, stage 7 is where the document is written and published; this question cannot be skipped.
+        wrong: Applicants agree to a document that is not the chapter's, which is a legal problem, not a cosmetic one. Left out altogether, the forms link to Cleveland's client code of conduct instead.
       - key: web.policy_mentor_ethics_url
-        label: Mentor code of ethics address
+        label: Web address (URL) of your mentor code of ethics page
         by: chapter
         kind: url
         required: true
-        meaning: The address of the chapter's mentor code of ethics. The volunteer application form links to it from its consent box.
-        source: The policy documents published in stage 7.
-        wrong: Volunteers agree to a document that is not the chapter's.
+        example: https://www.yourchapter.org/mentor-code-of-ethics/
+        meaning: The web address of the page on your website that shows your mentor code of ethics. The volunteer application form links to it from its consent box, so volunteers can read what they are agreeing to.
+        source: Open that page on your website in a browser and copy the web address from the address bar. If your website has no such page yet, stage 7 is where the document is written and published; this question cannot be skipped.
+        wrong: Volunteers agree to a document that is not the chapter's. Left out altogether, the forms link to Cleveland's mentor code of ethics instead.
       - key: web.policy_terms_url
-        label: Terms of use address
+        label: Web address (URL) of your terms of use page
         by: chapter
         kind: url
         required: true
-        meaning: The address of the chapter's terms of use, linked from every public form.
-        source: The policy documents published in stage 7.
-        wrong: Applicants agree to terms that are not the chapter's.
+        example: https://www.yourchapter.org/terms-of-use/
+        meaning: The web address of the page on your website that shows your terms of use. Every public form links to it from its consent box.
+        source: Open that page on your website in a browser and copy the web address from the address bar. If your website has no such page yet, stage 7 is where the document is written and published; this question cannot be skipped.
+        wrong: Applicants agree to terms that are not the chapter's. Left out altogether, the forms link to Cleveland's terms of use instead.
       - key: web.policy_privacy_url
-        label: Privacy policy address
+        label: Web address (URL) of your privacy policy page
         by: chapter
         kind: url
         required: true
-        meaning: The address of the chapter's privacy policy, linked from every public form.
-        source: The policy documents published in stage 7.
-        wrong: Applicants are shown a privacy policy that is not the chapter's, which is a legal exposure.
+        example: https://www.yourchapter.org/privacy-policy/
+        meaning: The web address of the page on your website that shows your privacy policy. Every public form links to it from its consent box.
+        source: Open that page on your website in a browser and copy the web address from the address bar. If your website has no such page yet, stage 7 is where the document is written and published; this question cannot be skipped.
+        wrong: Applicants are shown a privacy policy that is not the chapter's, which is a legal exposure. Left out altogether, the forms link to Cleveland's privacy policy instead.
       - key: web.chapter_tokens_url
-        label: Colour file address
+        label: Web address (URL) of your colour file
         by: chapter
         kind: url
         required: false
-        meaning: The address of a small file that sets the chapter's colours on the software's pages.
+        meaning: The web address of a small file that sets your chapter's colours on the software's pages.
         source: The colour file published in step 6.5. Most chapters start without one; mark this not known yet.
         wrong: The pages keep the standard colours. Nothing breaks.
     done_when:
@@ -258,7 +262,7 @@ steps:
         by: chapter
         kind: domain
         required: true
-        example: bbmentors.org
+        example: yourchapter.org
         meaning: The part after the @ in the chapter's staff email addresses.
         source: The Google Workspace admin console, under Account, then Domains.
         wrong: Email between the chapter's own people is treated as client email and filed on client records.
@@ -267,7 +271,7 @@ steps:
         by: chapter
         kind: email
         required: true
-        example: info@bbmentors.org
+        example: info@yourchapter.org
         meaning: The shared mailbox where public enquiries arrive. The software reads it and sends replies from it.
         source: The mailbox created in step 4.7. It must be a user with a licence, never a group or an alias.
         wrong: A group or alias makes reading and sending fail with an error that does not name the cause. If any other system reads the same mailbox, each one gets about half the messages.
@@ -276,7 +280,7 @@ steps:
         by: chapter
         kind: email
         required: true
-        example: alerts@bbmentors.org
+        example: alerts@yourchapter.org
         meaning: The mailbox the software sends its warning messages from.
         source: The mailbox created in step 4.8. It must be a user with a licence, never a group.
         wrong: A group is refused, and the refusal reads as though the software has no permission at all.
@@ -285,7 +289,7 @@ steps:
         by: chapter
         kind: email
         required: true
-        example: support@bbmentors.org
+        example: support@yourchapter.org
         meaning: Who receives the software's warning messages. It may be a group.
         source: The decision in step 4.9.
         wrong: Warnings about failed submissions reach nobody.
@@ -294,7 +298,7 @@ steps:
         by: chapter
         kind: email
         required: false
-        example: allmembers@bbmentors.org
+        example: allmembers@yourchapter.org
         meaning: The Google group every member of the chapter belongs to. A new mentor's mailbox is added to it automatically.
         source: The group created in step 4.10. Mark not known yet if the chapter has none; the software then skips adding mentors to a group.
         wrong: New mentors are added to the wrong group, or to none.
@@ -303,7 +307,7 @@ steps:
         by: chapter
         kind: domain
         required: true
-        example: bbmentors.org
+        example: yourchapter.org
         meaning: The domain the software creates mentors' mailboxes and CRM sign-ins on, as firstname.lastname@ this domain. Usually the same as the staff email domain.
         source: The Google Workspace admin console, under Account, then Domains.
         wrong: Mentors get addresses on a domain the chapter does not own, and their mailboxes cannot be created.
@@ -312,7 +316,7 @@ steps:
         by: chapter
         kind: email
         required: true
-        example: admin@bbmentors.org
+        example: admin@yourchapter.org
         meaning: A Google Workspace administrator account. The software acts as this account when it checks and creates mentors' mailboxes.
         source: The chapter's own administrator account from step 4.5.
         wrong: Checking and creating mentors' mailboxes fails, so new mentors are left without one.
@@ -331,7 +335,7 @@ steps:
         kind: email
         required: true
         show_if: flags.zoom_events
-        example: webinars@bbmentors.org
+        example: webinars@yourchapter.org
         meaning: The Zoom user that hosts the chapter's public webinars.
         source: The Zoom account set up in step 5.5.
         wrong: Webinars are created under Cleveland's host, which the chapter's Zoom app cannot reach.
@@ -385,12 +389,12 @@ steps:
         see: Every question in the section marked as saved.
     fields:
       - key: crm.base_url
-        label: CRM address
+        label: Web address (URL) the CRM will use
         by: central
         kind: url
         required: true
-        example: https://crm.bbmentors.org
-        meaning: The address of the chapter's CRM. It does not open yet; it starts working at step 9.6.
+        example: https://crm.yourchapter.org
+        meaning: The web address of the chapter's CRM, the system that holds every client, mentor and meeting. It does not open yet; it starts working at step 9.6.
         source: https://crm. followed by the chapter's domain, unless agreed otherwise.
         wrong: The applications cannot reach the CRM, and nothing works.
       - key: crm.application_name
@@ -398,7 +402,7 @@ steps:
         by: central
         kind: text
         required: true
-        example: Boston Business Mentors
+        example: Lakeside Business Mentors
         meaning: The name the CRM shows at the top of its own screens.
         source: Usually the chapter name from step 8.2.
         wrong: The CRM's screens show the wrong name.
@@ -407,7 +411,7 @@ steps:
         by: central
         kind: text
         required: true
-        example: Boston Business Mentors
+        example: Lakeside Business Mentors
         meaning: The sender name on email the CRM sends by itself, such as password resets.
         source: Usually the chapter name from step 8.2.
         wrong: Those emails arrive under the wrong name.
@@ -416,7 +420,7 @@ steps:
         by: central
         kind: email
         required: true
-        example: info@bbmentors.org
+        example: info@yourchapter.org
         meaning: The address email the CRM sends by itself comes from.
         source: Usually the shared operations mailbox from step 8.4.
         wrong: Password resets and other CRM emails bounce or land in spam.
@@ -425,7 +429,7 @@ steps:
         by: central
         kind: text
         required: false
-        example: boston-logo.png
+        example: lakeside-logo.png
         meaning: The file name of the chapter's logo, shown on the CRM's sign-in screen and menu.
         source: The logo from step 6.6. No build script sets the logo yet (work list G1, item 2); it is uploaded by hand in the CRM.
         wrong: The CRM shows no logo. Nothing else is affected.
@@ -743,6 +747,10 @@ steps:
     source: 5-Methods-Form-Accounts-Checks.md#8.10
 
 changes:
+  - version: "0.7"
+    date: "09-23-26 12:26"
+    change: >-
+      Every web-address question now says plainly that it asks for the web address (URL) of a page, and which page (Doug, 09-23-26: "Why doesn't it say that?"). The four policy questions say what to do when the page does not exist yet, and that leaving one out links the forms to Cleveland's document. Examples use yourchapter.org rather than Boston's own domain, because this stage serves every chapter. The page no longer shows each question's internal name; the guide still does.
   - version: "0.6"
     date: "09-23-26 12:20"
     change: >-
