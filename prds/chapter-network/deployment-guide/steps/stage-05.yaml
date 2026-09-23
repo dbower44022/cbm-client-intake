@@ -1,7 +1,7 @@
 stage: 5
 name: Open the hosting and video meeting accounts
-version: "0.5"
-updated: "09-23-26 13:39"
+version: "0.6"
+updated: "09-23-26 13:51"
 why: >-
   The chapter's CRM server, its applications and their database all run in a
   hosting account, and the public webinar programme runs through a video meeting
@@ -289,10 +289,13 @@ steps:
       - do: "Choose to continue to the summary, then create the token."
         see: "A new token, shown once only, covering only the chapter's zones."
       - do: "Copy the Cloudflare token straight into the chapter's Operations vault, named Cloudflare DNS token for CRMBuilder."
-      - do: "Open CRMBuilder. In a terminal, in the folder ~/Dropbox/Projects/crmbuilder, type the line below and press Enter:"
+      - do: "Work at the build computer: the central support organization's own computer, the one with CRMBuilder installed. Open a terminal window on it, type the line below and press Enter:"
+        items:
+          - "cd ~/Dropbox/Projects/crmbuilder"
+      - do: "Start CRMBuilder. Type the line below and press Enter:"
         items:
           - "./start-v2.sh"
-        see: CRMBuilder's main window. A window titled Cloud backend not configured means this computer is not set up to use CRMBuilder's service; stop and ask.
+        see: "CRMBuilder's main window. If a window titled Cloud backend not configured appears instead, the build computer is not connected to CRMBuilder's online service: stop and ask."
       - do: "Create the chapter's engagement, which holds the two tokens. Click the strip across the top of the window, which names the current engagement, then Manage engagements… at the bottom of the list. On the Engagements page, click New Engagement."
         see: A window titled New engagement, with four boxes.
       - do: "Fill in each box, then save:"
@@ -376,6 +379,10 @@ steps:
     source: TASKS.md § work owed, item 12
 
 changes:
+  - version: "0.6"
+    date: "09-23-26 13:51"
+    change: >-
+      Step 5.8 names the build computer, the central support organization's own computer with CRMBuilder installed, instead of "this computer", and gives the change of folder its own action.
   - version: "0.5"
     date: "09-23-26 13:39"
     change: >-

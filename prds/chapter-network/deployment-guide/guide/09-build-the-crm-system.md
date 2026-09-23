@@ -1,7 +1,7 @@
 # Stage 9 — Build the CRM system
 
-**Version:** 0.7  
-**Last Updated:** 09-23-26 13:41  
+**Version:** 0.8  
+**Last Updated:** 09-23-26 13:51  
 **Generated from** `steps/stage-09.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -98,45 +98,48 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Do this:**
 
-1. Make the sign-in key the central support organization will use to reach the server. CRMBuilder makes a key of its own for each run, but that key never leaves CRMBuilder's service, so nobody can use it from a computer. On this computer, type the line below and press Enter, and press Enter twice more to accept no passphrase:
+1. Work at the build computer: the central support organization's own computer, the one with CRMBuilder installed. Every command in this step is typed in a terminal window on the build computer.
+2. Create an SSH key for the central support organization. An SSH key is the file that lets a person open a command line on the server. Type the line below, press Enter, then press Enter twice more to leave the key without a passphrase:
    - ssh-keygen -t ed25519 -f ~/.ssh/crm-CHAPTER-SLUG -C crm-CHAPTER-SLUG
-   *You should see:* Two new files: ~/.ssh/crm-CHAPTER-SLUG, the private key, and ~/.ssh/crm-CHAPTER-SLUG.pub, the public key. Later steps call the private key KEY-FILE.
-2. Add the public key to the chapter's DigitalOcean account. In the chapter's DigitalOcean account, open Settings, then Security, and choose to add an SSH key. Paste the whole contents of ~/.ssh/crm-CHAPTER-SLUG.pub and name it crm-CHAPTER-SLUG. The exact wording of DigitalOcean's screens has not been checked for this guide.
-   *You should see:* The key crm-CHAPTER-SLUG listed among the account's SSH keys.
-3. Make the CRM's administrator password. In Proton Pass, add an item to the chapter's Operations vault named CRM administrator, with the user name admin and a generated password of 24 characters, letters and numbers only: switch symbols off.
-   *You should see:* A password with no character other than letters and numbers. Step 9.10 passes it on a command line, where any other character breaks. Do not use CRMBuilder's own Generate button, which can put - or _ in the password.
-4. Open CRMBuilder. In a terminal, in the folder ~/Dropbox/Projects/crmbuilder, type the line below and press Enter:
+   *You should see:* Two new files on the build computer: ~/.ssh/crm-CHAPTER-SLUG, the private key, which later steps call KEY-FILE; and ~/.ssh/crm-CHAPTER-SLUG.pub, the public key.
+3. Register the public key in the chapter's DigitalOcean account: open Settings, then Security, then add an SSH key. Paste the contents of ~/.ssh/crm-CHAPTER-SLUG.pub, and name the key crm-CHAPTER-SLUG. DigitalOcean's exact screen wording has not been checked for this guide.
+   *You should see:* The key crm-CHAPTER-SLUG in the account's list of SSH keys.
+4. Create the CRM administrator password in Proton Pass: a new item in the chapter's Operations vault, named CRM administrator, with the user name admin and a generated password of 24 characters, letters and numbers only (symbols off).
+   *You should see:* A password of letters and numbers only. Step 9.10 cannot use any other character, which is why CRMBuilder's own Generate button is not used: it can add - or _.
+5. Go to CRMBuilder's folder. Type the line below and press Enter:
+   - cd ~/Dropbox/Projects/crmbuilder
+6. Start CRMBuilder. Type the line below and press Enter:
    - ./start-v2.sh
-   *You should see:* CRMBuilder's main window. A window titled Cloud backend not configured means this computer is not set up to use CRMBuilder's service; stop and ask.
-5. Click the strip across the top of the window, which names the current engagement, and choose the chapter's engagement from the list.
-   *You should see:* The chapter's engagement, created in step 5.8, named in the strip. If it is not in the list, step 5.8 is not finished.
-6. Open the tab 11 · CRM Deployment. In the side bar, under Phase 11 steps, click Instances. On the Instances toolbar, click Deploy new…. Do not click New Instance, which only records a CRM that already exists.
-   *You should see:* A window titled Deploy a new CRM instance, on Step 1 of 5 — Providers.
-7. Step 1, Providers: check both lines.
+   *You should see:* CRMBuilder's main window. If a window titled Cloud backend not configured appears instead, the build computer is not connected to CRMBuilder's online service: stop and ask.
+7. Select the chapter's engagement. Click the strip across the top of the window, which names the current engagement, and choose the chapter's.
+   *You should see:* The chapter's engagement named in the strip. If it is not in the list, step 5.8 is not finished.
+8. Open the deploy window. Click the tab 11 · CRM Deployment, then Instances in the side bar, then Deploy new… on the toolbar. Do not use New Instance: it only records a CRM that already exists.
+   *You should see:* A window titled Deploy a new CRM instance, open at Step 1 of 5 — Providers.
+9. Step 1, Providers. Confirm both lines name the chapter's own tokens, by the label given in step 5.8, then click Next:
    - DigitalOcean: ✓ Configured — crmbuilder-CHAPTER-SLUG
    - Cloudflare: ✓ Configured — crmbuilder-CHAPTER-SLUG
-   *You should see:* Both lines naming the chapter's own tokens by the labels given in step 5.8. A line reading Not set, or naming any other label, means the run would build in the wrong account. Click Set credentials… and enter the chapter's tokens as step 5.8 says. Then click Next.
-8. Step 2, Server: fill in each box. The lists are read from the chapter's DigitalOcean account, so they fill in a moment after the page opens.
+   *You should see:* Both labels exactly as above. Any other label, or Not set, means the server would be built in the wrong account: click Set credentials… and repeat step 5.8's token actions first.
+10. Step 2, Server. Fill in each box, then click Next. The lists come from the chapter's DigitalOcean account and take a moment to fill.
    - Instance name: CHAPTER-SLUG CRM, using the chapter's short label from step 8.2
-   - Region: the DigitalOcean region nearest the chapter, for Boston New York
-   - Size: s-2vcpu-4gb (2 vCPU, 4096 MB). This size is a recommendation that has not been ruled; the August build did not record the size it used.
+   - Region: the region nearest the chapter; for Boston, New York
+   - Size: s-2vcpu-4gb (2 vCPU, 4096 MB), a recommendation not yet ruled
    - Image: the newest Ubuntu LTS release in the list
-   - Extra SSH keys: tick crm-CHAPTER-SLUG, the key added above
-   *You should see:* Every box filled, and crm-CHAPTER-SLUG ticked. Without the tick nobody can open a command line on the server, and steps 9.4 and 9.8 become impossible. Click Next.
-9. Step 3, Domain: fill in each box, taking the CRM's address from the chapter information form.
+   - Extra SSH keys: tick crm-CHAPTER-SLUG
+   *You should see:* crm-CHAPTER-SLUG ticked. Without it, nobody can open a command line on the server, and steps 9.4 and 9.8 cannot be done.
+11. Step 3, Domain. Fill in each box from the chapter information form, then click Next:
    - Cloudflare zone: the chapter's domain that the CRM's address ends in
-   - Subdomain: the first part of the CRM's address, before the first dot; for crm.example.org, crm
-   - Let's Encrypt email: the alert receiving address from the chapter information form
-   *You should see:* Instance address showing the CRM's address exactly as the chapter information form has it, with no https://. Click Next.
-10. Step 4, Accounts: fill in each box.
+   - Subdomain: the CRM's address up to the first dot; for crm.example.org, crm
+   - Let's Encrypt email: the alert receiving address
+   *You should see:* Instance address showing the CRM's address exactly as the chapter information form has it, without https://.
+12. Step 4, Accounts. Fill in each box, then click Next:
    - Administrator username: admin
    - Administrator email: the alert receiving address from the chapter information form
-   - Administrator password: paste the password from the CRM administrator item in the vault
-   - Generate database passwords automatically (recommended): leave it ticked
-   *You should see:* The page's reminder to record the administrator password now. It is already in the vault, and CRMBuilder never shows it again. Click Next.
-11. Step 5, Review: read every line against what was entered, then click Deploy.
-   *You should see:* Extra SSH keys naming crm-CHAPTER-SLUG, not (generated key only). Then a window titled Deploy run DEP-NNN, with a progress bar and a log.
-12. Wait for the run to finish. It works through ten stages in order, and the status line names each one:
+   - Administrator password: paste it from the CRM administrator item in the vault
+   - Generate database passwords automatically (recommended): leave ticked
+   *You should see:* A reminder to record the administrator password. It is already in the vault; CRMBuilder never shows it again.
+13. Step 5, Review. Check every line against what was entered, then click Deploy.
+   *You should see:* Extra SSH keys reading crm-CHAPTER-SLUG, not (generated key only). Then a window titled Deploy run DEP-NNN, with a progress bar and a log.
+14. Wait for the run to finish. The status line names each of its ten stages in turn:
    - Checking credentials
    - Creating server
    - Waiting for server
@@ -147,10 +150,10 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
    - Post-install checks
    - Verifying
    - Registering instance
-   *You should see:* The status line reading Deployment complete. The run happens on CRMBuilder's service, not this computer, so closing the window does not stop it; reopen it from Deploy History, then Open progress….
-13. Write down the server's address. In the log, find the line Server active at, followed by the address. Later steps call it SERVER-IP.
+   *You should see:* The status line reading Deployment complete. The run takes place on CRMBuilder's online service, not on the build computer, so closing the window does not stop it. To reopen it, click Deploy History, then Open progress….
+15. Record the server's address. The log shows it on the line beginning Server active at. Later steps call it SERVER-IP.
    *You should see:* The same address under Droplet IP, in the Deploy config section of the new instance on the Instances page.
-14. In Proton Pass, add the address to the CRM administrator item, as a note headed Server address.
+16. In Proton Pass, add the server's address to the CRM administrator item, as a note headed Server address.
 
 **Done when:** A server is running in the chapter's own hosting account and the central support organization can reach it.
 
@@ -336,7 +339,7 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 2. Sign in to the new server and find the same two folders there. Type the line below and press Enter:
    - ssh -i KEY-FILE root@SERVER-IP "find / -type d \( -path '*Espo/Custom' -o -path '*custom/src' \) -path '*espocrm*' 2>/dev/null"
    *You should see:* Two folder paths. Later actions call them TARGET-CONFIG and TARGET-SCREEN-CODE. On the newer installer the first is under data/espocrm/persistent/custom, and the screen code sits in a second folder beside it (August finding F13). If only one appears, stop and ask.
-3. On this computer, copy both folders down, then up to the new server. Type each line below and press Enter:
+3. On the build computer, copy both folders down, then up to the new server. Type each line below and press Enter:
    - mkdir -p ~/cbm-standard/config ~/cbm-standard/screen-code
    - rsync -a root@104.131.45.208:SOURCE-CONFIG/ ~/cbm-standard/config/
    - rsync -a root@104.131.45.208:SOURCE-SCREEN-CODE/ ~/cbm-standard/screen-code/
@@ -348,7 +351,7 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 5. Rebuild the CRM. Type the line below and press Enter:
    - ssh -i KEY-FILE root@SERVER-IP "docker exec -u www-data CRM-CONTAINER php command.php rebuild"
    *You should see:* The command returning with no error. In August it took three seconds.
-6. Delete ~/cbm-standard from this computer.
+6. Delete ~/cbm-standard from the build computer.
 
 **Done when all of these are true:**
 
@@ -736,6 +739,7 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 | Version | Date | Change |
 |---|---|---|
+| 0.8 | 09-23-26 13:51 | Step 9.2 rewritten in executive register (Doug, 09-23-26: it said "this computer" without saying which). It names the build computer, the central support organization's own computer with CRMBuilder installed, and uses that name for every command; defines an SSH key at first use; gives the change of folder its own action; and moves explanations out of the actions into what the reader should see. Step 9.8's two "this computer" now say the build computer. |
 | 0.7 | 09-23-26 13:41 | Steps 9.1 and 9.3 brought in line with the ruling that a new chapter runs the current CRM release and Cleveland moves up later (Doug, 09-23-26). Step 9.1 writes down "the current release CRMBuilder installs" rather than Cleveland's version, and checks each add-on supports version 10. Step 9.3 records the exact number instead of comparing it, since CRMBuilder cannot install any other. Both finishing tests changed with the step list (version 0.18). |
 | 0.6 | 09-23-26 13:39 | Step 9.2 points to step 5.8 for the chapter's engagement, which 5.8 now creates, instead of stopping to ask. |
 | 0.5 | 09-23-26 13:35 | Step 9.2 rewritten click by click from CRMBuilder's deploy wizard (Doug, 09-23-26: the step was not clear). Named every screen, box and stage, and three facts the old text hid: CRMBuilder's own sign-in key never leaves its service, so the key ticked under Extra SSH keys must first be made and added to the chapter's DigitalOcean account; the wizard's Generate button can put - or _ in the password, which step 9.10 cannot take; and a Preparing server failure on a fast run is cured by Retry. Step 9.4 now names that key. |
