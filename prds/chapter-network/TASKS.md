@@ -66,6 +66,22 @@ same review and left, because none stops the build. Each one names the file.
    account; 17.1 never names `scripts/rehearsal/stage4_users.py`.
 10. **Missing checks.** 4.4 waits for DKIM without checking it; nothing checks
     that `apps.` and `crm.` are DNS only (grey cloud).
+12. **Nothing links a chapter's DigitalOcean team to GitHub** (found 09-23).
+    The spec builds from `github: dbower44022/cbm-client-intake`, which needs
+    DigitalOcean's GitHub integration authorized on the chapter's team, by the
+    repository owner's GitHub account. Lakeside and Cleveland were in accounts
+    already linked. Add a step before 11.5; note that every chapter's builds then
+    depend on one personal GitHub account (the open question of moving the
+    repository to an organization with two owners). Steps:
+    https://claude.ai/artifact/Xy8TFAbhH3hCtuBDSbTY7m
+13. **The guide assumes Cloudflare DNS and a WordPress site.** Boston is on
+    Squarespace for both, with DNSSEC on. Stages 3, 6, 9, 11 and 13 need a
+    non-Cloudflare path (see DECISIONS 2026-09-23), and any DNS move must switch
+    DNSSEC off and wait out the registry's DS record (3,600 s at `.org`) first.
+14. **Step 5.8 describes per-engagement credentials CRMBuilder does not have.**
+    CRMBuilder holds one DigitalOcean and one Cloudflare credential for
+    everything (`provider_credentials.get_provider_credential`). Until it
+    changes, a chapter build swaps the global credential in and back out.
 11. **Public form still says CBM** — `forms/client_intake/frontend/index.html`
     lines 70 and 159 ("about CBM", "from CBM"). An applicant sees Cleveland's
     initials (`OPEN-ITEMS.md` #28).
