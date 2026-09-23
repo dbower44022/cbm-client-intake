@@ -1,7 +1,7 @@
 # Stage 9 — Build the CRM system
 
-**Version:** 0.5  
-**Last Updated:** 09-23-26 13:50  
+**Version:** 0.6  
+**Last Updated:** 09-23-26 13:39  
 **Generated from** `steps/stage-09.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -107,7 +107,7 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
    - ./start-v2.sh
    *You should see:* CRMBuilder's main window. A window titled Cloud backend not configured means this computer is not set up to use CRMBuilder's service; stop and ask.
 5. Click the strip across the top of the window, which names the current engagement, and choose the chapter's engagement from the list.
-   *You should see:* The chapter's engagement named in the strip. The exact screens for creating an engagement have not been checked for this guide; if the chapter has none, stop and ask.
+   *You should see:* The chapter's engagement, created in step 5.8, named in the strip. If it is not in the list, step 5.8 is not finished.
 6. Open the tab 11 · CRM Deployment. In the side bar, under Phase 11 steps, click Instances. On the Instances toolbar, click Deploy new…. Do not click New Instance, which only records a CRM that already exists.
    *You should see:* A window titled Deploy a new CRM instance, on Step 1 of 5 — Providers.
 7. Step 1, Providers: check both lines.
@@ -731,7 +731,8 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 | Version | Date | Change |
 |---|---|---|
-| 0.5 | 09-23-26 13:50 | Step 9.2 rewritten click by click from CRMBuilder's deploy wizard (Doug, 09-23-26: the step was not clear). Named every screen, box and stage, and three facts the old text hid: CRMBuilder's own sign-in key never leaves its service, so the key ticked under Extra SSH keys must first be made and added to the chapter's DigitalOcean account; the wizard's Generate button can put - or _ in the password, which step 9.10 cannot take; and a Preparing server failure on a fast run is cured by Retry. Step 9.4 now names that key. |
+| 0.6 | 09-23-26 13:39 | Step 9.2 points to step 5.8 for the chapter's engagement, which 5.8 now creates, instead of stopping to ask. |
+| 0.5 | 09-23-26 13:35 | Step 9.2 rewritten click by click from CRMBuilder's deploy wizard (Doug, 09-23-26: the step was not clear). Named every screen, box and stage, and three facts the old text hid: CRMBuilder's own sign-in key never leaves its service, so the key ticked under Extra SSH keys must first be made and added to the chapter's DigitalOcean account; the wizard's Generate button can put - or _ in the password, which step 9.10 cannot take; and a Preparing server failure on a fast run is cured by Retry. Step 9.4 now names that key. |
 | 0.4 | 09-23-26 00:55 | Step 9.11 now runs scripts/migrate_client_assignment_role.py. The roles captured on 31 August give the Client Assignment Role no User permission, so a client administrator on that team alone was refused on Assign (ruled 09-07-26). Its If it didn't work now tells an expected exit 4 (a field the source deleted) from a real one (an add-on missing); the old advice to install the add-ons and run again never ended. Found in the review before the first real chapter. |
 | 0.3 | 09-19-26 00:50 | The script now reads the chapter's name, CRM settings and provisioning account (CHAPTER-SLUG.provision) from the chapter information form through --values; the step that edited Lakeside's name out of the script by hand is gone. |
 | 0.2 | 09-19-26 00:07 | Every command-line action made exact (Doug, 09-19-26: sweep every step): the ssh, docker, find, rsync, chown and rebuild commands for copying the configuration; the trial scripts' exact options, including the name the provisioning account takes and the production option the version record needs; the test request for the applications' key; and the conformance check with its exit codes. Two traps written in: the scripts fill missing values from the repository's own settings, which are Cleveland's, and the settings file's password must be letters and numbers only. |

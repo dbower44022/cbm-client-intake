@@ -1,7 +1,7 @@
 stage: 5
 name: Open the hosting and video meeting accounts
-version: "0.4"
-updated: "09-23-26 13:50"
+version: "0.5"
+updated: "09-23-26 13:39"
 why: >-
   The chapter's CRM server, its applications and their database all run in a
   hosting account, and the public webinar programme runs through a video meeting
@@ -289,7 +289,20 @@ steps:
       - do: "Choose to continue to the summary, then create the token."
         see: "A new token, shown once only, covering only the chapter's zones."
       - do: "Copy the Cloudflare token straight into the chapter's Operations vault, named Cloudflare DNS token for CRMBuilder."
-      - do: "In CRMBuilder, choose the chapter's engagement in the strip across the top of the window. Open the tab 11 · CRM Deployment, click Instances in the side bar, then Deploy new…, and on Step 1 of 5 — Providers click Set credentials…."
+      - do: "Open CRMBuilder. In a terminal, in the folder ~/Dropbox/Projects/crmbuilder, type the line below and press Enter:"
+        items:
+          - "./start-v2.sh"
+        see: CRMBuilder's main window. A window titled Cloud backend not configured means this computer is not set up to use CRMBuilder's service; stop and ask.
+      - do: "Create the chapter's engagement, which holds the two tokens. Click the strip across the top of the window, which names the current engagement, then Manage engagements… at the bottom of the list. On the Engagements page, click New Engagement."
+        see: A window titled New engagement, with four boxes.
+      - do: "Fill in each box, then save:"
+        items:
+          - "Code: the chapter's short label from step 8.2 in capital letters, for Boston BOSTON. Two to ten capital letters and digits, starting with a letter. It cannot be changed later."
+          - "Name: the chapter's full name from step 8.2"
+          - "Purpose: Build and run the chapter's CRM and applications."
+          - "Status: active"
+        see: "The new engagement listed with an identifier of the form ENG-NNN, and named in the strip across the top of the window. If another engagement is named there, click the strip and choose the chapter's."
+      - do: "Open the tab 11 · CRM Deployment, click Instances in the side bar, then Deploy new…, and on Step 1 of 5 — Providers click Set credentials…."
         see: A window titled Provider credentials, with one box for DigitalOcean and one for Cloudflare.
       - do: "In each box, paste the token into Token, type crmbuilder-CHAPTER-SLUG into Label, and click Save token. Then click Close, and click Cancel to leave the deploy window; step 9.2 runs it."
         see: "Step 1 reading DigitalOcean: ✓ Configured — crmbuilder-CHAPTER-SLUG, and the same for Cloudflare. The token itself is never shown again."
@@ -363,8 +376,12 @@ steps:
     source: TASKS.md § work owed, item 12
 
 changes:
+  - version: "0.5"
+    date: "09-23-26 13:39"
+    change: >-
+      Step 5.8 now opens CRMBuilder and creates the chapter's engagement (Code, Name, Purpose, Status) before entering the tokens, because the tokens are stored on the engagement and no step created it (Doug, 09-23-26: in 5.8, code BOSTON for Boston).
   - version: "0.4"
-    date: "09-23-26 13:50"
+    date: "09-23-26 13:35"
     change: >-
       Step 5.8 names CRMBuilder's real screens for entering the two tokens (Set credentials…, then the Provider credentials window), gives each token the label step 9.2 checks for, and adds the Zone, Zone, Read permission to the Cloudflare token: CRMBuilder asks for Zone:Read and DNS:Edit, and the Edit zone DNS template gives only the second.
   - version: "0.3"
