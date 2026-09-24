@@ -20,6 +20,28 @@ is a table at the end of this file linking to them.
 
 # Part 1 — Ruled, and what follows
 
+## F1. Finish Boston's chapter information form
+
+### What this is
+
+Boston's values file, `chapters/boston-values.yaml`, was written from Teresa
+Lang's emailed answers on 2026-09-23 (step 8.10) and committed; it is not
+pushed. It is not finished: only one person signed off (step 8.9 needs two),
+and eleven switches read `owed`, which the settings generator refuses at step
+11.2. Pushing it also redeploys all of Cleveland (G1 item 5).
+
+### Steps
+
+1. Get the second sign-off on Teresa's page, and have her email a new block.
+2. Answer the eleven owed switches, and the alert sending mailbox, before
+   stage 11. Each question on the page carries a recommended answer.
+3. Write the file again from the new block (step 8.10), and commit it.
+4. A second person at the central support organization opens it from the
+   remote repository.
+5. Delete `~/Downloads/boston-answers.txt` from the build computer.
+
+---
+
 ## C1. Upgrade Cleveland's two CRMs to EspoCRM 10
 
 ### What this is
@@ -50,17 +72,19 @@ the settings the spec script left out, the Client Assignment Role grant, and the
 stage 17 checks — `render_spec.py`, stages 9, 11 and 17). These were found in the
 same review and left, because none stops the build. Each one names the file.
 
-1. **Roles come from the wrong source.** Step 9.11 replays
+1. **Roles come from the wrong source.** Step 9.7 (9.11 before the 09-23 renumbering) replays
    `rehearsal-2026-08-31/crmtest-capture/roles.json`; the ruled standard is
-   `roles-standard/prod-capture-2026-08-31.json`, and step 9.8 copies today's
+   `roles-standard/prod-capture-2026-08-31.json`, and step 9.6 copies today's
    crm-test files beside 08-31 roles, so an entity added since has no grants.
    Recapture from crm-test (aligned to the standard 09-13) or point the script
    at the standard.
-2. **Step 9.14 overclaims and step 9.15 cannot pass.** `apply_api_half.py` sets
-   neither the logo nor a site address (9.14), and it removes Cleveland's
-   documentation tab without adding the chapter's own (9.15 step 2).
-3. **Step 9.19 expects the wrong output.** The file copy already delivers
-   `CNetworkStandard`, so `build_networkstandard.py` should report nothing to do.
+2. **The script leaves three settings unset.** `apply_api_half.py` sets
+   neither the logo nor a site address, and it removes Cleveland's
+   documentation tab without adding the chapter's own. Worked around 09-23:
+   step 9.7 now sets all three by hand. The fix is in the script.
+3. **Step 9.8 (was 9.19) expected the wrong output.** The file copy already
+   delivers `CNetworkStandard`, so `build_networkstandard.py` should report
+   nothing to do. Worked around 09-23: step 9.8 now says so.
 4. **The guide over-gates.** Stage 8 requires stages 4, 6 and 7 finished, and
    stages 9 and 11 require stage 8 "complete and reviewed", so the website and
    legally reviewed policies block the CRM build. Everything they feed is
@@ -69,8 +93,8 @@ same review and left, because none stops the build. Each one names the file.
    drive not created until 10.5.
 5. **8.10 commits and pushes the form** — a push to `main` redeploys all of
    Cleveland. It should be stored in the vault or a chapter-owned place instead.
-6. **The paid add-ons are "not decided"** in `stage-02.yaml:88` and
-   `stage-09.yaml:242`; R7 ruled them in on 08-31.
+6. **The paid add-ons are "not decided"** in `stage-02.yaml:88`; R7 ruled
+   them in on 08-31. (Stage 9 fixed in its 09-23 rewrite.)
 7. **Inconsistencies.** The members group is `allmembers@` in 4.10 and
    `members@` in 8.4; 4.2 stores a password in the Board vault; `apps.` and
    `crm.CHAPTER-DOMAIN` do not say which domain; 8.4 demands `alert_email_from`
@@ -111,6 +135,27 @@ same review and left, because none stops the build. Each one names the file.
     selected overwrites Cleveland's. That happened on 09-23-26 and was repaired
     (Cleveland's read-only DigitalOcean token re-made; the stray Cloudflare entry
     removed).
+16. **Step 9.2 is the Cloudflare path only.** Rewritten 09-23 click by click
+    from CRMBuilder's code, it has the wizard write the CRM's DNS record in the
+    chapter's Cloudflare zone. Boston keeps its DNS at Squarespace (DECISIONS
+    2026-09-23), so Boston's server needs the wizard's manual DNS mode, which
+    the guide does not describe yet. Add that path to 9.2 and 9.5 once
+    CRMBuilder has it.
+17. **CRMBuilder's screen labels in steps 5.8 and 9.2 are unchecked.** They were
+    read from CRMBuilder's code (version 2 wizard) on 09-23, never seen on
+    screen. Walk both steps with CRMBuilder open and correct any label.
+18. **The server size in step 9.2 is not ruled.** The guide recommends
+    `s-2vcpu-4gb` (about $24 a month); the August build did not record the size
+    it used. Rule it, or try `s-1vcpu-2gb` (about $12) with the 2 GB swap file
+    CRMBuilder adds.
+19. **Unnamed computers and developer words remain.** Step 9.2, 9.8 and 5.8
+    now say "the build computer"; 11.5 still says "this computer" and 12 "your
+    own computer". Sweep every stage for the same, and for the heavy register
+    9.2 had.
+20. **Step 8.10 should warn about the answers file's name.** Saving the emailed
+    block under the email's own title gives `CHAPTER-INFORMATION-ANSWERS v1.txt`,
+    whose space breaks the unquoted command (hit on Boston, 09-23).
+
 11. **Public form still says CBM** — `forms/client_intake/frontend/index.html`
     lines 70 and 159 ("about CBM", "from CBM"). An applicant sees Cleveland's
     initials (`OPEN-ITEMS.md` #28).

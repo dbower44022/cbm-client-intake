@@ -1,7 +1,7 @@
 # Stage 9 — Build the CRM system
 
-**Version:** 0.11  
-**Last Updated:** 09-23-26 20:40  
+**Version:** 0.12  
+**Last Updated:** 09-23-26 22:55  
 **Generated from** `steps/stage-09.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -427,10 +427,16 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
    *You should see:* 200
 8. Test the provisioning administrator. Sign in at https://CRM-ADDRESS with its name and password from the vault, then sign out.
    *You should see:* The CRM's home screen, with Administration in the menu.
-9. Look over the result in the CRM, signed in as admin:
-   - Administration, then Teams: every team shows a role.
-   - Email Templates: the templates are listed.
-   - The documentation tab in the tab bar: it opens this chapter's help documentation, not Cleveland's.
+9. Set by hand the three things the script does not set yet (open work G1 item 2). Sign in as admin and open Administration. The exact screen labels have not been checked for this guide:
+   - The company logo: the file named on the chapter information form under crm: logo_file
+   - The site address: https://CRM-ADDRESS
+   - A tab in the tab bar that opens the chapter's help documentation, the address on the chapter information form under web: docs_site_url. The script removes Cleveland's documentation tab and adds none.
+
+   *You should see:* The chapter's logo at the top of the screen.
+10. Look over the result in the CRM, signed in as admin:
+    - Administration, then Teams: every team shows a role.
+    - Email Templates: the templates are listed.
+    - The documentation tab in the tab bar: it opens this chapter's help documentation, not Cleveland's.
 
 **Done when all of these are true:**
 
@@ -439,6 +445,7 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 - The applications' key answers a test request, and is in the vault.
 - The provisioning administrator signs in, and its password is in the vault.
 - Every team carries a role.
+- The logo, the site address and the documentation tab are set.
 
 **How to check:** Each test above showed what it should.
 
@@ -468,7 +475,7 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 1. In the client intake software's folder, see what the stamp would be. Type the line below and press Enter:
    - uv run --env-file ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env python scripts/build_networkstandard.py
 
-   *You should see:* A plan, and a line giving its fingerprint of sixteen letters and numbers. The next action calls it FINGERPRINT.
+   *You should see:* A plan, and a line giving its fingerprint of sixteen letters and numbers. The next action calls it FINGERPRINT. The files copied in step 9.6 may already carry the record (open work G1 item 3): if the script reports nothing to do, skip the next action.
 2. Create the record. Type the line below and press Enter:
    - uv run --env-file ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env python scripts/build_networkstandard.py --apply --production --expect FINGERPRINT
 
@@ -522,6 +529,7 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 
 | Version | Date | Change |
 |---|---|---|
+| 0.12 | 09-23-26 22:55 | Two known defects written into the steps (open work G1 items 2 and 3). Step 9.7 sets the logo, the site address and the documentation tab by hand, because the script sets none of them and removes Cleveland's documentation tab; its finishing test gains that condition. Step 9.8 says the script may report nothing to do, because the copied files can already carry the record. |
 | 0.11 | 09-23-26 20:40 | Rewritten and renumbered from twenty steps to nine (Doug, 09-23-26: the stage was terribly hard to understand and use). The old step list hid the work: step 9.10 ran one script that did seven steps, and six steps said only "nothing extra to run". Old to new: 9.1 → 9.1; 9.2 → 9.2 (the key, the password and the settings file) and 9.3 (the wizard); 9.3, 9.4, 9.5 and 9.6 → 9.4; 9.7 → 9.5; 9.8 and 9.9 → 9.6; 9.10 to 9.15, 9.17 and 9.18 → 9.7; 9.19 → 9.8; 9.20 → 9.9. Step 9.16, which could not be done, moved to a list of what is still owed at the top of the stage, with the missing event templates and the unruled server size. The wizard's Cloudflare and manual DNS screens are written as separate actions. The settings file is made before the wizard, so the password rule is stated once. Scripts read the settings file through uv's --env-file rather than a shell pipeline. The manual DNS record's host is now only the first part of the CRM's address, from Boston's first run at Squarespace (a fix from the CRMBuilder session, 09-23-26). Each failure case has its own line. The August build's history moved out of the actions; it stays in 3-Methods-CRM-Google-Applications.md, which keeps the old numbers. |
 | 0.10 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. |
 | 0.9 | 09-23-26 13:54 | Manual DNS added (Doug, 09-23-26): CRMBuilder's wizard now asks on its first page whether the CRM's address is managed through Cloudflare or by hand at the chapter's own DNS provider. Step 9.2 chooses from the DNS provider item in the vault, fills in the CRM address box that manual DNS shows, and adds the A record by hand when the run shows it; its failure advice covers the 30-minute wait and Retry. Step 9.5 checks the record at the chapter's DNS provider. Screen labels read from CRMBuilder's code (commit 7b1a5062); the first page's DNS list was seen on screen by Doug on 09-23-26. |

@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — The Step List
 
 **Document:** The bare list of steps, with no methods yet
-**Version:** 0.20
+**Version:** 0.21
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-23-26 20:40
+**Last Updated:** 09-23-26 22:55
 
 ---
 
@@ -455,6 +455,7 @@ Done when:
 - The applications' key answers a test request, and is in the vault.
 - The provisioning administrator signs in, and its password is in the vault.
 - Every team carries a role.
+- The logo, the site address and the documentation tab are set.
 
 **9.8 Stamp the configuration version.**
 Done when: the record exists, and the applications' key can read it.
@@ -835,6 +836,7 @@ Done when: a date is booked to review how the first months have gone.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.21 | 09-23-26 22:55 | Step 9.7 gains a condition: the logo, the site address and the documentation tab are set. The script sets none of them (open work G1 item 2), so the step sets them by hand. |
 | 0.20 | 09-23-26 20:40 | Stage 9 renumbered from twenty steps to nine (Doug, 09-23-26, amending the rule that step numbers never change). Old to new: 9.1 → 9.1; 9.2 → 9.2 and 9.3; 9.3 to 9.6 → 9.4; 9.7 → 9.5; 9.8 and 9.9 → 9.6; 9.10 to 9.15, 9.17 and 9.18 → 9.7; 9.19 → 9.8; 9.20 → 9.9. Step 9.16 became a note at the head of the stage: it cannot be done until work list item 3 is decided. Finishing tests rewritten to match; references elsewhere in the guide follow. The method notes keep the old numbers. |
 | 0.19 | 09-23-26 13:54 | Manual DNS added (Doug, 09-23-26, amending the 09-18-26 Cloudflare ruling): a chapter may keep its DNS at the provider it already uses. Step 3.7's finishing test and note accept a DNS provider account the chapter owns; step 5.8 needs no Cloudflare token for such a chapter. |
 | 0.18 | 09-23-26 13:41 | Steps 9.1 and 9.3 brought in line with the ruling that a new chapter runs the current CRM release and Cleveland moves up later (Doug, 09-23-26). Step 9.1 names the current release CRMBuilder installs as the CRM version; step 9.3 records the installed number rather than comparing it with Cleveland's. |

@@ -1,7 +1,7 @@
 stage: 9
 name: Build the CRM system
-version: "0.11"
-updated: "09-23-26 20:40"
+version: "0.12"
+updated: "09-23-26 22:55"
 why: >-
   The CRM is the chapter's system of record. Every client, mentor, partner,
   funder and meeting lives in it, and every application reads and writes it.
@@ -390,6 +390,12 @@ steps:
         see: "200"
       - do: "Test the provisioning administrator. Sign in at https://CRM-ADDRESS with its name and password from the vault, then sign out."
         see: The CRM's home screen, with Administration in the menu.
+      - do: "Set by hand the three things the script does not set yet (open work G1 item 2). Sign in as admin and open Administration. The exact screen labels have not been checked for this guide:"
+        items:
+          - "The company logo: the file named on the chapter information form under crm: logo_file"
+          - "The site address: https://CRM-ADDRESS"
+          - "A tab in the tab bar that opens the chapter's help documentation, the address on the chapter information form under web: docs_site_url. The script removes Cleveland's documentation tab and adds none."
+        see: The chapter's logo at the top of the screen.
       - do: "Look over the result in the CRM, signed in as admin:"
         items:
           - "Administration, then Teams: every team shows a role."
@@ -401,6 +407,7 @@ steps:
       - "The applications' key answers a test request, and is in the vault."
       - "The provisioning administrator signs in, and its password is in the vault."
       - "Every team carries a role."
+      - "The logo, the site address and the documentation tab are set."
     check:
       how: Each test above showed what it should.
       probe: The conformance check compares teams, roles, templates and settings with the standard, and the app makes one read request with the key.
@@ -430,7 +437,7 @@ steps:
       - do: "In the client intake software's folder, see what the stamp would be. Type the line below and press Enter:"
         items:
           - "uv run --env-file ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env python scripts/build_networkstandard.py"
-        see: A plan, and a line giving its fingerprint of sixteen letters and numbers. The next action calls it FINGERPRINT.
+        see: "A plan, and a line giving its fingerprint of sixteen letters and numbers. The next action calls it FINGERPRINT. The files copied in step 9.6 may already carry the record (open work G1 item 3): if the script reports nothing to do, skip the next action."
       - do: "Create the record. Type the line below and press Enter:"
         items:
           - "uv run --env-file ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env python scripts/build_networkstandard.py --apply --production --expect FINGERPRINT"
@@ -481,6 +488,14 @@ steps:
     source: 3-Methods-CRM-Google-Applications.md#9.20
 
 changes:
+  - version: "0.12"
+    date: "09-23-26 22:55"
+    change: >-
+      Two known defects written into the steps (open work G1 items 2 and 3). Step 9.7
+      sets the logo, the site address and the documentation tab by hand, because
+      the script sets none of them and removes Cleveland's documentation tab; its
+      finishing test gains that condition. Step 9.8 says the script may report
+      nothing to do, because the copied files can already carry the record.
   - version: "0.11"
     date: "09-23-26 20:40"
     change: >-
