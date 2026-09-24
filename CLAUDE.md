@@ -86,6 +86,9 @@ runbook: `DEPLOYMENT.md`; plain-language console companion:
   `doctl apps update <app-id> --spec <file>`. **Regenerating an overlay from
   `doctl apps spec get` encrypts plaintext secrets into `EV[…]` blobs** — save
   any creds you still need locally first ([[overlay-regen-encrypts-secrets]]).
+  **Backups of an overlay are secrets too** — `.do/*.bak*` is ignored since one
+  published production's `APP_ENCRYPTION_KEY` (2026-09-14, found 09-23,
+  `OPEN-ITEMS.md` #33). Never `git add` anything under `.do/` but `app.yaml`.
 - Each app runs a **web** component and a **`delivery-worker`** (`python -m
   worker`), plus a **PRE_DEPLOY `migrate` job** (`alembic upgrade head`).
   Alembic is the sole schema authority — there is no boot-time `create_all()`,
@@ -1480,11 +1483,23 @@ stamp — pending on both CRMs), `cintake-submission-*.md`, `cinformation-reques
 deployed and verified; `CHANGELOG.md` is the permanent record, `OPEN-ITEMS.md`
 holds anything still owed.*
 
-**Pushed through v0.230.1 (2026-09-14); crm-test and prod were serving v0.230.0
-at the time of writing, with the 0.230.1 build stalled at 2/13 on DigitalOcean's
-side rather than ours. Lakeside runs v0.228.1 off the release lane.** `deploy_on_push` is still on for
+**Released v0.231.1 on 2026-09-23** — cut with `scripts/cut_release.sh`, pushed
+with `main`; **Lakeside took it off the release lane by itself** (its
+`/healthz` read `v0.231.1` about a minute after the push, verified), the first
+unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
+
+- **2026-09-23 — the first real chapter (Boston Business Mentors) is being
+  built, and preparing it found three things.** (a) **Production's
+  `APP_ENCRYPTION_KEY` was published in plain text** in a committed overlay
+  backup (`OPEN-ITEMS.md` #33): the backups are untracked and `.do/*.bak*`
+  ignored; the key replacement is owed, steps written. (b) **The worker reads
+  its mail switches only at start-up from the environment** (#34), so the
+  chapter spec script now carries every Google/mail setting as an environment
+  variable. (c) The chapter information form is a web page built from stage 8
+  of the deployment guide (`scripts/chapter_form/`); rulings and open guide
+  defects are in `prds/chapter-network/TASKS.md` G1 and `DECISIONS.md`.
 
 - **v0.228.0–v0.228.2 (2026-09-13) — a chapter upgrade is one operation.**
   Doug's ruling after the nine-step Lakeside upgrade was put in front of him:

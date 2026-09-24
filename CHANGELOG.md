@@ -6,6 +6,13 @@ deploy marker on App Platform.
 
 ## [0.231.1] — 2026-09-16
 
+**Released 2026-09-23 as tag `v0.231.1`** (the release lane had stood at
+v0.228.1 since 09-13). The tag also carries, with no runtime change: the chapter
+spec script fixes (a valid `APP_ENCRYPTION_KEY`, every chapter setting in the
+spec), the chapter information form (`scripts/chapter_form/`), and the removal
+of three committed overlay backups, one of which exposed production's
+`APP_ENCRYPTION_KEY` (`OPEN-ITEMS.md` #33).
+
 **fix(sandbox): the nightly reset left the CRM unable to write attachments —
 and the editor hid the error.** Doug: *"The upload graphic function does not
 seem to work."*
