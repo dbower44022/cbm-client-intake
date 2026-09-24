@@ -23,7 +23,7 @@ The guide takes a new chapter from nothing to a running system. Work through the
 8. [Fill in the chapter information form](08-fill-in-the-chapter-information-form.md)
    The chapter information form holds the roughly forty answers that differ from one chapter to the next: its name, its addresses, its Google details and its feature switches.
 9. [Build the CRM system](09-build-the-crm-system.md)
-   The CRM is the chapter's system of record: every client, mentor, partner, funder and meeting lives in it, and every application reads and writes it.
+   The CRM is the chapter's system of record.
 10. [Set up the Google permissions the software needs](10-set-up-the-google-permissions-the-software-needs.md)
    The applications read and send the chapter's email, keep calendars in step, file documents on the shared drive and create mentor mailboxes.
 11. [Deploy the chapter's applications](11-deploy-the-chapter-s-applications.md)
@@ -58,6 +58,6 @@ A word in capitals inside a command stands for a value to type in its place. The
 - **ALERT-ADDRESS**: The email address that receives the system's alerts. *Comes from:* Step 8.4, the question Alert receiving address.
 - **CHAPTER-VALUES-FILE**: The filled-in chapter information form, saved as prds/chapter-network/chapters/SHORT-LABEL-values.yaml. *Comes from:* Step 8.10.
 - **KEY-FILE**: The private SSH key that opens a command line on the CRM server, ~/.ssh/crm-SHORT-LABEL on the build computer. *Comes from:* Step 9.2.
-- **SERVER-IP**: The CRM server's internet address. *Comes from:* Step 9.2.
-- **CHAPTER-ENV-FILE**: The chapter's settings file on the build computer, ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env. *Comes from:* Step 9.10.
+- **SERVER-IP**: The CRM server's internet address. *Comes from:* Step 9.3.
+- **CHAPTER-ENV-FILE**: The chapter's settings file on the build computer, ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env. *Comes from:* Step 9.2.
 - **APP-ID**: The chapter application's identifier on the hosting platform. *Comes from:* Step 11.5.

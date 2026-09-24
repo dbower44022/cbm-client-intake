@@ -1,745 +1,505 @@
 stage: 9
 name: Build the CRM system
-version: "0.10"
-updated: "09-23-26 14:27"
+version: "0.11"
+updated: "09-23-26 20:40"
 why: >-
-  The CRM is the chapter's system of record: every client, mentor, partner,
-  funder and meeting lives in it, and every application reads and writes it. This
-  stage builds the chapter's own CRM on the chapter's own server and makes it
-  identical to every other chapter's, so that one release of the software works
-  for all of them.
+  The CRM is the chapter's system of record. Every client, mentor, partner,
+  funder and meeting lives in it, and every application reads and writes it.
+  This stage builds the chapter's own CRM on the chapter's own server, and makes
+  it identical to every other chapter's CRM, so that one release of the software
+  works for all of them.
 who: >-
   The central support organization, working inside the chapter's accounts.
 time: >-
-  About half a day when nothing goes wrong. The August build of the trial chapter
-  took most of a day, including the failures it found.
+  About half a day when nothing goes wrong.
 before_you_start:
-  - The chapter information form, complete and reviewed (stage 8)
+  - The chapter information form, complete and reviewed, saved as the chapter's values file (step 8.10)
   - The chapter's hosting account, with the central support organization's access (steps 5.1 and 5.4)
   - The chapter's domain names in its Cloudflare account, or at its own DNS provider with manual DNS (step 3.7)
   - The chapter's own DigitalOcean token, and its Cloudflare token unless it uses manual DNS, entered in CRMBuilder (step 5.8)
-  - The chapter's vault, for every secret this stage creates (step 2.7)
+  - The chapter's vault in Proton Pass, for every secret this stage creates (step 2.7)
+owed:
+  - "Duplicate checking, saved views and automated rules. The standard does not yet say what these are, because nobody has examined them on Cleveland's systems (work list item 3). A chapter's CRM is built without them for now."
+  - "Five event email templates. They exist on no system yet (work list item 18), so the checking tool in step 9.9 reports them missing. That result is expected."
+  - "The server size. Step 9.3 uses 2 processors and 4 GB of memory. That is a recommendation, not yet ruled."
 unlocks: >-
   The Google permissions (stage 10) and the applications (stage 11) can start.
-  The applications need the CRM's key, which this stage creates.
+  The applications need the CRM key that step 9.7 creates.
 steps:
   - id: "9.1"
-    name: Obtain the current standard from the central support organization
-    why: Every later step checks against three version numbers, so they have to be fixed before anything is installed.
+    name: Write down the versions to build with
+    why: Two paid add-on products and one release of the standard configuration go onto the CRM, and later steps check against their version numbers.
     who: central
     first: []
     needs: []
-    produces: [crm_version, addon_versions, standard_release]
+    produces: [addon_versions, standard_release]
     mode: automated
     actions:
-      - do: "Write down three version numbers:"
+      - do: "In the chapter's Operations vault in Proton Pass, create a note named CRM build versions. Everything this step writes down goes in it."
+      - do: "Write down the two add-on products and the versions Cleveland's production CRM runs. To read them, sign in to Cleveland's production CRM as an administrator and open Administration, then Extensions. On 31 August 2026 they were:"
         items:
-          - The CRM version.
-          - The version of each of the two paid add-on products.
-          - The release of the standard configuration this chapter will get.
-        see: Three version numbers, written where the rest of the stage can read them.
-      - do: "For the CRM version, write down: the current release CRMBuilder installs. A new chapter takes the current release, and Cleveland's systems move up to it later (ruled 09-23-26). CRMBuilder's deploy cannot install any other version, so the exact number is only known once the server exists; step 9.3 records it."
-      - do: "For the other two, there is no published statement of the standard yet. Until there is, use the add-on versions Cleveland's production system runs, and the date its configuration was last captured."
-        see: "Each add-on version marked by its maker as supporting CRM version 10. If one is not, stop and ask: Cleveland's own add-ons have not yet been checked against version 10."
+          - "Advanced Pack 3.12.1"
+          - "Google Integration 1.8.4"
+        see: The two product names and version numbers in the note.
+      - do: "On each product maker's website, check that the version supports CRM version 10."
+        see: Both versions marked as supporting version 10.
+      - do: "Write down the release of the standard configuration. There is no published version number yet (work list item 15). Until there is, write: Cleveland's test system on today's date, with roles and teams as captured on 31 August 2026."
+      - do: "Do not write down a CRM version. CRMBuilder always installs the current release, and step 9.4 records the exact number once the server exists."
     done_when:
-      - "The chapter's build has, in writing, the CRM version to install: the current release CRMBuilder installs."
-      - "The build has, in writing, the version of each of the two add-on products."
-      - "The build has, in writing, which release of the standard configuration is being applied."
-    note: "Without these three numbers the later steps have nothing to check against."
+      - "The CRM build versions note names both add-on products and their versions."
+      - "Both versions support CRM version 10."
+      - "The note names the release of the standard configuration."
     check:
-      how: The three numbers are written down.
-      probe: The app reads them from the published standard and shows them before the build starts.
-    if_not: Do not start the build. Ask the central support organization for the three numbers.
+      how: Open the CRM build versions note in the vault.
+      probe: The app reads the versions from the published standard and shows them before the build starts.
+    if_not: If either add-on version does not support CRM version 10, do not start the build. Ask the maker which version does, and write that one down instead.
     goes_wrong: >-
-      Writing down the CRM version Cleveland's test system runs, 9.3.4. CRMBuilder
-      cannot install it, and a new chapter does not take it: it takes the current
-      release. The August build installed 10.0.6 and the configuration captured from
-      9.3.4 rebuilt cleanly on it.
+      Writing down 9.3.4 as the CRM version, the version Cleveland's test system
+      runs. A new chapter never runs it: CRMBuilder installs the current release,
+      and Cleveland moves up later.
     later: The standard is published with a version number that the checking tool compares against.
     status: not-yet-tried — the August build had no standard to obtain.
     source: 3-Methods-CRM-Google-Applications.md#9.1
 
   - id: "9.2"
-    name: Create the server
-    why: The CRM needs a server of its own, in the chapter's own hosting account, so the chapter owns it.
-    who: central, inside the chapter's hosting account
-    first: ["5.4", "5.8", "3.7"]
-    needs: [digitalocean_token, cloudflare_token, crm_base_url, alert_email_to]
-    produces: [crm_server_ip, crm_ssh_key]
-    mode: automated
+    name: Prepare the build computer
+    why: The deploy wizard in step 9.3 needs a sign-in key and an administrator password that already exist, and the scripts in later steps need a settings file.
+    who: central
+    first: ["2.7", "8.10"]
+    needs: [crm_base_url]
+    produces: [crm_ssh_key]
+    mode: guided
     actions:
-      - do: "Work at the build computer: the central support organization's own computer, the one with CRMBuilder installed. Every command in this step is typed in a terminal window on the build computer."
-      - do: "Create an SSH key for the central support organization. An SSH key is the file that lets a person open a command line on the server. Type the line below, press Enter, then press Enter twice more to leave the key without a passphrase:"
+      - do: "Work at the build computer. The build computer is the central support organization's own computer, the one with CRMBuilder installed. Every command in this stage is typed in a terminal window on the build computer. Two folders on it are used:"
+        items:
+          - "CRMBuilder's folder: ~/Dropbox/Projects/crmbuilder"
+          - "The client intake software's folder: ~/Dropbox/Projects/cbm-client-intake"
+      - do: "Create the server sign-in key. This is an SSH key: a pair of files that lets a person open a command line on the server. Type the line below and press Enter. Then press Enter twice more, to leave the key without a passphrase:"
         items:
           - "ssh-keygen -t ed25519 -f ~/.ssh/crm-SHORT-LABEL -C crm-SHORT-LABEL"
-        see: "Two new files on the build computer: ~/.ssh/crm-SHORT-LABEL, the private key, which later steps call KEY-FILE; and ~/.ssh/crm-SHORT-LABEL.pub, the public key."
-      - do: "Register the public key in the chapter's DigitalOcean account: open Settings, then Security, then add an SSH key. Paste the contents of ~/.ssh/crm-SHORT-LABEL.pub, and name the key crm-SHORT-LABEL. DigitalOcean's exact screen wording has not been checked for this guide."
+        see: "Two new files: ~/.ssh/crm-SHORT-LABEL, the private half, which later steps call KEY-FILE; and ~/.ssh/crm-SHORT-LABEL.pub, the public half."
+      - do: "Show the public half, so it can be copied. Type the line below and press Enter:"
+        items:
+          - "cat ~/.ssh/crm-SHORT-LABEL.pub"
+        see: One line beginning ssh-ed25519 and ending crm-SHORT-LABEL. Copy the whole line.
+      - do: "Add the public half to the chapter's DigitalOcean account. Sign in to the chapter's DigitalOcean account, open Settings, then Security, then add an SSH key. Paste the line, and name the key crm-SHORT-LABEL. The exact wording on DigitalOcean's screen has not been checked for this guide."
         see: The key crm-SHORT-LABEL in the account's list of SSH keys.
-      - do: "Create the CRM administrator password in Proton Pass: a new item in the chapter's Operations vault, named CRM administrator, with the user name admin and a generated password of 24 characters, letters and numbers only (symbols off)."
-        see: "A password of letters and numbers only. Step 9.10 cannot use any other character, which is why CRMBuilder's own Generate button is not used: it can add - or _."
-      - do: "Go to CRMBuilder's folder. Type the line below and press Enter:"
+      - do: "Create the CRM administrator password. In the chapter's Operations vault in Proton Pass, create a login item named CRM administrator. Set the user name to admin. Generate a password of 24 characters with symbols switched off, so it holds letters and numbers only."
+        see: A password of letters and numbers only.
+      - do: "Create the folder for the chapter's settings file. Type the line below and press Enter:"
         items:
-          - "cd ~/Dropbox/Projects/crmbuilder"
-      - do: "Start CRMBuilder. Type the line below and press Enter:"
+          - "mkdir -p ~/.config/cbm-SHORT-LABEL"
+      - do: "Create the chapter's settings file. In a text editor, make a new file with the three lines below, with the password pasted from the CRM administrator item. Save it as ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env. Later steps call this file CHAPTER-ENV-FILE."
         items:
-          - "./start-v2.sh"
-        see: "CRMBuilder's main window. If a window titled Cloud backend not configured appears instead, the build computer is not connected to CRMBuilder's online service: stop and ask."
-      - do: Select the chapter's engagement. Click the strip across the top of the window, which names the current engagement, and choose the chapter's.
-        see: The chapter's engagement named in the strip. If it is not in the list, step 5.8 is not finished.
-      - do: "Open the deploy window. Click the tab 11 · CRM Deployment, then Instances in the side bar, then Deploy new… on the toolbar. Do not use New Instance: it only records a CRM that already exists."
-        see: A window titled Deploy a new CRM instance, open at Step 1 of 5 — Providers.
-      - do: "Step 1, Providers. In the DNS list, choose the entry that matches the DNS provider item in the chapter's Operations vault (step 3.7):"
-        items:
-          - "Cloudflare — the run creates the record: the chapter's DNS is at Cloudflare."
-          - "Manual DNS — I add the record at the domain's own DNS provider: the chapter kept its own DNS provider."
-        see: The DNS list showing the entry that matches the vault.
-      - do: "Step 1, Providers. Confirm both lines name the chapter's own tokens, by the label given in step 5.8, then click Next. With manual DNS, only the DigitalOcean line matters; the Cloudflare line may read Not set:"
-        items:
-          - "DigitalOcean: ✓ Configured — crmbuilder-SHORT-LABEL"
-          - "Cloudflare: ✓ Configured — crmbuilder-SHORT-LABEL"
-        see: "Both labels exactly as above. Any other label, or Not set, means the server would be built in the wrong account: click Set credentials… and repeat step 5.8's token actions first."
-      - do: "Step 2, Server. Fill in each box, then click Next. The lists come from the chapter's DigitalOcean account and take a moment to fill."
-        items:
-          - "Instance name: SHORT-LABEL CRM, using the chapter's short label from step 8.2"
-          - "Region: the region nearest the chapter; for Boston, New York"
-          - "Size: s-2vcpu-4gb (2 vCPU, 4096 MB), a recommendation not yet ruled"
-          - "Image: the newest Ubuntu LTS release in the list"
-          - "Extra SSH keys: tick crm-SHORT-LABEL"
-        see: "crm-SHORT-LABEL ticked. Without it, nobody can open a command line on the server, and steps 9.4 and 9.8 cannot be done."
-      - do: "Step 3, Domain. Fill in each box from the chapter information form, then click Next:"
-        items:
-          - "Cloudflare zone: the chapter's domain that the CRM's address ends in"
-          - "Subdomain: the CRM's address up to the first dot; for crm.example.org, crm"
-          - "Let's Encrypt email: the alert receiving address"
-        see: Instance address showing the CRM's address exactly as the chapter information form has it, without https://.
-      - do: "Step 3, Domain, with manual DNS. The page shows different boxes. Fill in each one from the chapter information form, then click Next:"
-        items:
-          - "CRM address: the CRM's full address, without https://; for Boston, crm.bbmentors.org"
-          - "Let's Encrypt email: the alert receiving address"
-        see: A note on the page saying the run will show the A record to add at the domain's DNS provider.
-      - do: "Step 4, Accounts. Fill in each box, then click Next:"
-        items:
-          - "Administrator username: admin"
-          - "Administrator email: the alert receiving address from the chapter information form"
-          - "Administrator password: paste it from the CRM administrator item in the vault"
-          - "Generate database passwords automatically (recommended): leave ticked"
-        see: A reminder to record the administrator password. It is already in the vault; CRMBuilder never shows it again.
-      - do: "Step 5, Review. Check every line against what was entered, then click Deploy."
-        see: "Extra SSH keys reading crm-SHORT-LABEL, not (generated key only). With manual DNS, the line DNS reading manual DNS — you add the A record when the run shows it. Then a window titled Deploy run DEP-NNN, with a progress bar and a log."
-      - do: "With manual DNS, the run stops at Waiting for DNS until the CRM's record exists, so add it by hand while the run waits. When the status line reads Waiting for DNS, it also shows the record, in the words Add this DNS record at the domain's DNS provider: type A, name, then the CRM's address, value, then the server's address. The log shows the same line. In the chapter's DNS provider account, add a record with exactly:"
-        items:
-          - "Type: A"
-          - "Name or host: the CRM's address, or only its first part (for crm.bbmentors.org, crm), whichever the provider's screen asks for"
-          - "Value, data or points to: the server's address from the status line"
-          - "Proxy or forwarding: off"
-          - "TTL: the provider's default, or the shortest it offers"
-        see: "Within a few minutes, a log line saying the CRM's address resolves to the server's address on public resolvers, and the status line moving on to Preparing server. The run waits up to 30 minutes for the record."
-      - do: "Wait for the run to finish. The status line names each of its ten stages in turn:"
-        items:
-          - Checking credentials
-          - Creating server
-          - Waiting for server
-          - Setting DNS
-          - Waiting for DNS
-          - Preparing server
-          - Installing CRM
-          - Post-install checks
-          - Verifying
-          - Registering instance
-        see: "The status line reading Deployment complete. The run takes place on CRMBuilder's online service, not on the build computer, so closing the window does not stop it. To reopen it, click Deploy History, then Open progress…."
-      - do: "Record the server's address. The log shows it on the line beginning Server active at. Later steps call it SERVER-IP."
-        see: The same address under Droplet IP, in the Deploy config section of the new instance on the Instances page.
-      - do: In Proton Pass, add the server's address to the CRM administrator item, as a note headed Server address.
-    done_when: >-
-      A server is running in the chapter's own hosting account and the central
-      support organization can reach it.
+          - "ESPO_ADMIN_BASE=https://CRM-ADDRESS"
+          - "ESPO_ADMIN_USER=admin"
+          - "ESPO_ADMIN_PASS=the password"
+        see: The file holds exactly three lines, with no spaces around the equals signs.
+    done_when:
+      - "The server sign-in key exists on the build computer, and its public half is in the chapter's DigitalOcean account."
+      - "The CRM administrator password is in the vault, and holds letters and numbers only."
+      - "The chapter's settings file holds the CRM's address and the administrator's name and password."
     check:
-      how: The server appears in the chapter's hosting account, the run reads Deployment complete, and the new instance is listed on CRMBuilder's Instances page.
-      probe: The app lists the chapter's hosting account through its token and finds the new server.
-    if_not: >-
-      The run keeps what it built, names the stage that failed, and bills for the
-      server until it is finished or deleted. Do not delete anything. If the failed
-      stage is Preparing server and the log mentions Could not get lock, the new
-      server was still setting itself up: wait five minutes and click Retry, which
-      starts again at the stage that failed. With manual DNS, a failure at Waiting
-      for DNS means the record was not seen within 30 minutes: check the record at
-      the chapter's DNS provider against the status line, character by character,
-      then click Retry, which waits again on the same server. Deployment complete with verification
-      gaps means the CRM is installed but a check failed: read the log, and stop and
-      ask before going on. Anything else: stop, and ask the central support
-      organization to retry from the failed stage.
+      how: The key crm-SHORT-LABEL is listed in DigitalOcean, and the settings file opens with its three lines.
+      probe: The app finds the key in the hosting account through the chapter's token.
+    if_not: If ssh-keygen says the file already exists, a key for this chapter was made before. Use that key, and skip to adding it to DigitalOcean.
     goes_wrong: >-
-      Not ticking crm-SHORT-LABEL under Extra SSH keys. The run then leaves nobody
-      with a command line on the server, because CRMBuilder's own key never leaves
-      its service, and steps 9.4 and 9.8 become impossible. The August build hit
-      this and had to paste a key through the hosting provider's own console as a
-      rescue. Also, a run left on CRMBuilder's own tokens builds the server in
-      CRMBuilder's hosting account, and nothing says so until someone looks.
-    later: unchanged
-    status: done-for-real — the August build ran the wizard. The screen labels here were read from CRMBuilder's code on 09-23-26 and have not been checked on screen; the sign-in key and password actions are new.
+      Using CRMBuilder's Generate button for the password. It can add a hyphen or an
+      underscore, and the settings file is read by several programs that must all
+      read the password the same way. Letters and numbers only are safe everywhere.
+    later: The deployment tool makes the key and writes it to the chapter's vault itself.
+    status: not-yet-tried — the key, password and settings-file actions are new since the August build.
     source: 3-Methods-CRM-Google-Applications.md#9.2
 
   - id: "9.3"
-    name: Install the CRM software at the version the standard names
-    why: Every chapter must run the same CRM version, or a release built for one may break another.
-    who: central
-    first: ["9.1", "9.2"]
-    needs: [crm_version]
-    produces: []
+    name: Run CRMBuilder's deploy wizard
+    why: The wizard creates the server in the chapter's hosting account, installs the CRM on it, and gives the CRM its web address.
+    who: central, inside the chapter's hosting account
+    first: ["5.4", "5.8", "3.7", "9.2"]
+    needs: [digitalocean_token, cloudflare_token, alert_email_to, crm_ssh_key]
+    produces: [crm_server_ip]
     mode: automated
     actions:
-      - do: Sign in to the new CRM as the administrator the wizard created, and open the Administration page.
-        see: The installed version number, shown on the Administration page. It is 10 or higher.
-      - do: In Proton Pass, add the number to the CRM administrator item in the chapter's Operations vault, as a note headed CRM version.
-      - do: Send the number to the central support organization, which records it against the chapter.
-        see: A reply confirming it is recorded.
-    done_when: >-
-      The installed version is the current release CRMBuilder installs, and its
-      exact number is recorded where the central support organization can find it.
-    note: "Ruled 09-23-26: a new chapter takes the current release, and Cleveland's systems move up to it later."
+      - do: "Start CRMBuilder. Type each line below and press Enter:"
+        items:
+          - "cd ~/Dropbox/Projects/crmbuilder"
+          - "./start-v2.sh"
+        see: "CRMBuilder's main window. If a window titled Cloud backend not configured appears instead, the build computer is not connected to CRMBuilder's online service. Connect it before going on."
+      - do: "Choose the chapter. Click the strip across the top of the window, which names the current engagement, and choose the chapter's engagement."
+        see: The chapter's engagement named in the strip. If it is not in the list, step 5.8 is not finished.
+      - do: "Open the deploy wizard. Click the tab 11 · CRM Deployment, then Instances in the side bar, then Deploy new… on the toolbar. Do not use New Instance: it only records a CRM that already exists."
+        see: A window titled Deploy a new CRM instance, at Step 1 of 5 — Providers.
+      - do: "Screen 1, Providers. In the DNS list, choose the entry that matches the DNS provider item in the chapter's Operations vault:"
+        items:
+          - "Cloudflare — the run creates the record. Choose this when the chapter's DNS is at Cloudflare."
+          - "Manual DNS — I add the record at the domain's own DNS provider. Choose this when the chapter kept its own DNS provider."
+        see: The entry that matches the vault.
+      - do: "Screen 1, Providers. Check the token lines, then click Next:"
+        items:
+          - "DigitalOcean must read: ✓ Configured — crmbuilder-SHORT-LABEL"
+          - "Cloudflare must read: ✓ Configured — crmbuilder-SHORT-LABEL. With manual DNS it may read Not set."
+        see: "The labels exactly as above. Any other label means the server would be built in someone else's account: click Set credentials… and do step 5.8 again."
+      - do: "Screen 2, Server. Fill in each box, then click Next. The lists take a moment to fill."
+        items:
+          - "Instance name: SHORT-LABEL CRM"
+          - "Region: the region nearest the chapter. For Boston, New York."
+          - "Size: s-2vcpu-4gb (2 vCPU, 4096 MB)"
+          - "Image: the newest Ubuntu LTS release in the list"
+          - "Extra SSH keys: tick crm-SHORT-LABEL"
+        see: crm-SHORT-LABEL ticked. Without it, nobody can open a command line on the server, and steps 9.4 and 9.6 cannot be done.
+      - do: "Screen 3, Domain, when you chose Cloudflare. Fill in each box, then click Next:"
+        items:
+          - "Cloudflare zone: the chapter's domain that the CRM's address ends in"
+          - "Subdomain: the CRM's address up to the first dot. For crm.example.org, crm."
+          - "Let's Encrypt email: ALERT-ADDRESS"
+        see: Instance address showing CRM-ADDRESS exactly.
+      - do: "Screen 3, Domain, when you chose manual DNS. Fill in each box, then click Next:"
+        items:
+          - "CRM address: CRM-ADDRESS. For Boston, crm.bbmentors.org."
+          - "Let's Encrypt email: ALERT-ADDRESS"
+        see: A note saying the run will show the record to add at the domain's DNS provider.
+      - do: "Screen 4, Accounts. Fill in each box, then click Next:"
+        items:
+          - "Administrator username: admin"
+          - "Administrator email: ALERT-ADDRESS"
+          - "Administrator password: paste it from the CRM administrator item in the vault"
+          - "Generate database passwords automatically (recommended): leave ticked"
+      - do: "Screen 5, Review. Check that Extra SSH keys reads crm-SHORT-LABEL, not (generated key only). Then click Deploy."
+        see: A window titled Deploy run DEP-NNN, with a progress bar and a log.
+      - do: "Manual DNS only: add the CRM's record while the run waits. When the status line reads Waiting for DNS, it shows the record to add. The log shows the same line. In the chapter's DNS provider account, add a record with exactly:"
+        items:
+          - "Type: A"
+          - "Host or name: only the first part of the CRM's address, for crm.bbmentors.org just crm. Squarespace and most providers add the domain themselves, so typing the full address makes the record crm.bbmentors.org.bbmentors.org and the run never sees it. Only if the screen shows the domain is not added (no .bbmentors.org beside the box and no note saying so) type the full address."
+          - "Value, data or points to: the server's address from the status line"
+          - "Proxy or forwarding: off"
+          - "TTL: the provider's default, or the shortest it offers"
+        see: Within a few minutes, the status line moves on to Preparing server. The run waits up to 30 minutes for the record.
+      - do: "Wait for the run to finish. It takes place on CRMBuilder's online service, so closing the window does not stop it. To reopen it, click Deploy History, then Open progress…."
+        see: The status line reading Deployment complete.
+      - do: "Record the server's address. The log shows it on the line beginning Server active at. Add it to the CRM administrator item in the vault, as a note headed Server address. Later steps call it SERVER-IP."
+    done_when:
+      - "The run reads Deployment complete."
+      - "The server's address is in the vault."
     check:
-      how: The version on the CRM's administration page is 10 or higher, and matches the number the central support organization recorded.
-      probe: The app reads the CRM's version and records it against the chapter.
-    if_not: A number below 10 means something other than CRMBuilder's deploy installed the CRM. Stop, and ask the central support organization.
+      how: The new instance is listed on CRMBuilder's Instances page, with the same address under Droplet IP.
+      probe: The app lists the chapter's hosting account through its token and finds the new server.
+    if_not:
+      - "The run names the stage that failed and keeps what it built. Do not delete anything. The server is billed until the run finishes or the server is deleted."
+      - "Failed at Preparing server, and the log mentions Could not get lock: the new server was still setting itself up. Wait five minutes and click Retry. Retry starts again at the stage that failed."
+      - "Manual DNS, failed at Waiting for DNS: the record was not seen within 30 minutes. Compare the record at the DNS provider with the status line, character by character, then click Retry."
+      - "Deployment complete with verification gaps: the CRM is installed but a check failed. Read the log, and do not go on until the failed check is understood."
+      - "Any other failure: click Retry once. If it fails again, stop the build and keep the log."
     goes_wrong: >-
-      Not recording the number. Until Cleveland moves up (task C1 in the chapter network task list), the network
-      runs two major CRM versions, and a problem found on one may not happen on the
-      other. The recorded number is what tells the two apart.
-    later: The deployment tool installs the version the standard names, and every chapter's number is checked against it.
-    status: done-for-real
-    source: 3-Methods-CRM-Google-Applications.md#9.3
+      Not ticking crm-SHORT-LABEL under Extra SSH keys. CRMBuilder's own key never
+      leaves its online service, so without the tick nobody can open a command line
+      on the server. Also, a run left on CRMBuilder's own tokens builds the server in
+      CRMBuilder's hosting account, and nothing says so until someone looks. With
+      manual DNS, typing the full address as the record's host: the provider adds the
+      domain again, the name the run waits for never appears, and the run fails at
+      Waiting for DNS after 30 minutes. Boston's first run did this at Squarespace
+      (09-23-26).
+    later: unchanged
+    status: done-for-real — the August build ran the wizard. The screen labels were read from CRMBuilder's code on 09-23-26 and have not all been seen on screen.
+    source: 3-Methods-CRM-Google-Applications.md#9.2
 
   - id: "9.4"
-    name: Confirm command line access, and record who holds the key
-    why: Copying the configuration files (step 9.8) needs a command line on the server, and the key must not live on one laptop.
+    name: Confirm the server works
+    why: Before anything is copied onto the server, four things must be true. You can open a command line on it, its web address leads to it, its certificate renews by itself, and its CRM version is recorded.
     who: central
-    first: ["9.2"]
-    needs: [crm_ssh_key]
-    produces: []
+    first: ["9.3"]
+    needs: [crm_ssh_key, crm_server_ip, crm_base_url]
+    produces: [crm_version]
     mode: guided
     actions:
-      - do: "In a terminal, type the line below and press Enter, with SERVER-IP the server's address and KEY-FILE the private key ~/.ssh/crm-SHORT-LABEL, both from step 9.2:"
+      - do: "Open a command line on the server. Type the line below and press Enter:"
         items:
-          - "ssh -i KEY-FILE root@SERVER-IP"
-        see: "The server's prompt, ending root@ followed by the server's name."
-      - do: "Type the line below and press Enter, to confirm the CRM is running in its container:"
-        items:
-          - "docker ps --format '{{.Names}}'"
-        see: A list of container names, one of them espocrm. Later steps call that name CRM-CONTAINER; if it is named differently, use that name instead.
-      - do: Type exit and press Enter.
-      - do: In Proton Pass, add an item to the chapter's Operations vault named CRM server sign-in key, and attach KEY-FILE to it.
-        see: The item in the vault, with a second named person able to open it.
-    done_when: >-
-      The central support organization can open a command line on the server, and
-      the key that allows it is recorded in the secrets store with at least two
-      people able to reach it. The server can be created without this access, and
-      the next steps cannot be done without it.
-    check:
-      how: A command runs on the server and returns, and a second person can open the key in the vault.
-      probe: The app runs one harmless command on the server over the key.
-    goes_wrong: >-
-      The key exists on one person's laptop only.
-    later: The deployment tool holds the key it created and writes it to the chapter's vault itself.
-    status: done-for-real — except storing the key in a vault, which did not exist in August.
-    source: 3-Methods-CRM-Google-Applications.md#9.4
-
-  - id: "9.5"
-    name: Point the CRM's web address at the server
-    why: People and the applications reach the CRM by its name, so the name must lead to the server.
-    who: central
-    first: ["3.7", "9.2"]
-    needs: [crm_base_url, crm_server_ip]
-    produces: []
-    mode: automated
-    actions:
-      - do: Nothing to do by hand. The wizard wrote the record in step 9.2. Open the chapter's Cloudflare account, then the domain, then DNS.
-        see: An A record for the CRM's address, pointing at the server, marked "DNS only" with a grey cloud.
-      - do: With manual DNS, the record was added by hand during step 9.2. Open the domain's DNS records in the chapter's DNS provider account instead.
-        see: An A record for the CRM's address, pointing at the server, with no proxy or forwarding.
-    done_when: >-
-      The domain name record for the CRM address resolves to the server.
-    check:
-      how: A name lookup on the CRM's address returns the server's own address, not one of Cloudflare's.
-      probe: The app looks up the CRM's address and compares it with the server's address.
-    goes_wrong: >-
-      The proxy switched on, an orange cloud. The CRM's certificate is issued by a
-      direct check against the server, and the proxy blocks it.
-    later: unchanged
-    status: done-for-real
-    source: 3-Methods-CRM-Google-Applications.md#9.5
-
-  - id: "9.6"
-    name: Publish the CRM at its own web address
-    why: A secure connection protects every sign-in, and a certificate that is not renewed automatically takes the whole system down about ninety days later.
-    who: central
-    first: ["9.5"]
-    needs: [crm_base_url]
-    produces: []
-    mode: automated
-    actions:
-      - do: Open https://CRM-ADDRESS in a private browser window.
-        see: The CRM's sign-in page, with no certificate warning.
-      - do: "Sign in to the server as in step 9.4 and type the line below and press Enter, to list the running containers:"
+          - "ssh -i ~/.ssh/crm-SHORT-LABEL root@SERVER-IP"
+        see: "A prompt ending root@ followed by the server's name. The first time, it asks whether to continue connecting: type yes and press Enter."
+      - do: "List the programs running on the server. Type the line below and press Enter:"
         items:
           - "docker ps --format '{{.Names}}'"
-        see: A container whose name includes letsencrypt or certbot, which is what renews the certificate. The exact name depends on the installer version and is not checked for this guide; if no such container is listed, stop and ask.
-      - do: "Type the line below and press Enter, with the CRM's address in place of CRM-ADDRESS, to read the certificate's expiry date:"
+        see:
+          - One name is espocrm, the CRM itself. Later steps call it CRM-CONTAINER. If it is named differently, use that name.
+          - One name includes letsencrypt or certbot. That is what renews the certificate.
+      - do: "Close the command line. Type exit and press Enter."
+      - do: "Check that the CRM's address leads to the server. Type the line below and press Enter:"
+        items:
+          - "dig +short CRM-ADDRESS"
+        see: SERVER-IP, and nothing else.
+      - do: "Check the certificate's expiry date. Type the line below and press Enter:"
         items:
           - "echo | openssl s_client -connect CRM-ADDRESS:443 -servername CRM-ADDRESS 2>/dev/null | openssl x509 -noout -enddate"
         see: A line beginning notAfter= with a date about ninety days away.
-    done_when: >-
-      The CRM loads at its address over a secure connection, and the security
-      certificate is set to renew by itself. A certificate that has to be renewed by
-      hand will expire and take the system down.
+      - do: "Open https://CRM-ADDRESS in a private browser window, and sign in as admin with the password from the vault."
+        see: The CRM's home screen, with no certificate warning.
+      - do: "Read the CRM's version. Open Administration. The version number is shown on that page. Add it to the CRM administrator item in the vault, as a note headed CRM version."
+        see: A version number of 10 or higher.
+      - do: "Store the server sign-in key. In the chapter's Operations vault, create an item named CRM server sign-in key, and attach the file ~/.ssh/crm-SHORT-LABEL to it. Share the vault with a second named person."
+        see: The item in the vault, and the second person able to open it.
+    done_when:
+      - "A command runs on the server over the chapter's sign-in key, and the key is in the vault where a second person can open it."
+      - "The CRM's address leads to the server."
+      - "The CRM loads at its address with no certificate warning, and the certificate renews by itself."
+      - "The CRM's version, 10 or higher, is in the vault."
     check:
-      how: The sign-in page loads with no warning, and the renewal is scheduled.
-      probe: The app reads the certificate's expiry date and warns if it is under thirty days away.
+      how: Each action above showed what it should.
+      probe: The app runs one harmless command over the key, looks up the address, reads the certificate's expiry and the CRM's version.
+    if_not:
+      - "The ssh line asks for a password or says Permission denied: the key was not ticked in step 9.3. Stop the build."
+      - "dig shows an address other than SERVER-IP: the record is proxied. In Cloudflare, set the record to DNS only (a grey cloud). At another DNS provider, switch off proxy or forwarding."
+      - "No letsencrypt or certbot program is running: the certificate will not renew. Stop the build."
+      - "A version below 10: something other than CRMBuilder installed the CRM. Stop the build."
     goes_wrong: >-
-      A certificate that has to be renewed by hand. It expires about ninety days
-      after go-live and the whole system stops.
-    later: unchanged
-    status: done-for-real — except the renewal check.
-    source: 3-Methods-CRM-Google-Applications.md#9.6
+      A proxied record, shown as an orange cloud in Cloudflare. The certificate is
+      issued by a direct check against the server, and the proxy blocks it. Also, the
+      sign-in key left on one person's laptop only.
+    later: The deployment tool writes the key to the chapter's vault itself.
+    status: done-for-real — except storing the key in a vault, which did not exist in August.
+    source: 3-Methods-CRM-Google-Applications.md#9.3 to #9.6
 
-  - id: "9.7"
+  - id: "9.5"
     name: Install the two paid add-on products
-    why: The standard permission roles refer to features inside these two products, and the CRM refuses a role that names a missing feature.
+    why: The standard permission roles refer to features inside these two products, and the CRM refuses a whole role that names a missing feature.
     who: central, with the chapter paying for the licences
-    first: ["9.3", "9.1"]
-    needs: [addon_versions]
+    first: ["9.1", "9.4"]
+    needs: [addon_versions, crm_version]
     produces: []
     mode: guided
     actions:
-      - do: Buy a licence for each of the two products in the chapter's name.
-      - do: In the CRM, open Administration, then Extensions, and upload each product.
-        see: Both products listed as installed, at the versions from step 9.1.
+      - do: "Buy a licence for each product, Advanced Pack and Google Integration, in the chapter's name and paid by the chapter."
+      - do: "Download each product's installation file, at the version in the CRM build versions note."
+      - do: "In the CRM, open Administration, then Extensions. Upload the first file and click Install. Then do the same with the second."
+        see: Both products listed as installed, at the versions in the note.
     done_when:
-      - "Both are installed at the versions the standard names."
+      - "Both products are installed at the versions in the CRM build versions note."
       - "Both are licensed to this chapter."
-      - "Both are listed in the CRM's own list of installed products."
-    note: "They must be installed before the permission roles are created, because the roles refer to them."
+    note: "They must be installed before step 9.7, because the roles that step creates refer to them."
     check:
-      how: Both appear in the CRM's list of installed products, at the right versions.
+      how: Both appear under Administration, then Extensions, at the right versions.
       probe: The app reads the CRM's installed products and compares them with the standard.
+    if_not: If the CRM refuses a file, check that its version supports the CRM version recorded in step 9.4.
     goes_wrong: >-
-      Doing this after the permission roles instead of before. The CRM then rejects
-      each whole role. The August build hit this: seventy-one role entries had to be
-      stripped out and the run finished in a partial state.
+      Installing them after step 9.7 instead of before. The CRM then refuses every
+      role that names one of their features, and the run finishes half done.
     later: unchanged — these are paid products and cannot be copied between chapters.
-    status: not-yet-tried — the August build did not install them, which is how the failure was found. Whether they are part of the standard is still open (work list item 2).
+    status: not-yet-tried — the August build did not install them, which is how the failure was found.
     source: 3-Methods-CRM-Google-Applications.md#9.7
 
-  - id: "9.8"
-    name: Copy on the standard configuration files
-    why: The standard's records, fields, links, screen layouts and rules arrive as two sets of files, and the CRM must be rebuilt to take them in.
+  - id: "9.6"
+    name: Copy the standard configuration onto the server
+    why: The standard's record types, fields, links, screen layouts and rules arrive as two folders of files, copied from Cleveland's test system, and the CRM must be rebuilt to take them in.
     who: central
-    first: ["9.4", "9.7"]
+    first: ["9.4", "9.5"]
     needs: [standard_release]
     produces: []
     mode: automated
     actions:
-      - do: "Sign in to the source system, Cleveland's test system, and find the two configuration folders. Type the line below and press Enter:"
+      - do: "Find the two configuration folders on Cleveland's test system, at 104.131.45.208. Type the line below and press Enter:"
         items:
           - "ssh root@104.131.45.208 \"find /var/www/espocrm -type d \\( -path '*Espo/Custom' -o -path '*client/custom/src' \\) -not -path '*/vendor/*'\""
-        see: "Two folder paths, one ending Espo/Custom and one ending client/custom/src. Later actions call them SOURCE-CONFIG and SOURCE-SCREEN-CODE. In August the first was under data/espocrm/custom."
-      - do: "Sign in to the new server and find the same two folders there. Type the line below and press Enter:"
+        see: "Two folder paths. The one ending Espo/Custom holds the configuration; later actions call it SOURCE-CONFIG. The one ending client/custom/src holds the screen code; later actions call it SOURCE-SCREEN-CODE."
+      - do: "Find the same two folders on the new server. Type the line below and press Enter:"
         items:
-          - "ssh -i KEY-FILE root@SERVER-IP \"find / -type d \\( -path '*Espo/Custom' -o -path '*custom/src' \\) -path '*espocrm*' 2>/dev/null\""
-        see: "Two folder paths. Later actions call them TARGET-CONFIG and TARGET-SCREEN-CODE. On the newer installer the first is under data/espocrm/persistent/custom, and the screen code sits in a second folder beside it (August finding F13). If only one appears, stop and ask."
-      - do: "On the build computer, copy both folders down, then up to the new server. Type each line below and press Enter:"
+          - "ssh -i ~/.ssh/crm-SHORT-LABEL root@SERVER-IP \"find / -type d \\( -path '*Espo/Custom' -o -path '*custom/src' \\) -path '*espocrm*' 2>/dev/null\""
+        see: "Two folder paths. Later actions call the Espo/Custom one TARGET-CONFIG and the custom/src one TARGET-SCREEN-CODE. If only one appears, stop the build."
+      - do: "Copy both folders from the test system to the build computer. Type each line below and press Enter:"
         items:
           - "mkdir -p ~/cbm-standard/config ~/cbm-standard/screen-code"
           - "rsync -a root@104.131.45.208:SOURCE-CONFIG/ ~/cbm-standard/config/"
           - "rsync -a root@104.131.45.208:SOURCE-SCREEN-CODE/ ~/cbm-standard/screen-code/"
-          - "rsync -a -e 'ssh -i KEY-FILE' ~/cbm-standard/config/ root@SERVER-IP:TARGET-CONFIG/"
-          - "rsync -a -e 'ssh -i KEY-FILE' ~/cbm-standard/screen-code/ root@SERVER-IP:TARGET-SCREEN-CODE/"
-        see: Each command returning to the prompt with no error. In August the configuration folder held 791 files.
-      - do: "Make the web server user the owner of both folders. The web server user inside the CRM's container is number 33. Type the line below and press Enter:"
+        see: Each line returning to the prompt with no error.
+      - do: "Copy both folders from the build computer to the new server. Type each line below and press Enter:"
         items:
-          - "ssh -i KEY-FILE root@SERVER-IP \"chown -R 33:33 TARGET-CONFIG TARGET-SCREEN-CODE\""
+          - "rsync -a -e 'ssh -i ~/.ssh/crm-SHORT-LABEL' ~/cbm-standard/config/ root@SERVER-IP:TARGET-CONFIG/"
+          - "rsync -a -e 'ssh -i ~/.ssh/crm-SHORT-LABEL' ~/cbm-standard/screen-code/ root@SERVER-IP:TARGET-SCREEN-CODE/"
+        see: Each line returning to the prompt with no error.
+      - do: "Give both folders to the web server's user, number 33. Type the line below and press Enter:"
+        items:
+          - "ssh -i ~/.ssh/crm-SHORT-LABEL root@SERVER-IP \"chown -R 33:33 TARGET-CONFIG TARGET-SCREEN-CODE\""
       - do: "Rebuild the CRM. Type the line below and press Enter:"
         items:
-          - "ssh -i KEY-FILE root@SERVER-IP \"docker exec -u www-data CRM-CONTAINER php command.php rebuild\""
-        see: The command returning with no error. In August it took three seconds.
-      - do: Delete ~/cbm-standard from the build computer.
+          - "ssh -i ~/.ssh/crm-SHORT-LABEL root@SERVER-IP \"docker exec -u www-data CRM-CONTAINER php command.php rebuild\""
+        see: The line returning with no error, in a few seconds.
+      - do: "Delete the copies on the build computer. Type the line below and press Enter:"
+        items:
+          - "rm -rf ~/cbm-standard"
+      - do: "Reload the CRM in the browser."
+        see: The normal working screen, with the navigation bar across the top.
     done_when:
-      - "Both sets of configuration files are in place."
-      - "Both sets are owned by the web server user."
-      - "The rebuild command has finished without errors."
-    note: "There are two sets, not one."
+      - "Both folders are on the server and owned by the web server's user."
+      - "The rebuild finished without errors."
+      - "The CRM shows its normal working screen."
+    note: "There are two folders, not one."
     check:
-      how: The rebuild log shows no errors, and step 9.9 shows a working screen.
+      how: The CRM's navigation bar and home screen appear.
       probe: The app runs the rebuild and reads its result.
+    if_not:
+      - "A blank page: the screen code folder is missing. Copy it again, give it to user 33, rebuild, and reload."
+      - "An error from the rebuild: stop the build and keep the error."
     goes_wrong: >-
-      Copying only one of the two sets. The applications still work, but the CRM's
-      own screen is blank. Also, until the standard is versioned (work list item 15),
-      the source is Cleveland's test system, which changes under the application.
+      Copying only one of the two folders. The applications still work, but the
+      CRM's own screen is blank. Also, Cleveland's test system changes under the
+      applications, so two chapters built a week apart can get different
+      configurations until the standard is versioned (work list item 15).
     later: The configuration is packaged, versioned and applied by the applier (work list item 15) rather than copied.
     status: done-for-real
-    source: 3-Methods-CRM-Google-Applications.md#9.8
+    source: 3-Methods-CRM-Google-Applications.md#9.8 and #9.9
 
-  - id: "9.9"
-    name: Confirm the CRM's own screen loads
-    why: A blank screen is the only sign that one of the two sets of files is missing, so it is checked by eye before going on.
+  - id: "9.7"
+    name: Apply the standard with one script
+    why: One script creates the teams, the permission roles, the email templates, the CRM's own settings and two accounts, and reads each one back to prove it.
     who: central
-    first: ["9.8"]
-    needs: []
-    produces: []
-    mode: guided
-    actions:
-      - do: Open the CRM's address in a browser and sign in as the administrator.
-        see: The normal working screen, with the navigation bar across the top.
-    done_when: >-
-      An administrator signs in and sees the normal working screen. A blank page
-      here means one of the two sets of files is missing.
-    check:
-      how: The navigation bar and the home screen appear.
-      probe: none
-    if_not: A blank page means the screen code folder from step 9.8 is missing. Copy it, rebuild, and look again.
-    goes_wrong: nothing known yet
-    later: unchanged — this one stays human.
-    status: done-for-real
-    source: 3-Methods-CRM-Google-Applications.md#9.9
-
-  - id: "9.10"
-    name: Create the teams
-    why: Every page in the applications is opened by team membership, and each gate looks for an exact team name.
-    who: central
-    first: ["9.9"]
-    needs: [standard_release]
-    produces: []
+    first: ["9.6", "6.7"]
+    needs: [standard_release, chapter_name, crm_application_name, crm_outbound_from_name, crm_outbound_from_address, crm_base_url, crm_logo_file, timezone, currency, locale, docs_site_url]
+    produces: [ESPO_API_KEY, ESPO_PROVISION_USERNAME, ESPO_PROVISION_PASSWORD]
     mode: automated
     actions:
-      - do: "Make the chapter's settings file, CHAPTER-ENV-FILE, at ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env, outside the code repository. Put these three lines in it, using the administrator account the deployment wizard created:"
+      - do: "Go to the client intake software's folder. Type the line below and press Enter:"
         items:
-          - "ESPO_ADMIN_BASE=https://CRM-ADDRESS"
-          - "ESPO_ADMIN_USER=the wizard's administrator user name"
-          - "ESPO_ADMIN_PASS=the wizard's administrator password"
-      - do: The administrator password must be letters and numbers only, because later steps pass this file's values on a command line. If the wizard's password has any other character, change it in the CRM first (Administration, then Users), and put the new one in the file.
-      - do: "Type the line below and press Enter. It changes nothing, and reports what it would do:"
+          - "cd ~/Dropbox/Projects/cbm-client-intake"
+      - do: "Run the script without changing anything, to see what it would do. Type the line below and press Enter:"
         items:
-          - "uv run python scripts/rehearsal/apply_api_half.py --env ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env --values CHAPTER-VALUES-FILE"
-        see: A list of teams, roles, attachments, email templates, two accounts and settings it would create.
-      - do: "Type the line below and press Enter. It creates everything in steps 9.10 to 9.14, 9.17 and 9.18:"
+          - "uv run python scripts/rehearsal/apply_api_half.py --env ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env --values prds/chapter-network/chapters/SHORT-LABEL-values.yaml"
+        see:
+          - Nine teams
+          - Twelve permission roles
+          - Each role attached to its team
+          - The email templates
+          - The CRM's settings, including the tab bar and the chapter's documentation link
+          - Two accounts, customapps and SHORT-LABEL.provision
+      - do: "Run it for real. Type the line below and press Enter:"
         items:
-          - "uv run python scripts/rehearsal/apply_api_half.py --env ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env --values CHAPTER-VALUES-FILE --apply"
-        see: "Nine teams reported applied, and the new values ESPO_API_KEY, ESPO_PROVISION_USERNAME and ESPO_PROVISION_PASSWORD added to the end of CHAPTER-ENV-FILE."
-      - do: Put CHAPTER-ENV-FILE's contents in the chapter's Operations vault as an item named CRM build settings.
-    done_when: >-
-      Every team the standard names exists, spelled exactly as the standard spells
-      it.
-    check:
-      how: The teams list in the CRM matches the standard, letter for letter.
-      probe: The app reads the CRM's teams and compares the names with the standard.
-    goes_wrong: >-
-      A misspelled team name. The feature behind it becomes unreachable, and the
-      error names nothing useful.
-    later: The same work moves inside the applier.
-    status: done-for-real — nine of nine.
-    source: 3-Methods-CRM-Google-Applications.md#9.10
-
-  - id: "9.11"
-    name: Create the permission roles
-    why: Roles decide what each team may read and change. They are what keeps a mentor to their own clients.
-    who: central
-    first: ["9.7", "9.10"]
-    needs: [standard_release]
-    produces: []
-    mode: automated
-    actions:
-      - do: Nothing extra to run for the roles themselves. The script in step 9.10 creates the roles, checking each one against what this CRM has before writing it.
-        see: "Every role reported applied and read back identical. Lines marked unapplyable are explained under If it didn't work."
-      - do: "Give the Client Assignment Role the User permission it needs to assign a mentor. The roles captured on 31 August predate this ruling (Doug, 09-07-26). In the folder ~/Dropbox/Projects/cbm-client-intake, type the line below and press Enter. It changes nothing:"
+          - "uv run python scripts/rehearsal/apply_api_half.py --env ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env --values prds/chapter-network/chapters/SHORT-LABEL-values.yaml --apply"
+        see: "Each item reported applied and read back identical. Three new lines at the end of CHAPTER-ENV-FILE: ESPO_API_KEY, ESPO_PROVISION_USERNAME and ESPO_PROVISION_PASSWORD. Lines marked unapplyable are explained under If it didn't work."
+      - do: "Give the Client Assignment Role the permission it needs to assign a mentor: read all users and edit its own user. The roles captured on 31 August do not include it. First see what would change. Type the line below and press Enter:"
         items:
-          - "env $(grep -v '^#' ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env | xargs) uv run python scripts/migrate_client_assignment_role.py"
-        see: "A plan to raise Client Assignment Role, User, to read all and edit own."
-      - do: "Type the line below and press Enter:"
+          - "uv run --env-file ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env python scripts/migrate_client_assignment_role.py"
+        see: A plan to raise Client Assignment Role, User, to read all and edit own.
+      - do: "Apply it. Type the line below and press Enter:"
         items:
-          - "env $(grep -v '^#' ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env | xargs) uv run python scripts/migrate_client_assignment_role.py --apply"
-        see: The grant reported applied. Running the first line again reports nothing to do.
-    done_when: >-
-      Every role the standard names exists, and reading each one back matches what
-      was sent.
-    check:
-      how: The script reports every role read back identical, with nothing removed.
-      probe: The conformance check compares each role with the standard.
-    if_not: >-
-      The script ends with exit 4 whenever it had to leave an entry out, and it
-      always does here. Read the unapplyable lines. A roleField line, such as
-      Standard User: Account.cCompanyPartnerProfile, names a field the source CRM
-      has since deleted; it is expected, and leaving it out is correct. A roleScope
-      line names a whole feature the CRM does not have, which means an add-on
-      product is missing: install it (step 9.7) and run step 9.10's apply line
-      again. Exit 4 with only roleField lines is a finished run.
-    goes_wrong: >-
-      Two things, both seen in August. An entry naming a feature the CRM does not
-      have: the CRM refuses the entire role, not just that entry. And an entry naming
-      a field since deleted on the source: the target refuses the whole role for it,
-      so the source needs cleaning.
-    later: Inside the applier, with the same check.
-    status: done-for-real — twelve of twelve applied, with seventy-three entries removed because the add-on products were absent.
-    source: 3-Methods-CRM-Google-Applications.md#9.11
-
-  - id: "9.12"
-    name: Attach the roles to the teams
-    why: A team gives its members permissions only through the roles attached to it.
-    who: central
-    first: ["9.11"]
-    needs: []
-    produces: []
-    mode: automated
-    actions:
-      - do: Nothing extra to run. The script in step 9.10 attaches them.
-        see: Every attachment reported applied.
-      - do: In the CRM, open Administration, then Teams, and open each team.
-        see: Every team carrying a role. None empty.
-    done_when: >-
-      Each team carries the role it is meant to carry, and no team is left without
-      one. A team with no role gives its members no access at all.
-    check:
-      how: No team in the list has an empty role.
-      probe: The app reads each team's roles and flags any team with none.
-    goes_wrong: >-
-      A team with no role. Its members can read nothing, and nobody notices until
-      someone on that team tries to work. Two of Cleveland's own test-system teams
-      are in this state.
-    later: unchanged
-    status: done-for-real — seven of seven.
-    source: 3-Methods-CRM-Google-Applications.md#9.12
-
-  - id: "9.13"
-    name: Create the email templates
-    why: The applications send their standard emails, such as the mentor assignment notice, from these templates.
-    who: central
-    first: ["9.9"]
-    needs: [standard_release]
-    produces: []
-    mode: automated
-    actions:
-      - do: Nothing extra to run. The script in step 9.10 creates them.
-        see: The templates listed in the CRM under Email Templates.
-    done_when: >-
-      Every template the standard names exists.
-    check:
-      how: Every template the standard names is in the CRM.
-      probe: The conformance check lists any template missing.
-    goes_wrong: >-
-      Editing them per chapter. They carry no chapter name, on purpose, and must stay
-      identical. Also, five event templates the standard names exist nowhere yet
-      (work list item 18).
-    later: unchanged
-    status: done-for-real — two of two, which is all the source holds.
-    source: 3-Methods-CRM-Google-Applications.md#9.13
-
-  - id: "9.14"
-    name: Apply the instance settings
-    why: The CRM's own name, sending name and address, logo and locale are the chapter's, and anything the CRM sends directly uses them.
-    who: central
-    first: ["9.9"]
-    needs: [chapter_name, crm_application_name, crm_outbound_from_name, crm_outbound_from_address, crm_base_url, crm_logo_file, timezone, currency, locale]
-    produces: []
-    mode: automated
-    actions:
-      - do: Nothing extra to run. The script in step 9.10 applies them from the chapter information form and reads them back.
-        see: Each setting reported equal to what was sent.
-    done_when:
-      - "The chapter's name is set."
-      - "The sending name is set."
-      - "The sending address is set."
-      - "The web address is set."
-      - "The logo is set."
-      - "The time zone is set."
-      - "The date format is set."
-      - "The time format is set."
-      - "The currency is set."
-      - "The language is set."
-      - "The week start is set."
-      - "All of them are set from the chapter information form, and reading them back matches."
-    check:
-      how: Each setting reads back equal to the form.
-      probe: The app reads the CRM's settings and compares them with the form.
-    goes_wrong: >-
-      The sending name here is separate from anything the applications show.
-      Anything the CRM sends directly carries this name. Also, currency fields refuse
-      to save unless the currency setting is right.
-    later: unchanged
-    status: done-for-real
-    source: 3-Methods-CRM-Google-Applications.md#9.14
-
-  - id: "9.15"
-    name: Apply the navigation tabs and the quick-add list
-    why: Staff find their way around the CRM by its tab bar, which must be the standard one with the chapter's own help link.
-    who: central
-    first: ["9.14", "6.7"]
-    needs: [docs_site_url]
-    produces: []
-    mode: automated
-    actions:
-      - do: Nothing extra to run. The script in step 9.10 applies them.
-      - do: Open the CRM and click the documentation tab.
-        see: The chapter's own help documentation, not another chapter's.
-    done_when:
-      - "The tabs match the standard."
-      - "The chapter's own documentation link is in place of any other chapter's."
-      - "The list of records staff can add quickly matches the standard."
-    check:
-      how: The tab bar matches, and the documentation tab opens this chapter's documentation.
-      probe: The app reads the tab list and compares it with the standard plus the chapter's link.
-    goes_wrong: >-
-      The documentation link is the one tab that differs per chapter, and it is easy
-      to leave pointing at Cleveland's.
-    later: unchanged
-    status: done-for-real
-    source: 3-Methods-CRM-Google-Applications.md#9.15
-
-  - id: "9.16"
-    name: Apply the standard's duplicate checking, saved views and automated rules
-    why: The client intake software behaves differently depending on the CRM's duplicate checking, so every chapter must have the same settings.
-    who: central
-    first: ["9.9"]
-    needs: [standard_release]
-    produces: []
-    mode: automated
-    actions:
-      - do: Not possible yet. The standard does not say what these settings are, because nobody has examined them on either existing system (work list item 3).
-    done_when: >-
-      The settings the standard names are applied and read back correctly. The
-      standard does not yet say what they are, because nobody has ever examined them
-      on the existing systems. Deciding them is work owed before any chapter reaches
-      this step. See the work list document.
-    check:
-      how: Cannot be checked until the standard says what is expected.
-      probe: The conformance check compares them with the standard, once it names them.
-    if_not: Record the step as blocked and carry on.
-    goes_wrong: >-
-      Duplicate checking is not only a convenience. The intake software's behaviour
-      depends on it, and that dependency has never been tested either way.
-    later: Part of the standard like everything else.
-    status: not-yet-tried — blocked on work list item 3.
-    source: 3-Methods-CRM-Google-Applications.md#9.16
-
-  - id: "9.17"
-    name: Create the account the applications sign in with
-    why: The applications reach the CRM with an account of their own, and the key it creates is the first secret stage 11 needs.
-    who: central
-    first: ["9.12"]
-    needs: []
-    produces: [ESPO_API_KEY]
-    mode: automated
-    actions:
-      - do: Nothing extra to run. The script in step 9.10 created the account customapps, attached its role, and added its key to CHAPTER-ENV-FILE as ESPO_API_KEY.
-      - do: Copy the value after ESPO_API_KEY= into a new item in the chapter's Operations vault named CRM key for the applications.
-        see: The item in the Operations vault.
-      - do: "Type the line below and press Enter, with the key in place of CRM-KEY, to make one test request:"
+          - "uv run --env-file ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env python scripts/migrate_client_assignment_role.py --apply"
+        see: The permission reported applied.
+      - do: "Put the new secrets in the chapter's Operations vault, as three items:"
+        items:
+          - "CRM build settings: the whole of CHAPTER-ENV-FILE"
+          - "CRM key for the applications: the value after ESPO_API_KEY="
+          - "CRM provisioning administrator: the values after ESPO_PROVISION_USERNAME= and ESPO_PROVISION_PASSWORD="
+      - do: "Test the applications' key. Type the line below and press Enter, with the key in place of CRM-KEY:"
         items:
           - "curl -s -o /dev/null -w '%{http_code}\\n' -H 'X-Api-Key: CRM-KEY' https://CRM-ADDRESS/api/v1/CMentorProfile?maxSize=1"
-        see: 200. A 401 means the key is wrong; a 403 means a permission was missed in step 9.11.
-    done_when:
-      - "The account exists."
-      - "Its key has been recorded in the secrets store."
-      - "A test request using that key succeeds."
-    check:
-      how: A request using the key returns a normal answer, not a refusal.
-      probe: The app makes one read request with the key.
-    if_not: A refusal means a permission was missed in step 9.11. Stop and ask.
-    goes_wrong: >-
-      A refusal here becomes an invisible feature later: the applications show
-      nothing rather than an error.
-    later: The key goes straight into the chapter's vault.
-    status: done-for-real
-    source: 3-Methods-CRM-Google-Applications.md#9.17
-
-  - id: "9.18"
-    name: Create the administrator account for the central support organization
-    why: Only an administrator can create CRM accounts, and the applications use this account to create mentor logins.
-    who: central
-    first: ["9.9"]
-    needs: []
-    produces: [ESPO_PROVISION_USERNAME, ESPO_PROVISION_PASSWORD]
-    mode: automated
-    actions:
-      - do: Nothing extra to run. The script in step 9.10 created the administrator account SHORT-LABEL.provision and added its name and password to CHAPTER-ENV-FILE as ESPO_PROVISION_USERNAME and ESPO_PROVISION_PASSWORD.
-      - do: Copy both values into a new item in the chapter's Operations vault named CRM provisioning administrator.
-        see: The item in the Operations vault, with the user name and password.
-      - do: Sign in at https://CRM-ADDRESS with that name and password once, then sign out.
+        see: "200"
+      - do: "Test the provisioning administrator. Sign in at https://CRM-ADDRESS with its name and password from the vault, then sign out."
         see: The CRM's home screen, with Administration in the menu.
-    done_when: >-
-      The account exists and its password is in the secrets store, not on anyone's
-      computer.
+      - do: "Look over the result in the CRM, signed in as admin:"
+        items:
+          - "Administration, then Teams: every team shows a role."
+          - "Email Templates: the templates are listed."
+          - "The documentation tab in the tab bar: it opens this chapter's help documentation, not Cleveland's."
+    done_when:
+      - "The script reports every team, role, attachment, template, setting and account applied and read back identical, apart from the expected leftovers described under If it didn't work."
+      - "The Client Assignment Role can read all users."
+      - "The applications' key answers a test request, and is in the vault."
+      - "The provisioning administrator signs in, and its password is in the vault."
+      - "Every team carries a role."
     check:
-      how: The account signs in, and the password is in the vault only.
-      probe: The app signs in with the account once.
+      how: Each test above showed what it should.
+      probe: The conformance check compares teams, roles, templates and settings with the standard, and the app makes one read request with the key.
+    if_not:
+      - "Exit 4 with only roleField lines, such as Standard User: Account.cCompanyPartnerProfile: a finished run. Those lines name fields Cleveland's test system has since deleted, and leaving them out is correct."
+      - "A roleScope line: an add-on product is missing. Do step 9.5, then run the script for real again. It skips what it already made."
+      - "curl shows 401: the key was copied wrong. Copy it again from CHAPTER-ENV-FILE. curl shows 403: a permission is missing. Run the script for real again and read its unapplyable lines."
+      - "A team with no role: run the script for real again. If the team is still empty, stop the build."
     goes_wrong: >-
-      The password ends up on a laptop. On Cleveland's production system it exists
-      only inside the running application.
-    later: unchanged
-    status: done-for-real
-    source: 3-Methods-CRM-Google-Applications.md#9.18
+      Creating, renaming or editing anything here by hand. Each application page
+      looks for an exact team name, and a team with no role gives its members
+      nothing. Neither shows an error: the feature behind it just shows nothing.
+      The email templates carry no chapter name on purpose and stay identical.
+    later: The same work moves inside the applier, with the same checks.
+    status: done-for-real — except the Client Assignment Role permission, added after the August build.
+    source: 3-Methods-CRM-Google-Applications.md#9.10 to #9.18
 
-  - id: "9.19"
-    name: Create the configuration version record
-    why: The applications report which version of the standard their CRM holds, and they read it from this record.
+  - id: "9.8"
+    name: Stamp the configuration version
+    why: The applications report which version of the standard their CRM holds, and they read it from a record this step creates.
     who: central
-    first: ["9.17"]
+    first: ["9.7"]
     needs: [ESPO_API_KEY]
     produces: []
     mode: automated
     actions:
-      - do: "In ~/Dropbox/Projects/cbm-client-intake, type the line below and press Enter. It reads the four values it needs from CHAPTER-ENV-FILE, and changes nothing. Every value must come from that file: the script fills any missing value from the repository's own .env file, which holds Cleveland's settings."
+      - do: "In the client intake software's folder, see what the stamp would be. Type the line below and press Enter:"
         items:
-          - "env $(grep -v '^#' ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env | xargs) uv run python scripts/build_networkstandard.py"
-        see: A plan and a line giving its fingerprint, sixteen letters and numbers. Later actions call it FINGERPRINT.
-      - do: "Type the line below and press Enter. The production option is required for any system that is not Cleveland's test system:"
+          - "uv run --env-file ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env python scripts/build_networkstandard.py"
+        see: A plan, and a line giving its fingerprint of sixteen letters and numbers. The next action calls it FINGERPRINT.
+      - do: "Create the record. Type the line below and press Enter:"
         items:
-          - "env $(grep -v '^#' ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env | xargs) uv run python scripts/build_networkstandard.py --apply --production --expect FINGERPRINT"
-        see: The record created and read back by the applications' key. If it says the plan moved, run the first line again and read the new plan.
-    done_when: >-
-      The record that says which version of the standard this CRM holds exists and
-      can be read by the applications' own key.
+          - "uv run --env-file ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env python scripts/build_networkstandard.py --apply --production --expect FINGERPRINT"
+        see: The record created, and read back with the applications' key.
+    done_when: The record exists, and the applications' key can read it.
     check:
-      how: A request with the applications' key returns the record.
+      how: The script reports the record read back.
       probe: The app reads the record with the applications' key.
+    if_not: If it says the plan moved, run the first line again and use the new fingerprint.
     goes_wrong: >-
-      Writing a version after an incomplete run. A CRM claiming a version it does not
-      hold is worse than one claiming nothing.
+      Stamping a CRM that step 9.7 did not finish. A CRM claiming a version it does
+      not hold is worse than one claiming nothing. Also, running the script without
+      --env-file: it then falls back to the settings of Cleveland's test system.
     later: The applier writes the record itself, and only after a completely successful run.
     status: done-for-real
     source: 3-Methods-CRM-Google-Applications.md#9.19
 
-  - id: "9.20"
-    name: Run the checking tool until it reports no differences
-    why: This is the proof that the chapter's CRM matches the standard, and so that the next release will work on it.
+  - id: "9.9"
+    name: Run the checking tool
+    why: This is the proof that the chapter's CRM matches the standard, and so that the next release of the software will work on it.
     who: central
-    first: ["9.10", "9.11", "9.12", "9.13", "9.14", "9.15", "9.16", "9.17", "9.18", "9.19"]
+    first: ["9.8"]
     needs: [ESPO_API_KEY]
     produces: []
     mode: automated
     actions:
-      - do: "In ~/Dropbox/Projects/cbm-client-intake, type the line below and press Enter. Pass both the address and the key: with either missing, the script uses Cleveland's own settings instead."
+      - do: "In the client intake software's folder, run the check and read its report. Type the line below and press Enter:"
         items:
-          - "env $(grep -v '^#' ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env | xargs) sh -c 'uv run python scripts/preflight_crm.py --url \"$ESPO_ADMIN_BASE\" --key \"$ESPO_API_KEY\" --json' > ~/.config/cbm-SHORT-LABEL/preflight.json; echo exit $?"
-        see: "exit 0 (conformant), exit 1 (something differs) or exit 3 (could not be checked, usually a key or network problem)."
-      - do: "Type the line below and press Enter, to read the result as a report:"
+          - "uv run --env-file ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env sh -c 'python scripts/preflight_crm.py --url \"$ESPO_ADMIN_BASE\" --key \"$ESPO_API_KEY\"'"
+        see: "A last line beginning RESULT:. Today the expected result is DRIFT, listing only the five missing event email templates."
+      - do: "Save the result as a file. Type the line below and press Enter:"
         items:
-          - "env $(grep -v '^#' ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env | xargs) sh -c 'uv run python scripts/preflight_crm.py --url \"$ESPO_ADMIN_BASE\" --key \"$ESPO_API_KEY\"'"
-        see: "A last line beginning RESULT: CONFORMANT, DRIFT or UNCHECKED. Today the expected result is DRIFT, with only the five missing event email templates listed."
-      - do: Write each difference that is allowed on purpose, with its reason, into the chapter's entry in the list of watched systems (step 12.5). Keep preflight.json in the chapter's Operations vault.
-    done_when: >-
-      The tool runs using the applications' own key and reports that the CRM matches
-      the standard. Any difference that is allowed on purpose is listed and
-      explained in writing.
+          - "uv run --env-file ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env sh -c 'python scripts/preflight_crm.py --url \"$ESPO_ADMIN_BASE\" --key \"$ESPO_API_KEY\" --json' > ~/.config/cbm-SHORT-LABEL/preflight.json"
+      - do: "Attach ~/.config/cbm-SHORT-LABEL/preflight.json to the CRM build settings item in the vault."
+      - do: "Write each difference that is allowed on purpose, with its reason, in the chapter's entry in the list of watched systems (step 12.5)."
+    done_when: The checking tool reports that the CRM matches the standard, apart from differences that are written down with their reasons.
     check:
-      how: The tool reports nothing to fix, or only differences that are written down and explained.
+      how: The report lists nothing that is not written down in the list of watched systems.
       probe: The app runs the conformance check and shows its result.
+    if_not:
+      - "RESULT: DRIFT with anything other than the five event email templates: go back to the step that makes the missing item, usually step 9.7, and run it again."
+      - "RESULT: UNCHECKED: the tool could not reach the CRM or its key was refused. Check the address and key in CHAPTER-ENV-FILE."
     goes_wrong: >-
-      Today no system can reach "nothing to fix": Cleveland's systems and the trial
-      chapter all lack the same five event email templates (work list item 18). Until
-      they exist, the honest result is a recorded, explained difference.
+      Running the tool without --env-file. It then checks Cleveland's test system
+      instead of the chapter's CRM, and reports on the wrong system.
     later: The same check runs before every release and refuses a CRM that does not match.
-    status: done-for-real — with that difference.
+    status: done-for-real — with the event template difference.
     source: 3-Methods-CRM-Google-Applications.md#9.20
 
 changes:
+  - version: "0.11"
+    date: "09-23-26 20:40"
+    change: >-
+      Rewritten and renumbered from twenty steps to nine (Doug, 09-23-26: the stage was
+      terribly hard to understand and use). The old step list hid the work: step 9.10
+      ran one script that did seven steps, and six steps said only "nothing extra to
+      run". Old to new: 9.1 → 9.1; 9.2 → 9.2 (the key, the password and the settings
+      file) and 9.3 (the wizard); 9.3, 9.4, 9.5 and 9.6 → 9.4; 9.7 → 9.5; 9.8 and
+      9.9 → 9.6; 9.10 to 9.15, 9.17 and 9.18 → 9.7; 9.19 → 9.8; 9.20 → 9.9. Step
+      9.16, which could not be done, moved to a list of what is still owed at the top
+      of the stage, with the missing event templates and the unruled server size. The
+      wizard's Cloudflare and manual DNS screens are written as separate actions. The
+      settings file is made before the wizard, so the password rule is stated once.
+      Scripts read the settings file through uv's --env-file rather than a shell
+      pipeline. The manual DNS record's host is now only the first part of the CRM's
+      address, from Boston's first run at Squarespace (a fix from the CRMBuilder
+      session, 09-23-26). Each failure case has its own line. The August build's history moved
+      out of the actions; it stays in 3-Methods-CRM-Google-Applications.md, which
+      keeps the old numbers.
   - version: "0.10"
     date: "09-23-26 14:27"
     change: >-

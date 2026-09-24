@@ -1,7 +1,7 @@
 stage: 17
 name: Check everything works before going live
-version: "0.4"
-updated: "09-23-26 14:27"
+version: "0.5"
+updated: "09-23-26 20:40"
 why: >-
   This stage proves the chapter's system works end to end before any real client
   uses it: each team reaches its own pages and nobody else's, and a public
@@ -255,7 +255,7 @@ steps:
       how: The home screen and navigation bar appear.
       probe: The app can load the CRM's screen code as a test user and confirm it answers, but a person should look once.
     goes_wrong: >-
-      A blank page. The CRM's screen code folder was not copied (step 9.8). The trial
+      A blank page. The CRM's screen code folder was not copied (step 9.6). The trial
       chapter hit exactly this.
     later: The conformance check loads the CRM's screen as an ordinary user.
     status: done-for-real — after the fix.
@@ -335,6 +335,11 @@ steps:
     source: 5-Methods-Form-Accounts-Checks.md#17.9
 
 changes:
+  - version: "0.5"
+    date: "09-23-26 20:40"
+    change: >-
+      References to stage 9 follow its renumbering from twenty steps to nine
+      (stage 9 version 0.11).
   - version: "0.4"
     date: "09-23-26 14:27"
     change: >-

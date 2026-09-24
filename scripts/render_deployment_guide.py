@@ -50,6 +50,11 @@ def render_stage(stage: dict) -> str:
     out.append("**Before you start:**" + ("\n" if before else " nothing.\n"))
     out.extend(f"- {b.strip()}" for b in before)
     out.append("")
+    owed = stage.get("owed") or []
+    if owed:
+        out.append("**Not possible yet:** the build goes ahead without these.\n")
+        out.extend(f"- {o.strip()}" for o in owed)
+        out.append("")
     out.append("**Steps in this stage:**\n")
     out.extend(f"- {s['id']} {s['name']}" for s in stage["steps"])
     out.append("")
@@ -103,7 +108,13 @@ def render_stage(stage: dict) -> str:
         check = s.get("check") or {}
         if check.get("how"):
             out.append(f"**How to check:** {check['how'].strip()}\n")
-        out.append(f"**If it didn't work:** {(s.get('if_not') or DEFAULT_IF_NOT).strip()}\n")
+        if_not = s.get("if_not") or DEFAULT_IF_NOT
+        if isinstance(if_not, list):
+            out.append("**If it didn't work:**\n")
+            out.extend(f"- {str(x).strip()}" for x in if_not)
+            out.append("")
+        else:
+            out.append(f"**If it didn't work:** {if_not.strip()}\n")
         gw = (s.get("goes_wrong") or "").strip()
         if gw and gw.lower() not in {"nothing known yet.", "nothing known yet", "nothing known."}:
             out.append(f"**What usually goes wrong:** {gw}\n")

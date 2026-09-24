@@ -1,7 +1,7 @@
 # Stage 11 — Deploy the chapter's applications
 
-**Version:** 0.8  
-**Last Updated:** 09-23-26 14:27  
+**Version:** 0.9  
+**Last Updated:** 09-23-26 20:40  
 **Generated from** `steps/stage-11.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -80,11 +80,11 @@ The applications are what the chapter's staff, mentors and the public actually u
 **Finish first:**
 
 - step 8.9 Review the completed form
-- step 9.17 Create the account the applications sign in with
+- step 9.7 Apply the standard with one script
 
 **Do this:**
 
-1. Before running it, check CHAPTER-ENV-FILE already holds these three lines, written by the script in step 9.10:
+1. Before running it, check CHAPTER-ENV-FILE already holds these three lines, written by the script in step 9.7:
    - ESPO_API_KEY=
    - ESPO_PROVISION_USERNAME=
    - ESPO_PROVISION_PASSWORD=
@@ -94,7 +94,7 @@ The applications are what the chapter's staff, mentors and the public actually u
 4. In a terminal, in the folder ~/Dropbox/Projects/cbm-client-intake, type the line below and press Enter. CHAPTER-VALUES-FILE is the filled-in chapter information form saved as YAML (the trial chapter's is prds/chapter-network/rehearsal-2026-08-31/lakeside-values.yaml):
    - uv run python scripts/rehearsal/render_spec.py CHAPTER-VALUES-FILE ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env ~/.config/cbm-SHORT-LABEL/SHORT-LABEL-app.yaml
 
-   *You should see:* A line reading: wrote ~/.config/cbm-SHORT-LABEL/SHORT-LABEL-app.yaml following branch release with N shared + N web-only env vars. If it reads secrets not yet minted, step 9.10 has not run. If it names GOOGLE_SERVICE_ACCOUNT_KEY_FILE or shared_drive_id, a Google switch is on before stage 10 has produced what it needs.
+   *You should see:* A line reading: wrote ~/.config/cbm-SHORT-LABEL/SHORT-LABEL-app.yaml following branch release with N shared + N web-only env vars. If it reads secrets not yet minted, step 9.7 has not run. If it names GOOGLE_SERVICE_ACCOUNT_KEY_FILE or shared_drive_id, a Google switch is on before stage 10 has produced what it needs.
 5. Open SHORT-LABEL-app.yaml and check three things. The generator sets them itself; this is a check, not an edit:
    - There is no ENV_LABEL line.
    - ALLOWED_ORIGINS is https://APP-ADDRESS, or absent if the application address is not known yet.
@@ -458,12 +458,12 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **Finish first:**
 
-- step 9.17 Create the account the applications sign in with
+- step 9.7 Apply the standard with one script
 - step 11.12 Confirm the application is healthy
 
 **Do this:**
 
-1. Open https://APP-ADDRESS and sign in with the CRM administrator account the deployment wizard created in step 9.2. Its name and password are in the Operations vault.
+1. Open https://APP-ADDRESS and sign in with the CRM administrator account the deployment wizard created in step 9.3. Its name and password are in the Operations vault.
 2. Open Client Administration.
    *You should see:* Records, or an empty list. Both are fine. A message that access was refused means a permission was missed in stage 9.
 
@@ -471,7 +471,7 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **How to check:** The page shows records or an empty list, not a refusal.
 
-**If it didn't work:** A refusal means a permission was missed in stage 9. Go back to steps 9.11 and 9.12.
+**If it didn't work:** A refusal means a permission was missed in stage 9. Go back to step 9.7.
 
 **What usually goes wrong:** A page that asks for more than two hundred records at once is refused rather than trimmed, and inside the software that refusal reads as "there are no records". This once emptied every selection list on Cleveland's live system.
 
@@ -657,6 +657,7 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 | Version | Date | Change |
 |---|---|---|
+| 0.9 | 09-23-26 20:40 | References to stage 9 follow its renumbering from twenty steps to nine (stage 9 version 0.11). |
 | 0.8 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. |
 | 0.7 | 09-23-26 13:54 | Manual DNS added (Doug, 09-23-26): step 11.10 adds the application's CNAME record at the chapter's own DNS provider when the chapter kept it. |
 | 0.6 | 09-23-26 12:25 | Step 11.5 now waits for step 5.9, the hosting account's link to the code repository on GitHub, without which creating the application fails. |

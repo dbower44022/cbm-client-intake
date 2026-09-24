@@ -1,7 +1,7 @@
 # Stage 17 — Check everything works before going live
 
-**Version:** 0.4  
-**Last Updated:** 09-23-26 14:27  
+**Version:** 0.5  
+**Last Updated:** 09-23-26 20:40  
 **Generated from** `steps/stage-17.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -271,7 +271,7 @@ This stage proves the chapter's system works end to end before any real client u
 
 **If it didn't work:** Stop, and ask the central support organization before going on.
 
-**What usually goes wrong:** A blank page. The CRM's screen code folder was not copied (step 9.8). The trial chapter hit exactly this.
+**What usually goes wrong:** A blank page. The CRM's screen code folder was not copied (step 9.6). The trial chapter hit exactly this.
 
 ---
 
@@ -364,6 +364,7 @@ This stage proves the chapter's system works end to end before any real client u
 
 | Version | Date | Change |
 |---|---|---|
+| 0.5 | 09-23-26 20:40 | References to stage 9 follow its renumbering from twenty steps to nine (stage 9 version 0.11). |
 | 0.4 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG (and SLUG) is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. |
 | 0.3 | 09-23-26 00:55 | Three corrections from the review before the first real chapter. Step 17.1 sets the test mentor to accepting new clients, without which the Assign list in step 17.4 is empty, and step 17.9 deletes any Google mailbox that created. Step 17.2 no longer points at a record whose settings-page answer the next action calls wrong. Step 17.3 no longer waits on stage 13: the website link is checked once it exists, and the rest of the form check runs without it. |
 | 0.2 | 09-19-26 00:04 | Actions made precise (Doug, 09-19-26): exact test user names and teams, the twelve session-check addresses and the expected result per test user from the August table, exact made-up values for the test application, the pages and statuses to look for at each step, and the records and users to remove. The exact labels of the CRM's user screens are not verified, and the steps say so. |

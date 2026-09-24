@@ -1,7 +1,7 @@
 stage: 8
 name: Fill in the chapter information form
-version: "0.13"
-updated: "09-23-26 17:47"
+version: "0.14"
+updated: "09-23-26 20:40"
 why: >-
   The chapter information form holds the roughly forty answers that differ from
   one chapter to the next: its name, its addresses, its Google details and its
@@ -446,7 +446,7 @@ steps:
         kind: url
         required: true
         example: https://crm.yourchapter.org
-        meaning: The web address of the chapter's CRM, the system that holds every client, mentor and meeting. It does not open yet; it starts working at step 9.6.
+        meaning: The web address of the chapter's CRM, the system that holds every client, mentor and meeting. It does not open yet; it starts working at step 9.3.
         source: https://crm. followed by the chapter's domain, unless agreed otherwise.
         wrong: The applications cannot reach the CRM, and nothing works.
       - key: crm.application_name
@@ -686,9 +686,9 @@ steps:
       - do: Nothing to type. The page lists the secrets the chapter will have, by name only, and the values file written in step 8.10 includes the list. A chapter that answered yes to webinars in step 8.6 has an eighth, ZOOM_CLIENT_SECRET.
         see: "The section The secrets on the page, listing these names:"
         items:
-          - "ESPO_API_KEY — the CRM key the applications use. Created in step 9.17."
-          - "ESPO_PROVISION_USERNAME — the name of the administrator account that creates logins. Created in step 9.18."
-          - "ESPO_PROVISION_PASSWORD — that account's password. Created in step 9.18."
+          - "ESPO_API_KEY — the CRM key the applications use. Created in step 9.7."
+          - "ESPO_PROVISION_USERNAME — the name of the administrator account that creates logins. Created in step 9.7."
+          - "ESPO_PROVISION_PASSWORD — that account's password. Created in step 9.7."
           - "DATABASE_URL — the database address. Held by the hosting platform, which supplies it to the application (step 11.4). No person holds it, and it never goes in the vault."
           - "SESSION_SECRET — created in step 11.1."
           - "APP_ENCRYPTION_KEY — the encryption key for stored data. Created in step 11.2, and never changed afterwards."
@@ -812,6 +812,11 @@ steps:
     source: 5-Methods-Form-Accounts-Checks.md#8.10
 
 changes:
+  - version: "0.14"
+    date: "09-23-26 20:40"
+    change: >-
+      References to stage 9 follow its renumbering from twenty steps to nine
+      (stage 9 version 0.11).
   - version: "0.13"
     date: "09-23-26 17:47"
     change: >-

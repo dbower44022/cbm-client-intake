@@ -1,7 +1,7 @@
 # Stage 8 — Fill in the chapter information form
 
-**Version:** 0.13  
-**Last Updated:** 09-23-26 17:47  
+**Version:** 0.14  
+**Last Updated:** 09-23-26 20:40  
 **Generated from** `steps/stage-08.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -361,7 +361,7 @@ The chapter information form holds the roughly forty answers that differ from on
 **The questions in this step:**
 
 - **Web address (URL) the CRM will use** (`crm.base_url`) — answered by the central support organization; required.
-  - *What it is:* The web address of the chapter's CRM, the system that holds every client, mentor and meeting. It does not open yet; it starts working at step 9.6.
+  - *What it is:* The web address of the chapter's CRM, the system that holds every client, mentor and meeting. It does not open yet; it starts working at step 9.3.
   - *Where to find it:* https://crm. followed by the chapter's domain, unless agreed otherwise.
   - *If it is wrong:* The applications cannot reach the CRM, and nothing works.
   - *Example:* https://crm.yourchapter.org
@@ -528,9 +528,9 @@ The chapter information form holds the roughly forty answers that differ from on
 **Do this:**
 
 1. Nothing to type. The page lists the secrets the chapter will have, by name only, and the values file written in step 8.10 includes the list. A chapter that answered yes to webinars in step 8.6 has an eighth, ZOOM_CLIENT_SECRET.
-   - ESPO_API_KEY — the CRM key the applications use. Created in step 9.17.
-   - ESPO_PROVISION_USERNAME — the name of the administrator account that creates logins. Created in step 9.18.
-   - ESPO_PROVISION_PASSWORD — that account's password. Created in step 9.18.
+   - ESPO_API_KEY — the CRM key the applications use. Created in step 9.7.
+   - ESPO_PROVISION_USERNAME — the name of the administrator account that creates logins. Created in step 9.7.
+   - ESPO_PROVISION_PASSWORD — that account's password. Created in step 9.7.
    - DATABASE_URL — the database address. Held by the hosting platform, which supplies it to the application (step 11.4). No person holds it, and it never goes in the vault.
    - SESSION_SECRET — created in step 11.1.
    - APP_ENCRYPTION_KEY — the encryption key for stored data. Created in step 11.2, and never changed afterwards.
@@ -674,6 +674,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 | Version | Date | Change |
 |---|---|---|
+| 0.14 | 09-23-26 20:40 | References to stage 9 follow its renumbering from twenty steps to nine (stage 9 version 0.11). |
 | 0.13 | 09-23-26 17:47 | Step 8.10 said to write the values file from the page's link, which the script cannot read: the answers live only in the setup contact's browser (Doug, 09-23-26: fix it). The setup contact now emails the Copy all answers block; the central support organization saves it as a file on the build computer, checks it, writes the values file from it, and deletes the copy. Step 8.9 puts both sign-offs on the setup contact's page, the only one whose block carries the answers. |
 | 0.12 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. The Short label question now says it is neither the chapter's name nor its abbreviation, with Boston's three answers as the example. |
 | 0.11 | 09-23-26 12:49 | The chapter now gives its four colours instead of the colour file's web address (Doug, 09-23-26): main, button, button under the mouse, and text, each with Cleveland's for comparison. The colour file's address becomes a question for the central support organization, and the values-file writer produces the file from the four colours. |

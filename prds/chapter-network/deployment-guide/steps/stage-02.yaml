@@ -1,7 +1,7 @@
 stage: 2
 name: Sign the agreement with the central support organization
-version: "0.3"
-updated: "09-23-26 13:54"
+version: "0.4"
+updated: "09-23-26 20:40"
 why: >-
   Everything after this stage involves one organization spending money and
   holding administrative access inside another organization's accounts. The
@@ -146,7 +146,7 @@ steps:
           - "Google Workspace: an administrator account of the central support organization's own. Created in step 4.6."
           - "The video meeting account (Zoom), if there is one: an administrator. Granted in step 5.5."
           - "The chapter's vault (Proton Pass): a member of the Operations vault only, never the Board vault. Granted in step 2.7."
-          - "The CRM: the only administrator accounts. Created in steps 9.2 and 9.18."
+          - "The CRM: the only administrator accounts. Created in steps 9.3 and 9.7."
       - do: "Write in the rule: the central support organization holds the only CRM administrator accounts, and chapter staff hold ordinary accounts."
       - do: "Write in the other half of the rule: the chapter can always get in through the server it owns, and can withdraw the central support organization's access to any account at any time, by removing its members."
     done_when: >-
@@ -264,6 +264,11 @@ steps:
     source: 8-Methods-Organization-Domains-Google.md#2.7
 
 changes:
+  - version: "0.4"
+    date: "09-23-26 20:40"
+    change: >-
+      References to stage 9 follow its renumbering from twenty steps to nine
+      (stage 9 version 0.11).
   - version: "0.3"
     date: "09-23-26 13:54"
     change: >-

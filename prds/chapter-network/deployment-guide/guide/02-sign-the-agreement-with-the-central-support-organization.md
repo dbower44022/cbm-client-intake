@@ -1,7 +1,7 @@
 # Stage 2 — Sign the agreement with the central support organization
 
-**Version:** 0.3  
-**Last Updated:** 09-23-26 13:54  
+**Version:** 0.4  
+**Last Updated:** 09-23-26 20:40  
 **Generated from** `steps/stage-02.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -165,7 +165,7 @@ Everything after this stage involves one organization spending money and holding
    - Google Workspace: an administrator account of the central support organization's own. Created in step 4.6.
    - The video meeting account (Zoom), if there is one: an administrator. Granted in step 5.5.
    - The chapter's vault (Proton Pass): a member of the Operations vault only, never the Board vault. Granted in step 2.7.
-   - The CRM: the only administrator accounts. Created in steps 9.2 and 9.18.
+   - The CRM: the only administrator accounts. Created in steps 9.3 and 9.7.
 2. Write in the rule: the central support organization holds the only CRM administrator accounts, and chapter staff hold ordinary accounts.
 3. Write in the other half of the rule: the chapter can always get in through the server it owns, and can withdraw the central support organization's access to any account at any time, by removing its members.
 
@@ -293,6 +293,7 @@ Everything after this stage involves one organization spending money and holding
 
 | Version | Date | Change |
 |---|---|---|
+| 0.4 | 09-23-26 20:40 | References to stage 9 follow its renumbering from twenty steps to nine (stage 9 version 0.11). |
 | 0.3 | 09-23-26 13:54 | Manual DNS added (Doug, 09-23-26): the cost sheet and the access schedule name the chapter's own DNS provider when it keeps one instead of moving to Cloudflare. |
 | 0.2 | 09-19-26 00:25 | Every action made precise (Doug, 09-19-26): each schedule's contents as a checklist; a cost sheet with each supplier's own pricing page; the access schedule naming the access and the step that grants it for every account; the wording of the board's resolution; the attachments the signed agreement must carry; and the Proton Pass plan (Pass Professional, which carries the command-line tool, minimum three users), the two vault names and the central members' role. Proton Pass's plans were read from its own page on 09-19-26; its organization screen labels are not checked, and the step says so. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for signing the agreement (8-Methods-Organization-Domains-Google.md, version 0.5) with the step list's finishing tests. Step 2.1 brought up to the 09-18-26 rulings: requests go into ClickUp, the central committee meets every two weeks, and no response time is committed. |

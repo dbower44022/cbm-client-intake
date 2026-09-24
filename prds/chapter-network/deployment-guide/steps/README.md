@@ -1,9 +1,9 @@
 # The deployment guide as data
 
-**Version:** 0.3
+**Version:** 0.4
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-23-26 14:27
+**Last Updated:** 09-23-26 20:40
 
 ---
 
@@ -37,6 +37,8 @@ who: >-            # who does the stage
 time: >-           # rough time, or "not known yet"
 before_you_start:  # what must be finished first, named in words
   - The hosting account and its tokens (stage 5)
+owed:              # optional: what the standard cannot supply yet; the build goes ahead without it
+  - Duplicate checking, saved views and automated rules (work list item 3)
 unlocks: >-        # what can start once this stage is done
 steps: [...]
 ```
@@ -45,7 +47,7 @@ steps: [...]
 
 | Field | Meaning |
 |---|---|
-| `id` | The step number, as a string: `"9.2"`. Never renumbered. |
+| `id` | The step number, as a string: `"9.2"`. Changed only by a ruling, and then every reference in the guide, the step list and `scripts/chapter_form/` changes with it, and the stage's change log gives the old-to-new map. Stage 9 was renumbered this way on 09-23-26 (Doug). The method notes keep the old numbers. |
 | `name` | The step's name, unchanged from the step list. |
 | `why` | One sentence: why this step exists, in the reader's terms. |
 | `who` | `chapter`, `central` (the central support organization) or `both`, then any detail. |
@@ -57,7 +59,7 @@ steps: [...]
 | `done_when` | The finishing test, word for word from the step list. A test with several conditions is a list, one condition per item, rendered as "Done when all of these are true". Only conditions go in it. |
 | `note` | A sentence that explains the finishing test without being a condition, such as "There are two sets, not one." Printed after the conditions, and kept word for word with the step list's Note line. |
 | `check` | `how`: how a person confirms it. `probe`: what the app would check automatically, in plain words, or `none`. |
-| `if_not` | What to do when the check fails. Default: stop and ask the central support organization. |
+| `if_not` | What to do when the check fails: a sentence, or a list with one failure case per item, each naming how to recognise it. Default: stop and ask the central support organization. |
 | `goes_wrong` | The known failure and how to recognise it, or `nothing known yet`. |
 | `later` | The automation that will replace a manual method, or `unchanged`. |
 | `status` | `done-for-real` or `not-yet-tried`, plus a short note. |
@@ -94,6 +96,7 @@ screen is not known, say so in the action.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.4 | 09-23-26 20:40 | Step numbers may change by ruling, with every reference following (Doug, 09-23-26, for stage 9). A stage may carry an `owed` list, printed as Not possible yet. `if_not` may be a list, one failure case per item. The renderer indents an action's lines to the width of its number, so Markdown no longer breaks the list at action 10. |
 | 0.3 | 09-23-26 14:27 | `placeholders.yaml` added: the shared words in capitals, printed on the guide's index page. CHAPTER-SLUG renamed SHORT-LABEL, the form's own name (Doug, 09-23-26). |
 | 0.2 | 09-23-26 12:03 | The `fields` list added, for the chapter information form's questions (Doug, 09-23-26: the form becomes a web page built from stage 8). |
 | 0.1 | 09-18-26 16:50 | First version. The guide becomes structured data that drives both the readable guide and the onboarding app CRMBuilder is asked to build (Doug, 09-18-26). |

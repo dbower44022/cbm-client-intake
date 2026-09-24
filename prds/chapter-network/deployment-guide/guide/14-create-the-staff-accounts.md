@@ -1,7 +1,7 @@
 # Stage 14 — Create the staff accounts
 
-**Version:** 0.2  
-**Last Updated:** 09-19-26 00:15  
+**Version:** 0.3  
+**Last Updated:** 09-23-26 20:40  
 **Generated from** `steps/stage-14.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -37,7 +37,7 @@ Each member of the chapter's staff needs their own account to use the applicatio
 
 **Finish first:**
 
-- step 9.12 Attach the roles to the teams
+- step 9.7 Apply the standard with one script
 
 **Do this:**
 
@@ -107,7 +107,7 @@ Each member of the chapter's staff needs their own account to use the applicatio
 
 **If it didn't work:** Stop, and ask the central support organization before going on.
 
-**What usually goes wrong:** Two known failures. A team with no role attached gives its members no access at all; check step 9.12 before blaming the account. And a partner or funder manager with no mentor profile cannot be chosen as a manager, because the pages that choose one list mentor profiles, not accounts.
+**What usually goes wrong:** Two known failures. A team with no role attached gives its members no access at all; check step 9.7 before blaming the account. And a partner or funder manager with no mentor profile cannot be chosen as a manager, because the pages that choose one list mentor profiles, not accounts.
 
 ---
 
@@ -127,7 +127,7 @@ Each member of the chapter's staff needs their own account to use the applicatio
    *You should see:*
 
    - Exactly two accounts
-   - The central support organization's own administrator account (step 9.18)
+   - The central support organization's own administrator account (step 9.7)
    - The account the applications use to create logins
 2. If any other account is an administrator, change its Type to Regular and tell the chapter why.
 
@@ -172,5 +172,6 @@ Each member of the chapter's staff needs their own account to use the applicatio
 
 | Version | Date | Change |
 |---|---|---|
+| 0.3 | 09-23-26 20:40 | References to stage 9 follow its renumbering from twenty steps to nine (stage 9 version 0.11). |
 | 0.2 | 09-19-26 00:15 | Every action made precise (Doug, 09-19-26): the seven team names as written, the exact user fields to fill in, the administrator filter, and the Auth Log check. Unchecked EspoCRM labels are marked as unchecked. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for creating the staff accounts (5-Methods-Form-Accounts-Checks.md, version 0.4) with the step list's finishing tests. |

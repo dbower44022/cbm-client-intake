@@ -84,8 +84,8 @@ def is_shown(field: dict, answers: dict) -> bool:
 # When a question marked not known yet must be answered, by the part of the
 # form it belongs to. A field's own ``needed_by`` overrides this.
 NEEDED_BY = {
-    "chapter": "step 9.10, where the CRM is set up",
-    "crm": "step 9.10, where the CRM is set up",
+    "chapter": "step 9.2, where the CRM build starts",
+    "crm": "step 9.2, where the CRM build starts",
     "web": "step 11.2, where the applications' settings are generated",
     "google": "step 11.2, where the applications' settings are generated",
     "zoom": "step 11.2, where the applications' settings are generated",

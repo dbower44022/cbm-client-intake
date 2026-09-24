@@ -1,7 +1,7 @@
 # Stage 6 — Build the chapter's public website
 
-**Version:** 0.4  
-**Last Updated:** 09-23-26 14:27  
+**Version:** 0.5  
+**Last Updated:** 09-23-26 20:40  
 **Generated from** `steps/stage-06.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -242,7 +242,7 @@ The public website is the chapter's own marketing site. The software does not bu
 1. Produce the chapter's logo as a PNG image file, the type Cleveland's CRM logo uses. Name it SHORT-LABEL-logo.png, for example lakeside-logo.png.
 2. The best size and shape are not specified yet (work list item 4). Until they are, open Cleveland's CRM, note the size the logo shows at, and make the chapter's the same shape.
    *You should see:* A PNG file that opens.
-3. Put the file in the chapter's shared drive folder, and write its file name on the chapter information form under crm: logo_file. It is loaded into the CRM as its company logo in step 9.14.
+3. Put the file in the chapter's shared drive folder, and write its file name on the chapter information form under crm: logo_file. It is loaded into the CRM as its company logo in step 9.7.
 
 **Done when:** An image file of the chapter's logo exists in a form the CRM system accepts. The applications carry no logo; the CRM system does, and it is the only per-chapter image in the whole system.
 
@@ -293,6 +293,7 @@ The public website is the chapter's own marketing site. The software does not bu
 
 | Version | Date | Change |
 |---|---|---|
+| 0.5 | 09-23-26 20:40 | References to stage 9 follow its renumbering from twenty steps to nine (stage 9 version 0.11). |
 | 0.4 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. |
 | 0.3 | 09-23-26 12:49 | Step 6.5: the chapter enters its four colours on the chapter information page, and the values-file writer produces the colour file from them (Doug, 09-23-26). |
 | 0.2 | 09-19-26 00:04 | Every action made precise (Doug, 09-19-26): the three things the platform must do, the exact curl checks for the site, the redirect test at /redirect-test and the colour file, the exact lines of chapter-tokens.css with the four --cbm- colour names, the logo file name, and the form keys each value is written under. |

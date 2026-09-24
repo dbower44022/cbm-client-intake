@@ -2,10 +2,10 @@
 
 **Document:** Things the central support organization has to build, decide or write
 before the New Chapter Deployment Guide can actually be followed
-**Version:** 0.14
+**Version:** 0.15
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-23-26 13:33
+**Last Updated:** 09-23-26 20:40
 
 ---
 
@@ -53,7 +53,7 @@ Each line was checked against the code and the step files on 09-23-26.
 4. **Item 1 — the central support organization's own vault.** Boston keeps its
    own secrets in its own vault (step 2.7). The central support organization's
    secrets are still on one laptop.
-5. **Item 18 — five event email templates.** The conformance check at step 9.20
+5. **Item 18 — five event email templates.** The conformance check at step 9.9
    will report these five as a difference for Boston, as it did for the trial
    chapter. The difference is known and accepted.
 
@@ -76,8 +76,9 @@ Each line was checked against the code and the step files on 09-23-26.
     the logo specification (item 4), and the public events page, which still
     shows Cleveland's navy and gold (item 11). Item 11 matters only if Boston
     sends its events address to that page.
-11. **Item 3 — duplicate checking, saved views and automated rules.** Step 9.16
-    is skipped for Boston, as it was for the trial chapter.
+11. **Item 3 — duplicate checking, saved views and automated rules.** Stage 9
+    lists this as not possible yet, and Boston is built without it, as the trial
+    chapter was.
 12. **Item 17 — the time zone.** Boston is in Eastern time, so this does not
     affect Boston.
 13. **Items 5, 7, 9, 10 and 13** — the emergency access procedure, the standard
@@ -150,7 +151,7 @@ second chapter ever appears.
 
 **Update 09-23-26.** The add-on half is ruled: both paid add-on products are in
 the standard (R7, 08-31-26). The version half is still open, and Boston's build
-reaches it at step 9.3. Steps 2.2 and 9.7 still call the add-ons undecided
+reaches it at step 9.4. Steps 2.2 and 9.5 still call the add-ons undecided
 (`TASKS.md` G1 item 6).
 
 **Ruled 09-23-26 (Doug).** A new chapter installs the current EspoCRM release
@@ -163,9 +164,9 @@ which versions of the two paid add-on products, or which release of the standard
 configuration is current.
 
 **What it blocks.** Obtaining the standard's version numbers (step 9.1), and
-therefore installing the CRM at the right version (step 9.3), installing the add-on
-products (step 9.7), and the final check that the CRM matches the standard
-(step 9.20).
+therefore recording the CRM's version (step 9.4), installing the add-on
+products (step 9.5), and the final check that the CRM matches the standard
+(step 9.9).
 
 **Size.** Small to write, but it needs a decision first. The August practice build
 found that the deployment tool installs whatever version is current, which would
@@ -180,7 +181,7 @@ whether chapters are pinned to Cleveland's version, or Cleveland moves up.
 system. The August practice build recorded them as "not examined" and said so
 plainly.
 
-**What it blocks.** Applying them on a new chapter's CRM (step 9.16).
+**What it blocks.** Applying them on a new chapter's CRM (listed in stage 9 as not possible yet).
 
 **Size.** An investigation, then a decision. It may be larger than it looks:
 duplicate checking is not only a convenience for staff, it is something the intake
@@ -412,7 +413,7 @@ different standard every week. Phase 1's plan has the conformance check built an
 the applier not started.
 
 **What it blocks.** Doing stage 9 (building the CRM system) repeatably, and the
-final check that the CRM matches the standard (step 9.20).
+final check that the CRM matches the standard (step 9.9).
 
 **Size.** The largest item here. Ruled 08-31-26: the applier lives inside
 CRMBuilder, which is a separate repository with its own requirement-first process.
@@ -464,7 +465,7 @@ nothing reports an error.
 `EventSurvey`. None exists on Cleveland's test system, so none reached the trial
 chapter, and the conformance check fails on both for this reason alone.
 
-**What it blocks.** A clean result from the conformance check (step 9.20), and
+**What it blocks.** A clean result from the conformance check (step 9.9), and
 event follow-up emails on any system.
 
 **Size.** Small: write the five templates once, on the test system.
@@ -487,6 +488,7 @@ own records (finding F7 of the August build).
 
 | Version | Date | Change |
 |---|---|---|
+| 0.15 | 09-23-26 20:40 | Step references follow stage 9's renumbering from twenty steps to nine: 9.3 → 9.4, 9.7 → 9.5, 9.20 → 9.9, and 9.16 is now listed in stage 9 as not possible yet. |
 | 0.14 | 09-23-26 13:33 | Item 6 changed: chapters use the existing generic training users, reversing the 09-18-26 ruling for separate chapter accounts (Doug, 09-23-26). The passwords stay unchanged after each chapter, and stage 16 is rewritten to match. Nothing is built. |
 | 0.13 | 09-23-26 13:23 | Item 2 ruled: Boston runs the current EspoCRM release, and Cleveland moves up to it later (Doug, 09-23-26). Nothing now needs an answer before Boston's build. |
 | 0.12 | 09-23-26 13:21 | Brought up to date the day Boston is built. A new list at the top sorts every open item by what Boston needs: one needs an answer before the build (item 2, the CRM version), four have workarounds (items 15, 16, 1, 18), and the rest wait. Items 2, 4, 15 and 16 carry an update: the add-ons are ruled in, the colour file comes from the form, the applier's decision date passed with no recorded outcome, and the settings generator is mostly built. The 09-18-26 ranking is kept below the new list. |

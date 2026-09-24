@@ -1,7 +1,7 @@
 stage: 11
 name: Deploy the chapter's applications
-version: "0.8"
-updated: "09-23-26 14:27"
+version: "0.9"
+updated: "09-23-26 20:40"
 why: >-
   The applications are what the chapter's staff, mentors and the public actually
   use: the intake forms, the staff tools and the public events page. This stage
@@ -50,12 +50,12 @@ steps:
     name: Generate the deployment settings
     why: The deployment settings are what the hosting platform builds the applications from, and every value must come from the reviewed form, not from memory.
     who: central
-    first: ["8.9", "9.17"]
+    first: ["8.9", "9.7"]
     needs: [GOOGLE_SERVICE_ACCOUNT_JSON, chapter_name, chapter_slug, timezone, app_base_url, website_base_url, events_public_base_url, docs_site_url, policy_client_conduct_url, policy_mentor_ethics_url, policy_terms_url, policy_privacy_url, chapter_tokens_url, primary_domain, ops_mailbox, alert_email_from, alert_email_to, members_group, shared_drive_id, zoom_host_email, crm_base_url, flags, ZOOM_CLIENT_SECRET, zoom_account_id, zoom_client_id, mentor_email_domain]
     produces: [APP_ENCRYPTION_KEY]
     mode: automated
     actions:
-      - do: "Before running it, check CHAPTER-ENV-FILE already holds these three lines, written by the script in step 9.10:"
+      - do: "Before running it, check CHAPTER-ENV-FILE already holds these three lines, written by the script in step 9.7:"
         items:
           - "ESPO_API_KEY="
           - "ESPO_PROVISION_USERNAME="
@@ -67,7 +67,7 @@ steps:
       - do: "In a terminal, in the folder ~/Dropbox/Projects/cbm-client-intake, type the line below and press Enter. CHAPTER-VALUES-FILE is the filled-in chapter information form saved as YAML (the trial chapter's is prds/chapter-network/rehearsal-2026-08-31/lakeside-values.yaml):"
         items:
           - "uv run python scripts/rehearsal/render_spec.py CHAPTER-VALUES-FILE ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env ~/.config/cbm-SHORT-LABEL/SHORT-LABEL-app.yaml"
-        see: "A line reading: wrote ~/.config/cbm-SHORT-LABEL/SHORT-LABEL-app.yaml following branch release with N shared + N web-only env vars. If it reads secrets not yet minted, step 9.10 has not run. If it names GOOGLE_SERVICE_ACCOUNT_KEY_FILE or shared_drive_id, a Google switch is on before stage 10 has produced what it needs."
+        see: "A line reading: wrote ~/.config/cbm-SHORT-LABEL/SHORT-LABEL-app.yaml following branch release with N shared + N web-only env vars. If it reads secrets not yet minted, step 9.7 has not run. If it names GOOGLE_SERVICE_ACCOUNT_KEY_FILE or shared_drive_id, a Google switch is on before stage 10 has produced what it needs."
       - do: "Open SHORT-LABEL-app.yaml and check three things. The generator sets them itself; this is a check, not an edit:"
         items:
           - "There is no ENV_LABEL line."
@@ -413,12 +413,12 @@ steps:
     name: Confirm the application can read the CRM
     why: A permission missed in stage 9 shows up here as an empty screen rather than an error, so it is checked directly.
     who: central
-    first: ["9.17", "11.12"]
+    first: ["9.7", "11.12"]
     needs: [ESPO_API_KEY]
     produces: []
     mode: automated
     actions:
-      - do: Open https://APP-ADDRESS and sign in with the CRM administrator account the deployment wizard created in step 9.2. Its name and password are in the Operations vault.
+      - do: Open https://APP-ADDRESS and sign in with the CRM administrator account the deployment wizard created in step 9.3. Its name and password are in the Operations vault.
       - do: Open Client Administration.
         see: Records, or an empty list. Both are fine. A message that access was refused means a permission was missed in stage 9.
     done_when: >-
@@ -426,7 +426,7 @@ steps:
     check:
       how: The page shows records or an empty list, not a refusal.
       probe: The app makes one list request through the application.
-    if_not: A refusal means a permission was missed in stage 9. Go back to steps 9.11 and 9.12.
+    if_not: A refusal means a permission was missed in stage 9. Go back to step 9.7.
     goes_wrong: >-
       A page that asks for more than two hundred records at once is refused rather
       than trimmed, and inside the software that refusal reads as "there are no
@@ -600,6 +600,11 @@ steps:
     source: 3-Methods-CRM-Google-Applications.md#11.18
 
 changes:
+  - version: "0.9"
+    date: "09-23-26 20:40"
+    change: >-
+      References to stage 9 follow its renumbering from twenty steps to nine
+      (stage 9 version 0.11).
   - version: "0.8"
     date: "09-23-26 14:27"
     change: >-

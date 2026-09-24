@@ -1,7 +1,7 @@
 stage: 15
 name: Bring in the chapter's records and create the mentor accounts
-version: "0.3"
-updated: "09-23-26 14:27"
+version: "0.4"
+updated: "09-23-26 20:40"
 why: >-
   A chapter arrives with clients, companies, partners, funders and mentors it
   already knows about. This stage moves those records into the CRM without
@@ -25,7 +25,7 @@ steps:
     name: Decide whether there are records to bring in
     why: A record source nobody mentions before go-live turns up later as missing history.
     who: chapter decides; the central support organization records it
-    first: ["9.20"]
+    first: ["9.9"]
     needs: []
     produces: [record_sources]
     mode: offline
@@ -339,6 +339,11 @@ steps:
     source: 5-Methods-Form-Accounts-Checks.md#15.10
 
 changes:
+  - version: "0.4"
+    date: "09-23-26 20:40"
+    change: >-
+      References to stage 9 follow its renumbering from twenty steps to nine
+      (stage 9 version 0.11).
   - version: "0.3"
     date: "09-23-26 14:27"
     change: >-

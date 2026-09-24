@@ -1,7 +1,7 @@
 stage: 12
 name: Set up backups and monitoring
-version: "0.3"
-updated: "09-23-26 14:27"
+version: "0.4"
+updated: "09-23-26 20:40"
 why: >-
   This stage makes sure the chapter's records can be got back after a mistake or a
   failure, and that a person finds out when the system stops working. It comes
@@ -25,7 +25,7 @@ steps:
     name: Back up the CRM server on a schedule
     why: A backup of the whole server holds the CRM's database, its uploaded files and its configuration together, so one restore brings back all three.
     who: central, inside the chapter's hosting account
-    first: ["9.2"]
+    first: ["9.3"]
     needs: [digitalocean_token]
     produces: []
     mode: automated
@@ -251,6 +251,11 @@ steps:
     source: 6-Methods-Backups-Monitoring.md#12.5
 
 changes:
+  - version: "0.4"
+    date: "09-23-26 20:40"
+    change: >-
+      References to stage 9 follow its renumbering from twenty steps to nine
+      (stage 9 version 0.11).
   - version: "0.3"
     date: "09-23-26 14:27"
     change: >-

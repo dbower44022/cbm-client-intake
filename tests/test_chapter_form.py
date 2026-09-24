@@ -164,7 +164,7 @@ def test_any_question_can_be_marked_not_known_yet_and_is_listed_as_owed(tmp_path
     assert to_values.main(["x", str(src)]) == 0
     out = capsys.readouterr().out
     assert "privacy policy page (web.policy_privacy_url): marked not known yet; needed by step 17.3" in out
-    assert "(crm.base_url): marked not known yet; needed by step 9.10" in out
+    assert "(crm.base_url): marked not known yet; needed by step 9.2" in out
     text = (tmp_path / "boston-values.yaml").read_text()
     assert "# OWED" in text and yaml.safe_load(text)["web"]["policy_privacy_url"] == ""
 

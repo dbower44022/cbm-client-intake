@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — The Step List
 
 **Document:** The bare list of steps, with no methods yet
-**Version:** 0.19
+**Version:** 0.20
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-23-26 13:54
+**Last Updated:** 09-23-26 20:40
 
 ---
 
@@ -398,125 +398,70 @@ confirmed it can open it.
 
 ## Stage 9 — Build the CRM system
 
-**9.1 Obtain the current standard from the central support organization.**
+Not possible yet, and built without for now: the standard's duplicate checking,
+saved views and automated rules (work list item 3). Until 09-23-26 this was step
+9.16.
+
+**9.1 Write down the versions to build with.**
 Done when:
 
-- The chapter's build has, in writing, the CRM version to install: the current release CRMBuilder installs.
-- The build has, in writing, the version of each of the two add-on products.
-- The build has, in writing, which release of the standard configuration is being applied.
+- The CRM build versions note names both add-on products and their versions.
+- Both versions support CRM version 10.
+- The note names the release of the standard configuration.
 
-Note: Without these three numbers the later steps have nothing to check against.
-
-**9.2 Create the server.**
-Done when: a server is running in the chapter's own hosting account and the central
-support organization can reach it.
-
-**9.3 Install the CRM software at the version the standard names.**
-Done when: the installed version is the current release CRMBuilder installs, and
-its exact number is recorded where the central support organization can find it.
-
-Note: Ruled 09-23-26: a new chapter takes the current release, and Cleveland's
-systems move up to it later.
-
-**9.4 Confirm command line access, and record who holds the key.**
-Done when: the central support organization can open a command line on the server,
-and the key that allows it is recorded in the secrets store with at least two
-people able to reach it. The server can be created without this access, and the
-next steps cannot be done without it.
-
-**9.5 Point the CRM's web address at the server.**
-Done when: the domain name record for the CRM address resolves to the server.
-
-**9.6 Publish the CRM at its own web address.**
-Done when: the CRM loads at its address over a secure connection, and the security
-certificate is set to renew by itself. A certificate that has to be renewed by hand
-will expire and take the system down.
-
-**9.7 Install the two paid add-on products.**
+**9.2 Prepare the build computer.**
 Done when:
 
-- Both are installed at the versions the standard names.
+- The server sign-in key exists on the build computer, and its public half is in the chapter's DigitalOcean account.
+- The CRM administrator password is in the vault, and holds letters and numbers only.
+- The chapter's settings file holds the CRM's address and the administrator's name and password.
+
+**9.3 Run CRMBuilder's deploy wizard.**
+Done when:
+
+- The run reads Deployment complete.
+- The server's address is in the vault.
+
+**9.4 Confirm the server works.**
+Done when:
+
+- A command runs on the server over the chapter's sign-in key, and the key is in the vault where a second person can open it.
+- The CRM's address leads to the server.
+- The CRM loads at its address with no certificate warning, and the certificate renews by itself.
+- The CRM's version, 10 or higher, is in the vault.
+
+**9.5 Install the two paid add-on products.**
+Done when:
+
+- Both products are installed at the versions in the CRM build versions note.
 - Both are licensed to this chapter.
-- Both are listed in the CRM's own list of installed products.
 
-Note: They must be installed before the permission roles are created, because the roles refer to them.
+Note: They must be installed before step 9.7, because the roles that step creates refer to them.
 
-**9.8 Copy on the standard configuration files.**
+**9.6 Copy the standard configuration onto the server.**
 Done when:
 
-- Both sets of configuration files are in place.
-- Both sets are owned by the web server user.
-- The rebuild command has finished without errors.
+- Both folders are on the server and owned by the web server's user.
+- The rebuild finished without errors.
+- The CRM shows its normal working screen.
 
-Note: There are two sets, not one.
+Note: There are two folders, not one.
 
-**9.9 Confirm the CRM's own screen loads.**
-Done when: an administrator signs in and sees the normal working screen. A blank
-page here means one of the two sets of files is missing.
-
-**9.10 Create the teams.**
-Done when: every team the standard names exists, spelled exactly as the standard
-spells it.
-
-**9.11 Create the permission roles.**
-Done when: every role the standard names exists, and reading each one back matches
-what was sent.
-
-**9.12 Attach the roles to the teams.**
-Done when: each team carries the role it is meant to carry, and no team is left
-without one. A team with no role gives its members no access at all.
-
-**9.13 Create the email templates.**
-Done when: every template the standard names exists.
-
-**9.14 Apply the instance settings.**
+**9.7 Apply the standard with one script.**
 Done when:
 
-- The chapter's name is set.
-- The sending name is set.
-- The sending address is set.
-- The web address is set.
-- The logo is set.
-- The time zone is set.
-- The date format is set.
-- The time format is set.
-- The currency is set.
-- The language is set.
-- The week start is set.
-- All of them are set from the chapter information form, and reading them back matches.
+- The script reports every team, role, attachment, template, setting and account applied and read back identical, apart from the expected leftovers described under If it didn't work.
+- The Client Assignment Role can read all users.
+- The applications' key answers a test request, and is in the vault.
+- The provisioning administrator signs in, and its password is in the vault.
+- Every team carries a role.
 
-**9.15 Apply the navigation tabs and the quick-add list.**
-Done when:
+**9.8 Stamp the configuration version.**
+Done when: the record exists, and the applications' key can read it.
 
-- The tabs match the standard.
-- The chapter's own documentation link is in place of any other chapter's.
-- The list of records staff can add quickly matches the standard.
-
-**9.16 Apply the standard's duplicate checking, saved views and automated rules.**
-Done when: the settings the standard names are applied and read back correctly.
-The standard does not yet say what they are, because nobody has ever examined them
-on the existing systems. Deciding them is work owed before any chapter reaches this
-step. See the work list document.
-
-**9.17 Create the account the applications sign in with.**
-Done when:
-
-- The account exists.
-- Its key has been recorded in the secrets store.
-- A test request using that key succeeds.
-
-**9.18 Create the administrator account for the central support organization.**
-Done when: the account exists and its password is in the secrets store, not on
-anyone's computer.
-
-**9.19 Create the configuration version record.**
-Done when: the record that says which version of the standard this CRM holds exists
-and can be read by the applications' own key.
-
-**9.20 Run the checking tool until it reports no differences.**
-Done when: the tool runs using the applications' own key and reports that the CRM
-matches the standard. Any difference that is allowed on purpose is listed and
-explained in writing.
+**9.9 Run the checking tool.**
+Done when: the checking tool reports that the CRM matches the standard, apart from
+differences that are written down with their reasons.
 
 ---
 
@@ -890,6 +835,7 @@ Done when: a date is booked to review how the first months have gone.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.20 | 09-23-26 20:40 | Stage 9 renumbered from twenty steps to nine (Doug, 09-23-26, amending the rule that step numbers never change). Old to new: 9.1 → 9.1; 9.2 → 9.2 and 9.3; 9.3 to 9.6 → 9.4; 9.7 → 9.5; 9.8 and 9.9 → 9.6; 9.10 to 9.15, 9.17 and 9.18 → 9.7; 9.19 → 9.8; 9.20 → 9.9. Step 9.16 became a note at the head of the stage: it cannot be done until work list item 3 is decided. Finishing tests rewritten to match; references elsewhere in the guide follow. The method notes keep the old numbers. |
 | 0.19 | 09-23-26 13:54 | Manual DNS added (Doug, 09-23-26, amending the 09-18-26 Cloudflare ruling): a chapter may keep its DNS at the provider it already uses. Step 3.7's finishing test and note accept a DNS provider account the chapter owns; step 5.8 needs no Cloudflare token for such a chapter. |
 | 0.18 | 09-23-26 13:41 | Steps 9.1 and 9.3 brought in line with the ruling that a new chapter runs the current CRM release and Cleveland moves up later (Doug, 09-23-26). Step 9.1 names the current release CRMBuilder installs as the CRM version; step 9.3 records the installed number rather than comparing it with Cleveland's. |
 | 0.17 | 09-19-26 14:45 | Steps 11.4 and 8.8 brought in line with step 11.3 (Doug, 09-19-26): the database connection is supplied to the application by the hosting platform and no person holds it, so it is not kept in the vault. The other six secrets are. |

@@ -1,7 +1,7 @@
 # Stage 5 — Open the hosting and video meeting accounts
 
-**Version:** 0.8  
-**Last Updated:** 09-23-26 14:27  
+**Version:** 0.9  
+**Last Updated:** 09-23-26 20:40  
 **Generated from** `steps/stage-05.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -351,7 +351,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
     *You should see:* The new engagement listed with an identifier of the form ENG-NNN, and named in the strip across the top of the window. If another engagement is named there, click the strip and choose the chapter's.
 13. Open the tab 11 · CRM Deployment, click Instances in the side bar, then Deploy new…, and on Step 1 of 5 — Providers click Set credentials….
     *You should see:* A window titled Provider credentials, with one box for DigitalOcean and one for Cloudflare.
-14. In each box, paste the token into Token, type crmbuilder-SHORT-LABEL into Label, and click Save token. Then click Close, and click Cancel to leave the deploy window; step 9.2 runs it.
+14. In each box, paste the token into Token, type crmbuilder-SHORT-LABEL into Label, and click Save token. Then click Close, and click Cancel to leave the deploy window; step 9.3 runs it.
     *You should see:* Step 1 reading DigitalOcean: ✓ Configured — crmbuilder-SHORT-LABEL, and the same for Cloudflare. The token itself is never shown again.
 
 **Done when all of these are true:**
@@ -426,6 +426,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 | Version | Date | Change |
 |---|---|---|
+| 0.9 | 09-23-26 20:40 | References to stage 9 follow its renumbering from twenty steps to nine (stage 9 version 0.11). |
 | 0.8 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. The engagement code is described as the short label in capital letters. |
 | 0.7 | 09-23-26 13:54 | Manual DNS added (Doug, 09-23-26): step 5.7's account list names the chapter's DNS provider when the chapter kept its own, and step 5.8 makes only the DigitalOcean token for a chapter on manual DNS. The finishing test changed with the step list (version 0.19). |
 | 0.6 | 09-23-26 13:51 | Step 5.8 names the build computer, the central support organization's own computer with CRMBuilder installed, instead of "this computer", and gives the change of folder its own action. |

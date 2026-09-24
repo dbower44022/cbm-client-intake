@@ -35,10 +35,10 @@
   from: Step 9.2.
 - name: SERVER-IP
   means: The CRM server's internet address.
-  from: Step 9.2.
+  from: Step 9.3.
 - name: CHAPTER-ENV-FILE
   means: The chapter's settings file on the build computer, ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env.
-  from: Step 9.10.
+  from: Step 9.2.
 - name: APP-ID
   means: The chapter application's identifier on the hosting platform.
   from: Step 11.5.

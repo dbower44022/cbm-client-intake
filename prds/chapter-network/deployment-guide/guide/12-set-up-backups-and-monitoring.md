@@ -1,7 +1,7 @@
 # Stage 12 — Set up backups and monitoring
 
-**Version:** 0.3  
-**Last Updated:** 09-23-26 14:27  
+**Version:** 0.4  
+**Last Updated:** 09-23-26 20:40  
 **Generated from** `steps/stage-12.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -39,7 +39,7 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 **Finish first:**
 
-- step 9.2 Create the server
+- step 9.3 Run CRMBuilder's deploy wizard
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -269,6 +269,7 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 | Version | Date | Change |
 |---|---|---|
+| 0.4 | 09-23-26 20:40 | References to stage 9 follow its renumbering from twenty steps to nine (stage 9 version 0.11). |
 | 0.3 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. |
 | 0.2 | 09-19-26 00:15 | Every action made precise (Doug, 09-19-26): exact doctl commands with named placeholders for backups, the restore test and the uptime and database alerts, flags checked against doctl's own help, and the restore copy's password never printed. |
 | 0.1 | 09-18-26 17:30 | First version as data, converted from the methods for backups and monitoring (6-Methods-Backups-Monitoring.md, version 0.4) with the step list's finishing tests. |

@@ -1,7 +1,7 @@
 stage: 5
 name: Open the hosting and video meeting accounts
-version: "0.8"
-updated: "09-23-26 14:27"
+version: "0.9"
+updated: "09-23-26 20:40"
 why: >-
   The chapter's CRM server, its applications and their database all run in a
   hosting account, and the public webinar programme runs through a video meeting
@@ -308,7 +308,7 @@ steps:
         see: "The new engagement listed with an identifier of the form ENG-NNN, and named in the strip across the top of the window. If another engagement is named there, click the strip and choose the chapter's."
       - do: "Open the tab 11 · CRM Deployment, click Instances in the side bar, then Deploy new…, and on Step 1 of 5 — Providers click Set credentials…."
         see: A window titled Provider credentials, with one box for DigitalOcean and one for Cloudflare.
-      - do: "In each box, paste the token into Token, type crmbuilder-SHORT-LABEL into Label, and click Save token. Then click Close, and click Cancel to leave the deploy window; step 9.2 runs it."
+      - do: "In each box, paste the token into Token, type crmbuilder-SHORT-LABEL into Label, and click Save token. Then click Close, and click Cancel to leave the deploy window; step 9.3 runs it."
         see: "Step 1 reading DigitalOcean: ✓ Configured — crmbuilder-SHORT-LABEL, and the same for Cloudflare. The token itself is never shown again."
     done_when:
       - "A DigitalOcean API token from the chapter's hosting account exists."
@@ -380,6 +380,11 @@ steps:
     source: TASKS.md § work owed, item 12
 
 changes:
+  - version: "0.9"
+    date: "09-23-26 20:40"
+    change: >-
+      References to stage 9 follow its renumbering from twenty steps to nine
+      (stage 9 version 0.11).
   - version: "0.8"
     date: "09-23-26 14:27"
     change: >-
