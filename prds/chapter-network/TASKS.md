@@ -103,10 +103,14 @@ same review and left, because none stops the build. Each one names the file.
     Squarespace for both, with DNSSEC on. Stages 3, 6, 9, 11 and 13 need a
     non-Cloudflare path (see DECISIONS 2026-09-23), and any DNS move must switch
     DNSSEC off and wait out the registry's DS record (3,600 s at `.org`) first.
-14. **Step 5.8 describes per-engagement credentials CRMBuilder does not have.**
-    CRMBuilder holds one DigitalOcean and one Cloudflare credential for
-    everything (`provider_credentials.get_provider_credential`). Until it
-    changes, a chapter build swaps the global credential in and back out.
+14. **~~Step 5.8 describes per-engagement credentials CRMBuilder does not have.~~
+    Wrong — closed 09-23-26.** CRMBuilder already holds provider credentials per
+    engagement: the Provider credentials window saves the token on whichever
+    engagement the strip names. No swap is needed. The real risk is the other
+    way round: saving a chapter's token while Cleveland's engagement is
+    selected overwrites Cleveland's. That happened on 09-23-26 and was repaired
+    (Cleveland's read-only DigitalOcean token re-made; the stray Cloudflare entry
+    removed).
 11. **Public form still says CBM** — `forms/client_intake/frontend/index.html`
     lines 70 and 159 ("about CBM", "from CBM"). An applicant sees Cleveland's
     initials (`OPEN-ITEMS.md` #28).
