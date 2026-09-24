@@ -135,23 +135,19 @@ same review and left, because none stops the build. Each one names the file.
     selected overwrites Cleveland's. That happened on 09-23-26 and was repaired
     (Cleveland's read-only DigitalOcean token re-made; the stray Cloudflare entry
     removed).
-16. **Step 9.2 is the Cloudflare path only.** Rewritten 09-23 click by click
-    from CRMBuilder's code, it has the wizard write the CRM's DNS record in the
-    chapter's Cloudflare zone. Boston keeps its DNS at Squarespace (DECISIONS
-    2026-09-23), so Boston's server needs the wizard's manual DNS mode, which
-    the guide does not describe yet. Add that path to 9.2 and 9.5 once
-    CRMBuilder has it.
-17. **CRMBuilder's screen labels in steps 5.8 and 9.2 are unchecked.** They were
-    read from CRMBuilder's code (version 2 wizard) on 09-23, never seen on
-    screen. Walk both steps with CRMBuilder open and correct any label.
-18. **The server size in step 9.2 is not ruled.** The guide recommends
+16. ~~**Step 9.2 is the Cloudflare path only.**~~ **Closed 09-23-26:** the
+    stage 9 rewrite (commit `e2d81a9`, then `54e8139`) gives step 9.3 a manual
+    DNS path for a chapter that keeps its DNS provider.
+17. **CRMBuilder's screen labels in steps 5.8 and 9.3 are unchecked.** They were
+    read from CRMBuilder's code (the version 2 deploy wizard) on 09-23, never
+    seen on screen. Walk both steps with CRMBuilder open and correct any label.
+18. **The server size in step 9.3 has no recorded ruling.** The guide says
     `s-2vcpu-4gb` (about $24 a month); the August build did not record the size
-    it used. Rule it, or try `s-1vcpu-2gb` (about $12) with the 2 GB swap file
-    CRMBuilder adds.
-19. **Unnamed computers and developer words remain.** Step 9.2, 9.8 and 5.8
-    now say "the build computer"; 11.5 still says "this computer" and 12 "your
-    own computer". Sweep every stage for the same, and for the heavy register
-    9.2 had.
+    it used, and DECISIONS holds no ruling. Rule it, or try `s-1vcpu-2gb`
+    (about $12) with the 2 GB swap file CRMBuilder adds.
+19. **Unnamed computers remain.** Stages 5 and 9 say "the build computer";
+    11.5 still says "this computer" and 12 "your own computer". Sweep every
+    stage for the same, and for developer words.
 20. **Step 8.10 should warn about the answers file's name.** Saving the emailed
     block under the email's own title gives `CHAPTER-INFORMATION-ANSWERS v1.txt`,
     whose space breaks the unquoted command (hit on Boston, 09-23).
