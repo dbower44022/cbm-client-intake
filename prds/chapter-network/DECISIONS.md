@@ -108,8 +108,12 @@ therefore not paperwork; it is the load-bearing half of ruling 4.
    2026-08-31 after the Lakeside rehearsal produced the first deployment not on
    automatic updates. The policy's three values are Doug's words: **Development**
    (takes every push; the one soak copy, never a chapter's), **Latest Stable**
-   (moves automatically to each named release; the chapter default) and **On
-   Demand** (moves only on the button, with a reason and a review date). The
+   (moves automatically to each named release) and **On
+   Demand** (moves only on the button, with a reason and a review date). *Amended
+   2026-09-24: the policy is the chapter's own choice, made on the chapter
+   information form; Latest Stable is no longer the default for every chapter, a
+   chapter may decline a release, and an On Demand upgrade may be scheduled for a
+   time the chapter chooses. See the decision log, 2026-09-24.* The
    button refuses when the paired CRM is not conformant and moves the CRM
    configuration in the same promotion (ruling 7). It is a proposal because it
    lands in CRMBuilder's requirement-first process, and because it answers a
@@ -155,6 +159,7 @@ therefore not paperwork; it is the load-bearing half of ruling 4.
 | 2026-09-23 | **The chapter's "slug" is called the short label everywhere, and stays a separate answer from the name and the abbreviation.** "Slug is a terrible name for a user to understand." The form already asked for a Short label; the guide's commands now say `SHORT-LABEL`, and step 8.2 says it is neither the name nor the abbreviation (Boston: Boston Business Mentors, BBM, `boston`). Chosen over deriving it from the abbreviation, which gives less readable names (`bbm-intake`) and a clash between chapters with the same initials. Accepted cost: one more question on the form. The data key `chapter.slug` is unchanged. Boston's short label is `boston`. | deployment guide step 8.2, `steps/placeholders.yaml` |
 | 2026-09-23 | **The chapter's CRMBuilder engagement is created in step 5.8, with the short label in capitals as its code** (Boston: `BOSTON`). The engagement holds the chapter's two provider tokens, and no step created it. | deployment guide step 5.8 |
 | 2026-09-23 | **A switch the chapter has not answered is written to the values file as `owed`, never `false`, and the settings generator refuses it.** A `false` read as a decision nobody made. | `scripts/chapter_form/to_values.py`, `scripts/rehearsal/render_spec.py` |
+| 2026-09-24 | **Each chapter decides when its deployment takes a release; it may decline one or schedule the upgrade for a time of its own.** Ruled in the CRMBuilder requirements session (SES-433, decision DEC-1156) together with the model it follows from (DEC-1155): a client defines an application, other clients deploy it, and the defining client runs a demo/test deployment on which chapters try each release before deciding. Amends ruling 8 (Latest Stable is no longer every chapter's default) and the 2026-08-26 cadence ruling (a tag is still cut weekly, but chapters no longer all move to it together). Accepted cost: chapters may run different releases at the same time, the central support organization supports every release still in use, and a fix every chapter needs cannot be forced onto one that is waiting. | Ruling 8; README; deployment guide steps 8.6, 11.8, 11.9, 18.3; `chapter-values.md` |
 | 2026-09-19 | **Three choices from the deployment guide's precision sweep, confirmed.** (1) A chapter that runs public webinars gets a licensed `webinars@` mailbox as its Zoom host — one more Google licence for that chapter. (2) The chapter's vault is on Proton Pass's Pass Professional plan, the plan with the command-line tool (minimum three users). (3) Each chapter's filled-in chapter information form is kept at `prds/chapter-network/chapters/CHAPTER-SLUG-values.yaml`, with no secret values in it. | Deployment guide steps 2.7, 5.5, 8.10 |
 
 ---

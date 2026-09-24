@@ -1,14 +1,14 @@
 # Stage 11 — Deploy the chapter's applications
 
-**Version:** 0.9  
-**Last Updated:** 09-23-26 20:40  
+**Version:** 0.10  
+**Last Updated:** 09-24-26 00:39  
 **Generated from** `steps/stage-11.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
 
 ## Why this stage
 
-The applications are what the chapter's staff, mentors and the public actually use: the intake forms, the staff tools and the public events page. This stage deploys them into the chapter's own hosting account, connects them to the chapter's CRM and Google account, and sets them to take each weekly release by themselves. It ends by proving each Google connection works, one at a time.
+The applications are what the chapter's staff, mentors and the public actually use: the intake forms, the staff tools and the public events page. This stage deploys them into the chapter's own hosting account, connects them to the chapter's CRM and Google account, and sets them to take each release when the chapter chooses. It ends by proving each Google connection works, one at a time.
 
 **Who:** The central support organization, inside the chapter's hosting account.  
 **Time:** About an hour for the deployment itself; the August build was active on the first attempt in seven minutes. The Google checks at the end are not timed yet.  
@@ -31,7 +31,7 @@ The applications are what the chapter's staff, mentors and the public actually u
 - 11.5 Create the application parts
 - 11.6 Run the database setup
 - 11.7 Deploy the released version
-- 11.8 Set the update policy to Latest Stable
+- 11.8 Set the update policy the chapter chose
 - 11.9 Confirm the application does not follow the development branch
 - 11.10 Point the application's web address at the application
 - 11.11 Publish the application at its own web address
@@ -281,9 +281,9 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 ---
 
-## 11.8 Set the update policy to Latest Stable
+## 11.8 Set the update policy the chapter chose
 
-**Why:** Latest Stable makes the application take each weekly release by itself, so no chapter falls behind.
+**Why:** The chapter decides when its applications take a release (ruled 09-24-26). Automatically as each is cut, or only when the chapter asks for the upgrade or schedules it, after trying the release on the demo/test deployment.
 
 **Who:** The central support organization
 
@@ -293,20 +293,20 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **Do this:**
 
-1. In the folder ~/Dropbox/Projects/cbm-client-intake, with doctl switched to the chapter's account (step 11.5), type the line below and press Enter. It changes nothing:
-   - uv run python scripts/set_updates_policy.py APP-ID latest-stable
+1. POLICY is the chapter's answer to Take each release automatically? in step 8.6: latest-stable for yes, on-demand for no. In the folder ~/Dropbox/Projects/cbm-client-intake, with doctl switched to the chapter's account (step 11.5), type the line below and press Enter. It changes nothing:
+   - uv run python scripts/set_updates_policy.py APP-ID POLICY
 
    *You should see:* The change it would make to each of the three parts.
 2. Type the line below and press Enter. The deploy option starts a fresh deployment; without it the application rebuilds the same commit it already runs:
-   - uv run python scripts/set_updates_policy.py APP-ID latest-stable --apply --deploy
+   - uv run python scripts/set_updates_policy.py APP-ID POLICY --apply --deploy
 
    *You should see:* The spec updated and a new deployment started.
 3. Type the line below and press Enter:
-   - uv run python scripts/set_updates_policy.py APP-ID latest-stable --status
+   - uv run python scripts/set_updates_policy.py APP-ID POLICY --status
 
-   *You should see:* One line per part, each showing branch=release and deploy_on_push=True, and a final line reading conformant with 'latest-stable'.
+   *You should see:* One line per part, each showing branch=release, with deploy_on_push=True for latest-stable or deploy_on_push=False for on-demand, and a final line reading conformant with the policy named.
 
-**Done when:** All three parts of the application follow the release branch and the policy script reads all three back in agreement. An application has three parts, each with its own setting, and setting one without the others half-updates it with no warning from the platform.
+**Done when:** All three parts of the application follow the release branch and the policy script reads all three back in agreement with the policy the chapter chose. An application has three parts, each with its own setting, and setting one without the others half-updates it with no warning from the platform.
 
 **How to check:** The status option reports all three parts in agreement.
 
@@ -324,14 +324,14 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **Finish first:**
 
-- step 11.8 Set the update policy to Latest Stable
+- step 11.8 Set the update policy the chapter chose
 
 **Do this:**
 
 1. Type the line below and press Enter:
-   - uv run python scripts/set_updates_policy.py APP-ID latest-stable --status
+   - uv run python scripts/set_updates_policy.py APP-ID POLICY --status
 
-   *You should see:* Every part showing branch=release, none showing branch=main, and the line conformant with 'latest-stable'.
+   *You should see:* Every part showing branch=release, none showing branch=main, and the line conformant with the policy named.
 
 **Done when all of these are true:**
 
@@ -657,6 +657,7 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 | Version | Date | Change |
 |---|---|---|
+| 0.10 | 09-24-26 00:39 | The chapter decides when its applications take a release (Doug, 09-24-26, CRMBuilder decision DEC-1156): a chapter may decline a release or schedule the upgrade for a time of its own. Step 11.8 sets the policy the chapter chose in step 8.6, latest-stable or on-demand, in place of Latest Stable for every chapter; step 11.9 reads the policy back by name. The stage no longer says every chapter takes each weekly release by itself. |
 | 0.9 | 09-23-26 20:40 | References to stage 9 follow its renumbering from twenty steps to nine (stage 9 version 0.11). |
 | 0.8 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. |
 | 0.7 | 09-23-26 13:54 | Manual DNS added (Doug, 09-23-26): step 11.10 adds the application's CNAME record at the chapter's own DNS provider when the chapter kept it. |

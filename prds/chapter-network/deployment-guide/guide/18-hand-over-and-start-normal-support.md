@@ -1,7 +1,7 @@
 # Stage 18 — Hand over and start normal support
 
-**Version:** 0.3  
-**Last Updated:** 09-23-26 13:54  
+**Version:** 0.4  
+**Last Updated:** 09-24-26 00:39  
 **Generated from** `steps/stage-18.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -121,14 +121,14 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 **Finish first:**
 
-- step 11.8 Set the update policy to Latest Stable
+- step 11.8 Set the update policy the chapter chose
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
 **Do this:**
 
-1. Explain when: a new release is named each week at 17:00 UTC on Sunday. That is 1 p.m. Eastern in summer and 12 noon Eastern in winter. The chapter's application then takes it by itself.
-2. Explain that every chapter moves to the same release at the same time.
+1. Explain when: a new release is named each week at 17:00 UTC on Sunday. That is 1 p.m. Eastern in summer and 12 noon Eastern in winter. The chapter's application takes it the way the chapter chose in step 8.6: by itself, or only when the chapter asks for the upgrade or schedules it, after trying the release on the demo/test deployment.
+2. Explain that a chapter may decline a release, or schedule the upgrade for a time of its own, so chapters may run different releases at the same time (ruled 09-24-26).
 3. Explain what to do if something looks wrong afterwards:
    - Refresh the page fully: Ctrl and Shift and R on Windows, or Cmd and Shift and R on a Mac. A browser can keep an old copy of a page.
    - If it is still wrong, raise a defect report in ClickUp (step 18.1) with the version number from the page footer.
@@ -139,7 +139,7 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 **Done when all of these are true:**
 
-- The chapter knows software updates arrive automatically on a weekly schedule.
+- The chapter knows a new release is offered each week, and that its deployment takes it the way the chapter chose: automatically, on request, or at a scheduled time.
 - The chapter knows roughly when.
 - The chapter knows what to do if something looks wrong afterwards.
 
@@ -319,6 +319,7 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 | Version | Date | Change |
 |---|---|---|
+| 0.4 | 09-24-26 00:39 | Step 18.3 follows the ruling that the chapter decides when it takes a release (Doug, 09-24-26, CRMBuilder decision DEC-1156): a chapter may decline a release or schedule the upgrade for a time of its own, so chapters may run different releases at the same time. The step no longer tells the chapter that every chapter moves together or that updates arrive automatically. |
 | 0.3 | 09-23-26 13:54 | Manual DNS added (Doug, 09-23-26): the handover account list names the chapter's own DNS provider when it kept one. |
 | 0.2 | 09-19-26 00:04 | Actions made precise (Doug, 09-19-26): the three kinds of ClickUp request and what each contains, a test request, the exact wording to send, the release time in Eastern time and the health address, each account's sign-in address, the server console check, the four parts of the leaving kit with who produces each, and the review meeting's invitees and agenda. The ClickUp space address and how chapters get access to it are not settled, and step 18.1 says so. |
 | 0.1 | 09-18-26 17:30 | First version as data, converted from the methods for the handover (11-Methods-Handover.md, version 0.5) with the step list's finishing tests. |

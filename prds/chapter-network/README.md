@@ -10,16 +10,20 @@ application*, and this file is the anchor for *the network*.
 
 Other mentoring chapters like CBM want to use these apps and this website. The
 requirement: **all instances hold the same configuration, and a change made once
-propagates to all of them**, while each chapter keeps **its own website with its
-own graphics and marketing content**.
+propagates to all of them**, each chapter taking it when it chooses (ruled 09-24-26),
+while each chapter keeps **its own website with its own graphics and marketing
+content**.
 
 The shape that answers it: a **central services organization** owns development
 and support, **one EspoCRM per chapter**, **strictly identical function** — core
 or nothing, no per-chapter fields — **each chapter owning its own
 infrastructure** and granting the services org access, and **a release train**
-that moves every chapter to the same tag at the same time. Eight rulings settled
-2026-08-17/18; they are in **[DECISIONS.md](DECISIONS.md)** and everything here
-follows from them.
+that offers every chapter the same release each week. **Each chapter decides when
+its deployment takes a release** — automatically, on request, or at a time it
+schedules, after trying it on the demo/test deployment — and may decline one
+(ruled 09-24-26, CRMBuilder decision DEC-1156; chapters may therefore run
+different releases at the same time). Eight rulings settled 2026-08-17/18; they
+are in **[DECISIONS.md](DECISIONS.md)** and everything here follows from them.
 
 ## Where it stands
 

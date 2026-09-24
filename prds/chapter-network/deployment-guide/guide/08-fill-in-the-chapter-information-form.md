@@ -1,7 +1,7 @@
 # Stage 8 — Fill in the chapter information form
 
-**Version:** 0.14  
-**Last Updated:** 09-23-26 20:40  
+**Version:** 0.15  
+**Last Updated:** 09-24-26 00:39  
 **Generated from** `steps/stage-08.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -404,7 +404,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 **Why:** Each switch turns a part of the software on or off, and a switch left blank gives a chapter behaviour nobody chose.
 
-**Who:** The chapter and the central support organization — the chapter answers the three questions about what it will do; the central support organization confirms the rest
+**Who:** The chapter and the central support organization — the chapter answers the four questions about what it will do; the central support organization confirms the rest
 
 **Finish first:**
 
@@ -415,7 +415,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 **Do this:**
 
-1. The chapter's setup contact: answer the three switch questions marked For the chapter.
+1. The chapter's setup contact: answer the four switch questions marked For the chapter.
    *You should see:* The three marked as saved.
 2. The central support organization: check the recommended answer on each remaining switch, change any that should differ, and save each one. The page's button Use recommended answers gives every switch marked For central support that is not yet answered its recommended answer; it never changes a switch already answered or one marked For the chapter.
    *You should see:* Every switch marked as saved. None left blank.
@@ -497,10 +497,10 @@ The chapter information form holds the roughly forty answers that differ from on
   - *Where to find it:* Always off for a chapter.
   - *If it is wrong:* Switched on, nothing a chapter does is saved in its CRM.
   - *Recommended:* no
-- **Take each release automatically** (`flags.deploy_on_push`) — answered by the central support organization; required.
-  - *What it is:* The applications follow the release branch and update themselves when a release is cut (step 11.9).
-  - *Where to find it:* On for every chapter. The settings generator refuses the development branch.
-  - *If it is wrong:* Switched off, the chapter falls behind every release until someone updates it by hand.
+- **Take each release automatically?** (`flags.deploy_on_push`) — answered by the chapter; required.
+  - *What it is:* Yes: the applications update themselves within minutes of each weekly release being cut. No: they stay on their current release until the chapter asks for the upgrade, or schedules it for a time of its own, after trying the release on the demo/test deployment. Either way they follow the release branch (step 11.9).
+  - *Where to find it:* The chapter's own choice (ruled 09-24-26). It can be changed later.
+  - *If it is wrong:* Set to yes for a chapter that wanted to choose, a release arrives unannounced. Set to no, the chapter stays on its release until it asks for each upgrade.
   - *Recommended:* yes
 
 **Done when:** Each switch has been deliberately set to on or off, and the branch the application follows is recorded as the release branch rather than the development branch.
@@ -674,6 +674,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 | Version | Date | Change |
 |---|---|---|
+| 0.15 | 09-24-26 00:39 | The switch Take each release automatically? is now the chapter's question, not the central support organization's (Doug, 09-24-26, CRMBuilder decision DEC-1156): a chapter may take each release as it is cut, decline one, or schedule the upgrade for a time of its own after trying it on the demo/test deployment. Step 8.6 now has four chapter questions. |
 | 0.14 | 09-23-26 20:40 | References to stage 9 follow its renumbering from twenty steps to nine (stage 9 version 0.11). |
 | 0.13 | 09-23-26 17:47 | Step 8.10 said to write the values file from the page's link, which the script cannot read: the answers live only in the setup contact's browser (Doug, 09-23-26: fix it). The setup contact now emails the Copy all answers block; the central support organization saves it as a file on the build computer, checks it, writes the values file from it, and deletes the copy. Step 8.9 puts both sign-offs on the setup contact's page, the only one whose block carries the answers. |
 | 0.12 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. The Short label question now says it is neither the chapter's name nor its abbreviation, with Boston's three answers as the example. |

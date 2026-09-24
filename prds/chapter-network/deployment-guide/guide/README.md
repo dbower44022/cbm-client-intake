@@ -61,3 +61,4 @@ A word in capitals inside a command stands for a value to type in its place. The
 - **SERVER-IP**: The CRM server's internet address. *Comes from:* Step 9.3.
 - **CHAPTER-ENV-FILE**: The chapter's settings file on the build computer, ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env. *Comes from:* Step 9.2.
 - **APP-ID**: The chapter application's identifier on the hosting platform. *Comes from:* Step 11.5.
+- **POLICY**: The update policy the chapter chose: latest-stable when it answered yes to Take each release automatically?, on-demand when it answered no. *Comes from:* Step 8.6, the question Take each release automatically?.

@@ -176,12 +176,16 @@ deliberately: `ANALYTICS_ENABLED`, `EVENTS_ENABLED`, `EVENTS_PUBLIC_API`,
 `MENTOR_PROVISION_USERS`, `RECORD_QUICK_ADD`, `SETUP_ENABLED`,
 `ASYNC_DELIVERY`, `ESPO_DRY_RUN`.
 
-**`deploy_on_push` is ON, and the branch is `release`.** This used to say OFF,
-which was right while the release tag travelled in each deployment's spec. Since
-v0.228.0 the tag is stamped into the software at cut time, so an app following
-`release` with `deploy_on_push` on updates itself correctly (guide step 11.9).
-The danger that remains is `deploy_on_push` from `main`, which `render_spec.py`
-refuses.
+**`deploy_on_push` is the chapter's choice, and the branch is always `release`.**
+Since 09-24-26 the chapter answers Take each release automatically? on its form
+(guide step 8.6): yes gives `deploy_on_push` on, the Latest Stable policy, and the
+app updates itself when a release is cut; no gives `deploy_on_push` off, the On
+Demand policy, and the app stays on its release until the chapter asks for the
+upgrade or schedules it (CRMBuilder decision DEC-1156). Before 09-24-26 this said
+ON for every chapter, and before 09-23-26 it said OFF, which was right while the
+release tag travelled in each deployment's spec; since v0.228.0 the tag is stamped
+into the software at cut time. The danger that remains is `deploy_on_push` from
+`main`, which `render_spec.py` refuses.
 
 ---
 
@@ -241,6 +245,7 @@ until every setting the build reads is asked.
 
 | Date | Change |
 |---|---|
+| 09-24-26 00:39 | `deploy_on_push` becomes the chapter's own choice on the form (Doug, 09-24-26, CRMBuilder decision DEC-1156): yes is Latest Stable, no is On Demand; a chapter may decline a release or schedule its upgrade. |
 | 09-23-26 13:23 | EspoCRM version row: a new chapter takes the current release and Cleveland moves up to it (Doug, 09-23-26). |
 | 09-23-26 12:03 | The blank form is replaced by the chapter information page built from stage 8 of the deployment guide; this file becomes the engineers' inventory and says so at the top (Doug, 09-23-26: the file explained nothing about the process). |
 | 09-23-26 00:55 | `deploy_on_push` corrected to ON (following `release`), matching guide step 11.9. The Google key is handed to the spec script by file path. Found reviewing the guide before the first real chapter. |

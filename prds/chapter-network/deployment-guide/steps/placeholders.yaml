@@ -42,3 +42,8 @@
 - name: APP-ID
   means: The chapter application's identifier on the hosting platform.
   from: Step 11.5.
+- name: POLICY
+  means: >-
+    The update policy the chapter chose: latest-stable when it answered yes to
+    Take each release automatically?, on-demand when it answered no.
+  from: Step 8.6, the question Take each release automatically?.

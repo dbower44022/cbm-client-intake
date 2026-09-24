@@ -1,7 +1,7 @@
 stage: 18
 name: Hand over and start normal support
-version: "0.3"
-updated: "09-23-26 13:54"
+version: "0.4"
+updated: "09-24-26 00:39"
 why: >-
   This stage moves the chapter from being set up to being supported, and proves the
   chapter can reach everything it owns without help. The central support
@@ -97,8 +97,8 @@ steps:
     produces: []
     mode: offline
     actions:
-      - do: "Explain when: a new release is named each week at 17:00 UTC on Sunday. That is 1 p.m. Eastern in summer and 12 noon Eastern in winter. The chapter's application then takes it by itself."
-      - do: Explain that every chapter moves to the same release at the same time.
+      - do: "Explain when: a new release is named each week at 17:00 UTC on Sunday. That is 1 p.m. Eastern in summer and 12 noon Eastern in winter. The chapter's application takes it the way the chapter chose in step 8.6: by itself, or only when the chapter asks for the upgrade or schedules it, after trying the release on the demo/test deployment."
+      - do: Explain that a chapter may decline a release, or schedule the upgrade for a time of its own, so chapters may run different releases at the same time (ruled 09-24-26).
       - do: "Explain what to do if something looks wrong afterwards:"
         items:
           - "Refresh the page fully: Ctrl and Shift and R on Windows, or Cmd and Shift and R on a Mac. A browser can keep an old copy of a page."
@@ -108,7 +108,7 @@ steps:
       - do: "Show where the release itself is reported: open APP-ADDRESS/healthz."
         see: A line named releaseTag, with the release's name.
     done_when:
-      - "The chapter knows software updates arrive automatically on a weekly schedule."
+      - "The chapter knows a new release is offered each week, and that its deployment takes it the way the chapter chose: automatically, on request, or at a scheduled time."
       - "The chapter knows roughly when."
       - "The chapter knows what to do if something looks wrong afterwards."
     check:
@@ -117,7 +117,7 @@ steps:
     goes_wrong: >-
       A missed weekly slot. It has happened. A late release is harmless, but a
       chapter told "every Sunday" that sees nothing change should be told why.
-    later: The fleet console shows each chapter its current release and the date of the next.
+    later: CRMBuilder shows each deployment its current release, the release available, and any scheduled upgrade time (DEC-1156).
     status: not-yet-tried with a chapter — the trial chapter follows Latest Stable and has updated itself on a release.
     source: 11-Methods-Handover.md#18.3
 
@@ -267,6 +267,10 @@ steps:
     source: 11-Methods-Handover.md#18.7
 
 changes:
+  - version: "0.4"
+    date: "09-24-26 00:39"
+    change: >-
+      Step 18.3 follows the ruling that the chapter decides when it takes a release (Doug, 09-24-26, CRMBuilder decision DEC-1156): a chapter may decline a release or schedule the upgrade for a time of its own, so chapters may run different releases at the same time. The step no longer tells the chapter that every chapter moves together or that updates arrive automatically.
   - version: "0.3"
     date: "09-23-26 13:54"
     change: >-

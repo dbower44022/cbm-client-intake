@@ -1,7 +1,7 @@
 stage: 8
 name: Fill in the chapter information form
-version: "0.14"
-updated: "09-23-26 20:40"
+version: "0.15"
+updated: "09-24-26 00:39"
 why: >-
   The chapter information form holds the roughly forty answers that differ from
   one chapter to the next: its name, its addresses, its Google details and its
@@ -502,13 +502,13 @@ steps:
   - id: "8.6"
     name: Decide every feature switch
     why: Each switch turns a part of the software on or off, and a switch left blank gives a chapter behaviour nobody chose.
-    who: both — the chapter answers the three questions about what it will do; the central support organization confirms the rest
+    who: both — the chapter answers the four questions about what it will do; the central support organization confirms the rest
     first: ["8.2", "8.3", "8.4", "8.5"]
     needs: []
     produces: [flags]
     mode: guided
     actions:
-      - do: "The chapter's setup contact: answer the three switch questions marked For the chapter."
+      - do: "The chapter's setup contact: answer the four switch questions marked For the chapter."
         see: The three marked as saved.
       - do: "The central support organization: check the recommended answer on each remaining switch, change any that should differ, and save each one. The page's button Use recommended answers gives every switch marked For central support that is not yet answered its recommended answer; it never changes a switch already answered or one marked For the chapter."
         see: Every switch marked as saved. None left blank.
@@ -650,14 +650,14 @@ steps:
         source: Always off for a chapter.
         wrong: Switched on, nothing a chapter does is saved in its CRM.
       - key: flags.deploy_on_push
-        label: Take each release automatically
-        by: central
+        label: Take each release automatically?
+        by: chapter
         kind: bool
         required: true
         default: true
-        meaning: The applications follow the release branch and update themselves when a release is cut (step 11.9).
-        source: On for every chapter. The settings generator refuses the development branch.
-        wrong: Switched off, the chapter falls behind every release until someone updates it by hand.
+        meaning: "Yes: the applications update themselves within minutes of each weekly release being cut. No: they stay on their current release until the chapter asks for the upgrade, or schedules it for a time of its own, after trying the release on the demo/test deployment. Either way they follow the release branch (step 11.9)."
+        source: The chapter's own choice (ruled 09-24-26). It can be changed later.
+        wrong: Set to yes for a chapter that wanted to choose, a release arrives unannounced. Set to no, the chapter stays on its release until it asks for each upgrade.
     done_when: >-
       Each switch has been deliberately set to on or off, and the branch the
       application follows is recorded as the release branch rather than the
@@ -812,6 +812,10 @@ steps:
     source: 5-Methods-Form-Accounts-Checks.md#8.10
 
 changes:
+  - version: "0.15"
+    date: "09-24-26 00:39"
+    change: >-
+      The switch Take each release automatically? is now the chapter's question, not the central support organization's (Doug, 09-24-26, CRMBuilder decision DEC-1156): a chapter may take each release as it is cut, decline one, or schedule the upgrade for a time of its own after trying it on the demo/test deployment. Step 8.6 now has four chapter questions.
   - version: "0.14"
     date: "09-23-26 20:40"
     change: >-
