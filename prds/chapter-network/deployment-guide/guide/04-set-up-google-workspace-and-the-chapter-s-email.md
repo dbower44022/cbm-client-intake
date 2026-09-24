@@ -97,6 +97,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
    - First name and last name: the setup contact's own name, not a role such as Admin
    - Username: FIRSTNAME.LASTNAME, so the address is FIRSTNAME.LASTNAME@EMAIL-DOMAIN
    - Password: a new password, stored straight away in the chapter's Board vault (step 2.7)
+
    *You should see:* An account created, with this user as its first administrator. It becomes the chapter's own administrator account in step 4.5.
 5. Choose the Business Starter plan, or the plan the cost agreement names (step 2.2), and pay with the chapter's own card (step 1.6). The nonprofit discount is applied for later, in step 4.13.
 6. In a new browser window, go to https://admin.google.com and sign in as FIRSTNAME.LASTNAME@EMAIL-DOMAIN.
@@ -134,6 +135,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
    - Name: @ (the domain itself)
    - Content: the whole value from Google, starting google-site-verification=
    - TTL: Auto
+
    *You should see:* The new TXT record in the list. Leave any other TXT records as they are.
 3. With manual DNS, add the TXT record in the chapter's DNS provider account instead (step 3.7). Its screens differ by provider and are not given here; the record's values are the same.
 4. Return to the admin console and choose to verify.
@@ -174,16 +176,19 @@ Google Workspace is Google's paid service for an organization's email, calendars
    - Mail server: smtp.google.com
    - Priority: 1
    - TTL: Auto
+
    *You should see:* One MX record only, pointing at smtp.google.com. Cloudflare shows it as DNS only by itself. Cleveland's email domain uses exactly this record.
 3. Look for an existing TXT record beginning v=spf1. A domain may have only one. If one exists, edit it; if not, choose Add record. Enter exactly:
    - Type: TXT
    - Name: @
    - Content: v=spf1 include:_spf.google.com ~all
    - TTL: Auto
+
    *You should see:* Exactly one TXT record beginning v=spf1.
 4. In the Google Workspace admin console, open Apps, then Google Workspace, then Gmail, then Authenticate email. If the menu differs, search the admin console for Authenticate email. Choose the domain, then generate a new record with these settings:
    - Key length: 2048
    - Prefix selector: google
+
    *You should see:* A record name, google._domainkey, and a long value beginning v=DKIM1; k=rsa; p=.
 5. In Cloudflare, choose Add record and enter exactly:
    - Type: TXT
@@ -197,11 +202,13 @@ Google Workspace is Google's paid service for an organization's email, calendars
    - Name: _dmarc
    - Content: v=DMARC1; p=none; rua=mailto:REPORT-ADDRESS
    - TTL: Auto
+
    *You should see:* One TXT record named _dmarc.
 8. From a personal account outside the chapter, send a message to the first administrator's chapter address.
    *You should see:* The message arrives in the chapter mailbox.
 9. From the chapter mailbox, reply to that personal account. In the personal account, open the message and show its original, or its full headers.
    *You should see:*
+
    - SPF: PASS
    - DKIM: PASS
    - DMARC: PASS
@@ -478,6 +485,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
    - Enforcement: on, from a date one week away
    - New user enrollment period: 1 week
    - Methods: any except verification codes sent by text message or phone call
+
    *You should see:* The settings saved for the whole organization.
 3. Sign in as info@EMAIL-DOMAIN and turn on two-step sign-in at https://myaccount.google.com/signinoptions/twosv, using an authenticator app held by two named people, not one person's phone.
 4. On the same page, generate backup codes for info@EMAIL-DOMAIN and put them in the chapter's Operations vault. Do the same for any other shared mailbox.

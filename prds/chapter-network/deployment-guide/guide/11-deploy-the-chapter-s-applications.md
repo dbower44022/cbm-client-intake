@@ -93,6 +93,7 @@ The applications are what the chapter's staff, mentors and the public actually u
 3. Check the form's flags section names every switch deliberately, as true or false. The Google switches (gmail_sync, gcal_events, gdrive_docs, google_directory_check, google_create_mailbox) go into the deployment from here, not from the settings page: the background worker decides at start-up whether to read the mailbox, and a switch set later at /setup never reaches it. Set gdrive_identity to service, and set deploy_on_push to true so the application follows the release branch from its first build.
 4. In a terminal, in the folder ~/Dropbox/Projects/cbm-client-intake, type the line below and press Enter. CHAPTER-VALUES-FILE is the filled-in chapter information form saved as YAML (the trial chapter's is prds/chapter-network/rehearsal-2026-08-31/lakeside-values.yaml):
    - uv run python scripts/rehearsal/render_spec.py CHAPTER-VALUES-FILE ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env ~/.config/cbm-SHORT-LABEL/SHORT-LABEL-app.yaml
+
    *You should see:* A line reading: wrote ~/.config/cbm-SHORT-LABEL/SHORT-LABEL-app.yaml following branch release with N shared + N web-only env vars. If it reads secrets not yet minted, step 9.10 has not run. If it names GOOGLE_SERVICE_ACCOUNT_KEY_FILE or shared_drive_id, a Google switch is on before stage 10 has produced what it needs.
 5. Open SHORT-LABEL-app.yaml and check three things. The generator sets them itself; this is a check, not an edit:
    - There is no ENV_LABEL line.
@@ -128,6 +129,7 @@ The applications are what the chapter's staff, mentors and the public actually u
 1. Nothing to run. The settings file from step 11.2 carries every secret into the deployment when step 11.5 creates the application. The database connection is supplied by the hosting platform and never appears in the file.
 2. After step 11.5 has succeeded, type the line below and press Enter, to delete the settings file:
    - rm ~/.config/cbm-SHORT-LABEL/SHORT-LABEL-app.yaml ~/.config/cbm-SHORT-LABEL/google-key.json
+
    *You should see:* The prompt again, with no message.
 3. Check every secret in CHAPTER-ENV-FILE also has an item in the Operations vault. Then delete CHAPTER-ENV-FILE too, once the vault holds everything.
    *You should see:* No settings file and no secrets file left on the computer.
@@ -168,6 +170,7 @@ The applications are what the chapter's staff, mentors and the public actually u
    - Plan: the smallest node size (db-s-1vcpu-1gb)
    - Nodes: 1
    - Standby node: none
+
    *You should see:* The conversion completing and the application redeploying by itself, with no downtime. The connection details do not change.
 
 **Done when all of these are true:**
@@ -200,14 +203,17 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 1. If this computer has never been signed in to the chapter's hosting account, type the line below and press Enter, then paste the chapter's DigitalOcean token from the Operations vault when asked:
    - doctl auth init --context SHORT-LABEL
+
    *You should see:* A message that the token was validated.
 2. Type the line below and press Enter, so every following doctl command acts on the chapter's account and not Cleveland's:
    - doctl auth switch --context SHORT-LABEL
 3. Type the line below and press Enter:
    - doctl apps create --spec ~/.config/cbm-SHORT-LABEL/SHORT-LABEL-app.yaml
+
    *You should see:* A table with the new application's ID and the name SHORT-LABEL-intake. Copy the ID into the Operations vault as a note named Application ID; later steps call it APP-ID.
 4. Type the line below and press Enter:
    - doctl apps get APP-ID
+
    *You should see:* The application listed. In the hosting account's web page, its Components show web, delivery-worker and migrate.
 
 **Done when:** The web part, the background worker part and the setup job all exist.
@@ -235,6 +241,7 @@ The applications are what the chapter's staff, mentors and the public actually u
 1. Nothing to run. The migrate job runs by itself before the application starts.
 2. Type the line below and press Enter:
    - doctl apps list-deployments APP-ID
+
    *You should see:* The first deployment in the list with its phase ACTIVE. A phase of ERROR means the migrate job or the build failed; open the deployment in the hosting account's web page and read its log.
 
 **Done when:** The setup job has completed and the database holds the expected tables.
@@ -259,6 +266,7 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 1. Open https://APP-ADDRESS/healthz in a browser. Until step 11.10, use the address DigitalOcean gave the application, shown by doctl apps get APP-ID under Default Ingress.
    *You should see:*
+
    - status: ok
    - version: the current release's number, the one the release branch holds today
    - releaseTag: the same release with a v in front. The application follows the release branch from its first build, so it reads the tag straight away. A null here means the release branch's latest commit is not a cut release.
@@ -287,12 +295,15 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 1. In the folder ~/Dropbox/Projects/cbm-client-intake, with doctl switched to the chapter's account (step 11.5), type the line below and press Enter. It changes nothing:
    - uv run python scripts/set_updates_policy.py APP-ID latest-stable
+
    *You should see:* The change it would make to each of the three parts.
 2. Type the line below and press Enter. The deploy option starts a fresh deployment; without it the application rebuilds the same commit it already runs:
    - uv run python scripts/set_updates_policy.py APP-ID latest-stable --apply --deploy
+
    *You should see:* The spec updated and a new deployment started.
 3. Type the line below and press Enter:
    - uv run python scripts/set_updates_policy.py APP-ID latest-stable --status
+
    *You should see:* One line per part, each showing branch=release and deploy_on_push=True, and a final line reading conformant with 'latest-stable'.
 
 **Done when:** All three parts of the application follow the release branch and the policy script reads all three back in agreement. An application has three parts, each with its own setting, and setting one without the others half-updates it with no warning from the platform.
@@ -319,6 +330,7 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 1. Type the line below and press Enter:
    - uv run python scripts/set_updates_policy.py APP-ID latest-stable --status
+
    *You should see:* Every part showing branch=release, none showing branch=main, and the line conformant with 'latest-stable'.
 
 **Done when all of these are true:**
@@ -356,6 +368,7 @@ The applications are what the chapter's staff, mentors and the public actually u
    - Target: the Default Ingress address, without https://
    - Proxy status: DNS only (grey cloud)
    - TTL: Auto
+
    *You should see:* The record listed with a grey cloud.
 3. With manual DNS (step 3.7), add the same CNAME record in the chapter's DNS provider account instead, with any proxy or forwarding off. Its screens differ by provider and are not given here; the Name and Target are the same.
 4. In the hosting account, open Apps, then SHORT-LABEL-intake, then Settings, then Domains, and add APP-ADDRESS. Choose to manage DNS yourself and make it the primary domain. Labels are not checked on screen for this guide.
@@ -415,9 +428,11 @@ The applications are what the chapter's staff, mentors and the public actually u
    - releaseTag: the current release
    - database: ok
    - worker, then lastHeartbeatAgeSeconds: under 180
+
    *You should see:* All five as listed.
 2. Read the crmConfig block's state field.
    *You should see:*
+
    - stamped or unstamped: both are fine
    - absent, forbidden or unreachable: each is a problem to report
 
@@ -483,10 +498,12 @@ The applications are what the chapter's staff, mentors and the public actually u
    - OPS_MAILBOX: the shared operations mailbox address
    - COMMS_INTERNAL_DOMAINS: the chapter's email domain, and the mentors' domain when it differs
    - GMAIL_SYNC: true
+
    *You should see:* Each value as listed. Do not change them here.
 3. If a value is missing or wrong, correct the form, run step 11.2 again, then type the two lines below, pressing Enter after each. The first loads the new settings; the second restarts the worker, which reads its mail switches only at start-up:
    - doctl apps update APP-ID --spec ~/.config/cbm-SHORT-LABEL/SHORT-LABEL-app.yaml
    - doctl apps create-deployment APP-ID
+
    *You should see:* A new deployment reaching ACTIVE. Delete the settings file and the key file again afterwards, as in step 11.3.
 4. In the hosting account, open Apps, then SHORT-LABEL-intake, then Runtime Logs, and choose the delivery-worker component.
    *You should see:* A line naming the mailbox the worker acts as, and it is the shared operations mailbox. If that line is absent or names another address, stop; the cause is in stage 10.

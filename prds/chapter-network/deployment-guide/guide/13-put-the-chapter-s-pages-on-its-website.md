@@ -79,6 +79,7 @@ The public learns about the chapter through its website. This stage connects tha
    - EVENTS_HERO_PILLARS: the short line under the heading
    - EVENTS_HERO_BAND: the gold band's wording; empty hides it
    - EVENTS_PUBLIC_BASE_URL: leave empty, so event links point at this application
+
    *You should see:* Each setting shown with its new value.
 2. Open https://APP-ADDRESS/events/ and choose + New event. For each upcoming event fill in its title, format, topic, start and duration, and tick Publish to website, then save.
    *You should see:* Each event in the grid, shown as published to the website.
@@ -181,6 +182,7 @@ The public learns about the chapter through its website. This stage connects tha
    *You should see:* The calendar and the recorded library side by side, filling the window.
 2. On a phone, open the same address.
    *You should see:*
+
    - One column
    - No sideways scrolling
    - No text cut off

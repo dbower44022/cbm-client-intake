@@ -47,6 +47,7 @@ The applications read and send the chapter's email, keep calendars in step, file
 2. Open the project picker at the top of the page and choose New project. Enter:
    - Project name: SHORT-LABEL-apps
    - Organization: the chapter's own domain
+
    *You should see:* The new project selected in the project picker.
 3. Open APIs and services, then Library. Search for each of these and choose Enable on each:
    - Admin SDK API
@@ -54,11 +55,13 @@ The applications read and send the chapter's email, keep calendars in step, file
    - Google Calendar API
    - Google Drive API
    - Google Meet REST API (only if meeting transcripts will be switched on)
+
    *You should see:* Each API shown as enabled under APIs and services, then Enabled APIs and services.
 4. Open IAM and admin, then Service accounts, and choose Create service account. Enter:
    - Service account name: SHORT-LABEL-apps
    - Service account ID: SHORT-LABEL-apps (filled in for you)
    - Roles: none. Skip the optional steps and choose Done.
+
    *You should see:* The service account listed, with an email address ending @SHORT-LABEL-apps.iam.gserviceaccount.com.
 5. Open the service account. Copy its Unique ID, a number of about twenty digits, into the chapter's Operations vault as a note named Google machine account client ID. Step 10.3 needs it.
    *You should see:* The Unique ID on the service account's details page.
@@ -88,6 +91,7 @@ The applications read and send the chapter's email, keep calendars in step, file
 
 1. In the same service account, open the Keys tab, choose Add key, then Create new key. Choose:
    - Key type: JSON
+
    *You should see:* One file ending .json downloaded to the computer.
 2. If Google refuses to create the key, the organization has the policy that blocks service account keys switched on. That is the default for Google Cloud organizations created since 2024. The chapter's Google administrator must allow keys for this one project: open IAM and admin, then Organization policies, find Disable service account key creation, and override it for project SHORT-LABEL-apps only. Then create the key again.
 3. In Proton Pass, open the chapter's Operations vault and add a new item named Google machine account key. Attach the downloaded .json file to it.
@@ -192,10 +196,12 @@ The applications read and send the chapter's email, keep calendars in step, file
 
 1. Sign in at drive.google.com as the chapter's Google administrator. Open Shared drives and choose New. Enter:
    - Name: CHAPTER-NAME Documents
+
    *You should see:* The new shared drive open, and empty.
 2. Open the shared drive's menu, choose Manage members, and add the service account's email address from step 10.1 (ending @SHORT-LABEL-apps.iam.gserviceaccount.com). Choose:
    - Access: Manager (Cleveland's service account is a Manager of its shared drive, because it grants people access to folders)
    - Notify people: off (the service account has no mailbox)
+
    *You should see:* The service account in the member list as Manager.
 3. Copy the shared drive's identifier from the browser's address bar: the characters after /drive/folders/ . Write it on the chapter information form as the shared drive.
    *You should see:* A string of about nineteen letters and numbers, often starting 0A.

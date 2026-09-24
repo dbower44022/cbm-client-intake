@@ -55,6 +55,7 @@ The public website is the chapter's own marketing site. The software does not bu
    - Platform: the platform's name
    - Sign-in address: the address the site's editors sign in at
    - Built and maintained by: the named person
+
    *You should see:* The website on the account list, with a named person.
 
 **Done when:** The choice is made and someone is named to build and maintain the site.
@@ -84,6 +85,7 @@ The public website is the chapter's own marketing site. The software does not bu
 1. Publish the site at https://WEBSITE-DOMAIN/, where WEBSITE-DOMAIN is the chapter's website domain from stage 3, for example lakesidebusinessmentors.org.
 2. Open a terminal and run exactly:
    - curl -sI https://WEBSITE-DOMAIN/
+
    *You should see:* A first line of HTTP/2 200, or a 301 redirect to the same site with www added, which is also fine.
 3. Open https://WEBSITE-DOMAIN/ in a private browser window.
    *You should see:* The site, with no security warning.
@@ -118,12 +120,15 @@ The public website is the chapter's own marketing site. The software does not bu
    - Type: 302 (temporary)
 2. In a terminal, run exactly:
    - curl -sI https://WEBSITE-DOMAIN/redirect-test
+
    *You should see:*
+
    - A first line of HTTP/2 302 (or HTTP/1.1 302).
    - A line location: https://example.com/
 3. Delete the /redirect-test redirect.
 4. Run the same command again:
    - curl -sI https://WEBSITE-DOMAIN/redirect-test
+
    *You should see:* A first line of HTTP/2 404. The test redirect is gone.
 
 **Done when:** A test address on the site sends the visitor to a page on another site, by a temporary redirect. (Checking that the site can embed a page returns once the public mentor directory page is built and its method is decided.)
@@ -197,7 +202,9 @@ The public website is the chapter's own marketing site. The software does not bu
 4. Publish the file so it has its own address, for example https://WEBSITE-DOMAIN/chapter-tokens.css. Whether the chapter's platform can serve a .css file has not been checked for any platform. If it cannot, the central support organization hosts the file elsewhere.
 5. In a terminal, run exactly:
    - curl -sI https://WEBSITE-DOMAIN/chapter-tokens.css
+
    *You should see:*
+
    - A first line of HTTP/2 200.
    - A line content-type: text/css. Browsers ignore a stylesheet from another site served with any other type.
 6. Enter the file's full address on the chapter information page, in the question Web address (URL) of the colour file. It becomes the setting CHAPTER_TOKENS_URL.
@@ -264,9 +271,11 @@ The public website is the chapter's own marketing site. The software does not bu
 1. Decide one of two answers, then write it on the chapter information form under web: docs_site_url:
    - The chapter's own documentation site's full address, beginning https://.
    - none yet — until the open question of shared or per-chapter documentation is settled.
+
    *You should see:* An address or "none yet" on the form. Never blank.
 2. If an address was written, run exactly:
    - curl -sI DOCS-ADDRESS
+
    *You should see:* A first line of HTTP/2 200.
 3. The answer becomes the setting DOCS_SITE_URL. Its default is Cleveland's, https://docs.clevelandbusinessmentors.org, so it must never be left unset.
 

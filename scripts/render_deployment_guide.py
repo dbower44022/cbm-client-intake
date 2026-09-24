@@ -67,15 +67,23 @@ def render_stage(stage: dict) -> str:
             out.append("> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.\n")
         out.append("**Do this:**\n")
         for n, a in enumerate(s.get("actions") or [], 1):
+            # Nested lines must be indented to the width of the number ("10. " is
+            # four characters), or Markdown ends the numbered list at action 10.
+            pad = " " * len(f"{n}. ")
             out.append(f"{n}. {a['do'].strip()}")
-            for item in a.get("items") or []:
-                out.append(f"   - {str(item).strip()}")
+            items = a.get("items") or []
+            for item in items:
+                out.append(f"{pad}- {str(item).strip()}")
             see = a.get("see")
+            if see and items:
+                # A blank line keeps "You should see" out of the last item.
+                out.append("")
             if isinstance(see, list):
-                out.append("   *You should see:*")
-                out.extend(f"   - {str(x).strip()}" for x in see)
+                out.append(f"{pad}*You should see:*")
+                out.append("")
+                out.extend(f"{pad}- {str(x).strip()}" for x in see)
             elif see:
-                out.append(f"   *You should see:* {see.strip()}")
+                out.append(f"{pad}*You should see:* {see.strip()}")
         out.append("")
         fields = s.get("fields") or []
         if fields:

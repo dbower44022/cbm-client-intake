@@ -49,6 +49,7 @@ Every public form carries one required consent box that links to four documents.
 2. Publish it as a public page on the chapter's website at exactly this address, the same path Cleveland uses: https://WEBSITE-DOMAIN/client-code-of-conduct/
 3. In a terminal, run exactly:
    - curl -sI https://WEBSITE-DOMAIN/client-code-of-conduct/
+
    *You should see:* A first line of HTTP/2 200. A 302 to a sign-in page means the page is a draft or private.
 4. Open the same address in a private browser window.
    *You should see:* The document, without being asked to sign in.
@@ -82,6 +83,7 @@ Every public form carries one required consent box that links to four documents.
 2. Publish it as a public page on the chapter's website at exactly this address, the same path Cleveland uses: https://WEBSITE-DOMAIN/mentor-code-of-ethics/
 3. In a terminal, run exactly:
    - curl -sI https://WEBSITE-DOMAIN/mentor-code-of-ethics/
+
    *You should see:* A first line of HTTP/2 200. A 302 to a sign-in page means the page is a draft or private.
 4. Open the same address in a private browser window.
    *You should see:* The document, without being asked to sign in.
@@ -115,6 +117,7 @@ Every public form carries one required consent box that links to four documents.
 2. Publish it as a public page on the chapter's website at exactly this address, the same path Cleveland uses: https://WEBSITE-DOMAIN/legal-notices/
 3. In a terminal, run exactly:
    - curl -sI https://WEBSITE-DOMAIN/legal-notices/
+
    *You should see:* A first line of HTTP/2 200. A 302 to a sign-in page means the page is a draft or private.
 4. Open the same address in a private browser window.
    *You should see:* The document, without being asked to sign in.
@@ -151,6 +154,7 @@ Every public form carries one required consent box that links to four documents.
 3. Publish it as a public page at exactly this address, the same path Cleveland uses: https://WEBSITE-DOMAIN/privacy-policy/
 4. In a terminal, run exactly:
    - curl -s https://WEBSITE-DOMAIN/privacy-policy/ | grep -c -i cleveland
+
    *You should see:* The number 0. Any other number means Cleveland's name is still in the page.
 5. Open the same address in a private browser window and read which organization the policy names.
    *You should see:* The document, without a sign-in, naming this chapter.
@@ -223,6 +227,7 @@ Every public form carries one required consent box that links to four documents.
    - policy_privacy_url: https://WEBSITE-DOMAIN/privacy-policy/
 2. In a terminal, run this once for each of the four addresses, putting the address in place of POLICY-ADDRESS:
    - curl -sI POLICY-ADDRESS
+
    *You should see:* A first line of HTTP/2 200 for all four.
 3. Check that none of the four addresses contains clevelandbusinessmentors.org. Each setting defaults to Cleveland's document, so a copied Cleveland address would pass every other check.
 

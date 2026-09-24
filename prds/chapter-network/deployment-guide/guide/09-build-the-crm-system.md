@@ -63,6 +63,7 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
    - The CRM version.
    - The version of each of the two paid add-on products.
    - The release of the standard configuration this chapter will get.
+
    *You should see:* Three version numbers, written where the rest of the stage can read them.
 2. For the CRM version, write down: the current release CRMBuilder installs. A new chapter takes the current release, and Cleveland's systems move up to it later (ruled 09-23-26). CRMBuilder's deploy cannot install any other version, so the exact number is only known once the server exists; step 9.3 records it.
 3. For the other two, there is no published statement of the standard yet. Until there is, use the add-on versions Cleveland's production system runs, and the date its configuration was last captured.
@@ -101,6 +102,7 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 1. Work at the build computer: the central support organization's own computer, the one with CRMBuilder installed. Every command in this step is typed in a terminal window on the build computer.
 2. Create an SSH key for the central support organization. An SSH key is the file that lets a person open a command line on the server. Type the line below, press Enter, then press Enter twice more to leave the key without a passphrase:
    - ssh-keygen -t ed25519 -f ~/.ssh/crm-SHORT-LABEL -C crm-SHORT-LABEL
+
    *You should see:* Two new files on the build computer: ~/.ssh/crm-SHORT-LABEL, the private key, which later steps call KEY-FILE; and ~/.ssh/crm-SHORT-LABEL.pub, the public key.
 3. Register the public key in the chapter's DigitalOcean account: open Settings, then Security, then add an SSH key. Paste the contents of ~/.ssh/crm-SHORT-LABEL.pub, and name the key crm-SHORT-LABEL. DigitalOcean's exact screen wording has not been checked for this guide.
    *You should see:* The key crm-SHORT-LABEL in the account's list of SSH keys.
@@ -110,6 +112,7 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
    - cd ~/Dropbox/Projects/crmbuilder
 6. Start CRMBuilder. Type the line below and press Enter:
    - ./start-v2.sh
+
    *You should see:* CRMBuilder's main window. If a window titled Cloud backend not configured appears instead, the build computer is not connected to CRMBuilder's online service: stop and ask.
 7. Select the chapter's engagement. Click the strip across the top of the window, which names the current engagement, and choose the chapter's.
    *You should see:* The chapter's engagement named in the strip. If it is not in the list, step 5.8 is not finished.
@@ -118,56 +121,64 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 9. Step 1, Providers. In the DNS list, choose the entry that matches the DNS provider item in the chapter's Operations vault (step 3.7):
    - Cloudflare — the run creates the record: the chapter's DNS is at Cloudflare.
    - Manual DNS — I add the record at the domain's own DNS provider: the chapter kept its own DNS provider.
+
    *You should see:* The DNS list showing the entry that matches the vault.
 10. Step 1, Providers. Confirm both lines name the chapter's own tokens, by the label given in step 5.8, then click Next. With manual DNS, only the DigitalOcean line matters; the Cloudflare line may read Not set:
-   - DigitalOcean: ✓ Configured — crmbuilder-SHORT-LABEL
-   - Cloudflare: ✓ Configured — crmbuilder-SHORT-LABEL
-   *You should see:* Both labels exactly as above. Any other label, or Not set, means the server would be built in the wrong account: click Set credentials… and repeat step 5.8's token actions first.
+    - DigitalOcean: ✓ Configured — crmbuilder-SHORT-LABEL
+    - Cloudflare: ✓ Configured — crmbuilder-SHORT-LABEL
+
+    *You should see:* Both labels exactly as above. Any other label, or Not set, means the server would be built in the wrong account: click Set credentials… and repeat step 5.8's token actions first.
 11. Step 2, Server. Fill in each box, then click Next. The lists come from the chapter's DigitalOcean account and take a moment to fill.
-   - Instance name: SHORT-LABEL CRM, using the chapter's short label from step 8.2
-   - Region: the region nearest the chapter; for Boston, New York
-   - Size: s-2vcpu-4gb (2 vCPU, 4096 MB), a recommendation not yet ruled
-   - Image: the newest Ubuntu LTS release in the list
-   - Extra SSH keys: tick crm-SHORT-LABEL
-   *You should see:* crm-SHORT-LABEL ticked. Without it, nobody can open a command line on the server, and steps 9.4 and 9.8 cannot be done.
+    - Instance name: SHORT-LABEL CRM, using the chapter's short label from step 8.2
+    - Region: the region nearest the chapter; for Boston, New York
+    - Size: s-2vcpu-4gb (2 vCPU, 4096 MB), a recommendation not yet ruled
+    - Image: the newest Ubuntu LTS release in the list
+    - Extra SSH keys: tick crm-SHORT-LABEL
+
+    *You should see:* crm-SHORT-LABEL ticked. Without it, nobody can open a command line on the server, and steps 9.4 and 9.8 cannot be done.
 12. Step 3, Domain. Fill in each box from the chapter information form, then click Next:
-   - Cloudflare zone: the chapter's domain that the CRM's address ends in
-   - Subdomain: the CRM's address up to the first dot; for crm.example.org, crm
-   - Let's Encrypt email: the alert receiving address
-   *You should see:* Instance address showing the CRM's address exactly as the chapter information form has it, without https://.
+    - Cloudflare zone: the chapter's domain that the CRM's address ends in
+    - Subdomain: the CRM's address up to the first dot; for crm.example.org, crm
+    - Let's Encrypt email: the alert receiving address
+
+    *You should see:* Instance address showing the CRM's address exactly as the chapter information form has it, without https://.
 13. Step 3, Domain, with manual DNS. The page shows different boxes. Fill in each one from the chapter information form, then click Next:
-   - CRM address: the CRM's full address, without https://; for Boston, crm.bbmentors.org
-   - Let's Encrypt email: the alert receiving address
-   *You should see:* A note on the page saying the run will show the A record to add at the domain's DNS provider.
+    - CRM address: the CRM's full address, without https://; for Boston, crm.bbmentors.org
+    - Let's Encrypt email: the alert receiving address
+
+    *You should see:* A note on the page saying the run will show the A record to add at the domain's DNS provider.
 14. Step 4, Accounts. Fill in each box, then click Next:
-   - Administrator username: admin
-   - Administrator email: the alert receiving address from the chapter information form
-   - Administrator password: paste it from the CRM administrator item in the vault
-   - Generate database passwords automatically (recommended): leave ticked
-   *You should see:* A reminder to record the administrator password. It is already in the vault; CRMBuilder never shows it again.
+    - Administrator username: admin
+    - Administrator email: the alert receiving address from the chapter information form
+    - Administrator password: paste it from the CRM administrator item in the vault
+    - Generate database passwords automatically (recommended): leave ticked
+
+    *You should see:* A reminder to record the administrator password. It is already in the vault; CRMBuilder never shows it again.
 15. Step 5, Review. Check every line against what was entered, then click Deploy.
-   *You should see:* Extra SSH keys reading crm-SHORT-LABEL, not (generated key only). With manual DNS, the line DNS reading manual DNS — you add the A record when the run shows it. Then a window titled Deploy run DEP-NNN, with a progress bar and a log.
+    *You should see:* Extra SSH keys reading crm-SHORT-LABEL, not (generated key only). With manual DNS, the line DNS reading manual DNS — you add the A record when the run shows it. Then a window titled Deploy run DEP-NNN, with a progress bar and a log.
 16. With manual DNS, the run stops at Waiting for DNS until the CRM's record exists, so add it by hand while the run waits. When the status line reads Waiting for DNS, it also shows the record, in the words Add this DNS record at the domain's DNS provider: type A, name, then the CRM's address, value, then the server's address. The log shows the same line. In the chapter's DNS provider account, add a record with exactly:
-   - Type: A
-   - Name or host: the CRM's address, or only its first part (for crm.bbmentors.org, crm), whichever the provider's screen asks for
-   - Value, data or points to: the server's address from the status line
-   - Proxy or forwarding: off
-   - TTL: the provider's default, or the shortest it offers
-   *You should see:* Within a few minutes, a log line saying the CRM's address resolves to the server's address on public resolvers, and the status line moving on to Preparing server. The run waits up to 30 minutes for the record.
+    - Type: A
+    - Name or host: the CRM's address, or only its first part (for crm.bbmentors.org, crm), whichever the provider's screen asks for
+    - Value, data or points to: the server's address from the status line
+    - Proxy or forwarding: off
+    - TTL: the provider's default, or the shortest it offers
+
+    *You should see:* Within a few minutes, a log line saying the CRM's address resolves to the server's address on public resolvers, and the status line moving on to Preparing server. The run waits up to 30 minutes for the record.
 17. Wait for the run to finish. The status line names each of its ten stages in turn:
-   - Checking credentials
-   - Creating server
-   - Waiting for server
-   - Setting DNS
-   - Waiting for DNS
-   - Preparing server
-   - Installing CRM
-   - Post-install checks
-   - Verifying
-   - Registering instance
-   *You should see:* The status line reading Deployment complete. The run takes place on CRMBuilder's online service, not on the build computer, so closing the window does not stop it. To reopen it, click Deploy History, then Open progress….
+    - Checking credentials
+    - Creating server
+    - Waiting for server
+    - Setting DNS
+    - Waiting for DNS
+    - Preparing server
+    - Installing CRM
+    - Post-install checks
+    - Verifying
+    - Registering instance
+
+    *You should see:* The status line reading Deployment complete. The run takes place on CRMBuilder's online service, not on the build computer, so closing the window does not stop it. To reopen it, click Deploy History, then Open progress….
 18. Record the server's address. The log shows it on the line beginning Server active at. Later steps call it SERVER-IP.
-   *You should see:* The same address under Droplet IP, in the Deploy config section of the new instance on the Instances page.
+    *You should see:* The same address under Droplet IP, in the Deploy config section of the new instance on the Instances page.
 19. In Proton Pass, add the server's address to the CRM administrator item, as a note headed Server address.
 
 **Done when:** A server is running in the chapter's own hosting account and the central support organization can reach it.
@@ -225,9 +236,11 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 1. In a terminal, type the line below and press Enter, with SERVER-IP the server's address and KEY-FILE the private key ~/.ssh/crm-SHORT-LABEL, both from step 9.2:
    - ssh -i KEY-FILE root@SERVER-IP
+
    *You should see:* The server's prompt, ending root@ followed by the server's name.
 2. Type the line below and press Enter, to confirm the CRM is running in its container:
    - docker ps --format '{{.Names}}'
+
    *You should see:* A list of container names, one of them espocrm. Later steps call that name CRM-CONTAINER; if it is named differently, use that name instead.
 3. Type exit and press Enter.
 4. In Proton Pass, add an item to the chapter's Operations vault named CRM server sign-in key, and attach KEY-FILE to it.
@@ -287,9 +300,11 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
    *You should see:* The CRM's sign-in page, with no certificate warning.
 2. Sign in to the server as in step 9.4 and type the line below and press Enter, to list the running containers:
    - docker ps --format '{{.Names}}'
+
    *You should see:* A container whose name includes letsencrypt or certbot, which is what renews the certificate. The exact name depends on the installer version and is not checked for this guide; if no such container is listed, stop and ask.
 3. Type the line below and press Enter, with the CRM's address in place of CRM-ADDRESS, to read the certificate's expiry date:
    - echo | openssl s_client -connect CRM-ADDRESS:443 -servername CRM-ADDRESS 2>/dev/null | openssl x509 -noout -enddate
+
    *You should see:* A line beginning notAfter= with a date about ninety days away.
 
 **Done when:** The CRM loads at its address over a secure connection, and the security certificate is set to renew by itself. A certificate that has to be renewed by hand will expire and take the system down.
@@ -352,9 +367,11 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 1. Sign in to the source system, Cleveland's test system, and find the two configuration folders. Type the line below and press Enter:
    - ssh root@104.131.45.208 "find /var/www/espocrm -type d \( -path '*Espo/Custom' -o -path '*client/custom/src' \) -not -path '*/vendor/*'"
+
    *You should see:* Two folder paths, one ending Espo/Custom and one ending client/custom/src. Later actions call them SOURCE-CONFIG and SOURCE-SCREEN-CODE. In August the first was under data/espocrm/custom.
 2. Sign in to the new server and find the same two folders there. Type the line below and press Enter:
    - ssh -i KEY-FILE root@SERVER-IP "find / -type d \( -path '*Espo/Custom' -o -path '*custom/src' \) -path '*espocrm*' 2>/dev/null"
+
    *You should see:* Two folder paths. Later actions call them TARGET-CONFIG and TARGET-SCREEN-CODE. On the newer installer the first is under data/espocrm/persistent/custom, and the screen code sits in a second folder beside it (August finding F13). If only one appears, stop and ask.
 3. On the build computer, copy both folders down, then up to the new server. Type each line below and press Enter:
    - mkdir -p ~/cbm-standard/config ~/cbm-standard/screen-code
@@ -362,11 +379,13 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
    - rsync -a root@104.131.45.208:SOURCE-SCREEN-CODE/ ~/cbm-standard/screen-code/
    - rsync -a -e 'ssh -i KEY-FILE' ~/cbm-standard/config/ root@SERVER-IP:TARGET-CONFIG/
    - rsync -a -e 'ssh -i KEY-FILE' ~/cbm-standard/screen-code/ root@SERVER-IP:TARGET-SCREEN-CODE/
+
    *You should see:* Each command returning to the prompt with no error. In August the configuration folder held 791 files.
 4. Make the web server user the owner of both folders. The web server user inside the CRM's container is number 33. Type the line below and press Enter:
    - ssh -i KEY-FILE root@SERVER-IP "chown -R 33:33 TARGET-CONFIG TARGET-SCREEN-CODE"
 5. Rebuild the CRM. Type the line below and press Enter:
    - ssh -i KEY-FILE root@SERVER-IP "docker exec -u www-data CRM-CONTAINER php command.php rebuild"
+
    *You should see:* The command returning with no error. In August it took three seconds.
 6. Delete ~/cbm-standard from the build computer.
 
@@ -428,9 +447,11 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 2. The administrator password must be letters and numbers only, because later steps pass this file's values on a command line. If the wizard's password has any other character, change it in the CRM first (Administration, then Users), and put the new one in the file.
 3. Type the line below and press Enter. It changes nothing, and reports what it would do:
    - uv run python scripts/rehearsal/apply_api_half.py --env ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env --values CHAPTER-VALUES-FILE
+
    *You should see:* A list of teams, roles, attachments, email templates, two accounts and settings it would create.
 4. Type the line below and press Enter. It creates everything in steps 9.10 to 9.14, 9.17 and 9.18:
    - uv run python scripts/rehearsal/apply_api_half.py --env ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env --values CHAPTER-VALUES-FILE --apply
+
    *You should see:* Nine teams reported applied, and the new values ESPO_API_KEY, ESPO_PROVISION_USERNAME and ESPO_PROVISION_PASSWORD added to the end of CHAPTER-ENV-FILE.
 5. Put CHAPTER-ENV-FILE's contents in the chapter's Operations vault as an item named CRM build settings.
 
@@ -461,9 +482,11 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
    *You should see:* Every role reported applied and read back identical. Lines marked unapplyable are explained under If it didn't work.
 2. Give the Client Assignment Role the User permission it needs to assign a mentor. The roles captured on 31 August predate this ruling (Doug, 09-07-26). In the folder ~/Dropbox/Projects/cbm-client-intake, type the line below and press Enter. It changes nothing:
    - env $(grep -v '^#' ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env | xargs) uv run python scripts/migrate_client_assignment_role.py
+
    *You should see:* A plan to raise Client Assignment Role, User, to read all and edit own.
 3. Type the line below and press Enter:
    - env $(grep -v '^#' ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env | xargs) uv run python scripts/migrate_client_assignment_role.py --apply
+
    *You should see:* The grant reported applied. Running the first line again reports nothing to do.
 
 **Done when:** Every role the standard names exists, and reading each one back matches what was sent.
@@ -640,6 +663,7 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
    *You should see:* The item in the Operations vault.
 3. Type the line below and press Enter, with the key in place of CRM-KEY, to make one test request:
    - curl -s -o /dev/null -w '%{http_code}\n' -H 'X-Api-Key: CRM-KEY' https://CRM-ADDRESS/api/v1/CMentorProfile?maxSize=1
+
    *You should see:* 200. A 401 means the key is wrong; a 403 means a permission was missed in step 9.11.
 
 **Done when all of these are true:**
@@ -698,9 +722,11 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 1. In ~/Dropbox/Projects/cbm-client-intake, type the line below and press Enter. It reads the four values it needs from CHAPTER-ENV-FILE, and changes nothing. Every value must come from that file: the script fills any missing value from the repository's own .env file, which holds Cleveland's settings.
    - env $(grep -v '^#' ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env | xargs) uv run python scripts/build_networkstandard.py
+
    *You should see:* A plan and a line giving its fingerprint, sixteen letters and numbers. Later actions call it FINGERPRINT.
 2. Type the line below and press Enter. The production option is required for any system that is not Cleveland's test system:
    - env $(grep -v '^#' ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env | xargs) uv run python scripts/build_networkstandard.py --apply --production --expect FINGERPRINT
+
    *You should see:* The record created and read back by the applications' key. If it says the plan moved, run the first line again and read the new plan.
 
 **Done when:** The record that says which version of the standard this CRM holds exists and can be read by the applications' own key.
@@ -736,9 +762,11 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 1. In ~/Dropbox/Projects/cbm-client-intake, type the line below and press Enter. Pass both the address and the key: with either missing, the script uses Cleveland's own settings instead.
    - env $(grep -v '^#' ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env | xargs) sh -c 'uv run python scripts/preflight_crm.py --url "$ESPO_ADMIN_BASE" --key "$ESPO_API_KEY" --json' > ~/.config/cbm-SHORT-LABEL/preflight.json; echo exit $?
+
    *You should see:* exit 0 (conformant), exit 1 (something differs) or exit 3 (could not be checked, usually a key or network problem).
 2. Type the line below and press Enter, to read the result as a report:
    - env $(grep -v '^#' ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env | xargs) sh -c 'uv run python scripts/preflight_crm.py --url "$ESPO_ADMIN_BASE" --key "$ESPO_API_KEY"'
+
    *You should see:* A last line beginning RESULT: CONFORMANT, DRIFT or UNCHECKED. Today the expected result is DRIFT, with only the five missing event email templates listed.
 3. Write each difference that is allowed on purpose, with its reason, into the chapter's entry in the list of watched systems (step 12.5). Keep preflight.json in the chapter's Operations vault.
 

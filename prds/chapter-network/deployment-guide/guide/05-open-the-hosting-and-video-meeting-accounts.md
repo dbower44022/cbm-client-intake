@@ -120,6 +120,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
    - The route used
    - The date the application went in
    - The expected answer date
+
    *You should see:* The route and both dates on the list.
 
 **Done when:** The application is submitted and the expected answer date is recorded.
@@ -192,6 +193,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
    - Webinar registrants: read and write
    - Reports: read
    - Users: read
+
    *You should see:* Four groups of scopes added. Zoom's exact scope names have changed over time; pick the ones matching these four descriptions, and the central support organization checks them later with scripts/probe_zoom.py, which names any missing scope.
 8. On the Activation page, activate the app.
    *You should see:* The app shown as activated.
@@ -200,7 +202,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
    - Client ID: write it on the form as the Zoom client identifier
    - Client Secret: put it only in the chapter's Operations vault, never on the form
 10. On the chapter information form, write webinars@EMAIL-DOMAIN as the Zoom host address. The software reads it as ZOOM_HOST_EMAIL, which otherwise defaults to Cleveland's host.
-   *You should see:* The three values on the form and the secret in the vault.
+    *You should see:* The three values on the form and the secret in the vault.
 
 **Done when:** Either the account exists with a chapter mailbox as its host address and an app that lets the software schedule webinars through it, or a note records that this chapter runs no public webinars.
 
@@ -279,6 +281,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
    - Who else has access
    - Where the recovery codes are
    - Any nonprofit discount or credit applied, or applied for
+
    *You should see:* No passwords on the list. Passwords and recovery codes are in the chapter's vault (step 2.7).
 
 **Done when all of these are true:**
@@ -316,6 +319,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
    - Token name: crmbuilder-SHORT-LABEL, using the chapter's short label from step 8.2
    - Expiration: the longest the screen offers, or no expiry
    - Scopes: full read and write access
+
    *You should see:* A new token, shown once only.
 3. Copy the DigitalOcean token straight into the chapter's Operations vault, named DigitalOcean token for CRMBuilder.
 4. With manual DNS (step 3.7), skip every Cloudflare action below: there is no Cloudflare token to make, and the Cloudflare box in CRMBuilder stays empty. Go on to the action that begins Work at the build computer.
@@ -333,20 +337,22 @@ The chapter's CRM server, its applications and their database all run in a hosti
 9. Work at the build computer: the central support organization's own computer, the one with CRMBuilder installed. Open a terminal window on it, type the line below and press Enter:
    - cd ~/Dropbox/Projects/crmbuilder
 10. Start CRMBuilder. Type the line below and press Enter:
-   - ./start-v2.sh
-   *You should see:* CRMBuilder's main window. If a window titled Cloud backend not configured appears instead, the build computer is not connected to CRMBuilder's online service: stop and ask.
+    - ./start-v2.sh
+
+    *You should see:* CRMBuilder's main window. If a window titled Cloud backend not configured appears instead, the build computer is not connected to CRMBuilder's online service: stop and ask.
 11. Create the chapter's engagement, which holds the two tokens. Click the strip across the top of the window, which names the current engagement, then Manage engagements… at the bottom of the list. On the Engagements page, click New Engagement.
-   *You should see:* A window titled New engagement, with four boxes.
+    *You should see:* A window titled New engagement, with four boxes.
 12. Fill in each box, then save:
-   - Code: the chapter's short label from step 8.2, in capital letters: for Boston, BOSTON. Two to ten capital letters and digits, starting with a letter. It cannot be changed later.
-   - Name: the chapter's full name from step 8.2
-   - Purpose: Build and run the chapter's CRM and applications.
-   - Status: active
-   *You should see:* The new engagement listed with an identifier of the form ENG-NNN, and named in the strip across the top of the window. If another engagement is named there, click the strip and choose the chapter's.
+    - Code: the chapter's short label from step 8.2, in capital letters: for Boston, BOSTON. Two to ten capital letters and digits, starting with a letter. It cannot be changed later.
+    - Name: the chapter's full name from step 8.2
+    - Purpose: Build and run the chapter's CRM and applications.
+    - Status: active
+
+    *You should see:* The new engagement listed with an identifier of the form ENG-NNN, and named in the strip across the top of the window. If another engagement is named there, click the strip and choose the chapter's.
 13. Open the tab 11 · CRM Deployment, click Instances in the side bar, then Deploy new…, and on Step 1 of 5 — Providers click Set credentials….
-   *You should see:* A window titled Provider credentials, with one box for DigitalOcean and one for Cloudflare.
+    *You should see:* A window titled Provider credentials, with one box for DigitalOcean and one for Cloudflare.
 14. In each box, paste the token into Token, type crmbuilder-SHORT-LABEL into Label, and click Save token. Then click Close, and click Cancel to leave the deploy window; step 9.2 runs it.
-   *You should see:* Step 1 reading DigitalOcean: ✓ Configured — crmbuilder-SHORT-LABEL, and the same for Cloudflare. The token itself is never shown again.
+    *You should see:* Step 1 reading DigitalOcean: ✓ Configured — crmbuilder-SHORT-LABEL, and the same for Cloudflare. The token itself is never shown again.
 
 **Done when all of these are true:**
 
@@ -396,9 +402,9 @@ The chapter's CRM server, its applications and their database all run in a hosti
 9. Click the Branch drop-down to open its list. Do not pick anything from it.
    *You should see:* release among the branch names. That is the whole test.
 10. Press Esc to close the list.
-   *You should see:* The Branch list closed. Nothing on this screen is saved.
+    *You should see:* The Branch list closed. Nothing on this screen is saved.
 11. Do not choose Next or Create. Choose App Platform in the left menu to leave the screen. Going on would create a billed application with the wrong settings.
-   *You should see:* The chapter's App Platform page, with no application. An empty page may show a getting-started panel or a Create App button instead of a list.
+    *You should see:* The chapter's App Platform page, with no application. An empty page may show a getting-started panel or a Create App button instead of a list.
 
 **Done when all of these are true:**
 

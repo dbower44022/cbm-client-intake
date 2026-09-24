@@ -60,6 +60,7 @@ This stage proves the chapter's system works end to end before any real client u
    - Exactly one team, the one named above
    - Active: yes
    - A password of 20 letters and digits, stored first in the chapter's vault under the user name
+
    *You should see:* Six accounts in the Users list, each with one team.
 4. Create the seventh, the Mentor Team test user, through Mentor Administration so it is linked to a mentor record (step 15.9). Sign in to APP-ADDRESS/mentoradmin/ as a mentor administrator, add a mentor named Test Mentor SHORT-LABEL, fill in the required fields, set Accepting New Clients to yes, and set the status to Active. The exact label of the accepting field on screen is not verified.
    *You should see:* The mentor marked Complete, with a login created. Its user name is set by the software from the mentor's name; write it down.
@@ -112,6 +113,7 @@ This stage proves the chapter's system works end to end before any real client u
    - SHORT-LABEL.test.marketing: ops and events
    - SHORT-LABEL.test.analytics: analytics only
    - setup: refused for all seven
+
    *You should see:* The same pattern as the trial chapter's record, prds/chapter-network/rehearsal-2026-08-31/nonadmin-gate-matrix.json, for the first eleven addresses. That record shows Not Found for the setup address, which is not the right answer; the next action says what is.
 4. For the setup address, read the refusal. The right answer, when the settings page is switched on, is a refusal saying System Settings is restricted to administrators.
    *You should see:* That refusal, not "Not Found".
@@ -177,6 +179,7 @@ This stage proves the chapter's system works end to end before any real client u
 2. Find the row for Test Bakery DELETE-ME. Its status is Submitted.
 3. Use the row's Assign action and choose the Mentor Team test user's mentor, Test Mentor SHORT-LABEL.
    *You should see:*
+
    - The row showing Test Mentor SHORT-LABEL
    - The status Pending Acceptance
    - The email to the mentor opening, ready to send
@@ -234,6 +237,7 @@ This stage proves the chapter's system works end to end before any real client u
 1. In a new private browser window, sign in at APP-ADDRESS/ as SHORT-LABEL.test.marketing and open Submission Admin at APP-ADDRESS/ops/.
 2. Find the submission by the reference number from step 17.3.
    *You should see:*
+
    - Intake status: Completed
    - Response status: Closed
    - Close reason: Process completed

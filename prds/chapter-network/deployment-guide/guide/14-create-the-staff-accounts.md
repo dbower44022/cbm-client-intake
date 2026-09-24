@@ -94,6 +94,7 @@ Each member of the chapter's staff needs their own account to use the applicatio
    - Teams: the teams from the list
    - Default Team: their first team
    - Roles: leave empty. Permissions come from the teams.
+
    *You should see:* The user saved. These field labels are EspoCRM's standard ones and have not been checked on the chapter's version.
 3. Set a password and send it to the person. EspoCRM's user screen offers to generate a password and email the person their sign-in details; use that option. Its exact label has not been checked.
    *You should see:* The person receives an email with their user name and a sign-in link.
@@ -124,6 +125,7 @@ Each member of the chapter's staff needs their own account to use the applicatio
 
 1. In the CRM, open Administration, then Users, and filter the list by Type equal to Admin.
    *You should see:*
+
    - Exactly two accounts
    - The central support organization's own administrator account (step 9.18)
    - The account the applications use to create logins

@@ -216,6 +216,7 @@ This stage moves the chapter from being set up to being supported, and proves th
    - The hosting account, at https://cloud.digitalocean.com
    - The Google Workspace admin console, at https://admin.google.com
    - The domain registrar account, at the registrar's own sign-in address
+
    *You should see:* Each account's home page, under the officer's own name.
 2. In the hosting account, the officer opens the CRM server's page and opens its web console. The exact label of the console action is not verified.
    *You should see:* A command prompt on the CRM server.
@@ -298,6 +299,7 @@ This stage moves the chapter from being set up to being supported, and proves th
    - The chapter officer named in step 18.4
    - One member of the central committee
    - One member of the support team
+
    *You should see:* The meeting in both organizations' calendars.
 2. Put this agenda in the invitation:
    - The requests raised in ClickUp, and how they went.

@@ -47,12 +47,15 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 1. In a terminal signed in to the chapter's DigitalOcean account (`doctl auth init` with the chapter's DigitalOcean token), list the servers and note the CRM server's ID:
    - doctl compute droplet list --format ID,Name,Features
+
    *You should see:* The CRM server's row. Its Features column does not yet include backups.
 2. Switch on daily backups, putting the CRM server's ID in place of SERVER-ID:
    - doctl compute droplet-action enable-backups SERVER-ID --backup-policy-plan daily --backup-policy-hour 4 --wait
+
    *You should see:* The action reported as completed.
 3. Read the policy back:
    - doctl compute droplet backup-policies get SERVER-ID
+
    *You should see:* Enabled true, Plan daily, Hour 4, Retention Period Days 7. Cleveland's production CRM reads exactly this.
 4. Write on the chapter's entry in the list of watched systems (step 12.5):
    - Schedule: daily
@@ -85,11 +88,13 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 1. In the chapter's DigitalOcean account, list the databases and note the application database's ID:
    - doctl databases list --format ID,Name,Engine,Size
+
    *You should see:* A row for the application's database. If there is no row at all, the database is a development database, which this command does not list and which takes no backups.
 2. If there is no row, convert the database: in the DigitalOcean web console, open the application, then Settings, then the database component, and choose to convert it to a managed database at the smallest size. This label was the one Cleveland used on 07-23-26 and has not been checked since.
    *You should see:* The application keeps running, and the database now appears in the list above.
 3. List the database's backups, putting the database's ID in place of DATABASE-ID:
    - doctl databases backups DATABASE-ID
+
    *You should see:* A backup dated within the last day. Backups are daily and kept seven days.
 4. Write on the chapter's entry in the list of watched systems:
    - Schedule: daily
@@ -124,32 +129,38 @@ This stage makes sure the chapter's records can be got back after a mistake or a
    - doctl databases list --format ID,Name
 2. Restore it into a new database, putting that ID in place of DATABASE-ID. The output is thrown away on purpose, because it includes the new database's password:
    - doctl databases fork restore-test-SHORT-LABEL --restore-from-cluster-id DATABASE-ID --wait > /dev/null
+
    *You should see:* The prompt returns after five to fifteen minutes, with nothing printed.
 3. Find the new database's ID:
    - doctl databases list --format ID,Name,Status
+
    *You should see:* A row named restore-test-SHORT-LABEL with status online. Note its ID as RESTORED-ID.
 4. Let your own computer through the new database's firewall, which copies the live one and admits only the application. Putting your computer's public address in place of YOUR-IP (find it with `curl -s https://api.ipify.org`):
    - doctl databases firewalls append RESTORED-ID --rule ip_addr:YOUR-IP
 5. Count the submissions in the copy, without ever printing its address. This needs `psql` installed. The application's database is named after the chapter's short label, so put it in place of DATABASE-NAME (list it with `doctl databases db list RESTORED-ID`):
    - psql "$(doctl databases connection RESTORED-ID --no-header --format URI | sed 's#/defaultdb?#/DATABASE-NAME?#')" -c 'select count(*), max(received_at) from submission'
+
    *You should see:* A count of submissions and the date of the newest one, which should be recent. On Cleveland's test on 09-18-26 the newest was eight hours after the last daily backup, because a restore with no date rebuilds to the latest moment.
 6. Delete the copy the same hour. It holds the chapter's real personal details:
    - doctl databases delete RESTORED-ID --force
+
    *You should see:* The copy gone from `doctl databases list`.
 7. Now the CRM server. List its backups, putting the CRM server's ID in place of SERVER-ID:
    - doctl compute droplet backups SERVER-ID
+
    *You should see:* One backup image per day. Note the newest image's ID as BACKUP-IMAGE-ID.
 8. Create a new server from that backup, in the same region and size as the CRM server (read both from `doctl compute droplet get SERVER-ID --format Region,SizeSlug`):
    - doctl compute droplet create restore-test-SHORT-LABEL --image BACKUP-IMAGE-ID --region REGION --size SIZE --wait
+
    *You should see:* A new server with its own public address, NEW-SERVER-IP.
 9. Open https://NEW-SERVER-IP in a browser. The certificate warning is expected, because the certificate is for the CRM's real address. Sign in as the central support organization's administrator and open one record changed recently.
    *You should see:* The record, as it was at the time of the backup.
 10. Delete the new server:
-   - doctl compute droplet delete restore-test-SHORT-LABEL --force
+    - doctl compute droplet delete restore-test-SHORT-LABEL --force
 11. Write down on the chapter's entry in the list of watched systems:
-   - The date.
-   - What was checked in each copy.
-   - How long each restore took, timed from the command to the copy being usable.
+    - The date.
+    - What was checked in each copy.
+    - How long each restore took, timed from the command to the copy being usable.
 
 **Done when:** A restore has actually been performed and the result checked. An untested backup is not a backup.
 
@@ -179,12 +190,15 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 1. The alert address must belong to a member of the chapter's DigitalOcean team; DigitalOcean refuses any other. Check it is listed under the chapter's team members in the DigitalOcean web console.
 2. Create the uptime check on the application's health page, putting the application's address in place of APP-ADDRESS:
    - doctl monitoring uptime create SHORT-LABEL-app-up --target https://APP-ADDRESS/healthz --type https --regions us_east
+
    *You should see:* A new uptime check with its ID. Note it as APP-CHECK-ID.
 3. Add its alert, putting the alert address in place of ALERT-ADDRESS:
    - doctl monitoring uptime alert create APP-CHECK-ID --name SHORT-LABEL-app-down --type down --threshold 1 --comparison less_than --period 2m --emails ALERT-ADDRESS
+
    *You should see:* The alert with type down and period 2m. These are exactly the settings on Cleveland's production application.
 4. Create the uptime check on the CRM's own address, putting it in place of CRM-ADDRESS:
    - doctl monitoring uptime create SHORT-LABEL-crm-up --target https://CRM-ADDRESS/ --type https --regions us_east
+
    *You should see:* A second uptime check with its ID. Note it as CRM-CHECK-ID.
 5. Add its alert:
    - doctl monitoring uptime alert create CRM-CHECK-ID --name SHORT-LABEL-crm-down --type down --threshold 1 --comparison less_than --period 2m --emails ALERT-ADDRESS
@@ -192,11 +206,13 @@ This stage makes sure the chapter's records can be got back after a mistake or a
    - doctl monitoring alert create --type v1/dbaas/alerts/cpu_alerts --compare GreaterThan --value 90 --window 5m --entities DATABASE-ID --emails ALERT-ADDRESS --description 'CPU is running high'
    - doctl monitoring alert create --type v1/dbaas/alerts/memory_utilization_alerts --compare GreaterThan --value 90 --window 5m --entities DATABASE-ID --emails ALERT-ADDRESS --description 'Memory Utilization is running high'
    - doctl monitoring alert create --type v1/dbaas/alerts/disk_utilization_alerts --compare GreaterThan --value 90 --window 5m --entities DATABASE-ID --emails ALERT-ADDRESS --description 'Disk Utilization is running high'
+
    *You should see:* Three alert policies. They match Cleveland's database alerts.
 7. Send a test alert from the application itself. Open a console on the background worker, putting the application's ID in place of APP-ID:
    - doctl apps console APP-ID delivery-worker
 8. In that console, run:
    - PYTHONPATH=/app .venv/bin/python -c "import asyncio; from core.config import get_settings; from core.monitoring import send_alert; asyncio.run(send_alert(get_settings(), 'Test alert: checking the alert path'))"
+
    *You should see:* The line "alert sent (email to ...)" in the output, and the message arrives at the alert address. The line "ALERT (no delivery channel configured/working)" means the alert went only to the log.
 9. Write down the names of the people who read the alert address.
 
@@ -236,6 +252,7 @@ This stage makes sure the chapter's records can be got back after a mistake or a
    - Application database backups: the schedule from step 12.2
    - Alert readers: the names from step 12.4
    - Last restore test: the date from step 12.3
+
    *You should see:* Every line filled in. No password or key appears anywhere in the file.
 
 **Done when:** The central support organization's list of systems includes this chapter's CRM and application.

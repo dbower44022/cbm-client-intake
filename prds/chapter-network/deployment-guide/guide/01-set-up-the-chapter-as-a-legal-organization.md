@@ -49,10 +49,12 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 2. Search the state's register of business and nonprofit names. Each state runs its own search, usually through the Secretary of State. Search the web for the state's name followed by "Secretary of State business search". For Ohio the search is at https://businesssearch.ohiosos.gov/. Search for:
    - The full name.
    - The distinctive word or words in the name on their own, for example "Akron Mentors".
+
    *You should see:* No registered organization with the same or a confusingly similar name. Take a screenshot of the results.
 3. Open the United States Patent and Trademark Office's trademark search at https://tmsearch.uspto.gov/ and search for:
    - The full name.
    - The distinctive word or words on their own.
+
    *You should see:* No live trademark for the same or a similar name used for mentoring, business advice or education. Take a screenshot of the results.
 4. Open the domain registrar the chapter will use (Cleveland uses Porkbun, at https://porkbun.com) and search for each domain name the chapter would want. Step 3.2 explains whether a chapter needs one domain name or two.
    *You should see:* Each domain name shown as available to register.
@@ -132,6 +134,7 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
    - The chapter's legal name and address, exactly as in the stamped articles.
    - The name and Social Security number of the responsible party, who must be an officer of the chapter.
    - The date the articles were filed.
+
    *You should see:* The employer identification number, shown at the end of the session.
 3. Download the confirmation letter the site offers at the end of the session, before closing the page.
    *You should see:* A letter from the Internal Revenue Service, known as the CP 575, showing the number and the chapter's name.
@@ -213,6 +216,7 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
    - Search for "1023-EZ" or "1023", whichever applies.
    - Complete the form, attaching the stamped articles and the bylaws for Form 1023.
    - Pay the user fee Pay.gov shows. It is paid when the form is filed.
+
    *You should see:* A Pay.gov confirmation with a tracking number. Save it.
 4. File within 27 months of the date the articles were filed. Recognition then counts from the date of incorporation. The chapter's own adviser confirms this.
 5. Wait for the determination letter.

@@ -58,6 +58,7 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
    - Where it is: the system's name, or the file's location.
    - What it holds: clients, companies, mentors, partners, funders or meetings.
    - Roughly how many records.
+
    *You should see:* A written list of sources, or a written note that there are none.
 
 **Done when:** Either the sources are listed, or a note records that the chapter starts with nothing. A chapter starting with nothing skips the load (steps 15.2 to 15.7) but not the mentor steps after it (steps 15.8 to 15.10).
@@ -235,6 +236,7 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 4. In that console, report what is missing, then repair it:
    - PYTHONPATH=/app .venv/bin/python scripts/audit_assignment_stamps.py
    - PYTHONPATH=/app .venv/bin/python scripts/audit_assignment_stamps.py --heal
+
    *You should see:* The second run reports the missing users merged. A third run without --heal reports nothing missing. The nightly repair check does the same work if this is skipped.
 
 **Done when:** The records are in the live CRM and the counts match what was exported, with any difference explained.
@@ -270,6 +272,7 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 3. Write down, for each record checked:
    - Its name.
    - Right, or what was corrected.
+
    *You should see:* A written list, each record marked right or corrected.
 
 **Done when:** Somebody who knows the old records has opened a sample in the CRM and confirmed they are right.
@@ -329,6 +332,7 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 1. Never create a mentor's account by hand in the CRM.
 2. Open https://APP-ADDRESS/mentoradmin/, open the mentor, and on the Status tab set Status to Active. Save.
    *You should see:*
+
    - A status window listing each step as it runs
    - The mentor's mailbox created, if Google is switched on
    - The mentor's CRM account created on the Mentor Team

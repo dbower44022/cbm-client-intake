@@ -51,6 +51,7 @@ Every address the chapter uses hangs off its domain names: its email, its websit
    - The address.
    - The setup contact's name.
    - The words "Replace in step 4.14".
+
    *You should see:* The item in the Operations vault.
 
 **Done when:** One named person's existing working email address is recorded as the address that will create the first accounts, and it is understood that this is temporary.
@@ -251,6 +252,7 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 
 1. Find out where each domain name's DNS is hosted today. From a terminal, type the line below, putting the domain name in place of DOMAIN:
    - dig +short NS DOMAIN
+
    *You should see:* Two or more name servers. Names ending in ns.cloudflare.com mean the DNS is already at Cloudflare. Any other names, such as nsc1.squarespacedns.com, mean another DNS provider hosts it.
 2. Decide with the central support organization whether the DNS moves to Cloudflare or stays where it is. A chapter whose email and website already run on its domain may keep its DNS provider; this is called manual DNS (ruled 09-23-26). Moving costs two to three hours and touches the chapter's live email and website. Keeping it means every DNS record in this guide is added by hand at the chapter's DNS provider.
    *You should see:* One answer, agreed by both: Cloudflare, or manual DNS at the named provider.
@@ -272,10 +274,11 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 11. In the registrar account, open the domain's name server settings (at Porkbun, the domain's name server details; the exact label has not been checked). Delete the registrar's name servers and enter Cloudflare's two, exactly as Cloudflare shows them.
 12. In Cloudflare, open your profile's authentication settings and turn on two-step sign-in with an authenticator code, stored in the "Cloudflare" item in the vault. Save Cloudflare's backup codes into the same item.
 13. In Cloudflare, open the account's members page and invite each of the central support organization's named people by email, with the Administrator role. The exact page and role names have not been checked.
-   *You should see:* Each invited person listed as a member once they accept.
+    *You should see:* Each invited person listed as a member once they accept.
 14. Wait for Cloudflare to report each domain name as active. It can take up to a day. From a terminal, this command shows the name servers the world sees; put the domain name in place of DOMAIN:
-   - dig +short NS DOMAIN
-   *You should see:* Cloudflare's two name servers from the command, and each domain name shown as active in Cloudflare.
+    - dig +short NS DOMAIN
+
+    *You should see:* Cloudflare's two name servers from the command, and each domain name shown as active in Cloudflare.
 
 **Done when all of these are true:**
 

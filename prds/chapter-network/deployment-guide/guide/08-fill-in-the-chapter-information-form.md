@@ -49,6 +49,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 1. The central support organization: in a Claude Code session in the folder ~/Dropbox/Projects/cbm-client-intake, type this request, with the chapter's name in place of CHAPTER-NAME:
    - Build and publish the chapter information page for CHAPTER-NAME with scripts/chapter_form/build_page.py.
+
    *You should see:* A link to a page titled with the chapter's short name followed by Chapter Information.
 2. Open the link. In the page's Share menu, change the access so anyone with the link can open the page. A published page starts private, and a visitor who is not signed in to claude.ai is shown a sign-in page until this is changed.
    *You should see:* The Share menu showing the page open to anyone with the link.
@@ -153,6 +154,7 @@ The chapter information form holds the roughly forty answers that differ from on
    *You should see:* Every question in the section marked as saved, or marked not known yet.
 2. The central support organization: in a terminal, run the line below once for each address in the section except the applications' address, with the address in place of ADDRESS:
    - curl -sI ADDRESS
+
    *You should see:* A first line of HTTP/2 200 for every one.
 
 **The questions in this step:**
@@ -533,6 +535,7 @@ The chapter information form holds the roughly forty answers that differ from on
    - SESSION_SECRET — created in step 11.1.
    - APP_ENCRYPTION_KEY — the encryption key for stored data. Created in step 11.2, and never changed afterwards.
    - GOOGLE_SERVICE_ACCOUNT_JSON — the Google key. Created in step 10.2.
+
    *You should see:* The section The secrets on the page, listing these names:
 2. Never type a secret's value into the page. The page is not a secrets store.
 
@@ -611,6 +614,7 @@ The chapter information form holds the roughly forty answers that differ from on
    *You should see:* The line at the top of the page reading that every question is answered, apart from the shared drive identifier.
 3. The central support organization: run the curl check from step 8.3 on every address again:
    - curl -sI ADDRESS
+
    *You should see:* A first line of HTTP/2 200 for every address except the applications' address and the CRM address, which do not exist yet.
 4. At the bottom of the setup contact's page, in the section Sign-off, sign off both people: each name typed and Sign off clicked. Both go on the setup contact's page, because the answers are kept in that browser only. On a call, the setup contact types the central support person's name as they say it.
    *You should see:* Both names listed with the date, on the setup contact's page.
@@ -644,9 +648,11 @@ The chapter information form holds the roughly forty answers that differ from on
    - cd ~/Dropbox/Projects/cbm-client-intake
 4. Check the answers without writing anything. Type the line below and press Enter:
    - uv run python scripts/chapter_form/to_values.py ~/Downloads/SHORT-LABEL-answers.txt --check
+
    *You should see:* A report that the check passed. If it names a question, that answer is wrong or missing: ask the setup contact to correct it on the page and send a new email, then start this step again.
 5. Write the values file. Type the line below and press Enter:
    - uv run python scripts/chapter_form/to_values.py ~/Downloads/SHORT-LABEL-answers.txt
+
    *You should see:* A message naming the file written, prds/chapter-network/chapters/SHORT-LABEL-values.yaml.
 6. Open the file and check it holds no secret value. Every line under secrets must be a name only.
 7. Commit it with the message "docs(chapter-network): SHORT-LABEL chapter information form", and push it.

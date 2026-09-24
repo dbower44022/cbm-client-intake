@@ -149,6 +149,7 @@ Staff learn the system on invented records before they touch real ones. Training
 7. The person handling submissions, signed in as the training user Mark Marketing:
    - Open Submission Admin (the address ending /ops/).
    - Have the trainee open one submission and read its two status columns.
+
    *You should see:* Submissions in the queue. The queue is empty unless the central support organization filled it before the session; ask for that at least a day ahead.
 8. Analytics: skip it. None of the six training users is in the Analytics Admin Team, so none can open the Analytics page.
 
@@ -241,6 +242,7 @@ Staff learn the system on invented records before they touch real ones. Training
 1. When training ends, add two things to the chapter's entry in the list of watched systems (step 12.5):
    - The date training ended
    - That the chapter's staff hold the six training users' passwords
+
    *You should see:* Both lines in the chapter's entry.
 
 **Done when:** The date training ended, and that the chapter holds the training passwords, are written in the chapter's entry.
