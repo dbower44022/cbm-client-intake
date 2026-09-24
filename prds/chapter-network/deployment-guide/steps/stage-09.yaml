@@ -1,7 +1,7 @@
 stage: 9
 name: Build the CRM system
-version: "0.12"
-updated: "09-23-26 22:55"
+version: "0.13"
+updated: "09-24-26 00:50"
 why: >-
   The CRM is the chapter's system of record. Every client, mentor, partner,
   funder and meeting lives in it, and every application reads and writes it.
@@ -301,7 +301,7 @@ steps:
       - do: "Find the same two folders on the new server. Type the line below and press Enter:"
         items:
           - "ssh -i ~/.ssh/crm-SHORT-LABEL root@SERVER-IP \"find / -type d \\( -path '*Espo/Custom' -o -path '*custom/src' \\) -path '*espocrm*' 2>/dev/null\""
-        see: "Two folder paths. Later actions call the Espo/Custom one TARGET-CONFIG and the custom/src one TARGET-SCREEN-CODE. If only one appears, stop the build."
+        see: "One folder path, ending persistent/custom/Espo/Custom. Later actions call it TARGET-CONFIG. A new server has no screen code folder yet: it goes beside that one, at the same path with custom/Espo/Custom replaced by custom-client/src. Later actions call that TARGET-SCREEN-CODE. For Boston: /var/www/espocrm/data/espocrm/persistent/custom-client/src."
       - do: "Copy both folders from the test system to the build computer. Type each line below and press Enter:"
         items:
           - "mkdir -p ~/cbm-standard/config ~/cbm-standard/screen-code"
@@ -310,6 +310,7 @@ steps:
         see: Each line returning to the prompt with no error.
       - do: "Copy both folders from the build computer to the new server. Type each line below and press Enter:"
         items:
+          - "ssh -i ~/.ssh/crm-SHORT-LABEL root@SERVER-IP \"mkdir -p TARGET-SCREEN-CODE\""
           - "rsync -a -e 'ssh -i ~/.ssh/crm-SHORT-LABEL' ~/cbm-standard/config/ root@SERVER-IP:TARGET-CONFIG/"
           - "rsync -a -e 'ssh -i ~/.ssh/crm-SHORT-LABEL' ~/cbm-standard/screen-code/ root@SERVER-IP:TARGET-SCREEN-CODE/"
         see: Each line returning to the prompt with no error.
@@ -488,6 +489,13 @@ steps:
     source: 3-Methods-CRM-Google-Applications.md#9.20
 
 changes:
+  - version: "0.13"
+    date: "09-24-26 00:50"
+    change: >-
+      Step 9.6 corrected from Boston's build: a new server has no screen code folder,
+      so the search finds one folder, not two, and the old instruction to stop was
+      wrong. The step names the folder to create (persistent/custom-client/src) and
+      creates it before copying.
   - version: "0.12"
     date: "09-23-26 22:55"
     change: >-

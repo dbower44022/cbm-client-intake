@@ -1,7 +1,7 @@
 # Stage 9 — Build the CRM system
 
-**Version:** 0.12  
-**Last Updated:** 09-23-26 22:55  
+**Version:** 0.13  
+**Last Updated:** 09-24-26 00:50  
 **Generated from** `steps/stage-09.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -337,7 +337,7 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 2. Find the same two folders on the new server. Type the line below and press Enter:
    - ssh -i ~/.ssh/crm-SHORT-LABEL root@SERVER-IP "find / -type d \( -path '*Espo/Custom' -o -path '*custom/src' \) -path '*espocrm*' 2>/dev/null"
 
-   *You should see:* Two folder paths. Later actions call the Espo/Custom one TARGET-CONFIG and the custom/src one TARGET-SCREEN-CODE. If only one appears, stop the build.
+   *You should see:* One folder path, ending persistent/custom/Espo/Custom. Later actions call it TARGET-CONFIG. A new server has no screen code folder yet: it goes beside that one, at the same path with custom/Espo/Custom replaced by custom-client/src. Later actions call that TARGET-SCREEN-CODE. For Boston: /var/www/espocrm/data/espocrm/persistent/custom-client/src.
 3. Copy both folders from the test system to the build computer. Type each line below and press Enter:
    - mkdir -p ~/cbm-standard/config ~/cbm-standard/screen-code
    - rsync -a root@104.131.45.208:SOURCE-CONFIG/ ~/cbm-standard/config/
@@ -345,6 +345,7 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 
    *You should see:* Each line returning to the prompt with no error.
 4. Copy both folders from the build computer to the new server. Type each line below and press Enter:
+   - ssh -i ~/.ssh/crm-SHORT-LABEL root@SERVER-IP "mkdir -p TARGET-SCREEN-CODE"
    - rsync -a -e 'ssh -i ~/.ssh/crm-SHORT-LABEL' ~/cbm-standard/config/ root@SERVER-IP:TARGET-CONFIG/
    - rsync -a -e 'ssh -i ~/.ssh/crm-SHORT-LABEL' ~/cbm-standard/screen-code/ root@SERVER-IP:TARGET-SCREEN-CODE/
 
@@ -529,6 +530,7 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 
 | Version | Date | Change |
 |---|---|---|
+| 0.13 | 09-24-26 00:50 | Step 9.6 corrected from Boston's build: a new server has no screen code folder, so the search finds one folder, not two, and the old instruction to stop was wrong. The step names the folder to create (persistent/custom-client/src) and creates it before copying. |
 | 0.12 | 09-23-26 22:55 | Two known defects written into the steps (open work G1 items 2 and 3). Step 9.7 sets the logo, the site address and the documentation tab by hand, because the script sets none of them and removes Cleveland's documentation tab; its finishing test gains that condition. Step 9.8 says the script may report nothing to do, because the copied files can already carry the record. |
 | 0.11 | 09-23-26 20:40 | Rewritten and renumbered from twenty steps to nine (Doug, 09-23-26: the stage was terribly hard to understand and use). The old step list hid the work: step 9.10 ran one script that did seven steps, and six steps said only "nothing extra to run". Old to new: 9.1 → 9.1; 9.2 → 9.2 (the key, the password and the settings file) and 9.3 (the wizard); 9.3, 9.4, 9.5 and 9.6 → 9.4; 9.7 → 9.5; 9.8 and 9.9 → 9.6; 9.10 to 9.15, 9.17 and 9.18 → 9.7; 9.19 → 9.8; 9.20 → 9.9. Step 9.16, which could not be done, moved to a list of what is still owed at the top of the stage, with the missing event templates and the unruled server size. The wizard's Cloudflare and manual DNS screens are written as separate actions. The settings file is made before the wizard, so the password rule is stated once. Scripts read the settings file through uv's --env-file rather than a shell pipeline. The manual DNS record's host is now only the first part of the CRM's address, from Boston's first run at Squarespace (a fix from the CRMBuilder session, 09-23-26). Each failure case has its own line. The August build's history moved out of the actions; it stays in 3-Methods-CRM-Google-Applications.md, which keeps the old numbers. |
 | 0.10 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. |
