@@ -1,7 +1,7 @@
 stage: 5
 name: Open the hosting and video meeting accounts
-version: "0.9"
-updated: "09-23-26 20:40"
+version: "0.10"
+updated: "09-24-26 23:08"
 why: >-
   The chapter's CRM server, its applications and their database all run in a
   hosting account, and the public webinar programme runs through a video meeting
@@ -269,7 +269,8 @@ steps:
     produces: [digitalocean_token, cloudflare_token]
     mode: guided
     actions:
-      - do: "In the chapter's DigitalOcean account, open API, then Tokens, and choose to generate a new token. The exact wording of DigitalOcean's screens has not been checked for this guide."
+      - do: "Sign in to DigitalOcean under your own named sign-in from step 5.4, and choose the chapter's team in the team switcher. Then open API, then Tokens, and choose to generate a new token. The exact wording of DigitalOcean's screens has not been checked for this guide. The token must be made under this sign-in, not the chapter's own: DigitalOcean ties its GitHub authorization to a sign-in, not to a team, and step 11.5 builds the applications from GitHub with this token."
+        see: "The chapter's team named as the current team, and the Tokens page."
       - do: "Enter:"
         items:
           - "Token name: crmbuilder-SHORT-LABEL, using the chapter's short label from step 8.2"
@@ -323,7 +324,10 @@ steps:
       A Cloudflare token with more permission than it needs, or one covering every
       zone in the account. Also, leaving the engagement on CRMBuilder's own tokens
       by mistake. The server then appears in the wrong hosting account, and nothing
-      says so until someone looks.
+      says so until someone looks. And a DigitalOcean token made under the
+      chapter's own sign-in: it builds the CRM server, but step 11.5 fails with
+      GitHub user not authenticated, because the GitHub link from step 5.9 belongs
+      to the central support person's sign-in (Boston, 09-24-26).
     later: unchanged
     status: not-yet-tried
     source: 9-Methods-Hosting-Website-Policies.md#5.8
@@ -380,6 +384,15 @@ steps:
     source: TASKS.md § work owed, item 12
 
 changes:
+  - version: "0.10"
+    date: "09-24-26 23:08"
+    change: >-
+      From Boston's build (09-24-26): the DigitalOcean token in step 5.8 must be
+      made under the central support person's own sign-in with the chapter's team
+      chosen, because DigitalOcean ties its GitHub authorization to a sign-in and
+      step 11.5 fails with GitHub user not authenticated on a token made under the
+      chapter's own sign-in. Boston's first token was made that way and had to be
+      replaced.
   - version: "0.9"
     date: "09-23-26 20:40"
     change: >-

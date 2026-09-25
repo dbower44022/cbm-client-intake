@@ -1,7 +1,7 @@
 stage: 11
 name: Deploy the chapter's applications
-version: "0.10"
-updated: "09-24-26 00:39"
+version: "0.11"
+updated: "09-24-26 23:08"
 why: >-
   The applications are what the chapter's staff, mentors and the public actually
   use: the intake forms, the staff tools and the public events page. This stage
@@ -162,7 +162,7 @@ steps:
       platform adds an instruction to the connection details that the application's
       database library rejects; the software strips it, so it only looks broken.
     later: The settings generator asks for a managed database from the start.
-    status: done-for-real — as a development database. A managed database is not yet tried on a chapter.
+    status: "done-for-real — converted to a managed database on Boston (09-24-26): the smallest plan, one node, and the application redeployed by itself."
     source: 3-Methods-CRM-Google-Applications.md#11.4
 
   - id: "11.5"
@@ -174,31 +174,35 @@ steps:
     produces: [app_id]
     mode: automated
     actions:
-      - do: "If this computer has never been signed in to the chapter's hosting account, type the line below and press Enter, then paste the chapter's DigitalOcean token from the Operations vault when asked:"
+      - do: "If this computer has never been signed in to the chapter's hosting account, type the line below and press Enter, then paste the DigitalOcean token from the Operations vault when asked. It must be the token made under your own sign-in in step 5.8, not one made under the chapter's sign-in:"
         items:
           - "doctl auth init --context SHORT-LABEL"
         see: A message that the token was validated.
-      - do: "Type the line below and press Enter, so every following doctl command acts on the chapter's account and not Cleveland's:"
+      - do: "Check whose token it is. Type the line below and press Enter:"
         items:
-          - "doctl auth switch --context SHORT-LABEL"
+          - "doctl --context SHORT-LABEL account get --format Email"
+        see: "Your own DigitalOcean sign-in address, the one that linked GitHub in step 5.9. The chapter's own address here means the create below fails: make a token under your own sign-in (step 5.8) and run doctl auth init again with a new context name."
+      - do: "Every doctl command in this stage names the chapter's context with --context SHORT-LABEL, and every script that calls doctl runs with DIGITALOCEAN_CONTEXT=SHORT-LABEL in front. Do not use doctl auth switch: it changes this computer's default for every later command, including Cleveland's."
       - do: "Type the line below and press Enter:"
         items:
-          - "doctl apps create --spec ~/.config/cbm-SHORT-LABEL/SHORT-LABEL-app.yaml"
+          - "doctl --context SHORT-LABEL apps create --spec ~/.config/cbm-SHORT-LABEL/SHORT-LABEL-app.yaml"
         see: A table with the new application's ID and the name SHORT-LABEL-intake. Copy the ID into the Operations vault as a note named Application ID; later steps call it APP-ID.
       - do: "Type the line below and press Enter:"
         items:
-          - "doctl apps get APP-ID"
+          - "doctl --context SHORT-LABEL apps get APP-ID"
         see: The application listed. In the hosting account's web page, its Components show web, delivery-worker and migrate.
     done_when: >-
       The web part, the background worker part and the setup job all exist.
     check:
       how: All three parts appear in the hosting account.
       probe: The app reads the application's parts through the chapter's token.
+    if_not:
+      - "GitHub user not authenticated: the token belongs to a different sign-in from the one that linked GitHub in step 5.9. DigitalOcean ties the GitHub link to a sign-in, not to the team. Make a token under that sign-in (step 5.8), run doctl auth init with a new context name, and create again (Boston, 09-24-26)."
     goes_wrong: >-
       Creating only the web part. Without the background worker the system looks
       fine and quietly does nothing.
     later: unchanged for now
-    status: done-for-real — active on the first attempt, in seven minutes.
+    status: done-for-real — active on the first attempt, in seven minutes, on Lakeside and again on Boston (09-24-26).
     source: 3-Methods-CRM-Google-Applications.md#11.5
 
   - id: "11.6"
@@ -213,7 +217,7 @@ steps:
       - do: Nothing to run. The migrate job runs by itself before the application starts.
       - do: "Type the line below and press Enter:"
         items:
-          - "doctl apps list-deployments APP-ID"
+          - "doctl --context SHORT-LABEL apps list-deployments APP-ID"
         see: The first deployment in the list with its phase ACTIVE. A phase of ERROR means the migrate job or the build failed; open the deployment in the hosting account's web page and read its log.
     done_when: >-
       The setup job has completed and the database holds the expected tables.
@@ -234,7 +238,7 @@ steps:
     produces: []
     mode: automated
     actions:
-      - do: "Open https://APP-ADDRESS/healthz in a browser. Until step 11.10, use the address DigitalOcean gave the application, shown by doctl apps get APP-ID under Default Ingress."
+      - do: "Open https://APP-ADDRESS/healthz in a browser. Until step 11.10, use the address DigitalOcean gave the application, shown by doctl --context SHORT-LABEL apps get APP-ID under Default Ingress."
         see:
           - "status: ok"
           - "version: the current release's number, the one the release branch holds today"
@@ -261,17 +265,17 @@ steps:
     produces: []
     mode: automated
     actions:
-      - do: "POLICY is the chapter's answer to Take each release automatically? in step 8.6: latest-stable for yes, on-demand for no. In the folder ~/Dropbox/Projects/cbm-client-intake, with doctl switched to the chapter's account (step 11.5), type the line below and press Enter. It changes nothing:"
+      - do: "POLICY is the chapter's answer to Take each release automatically? in step 8.6: latest-stable for yes, on-demand for no. In the folder ~/Dropbox/Projects/cbm-client-intake, type the line below and press Enter. The first word points the script at the chapter's account. It changes nothing:"
         items:
-          - "uv run python scripts/set_updates_policy.py APP-ID POLICY"
+          - "DIGITALOCEAN_CONTEXT=SHORT-LABEL uv run python scripts/set_updates_policy.py APP-ID POLICY"
         see: The change it would make to each of the three parts.
       - do: "Type the line below and press Enter. The deploy option starts a fresh deployment; without it the application rebuilds the same commit it already runs:"
         items:
-          - "uv run python scripts/set_updates_policy.py APP-ID POLICY --apply --deploy"
+          - "DIGITALOCEAN_CONTEXT=SHORT-LABEL uv run python scripts/set_updates_policy.py APP-ID POLICY --apply --deploy"
         see: The spec updated and a new deployment started.
       - do: "Type the line below and press Enter:"
         items:
-          - "uv run python scripts/set_updates_policy.py APP-ID POLICY --status"
+          - "DIGITALOCEAN_CONTEXT=SHORT-LABEL uv run python scripts/set_updates_policy.py APP-ID POLICY --status"
         see: "One line per part, each showing branch=release, with deploy_on_push=True for latest-stable or deploy_on_push=False for on-demand, and a final line reading conformant with the policy named."
     done_when: >-
       All three parts of the application follow the release branch and the policy
@@ -299,7 +303,7 @@ steps:
     actions:
       - do: "Type the line below and press Enter:"
         items:
-          - "uv run python scripts/set_updates_policy.py APP-ID POLICY --status"
+          - "DIGITALOCEAN_CONTEXT=SHORT-LABEL uv run python scripts/set_updates_policy.py APP-ID POLICY --status"
         see: "Every part showing branch=release, none showing branch=main, and the line conformant with the policy named."
     done_when:
       - "No part of the deployment follows the main development branch."
@@ -323,7 +327,7 @@ steps:
     actions:
       - do: "Type the line below and press Enter, and copy the address shown under Default Ingress (it ends .ondigitalocean.app):"
         items:
-          - "doctl apps get APP-ID"
+          - "doctl --context SHORT-LABEL apps get APP-ID"
       - do: "In the chapter's Cloudflare account, open the domain, then DNS, then Records, and choose Add record. Enter exactly:"
         items:
           - "Type: CNAME"
@@ -332,9 +336,9 @@ steps:
           - "Proxy status: DNS only (grey cloud)"
           - "TTL: Auto"
         see: The record listed with a grey cloud.
-      - do: "With manual DNS (step 3.7), add the same CNAME record in the chapter's DNS provider account instead, with any proxy or forwarding off. Its screens differ by provider and are not given here; the Name and Target are the same."
+      - do: "With manual DNS (step 3.7), add the same CNAME record in the chapter's DNS provider account instead, with any proxy or forwarding off. Its screens differ by provider and are not given here; the Name and Target are the same. As in step 9.3, type only the first part of the address as the record's host, for apps.bbmentors.org just apps: Squarespace and most providers add the domain themselves."
       - do: "In the hosting account, open Apps, then SHORT-LABEL-intake, then Settings, then Domains, and add APP-ADDRESS. Choose to manage DNS yourself and make it the primary domain. Labels are not checked on screen for this guide."
-        see: The domain listed, moving to Active once the certificate is issued.
+        see: "The domain listed, moving to Active once the certificate is issued. On Boston (09-24-26) the certificate was issued within the hour of the record appearing; the line doctl --context SHORT-LABEL apps get APP-ID -o json shows the domain's phase PENDING until then, and ACTIVE after."
     done_when: >-
       The domain name record for the application address resolves to it.
     check:
@@ -346,7 +350,7 @@ steps:
       resolvers keep an earlier "no such address" answer for a while; wait rather
       than changing the record.
     later: unchanged
-    status: not-yet-tried — the August build used the platform's own address. Cleveland's apps. address is set up exactly this way.
+    status: done-for-real — Boston (09-24-26), with manual DNS at Squarespace.
     source: 3-Methods-CRM-Google-Applications.md#11.10
 
   - id: "11.11"
@@ -369,7 +373,7 @@ steps:
       probe: The app reads the certificate's expiry date and warns under thirty days.
     goes_wrong: nothing known yet
     later: unchanged
-    status: not-yet-tried
+    status: "done-for-real — Boston (09-24-26): the sign-in page and the health report answer at the chapter's address with the platform's certificate."
     source: 3-Methods-CRM-Google-Applications.md#11.11
 
   - id: "11.12"
@@ -600,6 +604,17 @@ steps:
     source: 3-Methods-CRM-Google-Applications.md#11.18
 
 changes:
+  - version: "0.11"
+    date: "09-24-26 23:08"
+    change: >-
+      Corrections from Boston's build on 09-24-26. Step 11.5 checks whose token the
+      context holds before creating, because DigitalOcean ties its GitHub link to a
+      sign-in and a token made under the chapter's own sign-in fails with GitHub
+      user not authenticated. Every doctl command names the chapter's context and
+      every script runs with DIGITALOCEAN_CONTEXT, in place of doctl auth switch,
+      which changed this computer's default for Cleveland's commands too. Step
+      11.10 repeats the host-name trap for manual DNS and records the timing.
+      Statuses updated: 11.4 managed, 11.10 and 11.11 done for real.
   - version: "0.10"
     date: "09-24-26 00:39"
     change: >-

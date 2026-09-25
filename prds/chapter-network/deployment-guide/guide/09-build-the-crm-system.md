@@ -1,7 +1,7 @@
 # Stage 9 — Build the CRM system
 
-**Version:** 0.13  
-**Last Updated:** 09-24-26 00:50  
+**Version:** 0.14  
+**Last Updated:** 09-24-26 23:08  
 **Generated from** `steps/stage-09.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -216,6 +216,8 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 - The run names the stage that failed and keeps what it built. Do not delete anything. The server is billed until the run finishes or the server is deleted.
 - Failed at Preparing server, and the log mentions Could not get lock: the new server was still setting itself up. Wait five minutes and click Retry. Retry starts again at the stage that failed.
 - Manual DNS, failed at Waiting for DNS: the record was not seen within 30 minutes. Compare the record at the DNS provider with the status line, character by character, then click Retry.
+- Manual DNS, a second run after a failed first run: the record still points at the first run's server, and the second run waits for its own address. Change the record's value to the new server's address from the status line. The server reports the address it sees every fifteen minutes in /var/log/crmbuilder-certificate-check.log (Boston, 09-24-26: ten hours were lost this way).
+- Deployment complete, but https://CRM-ADDRESS refuses to connect and http://CRM-ADDRESS shows a plain 404 page: the certificate was not installed. See step 9.4, If it didn't work.
 - Deployment complete with verification gaps: the CRM is installed but a check failed. Read the log, and do not go on until the failed check is understood.
 - Any other failure: click Retry once. If it fails again, stop the build and keep the log.
 
@@ -239,27 +241,31 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
    - ssh -i ~/.ssh/crm-SHORT-LABEL root@SERVER-IP
 
    *You should see:* A prompt ending root@ followed by the server's name. The first time, it asks whether to continue connecting: type yes and press Enter.
-2. List the programs running on the server. Type the line below and press Enter:
-   - docker ps --format '{{.Names}}'
+2. List the programs on the server, running or stopped. Type the line below and press Enter:
+   - docker ps -a --format '{{.Names}}	{{.Status}}'
 
    *You should see:*
 
-   - One name is espocrm, the CRM itself. Later steps call it CRM-CONTAINER. If it is named differently, use that name.
-   - One name includes letsencrypt or certbot. That is what renews the certificate.
-3. Close the command line. Type exit and press Enter.
-4. Check that the CRM's address leads to the server. Type the line below and press Enter:
+   - One name is espocrm, the CRM itself, shown as Up. Later steps call it CRM-CONTAINER. If it is named differently, use that name.
+   - One name is espocrm-certbot, shown as Exited (0). It runs once at each renewal and stops; that is normal. Nothing named espocrm-nginx-tmp is listed.
+3. Check the renewal schedule. Type the line below and press Enter:
+   - crontab -l
+
+   *You should see:* One line containing command.sh cert-renew, run at 01:00 each night. That is what renews the certificate.
+4. Close the command line. Type exit and press Enter.
+5. Check that the CRM's address leads to the server. Type the line below and press Enter:
    - dig +short CRM-ADDRESS
 
    *You should see:* SERVER-IP, and nothing else.
-5. Check the certificate's expiry date. Type the line below and press Enter:
+6. Check the certificate's expiry date. Type the line below and press Enter:
    - echo | openssl s_client -connect CRM-ADDRESS:443 -servername CRM-ADDRESS 2>/dev/null | openssl x509 -noout -enddate
 
    *You should see:* A line beginning notAfter= with a date about ninety days away.
-6. Open https://CRM-ADDRESS in a private browser window, and sign in as admin with the password from the vault.
+7. Open https://CRM-ADDRESS in a private browser window, and sign in as admin with the password from the vault.
    *You should see:* The CRM's home screen, with no certificate warning.
-7. Read the CRM's version. Open Administration. The version number is shown on that page. Add it to the CRM administrator item in the vault, as a note headed CRM version.
+8. Read the CRM's version. Open Administration. The version number is shown on that page. Add it to the CRM administrator item in the vault, as a note headed CRM version.
    *You should see:* A version number of 10 or higher.
-8. Store the server sign-in key. In the chapter's Operations vault, create an item named CRM server sign-in key, and attach the file ~/.ssh/crm-SHORT-LABEL to it. Share the vault with a second named person.
+9. Store the server sign-in key. In the chapter's Operations vault, create an item named CRM server sign-in key, and attach the file ~/.ssh/crm-SHORT-LABEL to it. Share the vault with a second named person.
    *You should see:* The item in the vault, and the second person able to open it.
 
 **Done when all of these are true:**
@@ -275,10 +281,16 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 
 - The ssh line asks for a password or says Permission denied: the key was not ticked in step 9.3. Stop the build.
 - dig shows an address other than SERVER-IP: the record is proxied. In Cloudflare, set the record to DNS only (a grey cloud). At another DNS provider, switch off proxy or forwarding.
-- No letsencrypt or certbot program is running: the certificate will not renew. Stop the build.
+- No line containing cert-renew in the schedule: the certificate will not renew. Stop the build.
+- https://CRM-ADDRESS refuses to connect, http://CRM-ADDRESS shows a plain 404 page, and the list shows espocrm-nginx-tmp as Up: CRMBuilder's certificate job ran the CRM installer from its schedule, and the installer cannot run there (it needs a terminal). It left its temporary web server holding port 80, so the CRM's own web server cannot start. Recover with the five actions below, all in one terminal on the server, opened with ssh -t -i ~/.ssh/crm-SHORT-LABEL root@SERVER-IP (Boston, 09-24-26).
+- Recovery 1 of 5: rm -f /etc/cron.d/crmbuilder-certificate-check — stops the job firing while you work.
+- Recovery 2 of 5: docker rm -f espocrm-nginx-tmp — prints espocrm-nginx-tmp.
+- Recovery 3 of 5: docker compose -f /var/www/espocrm/docker-compose.yml up -d --force-recreate espocrm-nginx — the line for espocrm-nginx ends Started, and http://CRM-ADDRESS then answers 200.
+- Recovery 4 of 5: cd /root && bash install.sh -y --ssl --letsencrypt --domain=CRM-ADDRESS --email=ALERT-ADDRESS — the same installer run, now from a terminal. It keeps the CRM's data and backs it up under /root/espocrm-backup first. Its last lines print the administrator password: never paste that output anywhere.
+- Recovery 5 of 5: rm -f /var/lib/crmbuilder/certificate-attempts && /usr/local/sbin/crmbuilder-certificate-check — prints a line ending in place. Then do this step again from the start.
 - A version below 10: something other than CRMBuilder installed the CRM. Stop the build.
 
-**What usually goes wrong:** A proxied record, shown as an orange cloud in Cloudflare. The certificate is issued by a direct check against the server, and the proxy blocks it. Also, the sign-in key left on one person's laptop only.
+**What usually goes wrong:** A proxied record, shown as an orange cloud in Cloudflare. The certificate is issued by a direct check against the server, and the proxy blocks it. Also, the sign-in key left on one person's laptop only. And CRMBuilder's certificate job itself: when the DNS record arrives after the run has finished, the job installs the certificate on its schedule, and that never works with the current CRM installer (open work G1 item 21). Boston's CRM was off the air for an hour until it was recovered by hand.
 
 ---
 
@@ -313,7 +325,7 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 
 **If it didn't work:** If the CRM refuses a file, check that its version supports the CRM version recorded in step 9.4.
 
-**What usually goes wrong:** Installing them after step 9.7 instead of before. The CRM then refuses every role that names one of their features, and the run finishes half done.
+**What usually goes wrong:** Installing them after step 9.7 instead of before. The script then leaves out every permission that names one of their features, and reports each one as unapplyable. It is recoverable: the script updates a role that already exists, so one re-run of step 9.7 after the products are installed fills in the missing permissions (verified on Boston, 09-24-26, where 9.7 ran first and 73 permissions wait on the products). The order here is still 9.5 first, so the roles are complete from the start.
 
 ---
 
@@ -411,11 +423,11 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 
    *You should see:* Each item reported applied and read back identical. Three new lines at the end of CHAPTER-ENV-FILE: ESPO_API_KEY, ESPO_PROVISION_USERNAME and ESPO_PROVISION_PASSWORD. Lines marked unapplyable are explained under If it didn't work.
 4. Give the Client Assignment Role the permission it needs to assign a mentor: read all users and edit its own user. The roles captured on 31 August do not include it. First see what would change. Type the line below and press Enter:
-   - uv run --env-file ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env python scripts/migrate_client_assignment_role.py
+   - PYTHONPATH=. uv run --env-file ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env python scripts/migrate_client_assignment_role.py
 
    *You should see:* A plan to raise Client Assignment Role, User, to read all and edit own.
 5. Apply it. Type the line below and press Enter:
-   - uv run --env-file ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env python scripts/migrate_client_assignment_role.py --apply
+   - PYTHONPATH=. uv run --env-file ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env python scripts/migrate_client_assignment_role.py --apply
 
    *You should see:* The permission reported applied.
 6. Put the new secrets in the chapter's Operations vault, as three items:
@@ -456,6 +468,7 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 - A roleScope line: an add-on product is missing. Do step 9.5, then run the script for real again. It skips what it already made.
 - curl shows 401: the key was copied wrong. Copy it again from CHAPTER-ENV-FILE. curl shows 403: a permission is missing. Run the script for real again and read its unapplyable lines.
 - A team with no role: run the script for real again. If the team is still empty, stop the build.
+- The permission line stops with No module named assignments: PYTHONPATH=. is missing from the front of the line. The script imports from the application's folder and needs it (Boston, 09-24-26).
 
 **What usually goes wrong:** Creating, renaming or editing anything here by hand. Each application page looks for an exact team name, and a team with no role gives its members nothing. Neither shows an error: the feature behind it just shows nothing. The email templates carry no chapter name on purpose and stay identical.
 
@@ -476,7 +489,7 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 1. In the client intake software's folder, see what the stamp would be. Type the line below and press Enter:
    - uv run --env-file ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env python scripts/build_networkstandard.py
 
-   *You should see:* A plan, and a line giving its fingerprint of sixteen letters and numbers. The next action calls it FINGERPRINT. The files copied in step 9.6 may already carry the record (open work G1 item 3): if the script reports nothing to do, skip the next action.
+   *You should see:* A plan, and a line giving its fingerprint of sixteen letters and numbers. The next action calls it FINGERPRINT. On a CRM built from the files copied in step 9.6 the script reports Nothing to do, because the files already carry the record type, and it then writes no version record at all: no tool writes that record yet (open work G1 item 3). Skip the next action. The applications will report crmConfig as unstamped, which is expected (Boston, 09-24-26).
 2. Create the record. Type the line below and press Enter:
    - uv run --env-file ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env python scripts/build_networkstandard.py --apply --production --expect FINGERPRINT
 
@@ -530,6 +543,7 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 
 | Version | Date | Change |
 |---|---|---|
+| 0.14 | 09-24-26 23:08 | Corrections from Boston's build on 09-24-26. Step 9.3: a second run after a failed one waits on a DNS record still pointing at the first run's server. Step 9.4: the certbot container shows as Exited on this installer and the renewal is a nightly crontab line, so the check reads both; and CRMBuilder's certificate job cannot install the certificate from its schedule (the installer needs a terminal), which took Boston's CRM off the air until it was recovered by hand — the recovery is written into If it didn't work. Step 9.5: running 9.7 first is recoverable by a re-run. Step 9.7: the permission line needs PYTHONPATH=. in front. Step 9.8: on a CRM built from the copied files, no version record is written and the applications report unstamped. Statuses updated for Boston. |
 | 0.13 | 09-24-26 00:50 | Step 9.6 corrected from Boston's build: a new server has no screen code folder, so the search finds one folder, not two, and the old instruction to stop was wrong. The step names the folder to create (persistent/custom-client/src) and creates it before copying. |
 | 0.12 | 09-23-26 22:55 | Two known defects written into the steps (open work G1 items 2 and 3). Step 9.7 sets the logo, the site address and the documentation tab by hand, because the script sets none of them and removes Cleveland's documentation tab; its finishing test gains that condition. Step 9.8 says the script may report nothing to do, because the copied files can already carry the record. |
 | 0.11 | 09-23-26 20:40 | Rewritten and renumbered from twenty steps to nine (Doug, 09-23-26: the stage was terribly hard to understand and use). The old step list hid the work: step 9.10 ran one script that did seven steps, and six steps said only "nothing extra to run". Old to new: 9.1 → 9.1; 9.2 → 9.2 (the key, the password and the settings file) and 9.3 (the wizard); 9.3, 9.4, 9.5 and 9.6 → 9.4; 9.7 → 9.5; 9.8 and 9.9 → 9.6; 9.10 to 9.15, 9.17 and 9.18 → 9.7; 9.19 → 9.8; 9.20 → 9.9. Step 9.16, which could not be done, moved to a list of what is still owed at the top of the stage, with the missing event templates and the unruled server size. The wizard's Cloudflare and manual DNS screens are written as separate actions. The settings file is made before the wizard, so the password rule is stated once. Scripts read the settings file through uv's --env-file rather than a shell pipeline. The manual DNS record's host is now only the first part of the CRM's address, from Boston's first run at Squarespace (a fix from the CRMBuilder session, 09-23-26). Each failure case has its own line. The August build's history moved out of the actions; it stays in 3-Methods-CRM-Google-Applications.md, which keeps the old numbers. |

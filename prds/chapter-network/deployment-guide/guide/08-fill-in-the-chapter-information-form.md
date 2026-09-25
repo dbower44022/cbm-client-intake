@@ -1,7 +1,7 @@
 # Stage 8 — Fill in the chapter information form
 
-**Version:** 0.15  
-**Last Updated:** 09-24-26 00:39  
+**Version:** 0.16  
+**Last Updated:** 09-24-26 23:08  
 **Generated from** `steps/stage-08.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -662,6 +662,8 @@ The chapter information form holds the roughly forty answers that differ from on
 
 **Done when:** The form is in the agreed place and the central support organization has confirmed it can open it.
 
+**Note:** An answer typed into the file by hand, and not on the page, is lost the next time the file is written from the page. Boston's switches were answered in the file on 09-24-26 because the settings generator in step 11.2 refuses to run while any switch reads not known yet; ask the setup contact to enter the same answers on the page before the file is ever written again.
+
 **How to check:** A second person at the central support organization opens it.
 
 **If it didn't work:** If an answer changes after the file is written, the setup contact changes it on the page and emails a new block, and this step is done again from it. The setup contact's page is the record; the file is always produced from it.
@@ -674,6 +676,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 | Version | Date | Change |
 |---|---|---|
+| 0.16 | 09-24-26 23:08 | Step 8.10 warns that a switch answered in the values file by hand is lost the next time the file is written from the page. Boston's fourteen switches were answered in the file by ruling on 09-24-26, because the settings generator refuses to run while any switch reads not known yet; the page still shows them unanswered until the setup contact updates it. |
 | 0.15 | 09-24-26 00:39 | The switch Take each release automatically? is now the chapter's question, not the central support organization's (Doug, 09-24-26, CRMBuilder decision DEC-1156): a chapter may take each release as it is cut, decline one, or schedule the upgrade for a time of its own after trying it on the demo/test deployment. Step 8.6 now has four chapter questions. |
 | 0.14 | 09-23-26 20:40 | References to stage 9 follow its renumbering from twenty steps to nine (stage 9 version 0.11). |
 | 0.13 | 09-23-26 17:47 | Step 8.10 said to write the values file from the page's link, which the script cannot read: the answers live only in the setup contact's browser (Doug, 09-23-26: fix it). The setup contact now emails the Copy all answers block; the central support organization saves it as a file on the build computer, checks it, writes the values file from it, and deletes the copy. Step 8.9 puts both sign-offs on the setup contact's page, the only one whose block carries the answers. |

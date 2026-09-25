@@ -1,7 +1,7 @@
 # Stage 11 — Deploy the chapter's applications
 
-**Version:** 0.10  
-**Last Updated:** 09-24-26 00:39  
+**Version:** 0.11  
+**Last Updated:** 09-24-26 23:08  
 **Generated from** `steps/stage-11.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -201,18 +201,21 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **Do this:**
 
-1. If this computer has never been signed in to the chapter's hosting account, type the line below and press Enter, then paste the chapter's DigitalOcean token from the Operations vault when asked:
+1. If this computer has never been signed in to the chapter's hosting account, type the line below and press Enter, then paste the DigitalOcean token from the Operations vault when asked. It must be the token made under your own sign-in in step 5.8, not one made under the chapter's sign-in:
    - doctl auth init --context SHORT-LABEL
 
    *You should see:* A message that the token was validated.
-2. Type the line below and press Enter, so every following doctl command acts on the chapter's account and not Cleveland's:
-   - doctl auth switch --context SHORT-LABEL
-3. Type the line below and press Enter:
-   - doctl apps create --spec ~/.config/cbm-SHORT-LABEL/SHORT-LABEL-app.yaml
+2. Check whose token it is. Type the line below and press Enter:
+   - doctl --context SHORT-LABEL account get --format Email
+
+   *You should see:* Your own DigitalOcean sign-in address, the one that linked GitHub in step 5.9. The chapter's own address here means the create below fails: make a token under your own sign-in (step 5.8) and run doctl auth init again with a new context name.
+3. Every doctl command in this stage names the chapter's context with --context SHORT-LABEL, and every script that calls doctl runs with DIGITALOCEAN_CONTEXT=SHORT-LABEL in front. Do not use doctl auth switch: it changes this computer's default for every later command, including Cleveland's.
+4. Type the line below and press Enter:
+   - doctl --context SHORT-LABEL apps create --spec ~/.config/cbm-SHORT-LABEL/SHORT-LABEL-app.yaml
 
    *You should see:* A table with the new application's ID and the name SHORT-LABEL-intake. Copy the ID into the Operations vault as a note named Application ID; later steps call it APP-ID.
-4. Type the line below and press Enter:
-   - doctl apps get APP-ID
+5. Type the line below and press Enter:
+   - doctl --context SHORT-LABEL apps get APP-ID
 
    *You should see:* The application listed. In the hosting account's web page, its Components show web, delivery-worker and migrate.
 
@@ -220,7 +223,9 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **How to check:** All three parts appear in the hosting account.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:**
+
+- GitHub user not authenticated: the token belongs to a different sign-in from the one that linked GitHub in step 5.9. DigitalOcean ties the GitHub link to a sign-in, not to the team. Make a token under that sign-in (step 5.8), run doctl auth init with a new context name, and create again (Boston, 09-24-26).
 
 **What usually goes wrong:** Creating only the web part. Without the background worker the system looks fine and quietly does nothing.
 
@@ -240,7 +245,7 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 1. Nothing to run. The migrate job runs by itself before the application starts.
 2. Type the line below and press Enter:
-   - doctl apps list-deployments APP-ID
+   - doctl --context SHORT-LABEL apps list-deployments APP-ID
 
    *You should see:* The first deployment in the list with its phase ACTIVE. A phase of ERROR means the migrate job or the build failed; open the deployment in the hosting account's web page and read its log.
 
@@ -264,7 +269,7 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **Do this:**
 
-1. Open https://APP-ADDRESS/healthz in a browser. Until step 11.10, use the address DigitalOcean gave the application, shown by doctl apps get APP-ID under Default Ingress.
+1. Open https://APP-ADDRESS/healthz in a browser. Until step 11.10, use the address DigitalOcean gave the application, shown by doctl --context SHORT-LABEL apps get APP-ID under Default Ingress.
    *You should see:*
 
    - status: ok
@@ -293,16 +298,16 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **Do this:**
 
-1. POLICY is the chapter's answer to Take each release automatically? in step 8.6: latest-stable for yes, on-demand for no. In the folder ~/Dropbox/Projects/cbm-client-intake, with doctl switched to the chapter's account (step 11.5), type the line below and press Enter. It changes nothing:
-   - uv run python scripts/set_updates_policy.py APP-ID POLICY
+1. POLICY is the chapter's answer to Take each release automatically? in step 8.6: latest-stable for yes, on-demand for no. In the folder ~/Dropbox/Projects/cbm-client-intake, type the line below and press Enter. The first word points the script at the chapter's account. It changes nothing:
+   - DIGITALOCEAN_CONTEXT=SHORT-LABEL uv run python scripts/set_updates_policy.py APP-ID POLICY
 
    *You should see:* The change it would make to each of the three parts.
 2. Type the line below and press Enter. The deploy option starts a fresh deployment; without it the application rebuilds the same commit it already runs:
-   - uv run python scripts/set_updates_policy.py APP-ID POLICY --apply --deploy
+   - DIGITALOCEAN_CONTEXT=SHORT-LABEL uv run python scripts/set_updates_policy.py APP-ID POLICY --apply --deploy
 
    *You should see:* The spec updated and a new deployment started.
 3. Type the line below and press Enter:
-   - uv run python scripts/set_updates_policy.py APP-ID POLICY --status
+   - DIGITALOCEAN_CONTEXT=SHORT-LABEL uv run python scripts/set_updates_policy.py APP-ID POLICY --status
 
    *You should see:* One line per part, each showing branch=release, with deploy_on_push=True for latest-stable or deploy_on_push=False for on-demand, and a final line reading conformant with the policy named.
 
@@ -329,7 +334,7 @@ The applications are what the chapter's staff, mentors and the public actually u
 **Do this:**
 
 1. Type the line below and press Enter:
-   - uv run python scripts/set_updates_policy.py APP-ID POLICY --status
+   - DIGITALOCEAN_CONTEXT=SHORT-LABEL uv run python scripts/set_updates_policy.py APP-ID POLICY --status
 
    *You should see:* Every part showing branch=release, none showing branch=main, and the line conformant with the policy named.
 
@@ -356,12 +361,10 @@ The applications are what the chapter's staff, mentors and the public actually u
 - step 3.7 Move the domain names' DNS to the chapter's Cloudflare account
 - step 11.5 Create the application parts
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
-
 **Do this:**
 
 1. Type the line below and press Enter, and copy the address shown under Default Ingress (it ends .ondigitalocean.app):
-   - doctl apps get APP-ID
+   - doctl --context SHORT-LABEL apps get APP-ID
 2. In the chapter's Cloudflare account, open the domain, then DNS, then Records, and choose Add record. Enter exactly:
    - Type: CNAME
    - Name: the first part of the application's address, for example apps
@@ -370,9 +373,9 @@ The applications are what the chapter's staff, mentors and the public actually u
    - TTL: Auto
 
    *You should see:* The record listed with a grey cloud.
-3. With manual DNS (step 3.7), add the same CNAME record in the chapter's DNS provider account instead, with any proxy or forwarding off. Its screens differ by provider and are not given here; the Name and Target are the same.
+3. With manual DNS (step 3.7), add the same CNAME record in the chapter's DNS provider account instead, with any proxy or forwarding off. Its screens differ by provider and are not given here; the Name and Target are the same. As in step 9.3, type only the first part of the address as the record's host, for apps.bbmentors.org just apps: Squarespace and most providers add the domain themselves.
 4. In the hosting account, open Apps, then SHORT-LABEL-intake, then Settings, then Domains, and add APP-ADDRESS. Choose to manage DNS yourself and make it the primary domain. Labels are not checked on screen for this guide.
-   *You should see:* The domain listed, moving to Active once the certificate is issued.
+   *You should see:* The domain listed, moving to Active once the certificate is issued. On Boston (09-24-26) the certificate was issued within the hour of the record appearing; the line doctl --context SHORT-LABEL apps get APP-ID -o json shows the domain's phase PENDING until then, and ACTIVE after.
 
 **Done when:** The domain name record for the application address resolves to it.
 
@@ -393,8 +396,6 @@ The applications are what the chapter's staff, mentors and the public actually u
 **Finish first:**
 
 - step 11.10 Point the application's web address at the application
-
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
 **Do this:**
 
@@ -657,6 +658,7 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 | Version | Date | Change |
 |---|---|---|
+| 0.11 | 09-24-26 23:08 | Corrections from Boston's build on 09-24-26. Step 11.5 checks whose token the context holds before creating, because DigitalOcean ties its GitHub link to a sign-in and a token made under the chapter's own sign-in fails with GitHub user not authenticated. Every doctl command names the chapter's context and every script runs with DIGITALOCEAN_CONTEXT, in place of doctl auth switch, which changed this computer's default for Cleveland's commands too. Step 11.10 repeats the host-name trap for manual DNS and records the timing. Statuses updated: 11.4 managed, 11.10 and 11.11 done for real. |
 | 0.10 | 09-24-26 00:39 | The chapter decides when its applications take a release (Doug, 09-24-26, CRMBuilder decision DEC-1156): a chapter may decline a release or schedule the upgrade for a time of its own. Step 11.8 sets the policy the chapter chose in step 8.6, latest-stable or on-demand, in place of Latest Stable for every chapter; step 11.9 reads the policy back by name. The stage no longer says every chapter takes each weekly release by itself. |
 | 0.9 | 09-23-26 20:40 | References to stage 9 follow its renumbering from twenty steps to nine (stage 9 version 0.11). |
 | 0.8 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. |

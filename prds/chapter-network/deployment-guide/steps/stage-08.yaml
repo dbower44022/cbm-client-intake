@@ -1,7 +1,7 @@
 stage: 8
 name: Fill in the chapter information form
-version: "0.15"
-updated: "09-24-26 00:39"
+version: "0.16"
+updated: "09-24-26 23:08"
 why: >-
   The chapter information form holds the roughly forty answers that differ from
   one chapter to the next: its name, its addresses, its Google details and its
@@ -802,6 +802,7 @@ steps:
       how: A second person at the central support organization opens it.
       probe: The values file is written by a script that runs the settings generator's own checks and refuses any secret value.
     if_not: If an answer changes after the file is written, the setup contact changes it on the page and emails a new block, and this step is done again from it. The setup contact's page is the record; the file is always produced from it.
+    note: "An answer typed into the file by hand, and not on the page, is lost the next time the file is written from the page. Boston's switches were answered in the file on 09-24-26 because the settings generator in step 11.2 refuses to run while any switch reads not known yet; ask the setup contact to enter the same answers on the page before the file is ever written again."
     goes_wrong: >-
       Two things. Editing the file by hand: the page and the file then disagree,
       and the next time the file is written the hand edit is lost. And the setup
@@ -812,6 +813,14 @@ steps:
     source: 5-Methods-Form-Accounts-Checks.md#8.10
 
 changes:
+  - version: "0.16"
+    date: "09-24-26 23:08"
+    change: >-
+      Step 8.10 warns that a switch answered in the values file by hand is lost the
+      next time the file is written from the page. Boston's fourteen switches were
+      answered in the file by ruling on 09-24-26, because the settings generator
+      refuses to run while any switch reads not known yet; the page still shows
+      them unanswered until the setup contact updates it.
   - version: "0.15"
     date: "09-24-26 00:39"
     change: >-

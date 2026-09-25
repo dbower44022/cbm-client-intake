@@ -152,6 +152,43 @@ same review and left, because none stops the build. Each one names the file.
     block under the email's own title gives `CHAPTER-INFORMATION-ANSWERS v1.txt`,
     whose space breaks the unquoted command (hit on Boston, 09-23).
 
+21. **CRMBuilder's certificate job can never finish from its schedule** (found
+    09-24-26 on Boston). `/usr/local/sbin/crmbuilder-certificate-check` runs
+    EspoCRM's `install.sh --ssl --letsencrypt` from cron once DNS resolves, and
+    the installer starts certbot with `docker run -it`, which dies without a
+    terminal. It leaves `espocrm-nginx-tmp` holding port 80 and `espocrm-nginx`
+    network-less, so the CRM is off the air on http and https until someone
+    recovers it by hand. Boston lost an hour. The recovery is now in step 9.4's
+    *If it didn't work*; the defect belongs to CRMBuilder's own requirement-first
+    process (the job should run the installer under a pseudo-terminal, or run
+    certbot itself and swap the compose file). **Guide fixed 09-24-26; CRMBuilder
+    change owed.**
+22. **The DigitalOcean token must come from the sign-in that linked GitHub**
+    (found 09-24-26). DigitalOcean ties its GitHub authorization to a user, not a
+    team, so a token made under the chapter's own sign-in builds the CRM server
+    but fails step 11.5 with `GitHub user not authenticated`. Boston's first
+    token was connect@'s; a second made under Doug's sign-in on the BBM CRM team
+    worked first time (doctl context `boston-central`). **Guide fixed 09-24-26**
+    (5.8, 11.5, and every doctl command in stage 11 names its context instead of
+    `doctl auth switch`, which had changed the computer's default for Cleveland
+    too).
+23. **`scripts/migrate_client_assignment_role.py` needs `PYTHONPATH=.`** — the
+    guide's line failed with `No module named 'assignments'`. **Guide fixed
+    09-24-26**; the script should insert its own repository root on `sys.path`
+    like its siblings do (code change owed).
+24. **Boston's switches were answered in the values file, not on the page.**
+    The settings generator refuses to run while any switch reads not known yet,
+    so the fourteen were answered by ruling on 09-24-26 directly in
+    `chapters/boston-values.yaml`. The chapter information page still shows them
+    unanswered, and a re-write from the page (step 8.10) would revert them. Step
+    8.10 now warns; **the page update is owed by Boston's setup contact**, and
+    stage 8 should say the switches are mandatory before stage 11 (F1).
+25. **No tool writes the `CNetworkStandard` version row** (extends item 3). On a
+    CRM built from the copied files, `build_networkstandard.py` reports nothing
+    to do and never writes the stamp, so every chapter's applications report
+    `crmConfig: unstamped`. Step 9.8 says so now; the applier (work list item 15)
+    is where the row should be written.
+
 11. **Public form still says CBM** — `forms/client_intake/frontend/index.html`
     lines 70 and 159 ("about CBM", "from CBM"). An applicant sees Cleveland's
     initials (`OPEN-ITEMS.md` #28).
