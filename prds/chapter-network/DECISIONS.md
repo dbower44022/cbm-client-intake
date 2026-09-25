@@ -9,6 +9,16 @@ organizational and have no phase behind them yet. That is the same statement
 [TASKS.md](TASKS.md) Part 1 makes; if the two ever disagree, TASKS is the one
 being worked from.
 
+**The services organization now has its own decision file.** It was defined in a
+planning conversation on 2026-09-19 and named the **Business Mentors
+Association**. Its rulings live in **`dbower44022/business-mentors-association`**,
+in that repository's `DECISIONS.md`, and **three of the rulings below were
+replaced or amended there**: ruling 4 (strictly identical function), ruling 6
+(the services org holds the only admin accounts) and ruling 7 (a release train,
+all chapters together). Each is marked in place. Where the two files disagree
+about the organization, the Association's file is the source; this one remains
+the source for the applications and the CRM.
+
 **How to use this file.** Nothing here is a task. A ruling changes only when Doug
 changes it, and then the phase files change to follow. A proposal leaves this
 section only by being ruled — record the ruling in place, dated, and move the
@@ -27,6 +37,13 @@ verbatim in substance.*
    propagation requires central operational control, and this supplies it without
    making Cleveland the landlord of its peers — the franchisor model minus the
    franchisor.
+   **Defined 2026-09-19/25 (Doug):** that organization is the **Business Mentors
+   Association**, a separate limited liability company **owned by its member
+   chapters**, formed so that its liabilities stay with it rather than reaching
+   the chapters. Membership is limited to independent business mentoring
+   nonprofits. "Owns development and support" now means it builds and supports;
+   operational control of each chapter's systems stays with the chapter (ruling 6
+   below).
 2. **One EspoCRM per chapter.** Not one shared multi-tenant database.
 3. **Google Workspace is mixed** — some chapters have one, some do not. The two
    branches ("bring your own Workspace and grant delegation to our service
@@ -38,35 +55,60 @@ verbatim in substance.*
 4. **Strictly identical function — core or nothing.** No per-chapter fields, enum
    values or form questions. A want becomes core for everyone, or it does not
    exist.
+   **Amended 2026-09-19 (Doug):** the application stays the same everywhere, but
+   chapters may differ through **optional settings and their own processes**. A
+   chapter that wants something new submits a feature request; the central
+   technical committee considers it, and if accepted it is built and delivered to
+   every chapter. Chapters do not change the application themselves — and since
+   ruling 6 was replaced, that is kept by agreement rather than by withholding
+   administrator accounts.
 5. **Each chapter owns its own infrastructure** — its DigitalOcean account and its
    Google Workspace — and grants the services org administrative access to run
    them. Lock-out is impossible in either direction: the services org can stop
    working, the chapter can stop paying and revoke access, neither can destroy the
    other. Dividend: each chapter claims **its own** nonprofit grants (Workspace
    for Nonprofits, TechSoup/DO credits), so the co-op fee is purely labour.
-6. **The services org holds the only EspoCRM admin accounts.** Chapter staff get
+6. ~~**The services org holds the only EspoCRM admin accounts.** Chapter staff get
    non-admin roles. This is what makes ruling 4 enforceable rather than requested:
    EspoCRM has no partial admin, so anyone who can add a user can open Entity
    Manager and add a field. Safe because ruling 5 leaves the chapter able to break
-   glass through the droplet it owns.
+   glass through the droplet it owns.~~
+   **REPLACED 2026-09-19 (Doug): each chapter holds ultimate authority over all of
+   its own technology, including its own administrator accounts.** The Association
+   supports the chapter's own technical personnel, and works directly on a
+   chapter's system only when that chapter's support contact is unavailable.
+   Ruling 4 is therefore kept by agreement, not by a technical lock; the
+   conformance check is how anyone finds out it has been broken.
 7. **A release train — all chapters move together.** Every merge deploys to a
    services-org staging instance and soaks; on a fixed cadence all chapters move
    to that tag at once. Chosen over ring promotion because rings create deliberate
    **version skew**, which is what ruling 4 exists to prevent and which makes every
    support call begin with "which version are you on". The guinea pig is a machine
    the co-op owns, not a member.
+   **REPLACED 2026-09-19 (Doug), and again in the CRMBuilder session of
+   2026-09-24 (see the decision log):** the Association builds and tests each
+   release; every chapter's technical personnel test and certify it; the release
+   goes forward on a vote of the chapter representatives, counted as a **double
+   majority** — a majority of the weighted votes and a majority of the chapters.
+   Each chapter then schedules its own deployment date, and **there is no limit on
+   how far behind a chapter may fall**. Version skew is accepted deliberately: a
+   support request starts by establishing which release that chapter runs.
 8. **The app serves the public pages for every chapter**, and each chapter's
    WordPress site embeds them.
 
 ### What ruling 4 costs, and who pays it
 
-Ruling 6 makes ruling 4 real, and together they move every configuration change
-onto the services org's desk. That is the trade: sameness is bought with
-responsiveness. **If the change-request route is slow, chapters will route around
-it** — not by hacking, but by asking their own admin, and there will not be one,
-so they will ask for one, and the first exception granted ends the architecture.
-The governance design — [governance-and-exit.md](governance-and-exit.md) — is
-therefore not paperwork; it is the load-bearing half of ruling 4.
+~~Ruling 6 makes ruling 4 real, and together they move every configuration change
+onto the services org's desk.~~ **Since ruling 6 was replaced, nothing makes
+ruling 4 enforceable: it is an agreement chapters sign, and chapters hold their
+own administrator accounts.** The trade is unchanged, and the risk is sharper:
+sameness is bought with responsiveness. **If the change-request route is slow,
+chapters will route around it** — and now they can, because each one can change
+its own system. The governance design —
+[governance-and-exit.md](governance-and-exit.md) — is therefore not paperwork; it
+is the load-bearing half of ruling 4. The Association's answer is the two-weekly
+committee, one technical contact per chapter, and everyday requests handled by
+the chapter's own people.
 
 
 ---
@@ -83,6 +125,10 @@ therefore not paperwork; it is the load-bearing half of ruling 4.
    see [TASKS.md](TASKS.md) § D4, which now argues for a services-org machine
    instead, deferred until a second chapter is in sight, with crm-test as the
    interim. Not urgent: nothing in Phase 2 except the soak itself depends on it.
+   **Overtaken 2026-09-19 (Doug):** the shared test system is reproduced on, or
+   moved to, a server the Association owns, bringing its test data, its training
+   and its midnight restore with it, and it serves both training and release
+   testing.
 3. ~~**The change forum meets monthly**, with operational requests explicitly out of
    scope and answered on a published turnaround instead.~~ **RULED differently,
    2026-09-18:** the central committee meets every two weeks to review and schedule
@@ -94,6 +140,9 @@ therefore not paperwork; it is the load-bearing half of ruling 4.
    2026-09-18:** branch A is mandatory. Every chapter hosts its own Google Workspace.
 5. **The fee is labour only**, chapters paying hosting and Workspace directly in
    their own accounts under their own nonprofit grants (ruling 5).
+   **Overtaken 2026-09-19 (Doug):** dues and votes are set in size bands, larger
+   chapters paying more and carrying more votes. The bands and amounts are the
+   committee's to set; the Association's cost list is in its own repository.
 6. **The exit rehearsal is a Phase 6 deliverable with a named owner**, not a
    clause.
 7. **Phase 1's decision trigger fires 2026-09-19, and Doug owns it** — the date
@@ -130,13 +179,15 @@ therefore not paperwork; it is the load-bearing half of ruling 4.
 
 | Date | Decision | Where it landed |
 |---|---|---|
+| 2026-09-25 | **The services organization is the Business Mentors Association, a limited liability company owned by its member chapters.** Formed so that a claim against it reaches its own assets rather than the chapters' buildings, endowments or donor funds; each chapter's exposure is limited to its dues and its own systems. Open: whether the company seeks tax-exempt status, and whether the nonprofit pricing the network assumes survives the change. | Ruling 1; the Association's own repository, `dbower44022/business-mentors-association` |
+| 2026-09-19 | **The services organization was defined, and three rulings here were replaced.** Chapters hold ultimate authority over their own technology, including administrator accounts (ruling 6 replaced); releases are certified by every chapter's technical personnel and go forward on a double-majority vote of chapter representatives, each chapter then choosing its own deployment date with no limit on falling behind (ruling 7 replaced); the application stays the same everywhere but chapters may differ through optional settings and their own processes (ruling 4 amended). Also ruled: membership limited to independent business mentoring nonprofits, dues and votes in size bands, volunteers first, the applications become open source, and the shared test system moves to an Association-owned server serving both training and release testing. | Rulings 1, 4, 6, 7; proposals 2 and 5; the Association's `DECISIONS.md` |
 | 2026-08-31 | **What a chapter deployment follows is a release branch, now; images by tag later.** The weekly cut fast-forwards a `release` branch to the tag; chapter apps track it, only the soak copy tracks `main`. Building one image per tag and shipping it by tag is deferred until the fleet outgrows N builds of one commit — the per-deployment policy and the Update button (proposal 8) must survive that swap unchanged. Chosen over "straight to images" because images need a registry every chapter's own DO account can pull from, which is Phase 3's secrets problem again. | [phase-2](phase-2-release-train.md) § *The release lane*; [TASKS.md](TASKS.md) § R10 |
 | 2026-08-31 | **The per-deployment update policy is named Development / Latest Stable / On Demand** (Doug's words, replacing "staging / train / held"). One Development in the fleet, never a chapter's; Cleveland's dry-run `lobster-app` is not the soak copy and is not registered. | Proposal 8; `prompts/crmbuilder-deployment-updates-requirements-v0.1.md` |
 | 2026-08-31 | **The network-standard applier lives INSIDE CRMBuilder** — a product capability, not a CBM-side artifact. Doug: *"It will reside inside CRMBuilder. It is designed to maintain a design and push it to CRM systems."* This rules the product-vs-artifact half of the A1 boundary question: Phase 1's Layer 2 (CRMBuilder as the realization) is the plan of record, and Layer 3's write path will not be built in this repo. Still owed to the requirements session: confirming **headless execution** and turning both briefing documents into confirmed CRMBuilder requirements under its requirement-first process. | [phase-1](phase-1-crm-config.md) § *The decision trigger*; [TASKS.md](TASKS.md) § A1 |
 | 2026-08-31 | **The roles standard is PRODUCTION'S shape, with one sanctioned staging deviation.** Groups B and C of the ruling table: production is the standard and crm-test was updated to match (verified by re-capture the same day; six leftovers noted in the table). Group A: `CustomAppAPIRole` `delete: all` exists on crm-test ONLY because the nightly recycle deletes app-created records through the API — **production and every chapter get `delete: no`**, and the drift detector must treat the staging delete grant as sanctioned, not drift. | [roles-standard/differences-2026-08-31.md](roles-standard/differences-2026-08-31.md); TASKS § R4 |
 | 2026-08-31 | **R7 — the extensions are IN the standard.** Advanced Pack 3.12.1 and Google Integration 1.8.4 are part of the network standard: every chapter installs both before the roles are applied (an Advanced Pack licence per instance is accepted cost). The roles then apply verbatim — no per-target scope filtering. | [chapter-values.md](chapter-values.md) § G; [phase-6](phase-6-first-chapter.md) step 2 |
 | 2026-08-31 | **The Lakeside rehearsal instance is NOT torn down.** Criterion 13 was met on the throwaway (`crm-lakeside`, DEP-001 / INST-001, app `lakeside-intake`); Doug ruled the same evening that it stays up to rehearse **Phase 6 step 3 — the Google integration** — and to document and automate that path. Cost: one droplet (~$24/mo) and one small App Platform app, in Doug's own accounts. The teardown steps are written and waiting on the standing page; "nothing left billing" is owed when that arc ends. | [TASKS.md](TASKS.md) § Closed (B2); [phase-6](phase-6-first-chapter.md) |
-| 2026-08-26 | **Release cadence is WEEKLY, cut Sunday 17:00 UTC** (proposal 1). Every merge lands on staging immediately; on a weekly cadence a tag is cut and every chapter moves to it together, the soak being the week itself. A security fix may bypass the cadence but never staging. **Note 17:00 UTC is Sunday *afternoon* in Cleveland** — 13:00 EDT / 12:00 EST — not night. | [phase-2](phase-2-release-train.md); the procedure is [crm-update-runbook.md](crm-update-runbook.md) |
+| 2026-08-26 | **Release cadence is WEEKLY, cut Sunday 17:00 UTC** (proposal 1). Every merge lands on staging immediately; on a weekly cadence a tag is cut and every chapter moves to it together, the soak being the week itself. A security fix may bypass the cadence but never staging. **Note 17:00 UTC is Sunday *afternoon* in Cleveland** — 13:00 EDT / 12:00 EST — not night. **Amended 2026-09-19 and 2026-09-24:** the tag is still cut weekly, but chapters no longer all move to it together. | [phase-2](phase-2-release-train.md); the procedure is [crm-update-runbook.md](crm-update-runbook.md) |
 | 2026-08-26 | **D1 — the CRM's configuration version lives in a new single-record custom entity, `CNetworkStandard`.** Not in EspoCRM Settings (reading those needs admin, and admin is genuinely closed to the app's credential — the org-wide key 403s on `Role`), and not as a `CActionLog` row (append-only history is the wrong shape for a current-state assertion). | Build handoff written: `cnetworkstandard-entity-crm-handoff.md`. [TASKS.md](TASKS.md) § R0 |
 | 2026-08-26 | **D2 — the CRMBuilder decision trigger stands at 2026-09-19, Doug owning it.** If the requirements session has not answered the product-vs-artifact boundary and the headless requirement by then, Layer 3 proceeds in full and its sunk cost is accepted deliberately. | [phase-1](phase-1-crm-config.md) § *The decision trigger*; the action is [TASKS.md](TASKS.md) § A1 |
 | 2026-08-26 | **D3 — no logo and no favicon.** Chapters get colours, not marks. The plan's "per-chapter `tokens.css` + logo" was describing a feature that does not exist — the application contains no image asset of any kind — so the phrase comes out of the plan rather than becoming a backlog item. | [phase-0](phase-0-decleveland.md) § 6; [phase-4](phase-4-public-pages.md) |
@@ -148,7 +199,7 @@ therefore not paperwork; it is the load-bearing half of ruling 4.
 | 2026-09-07 | **A gated team's role must be self-sufficient — it never borrows a grant from a second team seat.** The Client Assignment Role could not assign a mentor (EspoCRM's link check needs `User` read to stamp `assignedUsers`); Cleveland's client admins only ever passed because each also sat on the Mentor Team. Ruled `User: read all, edit own` on the role itself, over the narrower `read: team` that would have kept the accidental coupling. | Found on Lakeside 2026-09-07, fixed there by `scripts/migrate_client_assignment_role.py`; crm-test, the roles-standard re-capture and production owed — `OPEN-ITEMS.md` #28 |
 | 2026-09-18 | **Requests go through ClickUp, managed by the whole support team.** New feature requests, defect reports and support requests all go into one ClickUp system; the entire support team manages it, not one person. A standard chapter agreement exists in draft and is in review; it is not held in this repository. Still open: the promised response time, what counts as urgent, and who decides a feature request and how often (`DECISIONS.md` proposal 3). | [deployment-guide/4-Work-Owed-Before-Any-Chapter.md](deployment-guide/4-Work-Owed-Before-Any-Chapter.md) items 7 and 8; deployment guide steps 2.1–2.6, 18.1, 18.2 |
 | 2026-09-18 | **The central committee meets every two weeks to review and schedule features and defects, and there is no committed response time.** Replaces proposal 3's monthly forum and its published turnaround. Requests of every kind arrive through the ClickUp system (the entry above); the committee decides and schedules the feature requests and defects among them, every two weeks. | Proposal 3; [deployment-guide/4-Work-Owed-Before-Any-Chapter.md](deployment-guide/4-Work-Owed-Before-Any-Chapter.md) item 8; deployment guide steps 18.1, 18.2 |
-| 2026-09-18 | **Nothing is urgent, and everyday requests do not wait for the committee.** There is no urgent category of request. Everyday requests — adding a person, changing someone's team, resetting a password — are handled by the support team as they arrive, not held for the two-weekly committee, because a volunteer waiting weeks for an account is how a chapter starts asking for an administrator account of its own. | Deployment guide step 18.1; [deployment-guide/4-Work-Owed-Before-Any-Chapter.md](deployment-guide/4-Work-Owed-Before-Any-Chapter.md) item 8 |
+| 2026-09-18 | **Nothing is urgent, and everyday requests do not wait for the committee.** There is no urgent category of request. Everyday requests — adding a person, changing someone's team, resetting a password — are handled by the support team as they arrive, not held for the two-weekly committee, because a volunteer waiting weeks for an account is how a chapter starts asking for an administrator account of its own. **Note 2026-09-19:** chapters now hold their own administrator accounts (ruling 6 replaced), so their own technical personnel do this work, with the Association as backup. | Deployment guide step 18.1; [deployment-guide/4-Work-Owed-Before-Any-Chapter.md](deployment-guide/4-Work-Owed-Before-Any-Chapter.md) item 8 |
 | 2026-09-18 | **Each chapter keeps its credentials in a Proton Pass business organization it owns.** At least two chapter officers are owners; named people from the central support organization are members of a shared Operations vault. Named sign-ins with two-step verification wherever a system allows; the vault holds break-glass sign-ins, recovery codes and machine secrets. Chosen because it is the only arrangement that satisfies ruling 5 (the chapter owns its infrastructure) and the no-lock-out rule at once. Proton Pass has a command-line tool that can inject secrets into deployments, which the settings generator will use. | Deployment guide step 2.7 (new), steps 5.7, 8.8, 11.3, 18.4; work list item 1 |
 | 2026-09-18 | **Every chapter's DNS lives in a Cloudflare account the chapter owns, and CRMBuilder builds a chapter's CRM with the chapter's own DigitalOcean and Cloudflare tokens.** CRMBuilder supports DigitalOcean plus Cloudflare as its only provider pair (DEC-946, 2026-08-29), and its deployment wizard writes the CRM's address into Cloudflare itself. CRMBuilder's own default — its own tokens — is never used for a chapter, because under ruling 5 the chapter must own its server and DNS and be able to revoke access. The CRM and application addresses are always DNS only (grey cloud); the proxy blocks their certificates. | Deployment guide steps 3.7 and 5.8 (new), 3.6, 4.3, 4.4, 5.7, 9.2, 9.5, 11.10 |
 | 2026-09-18 | **The deployment guide becomes structured data, and the specification of a chapter onboarding app in CRMBuilder.** An app should interview the chapter for its information and decisions and automate what can be automated; it belongs in CRMBuilder beside its deployment wizard and the proposed fleet console. The guide's steps are held as YAML (`deployment-guide/steps/`), which renders the readable guide and serves as the app's specification. Only steps done once by hand are automated. | [deployment-guide/steps/README.md](deployment-guide/steps/README.md); `prompts/crmbuilder-chapter-onboarding-requirements-v0.1.md` |
@@ -188,3 +239,7 @@ answered. They are recorded so they are asked rather than rediscovered.
   `Account` or `Contact`?** Unverified, and it is a behavioural dependency of the
   intake orchestrators rather than a staff convenience — this app sends no
   `X-Skip-Duplicate-Check` header anywhere.
+- **Now that chapters hold their own administrator accounts (ruling 6 replaced),
+  what does the conformance check do when it finds a chapter has changed its own
+  configuration?** Report it, refuse the release, or both. The Association's file
+  records this as open.
