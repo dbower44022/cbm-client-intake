@@ -1490,16 +1490,30 @@ unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
 
-- **2026-09-23 — the first real chapter (Boston Business Mentors) is being
-  built, and preparing it found three things.** (a) **Production's
-  `APP_ENCRYPTION_KEY` was published in plain text** in a committed overlay
-  backup (`OPEN-ITEMS.md` #33): the backups are untracked and `.do/*.bak*`
-  ignored; the key replacement is owed, steps written. (b) **The worker reads
-  its mail switches only at start-up from the environment** (#34), so the
-  chapter spec script now carries every Google/mail setting as an environment
-  variable. (c) The chapter information form is a web page built from stage 8
-  of the deployment guide (`scripts/chapter_form/`); rulings and open guide
-  defects are in `prds/chapter-network/TASKS.md` G1 and `DECISIONS.md`.
+- **2026-09-24/25 — Boston Business Mentors, the first real chapter, has a
+  live CRM and live applications.** CRM at `https://crm.bbmentors.org`
+  (EspoCRM 10.0.8, DigitalOcean droplet 209.97.157.6, manual DNS at
+  Squarespace); applications at `https://apps.bbmentors.org` (App Platform app
+  `4fab6656-…`, release branch, latest-stable, managed Postgres, v0.231.1).
+  The standard is applied (9.6, 9.7, 9.9); the public events page is on by a
+  `/setup` override. **Owed:** stage 10 (Google — every Google switch is off),
+  step 9.5 (the two paid add-ons) followed by a 9.7 re-run to fill 73
+  permissions, Boston's setup contact entering the fourteen switch answers on
+  the chapter information page (they were answered in `boston-values.yaml` by
+  ruling), and CRMBuilder's certificate job (G1 item 21). Three traps this
+  build found, all now in the guide: **CRMBuilder's self-healing certificate
+  job can never succeed from cron** (the installer runs certbot with a
+  terminal flag; it left the CRM off the air on both ports until recovered by
+  hand — [[crmbuilder-certificate-job-needs-tty]]); **the DigitalOcean token
+  must be minted by the sign-in that linked GitHub** or `apps create` 400s
+  "GitHub user not authenticated" ([[do-github-link-is-per-user]]); and
+  `doctl auth switch` changes this computer's default for Cleveland too, so
+  every chapter doctl call names `--context` (Boston: `boston-central`).
+  Preparing the build on 09-23 also found production's `APP_ENCRYPTION_KEY`
+  published in a committed overlay backup (`OPEN-ITEMS.md` #33, key
+  replacement owed) and that the worker reads its mail switches only at
+  start-up (#34). Guide state: `prds/chapter-network/TASKS.md` G1 and
+  `DECISIONS.md`.
 
 - **v0.228.0–v0.228.2 (2026-09-13) — a chapter upgrade is one operation.**
   Doug's ruling after the nine-step Lakeside upgrade was put in front of him:

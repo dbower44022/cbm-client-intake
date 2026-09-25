@@ -25,20 +25,28 @@ is a table at the end of this file linking to them.
 ### What this is
 
 Boston's values file, `chapters/boston-values.yaml`, was written from Teresa
-Lang's emailed answers on 2026-09-23 (step 8.10) and committed; it is not
-pushed. It is not finished: only one person signed off (step 8.9 needs two),
-and eleven switches read `owed`, which the settings generator refuses at step
-11.2. Pushing it also redeploys all of Cleveland (G1 item 5).
+Lang's emailed answers on 2026-09-23 (step 8.10), committed and pushed. It is
+not finished: only one person signed off (step 8.9 needs two), the alert
+sending mailbox and the four policy page addresses are still empty, and the
+fourteen switches were **answered in the file by ruling on 2026-09-24** (Doug
+approved the trial chapter's set: staff pages on, every Google switch off,
+release branch followed) so stage 11 could run. The page still shows them as
+not known yet, and a re-write from the page would revert them (G1 item 24).
+Pushing the file also redeploys all of Cleveland (G1 item 5).
 
 ### Steps
 
-1. Get the second sign-off on Teresa's page, and have her email a new block.
-2. Answer the eleven owed switches, and the alert sending mailbox, before
-   stage 11. Each question on the page carries a recommended answer.
-3. Write the file again from the new block (step 8.10), and commit it.
-4. A second person at the central support organization opens it from the
+1. Have Teresa enter the fourteen switch answers on her page exactly as the
+   file holds them, plus the alert sending mailbox and the policy addresses as
+   they become known, and get the second sign-off.
+2. Only then write the file again from the new block (step 8.10), compare its
+   `flags` with the committed file before committing, and commit it.
+3. A second person at the central support organization opens it from the
    remote repository.
-5. Delete `~/Downloads/boston-answers.txt` from the build computer.
+4. Delete `~/Downloads/boston-answers.txt` from the build computer.
+5. When the Google switches turn on after stage 10, generate the settings
+   again (step 11.2) and apply them to the deployment: the worker reads them
+   only at start-up.
 
 ---
 
