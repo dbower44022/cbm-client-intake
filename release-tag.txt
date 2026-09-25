@@ -9,4 +9,4 @@
 # promoting a deployment two operations instead of one.
 #
 # Blank below = this commit is not a release.
-v0.231.1
+v0.232.0
