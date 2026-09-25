@@ -14,16 +14,40 @@ propagates to all of them**, each chapter taking it when it chooses (ruled 09-24
 while each chapter keeps **its own website with its own graphics and marketing
 content**.
 
-The shape that answers it: a **central services organization** owns development
-and support, **one EspoCRM per chapter**, **strictly identical function** — core
-or nothing, no per-chapter fields — **each chapter owning its own
-infrastructure** and granting the services org access, and **a release train**
-that offers every chapter the same release each week. **Each chapter decides when
-its deployment takes a release** — automatically, on request, or at a time it
-schedules, after trying it on the demo/test deployment — and may decline one
-(ruled 09-24-26, CRMBuilder decision DEC-1156; chapters may therefore run
-different releases at the same time). Eight rulings settled 2026-08-17/18; they
-are in **[DECISIONS.md](DECISIONS.md)** and everything here follows from them.
+The shape that answers it: a **central services organization** — the **Business
+Mentors Association**, a limited liability company owned by its member chapters
+(ruled 2026-09-19/25) — owns development and support, **one EspoCRM per
+chapter**, **one application everywhere**, **each chapter owning its own
+infrastructure** including its own administrator accounts, and **a release train**
+that offers every chapter the same release each week.
+
+Two of those changed in September, and the wording here follows the new rulings
+rather than the old:
+
+- **One application, not strictly identical function.** Chapters may differ
+  through **optional settings and their own processes**; the application itself is
+  the same everywhere. A chapter that wants something new submits a feature
+  request to the Association's technical committee, and if accepted it is built
+  for every chapter (ruled 2026-09-19, amending ruling 4).
+- **Chapters hold their own administrator accounts.** The Association supports the
+  chapter's own technical personnel and works on a chapter's system directly only
+  when that contact is unavailable. Ruling 4 is therefore kept by agreement, and
+  the conformance check is how anyone finds out it has been broken (ruled
+  2026-09-19, replacing ruling 6).
+- **Each chapter decides when its deployment takes a release** — automatically, on
+  request, or at a time it schedules, after trying it on the demo/test
+  deployment — and may decline one. Releases are certified by every chapter's
+  technical personnel and go forward on a double-majority vote of the chapter
+  representatives (ruled 2026-09-19, replacing ruling 7; confirmed in CRMBuilder
+  decision DEC-1156, 2026-09-24; chapters may therefore run different releases at
+  the same time, with no limit on how far behind one may fall).
+
+Eight rulings were settled 2026-08-17/18; three of them have since been replaced
+or amended. They are in **[DECISIONS.md](DECISIONS.md)**, each marked in place.
+**The organization's own rulings live in
+`dbower44022/business-mentors-association`** — membership, dues, governance,
+liability and the Association's own systems. This directory remains the source
+for the applications and the CRM.
 
 ## Where it stands
 
@@ -53,13 +77,13 @@ are in **[DECISIONS.md](DECISIONS.md)**.
 | File | What it holds | Changes when |
 |---|---|---|
 | `README.md` | This. Orientation and current state. | A phase changes state |
-| [`DECISIONS.md`](DECISIONS.md) | The eight rulings, the seven proposals awaiting a ruling, the decision log, and the open questions nobody owns yet | Doug rules something |
+| [`DECISIONS.md`](DECISIONS.md) | The eight rulings — three of them replaced or amended on 2026-09-19, marked in place — the proposals awaiting a ruling, the decision log, and the open questions nobody owns yet | Doug rules something |
 | [`TASKS.md`](TASKS.md) | The project's own open items. Each one: what the issue is, the options and a recommendation where a decision is owed, then steps | Every working session |
 | [`chapter-values.md`](chapter-values.md) | **Everything that differs between cities** — ~35 values, six secrets, one image. The per-city surface in one place, plus the ruling-4 fence listing what is deliberately the same everywhere | A new per-chapter value appears, or one gets parameterized |
 | [`crm-update-runbook.md`](crm-update-runbook.md) | **How to get a configuration change onto every CRM, step by step.** The procedure, the verification, and the twelve traps this project has been bitten by | The procedure changes — chiefly when the applier lands |
 | [`interface-contract.md`](interface-contract.md) | C1–C10 and both version stamps: what any CRM-config applier must satisfy | Rarely. It is meant to be stable, and it has a reader outside this repo |
 | `phase-0…6-*.md` | One file per phase, each closable on its own | Work on that phase |
-| [`governance-and-exit.md`](governance-and-exit.md) | Change governance, non-payment, the exit kit | The organizational design changes |
+| [`governance-and-exit.md`](governance-and-exit.md) | Change governance, non-payment, the exit kit. **Written before the 2026-09-19 rulings** — its case for withholding administrator accounts no longer holds, and the exit licence is now the open-source licence | The organizational design changes |
 | [`deployment-guide/guide/`](deployment-guide/guide/README.md) | **The New Chapter Deployment Guide** — one page per stage, generated from `deployment-guide/steps/` (the source, and the onboarding app's specification). Render with `scripts/render_deployment_guide.py` | A step changes: edit the YAML, re-render |
 | [`deployment-guide/`](deployment-guide/) | **Drafts of the New Chapter Deployment Guide** — the plan for writing it, the step list, the written-out methods for all eighteen stages, and the work owed before any chapter can follow it | The guide is drafted further |
 
@@ -96,6 +120,7 @@ anything in it.
 
 | Repo / system | Relationship | Rule |
 |---|---|---|
+| **`dbower44022/business-mentors-association`** | **The services organization's own records** — its rulings, open questions, proposal summary, cost list and account setup runbook. The organization is a limited liability company owned by its member chapters | Where the two disagree about the *organization*, that repository is the source. This directory stays the source for the applications and the CRM |
 | **CRMBuilder** | **The ruled home of Phase 1's applier** (Doug, 2026-08-31 — a product capability). HEAD `db1dbef0`, 2026-08-10; nothing has moved since the 2026-08-18 read-only review. | **Requirement-first governance.** Its shape is not ours to assume, and we cannot write a plan that obliges it to grow an interface it has not agreed to. Read-only from here until the requirements session runs |
 | **`dbower44022/ClevelandBusinessMentoring`** | Owns **MN-INTAKE**, the business definition of the client-intake process. The Requirements Spec here is kept aligned to it by carry-forward | Process definition, not application. Changes there are Doug's |
 | The chapters' **WordPress sites** | Ruling 8: the app serves the public pages, each chapter's site embeds them. `wp-plugin/cbm-events/` already ships the renderer plus the site's own stylesheet | The stylesheet is a **class contract**, guarded by a test. Do not restyle it |
@@ -144,9 +169,13 @@ different distribution stories.
 ## What would make this fail
 
 - **The change-request route being slow.** Named above; it is the top risk, and it
-  is organizational rather than technical.
-- **The first exception.** One chapter granted one custom field ends ruling 4, and
-  the applier's desired state stops being describable.
+  is organizational rather than technical. It is sharper since 2026-09-19: a
+  chapter that cannot get a change now holds the administrator account it would
+  need to make one itself.
+- **The first exception.** One chapter's own custom field ends the one-application
+  rule, and the applier's desired state stops being describable. Nothing prevents
+  it technically any more — the chapter agreement and the conformance check are
+  the whole defence.
 - **Espo upgrades.** The extension and the applier both bind to Espo's admin API
   surface; a major upgrade lands on six instances at once. The train helps —
   staging sees it first.
@@ -154,7 +183,8 @@ different distribution stories.
   to a member's production.
 - **The services org bus factor.** Today deployment ability lives with whoever
   holds the gitignored overlays. Phase 3 fixes that; until then it is the single
-  point of failure for the whole network.
+  point of failure for the whole network. The Association's own rulings start it
+  with volunteers, which does not fix this.
 
 
 ---
