@@ -888,6 +888,12 @@ each block.
   `main` and keep their overlay variable, so they report `v0.217.0` while
   running current code — `OPEN-ITEMS.md` #29 is the decision.
 
+**Confirm that against the remote, do not trust this line.** On 2026-08-20 it
+still read "pushed through v0.202.2" while v0.203.x/v0.204.0 sat unpushed
+locally, and a session that believed it pushed a docs commit and shipped a
+feature to production with it. `git log origin/main..main` is the answer; this
+sentence is a convenience.
+
 *The older release blocks were removed on 2026-09-25 under this section's
 own rolling-window rule — `CHANGELOG.md` is the permanent per-version
 record and `OPEN-ITEMS.md` holds anything still owed.*
