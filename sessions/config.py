@@ -801,7 +801,7 @@ PARTNER = DomainConfig(
         OverviewItem("Agreement date", "partnershipAgreementDate", "date", section="activity", always=True),
         OverviewItem("Last contacted", "lastContacted", "date", section="activity", always=True),
         OverviewItem("Partnership value", "partnershipValue", "multiEnum", section="activity", always=True),
-        OverviewItem("CBM value provided", "cBMValueProvided", "multiEnum", section="activity", always=True),
+        OverviewItem("{{abbr}} value provided", "cBMValueProvided", "multiEnum", section="activity", always=True),
     ),
     overall_notes_attr="partnerNotes",
     overall_notes_label="Partner Notes",

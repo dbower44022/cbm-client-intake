@@ -401,7 +401,7 @@
       config = await api("/session");
       $("title").textContent = config.title || "Sessions";
       $("subtitle").textContent = config.subtitle || "";
-      document.title = "CBM — " + (config.title || "Sessions");
+      document.title = "{{abbr}} — " + (config.title || "Sessions");
       $("whoName").textContent = config.name || config.userName;
       if (config.emptyMessage) $("emptyState").textContent = config.emptyMessage;
       buildDetailTabs();
@@ -738,7 +738,7 @@
       if (RECORD_ID) { showMessage(e.message); return; }
       notice("listNotice", e.message, "error"); return;
     }
-    if (RECORD_ID) document.title = (currentDetail.name || "Record") + " — CBM";
+    if (RECORD_ID) document.title = (currentDetail.name || "Record") + " — {{abbr}}";
     $("detailName").textContent = currentDetail.name || "(unnamed)";
     $("detailKind").textContent = currentDetail.parentLabel || "";
     currentDetails = null;  // Details tab reloads for the new record on activation
@@ -1204,7 +1204,7 @@
       });
     }
     if (coMentors.length) {
-      card.appendChild(cardHead("CBM Contacts"));
+      card.appendChild(cardHead("{{abbr}} Contacts"));
       coMentors.forEach(function (m) {
         var row = document.createElement("div"); row.className = "sx__oc";
         if (m.contactId) {  // link to the co-mentor's contact info (email/phone) pop-up
@@ -1853,7 +1853,7 @@
       xhr.onerror = xhr.onabort = xhr.ontimeout = function () {
         reject(new Error(
           "The upload was interrupted before it finished — check your " +
-          "connection and try again. If it keeps happening, tell CBM staff " +
+          "connection and try again. If it keeps happening, tell {{abbr}} staff " +
           "the file name and size."
         ));
       };
@@ -2770,11 +2770,11 @@
       api("/mailbox").then(function (r) {
         senderMailbox = (r && r.mailbox) || null;
         senderSignature = (r && r.signature) || "";
-        setFrom(senderMailbox || "no CBM email on your profile — sending won't work");
+        setFrom(senderMailbox || "no {{abbr}} email on your profile — sending won't work");
         seedSignature();
-      }).catch(function () { setFrom("your CBM email address"); });
+      }).catch(function () { setFrom("your {{abbr}} email address"); });
     } else if (senderMailbox === null) {
-      setFrom("no CBM email on your profile — sending won't work");
+      setFrom("no {{abbr}} email on your profile — sending won't work");
     }
 
     // To: every record contact with an email address as a checkbox — ALL
@@ -3462,11 +3462,11 @@
       if (lookup.found && lookup.contact) {
         // Existing CRM contact — CBM, client, or non-client alike.
         var c = lookup.contact;
-        var kind = c.isCbmMember ? "a CBM member" : (c.company ? c.company : "an existing contact");
+        var kind = c.isCbmMember ? "a {{abbr}} member" : (c.company ? c.company : "an existing contact");
         who.textContent = addr + " — " + (c.name || "?") + " (" + kind + ", already in the CRM)";
         var asComentor = c.isCbmMember && c.mentorProfileId &&
           (config && config.supportsComentor);
-        if (asComentor) checkLab.childNodes[1].textContent = " Add as CBM contact";
+        if (asComentor) checkLab.childNodes[1].textContent = " Add as {{abbr}} contact";
         if (c.isCbmMember && !asComentor) {
           // A CBM member must NEVER be linked as a client contact (that put
           // mentors under "Other Contacts"). No co-mentor path here => they
@@ -4688,7 +4688,7 @@
     b.addEventListener("click", function () {
       if (editable === false) {
         notice("detailsNotice", "You don't have permission to edit " + (what || "this record") +
-          " — ask CBM staff if you need it.", "error");
+          " — ask {{abbr}} staff if you need it.", "error");
         return;
       }
       detailsEditSet[key] = true; repaintDetails(key);
@@ -4737,7 +4737,7 @@
     card.appendChild(cardHeadEl(sec.title, null));
     var p = document.createElement("p"); p.className = "sx__muted sxd__none";
     p.textContent = "Your CRM role can't view this (no read access to " +
-      sec.entity + " records) — ask CBM staff if you need it.";
+      sec.entity + " records) — ask {{abbr}} staff if you need it.";
     card.appendChild(p);
     return card;
   }
@@ -4979,7 +4979,7 @@
       card.appendChild(head);
       var p = document.createElement("p"); p.className = "sx__muted sxd__none";
       p.textContent = "Your CRM role can't view this record's contacts " +
-        "(no read access to Contact records) — ask CBM staff if you need it.";
+        "(no read access to Contact records) — ask {{abbr}} staff if you need it.";
       card.appendChild(p);
       return card;
     }
@@ -4994,7 +4994,7 @@
   function cbmContactsCard() {
     var rows = currentDetails.cbmContacts || [];
     var card = document.createElement("div"); card.className = "sxd__card"; card.dataset.dkey = "cbmContacts";
-    var head = cardHeadEl("CBM Contacts", "(" + rows.length + ")");
+    var head = cardHeadEl("{{abbr}} Contacts", "(" + rows.length + ")");
     head.appendChild(addMenuEl("cbm"));
     card.appendChild(head);
     if (detailsAdd === "cbm-pick") card.appendChild(cbmPickPanel());
@@ -5044,7 +5044,7 @@
         e.addEventListener("click", function () {
           if (rowEditable === false) {  // never hidden — explain on click
             notice("detailsNotice", "You don't have permission to edit " + rowName +
-              " — ask CBM staff if you need it.", "error");
+              " — ask {{abbr}} staff if you need it.", "error");
             return;
           }
           detailsEditSet[editKey] = true; repaintDetails(editKey);
@@ -5121,7 +5121,7 @@
     btn.addEventListener("click", async function () {
       if (!parentEditable()) {
         notice("detailsNotice", "You don't have permission to change this record's primary contact — " +
-          "ask CBM staff if you need it.", "error");
+          "ask {{abbr}} staff if you need it.", "error");
         return;
       }
       btn.disabled = true;
@@ -5190,7 +5190,7 @@
       // explain on click rather than hiding the button (Doug's ruling).
       if (!parentEditable()) {
         notice("detailsNotice", "You don't have permission to change this record's contacts — " +
-          "ask CBM staff if you need it.", "error");
+          "ask {{abbr}} staff if you need it.", "error");
         return;
       }
       if (!armed) { armed = true; btn.textContent = "Really remove?"; return; }
@@ -5202,7 +5202,7 @@
         await api(path, { method: "DELETE" });
         await loadDetails(currentDetail.id);
         refreshRecordViews();
-        notice("detailsNotice", isClient ? "Contact removed from this record." : "CBM contact removed.", "success");
+        notice("detailsNotice", isClient ? "Contact removed from this record." : "{{abbr}} contact removed.", "success");
       } catch (e) {
         if (e.status === 401) { showLogin(); return; }
         btn.disabled = false; armed = false; btn.textContent = "Remove";
@@ -5231,7 +5231,7 @@
       } else {
         // CBM contacts are mentor profiles; new ones are onboarded via Mentor
         // Administration, so only select-existing is offered here.
-        menu.appendChild(menuItem("Select existing CBM contact…", function () { detailsAdd = "cbm-pick"; repaintDetails(cardKey); }));
+        menu.appendChild(menuItem("Select existing {{abbr}} contact…", function () { detailsAdd = "cbm-pick"; repaintDetails(cardKey); }));
       }
       wrap.appendChild(menu);
     }
@@ -5366,18 +5366,18 @@
   // Add a CBM contact: pick an existing mentor profile (attached via the
   // engagement's additionalMentors relation).
   function cbmPickPanel() {
-    var panel = addPanelShell("Add a CBM contact");
+    var panel = addPanelShell("Add a {{abbr}} contact");
     var row = document.createElement("div"); row.className = "sx__inline";
     var sel = document.createElement("select"); sel.className = "sxd__addselect";
-    sel.setAttribute("aria-label", "Choose a CBM contact");
+    sel.setAttribute("aria-label", "Choose a {{abbr}} contact");
     sel.appendChild(new Option("Loading…", ""));
     api("/mentors").then(function (res) {
       sel.innerHTML = "";
-      sel.appendChild(new Option("Choose a CBM contact…", ""));
+      sel.appendChild(new Option("Choose a {{abbr}} contact…", ""));
       (res.mentors || []).forEach(function (m) { sel.appendChild(new Option(m.name || m.id, m.id)); });
     }).catch(function (e) {
       if (e.status === 401) { showLogin(); return; }
-      sel.innerHTML = ""; sel.appendChild(new Option("Couldn't load CBM contacts", ""));
+      sel.innerHTML = ""; sel.appendChild(new Option("Couldn't load {{abbr}} contacts", ""));
     });
     var err = document.createElement("p"); err.className = "sx__dpanel-error"; err.hidden = true;
     var add = document.createElement("button"); add.type = "button"; add.className = "cbm-button"; add.textContent = "Add";
@@ -5390,7 +5390,7 @@
         detailsAdd = null;
         await loadDetails(currentDetail.id);
         refreshRecordViews();
-        notice("detailsNotice", (res && res.warning) || "CBM contact added.",
+        notice("detailsNotice", (res && res.warning) || "{{abbr}} contact added.",
           res && res.warning ? "error" : "success");
       } catch (e) {
         if (e.status === 401) { showLogin(); return; }
@@ -7211,7 +7211,7 @@
     var list = d.contacts || [];
     for (var i = 0; i < list.length; i++) { if (list[i].id === id) return "Client"; }
     var cm = d.coMentors || [];
-    for (var j = 0; j < cm.length; j++) { if (cm[j].contactId === id) return "CBM"; }
+    for (var j = 0; j < cm.length; j++) { if (cm[j].contactId === id) return "{{abbr}}"; }
     return "Contact";
   }
 
@@ -8008,7 +8008,7 @@
       box.appendChild(lab);
     }
     contacts.forEach(function (c) { option(c, ""); });
-    cbm.forEach(function (c) { option(c, "(CBM)"); });
+    cbm.forEach(function (c) { option(c, "({{abbr}})"); });
   }
 
   function chosenAttendees() {
@@ -8117,7 +8117,7 @@
       openConfirm({
         title: "Schedule the next session",
         msg: "This will create the agreed next session on " + fmtWhen(followUp.when) +
-          " for all client and CBM contacts. Send calendar invitations now?",
+          " for all client and {{abbr}} contacts. Send calendar invitations now?",
         saveLabel: "Send invites", discardLabel: "Don't send invites",
         cancelLabel: "Keep editing",
         onSave: function () { saveSession(calendarDecision, "invite"); },
@@ -8228,7 +8228,7 @@
       if (bare) {
         m = "The save failed (server error " + bare[1] + "). Nothing you typed "
           + "has been lost — it is still in this editor and auto-saved as a "
-          + "draft. Please try again; if it keeps failing, tell CBM staff "
+          + "draft. Please try again; if it keeps failing, tell {{abbr}} staff "
           + "which record and the time it happened.";
       }
       notice("editorNotice", m, "error");

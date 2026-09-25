@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     # point: an unconfigured deployment renders byte-identical to what it
     # rendered before the token existed.
     organization_name: str = "Cleveland Business Mentors"
+    # The chapter's acronym, which every UI string that used to say "CBM" now
+    # carries as the ``{{abbr}}`` token (Doug, 2026-09-25). Same safety property
+    # as the name: the default renders exactly what the pages always said.
+    organization_abbreviation: str = "CBM"
 
     # The organization's logo as a PUBLICLY-HOSTED https URL (typically a file
     # already served by the org's own website). Powers the email-signature
@@ -549,8 +553,10 @@ class Settings(BaseSettings):
     # substituted from ORGANIZATION_NAME like every other page.
     events_hero_tagline: str = "Free Education for Every Stage of Your Business"
     events_hero_pillars: str = "Launch • Grow • Thrive"
+    # The three hero strings honour the branding tokens ({{org}}, {{abbr}}), so a
+    # chapter's wording can name itself without repeating the name.
     events_hero_band: str = (
-        "CBM Workshops Program | Business Questions, Answered Free, Live, "
+        "{{abbr}} Workshops Program | Business Questions, Answered Free, Live, "
         "Straightforward"
     )
     # The organisation's own top-level menu, reproduced across the top of the

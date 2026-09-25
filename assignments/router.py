@@ -1,6 +1,7 @@
 """FastAPI routes for the mentor assignment dashboard (``/assignments/api``)."""
 
 from __future__ import annotations
+from core.branding import abbr
 
 import logging
 from typing import Any
@@ -98,10 +99,10 @@ def _crm_failure(request: Request, exc: EspoError, message: str) -> HTTPExceptio
             status_code=403,
             detail=(
                 f"{message}: your CRM role is missing {hint} — "
-                "ask CBM staff to grant it."
+                f"ask {abbr()} staff to grant it."
                 if hint else
                 f"{message}: your account doesn't have permission to do this "
-                "in the CRM — ask CBM staff if you need it."
+                f"in the CRM — ask {abbr()} staff if you need it."
             ),
         )
     return HTTPException(status_code=502, detail=f"{message}: {exc}")

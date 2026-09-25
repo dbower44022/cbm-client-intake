@@ -13,6 +13,7 @@ forbids (see the assignedUserId lesson in assignments.service).
 """
 
 from __future__ import annotations
+from core.branding import abbr, render_text
 
 import asyncio
 import logging
@@ -107,7 +108,7 @@ PEEK_FIELDS: dict[str, tuple[tuple[str, str, str], ...]] = {
     "CMentorProfile": (
         ("mentorType", "Mentor type", "text"),
         ("mentorStatus", "Status", "text"),
-        ("cbmEmail", "CBM email", "email"),
+        ("cbmEmail", "{{abbr}} email", "email"),
         ("areaOfExpertise", "Areas of expertise", "multiEnum"),
         ("industryExperience", "Industry experience", "multiEnum"),
     ),
@@ -131,7 +132,7 @@ PEEK_FIELDS: dict[str, tuple[tuple[str, str, str], ...]] = {
         ("partnerContactCadence", "Contact cadence", "text"),
         ("lastContacted", "Last contacted", "date"),
         ("partnershipValue", "Value", "multiEnum"),
-        ("cBMValueProvided", "CBM value provided", "multiEnum"),
+        ("cBMValueProvided", "{{abbr}} value provided", "multiEnum"),
     ),
     "CSponsorProfile": (
         ("totalContribution", "Total contribution", "currency"),
@@ -619,13 +620,13 @@ def _company_item(it: Any, parent: dict[str, Any]) -> Optional[dict[str, Any]]:
             if not it.always:
                 return None
             return {
-                "label": it.label, "value": None, "type": "text",
+                "label": render_text(it.label), "value": None, "type": "text",
                 "block": it.block, "section": it.section,
             }
     if not display and not pairs:
         return None
     return {
-        "label": it.label, "value": display or "(details)", "type": "text",
+        "label": render_text(it.label), "value": display or "(details)", "type": "text",
         "block": it.block, "section": it.section, "link": {"aggregate": pairs},
     }
 
@@ -648,7 +649,7 @@ def _overview_items(cfg: DomainConfig, parent: dict[str, Any]) -> list[dict[str,
                 continue
             value = None  # rendered as "—" — the slot stays discoverable
         entry = {
-            "label": it.label, "value": value, "type": it.type,
+            "label": render_text(it.label), "value": value, "type": it.type,
             "block": it.block, "section": it.section,
         }
         if it.link_entity and it.id_attr and parent.get(it.id_attr):
@@ -970,7 +971,7 @@ async def peek(client: SessionClient, entity: str, record_id: str) -> dict[str, 
             return {"entity": entity, "name": None, "fields": [], "restricted": True}
         raise
     fields = [
-        {"label": label, "value": rec.get(attr), "type": ftype}
+        {"label": render_text(label), "value": rec.get(attr), "type": ftype}
         for attr, label, ftype in spec
         if rec.get(attr) not in (None, "", [])
     ]
@@ -986,7 +987,7 @@ async def peek(client: SessionClient, entity: str, record_id: str) -> dict[str, 
         email = await _mentor_personal_email(client, rec.get("contactRecordId"))
         if email:
             pos = next(
-                (i + 1 for i, f in enumerate(fields) if f["label"] == "CBM email"),
+                (i + 1 for i, f in enumerate(fields) if f["label"] == render_text("{{abbr}} email")),
                 sum(1 for f in fields if f["label"] in ("Mentor type", "Status")),
             )
             fields.insert(pos, {"label": "Personal email", "value": email, "type": "email"})
@@ -1759,7 +1760,7 @@ async def update_session(
         warnings.append(
             f"The session was saved, but {attendee_failures} attendee "
             f"change(s) could not be applied — you may not have permission to "
-            f"those contact records. Ask CBM staff to check the contact's "
+            f"those contact records. Ask {abbr()} staff to check the contact's "
             f"assigned users, then re-save the attendees."
         )
     if warnings:
@@ -1873,9 +1874,9 @@ async def _profile_display_name(client: SessionClient, mentor_profile_id: str) -
     """The mentor profile's name, for stream notes — 'CBM contact' when unreadable."""
     try:
         rec = await client.get(MENTOR_PROFILE, mentor_profile_id, select="name")
-        return rec.get("name") or "CBM contact"
+        return rec.get("name") or f"{abbr()} contact"
     except EspoError:
-        return "CBM contact"
+        return f"{abbr()} contact"
 
 
 async def _engagement_client_records(
@@ -2065,7 +2066,7 @@ async def add_comentor(
             return {
                 "status": "ok",
                 "warning": (
-                    "Added — but this CBM contact has no linked login user, so the "
+                    f"Added — but this {abbr()} contact has no linked login user, so the "
                     "engagement will not appear in their engagement list until one "
                     "is assigned in Mentor Administration."
                 ),

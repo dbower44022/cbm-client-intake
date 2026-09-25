@@ -167,7 +167,7 @@ window.CBMWizard = (function () {
           .map((e) => ((e.loc || []).join(".") || "submission") + ": " + e.msg)
           .join("; ");
       }
-      return "The server rejected the submission (HTTP " + status + ") without a reason. Please try again or contact CBM.";
+      return "The server rejected the submission (HTTP " + status + ") without a reason. Please try again or contact {{abbr}}.";
     }
 
     // Show the submission reference number on the confirmation screen so the

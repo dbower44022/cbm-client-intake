@@ -13,6 +13,7 @@ computed with THEIR login ``userName`` (the key ``conversation_seen`` uses).
 """
 
 from __future__ import annotations
+from core.branding import abbr
 
 import html as _html
 import logging
@@ -142,7 +143,7 @@ def _render_digest(
         f'<ul style="padding-left:20px">{"".join(lines)}</ul>'
         f"{footer}"
         '<p style="color:#889;font-size:12px;margin-top:20px">'
-        "You're receiving this because you manage these records in the CBM apps."
+        f"You're receiving this because you manage these records in the {abbr()} apps."
         "</p></div>"
     )
 
@@ -181,7 +182,7 @@ async def run_digest_cycle(settings: Settings, api_client: Any, store: Any) -> i
             body = _render_digest(m["name"], items, settings.app_base_url)
             n_unread = sum(i["unread"] for i in items)
             subject = (
-                f"CBM: {n_unread} unread "
+                f"{abbr()}: {n_unread} unread "
                 + ("message" if n_unread == 1 else "messages")
                 + f" across {len(items)} "
                 + ("record" if len(items) == 1 else "records")

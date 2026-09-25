@@ -212,7 +212,7 @@ SETTINGS: tuple[SettingSpec, ...] = (
     # --- Features ----------------------------------------------------------
     _s("zoom_events", GROUP_FEATURES, "Zoom webinar provisioning", kind="bool",
        component="both",
-       help="Public webinars only — mentor 1:1 sessions never use the CBM Zoom account."),
+       help="Public webinars only — mentor 1:1 sessions never use the {{abbr}} Zoom account."),
     _s("events_reminders", GROUP_FEATURES, "Event reminder emails", kind="bool",
        component="worker",
        help="The only time-driven follow-up. Needs the EventReminder template in "
@@ -244,7 +244,7 @@ SETTINGS: tuple[SettingSpec, ...] = (
        component="worker", help="Needs Gmail sync, the shared mailbox and the database."),
     _s("mentor_provision_users", GROUP_FEATURES, "Provision mentor logins", kind="bool",
        help="Creates an EspoCRM User on approval, via the admin service account."),
-    _s("google_directory_check", GROUP_FEATURES, "Verify CBM mailbox exists", kind="bool",
+    _s("google_directory_check", GROUP_FEATURES, "Verify {{abbr}} mailbox exists", kind="bool",
        help="Blocks provisioning when a mailbox is confirmed missing. Fails open."),
     _s("google_create_mailbox", GROUP_FEATURES, "Create missing mailboxes", kind="bool",
        help="Needs the read-WRITE Directory scope."),
@@ -285,7 +285,7 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("summary_model", GROUP_INTEGRATIONS, "Summary model", component="worker"),
     _s("youtube_playlist_id", GROUP_INTEGRATIONS, "YouTube playlists",
        help="The recorded-webinar playlists to import from, comma separated. "
-            "CBM keeps five topic playlists rather than one library. A video in "
+            "{{abbr}} keeps five topic playlists rather than one library. A video in "
             "two of them is imported once. Read only by the import script."),
 
     # --- Email -------------------------------------------------------------
@@ -413,6 +413,11 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="The name every page carries — title, footer and the public forms' prose. "
             "Substituted server-side as it is served, so a change here takes effect on "
             "the next page load with no redeploy."),
+    _s("organization_abbreviation", GROUP_PRESENTATION, "Chapter acronym", component="both",
+       help="The short form of the name, CBM for Cleveland. Every page, message and "
+            "email that used to say CBM says this instead — \"ask CBM staff\", the "
+            "\"CBM contacts\" table, the daily digest subject. Substituted as pages "
+            "are served, so a change takes effect on the next page load."),
     _s("organization_logo_url", GROUP_PRESENTATION, "Organisation logo URL",
        help="A publicly-hosted https image (typically on the org's own website). "
             "Powers the email-signature editor's Insert-logo button — signature "
@@ -475,7 +480,7 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("zoom_account_id", GROUP_INTEGRATIONS, "Zoom account ID", component="both"),
     _s("zoom_client_id", GROUP_INTEGRATIONS, "Zoom client ID", component="both"),
     _s("zoom_client_secret", GROUP_INTEGRATIONS, "Zoom client secret", component="both",
-       help="Public webinars only. Mentor sessions never use the CBM Zoom account."),
+       help="Public webinars only. Mentor sessions never use the {{abbr}} Zoom account."),
     _s("fathom_api_key", GROUP_INTEGRATIONS, "Fathom API key", component="worker"),
     _s("youtube_api_key", GROUP_INTEGRATIONS, "YouTube API key",
        help="The recorded-webinar library."),

@@ -30,6 +30,7 @@ set, so the feature deploys safely ahead of the Zoom app existing.
 """
 
 from __future__ import annotations
+from core.branding import abbr
 
 import logging
 from datetime import datetime
@@ -157,7 +158,7 @@ async def _create(
 
     created = await api.create_webinar(
         host,
-        topic=event.get("name") or "CBM Workshop",
+        topic=event.get("name") or f"{abbr()} Workshop",
         start=start,
         duration_minutes=_duration_minutes(event),
         agenda=(event.get("description") or "").strip(),

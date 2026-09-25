@@ -216,7 +216,7 @@ def test_brand_as_identifier_is_left_alone():
 #: building a second app in the same test really does go back to the default —
 #: monkeypatch keeps setenv for the whole test, which silently turned a "revert"
 #: case into a no-op.
-_BRANDING_ENV = ("ORGANIZATION_NAME", "CHAPTER_TOKENS_URL")
+_BRANDING_ENV = ("ORGANIZATION_NAME", "ORGANIZATION_ABBREVIATION", "CHAPTER_TOKENS_URL")
 
 
 def _public_app(monkeypatch, **env):
@@ -482,3 +482,115 @@ def test_vendored_assets_are_never_rewritten(monkeypatch):
     r = client.get("/shared/vendor/jodit/jodit.min.js")
     assert r.status_code == 200
     assert len(r.content) > 100_000
+
+
+# --- the chapter acronym ------------------------------------------------------
+#
+# Doug's ruling (2026-09-25): every UI string that said "CBM" carries the
+# chapter's acronym instead — ``{{abbr}}`` on pages and scripts, ``abbr()`` in
+# server-side messages. Same safety property as the name: the default is CBM.
+# The inventory behind the sweep is
+# ``prds/chapter-network/chapter-neutral-wording-inventory.md``.
+
+#: The word, standing alone, as it must never appear in a shipped page. The
+#: pattern deliberately passes identifiers: ``CBM.formatPhone``, ``CBMBusy``,
+#: ``cbm-button``, ``--cbm-*``, ``CBMEvents`` — those are the fence above.
+ABBR_WORD = re.compile(r"(?<![\w.\-$/{])CBM(?![\w\-}])(?!\.[A-Za-z_])")
+
+
+def _without_comments(text: str, suffix: str) -> str:
+    """Comments may say CBM (provenance); served text may not."""
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+    if suffix == ".html":
+        text = re.sub(r"<!--.*?-->", "", text, flags=re.S)
+    if suffix in (".html", ".js"):
+        text = re.sub(r"(?m)(?:^|(?<=[\s;{(]))//[^\n]*$", "", text)
+    return text
+
+
+def test_the_acronym_token_substitutes():
+    s = Settings(organization_abbreviation="BBM")
+    assert render("ask {{abbr}} staff", s, MODE_TEXT) == "ask BBM staff"
+    assert render("{{abbr}}", Settings(), MODE_TEXT) == "CBM"
+
+
+def test_no_frontend_file_hardcodes_the_acronym():
+    """THE GUARD for the acronym. A page or script that types CBM as a word
+    instead of the {{abbr}} token fails here. CRM list VALUES (options.js) are
+    data synced from the CRM, not UI strings — a CRM decision, and exempt."""
+    offenders = []
+    for path in _frontend_files(".html", ".js", ".css"):
+        rel = _rel(path)
+        if rel in GUARD_EXEMPT or path.name == "options.js":
+            continue
+        text = _without_comments(path.read_text(encoding="utf-8", errors="ignore"), path.suffix)
+        if rel == "forms/info_request/frontend/app.js":
+            text = text.replace('"CBM client or volunteer"', "")  # a CRM list value
+        hits = [text.count("\n", 0, m.start()) + 1 for m in ABBR_WORD.finditer(text)]
+        if hits:
+            offenders.append(f"{rel}: lines {hits}")
+    assert not offenders, (
+        "the acronym is typed instead of the {{abbr}} token "
+        "(core/branding.py):\n  " + "\n  ".join(offenders)
+    )
+
+
+@pytest.mark.parametrize("page", PUBLIC_PAGES)
+def test_a_default_deployment_still_says_cbm(monkeypatch, page):
+    body = _public_app(monkeypatch).get(page).text
+    assert "{{abbr}}" not in body
+
+
+def test_a_configured_deployment_says_its_own_acronym(monkeypatch):
+    client = _public_app(monkeypatch, ORGANIZATION_ABBREVIATION="BBM")
+    body = client.get("/client-intake/").text
+    assert "How did you hear about BBM?" in body
+    assert "about CBM" not in body
+    # The public form's own script carries the token too, and .js is rewritten.
+    script = client.get("/client-intake/app.js").text
+    assert "contact BBM." in script and "{{" not in script
+
+
+def test_the_default_script_still_says_cbm(monkeypatch):
+    script = _public_app(monkeypatch).get("/client-intake/app.js").text
+    assert "contact CBM." in script and "{{" not in script
+
+
+def test_server_messages_read_the_live_setting(monkeypatch):
+    """`abbr()` reads the settings at call time, so a change at /setup reaches
+    the next message with no restart."""
+    from core.branding import abbr, render_text
+
+    monkeypatch.setenv("ORGANIZATION_ABBREVIATION", "BBM")
+    get_settings.cache_clear()
+    assert abbr() == "BBM"
+    assert render_text("no {{abbr}} email on the profile") == "no BBM email on the profile"
+
+
+def test_the_settings_page_renders_its_own_captions(monkeypatch):
+    """A registry label may carry the token; the row the page shows may not."""
+    from core.settings_registry import SETTINGS
+
+    keys = {s.key for s in SETTINGS}
+    assert "organization_abbreviation" in keys
+    spec = next(s for s in SETTINGS if s.key == "google_directory_check")
+    assert "{{abbr}}" in spec.label
+    from setup.service import _row  # noqa: F401 — the row builder renders it
+    s = Settings(organization_abbreviation="BBM")
+    from core.branding import render_text
+    assert render_text(spec.label, s) == "Verify BBM mailbox exists"
+
+
+def test_the_public_programme_hero_reads_the_acronym():
+    """The gold band's default named CBM; Boston's public page showed it."""
+    from events.pages import _chrome
+
+    band = _chrome(Settings(organization_abbreviation="BBM"))["heroBand"]
+    assert band.startswith("BBM Workshops Program")
+    assert _chrome(Settings())["heroBand"].startswith("CBM Workshops Program")
+
+
+def test_the_dev_form_index_carries_the_acronym(monkeypatch):
+    monkeypatch.delenv("SESSION_SECRET", raising=False)
+    body = _public_app(monkeypatch, ORGANIZATION_ABBREVIATION="BBM").get("/").text
+    assert "BBM Intake Forms" in body and "CBM Intake" not in body

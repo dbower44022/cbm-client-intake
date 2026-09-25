@@ -11,6 +11,8 @@ app runs live-only (recompute each view).
 
 from __future__ import annotations
 
+from core.branding import render_text
+
 import logging
 from typing import Optional
 
@@ -183,7 +185,7 @@ async def _resolve_page(key: str, store) -> Optional[PageSpec]:
 
 async def _page_summaries(user: dict, settings: Settings, store) -> list[dict]:
     return [
-        {"key": p.key, "title": p.title, "scope": p.scope, "subtitle": p.subtitle}
+        {"key": p.key, "title": p.title, "scope": p.scope, "subtitle": render_text(p.subtitle)}
         for p in await _all_page_specs(store)
         if p.scope == "system" and _can_view_page(user, p, settings)
     ]
@@ -836,7 +838,7 @@ async def customize_page(key: str, request: Request) -> dict:
         raise HTTPException(status_code=404, detail="Built-in page not found.")
     values = {
         "key": code.key, "scope": code.scope, "title": code.title,
-        "subtitle": code.subtitle, "team_gate": list(code.team_gate),
+        "subtitle": render_text(code.subtitle), "team_gate": list(code.team_gate),
         "portal_dashboard": bool(code.portal_dashboard), "default_range": code.default_range,
         "panels": [
             {"key": p.key, "title": p.title, "metric_key": p.metric_key, "viz": p.viz,

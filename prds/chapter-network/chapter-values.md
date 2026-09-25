@@ -40,6 +40,7 @@ as much as the rest of the document.
 | Key | Cleveland's value | Lands in | State |
 |---|---|---|---|
 | `ORGANIZATION_NAME` | `Cleveland Business Mentors` | App env | **Built.** One setting names the chapter in every `<title>`, footer and piece of body prose across 18 pages, substituted server-side as the page is served |
+| `ORGANIZATION_ABBREVIATION` | `CBM` | App env | **Built** (v0.232.0). The acronym every UI string, message and email carries in place of CBM; read from the form's `chapter.abbreviation` |
 | `CHAPTER_TOKENS_URL` | *(empty)* | App env | **Built.** A stylesheet loaded after `/shared/tokens.css` that may redefine `--cbm-*` on `:root` and nothing else |
 
 `ops_mailbox_name` derives from `ORGANIZATION_NAME` automatically — a chapter

@@ -101,7 +101,7 @@
       fieldSpec = f.fields || []; fieldOptions = f.options || {}; requiredNames = f.required || [];
       var result = await api("/profile");
       if (!result.profileFound) {
-        showMessage("We couldn't find a mentor profile linked to your login. Please contact CBM staff to have your profile connected.");
+        showMessage("We couldn't find a mentor profile linked to your login. Please contact {{abbr}} staff to have your profile connected.");
         return;
       }
       record = result.record || {};
@@ -124,7 +124,7 @@
     var h = document.createElement("h2"); h.className = "mp__group-h"; h.textContent = "Email signature";
     sec.appendChild(h);
     var help = document.createElement("p"); help.className = "mp__hint";
-    help.textContent = "Added to the bottom of every email you compose in the CBM tools. " +
+    help.textContent = "Added to the bottom of every email you compose in the {{abbr}} tools. " +
       "You can still edit or remove it on any individual message.";
     sec.appendChild(help);
     var wrap = document.createElement("div"); wrap.className = "cbm-field";
@@ -201,7 +201,7 @@
   var GROUP_PAIRS = { "Contact information": "Personal details" };
   // Optional guidance shown under a group heading (a muted line).
   var GROUP_HINTS = {
-    "Personal interests": "Hobbies, family, what you enjoy outside work — this is shown to fellow CBM members on the mentor directory, so they can get to know you.",
+    "Personal interests": "Hobbies, family, what you enjoy outside work — this is shown to fellow {{abbr}} members on the mentor directory, so they can get to know you.",
   };
 
   // --- form (stacked groups; `row` packs fields on one line, full width;

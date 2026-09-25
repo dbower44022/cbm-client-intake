@@ -1468,7 +1468,13 @@ stamp — pending on both CRMs), `cintake-submission-*.md`, `cinformation-reques
   Inventory and rulings: `prds/chapter-network/phase-0-decleveland.md`.
   The rewrite covers `.js` too (`vendor/` excluded, token-free files untouched),
   which is how `legal-links.js` gets the four `POLICY_*_URL` settings — the
-  policy documents the public consent checkbox links to.
+  policy documents the public consent checkbox links to. **The acronym is a
+  token too** (v0.232.0, Doug's ruling 2026-09-25): `{{abbr}}` in pages and
+  scripts, `branding.abbr()` in server-side messages, `branding.render_text()`
+  for labels built at import time; setting `ORGANIZATION_ABBREVIATION`, default
+  `CBM`. Never type the word CBM in served text — the guard fails on it. CRM
+  list values (`options.js`) and the CRM's own field labels are data, not UI
+  strings, and stay until the CRM standard rules on them (TASKS G1 item 26).
 - **A new CRM-facing feature should feature-detect its field from metadata**
   rather than requiring a coordinated deploy — the established pattern is that
   the feature stays dark until the CRM field exists, then activates with no

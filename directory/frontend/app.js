@@ -355,10 +355,10 @@
     // Mentors (and any handoff kind) edit in their own tool — own record only.
     if (d.editHandoff) {
       if (d.isOwn) { openWindow(d.editHandoff, "cbm-mentorprofile"); closeModal(); }
-      else notify("You can only edit your own profile here. Open the CRM to edit other mentors, or ask CBM staff.");
+      else notify("You can only edit your own profile here. Open the CRM to edit other mentors, or ask {{abbr}} staff.");
       return;
     }
-    if (!d.editable) { notify("You can only edit records you own — ask CBM staff if you need access."); return; }
+    if (!d.editable) { notify("You can only edit records you own — ask {{abbr}} staff if you need access."); return; }
 
     $("modalTitle").textContent = d.name || "(no name)";
     var body = $("modalBody"); body.innerHTML = "";
@@ -534,7 +534,7 @@
     try {
       var s = await api("/session");
       state.session = s;
-      document.title = "CBM — " + s.title;
+      document.title = "{{abbr}} — " + s.title;
       $("title").textContent = s.title;
       $("whoName").textContent = s.name || s.userName;
       show($("mainView"));

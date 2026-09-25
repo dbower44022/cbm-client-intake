@@ -27,6 +27,7 @@ Mapping (reconciled against crm-test.clevelandbusinessmentors.org, 2026-06-12):
 """
 
 from __future__ import annotations
+from core.branding import abbr
 
 import json
 import logging
@@ -63,7 +64,7 @@ def _description_block(
     if include_company and sub.company:
         lines.append(f"Company: {sub.company}")
     if sub.how_did_you_hear:
-        lines.append(f"How they heard about CBM: {sub.how_did_you_hear}")
+        lines.append(f"How they heard about {abbr()}: {sub.how_did_you_hear}")
     lines.append("")
     lines.append(sub.message.strip())
     return "\n".join(lines)

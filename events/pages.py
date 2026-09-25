@@ -118,9 +118,11 @@ def _chrome(settings: Settings) -> dict[str, str]:
         "logoUrl": (settings.organization_logo_url or "").strip(),
         "contactEmail": settings.events_contact_address,
         "pageUrl": f"{settings.events_public_base}/" if settings.events_public_base else "",
-        "heroTagline": (settings.events_hero_tagline or "").strip(),
-        "heroPillars": (settings.events_hero_pillars or "").strip(),
-        "heroBand": (settings.events_hero_band or "").strip(),
+        # The hero strings honour {{org}} and {{abbr}} (rendered as TEXT here,
+        # then escaped like every other value by _render).
+        "heroTagline": branding.render_text((settings.events_hero_tagline or "").strip(), settings),
+        "heroPillars": branding.render_text((settings.events_hero_pillars or "").strip(), settings),
+        "heroBand": branding.render_text((settings.events_hero_band or "").strip(), settings),
     }
 
 

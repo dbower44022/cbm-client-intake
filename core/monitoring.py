@@ -13,6 +13,7 @@ The check functions accept injected ``send``/``fetch`` callables for testing.
 """
 
 from __future__ import annotations
+from .branding import abbr
 
 import logging
 from datetime import datetime, timezone
@@ -81,9 +82,9 @@ async def _email_alert(settings: Settings, text: str) -> None:
     first_line = text.strip().splitlines()[0][:120] if text.strip() else "alert"
     mime = build_mime(
         sender=sender,
-        sender_name="CBM Intake Alerts",
+        sender_name=f"{abbr()} Intake Alerts",
         to=settings.alert_email_to_list,
-        subject=f"[CBM Intake — {settings.environment}] {first_line}",
+        subject=f"[{abbr()} Intake — {settings.environment}] {first_line}",
         body_text=text,
     )
     gmail = GmailClient(sa_info, sender, settings.request_timeout_seconds)

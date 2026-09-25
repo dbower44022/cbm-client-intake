@@ -7,6 +7,7 @@ EspoCRM metadata so the CRM stays the source of truth. Computed totals
 """
 
 from __future__ import annotations
+from core.branding import abbr, render_text
 
 import asyncio
 import logging
@@ -168,7 +169,7 @@ EDITABLE_FIELDS: list[dict[str, Any]] = [
     {"name": "duesRenewalDate", "label": "Dues renewal date", "type": "date", "group": "Compliance", "row": "dates"},
     {"name": "departureDate", "label": "Departure date", "type": "date", "group": "Departure"},
     {"name": "departureReason", "label": "Departure reason", "type": "enum", "group": "Departure"},
-    {"name": "cbmEmail", "label": "CBM email", "type": "varchar", "group": "Profile"},
+    {"name": "cbmEmail", "label": "{{abbr}} email", "type": "varchar", "group": "Profile"},
     {"name": "boardPosition", "label": "Board position", "type": "varchar", "group": "Profile"},
     # LinkedIn lives on the linked Contact (same field the My Mentor Profile
     # tool + the website preview use), but is shown on the Profile tab.
@@ -176,7 +177,7 @@ EDITABLE_FIELDS: list[dict[str, Any]] = [
     # No static options: howDidYouHearAboutCBM is a real CRM enum (converted
     # from free-text 2026-07-11), so its options are pulled live like every
     # other enum — a hard-coded list here drifted and 400'd a prod save.
-    {"name": "howDidYouHearAboutCBM", "label": "How they heard about CBM", "type": "enum", "group": "Profile"},
+    {"name": "howDidYouHearAboutCBM", "label": "How they heard about {{abbr}}", "type": "enum", "group": "Profile"},
     {"name": "description", "label": "Description / notes", "type": "text", "group": "Profile"},
     {"name": "aboutMentor", "label": "About the mentor", "type": "wysiwyg", "group": "Bio"},
     {"name": "mentorProfessionalBio", "label": "Professional bio", "type": "wysiwyg", "group": "Bio"},
@@ -283,7 +284,7 @@ async def check_completeness(client: MentorClient, rec: dict[str, Any]) -> dict[
 
     if rec.get("mentorStatus") == STATUS_ACTIVE:
         if not rec.get("cbmEmail"):
-            issues.append("no CBM email address")
+            issues.append(f"no {abbr()} email address")
         user_id = assigned_user_id(rec)
         if not user_id:
             issues.append("no User assigned to the mentor")
@@ -367,7 +368,7 @@ async def _sanitize_enum_changes(
         )
         vals = ", ".join(f"“{v}”" for v in values)
         warnings.append(
-            f"{_FIELD_LABELS.get(name, name)}: {vals} is no longer a valid "
+            f"{render_text(_FIELD_LABELS.get(name, name))}: {vals} is no longer a valid "
             "option in the CRM, so that value was not saved."
         )
 
@@ -1260,7 +1261,7 @@ async def verify_mentor_status(
     email = (rec.get("cbmEmail") or "").strip()
     if not email:
         mailbox: dict[str, Any] = {
-            "status": "no-email", "detail": "no CBM email on the profile",
+            "status": "no-email", "detail": f"no {abbr()} email on the profile",
         }
     elif directory is None:
         mailbox = {

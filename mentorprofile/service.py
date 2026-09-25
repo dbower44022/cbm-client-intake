@@ -15,6 +15,7 @@ drops them even if a request smuggles them in. Staff edit those in
 """
 
 from __future__ import annotations
+from core.branding import abbr
 
 import logging
 from typing import Any, Optional, Protocol
@@ -298,7 +299,7 @@ async def update_own_profile(
     profile_id = await resolve_manager_profile(client, user_id)
     if not profile_id:
         raise MentorProfileError(
-            "No mentor profile is linked to your login. Please contact CBM staff."
+            f"No mentor profile is linked to your login. Please contact {abbr()} staff."
         )
     payload = {k: v for k, v in changes.items() if k in PROFILE_EDIT_NAMES}
     contact_payload = {k: v for k, v in changes.items() if k in CONTACT_NAMES}
@@ -317,7 +318,7 @@ async def update_own_profile(
         if not contact_id:
             raise MentorProfileError(
                 "Your mentor profile has no linked Contact record, so contact "
-                "information can't be saved. Please contact CBM staff."
+                f"information can't be saved. Please contact {abbr()} staff."
             )
         phone = contact_payload.get("phoneNumber")
         if isinstance(phone, str) and phone.strip():
@@ -383,7 +384,7 @@ async def set_own_photo(
     profile_id = await resolve_manager_profile(client, user_id)
     if not profile_id:
         raise MentorProfileError(
-            "No mentor profile is linked to your login. Please contact CBM staff."
+            f"No mentor profile is linked to your login. Please contact {abbr()} staff."
         )
     attachment_id = await client.upload_attachment(
         filename=filename or "profile-photo",
@@ -402,7 +403,7 @@ async def clear_own_photo(client: ProfileClient, user_id: str) -> None:
     profile_id = await resolve_manager_profile(client, user_id)
     if not profile_id:
         raise MentorProfileError(
-            "No mentor profile is linked to your login. Please contact CBM staff."
+            f"No mentor profile is linked to your login. Please contact {abbr()} staff."
         )
     await client.update(MENTOR_PROFILE, profile_id, {f"{PHOTO_FIELD}Id": None})
 
@@ -452,7 +453,7 @@ async def upload_inline_image(
     profile_id = await resolve_manager_profile(client, user_id)
     if not profile_id:
         raise MentorProfileError(
-            "No mentor profile is linked to your login. Please contact CBM staff."
+            f"No mentor profile is linked to your login. Please contact {abbr()} staff."
         )
     try:
         return await inline_images.upload_inline_image(

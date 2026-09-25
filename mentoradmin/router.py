@@ -7,6 +7,7 @@ edit permissions on CMentorProfile.
 """
 
 from __future__ import annotations
+from core.branding import abbr, render_text
 
 import json
 import logging
@@ -110,10 +111,10 @@ def _crm_failure(request: Request, exc: EspoError, message: str) -> HTTPExceptio
             status_code=403,
             detail=(
                 f"{message}: your CRM role is missing {hint} — "
-                "ask CBM staff to grant it."
+                f"ask {abbr()} staff to grant it."
                 if hint else
                 f"{message}: your account doesn't have permission to do this "
-                "in the CRM — ask CBM staff if you need it."
+                f"in the CRM — ask {abbr()} staff if you need it."
             ),
         )
     return HTTPException(status_code=502, detail=f"{message}: {exc}")
@@ -211,7 +212,8 @@ async def fields(request: Request) -> dict:
     user = _require_user(request)
     client = client_for(get_settings(), user)
     try:
-        return {"fields": service.EDITABLE_FIELDS, "options": await service.field_options(client)}
+        fields_out = [{**f, "label": render_text(f["label"])} for f in service.EDITABLE_FIELDS]
+        return {"fields": fields_out, "options": await service.field_options(client)}
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not load field options")
 

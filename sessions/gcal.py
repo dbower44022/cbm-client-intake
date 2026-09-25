@@ -30,6 +30,7 @@ safely ahead of the CRM build.
 """
 
 from __future__ import annotations
+from core.branding import abbr
 
 import asyncio
 import logging
@@ -272,13 +273,13 @@ async def _client_for_user(
     if not mailbox:
         return {
             "ok": False,
-            "error": "your profile has no CBM email address, so no calendar event was created",
+            "error": f"your profile has no {abbr()} email address, so no calendar event was created",
         }
     return CalendarClient(sa_info, mailbox, getattr(settings, "request_timeout_seconds", 20))
 
 
 def _summary(session: dict[str, Any]) -> str:
-    return session.get("name") or f"CBM {session.get('sessionType') or 'Session'}"
+    return session.get("name") or f"{abbr()} {session.get('sessionType') or 'Session'}"
 
 
 def _attendee_emails(
@@ -373,7 +374,7 @@ async def _create(
                 parts.append(f"{cfg.parent_label}: {parent['name']}")
         except Exception as exc:  # noqa: BLE001 — description is nice-to-have
             log.warning("could not read parent name for calendar event: %s", exc)
-    parts.append(f"Scheduled from CBM {cfg.title}.")
+    parts.append(f"Scheduled from {abbr()} {cfg.title}.")
 
     # Id-before-invite (P2, reliability review 2026-07-17): create the event
     # QUIETLY (no attendees, sendUpdates=none), persist its id to the CRM, and

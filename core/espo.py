@@ -164,7 +164,7 @@ _OP_PERMISSION = {
 # For the links users act on by name, say WHAT they picked rather than quoting
 # the CRM's link identifier at them (Doug's readable-permission-errors rule).
 _LINK_SUBJECT = {
-    "additionalMentors": "the CBM member you selected (their mentor profile)",
+    "additionalMentors": "the {{abbr}} member you selected (their mentor profile)",
     "sessionAttendees": "the contact you selected",
     "engagementContacts": "the contact you selected",
     "contacts": "the contact you selected",
@@ -250,7 +250,9 @@ def forbidden_hint(exc: Exception) -> Optional[str]:
         # "the “additionalMentors” link" is developer-speak in a mentor's face.
         known = _LINK_SUBJECT.get(link_name)
         if known:
-            return f"edit access to {known} — not to the {entity}"
+            from .branding import render_text  # lazy: branding reads settings
+
+            return f"edit access to {render_text(known)} — not to the {entity}"
         via = f" (the “{link_name}” link)" if link_name else ""
         return (
             f"edit access to the record being linked{via} — the linked record "

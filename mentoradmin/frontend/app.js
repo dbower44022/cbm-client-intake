@@ -393,7 +393,7 @@
     var mb = row.mailbox || {};
     if (mb.status === "exists") return verifyMark(true, mb.email);
     if (mb.status === "missing") return verifyMark(false, "no mailbox for " + mb.email);
-    if (mb.status === "no-email") return verifyMark(false, "no CBM email on the profile");
+    if (mb.status === "no-email") return verifyMark(false, "no {{abbr}} email on the profile");
     if (mb.status === "unavailable") {
       var s = document.createElement("span");
       s.className = "verify-na";
@@ -986,7 +986,7 @@
       xhr.onerror = xhr.onabort = xhr.ontimeout = function () {
         reject(new Error(
           "The upload was interrupted before it finished — check your " +
-          "connection and try again. If it keeps happening, tell CBM staff " +
+          "connection and try again. If it keeps happening, tell {{abbr}} staff " +
           "the file name and size."
         ));
       };
@@ -1280,7 +1280,7 @@
      ["trainingCompleted", "training completed"], ["termsAccepted", "terms accepted"]].forEach(function (f) {
       if (!v[f[0]]) issues.push({ field: f[0], text: f[1] + " not confirmed" });
     });
-    if (v.mentorStatus === "Active" && !(v.cbmEmail || "").trim()) issues.push({ field: "cbmEmail", text: "no CBM email address" });
+    if (v.mentorStatus === "Active" && !(v.cbmEmail || "").trim()) issues.push({ field: "cbmEmail", text: "no {{abbr}} email address" });
     return issues;
   }
 

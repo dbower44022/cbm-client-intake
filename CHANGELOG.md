@@ -4,6 +4,39 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.232.0] — 2026-09-25
+
+**feat(branding): the chapter's acronym replaces "CBM" in every UI string.**
+Doug's ruling (2026-09-25), after Boston's build showed CBM on every page:
+*"create a setting for capturing the Chapter Acronym that will be inserted in
+all UI strings that today contain CBM."*
+
+- New setting **`ORGANIZATION_ABBREVIATION`** (default `CBM`; `/setup` →
+  Presentation → *Chapter acronym*; the chapter settings generator reads it from
+  `chapter.abbreviation`). Same safety property as the name: an unconfigured
+  deployment renders exactly what it always did, and every existing test passed
+  unchanged.
+- Token **`{{abbr}}`** beside `{{org}}` in `core/branding.py`, substituted as
+  `.html` and `.js` files are served — 59 places across the public forms, the
+  portal, Client Administration, Mentor Administration, My Mentor Profile, the
+  session tools, the directory and My Email ("ask CBM staff", the "CBM
+  Contacts" table, "CBM — …" tab titles, "no CBM email on your profile").
+- **`branding.abbr()`** for server-side messages (46 places: the permission
+  messages in eight routers, profile-not-linked messages, the sign-in and
+  password-reset errors, calendar-event text, the daily digest subject, the
+  alert sender name, event and Zoom fallback titles) and **`render_text()`**
+  for labels built at import time (field labels, overview items, analytics
+  subtitles, the settings page's own captions), rendered where they are served.
+- The public programme's gold band default is now `{{abbr}} Workshops Program …`
+  and all three hero settings honour the tokens, so Boston's page stops saying
+  CBM the moment it takes this release.
+- Guard: `tests/test_shared_branding.py` fails on any served page or script
+  that types the word CBM outside a comment or identifier. **Not swept, by
+  design:** the CRM list values "CBM Client or Volunteer" / "CBM Email" (data
+  synced from the CRM) and the CRM's own field labels — both are CRM-standard
+  decisions, `prds/chapter-network/TASKS.md` G1 item 26. Inventory:
+  `prds/chapter-network/chapter-neutral-wording-inventory.md`.
+
 ## [0.231.1] — 2026-09-16
 
 **Released 2026-09-23 as tag `v0.231.1`** (the release lane had stood at

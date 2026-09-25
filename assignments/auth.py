@@ -12,6 +12,7 @@ request** via :func:`is_member` (admins always pass).
 """
 
 from __future__ import annotations
+from core.branding import abbr
 
 import base64
 import logging
@@ -226,10 +227,10 @@ async def request_password_reset(settings: Settings, username: str, email: str) 
         raise AuthError(
             "The CRM refused the request — password recovery may be disabled, "
             "or a reset link was already sent recently. Check your email, or "
-            "contact a CBM administrator."
+            f"contact a {abbr()} administrator."
         )
     raise AuthError(
-        "The password reset email could not be sent — please contact a CBM administrator."
+        f"The password reset email could not be sent — please contact a {abbr()} administrator."
     )
 
 

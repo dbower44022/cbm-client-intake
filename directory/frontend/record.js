@@ -948,11 +948,11 @@
       api("/mailbox").then(function (r) {
         senderMailbox = (r && r.mailbox) || null;
         senderSignature = (r && r.signature) || "";
-        setFrom(senderMailbox || "no CBM email on your profile — sending won't work");
+        setFrom(senderMailbox || "no {{abbr}} email on your profile — sending won't work");
         seedIfReady();
-      }).catch(function () { setFrom("your CBM email address"); });
+      }).catch(function () { setFrom("your {{abbr}} email address"); });
     } else if (senderMailbox === null) {
-      setFrom("no CBM email on your profile — sending won't work");
+      setFrom("no {{abbr}} email on your profile — sending won't work");
     }
 
     // To: the contact's own addresses as checkboxes — all checked on a fresh
@@ -1431,7 +1431,7 @@
         // Belongs to someone else in the CRM — never graft their address onto
         // THIS contact; they simply receive the email.
         var c = lookup.contact;
-        var kind = c.isCbmMember ? "a CBM member" : (c.company ? c.company : "an existing contact");
+        var kind = c.isCbmMember ? "a {{abbr}} member" : (c.company ? c.company : "an existing contact");
         who.textContent = addr + " — " + (c.name || "?") + " (" + kind + ", already in the CRM)";
         check.checked = false; check.disabled = true;
         checkText.textContent = " Will receive the email";
@@ -1655,7 +1655,7 @@
     try {
       session = await api("/session");
       detail = await api("/records/" + encodeURIComponent(RECORD_ID));
-      document.title = "CBM — " + (detail.name || (session.title || "Record"));
+      document.title = "{{abbr}} — " + (detail.name || (session.title || "Record"));
       $("crTitle").textContent = detail.name || "(no name)";
       $("crWhoName").textContent = session.name || session.userName;
       contactEmails = collectContactEmails();

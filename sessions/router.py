@@ -8,6 +8,7 @@ run as the logged-in user, so EspoCRM enforces their ACL.
 """
 
 from __future__ import annotations
+from core.branding import abbr
 
 import asyncio
 import logging
@@ -227,7 +228,7 @@ COMMON_DETAIL_TABS = [
 # them as its assigned User, so nothing can be scoped to them. Only an
 # administrator can create that link (in the CRM), so this one names them.
 NO_PROFILE_MESSAGE = (
-    "Your login isn't linked to a CBM Mentor profile yet, so there are no "
+    f"Your login isn't linked to a {abbr()} Mentor profile yet, so there are no "
     "records to show. Ask an administrator to set your user as the Assigned "
     "User on your profile in the CRM, then Refresh."
 )
@@ -309,10 +310,10 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 status_code=403,
                 detail=(
                     f"{message}: your CRM role is missing {hint} — "
-                    "ask CBM staff to grant it."
+                    f"ask {abbr()} staff to grant it."
                     if hint else
                     f"{message}: your account doesn't have permission to do this "
-                    "in the CRM — ask CBM staff if you need it."
+                    f"in the CRM — ask {abbr()} staff if you need it."
                 ),
             )
         # A CRM 5xx is EspoCRM's own server-side failure (e.g. a database
@@ -326,7 +327,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                     f"{message}: the CRM reported an internal error while "
                     "processing this request. Nothing you typed has been lost — "
                     "it is still in this editor. Please try again; if it keeps "
-                    "failing, tell CBM staff (the CRM server log has the detail)."
+                    f"failing, tell {abbr()} staff (the CRM server log has the detail)."
                 ),
             )
         return HTTPException(status_code=502, detail=f"{message}: {exc}")

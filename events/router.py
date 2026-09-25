@@ -16,6 +16,7 @@ administration leaves the same audit trail as the rest of the system.
 """
 
 from __future__ import annotations
+from core.branding import abbr
 
 import logging
 from typing import Any, Optional
@@ -71,7 +72,7 @@ def _crm_failure(exc: EspoError, what: str) -> HTTPException:
         raise HTTPException(
             status_code=403,
             detail=forbidden_hint(exc)
-            or "Your CRM role does not allow that — ask CBM staff to grant it.",
+            or f"Your CRM role does not allow that — ask {abbr()} staff to grant it.",
         )
     # A rejected FIELD is the user's to fix, not an outage. Mapping it to 502
     # told them the CRM was unavailable, which is wrong and leaves them nothing

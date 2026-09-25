@@ -732,7 +732,7 @@ register_page(PageSpec(
 
 register_page(PageSpec(
     key="record-contact", title="Contact Analytics", scope=CONTACT,
-    subtitle="This person's meetings and email activity with CBM.",
+    subtitle="This person's meetings and email activity with {{abbr}}.",
     default_range="last12mo",
     panels=[
         PanelSpec("meetings", "Meetings attended", "contact_sessions_attended", VIZ_STAT, width=3),
@@ -744,7 +744,7 @@ register_page(PageSpec(
 
 register_page(PageSpec(
     key="record-client", title="Client Analytics", scope=CLIENT,
-    subtitle="This business's engagement history with CBM.",
+    subtitle="This business's engagement history with {{abbr}}.",
     default_range="last12mo",
     panels=[
         PanelSpec("total", "Total engagements", "client_engagements_total", VIZ_STAT, width=3),
@@ -756,7 +756,7 @@ register_page(PageSpec(
 
 register_page(PageSpec(
     key="record-company", title="Company Analytics", scope=ACCOUNT,
-    subtitle="The company's people and activity with CBM.",
+    subtitle="The company's people and activity with {{abbr}}.",
     default_range="last12mo",
     panels=[
         PanelSpec("contacts", "Contacts at this company", "company_contacts_count", VIZ_STAT, width=3),

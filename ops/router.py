@@ -17,6 +17,7 @@ message and the compose falls back to ``mailto:``.
 """
 
 from __future__ import annotations
+from core.branding import abbr
 
 import asyncio
 import logging
@@ -98,7 +99,7 @@ def _crm_failure(request: Request, exc: EspoError, message: str) -> HTTPExceptio
         return HTTPException(
             status_code=403,
             detail=(
-                f"{message}: your CRM role is missing {hint} — ask CBM staff to grant it."
+                f"{message}: your CRM role is missing {hint} — ask {abbr()} staff to grant it."
                 if hint else
                 f"{message}: your account doesn't have permission to do this in the CRM."
             ),

@@ -24,6 +24,7 @@ find-or-create, which converges on the committed folder.
 """
 
 from __future__ import annotations
+from core.branding import abbr
 
 import logging
 import re
@@ -104,8 +105,8 @@ async def drive_for_user(
     if not mailbox:
         if not service_mode:
             raise DocsError(
-                "Your profile has no CBM email address, so documents can't be "
-                "uploaded as you — ask CBM staff to set it."
+                f"Your profile has no {abbr()} email address, so documents can't be "
+                f"uploaded as you — ask {abbr()} staff to set it."
             )
         # attribution-only in service mode — never blocks
         mailbox = user.get("userName") or "unknown"
@@ -416,7 +417,7 @@ async def _lifecycle_move(
     if not record_folder:
         raise DocsError(
             "This document's Drive folder isn't recorded, so it can't be "
-            f"{verb} — contact CBM staff."
+            f"{verb} — contact {abbr()} staff."
         )
     if to_status == STATUS_ARCHIVED:
         dest = await drive.find_child_folder(record_folder, ARCHIVED_FOLDER_NAME)

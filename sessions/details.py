@@ -10,6 +10,8 @@ runs as the logged-in user, so EspoCRM enforces their ACL.
 
 from __future__ import annotations
 
+from core.branding import abbr
+
 import logging
 import re
 from typing import Any, Optional
@@ -119,7 +121,7 @@ def _label(name: str) -> str:
     ``cIndustrySector`` → "Industry Sector", ``partnershipStartDate`` →
     "Partnership Start Date"."""
     if name.startswith("cBM"):
-        name = "CBM " + name[3:]
+        name = abbr() + " " + name[3:]
     else:
         name = _PREFIX_C.sub("", name)
     s = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", name)

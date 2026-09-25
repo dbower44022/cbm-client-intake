@@ -61,6 +61,7 @@ if TYPE_CHECKING:  # pragma: no cover
 #: public forms was a copy bug, not a second brand. Kept as a table rather than an
 #: f-string so a genuinely new token is a one-line addition here and nowhere else.
 TOKEN_ORG = "{{org}}"
+TOKEN_ABBR = "{{abbr}}"
 TOKEN_POLICY_CLIENT_CONDUCT = "{{policyClientConduct}}"
 TOKEN_POLICY_MENTOR_ETHICS = "{{policyMentorEthics}}"
 TOKEN_POLICY_TERMS = "{{policyTerms}}"
@@ -81,6 +82,7 @@ def tokens(settings: "Settings") -> dict[str, str]:
     """The substitution table for one deployment, values unescaped."""
     return {
         TOKEN_ORG: settings.organization_name,
+        TOKEN_ABBR: settings.organization_abbreviation,
         TOKEN_POLICY_CLIENT_CONDUCT: settings.policy_client_conduct_url,
         TOKEN_POLICY_MENTOR_ETHICS: settings.policy_mentor_ethics_url,
         TOKEN_POLICY_TERMS: settings.policy_terms_url,
@@ -121,6 +123,30 @@ def render(text: str, settings: "Settings", mode: str = MODE_HTML) -> str:
     for token, value in tokens(settings).items():
         text = text.replace(token, _escape(value, mode))
     return text
+
+
+def abbr(settings: "Settings | None" = None) -> str:
+    """The chapter's acronym for a server-side message ("ask {abbr} staff").
+
+    The page-side equivalent is the ``{{abbr}}`` token, substituted as the file
+    is served. Reads the live settings when none are given, so a change at
+    ``/setup`` reaches the next message with no restart."""
+    if settings is None:
+        from .config import get_settings
+
+        settings = get_settings()
+    return settings.organization_abbreviation
+
+
+def render_text(text: str, settings: "Settings | None" = None) -> str:
+    """Substitute the branding tokens in a plain-text string built at import
+    time (a field label, a settings-page caption), where an f-string could not
+    read the settings yet."""
+    if settings is None:
+        from .config import get_settings
+
+        settings = get_settings()
+    return render(text, settings, MODE_TEXT)
 
 
 #: Where the chapter override is threaded into the cascade: immediately after

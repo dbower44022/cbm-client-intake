@@ -87,7 +87,7 @@
     }
 
     $("realUrl").textContent = event.url || "(no public URL yet)";
-    document.title = "CBM — " + (event.topic || "Event");
+    document.title = "{{abbr}} — " + (event.topic || "Event");
 
     if (event.imageUrl) {
       $("hero").src = event.imageUrl;

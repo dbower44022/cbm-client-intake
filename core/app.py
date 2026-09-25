@@ -389,6 +389,7 @@ def _index_html(
     forms: list[FormSpec],
     environment: str = "",
     organization: str = "Cleveland Business Mentors",
+    abbreviation: str = "CBM",
 ) -> str:
     """The PUBLIC form index — served at ``/`` only when the staff stack is off
     (no ``SESSION_SECRET``, e.g. the dry-run dev app). With the staff stack on,
@@ -422,7 +423,7 @@ def _index_html(
         "<style>.shortcut{background:#f0f2f5;border:1px solid #d7dce2;"
         "border-radius:4px;padding:0.05em 0.4em;font-size:0.85em;color:#556}"
         "li{margin:0.3em 0}</style></head><body>"
-        + "<h1>CBM Intake Forms</h1><ul>" + "".join(items) + "</ul>" + footer
+        + f"<h1>{html_escape(abbreviation)} Intake Forms</h1><ul>" + "".join(items) + "</ul>" + footer
         + "</body></html>"
     )
 
@@ -584,7 +585,10 @@ def create_app(
             if settings_task is not None:
                 settings_task.cancel()
 
-    app = FastAPI(title="CBM Intake Forms", version=__version__, lifespan=lifespan)
+    app = FastAPI(
+        title=f"{settings.organization_abbreviation} Intake Forms",
+        version=__version__, lifespan=lifespan,
+    )
     # Exposed to the ops console router (V2 Phase 2).
     app.state.submission_store = store
     # Exposed to the analytics router — the cached-metric store (None => the app
@@ -949,6 +953,7 @@ def create_app(
                 forms,
                 environment=settings.environment,
                 organization=settings.organization_name,
+                abbreviation=settings.organization_abbreviation,
             )
         return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 

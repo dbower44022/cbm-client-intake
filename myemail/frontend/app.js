@@ -134,7 +134,7 @@
       hide($("loadingState"));
       if (res.profileFound === false) {
         $("emptyState").textContent =
-          "Your login isn't linked to a CBM Mentor profile yet, so there is no email to show. " +
+          "Your login isn't linked to a {{abbr}} Mentor profile yet, so there is no email to show. " +
           "Ask an administrator to link your profile in the CRM, then Refresh.";
         show($("emptyState"));
         return;

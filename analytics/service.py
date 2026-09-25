@@ -12,6 +12,8 @@ top of the page gate) and returns the panel payloads for the frontend renderers.
 
 from __future__ import annotations
 
+from core.branding import render_text
+
 import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
@@ -281,7 +283,7 @@ async def render_page(
         "page": {
             "key": page.key,
             "title": page.title,
-            "subtitle": page.subtitle,
+            "subtitle": render_text(page.subtitle),
             "scope": page.scope,
             "defaultRange": page.default_range,
         },

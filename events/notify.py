@@ -24,6 +24,7 @@ Inert unless Events, Gmail sync and a shared mailbox are all configured.
 """
 
 from __future__ import annotations
+from core.branding import abbr
 
 import logging
 from dataclasses import dataclass
@@ -253,7 +254,7 @@ async def send_follow_up(
                 await comms_service.send_quick_message(
                     gmail=gmail,
                     to=[reg["email"]],
-                    subject=rendered.get("subject") or (event.get("name") or "CBM event"),
+                    subject=rendered.get("subject") or (event.get("name") or f"{abbr()} event"),
                     body_html=rendered.get("bodyHtml") or "",
                     sender_name=settings.sender_display_name,
                 )

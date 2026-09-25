@@ -185,6 +185,7 @@ def build_spec(values: dict, env: dict[str, str]) -> dict:
         ev("ASYNC_DELIVERY", str(f["async_delivery"]).lower()),
         ev("ANALYTICS_ENABLED", str(f["analytics_enabled"]).lower()),
         ev("ORGANIZATION_NAME", values["chapter"]["name"]),
+        ev("ORGANIZATION_ABBREVIATION", values["chapter"].get("abbreviation") or "CBM"),
         ev("GMAIL_SYNC", flag(f, "gmail_sync")),
         ev("GDRIVE_DOCS", flag(f, "gdrive_docs")),
         ev("ZOOM_EVENTS", flag(f, "zoom_events")),

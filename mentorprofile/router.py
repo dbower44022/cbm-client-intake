@@ -8,6 +8,7 @@ run as the logged-in user (their token), so EspoCRM enforces their ACL.
 """
 
 from __future__ import annotations
+from core.branding import abbr
 
 import logging
 
@@ -81,10 +82,10 @@ def _crm_failure(request: Request, exc: EspoError, message: str) -> HTTPExceptio
             status_code=403,
             detail=(
                 f"{message}: your CRM role is missing {hint} — "
-                "please contact CBM staff to grant it."
+                f"please contact {abbr()} staff to grant it."
                 if hint else
                 f"{message}: your account doesn't have permission for this "
-                "in the CRM yet. Please contact CBM staff."
+                f"in the CRM yet. Please contact {abbr()} staff."
             ),
         )
     return HTTPException(status_code=502, detail=f"{message}: {exc}")

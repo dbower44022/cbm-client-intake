@@ -191,6 +191,19 @@ same review and left, because none stops the build. Each one names the file.
     unanswered, and a re-write from the page (step 8.10) would revert them. Step
     8.10 now warns; **the page update is owed by Boston's setup contact**, and
     stage 8 should say the switches are mandatory before stage 11 (F1).
+26. **Decide how to handle the CRM's list values and field labels that say
+    CBM** (Doug, 09-25-26: discuss after the acronym fix). Two kinds, both
+    CRM-standard decisions under ruling 4, neither touched by v0.232.0. (a) The
+    stored enum **values** "CBM Client or Volunteer" and "CBM Email" in the
+    how-did-you-hear lists of all five public forms and of `CMentorProfile` /
+    `Contact` — renaming a value changes what is stored on every existing
+    record, so the candidate is renaming only their labels
+    (`translatedOptions`) in the standard. (b) The 22 field labels and the
+    entity name in the standard's `i18n` files ("CBM Email", "CBM Member",
+    "CBM Value Provided", "Recognition on CBM Site" …), which every chapter's
+    CRM shows today; a neutral wording ("Chapter Email", "Member") applied to
+    Cleveland's two CRMs at a Sunday slot and copied to chapters from then on.
+    Section F of `chapter-neutral-wording-inventory.md` lists them all.
 25. **No tool writes the `CNetworkStandard` version row** (extends item 3). On a
     CRM built from the copied files, `build_networkstandard.py` reports nothing
     to do and never writes the stamp, so every chapter's applications report
@@ -216,7 +229,11 @@ same review and left, because none stops the build. Each one names the file.
     are never renamed.
     **Ruled 09-23-26: later, in a normal release.** Boston launches showing
     CBM in these places until then (Doug chose this over sweeping before the
-    Boston install).
+    Boston install). **Built 09-25-26 as v0.232.0** (Doug's ruling the same
+    day: a *Chapter acronym* setting inserted in every UI string): setting
+    `ORGANIZATION_ABBREVIATION`, token `{{abbr}}`, `abbr()` / `render_text()`
+    server-side, 105 places, a guard test. Inventory:
+    `chapter-neutral-wording-inventory.md`. What it deliberately left is item 26.
 
 ### Steps
 

@@ -162,9 +162,9 @@
     badgeMyEmailTile();
     badgeAttentionTiles();
     fillList("crmSection", "crmList",
-      data.crmUrl ? [{ title: "CBM CRM", url: data.crmUrl }] : [], true);
+      data.crmUrl ? [{ title: "{{abbr}} CRM", url: data.crmUrl }] : [], true);
     fillList("docsSection", "docsList",
-      data.docsUrl ? [{ title: "CBM Documentation", url: data.docsUrl }] : [], true);
+      data.docsUrl ? [{ title: "{{abbr}} Documentation", url: data.docsUrl }] : [], true);
     fillList("formsSection", "formsList", data.forms || [], true);
     show($("homeView"));
     if (data.analyticsEnabled) loadPortalDashboard();

@@ -374,7 +374,7 @@
             : Array.isArray(body.errors) ? body.errors : null;
           msg = errs && errs.length
             ? errs.map((e) => ((e.loc || []).join(".") || "submission") + ": " + e.msg).join("; ")
-            : "The server rejected the submission (HTTP " + resp.status + ") without a reason. Please try again or contact CBM.";
+            : "The server rejected the submission (HTTP " + resp.status + ") without a reason. Please try again or contact {{abbr}}.";
         }
         throw new Error(msg);
       }

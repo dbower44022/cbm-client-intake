@@ -9,6 +9,7 @@ the intake API client, the same identity the sync worker uses.
 """
 
 from __future__ import annotations
+from core.branding import abbr
 
 import logging
 from typing import Any, Optional
@@ -95,12 +96,12 @@ async def gmail_for_user(
 
     profile_id = await resolve_manager_profile(user_client, user["userId"])
     if not profile_id:
-        raise CommsError("Your login isn't linked to a CBM profile.")
+        raise CommsError(f"Your login isn't linked to a {abbr()} profile.")
     profile = await user_client.get(crm.MENTOR_PROFILE, profile_id, select="cbmEmail")
     mailbox = (profile.get("cbmEmail") or "").strip().lower()
     if not mailbox:
         raise CommsError(
-            "Your profile has no CBM email address, so your mailbox can't be read."
+            f"Your profile has no {abbr()} email address, so your mailbox can't be read."
         )
     sa_info = await get_service_account(settings)
     if sa_info is None:

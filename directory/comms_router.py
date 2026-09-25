@@ -21,6 +21,7 @@ when ``commsEnabled`` is false). All reads/writes run as the logged-in user.
 """
 
 from __future__ import annotations
+from core.branding import abbr
 
 import logging
 from typing import Callable, Optional
@@ -108,9 +109,9 @@ def register_contact_comms(
         return await sessions_service.resolve_user_mailbox(client, user["userId"])
 
     _NO_MAILBOX_NOTICE = (
-        "Your login isn't linked to a CBM mailbox, so your conversations with "
-        "this contact can't be shown. Ask CBM staff to link your mentor "
-        "profile and CBM email address."
+        f"Your login isn't linked to a {abbr()} mailbox, so your conversations with "
+        f"this contact can't be shown. Ask {abbr()} staff to link your mentor "
+        f"profile and {abbr()} email address."
     )
 
     @router.get("/records/{contact_id}/conversations")

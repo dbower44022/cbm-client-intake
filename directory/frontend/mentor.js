@@ -198,7 +198,7 @@
     // Contact lane
     var ct = p.contact || {};
     var ctBody = $("mpContactBody");
-    if (ct.cbmEmail) factRow(ctBody, "CBM email", emailNode(ct.cbmEmail));
+    if (ct.cbmEmail) factRow(ctBody, "{{abbr}} email", emailNode(ct.cbmEmail));
     if (ct.personalEmail && ct.personalEmail !== ct.cbmEmail) factRow(ctBody, "Personal email", emailNode(ct.personalEmail));
     if (ct.phone) {
       var disp = (window.CBM && CBM.formatPhone) ? CBM.formatPhone(ct.phone) : ct.phone;

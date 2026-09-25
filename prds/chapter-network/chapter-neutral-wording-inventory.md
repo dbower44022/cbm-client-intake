@@ -1,9 +1,9 @@
 # Chapter-neutral wording — every place a user still reads "CBM" or "Cleveland"
 
-**Version:** 0.1
-**Status:** Inventory for decision
+**Version:** 0.2
+**Status:** Sections A–E built as v0.232.0; section F and the list values open (TASKS G1 item 26)
 **Owner:** Doug Bower
-**Last Updated:** 09-25-26 10:47
+**Last Updated:** 09-25-26 11:00
 
 ---
 
@@ -209,4 +209,5 @@ chapter.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.2 | 09-25-26 11:00 | Doug ruled decision 1 (substitute the acronym) and asked for the setting, named *Chapter acronym*: built as v0.232.0 — 59 page places, 46 server messages, the label tables and the hero band, with a guard test. Decisions 2 and 3 are queued as TASKS G1 item 26. |
 | 0.1 | 09-25-26 10:47 | First inventory, measured against commit 6f7b3cb and Boston's CRM configuration. Requested by Doug on 09-25-26 after Boston's build showed CBM throughout its pages. |

@@ -17,6 +17,7 @@ from typing import Any, Optional
 
 from core import boot_overrides
 from core import config as config_module
+from core import branding
 from core.config import Settings, get_settings
 from core.settings_registry import (
     DENYLIST,
@@ -63,12 +64,12 @@ def _row(
     effective = getattr(settings, key, None)
     row: dict[str, Any] = {
         "key": key,
-        "label": spec.label,
+        "label": branding.render_text(spec.label, settings),
         "group": spec.group,
         "kind": spec.kind,
         "choices": list(spec.choices),
         "unit": spec.unit,
-        "help": spec.help,
+        "help": branding.render_text(spec.help, settings) if spec.help else spec.help,
         "restart": spec.restart,
         "component": spec.component,
         "editable": not spec.readonly,
