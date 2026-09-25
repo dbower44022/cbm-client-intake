@@ -1,7 +1,7 @@
 # Stage 9 — Build the CRM system
 
-**Version:** 0.14  
-**Last Updated:** 09-24-26 23:08  
+**Version:** 0.15  
+**Last Updated:** 09-24-26 23:13  
 **Generated from** `steps/stage-09.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -423,11 +423,11 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 
    *You should see:* Each item reported applied and read back identical. Three new lines at the end of CHAPTER-ENV-FILE: ESPO_API_KEY, ESPO_PROVISION_USERNAME and ESPO_PROVISION_PASSWORD. Lines marked unapplyable are explained under If it didn't work.
 4. Give the Client Assignment Role the permission it needs to assign a mentor: read all users and edit its own user. The roles captured on 31 August do not include it. First see what would change. Type the line below and press Enter:
-   - PYTHONPATH=. uv run --env-file ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env python scripts/migrate_client_assignment_role.py
+   - uv run --env-file ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env python scripts/migrate_client_assignment_role.py
 
    *You should see:* A plan to raise Client Assignment Role, User, to read all and edit own.
 5. Apply it. Type the line below and press Enter:
-   - PYTHONPATH=. uv run --env-file ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env python scripts/migrate_client_assignment_role.py --apply
+   - uv run --env-file ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env python scripts/migrate_client_assignment_role.py --apply
 
    *You should see:* The permission reported applied.
 6. Put the new secrets in the chapter's Operations vault, as three items:
@@ -468,7 +468,7 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 - A roleScope line: an add-on product is missing. Do step 9.5, then run the script for real again. It skips what it already made.
 - curl shows 401: the key was copied wrong. Copy it again from CHAPTER-ENV-FILE. curl shows 403: a permission is missing. Run the script for real again and read its unapplyable lines.
 - A team with no role: run the script for real again. If the team is still empty, stop the build.
-- The permission line stops with No module named assignments: PYTHONPATH=. is missing from the front of the line. The script imports from the application's folder and needs it (Boston, 09-24-26).
+- The permission line stops with No module named assignments: the script is older than 09-24-26. Update the application's folder with git pull and run the line again.
 
 **What usually goes wrong:** Creating, renaming or editing anything here by hand. Each application page looks for an exact team name, and a team with no role gives its members nothing. Neither shows an error: the feature behind it just shows nothing. The email templates carry no chapter name on purpose and stay identical.
 
@@ -543,6 +543,7 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 
 | Version | Date | Change |
 |---|---|---|
+| 0.15 | 09-24-26 23:13 | Step 9.7's permission line no longer needs PYTHONPATH=. in front: the script now puts the application's folder on its own path, like its siblings. The failure case names an out-of-date copy instead. |
 | 0.14 | 09-24-26 23:08 | Corrections from Boston's build on 09-24-26. Step 9.3: a second run after a failed one waits on a DNS record still pointing at the first run's server. Step 9.4: the certbot container shows as Exited on this installer and the renewal is a nightly crontab line, so the check reads both; and CRMBuilder's certificate job cannot install the certificate from its schedule (the installer needs a terminal), which took Boston's CRM off the air until it was recovered by hand — the recovery is written into If it didn't work. Step 9.5: running 9.7 first is recoverable by a re-run. Step 9.7: the permission line needs PYTHONPATH=. in front. Step 9.8: on a CRM built from the copied files, no version record is written and the applications report unstamped. Statuses updated for Boston. |
 | 0.13 | 09-24-26 00:50 | Step 9.6 corrected from Boston's build: a new server has no screen code folder, so the search finds one folder, not two, and the old instruction to stop was wrong. The step names the folder to create (persistent/custom-client/src) and creates it before copying. |
 | 0.12 | 09-23-26 22:55 | Two known defects written into the steps (open work G1 items 2 and 3). Step 9.7 sets the logo, the site address and the documentation tab by hand, because the script sets none of them and removes Cleveland's documentation tab; its finishing test gains that condition. Step 9.8 says the script may report nothing to do, because the copied files can already carry the record. |

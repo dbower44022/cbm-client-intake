@@ -30,6 +30,9 @@ are never written or logged::
     # apply
     ... scripts/migrate_client_assignment_role.py --apply
 
+    # a chapter CRM, from its settings file (deployment guide step 9.7)
+    uv run --env-file ~/.config/cbm-<label>/<label>.env python scripts/migrate_client_assignment_role.py
+
 Order: Lakeside (where it was found), crm-test (the standard), then production at
 the Sunday 17:00 UTC slot, run by a human from inside the deployed container.
 """
@@ -40,8 +43,12 @@ import os
 import sys
 from typing import Any
 
-from assignments.auth import login_token
-from core.espo import EspoClient
+# Run-as-a-script: put the repo root (this file's parent's parent) on the path,
+# so ``uv run python scripts/...`` works without PYTHONPATH (Boston, 2026-09-24).
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from assignments.auth import login_token  # noqa: E402
+from core.espo import EspoClient  # noqa: E402
 
 # --- The change list -------------------------------------------------------
 # (role name, scope, {action: minimum level}). Levels are ranked below; a grant

@@ -1,7 +1,7 @@
 stage: 9
 name: Build the CRM system
-version: "0.14"
-updated: "09-24-26 23:08"
+version: "0.15"
+updated: "09-24-26 23:13"
 why: >-
   The CRM is the chapter's system of record. Every client, mentor, partner,
   funder and meeting lives in it, and every application reads and writes it.
@@ -395,11 +395,11 @@ steps:
         see: "Each item reported applied and read back identical. Three new lines at the end of CHAPTER-ENV-FILE: ESPO_API_KEY, ESPO_PROVISION_USERNAME and ESPO_PROVISION_PASSWORD. Lines marked unapplyable are explained under If it didn't work."
       - do: "Give the Client Assignment Role the permission it needs to assign a mentor: read all users and edit its own user. The roles captured on 31 August do not include it. First see what would change. Type the line below and press Enter:"
         items:
-          - "PYTHONPATH=. uv run --env-file ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env python scripts/migrate_client_assignment_role.py"
+          - "uv run --env-file ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env python scripts/migrate_client_assignment_role.py"
         see: A plan to raise Client Assignment Role, User, to read all and edit own.
       - do: "Apply it. Type the line below and press Enter:"
         items:
-          - "PYTHONPATH=. uv run --env-file ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env python scripts/migrate_client_assignment_role.py --apply"
+          - "uv run --env-file ~/.config/cbm-SHORT-LABEL/SHORT-LABEL.env python scripts/migrate_client_assignment_role.py --apply"
         see: The permission reported applied.
       - do: "Put the new secrets in the chapter's Operations vault, as three items:"
         items:
@@ -438,7 +438,7 @@ steps:
       - "A roleScope line: an add-on product is missing. Do step 9.5, then run the script for real again. It skips what it already made."
       - "curl shows 401: the key was copied wrong. Copy it again from CHAPTER-ENV-FILE. curl shows 403: a permission is missing. Run the script for real again and read its unapplyable lines."
       - "A team with no role: run the script for real again. If the team is still empty, stop the build."
-      - "The permission line stops with No module named assignments: PYTHONPATH=. is missing from the front of the line. The script imports from the application's folder and needs it (Boston, 09-24-26)."
+      - "The permission line stops with No module named assignments: the script is older than 09-24-26. Update the application's folder with git pull and run the line again."
     goes_wrong: >-
       Creating, renaming or editing anything here by hand. Each application page
       looks for an exact team name, and a team with no role gives its members
@@ -511,6 +511,12 @@ steps:
     source: 3-Methods-CRM-Google-Applications.md#9.20
 
 changes:
+  - version: "0.15"
+    date: "09-24-26 23:13"
+    change: >-
+      Step 9.7's permission line no longer needs PYTHONPATH=. in front: the script
+      now puts the application's folder on its own path, like its siblings. The
+      failure case names an out-of-date copy instead.
   - version: "0.14"
     date: "09-24-26 23:08"
     change: >-

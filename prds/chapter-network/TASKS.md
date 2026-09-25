@@ -172,10 +172,10 @@ same review and left, because none stops the build. Each one names the file.
     (5.8, 11.5, and every doctl command in stage 11 names its context instead of
     `doctl auth switch`, which had changed the computer's default for Cleveland
     too).
-23. **`scripts/migrate_client_assignment_role.py` needs `PYTHONPATH=.`** — the
-    guide's line failed with `No module named 'assignments'`. **Guide fixed
-    09-24-26**; the script should insert its own repository root on `sys.path`
-    like its siblings do (code change owed).
+23. ~~**`scripts/migrate_client_assignment_role.py` needs `PYTHONPATH=.`**~~ —
+    the guide's line failed with `No module named 'assignments'`. **Closed
+    09-24-26:** the script puts its repository root on `sys.path` like its
+    siblings, and step 9.7's line lost the prefix (stage 9 version 0.15).
 24. **Boston's switches were answered in the values file, not on the page.**
     The settings generator refuses to run while any switch reads not known yet,
     so the fourteen were answered by ruling on 09-24-26 directly in
