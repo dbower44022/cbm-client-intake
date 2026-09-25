@@ -1496,11 +1496,22 @@ unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
 
+- **v0.232.0 (2026-09-25) — the chapter's acronym replaces CBM in every UI
+  string.** Cut and released the same day; **Boston took it by itself** from the
+  push to `release` (two minutes) and its *Chapter acronym* is set to BBM as a
+  `/setup` override, verified on the public form, a served script and the
+  public programme band. Cleveland's three apps run it and still say CBM (the
+  default). Standing rule in Conventions; what was deliberately left is
+  `prds/chapter-network/TASKS.md` G1 item 26 (CRM list values and field
+  labels). Verified live on Boston only — Cleveland's pages were checked for
+  *no change*, not for a configured acronym.
+
 - **2026-09-24/25 — Boston Business Mentors, the first real chapter, has a
   live CRM and live applications.** CRM at `https://crm.bbmentors.org`
   (EspoCRM 10.0.8, DigitalOcean droplet 209.97.157.6, manual DNS at
   Squarespace); applications at `https://apps.bbmentors.org` (App Platform app
-  `4fab6656-…`, release branch, latest-stable, managed Postgres, v0.231.1).
+  `4fab6656-…`, release branch, latest-stable, managed Postgres, v0.232.0 with
+  two `/setup` overrides: the public events page on, acronym BBM).
   The standard is applied (9.6, 9.7, 9.9); the public events page is on by a
   `/setup` override. **Owed:** stage 10 (Google — every Google switch is off),
   step 9.5 (the two paid add-ons) followed by a 9.7 re-run to fill 73

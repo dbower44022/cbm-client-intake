@@ -234,6 +234,8 @@ same review and left, because none stops the build. Each one names the file.
     `ORGANIZATION_ABBREVIATION`, token `{{abbr}}`, `abbr()` / `render_text()`
     server-side, 105 places, a guard test. Inventory:
     `chapter-neutral-wording-inventory.md`. What it deliberately left is item 26.
+    **Released and verified on Boston 09-25-26** (its acronym set to BBM at
+    `/setup`); Cleveland unchanged by default.
 
 ### Steps
 
