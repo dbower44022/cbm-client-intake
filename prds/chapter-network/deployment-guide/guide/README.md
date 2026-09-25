@@ -27,7 +27,7 @@ The guide takes a new chapter from nothing to a running system. Work through the
 10. [Set up the Google permissions the software needs](10-set-up-the-google-permissions-the-software-needs.md)
    In this stage we give the applications a way to act inside the chapter's Google account.
 11. [Deploy the chapter's applications](11-deploy-the-chapter-s-applications.md)
-   The applications are what the chapter's staff, mentors and the public actually use: the intake forms, the staff tools and the public events page.
+   In this stage we put the chapter's applications on its own hosting account and prove they work.
 12. [Set up backups and monitoring](12-set-up-backups-and-monitoring.md)
    This stage makes sure the chapter's records can be got back after a mistake or a failure, and that a person finds out when the system stops working.
 13. [Put the chapter's pages on its website](13-put-the-chapter-s-pages-on-its-website.md)
