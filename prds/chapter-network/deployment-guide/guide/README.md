@@ -25,7 +25,7 @@ The guide takes a new chapter from nothing to a running system. Work through the
 9. [Build the CRM system](09-build-the-crm-system.md)
    The CRM is the chapter's system of record.
 10. [Set up the Google permissions the software needs](10-set-up-the-google-permissions-the-software-needs.md)
-   The applications read and send the chapter's email, keep calendars in step, file documents on the shared drive and create mentor mailboxes.
+   In this stage we give the applications a way to act inside the chapter's Google account.
 11. [Deploy the chapter's applications](11-deploy-the-chapter-s-applications.md)
    The applications are what the chapter's staff, mentors and the public actually use: the intake forms, the staff tools and the public events page.
 12. [Set up backups and monitoring](12-set-up-backups-and-monitoring.md)

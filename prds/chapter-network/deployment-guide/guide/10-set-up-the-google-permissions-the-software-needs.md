@@ -1,14 +1,14 @@
 # Stage 10 — Set up the Google permissions the software needs
 
-**Version:** 0.3  
-**Last Updated:** 09-23-26 14:27  
+**Version:** 0.4  
+**Last Updated:** 09-25-26 12:50  
 **Generated from** `steps/stage-10.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
 
-## Why this stage
+## Summary
 
-The applications read and send the chapter's email, keep calendars in step, file documents on the shared drive and create mentor mailboxes. They do all of it through one machine account that the chapter's own Google administrator allows to act on the chapter's behalf. This stage creates that account and its permission, before the applications are deployed, because the applications need its key when they start.
+In this stage we give the applications a way to act inside the chapter's Google account. We create one account made for a program rather than a person, store its key in the chapter's vault, and have the chapter's own Google administrator grant that account an exact list of permissions. We also confirm the mailbox the applications will act as, and create the shared drive where every record's documents will be filed. The applications read and send the chapter's email, keep calendars in step, file documents and create mentor mailboxes, and every one of those goes through this single account. It comes before stage 11 because the applications need the key and the shared drive the moment they are deployed.
 
 **Who:** The central support organization, inside the chapter's Google account, with the chapter's own Google administrator at the keyboard for the permission grant.  
 **Time:** Not known yet. This stage has never been done on a new chapter. Book an hour with the chapter's Google administrator for step 10.3.  
@@ -31,7 +31,7 @@ The applications read and send the chapter's email, keep calendars in step, file
 
 ## 10.1 Create the machine account
 
-**Why:** The applications act on Google through an account made for a program, not a person, so no one person's sign-in is involved.
+**Summary:** We create a Google Cloud project for the chapter and, inside it, a service account: an account made for a program rather than a person. The applications sign in to Google as this account, so nobody's personal sign-in is ever involved and nothing stops working when a person leaves. In the same project we switch on the five Google services the applications call, because Google refuses a call to a service that has not been switched on for the project. The account's Unique ID is the number the chapter's Google administrator will grant permission to in step 10.3.
 
 **Who:** The central support organization inside the chapter's Google account
 
@@ -68,15 +68,21 @@ The applications read and send the chapter's email, keep calendars in step, file
 
 **Done when:** The account the software will use exists in the chapter's Google account.
 
-**How to check:** The service account appears in the project with a client identifier.
+**How to check:**
+
+- At console.cloud.google.com, with SHORT-LABEL-apps showing in the project picker at the top of the page, open IAM and admin, then Service accounts. The list shows one account named SHORT-LABEL-apps, with an email address ending @SHORT-LABEL-apps.iam.gserviceaccount.com and a status of Enabled.
+- Open that account. Its details page shows a Unique ID of about twenty digits. Open the note named Google machine account client ID in the chapter's Operations vault beside it and compare the two numbers digit by digit. They must be the same number: a wrong digit here means step 10.3 grants permission to an account that does not exist.
+- Open APIs and services, then Enabled APIs and services. The list includes Admin SDK API, Gmail API, Google Calendar API and Google Drive API, and Google Meet REST API if meeting transcripts will be switched on. A service missing here is refused later with a message saying the API has not been used in this project or is disabled.
 
 **If it didn't work:** Stop, and ask the central support organization before going on.
+
+**What usually goes wrong:** The project is created under the wrong organization, or under no organization at all, because the person signed in with a personal Google account rather than the chapter's administrator account. The project picker names the organization beside each project; if it does not name the chapter's domain, sign out, sign in as the administrator from step 4.5 and start again.
 
 ---
 
 ## 10.2 Download and store its key
 
-**Why:** The key file is the whole of the chapter's Google access in one file, so it goes straight into the vault and nowhere else.
+**Summary:** We create a key for the service account and put the key file in the chapter's vault. The key is how the applications prove to Google that they are this account. It is the whole of the chapter's Google access in one file, and anyone who holds the file can use it, so it goes into the vault and nowhere else, and the copy the browser downloaded is deleted straight afterwards. Stage 11 takes the key from the vault when the applications are deployed.
 
 **Who:** The central support organization
 
@@ -101,7 +107,12 @@ The applications read and send the chapter's email, keep calendars in step, file
 
 **Done when:** The key file is stored as a secret and is not left on anyone's laptop or in email.
 
-**How to check:** The file is in the vault, and a search of the downloads folder finds nothing.
+**How to check:**
+
+- In Proton Pass, open the chapter's Operations vault. An item named Google machine account key is there with one attachment, a file ending .json. Open the attachment. It is plain text that starts with a curly bracket and contains a line beginning "client_email" whose value ends @SHORT-LABEL-apps.iam.gserviceaccount.com, and a line beginning "client_id" whose value is the Unique ID from step 10.1. A file naming a different account is the key to the wrong project.
+- A second named person at the central support organization opens the same item and sees the attachment. One person holding the only copy is the failure this vault exists to prevent.
+- On the computer that did the download, search the Downloads folder for .json. It finds nothing. Then open the bin: it is empty. Also check the browser's own downloads list, which keeps a link to the file until it is cleared.
+- At console.cloud.google.com, open the service account's Keys tab. Exactly one key is listed, dated today. If two are listed, the download was run twice: keep the one whose Key ID matches the "private_key_id" line in the file in the vault, and delete the other, so no key exists that the vault does not hold.
 
 **If it didn't work:** Stop, and ask the central support organization before going on.
 
@@ -111,7 +122,7 @@ The applications read and send the chapter's email, keep calendars in step, file
 
 ## 10.3 Enter the permission grant
 
-**Why:** The machine account can do nothing until the chapter's Google administrator allows it, and each permission missed here fails much later with an error that names nothing useful.
+**Summary:** The chapter's Google administrator tells Google that the service account may act on behalf of the chapter's users, for an exact list of permissions (Google calls the mechanism domain-wide delegation). Without this grant the account exists but can do nothing. The list has to be exact, because a permission missed here does not fail here: it fails weeks later, in a message that does not say which permission is missing. Only the chapter's own administrator can enter the grant, which is why this step is booked in advance and why the central support organization reads the list aloud while the administrator types.
 
 **Who:** The chapter and the central support organization — the chapter's Google administrator types; the central support organization reads out the list
 
@@ -144,17 +155,22 @@ The applications read and send the chapter's email, keep calendars in step, file
 
 **Done when:** The grant is entered in the chapter's own Google admin console with the exact list of permissions, and the list has been checked item by item against the standard. A missing permission fails later with a message that names nothing useful.
 
-**How to check:** The grant is listed with the client identifier and every permission on the standard list.
+**How to check:**
+
+- At admin.google.com, signed in as the chapter's Google administrator, open Security, then Access and data control, then API controls, then Manage domain-wide delegation. One row shows the Client ID from step 10.1. Open the note named Google machine account client ID in the chapter's Operations vault beside it and compare digit by digit. A row for a different number is a grant to an account that does not exist.
+- Beside the Client ID, the row lists its scopes. Count them: seven, or eight if meeting transcripts will be switched on. Then read each one against the list in action 4 of this step, aloud, one at a time. Look for a space after a comma, a trailing full stop, or http instead of https; each one silently breaks that scope and nothing else.
+- Check there is only one row for this Client ID. Google keeps all of an account's scopes in a single row, and a second row for the same number does not add to the first; it conflicts with it. If there are two, edit the first to hold the full list and delete the second.
+- The real test is in stage 11, where steps 11.14 to 11.18 try each Google connection in turn. A grant takes a few minutes to take effect, and Google says it can take up to a day. A failure straight after authorizing that reads unauthorized_client is usually the wait, not a mistake: wait and try again before changing anything.
 
 **If it didn't work:** If a Google check in stage 11 fails later, come back to this list first, before looking anywhere else.
 
-**What usually goes wrong:** A permission missed. It does not fail here. It fails later, and the error does not say which permission is missing. Directory access needs two permissions, reading and changing; a grant with only the reading one fails at the very last check (step 11.18).
+**What usually goes wrong:** A permission missed. It does not fail here. It fails later, and the error does not say which permission is missing. Directory access needs two permissions, reading and changing; a grant with only the reading one fails at the very last check (step 11.18). The other known failure is a second row added for the same Client ID instead of editing the first: the two rows conflict rather than combine.
 
 ---
 
 ## 10.4 Name the mailbox the software acts as
 
-**Why:** The applications act as one mailbox when they read and send the chapter's mail, and Google refuses anything that is not a real mailbox.
+**Summary:** We confirm that the shared operations mailbox from stage 4 is a real mailbox with its own licence, and write its address on the chapter information form. The applications read and send the chapter's shared mail as this mailbox, and Google lets the service account act only as a real licensed user. A group address or a forwarding alias looks the same in an address book, but Google refuses it, with a message that names nothing useful. This check has cost the project time before, so it is done here rather than discovered in stage 11.
 
 **Who:** The chapter and the central support organization
 
@@ -172,7 +188,12 @@ The applications read and send the chapter's email, keep calendars in step, file
 
 **Done when:** The mailbox is named, and it is a real licensed mailbox rather than a group or an alias. A group or alias is refused.
 
-**How to check:** The address appears in the users list with a licence attached.
+**How to check:**
+
+- At admin.google.com, open Directory, then Users, and search for the address. It appears as a user with a person's or a team's name beside it. Open the user: the page names a Google Workspace licence against it. A user with no licence has no mailbox, and the applications cannot act as it.
+- On that user's page, find the primary email address. The address written on the chapter information form must be that primary address, character for character. An address listed further down the page as an email alias is not a mailbox of its own, and must not be the one on the form.
+- Open Directory, then Groups, and search for the same address. It must not appear there. An address that is a group appears here and not under Users.
+- Signing in at mail.google.com as the address, with its own password from step 4.7, opens an inbox. A group or an alias has no password and no inbox to open.
 
 **If it didn't work:** Stop, and ask the central support organization before going on.
 
@@ -182,7 +203,7 @@ The applications read and send the chapter's email, keep calendars in step, file
 
 ## 10.5 Create the shared drive and add the machine account
 
-**Why:** Every record's documents are kept on one shared drive the chapter owns, and the applications file them there as the machine account.
+**Summary:** We create the shared drive that will hold every record's documents, and add the service account to it as a Manager. The applications file documents there as the service account, and give each person access to the folders for their own records, which is what the Manager role allows. A shared drive belongs to the chapter rather than to a person, so it survives staff changes; a folder in someone's own drive goes with them when they leave. Its identifier goes on the chapter information form, and stage 11 gives it to the applications.
 
 **Who:** The central support organization inside the chapter's Google account
 
@@ -208,7 +229,12 @@ The applications read and send the chapter's email, keep calendars in step, file
 
 **Done when:** The shared drive exists and the machine account is a member of it.
 
-**How to check:** The service account appears in the drive's member list.
+**How to check:**
+
+- At drive.google.com, signed in as the chapter's Google administrator, open Shared drives in the left-hand list. CHAPTER-NAME Documents is listed there, under Shared drives and not under My Drive. A drive that appears under My Drive is an ordinary folder, and the check has failed.
+- Open the drive, click its name at the top of the page and choose Manage members. The service account's address, ending @SHORT-LABEL-apps.iam.gserviceaccount.com, is in the list with the role Manager. Any other role lets the applications file documents but not give people access to their folders.
+- The rest of the member list is the chapter's Google administrator who created the drive, and nobody else. People are given access to single folders later, by the applications, never to the whole drive.
+- With the drive itself open (not a folder inside it), the browser's address bar ends /drive/folders/ followed by the identifier. The value on the chapter information form matches it character for character. It is about nineteen characters and usually begins 0A; a much longer value was copied from inside a folder and points at that folder, not the drive.
 
 **If it didn't work:** Stop, and ask the central support organization before going on.
 
@@ -220,6 +246,7 @@ The applications read and send the chapter's email, keep calendars in step, file
 
 | Version | Date | Change |
 |---|---|---|
+| 0.4 | 09-25-26 12:50 | Rewritten for the reader (Doug, 09-25-26): the stage and every step open with a Summary, what is done and why in a few plain sentences, in place of the one-line Why. Every How to check is now a list of concrete checks naming where to look and what must be seen: the Unique ID compared digit by digit, the key file's own contents and the Keys tab, the single delegation row and its scope count, the primary address against the alias list, and the shared drive's place in the left-hand list and the length of its identifier. Two more known failures added: a project made under a personal account (10.1) and a second delegation row for the same Client ID (10.3). |
 | 0.3 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. |
 | 0.2 | 09-19-26 00:07 | Every action made exact (Doug, 09-19-26: sweep every step): the Google Cloud project, the five APIs, the service account, the JSON key (including the organization policy that blocks keys by default), the domain-wide delegation entry with the exact scope list read from the software's code, one per line and as one pasteable line, and the shared drive with the Manager role Cleveland's own service account holds. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for the Google permissions (3-Methods-CRM-Google-Applications.md, version 0.5) with the step list's finishing tests. Numbered actions, a reason per step, and a check an app can run were added. |

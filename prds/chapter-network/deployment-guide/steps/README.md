@@ -1,9 +1,9 @@
 # The deployment guide as data
 
-**Version:** 0.4
+**Version:** 0.5
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-23-26 20:40
+**Last Updated:** 09-25-26 12:50
 
 ---
 
@@ -32,7 +32,8 @@ August build found. The reader never needs them.
 ```yaml
 stage: 9
 name: Build the CRM system
-why: >-            # two to four plain sentences: what the stage achieves, and why it matters
+summary: >-        # a short paragraph: what the stage does and why it matters; printed as Summary
+why: >-            # older form, one to four sentences; printed as Why this stage when there is no summary
 who: >-            # who does the stage
 time: >-           # rough time, or "not known yet"
 before_you_start:  # what must be finished first, named in words
@@ -49,7 +50,8 @@ steps: [...]
 |---|---|
 | `id` | The step number, as a string: `"9.2"`. Changed only by a ruling, and then every reference in the guide, the step list and `scripts/chapter_form/` changes with it, and the stage's change log gives the old-to-new map. Stage 9 was renumbered this way on 09-23-26 (Doug). The method notes keep the old numbers. |
 | `name` | The step's name, unchanged from the step list. |
-| `why` | One sentence: why this step exists, in the reader's terms. |
+| `summary` | Two to four plain sentences: what the step does and why it matters, in the reader's terms. Printed as **Summary** at the top of the step. A step has this or `why`, not both; `summary` is the form new and rewritten stages use (Doug, 09-25-26, for stage 10). |
+| `why` | The older form: one sentence, why this step exists. Printed as **Why** when the step has no `summary`. |
 | `who` | `chapter`, `central` (the central support organization) or `both`, then any detail. |
 | `first` | Step ids that must be finished first. |
 | `needs` | Values from the chapter information form, or secrets, this step uses. |
@@ -58,7 +60,7 @@ steps: [...]
 | `actions` | Numbered actions. Each has `do` (one action), `items` when the action involves a list (each item renders on its own line), and, where it helps, `see` (what the person should see — a sentence, or a list when there are several things to see). Click-level where the screens are known; coarser where they are not, and `status` says so. |
 | `done_when` | The finishing test, word for word from the step list. A test with several conditions is a list, one condition per item, rendered as "Done when all of these are true". Only conditions go in it. |
 | `note` | A sentence that explains the finishing test without being a condition, such as "There are two sets, not one." Printed after the conditions, and kept word for word with the step list's Note line. |
-| `check` | `how`: how a person confirms it. `probe`: what the app would check automatically, in plain words, or `none`. |
+| `check` | `how`: how a person confirms it — a sentence, or a list with one concrete check per item, each naming where to look and what must be seen. `probe`: what the app would check automatically, in plain words, or `none`. |
 | `if_not` | What to do when the check fails: a sentence, or a list with one failure case per item, each naming how to recognise it. Default: stop and ask the central support organization. |
 | `goes_wrong` | The known failure and how to recognise it, or `nothing known yet`. |
 | `later` | The automation that will replace a manual method, or `unchanged`. |
@@ -66,7 +68,7 @@ steps: [...]
 | `fields` | Stage 8 only: the questions of the chapter information form, one entry per answer. Each has `key` (where the answer sits in the values file, e.g. `web.website_base_url`), `label`, `by` (`chapter` or `central`), `kind` (`text`, `slug`, `url`, `email`, `domain`, `bool` or `choice`), `required`, and the three explanations `meaning`, `source` and `wrong`. Optional: `example`, `default` (the recommended answer), `options` (for `choice`), `later` (the step that answers it), `show_if` (a switch that must be yes for it to be asked). The guide prints them; `scripts/chapter_form/` builds the web page and the values file from them. |
 | `source` | Where the history lives, e.g. `3-Methods-CRM-Google-Applications.md#9.2`. |
 
-The readable guide shows `why`, `who`, `first`, `actions`, `done_when`,
+The readable guide shows `summary` (or `why`), `who`, `first`, `actions`, `done_when`,
 `check.how`, `if_not` and `goes_wrong`, plus one line when a step has never been
 done for real. `mode`, `needs`, `produces`, `probe`, `later` and `source` are for
 the app and the people maintaining the guide.
@@ -96,6 +98,7 @@ screen is not known, say so in the action.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.5 | 09-25-26 12:50 | A stage or a step may carry `summary`, what is done and why in a few sentences, printed as Summary in place of Why (Doug, 09-25-26, for stage 10). `check.how` may be a list, one concrete check per item. |
 | 0.4 | 09-23-26 20:40 | Step numbers may change by ruling, with every reference following (Doug, 09-23-26, for stage 9). A stage may carry an `owed` list, printed as Not possible yet. `if_not` may be a list, one failure case per item. The renderer indents an action's lines to the width of its number, so Markdown no longer breaks the list at action 10. |
 | 0.3 | 09-23-26 14:27 | `placeholders.yaml` added: the shared words in capitals, printed on the guide's index page. CHAPTER-SLUG renamed SHORT-LABEL, the form's own name (Doug, 09-23-26). |
 | 0.2 | 09-23-26 12:03 | The `fields` list added, for the chapter information form's questions (Doug, 09-23-26: the form becomes a web page built from stage 8). |

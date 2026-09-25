@@ -41,8 +41,14 @@ def render_stage(stage: dict) -> str:
     out.append(f"**Last Updated:** {stage.get('updated', '')}  ")
     out.append(f"**Generated from** `steps/stage-{int(stage['stage']):02d}.yaml` — do not edit this page; edit the YAML and re-render.\n")
     out.append("---\n")
-    out.append("## Why this stage\n")
-    out.append(stage["why"].strip() + "\n")
+    # A stage (or a step) carries either `summary` — what is done and why, a
+    # few sentences — or the older one-line `why`. Summary replaces Why.
+    if stage.get("summary"):
+        out.append("## Summary\n")
+        out.append(stage["summary"].strip() + "\n")
+    else:
+        out.append("## Why this stage\n")
+        out.append(stage["why"].strip() + "\n")
     out.append(f"**Who:** {stage['who'].strip()}  ")
     out.append(f"**Time:** {stage.get('time', 'not known yet').strip()}  ")
     out.append(f"**When this stage is done:** {stage['unlocks'].strip()}\n")
@@ -61,7 +67,10 @@ def render_stage(stage: dict) -> str:
     for s in stage["steps"]:
         out.append("---\n")
         out.append(f"## {s['id']} {s['name']}\n")
-        out.append(f"**Why:** {s['why'].strip()}\n")
+        if s.get("summary"):
+            out.append(f"**Summary:** {s['summary'].strip()}\n")
+        else:
+            out.append(f"**Why:** {s['why'].strip()}\n")
         first = s.get("first") or []
         out.append(f"**Who:** {_who(s['who'].strip())}\n")
         out.append("**Finish first:**" + ("\n" if first else " nothing.\n"))
@@ -106,8 +115,13 @@ def render_stage(stage: dict) -> str:
         if s.get("note"):
             out.append(f"**Note:** {str(s['note']).strip()}\n")
         check = s.get("check") or {}
-        if check.get("how"):
-            out.append(f"**How to check:** {check['how'].strip()}\n")
+        how = check.get("how")
+        if isinstance(how, list):
+            out.append("**How to check:**\n")
+            out.extend(f"- {str(x).strip()}" for x in how)
+            out.append("")
+        elif how:
+            out.append(f"**How to check:** {how.strip()}\n")
         if_not = s.get("if_not") or DEFAULT_IF_NOT
         if isinstance(if_not, list):
             out.append("**If it didn't work:**\n")
@@ -162,7 +176,8 @@ def render_index(stages: list[dict]) -> str:
            "---\n"]
     for st in stages:
         out.append(f"{st['stage']}. [{st['name']}]({_slug(st)}.md)")
-        out.append(f"   {st['why'].strip().split('. ')[0].rstrip('.')}.")
+        lead = (st.get("summary") or st["why"]).strip()
+        out.append(f"   {lead.split('. ')[0].rstrip('.')}.")
     placeholders = STEPS / "placeholders.yaml"
     if placeholders.exists():
         out += ["", "---\n", "## Words in capitals\n",
