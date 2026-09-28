@@ -1,6 +1,6 @@
 # CBM Events & Webinars — Finalization Plan
 
-Last Updated: 09-28-26 00:24 · Revision 4.2 — see change log at the end.
+Last Updated: 09-28-26 00:32 · Revision 4.3 — see change log at the end.
 
 Companion to `CBM_Events_PRD.md`, `CBM_Events_Implementation_Plan.md` and
 `CBM_Events_Registration_Recognition_Plan.md`. Those three say what the feature
@@ -130,8 +130,8 @@ after Doug's requirements are gathered, and nothing is settled until he rules.
 | # | Feature | Raised by | State |
 |---|---|---|---|
 | F1 | Event topic: multiple selections, plus a user-entered value | User review, 09-2026 | Catalogued |
-| F2 | Display Date/Time: the moment an event may first appear on the public pages | User review, 09-2026 | Requirements ruled 09-28-26; design not drafted |
-| F3 | Event audience: Internal, a specific chapter, or Public — Internal events form a calendar on the chapter's portal | User review, 09-2026 | Requirements ruled 09-28-26; design not drafted |
+| F2 | Display Date/Time: the moment an event may first appear on the public pages | User review, 09-2026 | Requirements ruled 09-28-26; design drafted (`CBM_Events_Audience_and_Display_Design.md` 0.1), awaiting Doug's review |
+| F3 | Event audience: Internal, a specific chapter, or Public — Internal events form a calendar on the chapter's portal | User review, 09-2026 | Requirements ruled 09-28-26; design drafted (`CBM_Events_Audience_and_Display_Design.md` 0.1), awaiting Doug's review |
 | F4 | Presenters: select or add them per event, with an optional presenter biography on the event page | User review, 09-2026 | Catalogued |
 | F5 | Portal home page: a left-hand list of upcoming internal events, each opening its details | User review, 09-2026 | Catalogued |
 
@@ -513,6 +513,7 @@ attendance recorded → recording link pasted → the engagement rollup shows it
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 4.3 | 09-28-26 00:32 | Claude (Claude Code) | F2 and F3 designed together in `CBM_Events_Audience_and_Display_Design.md` revision 0.1, a draft awaiting Doug's review with four decisions (D1–D4). Both features' state updated. |
 | 4.2 | 09-28-26 00:24 | Claude (Claude Code) | F2 requirements ruled by Doug (09-28-26): the display time applies on every page; it narrows the Publish to website checkbox rather than replacing it, and an empty one means as soon as ticked; registration opens at the display time; the Zoom webinar is still created when the event is ticked; a display time after the start is allowed, with a warning only when the event is still upcoming. Claude's decisions recorded separately: a visible "Appears" state in Event Administration, and the cache delay of about two minutes accepted. F2 and F3 are to be designed together. |
 | 4.1 | 09-28-26 00:10 | Claude (Claude Code) | F3 requirements ruled by Doug (09-27-26 and 09-28-26): an event is Internal or Public; a Public event carries a reach of all chapters, one chapter or a list, always including the creating chapter; the reach is recorded now and the sharing across chapters is built later, not blocking the cutover; chapter names come from the CRM standard; the audience sits beside the Publish to website checkbox; Internal events are seen by every signed-in member unless limited to teams, and take registrations when a per-event checkbox says so; the portal calendar shows Internal and this chapter's Public events with a per-member filter saved in the application's database; F2's display time applies everywhere. Also recorded: the Association's rulings say nothing about events, and the public registration form's gate must check the audience. F3 state moved from Catalogued. |
 | 4.0 | 09-27-26 23:24 | Claude (Claude Code) | Track F added: features found by user review, catalogued before design, required before the cutover (Doug, 09-27-26). F1 recorded — the event topic takes several values and a user-entered one. F2 recorded — a Display Date/Time before which an event stays off the public pages. F3 recorded — an event audience of Internal, a specific chapter, or Public, with Internal events forming a portal calendar. F4 recorded — presenters per event, with an optional biography copied from a mentor's profile or written by hand. F5 recorded — a left-hand list of upcoming internal events on the portal home page. The catalog is complete at five. Definition of done gains item 8 (Track F), and D3, the confirmation email, is named as required by item 2. |
