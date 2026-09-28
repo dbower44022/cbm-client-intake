@@ -1,6 +1,6 @@
 # CBM Events & Webinars — Finalization Plan
 
-Last Updated: 09-14-26 18:15 · Revision 3.0 — see change log at the end.
+Last Updated: 09-27-26 23:38 · Revision 4.0 — see change log at the end.
 
 Companion to `CBM_Events_PRD.md`, `CBM_Events_Implementation_Plan.md` and
 `CBM_Events_Registration_Recognition_Plan.md`. Those three say what the feature
@@ -8,7 +8,9 @@ is and how it was built. This document says what is left between today's state
 and a finished, live, production feature, in the order it should be done, and
 who owns each piece.
 
-**Status:** Track A is DONE except the redirect itself. Production is switched
+**Status:** Track A is DONE except the redirect itself — **but the cutover now waits on Track F**, the features
+found by user review (Doug, 09-27-26), and on the confirmation email (D3),
+which the definition of done always required. Production is switched
 on, its recorded library is imported and published, and both blockers (consent,
 the per-event duplicate hold) are built and live. What remains is Doug creating
 the upcoming sessions, one end-to-end test registration, and the one redirect
@@ -73,8 +75,15 @@ The feature is finished when all of the following are true on **production**:
 6. Staff create, publish, run and report on an event entirely in `/events`,
    signed in as a non-admin member of the Marketing Admin Team.
 7. The Google Apps Script is retired and its exposed YouTube key is rotated.
+8. Every Track F feature is built, verified, and live on production.
 
-Items 1–5 and 7 are the **lead-leak fix**. Item 6 is the programme-management
+Item 2 requires the CBM confirmation email (D3). Zoom's own confirmation
+covers only online events, and Zoom is switched off everywhere, so without D3 a
+visitor who registers after the redirect receives nothing. D3 is therefore
+required before the cutover, not an improvement after it.
+
+Items 1–5 and 7 are the **lead-leak fix**. Item 8 is what user review found
+missing (Doug, 09-27-26). Item 6 is the programme-management
 tool. The Zoom automation, the follow-up emails and registration recognition
 make the tool better but are not required for any of the seven.
 
@@ -110,6 +119,187 @@ website, and it is one redirect rule.
 **The rollback is the redirect.** Removing it puts the old page back exactly as
 it was, in under a minute, with no deploy and no code change. That is why the
 Apps Script stays deployed but idle until A9.
+
+### Track F — Features from user review. Required before the cutover.
+
+Doug, 09-27-26: user review of the live pages and Event Administration found
+features that must exist before the redirect. This track is the catalog. Each
+feature is **catalogued first, designed second**: the design is drafted only
+after Doug's requirements are gathered, and nothing is settled until he rules.
+
+| # | Feature | Raised by | State |
+|---|---|---|---|
+| F1 | Event topic: multiple selections, plus a user-entered value | User review, 09-2026 | Catalogued |
+| F2 | Display Date/Time: the moment an event may first appear on the public pages | User review, 09-2026 | Catalogued |
+| F3 | Event audience: Internal, a specific chapter, or Public — Internal events form a calendar on the chapter's portal | User review, 09-2026 | Catalogued |
+| F4 | Presenters: select or add them per event, with an optional presenter biography on the event page | User review, 09-2026 | Catalogued |
+| F5 | Portal home page: a left-hand list of upcoming internal events, each opening its details | User review, 09-2026 | Catalogued |
+
+**The catalog is complete at five features** (Doug, 09-27-26). Design proceeds
+one feature at a time, in the order Doug chooses.
+
+**F1 — Event topic takes several values and a user-entered one.**
+
+*The need, as stated:* "The topic selection needs to support multiple
+selections and allow a user entered value in case the event does not match the
+pre-defined topics."
+
+*What exists today (verified in the code, 09-27-26):*
+- `CEvent.topic` is a single enum of ten values. Doug ruled on 2026-07-25 to
+  keep it single (`cevent-entities-crm-handoff.md` § 5), and that ruling
+  anticipated widening it to a multi-enum as a one-line schema change. This
+  feature supersedes the single-value half of that ruling.
+- The field feeds four places: the Event Administration editor
+  (`events/config.EVENT_FIELDS`), the public recorded-library topic filter
+  (`events/service.recording_topics` / `filter_recordings`, ordered by
+  `cfg.TOPIC_ORDER`), the public payload's `category` (`events/service.py`,
+  `events/reporting.py`), and the enum clean-up on save (`events/service.py`,
+  the empty-enum fix of v0.229.1).
+- A user-entered value is new. It has no precedent in the 07-25 ruling, and
+  EspoCRM refuses a multi-enum value outside the field's option list.
+
+*Questions to settle at design, not yet asked:* who may enter a new value
+(staff only, surely); whether a user-entered value appears in the public topic
+filter; whether it is stored beside the curated values or in its own field;
+whether a repeated user-entered value is ever promoted into the curated list;
+and how an event with two topics is counted in the programme reports.
+
+**F2 — Display Date/Time.**
+
+*The need, as stated:* "When an event is created, a 'Display Date/Time' can be
+defined that will specify the date and time when the event can first be
+displayed on the event web sites. If not defined, the event can be displayed
+immediately."
+
+*What exists today (verified in the code, 09-27-26):*
+- The only public boundary is `publishToWebsite` plus "not cancelled", applied
+  by `events/service._public_where`. Every public read goes through it: the
+  calendar (`list_upcoming`), the recorded library (`published_recordings`) and
+  the per-event page (`get_by_slug`, which 404s an unpublished event).
+- **A second gate exists outside that function.** The registration orchestrator
+  checks `publishToWebsite` directly (`forms/event_registration/orchestrator.py`
+  line 96). A display time enforced only in `_public_where` would hide an event
+  from the pages while still accepting registrations for it.
+- Public responses carry a public `Cache-Control` lifetime (`events/public.py`,
+  `events/pages.py`), and the recorded library has a server-side cache. An
+  event can therefore appear up to one cache lifetime after its display time.
+- No display-time field exists on `CEvent` on either CRM, so this is a CRM
+  build as well as a code change, and it follows the feature-detect convention.
+
+*Questions to settle at design, not yet asked:* whether the display time
+narrows `publishToWebsite` (both must hold) or replaces the need to tick it;
+whether it governs the calendar, the recorded library and the event page alike;
+whether registration opens at the display time or has its own opening time;
+whether an event whose display time has not arrived is visible to staff in a
+"scheduled to appear" state in Event Administration; whether Zoom webinar
+creation (which fires on publish) waits for the display time; and whether a
+display time later than the event's start is refused at save.
+
+**F3 — Event audience: Internal, a specific chapter, or Public.**
+
+*The need, as stated:* "When an event is defined, it can be defined as an
+internal event, a specific chapter event, or a public event. Internal events
+will only be displayed on the chapter main menu page as a sort of internal
+calendar."
+
+*What exists today (verified in the code, 09-27-26):*
+- An event has no audience field. Its only visibility control is the
+  `publishToWebsite` tick (see F2 for where it is enforced). `eventType`
+  (`Online Webinar` / `In Person Event` / `Online Course`) is an editorial
+  category, not an audience.
+- The "chapter main menu page" is the authenticated portal at `/`
+  (`portal/router.py`). It shows no calendar today; events appear there only
+  as the Event Administration tile and the public-pages links.
+- `CEvent` already doubles as the organisation calendar: on crm-test most of
+  its 94 rows are internal meetings and mentoring-session mirrors synced from
+  Google, while production's rows are all programme events. An internal
+  calendar built on `CEvent` would show whatever the Google sync puts there,
+  unless it is filtered.
+- **The chapter network bears on "a specific chapter event."** Chapter-network
+  ruling 2 is one EspoCRM per chapter, and ruling 8 is that this application
+  serves each chapter's public pages from that chapter's own deployment. So
+  every event already belongs to exactly one chapter's CRM, and today no
+  chapter can see another chapter's events. If "Public" means visible across
+  chapters, that is a cross-CRM feature with no mechanism yet; if it means "on
+  this chapter's public site", then "a specific chapter event" needs defining.
+  The Business Mentors Association repository holds the rulings on how the
+  chapters relate, and it would have to be read before this is designed.
+
+*Questions to settle at design, not yet asked:* what "a specific chapter event"
+means and who sees it, as distinct from Public; whether Public means this
+chapter's public site or every chapter's; whether the audience replaces the
+`publishToWebsite` tick or sits beside it; who sees the internal calendar
+(every signed-in member, or by team); whether Google-synced meetings and
+session mirrors belong on it; whether internal events take registrations; and
+how F2's display time applies to an internal event.
+
+**F4 — Presenters, and their biographies on the event page.**
+
+*The need, as stated:* "The system needs to provide a way to select or add
+presenter(s) to each event. The event contains an option to show the
+presenters bio on the event details page. If the presenter selected is a
+mentor, it will copy the mentor bio to the presenter bio and allow edits. If
+the presenter is a contact the event manager will have to manually add a bio."
+
+*What exists today (verified in the code and the schema handoff, 09-27-26):*
+- The CRM already has the link: `CEvent.presenters`, many-to-many to Contact,
+  foreign `cPresenterEvents` (`cevent-entities-crm-handoff.md` § 2). It was
+  designed to cover guests, staff and mentors alike, with a mentor's
+  `CMentorProfile` reached through their Contact.
+- **The application does not use it anywhere.** No file under `events/` reads
+  or writes `presenters`, the editor has no picker, and the public pages show
+  no presenter. Being a custom many-to-many, it is a relationship, not a field:
+  it is read with `list_related` and written with relate/unrelate, never as
+  `presentersIds` on an update (the EspoCRM custom linkMultiple trap).
+- The mentor biography to copy from is `CMentorProfile.aboutMentor`, a wysiwyg
+  field that already feeds the public website mentor page, so it is public text
+  by design. It refuses inline images by ruling, because its audience cannot
+  reach the image proxy — the presenter biography on a public event page has
+  the same audience and inherits the same constraint.
+- No presenter-biography field and no "show presenter biographies" option
+  exists on either CRM.
+
+*Questions to settle at design, not yet asked:* whether a presenter biography
+belongs to the person (one biography reused across events) or to the pairing
+of person and event (edited per event), which decides where it is stored;
+whether the copy from `aboutMentor` is one-time at selection or refreshes when
+the mentor edits their profile; whether "add a presenter" creates a new Contact
+from the editor, with the usual find-or-create on email; whether the show
+option is one switch per event or per presenter; what else a presenter shows
+publicly (name, photo, title, company); presenter order on the page; and
+whether a partner organisation as host (`partnerHost`, D-10) is part of this
+feature or separate.
+
+**F5 — Upcoming internal events on the portal home page.**
+
+*The need, as stated:* "Modify the initial page displayed after login to show a
+list of internal events on the left side of the page in a list that allows the
+user to see upcoming events and click on each to see details."
+
+*Relationship to F3:* F3 defines which events are Internal and rules that they
+appear only on the portal. F5 is that portal surface. F5 cannot be designed
+before F3 settles what "Internal" selects.
+
+*What exists today (verified in the code, 09-27-26):*
+- The page after sign-in is the portal's home view (`portal/frontend/index.html`,
+  `homeView`): a single column of sections — the analytics dashboard panel,
+  Directories, Applications, the CRM links, Documentation and the public pages.
+  There is no left rail and no events list.
+- **The portal caps its own width** (`.portal { max-width:
+  var(--cbm-container-narrow) }` in `portal/frontend/styles.css`). That
+  contradicts the standing no-width-caps ruling, and a left rail beside the
+  existing column is not workable inside it, so F5 lifts the cap.
+- Event Administration, where event details live today, is gated to the
+  Marketing Admin Team (`EVENTS_ALLOWED_TEAMS`). Most signed-in members are not
+  in it, so "click to see details" cannot open that screen for them.
+
+*Questions to settle at design, not yet asked:* what "details" shows and where
+(a pop-up on the portal, or a read-only page open to every member); how far
+ahead the list looks, and whether it pages; whether it is filtered by the
+user's teams; whether a member can register or accept from the list; how it
+behaves on a phone, where a left rail cannot sit beside the column; and
+whether the portal reads the events as the signed-in user (their CRM access
+decides what they see) or under the organisation-wide key.
 
 ### Track B — Live verification already owed on crm-test. Can start today.
 
@@ -238,6 +428,7 @@ attendance recorded → recording link pasted → the engagement rollup shows it
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 4.0 | 09-27-26 23:24 | Claude (Claude Code) | Track F added: features found by user review, catalogued before design, required before the cutover (Doug, 09-27-26). F1 recorded — the event topic takes several values and a user-entered one. F2 recorded — a Display Date/Time before which an event stays off the public pages. F3 recorded — an event audience of Internal, a specific chapter, or Public, with Internal events forming a portal calendar. F4 recorded — presenters per event, with an optional biography copied from a mentor's profile or written by hand. F5 recorded — a left-hand list of upcoming internal events on the portal home page. The catalog is complete at five. Definition of done gains item 8 (Track F), and D3, the confirmation email, is named as required by item 2. |
 | 3.0 | 09-14-26 18:15 | Claude (Claude Code) | Track A is done but for the redirect. Production switched on, schema probed and diffed, recorded library imported and published, consent and the duplicate hold both shipped, and a topic filter added on Doug's request. Remaining: the upcoming sessions, one end-to-end registration, and the redirect rule. |
 | 2.1 | 09-12-26 14:05 | Claude (Claude Code) | First side-by-side against the live page. Track A gains A2b, the recorded-library backfill, which is blocking and needs two values from Doug. A2 records the three differences already fixed in v0.223.0. |
 | 2.0 | 09-11-26 23:10 | Claude (Claude Code) | Track A rebuilt around Doug's 2026-09-11 ruling: the marketing site redirects to a page this app serves, and the presenting invitation moves onto it. The WordPress plugin, its proxy, its thumbnail proxy and its settings screen are struck. A1 is built (v0.222.0); the remaining Track A items are the browser pass, the per-event duplicate hold, the consent wording, and one redirect rule. Definition of done, sequence, decisions and verification gates follow. |
