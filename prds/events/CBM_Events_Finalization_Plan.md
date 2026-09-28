@@ -1,6 +1,6 @@
 # CBM Events & Webinars — Finalization Plan
 
-Last Updated: 09-27-26 23:38 · Revision 4.0 — see change log at the end.
+Last Updated: 09-28-26 00:10 · Revision 4.1 — see change log at the end.
 
 Companion to `CBM_Events_PRD.md`, `CBM_Events_Implementation_Plan.md` and
 `CBM_Events_Registration_Recognition_Plan.md`. Those three say what the feature
@@ -131,7 +131,7 @@ after Doug's requirements are gathered, and nothing is settled until he rules.
 |---|---|---|---|
 | F1 | Event topic: multiple selections, plus a user-entered value | User review, 09-2026 | Catalogued |
 | F2 | Display Date/Time: the moment an event may first appear on the public pages | User review, 09-2026 | Catalogued |
-| F3 | Event audience: Internal, a specific chapter, or Public — Internal events form a calendar on the chapter's portal | User review, 09-2026 | Catalogued |
+| F3 | Event audience: Internal, a specific chapter, or Public — Internal events form a calendar on the chapter's portal | User review, 09-2026 | Requirements ruled 09-28-26; design not drafted |
 | F4 | Presenters: select or add them per event, with an optional presenter biography on the event page | User review, 09-2026 | Catalogued |
 | F5 | Portal home page: a left-hand list of upcoming internal events, each opening its details | User review, 09-2026 | Catalogued |
 
@@ -225,13 +225,71 @@ calendar."
   The Business Mentors Association repository holds the rulings on how the
   chapters relate, and it would have to be read before this is designed.
 
-*Questions to settle at design, not yet asked:* what "a specific chapter event"
-means and who sees it, as distinct from Public; whether Public means this
-chapter's public site or every chapter's; whether the audience replaces the
-`publishToWebsite` tick or sits beside it; who sees the internal calendar
-(every signed-in member, or by team); whether Google-synced meetings and
-session mirrors belong on it; whether internal events take registrations; and
-how F2's display time applies to an internal event.
+*What the Business Mentors Association's rulings say (read 09-27-26, read
+only):* nothing about events, calendars or chapters sharing content. Association
+ruling 3 (one application everywhere; chapters differ only by optional settings
+and their own processes) and chapter-network ruling 2 (one EspoCRM per chapter)
+are the two that bear on this feature.
+
+*Requirements, ruled by Doug 09-27-26 and 09-28-26.* These are rulings. The
+design that follows from them has not been drafted.
+
+1. **Two levels, not three choices.** An event's audience is **Internal** or
+   **Public**. A Public event also carries a **reach**: all chapters, one
+   chapter, or a list of chapters. "A specific chapter event" in the original
+   need is the one-chapter reach of a Public event, not a separate audience.
+2. **The goal is a shared list of public events across chapters, built later.**
+   F3 records the reach on every event from now on. This chapter's public pages
+   show only this chapter's own Public events. The sharing itself is not part of
+   F3 and does not block the cutover. The editor states plainly that the reach
+   has no effect until the sharing exists.
+3. **The chapter names come from the CRM standard.** They are the fixed choices
+   of the reach field, identical in every chapter, so the future shared list can
+   match on them. Adding a chapter takes a release. A chapter that has not yet
+   taken that release does not see the newest chapter in its list.
+4. **The audience sits beside the Publish to website checkbox; it does not
+   replace it.** The checkbox decides whether the event is shown at all; the
+   audience decides where (the portal for Internal, the public pages for
+   Public). Unticked means shown nowhere, as today. The checkbox is relabelled
+   (working wording "Show this event") because it now governs the portal too;
+   the CRM field keeps its name. Existing events carry over as: ticked → Public,
+   reach this chapter; unticked → Internal, still unticked.
+5. **Who sees an Internal event:** everyone who signs in to the portal, unless
+   staff limit the event to one or more named teams. The team limit applies to
+   Internal events only.
+6. **The creating chapter is always in a Public event's reach.** The reach can
+   only add other chapters. "One chapter" means the creating chapter. Hosting an
+   event solely for another chapter's audience is left for later; relaxing this
+   rule would change no stored data.
+7. **Internal events take registrations when staff say so.** A per-event
+   checkbox (working wording "Takes registrations") turns on a Register button
+   for signed-in members, which records a registration against the member's own
+   contact record with no form.
+8. **The portal calendar shows Internal events and this chapter's Public
+   events**, each Public event marked as public, with a filter each member sets
+   for themselves. The filter choice is saved per user in the application's own
+   database, keyed on the member's CRM user, so it follows them between
+   computers. *Claude's decision, open to challenge:* the database rather than
+   browser storage, because no per-user preference store exists today and
+   browser storage does not follow the member.
+9. **F2's display time applies everywhere.** Before an event's display time it
+   is on no page, portal or public, whatever its audience. Early notice for
+   members can be added later as its own setting.
+
+*Found while gathering these, verified in the code 09-28-26:* the public
+registration form accepts a sign-up for any ticked event
+(`forms/event_registration/orchestrator.py`, `check_open`). Under ruling 4 an
+Internal event is ticked too, so the public pages **and** the public
+registration form must both require audience Public with this chapter in the
+reach — the same gap F2 already names for the display time.
+
+*Inferred, not yet checked:* that the meetings and session copies synced from
+Google arrive unticked, and so stay off the portal calendar under ruling 4 with
+no extra filter. The design verifies this on crm-test.
+
+*This settles part of F5:* members can register from the portal list (ruling 7),
+the list is filtered per member (ruling 8), and team limits apply to Internal
+events (ruling 5).
 
 **F4 — Presenters, and their biographies on the event page.**
 
@@ -428,6 +486,7 @@ attendance recorded → recording link pasted → the engagement rollup shows it
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 4.1 | 09-28-26 00:10 | Claude (Claude Code) | F3 requirements ruled by Doug (09-27-26 and 09-28-26): an event is Internal or Public; a Public event carries a reach of all chapters, one chapter or a list, always including the creating chapter; the reach is recorded now and the sharing across chapters is built later, not blocking the cutover; chapter names come from the CRM standard; the audience sits beside the Publish to website checkbox; Internal events are seen by every signed-in member unless limited to teams, and take registrations when a per-event checkbox says so; the portal calendar shows Internal and this chapter's Public events with a per-member filter saved in the application's database; F2's display time applies everywhere. Also recorded: the Association's rulings say nothing about events, and the public registration form's gate must check the audience. F3 state moved from Catalogued. |
 | 4.0 | 09-27-26 23:24 | Claude (Claude Code) | Track F added: features found by user review, catalogued before design, required before the cutover (Doug, 09-27-26). F1 recorded — the event topic takes several values and a user-entered one. F2 recorded — a Display Date/Time before which an event stays off the public pages. F3 recorded — an event audience of Internal, a specific chapter, or Public, with Internal events forming a portal calendar. F4 recorded — presenters per event, with an optional biography copied from a mentor's profile or written by hand. F5 recorded — a left-hand list of upcoming internal events on the portal home page. The catalog is complete at five. Definition of done gains item 8 (Track F), and D3, the confirmation email, is named as required by item 2. |
 | 3.0 | 09-14-26 18:15 | Claude (Claude Code) | Track A is done but for the redirect. Production switched on, schema probed and diffed, recorded library imported and published, consent and the duplicate hold both shipped, and a topic filter added on Doug's request. Remaining: the upcoming sessions, one end-to-end registration, and the redirect rule. |
 | 2.1 | 09-12-26 14:05 | Claude (Claude Code) | First side-by-side against the live page. Track A gains A2b, the recorded-library backfill, which is blocking and needs two values from Doug. A2 records the three differences already fixed in v0.223.0. |
