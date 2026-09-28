@@ -1,6 +1,6 @@
 # CBM Events & Webinars — Finalization Plan
 
-Last Updated: 09-28-26 00:10 · Revision 4.1 — see change log at the end.
+Last Updated: 09-28-26 00:24 · Revision 4.2 — see change log at the end.
 
 Companion to `CBM_Events_PRD.md`, `CBM_Events_Implementation_Plan.md` and
 `CBM_Events_Registration_Recognition_Plan.md`. Those three say what the feature
@@ -130,7 +130,7 @@ after Doug's requirements are gathered, and nothing is settled until he rules.
 | # | Feature | Raised by | State |
 |---|---|---|---|
 | F1 | Event topic: multiple selections, plus a user-entered value | User review, 09-2026 | Catalogued |
-| F2 | Display Date/Time: the moment an event may first appear on the public pages | User review, 09-2026 | Catalogued |
+| F2 | Display Date/Time: the moment an event may first appear on the public pages | User review, 09-2026 | Requirements ruled 09-28-26; design not drafted |
 | F3 | Event audience: Internal, a specific chapter, or Public — Internal events form a calendar on the chapter's portal | User review, 09-2026 | Requirements ruled 09-28-26; design not drafted |
 | F4 | Presenters: select or add them per event, with an optional presenter biography on the event page | User review, 09-2026 | Catalogued |
 | F5 | Portal home page: a left-hand list of upcoming internal events, each opening its details | User review, 09-2026 | Catalogued |
@@ -186,14 +186,41 @@ immediately."
 - No display-time field exists on `CEvent` on either CRM, so this is a CRM
   build as well as a code change, and it follows the feature-detect convention.
 
-*Questions to settle at design, not yet asked:* whether the display time
-narrows `publishToWebsite` (both must hold) or replaces the need to tick it;
-whether it governs the calendar, the recorded library and the event page alike;
-whether registration opens at the display time or has its own opening time;
-whether an event whose display time has not arrived is visible to staff in a
-"scheduled to appear" state in Event Administration; whether Zoom webinar
-creation (which fires on publish) waits for the display time; and whether a
-display time later than the event's start is refused at save.
+*Requirements, ruled by Doug 09-28-26.* These are rulings. The design, drafted
+together with F3's because both change the same public gate, has not been
+drafted.
+
+1. **The display time applies on every page** — the portal calendar, the
+   public calendar, the recorded library and the event's own page — whatever
+   the event's audience. Ruled as F3 requirement 9.
+2. **The display time narrows the checkbox; it does not replace it.** An event
+   is shown only when it is ticked (Publish to website, relabelled under F3)
+   **and** its display time has passed. An empty display time means "as soon as
+   it is ticked". Unticking hides an event at once, whatever its display time.
+   The editor warns when a display time is set on an unticked event.
+3. **Registration opens at the display time.** There is no separate opening
+   time. The public registration form checks the same gate as the pages. A
+   "Registration opens" time can be added later with no change to stored data,
+   because empty would mean what this rule does.
+4. **The Zoom webinar is created when the event is ticked, as today**
+   (`events/zoom_sync.py`), whatever its display time. Verified 09-28-26: the
+   create fires on a save of an online, ticked event with no webinar yet. Zoom
+   creation is switched off on both deployments, so this has no effect until it
+   is switched on.
+5. **A display time later than the event's start is allowed.** When the event
+   is still upcoming, the editor warns that no one will see it or register
+   before it starts, and saves anyway. When the event is over — releasing a
+   recording on a chosen day — no warning appears.
+
+*Claude's decisions, open to challenge:*
+- **Staff see the waiting state.** An event that is ticked but whose display
+  time has not arrived shows in Event Administration as "Appears" with its
+  date, on the grid and in the editor, so a scheduled event is not mistaken for
+  a live one or a forgotten one.
+- **The cache delay is accepted, not engineered away.** The public reads cache
+  for `events_cache_seconds` (default 60) in the process and again in the
+  browser, so an event can appear up to about two minutes after its display
+  time. No change is planned.
 
 **F3 — Event audience: Internal, a specific chapter, or Public.**
 
@@ -486,6 +513,7 @@ attendance recorded → recording link pasted → the engagement rollup shows it
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 4.2 | 09-28-26 00:24 | Claude (Claude Code) | F2 requirements ruled by Doug (09-28-26): the display time applies on every page; it narrows the Publish to website checkbox rather than replacing it, and an empty one means as soon as ticked; registration opens at the display time; the Zoom webinar is still created when the event is ticked; a display time after the start is allowed, with a warning only when the event is still upcoming. Claude's decisions recorded separately: a visible "Appears" state in Event Administration, and the cache delay of about two minutes accepted. F2 and F3 are to be designed together. |
 | 4.1 | 09-28-26 00:10 | Claude (Claude Code) | F3 requirements ruled by Doug (09-27-26 and 09-28-26): an event is Internal or Public; a Public event carries a reach of all chapters, one chapter or a list, always including the creating chapter; the reach is recorded now and the sharing across chapters is built later, not blocking the cutover; chapter names come from the CRM standard; the audience sits beside the Publish to website checkbox; Internal events are seen by every signed-in member unless limited to teams, and take registrations when a per-event checkbox says so; the portal calendar shows Internal and this chapter's Public events with a per-member filter saved in the application's database; F2's display time applies everywhere. Also recorded: the Association's rulings say nothing about events, and the public registration form's gate must check the audience. F3 state moved from Catalogued. |
 | 4.0 | 09-27-26 23:24 | Claude (Claude Code) | Track F added: features found by user review, catalogued before design, required before the cutover (Doug, 09-27-26). F1 recorded — the event topic takes several values and a user-entered one. F2 recorded — a Display Date/Time before which an event stays off the public pages. F3 recorded — an event audience of Internal, a specific chapter, or Public, with Internal events forming a portal calendar. F4 recorded — presenters per event, with an optional biography copied from a mentor's profile or written by hand. F5 recorded — a left-hand list of upcoming internal events on the portal home page. The catalog is complete at five. Definition of done gains item 8 (Track F), and D3, the confirmation email, is named as required by item 2. |
 | 3.0 | 09-14-26 18:15 | Claude (Claude Code) | Track A is done but for the redirect. Production switched on, schema probed and diffed, recorded library imported and published, consent and the duplicate hold both shipped, and a topic filter added on Doug's request. Remaining: the upcoming sessions, one end-to-end registration, and the redirect rule. |
