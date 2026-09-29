@@ -47,7 +47,9 @@ MENTOR_STATUS_ACTIVE = "Active"
 
 # Engagement statuses that count toward a mentor's Active Clients (and, when
 # engagementAssignedDate is within 30 days, the Assigned-last-30-days count).
-ACTIVE_CLIENT_STATUSES = {"Active", "Assigned", STATUS_PENDING}
+# On-Hold counts in all cases (Doug's ruling 2026-09-29) — the same set the
+# analytics metrics use, so every screen reports the same number.
+ACTIVE_CLIENT_STATUSES = {"Active", "Assigned", STATUS_PENDING, "On-Hold"}
 
 # Full engagementStatus enum (crm-test metadata 2026-06-19) — the filter's option
 # set. Kept here rather than fetched per-request; refresh if the CRM enum changes.
@@ -845,6 +847,45 @@ async def _mentor_type_options(client: AssignClient) -> list[str]:
     return [o for o in options or [] if o and o.strip()]
 
 
+_COMENTOR_CONCURRENCY = 8
+
+
+async def mentor_comentor_counts(
+    client: AssignClient, mentor_ids: list[str]
+) -> dict[str, Optional[int]]:
+    """Per-mentor count of ACTIVE engagements this mentor co-mentors.
+
+    Read through the ``engagements`` reverse link of ``CEngagement.additionalMentors``
+    — a custom linkMultiple is a relationship, so ``additionalMentorsIds`` on a
+    list read comes back empty. One related-list read per mentor, bounded
+    concurrency. An engagement where the mentor is ALSO the primary is not
+    counted here: it is already in their Active Clients.
+
+    Best-effort per mentor: a failed read gives ``None`` (rendered "—"), never a
+    zero that would pass for "co-mentors nobody".
+    """
+    sem = asyncio.Semaphore(_COMENTOR_CONCURRENCY)
+
+    async def one(mentor_id: str) -> tuple[str, Optional[int]]:
+        async with sem:
+            try:
+                data = await client.list_related(
+                    MENTOR_PROFILE, mentor_id, "engagements",
+                    select="engagementStatus,mentorProfileId", max_size=_METRICS_PAGE,
+                )
+            except EspoError as exc:
+                log.warning("co-mentor count unavailable for %s: %s", mentor_id, exc)
+                return mentor_id, None
+        n = sum(
+            1 for r in data.get("list", [])
+            if r.get("engagementStatus") in ACTIVE_CLIENT_STATUSES
+            and r.get("mentorProfileId") != mentor_id
+        )
+        return mentor_id, n
+
+    return dict(await asyncio.gather(*(one(i) for i in mentor_ids)))
+
+
 async def _metrics_or_none(client: AssignClient) -> Optional[dict[str, dict[str, int]]]:
     """Metrics, or None when CEngagement can't be read (e.g. a Mentor Admin user
     whose EspoCRM role lacks the grant) — the roster still loads, metrics blank."""
@@ -939,14 +980,24 @@ async def list_eligible_mentors(client: AssignClient) -> dict[str, Any]:
     return {"mentors": rows, "metricsAvailable": metrics is not None}
 
 
-async def list_all_mentors(client: AssignClient) -> dict[str, Any]:
-    """Every mentor profile (any status) for the review/roster lists."""
+async def list_all_mentors(
+    client: AssignClient, *, include_comentors: bool = False
+) -> dict[str, Any]:
+    """Every mentor profile (any status) for the review/roster lists.
+
+    ``include_comentors`` adds ``coMentorClients`` to each row — one related
+    read per mentor, so only the Client Administration roster asks for it.
+    """
     data = await client.list(
         MENTOR_PROFILE, select=await _mentor_select(client), max_size=200,
         order_by="name",
     )
     metrics = await _metrics_or_none(client)
     rows = [_mentor_row(r, metrics) for r in data.get("list", [])]
+    if include_comentors:
+        co = await mentor_comentor_counts(client, [r["id"] for r in rows])
+        for row in rows:
+            row["coMentorClients"] = co.get(row["id"])
     return {
         "mentors": rows,
         "metricsAvailable": metrics is not None,

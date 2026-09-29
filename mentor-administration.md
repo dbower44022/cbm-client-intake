@@ -29,8 +29,8 @@ Clients · Max Clients · Available · Assigned (30d) · Lifetime**.
 
 The five client-count columns are computed live from the mentor's engagements:
 
-- **Active Clients** — engagements whose status is *Active*, *Assigned*, or
-  *Pending Acceptance*.
+- **Active Clients** — engagements whose status is *Active*, *Assigned*,
+  *Pending Acceptance* or *On-Hold*.
 - **Max Clients** — the mentor's stored maximum client capacity (blank if not set).
 - **Available** — Max Clients minus Active Clients (blank when no max is set;
   "Unlimited" when the max is unlimited).

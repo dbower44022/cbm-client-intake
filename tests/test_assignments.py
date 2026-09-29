@@ -1025,6 +1025,68 @@ async def test_available_capacity_unlimited_and_blank_semantics():
     assert by_id["m2"]["activeClients"] == 0         # metrics known, just zero
 
 
+async def test_on_hold_counts_as_an_active_client():
+    """Doug's ruling 2026-09-29: On-Hold counts in all cases."""
+    client = FakeClient(lists={service.ENGAGEMENT: {"list": [
+        _eng("m1", "On-Hold"), _eng("m1", "Active"), _eng("m1", "Dormant"),
+    ]}})
+    metrics = await service.mentor_engagement_metrics(client)
+    assert metrics["m1"]["activeClients"] == 2
+
+
+class CoMentorClient(FakeClient):
+    """Serves each mentor's ``engagements`` reverse link (the co-mentored side
+    of CEngagement.additionalMentors) from a per-mentor map; a mentor mapped to
+    an EspoError fails its read."""
+
+    def __init__(self, co_links, **kw):
+        super().__init__(**kw)
+        self._co_links = co_links
+        self.related_calls: list[tuple[str, str, str]] = []
+
+    async def list_related(self, entity, record_id, link, **kwargs):
+        self.related_calls.append((entity, record_id, link))
+        rows = self._co_links.get(record_id, [])
+        if isinstance(rows, EspoError):
+            raise rows
+        return {"list": rows}
+
+
+async def test_comentor_counts_active_nonprimary_only():
+    client = CoMentorClient({
+        "m1": [
+            _eng("m9", "Active"),              # co-mentor, active -> counts
+            _eng("m9", "On-Hold"),             # co-mentor, active set -> counts
+            _eng("m9", "Completed"),           # not active -> no
+            _eng("m1", "Active"),              # also primary -> already in Active Clients
+        ],
+        "m2": [],
+        "m3": EspoError("list_related failed: 403"),
+    })
+    counts = await service.mentor_comentor_counts(client, ["m1", "m2", "m3"])
+    assert counts == {"m1": 2, "m2": 0, "m3": None}
+    assert all(c[0] == service.MENTOR_PROFILE and c[2] == "engagements"
+               for c in client.related_calls)
+
+
+async def test_roster_carries_comentor_column_only_when_asked():
+    mentors = {service.MENTOR_PROFILE: {"list": [
+        {"id": "m1", "name": "Jane", "maximumClientCapacity": 3},
+    ]}, service.ENGAGEMENT: {"list": [_eng("m1", "Active")]}}
+
+    client = CoMentorClient({"m1": [_eng("m9", "Assigned")]}, lists=mentors)
+    row = (await service.list_all_mentors(client, include_comentors=True))["mentors"][0]
+    assert row["coMentorClients"] == 1
+    # Co-mentored clients do not reduce Available — that is Max minus Active.
+    assert row["activeClients"] == 1 and row["availableCapacity"] == 2
+
+    # Mentor Administration's roster (same function, default) pays no extra reads.
+    plain = CoMentorClient({"m1": [_eng("m9", "Assigned")]}, lists=mentors)
+    row = (await service.list_all_mentors(plain))["mentors"][0]
+    assert "coMentorClients" not in row
+    assert plain.related_calls == []
+
+
 def test_parse_espo_datetime():
     from datetime import timezone
 

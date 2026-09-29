@@ -1247,7 +1247,8 @@
   }
 
   function sortVal(m, k) {
-    if (k === "maxCapacity" || k === "activeClients" || k === "assignedLast30" || k === "lifetimeClients")
+    if (k === "maxCapacity" || k === "activeClients" || k === "coMentorClients" ||
+        k === "assignedLast30" || k === "lifetimeClients")
       return m[k] == null ? -Infinity : m[k];
     if (k === "availableCapacity") return mentorAvail(m);
     // A CRM datetime string sorts correctly as-is; never-assigned mentors sort
@@ -1313,7 +1314,7 @@
     if (!rows.length) {
       var tr = document.createElement("tr");
       var td = document.createElement("td");
-      td.colSpan = 12;
+      td.colSpan = 13;
       td.className = "mentor-empty";
       td.textContent = "No mentors match the current filters.";
       tr.appendChild(td);
@@ -1337,9 +1338,12 @@
       tr.appendChild(cell(types.length ? types.join(", ") : "—"));
       tr.appendChild(cell(m.acceptingNewClients ? "Yes" : "No"));
       // Client counts are app-computed from CEngagement (Active/Assigned/Pending
-      // Acceptance = active); Available = Max − Active; Max is the stored
+      // Acceptance/On-Hold = active); Available = Max − Active; Max is the stored
       // maximumClientCapacity exactly as on the CRM record (blank there = blank here).
+      // CoMentors = active engagements where this mentor is a non-primary
+      // (additionalMentors) mentor — not part of Active or Available.
       tr.appendChild(cell(numText(m.activeClients), "num"));
+      tr.appendChild(cell(numText(m.coMentorClients), "num"));
       tr.appendChild(cell(numText(m.maxCapacity), "num"));
       tr.appendChild(cell(m.availableCapacity === -1 ? "Unlimited" : numText(m.availableCapacity), "num"));
       tr.appendChild(cell(numText(m.assignedLast30), "num"));

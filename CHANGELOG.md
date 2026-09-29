@@ -4,6 +4,32 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.234.0] — 2026-09-29
+
+**feat(assignments): a CoMentors column in Available Mentors, and On-Hold counts
+as an active client.** Doug's rulings of 09-29-26.
+
+- **CoMentors** sits between Active Clients and Max Clients in Client
+  Administration → Available Mentors. It counts the active engagements where the
+  mentor is a **non-primary** mentor (`CEngagement.additionalMentors`), read
+  through each mentor's `engagements` reverse link — one related-list read per
+  mentor, eight at a time (`service.mentor_comentor_counts`). An engagement where
+  the mentor is also the primary is left out, because it is already in Active
+  Clients. It is sortable. A failed read for one mentor shows "—", never 0.
+- **CoMentors does not change Available.** Available is still Max Clients minus
+  Active Clients.
+- Only this roster asks for the count (`list_all_mentors(include_comentors=True)`).
+  Mentor Administration uses the same function and makes no extra reads.
+- **On-Hold now counts as an active client everywhere.** It is added to
+  `ACTIVE_CLIENT_STATUSES`, which feeds Active Clients, Available and Assigned
+  (30d) in both mentor grids and the Mentor Administration detail card, plus the
+  directory's availability bar. The Analytics metrics already counted it, so
+  every screen now reports the same number.
+- Verified by tests, and by one read against crm-test with the organisation-wide
+  key: 26 mentors, no failed reads, Joe Mentor and Matt Mentor showing 1 each.
+  Not yet seen in a browser. Not yet read as a real Client Administration
+  non-admin.
+
 ## [0.233.0] — 2026-09-29
 
 **feat(events): event audience and display time — Track F, features F2 and F3.**

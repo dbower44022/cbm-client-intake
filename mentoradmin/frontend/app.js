@@ -210,7 +210,7 @@
       tr.appendChild(cell(m.mentorType || "—"));
       tr.appendChild(cell(fmtDate(m.createdAt)));
       // Client counts are app-computed from CEngagement (Active/Assigned/Pending
-      // Acceptance = active); Available = Max Clients − Active Clients.
+      // Acceptance/On-Hold = active); Available = Max Clients − Active Clients.
       tr.appendChild(cell(num(m.activeClients), "num"));
       tr.appendChild(cell(num(m.maxCapacity), "num"));
       tr.appendChild(cell(m.availableCapacity === -1 ? "Unlimited" : num(m.availableCapacity), "num"));

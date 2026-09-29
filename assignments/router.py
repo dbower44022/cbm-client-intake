@@ -155,7 +155,7 @@ async def mentors(request: Request, all_: bool = Query(default=False, alias="all
     try:
         # {"mentors": [...], "metricsAvailable": bool} — served as-is.
         return await (
-            service.list_all_mentors(client) if all_
+            service.list_all_mentors(client, include_comentors=True) if all_
             else service.list_eligible_mentors(client)
         )
     except EspoError as exc:
