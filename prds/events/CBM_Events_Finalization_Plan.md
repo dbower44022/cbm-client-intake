@@ -1,6 +1,6 @@
 # CBM Events & Webinars — Finalization Plan
 
-Last Updated: 09-29-26 00:58 · Revision 4.4 — see change log at the end.
+Last Updated: 09-29-26 01:44 · Revision 4.5 — see change log at the end.
 
 Companion to `CBM_Events_PRD.md`, `CBM_Events_Implementation_Plan.md` and
 `CBM_Events_Registration_Recognition_Plan.md`. Those three say what the feature
@@ -130,8 +130,8 @@ after Doug's requirements are gathered, and nothing is settled until he rules.
 | # | Feature | Raised by | State |
 |---|---|---|---|
 | F1 | Event topic: multiple selections, plus a user-entered value | User review, 09-2026 | Catalogued |
-| F2 | Display Date/Time: the moment an event may first appear on the public pages | User review, 09-2026 | Requirements ruled 09-28-26; design drafted (`CBM_Events_Audience_and_Display_Design.md` 0.2), decisions ruled, awaiting Doug's approval to build |
-| F3 | Event audience: Internal, a specific chapter, or Public — Internal events form a calendar on the chapter's portal | User review, 09-2026 | Requirements ruled 09-28-26; design drafted (`CBM_Events_Audience_and_Display_Design.md` 0.2), decisions ruled, awaiting Doug's approval to build |
+| F2 | Display Date/Time: the moment an event may first appear on the public pages | User review, 09-2026 | Built v0.233.0 (09-29-26); CRM on crm-test; live review, production and Boston owed (`OPEN-ITEMS.md` #35) |
+| F3 | Event audience: Internal, a specific chapter, or Public — Internal events form a calendar on the chapter's portal | User review, 09-2026 | Built v0.233.0 (09-29-26); CRM on crm-test; live review, production and Boston owed (`OPEN-ITEMS.md` #35) |
 | F4 | Presenters: select or add them per event, with an optional presenter biography on the event page | User review, 09-2026 | Catalogued |
 | F5 | Portal home page: a left-hand list of upcoming internal events, each opening its details | User review, 09-2026 | Catalogued |
 
@@ -513,6 +513,7 @@ attendance recorded → recording link pasted → the engagement rollup shows it
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 4.5 | 09-29-26 01:44 | Claude (Claude Code) | F2 and F3 built as v0.233.0 and their CRM fields applied to crm-test. Owed: the live review as real non-admins, production at a Sunday slot, Boston with its next release. |
 | 4.4 | 09-29-26 00:58 | Claude (Claude Code) | The F2/F3 design's four decisions ruled by Doug; design at revision 0.2, awaiting approval to build. |
 | 4.3 | 09-28-26 00:32 | Claude (Claude Code) | F2 and F3 designed together in `CBM_Events_Audience_and_Display_Design.md` revision 0.1, a draft awaiting Doug's review with four decisions (D1–D4). Both features' state updated. |
 | 4.2 | 09-28-26 00:24 | Claude (Claude Code) | F2 requirements ruled by Doug (09-28-26): the display time applies on every page; it narrows the Publish to website checkbox rather than replacing it, and an empty one means as soon as ticked; registration opens at the display time; the Zoom webinar is still created when the event is ticked; a display time after the start is allowed, with a warning only when the event is still upcoming. Claude's decisions recorded separately: a visible "Appears" state in Event Administration, and the cache delay of about two minutes accepted. F2 and F3 are to be designed together. |

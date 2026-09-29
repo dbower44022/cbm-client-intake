@@ -445,6 +445,35 @@ block a deploy.)*
 
 ## Live verification owed
 
+35. **Event audience and display time (v0.233.0, F2 + F3) — built, on crm-test,
+    never reviewed live** (2026-09-29). The CRM fields are applied to crm-test and
+    verified as the org-wide key; the code is verified by 48 tests and a
+    stub-harness pass of the editor. Owed, in order:
+    1. **Ask the CRM team what `CEvent.eventReleaseDate` was made for** (the
+       07-25 handoff's unanswered question). Ruling D1 reuses it as the display
+       time; if someone claims it, stop and bring it back to Doug.
+    2. **Live review on crm-test as real non-admins** (design § 8 step 3): a
+       limited Internal event seen by a team member and not by a mentor outside
+       it; a Public event with a display time a few minutes ahead appearing on
+       `/webinars/` on time; a public registration refused for an Internal event;
+       a portal registration (`POST /api/portal/events/{id}/register`) landing
+       with source `Portal` and the member's own Contact. An administrator's test
+       proves nothing — administrators pass every team limit. Remember the
+       nightly reset: records made in the day are gone by morning.
+    3. **Production CRM** at a Sunday 17:00 UTC slot, from inside the web
+       container: `scripts/migrate_event_audience_schema.py`, runbook
+       `cevent-audience-display-crm-handoff.md`. Confirms on the way whether
+       production has `eventReleaseDate` (inferred, not checked).
+    4. **Boston**, when it takes v0.233.0: the same script, and set
+       `CHAPTER_KEY=boston` at `/setup` — the default is `cleveland`, and a wrong
+       key puts Cleveland into Boston's reach. (Boston's spec predates the
+       setting; `scripts/rehearsal/render_spec.py` now writes it for every
+       chapter built from here on.)
+    Nothing is visible to members until F5 builds the portal list; the public
+    pages are unchanged until someone sets an event Internal or gives it a
+    display time.
+
+
 **De-Clevelanding (v0.205.0–v0.206.0): partly verified live, the rest still owed.**
 
 Confirmed on **production** by fetching the served pages on 2026-08-20, after

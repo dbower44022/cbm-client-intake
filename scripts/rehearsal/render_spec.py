@@ -186,6 +186,10 @@ def build_spec(values: dict, env: dict[str, str]) -> dict:
         ev("ANALYTICS_ENABLED", str(f["analytics_enabled"]).lower()),
         ev("ORGANIZATION_NAME", values["chapter"]["name"]),
         ev("ORGANIZATION_ABBREVIATION", values["chapter"].get("abbreviation") or "CBM"),
+        # The chapter's short label: every public event's reach includes it (F3).
+        # Its default is cleveland, which on any other chapter would put Cleveland
+        # into that chapter's reach, so the generator always writes it.
+        ev("CHAPTER_KEY", slug),
         ev("GMAIL_SYNC", flag(f, "gmail_sync")),
         ev("GDRIVE_DOCS", flag(f, "gdrive_docs")),
         ev("ZOOM_EVENTS", flag(f, "zoom_events")),

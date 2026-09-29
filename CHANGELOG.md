@@ -4,6 +4,48 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.233.0] — 2026-09-29
+
+**feat(events): event audience and display time — Track F, features F2 and F3.**
+Doug's rulings of 09-27/28/29-26; design
+`prds/events/CBM_Events_Audience_and_Display_Design.md` (decisions D1–D4).
+
+- **One visibility rule**, `events/visibility.py`. "Show this event" (the CRM's
+  `publishToWebsite`, relabelled) decides *whether*; the new **Audience**
+  (Internal / Public) decides *where*; the display time (`eventReleaseDate`,
+  reused by ruling D1) decides *when*. Every public read, the public
+  registration form and the portal calendar call it, and a guard test fails on
+  any other read of the tick. **An empty audience carries over from the tick**
+  (ticked → Public, unticked → Internal), so every existing event keeps its
+  behaviour with no data change, and a CRM without the fields behaves exactly
+  as before.
+- **Fixed on the way:** the public registration form checked only the tick, so
+  it would have taken sign-ups for an Internal event, or one before its display
+  time. It now refuses both as "not found".
+- **Event Administration** gains Audience, Reach, Chapters, Limit to teams,
+  Takes registrations and Display from — each feature-detected, shown only when
+  it applies — a multiple-choice control, non-blocking save warnings, and a
+  **Shown** column (Hidden / Appears *date* / Public / Internal / Internal,
+  limited). New events start Public, reach this chapter. The creating chapter is
+  always added to the reach, server-side.
+- **Zoom webinars for Public events only** (ruling D2); an existing webinar is
+  never cancelled by an audience change.
+- **Portal endpoints for F5** (open to every signed-in user, organisation-wide
+  key): `GET /api/portal/events` (Internal events to the member's teams plus the
+  chapter's Public events, all past their display time) and
+  `POST /api/portal/events/{id}/register` (Internal events that take
+  registrations; source `Portal`; linked to the member's own Contact, never a new
+  one). The team limit is a display filter, not confidentiality (ruling D4).
+- **Per-user preferences**: table `user_preference` (migration **0028**, kept by
+  the sandbox reset) and `GET`/`PUT /api/portal/preferences/events.calendar`.
+- New setting **`CHAPTER_KEY`** (default `cleveland`; `/setup` → Presentation).
+- **CRM**: `scripts/plans/cevent-audience-display.json`, applied to **crm-test**
+  2026-09-29 and verified; production and Boston owed —
+  `cevent-audience-display-crm-handoff.md`,
+  `scripts/migrate_event_audience_schema.py`.
+- Verified by tests (48 new) and a stub-harness browser pass of the editor;
+  the live review as real non-admin members is owed (`OPEN-ITEMS.md` #35).
+
 ## [0.232.0] — 2026-09-25
 
 **feat(branding): the chapter's acronym replaces "CBM" in every UI string.**

@@ -1,9 +1,11 @@
 # CBM Events — Audience and Display Time: Design (Track F, F2 + F3)
 
-Last Updated: 09-29-26 00:58 · Revision 0.2 — see change log at the end.
+Last Updated: 09-29-26 01:44 · Revision 0.3 — see change log at the end.
 
-**Status: DRAFT for Doug's review. Nothing here is built, and nothing here is a
-ruling unless it cites one.** The requirements are Doug's rulings recorded in
+**Status: BUILT as v0.233.0 (09-29-26), on Doug's approval. The CRM half is on
+crm-test; production, Boston and the live review are owed (`OPEN-ITEMS.md` #35).
+§ 10 records where the build departs from this design. Nothing here is a ruling
+unless it cites one.** The requirements are Doug's rulings recorded in
 `CBM_Events_Finalization_Plan.md` revision 4.2, sections F2 (requirements 1–5)
 and F3 (requirements 1–9); they are cited below as *F2-n* and *F3-n*. Everything
 else is Claude's design and is marked where it is a choice. The four decisions
@@ -322,11 +324,47 @@ calendar at all.
 limited event that the limit hides it on the portal and does not make it
 private.
 
+## 10. As built — where the build departs from this design
+
+Each is Claude's decision during the build, open to challenge.
+
+1. **Portal registration writes under the organisation-wide key, not as the
+   member.** § 6 said "as the signed-in member"; the roles standard gives Mentor
+   Role no access to `CEventRegistration` at all, so that write would always be
+   refused. The member is recorded as the actor in the action history.
+2. **A new event starts Public, reach This chapter.** Not specified above. Event
+   Administration is the public programme's tool, and the tick still decides
+   whether it appears. In the CRM itself, `Internal` is the first option, so an
+   event created there by hand defaults to the safe value.
+3. **A multiple-choice value that is no longer an option is shown, then dropped
+   on save.** § 3.2 said it would be kept. EspoCRM refuses the whole save for one
+   unknown value, so keeping it would block every save of that event; the editor
+   labels it "(no longer an option)" so the loss is visible before it happens.
+4. **The Zoom rule (D2) keys on an audience someone set.** An event from before
+   the field existed has none; a forced webinar for an unticked draft of the
+   programme still works as it did. An explicit Internal is refused even when
+   forced.
+5. **A failed metadata read fails closed.** The public reads need to know
+   whether the audience field exists before they can filter on it; guessing
+   "absent" during an outage would put Internal events on the public pages, so the
+   read raises and the public route answers 502.
+6. **The CRM change ships as a tracked script as well as a plan.** The
+   CRM-changes skill's applier (which applied the plan to crm-test) lives under
+   `.claude/`, which is not tracked and so not in the deployed image; production's
+   change runs from inside the container. `scripts/migrate_event_audience_schema.py`
+   applies the same plan file. The skill's applier also had a fault — an enum
+   option update sent a partial field definition and got HTTP 500 — fixed locally.
+7. **`CHAPTER_KEY` is written by the chapter settings generator**
+   (`scripts/rehearsal/render_spec.py`, from the chapter's short label), because
+   its default `cleveland` on another chapter would put Cleveland into that
+   chapter's reach. Boston's existing deployment needs it set by hand.
+
 ---
 
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.3 | 09-29-26 01:44 | Claude (Claude Code) | Built as v0.233.0 on Doug's approval; CRM fields applied to crm-test. Status updated and § 10 added: seven places the build departs from the design, each Claude's decision. |
 | 0.2 | 09-29-26 00:58 | Claude (Claude Code) | Doug ruled the four decisions: D1 reuse `eventReleaseDate` as the display time; D2 Zoom webinars for Public events only (Claude added: an existing webinar is not cancelled when an event turns Internal); D3 the chapter list is Cleveland and Boston; D4 the team limit is a display filter, stated as not private in the editor. |
 | 0.1 | 09-28-26 00:30 | Claude (Claude Code) | First draft, from the F2 and F3 requirements Doug ruled 09-27-26 and 09-28-26 (Finalization Plan revision 4.2). Findings verified against the code, crm-test's metadata and data, and the roles standard. Four decisions for Doug (D1–D4). |

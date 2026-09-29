@@ -13,10 +13,11 @@ registrations, track who actually turned up, and publish the recording. It is
 
 > **Read this first, it is the one rule that matters.**
 > `CEvent` is also CBM's general calendar entity — it holds internal team
-> meetings and copies of mentoring sessions. **A single checkbox, "Publish to
-> website", is what separates a public workshop from an internal meeting.**
-> Nothing reaches the website unless that box is ticked. Leave it off for
-> anything that isn't a public event.
+> meetings and copies of mentoring sessions. **Nothing is shown anywhere — the
+> website or the portal — unless "Show this event" is ticked.** Once it is, the
+> **Audience** decides where it appears (Public: the website and the portal;
+> Internal: the portal only), and **Display from** decides when. See *Who sees an
+> event, where, and when* below.
 
 ---
 
@@ -27,12 +28,12 @@ events carrying a recording link that are not yet published — exactly what the
 YouTube import creates, and nothing else looks like it, so the list can never
 open on the internal calendar by mistake. Each one needs its real date (the
 import's starting guess is the video's upload date, which is usually wrong), a
-topic, and the **Publish to website** tick. The count beside the option falls as
+topic, and the **Show this event** tick. The count beside the option falls as
 you work through them. Once it empties, the list opens on the published
 programme as before.
 
-Use the **Show** dropdown to move between Needs review, Published to the
-website, Upcoming, Past and All events. Choosing one yourself stops the
+Use the **Show** dropdown to move between Needs review, Shown or scheduled,
+Upcoming, Past and All events. Choosing one yourself stops the
 automatic switch for the rest of your visit, so a reload will not drag you back.
 
 
@@ -42,7 +43,7 @@ The landing screen lists events, newest first.
 
 | Setting | What you see |
 |---|---|
-| **Published to the website** *(default)* | Just the public workshop programme. This is deliberately the default — otherwise the list opens on ~90 internal calendar entries. |
+| **Shown or scheduled** *(default)* | Every event with "Show this event" ticked — Public, Internal, and those waiting for their display time. This is deliberately the default — otherwise the list opens on the internal calendar entries nobody ticked. |
 | **Upcoming** | Everything in the future, published or not. |
 | **Past** | Everything that has already happened. |
 | **All events** | Everything, including internal meetings. Useful for spotting something wrongly published. |
@@ -74,10 +75,48 @@ behaviour:
 | **Capacity** | Seat cap. **Leave empty (or 0) for unlimited.** Zero does not mean "full". |
 | **Location** | Venue, for in-person and hybrid events. |
 | **Full description / Syllabus** | Long-form content for the event's own page. Both are **formatted text** — bold, lists, links and headings work, and there is no need to know any HTML. |
-| **Publish to website** | The gate described above. Off by default. |
+| **Show this event** | The one switch that decides whether the event appears **anywhere**. Off by default. |
+| **Audience** | **Public**: the public pages and the portal calendar. **Internal**: the portal calendar only. A new event starts Public. |
+| **Reach** *(Public only)* | This chapter, All chapters, or Selected chapters. **Other chapters do not show your events yet** — the reach is recorded now so the shared list can use it later. |
+| **Chapters** *(Selected chapters only)* | The chapters named. Your own chapter is always included, even if you untick it. |
+| **Limit to teams** *(Internal only)* | Only members of these teams see the event on the portal. Empty means everyone who signs in. **This is not private**: anyone who can read events in the CRM can still find it. Keep genuinely confidential meetings off the calendar. |
+| **Takes registrations** *(Internal only)* | Gives members a Register button on the portal. Public events always take registrations through the website. |
+| **Display from** | The first moment the event may appear, on any page. Empty means as soon as it is ticked. Registration opens at the same moment. |
 
-Saving creates the event. It does **not** publish it and does **not** create a
+Saving creates the event. It does **not** show it and does **not** create a
 Zoom webinar until you ask.
+
+## Who sees an event, where, and when
+
+Three controls, read in this order:
+
+1. **Show this event** decides *whether*. Unticked, the event is on no page at
+   all — not the website, not the portal. Unticking hides it at once.
+2. **Audience** decides *where*. Public events are on the website **and** the
+   portal calendar; Internal events are on the portal calendar only, to everyone
+   who signs in unless you limit them to teams.
+3. **Display from** decides *when*. Before that moment the event is on no page,
+   whatever its audience, and nobody can register. Use it to prepare an event
+   now and announce it later — or to release a recording on a chosen day.
+
+The **Shown** column in the list reads the result back: *Hidden*, *Appears*
+with a date, *Public*, *Internal* or *Internal, limited*.
+
+Events created before these controls existed have no audience set. They read
+from the tick: a ticked one is Public, an unticked one Internal. The Overview
+says so ("not set — read from Show this event"); saving the event writes it.
+
+Two warnings can appear after a save. Neither stops the save:
+
+- **A display time on an unticked event** — it will not appear at that time
+  until you tick "Show this event".
+- **A display time after the event starts** on an event that has not happened
+  yet — nobody will see it or be able to register before it begins. (After the
+  event, this is how a recording is released later, and no warning appears.)
+
+**Zoom webinars are for Public events only.** An Internal event never gets one,
+even from the Zoom button; paste your own meeting link into its description. An
+event that already has a webinar keeps it if you change it to Internal.
 
 **About the form itself.** It opens as a large window sized to your screen, and
 you can drag the **bottom-right corner** to make it whatever size suits you. The
@@ -309,13 +348,14 @@ Two rules worth knowing when they do go live:
 ## Frequently asked
 
 **I created an event but it isn't on the website.**
-Two possible reasons: "Publish to website" isn't ticked, or the website hasn't
-been switched over yet (see above). The Overview tab tells you which.
+Check four things: "Show this event" is ticked; the **Audience** is Public;
+**Display from** is empty or already past; and the website has been switched
+over (see above). The **Shown** column tells you the first three at a glance.
 
 **Why is an internal team meeting in this list?**
 Because `CEvent` is CBM's calendar entity as well. Use the **Show** filter —
-"Published to the website" hides them. If one is wrongly published, open it and
-untick the box.
+"Shown or scheduled" hides the unticked ones. If one is wrongly shown, open it
+and untick the box.
 
 **Someone registered twice — do I need to delete one?**
 No. A repeat sign-up updates the existing registration; you'll only ever have one

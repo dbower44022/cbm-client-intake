@@ -959,12 +959,22 @@ would be indistinguishable from a slug.
   meetings and mentoring-session mirrors. That is true **on crm-test (94 rows)**;
   **prod's `CEvent` is empty** because it was never connected to Google
   (verified 2026-08-08), so the first published event there will be a real one.
-  Workshops share the entity, gated by
-  **`publishToWebsite`** (default false). **That flag is the entire boundary to
-  the public site** — every public read goes through
-  `events/service._public_where`, and an unpublished event's page 404s rather
-  than merely hiding. Never hand-roll a public CEvent query
-  ([[events-publish-gate]]).
+  Workshops share the entity. **Since v0.233.0 visibility is ONE rule in
+  `events/visibility.py`** (F2 + F3, Doug's rulings 09-27/29-26): the tick
+  (`publishToWebsite`, labelled **"Show this event"**, default false) decides
+  *whether* — unticked is on no page; **`audience`** (Internal / Public)
+  decides *where* — Internal is the portal calendar only; **`eventReleaseDate`**
+  (reused as the display time) decides *when*, on every page. **An empty
+  audience carries over from the tick** (ticked → Public), which is how old rows
+  and a CRM without the field behave exactly as before. Every public read goes
+  through `_public_where` AND re-checks each row with `visibility.is_shown`; the
+  registration form uses the same rule; a guard test fails on any other read of
+  the tick. A failed metadata read **fails closed** (502) — guessing "no audience
+  field" would publish Internal events. The team limit (`internalTeams`) is a
+  **display filter, not confidentiality** — every role reads all events in the
+  CRM (ruling D4). Never hand-roll a public CEvent query
+  ([[events-publish-gate]]). Design:
+  `prds/events/CBM_Events_Audience_and_Display_Design.md`.
 - **Zoom here is the explicit exception** to the mentor-sessions "user-supplied
   links only" ruling: the public webinar programme uses the CBM Zoom account via
   Server-to-Server OAuth (host `zweb@cbmentors.org`). Ask which world you're in
@@ -1388,7 +1398,8 @@ build on crm-test), `cengagement-description-wysiwyg-crm-handoff.md` (converts
 the Notes column's field to wysiwyg — the switch that turns rich notes on),
 `cgrant-entities-crm-handoff.md`,
 `crating-entity-crm-handoff.md`,
-`cnetworkstandard-entity-crm-handoff.md` (the chapter network's config-version
+`cevent-audience-display-crm-handoff.md` (event audience + display time —
+crm-test done, production and Boston owed), `cnetworkstandard-entity-crm-handoff.md` (the chapter network's config-version
 stamp — pending on both CRMs), `cintake-submission-*.md`, `cinformation-request-entity.md`,
 `cconversation-entity.md`, `cevent-entities-crm-handoff.md`,
 `csession-*.md`, `cmentorprofile-*.md`, `clastcontactdate-field.md`,
@@ -1495,6 +1506,17 @@ with `main`; **Lakeside took it off the release lane by itself** (its
 unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
+
+- **v0.233.0 (2026-09-29) — event audience and display time (Track F, F2 +
+  F3). Committed, not pushed.** Standing rules in the Events section above.
+  The CRM fields are on **crm-test only** (applied and verified 09-29); the code
+  is dark until a CRM has them, so a push changes nothing visible anywhere. New
+  **`CHAPTER_KEY`** (default `cleveland`) — Boston must set `boston` at `/setup`
+  before its events are saved, or Cleveland lands in Boston's reach; the settings
+  generator now writes it for new chapters. The portal endpoints are F5's to put
+  on screen. **Verified by tests and a stub-harness pass only**; the live review
+  as real non-admins, production at a Sunday slot, and Boston are
+  `OPEN-ITEMS.md` #35.
 
 - **v0.232.0 (2026-09-25) — the chapter's acronym replaces CBM in every UI
   string.** Cut and released the same day; **Boston took it by itself** from the
