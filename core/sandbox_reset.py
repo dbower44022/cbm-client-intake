@@ -80,6 +80,9 @@ KEEP_TABLES: frozenset[str] = frozenset(
         "app_config",
         "email_sync_state",
         "worker_heartbeat",
+        # A member's own settings (the portal calendar filter) — configuration
+        # like the roles and teams it sits beside, not training data.
+        "user_preference",
     }
 )
 

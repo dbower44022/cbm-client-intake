@@ -1132,3 +1132,31 @@ async def add_registrant(
         registration["contactId"] = contact_id
     created = await client.create(cfg.REGISTRATION, registration)
     return await client.get(cfg.REGISTRATION, created["id"])
+
+
+# --- the portal calendar (F3 supplies it; F5 builds the surface) -------------
+
+
+async def portal_calendar(
+    client: EspoApi, user: dict[str, Any], *, now: Optional[datetime] = None
+) -> list[dict[str, Any]]:
+    """Upcoming events a signed-in member may see on the portal, soonest first.
+
+    Internal events (to the member's teams, if limited) and this chapter's
+    Public events (F3-8), all ticked, not cancelled and past their display time.
+    ``client`` is the ORGANISATION-WIDE API key: a Standard User role reads
+    events at "own" and would see an empty calendar, and the team limit is the
+    application's to apply (design § 6).
+    """
+    moment = now or datetime.now(timezone.utc)
+    fields = await live_event_fields(client)
+    horizon = moment - timedelta(hours=2)
+    where = visibility.public_where_clauses(fields, moment, surface=visibility.SURFACE_PORTAL)
+    where.append({"type": "after", "attribute": "dateStart", "value": to_crm_datetime(horizon)})
+    rows = await _all_events(
+        client, select=cfg.PUBLIC_SELECT, where=where, order_by="dateStart", order="asc",
+    )
+    return [
+        r for r in rows
+        if visibility.is_shown(r, visibility.SURFACE_PORTAL, now=moment, user=user)
+    ]

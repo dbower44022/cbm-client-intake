@@ -250,6 +250,21 @@ record_comment = Table(
     Index("ix_record_comment_parent", "parent_type", "parent_id", "created_at"),
 )
 
+# --- Per-user preferences (F3, 2026-09-29) ----------------------------------
+# One row per (CRM user, preference key), holding a small JSON value — first
+# the portal calendar's filter (Doug's F3 ruling 8: "saved in their
+# preferences", so it follows the member between computers, which browser
+# storage would not). Configuration, not training data: kept by the sandbox
+# reset. (Migration 0028.)
+user_preference = Table(
+    "user_preference",
+    metadata,
+    Column("user_id", String(64), primary_key=True),     # the CRM User id
+    Column("pref_key", String(64), primary_key=True),    # e.g. "events.calendar"
+    Column("value", JSONB, nullable=False),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
+)
+
 # Activity feed kinds — the vocabulary the summary lines are grouped by.
 ACT_SUBMITTED = "submitted"
 ACT_DELIVERED = "delivered"
@@ -396,6 +411,9 @@ class SubmissionStore(Protocol):
     async def list_record_comments(
         self, parent_type: str, parent_id: str
     ) -> list[dict[str, Any]]: ...
+    # Per-user preferences (F3) — one small JSON value per (user, key).
+    async def get_user_preference(self, user_id: str, key: str) -> Optional[Any]: ...
+    async def set_user_preference(self, user_id: str, key: str, value: Any) -> None: ...
     async def add_activity(
         self, submission_id: str, *, kind: str, actor: Optional[str],
         actor_name: Optional[str], summary: str, bump: bool = True,
@@ -982,6 +1000,28 @@ class PostgresStore:
                 )
             ).mappings().all()
         return [dict(r) for r in rows]
+
+    async def get_user_preference(self, user_id: str, key: str) -> Optional[Any]:
+        async with self._engine.begin() as conn:
+            row = (
+                await conn.execute(
+                    select(user_preference.c.value)
+                    .where(user_preference.c.user_id == user_id)
+                    .where(user_preference.c.pref_key == key)
+                )
+            ).first()
+        return row[0] if row else None
+
+    async def set_user_preference(self, user_id: str, key: str, value: Any) -> None:
+        stmt = pg_insert(user_preference).values(
+            user_id=user_id, pref_key=key, value=value, updated_at=_now(),
+        )
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[user_preference.c.user_id, user_preference.c.pref_key],
+            set_={"value": stmt.excluded.value, "updated_at": stmt.excluded.updated_at},
+        )
+        async with self._engine.begin() as conn:
+            await conn.execute(stmt)
 
     async def add_activity(
         self, submission_id: str, *, kind: str, actor: Optional[str],

@@ -291,6 +291,64 @@ async def attention(request: Request) -> dict:
     return {"items": items}
 
 
+# --- per-user preferences (F3) ------------------------------------------------
+
+#: The preferences a member may store. A whitelist, so the table holds only
+#: what some screen reads back — the portal calendar's filter, for now.
+PREFERENCE_KEYS = frozenset({"events.calendar"})
+#: A preference is a few choices, never a document.
+MAX_PREFERENCE_BYTES = 2048
+
+
+class PreferenceIn(BaseModel):
+    value: Any = None
+
+
+def _preference_key(key: str) -> str:
+    if key not in PREFERENCE_KEYS:
+        raise HTTPException(status_code=404, detail="Unknown preference.")
+    return key
+
+
+@router.get("/preferences/{key}")
+async def get_preference(key: str, request: Request) -> dict:
+    """The member's saved value, or null. Without a database there is nowhere
+    to keep one, so the answer is null and ``stored`` says why."""
+    user = current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    key = _preference_key(key)
+    store = getattr(request.app.state, "submission_store", None)
+    if store is None:
+        return {"key": key, "value": None, "stored": False}
+    try:
+        value = await store.get_user_preference(user.get("userId") or "", key)
+    except Exception as exc:  # noqa: BLE001 — a preference never breaks the portal
+        log.warning("preference read failed (%s) for %s: %s", key, user.get("userName"), exc)
+        return {"key": key, "value": None, "stored": False}
+    return {"key": key, "value": value, "stored": True}
+
+
+@router.put("/preferences/{key}")
+async def put_preference(key: str, body: PreferenceIn, request: Request) -> dict:
+    user = current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    key = _preference_key(key)
+    import json
+
+    if len(json.dumps(body.value)) > MAX_PREFERENCE_BYTES:
+        raise HTTPException(status_code=400, detail="That preference is too large to save.")
+    store = getattr(request.app.state, "submission_store", None)
+    if store is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Preferences cannot be saved on this deployment (it has no database).",
+        )
+    await store.set_user_preference(user.get("userId") or "", key, body.value)
+    return {"key": key, "value": body.value, "stored": True}
+
+
 @router.post("/logout")
 async def logout(request: Request) -> dict:
     clear_session(request)

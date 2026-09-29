@@ -888,9 +888,13 @@ def create_app(
             app.include_router(setup_router)
         # Event Administration — the staff app; team-gated like the others.
         if settings.events_active:
+            from events.member import member_router as events_member_router
             from events.router import api_router as events_admin_router
 
             app.include_router(events_admin_router)
+            # The portal's calendar + member registration (F3). Open to every
+            # signed-in user; the visibility rule and team limit apply per row.
+            app.include_router(events_member_router)
         # Session Management: one router per domain, all from the same engine.
         for _cfg in SESSION_DOMAINS.values():
             app.include_router(make_sessions_router(_cfg))

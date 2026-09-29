@@ -116,7 +116,7 @@ def is_shown(
 
 
 def public_where_clauses(
-    fields: Iterable[str], now: Optional[datetime] = None
+    fields: Iterable[str], now: Optional[datetime] = None, *, surface: str = SURFACE_PUBLIC
 ) -> list[dict[str, Any]]:
     """The same rule as :func:`is_shown` for the public surface, as CRM
     ``where`` clauses — so a list read does not fetch what it must not show.
@@ -134,7 +134,8 @@ def public_where_clauses(
         {"type": "isTrue", "attribute": cfg.SHOW_FIELD},
         {"type": "notEquals", "attribute": "status", "value": cfg.STATUS_CANCELLED},
     ]
-    if cfg.AUDIENCE_FIELD in present:
+    # The portal shows both audiences; only the public pages filter on it.
+    if surface == SURFACE_PUBLIC and cfg.AUDIENCE_FIELD in present:
         where.append({"type": "or", "value": [
             {"type": "equals", "attribute": cfg.AUDIENCE_FIELD, "value": cfg.AUDIENCE_PUBLIC},
             {"type": "isNull", "attribute": cfg.AUDIENCE_FIELD},
