@@ -1,0 +1,86 @@
+{
+  "name": "cevent-audience-display",
+  "description": "Track F features F2 (display time) and F3 (event audience). Design: prds/events/CBM_Events_Audience_and_Display_Design.md; hand steps and verification: cevent-audience-display-crm-handoff.md. Five new CEvent fields and one registration-source option. The display time reuses the existing CEvent.eventReleaseDate (ruling D1); it is listed so a CRM that lacks it gains it, and is skipped where it already exists (crm-test, verified 2026-09-29). Every option list is Doug's ruling: the chapters are Cleveland and Boston (D3); the teams are the roles standard's.",
+  "fields": [
+    {
+      "entity": "CEvent",
+      "name": "audience",
+      "type": "enum",
+      "options": [
+        "Internal",
+        "Public"
+      ],
+      "label": "Audience",
+      "tooltipText": "Internal: the chapter's portal calendar only. Public: the public pages and the portal. Nothing shows anywhere unless Publish To Website is ticked. Left empty, a ticked event reads as Public and an unticked one as Internal."
+    },
+    {
+      "entity": "CEvent",
+      "name": "publicReach",
+      "type": "enum",
+      "options": [
+        "This chapter",
+        "All chapters",
+        "Selected chapters"
+      ],
+      "label": "Reach",
+      "tooltipText": "For a Public event: which chapters' pages should list it. Recorded now; other chapters do not show it until the shared list exists."
+    },
+    {
+      "entity": "CEvent",
+      "name": "reachChapters",
+      "type": "multiEnum",
+      "options": [
+        "cleveland",
+        "boston"
+      ],
+      "translatedOptions": {
+        "cleveland": "Cleveland Business Mentors",
+        "boston": "Boston Business Mentors"
+      },
+      "label": "Chapters",
+      "tooltipText": "The chapters named when the reach is Selected chapters. The creating chapter is always included. Values are each chapter's short label, identical in every chapter's CRM."
+    },
+    {
+      "entity": "CEvent",
+      "name": "internalTeams",
+      "type": "multiEnum",
+      "options": [
+        "Analytics Admin Team",
+        "Client Administration Team",
+        "Data Integrity Team",
+        "Marketing Admin Team",
+        "Mentor Administration Team",
+        "Mentor Team",
+        "Partner Management Team",
+        "Sponsor Management Team",
+        "System Administration Team"
+      ],
+      "label": "Limit To Teams",
+      "tooltipText": "For an Internal event: only members of these teams see it on the portal. Empty means every signed-in member. This hides the event on the portal only; it does not make it private."
+    },
+    {
+      "entity": "CEvent",
+      "name": "takesRegistrations",
+      "type": "bool",
+      "default": false,
+      "label": "Takes Registrations",
+      "tooltipText": "For an Internal event: shows members a Register button on the portal."
+    },
+    {
+      "entity": "CEvent",
+      "name": "eventReleaseDate",
+      "type": "datetime",
+      "label": "Display From",
+      "tooltipText": "The first moment the event may appear on any page, public or portal. Empty means as soon as Publish To Website is ticked. Registration opens at this time too."
+    }
+  ],
+  "enumOptions": [
+    {
+      "entity": "CEventRegistration",
+      "field": "registrationSource",
+      "add": [
+        "Portal"
+      ]
+    }
+  ]
+}
