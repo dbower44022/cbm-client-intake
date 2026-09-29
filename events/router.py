@@ -34,6 +34,7 @@ from . import config as cfg
 from . import notify
 from . import reporting
 from . import service
+from . import visibility
 from .zoom_sync import adopt_existing_webinar, sync_event_webinar
 
 log = logging.getLogger("cbm_intake.events")
@@ -148,7 +149,9 @@ async def session(request: Request) -> dict[str, Any]:
 async def fields(request: Request) -> dict[str, Any]:
     _, client = await _actor(request)
     try:
+        available = await service.live_event_fields(client)
         options = await service.field_options(client)
+        labels = await service.option_labels(client)
     except EspoError as exc:
         raise _crm_failure(exc, "read the event field options") from exc
     return {
@@ -157,10 +160,17 @@ async def fields(request: Request) -> dict[str, Any]:
                 "name": f.name, "label": f.label, "type": f.type,
                 "group": f.group, "big": f.big, "help": f.help,
                 "appManaged": f.app_managed, "hidden": f.hidden,
+                "showWhen": (
+                    {"field": f.show_when[0], "values": list(f.show_when[1])}
+                    if f.show_when else None
+                ),
             }
-            for f in cfg.EVENT_FIELDS
+            # F2/F3 fields appear only once the CRM has them (feature-detected).
+            for f in service.editor_fields(available)
         ],
         "options": options,
+        "optionLabels": labels,
+        "chapterKey": get_settings().chapter_key,
     }
 
 
@@ -181,7 +191,8 @@ async def list_events(request: Request, status: str = "") -> dict[str, Any]:
         "events": [
             {
                 **service.public_event(row),
-                "publishToWebsite": bool(row.get("publishToWebsite")),
+                "publishToWebsite": visibility.is_ticked(row),
+                "state": visibility.staff_state(row),
                 "summary_counts": counts.get(row["id"], {}),
             }
             for row in rows
@@ -207,6 +218,12 @@ async def get_event(event_id: str, request: Request) -> dict[str, Any]:
                 raw, base_url=settings.events_public_base_url
             ),
             "raw": raw,
+            # What the empty-audience carry-over rule reads, so the editor never
+            # shows a blank where the record has an effective value.
+            "visibility": {
+                "audience": visibility.effective_audience(raw),
+                "state": visibility.staff_state(raw),
+            },
         },
         "counts": counts,
         "registrations": registrations,
@@ -217,7 +234,9 @@ async def get_event(event_id: str, request: Request) -> dict[str, Any]:
 async def create_event(payload: EventIn, request: Request) -> dict[str, Any]:
     user, client = await _actor(request)
     try:
-        event = await service.create_event(client, payload.changes)
+        event = await service.create_event(
+            client, payload.changes, chapter_key=get_settings().chapter_key
+        )
     except service.EventError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except EspoError as exc:
@@ -228,7 +247,8 @@ async def create_event(payload: EventIn, request: Request) -> dict[str, Any]:
         summary=f"Created the event \"{event.get('name')}\"",
         actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
     )
-    return {"event": service.public_event_detail(event), "raw": event}
+    return {"event": service.public_event_detail(event), "raw": event,
+            "warnings": visibility.save_warnings(event)}
 
 
 @api_router.put("/events/{event_id}")
@@ -239,7 +259,9 @@ async def update_event(
     settings = get_settings()
     try:
         before = await client.get(cfg.EVENT, event_id, select=cfg.PUBLIC_SELECT)
-        event = await service.update_event(client, event_id, payload.changes)
+        event = await service.update_event(
+            client, event_id, payload.changes, chapter_key=settings.chapter_key
+        )
     except service.EventError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except EspoError as exc:
@@ -257,7 +279,8 @@ async def update_event(
         actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
         details={"fields": changed, "zoom": zoom.get("action")},
     )
-    return {"event": service.public_event_detail(event), "raw": event, "zoom": zoom}
+    return {"event": service.public_event_detail(event), "raw": event, "zoom": zoom,
+            "warnings": visibility.save_warnings(event)}
 
 
 @api_router.post("/events/{event_id}/zoom")

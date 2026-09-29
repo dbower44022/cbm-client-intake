@@ -204,6 +204,17 @@ body { margin: 0; background: var(--cbm-bg, #f6f7f9); color: var(--cbm-text, #21
 .ev__field input:not([type="checkbox"]):not([type="file"]),
 .ev__field select { height: 2.35rem; }
 .ev__field textarea { resize: vertical; min-height: 4.5rem; }
+/* `display:flex` above beats the [hidden] attribute, so the conditional
+   fields (Reach, Chapters, the team limit — F2/F3) would never disappear
+   without this. The same trap as the page-covering overlay. */
+.ev__field[hidden] { display: none; }
+/* Multiple choice: a wrapping row of checkbox chips (the reach's chapters, the
+   team limit). */
+.ev__field--multiEnum { grid-column: 1 / -1; }
+.ev__multi { display: flex; flex-wrap: wrap; gap: .35rem .9rem; padding: .3rem 0; }
+.ev__multi-item { display: inline-flex; align-items: center; gap: .35rem;
+  color: #21252b; font-size: .92rem; cursor: pointer; }
+.ev__field .ev__multi-item input { width: auto; }
 .ev__field--check { flex-direction: row; align-items: center; gap: .5rem; }
 .ev__field--check input { width: auto; }
 /* Fields that want the whole row: the long-form ones the spec marks `big`, the

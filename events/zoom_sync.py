@@ -6,11 +6,12 @@ One entry point — :func:`sync_event_webinar` — decides what the saved state 
 ===========================  ==========================================
 Saved state                  Action
 ===========================  ==========================================
-online, published, no id     **create** the webinar, persist id + URLs
-online, published, has id    **patch** it, but only if something material changed
+online, shown, public, no id **create** the webinar, persist id + URLs
+online, has id               **patch** it, but only if something material changed
 status Cancelled, has id     **cancel** it and clear the stored id
 in-person                    skip — nothing to provision
-not published                skip, unless the staff action forces it
+audience Internal, no id     skip — webinars are for Public events (ruling D2)
+not shown                    skip, unless the staff action forces it
 already-linked id supplied   adopt it (EV-23) rather than creating a second
 ===========================  ==========================================
 
@@ -39,6 +40,7 @@ from typing import Any, Optional
 from core.zoom import ZoomClient, ZoomError, make_client
 
 from . import config as cfg
+from . import visibility
 from . import service
 
 log = logging.getLogger("cbm_intake.events.zoom")
@@ -101,10 +103,21 @@ def decide(
             return "patch", "the title, time or description changed"
         return "skip", "nothing material changed"
 
-    if not (event.get("publishToWebsite") or force):
-        return "skip", "the event is not published to the website"
+    # Doug's ruling D2 (F2/F3 design): webinars are for PUBLIC events only —
+    # the account is the public programme's. Even a forced create respects it.
+    # Keyed on an audience someone actually SET: an event from before the field
+    # existed has none, and a staff member forcing a webinar for an unticked
+    # draft of the programme keeps the behaviour they had. An existing webinar
+    # on an event that later turns Internal is left alone above, so a mistaken
+    # audience change cannot cancel real registrants.
+    if ((event.get(cfg.AUDIENCE_FIELD) or "").strip()
+            and visibility.effective_audience(event) != cfg.AUDIENCE_PUBLIC):
+        return "skip", "Zoom webinars are for Public events only"
 
-    return "create", "the event is published and has no webinar yet"
+    if not (visibility.is_ticked(event) or force):
+        return "skip", "the event is not shown (\u201cShow this event\u201d is off)"
+
+    return "create", "the event is shown and has no webinar yet"
 
 
 async def sync_event_webinar(

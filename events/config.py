@@ -60,6 +60,37 @@ SOURCE_ONLINE = "Online"
 SOURCE_WALK_IN = "Walk-In"
 SOURCE_STAFF = "Staff"
 SOURCE_IMPORT = "Import"
+#: A member registering for an Internal event from the portal (F3-7). A CRM
+#: option to be added — the portal Register action checks for it live and
+#: refuses plainly until it exists, because an unknown value 400s the create.
+SOURCE_PORTAL = "Portal"
+
+# --- Audience and display time (F2 + F3) -----------------------------------
+# Design: prds/events/CBM_Events_Audience_and_Display_Design.md. Every rule
+# that reads these lives in events/visibility.py.
+
+#: "Show this event" — relabelled, but the CRM field keeps its name (F3-4).
+SHOW_FIELD = "publishToWebsite"
+AUDIENCE_FIELD = "audience"
+AUDIENCE_INTERNAL = "Internal"
+AUDIENCE_PUBLIC = "Public"
+REACH_FIELD = "publicReach"
+REACH_THIS = "This chapter"
+REACH_ALL = "All chapters"
+REACH_SELECTED = "Selected chapters"
+#: The chapters' short labels (cleveland, boston), from the CRM standard.
+REACH_CHAPTERS_FIELD = "reachChapters"
+INTERNAL_TEAMS_FIELD = "internalTeams"
+TAKES_REGISTRATIONS_FIELD = "takesRegistrations"
+#: The display time. An existing, never-used field reused by Doug's ruling D1.
+DISPLAY_FROM_FIELD = "eventReleaseDate"
+
+#: The F2/F3 fields, each feature-detected from live CRM metadata: a field the
+#: CRM lacks drops out of the editor, the write whitelist and the CRM filters.
+AUDIENCE_FIELDS: tuple[str, ...] = (
+    AUDIENCE_FIELD, REACH_FIELD, REACH_CHAPTERS_FIELD, INTERNAL_TEAMS_FIELD,
+    TAKES_REGISTRATIONS_FIELD, DISPLAY_FROM_FIELD,
+)
 
 #: Statuses that occupy a seat.
 SEAT_TAKING = (REG_REGISTERED, REG_ATTENDED, REG_NO_SHOW)
@@ -83,6 +114,11 @@ PUBLIC_SELECT = ",".join([
     # The staff Overview shows every spec field, so the record must carry it.
     "registrationUrl",
     "eventGraphicId",
+    # F2/F3. Selecting an attribute the CRM does not have is silently ignored
+    # (verified on crm-test 2026-09-29), so these ride every read safely; the
+    # public payload never exposes them.
+    "audience", "publicReach", "reachChapters", "internalTeams",
+    "takesRegistrations", "eventReleaseDate",
 ])
 
 # --- event graphic (EV-05b) -------------------------------------------------
@@ -133,6 +169,9 @@ class EventField:
     #: ``duration`` is virtual (dateEnd - dateStart), so the editor shows a
     #: Duration select and sends the recomputed dateEnd.
     hidden: bool = False
+    #: Show the control only while another field holds one of these values —
+    #: ``("audience", ("Public",))``. The value is still posted when hidden.
+    show_when: Optional[tuple[str, tuple[str, ...]]] = None
 
 
 #: The curated subject categories, in the order the CRM lists them. Used to
@@ -193,10 +232,31 @@ EVENT_FIELDS: list[EventField] = [
                     "the card falls back to the recording's YouTube thumbnail, "
                     "which an upcoming event doesn't have yet."),
 
-    # Publishing
-    EventField("publishToWebsite", "Publish to website", "bool", "Publishing",
-               help="Off for internal calendar entries. This is what keeps "
-                    "team meetings off the public site."),
+    # Publishing — "whether" first, then "where", then "when" (F2/F3).
+    EventField("publishToWebsite", "Show this event", "bool", "Publishing",
+               help="Nothing is shown anywhere until this is ticked. The audience "
+                    "below decides where it is shown."),
+    EventField("audience", "Audience", "enum", "Publishing",
+               help="Internal: the portal calendar only. Public: the public pages "
+                    "and the portal calendar."),
+    EventField("publicReach", "Reach", "enum", "Publishing",
+               show_when=("audience", ("Public",)),
+               help="Other chapters do not show this event yet. The reach is "
+                    "recorded now so the shared list can use it later."),
+    EventField("reachChapters", "Chapters", "multiEnum", "Publishing",
+               show_when=("publicReach", ("Selected chapters",)),
+               help="This chapter is always included."),
+    EventField("internalTeams", "Limit to teams", "multiEnum", "Publishing",
+               show_when=("audience", ("Internal",)),
+               help="Empty: every signed-in member sees it. This hides the event "
+                    "on the portal only. It does not make it private: anyone who "
+                    "can read events in the CRM can still find it."),
+    EventField("takesRegistrations", "Takes registrations", "bool", "Publishing",
+               show_when=("audience", ("Internal",)),
+               help="Shows a Register button to members on the portal."),
+    EventField("eventReleaseDate", "Display from", "datetime", "Publishing",
+               help="Leave empty to show the event as soon as it is ticked. "
+                    "Registration opens at this time too."),
     EventField("slug", "URL slug", "varchar", "Publishing", app_managed=True),
     EventField("recordingUrl", "Recording URL", "url", "Publishing",
                help="Paste the YouTube link once the recording is published."),

@@ -77,7 +77,7 @@ def test_the_facts_are_driven_by_the_editor_field_spec():
     assert "factRow(host, spec.label, factValue(spec, raw, event));" in APP
     # Every type the spec uses has a formatting case.
     types_in_spec = {f.type for f in cfg.EVENT_FIELDS}
-    cases = set(re.findall(r'case "([a-z]+)":', APP[APP.index("function factValue"):]))
+    cases = set(re.findall(r'case "([A-Za-z]+)":', APP[APP.index("function factValue"):]))
     # wysiwyg is the content column, not a fact; the three plain kinds share the default.
     assert types_in_spec - {"varchar", "text", "enum", "wysiwyg"} <= cases, types_in_spec - cases
 

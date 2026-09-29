@@ -43,6 +43,7 @@ from core.phone import e164_or_none
 from core.resumable import run_step_once
 from events import config as cfg
 from events import service as events_service
+from events import visibility
 
 from .schemas import EventRegistration
 
@@ -93,7 +94,13 @@ async def check_open(client: EspoApi, slug: str) -> dict[str, Any]:
     a refusal raised at delivery time would never reach them.
     """
     event = await _find_event(client, slug)
-    if event is None or not event.get("publishToWebsite"):
+    # The same visibility rule as the public pages (events/visibility.py): an
+    # Internal event, or one whose display time has not come, is refused exactly
+    # like a missing one — the form must not confirm it exists. Registration
+    # opens at the display time (Doug's F2 ruling 3).
+    if event is None or not visibility.is_shown(
+        event, visibility.SURFACE_PUBLIC, ignore_cancelled=True
+    ):
         raise RegistrationRefused("That event could not be found.")
     if event.get("status") == cfg.STATUS_CANCELLED:
         raise RegistrationRefused("That event has been cancelled.")

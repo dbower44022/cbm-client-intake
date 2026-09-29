@@ -418,6 +418,10 @@ SETTINGS: tuple[SettingSpec, ...] = (
             "email that used to say CBM says this instead — \"ask CBM staff\", the "
             "\"CBM contacts\" table, the daily digest subject. Substituted as pages "
             "are served, so a change takes effect on the next page load."),
+    _s("chapter_key", GROUP_PRESENTATION, "Chapter short label",
+       help="This chapter's short label in the chapter list of the CRM standard — "
+            "cleveland, boston. Every public event's reach includes it. It must be "
+            "one of the options of the event Chapters field, or the reach is left alone."),
     _s("organization_logo_url", GROUP_PRESENTATION, "Organisation logo URL",
        help="A publicly-hosted https image (typically on the org's own website). "
             "Powers the email-signature editor's Insert-logo button — signature "

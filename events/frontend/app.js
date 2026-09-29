@@ -20,6 +20,8 @@
     events: [],
     fields: [],
     options: {},
+    optionLabels: {},   // { field: { storedValue: displayLabel } } from the CRM
+    chapterKey: "",
     session: {},
     current: null,      // { event, counts, registrations }
     sort: { key: "startsAtUtc", dir: -1 },
@@ -45,6 +47,13 @@
       throw new Error((data && data.detail) || ("Request failed (" + resp.status + ")"));
     }
     return data;
+  }
+
+  /* A save that succeeded but deserves a second look (a display time on an
+     unticked event, a display time after the start) — never blocking. */
+  function noticeWithWarnings(message, warnings) {
+    if (warnings && warnings.length) notice(message + " " + warnings.join(" "), "warn");
+    else notice(message, "ok");
   }
 
   function notice(message, kind) {
@@ -98,7 +107,7 @@
     var now = new Date().toISOString();
     var rows = state.events.filter(function (e) {
       if (state.scope === "review") return needsReview(e);
-      if (state.scope === "published") return e.publishToWebsite;
+      if (state.scope === "published") return (e.state || {}).key !== "hidden";
       if (state.scope === "upcoming") return e.startsAtUtc && e.startsAtUtc >= now;
       if (state.scope === "past") return e.startsAtUtc && e.startsAtUtc < now;
       return true;
@@ -123,7 +132,7 @@
     if (key === "registered") return counts.registered || 0;
     if (key === "attended") return counts.attended || 0;
     if (key === "showRate") return counts.showRate == null ? -1 : counts.showRate;
-    if (key === "published") return row.publishToWebsite ? 1 : 0;
+    if (key === "published") return (row.state || {}).label || "";
     if (key === "recording") return row.recordingUrl ? 1 : 0;
     if (key === "name") return (row.topic || "").toLowerCase();
     return (row[key] || "").toString().toLowerCase();
@@ -162,7 +171,8 @@
       cell(counts.registered == null ? "—" : counts.registered, "num");
       cell(counts.attended == null ? "—" : counts.attended, "num");
       cell(pct(counts.showRate), "num");
-      cell(item.publishToWebsite ? "Live" : "—");
+      // Hidden · Appears <date> · Public · Internal · Internal, limited (F2/F3).
+      cell((item.state || {}).label || (item.publishToWebsite ? "Shown" : "Hidden"));
       cell(item.recordingUrl ? "Yes" : "—");
       body.appendChild(tr);
     });
@@ -235,12 +245,23 @@
      spec uses has a case; "—" is the empty value everywhere, never a blank. */
   function factValue(spec, raw, event) {
     var value = raw[spec.name];
+    if (spec.name === "audience" && !value) {
+      // The carry-over rule (design § 3.1): an empty audience reads from the tick.
+      return ((event.visibility || {}).audience || "—") + " (not set — read from Show this event)";
+    }
     switch (spec.type) {
       case "datetime": return fmtStamp(value);
       case "duration":
         return window.CBMDateTime.formatDuration(
           window.CBMDateTime.durationBetween(raw.dateStart, raw.dateEnd)) || "—";
       case "bool": return value ? "Yes" : "No";
+      case "multiEnum": {
+        var picked = Array.isArray(value) ? value : [];
+        if (!picked.length) {
+          return spec.name === "internalTeams" ? "Every signed-in member" : "—";
+        }
+        return picked.map(function (v) { return optionLabel(spec.name, v); }).join(", ");
+      }
       case "int":
         if (spec.name === "venueCapacity") return value ? String(value) : "Unlimited";
         return value == null || value === "" ? "—" : String(value);
@@ -258,6 +279,33 @@
       default:
         return value == null || String(value).trim() === "" ? "—" : String(value);
     }
+  }
+
+  /* The CRM's display label for a stored option value (a chapter's full name
+     for its short label), or the value itself when the CRM has none. */
+  function optionLabel(fieldName, value) {
+    var labels = state.optionLabels[fieldName] || {};
+    return labels[value] || value;
+  }
+
+  /* The value a control starts with. An empty audience is read by the
+     carry-over rule (ticked = Public, unticked = Internal), so the editor shows
+     what the record effectively is rather than a blank (design § 3.1). A new
+     event starts Public, reach this chapter — the server applies the same. */
+  function initialValue(spec, raw) {
+    var value = raw[spec.name];
+    var isNew = !raw.id;
+    if (spec.name === "audience" && !value) {
+      var vis = (state.current && !isNew && state.current.event.visibility) || {};
+      return vis.audience || "Public";
+    }
+    if (spec.name === "publicReach" && !value) return "This chapter";
+    if (spec.name === "reachChapters") {
+      var list = Array.isArray(value) ? value.slice() : [];
+      if (state.chapterKey && list.indexOf(state.chapterKey) === -1) list.push(state.chapterKey);
+      return list;
+    }
+    return value;
   }
 
   /* A CRM UTC stamp as local wall time, the way the editor's date control
@@ -530,7 +578,9 @@
      room to; the layout classes carry that through to the stylesheet. */
   function field(host, name, label, type, value, options, help, opts) {
     opts = opts || {};
-    var wrap = document.createElement("label");
+    // A group of checkboxes cannot sit inside one <label>: a click anywhere in
+    // it would toggle the first box.
+    var wrap = document.createElement(type === "multiEnum" ? "div" : "label");
     wrap.className = "ev__field ev__field--" + type;
     if (opts.big) wrap.classList.add("ev__field--wide");
     var caption = document.createElement("span");
@@ -544,10 +594,38 @@
       input.appendChild(blank);
       (options || []).forEach(function (option) {
         var node = document.createElement("option");
-        node.value = option; node.textContent = option;
+        node.value = option; node.textContent = optionLabel(name, option);
         if (option === value) node.selected = true;
         input.appendChild(node);
       });
+    } else if (type === "multiEnum") {
+      // A row of checkboxes. The group carries the name; the boxes do not, so
+      // collectForm reads the group once and gets a list.
+      input = document.createElement("div");
+      input.className = "ev__multi";
+      var chosen = Array.isArray(value) ? value : [];
+      var known = (options || []).slice();
+      // A stored value no longer offered stays visible (and is dropped by the
+      // server on save, because the CRM would refuse the whole save for it).
+      chosen.forEach(function (v) { if (known.indexOf(v) === -1) known.push(v); });
+      known.forEach(function (option) {
+        var item = document.createElement("label");
+        item.className = "ev__multi-item";
+        var box = document.createElement("input");
+        box.type = "checkbox";
+        box.value = option;
+        box.checked = chosen.indexOf(option) !== -1;
+        var text = document.createElement("span");
+        var gone = (options || []).indexOf(option) === -1;
+        text.textContent = optionLabel(name, option) + (gone ? " (no longer an option)" : "");
+        item.appendChild(box); item.appendChild(text);
+        input.appendChild(item);
+      });
+      if (!known.length) {
+        var none = document.createElement("small");
+        none.textContent = "The CRM offers no options for this field yet.";
+        input.appendChild(none);
+      }
     } else if (type === "bool") {
       input = document.createElement("input");
       input.type = "checkbox";
@@ -733,17 +811,40 @@
       section.appendChild(legend);
       groups[groupName].forEach(function (spec) {
         if (spec.type === "image") { graphicField(section, raw, spec); return; }
-        var value = raw[spec.name];
+        var value = initialValue(spec, raw);
         if (spec.type === "duration") {
           // `duration` is VIRTUAL in EspoCRM (dateEnd - dateStart) and is often
           // null on the record, so derive it rather than trusting the field.
           value = window.CBMDateTime.durationBetween(raw.dateStart, raw.dateEnd);
         }
-        field(section, spec.name, spec.label, spec.type, value,
-              state.options[spec.name], spec.help, { big: spec.big });
+        var control = field(section, spec.name, spec.label, spec.type, value,
+                            state.options[spec.name], spec.help, { big: spec.big });
+        if (spec.showWhen) control.closest(".ev__field").dataset.showWhen = JSON.stringify(spec.showWhen);
       });
       host.appendChild(section);
     });
+    applyShowWhen(host);
+    host.addEventListener("change", function () { applyShowWhen(host); });
+  }
+
+  /* Conditional fields (F2/F3): Reach only for a Public event, Chapters only
+     for a Selected reach, the team limit and Takes registrations only for an
+     Internal one. A field is shown when the field it depends on is itself shown
+     and holds one of the listed values — so Chapters disappears with Reach when
+     the event turns Internal. Hidden controls keep their values and are still
+     posted; the server applies the rules. */
+  function applyShowWhen(host) {
+    var wraps = Array.prototype.slice.call(host.querySelectorAll("[data-show-when]"));
+    function controlOf(name) { return host.querySelector('[name="' + name + '"]'); }
+    function isShown(wrap) {
+      var rule = JSON.parse(wrap.dataset.showWhen);
+      var parent = controlOf(rule.field);
+      if (!parent) return false;
+      var parentWrap = parent.closest(".ev__field");
+      if (parentWrap && parentWrap.dataset.showWhen && !isShown(parentWrap)) return false;
+      return rule.values.indexOf(parent.value) !== -1;
+    }
+    wraps.forEach(function (wrap) { wrap.hidden = !isShown(wrap); });
   }
 
   function collectForm() {
@@ -752,6 +853,11 @@
       var type = input.dataset.type;
       var value;
       if (type === "bool") value = input.checked;
+      else if (type === "multiEnum") {
+        value = Array.prototype.filter.call(
+          input.querySelectorAll('input[type="checkbox"]'), function (b) { return b.checked; }
+        ).map(function (b) { return b.value; });
+      }
       else if (type === "int") value = input.value === "" ? null : parseInt(input.value, 10);
       else if (type === "duration") value = window.CBMDateTime.readDuration(input);
       else if (type === "datetime") value = window.CBMDateTime.read(input);
@@ -864,7 +970,7 @@
         method: "POST", body: JSON.stringify({ changes: changes }),
       });
       closeModal();
-      notice("Event created.", "ok");
+      noticeWithWarnings("Event created.", result.warnings);
       await loadEvents();
       await openEvent(result.raw.id);
     }, "Create event", { wide: true });
@@ -883,9 +989,9 @@
       });
       closeModal();
       var zoom = result.zoom || {};
-      notice(zoom.ok && zoom.action && zoom.action !== "skipped"
+      noticeWithWarnings(zoom.ok && zoom.action && zoom.action !== "skipped"
         ? "Saved. Zoom webinar " + zoom.action + "."
-        : "Saved.", "ok");
+        : "Saved.", result.warnings);
       await refreshDetail();
     }, "Save", { wide: true });
   }
@@ -1011,6 +1117,8 @@
       var fieldData = await api("/fields");
       state.fields = fieldData.fields || [];
       state.options = fieldData.options || {};
+      state.optionLabels = fieldData.optionLabels || {};
+      state.chapterKey = fieldData.chapterKey || "";
       await loadEvents();
       if (!state.session.websiteLive) {
         notice("The public website is not reading from this app yet — events "

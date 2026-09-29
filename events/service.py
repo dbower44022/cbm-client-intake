@@ -5,12 +5,13 @@ Everything the website and (later) the staff app need from ``CEvent`` /
 
 Two rules this module exists to enforce:
 
-**1. Nothing is served publicly without ``publishToWebsite``.** ``CEvent`` is
-also the organisation's calendar entity — it holds internal team meetings and
-mentoring-session mirrors (92 of them at the time of writing). That flag is the
-only thing separating them from the public website, so every public read goes
-through :func:`_public_where`, which always includes it. Do not hand-roll a
-public query elsewhere.
+**1. Nothing is served publicly unless the visibility rule allows it.**
+``CEvent`` is also the organisation's calendar entity — it holds internal team
+meetings and mentoring-session mirrors. Whether an event may be shown, where
+and from when is decided in ONE place, :mod:`events.visibility` ("Show this
+event" ticked, audience Public, display time passed, not cancelled). Every
+public read goes through :func:`_public_where` AND re-checks each row with
+``visibility.is_shown``. Do not hand-roll a public query elsewhere.
 
 **2. Counts are computed, never stored.** Registered/attended/show-rate/seats
 remaining are derived from the registration rows on every read
@@ -35,6 +36,7 @@ from core.espo import EspoApi, EspoError
 from core.youtube import thumbnail_url, video_id_from_url
 
 from . import config as cfg
+from . import visibility
 
 log = logging.getLogger("cbm_intake.events")
 
@@ -45,6 +47,15 @@ _LOCAL = ZoneInfo(cfg.PUBLIC_TIMEZONE)
 
 #: CRM datetime wire format.
 _FMT = "%Y-%m-%d %H:%M:%S"
+
+#: Enum fields on CEvent, from the one spec that also drives the form.
+_ENUM_FIELD_NAMES = frozenset(f.name for f in cfg.EVENT_FIELDS if f.type == "enum")
+#: Multiple-choice fields (F2/F3: the reach's chapters, the team limit).
+_MULTI_FIELD_NAMES = frozenset(f.name for f in cfg.EVENT_FIELDS if f.type == "multiEnum")
+#: Every field whose options the editor reads live.
+_OPTION_FIELD_NAMES = ("status", *(
+    f.name for f in cfg.EVENT_FIELDS if f.type in ("enum", "multiEnum")
+))
 
 
 class EventError(RuntimeError):
@@ -156,19 +167,42 @@ async def _all_events(
     return rows
 
 
-def _public_where(extra: Optional[list[dict[str, Any]]] = None) -> list[dict[str, Any]]:
-    """The non-negotiable public filter.
+async def live_event_fields(client: EspoApi) -> frozenset[str]:
+    """Which of the F2/F3 fields the live CRM has (CRM = truth).
 
-    ``publishToWebsite`` is true and the event is not cancelled. Every public
-    read starts here — see the module docstring for why.
+    A client with no metadata reader (the dry-run client, simple test fakes) has
+    none of them, which is exactly the behaviour before those fields existed.
+    A metadata read that FAILS raises: the visibility filter depends on this
+    answer, and guessing "absent" during an outage would drop the audience
+    filter and put Internal events on the public pages.
     """
-    where: list[dict[str, Any]] = [
-        {"type": "isTrue", "attribute": "publishToWebsite"},
-        {"type": "notEquals", "attribute": "status", "value": cfg.STATUS_CANCELLED},
-    ]
+    reader = getattr(client, "metadata", None)
+    if reader is None:
+        return frozenset()
+    fields = await reader(f"entityDefs.{cfg.EVENT}.fields") or {}
+    return frozenset(name for name in cfg.AUDIENCE_FIELDS if name in fields)
+
+
+def _public_where(
+    extra: Optional[list[dict[str, Any]]] = None,
+    *,
+    fields: Iterable[str] = (),
+    now: Optional[datetime] = None,
+) -> list[dict[str, Any]]:
+    """The non-negotiable public filter — :mod:`events.visibility`'s rule as CRM
+    ``where`` clauses, for the fields the live CRM has. Every public read starts
+    here, and then re-checks each row with ``visibility.is_shown``.
+    """
+    where = visibility.public_where_clauses(fields, now)
     if extra:
         where.extend(extra)
     return where
+
+
+def _shown_publicly(
+    rows: list[dict[str, Any]], now: Optional[datetime] = None
+) -> list[dict[str, Any]]:
+    return [r for r in rows if visibility.is_shown(r, visibility.SURFACE_PUBLIC, now=now)]
 
 
 async def list_upcoming(
@@ -178,16 +212,18 @@ async def list_upcoming(
     moment = now or datetime.now(timezone.utc)
     # A little slack so an event that has just started still shows while it runs.
     horizon = moment - timedelta(hours=2)
+    fields = await live_event_fields(client)
     rows = await _all_events(
         client,
         select=cfg.PUBLIC_SELECT,
         where=_public_where(
-            [{"type": "after", "attribute": "dateStart", "value": to_crm_datetime(horizon)}]
+            [{"type": "after", "attribute": "dateStart", "value": to_crm_datetime(horizon)}],
+            fields=fields, now=moment,
         ),
         order_by="dateStart",
         order="asc",
     )
-    return rows
+    return _shown_publicly(rows, moment)
 
 
 async def published_recordings(client: EspoApi) -> list[dict[str, Any]]:
@@ -196,15 +232,17 @@ async def published_recordings(client: EspoApi) -> list[dict[str, Any]]:
     One read. The filtering below is pure, so the topic list and the filtered
     results come from the same fetch rather than one query each.
     """
+    fields = await live_event_fields(client)
+    now = datetime.now(timezone.utc)
     rows = await _all_events(
         client,
         select=cfg.PUBLIC_SELECT,
-        where=_public_where(),
+        where=_public_where(fields=fields, now=now),
         order_by="dateStart",
         order="desc",
         limit=1000,
     )
-    return [r for r in rows if (r.get("recordingUrl") or "").strip()]
+    return [r for r in _shown_publicly(rows, now) if (r.get("recordingUrl") or "").strip()]
 
 
 def recording_topics(rows: list[dict[str, Any]]) -> list[str]:
@@ -262,12 +300,16 @@ async def get_by_slug(client: EspoApi, slug: str) -> Optional[dict[str, Any]]:
     """
     if not slug:
         return None
+    fields = await live_event_fields(client)
+    now = datetime.now(timezone.utc)
     rows = await _all_events(
         client,
         select=cfg.PUBLIC_SELECT,
-        where=_public_where([{"type": "equals", "attribute": "slug", "value": slug}]),
+        where=_public_where([{"type": "equals", "attribute": "slug", "value": slug}],
+                            fields=fields, now=now),
         limit=2,
     )
+    rows = _shown_publicly(rows, now)
     return rows[0] if rows else None
 
 
@@ -721,7 +763,7 @@ async def field_options(client: EspoApi) -> dict[str, list[str]]:
     empty list rather than failing the form.
     """
     options: dict[str, list[str]] = {}
-    for name in ("eventType", "format", "status", "topic"):
+    for name in _OPTION_FIELD_NAMES:
         try:
             values = await client.metadata_enum_options(cfg.EVENT, name)
         except EspoError:
@@ -730,32 +772,142 @@ async def field_options(client: EspoApi) -> dict[str, list[str]]:
     return options
 
 
-def _writable(changes: dict[str, Any], *, allow_managed: bool = False) -> dict[str, Any]:
-    """Drop anything not in the field spec.
+async def option_labels(client: EspoApi) -> dict[str, dict[str, str]]:
+    """The CRM's own display labels for option values, where it has them.
+
+    The chapter list stores each chapter's short label (``boston``) and shows
+    its full name, which lives in the CRM's translations, not its metadata.
+    Best-effort: without labels the editor shows the stored values.
+    """
+    reader = getattr(client, "i18n", None)
+    if reader is None:
+        return {}
+    try:
+        data = await reader(cfg.EVENT)
+    except EspoError:
+        return {}
+    options = ((data or {}).get(cfg.EVENT) or {}).get("options") or {}
+    return {
+        name: labels for name, labels in options.items()
+        if name in _OPTION_FIELD_NAMES and isinstance(labels, dict)
+    }
+
+
+def editor_fields(available: Iterable[str]) -> list[cfg.EventField]:
+    """The field spec, less the F2/F3 fields the live CRM does not have."""
+    present = set(available)
+    return [
+        f for f in cfg.EVENT_FIELDS
+        if f.name not in cfg.AUDIENCE_FIELDS or f.name in present
+    ]
+
+
+def _writable(
+    changes: dict[str, Any],
+    *,
+    allow_managed: bool = False,
+    available: Iterable[str] = (),
+) -> dict[str, Any]:
+    """Drop anything not in the field spec, and any F2/F3 field the live CRM
+    does not have.
 
     The spec is the whitelist (the SESSION_FIELDS convention): a smuggled
     ``zoomWebinarId`` or an invented attribute never reaches the CRM.
     """
-    allowed = cfg.EVENT_WRITABLE_NAMES if allow_managed else cfg.EVENT_EDIT_NAMES
+    allowed = set(cfg.EVENT_WRITABLE_NAMES if allow_managed else cfg.EVENT_EDIT_NAMES)
+    allowed -= set(cfg.AUDIENCE_FIELDS) - set(available)
     return {k: v for k, v in changes.items() if k in allowed}
 
 
-async def create_event(client: EspoApi, changes: dict[str, Any]) -> dict[str, Any]:
-    """Create an event, giving it a unique URL slug."""
-    payload = _writable(changes)
+async def _clean_multi_enums(client: EspoApi, payload: dict[str, Any]) -> None:
+    """A multi-choice value is a de-duplicated list of live options.
+
+    EspoCRM refuses the whole save when one value is not an option, so a value
+    that has drifted out of the list (a renamed team) is dropped here rather
+    than failing the save. Fails open when the options cannot be read.
+    """
+    for name in _MULTI_FIELD_NAMES & payload.keys():
+        value = payload[name]
+        if value in (None, ""):
+            payload[name] = []
+            continue
+        if isinstance(value, str):
+            value = [value]
+        values = [v for v in value if isinstance(v, str) and v.strip()]
+        try:
+            options = await client.metadata_enum_options(cfg.EVENT, name)
+        except EspoError:
+            options = None
+        if options is not None:
+            values = [v for v in values if v in options]
+        payload[name] = list(dict.fromkeys(values))
+
+
+async def _include_own_chapter(
+    client: EspoApi,
+    payload: dict[str, Any],
+    current: dict[str, Any],
+    *,
+    available: Iterable[str],
+    chapter_key: str,
+) -> None:
+    """The creating chapter is always in an event's reach (Doug's F3 ruling 6).
+
+    Enforced here, on every save, rather than only in the browser, so no
+    caller can leave it out. Skipped — with a warning in the log — when this
+    chapter's key is not one of the CRM's chapter options, because writing an
+    unknown value would fail the whole save.
+    """
+    key = (chapter_key or "").strip()
+    if not key or cfg.REACH_CHAPTERS_FIELD not in set(available):
+        return
+    chapters = payload.get(cfg.REACH_CHAPTERS_FIELD)
+    if chapters is None:
+        chapters = list(current.get(cfg.REACH_CHAPTERS_FIELD) or [])
+    if key in chapters:
+        return
+    try:
+        options = await client.metadata_enum_options(cfg.EVENT, cfg.REACH_CHAPTERS_FIELD)
+    except EspoError:
+        options = None
+    if not options or key not in options:
+        log.warning(
+            "chapter key %r is not an option of CEvent.%s; the reach was left alone",
+            key, cfg.REACH_CHAPTERS_FIELD,
+        )
+        return
+    payload[cfg.REACH_CHAPTERS_FIELD] = [*chapters, key]
+
+
+async def create_event(
+    client: EspoApi, changes: dict[str, Any], *, chapter_key: str = ""
+) -> dict[str, Any]:
+    """Create an event, giving it a unique URL slug.
+
+    A new event is Public, reach this chapter, unless the editor says
+    otherwise: Event Administration is the public programme's tool, and the
+    "Show this event" tick still decides whether it appears at all.
+    """
+    available = await live_event_fields(client)
+    payload = _blank_enums_to_null(_writable(changes, available=available))
     name = (payload.get("name") or "").strip()
     if not name:
         raise EventError("An event needs a title.")
     payload["name"] = name
     payload["slug"] = unique_slug(name, await existing_slugs(client))
     payload.setdefault("status", cfg.STATUS_PLANNED)
-    payload.setdefault("publishToWebsite", False)
+    payload.setdefault(cfg.SHOW_FIELD, False)
+    if cfg.AUDIENCE_FIELD in available and not payload.get(cfg.AUDIENCE_FIELD):
+        payload[cfg.AUDIENCE_FIELD] = cfg.AUDIENCE_PUBLIC
+    if cfg.REACH_FIELD in available and not payload.get(cfg.REACH_FIELD):
+        payload[cfg.REACH_FIELD] = cfg.REACH_THIS
+    await _clean_multi_enums(client, payload)
+    await _include_own_chapter(client, payload, {}, available=available,
+                               chapter_key=chapter_key)
     created = await client.create(cfg.EVENT, payload)
     return await client.get(cfg.EVENT, created["id"], select=cfg.PUBLIC_SELECT)
 
 
-#: Enum fields on CEvent, from the one spec that also drives the form.
-_ENUM_FIELD_NAMES = frozenset(f.name for f in cfg.EVENT_FIELDS if f.type == "enum")
 
 
 def _blank_enums_to_null(payload: dict[str, Any]) -> dict[str, Any]:
@@ -782,13 +934,17 @@ def _blank_enums_to_null(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 async def update_event(
-    client: EspoApi, event_id: str, changes: dict[str, Any]
+    client: EspoApi, event_id: str, changes: dict[str, Any], *, chapter_key: str = ""
 ) -> dict[str, Any]:
     """Apply whitelisted changes; give the event a slug if it never had one."""
-    payload = _blank_enums_to_null(_writable(changes))
+    available = await live_event_fields(client)
+    payload = _blank_enums_to_null(_writable(changes, available=available))
     if "name" in payload and not (payload["name"] or "").strip():
         raise EventError("An event needs a title.")
     current = await client.get(cfg.EVENT, event_id, select=cfg.PUBLIC_SELECT)
+    await _clean_multi_enums(client, payload)
+    await _include_own_chapter(client, payload, current, available=available,
+                               chapter_key=chapter_key)
     if not current.get("slug"):
         source = payload.get("name") or current.get("name") or ""
         if source:

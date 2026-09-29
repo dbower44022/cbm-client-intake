@@ -47,6 +47,12 @@ class Settings(BaseSettings):
     # carries as the ``{{abbr}}`` token (Doug, 2026-09-25). Same safety property
     # as the name: the default renders exactly what the pages always said.
     organization_abbreviation: str = "CBM"
+    # The chapter's short label — the lower-case name the deployment guide builds
+    # into everything for a chapter (``cleveland``, ``boston``). An event's reach
+    # always includes this chapter (Doug's F3 ruling 6), stored as this value in
+    # ``CEvent.reachChapters``, whose options are the CRM standard's chapter
+    # list. Must be one of those options or the reach is left untouched.
+    chapter_key: str = "cleveland"
 
     # The organization's logo as a PUBLICLY-HOSTED https URL (typically a file
     # already served by the org's own website). Powers the email-signature
