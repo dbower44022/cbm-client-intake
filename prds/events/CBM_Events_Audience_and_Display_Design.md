@@ -1,13 +1,14 @@
 # CBM Events — Audience and Display Time: Design (Track F, F2 + F3)
 
-Last Updated: 09-28-26 00:30 · Revision 0.1 — see change log at the end.
+Last Updated: 09-29-26 00:58 · Revision 0.2 — see change log at the end.
 
 **Status: DRAFT for Doug's review. Nothing here is built, and nothing here is a
 ruling unless it cites one.** The requirements are Doug's rulings recorded in
 `CBM_Events_Finalization_Plan.md` revision 4.2, sections F2 (requirements 1–5)
 and F3 (requirements 1–9); they are cited below as *F2-n* and *F3-n*. Everything
-else is Claude's design and is marked where it is a choice. Four decisions in
-§ 9 are Doug's to make before the build starts.
+else is Claude's design and is marked where it is a choice. The four decisions
+in § 9 were ruled by Doug on 09-28-26 and 09-29-26; the design as a whole still
+awaits his approval before anything is built.
 
 ---
 
@@ -164,7 +165,8 @@ late (Claude's decision recorded in F2).
 `forms/event_registration/` reads `publishToWebsite` for a visibility decision
 outside the visibility rule — the same kind of guard as the stylesheet
 contract. The Zoom module's own read is the one exception it allows, because
-F2-4 deliberately keys Zoom on the checkbox alone.
+F2-4 keys Zoom on the checkbox rather than on the display time; after D2 it
+also requires audience Public.
 
 ## 5. The public side
 
@@ -279,6 +281,10 @@ had a different use in mind, the two meanings collide. A new `displayFrom`
 field costs one CRM build per system and leaves the old field unexplained.
 **Recommendation: reuse it**, after asking the CRM team the 07-25 question once
 more; if nobody claims it, it is the field the handoff already guessed it was.
+**Ruled by Doug 09-28-26: reuse `eventReleaseDate`.** *Claude's recommendation,
+not part of the ruling:* ask the CRM team the 07-25 question once before the
+build, and confirm on production that the field exists (finding 2 is an
+inference).
 
 **D2 — Do Internal events that are online get a Zoom webinar?** Today the Zoom
 module creates a webinar for any ticked online event (F2-4), on the chapter's
@@ -288,11 +294,18 @@ Public events only — the webinar account stays the public programme's, and an
 Internal event uses a link staff paste in. Option B: every ticked online event,
 as the code does now. **Recommendation: A.** Cost: an internal training that
 wants a webinar has to be run from Zoom by hand.
+**Ruled by Doug 09-29-26: A — Public events only.** `events/zoom_sync.py` gains
+one condition: a webinar is created only when the event is ticked **and** its
+audience is Public (or empty and ticked, by the carry-over rule). *Claude's
+addition:* an existing
+webinar on an event changed to Internal is left alone, not cancelled, so a
+mistaken audience change cannot cancel a real webinar's registrants.
 
 **D3 — Are there chapters other than Cleveland and Boston to list now?** The
 list is the CRM standard's (F3-3), and I know of no other member chapter.
 Lakeside is a rehearsal and is left out. **Recommendation:** Cleveland and
 Boston only.
+**Ruled by Doug 09-29-26: Cleveland and Boston only.**
 
 **D4 — Is a team limit a display filter, or must it keep the event
 confidential?** Finding 3: every role that reads events reads all of them, so a
@@ -305,6 +318,9 @@ that reads events as a mentor. **Recommendation: A**, because nothing in F3
 asked for secrecy and B is a roles-standard change with a reach well beyond
 this feature. Cost: a genuinely private meeting should not be put on the
 calendar at all.
+**Ruled by Doug 09-29-26: A — a display filter.** The editor states on every
+limited event that the limit hides it on the portal and does not make it
+private.
 
 ---
 
@@ -312,4 +328,5 @@ calendar at all.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.2 | 09-29-26 00:58 | Claude (Claude Code) | Doug ruled the four decisions: D1 reuse `eventReleaseDate` as the display time; D2 Zoom webinars for Public events only (Claude added: an existing webinar is not cancelled when an event turns Internal); D3 the chapter list is Cleveland and Boston; D4 the team limit is a display filter, stated as not private in the editor. |
 | 0.1 | 09-28-26 00:30 | Claude (Claude Code) | First draft, from the F2 and F3 requirements Doug ruled 09-27-26 and 09-28-26 (Finalization Plan revision 4.2). Findings verified against the code, crm-test's metadata and data, and the roles standard. Four decisions for Doug (D1–D4). |
