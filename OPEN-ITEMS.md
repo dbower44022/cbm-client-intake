@@ -445,12 +445,26 @@ block a deploy.)*
 
 ## Live verification owed
 
+38. **An Internal event's join link cannot be set in Event Administration**
+    (found 2026-09-30 while writing the F5 live pass). `virtualMeetingUrl`
+    ("Join URL") is app-managed in `events/config.EVENT_FIELDS` — Zoom sync
+    fills it, and Zoom is for Public events only (D2 of the F2/F3 design). So
+    the F5 join-link rule (design § 5, decision D2) can only ever fire for a
+    link someone typed into the CRM record by hand; the staff guide today says
+    "paste your own meeting link into its description", which the member page
+    renders as prose, not as a **Join online** fact. Decision for Doug: make
+    the Join URL editable in the editor for Internal events (Zoom keeps owning
+    it for Public ones), or drop D2's fact and rely on the description. Until
+    ruled, the live pass below sets the field in the CRM directly.
+
 37. **The portal events rail and member page (v0.235.0, F5) — built dark,
     never seen** (2026-09-30). `PORTAL_CALENDAR` is off everywhere. Owed on
     crm-test, as **two real non-admin accounts** (one in a team an Internal
     event is limited to, one not), on a desktop and at phone width: (a) create
-    through `/events` an Internal event with a graphic, **no slug**, Takes
-    registrations on, and one limited to a team; (b) switch `PORTAL_CALENDAR`
+    through `/events` an Internal event with a graphic and Takes
+    registrations on, and one limited to a team (the editor always generates
+    a slug — a slug-less event exists only when created directly in the CRM,
+    and is optional here); (b) switch `PORTAL_CALENDAR`
     on at `/setup`; (c) the rail renders beside the tiles with no width cap,
     the fold appears for an event beyond 30 days, both switches survive a
     sign-out and a different browser; (d) Register from a row and from the
