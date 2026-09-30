@@ -1534,9 +1534,9 @@ each block.
   **`CHAPTER_KEY`** (default `cleveland`) — Boston must set `boston` at `/setup`
   before its events are saved, or Cleveland lands in Boston's reach; the settings
   generator now writes it for new chapters. The portal endpoints are F5's to put
-  on screen. **Verified by tests and a stub-harness pass only**; the live review
-  as real non-admins, production at a Sunday slot, and Boston are
-  `OPEN-ITEMS.md` #35.
+  on screen. **Reviewed live on crm-test by Doug on 2026-09-30 as two real
+  non-admin accounts** (team limit, display time, public refusal all confirmed);
+  production at a Sunday slot and Boston are `OPEN-ITEMS.md` #35.
 
 - **v0.232.0 (2026-09-25) — the chapter's acronym replaces CBM in every UI
   string.** Cut and released the same day; **Boston took it by itself** from the

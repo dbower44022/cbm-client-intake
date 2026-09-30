@@ -456,21 +456,22 @@ block a deploy.)*
     a mentor with an On-Hold client shows one more Active and one less Available
     than before.
 
-35. **Event audience and display time (v0.233.0, F2 + F3) — built, on crm-test,
-    never reviewed live** (2026-09-29). The CRM fields are applied to crm-test and
-    verified as the org-wide key; the code is verified by 48 tests and a
-    stub-harness pass of the editor. Owed, in order:
+35. **Event audience and display time (v0.233.0, F2 + F3) — reviewed live on
+    crm-test 2026-09-30; production and Boston owed.** Doug ran the review as
+    two real non-admin accounts (Mark Marketing, Joe Mentor): the editor's
+    conditional controls, the Shown column, an Internal event limited to a team
+    seen by a member and hidden from an outsider, the public page refusing the
+    Internal event (404), and a Public event held back until its display time
+    and appearing once it passed — all confirmed, and cross-checked from here
+    against the live CRM and public API. Not reviewed: portal registration (no
+    button until F5). Still owed, in order:
     1. **Ask the CRM team what `CEvent.eventReleaseDate` was made for** (the
        07-25 handoff's unanswered question). Ruling D1 reuses it as the display
        time; if someone claims it, stop and bring it back to Doug.
-    2. **Live review on crm-test as real non-admins** (design § 8 step 3): a
-       limited Internal event seen by a team member and not by a mentor outside
-       it; a Public event with a display time a few minutes ahead appearing on
-       `/webinars/` on time; a public registration refused for an Internal event;
-       a portal registration (`POST /api/portal/events/{id}/register`) landing
-       with source `Portal` and the member's own Contact. An administrator's test
-       proves nothing — administrators pass every team limit. Remember the
-       nightly reset: records made in the day are gone by morning.
+    2. ~~Live review on crm-test as real non-admins~~ — **done 2026-09-30**
+       (above). Only the portal registration
+       (`POST /api/portal/events/{id}/register`) remains unexercised live; it is
+       F5's Register button that will drive it.
     3. **Production CRM** at a Sunday 17:00 UTC slot, from inside the web
        container: `scripts/migrate_event_audience_schema.py`, runbook
        `cevent-audience-display-crm-handoff.md`. Confirms on the way whether
