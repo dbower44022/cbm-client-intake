@@ -4,6 +4,11 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.234.1] — 2026-09-29
+
+**feat(assignments): CoMentors in the mentor detail popup's stats line**, between
+Active and Max — the same value as the roster column, from the same row.
+
 ## [0.234.0] — 2026-09-29
 
 **feat(assignments): a CoMentors column in Available Mentors, and On-Hold counts

@@ -1434,6 +1434,7 @@
   function renderMentorDetailStats(m) {
     var bits = [
       ["Active", numText(m.activeClients)],
+      ["CoMentors", numText(m.coMentorClients)],
       ["Max", numText(m.maxCapacity)],
       ["Available", m.availableCapacity === -1 ? "Unlimited" : numText(m.availableCapacity)],
       ["Assigned 30d", numText(m.assignedLast30)],
