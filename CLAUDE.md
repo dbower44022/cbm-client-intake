@@ -1540,7 +1540,10 @@ Cleveland by design. What is *verified* is narrower than what is deployed — se
 each block.
 
 - **v0.235.0 (2026-09-30) — upcoming events on the portal home page (Track F,
-  F5). Committed, not pushed.** Doug's six rulings and two design decisions
+  F5). Pushed; live on all three apps the same day, switch OFF everywhere.**
+  Production's push-triggered build stalled at 2/13 with no build output for
+  32 minutes (the 09-14 stall again); a manual `create-deployment` of the same
+  commit built in three minutes. Doug's six rulings and two design decisions
   were gathered one question at a time on 09-30 and the design approved the
   same day; standing rules are in the Portal section above. **Ships dark**
   behind `PORTAL_CALENDAR`, so a push changes nothing visible. **Verified by
