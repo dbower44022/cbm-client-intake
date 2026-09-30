@@ -1,14 +1,14 @@
 # CBM Events — The Portal Calendar: Design (Track F, F5)
 
-Last Updated: 09-30-26 14:55 · Revision 0.1 — see change log at the end.
+Last Updated: 09-30-26 14:56 · Revision 0.2 — see change log at the end.
 
-**Status: DRAFT, awaiting Doug's review. Nothing is built.** The requirements
+**Status: DRAFT, decisions ruled, awaiting Doug's approval to build. Nothing is built.** The requirements
 are Doug's six rulings recorded in `CBM_Events_Finalization_Plan.md` revision
 4.11, section F5; they are cited below as *F5-n*. What F3 already settled for
 this surface is cited as *F3-n* and the F2/F3 design as *design § n*. Everything
 else is Claude's design and is marked where it is a choice. The two decisions in
-§ 9 are Doug's to rule; the design as a whole awaits his approval before
-anything is built.
+§ 9 were ruled by Doug on 09-30-26 (both on Claude's recommendation); the
+design as a whole awaits his approval before anything is built.
 
 **Terms used here.** The **portal** is the page a member sees after signing in
 at `/`. The **rail** is the events list on its left side. The **strip** is what
@@ -177,7 +177,7 @@ rest of the portal renders as usual (finding 11).
 
 ## 5. The member page — `/portal/events/{id}`
 
-**Route.** A page route in `core/app.py`, registered before the `/portal`
+**Address: the event's id** (D1, ruled). **Route.** A page route in `core/app.py`, registered before the `/portal`
 mount, that renders `portal/frontend/event.html` through the branding
 substitution — the directory record pages' pattern (finding 8). The page
 itself is served to anyone; **the data is not**: its script calls
@@ -223,7 +223,10 @@ top.
   (`publicUrl` empty) the box says so instead of offering a dead link.
 
 **The join link.** `virtualMeetingUrl` for an online event, shown as a **Join
-online** fact. When it shows is Decision D2.
+online** fact — to every member who can see the event when it takes no
+registrations, and only to registered members when it does (D2, ruled). The
+detail endpoint applies the rule server-side, so an unregistered member's
+payload never carries the link.
 
 ## 6. The API
 
@@ -238,7 +241,7 @@ Added, all in `events/member.py`, all gated on `visibility.is_shown(event,
 | Endpoint | Returns | Notes |
 |---|---|---|
 | `GET /api/portal/events` | as today, plus `windowDays` in the envelope and `myRegistration: {id, status}` or `null` on each row | One `CEventRegistration` list read: `eventId` in the returned ids, `email` equals the member's, page size 200 in pages. A failed read leaves `myRegistration` `null` and logs; the row then offers Register, and the server's one-registration rule makes a second click an update, not a duplicate. |
-| `GET /api/portal/events/{id}` | `calendar_entry` plus `overview`, `syllabus`, `joinUrl` (subject to D2), `myRegistration` | 404 when not shown to this member. Never exposes the reach or the team list (design § 5). |
+| `GET /api/portal/events/{id}` | `calendar_entry` plus `overview`, `syllabus`, `joinUrl` (under the D2 rule), `myRegistration` | 404 when not shown to this member. Never exposes the reach or the team list (design § 5). |
 | `GET /api/portal/events/{id}/image` | the event graphic | The portal twin of the public image route: keyed on the id, gated on the portal surface, cached for `events_cache_seconds`, never `immutable`, for the same revocability reason. `calendar_entry` rewrites `imageUrl` to this route for every row. |
 | `POST /api/portal/events/{id}/cancel` | `{ok, status}` | Finds the member's own registration for the event (by the resolved address), refuses 404 if there is none or it is not theirs, then `service.cancel_registration`. Recorded in the action history as "Event Registration Cancelled". |
 
@@ -283,20 +286,21 @@ promotion gate. Rollback is the flag, not a revert.
    gives production the audience field and the `Portal` source. Switch on at
    `/setup`. Boston with its next release; its flag off until its staff ask.
 
-## 9. Decisions for Doug
+## 9. Decisions for Doug — ruled 09-30-26
 
 **D1 — The member page's address: the event's id, or its slug.** The id is on
 every event and never changes; the slug is filled for the public programme,
 often empty on Internal events (finding 4), and staff can edit it, which would
-break a link already sent. The slug reads better in an email. *Recommendation:
-the id.* Cost: the address is opaque, `/portal/events/68d3…`. A slug address
-could be added later as an alias without changing anything stored.
+break a link already sent. The slug reads better in an email. *Ruled: the id*
+(Doug, 09-30-26, on Claude's recommendation). Cost: the address is opaque,
+`/portal/events/68d3…`. A slug address could be added later as an alias without
+changing anything stored.
 
 **D2 — Who sees an online Internal event's join link.** Three rules are
 possible: every member who can see the event; only registered members, with
 the link appearing after Register; or a split — every member when the event
 takes no registrations (a team meeting everyone is expected at), registered
-members only when it does. *Recommendation: the split.* An event that takes
+members only when it does. *Ruled: the split* (Doug, 09-30-26, on Claude's recommendation). An event that takes
 registrations has a reason to know who is coming, and hiding the link until
 then is the only lever the portal has; an event that does not cannot hide the
 link from the people it is for. Cost: two behaviours to explain in the staff
@@ -308,4 +312,5 @@ guide, one line each.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.2 | 09-30-26 14:56 | Claude (Claude Code) | D1 and D2 ruled by Doug: the member page address is the event's id; the join link shows to everyone when the event takes no registrations and to registered members only when it does. Status: awaiting approval to build. |
 | 0.1 | 09-30-26 14:55 | Claude (Claude Code) | First draft, from the six F5 rulings Doug made on 09-30-26 (Finalization Plan revision 4.11). Eleven findings verified in the code. Two decisions for Doug (D1 address, D2 join link). Awaiting review; nothing built. |

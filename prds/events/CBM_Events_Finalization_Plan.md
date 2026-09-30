@@ -1,6 +1,6 @@
 # CBM Events & Webinars — Finalization Plan
 
-Last Updated: 09-30-26 14:50 · Revision 4.11 — see change log at the end.
+Last Updated: 09-30-26 14:56 · Revision 4.12 — see change log at the end.
 
 Companion to `CBM_Events_PRD.md`, `CBM_Events_Implementation_Plan.md` and
 `CBM_Events_Registration_Recognition_Plan.md`. Those three say what the feature
@@ -133,7 +133,7 @@ after Doug's requirements are gathered, and nothing is settled until he rules.
 | F2 | Display Date/Time: the moment an event may first appear on the public pages | User review, 09-2026 | Built v0.233.0 (09-29-26); CRM on crm-test; live review, production and Boston owed (`OPEN-ITEMS.md` #35) |
 | F3 | Event audience: Internal, a specific chapter, or Public — Internal events form a calendar on the chapter's portal | User review, 09-2026 | Built v0.233.0 (09-29-26); CRM on crm-test; live review, production and Boston owed (`OPEN-ITEMS.md` #35) |
 | F4 | Presenters: select or add them per event, with an optional presenter biography on the event page | User review, 09-2026 | Catalogued |
-| F5 | Portal home page: a left-hand list of upcoming internal events, each opening its details | User review, 09-2026 | Requirements ruled 09-30-26; design drafted, awaiting Doug's review |
+| F5 | Portal home page: a left-hand list of upcoming internal events, each opening its details | User review, 09-2026 | Requirements and design decisions ruled 09-30-26; design 0.2 awaiting approval to build |
 
 **The catalog is complete at five features** (Doug, 09-27-26). Design proceeds
 one feature at a time, in the order Doug chooses.
@@ -439,8 +439,11 @@ follows from them has not been drafted.
    second link in the row, or public webinars opening the website page
    directly (which would undo half of ruling 1).
 
-**All six questions are ruled (09-30-26).** The design follows as a separate
-document, `CBM_Events_Portal_Calendar_Design.md`, for Doug's review.
+**All six questions are ruled (09-30-26).** The design is
+`CBM_Events_Portal_Calendar_Design.md`, revision 0.2: its two decisions are
+ruled (D1 the member page address is the event's id; D2 the join link shows to
+everyone when an event takes no registrations, to registered members only when
+it does). Awaiting Doug's approval to build.
 
 ### Track B — Live verification already owed on crm-test. Can start today.
 
@@ -569,6 +572,7 @@ attendance recorded → recording link pasted → the engagement rollup shows it
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 4.12 | 09-30-26 14:56 | Claude (Claude Code) | F5 design decisions D1 and D2 ruled by Doug; design at revision 0.2, awaiting approval to build. |
 | 4.11 | 09-30-26 14:50 | Claude (Claude Code) | F5 ruling 6 (Doug, 09-30-26, on Claude's recommendation): a Public webinar's website link is on its member page, not in the row. All six F5 questions ruled; design to follow in `CBM_Events_Portal_Calendar_Design.md`. |
 | 4.10 | 09-30-26 14:48 | Claude (Claude Code) | F5 ruling 5 (Doug, 09-30-26, on Claude's recommendation): on a phone the rail becomes a one-line strip at the top that expands on a tap; on a desktop a left rail beside full-width tiles. |
 | 4.9 | 09-30-26 14:39 | Claude (Claude Code) | F5 ruling 4 (Doug, 09-30-26): Register is in the list row (with a one-line confirmation) and on the event page, one action in both places. |
