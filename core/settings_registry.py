@@ -234,6 +234,14 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("record_quick_add", GROUP_FEATURES, "Add partners & funders in-app", kind="bool",
        help="The '+ Add partner' / '+ Add funder' button on those grids. Creates the "
             "company, primary contact and profile as the signed-in user."),
+    _s("portal_calendar", GROUP_FEATURES, "Events on the portal home page", kind="bool",
+       help="The rail of upcoming events beside the portal's tiles, and the member "
+            "page each one opens. Members see Internal events (to their teams, if "
+            "limited) and this chapter's Public webinars. Needs Events & Webinars on."),
+    _s("portal_events_window_days", GROUP_FEATURES, "Portal calendar window", kind="int",
+       unit="days",
+       help="How many days ahead the rail lists in full; events beyond fold behind "
+            "one line. 0 folds everything."),
     _s("grants_enabled", GROUP_FEATURES, "Grants on funder records", kind="bool",
        help="The Grants tab in Funder Management — awards, deliverables and (later) "
             "funder reporting. Stays hidden until the CRM has CGrant and "

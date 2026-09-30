@@ -70,6 +70,31 @@
         <button type="button" class="cbm-button cbm-button--secondary" id="logoutBtn">Sign out</button>
       </div>
 
+      <div class="portal__body" id="homeBody">
+        <!-- Upcoming events rail (F5). Hidden until the session payload says the
+             portal calendar is on; on a phone it is the one-line strip at the
+             top that expands on a tap (F5-5). -->
+        <aside class="portal__rail" id="eventsRail" hidden aria-labelledby="eventsHeading">
+          <button type="button" class="portal__strip" id="eventsStrip"
+                  aria-expanded="false" aria-controls="eventsPanel">
+            <span class="portal__strip-text" id="eventsStripText">Upcoming events</span>
+            <span class="portal__strip-caret" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="portal__railpanel" id="eventsPanel">
+            <h2 id="eventsHeading">Upcoming events</h2>
+            <div class="portal__switches" id="eventsSwitches">
+              <label><input type="checkbox" id="filterInternal" checked /> Internal events</label>
+              <label><input type="checkbox" id="filterPublic" checked /> Public webinars</label>
+              <p class="portal__railnote" id="filterNote" role="status" hidden></p>
+            </div>
+            <p class="portal__railmsg" id="eventsMsg" role="status" hidden></p>
+            <ul class="portal__events" id="eventsList"></ul>
+            <button type="button" class="portal__fold" id="eventsFold" aria-expanded="false" hidden></button>
+            <ul class="portal__events portal__events--later" id="eventsLater" hidden></ul>
+          </div>
+        </aside>
+
+        <div class="portal__main">
       <section id="analyticsSection" hidden>
         <div class="portal__anahead">
           <h2>Analytics</h2>
@@ -104,6 +129,8 @@
         <h2>Public pages</h2>
         <ul class="portal__list" id="formsList"></ul>
       </section>
+        </div><!-- /.portal__main -->
+      </div><!-- /.portal__body -->
     </section>
 
     <footer class="cbm-footer">

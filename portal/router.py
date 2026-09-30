@@ -159,6 +159,10 @@ def _home_payload(user: dict[str, Any], request: Request, settings: Settings) ->
         # (GET /analytics/api/portal; it self-gates, so non-analytics users just
         # get available:false and no dashboard shows). Phase D.
         "analyticsEnabled": settings.analytics_active,
+        # True => the home page renders the events rail (F5) from
+        # GET /api/portal/events and offers the member page. Per-request, so
+        # /setup switches it without a restart.
+        "eventsCalendar": settings.portal_calendar_active,
         "forms": _public_pages(request, settings),
     }
 

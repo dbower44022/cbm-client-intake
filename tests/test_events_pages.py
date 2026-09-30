@@ -249,14 +249,18 @@ def test_the_event_page_orders_the_date_the_way_people_read_it():
     a browser."""
     from pathlib import Path
 
-    js = (
-        Path(__file__).resolve().parents[1]
-        / "events" / "public_frontend" / "event.js"
-    ).read_text(encoding="utf-8")
+    root = Path(__file__).resolve().parents[1]
+    # The body renderer is shared with the portal's member page (F5-1), so the
+    # when-line lives in /shared/event-body.js and the public page loads it.
+    js = (root / "frontend" / "shared" / "event-body.js").read_text(encoding="utf-8")
     assert "function whenLine(event)" in js
     assert 'day + " " + month' in js
     # The naive join is what produced the defect; it must not come back.
     assert "[event.month, event.day, event.time]" not in js
+    page = (root / "events" / "public_frontend" / "event.js").read_text(encoding="utf-8")
+    assert "CBMEventBody.fill(" in page
+    html = (root / "events" / "public_frontend" / "event.html").read_text(encoding="utf-8")
+    assert html.index("/shared/event-body.js") < html.index("/webinars-assets/event.js")
 
 
 # --- the marketing page's own chrome, carried across -------------------------

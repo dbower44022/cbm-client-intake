@@ -4,6 +4,63 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.235.0] — 2026-09-30
+
+**feat(portal): upcoming events on the portal home page, and a member page per
+event (Track F, F5).** Doug's six rulings of 09-30-26 and the two design
+decisions (D1, D2); design record `prds/events/CBM_Events_Portal_Calendar_Design.md`.
+**Ships dark** behind `PORTAL_CALENDAR` (off; `/setup` → Features), which also
+needs Events & Webinars on.
+
+- **The rail.** The home view is two columns: a 22rem rail of upcoming events on
+  the left and the existing sections filling the width on the right. The
+  portal's 750px width cap (and the 1200px container cap under it) are gone —
+  the no-width-caps ruling. The rail lists the next `PORTAL_EVENTS_WINDOW_DAYS`
+  (default 30) in full and folds the rest behind "*N* more events later"
+  (F5-2). Rows are title, "Tue 14 Oct · 6:00 PM - 7:00 PM", and marks: Public,
+  Team (limited to teams you belong to), Registered / Waitlisted (F5-6 keeps
+  rows short). On a phone (≤767px) the rail becomes a one-line strip — "Next:
+  Mentor Roundtable · Tue 14 Oct · 3 more" — that expands on a tap (F5-5).
+- **Two switches**, Internal events and Public webinars, both on by default,
+  saved to the member's account through the F3 preference store
+  (`events.calendar`); hiding both shows "You have hidden all events. Show
+  them" rather than a blank rail (F5-3).
+- **Register in the row and on the page**, one action in both, each behind a
+  one-line confirmation ("Register for Board Meeting on Thu 23 Oct? Yes / No");
+  Cancel likewise, through the new `POST /api/portal/events/{id}/cancel`, which
+  finds the member's OWN registration by their resolved address and runs the
+  same cancellation as the emailed link (seat freed, Zoom removal, waitlist
+  promotion). Refusals show in the row in the server's words; the button is
+  never disabled or hidden for a permission reason (F5-4).
+- **The member page**, `/portal/events/{id}` (D1: the id — Internal events often
+  have no slug). Behind the portal sign-in: a signed-out visitor is sent to
+  `/?next=…`, and the portal now forwards a `next` under `/portal/events/`. It
+  renders the same body as the public event page through the new shared
+  `frontend/shared/event-body.js` (hero, eyebrow, title, when-line, summary,
+  facts, overview, syllabus), which the public page now uses too (F5-1). The
+  action box is Register / Registered + Cancel for an Internal event that takes
+  registrations, "Registration has closed" when it did and closed, nothing for
+  an event that takes none, and **View on the website / Sign up on the
+  website** for a Public webinar (F5-6). **The join link (D2)**: an online
+  Internal event's link goes to every member when the event takes no
+  registrations, and only to registered members when it does — decided
+  server-side, so an unregistered member's payload never carries it.
+- **New reads, all under the organisation-wide key with `visibility.is_shown`
+  on the portal surface:** `GET /api/portal/events/{id}` (the calendar row plus
+  overview, syllabus, join link and the member's own registration) and
+  `GET /api/portal/events/{id}/image` (the graphic, keyed on the id because the
+  public route is keyed on the slug and gated on the public surface, which made
+  every Internal event's picture unreachable). Outside the member's teams,
+  unticked and unknown all answer 404 with the same words, so an address
+  confirms nothing. The calendar payload gains `windowDays`, `myRegistration`
+  and `takesRegistrations`, from one paged registration read per hundred
+  events — never one per row.
+- **`GET /api/portal/session`** gains `eventsCalendar`, which is what tells the
+  home page to render the rail at all.
+- **Verified by tests only** (25 new; suite green). Nothing has been seen in a
+  browser or as a real member — `OPEN-ITEMS.md` #37 is the live pass, and the
+  switch stays off until it runs.
+
 ## [0.234.1] — 2026-09-29
 
 **feat(assignments): CoMentors in the mentor detail popup's stats line**, between

@@ -518,6 +518,15 @@ class Settings(BaseSettings):
 
     # Team gate for the /events staff app (Phase 5).
     events_allowed_teams: str = "Marketing Admin Team"
+    # --- F5: the portal calendar (prds/events/CBM_Events_Portal_Calendar_Design.md) ---
+    # The rail of upcoming events on the portal home page and the member page
+    # behind it. Off by default so crm-test can show it to a real member first:
+    # until production's CRM carries the audience field, every published webinar
+    # there reads as Public and would appear in every member's rail on push day.
+    portal_calendar: bool = False
+    # How many days ahead the rail lists in full; events beyond fold behind one
+    # line (F5-2). 0 puts every event in the fold-out.
+    portal_events_window_days: int = 30
     # In-process cache for the public read endpoints. The WordPress plugin
     # caches too, so a normal page load makes no live call to us at all.
     events_cache_seconds: int = 60
@@ -795,6 +804,12 @@ class Settings(BaseSettings):
     def events_active(self) -> bool:
         """The Events feature as a whole (staff app + CRM writes)."""
         return self.events_enabled and self.assignments_active
+
+    @property
+    def portal_calendar_active(self) -> bool:
+        """The portal's events rail and member page (F5): the switch AND the
+        events feature it reads through."""
+        return self.portal_calendar and self.events_active
 
     @property
     def events_public_active(self) -> bool:

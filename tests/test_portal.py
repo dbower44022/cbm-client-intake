@@ -310,3 +310,54 @@ def test_portal_login_carries_into_staff_apps(monkeypatch):
         r = c.get("/assignments/api/engagements")
         assert r.status_code == 403
         assert "Client Administration Team" in r.json()["detail"]
+
+
+# --- F5: the portal calendar switch and the member page ----------------------
+
+def test_session_says_whether_the_events_rail_renders(monkeypatch):
+    """`eventsCalendar` is what tells the home page to fetch the rail. It needs
+    the switch AND the events feature (the endpoints ride on it)."""
+    _fake_login(monkeypatch, _user())
+    with TestClient(_app(monkeypatch)) as c:
+        c.post("/api/portal/login", json={"username": "jdoe", "password": "x"})
+        assert c.get("/api/portal/session").json()["eventsCalendar"] is False
+    with TestClient(_app(monkeypatch, PORTAL_CALENDAR="true")) as c:
+        c.post("/api/portal/login", json={"username": "jdoe", "password": "x"})
+        assert c.get("/api/portal/session").json()["eventsCalendar"] is False  # events off
+    with TestClient(_app(monkeypatch, PORTAL_CALENDAR="true", EVENTS_ENABLED="true")) as c:
+        c.post("/api/portal/login", json={"username": "jdoe", "password": "x"})
+        assert c.get("/api/portal/session").json()["eventsCalendar"] is True
+
+
+def test_member_page_is_served_only_with_the_switch_on(monkeypatch):
+    """/portal/events/{id} is a route ahead of the /portal static mount. Off,
+    it 404s; on, it serves the branded page whose script does the gated read
+    and sends a signed-out visitor to sign in."""
+    with TestClient(_app(monkeypatch, EVENTS_ENABLED="true")) as c:
+        assert c.get("/portal/events/abc123").status_code == 404
+    with TestClient(_app(monkeypatch, PORTAL_CALENDAR="true", EVENTS_ENABLED="true",
+                         ORGANIZATION_NAME="Lakeside Business Mentors")) as c:
+        r = c.get("/portal/events/abc123")
+    assert r.status_code == 200
+    assert "Lakeside Business Mentors" in r.text
+    assert "{{org}}" not in r.text
+    assert "/shared/event-body.js" in r.text
+    assert r.text.index("/shared/busy.js") < r.text.index("/portal/event.js")
+    assert r.headers["cache-control"] == "no-store"
+
+
+def test_home_page_carries_the_rail_and_the_strip():
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    html = (root / "portal" / "frontend" / "index.html").read_text()
+    for needle in ('id="eventsRail"', 'id="eventsStrip"', 'id="filterInternal"',
+                   'id="filterPublic"', 'id="eventsFold"', 'class="portal__main"'):
+        assert needle in html, needle
+    css = (root / "portal" / "frontend" / "styles.css").read_text()
+    # The width cap is gone (the no-width-caps ruling); the rail folds at 767px.
+    assert "max-width: var(--cbm-container-narrow)" not in css
+    assert "max-width: none" in css
+    assert "@media (max-width: 767px)" in css
+    js = (root / "portal" / "frontend" / "app.js").read_text()
+    assert "/portal/events/" in js          # the sign-in deep-link rule
+    assert "eventsCalendar" in js

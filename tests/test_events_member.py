@@ -54,10 +54,17 @@ class PortalCrm:
         for clause in where or []:
             if entity == cfg.REGISTRATION and clause.get("type") == "equals":
                 rows = [r for r in rows if r.get(clause["attribute"]) == clause["value"]]
+            if entity == cfg.REGISTRATION and clause.get("type") == "in":
+                rows = [r for r in rows if r.get(clause["attribute"]) in clause["value"]]
         return {"total": len(rows), "list": rows[offset: offset + max_size]}
 
+    async def download_attachment(self, attachment_id):
+        self.downloaded = attachment_id
+        return b"PNG", "image/png"
+
     async def get(self, entity, record_id, select=None):
-        pool = {cfg.EVENT: self.events, "CMentorProfile": self.profiles}.get(entity, [])
+        pool = {cfg.EVENT: self.events, cfg.REGISTRATION: self.registrations,
+                "CMentorProfile": self.profiles}.get(entity, [])
         for row in pool:
             if row.get("id") == record_id:
                 return dict(row)
@@ -251,3 +258,135 @@ def test_preference_without_a_database(monkeypatch):
     url = "/api/portal/preferences/events.calendar"
     assert client.get(url).json()["stored"] is False
     assert client.put(url, json={"value": {}}).status_code == 503
+
+
+# --- F5: the rail's payload, the member page's read, the image, cancel --------
+# Design: prds/events/CBM_Events_Portal_Calendar_Design.md.
+
+MIA = "mia.mentor@cbmentors.org"
+
+
+def _reg(event_id, status=cfg.REG_REGISTERED, email=MIA, rid="r1"):
+    return {"id": rid, "eventId": event_id, "email": email, "attendanceStatus": status}
+
+
+def test_calendar_carries_the_window_and_the_members_own_registration(monkeypatch):
+    monkeypatch.setenv("PORTAL_EVENTS_WINDOW_DAYS", "45")
+    crm = PortalCrm(
+        events=[_internal(id="a"), _internal(id="b"), _internal(id="c")],
+        registrations=[_reg("a"), _reg("b", status=cfg.REG_CANCELLED, rid="r2"),
+                       _reg("c", email="someone.else@example.org", rid="r3")],
+    )
+    body = build(monkeypatch, MENTOR, crm).get("/api/portal/events").json()
+    assert body["windowDays"] == 45
+    mine = {e["id"]: e["myRegistration"] for e in body["events"]}
+    assert mine["a"] == {"id": "r1", "status": cfg.REG_REGISTERED}
+    assert mine["b"] is None          # cancelled reads as none — Register is offered again
+    assert mine["c"] is None          # someone else's is not mine
+    assert all(e["takesRegistrations"] is True for e in body["events"])
+
+
+def test_calendar_image_goes_through_the_portal_route(monkeypatch):
+    """An Internal event often has no slug, and the public image route is
+    gated on the public surface — so the rail's picture must come from the
+    portal route, keyed on the id (finding 3)."""
+    crm = PortalCrm(events=[_internal(id="pic", eventGraphicId="att-123456789abc-tail")])
+    row = build(monkeypatch, MENTOR, crm).get("/api/portal/events").json()["events"][0]
+    assert row["imageUrl"] == "/api/portal/events/pic/image?v=att-12345678"
+    assert member.calendar_entry(_internal(id="nopic"))["imageUrl"] == ""
+
+
+def test_detail_serves_the_long_form_content_to_a_member(monkeypatch):
+    crm = PortalCrm(events=[_internal(id="ev1", eventOverview="<p>Why</p>",
+                                      eventSyllabus="<ol><li>One</li></ol>")])
+    r = build(monkeypatch, MENTOR, crm).get("/api/portal/events/ev1")
+    assert r.status_code == 200
+    ev = r.json()["event"]
+    assert ev["overview"] == "<p>Why</p>"
+    assert ev["syllabus"] == "<ol><li>One</li></ol>"
+    assert ev["myRegistration"] is None
+    assert "internalTeams" not in ev and "reachChapters" not in ev
+
+
+def test_detail_image_and_cancel_answer_404_alike_for_an_event_outside_the_teams(monkeypatch):
+    """Outside the member's teams, unticked, and unknown are ONE answer, with
+    the same words, so a member page address confirms nothing (design § 5)."""
+    crm = PortalCrm(events=[
+        _internal(id="board", internalTeams=["System Administration Team"], eventGraphicId="x"),
+        _internal(id="draft", publishToWebsite=False, eventGraphicId="x"),
+    ])
+    client = build(monkeypatch, MENTOR, crm)
+    bodies = set()
+    for eid in ("board", "draft", "nope"):
+        r = client.get(f"/api/portal/events/{eid}")
+        assert r.status_code == 404
+        bodies.add(r.json()["detail"])
+        assert client.get(f"/api/portal/events/{eid}/image").status_code == 404
+        rc = client.post(f"/api/portal/events/{eid}/cancel")
+        assert rc.status_code == 404
+        bodies.add(rc.json()["detail"])
+    assert bodies == {member.NOT_FOUND}
+    # ...and the same event IS served to a member of that team.
+    assert build(monkeypatch, BOARD, crm).get("/api/portal/events/board").status_code == 200
+
+
+def test_detail_needs_a_signed_in_member(monkeypatch):
+    client = build(monkeypatch, None, PortalCrm(events=[_internal()]))
+    assert client.get("/api/portal/events/ev1").status_code == 401
+    assert client.get("/api/portal/events/ev1/image").status_code == 401
+    assert client.post("/api/portal/events/ev1/cancel").status_code == 401
+
+
+def test_image_streams_the_graphic_with_a_short_private_cache(monkeypatch):
+    crm = PortalCrm(events=[_internal(id="pic", eventGraphicId="att-1")])
+    r = build(monkeypatch, MENTOR, crm).get("/api/portal/events/pic/image")
+    assert r.status_code == 200
+    assert r.content == b"PNG"
+    assert r.headers["content-type"].startswith("image/png")
+    assert "must-revalidate" in r.headers["cache-control"]
+    assert "immutable" not in r.headers["cache-control"]
+    assert crm.downloaded == "att-1"
+
+
+def test_join_link_follows_d2():
+    """D2 (ruled 09-30-26): everyone when the event takes no registrations;
+    registered members only when it does; never for a Public event here."""
+    url = "https://meet.example/abc"
+    open_house = _internal(takesRegistrations=False, virtualMeetingUrl=url)
+    signup = _internal(takesRegistrations=True, virtualMeetingUrl=url)
+    public = make_event(audience="Public", dateStart=SOON, virtualMeetingUrl=url)
+    assert member.join_url_for(open_house, None) == url
+    assert member.join_url_for(signup, None) == ""
+    assert member.join_url_for(signup, _reg("ev1")) == url
+    assert member.join_url_for(signup, _reg("ev1", status=cfg.REG_WAITLISTED)) == ""
+    assert member.join_url_for(signup, _reg("ev1", status=cfg.REG_CANCELLED)) == ""
+    assert member.join_url_for(public, _reg("ev1")) == ""
+    assert member.detail_entry(open_house)["joinUrl"] == url
+    assert member.detail_entry(signup)["joinUrl"] == ""
+
+
+async def test_cancel_cancels_only_the_members_own_registration(monkeypatch):
+    crm = PortalCrm(events=[_internal(id="ev1")],
+                    registrations=[_reg("ev1", rid="mine"),
+                                   _reg("ev1", email="other@example.org", rid="theirs")])
+    result = await member.cancel_member(crm, MENTOR, "ev1")
+    assert result["ok"] is True and result["registrationId"] == "mine"
+    cancelled = [(rid, p) for (ent, rid, p) in crm.updated if ent == cfg.REGISTRATION]
+    assert [rid for rid, _ in cancelled] == ["mine"]
+    assert cancelled[0][1]["attendanceStatus"] == cfg.REG_CANCELLED
+
+
+async def test_cancel_refuses_when_the_member_is_not_registered():
+    crm = PortalCrm(events=[_internal(id="ev1")],
+                    registrations=[_reg("ev1", status=cfg.REG_CANCELLED)])
+    with pytest.raises(member.MemberRegistrationRefused) as exc:
+        await member.cancel_member(crm, MENTOR, "ev1")
+    assert "not registered" in str(exc.value)
+    assert crm.updated == []
+
+
+def test_cancel_endpoint_reports_a_refusal_readably(monkeypatch):
+    crm = PortalCrm(events=[_internal(id="ev1")])
+    r = build(monkeypatch, MENTOR, crm).post("/api/portal/events/ev1/cancel")
+    assert r.status_code == 400
+    assert "not registered" in r.json()["detail"]

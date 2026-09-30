@@ -287,6 +287,25 @@ enforces their ACL and records them as modifier. The dev app (no
 - "Forgot your password?" proxies EspoCRM's own unauthenticated
   `User/passwordChangeRequest` — the CRM matches, throttles and emails its
   standard recovery link; the app never sees or sets a password.
+- **The events rail and the member page (F5, v0.235.0)** — behind
+  `PORTAL_CALENDAR` (off by default, `/setup` → Features; needs Events on). The
+  home view is a 22rem rail of upcoming events beside the tiles; **the portal
+  has no width cap any more.** What the rail SELECTS is F3's and lives in
+  `events/service.portal_calendar` + `events/visibility.py` — never re-filter
+  in the portal. The rail shows `PORTAL_EVENTS_WINDOW_DAYS` (30) in full and
+  folds the rest; two saved switches (Internal / Public) in the F3 preference
+  store; Register/Cancel in the row and on the page behind a one-line
+  confirmation; a phone strip at ≤767px. Every event opens
+  **`/portal/events/{id}`** (the id, not the slug — Internal events often have
+  none), a route registered ahead of the `/portal` static mount, whose body is
+  the shared `frontend/shared/event-body.js` the public event page also uses.
+  **Its reads are the member endpoints in `events/member.py`**, all through
+  `is_shown(..., "portal")`, and **an event the member may not see answers 404
+  in the same words as an unknown id** — keep it that way. The graphic comes
+  from `/api/portal/events/{id}/image` because the public image route is keyed
+  on the slug and gated on the public surface. Join link rule (D2): everyone
+  when the event takes no registrations, registered members only when it does,
+  decided server-side. Design: `prds/events/CBM_Events_Portal_Calendar_Design.md`.
 
 **Team gates** (each an env var, listed with its default):
 `ASSIGN_ALLOWED_TEAMS` = Client Administration Team · `MENTOR_ADMIN_ALLOWED_TEAMS`
@@ -1519,6 +1538,19 @@ with `main`; **Lakeside took it off the release lane by itself** (its
 unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
+
+- **v0.235.0 (2026-09-30) — upcoming events on the portal home page (Track F,
+  F5). Committed, not pushed.** Doug's six rulings and two design decisions
+  were gathered one question at a time on 09-30 and the design approved the
+  same day; standing rules are in the Portal section above. **Ships dark**
+  behind `PORTAL_CALENDAR`, so a push changes nothing visible. **Verified by
+  tests only** — no browser, no real member; the live pass on crm-test as two
+  non-admin accounts (one inside a team limit, one outside), desktop and phone
+  width, is `OPEN-ITEMS.md` #37, and it needs an Internal event with a
+  graphic, no slug and Takes registrations on, created through `/events`
+  first. Production waits on that pass AND on the F2/F3 CRM change (#35),
+  which is what gives production the audience field and the `Portal`
+  registration source.
 
 - **v0.234.0 / v0.234.1 (2026-09-29) — CoMentors column, and On-Hold counts
   as an active client.** Pushed and live on production and crm-test the same

@@ -1,0 +1,82 @@
+/* The member page for one event (/portal/events/{id}) — builds on
+   /shared/tokens.css and /portal/styles.css. A portal page, so it wears the
+   portal's look (Claude's choice, design § 5); the public event page under the
+   website's stylesheet shares the BODY through /shared/event-body.js, not the
+   styling. No width cap. */
+.pev__crumb { margin: 0.25rem 0 0; font-size: var(--cbm-text-sm); }
+.pev__crumb a { color: var(--cbm-blue); text-decoration: none; }
+.pev__crumb a:hover { text-decoration: underline; }
+
+.pev__msg {
+  margin: 1.5rem 0;
+  padding: 0.9rem 1.1rem;
+  background: var(--cbm-surface);
+  border: 1px solid var(--cbm-border);
+  border-radius: var(--cbm-radius);
+}
+.pev__msg--error { color: var(--cbm-danger); font-weight: 600; }
+
+.pev__event { margin-top: 1.5rem; }
+.pev__hero {
+  display: block;
+  max-width: 100%;
+  max-height: 24rem;
+  width: auto;
+  border-radius: var(--cbm-radius);
+  margin: 0 0 1.25rem;
+}
+.pev__eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: var(--cbm-text-sm);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cbm-slate-700);
+}
+.pev__title {
+  margin: 0 0 0.4rem;
+  color: var(--cbm-navy);
+  font-family: var(--cbm-font-serif);
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.15;
+}
+.pev__when { margin: 0 0 0.75rem; font-weight: 600; }
+.pev__summary { margin: 0 0 1.25rem; max-width: 75ch; line-height: 1.6; }
+
+.pev__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, max-content));
+  gap: 0.75rem 2.5rem;
+  margin: 0 0 1.5rem;
+  padding: 0.9rem 1.1rem;
+  background: var(--cbm-surface);
+  border: 1px solid var(--cbm-border);
+  border-radius: var(--cbm-radius);
+}
+.pev__facts dt { font-size: var(--cbm-text-sm); color: var(--cbm-slate-700); }
+.pev__facts dd { margin: 0.15rem 0 0; font-weight: 600; }
+.pev__facts dd a { color: var(--cbm-blue); }
+
+.pev__prose { margin: 0 0 1.5rem; max-width: 75ch; line-height: 1.6; }
+.pev__prose img { max-width: 100%; height: auto; }
+
+.pev__action {
+  margin: 1.5rem 0 2rem;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--cbm-border);
+  border-left: 4px solid var(--cbm-navy);
+  border-radius: var(--cbm-radius);
+  background: var(--cbm-surface);
+}
+.pev__action h3 { margin: 0 0 0.4rem; color: var(--cbm-navy); font-family: var(--cbm-font-serif); }
+.pev__action p { margin: 0 0 0.75rem; }
+.pev__action .portal__confirm { margin-top: 0.5rem; }
+.pev__links { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.pev__result { margin: 0.75rem 0 0; font-weight: 600; }
+.pev__result--error { color: var(--cbm-danger); }
+.pev__result--ok { color: var(--cbm-success); }
+
+@media (max-width: 767px) {
+  .pev__title { font-size: 1.5rem; }
+  .pev__facts { grid-template-columns: minmax(0, 1fr); }
+}

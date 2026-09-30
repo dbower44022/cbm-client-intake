@@ -168,6 +168,265 @@
     fillList("formsSection", "formsList", data.forms || [], true);
     show($("homeView"));
     if (data.analyticsEnabled) loadPortalDashboard();
+    if (data.eventsCalendar) loadEventsRail();
+  }
+
+  // --- Upcoming events rail (F5) -------------------------------------------
+  // Design: prds/events/CBM_Events_Portal_Calendar_Design.md § 4. The rows come
+  // from GET /api/portal/events (F3's selection, untouched here); this code is
+  // the surface: the two saved switches, the 30-day window with its fold, the
+  // marks, Register / Cancel in the row with a one-line confirmation, and the
+  // phone strip. Best-effort like the badges: a failure never blanks the portal.
+  var RAIL = { events: [], prefs: { internal: true, public: true }, windowDays: 30,
+               more: false, loaded: false };
+  var PREF_KEY = "events.calendar";
+  var DAY_MS = 86400000;
+
+  function weekdayShort(date) {
+    if (!date) return "";
+    var d = new Date(date + "T12:00:00");
+    return isNaN(d) ? "" : d.toLocaleDateString(undefined, { weekday: "short" });
+  }
+  // "Tue 14 Oct" — from the payload's own day/monthShort (the server's
+  // calendar day), with the weekday derived from its date.
+  function rowDate(ev) {
+    var parts = [weekdayShort(ev.date), ev.day, ev.monthShort].filter(Boolean);
+    return parts.join(" ") || "Date to be confirmed";
+  }
+  // The payload's time is the website's band, "2:00 PM - 3:00 PM | WEBINAR";
+  // the row wants the clock only.
+  function rowTime(ev) { return String(ev.time || "").split("|")[0].trim(); }
+  function rowWhen(ev) {
+    var t = rowTime(ev);
+    return t ? rowDate(ev) + " \u00b7 " + t : rowDate(ev);
+  }
+  function isPublic(ev) { return ev.audience === "Public"; }
+  function passesSwitches(ev) { return isPublic(ev) ? RAIL.prefs.public : RAIL.prefs.internal; }
+  function inWindow(ev, now) {
+    if (!ev.startsAtUtc) return true;
+    var start = new Date(ev.startsAtUtc).getTime();
+    return isNaN(start) || start <= now + RAIL.windowDays * DAY_MS;
+  }
+  function mark(text, kind, title) {
+    var s = document.createElement("span");
+    s.className = "portal__mark" + (kind ? " portal__mark--" + kind : "");
+    s.textContent = text;
+    if (title) s.title = title;
+    return s;
+  }
+  function smallButton(text, cls) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = cls || "cbm-button portal__btn-sm";
+    b.textContent = text;
+    return b;
+  }
+  function rowMessage(li, text, ok) {
+    var old = li.querySelector(".portal__rowmsg");
+    if (old) old.remove();
+    if (!text) return;
+    var p = document.createElement("p");
+    p.className = "portal__rowmsg" + (ok ? " portal__rowmsg--ok" : "");
+    p.textContent = text;
+    li.appendChild(p);
+  }
+  // One-line confirmation in place of the control that was clicked (F5-4):
+  // "Register for Board Meeting on Thu 23 Oct?  Yes  No".
+  function confirmInline(li, host, question, onYes) {
+    var box = document.createElement("div");
+    box.className = "portal__confirm";
+    var q = document.createElement("span"); q.textContent = question;
+    var yes = smallButton("Yes");
+    var no = smallButton("No", "portal__link-act");
+    box.appendChild(q); box.appendChild(yes); box.appendChild(no);
+    host.replaceWith(box);
+    no.addEventListener("click", function () { renderRail(); });
+    yes.addEventListener("click", function () { onYes(box); });
+  }
+  async function registerRow(ev, li, host) {
+    confirmInline(li, host, "Register for " + (ev.topic || "this event") + " on " + rowDate(ev) + "?",
+      async function (box) {
+        box.textContent = "Registering\u2026";
+        try {
+          var data = await api("/events/" + encodeURIComponent(ev.id) + "/register", { method: "POST", body: "{}" });
+          ev.myRegistration = { id: data.registrationId, status: data.status || "Registered" };
+          renderRail();
+        } catch (e) {
+          renderRail();
+          var row = document.querySelector('.portal__event[data-id="' + ev.id + '"]');
+          if (row) rowMessage(row, e.message);
+        }
+      });
+  }
+  async function cancelRow(ev, li, host) {
+    confirmInline(li, host, "Cancel your registration for " + (ev.topic || "this event") + "?",
+      async function (box) {
+        box.textContent = "Cancelling\u2026";
+        try {
+          await api("/events/" + encodeURIComponent(ev.id) + "/cancel", { method: "POST", body: "{}" });
+          ev.myRegistration = null;
+          renderRail();
+        } catch (e) {
+          renderRail();
+          var row = document.querySelector('.portal__event[data-id="' + ev.id + '"]');
+          if (row) rowMessage(row, e.message);
+        }
+      });
+  }
+  function eventRow(ev) {
+    var li = document.createElement("li");
+    li.className = "portal__event";
+    li.dataset.id = ev.id;
+    var a = document.createElement("a");
+    a.className = "portal__event-title";
+    a.href = "/portal/events/" + encodeURIComponent(ev.id);
+    // A stable named tab per event, like the tiles: re-clicking brings it back.
+    a.target = "cbm-event-" + ev.id;
+    a.textContent = ev.topic || "Event";
+    li.appendChild(a);
+    var when = document.createElement("p");
+    when.className = "portal__event-when";
+    when.textContent = rowWhen(ev);
+    li.appendChild(when);
+    var marks = document.createElement("div");
+    marks.className = "portal__event-marks";
+    if (isPublic(ev)) marks.appendChild(mark("Public", "public", "A public webinar — also on the website"));
+    if (ev.teamLimited) marks.appendChild(mark("Team", "team", "Limited to teams you belong to"));
+    var reg = ev.myRegistration;
+    if (reg && reg.status === "Waitlisted") {
+      marks.appendChild(mark("Waitlisted", "waitlisted"));
+    } else if (reg) {
+      marks.appendChild(mark("Registered", "registered"));
+    }
+    // The action: Register for an Internal event that takes it; Cancel once
+    // registered. Never hidden for a permission reason — the server answers
+    // and the row shows what it said.
+    if (!isPublic(ev)) {
+      if (reg) {
+        var c = smallButton("Cancel", "portal__link-act portal__event-act");
+        c.addEventListener("click", function () { cancelRow(ev, li, c); });
+        marks.appendChild(c);
+      } else if (ev.canRegister) {
+        var r = smallButton("Register", "cbm-button portal__btn-sm portal__event-act");
+        r.addEventListener("click", function () { registerRow(ev, li, r); });
+        marks.appendChild(r);
+      }
+    }
+    li.appendChild(marks);
+    return li;
+  }
+  function railMessage(text, linkText, onLink) {
+    var box = $("eventsMsg");
+    box.innerHTML = "";
+    if (!text) { hide(box); return; }
+    box.appendChild(document.createTextNode(text + (linkText ? " " : "")));
+    if (linkText) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "portal__link-act"; b.textContent = linkText;
+      b.addEventListener("click", onLink);
+      box.appendChild(b);
+    }
+    show(box);
+  }
+  function renderStrip(soon, total) {
+    var t = $("eventsStripText");
+    if (!total) { t.textContent = "No upcoming events"; return; }
+    var first = soon[0] || null;
+    if (!first) { t.textContent = total + " upcoming event" + (total === 1 ? "" : "s"); return; }
+    var rest = total - 1;
+    t.textContent = "Next: " + (first.topic || "Event") + " \u00b7 " + rowDate(first)
+      + (rest > 0 ? " \u00b7 " + rest + " more" : "");
+  }
+  function renderRail() {
+    var list = $("eventsList"), later = $("eventsLater"), fold = $("eventsFold");
+    list.innerHTML = ""; later.innerHTML = "";
+    var shown = RAIL.events.filter(passesSwitches);
+    var now = Date.now();
+    var soon = shown.filter(function (e) { return inWindow(e, now); });
+    var rest = shown.filter(function (e) { return !inWindow(e, now); });
+    if (!RAIL.prefs.internal && !RAIL.prefs.public) {
+      railMessage("You have hidden all events.", "Show them", function () {
+        RAIL.prefs = { internal: true, public: true };
+        $("filterInternal").checked = true; $("filterPublic").checked = true;
+        savePrefs(); renderRail();
+      });
+    } else if (!shown.length) {
+      railMessage("No upcoming events");
+    } else {
+      railMessage("");
+    }
+    soon.forEach(function (e) { list.appendChild(eventRow(e)); });
+    if (rest.length) {
+      fold.textContent = RAIL.more
+        ? "Show fewer"
+        : rest.length + " more event" + (rest.length === 1 ? "" : "s") + " later";
+      fold.setAttribute("aria-expanded", RAIL.more ? "true" : "false");
+      show(fold);
+      if (RAIL.more) { rest.forEach(function (e) { later.appendChild(eventRow(e)); }); show(later); }
+      else hide(later);
+    } else { hide(fold); hide(later); }
+    renderStrip(soon.length ? soon : rest, shown.length);
+  }
+  function readSwitches() {
+    RAIL.prefs = { internal: $("filterInternal").checked, public: $("filterPublic").checked };
+  }
+  function applySwitches() {
+    $("filterInternal").checked = RAIL.prefs.internal !== false;
+    $("filterPublic").checked = RAIL.prefs.public !== false;
+    readSwitches();
+  }
+  async function savePrefs() {
+    var note = $("filterNote");
+    try {
+      await api("/preferences/" + PREF_KEY, { method: "PUT", body: JSON.stringify({ value: RAIL.prefs }) });
+      hide(note);
+    } catch (e) {
+      note.textContent = "Your choice was not saved.";
+      show(note);
+    }
+  }
+  async function loadPrefs() {
+    try {
+      var d = await api("/preferences/" + PREF_KEY);
+      if (d && d.value && typeof d.value === "object") {
+        RAIL.prefs = { internal: d.value.internal !== false, public: d.value.public !== false };
+      }
+    } catch (e) { /* defaults: both on */ }
+    applySwitches();
+  }
+  function wireRail() {
+    if (RAIL.wired) return;
+    RAIL.wired = true;
+    ["filterInternal", "filterPublic"].forEach(function (id) {
+      $(id).addEventListener("change", function () { readSwitches(); savePrefs(); renderRail(); });
+    });
+    $("eventsFold").addEventListener("click", function () { RAIL.more = !RAIL.more; renderRail(); });
+    var strip = $("eventsStrip"), rail = $("eventsRail");
+    strip.addEventListener("click", function () {
+      var open = !rail.classList.contains("portal__rail--open");
+      rail.classList.toggle("portal__rail--open", open);
+      strip.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+  }
+  async function loadEventsRail() {
+    var rail = $("eventsRail");
+    if (!rail) return;
+    wireRail();
+    show(rail);
+    $("homeBody").classList.add("portal__body--rail");
+    railMessage("Loading\u2026");
+    await loadPrefs();
+    try {
+      var d = await api("/events");
+      RAIL.events = (d && d.events) || [];
+      if (d && typeof d.windowDays === "number") RAIL.windowDays = Math.max(0, d.windowDays);
+      RAIL.loaded = true;
+      renderRail();
+    } catch (e) {
+      railMessage("The events calendar is unavailable right now.");
+      renderStrip([], 0);
+      $("eventsStripText").textContent = "Events unavailable";
+    }
   }
 
   // Analytics dashboard on the home page (Phase D). Self-gating endpoint: a
@@ -213,7 +472,11 @@
     if (!next) return null;
     var ok = (data.apps || []).some(function (a) { return a.url === next; })
       || (data.directories || []).some(function (d) { return d.url === next; })
-      || (data.forms || []).some(function (f) { return f.url === next; });
+      || (data.forms || []).some(function (f) { return f.url === next; })
+      // A member page for one event (F5-1): this app's own same-origin path,
+      // so an announcement email can link straight to the event. The page
+      // itself 404s for an event the member may not see.
+      || (!!data.eventsCalendar && /^\/portal\/events\/[A-Za-z0-9_-]+$/.test(next));
     return ok ? next : null;
   }
 

@@ -25,53 +25,9 @@
     return (document.body.getAttribute("data-event-slug") || "").trim();
   }
 
-  /* Overview and syllabus are wysiwyg HTML authored by staff in the CRM. Render
-     it as HTML — that is the point of a rich-text field — but strip scripts,
-     embedded objects and inline handlers first. Staff-authored is not the same
-     as trusted, and this page is served to the public. */
-  function safeHtml(host, html) {
-    host.innerHTML = html || "";
-    Array.prototype.forEach.call(
-      host.querySelectorAll("script,style,iframe,object,embed,form"),
-      function (node) { node.remove(); }
-    );
-    Array.prototype.forEach.call(host.querySelectorAll("*"), function (node) {
-      Array.prototype.slice.call(node.attributes).forEach(function (attr) {
-        var name = attr.name.toLowerCase();
-        var isUrlAttr = name === "href" || name === "src";
-        if (name.indexOf("on") === 0
-            || (isUrlAttr && /^\s*javascript:/i.test(attr.value))) {
-          node.removeAttribute(attr.name);
-        }
-      });
-    });
-    host.hidden = !host.innerHTML.trim();
-  }
-
-  /* "26 September 2026 - 2:00 PM - 3:00 PM | WEBINAR".
-   *
-   * The payload's `month` is the full "September 2026" and `day` is the bare
-   * "26", because the calendar renders them as a two-line date chip. Joined in
-   * payload order they read "September 2026 26", which is what this page did
-   * until it was looked at in a browser. */
-  function whenLine(event) {
-    var month = (event.month || "").trim();
-    var day = String(event.day || "").trim();
-    var date = (day && month) ? day + " " + month : (month || "");
-    var time = (event.time || "").trim();
-    var parts = [date, time].filter(Boolean);
-    return parts.join(" \u00b7 ") || "Date to be confirmed";
-  }
-
-  function fact(list, key, value) {
-    if (!value) return;
-    var dt = document.createElement("dt");
-    dt.textContent = key;
-    var dd = document.createElement("dd");
-    dd.textContent = value;
-    list.appendChild(dt);
-    list.appendChild(dd);
-  }
+  /* The body — hero, eyebrow, title, when-line, summary, facts, overview and
+     syllabus — is rendered by /shared/event-body.js, which the portal's member
+     page shares (F5-1). This file keeps the page's chrome and its sign-up form. */
 
   async function getJson(path) {
     var resp = await fetch(path, { credentials: "omit" });
@@ -103,24 +59,8 @@
       return;
     }
 
-    if (event.imageUrl) {
-      $("hero").src = event.imageUrl;
-      $("hero").hidden = false;
-      $("hero").addEventListener("error", function () { $("hero").hidden = true; });
-    }
-    $("eyebrow").textContent = [event.category, event.format].filter(Boolean).join(" · ");
-    $("title").textContent = event.topic || "Workshop";
-    $("when").textContent = whenLine(event);
-    $("summary").textContent = event.summary || "";
-
-    var facts = $("facts");
-    facts.innerHTML = "";
-    fact(facts, "Location", event.location);
-    fact(facts, "Format", event.eventType);
-    if (event.seatsRemaining != null) fact(facts, "Seats remaining", String(event.seatsRemaining));
-
-    safeHtml($("overview"), event.overview);
-    safeHtml($("syllabus"), event.syllabus);
+    CBMEventBody.fill(event, event.seatsRemaining != null
+      ? [["Seats remaining", String(event.seatsRemaining)]] : []);
 
     // Registration closed is a fact about the event, not an error — say so
     // where the form would have been, and keep the page readable.

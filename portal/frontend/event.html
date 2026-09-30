@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="cbm-org" content="{{org}}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- The member page for ONE event (F5-1), behind the portal sign-in. No
+       Open Graph tags: no crawler reads a signed-in page, and the title alone
+       serves a browser tab and a bookmark. The script fills the title. -->
+  <title>Event — {{org}}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="/portal/styles.css" />
+  <link rel="stylesheet" href="/portal/event.css" />
+</head>
+<body>
+  <main class="cbm-container portal portal--event">
+    <header class="portal__header">
+      <h1>{{org}}</h1>
+      <p class="pev__crumb"><a href="/">&larr; Back to the portal</a></p>
+    </header>
+
+    <p class="pev__msg" id="msg" role="status" hidden></p>
+
+    <!-- The body ids are the public event page's: /shared/event-body.js fills
+         them for both pages, which is what makes "the same body" one code path. -->
+    <article class="pev__event" id="eventBody" hidden>
+      <img class="pev__hero" id="hero" alt="" hidden />
+      <p class="pev__eyebrow" id="eyebrow"></p>
+      <h2 class="pev__title" id="title"></h2>
+      <p class="pev__when" id="when"></p>
+      <p class="pev__summary" id="summary"></p>
+
+      <dl class="pev__facts" id="facts"></dl>
+
+      <section class="pev__prose" id="overview" hidden></section>
+      <section class="pev__prose" id="syllabus" hidden></section>
+
+      <!-- The action box: Register / Registered + Cancel for an Internal event
+           that takes registrations; the two website links for a Public webinar
+           (F5-4, F5-6). Filled by event.js from the payload. -->
+      <section class="pev__action" id="actionBox" hidden></section>
+    </article>
+  </main>
+
+  <footer class="cbm-footer">
+    <p>&copy; <span data-cbm-year>2026</span> {{org}}. All rights reserved.<span class="cbm-footer__version" data-cbm-version></span></p>
+  </footer>
+
+  <!-- busy.js first: it wraps fetch/XHR, so it must be in place before any
+       other script can start a request. -->
+  <script src="/shared/busy.js"></script>
+  <script src="/shared/event-body.js"></script>
+  <script src="/portal/event.js"></script>
+  <script src="/shared/footer.js"></script>
+</body>
+</html>

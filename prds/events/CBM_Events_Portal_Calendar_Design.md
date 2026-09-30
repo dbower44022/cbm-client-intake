@@ -1,8 +1,8 @@
 # CBM Events — The Portal Calendar: Design (Track F, F5)
 
-Last Updated: 09-30-26 14:56 · Revision 0.2 — see change log at the end.
+Last Updated: 09-30-26 15:10 · Revision 0.3 — see change log at the end.
 
-**Status: DRAFT, decisions ruled, awaiting Doug's approval to build. Nothing is built.** The requirements
+**Status: BUILT as v0.235.0 (09-30-26), on Doug's approval, dark behind `PORTAL_CALENDAR`. Verified by tests only; the live pass is `OPEN-ITEMS.md` #37. § 10 records where the build departs from this design.** The requirements
 are Doug's six rulings recorded in `CBM_Events_Finalization_Plan.md` revision
 4.11, section F5; they are cited below as *F5-n*. What F3 already settled for
 this surface is cited as *F3-n* and the F2/F3 design as *design § n*. Everything
@@ -306,11 +306,39 @@ then is the only lever the portal has; an event that does not cannot hide the
 link from the people it is for. Cost: two behaviours to explain in the staff
 guide, one line each.
 
+## 10. As built — where the build departs from this design
+
+Each is Claude's decision during the build, open to challenge.
+
+1. **The calendar row carries `takesRegistrations`.** § 6 listed only
+   `myRegistration` and `windowDays` as additions. Without it the member page
+   could not tell "registration has closed" from "no sign-up needed", both of
+   which have `canRegister` false. It is not staff data: it is what the button
+   itself already revealed.
+2. **A Public event's join link is never served on the member page.** D2 rules
+   Internal events; the design left Public open. The member signs up on the
+   website and is told the link there, as every other public registrant is.
+3. **The image route answers `private`, not `public`, cache control.** The
+   response is per member (the gate depends on who asks), so a shared cache
+   must not hold it. Same lifetime and `must-revalidate` as the public route.
+4. **The member page route 404s when the switch is off** rather than not being
+   mounted. The switch is a per-request setting so `/setup` can flip it, and a
+   route that is present-but-refusing is the only way to honour that.
+5. **The registration read chunks the `in` clause at 100 event ids** and pages
+   results at 200; § 6 said only "page size 200 in pages".
+6. **The `whenLine` guard test moved** from the public page's script to the
+   shared renderer, where the function now lives, and gained an assertion that
+   the public page loads the shared file before its own.
+7. **The rail's rows show the weekday** ("Tue 14 Oct"), derived in the browser
+   from the payload's date; § 4 gave the format without saying where the
+   weekday came from.
+
 ---
 
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.3 | 09-30-26 15:10 | Claude (Claude Code) | Built as v0.235.0 on Doug's approval, dark behind `PORTAL_CALENDAR`. Status updated and § 10 added: seven places the build departs from the design. |
 | 0.2 | 09-30-26 14:56 | Claude (Claude Code) | D1 and D2 ruled by Doug: the member page address is the event's id; the join link shows to everyone when the event takes no registrations and to registered members only when it does. Status: awaiting approval to build. |
 | 0.1 | 09-30-26 14:55 | Claude (Claude Code) | First draft, from the six F5 rulings Doug made on 09-30-26 (Finalization Plan revision 4.11). Eleven findings verified in the code. Two decisions for Doug (D1 address, D2 join link). Awaiting review; nothing built. |

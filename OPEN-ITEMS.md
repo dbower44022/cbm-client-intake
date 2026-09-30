@@ -445,6 +445,27 @@ block a deploy.)*
 
 ## Live verification owed
 
+37. **The portal events rail and member page (v0.235.0, F5) — built dark,
+    never seen** (2026-09-30). `PORTAL_CALENDAR` is off everywhere. Owed on
+    crm-test, as **two real non-admin accounts** (one in a team an Internal
+    event is limited to, one not), on a desktop and at phone width: (a) create
+    through `/events` an Internal event with a graphic, **no slug**, Takes
+    registrations on, and one limited to a team; (b) switch `PORTAL_CALENDAR`
+    on at `/setup`; (c) the rail renders beside the tiles with no width cap,
+    the fold appears for an event beyond 30 days, both switches survive a
+    sign-out and a different browser; (d) Register from a row and from the
+    page, the row reads Registered, Cancel works, and `CEventRegistration`
+    shows source `Portal`; (e) the member page shows the graphic (the portal
+    image route), the join link only after registering (D2), and a Public
+    webinar's two website links; (f) a deep link to a member page from a
+    signed-out browser signs in and lands on the event; (g) the team-limited
+    event 404s for the outside account with the same words as a made-up id;
+    (h) the phone strip expands and collapses. Note the nightly reset takes the
+    registrations by morning. Production after this AND #35 (the CRM change
+    that gives production the audience field and the `Portal` source), then
+    `PORTAL_CALENDAR` on at `/setup`; Boston with its next release, flag off
+    until asked.
+
 36. **CoMentors column and On-Hold as active (v0.234.0 / v0.234.1) — live on
     both environments, never seen as a non-admin** (2026-09-29). Verified by
     tests and one org-wide-key read against crm-test (26 mentors, Joe Mentor

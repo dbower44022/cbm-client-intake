@@ -114,6 +114,18 @@ Two warnings can appear after a save. Neither stops the save:
   yet — nobody will see it or be able to register before it begins. (After the
   event, this is how a recording is released later, and no warning appears.)
 
+**What members see on the portal.** When the portal calendar is switched on
+(System Settings → Features → *Events on the portal home page*), every member's
+home page has a list of upcoming events down the left side: Internal events (to
+their teams, if you limited them) and this chapter's Public webinars, the next
+30 days in full and the rest behind one line. Each opens a page of its own.
+An Internal event with **Takes registrations** ticked shows a Register button
+in the list and on the page; a Public webinar's page points to the website
+instead. **The join link of an online Internal event** shows to everyone when
+the event takes no registrations, and only to members who have registered when
+it does — so tick Takes registrations if you want to know who is coming before
+handing out the link.
+
 **Zoom webinars are for Public events only.** An Internal event never gets one,
 even from the Zoom button; paste your own meeting link into its description. An
 event that already has a webinar keeps it if you change it to Internal.

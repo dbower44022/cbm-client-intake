@@ -1103,6 +1103,24 @@ def create_app(
             name="setup-frontend",
         )
     if settings.assignments_active and PORTAL_FRONTEND_DIR.is_dir():
+        # The member page for one event (F5-1), registered BEFORE the /portal
+        # mount below or the static files would shadow it. The page is served
+        # to anyone; its DATA is not — the script reads /api/portal/events/{id}
+        # and sends a signed-out visitor to /?next=. Gated per request on the
+        # portal-calendar switch so /setup turns it on and off without a
+        # restart. Design: prds/events/CBM_Events_Portal_Calendar_Design.md § 5.
+        @app.get("/portal/events/{event_id}", response_class=HTMLResponse,
+                 include_in_schema=False)
+        async def portal_event_page(event_id: str) -> HTMLResponse:
+            live = get_settings()
+            if not live.portal_calendar_active:
+                raise HTTPException(status_code=404, detail="Not found.")
+            html = render_branding(
+                (PORTAL_FRONTEND_DIR / "event.html").read_text(encoding="utf-8"),
+                live,
+            )
+            return HTMLResponse(html, headers={"Cache-Control": "no-store"})
+
         # The portal's assets (its index.html is served at "/" above).
         app.mount(
             "/portal",
