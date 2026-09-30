@@ -1,6 +1,6 @@
 # CBM Events & Webinars — Finalization Plan
 
-Last Updated: 09-29-26 01:44 · Revision 4.5 — see change log at the end.
+Last Updated: 09-30-26 14:50 · Revision 4.11 — see change log at the end.
 
 Companion to `CBM_Events_PRD.md`, `CBM_Events_Implementation_Plan.md` and
 `CBM_Events_Registration_Recognition_Plan.md`. Those three say what the feature
@@ -133,7 +133,7 @@ after Doug's requirements are gathered, and nothing is settled until he rules.
 | F2 | Display Date/Time: the moment an event may first appear on the public pages | User review, 09-2026 | Built v0.233.0 (09-29-26); CRM on crm-test; live review, production and Boston owed (`OPEN-ITEMS.md` #35) |
 | F3 | Event audience: Internal, a specific chapter, or Public — Internal events form a calendar on the chapter's portal | User review, 09-2026 | Built v0.233.0 (09-29-26); CRM on crm-test; live review, production and Boston owed (`OPEN-ITEMS.md` #35) |
 | F4 | Presenters: select or add them per event, with an optional presenter biography on the event page | User review, 09-2026 | Catalogued |
-| F5 | Portal home page: a left-hand list of upcoming internal events, each opening its details | User review, 09-2026 | Catalogued |
+| F5 | Portal home page: a left-hand list of upcoming internal events, each opening its details | User review, 09-2026 | Requirements ruled 09-30-26; design drafted, awaiting Doug's review |
 
 **The catalog is complete at five features** (Doug, 09-27-26). Design proceeds
 one feature at a time, in the order Doug chooses.
@@ -378,13 +378,69 @@ before F3 settles what "Internal" selects.
   Marketing Admin Team (`EVENTS_ALLOWED_TEAMS`). Most signed-in members are not
   in it, so "click to see details" cannot open that screen for them.
 
-*Questions to settle at design, not yet asked:* what "details" shows and where
-(a pop-up on the portal, or a read-only page open to every member); how far
-ahead the list looks, and whether it pages; whether it is filtered by the
-user's teams; whether a member can register or accept from the list; how it
-behaves on a phone, where a left rail cannot sit beside the column; and
-whether the portal reads the events as the signed-in user (their CRM access
-decides what they see) or under the organisation-wide key.
+*Already settled by F3 (design § 6, built v0.233.0):* the portal reads events
+under the organisation-wide API key and applies the team limit itself; the
+list shows Internal events and this chapter's Public events past their display
+time, each marked; the member's filter is saved per user in the application's
+database; a Register button acts on Internal events that take registrations.
+F5 puts these on screen and does not reopen them.
+
+*Requirements, ruled by Doug 09-30-26.* These are rulings. The design that
+follows from them has not been drafted.
+
+1. **Clicking an event opens a page of its own, behind the portal sign-in.**
+   Not a pop-up over the home page. The page renders the same body the public
+   event page renders — description, overview, syllabus, graphic, time and
+   place — with the member's Register button in place of the public sign-up
+   form, so an Internal and a Public event read alike. Every event therefore
+   has an address an announcement or reminder email can link to, which is why
+   the page was chosen over the cheaper pop-up. Cost accepted: one more route
+   and template, and a sign-in deep link the portal does not yet support for
+   this target. Follow-on details for the design: slug or id in the address,
+   and whether an online Internal event's join link shows to every member or
+   only to registered ones.
+2. **The list shows the near term in full and folds the rest.** Every event
+   in the next thirty days is listed. Below it one line — "8 more events later
+   this year" — expands to show the events beyond the window, so a far-off
+   event still has somewhere to be found without pushing the rest of the home
+   page below the fold. The thirty days is a setting staff can change, default
+   thirty. Not chosen: a fixed window alone (an annual meeting announced three
+   months out would be invisible) and a fixed count (a busy week would hide
+   next month behind a click).
+3. **The saved filter is two switches: Internal events, and Public webinars.**
+   Both on when a member first signs in; the member's choice is saved to their
+   account (F3-8). A member who turns both off sees one line in the rail, "You
+   have hidden all events", with a link to turn them back on — the rail never
+   goes blank. No filter by kind of event or by subject: the list is short by
+   ruling 2, and a forgotten filter is the commonest reason an event is
+   reported missing. "Only my teams" needs no switch: a team-limited Internal
+   event is never sent to a member outside those teams.
+4. **Register is on the list and on the page, the same action in both.** An
+   Internal event that takes registrations shows a Register button in its row;
+   the row's button asks a one-line confirmation ("Register for Board Meeting
+   on October 23?") before it acts, so a mis-click registers no one; the page
+   carries the same button. After registering, the row reads "Registered" with
+   a Cancel link. Not chosen: page-only (two clicks for what F3-7 defined as one
+   action, and a button missing from the row reads as broken).
+5. **On a phone the rail becomes a collapsed strip at the top.** Where the
+   screen is too narrow for two columns, the list shrinks to one line — "Next:
+   Mentor Roundtable, Tue Oct 14 · 3 more" — that expands on a tap to the full
+   list, so the next event and the application tiles are both on screen with
+   no scrolling. On a desktop the list is a left rail beside the tiles, which
+   fill the remaining width (the portal's width cap is lifted). Not chosen:
+   stacking the list above the tiles (a phone user reaching My Email scrolls
+   past the events every time) or below them (the list is out of sight).
+6. **A Public webinar's website link lives on its member page, not in the
+   row.** Every event in the list opens its member page (ruling 1). For a
+   Public webinar that page carries "View on the website" and "Sign up on the
+   website" where an Internal event carries Register, because public sign-up
+   needs the public form's consent and details. The rows stay title, date and
+   marks only, which the phone strip (ruling 5) depends on. Not chosen: a
+   second link in the row, or public webinars opening the website page
+   directly (which would undo half of ruling 1).
+
+**All six questions are ruled (09-30-26).** The design follows as a separate
+document, `CBM_Events_Portal_Calendar_Design.md`, for Doug's review.
 
 ### Track B — Live verification already owed on crm-test. Can start today.
 
@@ -513,6 +569,12 @@ attendance recorded → recording link pasted → the engagement rollup shows it
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 4.11 | 09-30-26 14:50 | Claude (Claude Code) | F5 ruling 6 (Doug, 09-30-26, on Claude's recommendation): a Public webinar's website link is on its member page, not in the row. All six F5 questions ruled; design to follow in `CBM_Events_Portal_Calendar_Design.md`. |
+| 4.10 | 09-30-26 14:48 | Claude (Claude Code) | F5 ruling 5 (Doug, 09-30-26, on Claude's recommendation): on a phone the rail becomes a one-line strip at the top that expands on a tap; on a desktop a left rail beside full-width tiles. |
+| 4.9 | 09-30-26 14:39 | Claude (Claude Code) | F5 ruling 4 (Doug, 09-30-26): Register is in the list row (with a one-line confirmation) and on the event page, one action in both places. |
+| 4.8 | 09-30-26 14:36 | Claude (Claude Code) | F5 ruling 3 (Doug, 09-30-26): the per-member filter is two switches, Internal events and Public webinars, both on by default; no filter by kind or subject. |
+| 4.7 | 09-30-26 14:35 | Claude (Claude Code) | F5 ruling 2 (Doug, 09-30-26): the list shows the next thirty days in full, with a one-line reveal for events beyond the window; the window is a staff setting. |
+| 4.6 | 09-30-26 14:32 | Claude (Claude Code) | F5 requirements gathering opened. Ruling 1 (Doug, 09-30-26): clicking an event opens a member page of its own behind the portal sign-in, not a pop-up, so every event has a linkable address. F5 state moved from Catalogued; what F3 already settled for F5 recorded. |
 | 4.5 | 09-29-26 01:44 | Claude (Claude Code) | F2 and F3 built as v0.233.0 and their CRM fields applied to crm-test. Owed: the live review as real non-admins, production at a Sunday slot, Boston with its next release. |
 | 4.4 | 09-29-26 00:58 | Claude (Claude Code) | The F2/F3 design's four decisions ruled by Doug; design at revision 0.2, awaiting approval to build. |
 | 4.3 | 09-28-26 00:32 | Claude (Claude Code) | F2 and F3 designed together in `CBM_Events_Audience_and_Display_Design.md` revision 0.1, a draft awaiting Doug's review with four decisions (D1–D4). Both features' state updated. |
