@@ -445,6 +445,17 @@ block a deploy.)*
 
 ## Live verification owed
 
+36. **CoMentors column and On-Hold as active (v0.234.0 / v0.234.1) — live on
+    both environments, never seen as a non-admin** (2026-09-29). Verified by
+    tests and one org-wide-key read against crm-test (26 mentors, Joe Mentor
+    and Matt Mentor at 1 each). Owed: open Client Administration → Available
+    Mentors on crm-test **as a Client Administration user who is not an
+    admin**, sort by CoMentors, confirm those two show 1 and no row shows "—"
+    (a "—" means that role cannot read `CMentorProfile.engagements`); click a
+    name and confirm the popup's stats line carries CoMentors. Then production:
+    a mentor with an On-Hold client shows one more Active and one less Available
+    than before.
+
 35. **Event audience and display time (v0.233.0, F2 + F3) — built, on crm-test,
     never reviewed live** (2026-09-29). The CRM fields are applied to crm-test and
     verified as the org-wide key; the code is verified by 48 tests and a

@@ -316,6 +316,19 @@ full-height grid with a status multi-select, and assigns each to a mentor.
 - **Mentor dropdown** = `CMentorProfile` where `acceptingNewClients=true` AND
   `mentorStatus="Active"` AND `assignedUser` set. An empty dropdown means no
   mentor passes all three.
+- **Client counts are app-computed from `CEngagement`, never the CRM's own
+  `currentActiveClients`/`availableCapacity`** (crm-test's formula is
+  known-buggy). `ACTIVE_CLIENT_STATUSES` = Active, Assigned, Pending Acceptance
+  **and On-Hold** (Doug's ruling 2026-09-29 — the same set Analytics uses, so
+  every screen agrees). Available = Max Clients − Active Clients.
+  **CoMentors** (v0.234.0) counts the active engagements where the mentor is a
+  *non-primary* mentor, read per mentor through the `engagements` reverse link
+  of `CEngagement.additionalMentors` (a relationship — `additionalMentorsIds`
+  on a list read is always empty). It does **not** reduce Available, and only
+  the Client Administration roster asks for it
+  (`list_all_mentors(include_comentors=True)`) — Mentor Administration shares
+  the function and makes no extra reads. A failed per-mentor read renders "—",
+  never 0.
 - **A mentor's name in the Available Mentors list opens a read-only detail
   popup** (v0.220.0): the CRM's own `CMentorProfile` detail layout rendered by
   the shared `/shared/detail-render.js`, plus a Contact panel and an "Other
@@ -1506,6 +1519,13 @@ with `main`; **Lakeside took it off the release lane by itself** (its
 unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
+
+- **v0.234.0 / v0.234.1 (2026-09-29) — CoMentors column, and On-Hold counts
+  as an active client.** Pushed and live on production and crm-test the same
+  day; standing rules in the Client Administration section above. No feature
+  flag — the rollback is a revert. Verified by tests and one org-wide-key read
+  on crm-test; the pass as a real non-admin Client Administration user is
+  `OPEN-ITEMS.md` #36.
 
 - **v0.233.0 (2026-09-29) — event audience and display time (Track F, F2 +
   F3). Committed, not pushed.** Standing rules in the Events section above.
