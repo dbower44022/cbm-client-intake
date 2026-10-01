@@ -328,3 +328,23 @@ def test_a_rejected_field_reads_as_a_message_not_an_outage():
     # Anything that is not a 400 is left to the existing handling.
     assert validation_failure(EspoError("read CEvent failed: HTTP 403 [Forbidden]")) is None
     assert validation_failure(EspoError("read CEvent failed: HTTP 500 [Boom]")) is None
+
+
+# --- the editor survives a field the CRM does not have (production, 2026-10-01) ---
+
+@pytest.mark.asyncio
+async def test_field_options_survive_a_field_the_crm_lacks():
+    """``/events/api/fields`` 500'd on production because the F2/F3 enum fields
+    do not exist there yet and the metadata read raised a non-EspoError. A
+    missing field yields an empty list; the rest of the editor still loads."""
+    from events import service
+
+    class Crm:
+        async def metadata_enum_options(self, entity, field):
+            if field in ("audience", "publicReach", "reachChapters", "internalTeams"):
+                raise ValueError("Expecting value: line 1 column 1 (char 0)")
+            return ["A", "B"]
+
+    options = await service.field_options(Crm())
+    assert options["audience"] == []
+    assert options["topic"] == ["A", "B"]

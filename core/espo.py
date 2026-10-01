@@ -288,6 +288,27 @@ class EspoApi(Protocol):
     ) -> Optional[list[str]]: ...
 
 
+def _json_or_none(resp: Any) -> Any:
+    """A metadata response's body, or None when there is nothing to parse.
+
+    **EspoCRM answers a metadata key it does not have with HTTP 200 and an
+    EMPTY body** (verified on crm-test 2026-10-01:
+    ``Metadata?key=entityDefs.CEvent.fields.nonexistentField.options`` → 200,
+    ``''``). ``resp.json()`` on that raises ``JSONDecodeError``, which is not an
+    ``EspoError``, so no best-effort ``except EspoError`` caught it — and the
+    Event Administration editor 500'd on production for every F2/F3 field the
+    production CRM did not have yet. "Not there" is a normal answer for a
+    feature-detected field; it must read as None, never as a crash.
+    """
+    body = getattr(resp, "content", b"") or b""
+    if not body.strip():
+        return None
+    try:
+        return resp.json()
+    except ValueError:
+        return None
+
+
 class EspoClient:
     def __init__(
         self,
@@ -522,7 +543,7 @@ class EspoClient:
             raise EspoError(
                 f"metadata {key} failed: {http_error_detail(resp)}"
             )
-        return resp.json()
+        return _json_or_none(resp)
 
     async def app_user(self) -> dict[str, Any]:
         """The ``App/user`` payload for the current auth — includes the user's
@@ -584,7 +605,7 @@ class EspoClient:
             raise EspoError(
                 f"metadata {entity}.{field} failed: {http_error_detail(resp)}"
             )
-        options = resp.json()
+        options = _json_or_none(resp)
         return options if isinstance(options, list) else None
 
     async def upload_attachment(

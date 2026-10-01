@@ -766,7 +766,10 @@ async def field_options(client: EspoApi) -> dict[str, list[str]]:
     for name in _OPTION_FIELD_NAMES:
         try:
             values = await client.metadata_enum_options(cfg.EVENT, name)
-        except EspoError:
+        except (EspoError, ValueError):
+            # ValueError: a body that is not JSON. The client now answers None
+            # for an empty body, but a field the CRM lacks must never take the
+            # whole editor down whatever the transport hands back.
             values = None
         options[name] = [v for v in (values or []) if v]
     return options

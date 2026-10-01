@@ -1539,6 +1539,15 @@ unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
 
+- **v0.235.1 (2026-10-01) — Event Administration 500'd on production.** A
+  metadata key the CRM lacks answers 200 with an EMPTY body; `resp.json()` on
+  it raised a `JSONDecodeError` that no `except EspoError` caught, so the
+  editor's option read died on `audience`, the first F2/F3 field production's
+  CRM does not have. Latent since 09-29, found by Doug 10-01. The client now
+  reads an empty body as None for every caller (`core/espo._json_or_none`).
+  **Standing rule:** a feature-detected field's OPTIONS read must tolerate the
+  field being absent — `live_event_fields` was never the only read.
+
 - **v0.235.0 (2026-09-30) — upcoming events on the portal home page (Track F,
   F5). Pushed; live on all three apps the same day, switch OFF everywhere.**
   Production's push-triggered build stalled at 2/13 with no build output for

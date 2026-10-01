@@ -4,6 +4,32 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.235.1] — 2026-10-01
+
+**fix(events): Event Administration 500'd on production — a metadata key the
+CRM does not have answers HTTP 200 with an EMPTY body.** Reported by Doug on
+2026-10-01 ("request failed (500)"); root cause verified on crm-test the same
+hour: `Metadata?key=entityDefs.CEvent.fields.nonexistentField.options` → 200,
+`''`. `EspoClient.metadata_enum_options` called `resp.json()` on that, which
+raises `JSONDecodeError` — **not an `EspoError`**, so `service.field_options`'
+best-effort catch never saw it and `GET /events/api/fields` died on the first
+F2/F3 enum field (`audience`) production's CRM does not have yet. **Latent
+since v0.233.0 reached production on 2026-09-29**; crm-test never hit it
+because every field exists there, and nobody had opened Event Administration
+on production since. Not caused by v0.235.0, but found the day after it.
+
+- `core/espo.py`: `metadata()` and `metadata_enum_options()` read an empty or
+  non-JSON body as **None** ("not there"), never as a crash — through one
+  helper, `_json_or_none`, whose docstring records the EspoCRM behaviour.
+- `events/service.field_options` also catches `ValueError`, so a field the CRM
+  lacks yields an empty option list whatever the transport hands back.
+- Three client tests with real `httpx.Response` bodies, one service test.
+- **The lesson for the feature-detect convention**: "the code is dark until
+  the CRM has the field" was true of every read that went through
+  `live_event_fields`, and false of the one that asked the CRM for each enum's
+  options by name. A feature-detected field's *options* read must tolerate the
+  field being absent, and the client now guarantees it for every caller.
+
 ## [0.235.0] — 2026-09-30
 
 **feat(portal): upcoming events on the portal home page, and a member page per

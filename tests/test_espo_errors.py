@@ -272,3 +272,40 @@ async def test_list_serializes_or_group_without_keyerror(monkeypatch):
     assert "where[0][type]" in keys
     assert "where[0][value][0][attribute]" in keys
     assert "where[0][value][1][attribute]" in keys
+
+
+# --- an empty metadata body is "not there", never a crash ----------------------
+
+def _metadata_client(monkeypatch, body: bytes):
+    """A client whose Metadata request answers 200 with ``body`` — a REAL
+    httpx.Response, so ``.json()`` behaves exactly as it does in production."""
+    client = EspoClient("https://crm.example", "k", 30)
+
+    async def fake_request(method, url, *, op, params=None, json_body=None):
+        return httpx.Response(200, content=body, request=httpx.Request(method, url))
+
+    monkeypatch.setattr(client, "_request", fake_request)
+    return client
+
+
+@pytest.mark.asyncio
+async def test_enum_options_of_a_field_the_crm_lacks_read_as_none(monkeypatch):
+    """EspoCRM answers a metadata key it does not have with HTTP 200 and an
+    EMPTY body (verified on crm-test 2026-10-01). Before this, ``resp.json()``
+    raised JSONDecodeError — not an EspoError — and the Event Administration
+    editor 500'd on production for every F2/F3 field its CRM did not have."""
+    client = _metadata_client(monkeypatch, b"")
+    assert await client.metadata_enum_options("CEvent", "audience") is None
+    assert await client.metadata("entityDefs.CEvent.fields.audience") is None
+
+
+@pytest.mark.asyncio
+async def test_enum_options_still_parse_a_real_list(monkeypatch):
+    client = _metadata_client(monkeypatch, b'["Internal","Public"]')
+    assert await client.metadata_enum_options("CEvent", "audience") == ["Internal", "Public"]
+
+
+@pytest.mark.asyncio
+async def test_metadata_that_is_not_json_reads_as_none(monkeypatch):
+    client = _metadata_client(monkeypatch, b"<html>maintenance</html>")
+    assert await client.metadata("scopes") is None
