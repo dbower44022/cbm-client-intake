@@ -4,6 +4,48 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.239.0] — 2026-10-07
+
+**feat(events): partners and funders on an event, and an Events tab on the
+Partner and Funder records (Phase B of
+`prds/mailing-list-and-event-sponsorship-plan.md`).** Doug's rulings
+2026-10-07: many partners per event through one many-to-many link; the
+Partner and Funder Management records show their events with registered,
+attended and became-a-client counts; "requested a mentor" is not a separate
+count. No feature flag — everything is feature-detected from the live CRM's
+links, so a CRM without the partner build (production, Boston) shows no
+Partners picker and an explanatory Events tab until Phase A lands there.
+
+- **Event Administration**: a *Sponsorship* group in the editor with a
+  Partners and a Funders picker (checkbox list with a filter; a stored link
+  the list no longer offers stays visible and ticked), the same two on the
+  Overview facts ("—" when empty or unreadable). The pickers are
+  **relationships**, so they ride their own request —
+  `PUT /events/api/events/{id}/sponsors` with the exact set per link — never
+  the record PUT, where a `*Ids` value is silently ignored. Written as the
+  signed-in user; ONLY a `noAccessToForeignRecord` denial is retried as the
+  provisioning admin (`events/service._relate_or_escalate`, the co-mentor
+  precedent), because the Marketing Admin Role now reads partner and funder
+  profiles and does not edit them. A forbidden option list degrades the
+  picker to read-only with the current names and an explanation, never an
+  empty list. `GET /fields` carries `links`; `GET /events/{id}` carries
+  `sponsors`. Action-logged as "Event Sponsors Updated".
+- **Partner and Funder Management**: an **Events** tab just before
+  Communications (`DomainConfig.sponsored_events_link = "sponsoredEvents"`,
+  gating both the tab and `GET /records/{id}/sponsoredevents`; the mentor
+  router never carries it). Totals tiles plus one sortable row per linked
+  event: date, title, status, registered, attended, became clients. Computed
+  in ONE place, `events/reporting.sponsor_rollup`, with the programme's
+  conversion rule scoped to the event (an attendee whose engagement was
+  created after it started); clients are unique people in the totals. Two
+  best-effort layers: unreadable registrations make every count `None`
+  (rendered "—", never 0), unreadable engagements only the client count.
+- `events/config.SPONSOR_LINKS` is the spec: name, label, far entity and
+  reverse link, verified against crm-test's metadata on 2026-10-07.
+- Tests: `tests/test_event_sponsorship.py` (23). **Verified by tests only** —
+  the live pass on crm-test as a real Marketing Admin and a real Partner
+  Management user is `OPEN-ITEMS.md` #39.
+
 ## [0.238.1] — 2026-10-07
 
 **fix(receipts): a receipt-status option built in the CRM activates without a

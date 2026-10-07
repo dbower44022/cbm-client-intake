@@ -311,3 +311,139 @@ async def conversion_report(
         "from": start or None,
         "to": end or None,
     }
+
+
+# --- Phase B: a partner's or funder's events ---------------------------------
+# prds/mailing-list-and-event-sponsorship-plan.md § 4.3. The Events tab on the
+# Partner and Funder records: one row per linked event with registered,
+# attended and became-a-client counts, and totals. "Became a client" is the
+# EV-73 rule scoped to one event: an ATTENDED contact whose client engagement
+# was created AFTER that event started. Doug's ruling 2026-10-07: no separate
+# "requested a mentor" count — every request ends in an assignment.
+
+
+async def _registrations_for_events(
+    client: EspoApi, event_ids: list[str]
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for start in range(0, len(event_ids), 100):
+        chunk = event_ids[start:start + 100]
+        offset = 0
+        while True:
+            data = await client.list(
+                cfg.REGISTRATION,
+                select=cfg.REGISTRATION_SELECT,
+                where=[{"type": "in", "attribute": "eventId", "value": chunk}],
+                max_size=200, offset=offset,
+            )
+            batch = data.get("list", [])
+            rows.extend(batch)
+            if len(batch) < 200:
+                break
+            offset += 200
+    return rows
+
+
+async def _engagement_creations(
+    client: EspoApi, contact_ids: list[str]
+) -> dict[str, list[str]]:
+    """contact id -> the ``createdAt`` stamps of their client engagements."""
+    out: dict[str, list[str]] = {}
+    for start in range(0, len(contact_ids), 100):
+        chunk = contact_ids[start:start + 100]
+        offset = 0
+        while True:
+            data = await client.list(
+                "CEngagement",
+                select="id,contactId,createdAt",
+                where=[{"type": "in", "attribute": "contactId", "value": chunk}],
+                max_size=200, offset=offset,
+            )
+            batch = data.get("list", [])
+            for eng in batch:
+                cid = eng.get("contactId")
+                if cid and eng.get("createdAt"):
+                    out.setdefault(cid, []).append(eng["createdAt"])
+            if len(batch) < 200:
+                break
+            offset += 200
+    return out
+
+
+async def sponsor_rollup(
+    client: EspoApi, parent_entity: str, parent_id: str, link: str
+) -> dict[str, Any]:
+    """Every event linked to one partner or funder, newest first, with counts.
+
+    Best-effort in two layers, so the tab never shows a wrong number: if the
+    registrations cannot be read every count is ``None`` (rendered "—"); if
+    the engagements cannot be read only ``clients`` is. The list of events
+    itself is not best-effort — a partner whose events cannot be read has a
+    real problem the caller should see.
+
+    The parent's link is read in one page of 200. A partner with more linked
+    events than that is not a case this chapter has, and the cap is the CRM's.
+    """
+    data = await client.list_related(
+        parent_entity, parent_id, link, select=cfg.PUBLIC_SELECT, max_size=200,
+    )
+    events = [e for e in data.get("list", []) if e.get("id")]
+    events.sort(key=lambda e: e.get("dateStart") or "", reverse=True)
+    ids = [e["id"] for e in events]
+
+    # No events means nothing to count: zeros, not "unreadable".
+    regs_by_event: Optional[dict[str, list[dict[str, Any]]]] = {} if not ids else None
+    creations: Optional[dict[str, list[str]]] = {} if not ids else None
+    if ids:
+        try:
+            regs_by_event = {}
+            for reg in await _registrations_for_events(client, ids):
+                regs_by_event.setdefault(reg.get("eventId") or "", []).append(reg)
+        except EspoError as exc:
+            log.warning("sponsor rollup: registrations unreadable: %s", exc)
+            regs_by_event = None
+        if regs_by_event is not None:
+            attended_ids = sorted({
+                r["contactId"] for rows in regs_by_event.values() for r in rows
+                if r.get("contactId") and (r.get("attendanceStatus") or "") in ATTENDED
+            })
+            try:
+                creations = await _engagement_creations(client, attended_ids) if attended_ids else {}
+            except EspoError as exc:
+                log.warning("sponsor rollup: engagements unreadable: %s", exc)
+                creations = None
+
+    rows: list[dict[str, Any]] = []
+    total_registered = total_attended = 0
+    converted_contacts: set[str] = set()
+    for event in events:
+        row = {**_event_ref(event), "status": event.get("status") or "",
+               "registered": None, "attended": None, "clients": None}
+        if regs_by_event is not None:
+            regs = regs_by_event.get(event["id"], [])
+            counts = service.summarise(regs)
+            row["registered"] = counts["registered"]
+            row["attended"] = counts["attended"]
+            total_registered += counts["registered"]
+            total_attended += counts["attended"]
+            if creations is not None:
+                started = event.get("dateStart") or ""
+                clients = {
+                    r["contactId"] for r in regs
+                    if r.get("contactId")
+                    and (r.get("attendanceStatus") or "") in ATTENDED
+                    and any(c > started for c in creations.get(r["contactId"], []))
+                }
+                row["clients"] = len(clients)
+                converted_contacts |= clients
+        rows.append(row)
+
+    totals = {
+        "events": len(rows),
+        "registered": total_registered if regs_by_event is not None else None,
+        "attended": total_attended if regs_by_event is not None else None,
+        # Unique people: one person who attended two of this partner's events
+        # and then became a client is one client, not two.
+        "clients": len(converted_contacts) if creations is not None else None,
+    }
+    return {"available": True, "events": rows, "totals": totals}

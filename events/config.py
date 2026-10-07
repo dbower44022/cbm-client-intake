@@ -268,6 +268,33 @@ EVENT_FIELDS: list[EventField] = [
                app_managed=True),
 ]
 
+# --- Sponsorship links (Phase B of prds/mailing-list-and-event-sponsorship-plan.md)
+# An event's partners and funders are RELATIONSHIPS on CEvent, not fields:
+# read through ``list_related``, written with relate/unrelate (a ``*Ids`` write
+# is silently ignored — see CLAUDE.md § Gotchas). The partner link is a CRM
+# build (``cevent-partner-sponsorship-crm-handoff.md``); the funder link has
+# existed since the first events handoff. Each is feature-detected per load,
+# so a CRM without the partner link simply shows no Partners picker.
+
+
+@dataclass(frozen=True)
+class EventLink:
+    """One many-to-many link the editor offers as a picker."""
+
+    name: str          #: the link on CEvent
+    label: str         #: what staff see
+    entity: str        #: the far entity
+    foreign: str       #: the link on the far entity (its reverse)
+
+
+SPONSOR_LINKS: tuple[EventLink, ...] = (
+    EventLink("partnerProfiles", "Partners", "CPartnerProfile", "sponsoredEvents"),
+    EventLink("sponsorProfiles", "Funders", "CSponsorProfile", "sponsoredEvents"),
+)
+SPONSOR_LINK_NAMES: frozenset[str] = frozenset(l.name for l in SPONSOR_LINKS)
+#: The editor group the pickers sit in, and the Overview facts group.
+SPONSOR_GROUP = "Sponsorship"
+
 #: Server-side write whitelist for the staff editor (Phase 5).
 EVENT_EDIT_NAMES: frozenset[str] = frozenset(
     f.name for f in EVENT_FIELDS if not f.app_managed

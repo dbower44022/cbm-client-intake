@@ -619,6 +619,14 @@ one shared frontend that derives its domain from the first segment of its URL.
   unconditional create silently moved the Account and contact off the existing
   hub (twice in production, 2026-07-17 and 2026-07-27). Verified clean
   2026-08-16: all 73 prod client profiles have a company and none share one.
+- **Events (partner and funder, `sponsored_events_link`)** — the Events tab
+  just before Communications (v0.239.0): every event linked to the record,
+  with registered / attended / became-a-client counts and totals, all from
+  `events/reporting.sponsor_rollup` so every screen agrees. "Became a
+  client" is the programme's conversion rule scoped to one event, and never
+  a separate "requested a mentor" count (Doug's ruling 2026-10-07). The
+  endpoint feature-detects the reverse link and answers `available: false`
+  with a reason on a CRM without it; an unreadable count renders "—", never 0.
 - **Grants (funder only, `grants_link`)** — the Grants tab: awards, their
   deliverables, and later their funder reports. The **grant is the hub**:
   `CContribution` rows become its payments and deliverables its obligations, and
@@ -989,6 +997,17 @@ would be indistinguishable from a slug.
   rule): facts left, driven by `EVENT_FIELDS` so a new spec field shows without
   a second edit; graphic + Summary + Full description + Syllabus right, rich
   text through the shared sanitizer. Every slot renders even when empty.
+- **An event's partners and funders are RELATIONSHIPS, set in the editor's
+  Sponsorship group** (v0.239.0, plan `prds/mailing-list-and-event-sponsorship-plan.md`).
+  `events/config.SPONSOR_LINKS` names the two links (`partnerProfiles` →
+  `CPartnerProfile`, `sponsorProfiles` → `CSponsorProfile`, both reversed as
+  `sponsoredEvents`); they are feature-detected per load from
+  `entityDefs.CEvent.links`, ride their own `PUT …/sponsors` with the exact
+  set per link (never the record PUT — a `*Ids` write is ignored), and only a
+  `noAccessToForeignRecord` denial escalates to the admin account. The
+  Marketing Admin Role reads partner and funder profiles, it does not edit
+  them (Doug's ruling 2026-10-07). Production and Boston lack the partner
+  link until the Phase A handoff is applied there, so they show Funders only.
 - **Phase 6a attendance** (`events/attendance.py`, worker): pulls each finished
   online event's Zoom participant report and matches by email. An empty report
   means "not published yet", never "nobody came"; a `Manual`/`Check-in` source

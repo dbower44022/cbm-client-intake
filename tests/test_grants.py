@@ -471,7 +471,7 @@ def test_grants_tab_needs_the_flag_and_sits_after_contributions():
     keys = [t["key"] for t in _detail_tabs(SPONSOR, grants=True)]
     assert keys == [
         "overview", "details", "sessions", "contributions", "grants",
-        "communications", "documents",
+        "sponsoredEvents", "communications", "documents",
     ]
     # the flag alone never puts the tab on a domain that has no grant book
     assert "grants" not in [t["key"] for t in _detail_tabs(MENTOR, grants=True)]

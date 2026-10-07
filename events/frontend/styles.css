@@ -215,6 +215,10 @@ body { margin: 0; background: var(--cbm-bg, #f6f7f9); color: var(--cbm-text, #21
 .ev__multi-item { display: inline-flex; align-items: center; gap: .35rem;
   color: #21252b; font-size: .92rem; cursor: pointer; }
 .ev__field .ev__multi-item input { width: auto; }
+.ev__linkpick { display: block; }
+.ev__linkpick-filter { max-width: 22rem; margin: .15rem 0 .35rem; }
+.ev__linkpick-list { max-height: 11rem; overflow: auto; padding: .2rem .1rem; }
+.ev__linkpick-list .ev__multi-item[hidden] { display: none; }
 .ev__field--check { flex-direction: row; align-items: center; gap: .5rem; }
 .ev__field--check input { width: auto; }
 /* Fields that want the whole row: the long-form ones the spec marks `big`, the

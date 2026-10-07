@@ -32,7 +32,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Optional
 from zoneinfo import ZoneInfo
 
-from core.espo import EspoApi, EspoError
+from core.espo import EspoApi, EspoError, is_forbidden
 from core.youtube import thumbnail_url, video_id_from_url
 
 from . import config as cfg
@@ -1163,3 +1163,161 @@ async def portal_calendar(
         r for r in rows
         if visibility.is_shown(r, visibility.SURFACE_PORTAL, now=moment, user=user)
     ]
+
+
+# --- Sponsorship: an event's partners and funders (Phase B) --------------------
+# prds/mailing-list-and-event-sponsorship-plan.md § 5. Both links are
+# relationships, so a ``*Ids`` write would be silently ignored — everything here
+# goes through list_related / relate / unrelate (CLAUDE.md § Gotchas).
+
+
+async def live_sponsor_links(client: EspoApi) -> tuple[cfg.EventLink, ...]:
+    """Which sponsorship links the live CRM has, pointing where the spec says.
+
+    Fails CLOSED: a client with no metadata reader, or a metadata read that
+    fails, yields no links and the editor shows no pickers. Offering a picker
+    whose save the CRM must refuse is worse than a missing one, and unlike the
+    audience fields nothing public depends on this answer.
+    """
+    reader = getattr(client, "metadata", None)
+    if reader is None:
+        return ()
+    try:
+        links = await reader(f"entityDefs.{cfg.EVENT}.links") or {}
+    except EspoError as exc:
+        log.warning("event links not detectable (%s); sponsorship pickers stay dark", exc)
+        return ()
+    return tuple(
+        link for link in cfg.SPONSOR_LINKS
+        if isinstance(links.get(link.name), dict)
+        and links[link.name].get("entity") == link.entity
+    )
+
+
+async def sponsor_options(
+    client: EspoApi, link: cfg.EventLink
+) -> Optional[list[dict[str, Any]]]:
+    """The far entity's records for the picker — id and name, name order.
+
+    Paged at 200 (an oversized page is a 403, not a truncation — the lesson of
+    v0.198.0). A FORBIDDEN list degrades the picker to read-only, which is what
+    ``None`` means to the caller: the role can edit events but cannot see
+    partners, and the editor says so instead of offering an empty list.
+    """
+    rows: list[dict[str, Any]] = []
+    offset = 0
+    while True:
+        try:
+            page = await client.list(
+                link.entity, select="id,name", max_size=200, offset=offset,
+            )
+        except EspoError as exc:
+            if is_forbidden(exc):
+                log.info("%s list forbidden for the picker: %s", link.entity, exc)
+                return None
+            raise
+        batch = page.get("list", [])
+        rows.extend(
+            {"id": r["id"], "name": r.get("name") or "(unnamed)"}
+            for r in batch if r.get("id")
+        )
+        if len(batch) < 200 or offset >= 2000:
+            break
+        offset += 200
+    rows.sort(key=lambda r: r["name"].lower())
+    return rows
+
+
+async def event_sponsors(
+    client: EspoApi, event_id: str, links: Iterable[cfg.EventLink]
+) -> dict[str, Optional[list[dict[str, Any]]]]:
+    """The records on each live sponsorship link of one event.
+
+    Best-effort per link: an unreadable link is ``None`` (rendered "—"), never
+    an empty list — an empty slot reads as "no partners", which may be false.
+    """
+    out: dict[str, Optional[list[dict[str, Any]]]] = {}
+    for link in links:
+        try:
+            data = await client.list_related(
+                cfg.EVENT, event_id, link.name, select="id,name", max_size=200,
+            )
+            out[link.name] = [
+                {"id": r["id"], "name": r.get("name") or "(unnamed)"}
+                for r in data.get("list", []) if r.get("id")
+            ]
+        except EspoError as exc:
+            log.warning("could not read %s of event %s: %s", link.name, event_id, exc)
+            out[link.name] = None
+    return out
+
+
+async def _relate_or_escalate(
+    client: EspoApi, admin_factory, op: str, event_id: str, link: str, related_id: str
+) -> None:
+    """relate/unrelate as the signed-in user, retrying ONLY a foreign-record
+    denial as the provisioning admin.
+
+    EspoCRM checks edit on BOTH sides of a link, and the Marketing Admin Role
+    reads partner and funder profiles without editing them (Doug's ruling
+    2026-10-07: ``read: all``, nothing more). The user's own edit access to
+    the EVENT is the real gate and must pass on its own; only
+    ``noAccessToForeignRecord`` — which by definition means the event half
+    passed — is retried as the admin. The same shape as
+    ``sessions.service._link_or_escalate``; duplicated because that one is
+    bound to CEngagement.
+    """
+    try:
+        await getattr(client, op)(cfg.EVENT, event_id, link, related_id)
+        return
+    except EspoError as exc:
+        escalatable = is_forbidden(exc) and "noAccessToForeignRecord" in str(exc)
+        if not escalatable or admin_factory is None:
+            raise
+        log.info(
+            "%s %s/%s/%s denied on the linked record — retrying as the "
+            "provisioning admin", op, cfg.EVENT, event_id, link,
+        )
+        try:
+            admin = await admin_factory()
+            await getattr(admin, op)(cfg.EVENT, event_id, link, related_id)
+        except Exception as admin_exc:  # noqa: BLE001
+            log.warning("admin fallback for %s also failed: %s", op, admin_exc)
+            raise exc from None
+
+
+async def set_event_sponsors(
+    client: EspoApi,
+    event_id: str,
+    wanted: dict[str, list[str]],
+    *,
+    links: Iterable[cfg.EventLink],
+    admin_factory=None,
+) -> dict[str, dict[str, int]]:
+    """Make each named live link hold exactly the ids given.
+
+    The spec is the whitelist: a name that is not a live sponsorship link is
+    ignored, never written. Missing ids are related, surplus ones unrelated;
+    the rest are left alone, so re-saving an unchanged picker writes nothing.
+    A refused write raises — the router turns it into the 403 that names the
+    missing grant.
+    """
+    live = {link.name: link for link in links}
+    result: dict[str, dict[str, int]] = {}
+    for name, ids in wanted.items():
+        if name not in live:
+            continue
+        current = await client.list_related(
+            cfg.EVENT, event_id, name, select="id", max_size=200,
+        )
+        have = {r["id"] for r in current.get("list", []) if r.get("id")}
+        want = {str(i) for i in (ids or []) if i}
+        added = removed = 0
+        for rid in sorted(want - have):
+            await _relate_or_escalate(client, admin_factory, "relate", event_id, name, rid)
+            added += 1
+        for rid in sorted(have - want):
+            await _relate_or_escalate(client, admin_factory, "unrelate", event_id, name, rid)
+            removed += 1
+        result[name] = {"added": added, "removed": removed}
+    return result

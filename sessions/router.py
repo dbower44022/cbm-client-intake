@@ -261,6 +261,12 @@ def _detail_tabs(
         tabs.insert(idx + 1, {"key": "referredClients", "label": "Referred Clients"})
     if cfg.events_tab:
         tabs.insert(idx + 1, {"key": "events", "label": "Events"})
+    # Phase B — a partner's / funder's events. Placed just before Communications
+    # so it follows whatever money-and-referral tabs the domain carries.
+    if cfg.sponsored_events_link:
+        comms = next((i for i, t in enumerate(tabs) if t["key"] == "communications"),
+                     len(tabs))
+        tabs.insert(comms, {"key": "sponsoredEvents", "label": "Events"})
     if analytics:
         tabs.append({"key": "analytics", "label": "Analytics"})
     return tabs
@@ -822,6 +828,40 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not load the events history")
             return {"events": rows}
+
+    if cfg.sponsored_events_link:
+        # Phase B (prds/mailing-list-and-event-sponsorship-plan.md § 4.3): the
+        # events this partner / funder is linked to, with counts. Registered
+        # only on a domain that owns the link; the mentor router never carries
+        # it. Read-only. Feature-detects the link on the live CRM first so a
+        # CRM that lacks the partner build shows an explanation, not a 502.
+
+        @router.get("/records/{parent_id}/sponsoredevents")
+        async def sponsored_events(parent_id: str, request: Request) -> dict:
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            from events.reporting import sponsor_rollup
+
+            link = cfg.sponsored_events_link
+            try:
+                defs = await client.metadata(
+                    f"entityDefs.{cfg.parent_entity}.links.{link}")
+            except Exception as exc:  # noqa: BLE001 — a probe never raises
+                log.info("%s.%s not detectable (%s)", cfg.parent_entity, link, exc)
+                defs = None
+            if not isinstance(defs, dict) or not defs:
+                return {
+                    "available": False, "events": [], "totals": None,
+                    "reason": (
+                        f"This CRM does not link events to {cfg.parent_label.lower()}s "
+                        f"yet ({cfg.parent_entity}.{link} is missing). Once the CRM "
+                        "build lands, this tab fills in by itself."
+                    ),
+                }
+            try:
+                return await sponsor_rollup(client, cfg.parent_entity, parent_id, link)
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load this record's events")
 
     if cfg.contributions_link:
         # The funder ledger (prds/funder-contributions-plan.md) — registered

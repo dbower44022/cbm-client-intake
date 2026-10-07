@@ -221,6 +221,37 @@
         </p>
       </div>
 
+      <!-- Events (Phase B of the mailing-list and event-sponsorship plan;
+           partner + funder domains): every event this record is linked to,
+           newest first, with registered / attended / became-a-client counts
+           and totals. "Became a client" is the programme's conversion rule
+           scoped to one event (an attendee whose engagement postdates it).
+           Read-only; the links are set in Event Administration. -->
+      <div class="sx__dpanel" data-dpanel="sponsoredEvents" hidden>
+        <div class="sx__comm-head">
+          <h3>Events</h3>
+        </div>
+        <p class="sx__notice" id="speNotice" role="status" hidden></p>
+        <p class="sx__loading" id="speLoading" hidden>Loading…</p>
+        <p class="sx__muted" id="speUnavailable" hidden></p>
+        <div class="ctb__tiles" id="speTiles" hidden></div>
+        <table class="sx__table" id="speTable" hidden>
+          <thead><tr>
+            <th data-sort="startsAtUtc" scope="col">Date</th>
+            <th data-sort="title" scope="col">Event</th>
+            <th data-sort="status" scope="col">Status</th>
+            <th data-sort="registered" scope="col">Registered</th>
+            <th data-sort="attended" scope="col">Attended</th>
+            <th data-sort="clients" scope="col">Became clients</th>
+          </tr></thead>
+          <tbody id="speBody"></tbody>
+        </table>
+        <p class="sx__muted" id="noSpe" hidden>
+          No {{abbr}} event is linked to this record yet. Partners and funders are
+          added to an event in Event Administration.
+        </p>
+      </div>
+
       <!-- Contributions: the funder ledger (sponsor domain only —
            prds/funder-contributions-plan.md). Four Received-only tiles +
            recency callout + rolling-window rollup + grid. Soft delete = the

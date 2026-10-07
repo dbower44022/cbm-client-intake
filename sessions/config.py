@@ -305,6 +305,15 @@ class DomainConfig:
     #: with the programme, not whether one named person did. Gating it here
     #: keeps the routes off the partner/funder routers entirely.
     events_tab: bool = False
+    #: Phase B of prds/mailing-list-and-event-sponsorship-plan.md — the Events
+    #: tab on a PARTNER or FUNDER record: every event linked to it through this
+    #: reverse link (``sponsoredEvents`` on both profiles — the partner link is
+    #: the 2026-10-07 CRM build, the funder one dates from the first events
+    #: handoff), with registered / attended / became-a-client counts per event
+    #: and totals. Gates BOTH the tab and ``/records/{id}/sponsoredevents``; the
+    #: endpoint also feature-detects the link on the live CRM and answers
+    #: ``available: false`` with a reason until the build lands there.
+    sponsored_events_link: Optional[str] = None
 
     # --- Last contact date (Doug's request 2026-07-25). The record field that is
     # advanced to the contact date whenever an outbound email is sent from the
@@ -819,6 +828,8 @@ PARTNER = DomainConfig(
     # Client engagements that name this partner as their referring partner
     # (reverse of CEngagement.referringPartner) — the Referred Clients tab.
     referred_clients_link="engagements",
+    # Events this partner is associated with (reverse of CEvent.partnerProfiles).
+    sponsored_events_link="sponsoredEvents",
     # Reuse the existing date field — advanced on outbound email / recorded session.
     last_contact_attr="lastContacted",
     last_contact_type="date",
@@ -940,6 +951,8 @@ SPONSOR = DomainConfig(
     # ``grants_enabled`` is on AND the CRM has the entities.
     grants_link="grants",
     grants_parent_fk="sponsorProfileId",
+    # Events this funder sponsors (reverse of CEvent.sponsorProfiles).
+    sponsored_events_link="sponsoredEvents",
     # Reuse the existing date field — advanced on outbound email / recorded session.
     last_contact_attr="lastContacted",
     last_contact_type="date",

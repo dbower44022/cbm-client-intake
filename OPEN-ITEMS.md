@@ -474,6 +474,30 @@ block a deploy.)*
 
 ## Live verification owed
 
+39. **Phase B of the mailing-list and event-sponsorship plan — the partner /
+    funder pickers and the Events tab (v0.239.0, 2026-10-07).** Verified by
+    tests only. The live pass, on crm-test, needs TWO real non-admin accounts
+    because the two halves run under different roles:
+    - As a **Marketing Admin** (not an admin — admins bypass the read-all
+      grant this exercises): open any event in Event Administration → Edit.
+      The *Sponsorship* group shows a Partners and a Funders picker listing
+      the profiles. Tick a partner and a funder, Save. Expected: the Overview
+      facts show both names; the CRM's own Event record shows them under
+      Partners / Sponsors; the stream carries "Event Sponsors Updated". The
+      relate ran as the admin account only for the foreign half — check the
+      log for "retrying as the provisioning admin". Untick one, Save: it is
+      removed, the other stays.
+    - As a **Partner Management** user: open that partner in Partner
+      Management → Events. Expected: the event row with registered / attended
+      / became-clients counts and the totals tiles; "—" only where a read
+      failed. Same on Funder Management for the funder.
+    - On production (no partner link yet): the editor shows **Funders only**,
+      and Partner Management's Events tab shows the "does not link events to
+      partners yet" explanation rather than an error.
+    Also owed: the hand removal of `partnerHost` on crm-test
+    (`cevent-partner-sponsorship-crm-handoff.md` § 5) — the app does not
+    read it, so this pass does not depend on it.
+
 38. **An Internal event's join link cannot be set in Event Administration**
     (found 2026-09-30 while writing the F5 live pass). `virtualMeetingUrl`
     ("Join URL") is app-managed in `events/config.EVENT_FIELDS` — Zoom sync
@@ -1096,6 +1120,18 @@ toggle.
     Documents tab holds nothing new and the message still shows the attachment
     in View original.
 
+40. **The chapter colour file has never been applied to a live deployment**
+    (`chapter-colours.md`, 2026-10-07). `CHAPTER_TOKENS_URL` is empty on
+    Cleveland, Boston and Lakeside, so the injection in
+    `core/branding.render_page` is covered by `tests/test_shared_branding.py`
+    and nothing else. Owed: one run of `chapter-colours.md` sections 1–4 on
+    crm-test with a throwaway colour file, then Reset (section 6). While it is
+    on, look at `/webinars/` and at a second-rank button under the mouse:
+    the calendar and library panels keep the marketing site's fixed colours,
+    and the second-rank hover colour is hard-coded to Cleveland's dark navy
+    (`frontend/shared/tokens.css`, `.cbm-button--secondary:hover`). The hover
+    colour is a one-line fix plus a new design token; Doug chose the guide
+    over the fix on 2026-10-07, so the fix is still owed.
 
 ## Resolved
 
@@ -1120,18 +1156,6 @@ toggle.
   company). The `Held-Company` CRM option is item 11.
 
 - **crm-test writes attachments again, and the event Overview tab is verified
-40. **The chapter colour file has never been applied to a live deployment**
-    (`chapter-colours.md`, 2026-10-07). `CHAPTER_TOKENS_URL` is empty on
-    Cleveland, Boston and Lakeside, so the injection in
-    `core/branding.render_page` is covered by `tests/test_shared_branding.py`
-    and nothing else. Owed: one run of `chapter-colours.md` sections 1–4 on
-    crm-test with a throwaway colour file, then Reset (section 6). While it is
-    on, look at `/webinars/` and at a second-rank button under the mouse:
-    the calendar and library panels keep the marketing site's fixed colours,
-    and the second-rank hover colour is hard-coded to Cleveland's dark navy
-    (`frontend/shared/tokens.css`, `.cbm-button--secondary:hover`). The hover
-    colour is a one-line fix plus a new design token; Doug chose the guide
-    over the fix on 2026-10-07, so the fix is still owed.
   live** (was item 32 and the first sub-bullet of item 20; raised 2026-09-16,
   closed 2026-09-20). Two things had to hold together, and both do:
   - **The droplet.** Doug copied `scripts/sandbox/reset_crm_sandbox.py` over

@@ -395,8 +395,11 @@ def test_whitelist_covers_spec_plus_currency_companion():
 
 def test_contributions_tab_sponsor_only_after_sessions():
     sponsor_keys = [t["key"] for t in _detail_tabs(SPONSOR)]
+    # Events (Phase B of the mailing-list and event-sponsorship plan) sits just
+    # before Communications on the partner and funder records.
     assert sponsor_keys == [
-        "overview", "details", "sessions", "contributions", "communications", "documents",
+        "overview", "details", "sessions", "contributions", "sponsoredEvents",
+        "communications", "documents",
     ]
     assert "contributions" not in [t["key"] for t in _detail_tabs(MENTOR)]
 

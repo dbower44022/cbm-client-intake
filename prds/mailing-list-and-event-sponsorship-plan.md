@@ -1,6 +1,6 @@
 # Mailing List and Event Sponsorship — plan v0.1 (2026-10-07)
 
-Last Updated: 10-07-26 03:45 · Revision 0.3 — change log at the end.
+Last Updated: 10-07-26 04:10 · Revision 0.4 — change log at the end.
 
 **Status: rulings settled, nothing built.** This is the plan document for the
 arc, in the style of the other arcs in `prds/`: it records Doug's rulings, the
@@ -196,7 +196,9 @@ production at a Sunday 17:00 UTC slot, then Boston with the release that
 carries the code.
 
 **Phase B — Event Administration and the Events tab (code, ships with no
-flag; dark until the CRM has the link).** Partner and funder link pickers in
+flag; dark until the CRM has the link). BUILT 2026-10-07 as v0.239.0 —
+verified by tests only; live pass `OPEN-ITEMS.md` #39. Analytics panels
+not built (see § 9).** Partner and funder link pickers in
 the editor (relationships, so `list_related` / `relate` / `unrelate`, never a
 `*Ids` write). `DomainConfig` gains a `sponsored_events_link` that gates both
 the tab and its endpoint, the `contributions_link` precedent. Counts computed
@@ -298,6 +300,8 @@ What was established:
 Suggested on 2026-10-07 as ways to make the partner and event process more
 valuable, each built on something already in place:
 
+- **Analytics panels for a partner's or funder's events** on their record
+  dashboards, rolling the Events tab totals up — deferred from Phase B.
 - **A promotion link per partner.** The partner's link carries its identifier;
   the registration records it; the Events tab can say "your promotion brought
   this many". One field on the registration (the same mechanism as the
@@ -334,6 +338,7 @@ valuable, each built on something already in place:
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.4 | 10-07-26 04:10 | Claude (Claude Code) | Phase B built (v0.239.0): pickers, the sponsors endpoint, the Events tab, the rollup. Analytics panels deferred to § 9. |
 | 0.3 | 10-07-26 03:45 | Claude (Claude Code) | Phase A applied to crm-test (all but the hand removal); the role grant ruled read-all and applied there. |
 | 0.2 | 10-07-26 03:40 | Claude (Claude Code) | Phase A handoff written: far-side link name is `sponsoredEvents` (mirrors the funder link as read from crm-test), relation table named; Marketing Admin Role gap added to the prerequisites. |
 | 0.1 | 10-07-26 03:30 | Claude (Claude Code) | First version from the 2026-10-07 conversation: ten rulings, the model, five phases, CRM prerequisites, four open questions with recommendations, the deferred designer, later candidates. |

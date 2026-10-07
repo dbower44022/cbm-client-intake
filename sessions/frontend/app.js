@@ -300,6 +300,7 @@
     if (tab === "grants") renderGrants();
     if (tab === "referredClients") renderReferredClients();
     if (tab === "events") renderEvents();
+    if (tab === "sponsoredEvents") renderSponsoredEvents();
     if (tab === "communications") renderComms();
     if (tab === "documents") renderDocuments();
     if (tab === "analytics") renderAnalytics();
@@ -5804,6 +5805,97 @@
   if ($("evtSearch")) {
     $("evtSearch").addEventListener("input", function () { evt.search = this.value; paintEvt(); });
   }
+
+  // --- Events tab (partner + funder domains) ---------------------------------
+  // Phase B of prds/mailing-list-and-event-sponsorship-plan.md. The server
+  // computes every number (events/reporting.sponsor_rollup); a count the CRM
+  // could not supply arrives as null and renders "—", never 0. The endpoint
+  // answers available:false with a reason on a CRM that lacks the link.
+  var spe = { forId: null, rows: [], totals: null, sort: { key: "startsAtUtc", dir: -1 } };
+
+  function speNum(v) { return v == null ? "—" : String(v); }
+
+  function paintSpe() {
+    var rows = spe.rows.slice();
+    var key = spe.sort.key, dir = spe.sort.dir;
+    rows.sort(function (a, b) {
+      var av = a[key], bv = b[key];
+      if (av == null) av = key === "title" || key === "status" || key === "startsAtUtc" ? "" : -1;
+      if (bv == null) bv = key === "title" || key === "status" || key === "startsAtUtc" ? "" : -1;
+      if (av === bv) return 0;
+      return (av > bv ? 1 : -1) * dir;
+    });
+    var tiles = $("speTiles");
+    tiles.innerHTML = "";
+    var t = spe.totals || {};
+    [["Events", t.events], ["Registered", t.registered], ["Attended", t.attended],
+     ["Became clients", t.clients]].forEach(function (pair) {
+      var box = document.createElement("div"); box.className = "ctb__tile";
+      var v = document.createElement("div"); v.className = "ctb__tile-value"; v.textContent = speNum(pair[1]);
+      var l = document.createElement("div"); l.className = "ctb__tile-label"; l.textContent = pair[0];
+      box.appendChild(v); box.appendChild(l); tiles.appendChild(box);
+    });
+    var body = $("speBody");
+    body.innerHTML = "";
+    rows.forEach(function (r) {
+      var tr = document.createElement("tr");
+      function cell(text, cls) {
+        var td = document.createElement("td");
+        if (cls) td.className = cls;
+        td.textContent = text == null || text === "" ? "—" : text;
+        tr.appendChild(td);
+      }
+      cell(r.dateLabel);
+      cell(r.title);
+      cell(r.status);
+      cell(speNum(r.registered), "sx__num");
+      cell(speNum(r.attended), "sx__num");
+      cell(speNum(r.clients), "sx__num");
+      body.appendChild(tr);
+    });
+    if (rows.length) { show(tiles); show($("speTable")); hide($("noSpe")); }
+    else { hide(tiles); hide($("speTable")); show($("noSpe")); }
+  }
+
+  async function renderSponsoredEvents() {
+    if (!currentDetail) return;
+    if (!$("speBody")) return;
+    if (spe.forId === currentDetail.id) { paintSpe(); return; }
+    spe.forId = currentDetail.id;
+    spe.rows = []; spe.totals = null;
+    hide($("speNotice")); hide($("speTable")); hide($("noSpe")); hide($("speTiles"));
+    hide($("speUnavailable"));
+    show($("speLoading"));
+    try {
+      var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/sponsoredevents");
+      if (res.available === false) {
+        $("speUnavailable").textContent = res.reason || "Events are not available on this CRM yet.";
+        show($("speUnavailable"));
+        return;
+      }
+      spe.rows = res.events || [];
+      spe.totals = res.totals || null;
+      paintSpe();
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      spe.forId = null;   // so the next visit retries
+      notice("speNotice", e.message, "error");
+    } finally { hide($("speLoading")); }
+  }
+
+  Array.prototype.forEach.call(
+    document.querySelectorAll("#speTable th[data-sort]"),
+    function (th) {
+      th.classList.add("sx__th-sort");
+      onActivate(th, function () {
+        var key = th.getAttribute("data-sort");
+        if (spe.sort.key === key) spe.sort.dir = -spe.sort.dir;
+        else { spe.sort.key = key; spe.sort.dir = key === "title" || key === "status" ? 1 : -1; }
+        paintSpe();
+      });
+    }
+  );
+  if ($("speTable")) makeColumnsResizable($("speTable"));
 
   // --- Contributions tab (the funder ledger — sponsor domain only) ----------
   // prds/funder-contributions-plan.md. Panel + endpoints exist only when the

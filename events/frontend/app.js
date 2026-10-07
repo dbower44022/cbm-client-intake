@@ -19,6 +19,7 @@
   var state = {
     events: [],
     fields: [],
+    links: [],         // Phase B: the partner / funder pickers the live CRM supports
     options: {},
     optionLabels: {},   // { field: { storedValue: displayLabel } } from the CRM
     chapterKey: "",
@@ -408,6 +409,17 @@
     factRow(host, "Public page", event.url || "—");
     factRow(host, "Registration", event.registrationOpen ? "Open" : "Closed");
     factRow(host, "When (as shown)", fmtWhen(event));
+    // Phase B: who sponsors it. Every live link renders, "—" when empty, and
+    // an unreadable link is "—" too rather than a false "none".
+    if (state.links.length) {
+      factGroup(host, state.links[0].group || "Sponsorship");
+      var sponsors = state.current.sponsors || {};
+      state.links.forEach(function (link) {
+        var rows = sponsors[link.name];
+        factRow(host, link.label, rows && rows.length
+          ? rows.map(function (r) { return r.name; }).join(", ") : "—");
+      });
+    }
 
     // --- content: what the website shows, read the way the website reads it ---
     var graphicId = raw.eventGraphicId || "";
@@ -823,8 +835,126 @@
       });
       host.appendChild(section);
     });
+    sponsorshipGroup(host, raw);
     applyShowWhen(host);
     host.addEventListener("change", function () { applyShowWhen(host); });
+  }
+
+  /* Phase B — who sponsors this event. One checkbox list per link the live CRM
+     has (Partners, Funders), with a filter box because a chapter can hold a
+     few dozen partners. These are RELATIONSHIPS: collectForm skips them and
+     saveSponsors() sends the exact set to its own endpoint. A role that may
+     not list the far entity (options === null) gets the current names and an
+     explanation rather than an empty list that reads as "no partners". */
+  function sponsorshipGroup(host, raw) {
+    if (!state.links.length) return;
+    var current = (state.current && raw.id && state.current.sponsors) || {};
+    var section = document.createElement("fieldset");
+    section.className = "ev__group";
+    var legend = document.createElement("legend");
+    legend.textContent = state.links[0].group || "Sponsorship";
+    section.appendChild(legend);
+    state.links.forEach(function (link) {
+      var chosen = (current[link.name] || []).map(function (r) { return r.id; });
+      var wrap = document.createElement("div");
+      wrap.className = "ev__field ev__field--link ev__field--wide";
+      var caption = document.createElement("span");
+      caption.textContent = link.label;
+      wrap.appendChild(caption);
+      var box = document.createElement("div");
+      box.className = "ev__linkpick";
+      box.setAttribute("name", link.name);
+      box.dataset.type = "link";
+      if (link.options === null) {
+        // Read-only: the user's CRM role cannot list the far entity.
+        box.dataset.readonly = "1";
+        var names = (current[link.name] || []).map(function (r) { return r.name; });
+        var note = document.createElement("small");
+        note.textContent = (names.length ? names.join(", ") + ". " : "")
+          + "Your CRM role cannot list " + link.label.toLowerCase()
+          + ", so this cannot be changed here.";
+        box.appendChild(note);
+      } else {
+        var filter = document.createElement("input");
+        filter.type = "search";
+        filter.placeholder = "Filter " + link.label.toLowerCase() + "…";
+        filter.className = "ev__linkpick-filter";
+        filter.setAttribute("aria-label", "Filter " + link.label.toLowerCase());
+        box.appendChild(filter);
+        var list = document.createElement("div");
+        list.className = "ev__multi ev__linkpick-list";
+        var known = link.options.slice();
+        // A linked record the list no longer offers stays visible (and selected),
+        // the same rule as a multi-choice value that has drifted out of its enum.
+        (current[link.name] || []).forEach(function (r) {
+          if (!known.some(function (o) { return o.id === r.id; })) known.push(r);
+        });
+        known.forEach(function (option) {
+          var item = document.createElement("label");
+          item.className = "ev__multi-item";
+          var check = document.createElement("input");
+          check.type = "checkbox";
+          check.value = option.id;
+          check.checked = chosen.indexOf(option.id) !== -1;
+          var text = document.createElement("span");
+          text.textContent = option.name;
+          item.appendChild(check); item.appendChild(text);
+          list.appendChild(item);
+        });
+        if (!known.length) {
+          var none = document.createElement("small");
+          none.textContent = "The CRM has no " + link.label.toLowerCase() + " yet.";
+          list.appendChild(none);
+        }
+        filter.addEventListener("input", function () {
+          var needle = filter.value.trim().toLowerCase();
+          Array.prototype.forEach.call(list.querySelectorAll(".ev__multi-item"), function (item) {
+            var hit = !needle || item.textContent.toLowerCase().indexOf(needle) !== -1;
+            // A ticked item never hides, or the filter would silently drop it from view.
+            item.hidden = !(hit || item.querySelector("input").checked);
+          });
+        });
+        box.appendChild(list);
+      }
+      wrap.appendChild(box);
+      section.appendChild(wrap);
+    });
+    host.appendChild(section);
+  }
+
+  /* The exact set per EDITABLE link, or null when the form has no pickers. */
+  function collectLinks() {
+    var picks = $("modalBody").querySelectorAll('[data-type="link"]');
+    if (!picks.length) return null;
+    var out = {};
+    Array.prototype.forEach.call(picks, function (box) {
+      if (box.dataset.readonly) return;
+      out[box.getAttribute("name")] = Array.prototype.filter.call(
+        box.querySelectorAll('input[type="checkbox"]'), function (b) { return b.checked; }
+      ).map(function (b) { return b.value; });
+    });
+    return out;
+  }
+
+  function sameIds(a, b) {
+    var x = (a || []).slice().sort(), y = (b || []).slice().sort();
+    return x.length === y.length && x.every(function (v, i) { return v === y[i]; });
+  }
+
+  /* Send the pickers' sets when they differ from what the record held. Its own
+     request: a relationship cannot ride the record PUT. Errors surface as the
+     notice — the event itself has already saved. */
+  async function saveSponsors(eventId, picked, before) {
+    if (!picked) return null;
+    var changed = {};
+    Object.keys(picked).forEach(function (name) {
+      var had = ((before || {})[name] || []).map(function (r) { return r.id; });
+      if (!sameIds(had, picked[name])) changed[name] = picked[name];
+    });
+    if (!Object.keys(changed).length) return null;
+    return api("/events/" + encodeURIComponent(eventId) + "/sponsors", {
+      method: "PUT", body: JSON.stringify({ links: changed }),
+    });
   }
 
   /* Conditional fields (F2/F3): Reach only for a Public event, Chapters only
@@ -852,6 +982,7 @@
     Array.prototype.forEach.call($("modalBody").querySelectorAll("[name]"), function (input) {
       var type = input.dataset.type;
       var value;
+      if (type === "link") return;   // relationships go through saveSponsors()
       if (type === "bool") value = input.checked;
       else if (type === "multiEnum") {
         value = Array.prototype.filter.call(
@@ -966,11 +1097,16 @@
         $("modalMsg").textContent = "An event needs a title.";
         return false;
       }
+      var picked = collectLinks();
       var result = await api("/events", {
         method: "POST", body: JSON.stringify({ changes: changes }),
       });
+      var sponsorError = null;
+      try { await saveSponsors(result.raw.id, picked, {}); }
+      catch (e) { sponsorError = e; }
       closeModal();
       noticeWithWarnings("Event created.", result.warnings);
+      if (sponsorError) notice("The event was created, but its partners and funders were not saved: " + sponsorError.message, "error");
       await loadEvents();
       await openEvent(result.raw.id);
     }, "Create event", { wide: true });
@@ -984,10 +1120,15 @@
         $("modalMsg").textContent = "An event needs a title.";
         return false;
       }
+      var picked = collectLinks();
       var result = await api("/events/" + raw.id, {
         method: "PUT", body: JSON.stringify({ changes: changes }),
       });
+      var sponsorError = null;
+      try { await saveSponsors(raw.id, picked, state.current.sponsors); }
+      catch (e) { sponsorError = e; }
       closeModal();
+      if (sponsorError) notice("Saved, but the partners and funders were not: " + sponsorError.message, "error");
       var zoom = result.zoom || {};
       noticeWithWarnings(zoom.ok && zoom.action && zoom.action !== "skipped"
         ? "Saved. Zoom webinar " + zoom.action + "."
@@ -1116,6 +1257,7 @@
       $("userCorner").hidden = false;
       var fieldData = await api("/fields");
       state.fields = fieldData.fields || [];
+      state.links = fieldData.links || [];
       state.options = fieldData.options || {};
       state.optionLabels = fieldData.optionLabels || {};
       state.chapterKey = fieldData.chapterKey || "";

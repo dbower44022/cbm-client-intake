@@ -27,6 +27,7 @@ from pydantic import BaseModel
 from assignments.auth import current_user, is_member
 from assignments.espo_user import client_for
 from core.action_log import CAT_COMMUNICATION, CAT_RECORD_EDIT, CAT_STATUS, record_action
+from core.admin_client import admin_client_factory
 from core.config import get_settings
 from core.espo import EspoError, forbidden_hint, is_forbidden, validation_failure
 
@@ -105,6 +106,11 @@ class RecordingIn(BaseModel):
     url: str = ""
 
 
+class SponsorsIn(BaseModel):
+    """``{link name: [record ids]}`` — the exact set each picker should hold."""
+    links: dict[str, list[str]] = {}
+
+
 class GraphicIn(BaseModel):
     filename: str = ""
     contentType: str = ""
@@ -152,9 +158,21 @@ async def fields(request: Request) -> dict[str, Any]:
         available = await service.live_event_fields(client)
         options = await service.field_options(client)
         labels = await service.option_labels(client)
+        # Phase B: the partner / funder pickers. Feature-detected per load, so
+        # a CRM without the partner link shows no Partners picker; a role that
+        # may not list the far entity gets ``options: null`` and a read-only
+        # control that says so, never an empty list.
+        links = []
+        for link in await service.live_sponsor_links(client):
+            links.append({
+                "name": link.name, "label": link.label, "entity": link.entity,
+                "group": cfg.SPONSOR_GROUP,
+                "options": await service.sponsor_options(client, link),
+            })
     except EspoError as exc:
         raise _crm_failure(exc, "read the event field options") from exc
     return {
+        "links": links,
         "fields": [
             {
                 "name": f.name, "label": f.label, "type": f.type,
@@ -209,10 +227,14 @@ async def get_event(event_id: str, request: Request) -> dict[str, Any]:
             raise HTTPException(status_code=404, detail="Event not found.")
         registrations = await service.list_registrations(client, event_id)
         counts = service.summarise(registrations, raw.get("venueCapacity"))
+        sponsors = await service.event_sponsors(
+            client, event_id, await service.live_sponsor_links(client)
+        )
     except EspoError as exc:
         raise _crm_failure(exc, "read the event") from exc
     settings = get_settings()
     return {
+        "sponsors": sponsors,
         "event": {
             **service.public_event_detail(
                 raw, base_url=settings.events_public_base_url
@@ -281,6 +303,44 @@ async def update_event(
     )
     return {"event": service.public_event_detail(event), "raw": event, "zoom": zoom,
             "warnings": visibility.save_warnings(event)}
+
+
+@api_router.put("/events/{event_id}/sponsors")
+async def set_sponsors(
+    event_id: str, payload: SponsorsIn, request: Request
+) -> dict[str, Any]:
+    """Phase B — the exact set of partners and funders on an event.
+
+    Its own endpoint, not a field on the generic PUT, for the same reason the
+    graphic has one: these are relationships, and a ``*Ids`` value riding the
+    record update is silently ignored by EspoCRM. Written as the user, with a
+    foreign-record denial retried as the provisioning admin (the Marketing
+    Admin Role reads partner and funder profiles, it does not edit them).
+    """
+    user, client = await _actor(request)
+    settings = get_settings()
+    try:
+        links = await service.live_sponsor_links(client)
+        changes = await service.set_event_sponsors(
+            client, event_id, payload.links, links=links,
+            admin_factory=admin_client_factory(settings),
+        )
+        sponsors = await service.event_sponsors(client, event_id, links)
+    except EspoError as exc:
+        raise _crm_failure(exc, "save the event's partners and funders") from exc
+    touched = {k: v for k, v in changes.items() if v["added"] or v["removed"]}
+    if touched:
+        await record_action(
+            client, app=APP_EVENTS, category=CAT_RECORD_EDIT,
+            action="Event Sponsors Updated",
+            parent_type=cfg.EVENT, parent_id=event_id,
+            summary="Updated " + ", ".join(
+                f"{name} (+{v['added']}/-{v['removed']})" for name, v in touched.items()
+            ),
+            actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+            details={"links": touched},
+        )
+    return {"sponsors": sponsors, "changes": changes}
 
 
 @api_router.post("/events/{event_id}/zoom")
