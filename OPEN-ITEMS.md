@@ -435,8 +435,11 @@ block a deploy.)*
 16. **Partner / Funder domains on prod** — the `Partner Management Team` and
     `Sponsor Management Team` roles need the profile entity readable at **team**
     scope, existing records backfilled with the team, and the intake API role
-    granted **Team read** (until then the intake team-stamp is skipped with a
-    WARNING). Same list for the session-tool CRM prereqs generally: `CSession`
+    granted **Team read** AND **Assignment Permission = all** (until then the
+    intake team-stamp is skipped with a WARNING — and with Team read but no
+    assignment permission it is *refused*, 403 "Assignment failure", failing
+    the whole partner/sponsor create: exactly what crm-test did on 2026-10-07
+    after the roles standard gave it Team read. Grant both together). Same list for the session-tool CRM prereqs generally: `CSession`
     create + read-own/edit-own, `assignedUsers` enabled on `CSession`, and the
     `CSession` name formula must be **keep-if-present**.
 19. **Meet transcripts — three Google-side changes, none done** (re-probed
@@ -461,19 +464,6 @@ block a deploy.)*
     than silent loss ([[prod-ccommunication-field-length-drift]]).
 
 ## Live verification owed
-
-39. **The company-website hold (v0.238.0) — verified by tests only.** On
-    crm-test, as a real non-admin Marketing Admin Team user: (a) submit the
-    partner form naming a company that exists there with a different website
-    → the row reads **Held-Company** in Submission Admin, no Account /
-    Contact / CPartnerProfile created, the receipt carries the explanation;
-    (b) *Company ▾ → Same company* → delivered, the existing company reused,
-    its website unchanged; (c) a second such submission, *Different company*
-    with a qualified name → a new Account under that name; (d) the same with
-    the client-intake form, checking no CClientProfile was touched while held.
-    The migrate job must have run (`delivery_overrides` column) — a hold
-    before it would fail the claim with a column error. Remember crm-test
-    resets nightly.
 
 38. **An Internal event's join link cannot be set in Event Administration**
     (found 2026-09-30 while writing the F5 live pass). `virtualMeetingUrl`
@@ -1099,6 +1089,26 @@ toggle.
 
 
 ## Resolved
+
+- **The company-website hold (v0.238.0) passed live on crm-test** (was item
+  39; raised and closed 2026-10-07). Doug ran the partner-form script
+  (`Company Hold Test Script`, the standing page): the hold, the *Same
+  company* decision (company reused, website unchanged, type gained
+  Partner), and the *Different company* decision (a new Account and partner
+  record under the qualified name) all behaved as specified. Two things the
+  pass found that are NOT the feature: (1) **the crm-test intake API role
+  refused the Partner Management Team stamp** — `CustomAppAPIRole` had
+  Assignment Permission not-set and the user no teams, so *every* partner and
+  sponsor submission on crm-test failed at the profile create once the roles
+  standard gave the role Team read (production skips the stamp because its
+  API user cannot read Teams — item 16); fixed on crm-test during the pass,
+  and production's #16 now owes Assignment Permission = all alongside Team
+  read. (2) crm-test's Intake Submission layouts predate the receipt
+  redesign (`cintake-submission-redesign.md` §2): the page shows the dead
+  `status` field, not `intakeStatus`/`intakeMessage`; Doug is not concerned,
+  so it stays as a note. Still unrun: the client-intake variant (the hold
+  code path is shared; what differs is only which form field names the
+  company). The `Held-Company` CRM option is item 11.
 
 - **crm-test writes attachments again, and the event Overview tab is verified
   live** (was item 32 and the first sub-bullet of item 20; raised 2026-09-16,

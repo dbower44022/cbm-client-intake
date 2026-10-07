@@ -1576,14 +1576,15 @@ Cleveland by design. What is *verified* is narrower than what is deployed — se
 each block.
 
 - **v0.238.0 (2026-10-07) — the public forms HOLD a submission whose company
-  exists at a different web address.** Committed, not pushed. Standing rules
+  exists at a different web address.** Pushed and live on all three apps
+  the same day (migration 0029 ran); **verified live on crm-test by Doug**
+  — both decisions, partner form (`OPEN-ITEMS.md` Resolved). Standing rules
   in the five-forms and Submission Admin sections; plan
-  `prds/company-website-hold-plan.md`. Ships with **migration 0029**
-  (`delivery_overrides`), so the PRE_DEPLOY migrate job runs on the push. No
-  flag; rollback is a revert (the column is harmless left behind). **Verified
-  by tests only** — the live pass is `OPEN-ITEMS.md` #39; the CRM option
-  `Held-Company` is owed on both CRMs (#11), and until built the receipt
-  reads `Received` with the explanation.
+  `prds/company-website-hold-plan.md`. No flag; rollback is a revert. Owed:
+  the `Held-Company` CRM option (#11), and production's intake API role needs
+  Team read **plus Assignment Permission = all** before its partner/sponsor
+  records carry a team (#16 — crm-test proved that Team read alone turns a
+  skipped stamp into a refused create).
 
 - **v0.237.0 (2026-10-07) — quick-add refuses a same-named company at a
   different web address.** Pushed 2026-10-07 with v0.236.0; standing rule in the
