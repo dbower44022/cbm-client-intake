@@ -34,7 +34,7 @@ from __future__ import annotations
 import logging
 
 from core.config import get_settings
-from core.crm_upsert import find_create_or_fill
+from core.crm_upsert import COMPANY_SELECT, find_create_or_fill, merge_company_type
 from core.enum_filter import EnumSanitizer
 from core.espo import EspoApi, EspoError
 from core.phone import e164_or_none
@@ -85,9 +85,11 @@ async def _find_or_create_account(sub: PartnerApplication, client: EspoApi) -> s
     Reusing a same-named Account dedupes repeat submitters and avoids EspoCRM's
     duplicate-detection 409 (same rule as the client-intake form).
     """
-    existing = await client.find_one(ACCOUNT, "name", sub.company)
+    existing = await client.find_one(ACCOUNT, "name", sub.company, select=COMPANY_SELECT)
     if existing:
         log.info("matched existing Account %s for %r", existing["id"], sub.company)
+        # A company CBM knows in another role gains this one (merge-only).
+        await merge_company_type(client, existing, COMPANY_TYPE_PARTNER)
         return existing["id"]
 
     payload: dict = {

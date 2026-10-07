@@ -87,6 +87,45 @@ async def create_dropping_invalid(
     return await client.create(entity, attempt)
 
 
+# The Company (Account) type discriminator — a multiEnum every management grid
+# and report filters on. One company may hold several values.
+COMPANY_TYPE_FIELD = "cCompanyType"
+COMPANY_SELECT = "id,cCompanyType"   # what a company find must select for the merge
+
+
+async def merge_company_type(client: EspoApi, existing: dict[str, Any], company_type: str) -> bool:
+    """Give a REUSED company this door's role, merge-only and best-effort.
+
+    A company the CRM already knows in one role (a funder, say) that comes back
+    through another door (the partner form, the partner quick-add) must gain the
+    new ``cCompanyType`` value, or every screen keyed on that type misses it.
+    The rule, shared by the public forms and the staff quick-add:
+
+    * a value already present is left alone — nothing is ever removed;
+    * a missing value is appended with one update;
+    * a refused update is logged and swallowed — the type is a classification,
+      never a reason to lose the submission.
+
+    ``existing`` is the matched company as ``find_one`` returned it; select
+    :data:`COMPANY_SELECT` on that read or the stored list reads as empty and
+    the merge would overwrite it. Returns True when a write was made.
+    """
+    types = list(existing.get(COMPANY_TYPE_FIELD) or [])
+    if company_type in types:
+        return False
+    try:
+        await client.update(
+            "Account", existing["id"], {COMPANY_TYPE_FIELD: types + [company_type]}
+        )
+    except EspoError as exc:
+        log.warning(
+            "could not add %s to Account/%s %s: %s",
+            company_type, existing.get("id"), COMPANY_TYPE_FIELD, exc,
+        )
+        return False
+    return True
+
+
 async def find_create_or_fill(
     client: EspoApi,
     entity: str,

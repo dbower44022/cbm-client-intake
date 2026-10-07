@@ -168,3 +168,51 @@ async def test_a_required_failure_is_not_retried():
     with pytest.raises(EspoError):
         await create_dropping_invalid(c, "Contact", dict(PAYLOAD))
     assert len(c.creates) == 1  # no pointless retry
+
+
+# --- merge_company_type: a reused company gains the new door's role ---------
+
+from core.crm_upsert import COMPANY_SELECT, merge_company_type  # noqa: E402
+
+
+@pytest.mark.asyncio
+async def test_merge_company_type_appends_a_missing_role():
+    """A funder's company coming through the partner door gains Partner and
+    keeps Sponsor — the merge never removes a value."""
+    client = FakeClient()
+    existing = {"id": "A-1", "cCompanyType": ["Sponsor"]}
+    assert await merge_company_type(client, existing, "Partner") is True
+    assert client.updates == [("Account", "A-1", {"cCompanyType": ["Sponsor", "Partner"]})]
+
+
+@pytest.mark.asyncio
+async def test_merge_company_type_is_a_noop_when_present():
+    client = FakeClient()
+    existing = {"id": "A-1", "cCompanyType": ["Client", "Partner"]}
+    assert await merge_company_type(client, existing, "Partner") is False
+    assert client.updates == []
+
+
+@pytest.mark.asyncio
+async def test_merge_company_type_treats_an_untyped_company_as_empty():
+    """A company with no type at all (hand-entered in the CRM) gets this one."""
+    client = FakeClient()
+    assert await merge_company_type(client, {"id": "A-1"}, "Client") is True
+    assert client.updates == [("Account", "A-1", {"cCompanyType": ["Client"]})]
+
+
+@pytest.mark.asyncio
+async def test_merge_company_type_swallows_a_refused_update():
+    """The type is a classification, never a reason to lose the submission:
+    a 403 on the merge is logged and the caller carries on."""
+    class Refusing(FakeClient):
+        async def update(self, entity, record_id, payload):
+            raise EspoError("HTTP 403: Access denied to Account")
+
+    assert await merge_company_type(Refusing(), {"id": "A-1"}, "Partner") is False
+
+
+def test_company_select_names_the_type_field():
+    """The merge reads the stored list off the find; a find that forgets to
+    select it would overwrite the list instead of appending."""
+    assert "cCompanyType" in COMPANY_SELECT.split(",")

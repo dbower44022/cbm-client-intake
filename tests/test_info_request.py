@@ -17,11 +17,13 @@ from forms.info_request.schemas import InfoRequest
 
 
 class CapturingClient:
-    def __init__(self, existing_contact=None, existing_description=None, fail_entities=()):
+    def __init__(self, existing_contact=None, existing_description=None, fail_entities=(),
+                 existing_account=None):
         self.creates: list[tuple[str, dict]] = []
         self.updates: list[tuple[str, str, dict]] = []
         self._existing_contact = existing_contact
         self._existing_description = existing_description
+        self._existing_account = existing_account
         self._fail = set(fail_entities)
         self._n = 0
 
@@ -42,6 +44,8 @@ class CapturingClient:
                 "id": self._existing_contact,
                 "description": self._existing_description,
             }
+        if entity == ACCOUNT and self._existing_account:
+            return {"id": self._existing_account, "cCompanyType": ["Sponsor"]}
         return None
 
 
@@ -123,6 +127,19 @@ async def test_existing_contact_with_empty_description():
 
     [(_, _, payload)] = client.updates
     assert payload["description"].startswith("[Information request via website")
+
+
+@pytest.mark.asyncio
+async def test_existing_company_gains_the_client_type():
+    """A funder's company asking for information is reused, not duplicated,
+    and gains Client on cCompanyType while keeping Sponsor (v0.236.0)."""
+    client = CapturingClient(existing_account="account-9")
+    ids = await submit_request(_request(company="Generous Corp"), client)
+    assert [e for e, _ in client.creates] == [CONTACT, INFO_REQUEST]
+    assert [u for u in client.updates if u[0] == ACCOUNT] == [
+        (ACCOUNT, "account-9", {"cCompanyType": ["Sponsor", "Client"]})
+    ]
+    assert ids["accountId"] == "account-9"
 
 
 @pytest.mark.asyncio

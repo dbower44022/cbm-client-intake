@@ -222,6 +222,12 @@ async def test_matched_account_is_reused_not_created():
     assert contact_payload["accountId"] == "acct-existing"
     _, profile_payload = client.creates[1]
     assert profile_payload["linkedCompanyId"] == "acct-existing"
+    # The matched company reports no type (the fake selects only an id), so the
+    # merge-only rule gives it Client — a company CBM knows as a partner or
+    # funder becoming a client must gain the type (v0.236.0).
+    assert [u for u in client.updates if u[0] == ACCOUNT] == [
+        (ACCOUNT, "acct-existing", {"cCompanyType": ["Client"]})
+    ]
 
 
 async def test_pre_startup_creates_placeholder_account_without_profile():

@@ -4,6 +4,38 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.236.0] — 2026-10-07
+
+**feat(intake): a company the CRM already knows gains the new door's role.**
+Doug's question on 2026-10-06: a funder wants to become a partner — what is
+the proper way to set them up? The answer exposed a split. The staff quick-add
+in Partner / Funder Management merged the new `cCompanyType` value into a
+reused company; the four public forms (client intake, information request,
+partner, sponsor) found the same company by name, reused it and left its type
+list untouched. A funder's company that applied as a partner stayed typed
+`Sponsor` only, so every grid, filter and report keyed on the Partner type
+missed it. Doug ruled option 2 on 2026-10-07: enforce the one rule on every
+door.
+
+- `core/crm_upsert.merge_company_type` — the shared rule. Merge-only (a value
+  already present is never removed), one update when a value is missing,
+  best-effort (a refused update is logged and the submission carries on — the
+  type is a classification, never a reason to lose a lead). `COMPANY_SELECT`
+  is what a company find must select for the merge to append rather than
+  overwrite.
+- All four public-form orchestrators call it on a matched company;
+  `sessions.service._find_or_create_company` (quick-add) now calls the same
+  helper instead of its own copy, so the five doors cannot drift again.
+- **Deliberately unchanged:** an existing Contact's `cContactType` and company
+  link. Both stay null-fill-only — rewriting a person's type on a repeat
+  submission is the curated-data overwrite the null-fill rule exists to
+  prevent. A separate ruling if contacts should accrue roles the same way.
+- No feature flag: the rule was already the application's rule on one door.
+  Rollback is a revert.
+- Tests: five for the helper, one existing-company case per form (the
+  sponsor and client-intake matched-account tests gained the assertion),
+  quick-add's existing test unchanged and green.
+
 ## [0.235.1] — 2026-10-01
 
 **fix(events): Event Administration 500'd on production — a metadata key the

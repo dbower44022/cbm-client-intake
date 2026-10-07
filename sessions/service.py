@@ -30,7 +30,9 @@ from assignments.service import (
 )
 from core import inline_images
 from core.config import get_settings
-from core.crm_upsert import create_dropping_invalid, find_create_or_fill
+from core.crm_upsert import (
+    COMPANY_SELECT, create_dropping_invalid, find_create_or_fill, merge_company_type,
+)
 from core.espo import EspoError, is_forbidden
 from core.phone import e164_or_none, format_us
 from core.stream import post_stream_note
@@ -3192,23 +3194,16 @@ async def _find_or_create_company(
     company).
 
     On a REUSED Account the domain's company type is merged into
-    ``cCompanyType`` when missing — a company CBM already knows as a Client
-    becoming a Partner must gain the type, since that multiEnum is the
-    discriminator the whole CRM filters on. Merge-only and best-effort: an
-    existing type is never removed and a failed merge never fails the create.
+    ``cCompanyType`` when missing — ``core.crm_upsert.merge_company_type``,
+    the same rule the four public forms apply, so a company gains a role
+    whichever door it comes through. Merge-only and best-effort: an existing
+    type is never removed and a failed merge never fails the create.
     """
     spec = cfg.create_spec
-    existing = await client.find_one(ACCOUNT, "name", name, select="name,cCompanyType")
+    existing = await client.find_one(ACCOUNT, "name", name, select=COMPANY_SELECT)
     if existing:
-        types = list(existing.get("cCompanyType") or [])
-        if spec and spec.company_type not in types:
-            try:
-                await client.update(
-                    ACCOUNT, existing["id"], {"cCompanyType": types + [spec.company_type]}
-                )
-            except EspoError as exc:
-                log.warning("could not add %s to Account/%s cCompanyType: %s",
-                            spec.company_type, existing["id"], exc)
+        if spec:
+            await merge_company_type(client, existing, spec.company_type)
         return existing["id"], False
     payload: dict[str, Any] = {"name": name}
     if spec:

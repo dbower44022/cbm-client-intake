@@ -48,6 +48,14 @@ Cross-form behaviour worth knowing before changing an orchestrator:
   `"Sponsor"`, NOT `"Donor/Sponsor"`, and **EspoCRM rejects an invalid multiEnum
   outright** (the create 400s, nothing written). See
   [[prod-account-caccounttype-missing]].
+- **A company the CRM already knows GAINS the new door's role** (v0.236.0,
+  Doug's ruling 2026-10-07): every door that find-or-creates a Company — the
+  four public forms and the Partner/Funder quick-add — calls
+  `core/crm_upsert.merge_company_type` on a match, appending this door's
+  `cCompanyType` value and never removing one. Best-effort: a refused merge
+  is logged, never fatal. A funder's company applying as a partner used to
+  stay typed `Sponsor` only. **The Contact's `cContactType` is deliberately
+  NOT merged** — null-fill only, a person's type is curated data.
 - **Repeat submitters null-fill, never overwrite** —
   `core/crm_upsert.find_create_or_fill` reuses an existing Contact and backfills
   only empty fields. `CClientProfile` is find-or-create too (matched on
@@ -1538,6 +1546,14 @@ with `main`; **Lakeside took it off the release lane by itself** (its
 unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
+
+- **v0.236.0 (2026-10-07) — a company the CRM already knows gains the new
+  door's role.** Committed, not pushed. The four public forms now apply the
+  merge-only `cCompanyType` rule the staff quick-add already had (standing
+  rule in the five-forms section above). No flag; rollback is a revert.
+  **Verified by tests only** — the live case is a funder's company submitting
+  the partner form on crm-test and reading `cCompanyType` as `Sponsor, Partner`
+  afterwards.
 
 - **v0.235.1 (2026-10-01) — Event Administration 500'd on production.** A
   metadata key the CRM lacks answers 200 with an EMPTY body; `resp.json()` on

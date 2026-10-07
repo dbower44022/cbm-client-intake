@@ -18,12 +18,14 @@ from forms.partner.schemas import PartnerApplication
 class CapturingClient:
     """Fake EspoApi that records calls and returns sequential ids."""
 
-    def __init__(self, existing_contact=None, existing_account=None, enum_options=None, team_id=None):
+    def __init__(self, existing_contact=None, existing_account=None, enum_options=None, team_id=None,
+                 existing_account_types=None):
         self.creates: list[tuple[str, dict]] = []
         self.updates: list[tuple[str, str, dict]] = []
         self.relates: list[tuple[str, str, str, str]] = []
         self._existing_contact = existing_contact
         self._existing_account = existing_account
+        self._existing_account_types = existing_account_types
         self._team_id = team_id  # id returned for a Team name lookup; None => not readable
         # {(entity, field): [valid options]}; absent => None ("keep all").
         self._enum_options = enum_options or {}
@@ -43,7 +45,10 @@ class CapturingClient:
 
     async def find_one(self, entity, attribute, value, select="id"):
         if entity == ACCOUNT and self._existing_account:
-            return {"id": self._existing_account}
+            found = {"id": self._existing_account}
+            if self._existing_account_types is not None:
+                found["cCompanyType"] = self._existing_account_types
+            return found
         if entity == CONTACT and self._existing_contact:
             return {"id": self._existing_contact}
         if entity == "Team" and self._team_id:
@@ -168,6 +173,43 @@ async def test_existing_account_and_contact_reused():
     _, profile = client.creates[0]
     assert profile["partnerCompanyId"] == "account-7"
     assert profile["primaryPartnercontactId"] == "contact-99"
+
+
+@pytest.mark.asyncio
+async def test_existing_funder_company_gains_the_partner_type():
+    """A funder's company that applies as a partner must gain Partner on
+    cCompanyType and keep Sponsor — the merge-only rule the staff quick-add
+    already applied; before v0.236.0 this form left the company typed
+    Sponsor only (Doug's ruling 2026-10-07)."""
+    client = CapturingClient(existing_account="account-7",
+                             existing_account_types=["Sponsor"])
+    await submit_partner(_application(), client)
+    account_updates = [u for u in client.updates if u[0] == ACCOUNT]
+    assert account_updates == [(ACCOUNT, "account-7", {"cCompanyType": ["Sponsor", "Partner"]})]
+
+
+@pytest.mark.asyncio
+async def test_existing_partner_company_is_not_rewritten():
+    client = CapturingClient(existing_account="account-7",
+                             existing_account_types=["Partner"])
+    await submit_partner(_application(), client)
+    assert [u for u in client.updates if u[0] == ACCOUNT] == []
+
+
+@pytest.mark.asyncio
+async def test_refused_type_merge_never_blocks_the_partner():
+    from core.espo import EspoError
+
+    class Refusing(CapturingClient):
+        async def update(self, entity, record_id, payload):
+            if entity == ACCOUNT:
+                raise EspoError("HTTP 403: Access denied to Account")
+            return await super().update(entity, record_id, payload)
+
+    client = Refusing(existing_account="account-7", existing_account_types=["Sponsor"])
+    ids = await submit_partner(_application(), client)
+    assert ids["accountId"] == "account-7"
+    assert [e for e, _ in client.creates] == [CONTACT, PARTNER_PROFILE]
 
 
 @pytest.mark.asyncio

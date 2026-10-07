@@ -43,7 +43,7 @@ class CapturingClient:
 
     async def find_one(self, entity, attribute, value, select="id"):
         if entity == ACCOUNT and self._existing_account:
-            return {"id": self._existing_account}
+            return {"id": self._existing_account, "cCompanyType": ["Partner"]}
         if entity == CONTACT and self._existing_contact:
             return {"id": self._existing_contact}
         if entity == "Team" and self._team_id:
@@ -124,6 +124,10 @@ async def test_existing_account_and_contact_reused():
     _, profile = client.creates[0]
     assert profile["sponsorCompanyId"] == "account-3"
     assert profile["sponsorContactId"] == "contact-50"
+    # The fake's matched company is typed Partner: it gains Sponsor, keeps Partner.
+    assert [u for u in client.updates if u[0] == ACCOUNT] == [
+        (ACCOUNT, "account-3", {"cCompanyType": ["Partner", "Sponsor"]})
+    ]
 
 
 @pytest.mark.asyncio

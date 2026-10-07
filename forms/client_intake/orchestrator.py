@@ -47,7 +47,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from core.crm_upsert import find_create_or_fill
+from core.crm_upsert import COMPANY_SELECT, find_create_or_fill, merge_company_type
 from core.enum_filter import EnumSanitizer
 from core.espo import EspoApi
 from core.phone import e164_or_none
@@ -116,9 +116,11 @@ async def _find_or_create_account(
     else:
         name = sub.business_name or f"{sub.first_name} {sub.last_name}"
 
-    existing = await client.find_one(ACCOUNT, "name", name)
+    existing = await client.find_one(ACCOUNT, "name", name, select=COMPANY_SELECT)
     if existing:
         log.info("matched existing Account %s for %r", existing["id"], name)
+        # A company CBM knows in another role gains this one (merge-only).
+        await merge_company_type(client, existing, CLIENT)
         return existing["id"]
 
     payload: dict = {

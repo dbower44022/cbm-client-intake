@@ -33,7 +33,7 @@ import json
 import logging
 from datetime import datetime, timezone
 
-from core.crm_upsert import create_dropping_invalid
+from core.crm_upsert import COMPANY_SELECT, create_dropping_invalid, merge_company_type
 from core.espo import EspoApi
 from core.phone import e164_or_none
 from core.resumable import run_step_once
@@ -71,9 +71,11 @@ def _description_block(
 
 
 async def _find_or_create_account(sub: InfoRequest, client: EspoApi) -> str:
-    existing = await client.find_one(ACCOUNT, "name", sub.company)
+    existing = await client.find_one(ACCOUNT, "name", sub.company, select=COMPANY_SELECT)
     if existing:
         log.info("matched existing Account %s for %r", existing["id"], sub.company)
+        # A company CBM knows in another role gains this one (merge-only).
+        await merge_company_type(client, existing, CLIENT)
         return existing["id"]
     created = await client.create(
         ACCOUNT,
