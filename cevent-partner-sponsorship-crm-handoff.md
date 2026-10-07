@@ -1,6 +1,6 @@
 # CRM handoff — partners on events become many-to-many, plus the notice-campaign identifier (Phase A)
 
-Last Updated: 10-07-26 12:05 · Revision 1.2 — see change log at the end.
+Last Updated: 10-07-26 12:08 · Revision 1.3 — see change log at the end.
 
 **What this changes:** an event can carry **many partners**, through one
 many-to-many link that mirrors the funder link the event already has; the old
@@ -25,7 +25,7 @@ a list of `CEvent`), except where a line says *inferred*.
 
 | System | State | Evidence |
 |---|---|---|
-| crm-test | **§ 2, § 4 and § 7 done 2026-10-07 07:39–07:40 UTC**, by the shipping applier as the configuration administrator: both fields and the link created, rebuilt, read back on both sides (relation `cPartnerProfileEvent`), the one demo host carried, all re-verified as the org-wide API key. Marketing Admin Role given `read: all` on both profiles and read back. **§ 5 (the hand removal of `partnerHost`) is still owed — Doug.** State before the change: | `CEvent.partnerHost` is `belongsTo → CPartnerProfile`, reverse `CPartnerProfile.hostedEvents`. The funder link is `CEvent.sponsorProfiles` ↔ `CSponsorProfile.sponsoredEvents`, relation table `cSponsorProfileEvent`. Neither `partnerProfiles` nor `noticeCampaignId` exists. **One** of crm-test's five events has a partner host (*Hiring Your First Employee* → *Cuyahoga Small Business Alliance*, demo data). No list, detail or relationships layout names either link. |
+| crm-test | **§ 2, § 4 and § 7 done 2026-10-07 07:39–07:40 UTC**, by the shipping applier as the configuration administrator: both fields and the link created, rebuilt, read back on both sides (relation `cPartnerProfileEvent`), the one demo host carried, all re-verified as the org-wide API key. Marketing Admin Role given `read: all` on both profiles and read back. **§ 5 done by Doug 2026-10-07 12:05 in Entity Manager; `scripts/check_partner_host_removed.py` prints `OK` (old link gone, new one points both ways).** crm-test is complete. State before the change: | `CEvent.partnerHost` is `belongsTo → CPartnerProfile`, reverse `CPartnerProfile.hostedEvents`. The funder link is `CEvent.sponsorProfiles` ↔ `CSponsorProfile.sponsoredEvents`, relation table `cSponsorProfileEvent`. Neither `partnerProfiles` nor `noticeCampaignId` exists. **One** of crm-test's five events has a partner host (*Hiring Your First Employee* → *Cuyahoga Small Business Alliance*, demo data). No list, detail or relationships layout names either link. |
 | Production | **Owed** — Sunday 17:00 UTC slot | *Inferred:* the same two links, because production's `partnerHost` was rebuilt to match crm-test on 2026-08-08 (`OPEN-ITEMS.md`, the reversed-link note). Production's events carry no partner host as far as is known; the dry run in § 4 is what proves it. |
 | Boston | **Owed** — with the release that carries the Phase B code | *Inferred:* built from crm-test's files, so expected to hold `partnerHost` too. |
 
@@ -264,6 +264,7 @@ conformance check will otherwise report as drift.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 10-07-26 12:08 | Claude (Claude Code) | crm-test complete: § 5 removal done by Doug, verified from metadata. Production and Boston owed. |
 | 1.2 | 10-07-26 12:05 | Claude (Claude Code) | § 5 gains the data check script; the live pass found `CActionLog.record` could not point at an event (fixed on crm-test, OPEN-ITEMS). |
 | 1.1 | 10-07-26 03:45 | Claude (Claude Code) | Applied § 2, § 4 and § 7 to crm-test and verified as the org-wide API key; § 5 owed to Doug. Role grant ruled read-all. |
 | 1.0 | 10-07-26 03:40 | Claude (Claude Code) | First version. State read from crm-test; both appliers dry-run clean; nothing applied yet. Records the Marketing Admin Role gap (§ 7). |

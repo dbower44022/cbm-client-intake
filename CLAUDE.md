@@ -1627,10 +1627,11 @@ each block.
   the three sandbox logins in the browser): the pickers, both relate and
   unrelate through the admin fallback, the Events tab under the org-wide key,
   and the client count after its live-found fix. Standing rules in the Events
-  and Session Management sections. **Owed:** `CActionLog.record` cannot point
-  at an event (CRM prerequisite, all three CRMs); the hand removal of
-  `partnerHost` on crm-test; Phase A on production and Boston (until then
-  they show Funders only, by design); Phases C and D of the plan.
+  and Session Management sections. crm-test's CRM side is complete (the
+  many-to-many link, the old host link removed by hand, `CActionLog.record`
+  able to point at an event). **Owed:** Phase A and the `CActionLog` fix on
+  production and Boston (until then they show Funders only, by design);
+  Phases C and D of the plan.
 
 - **v0.237.0 (2026-10-07) — quick-add refuses a same-named company at a
   different web address.** Pushed 2026-10-07 with v0.236.0; standing rule in the

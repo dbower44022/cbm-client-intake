@@ -358,9 +358,10 @@ gone and the new one points both ways
 replaces the single `partnerHost` / `hostedEvents` link (removed — metadata
 only, the column stays; production's events carry no host today).
 `CEvent.noticeCampaignId` and `CEventRegistration.noticeCampaignId`, varchar.
-**Handoff: `cevent-partner-sponsorship-crm-handoff.md`. crm-test done
+**Handoff: `cevent-partner-sponsorship-crm-handoff.md`. crm-test COMPLETE
 2026-10-07** (fields, link, the one demo host carried, verified as the org-wide
-key) **except the hand removal of `partnerHost` (handoff § 5) — Doug.** Then
+key; the hand removal of `partnerHost` done by Doug at 12:05 and confirmed by
+`scripts/check_partner_host_removed.py`). Then
 production at a Sunday 17:00 UTC slot, then Boston with the release that
 carries the code. The application reads neither link until Phase B ships.
 **Ruled 2026-10-07:** the Marketing Admin Role gets `read: all` on
