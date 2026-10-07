@@ -328,8 +328,15 @@ empty company on a partner/funder now renders as "—" and is fixable in the app
 
 ## CRM prerequisites outstanding
 
-**`CActionLog.record` cannot point at an event** (found 2026-10-07 in the
-crm-test web log during the Phase B pass). The parent link's entity list is
+**`CActionLog.record` cannot point at an event — crm-test DONE 2026-10-07,
+production and Boston owed** (found 2026-10-07 in the crm-test web log during
+the Phase B pass). Applied on crm-test by `scripts/migrate_actionlog_record_entities.py`
+(dry-run by default, idempotent, ships in the image for the production
+container), read back, and proven by a probe `CActionLog` row with
+`recordType: CEvent` that the CRM accepted and that was then deleted. On
+production and Boston: the same script with `--apply` from inside the web
+container, at the Sunday slot or any time — it is additive and the app
+feature-detects nothing here. The parent link's entity list is
 Account, Contact, CEngagement, CMentorProfile, CClientProfile,
 CPartnerProfile, CSponsorProfile, CSession — no `CEvent`, no
 `CEventRegistration`. So the `CActionLog` half of EVERY Event Administration
@@ -343,7 +350,10 @@ Action Log → Fields → record → Entities), then confirm one event save stop
 logging the warning. Production's entity list is inferred to match.
 
 **Partner sponsorship of events becomes many-to-many, and two campaign
-fields** (ruled 2026-10-07; plan: `prds/mailing-list-and-event-sponsorship-plan.md`
+fields** (ruled 2026-10-07; plan: `prds/mailing-list-and-event-sponsorship-plan.md`;
+the hand removal of `partnerHost` has its own step page and a data check,
+`scripts/check_partner_host_removed.py`, which prints `OK` once the old link is
+gone and the new one points both ways
 § 5 Phase A, § 6). `CEvent.partnerProfiles` ↔ `CPartnerProfile.events`
 replaces the single `partnerHost` / `hostedEvents` link (removed — metadata
 only, the column stays; production's events carry no host today).

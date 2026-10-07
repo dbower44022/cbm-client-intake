@@ -1,6 +1,6 @@
 # CRM handoff — partners on events become many-to-many, plus the notice-campaign identifier (Phase A)
 
-Last Updated: 10-07-26 03:45 · Revision 1.1 — see change log at the end.
+Last Updated: 10-07-26 12:05 · Revision 1.2 — see change log at the end.
 
 **What this changes:** an event can carry **many partners**, through one
 many-to-many link that mirrors the funder link the event already has; the old
@@ -166,6 +166,11 @@ removal is recoverable by recreating the link under the **same** name.
 No layout references the old link on either entity (read 2026-10-07), so
 there is nothing to tidy on the Event or Partner Profile screens afterwards.
 
+**Prove it from the data** (also § 6): `uv run python
+scripts/check_partner_host_removed.py` from the repository root prints one
+line per link and `OK` when the old link is gone and the new one points both
+ways; `--base URL --key KEY` checks another CRM.
+
 ## 6. Verification — read the data back
 
 As the **org-wide API key**, on the system just changed:
@@ -259,5 +264,6 @@ conformance check will otherwise report as drift.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 10-07-26 12:05 | Claude (Claude Code) | § 5 gains the data check script; the live pass found `CActionLog.record` could not point at an event (fixed on crm-test, OPEN-ITEMS). |
 | 1.1 | 10-07-26 03:45 | Claude (Claude Code) | Applied § 2, § 4 and § 7 to crm-test and verified as the org-wide API key; § 5 owed to Doug. Role grant ruled read-all. |
 | 1.0 | 10-07-26 03:40 | Claude (Claude Code) | First version. State read from crm-test; both appliers dry-run clean; nothing applied yet. Records the Marketing Admin Role gap (§ 7). |
