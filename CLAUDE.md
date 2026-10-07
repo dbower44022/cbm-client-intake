@@ -1245,6 +1245,13 @@ Conventions. Plan: `prds/action-history-plan.md`;
 
 **EspoCRM behaviour**
 
+- **A metadata key the CRM does not have answers HTTP 200 with an EMPTY body**
+  (verified on crm-test 2026-10-01). `resp.json()` on it raises a
+  `JSONDecodeError`, which no `except EspoError` catches — that is how Event
+  Administration 500'd on production for every F2/F3 field its CRM lacked
+  (v0.235.1). `EspoClient.metadata` / `metadata_enum_options` now read an empty
+  or non-JSON body as None; any new metadata read must go through them, and a
+  feature-detected field's OPTIONS read must tolerate the field being absent.
 - **Field-level ACL silently strips writes** — a 200 OK where one field didn't
   store. Newer fields saving while older ones don't is the tell. Diagnose by
   reading each role's `fieldData` as admin
@@ -1620,7 +1627,7 @@ each block.
   whose name exists with another website, expecting the refusal message.
 
 - **v0.236.0 (2026-10-07) — a company the CRM already knows gains the new
-  door's role.** Committed, not pushed. The four public forms now apply the
+  door's role.** Pushed with v0.237.0 (production reported 0.237.0 on 10-07). The four public forms now apply the
   merge-only `cCompanyType` rule the staff quick-add already had (standing
   rule in the five-forms section above). No flag; rollback is a revert.
   **Verified by tests only** — the live case is a funder's company submitting

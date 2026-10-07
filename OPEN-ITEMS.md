@@ -537,7 +537,9 @@ block a deploy.)*
     ruled, the live pass below sets the field in the CRM directly.
 
 37. **The portal events rail and member page (v0.235.0, F5) — built dark,
-    never seen** (2026-09-30). `PORTAL_CALENDAR` is off everywhere. Owed on
+    never seen** (2026-09-30; step-by-step pass with expected results:
+    https://claude.ai/artifact/47kkLsCn5xTSDK56akg9W1, private; no run
+    recorded as of 10-07-26). `PORTAL_CALENDAR` is off everywhere. Owed on
     crm-test, as **two real non-admin accounts** (one in a team an Internal
     event is limited to, one not), on a desktop and at phone width: (a) create
     through `/events` an Internal event with a graphic and Takes
@@ -586,7 +588,11 @@ block a deploy.)*
        (above). Only the portal registration
        (`POST /api/portal/events/{id}/register`) remains unexercised live; it is
        F5's Register button that will drive it.
-    3. **Production CRM** at a Sunday 17:00 UTC slot, from inside the web
+    3. **Production CRM** — console steps with expected output prepared
+       10-01-26 at Doug's request (https://claude.ai/artifact/EoSQ9EuKC4oWPFYWvpxQRe,
+       private); **no run recorded as of 10-07-26** — if it was run, the
+       dry-run output and the two conformance exit numbers close this item.
+       Originally: at a Sunday 17:00 UTC slot, from inside the web
        container: `scripts/migrate_event_audience_schema.py`, runbook
        `cevent-audience-display-crm-handoff.md`. Confirms on the way whether
        production has `eventReleaseDate` (inferred, not checked).

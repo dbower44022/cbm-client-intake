@@ -1,6 +1,6 @@
 # CRM handoff — event audience and display time (Track F, F2 + F3)
 
-Last Updated: 09-29-26 01:45 · Revision 1.0 — see change log at the end.
+Last Updated: 10-07-26 04:32 · Revision 1.1 — see change log at the end.
 
 **What this adds:** five fields on `CEvent` and one registration-source option,
 so an event can be Internal or Public, reach named chapters, be limited to teams,
@@ -49,9 +49,17 @@ export ESPO_ADMIN_BASE="$ESPO_BASE_URL"
 export ESPO_ADMIN_USER="$ESPO_PROVISION_USERNAME"
 export ESPO_ADMIN_PASS="$ESPO_PROVISION_PASSWORD"
 
-PYTHONPATH=/app python scripts/migrate_event_audience_schema.py           # dry run
-PYTHONPATH=/app python scripts/migrate_event_audience_schema.py --apply   # apply
+cd /app
+PYTHONPATH=/app .venv/bin/python scripts/migrate_event_audience_schema.py           # dry run
+PYTHONPATH=/app .venv/bin/python scripts/migrate_event_audience_schema.py --apply   # apply
 ```
+
+The interpreter is `.venv/bin/python`: the image does not put the virtual
+environment on `PATH`, so a bare `python` there is the system interpreter
+without the application's packages. A step-by-step version of this section
+for the console, with the exact expected output of the dry run and the
+read-back as the org-wide key, was written on 10-01-26:
+https://claude.ai/artifact/EoSQ9EuKC4oWPFYWvpxQRe (Doug's private page).
 
 The container must be running a build that includes this change (v0.233.0 or
 later), or the script and plan are not there.
@@ -146,4 +154,5 @@ event someone deliberately sets to Internal.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 10-07-26 04:32 | Claude (Claude Code) | Production commands use `.venv/bin/python` (a bare `python` in the container lacks the packages); link to the 10-01-26 console step page. Production still owed — no run recorded. |
 | 1.0 | 09-29-26 01:45 | Claude (Claude Code) | First version. Applied to crm-test and verified; production and Boston owed. Records the applier's enum-option fix. |
