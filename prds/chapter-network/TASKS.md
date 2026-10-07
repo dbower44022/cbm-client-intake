@@ -20,6 +20,45 @@ is a table at the end of this file linking to them.
 
 # Part 1 — Ruled, and what follows
 
+## B1. Boston's HubSpot migration — rehearsed, waiting on Boston's nine answers
+
+### What this is
+
+Boston kept eleven months of records in HubSpot (2,698 people, 2,222 notes,
+owner = mentor). The whole of it is pulled, mapped under the 2026-09-26
+ruling (DECISIONS.md), loaded on Lakeside as a rehearsal, checked in the
+browser as a mentor and as a client administrator, and dry-run clean against
+Boston. Pre-load backups of `crm.bbmentors.org` were taken 2026-09-27
+(droplet snapshot `crm-bbmentors-pre-hubspot-20260927` + a database dump,
+kept on the droplet and in `~/.config/cbm-boston/backups/`). The plan, the
+rehearsal record and the cut-over checklist:
+[chapters/boston-hubspot-migration.md](chapters/boston-hubspot-migration.md).
+The overview for Boston's people, with the nine decisions and a blank answer
+line under each, is a shared doc ("Moving Boston's HubSpot records",
+2026-09-28); Doug shares or exports it.
+
+Scripts: `scripts/hubspot/pull_snapshot.py` (the read-only pull + inventory),
+`scripts/hubspot/load_boston.py` (the loader: dry run by default, ledger,
+`--rebuild-ledger`, `--repair-session-stamps`), and the short front door
+`scripts/hubspot/run.sh {lakeside|boston} {plan|write|rebuild|repair}` —
+every terminal command fits one line. The write is Doug's to run: the
+session classifier refuses it.
+
+### Steps
+
+1. Boston answers the nine questions in the shared doc (roster, the 31
+   waiting clients, notes-as-sessions, test records, freeze date, website
+   forms, outgoing mail + logins, HubSpot afterwards, the client rule).
+2. Boston's CRM gets an outgoing mail server (stage 10 Google, or a relay) —
+   nothing can issue a password until it has one.
+3. Freeze day: re-pull (`uv run --with tenacity python scripts/hubspot/pull_snapshot.py`),
+   fresh droplet snapshot + dump, then `scripts/hubspot/run.sh boston write`
+   (about 55 minutes), then `… boston rebuild` once.
+4. Next morning: re-pull and re-run for the delta; counts against
+   `inventory.json`; the browser checks as one mentor and one client admin.
+5. Announcement day, sign-off, HubSpot read-only 30 days, delete the local
+   snapshot.
+
 ## F1. Finish Boston's chapter information form
 
 ### What this is
