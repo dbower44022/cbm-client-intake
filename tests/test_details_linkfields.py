@@ -344,6 +344,28 @@ async def test_create_company_reuses_a_same_named_account_and_merges_the_type():
 
 
 @pytest.mark.asyncio
+async def test_create_company_refuses_a_same_name_with_a_different_website():
+    """The Details picker shares the quick-add rule: a same-named company at a
+    different web address is a different company, and the save is refused
+    with the existing one named rather than merged or duplicated."""
+    client = _CoFake(existing={"id": "A1", "name": "Key Bank", "cCompanyType": ["Client"],
+                               "website": "https://key.com"})
+    api = _CoApi()
+    with pytest.raises(service.SessionError, match="https://key.com"):
+        await details.create_company(SPONSOR, client, api, "Key Bank", "keybank-foundation.org")
+    assert not api.created and client.updates == []
+
+
+def test_create_company_route_returns_the_refusal_as_a_400(monkeypatch):
+    fake = _CoFake(existing={"id": "A1", "name": "Key Bank", "website": "https://key.com"})
+    with TestClient(_route_app(monkeypatch, fake)) as c:
+        r = c.post("/partnersessions/api/records/P1/company",
+                   json={"name": "Key Bank", "website": "keybank-foundation.org"})
+    assert r.status_code == 400
+    assert "https://key.com" in r.json()["detail"]
+
+
+@pytest.mark.asyncio
 async def test_create_company_requires_a_name():
     with pytest.raises(service.SessionError):
         await details.create_company(PARTNER, _CoFake(), _CoApi(), "   ")

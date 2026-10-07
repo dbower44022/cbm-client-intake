@@ -32,6 +32,7 @@ from core import inline_images
 from core.config import get_settings
 from core.crm_upsert import (
     COMPANY_SELECT, create_dropping_invalid, find_create_or_fill, merge_company_type,
+    website_key,
 )
 from core.espo import EspoError, is_forbidden
 from core.phone import e164_or_none, format_us
@@ -3198,10 +3199,36 @@ async def _find_or_create_company(
     the same rule the four public forms apply, so a company gains a role
     whichever door it comes through. Merge-only and best-effort: an existing
     type is never removed and a failed merge never fails the create.
+
+    **A website, when given, has to agree with the match** (Doug's ruling
+    2026-10-07). Two businesses can share a name; a same-named Account whose
+    stored website is a *different* address is a different company, and
+    reusing it would merge two organisations into one record. The save is
+    refused with a message naming the existing company and its website, and
+    the user qualifies the name (or clears the website if it really is the same
+    company) — never a second same-named Account, because every name-based
+    match in the CRM would be ambiguous from then on. A same-named Account
+    with NO website stored still matches and gains the website by null-fill;
+    no website entered means the name match as before. Addresses are
+    compared through :func:`core.crm_upsert.website_key`, so scheme, ``www.``,
+    case and a trailing slash never count as a difference.
     """
     spec = cfg.create_spec
     existing = await client.find_one(ACCOUNT, "name", name, select=COMPANY_SELECT)
     if existing:
+        stored = existing.get("website") or ""
+        if website and stored and website_key(stored) != website_key(website):
+            raise SessionError(
+                f"A company named {name} already exists with the website {stored}. "
+                f"If this is a different company, add something to the name that "
+                f"tells them apart (for example a city). If it is the same company, "
+                f"clear the website and save again."
+            )
+        if website and not stored:
+            try:
+                await client.update(ACCOUNT, existing["id"], {"website": website})
+            except EspoError as exc:  # null-fill is best-effort, never fatal
+                log.warning("could not fill website on Account/%s: %s", existing["id"], exc)
         if spec:
             await merge_company_type(client, existing, spec.company_type)
         return existing["id"], False

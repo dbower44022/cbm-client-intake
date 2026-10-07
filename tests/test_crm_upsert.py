@@ -216,3 +216,31 @@ def test_company_select_names_the_type_field():
     """The merge reads the stored list off the find; a find that forgets to
     select it would overwrite the list instead of appending."""
     assert "cCompanyType" in COMPANY_SELECT.split(",")
+
+
+# --- website_key: one comparable form of a website address -----------------
+
+from core.crm_upsert import website_key  # noqa: E402
+
+
+@pytest.mark.parametrize("a, b", [
+    ("acme.com", "https://www.acme.com/"),
+    ("HTTP://Acme.com", "acme.com"),
+    ("https://acme.com/program-a/", "acme.com/program-a"),
+    ("acme.com?utm=x#top", "acme.com"),
+])
+def test_website_key_treats_presentational_differences_as_one_site(a, b):
+    assert website_key(a) == website_key(b)
+
+
+@pytest.mark.parametrize("a, b", [
+    ("acme.com", "acme-ohio.com"),
+    ("example.org/program-a", "example.org/program-b"),
+    ("acme.com", "acme.org"),
+])
+def test_website_key_keeps_real_differences(a, b):
+    assert website_key(a) != website_key(b)
+
+
+def test_website_key_of_nothing_is_empty():
+    assert website_key(None) == "" and website_key("  ") == ""

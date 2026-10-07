@@ -4,6 +4,38 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.237.0] — 2026-10-07
+
+**feat(sessions): "+ Add partner" / "+ Add funder" refuse a same-named company
+at a different web address.** Doug's request on 2026-10-07, following the
+v0.236.0 discussion of how a company is matched (exact name, nothing else):
+two businesses can share a name, and the name match would silently merge the
+second into the first's record. Ruling the same day: **refuse and explain**,
+never create a second same-named Account — EspoCRM's own duplicate check
+rejects one, and every name-based match in the CRM (the four public forms,
+the quick-add, EspoCRM's detection) would be ambiguous from then on.
+
+- `sessions.service._find_or_create_company`, the one function behind both
+  quick-add buttons AND the Details tab's "+ New company" picker: when the
+  user enters a website and the same-named company's stored website is a
+  different address, the save stops with a 400 naming the existing company
+  and its website, and nothing is written. The message tells the user to
+  qualify the name (a city, say) if it is a different company, or clear the
+  website if it is the same one.
+- A same-named company with **no** website stored still matches and gains the
+  website by null-fill (best-effort). No website entered ⇒ the name match as
+  before.
+- `core/crm_upsert.website_key` is the comparison: scheme, a leading `www.`,
+  case, a trailing slash, query and fragment never count as a difference;
+  the path does (`example.org/program-a` is not `example.org/program-b`,
+  and a programme inside an organisation is often exactly what a second
+  partner record is). `COMPANY_SELECT` now reads `website` too.
+- The public intake forms are unchanged — they collect a website but match
+  by name only, as before. Extending the rule there is a separate decision.
+- Tests: seven for the key, four quick-add cases (refused / same site in
+  another form / no stored site filled / no site entered), two for the
+  Details picker including the route's 400.
+
 ## [0.236.0] — 2026-10-07
 
 **feat(intake): a company the CRM already knows gains the new door's role.**

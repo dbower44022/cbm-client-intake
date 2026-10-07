@@ -90,7 +90,31 @@ async def create_dropping_invalid(
 # The Company (Account) type discriminator — a multiEnum every management grid
 # and report filters on. One company may hold several values.
 COMPANY_TYPE_FIELD = "cCompanyType"
-COMPANY_SELECT = "id,cCompanyType"   # what a company find must select for the merge
+COMPANY_SELECT = "id,cCompanyType,website"   # what a company find must select
+
+
+def website_key(value: Any) -> str:
+    """One comparable form of a website address, or "" for none.
+
+    ``acme.com``, ``https://www.acme.com/`` and ``HTTP://Acme.com`` are one
+    site to a person, so they are one key here: scheme dropped, a leading
+    ``www.`` dropped, lower-cased, trailing slash dropped. The path is kept —
+    ``example.org/program-a`` and ``example.org/program-b`` are different
+    addresses, and a programme inside an organisation is exactly what a second
+    partner record often is. Query strings and fragments are dropped.
+    """
+    raw = (value or "").strip() if isinstance(value, str) else ""
+    if not raw:
+        return ""
+    if "://" in raw:
+        raw = raw.split("://", 1)[1]
+    raw = raw.split("#", 1)[0].split("?", 1)[0]
+    host, _, path = raw.partition("/")
+    host = host.lower()
+    if host.startswith("www."):
+        host = host[4:]
+    path = path.rstrip("/")
+    return f"{host}/{path}" if path else host
 
 
 async def merge_company_type(client: EspoApi, existing: dict[str, Any], company_type: str) -> bool:

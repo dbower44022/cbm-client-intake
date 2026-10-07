@@ -625,7 +625,15 @@ one shared frontend that derives its domain from the first segment of its URL.
   routes (mentor has none — engagements arrive through intake), and the spec is
   BOTH the form layout and the write whitelist. Same dedupe policy as intake:
   a same-named company / same-email contact is reused and null-filled, never
-  duplicated; a reused company gains the type value merge-only.
+  duplicated; a reused company gains the type value merge-only. **A website,
+  when entered, must agree with the match** (v0.237.0, Doug's ruling
+  2026-10-07): a same-named company at a *different* web address is a
+  different company, and the save is **refused with the existing company
+  named** — never a second same-named Account, which would make every
+  name-based match in the CRM ambiguous. Same rule on the Details tab's
+  "+ New company" picker (shared function). Compared through
+  `core/crm_upsert.website_key` (scheme, `www.`, case, trailing slash
+  ignored; the path counts). No stored website ⇒ match and null-fill it.
 - **Contacts tables are per-domain**: mentor shows Role chips and an Agreements
   badge; partner/funder show neither (every contact has the same relationship to
   CBM, and the consent bools are a client-intake concept) but offer **Make
@@ -1546,6 +1554,12 @@ with `main`; **Lakeside took it off the release lane by itself** (its
 unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
+
+- **v0.237.0 (2026-10-07) — quick-add refuses a same-named company at a
+  different web address.** Committed, not pushed; standing rule in the
+  Session Management section. No flag; rollback is a revert. **Verified by
+  tests only** — the live case is "+ Add partner" on crm-test for a company
+  whose name exists with another website, expecting the refusal message.
 
 - **v0.236.0 (2026-10-07) — a company the CRM already knows gains the new
   door's role.** Committed, not pushed. The four public forms now apply the

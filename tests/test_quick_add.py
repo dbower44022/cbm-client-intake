@@ -230,6 +230,81 @@ async def test_existing_company_is_reused_and_gains_the_type():
 
 
 @pytest.mark.asyncio
+async def test_same_name_different_website_is_refused_not_merged():
+    """Two businesses can share a name. A same-named company whose stored
+    website is a different address is a different company — the save is
+    refused with the existing company named, and nothing is written (Doug's
+    ruling 2026-10-07: refuse and explain, never a second same-named Account)."""
+    fake = Fake(
+        meta=_PARTNER_META,
+        found={("Account", "name", "Acme Supply Co."):
+               {"id": "A-OLD", "name": "Acme Supply Co.", "cCompanyType": ["Client"],
+                "website": "https://acme-ohio.com"}},
+    )
+    api = FakeApi()
+    with pytest.raises(service.SessionError) as excinfo:
+        await service.create_record(
+            PARTNER, fake, api,
+            {"company": "Acme Supply Co.", "website": "acme.com", "name": "Acme"},
+            user_id="u1",
+        )
+    msg = str(excinfo.value)
+    assert "Acme Supply Co." in msg and "https://acme-ohio.com" in msg
+    assert not api.created and not fake.created and not fake.updates
+
+
+@pytest.mark.asyncio
+async def test_same_name_same_website_in_another_form_still_matches():
+    """acme.com, https://www.acme.com/ and HTTP://Acme.com are one site."""
+    fake = Fake(
+        meta=_PARTNER_META,
+        found={("Account", "name", "Acme Supply Co."):
+               {"id": "A-OLD", "name": "Acme Supply Co.", "cCompanyType": ["Partner"],
+                "website": "https://www.acme.com/"}},
+    )
+    api = FakeApi()
+    res = await service.create_record(
+        PARTNER, fake, api,
+        {"company": "Acme Supply Co.", "website": "HTTP://Acme.com", "name": "Acme"},
+        user_id="u1",
+    )
+    assert res["accountCreated"] is False and not api.created
+    assert fake.updates == []     # type present, website present: nothing to write
+
+
+@pytest.mark.asyncio
+async def test_same_name_no_stored_website_matches_and_fills_it():
+    fake = Fake(
+        meta=_PARTNER_META,
+        found={("Account", "name", "Acme Supply Co."):
+               {"id": "A-OLD", "name": "Acme Supply Co.", "cCompanyType": ["Partner"]}},
+    )
+    api = FakeApi()
+    res = await service.create_record(
+        PARTNER, fake, api,
+        {"company": "Acme Supply Co.", "website": "acme.com", "name": "Acme"},
+        user_id="u1",
+    )
+    assert res["accountCreated"] is False
+    assert fake.updates == [("Account", "A-OLD", {"website": "https://acme.com"})]
+
+
+@pytest.mark.asyncio
+async def test_no_website_entered_matches_by_name_as_before():
+    fake = Fake(
+        meta=_PARTNER_META,
+        found={("Account", "name", "Acme Supply Co."):
+               {"id": "A-OLD", "name": "Acme Supply Co.", "cCompanyType": ["Partner"],
+                "website": "https://acme-ohio.com"}},
+    )
+    api = FakeApi()
+    res = await service.create_record(
+        PARTNER, fake, api, {"company": "Acme Supply Co.", "name": "Acme"}, user_id="u1",
+    )
+    assert res["accountCreated"] is False and fake.updates == []
+
+
+@pytest.mark.asyncio
 async def test_existing_contact_is_null_filled_never_overwritten():
     fake = Fake(
         meta=_PARTNER_META,
