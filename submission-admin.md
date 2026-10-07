@@ -54,6 +54,8 @@ Since the intake-receipt redesign (2026-07-27), the app and the CRM speak the
 | **Completed** | All CRM records were created. |
 | **Held-Spam** | The form's hidden spam trap was triggered; nothing was created. |
 | **Held-Email** | An email to info@ awaiting your Approve/Discard. |
+| **Held-Duplicate** | A second submission of the same form from the same email a short time after the first — decide whether it is a genuine separate request (Approve) or restates the first (Discard). |
+| **Held-Company** | The company the submission names already exists in the CRM **with a different website**. Two businesses can share a name, so nothing was created. Use **Company ▾**: *Same company* if it is the one on file (the submitted website is set aside), or *Different company* with a name that tells them apart (a city, say) — either way it is then delivered. |
 | **Error** | Delivery failed and a person needs to act (the receipt carries a what-happened-and-how-to-fix explanation). |
 | **Discarded** | A person decided no records should be created — always with a recorded reason. |
 
@@ -108,6 +110,12 @@ that reconciliation on demand (safe to press any time).
   Duplicate / Not actionable / Other + note): the decision — who, when, why —
   is recorded on the row, in the Activity feed, and on the CRM receipt. Undo
   a mistaken discard by re-driving.
+- **Held-Company** rows carry **Company ▾** instead of Re-drive (re-driving
+  would hit the same conflict). *Same company — use the one on file* reuses
+  the existing company and keeps its website; *Different company* needs a
+  distinguishing name typed in the box and creates a new company under it.
+  The decision and the name used go to the Activity feed and the CRM receipt;
+  what the visitor typed is kept as submitted.
 - **Inbound emails** (form "info-email", status **Held-Email**) carry
   **Approve** instead of Re-drive: approving creates the CRM records —
   Contact, plus the Information Request — exactly as if the person had used

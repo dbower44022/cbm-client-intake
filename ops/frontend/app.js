@@ -11,7 +11,7 @@
   "use strict";
 
   var API = "/ops/api";
-  var STATUSES = ["pending", "processing", "retry", "completed", "needs_attention", "held_honeypot", "held_review", "held_duplicate", "discarded"];
+  var STATUSES = ["pending", "processing", "retry", "completed", "needs_attention", "held_honeypot", "held_review", "held_duplicate", "held_company", "discarded"];
   // ONE vocabulary (the intake-receipt redesign, 2026-07-27): every screen
   // speaks Received / Completed / Held-Spam / Held-Email / Error / Discarded —
   // the same words the CRM receipt's Intake Status uses. The machine words
@@ -20,7 +20,7 @@
     pending: "Received", processing: "Received", retry: "Received",
     completed: "Completed", needs_attention: "Error",
     held_honeypot: "Held-Spam", held_review: "Held-Email",
-    held_duplicate: "Held-Duplicate", discarded: "Discarded",
+    held_duplicate: "Held-Duplicate", held_company: "Held-Company", discarded: "Discarded",
   };
   function statusLabel(s) { return STATUS_LABELS[s] || (s || "").replace(/_/g, " "); }
   // INTAKE STATUS — "what happened to this arrival?" — is its own grid column
@@ -32,11 +32,14 @@
     "Held-Spam":  { cell: "heldspam",  chip: "status-held_honeypot" },
     "Held-Email": { cell: "heldemail", chip: "status-held_review" },
     "Held-Duplicate": { cell: "heldduplicate", chip: "status-held_duplicate" },
+    // The company named exists at a different web address — staff decide
+    // same / different company (company-website-hold-plan.md).
+    "Held-Company": { cell: "heldcompany", chip: "status-held_company" },
     "Error":      { cell: "error",     chip: "status-needs_attention" },
     "Discarded":  { cell: "discarded", chip: "status-discarded" },
   };
-  var INTAKE_LABELS = ["Received", "Completed", "Held-Spam", "Held-Email", "Held-Duplicate", "Error", "Discarded"];
-  var INTAKE_RANK = { "Error": 0, "Held-Duplicate": 1, "Held-Email": 2, "Held-Spam": 3, "Received": 4, "Completed": 5, "Discarded": 6 };
+  var INTAKE_LABELS = ["Received", "Completed", "Held-Spam", "Held-Email", "Held-Duplicate", "Held-Company", "Error", "Discarded"];
+  var INTAKE_RANK = { "Error": 0, "Held-Duplicate": 1, "Held-Company": 2, "Held-Email": 3, "Held-Spam": 4, "Received": 5, "Completed": 6, "Discarded": 7 };
   // RESPONSE STATUS — "where does the reply conversation stand?" — its own
   // column and filter. The reply lifecycle (owed / waiting / responded) only
   // applies once the item is a LIVE REQUEST — a delivered form or an APPROVED
@@ -51,8 +54,11 @@
   var FORMS = ["client-intake", "volunteer", "info-request", "partner", "sponsor", "info-email"];
   // Re-drive includes discarded so a mistaken discard can be undone (re-queued).
   var REDRIVABLE = { held_honeypot: 1, held_review: 1, held_duplicate: 1, needs_attention: 1, retry: 1, discarded: 1 };
+  // A company hold is resolved through its own two-way control, never a bare
+  // re-drive (which would hit the same conflict again).
+  var COMPANY_HELD = { held_company: 1 };
   // Discard resolves a stuck row that can't be re-driven (e.g. a bad payload).
-  var DISCARDABLE = { held_honeypot: 1, held_review: 1, held_duplicate: 1, needs_attention: 1, retry: 1 };
+  var DISCARDABLE = { held_honeypot: 1, held_review: 1, held_duplicate: 1, held_company: 1, needs_attention: 1, retry: 1 };
 
   // Filters run client-side over the loaded rows, so the count chips can double
   // as one-click filters.
@@ -336,7 +342,7 @@
   function responseInfo(r) {
     if (r.closed_at) return { label: "Closed", cls: "closed", reason: r.close_reason };
     if (!LIVE_REQUEST[r.status]) {
-      if (r.status === "held_review" || r.status === "held_duplicate")
+      if (r.status === "held_review" || r.status === "held_duplicate" || r.status === "held_company")
         return { label: "Awaiting review", cls: "review" };
       return { label: "—", cls: "none" };
     }
@@ -486,6 +492,7 @@
       } else if (c.key === "_actions") {
         td.className = "actions";
         if (REDRIVABLE[r.status]) td.appendChild(redriveBtn(r, "notice"));
+        if (COMPANY_HELD[r.status]) td.appendChild(companyControl(r, "notice"));
         if (DISCARDABLE[r.status]) td.appendChild(discardControl(r, "notice"));
       } else {
         var v = c.get ? c.get(r) : r[c.key];
@@ -611,6 +618,62 @@
     return wrap;
   }
 
+  // Company ▾ — resolves a Held-Company row (the company named already exists
+  // at a different web address). Two decisions, both re-queue the delivery:
+  // "Same company" sets the submitted website aside so the name match reuses
+  // the company on file; "Different company" takes a qualified name and
+  // delivers as a new company. Mirrors discardControl's menu.
+  function companyControl(r, noticeEl, big) {
+    var wrap = document.createElement("span"); wrap.className = "closewrap";
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "cbm-button" + (big ? "" : " row-btn");
+    btn.textContent = "Company ▾";
+    var menu = document.createElement("div"); menu.className = "closemenu"; menu.hidden = true;
+    var h = document.createElement("h5"); h.textContent = "Is this the company already on file?"; menu.appendChild(h);
+    var same = document.createElement("button"); same.type = "button"; same.className = "closemenu__opt";
+    same.textContent = "Same company — use the one on file";
+    same.addEventListener("click", function (e) {
+      e.stopPropagation(); menu.hidden = true;
+      resolveCompany(r, noticeEl, "same", "");
+    });
+    menu.appendChild(same);
+    var name = document.createElement("input");
+    name.type = "text"; name.className = "closemenu__note";
+    name.placeholder = "Different company — name that tells them apart (e.g. a city)…";
+    name.addEventListener("click", function (e) { e.stopPropagation(); });
+    menu.appendChild(name);
+    var diff = document.createElement("button"); diff.type = "button"; diff.className = "closemenu__opt";
+    diff.textContent = "Different company — create it under that name";
+    diff.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var v = name.value.trim();
+      if (!v) { name.placeholder = "A distinguishing name is required — type it here…"; name.focus(); return; }
+      menu.hidden = true;
+      resolveCompany(r, noticeEl, "different", v);
+    });
+    menu.appendChild(diff);
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation(); menu.hidden = !menu.hidden; if (!menu.hidden) name.focus();
+    });
+    document.addEventListener("click", function (ev) { if (!wrap.contains(ev.target)) menu.hidden = true; });
+    wrap.appendChild(btn); wrap.appendChild(menu);
+    return wrap;
+  }
+
+  async function resolveCompany(r, noticeEl, decision, name) {
+    try {
+      await api("/submissions/" + encodeURIComponent(r.id) + "/company",
+        { method: "POST", body: JSON.stringify({ decision: decision, name: name }) });
+      notice(noticeEl, (decision === "same" ? "Using the company on file" : "Delivering as \"" + name + "\"")
+        + " — re-queued " + r.id.slice(0, 8) + "; the worker will pick it up.", "success");
+      if (noticeEl === "notice") loadData(); else refreshDetailRow();
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice(noticeEl, e.message, "error");
+    }
+  }
+
   // --- detail view ----------------------------------------------------------
   var TABS = [
     { key: "overview", label: "Overview" },
@@ -703,6 +766,7 @@
     }
     // Full-size (big=true) so Re-drive / Approve / Discard match the Close button.
     if (REDRIVABLE[current.status]) box.appendChild(redriveBtn(current, "detailNotice", true));
+    if (COMPANY_HELD[current.status]) box.appendChild(companyControl(current, "detailNotice", true));
     if (DISCARDABLE[current.status]) box.appendChild(discardControl(current, "detailNotice", true));
   }
 
@@ -1011,7 +1075,11 @@
   function renderDetailsTab() {
     var body = $("detailBody"); body.innerHTML = "";
     body.appendChild(field("Intake status", statusLabel(current.status) + "  (attempts: " + (current.attempt_count || 0) + ")"));
-    if (current.last_error) body.appendChild(field("Last error", current.last_error));
+    if (current.last_error) {
+      // A held row's text is the reason it is held, not an error.
+      body.appendChild(field(current.status === "held_company" ? "Why it is held" : "Last error", current.last_error));
+    }
+    if (current.delivery_overrides) body.appendChild(field("Delivery overrides (staff decision)", JSON.stringify(current.delivery_overrides, null, 2)));
     body.appendChild(field("Payload", JSON.stringify(current.payload, null, 2)));
     if (current.progress) body.appendChild(field("Progress (created so far)", JSON.stringify(current.progress, null, 2)));
     if (current.result) {

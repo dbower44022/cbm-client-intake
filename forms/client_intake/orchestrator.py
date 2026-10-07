@@ -47,7 +47,10 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from core.crm_upsert import COMPANY_SELECT, find_create_or_fill, merge_company_type
+from core.crm_upsert import (
+    COMPANY_SELECT, CompanyConflict, conflicting_website, fill_company_website,
+    find_create_or_fill, merge_company_type,
+)
 from core.enum_filter import EnumSanitizer
 from core.espo import EspoApi
 from core.phone import e164_or_none
@@ -119,6 +122,16 @@ async def _find_or_create_account(
     existing = await client.find_one(ACCOUNT, "name", name, select=COMPANY_SELECT)
     if existing:
         log.info("matched existing Account %s for %r", existing["id"], name)
+        # A pre-startup submission collects no website, so only a business
+        # profile can conflict. Same name at a DIFFERENT web address is a
+        # different company: hold for staff before anything is written —
+        # here a wrong match would also hand the client another business's
+        # client profile and engagement (company-website-hold-plan.md).
+        website = sub.business_website if sub.business_stage != "Pre-Startup" else None
+        stored = conflicting_website(existing, website)
+        if stored:
+            raise CompanyConflict(name, existing["id"], stored, website or "")
+        await fill_company_website(client, existing, website)
         # A company CBM knows in another role gains this one (merge-only).
         await merge_company_type(client, existing, CLIENT)
         return existing["id"]

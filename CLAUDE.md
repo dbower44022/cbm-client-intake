@@ -56,6 +56,16 @@ Cross-form behaviour worth knowing before changing an orchestrator:
   is logged, never fatal. A funder's company applying as a partner used to
   stay typed `Sponsor` only. **The Contact's `cContactType` is deliberately
   NOT merged** — null-fill only, a person's type is curated data.
+- **A company that exists at a DIFFERENT web address HOLDS the submission**
+  (v0.238.0, Doug's ruling 2026-10-07): client intake, partner and sponsor
+  raise `core/crm_upsert.CompanyConflict` on a matched company whose stored
+  website disagrees with the submitted one (`website_key` comparison — the
+  quick-add refuses with a message; a public form cannot, so it holds). The
+  row goes to **`held_company`** before any record is written, and Submission
+  Admin resolves it — *Same company* (website set aside) or *Different
+  company* (a qualified name) — through **`delivery_overrides`**, merged
+  over the captured payload at delivery; the payload itself is never
+  rewritten. Plan: `prds/company-website-hold-plan.md`.
 - **Repeat submitters null-fill, never overwrite** —
   `core/crm_upsert.find_create_or_fill` reuses an existing Contact and backfills
   only empty fields. `CClientProfile` is find-or-create too (matched on
@@ -695,6 +705,11 @@ durable store. Staff reference: `submission-admin.md`.
   render. Count chips are one-click filters; filtering is client-side.
 - **No owner — coordination by visibility**: an attributed comment stream, an
   automatic activity feed, and presence ("viewed 4 min ago").
+- **A Held-Company row has its own control, not Approve** (v0.238.0): the
+  company the submission names exists at a different web address, so
+  *Company ▾* offers *Same company* / *Different company* (name required,
+  must differ from the one on file); both write `delivery_overrides` and
+  re-queue. A bare re-drive is not offered — it would hit the same conflict.
 - **Close requires a reason**; discard requires one too (422 without) and stamps
   who/when/why on the CRM receipt. A submitter replying on an anchored thread
   after close **auto-reopens** it.
@@ -1448,7 +1463,8 @@ the Notes column's field to wysiwyg — the switch that turns rich notes on),
 `crating-entity-crm-handoff.md`,
 `cevent-audience-display-crm-handoff.md` (event audience + display time —
 crm-test done, production and Boston owed), `cnetworkstandard-entity-crm-handoff.md` (the chapter network's config-version
-stamp — pending on both CRMs), `cintake-submission-*.md`, `cinformation-request-entity.md`,
+stamp — pending on both CRMs), `cintake-submission-*.md` (incl. `cintake-submission-company-status.md`, the
+`Held-Company` option — pending on both CRMs), `cinformation-request-entity.md`,
 `cconversation-entity.md`, `cevent-entities-crm-handoff.md`,
 `csession-*.md`, `cmentorprofile-*.md`, `clastcontactdate-field.md`,
 `documentsfolderurl-crm-field.md`, `emailtemplate-et-crm-prereqs.md`,
@@ -1555,8 +1571,18 @@ unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
 
+- **v0.238.0 (2026-10-07) — the public forms HOLD a submission whose company
+  exists at a different web address.** Committed, not pushed. Standing rules
+  in the five-forms and Submission Admin sections; plan
+  `prds/company-website-hold-plan.md`. Ships with **migration 0029**
+  (`delivery_overrides`), so the PRE_DEPLOY migrate job runs on the push. No
+  flag; rollback is a revert (the column is harmless left behind). **Verified
+  by tests only** — the live pass is `OPEN-ITEMS.md` #39; the CRM option
+  `Held-Company` is owed on both CRMs (#11), and until built the receipt
+  reads `Received` with the explanation.
+
 - **v0.237.0 (2026-10-07) — quick-add refuses a same-named company at a
-  different web address.** Committed, not pushed; standing rule in the
+  different web address.** Pushed 2026-10-07 with v0.236.0; standing rule in the
   Session Management section. No flag; rollback is a revert. **Verified by
   tests only** — the live case is "+ Add partner" on crm-test for a company
   whose name exists with another website, expecting the refusal message.

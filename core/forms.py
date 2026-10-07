@@ -51,3 +51,11 @@ class FormSpec:
     # Naming a key here makes the match form + email + that key, so a repeat for
     # the SAME thing still holds and a repeat for a different one delivers.
     duplicate_scope_key: Optional[str] = None
+    # The payload keys holding the company NAME and its WEBSITE, for forms that
+    # find-or-create a Company — ``(name_key, website_key)`` — or None.
+    #
+    # Submission Admin's resolution of a ``held_company`` row writes a
+    # ``delivery_overrides`` entry against these keys: "Same company" blanks
+    # the website so the name match reuses the company; "Different company"
+    # replaces the name so a new one is created (company-website-hold-plan.md).
+    company_keys: Optional[tuple[str, str]] = None

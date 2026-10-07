@@ -34,7 +34,10 @@ from __future__ import annotations
 import logging
 
 from core.config import get_settings
-from core.crm_upsert import COMPANY_SELECT, find_create_or_fill, merge_company_type
+from core.crm_upsert import (
+    COMPANY_SELECT, CompanyConflict, conflicting_website, fill_company_website,
+    find_create_or_fill, merge_company_type,
+)
 from core.enum_filter import EnumSanitizer
 from core.espo import EspoApi, EspoError
 from core.phone import e164_or_none
@@ -88,6 +91,12 @@ async def _find_or_create_account(sub: PartnerApplication, client: EspoApi) -> s
     existing = await client.find_one(ACCOUNT, "name", sub.company, select=COMPANY_SELECT)
     if existing:
         log.info("matched existing Account %s for %r", existing["id"], sub.company)
+        # Same name at a DIFFERENT web address is a different company: hold
+        # for staff before anything is written (company-website-hold-plan.md).
+        stored = conflicting_website(existing, sub.business_website)
+        if stored:
+            raise CompanyConflict(sub.company, existing["id"], stored, sub.business_website or "")
+        await fill_company_website(client, existing, sub.business_website)
         # A company CBM knows in another role gains this one (merge-only).
         await merge_company_type(client, existing, COMPANY_TYPE_PARTNER)
         return existing["id"]

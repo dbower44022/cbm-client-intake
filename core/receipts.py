@@ -43,6 +43,7 @@ R_COMPLETED = "Completed"
 R_HELD_SPAM = "Held-Spam"
 R_HELD_EMAIL = "Held-Email"
 R_HELD_DUPLICATE = "Held-Duplicate"
+R_HELD_COMPANY = "Held-Company"
 R_ERROR = "Error"
 R_DISCARDED = "Discarded"
 
@@ -51,7 +52,7 @@ R_DISCARDED = "Discarded"
 # ``_gate_status``); until then the receipt falls back to the mapped value below
 # and the explanation still rides in intakeMessage, so the app can deploy ahead
 # of the CRM build. Handoff: cintake-submission-duplicate-status.md
-_GATED_STATUSES = {R_HELD_DUPLICATE: R_RECEIVED}
+_GATED_STATUSES = {R_HELD_DUPLICATE: R_RECEIVED, R_HELD_COMPANY: R_RECEIVED}
 
 # App-store machine status -> receipt status. pending/processing/retry are all
 # "Received" — the visitor's submission is in hand and being worked; the
@@ -65,6 +66,7 @@ _STATUS_MAP = {
     "held_honeypot": R_HELD_SPAM,
     "held_review": R_HELD_EMAIL,
     "held_duplicate": R_HELD_DUPLICATE,
+    "held_company": R_HELD_COMPANY,
     "discarded": R_DISCARDED,
 }
 
@@ -261,6 +263,31 @@ def duplicate_message(row: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def company_message(row: dict[str, Any]) -> str:
+    """Why this arrival was held, and what the reviewer is deciding."""
+    detail = (row.get("last_error") or "").strip()
+    lines = [
+        "Company name conflict — held for review, not yet delivered to the CRM.",
+        "",
+        "The company this submission names already exists in the CRM with a "
+        "DIFFERENT website. Two businesses can share a name; delivering this "
+        "submission as-is would attach it to the existing company's records.",
+    ]
+    if detail:
+        lines += ["", detail]
+    lines += [
+        "",
+        "In Submission Admin:",
+        "  - Same company — if it really is the company already on file. The "
+        "submitted website is set aside and the existing company is reused.",
+        "  - Different company — if it is another business. Give it a name "
+        "that tells the two apart (a city, say); a new company is created "
+        "under that name.",
+        "  - Discard (with a reason) — if the submission should not be processed.",
+    ]
+    return "\n".join(lines)
+
+
 def intake_message(row: dict[str, Any]) -> str:
     status = receipt_status(row.get("status") or "")
     if status == R_HELD_SPAM:
@@ -269,6 +296,8 @@ def intake_message(row: dict[str, Any]) -> str:
         return "All emails need review"
     if status == R_HELD_DUPLICATE:
         return duplicate_message(row)
+    if status == R_HELD_COMPANY:
+        return company_message(row)
     if status == R_ERROR:
         return error_message(row)
     # Received / Completed / Discarded carry no processing message (the

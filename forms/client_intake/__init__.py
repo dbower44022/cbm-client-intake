@@ -18,4 +18,5 @@ SPEC = FormSpec(
     submission_model=IntakeSubmission,
     orchestrator=submit_intake,
     frontend_dir=Path(__file__).resolve().parent / "frontend",
+    company_keys=("business_name", "business_website"),
 )

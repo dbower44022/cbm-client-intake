@@ -59,6 +59,12 @@ STATUS_HELD_REVIEW = "held_review"
 # re-filling the form used to produce. Staff decide in /ops: Approve = redrive
 # (the worker delivers it normally), Discard = drop it. Never claimed while held.
 STATUS_HELD_DUPLICATE = "held_duplicate"
+# The company this submission names already exists at a DIFFERENT web address
+# (2026-10-07). Delivery stopped before any record was written; staff decide in
+# /ops — "Same company" or "Different company" (a qualified name) — through
+# ``delivery_overrides``, then redrive. Never claimed while held. Plan:
+# prds/company-website-hold-plan.md
+STATUS_HELD_COMPANY = "held_company"
 # Terminal, staff-set: a stuck submission resolved manually in /ops (e.g. a bad
 # payload that can't be re-driven). Kept in the table for audit; excluded from
 # the backlog / needs-attention alerting and never claimed by the worker.
@@ -77,7 +83,8 @@ CLAIMABLE = (STATUS_PENDING, STATUS_RETRY)
 # spam — neither is a new item for a human, so they don't count. held_duplicate
 # is a real new item: a submission nobody has decided about yet.
 OPEN_REVIEW_STATUSES = (
-    STATUS_HELD_REVIEW, STATUS_HELD_DUPLICATE, STATUS_NEEDS_ATTENTION, STATUS_COMPLETED,
+    STATUS_HELD_REVIEW, STATUS_HELD_DUPLICATE, STATUS_HELD_COMPANY,
+    STATUS_NEEDS_ATTENTION, STATUS_COMPLETED,
 )
 
 # Statuses that do NOT count as a prior submission when looking for a near
@@ -160,6 +167,11 @@ submission = Table(
     # duplicate (migration 0024). Lets Submission Admin link the reviewer to the
     # original for side-by-side comparison. NULL on every other row.
     Column("duplicate_of", String(36)),
+    # Staff-supplied values merged OVER the captured payload at delivery (the
+    # captured payload itself is never rewritten — it is what the visitor
+    # sent). Written by the held_company resolution; keys are the form's
+    # ``company_keys`` (2026-10-07, migration 0029).
+    Column("delivery_overrides", JSONB),
     Column("received_at", DateTime(timezone=True), nullable=False),
     Column("processed_at", DateTime(timezone=True)),
     Column("updated_at", DateTime(timezone=True), nullable=False),
@@ -327,6 +339,8 @@ class Claimed:
     payload: dict[str, Any]
     progress: Optional[dict[str, Any]]
     attempt_count: int
+    # See the ``delivery_overrides`` column; the worker merges it over payload.
+    overrides: Optional[dict[str, Any]] = None
 
 
 def _now() -> datetime:
@@ -376,6 +390,9 @@ class SubmissionStore(Protocol):
     async def open_review_count(self) -> int: ...
     async def list_open_review(self, *, limit: int = 25) -> list[dict[str, Any]]: ...
     async def redrive(self, submission_id: str, *, acted_by: Optional[str] = None) -> bool: ...
+    async def set_delivery_overrides(
+        self, submission_id: str, overrides: dict[str, Any], *, acted_by: Optional[str] = None
+    ) -> bool: ...
     async def discard(
         self, submission_id: str, *, acted_by: Optional[str] = None,
         reason: Optional[str] = None,
@@ -686,6 +703,7 @@ class PostgresStore:
                 submission.c.payload,
                 submission.c.progress,
                 submission.c.attempt_count,
+                submission.c.delivery_overrides,
             )
         )
         async with self._engine.begin() as conn:
@@ -693,7 +711,7 @@ class PostgresStore:
         return [
             Claimed(
                 id=r[0], form_slug=r[1], submission_token=r[2],
-                payload=r[3], progress=r[4], attempt_count=r[5],
+                payload=r[3], progress=r[4], attempt_count=r[5], overrides=r[6],
             )
             for r in rows
         ]
@@ -835,7 +853,7 @@ class PostgresStore:
 
         Guarded (P1-11): only ``needs_attention`` / ``retry`` /
         ``held_honeypot`` / ``held_review`` / ``held_duplicate`` /
-        ``discarded`` rows may be
+        ``held_company`` / ``discarded`` rows may be
         re-driven (held_honeypot = the honeypot false-positive recovery;
         held_review = staff APPROVING an inbound info@ email — delivery
         creates the CRM records; held_duplicate = staff judging a near-duplicate
@@ -853,7 +871,8 @@ class PostgresStore:
                 .where(
                     submission.c.status.in_(
                         (STATUS_NEEDS_ATTENTION, STATUS_RETRY, STATUS_HELD,
-                         STATUS_HELD_REVIEW, STATUS_HELD_DUPLICATE, STATUS_DISCARDED)
+                         STATUS_HELD_REVIEW, STATUS_HELD_DUPLICATE, STATUS_HELD_COMPANY,
+                         STATUS_DISCARDED)
                     )
                 )
                 .values(
@@ -868,6 +887,24 @@ class PostgresStore:
                     resolved_at=None, resolved_by=None,
                     updated_at=_now(),
                 )
+            )
+        return result.rowcount > 0
+
+    async def set_delivery_overrides(
+        self, submission_id: str, overrides: dict[str, Any], *, acted_by: Optional[str] = None
+    ) -> bool:
+        """Record staff-supplied values to merge over the payload at delivery.
+
+        Only a ``held_company`` row takes them — the resolution is the only
+        thing that writes here, and a row in any other state has nothing to
+        resolve. The caller redrives afterwards.
+        """
+        async with self._engine.begin() as conn:
+            result = await conn.execute(
+                update(submission)
+                .where(submission.c.id == submission_id)
+                .where(submission.c.status == STATUS_HELD_COMPANY)
+                .values(delivery_overrides=overrides, acted_by=acted_by, updated_at=_now())
             )
         return result.rowcount > 0
 

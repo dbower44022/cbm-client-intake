@@ -942,6 +942,84 @@ async def redrive(submission_id: str, request: Request) -> dict:
     return {"status": "requeued"}
 
 
+class CompanyResolutionIn(BaseModel):
+    decision: str            # "same" | "different"
+    name: str = ""           # the qualified company name, for "different"
+
+
+@router.post("/submissions/{submission_id}/company")
+async def resolve_company(submission_id: str, body: CompanyResolutionIn, request: Request) -> dict:
+    """Resolve a ``held_company`` row and re-queue it (company-website-hold-plan.md).
+
+    **same** — the company on file IS this one: the submitted website is set
+    aside (blanked in ``delivery_overrides``), so the name match reuses the
+    company and its stored website stands.
+    **different** — another business with the same name: ``name`` replaces
+    the submitted company name, so delivery creates a new company under it.
+    The captured payload is never rewritten; the override and the decision are
+    recorded, then the row redrives like any approval.
+    """
+    from forms import SPECS_BY_SLUG
+
+    user = _require_user(request)
+    store = _store(request)
+    row = await store.get_submission(submission_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Submission not found.")
+    if row.get("status") != "held_company":
+        raise HTTPException(
+            status_code=409, detail="This submission is not held for a company decision."
+        )
+    spec = SPECS_BY_SLUG.get(row.get("form_slug") or "")
+    keys = getattr(spec, "company_keys", None)
+    if not keys:
+        raise HTTPException(status_code=409, detail="This form has no company to resolve.")
+    name_key, website_key = keys
+    decision = body.decision.strip().lower()
+    if decision == "same":
+        overrides = {website_key: None}
+        summary = "company decision: same company — submitted website set aside"
+    elif decision == "different":
+        name = body.name.strip()
+        if not name:
+            raise HTTPException(
+                status_code=422,
+                detail="Give the new company a name that tells it apart from the one on file.",
+            )
+        current = ((row.get("payload") or {}).get(name_key) or "").strip()
+        if name.lower() == current.lower():
+            raise HTTPException(
+                status_code=422,
+                detail="That is the same name as the company on file — add something "
+                       "that tells them apart, for example a city.",
+            )
+        overrides = {name_key: name}
+        summary = f"company decision: different company — delivering as \"{name}\""
+    else:
+        raise HTTPException(status_code=422, detail="Decision must be 'same' or 'different'.")
+
+    if not await store.set_delivery_overrides(submission_id, overrides, acted_by=user["userName"]):
+        raise HTTPException(status_code=409, detail="This submission is no longer held.")
+    if not await store.redrive(submission_id, acted_by=user["userName"]):
+        raise HTTPException(status_code=409, detail="Could not re-queue the submission.")
+    log.info("company resolution %s by %s: %s", submission_id, user["userName"], summary)
+    await _activity(store, submission_id, kind=ACT_REDRIVEN, actor=user["userName"],
+                    actor_name=_actor(user), summary=summary)
+    espo = _api_client()
+    if espo is not None:
+        from core import receipts
+        from datetime import datetime, timezone
+
+        await receipts.touch_safe(
+            espo, store, submission_id,
+            extra={
+                "dispositionedBy": _actor(user),
+                "dispositionedAt": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+            },
+        )
+    return {"status": "requeued", "decision": decision, "overrides": overrides}
+
+
 class DiscardIn(BaseModel):
     reason: str = ""
     note: str = ""

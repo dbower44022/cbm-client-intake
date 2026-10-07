@@ -23,6 +23,7 @@ import httpx
 from core import monitoring, receipts
 from core import store as store_mod
 from core.config import Settings, get_settings
+from core.crm_upsert import CompanyConflict
 from core.espo import DryRunEspoClient, EspoApi, EspoClient, EspoError, EspoTransportError
 from core.logging_setup import setup_logging
 from core.resumable import ResumableClient
@@ -120,8 +121,20 @@ async def process_one(store: SubmissionStore, settings: Settings, claimed: Claim
         # the current schema rejects (e.g. a form schema tightened after
         # capture) is a permanent failure routed to needs_attention — it must
         # never escape and kill the worker process.
-        submission = spec.submission_model.model_validate(claimed.payload)
+        # Staff-supplied overrides (the held_company resolution) ride OVER
+        # the captured payload; the payload itself is never rewritten.
+        payload = {**claimed.payload, **(claimed.overrides or {})}
+        submission = spec.submission_model.model_validate(payload)
         ids = await spec.orchestrator(submission, client)
+    except CompanyConflict as exc:
+        # Not a failure: the company named already exists at a different web
+        # address, and nothing was written. Held for a staff decision
+        # (prds/company-website-hold-plan.md); the receipt explains it.
+        await store.mark_failed(claimed.id, status=store_mod.STATUS_HELD_COMPANY, error=str(exc))
+        await receipts.touch_safe(base, store, claimed.id)
+        log.info("held_company %s (%s token=%s): %s",
+                 claimed.id, claimed.form_slug, claimed.submission_token, exc)
+        return
     except Exception as exc:  # noqa: BLE001 — classify + route, never crash the loop
         attempt = (claimed.attempt_count or 0) + 1
         if _is_transient(exc) and attempt < settings.max_delivery_attempts:

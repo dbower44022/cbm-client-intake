@@ -21,7 +21,8 @@ vocabulary both Submission Admin and the CRM receipt speak.*
    intake-receipt redesign, 2026-07-27). One status vocabulary, used by the
    receipt AND every Submission Admin screen: **Received** (in hand, being
    processed — covers waiting/delivering/retrying) → **Completed** (all
-   records created), with **Held-Spam** (bot trap), **Held-Email** (an info@
+   records created), with **Held-Spam** (bot trap), **Held-Company** (the company named exists
+   at a different website — staff decide same/different), **Held-Email** (an info@
    email awaiting triage), **Error** (delivery failed; the receipt's message
    says exactly what happened and how to fix it), and **Discarded** (a
    person decided against it — with who/when/why stamped on the receipt).

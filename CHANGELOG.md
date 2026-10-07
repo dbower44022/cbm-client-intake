@@ -4,7 +4,49 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
-## [0.237.0] — 2026-10-07
+## [0.238.0] — 2026-10-07
+
+**feat(intake): a public submission naming a company that exists at a
+DIFFERENT web address is HELD for staff, not delivered.** The public-form
+twin of v0.237.0's quick-add rule, by Doug's ruling the same day: the forms
+cannot refuse (the submitter is an anonymous visitor who cannot fix CRM data,
+and naming the company on file to them hands our records to anyone who types
+a name) and must not merge (one business would land on another's record —
+for a client, on another business's client profile and engagement). Plan:
+`prds/company-website-hold-plan.md`.
+
+- `core/crm_upsert.CompanyConflict` + `conflicting_website` +
+  `fill_company_website`; the client-intake, partner and sponsor
+  orchestrators raise the conflict on a matched company **before any record
+  is written**, null-fill a missing website otherwise. Pre-startup client
+  intake collects no website and never conflicts. The quick-add now shares
+  the same comparison helper.
+- **`held_company`**, a new store status: in `OPEN_REVIEW_STATUSES` (a new
+  item in Submission Admin, counted in the portal badge and the analytics
+  attention metric) and in the redrive guard. The worker and the synchronous
+  path both catch the conflict and hold the row with the explanation; the
+  visitor sees "received" either way. Storeless (dev) writes a direct
+  receipt.
+- **`delivery_overrides`** (migration 0029): staff-supplied values the worker
+  merges OVER the captured payload before validation. The captured payload is
+  never rewritten — it is the record of what the visitor sent.
+- **Submission Admin**: a **Company ▾** control on a Held-Company row with
+  two decisions, both re-queue — *Same company* blanks the submitted website
+  so the name match reuses the company on file; *Different company* takes a
+  qualified name (refused if blank or identical to the one on file) and
+  delivers as a new company. `POST /ops/api/submissions/{id}/company`. The
+  form's `company_keys` on its `FormSpec` say which payload keys those are.
+  Discard stays available; a plain Re-drive is deliberately not offered (it
+  would hit the same conflict).
+- **Receipt vocabulary**: `Held-Company`, feature-gated like Held-Duplicate
+  (falls back to `Received` with the explanation in `intakeMessage` until the
+  CRM option exists). Handoff: `cintake-submission-company-status.md`,
+  `OPEN-ITEMS.md` #11.
+- Tests: `tests/test_company_hold.py` (23) — helpers, the three
+  orchestrators, the worker hold and both override merges, the receipt word
+  and gate, and the resolution endpoint's six cases.
+
+
 
 **feat(sessions): "+ Add partner" / "+ Add funder" refuse a same-named company
 at a different web address.** Doug's request on 2026-10-07, following the

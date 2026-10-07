@@ -395,10 +395,12 @@ block a deploy.)*
     metadata that must result and gives a two-ordinary-links fallback. Take the
     fallback rather than fighting the dialog, and say which way it went.
 
-11. **`Held-Duplicate` option on `CIntakeSubmission.intakeStatus`** (both CRMs) —
-    handoff `cintake-submission-duplicate-status.md`. Until built, the receipt
-    engine falls back to `Received` with the explanation in `intakeMessage`;
-    activates with no deploy.
+11. **`Held-Duplicate` AND `Held-Company` options on
+    `CIntakeSubmission.intakeStatus`** (both CRMs) — handoffs
+    `cintake-submission-duplicate-status.md` and
+    `cintake-submission-company-status.md` (v0.238.0, 2026-10-07); one sitting
+    for both. Until built, the receipt engine falls back to `Received` with the
+    explanation in `intakeMessage`; activates with no deploy.
 12. **prod Mentor Role: `CMentorProfile` edit = `all`** — crm-test has it, prod
     has `own`, which 403s "+ Add CBM contact" (co-mentor linking) for every
     non-admin mentor. v0.174.0 added an app-side admin escalation as the second
@@ -444,6 +446,19 @@ block a deploy.)*
     than silent loss ([[prod-ccommunication-field-length-drift]]).
 
 ## Live verification owed
+
+39. **The company-website hold (v0.238.0) — verified by tests only.** On
+    crm-test, as a real non-admin Marketing Admin Team user: (a) submit the
+    partner form naming a company that exists there with a different website
+    → the row reads **Held-Company** in Submission Admin, no Account /
+    Contact / CPartnerProfile created, the receipt carries the explanation;
+    (b) *Company ▾ → Same company* → delivered, the existing company reused,
+    its website unchanged; (c) a second such submission, *Different company*
+    with a qualified name → a new Account under that name; (d) the same with
+    the client-intake form, checking no CClientProfile was touched while held.
+    The migrate job must have run (`delivery_overrides` column) — a hold
+    before it would fail the claim with a column error. Remember crm-test
+    resets nightly.
 
 38. **An Internal event's join link cannot be set in Event Administration**
     (found 2026-09-30 while writing the F5 live pass). `virtualMeetingUrl`

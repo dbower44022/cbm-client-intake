@@ -31,6 +31,7 @@ from . import receipts
 from . import store as store_mod
 from .branding import BrandedStaticFiles, render_page as render_branding
 from .config import Settings, get_settings, override_values, overrides_version
+from .crm_upsert import CompanyConflict
 from .espo import DryRunEspoClient, EspoApi, EspoClient, EspoError
 from .forms import BaseSubmission, FormSpec
 from .logging_setup import setup_logging
@@ -329,6 +330,26 @@ async def _process_submission(
 
     try:
         ids = await spec.orchestrator(submission, delivery_client)
+    except CompanyConflict as exc:
+        # The company named already exists at a different web address; nothing
+        # was written. With a store the row is HELD for staff (the worker
+        # path's twin); without one the CRM receipt carries the explanation
+        # and is the only record. The visitor is told "received" either way —
+        # the decision is staff's, never theirs (company-website-hold-plan.md).
+        if captured is not None:
+            await store.mark_failed(
+                captured.id, status=store_mod.STATUS_HELD_COMPANY, error=str(exc)
+            )
+            await receipts.touch_safe(client, store, captured.id)
+            log.info("%s held_company token=%s: %s", spec.slug, submission.submission_token, exc)
+            return {"status": "received", "reference": captured.id}
+        await receipts.create_direct(
+            client,
+            _receipt_row_like(spec, submission, store_mod.STATUS_HELD_COMPANY, error=str(exc)),
+        )
+        log.warning("%s held_company (no store) token=%s: %s",
+                    spec.slug, submission.submission_token, exc)
+        return {"status": "received"}
     except EspoError as exc:
         # Record the failure on the CRM receipt (intakeStatus=Error with the
         # what-happened-and-how-to-fix message). Best-effort, then the 502.

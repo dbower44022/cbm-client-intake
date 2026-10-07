@@ -20,4 +20,5 @@ SPEC = FormSpec(
     submission_model=SponsorApplication,
     orchestrator=submit_sponsor,
     frontend_dir=Path(__file__).resolve().parent / "frontend",
+    company_keys=("company", "business_website"),
 )

@@ -117,6 +117,53 @@ def website_key(value: Any) -> str:
     return f"{host}/{path}" if path else host
 
 
+class CompanyConflict(Exception):
+    """A same-named company exists at a DIFFERENT web address.
+
+    Raised by the public-form orchestrators before any record is written, so
+    the submission can be HELD for staff (never refused — the submitter is an
+    anonymous visitor — and never merged, which would attach one business to
+    another's record). Carries what the reviewer needs to decide.
+    """
+
+    def __init__(self, name: str, existing_id: str, existing_website: str,
+                 submitted_website: str) -> None:
+        self.name = name
+        self.existing_id = existing_id
+        self.existing_website = existing_website
+        self.submitted_website = submitted_website
+        super().__init__(
+            f"A company named {name} already exists (Account/{existing_id}) with "
+            f"the website {existing_website}; this submission gave {submitted_website}."
+        )
+
+
+def conflicting_website(existing: dict[str, Any], website: Any) -> Optional[str]:
+    """The matched company's stored website when it DISAGREES with ``website``.
+
+    None when no website was given, none is stored, or the two are one site
+    under :func:`website_key`. ``existing`` must have been read with
+    :data:`COMPANY_SELECT`.
+    """
+    given = website_key(website)
+    stored = existing.get("website") or ""
+    if not given or not stored:
+        return None
+    return stored if website_key(stored) != given else None
+
+
+async def fill_company_website(client: EspoApi, existing: dict[str, Any], website: Any) -> bool:
+    """Null-fill a matched company's website, best-effort. True when written."""
+    if not website or existing.get("website"):
+        return False
+    try:
+        await client.update("Account", existing["id"], {"website": website})
+    except EspoError as exc:
+        log.warning("could not fill website on Account/%s: %s", existing.get("id"), exc)
+        return False
+    return True
+
+
 async def merge_company_type(client: EspoApi, existing: dict[str, Any], company_type: str) -> bool:
     """Give a REUSED company this door's role, merge-only and best-effort.
 

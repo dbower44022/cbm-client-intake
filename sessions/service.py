@@ -31,8 +31,8 @@ from assignments.service import (
 from core import inline_images
 from core.config import get_settings
 from core.crm_upsert import (
-    COMPANY_SELECT, create_dropping_invalid, find_create_or_fill, merge_company_type,
-    website_key,
+    COMPANY_SELECT, conflicting_website, create_dropping_invalid, fill_company_website,
+    find_create_or_fill, merge_company_type,
 )
 from core.espo import EspoError, is_forbidden
 from core.phone import e164_or_none, format_us
@@ -3216,19 +3216,15 @@ async def _find_or_create_company(
     spec = cfg.create_spec
     existing = await client.find_one(ACCOUNT, "name", name, select=COMPANY_SELECT)
     if existing:
-        stored = existing.get("website") or ""
-        if website and stored and website_key(stored) != website_key(website):
+        stored = conflicting_website(existing, website)
+        if stored:
             raise SessionError(
                 f"A company named {name} already exists with the website {stored}. "
                 f"If this is a different company, add something to the name that "
                 f"tells them apart (for example a city). If it is the same company, "
                 f"clear the website and save again."
             )
-        if website and not stored:
-            try:
-                await client.update(ACCOUNT, existing["id"], {"website": website})
-            except EspoError as exc:  # null-fill is best-effort, never fatal
-                log.warning("could not fill website on Account/%s: %s", existing["id"], exc)
+        await fill_company_website(client, existing, website)
         if spec:
             await merge_company_type(client, existing, spec.company_type)
         return existing["id"], False
