@@ -6,6 +6,25 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+40. **The training sandbox's funders were invisible to the Funder Management
+    demo login** (found 2026-10-07 during the Phase B live pass, section 5).
+    Sally Sponsor's role (Sponsor Manager Role, the roles standard) reads
+    `CSponsorProfile` at **team**, and none of the six sandbox funders carried
+    a team or an assigned user, so her grid was empty while an administrator
+    saw all six (administrators bypass ACL). The demo in `demo-records.md`
+    ("Open: Harrowgate Family Trust") predates crm-test being brought to the
+    roles standard on 2026-09-13, which is the likely moment it broke.
+    **Worked around 2026-10-07:** all six funders were put in the Sponsor
+    Management Team on crm-test by the configuration administrator (data only,
+    no role change). **Owed:** (a) the nightly reset restores the data
+    snapshot, so this is gone by morning unless the sandbox is re-baselined
+    (`SANDBOX-RESET.md`); (b) check whether production's funder records carry
+    the Sponsor Management Team or assigned users — if they do not, every
+    non-admin Funder Management user on production sees an empty grid too, and
+    the fix is data (teams on the records) rather than the role; (c) the same
+    question for partners, whose role reads at **all** today and so hides
+    nothing, but would if the standard ever tightened it.
+
 34. **The worker reads its mail switches only at start-up, from the
     environment** (found 2026-09-23, reviewing the deployment guide before the
     first real chapter). `worker.py` decides `inbound_on` (the info@ poller) and
