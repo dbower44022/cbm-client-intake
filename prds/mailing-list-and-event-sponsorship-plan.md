@@ -1,6 +1,6 @@
 # Mailing List and Event Sponsorship — plan v0.1 (2026-10-07)
 
-Last Updated: 10-07-26 03:30 · Revision 0.1 — change log at the end.
+Last Updated: 10-07-26 03:40 · Revision 0.2 — change log at the end.
 
 **Status: rulings settled, nothing built.** This is the plan document for the
 arc, in the style of the other arcs in `prds/`: it records Doug's rulings, the
@@ -66,9 +66,11 @@ future work and is not part of this arc.
    measure. Columns are registered, attended, became a client.
 9. **Partner sponsorship is one many-to-many link, and the host link goes.**
    Many partners are associated with one event as a matter of course.
-   `CEvent.partnerProfiles` ↔ `CPartnerProfile.events`, the mirror of the
-   existing funder link; `CEvent.partnerHost` / `CPartnerProfile.hostedEvents`
-   is removed. No "host" distinction until a real report asks for it.
+   `CEvent.partnerProfiles` ↔ `CPartnerProfile.sponsoredEvents`, the mirror
+   of the existing funder link (`sponsorProfiles` ↔ `sponsoredEvents`, read
+   from crm-test 2026-10-07); `CEvent.partnerHost` /
+   `CPartnerProfile.hostedEvents` is removed. No "host" distinction until a
+   real report asks for it.
 10. **The in-application designer is deferred.** Recorded in § 8 for future
     action. The event, partner and contact changes come first.
 
@@ -181,8 +183,12 @@ exportable or printable version is a later step (§ 9).
 ## 5. Phases
 
 **Phase A — CRM change (Doug, crm-test first).** `CEvent.partnerProfiles` ↔
-`CPartnerProfile.events`, many-to-many, labels *Partners* / *Events*; remove
-`partnerHost`. `CEvent.noticeCampaignId` varchar. `CEventRegistration.
+`CPartnerProfile.sponsoredEvents`, many-to-many, labels *Partners* /
+*Sponsored Events*, relation table `cPartnerProfileEvent`; remove
+`partnerHost`. Handoff: `cevent-partner-sponsorship-crm-handoff.md`; plan file
+`scripts/plans/cevent-partner-sponsorship.json`; applier
+`scripts/migrate_event_sponsorship_schema.py` (`--carry-host` copies any
+existing host into the new link first). `CEvent.noticeCampaignId` varchar. `CEventRegistration.
 noticeCampaignId` varchar. Written as a handoff through the CRM-changes
 procedure, applied with the migration-script pattern, verified by reading
 the links back from `GET /Metadata` on the side intended. crm-test, then
@@ -220,7 +226,8 @@ Partner Management user before the flag is set on production.
 
 | Entity | Change | Phase |
 |---|---|---|
-| `CEvent` ↔ `CPartnerProfile` | add many-to-many `partnerProfiles` / `events`; remove `partnerHost` / `hostedEvents` | A |
+| `CEvent` ↔ `CPartnerProfile` | add many-to-many `partnerProfiles` / `sponsoredEvents`; remove `partnerHost` / `hostedEvents` | A |
+| Marketing Admin Role (both CRMs, Boston) | `read: all` on `CPartnerProfile` and `CSponsorProfile`, so the Phase B pickers list — the role holds none today (handoff § 7); the link write escalates on a foreign-record denial | A, ruling owed |
 | `CEvent` | `noticeCampaignId` varchar (app-managed, read-only in layouts) | A |
 | `CEventRegistration` | `noticeCampaignId` varchar | A |
 | `Contact` | none — `cMarketingOptIn` and the native email opt-out suffice | — |
@@ -327,4 +334,5 @@ valuable, each built on something already in place:
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.2 | 10-07-26 03:40 | Claude (Claude Code) | Phase A handoff written: far-side link name is `sponsoredEvents` (mirrors the funder link as read from crm-test), relation table named; Marketing Admin Role gap added to the prerequisites. |
 | 0.1 | 10-07-26 03:30 | Claude (Claude Code) | First version from the 2026-10-07 conversation: ten rulings, the model, five phases, CRM prerequisites, four open questions with recommendations, the deferred designer, later candidates. |

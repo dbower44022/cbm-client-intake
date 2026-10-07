@@ -1,0 +1,38 @@
+{
+  "name": "cevent-partner-sponsorship",
+  "description": "Phase A of prds/mailing-list-and-event-sponsorship-plan.md (Doug's rulings 2026-10-07). One many-to-many link so MANY partners can be associated with one event, mirroring the funder link CEvent.sponsorProfiles <-> CSponsorProfile.sponsoredEvents (relation cSponsorProfileEvent, read from crm-test 2026-10-07); plus the notice-campaign identifier on the event and on the registration. ADDITIVE ONLY: removing the old single partnerHost link is a hand step in cevent-partner-sponsorship-crm-handoff.md section 5, done AFTER this plan has been applied and the one crm-test value carried across.",
+
+  "fields": [
+    {
+      "entity": "CEvent",
+      "name": "noticeCampaignId",
+      "type": "varchar",
+      "maxLength": 100,
+      "readOnly": true,
+      "label": "Notice campaign ID",
+      "tooltipText": "Set by the application when staff link the mailing-service campaign that announced this event. Not edited by hand."
+    },
+    {
+      "entity": "CEventRegistration",
+      "name": "noticeCampaignId",
+      "type": "varchar",
+      "maxLength": 100,
+      "readOnly": true,
+      "label": "Notice campaign ID",
+      "tooltipText": "The campaign whose link this registrant used, when the Register link carried one. Set by the application."
+    }
+  ],
+
+  "links": [
+    {
+      "entity": "CEvent",
+      "link": "partnerProfiles",
+      "linkType": "manyToMany",
+      "entityForeign": "CPartnerProfile",
+      "linkForeign": "sponsoredEvents",
+      "relationName": "cPartnerProfileEvent",
+      "label": "Partners",
+      "labelForeign": "Sponsored Events"
+    }
+  ]
+}

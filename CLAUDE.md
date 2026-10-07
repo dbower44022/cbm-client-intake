@@ -1464,7 +1464,9 @@ the Notes column's field to wysiwyg — the switch that turns rich notes on),
 `cgrant-entities-crm-handoff.md`,
 `crating-entity-crm-handoff.md`,
 `cevent-audience-display-crm-handoff.md` (event audience + display time —
-crm-test done, production and Boston owed), `cnetworkstandard-entity-crm-handoff.md` (the chapter network's config-version
+crm-test done, production and Boston owed),
+`cevent-partner-sponsorship-crm-handoff.md` (many partners per event +
+the notice-campaign id — written, nothing applied), `cnetworkstandard-entity-crm-handoff.md` (the chapter network's config-version
 stamp — pending on both CRMs), `cintake-submission-*.md` (incl. `cintake-submission-company-status.md`, the
 `Held-Company` option — pending on both CRMs), `cinformation-request-entity.md`,
 `cconversation-entity.md`, `cevent-entities-crm-handoff.md`,

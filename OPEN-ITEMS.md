@@ -315,9 +315,14 @@ fields** (ruled 2026-10-07; plan: `prds/mailing-list-and-event-sponsorship-plan.
 replaces the single `partnerHost` / `hostedEvents` link (removed — metadata
 only, the column stays; production's events carry no host today).
 `CEvent.noticeCampaignId` and `CEventRegistration.noticeCampaignId`, varchar.
-Handoff not yet written; crm-test first, then production at a Sunday 17:00
-UTC slot, then Boston with the release that carries the code. The application
-reads neither existing link, so nothing breaks before or after.
+**Handoff written 2026-10-07: `cevent-partner-sponsorship-crm-handoff.md`**,
+both appliers dry-run clean on crm-test, nothing applied yet. crm-test first
+(the apply is two commands plus one hand removal), then production at a Sunday
+17:00 UTC slot, then Boston with the release that carries the code. The
+application reads neither existing link, so nothing breaks before or after.
+**Ruling owed (handoff § 7):** the Marketing Admin Role holds no access to
+`CPartnerProfile` / `CSponsorProfile`, so the Phase B pickers would list
+nothing — recommended `read: all` on both, on both CRMs and Boston.
 
 **Production's `CEngagement.description` → wysiwyg conversion** (added
 2026-08-31) — `cengagement-description-wysiwyg-crm-handoff.md` § 3, at a
