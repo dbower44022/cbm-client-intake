@@ -1434,7 +1434,9 @@ form, tool and platform arc is documented in this file plus its own guide.
 funder contributions, Gmail communications, email quality, the info@ mailbox
 rollout, the intake-receipt redesign, Meet and Fathom transcripts, submission-admin
 collaboration, workspace directories, transcription-vendor options, **grant
-management** and **the rating engine**) — each records
+management**, **the rating engine** and **the mailing list and event
+sponsorship arc** — Constant Contact as a mirror of the CRM, partner
+many-to-many, the deferred in-app designer) — each records
 the decisions and Doug's rulings behind that arc, so read the relevant one before
 reworking a feature. The chapter network is
 **not** one of those plans any more — it is its own project directory,

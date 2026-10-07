@@ -309,6 +309,16 @@ empty company on a partner/funder now renders as "—" and is fixable in the app
 
 ## CRM prerequisites outstanding
 
+**Partner sponsorship of events becomes many-to-many, and two campaign
+fields** (ruled 2026-10-07; plan: `prds/mailing-list-and-event-sponsorship-plan.md`
+§ 5 Phase A, § 6). `CEvent.partnerProfiles` ↔ `CPartnerProfile.events`
+replaces the single `partnerHost` / `hostedEvents` link (removed — metadata
+only, the column stays; production's events carry no host today).
+`CEvent.noticeCampaignId` and `CEventRegistration.noticeCampaignId`, varchar.
+Handoff not yet written; crm-test first, then production at a Sunday 17:00
+UTC slot, then Boston with the release that carries the code. The application
+reads neither existing link, so nothing breaks before or after.
+
 **Production's `CEngagement.description` → wysiwyg conversion** (added
 2026-08-31) — `cengagement-description-wysiwyg-crm-handoff.md` § 3, at a
 Sunday 17:00 UTC slot. It is the switch that turns Client Administration's
