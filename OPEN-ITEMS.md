@@ -315,14 +315,17 @@ fields** (ruled 2026-10-07; plan: `prds/mailing-list-and-event-sponsorship-plan.
 replaces the single `partnerHost` / `hostedEvents` link (removed — metadata
 only, the column stays; production's events carry no host today).
 `CEvent.noticeCampaignId` and `CEventRegistration.noticeCampaignId`, varchar.
-**Handoff written 2026-10-07: `cevent-partner-sponsorship-crm-handoff.md`**,
-both appliers dry-run clean on crm-test, nothing applied yet. crm-test first
-(the apply is two commands plus one hand removal), then production at a Sunday
-17:00 UTC slot, then Boston with the release that carries the code. The
-application reads neither existing link, so nothing breaks before or after.
-**Ruling owed (handoff § 7):** the Marketing Admin Role holds no access to
-`CPartnerProfile` / `CSponsorProfile`, so the Phase B pickers would list
-nothing — recommended `read: all` on both, on both CRMs and Boston.
+**Handoff: `cevent-partner-sponsorship-crm-handoff.md`. crm-test done
+2026-10-07** (fields, link, the one demo host carried, verified as the org-wide
+key) **except the hand removal of `partnerHost` (handoff § 5) — Doug.** Then
+production at a Sunday 17:00 UTC slot, then Boston with the release that
+carries the code. The application reads neither link until Phase B ships.
+**Ruled 2026-10-07:** the Marketing Admin Role gets `read: all` on
+`CPartnerProfile` and `CSponsorProfile` — applied on crm-test; production and
+Boston owed with their Phase A apply, and the roles standard capture
+(`prds/chapter-network/roles-standard/prod-capture-2026-08-31.json`) must gain
+the two cells when production does, or the conformance check reports crm-test
+as drifted.
 
 **Production's `CEngagement.description` → wysiwyg conversion** (added
 2026-08-31) — `cengagement-description-wysiwyg-crm-handoff.md` § 3, at a

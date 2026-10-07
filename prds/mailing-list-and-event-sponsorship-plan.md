@@ -1,6 +1,6 @@
 # Mailing List and Event Sponsorship — plan v0.1 (2026-10-07)
 
-Last Updated: 10-07-26 03:40 · Revision 0.2 — change log at the end.
+Last Updated: 10-07-26 03:45 · Revision 0.3 — change log at the end.
 
 **Status: rulings settled, nothing built.** This is the plan document for the
 arc, in the style of the other arcs in `prds/`: it records Doug's rulings, the
@@ -227,7 +227,7 @@ Partner Management user before the flag is set on production.
 | Entity | Change | Phase |
 |---|---|---|
 | `CEvent` ↔ `CPartnerProfile` | add many-to-many `partnerProfiles` / `sponsoredEvents`; remove `partnerHost` / `hostedEvents` | A |
-| Marketing Admin Role (both CRMs, Boston) | `read: all` on `CPartnerProfile` and `CSponsorProfile`, so the Phase B pickers list — the role holds none today (handoff § 7); the link write escalates on a foreign-record denial | A, ruling owed |
+| Marketing Admin Role (both CRMs, Boston) | `read: all` on `CPartnerProfile` and `CSponsorProfile`, so the Phase B pickers list — the role held none (handoff § 7); the link write escalates on a foreign-record denial | A — **ruled and applied on crm-test 2026-10-07**; production and Boston owed |
 | `CEvent` | `noticeCampaignId` varchar (app-managed, read-only in layouts) | A |
 | `CEventRegistration` | `noticeCampaignId` varchar | A |
 | `Contact` | none — `cMarketingOptIn` and the native email opt-out suffice | — |
@@ -334,5 +334,6 @@ valuable, each built on something already in place:
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.3 | 10-07-26 03:45 | Claude (Claude Code) | Phase A applied to crm-test (all but the hand removal); the role grant ruled read-all and applied there. |
 | 0.2 | 10-07-26 03:40 | Claude (Claude Code) | Phase A handoff written: far-side link name is `sponsoredEvents` (mirrors the funder link as read from crm-test), relation table named; Marketing Admin Role gap added to the prerequisites. |
 | 0.1 | 10-07-26 03:30 | Claude (Claude Code) | First version from the 2026-10-07 conversation: ten rulings, the model, five phases, CRM prerequisites, four open questions with recommendations, the deferred designer, later candidates. |

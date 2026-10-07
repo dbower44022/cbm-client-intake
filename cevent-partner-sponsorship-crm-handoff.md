@@ -1,6 +1,6 @@
 # CRM handoff — partners on events become many-to-many, plus the notice-campaign identifier (Phase A)
 
-Last Updated: 10-07-26 03:40 · Revision 1.0 — see change log at the end.
+Last Updated: 10-07-26 03:45 · Revision 1.1 — see change log at the end.
 
 **What this changes:** an event can carry **many partners**, through one
 many-to-many link that mirrors the funder link the event already has; the old
@@ -25,7 +25,7 @@ a list of `CEvent`), except where a line says *inferred*.
 
 | System | State | Evidence |
 |---|---|---|
-| crm-test | **Owed.** Dry runs of both appliers clean (§ 2). | `CEvent.partnerHost` is `belongsTo → CPartnerProfile`, reverse `CPartnerProfile.hostedEvents`. The funder link is `CEvent.sponsorProfiles` ↔ `CSponsorProfile.sponsoredEvents`, relation table `cSponsorProfileEvent`. Neither `partnerProfiles` nor `noticeCampaignId` exists. **One** of crm-test's five events has a partner host (*Hiring Your First Employee* → *Cuyahoga Small Business Alliance*, demo data). No list, detail or relationships layout names either link. |
+| crm-test | **§ 2, § 4 and § 7 done 2026-10-07 07:39–07:40 UTC**, by the shipping applier as the configuration administrator: both fields and the link created, rebuilt, read back on both sides (relation `cPartnerProfileEvent`), the one demo host carried, all re-verified as the org-wide API key. Marketing Admin Role given `read: all` on both profiles and read back. **§ 5 (the hand removal of `partnerHost`) is still owed — Doug.** State before the change: | `CEvent.partnerHost` is `belongsTo → CPartnerProfile`, reverse `CPartnerProfile.hostedEvents`. The funder link is `CEvent.sponsorProfiles` ↔ `CSponsorProfile.sponsoredEvents`, relation table `cSponsorProfileEvent`. Neither `partnerProfiles` nor `noticeCampaignId` exists. **One** of crm-test's five events has a partner host (*Hiring Your First Employee* → *Cuyahoga Small Business Alliance*, demo data). No list, detail or relationships layout names either link. |
 | Production | **Owed** — Sunday 17:00 UTC slot | *Inferred:* the same two links, because production's `partnerHost` was rebuilt to match crm-test on 2026-08-08 (`OPEN-ITEMS.md`, the reversed-link note). Production's events carry no partner host as far as is known; the dry run in § 4 is what proves it. |
 | Boston | **Owed** — with the release that carries the Phase B code | *Inferred:* built from crm-test's files, so expected to hold `partnerHost` too. |
 
@@ -195,7 +195,7 @@ On crm-test, additionally: `GET /api/v1/CEvent/<the Hiring Your First Employee
 id>/partnerProfiles` lists *Cuyahoga Small Business Alliance* — the carried
 value.
 
-## 7. Role grants — one decision owed before Phase B is useful
+## 7. Role grants — ruled and applied on crm-test; production and Boston owed
 
 The schema needs no new grant: the organisation-wide API role already reads
 and edits `CEvent`, `CEventRegistration`, `CPartnerProfile` and
@@ -212,8 +212,13 @@ this schema change causes but both of which it exposes:
 - **Relating** a partner to an event needs edit on the partner record too
   (`noAccessToForeignRecord`), so the write would be refused.
 
-Recommended, pending Doug's ruling: give the **Marketing Admin Role** `read:
-all` on `CPartnerProfile` and `CSponsorProfile` (the pickers list), and have
+**Doug's ruling (2026-10-07): the Marketing Admin Role gets `read: all` on
+`CPartnerProfile` and `CSponsorProfile`** (create / edit / delete / stream all
+`no`). Applied on crm-test the same day through `PUT Role/{id}` as the
+configuration administrator, read back, cache cleared; the role held no entry
+for either scope before. Production and Boston get the same two cells with
+their Phase A apply, and the roles standard capture must gain them when
+production does. The pickers list because of this, and the plan is to have
 the Phase B code make the link write through the existing user-first,
 admin-on-foreign-denial path (`sessions.service._link_or_escalate`), so the
 role never needs edit on records it does not manage. The cost is one more
@@ -254,4 +259,5 @@ conformance check will otherwise report as drift.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 10-07-26 03:45 | Claude (Claude Code) | Applied § 2, § 4 and § 7 to crm-test and verified as the org-wide API key; § 5 owed to Doug. Role grant ruled read-all. |
 | 1.0 | 10-07-26 03:40 | Claude (Claude Code) | First version. State read from crm-test; both appliers dry-run clean; nothing applied yet. Records the Marketing Admin Role gap (§ 7). |
