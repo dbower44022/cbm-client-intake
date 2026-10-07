@@ -1415,6 +1415,7 @@ publishing refused.
 | `demo-records.md` | The data reference behind that guide — which record to open for each user type, and what is on each of its tabs |
 | `SANDBOX-RESET.md` | The training sandbox: the nightly restore, containment, capturing and re-baselining |
 | `address-paste.md` | Staff guide to pasting a whole address into one box |
+| `chapter-colours.md` | **Changing a chapter's colours**: the colour file, entering its address at `/setup`, where each of the four colours appears and what stays fixed, the check, the undo. Companion to deployment guide step 6.5 |
 | `birthday-greetings.md` | The portal birthday celebration, rules, and how to test it without touching data |
 | `email-management.md` | **Umbrella** email reference; links to the deep-dives |
 | `communications-tab.md` | The session tools' Communications tab |

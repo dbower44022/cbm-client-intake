@@ -215,13 +215,13 @@ The public website is the chapter's own marketing site. The software does not bu
 - The colours are written into a small stylesheet.
 - The stylesheet is published at a web address the software can load.
 
-**Note:** Colours are the only visual difference between chapters in the software, so a chapter that skips this looks exactly like Cleveland.
+**Note:** Colours are the only visual difference between chapters in the software, so a chapter that skips this looks exactly like Cleveland. The step-by-step companion, with where each colour appears and how to check or undo it on a running deployment, is chapter-colours.md at the root of the software's repository.
 
-**How to check:** The file's address shows the stylesheet's text in a browser. Once the applications are deployed, the public forms show the chapter's colours.
+**How to check:** The file's address shows the stylesheet's text in a browser. Once the applications are deployed, the public forms show the chapter's colours. chapter-colours.md section 4 is the check.
 
 **If it didn't work:** Stop, and ask the central support organization before going on.
 
-**What usually goes wrong:** Three things. The file sets something other than a colour name, which the rule forbids so a chapter's file cannot break the pages. Some website platforms refuse to host a stylesheet, or serve it as a download; this has not been checked for any platform. And the colour file changes only the applications - the CRM and the public events page keep their own look (work list item 11).
+**What usually goes wrong:** Three things. The file sets something other than a colour name, which the rule forbids so a chapter's file cannot break the pages. Some website platforms refuse to host a stylesheet, or serve it as a download; this has not been checked for any platform. And the colour file changes only the applications - the CRM keeps its own look, and on the public events page only the hero, band and menu follow the colours; the calendar and recorded-library panels keep the marketing website's fixed colours (work list item 11).
 
 ---
 
