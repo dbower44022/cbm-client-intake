@@ -1120,6 +1120,18 @@ toggle.
   company). The `Held-Company` CRM option is item 11.
 
 - **crm-test writes attachments again, and the event Overview tab is verified
+40. **The chapter colour file has never been applied to a live deployment**
+    (`chapter-colours.md`, 2026-10-07). `CHAPTER_TOKENS_URL` is empty on
+    Cleveland, Boston and Lakeside, so the injection in
+    `core/branding.render_page` is covered by `tests/test_shared_branding.py`
+    and nothing else. Owed: one run of `chapter-colours.md` sections 1–4 on
+    crm-test with a throwaway colour file, then Reset (section 6). While it is
+    on, look at `/webinars/` and at a second-rank button under the mouse:
+    the calendar and library panels keep the marketing site's fixed colours,
+    and the second-rank hover colour is hard-coded to Cleveland's dark navy
+    (`frontend/shared/tokens.css`, `.cbm-button--secondary:hover`). The hover
+    colour is a one-line fix plus a new design token; Doug chose the guide
+    over the fix on 2026-10-07, so the fix is still owed.
   live** (was item 32 and the first sub-bullet of item 20; raised 2026-09-16,
   closed 2026-09-20). Two things had to hold together, and both do:
   - **The droplet.** Doug copied `scripts/sandbox/reset_crm_sandbox.py` over
