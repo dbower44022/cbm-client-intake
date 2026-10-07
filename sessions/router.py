@@ -38,6 +38,27 @@ from .config import CONTRIBUTION_FIELDS, DomainConfig
 
 log = logging.getLogger("cbm_intake.sessions")
 
+
+def _system_client(settings):
+    """The org-wide API-key CRM client (None in dry-run / keyless deploys).
+
+    Used only for the partner / funder Events tab's COUNTS, which are
+    non-sensitive aggregates (events are not confidential — ruling D4 — and
+    a registration count names nobody). The Partner Manager and Sponsor
+    Manager roles hold no access to events, registrations or engagements
+    (read live on crm-test 2026-10-07), so computed as the user the tab
+    would 403 or show "—" everywhere. The directory's availability aggregate
+    and the analytics system metrics take the same route. The user's OWN
+    read of the parent record still gates the tab.
+    """
+    from core.espo import EspoClient
+
+    if settings.espo_dry_run or not settings.espo_api_key:
+        return None
+    return EspoClient(
+        settings.espo_base_url, settings.espo_api_key, settings.request_timeout_seconds
+    )
+
 # --- duplicate-save protection for session creates -------------------------
 # The staff tools had no equivalent of the intake forms' ``submission_token``:
 # a save that LOOKED like it failed (a slow request with no feedback, or a
@@ -839,12 +860,23 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         @router.get("/records/{parent_id}/sponsoredevents")
         async def sponsored_events(parent_id: str, request: Request) -> dict:
             user = _require_user(request)
-            client = client_for(get_settings(), user)
+            settings = get_settings()
+            client = client_for(settings, user)
             from events.reporting import sponsor_rollup
 
             link = cfg.sponsored_events_link
+            # The user's own ACL gates the tab: a parent they may not read is
+            # the same 403 / 404 the rest of the record answers with.
             try:
-                defs = await client.metadata(
+                if not await client.get(cfg.parent_entity, parent_id, select="id"):
+                    raise HTTPException(status_code=404, detail="Record not found.")
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not read this record")
+            # The counts run under the org-wide key (see _system_client); a
+            # keyless deploy reads as the user and degrades to "—" per layer.
+            reader = _system_client(settings) or client
+            try:
+                defs = await reader.metadata(
                     f"entityDefs.{cfg.parent_entity}.links.{link}")
             except Exception as exc:  # noqa: BLE001 — a probe never raises
                 log.info("%s.%s not detectable (%s)", cfg.parent_entity, link, exc)
@@ -859,7 +891,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                     ),
                 }
             try:
-                return await sponsor_rollup(client, cfg.parent_entity, parent_id, link)
+                return await sponsor_rollup(reader, cfg.parent_entity, parent_id, link)
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not load this record's events")
 

@@ -627,6 +627,10 @@ one shared frontend that derives its domain from the first segment of its URL.
   a separate "requested a mentor" count (Doug's ruling 2026-10-07). The
   endpoint feature-detects the reverse link and answers `available: false`
   with a reason on a CRM without it; an unreadable count renders "—", never 0.
+  **The counts compute under the org-wide API key** after the user's own read
+  of the parent record gates the tab — the Partner Manager and Sponsor Manager
+  roles hold no event, registration or engagement access, and the numbers are
+  aggregates (the directory-availability precedent).
 - **Grants (funder only, `grants_link`)** — the Grants tab: awards, their
   deliverables, and later their funder reports. The **grant is the hub**:
   `CContribution` rows become its payments and deliverables its obligations, and

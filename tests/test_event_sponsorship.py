@@ -305,8 +305,11 @@ def _world():
         {"id": "g2", "contactId": "c4", "createdAt": "2026-01-01 12:00:00"},  # BEFORE e2: not a conversion
     ]
     related = {("CPartnerProfile", "P1", "sponsoredEvents"): events}
-    return LinkCrm(events=events, registrations=regs, engagements=engagements,
-                   related=related)
+    crm = LinkCrm(events=events, registrations=regs, engagements=engagements,
+                  related=related)
+    crm.data["CPartnerProfile"] = [{"id": "P1", "name": "Alpha Chamber"}]
+    crm.data["CSponsorProfile"] = [{"id": "S1", "name": "Big Bank"}]
+    return crm
 
 
 async def test_rollup_counts_per_event_with_the_conversion_rule():
@@ -382,9 +385,12 @@ def _sessions_app(monkeypatch):
 _BOSS = {"userId": "u1", "userName": "boss", "name": "The Boss", "isAdmin": True, "token": "tok"}
 
 
-def _as(monkeypatch, crm):
+def _as(monkeypatch, crm, system=None):
     monkeypatch.setattr("sessions.router.current_user", lambda request, key=None: _BOSS)
     monkeypatch.setattr("sessions.router.client_for", lambda settings, u: crm)
+    # The counts run under the org-wide key; None (the test default, dry-run)
+    # falls back to the user's client.
+    monkeypatch.setattr("sessions.router._system_client", lambda settings: system)
 
 
 def test_sponsored_events_endpoint_on_partner_and_funder(monkeypatch):
@@ -400,8 +406,24 @@ def test_sponsored_events_endpoint_on_partner_and_funder(monkeypatch):
         assert c.get("/mentorsessions/api/records/E1/sponsoredevents").status_code in (404, 405)
 
 
+def test_counts_run_under_the_org_wide_key_after_the_user_reads_the_parent(monkeypatch):
+    """The Partner Manager and Sponsor Manager roles cannot read events or
+    registrations, so the rollup runs under the org-wide key — but only once
+    the user's own client has read the parent record."""
+    user_crm = LinkCrm()                         # can read the parent, nothing else
+    user_crm.data["CPartnerProfile"] = [{"id": "P1", "name": "Alpha Chamber"}]
+    user_crm.forbid_list.update({cfg.REGISTRATION, cfg.EVENT})
+    _as(monkeypatch, user_crm, system=_world())
+    with TestClient(_sessions_app(monkeypatch)) as c:
+        body = c.get("/partnersessions/api/records/P1/sponsoredevents").json()
+        assert body["totals"]["events"] == 2 and body["totals"]["attended"] == 3
+        # A parent the user cannot see is a 404, whatever the org key could read.
+        assert c.get("/partnersessions/api/records/P404/sponsoredevents").status_code == 404
+
+
 def test_sponsored_events_endpoint_explains_a_crm_without_the_link(monkeypatch):
     crm = LinkCrm(links={})
+    crm.data["CPartnerProfile"] = [{"id": "P1", "name": "Alpha Chamber"}]
     _as(monkeypatch, crm)
     with TestClient(_sessions_app(monkeypatch)) as c:
         body = c.get("/partnersessions/api/records/P1/sponsoredevents").json()

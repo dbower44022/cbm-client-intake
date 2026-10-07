@@ -40,6 +40,11 @@ Partners picker and an explanatory Events tab until Phase A lands there.
   created after it started); clients are unique people in the totals. Two
   best-effort layers: unreadable registrations make every count `None`
   (rendered "—", never 0), unreadable engagements only the client count.
+  **The counts run under the org-wide API key** once the user's own client
+  has read the parent record — the Partner Manager and Sponsor Manager roles
+  hold no access to events, registrations or engagements (read live on
+  crm-test 2026-10-07), and the numbers are non-sensitive aggregates, the
+  directory-availability precedent. A keyless deploy reads as the user.
 - `events/config.SPONSOR_LINKS` is the spec: name, label, far entity and
   reverse link, verified against crm-test's metadata on 2026-10-07.
 - Tests: `tests/test_event_sponsorship.py` (23). **Verified by tests only** —
