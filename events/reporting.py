@@ -33,6 +33,16 @@ log = logging.getLogger("cbm_intake.events.reporting")
 #: Statuses that mean the person was actually in the room.
 ATTENDED = (cfg.REG_ATTENDED,)
 
+#: How an engagement names the person who became a client. ``CEngagement`` has
+#: NO ``contactId``: its people are ``primaryEngagementContact`` (a belongsTo,
+#: so ``primaryEngagementContactId`` is a real attribute a ``where`` can use)
+#: plus the ``engagementContacts`` relationship, and the client intake sets
+#: both to the applicant. The primary contact is the measure here — found live
+#: on crm-test 2026-10-07, where the ``contactId`` filter answered
+#: *400 Not existing attribute* and the Events tab showed "—" for every
+#: client count. All 18 engagements there carry a primary contact.
+ENGAGEMENT_CONTACT_FK = "primaryEngagementContactId"
+
 
 def _event_ref(event: dict[str, Any]) -> dict[str, Any]:
     start = service.parse_crm_datetime(event.get("dateStart"))
@@ -280,15 +290,15 @@ async def conversion_report(
         try:
             data = await client.list(
                 "CEngagement",
-                select="id,name,createdAt,contactId,engagementStatus",
-                where=[{"type": "in", "attribute": "contactId", "value": chunk}],
+                select=f"id,name,createdAt,{ENGAGEMENT_CONTACT_FK},engagementStatus",
+                where=[{"type": "in", "attribute": ENGAGEMENT_CONTACT_FK, "value": chunk}],
                 max_size=200,
             )
         except EspoError as exc:
             log.warning("conversion report: engagement lookup failed: %s", exc)
             break
         for eng in data.get("list", []):
-            contact_id = eng.get("contactId")
+            contact_id = eng.get(ENGAGEMENT_CONTACT_FK)
             attended_at = first_attended.get(contact_id or "")
             created = eng.get("createdAt") or ""
             if attended_at and created and created > attended_at:
@@ -355,13 +365,13 @@ async def _engagement_creations(
         while True:
             data = await client.list(
                 "CEngagement",
-                select="id,contactId,createdAt",
-                where=[{"type": "in", "attribute": "contactId", "value": chunk}],
+                select=f"id,{ENGAGEMENT_CONTACT_FK},createdAt",
+                where=[{"type": "in", "attribute": ENGAGEMENT_CONTACT_FK, "value": chunk}],
                 max_size=200, offset=offset,
             )
             batch = data.get("list", [])
             for eng in batch:
-                cid = eng.get("contactId")
+                cid = eng.get(ENGAGEMENT_CONTACT_FK)
                 if cid and eng.get("createdAt"):
                     out.setdefault(cid, []).append(eng["createdAt"])
             if len(batch) < 200:

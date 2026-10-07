@@ -328,6 +328,20 @@ empty company on a partner/funder now renders as "—" and is fixable in the app
 
 ## CRM prerequisites outstanding
 
+**`CActionLog.record` cannot point at an event** (found 2026-10-07 in the
+crm-test web log during the Phase B pass). The parent link's entity list is
+Account, Contact, CEngagement, CMentorProfile, CClientProfile,
+CPartnerProfile, CSponsorProfile, CSession — no `CEvent`, no
+`CEventRegistration`. So the `CActionLog` half of EVERY Event Administration
+action (Event Created / Updated / Sponsors Updated, attendance, check-in) is
+refused with *400 Field validation failure, field: record* and logged as a
+warning; the stream note half still posts, so the history is on the record
+but not in the reporting table. Best-effort by design, so nothing fails for
+the user. Fix: add `CEvent` and `CEventRegistration` to the entity list of
+`CActionLog.record` on crm-test, production and Boston (Entity Manager →
+Action Log → Fields → record → Entities), then confirm one event save stops
+logging the warning. Production's entity list is inferred to match.
+
 **Partner sponsorship of events becomes many-to-many, and two campaign
 fields** (ruled 2026-10-07; plan: `prds/mailing-list-and-event-sponsorship-plan.md`
 § 5 Phase A, § 6). `CEvent.partnerProfiles` ↔ `CPartnerProfile.events`
@@ -502,8 +516,22 @@ block a deploy.)*
     bypass ACL: that the Marketing Admin Role's read-all grant fills the
     pickers, that the foreign-record denial is retried as the admin account,
     and that the Events tab counts reach a team-scoped Funder Management user.
-    Those three remain owed as the non-admin halves below. The pass needs TWO
-    real non-admin accounts because the two halves run under different roles:
+    **The non-admin halves were then run by Claude on 2026-10-07 in the
+    browser, with temporary passwords on the three sandbox logins (restored by
+    the nightly reset):** as Mark Marketing the pickers listed ten partners and
+    six funders, a relate and an unrelate both saved with the web log showing
+    *retrying as the provisioning admin*, and the CRM record held the links;
+    as Partner Manager the Northgate Events tab showed the one event with its
+    counts; as Sally Sponsor the Harrowgate Events tab showed TWO events (she
+    already sponsored *Pricing for Profit* in the demo data) with registered
+    and attended counts — and **"Became clients" read "—" on both**, which was
+    a real defect: `CEngagement` has no `contactId`, the lookup 400'd, and the
+    programme conversion report had the same latent fault. Fixed in the
+    working tree (`primaryEngagementContactId`), **not yet pushed**. **One
+    re-check owed after the next push:** Harrowgate → Events as Sally reads
+    *Became clients 1* on the Pricing for Profit row (the attendee's
+    Brightline engagement postdates it). The original checklist, for the
+    record:
     - As a **Marketing Admin** (not an admin — admins bypass the read-all
       grant this exercises): open any event in Event Administration → Edit.
       The *Sponsorship* group shows a Partners and a Funders picker listing

@@ -47,9 +47,20 @@ Partners picker and an explanatory Events tab until Phase A lands there.
   directory-availability precedent. A keyless deploy reads as the user.
 - `events/config.SPONSOR_LINKS` is the spec: name, label, far entity and
   reverse link, verified against crm-test's metadata on 2026-10-07.
-- Tests: `tests/test_event_sponsorship.py` (23). **Verified by tests only** —
-  the live pass on crm-test as a real Marketing Admin and a real Partner
-  Management user is `OPEN-ITEMS.md` #39.
+- **`CEngagement` has no `contactId`** — found live on crm-test 2026-10-07 by
+  the non-admin pass: the client count's engagement lookup answered *400 Not
+  existing attribute 'contactId' in where* and every "Became clients" read
+  "—". Both the per-partner rollup and the programme conversion report
+  (latent since Phase 6c — never run against a real CRM) now query
+  `primaryEngagementContactId`, the belongsTo the intake sets on every
+  engagement (`events/reporting.ENGAGEMENT_CONTACT_FK`).
+- Tests: `tests/test_event_sponsorship.py` (24). **Live pass on crm-test
+  2026-10-07**: by Doug as an administrator (every step), then by Claude in
+  the browser as the three sandbox logins — the pickers list for Mark
+  Marketing, a relate AND an unrelate as him succeed with the log showing
+  *retrying as the provisioning admin*, the Events tab fills for Partner
+  Manager and for Sally Sponsor (whose roles hold no event access). The
+  client-count fix is the one thing not yet seen live; `OPEN-ITEMS.md` #39.
 
 ## [0.238.1] — 2026-10-07
 

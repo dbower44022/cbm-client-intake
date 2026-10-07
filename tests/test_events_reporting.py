@@ -129,9 +129,9 @@ async def test_conversion_requires_the_engagement_to_postdate_the_event():
     regs = [_reg("r1", "e1", "c1"), _reg("r2", "e1", "c2")]
     engagements = [
         # c1 became a client AFTER attending — a conversion.
-        {"id": "g1", "name": "New Co", "contactId": "c1", "createdAt": "2026-04-01 10:00:00"},
+        {"id": "g1", "name": "New Co", "primaryEngagementContactId": "c1", "createdAt": "2026-04-01 10:00:00"},
         # c2 was already a client BEFORE the event — not a conversion.
-        {"id": "g2", "name": "Old Co", "contactId": "c2", "createdAt": "2025-04-01 10:00:00"},
+        {"id": "g2", "name": "Old Co", "primaryEngagementContactId": "c2", "createdAt": "2025-04-01 10:00:00"},
     ]
     out = await reporting.conversion_report(
         FakeCrm(events, regs, engagements), start="2026-01-01", end="2026-12-31"

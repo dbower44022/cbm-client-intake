@@ -301,8 +301,8 @@ def _world():
         _reg("r6", "e2", "c5", status=cfg.REG_REGISTERED),   # upcoming / unresolved
     ]
     engagements = [
-        {"id": "g1", "contactId": "c1", "createdAt": "2026-04-01 12:00:00"},  # after e1, before e2
-        {"id": "g2", "contactId": "c4", "createdAt": "2026-01-01 12:00:00"},  # BEFORE e2: not a conversion
+        {"id": "g1", "primaryEngagementContactId": "c1", "createdAt": "2026-04-01 12:00:00"},  # after e1, before e2
+        {"id": "g2", "primaryEngagementContactId": "c4", "createdAt": "2026-01-01 12:00:00"},  # BEFORE e2: not a conversion
     ]
     related = {("CPartnerProfile", "P1", "sponsoredEvents"): events}
     crm = LinkCrm(events=events, registrations=regs, engagements=engagements,
@@ -329,7 +329,7 @@ async def test_rollup_de_duplicates_clients_across_events():
     crm = _world()
     # Give c1 a second engagement after e2 too: still ONE client in the totals.
     crm.data["CEngagement"].append(
-        {"id": "g3", "contactId": "c1", "createdAt": "2026-07-01 12:00:00"})
+        {"id": "g3", "primaryEngagementContactId": "c1", "createdAt": "2026-07-01 12:00:00"})
     out = await reporting.sponsor_rollup(crm, "CPartnerProfile", "P1", "sponsoredEvents")
     rows = {r["id"]: r for r in out["events"]}
     assert rows["e1"]["clients"] == 1 and rows["e2"]["clients"] == 1
