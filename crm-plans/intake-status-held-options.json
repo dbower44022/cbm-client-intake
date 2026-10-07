@@ -1,0 +1,8 @@
+{
+  "description": "CIntakeSubmission.intakeStatus: the two held words the app already writes behind a feature gate (cintake-submission-duplicate-status.md, cintake-submission-company-status.md). Additive only.",
+  "enumOptions": [
+    {"entity": "CIntakeSubmission", "field": "intakeStatus",
+     "add": ["Held-Duplicate", "Held-Company"],
+     "labels": {"Held-Duplicate": "Held-Duplicate", "Held-Company": "Held-Company"}}
+  ]
+}

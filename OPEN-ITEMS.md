@@ -414,11 +414,18 @@ block a deploy.)*
     fallback rather than fighting the dialog, and say which way it went.
 
 11. **`Held-Duplicate` AND `Held-Company` options on
-    `CIntakeSubmission.intakeStatus`** (both CRMs) — handoffs
-    `cintake-submission-duplicate-status.md` and
-    `cintake-submission-company-status.md` (v0.238.0, 2026-10-07); one sitting
-    for both. Until built, the receipt engine falls back to `Received` with the
-    explanation in `intakeMessage`; activates with no deploy.
+    `CIntakeSubmission.intakeStatus`** — **crm-test DONE 2026-10-07** through
+    the applier (`crm-plans/intake-status-held-options.json`, fingerprint
+    a2e87df8d798, read back from metadata and seen by the org API key).
+    **Production owed** at a Sunday 17:00 UTC slot: the same plan file, run
+    from inside the prod web container per the runbook. Handoffs for the
+    manual route: `cintake-submission-duplicate-status.md`,
+    `cintake-submission-company-status.md`. Two cautions: (a) the receipt
+    engine caches the option list **once per process** (`core/receipts.py`
+    `_status_options_cache`), so a running web/worker keeps writing
+    `Received` until it restarts — "activates with no deploy" is true only
+    of processes started after the option exists; (b) the live enum carries
+    a stray empty-string option `""` from before, left alone.
 12. **prod Mentor Role: `CMentorProfile` edit = `all`** — crm-test has it, prod
     has `own`, which 403s "+ Add CBM contact" (co-mentor linking) for every
     non-admin mentor. v0.174.0 added an app-side admin escalation as the second

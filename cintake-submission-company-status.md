@@ -48,6 +48,11 @@ Discarded
 
 Do this on **crm-test first, then production**.
 
+**Status (2026-10-07): crm-test DONE** through the API applier
+(`crm-plans/intake-status-held-options.json`); production owed at a Sunday
+slot. The running web and worker read the option list once per process, so the
+new word appears on receipts only after they restart.
+
 Nothing else changes: no new field, no new link, no workflow, no role grant.
 `intakeMessage` carries the explanation and the reviewer's two choices, and
 the disposition fields already exist.
