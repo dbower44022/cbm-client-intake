@@ -507,51 +507,6 @@ block a deploy.)*
 
 ## Live verification owed
 
-39. **Phase B of the mailing-list and event-sponsorship plan — the partner /
-    funder pickers and the Events tab (v0.239.0, 2026-10-07).** **Live pass run
-    by Doug on 2026-10-07 as an administrator: every step matched** — the
-    pickers, the save, the CRM record's Partners and Sponsor Profiles panels,
-    the Events tab on both records, and production showing Funders only. What
-    an administrator CANNOT prove is the role half, because administrators
-    bypass ACL: that the Marketing Admin Role's read-all grant fills the
-    pickers, that the foreign-record denial is retried as the admin account,
-    and that the Events tab counts reach a team-scoped Funder Management user.
-    **The non-admin halves were then run by Claude on 2026-10-07 in the
-    browser, with temporary passwords on the three sandbox logins (restored by
-    the nightly reset):** as Mark Marketing the pickers listed ten partners and
-    six funders, a relate and an unrelate both saved with the web log showing
-    *retrying as the provisioning admin*, and the CRM record held the links;
-    as Partner Manager the Northgate Events tab showed the one event with its
-    counts; as Sally Sponsor the Harrowgate Events tab showed TWO events (she
-    already sponsored *Pricing for Profit* in the demo data) with registered
-    and attended counts — and **"Became clients" read "—" on both**, which was
-    a real defect: `CEngagement` has no `contactId`, the lookup 400'd, and the
-    programme conversion report had the same latent fault. Fixed in the
-    working tree (`primaryEngagementContactId`), **not yet pushed**. **One
-    re-check owed after the next push:** Harrowgate → Events as Sally reads
-    *Became clients 1* on the Pricing for Profit row (the attendee's
-    Brightline engagement postdates it). The original checklist, for the
-    record:
-    - As a **Marketing Admin** (not an admin — admins bypass the read-all
-      grant this exercises): open any event in Event Administration → Edit.
-      The *Sponsorship* group shows a Partners and a Funders picker listing
-      the profiles. Tick a partner and a funder, Save. Expected: the Overview
-      facts show both names; the CRM's own Event record shows them under
-      Partners / Sponsors; the stream carries "Event Sponsors Updated". The
-      relate ran as the admin account only for the foreign half — check the
-      log for "retrying as the provisioning admin". Untick one, Save: it is
-      removed, the other stays.
-    - As a **Partner Management** user: open that partner in Partner
-      Management → Events. Expected: the event row with registered / attended
-      / became-clients counts and the totals tiles; "—" only where a read
-      failed. Same on Funder Management for the funder.
-    - On production (no partner link yet): the editor shows **Funders only**,
-      and Partner Management's Events tab shows the "does not link events to
-      partners yet" explanation rather than an error.
-    Also owed: the hand removal of `partnerHost` on crm-test
-    (`cevent-partner-sponsorship-crm-handoff.md` § 5) — the app does not
-    read it, so this pass does not depend on it.
-
 38. **An Internal event's join link cannot be set in Event Administration**
     (found 2026-09-30 while writing the F5 live pass). `virtualMeetingUrl`
     ("Join URL") is app-managed in `events/config.EVENT_FIELDS` — Zoom sync
@@ -1194,6 +1149,57 @@ toggle.
     over the fix on 2026-10-07, so the fix is still owed.
 
 ## Resolved
+
+39. **RESOLVED 2026-10-07 — Phase B of the mailing-list and event-sponsorship
+    plan, the partner / funder pickers and the Events tab (v0.239.0).** The
+    client-count fix was pushed the same day (crm-test and production both
+    built from 951db7e) and re-checked as Sally Sponsor: Harrowgate → Events
+    reads *Became clients 1* on the Pricing for Profit row. Every half of the
+    pass has now run as a real non-admin. Still open, tracked elsewhere: the
+    `CActionLog.record` entity list (CRM prerequisites) and the hand removal of
+    `partnerHost` on crm-test (handoff § 5). Original record: **Live pass run
+    by Doug on 2026-10-07 as an administrator: every step matched** — the
+    pickers, the save, the CRM record's Partners and Sponsor Profiles panels,
+    the Events tab on both records, and production showing Funders only. What
+    an administrator CANNOT prove is the role half, because administrators
+    bypass ACL: that the Marketing Admin Role's read-all grant fills the
+    pickers, that the foreign-record denial is retried as the admin account,
+    and that the Events tab counts reach a team-scoped Funder Management user.
+    **The non-admin halves were then run by Claude on 2026-10-07 in the
+    browser, with temporary passwords on the three sandbox logins (restored by
+    the nightly reset):** as Mark Marketing the pickers listed ten partners and
+    six funders, a relate and an unrelate both saved with the web log showing
+    *retrying as the provisioning admin*, and the CRM record held the links;
+    as Partner Manager the Northgate Events tab showed the one event with its
+    counts; as Sally Sponsor the Harrowgate Events tab showed TWO events (she
+    already sponsored *Pricing for Profit* in the demo data) with registered
+    and attended counts — and **"Became clients" read "—" on both**, which was
+    a real defect: `CEngagement` has no `contactId`, the lookup 400'd, and the
+    programme conversion report had the same latent fault. Fixed in the
+    working tree (`primaryEngagementContactId`), **not yet pushed**. **One
+    re-check owed after the next push:** Harrowgate → Events as Sally reads
+    *Became clients 1* on the Pricing for Profit row (the attendee's
+    Brightline engagement postdates it). The original checklist, for the
+    record:
+    - As a **Marketing Admin** (not an admin — admins bypass the read-all
+      grant this exercises): open any event in Event Administration → Edit.
+      The *Sponsorship* group shows a Partners and a Funders picker listing
+      the profiles. Tick a partner and a funder, Save. Expected: the Overview
+      facts show both names; the CRM's own Event record shows them under
+      Partners / Sponsors; the stream carries "Event Sponsors Updated". The
+      relate ran as the admin account only for the foreign half — check the
+      log for "retrying as the provisioning admin". Untick one, Save: it is
+      removed, the other stays.
+    - As a **Partner Management** user: open that partner in Partner
+      Management → Events. Expected: the event row with registered / attended
+      / became-clients counts and the totals tiles; "—" only where a read
+      failed. Same on Funder Management for the funder.
+    - On production (no partner link yet): the editor shows **Funders only**,
+      and Partner Management's Events tab shows the "does not link events to
+      partners yet" explanation rather than an error.
+    Also owed: the hand removal of `partnerHost` on crm-test
+    (`cevent-partner-sponsorship-crm-handoff.md` § 5) — the app does not
+    read it, so this pass does not depend on it.
 
 - **The company-website hold (v0.238.0) passed live on crm-test** (was item
   39; raised and closed 2026-10-07). Doug ran the partner-form script

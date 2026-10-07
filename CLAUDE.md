@@ -1620,6 +1620,18 @@ each block.
   records carry a team (#16 — crm-test proved that Team read alone turns a
   skipped stamp into a refused create).
 
+- **v0.239.0 (2026-10-07) — partners and funders on an event; Events tab on
+  the Partner and Funder records (Phase B of the mailing-list and
+  event-sponsorship plan).** Pushed; crm-test and production built the same
+  day. **Verified live on crm-test as real non-admins** (Doug as admin, then
+  the three sandbox logins in the browser): the pickers, both relate and
+  unrelate through the admin fallback, the Events tab under the org-wide key,
+  and the client count after its live-found fix. Standing rules in the Events
+  and Session Management sections. **Owed:** `CActionLog.record` cannot point
+  at an event (CRM prerequisite, all three CRMs); the hand removal of
+  `partnerHost` on crm-test; Phase A on production and Boston (until then
+  they show Funders only, by design); Phases C and D of the plan.
+
 - **v0.237.0 (2026-10-07) — quick-add refuses a same-named company at a
   different web address.** Pushed 2026-10-07 with v0.236.0; standing rule in the
   Session Management section. No flag; rollback is a revert. **Verified by
