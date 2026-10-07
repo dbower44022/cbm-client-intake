@@ -4,7 +4,21 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
-## [0.238.0] — 2026-10-07
+## [0.238.1] — 2026-10-07
+
+**fix(receipts): a receipt-status option built in the CRM activates without a
+restart.** Applying `Held-Duplicate` / `Held-Company` on crm-test (item 11)
+showed that `core/receipts.py` read each gated field's option list once per
+process and kept it until restart, so "activates with no deploy" was true only
+of a process started after the option existed. Both caches (`intakeStatus`,
+`form`) now share `_cached_options`: a routine refresh every
+`OPTIONS_TTL_SECONDS` (15 min) **and a re-read on a miss** — when the value
+about to be downgraded or dropped is not in a list older than
+`OPTIONS_MISS_RECHECK_SECONDS` (60 s). A hit never re-reads, so the steady
+state costs nothing; an unreadable re-read keeps the last good list. Four
+tests.
+
+
 
 **feat(intake): a public submission naming a company that exists at a
 DIFFERENT web address is HELD for staff, not delivered.** The public-form

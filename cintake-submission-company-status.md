@@ -50,8 +50,8 @@ Do this on **crm-test first, then production**.
 
 **Status (2026-10-07): crm-test DONE** through the API applier
 (`crm-plans/intake-status-held-options.json`); production owed at a Sunday
-slot. The running web and worker read the option list once per process, so the
-new word appears on receipts only after they restart.
+slot. Since v0.238.1 a running web or worker re-reads the option list within a
+minute of the first receipt that needs the new word, so no restart is needed.
 
 Nothing else changes: no new field, no new link, no workflow, no role grant.
 `intakeMessage` carries the explanation and the reviewer's two choices, and

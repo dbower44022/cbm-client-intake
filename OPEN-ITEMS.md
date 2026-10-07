@@ -420,12 +420,11 @@ block a deploy.)*
     **Production owed** at a Sunday 17:00 UTC slot: the same plan file, run
     from inside the prod web container per the runbook. Handoffs for the
     manual route: `cintake-submission-duplicate-status.md`,
-    `cintake-submission-company-status.md`. Two cautions: (a) the receipt
-    engine caches the option list **once per process** (`core/receipts.py`
-    `_status_options_cache`), so a running web/worker keeps writing
-    `Received` until it restarts — "activates with no deploy" is true only
-    of processes started after the option exists; (b) the live enum carries
-    a stray empty-string option `""` from before, left alone.
+    `cintake-submission-company-status.md`. Two notes: (a) since v0.238.1 the
+    receipt engine re-reads the option list within a minute of a miss, so a
+    running web/worker picks a new option up with no restart (before that it
+    read the list once per process); (b) the live enum carries a stray
+    empty-string option `""` from before, left alone.
 12. **prod Mentor Role: `CMentorProfile` edit = `all`** — crm-test has it, prod
     has `own`, which 403s "+ Add CBM contact" (co-mentor linking) for every
     non-admin mentor. v0.174.0 added an app-side admin escalation as the second

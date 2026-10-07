@@ -337,3 +337,84 @@ def test_event_registration_maps_to_the_crm_value():
         "payload": {"email": "someone@example.org"},
     })
     assert fields["form"] == "Event Registration"
+
+
+# --- the option caches refresh on a schedule and on a miss (v0.238.1) ------------
+
+class _CountingEnum:
+    """Metadata stub that counts reads and can change its answer between them."""
+
+    def __init__(self, options):
+        self.options = list(options)
+        self.reads = 0
+
+    async def metadata_enum_options(self, entity, field):
+        self.reads += 1
+        return list(self.options)
+
+
+SIX = ["Received", "Completed", "Held-Spam", "Held-Email", "Error", "Discarded"]
+
+
+def _reset_status_cache():
+    from core import receipts
+    receipts._status_options_cache["options"] = None
+    receipts._status_options_cache["read_at"] = 0.0
+
+
+async def test_a_hit_never_rereads_the_options():
+    from core import receipts
+    _reset_status_cache()
+    crm = _CountingEnum(SIX + ["Held-Company"])
+    for _ in range(3):
+        out = await receipts._gate_status(crm, {"intakeStatus": "Held-Company"})
+        assert out["intakeStatus"] == "Held-Company"
+    assert crm.reads == 1
+    _reset_status_cache()
+
+
+async def test_a_miss_on_a_stale_list_rereads_and_honours_a_new_option(monkeypatch):
+    """The crm-test case of 2026-10-07: the option is built while the process
+    runs. The next miss older than the recheck window re-reads and the word is
+    written — no restart."""
+    from core import receipts
+    _reset_status_cache()
+    crm = _CountingEnum(SIX)
+    out = await receipts._gate_status(crm, {"intakeStatus": "Held-Company"})
+    assert out["intakeStatus"] == "Received" and crm.reads == 1
+    crm.options.append("Held-Company")           # the option is built in the CRM
+    # Inside the recheck window: still the cached answer, no extra read.
+    out = await receipts._gate_status(crm, {"intakeStatus": "Held-Company"})
+    assert out["intakeStatus"] == "Received" and crm.reads == 1
+    # Age the cache past the recheck window: the miss re-reads.
+    receipts._status_options_cache["read_at"] -= receipts.OPTIONS_MISS_RECHECK_SECONDS + 1
+    out = await receipts._gate_status(crm, {"intakeStatus": "Held-Company"})
+    assert out["intakeStatus"] == "Held-Company" and crm.reads == 2
+    _reset_status_cache()
+
+
+async def test_the_list_refreshes_after_the_ttl_even_on_a_hit():
+    from core import receipts
+    _reset_status_cache()
+    crm = _CountingEnum(SIX + ["Held-Company"])
+    await receipts._gate_status(crm, {"intakeStatus": "Held-Company"})
+    receipts._status_options_cache["read_at"] -= receipts.OPTIONS_TTL_SECONDS + 1
+    await receipts._gate_status(crm, {"intakeStatus": "Held-Company"})
+    assert crm.reads == 2
+    _reset_status_cache()
+
+
+async def test_an_unreadable_reread_keeps_the_last_good_list():
+    from core import receipts
+    _reset_status_cache()
+    crm = _CountingEnum(SIX)
+    await receipts._gate_status(crm, {"intakeStatus": "Held-Company"})
+
+    class Broken:
+        async def metadata_enum_options(self, entity, field):
+            raise RuntimeError("metadata down")
+
+    receipts._status_options_cache["read_at"] -= receipts.OPTIONS_TTL_SECONDS + 1
+    out = await receipts._gate_status(Broken(), {"intakeStatus": "Held-Company"})
+    assert out["intakeStatus"] == "Received"       # the stale list, not a crash
+    _reset_status_cache()

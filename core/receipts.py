@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from datetime import datetime, timezone
 from typing import Any, Optional
 
@@ -377,7 +378,48 @@ async def _prune_dangling_contact(client, fields: dict[str, Any]) -> dict[str, A
         return {k: v for k, v in fields.items() if k != "contactId"}
 
 
-_status_options_cache: dict[str, Any] = {"options": None}
+# The CRM's enum options for the two gated receipt fields, cached per process.
+#
+# Each cache is re-read on a schedule AND on a miss: when the value about to be
+# written is not in the cached list and the list is more than
+# ``OPTIONS_MISS_RECHECK_SECONDS`` old, the options are read again before the
+# value is downgraded or dropped. That is what makes "build the option in the
+# CRM and it activates with no deploy" true of a RUNNING process — before
+# v0.238.1 the list was read once and kept until restart, so the crm-test
+# options added on 2026-10-07 were invisible to the live web and worker. A hit
+# never re-reads, so a steady state costs no metadata calls.
+OPTIONS_TTL_SECONDS = 900          # routine refresh
+OPTIONS_MISS_RECHECK_SECONDS = 60  # a miss re-reads at most this often
+
+_status_options_cache: dict[str, Any] = {"options": None, "read_at": 0.0}
+_form_options_cache: dict[str, Any] = {"options": None, "read_at": 0.0}
+
+
+async def _cached_options(
+    client, cache: dict[str, Any], field: str, want: Optional[str]
+) -> Optional[list[str]]:
+    """The live option list for ``field``, from ``cache`` or re-read.
+
+    Returns None when the options cannot be read at all (the caller fails
+    open). ``want`` is the value about to be written; a miss on a stale list
+    forces a re-read so a freshly built option is honoured within a minute.
+    """
+    options = cache.get("options")
+    age = time.monotonic() - float(cache.get("read_at") or 0.0)
+    stale = options is None or age > OPTIONS_TTL_SECONDS
+    missed = options is not None and want is not None and want not in options \
+        and age > OPTIONS_MISS_RECHECK_SECONDS
+    if stale or missed:
+        if not hasattr(client, "metadata_enum_options"):
+            return options
+        try:
+            fresh = await client.metadata_enum_options(RECEIPT_ENTITY, field)
+        except Exception:  # noqa: BLE001 — unreadable metadata: keep what we had
+            return options
+        cache["options"] = fresh or []
+        cache["read_at"] = time.monotonic()
+        options = cache["options"]
+    return options
 
 
 async def _gate_status(client, fields: dict[str, Any]) -> dict[str, Any]:
@@ -388,7 +430,8 @@ async def _gate_status(client, fields: dict[str, Any]) -> dict[str, Any]:
     an out-of-enum value) and the receipt would fail every sweep forever. Until
     the option exists the receipt reads ``Received`` — truthful, since the
     submission IS in hand and undelivered — and ``intakeMessage`` still carries
-    the full explanation. Once built, it activates with no deploy.
+    the full explanation. Once built it activates with no deploy: a miss
+    re-reads the options (see ``_cached_options``).
 
     Fails OPEN: if the options can't be read, the value is left alone.
     """
@@ -396,16 +439,7 @@ async def _gate_status(client, fields: dict[str, Any]) -> dict[str, Any]:
     fallback = _GATED_STATUSES.get(status)
     if fallback is None:
         return fields
-    options = _status_options_cache["options"]
-    if options is None:
-        if not hasattr(client, "metadata_enum_options"):
-            return fields
-        try:
-            options = await client.metadata_enum_options(RECEIPT_ENTITY, "intakeStatus")
-        except Exception:  # noqa: BLE001 — unreadable metadata: write as-is
-            return fields
-        _status_options_cache["options"] = options or []
-        options = _status_options_cache["options"]
+    options = await _cached_options(client, _status_options_cache, "intakeStatus", status)
     if not options or status in options:
         return fields
     log.info(
@@ -413,9 +447,6 @@ async def _gate_status(client, fields: dict[str, Any]) -> dict[str, Any]:
         "(build the option to activate it)", status, fallback,
     )
     return {**fields, "intakeStatus": fallback}
-
-
-_form_options_cache: dict[str, Any] = {"options": None}
 
 
 async def _gate_form(client, fields: dict[str, Any]) -> dict[str, Any]:
@@ -439,16 +470,7 @@ async def _gate_form(client, fields: dict[str, Any]) -> dict[str, Any]:
     form = fields.get("form")
     if not form:
         return fields
-    options = _form_options_cache["options"]
-    if options is None:
-        if not hasattr(client, "metadata_enum_options"):
-            return fields
-        try:
-            options = await client.metadata_enum_options(RECEIPT_ENTITY, "form")
-        except Exception:  # noqa: BLE001 — unreadable metadata: write as-is
-            return fields
-        _form_options_cache["options"] = options or []
-        options = _form_options_cache["options"]
+    options = await _cached_options(client, _form_options_cache, "form", form)
     if not options or form in options:
         return fields
     log.warning(

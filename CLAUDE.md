@@ -1583,9 +1583,9 @@ each block.
   in the five-forms and Submission Admin sections; plan
   `prds/company-website-hold-plan.md`. No flag; rollback is a revert. Owed:
   the `Held-Company` CRM option on production (#11 — crm-test has both held
-  words since 2026-10-07, `crm-plans/intake-status-held-options.json`; note
-  the receipt engine caches the option list per process, so a restart is
-  what activates them), and production's intake API role needs
+  words since 2026-10-07, `crm-plans/intake-status-held-options.json`; since
+  v0.238.1 a running process picks a new option up within a minute of a
+  miss), and production's intake API role needs
   Team read **plus Assignment Permission = all** before its partner/sponsor
   records carry a team (#16 — crm-test proved that Team read alone turns a
   skipped stamp into a refused create).
