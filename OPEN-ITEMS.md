@@ -494,9 +494,16 @@ block a deploy.)*
 ## Live verification owed
 
 39. **Phase B of the mailing-list and event-sponsorship plan — the partner /
-    funder pickers and the Events tab (v0.239.0, 2026-10-07).** Verified by
-    tests only. The live pass, on crm-test, needs TWO real non-admin accounts
-    because the two halves run under different roles:
+    funder pickers and the Events tab (v0.239.0, 2026-10-07).** **Live pass run
+    by Doug on 2026-10-07 as an administrator: every step matched** — the
+    pickers, the save, the CRM record's Partners and Sponsor Profiles panels,
+    the Events tab on both records, and production showing Funders only. What
+    an administrator CANNOT prove is the role half, because administrators
+    bypass ACL: that the Marketing Admin Role's read-all grant fills the
+    pickers, that the foreign-record denial is retried as the admin account,
+    and that the Events tab counts reach a team-scoped Funder Management user.
+    Those three remain owed as the non-admin halves below. The pass needs TWO
+    real non-admin accounts because the two halves run under different roles:
     - As a **Marketing Admin** (not an admin — admins bypass the read-all
       grant this exercises): open any event in Event Administration → Edit.
       The *Sponsorship* group shows a Partners and a Funders picker listing
