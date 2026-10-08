@@ -1,6 +1,6 @@
 # CBM Events — Presenters: Design (Track F, F4)
 
-Last Updated: 10-08-26 00:55 · Revision 0.2 — see change log at the end.
+Last Updated: 10-08-26 01:09 · Revision 0.3 — see change log at the end.
 
 **Status: DRAFT, awaiting Doug's review. Nothing is built and nothing has been
 applied to any CRM.** The requirements are the eight F4 rulings recorded in
@@ -9,8 +9,8 @@ applied to any CRM.** The requirements are the eight F4 rulings recorded in
 cited below as *F4-n*. What earlier designs settled for the surfaces this one
 touches is cited as *design § n* (the F2/F3 audience design) and *F5 § n* (the
 Portal Calendar design). Everything else is Claude's design and is marked
-where it is a choice. Of the two decisions in § 10, D1 is ruled (10-08-26) and D2
-is open; the design as a whole awaits his approval before anything is built.
+where it is a choice. Both decisions in § 10 are ruled (10-08-26); the design as a
+whole awaits his approval before anything is built.
 
 **Terms used here.** A **presenter** is a person who speaks at an event. A
 **presenter entry** is the CRM record that joins one event to one presenter and
@@ -410,10 +410,11 @@ F4-6 rejected for the biography and the photo; copied once into
 they behave exactly as the other two. The record type in § 3 is drawn with the
 copies.
 
-*Recommendation: static copies*, for consistency with F4-2 and F4-6 and so the
-page is the record of what was presented. Cost: a title that changes before
-the event has to be corrected on the entry by hand, like the biography; and
-two more fields on the record type.
+*Ruled: static copies* (Doug, 10-08-26, on Claude's recommendation), for
+consistency with F4-2 and F4-6 and so the page is the record of what was
+presented. Cost accepted: a title that changes before the event has to be
+corrected on the entry by hand, like the biography; and two more fields on
+the record type. The record type in § 3 and the plan in § 9 stand as drawn.
 
 ---
 
@@ -421,5 +422,6 @@ two more fields on the record type.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.3 | 10-08-26 01:09 | Claude (Claude Code) | D2 ruled by Doug: title and company are static copies on the presenter entry. Both decisions ruled; awaiting approval to build. |
 | 0.2 | 10-08-26 00:55 | Claude (Claude Code) | D1 ruled by Doug: widen the Marketing Admin Role (Contact create + read, mentor profile read, CEventPresenter all) rather than use the org-wide key; the exact grants recorded. D2 open. |
 | 0.1 | 10-08-26 00:39 | Claude (Claude Code) | First draft, from the eight F4 requirements in the Finalization Plan revision 4.24. Twelve findings verified on crm-test and in the code (notably: the Marketing Admin Role has no Contact or mentor-profile grant; "Presenter" is already a Contact type; the applier is unproven on `image` fields). New record type `CEventPresenter` drawn in § 3, plan file in § 9. Two decisions for Doug (D1 grants, D2 title/company copies). Awaiting review; nothing built. |
