@@ -1,6 +1,6 @@
 # CRM handoff — presenters on events (Track F, F4)
 
-Last Updated: 10-08-26 01:26 · Revision 1.0 — see change log at the end.
+Last Updated: 10-08-26 11:04 · Revision 1.1 — see change log at the end.
 
 One new record type, `CEventPresenter`, joining one event to one presenter and
 carrying that presenter's biography, title, company, photo and display order
@@ -14,7 +14,7 @@ behind `EVENT_PRESENTERS` until this change has landed.
 
 | CRM | State | Evidence |
 |---|---|---|
-| crm-test | **Done 10-08-26** — plan applied by the shipping applier as the configuration administrator (fingerprint `5a78484e6b9c`), every entity, field and link read back from metadata; the role script applied and each grant read back; `GET /CEventPresenter?maxSize=1` as the org-wide key answers 200. | This document's § 2 and § 3 output, 10-08-26 01:12–01:25 local. |
+| crm-test | **Done 10-08-26** (role script re-run 11:03 for the assignment permission) — plan applied by the shipping applier as the configuration administrator (fingerprint `5a78484e6b9c`), every entity, field and link read back from metadata; the role script applied and each grant read back; `GET /CEventPresenter?maxSize=1` as the org-wide key answers 200. | This document's § 2 and § 3 output, 10-08-26 01:12–01:25 local. |
 | Production | **Owed** — Sunday 17:00 UTC slot, from inside the deployed web container. | *Inferred:* production has neither the entity nor the field; it has `CEvent.presenters` (the bare link) like crm-test. The dry run in § 2 proves it. |
 | Boston | **Owed** — with the release that carries v0.241.0. | *Inferred:* built from crm-test's files before this change. |
 
@@ -67,7 +67,12 @@ PYTHONPATH=. uv run python .claude/skills/espo-crm-changes/scripts/run_with_admi
 
 Dry run first (above), then `--apply`. It grants: Marketing Admin Role —
 `Contact` create yes, read all (edit stays **no**); `CMentorProfile` read all;
-`CEventPresenter` create yes, read/edit/delete all. `CustomAppAPIRole` —
+`CEventPresenter` create yes, read/edit/delete all; **and Assignment Permission
+`team`** (found in the live pass 10-08-26: without it, `POST Contact` as a
+Marketing Admin answered `403 Assignment failure: assigned user or team not
+allowed` despite Contact create — EspoCRM stamps the creator's team on a new
+record and then checks the role may assign it; the Mentor Role carries `team`,
+the API role learnt the same lesson as #16). `CustomAppAPIRole` —
 `CEventPresenter` read all. Nothing is ever lowered. It refuses to run before
 § 2 has created the entity. A CRM whose org-wide API user holds a role with a
 different name needs that name in the script's table first — check with
@@ -104,4 +109,5 @@ computer using Boston's settings file. Switch stays off until Boston's staff ask
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 10-08-26 11:04 | Claude (Claude Code) | Live pass step 3.10 refused Contact create with an assignment failure; the role script now also sets the Marketing Admin Role's Assignment Permission to `team`, applied on crm-test 11:03. |
 | 1.0 | 10-08-26 01:26 | Claude (Claude Code) | Written after the crm-test run: plan applied and verified, role grants applied and read back, org-key read proven. Production and Boston owed. |

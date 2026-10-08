@@ -1027,9 +1027,13 @@ would be indistinguishable from a slug.
   Contact** (an existing Contact is reused untouched — no null-fill, no type
   merge). One switch per event, `showPresenterBios`. Every staff read and
   write runs **as the signed-in user** (D1: the Marketing Admin Role carries
-  Contact create + read and mentor-profile read — `scripts/migrate_presenter_
-  roles.py`); the page reads run under the org key, whose role reads the
-  entity. Photos ride routes **keyed on the event and the entry** (public by
+  Contact create + read, mentor-profile read **and Assignment Permission
+  `team`** — `scripts/migrate_presenter_roles.py`. **A role that may create a
+  record must also be allowed to assign it**: EspoCRM stamps the creator's
+  team on a new record and refuses the create with "Assignment failure" when
+  the role's assignment permission is unset, which is how the live pass
+  found Contact create 403ing on a role that had it); the page reads run
+  under the org key, whose role reads the entity. Photos ride routes **keyed on the event and the entry** (public by
   slug, portal by id, staff authenticated), never on an attachment id. Dark
   behind `EVENT_PRESENTERS` AND feature detection (fails closed). The bare
   `CEvent.presenters` link is unused and left in place. crm-test CRM done;

@@ -541,7 +541,10 @@ block a deploy.)*
     (`scripts/plans/cevent-presenters.json` applied and read back,
     `scripts/migrate_presenter_roles.py` applied, org key reads
     `CEventPresenter`). **Pushed 2026-10-08 10:35; all three apps report
-    0.241.0.** Owed: (a) the **live pass on crm-test** as a real
+    0.241.0.** Live pass started 2026-10-08 11:00; step 3.10 found Contact
+    create refused (`Assignment failure`) — fixed by Assignment Permission
+    `team` on the role, applied 11:03, script updated. Owed: (a) the rest of
+    the **live pass on crm-test** as a real
     Marketing Admin non-admin, step page
     https://claude.ai/artifact/RrS6SvEtMFNx2dTPckPkaZ (private) — switch on at `/setup`; add a mentor presenter
     and see the copied biography, title and photo; replace the photo and

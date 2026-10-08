@@ -399,7 +399,11 @@ the one enforcing the permission. Cost accepted: a merge-only role change on
 three CRMs, and Marketing Admin members gaining sight of every Contact. The
 grants, as they will be scripted: Marketing Admin Role — `Contact` create yes,
 read all, edit no, delete no; `CMentorProfile` read all; `CEventPresenter`
-create yes, read all, edit all, delete all. The org-wide API role
+create yes, read all, edit all, delete all; **Assignment Permission `team`**
+(added 10-08-26 after the live pass: without it EspoCRM refused the Contact
+create with "Assignment failure: assigned user or team not allowed", because a
+new record is stamped with the creator's team and the role must be allowed to
+assign it — the Mentor Role carries `team`). The org-wide API role
 (`CustomAppAPIRole`) — `CEventPresenter` read all, for the public pages. Every
 presenter read and write in § 6 runs **as the signed-in user**; the master key
 is used for the public and member page reads only, as every other public read
@@ -455,6 +459,7 @@ Each is Claude's decision during the build, open to challenge.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.5 | 10-08-26 11:04 | Claude (Claude Code) | D1 gains Assignment Permission `team` on the Marketing Admin Role, found by the live pass (Contact create refused with an assignment failure). |
 | 0.4 | 10-08-26 01:26 | Claude (Claude Code) | Approved by Doug and built as v0.241.0, dark behind `EVENT_PRESENTERS`. crm-test CRM change and role grants applied and verified; production and Boston owed. § 11 added: eight places the build departs from the design. |
 | 0.3 | 10-08-26 01:09 | Claude (Claude Code) | D2 ruled by Doug: title and company are static copies on the presenter entry. Both decisions ruled; awaiting approval to build. |
 | 0.2 | 10-08-26 00:55 | Claude (Claude Code) | D1 ruled by Doug: widen the Marketing Admin Role (Contact create + read, mentor profile read, CEventPresenter all) rather than use the org-wide key; the exact grants recorded. D2 open. |

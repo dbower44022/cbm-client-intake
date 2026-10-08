@@ -13,6 +13,12 @@ Grants, from ``prds/events/CBM_Events_Presenters_Design.md`` § 10 D1:
   ``CMentorProfile`` read all; ``CEventPresenter`` create yes, read/edit/delete all.
 * CustomAppAPIRole (the org-wide API key) — ``CEventPresenter`` read all, for the
   public and portal page reads.
+* Marketing Admin Role — **Assignment Permission ``team``** (was not set). Found
+  in the live pass 10-08-26: with it unset, ``POST Contact`` as a Marketing Admin
+  answered ``403 Assignment failure: assigned user or team not allowed`` even
+  with Contact create granted, because EspoCRM stamps the creator's team on a new
+  record and then checks the role may assign it. The Mentor Role, which creates
+  Contacts daily, carries ``team``; the API role needed the same lesson (#16).
 
 **Idempotent and merge-only.** A level already at or above the wanted one is left
 alone; nothing is ever lowered or removed. Needs an Admin-type login::
@@ -44,8 +50,13 @@ ROLE_SCOPE_GRANTS: list[tuple[str, str, dict[str, str]]] = [
     ("CustomAppAPIRole", "CEventPresenter", {"read": "all"}),
 ]
 
+#: Role-level permissions (not per scope): (role name, permission, minimum level).
+ROLE_PERMISSIONS: list[tuple[str, str, str]] = [
+    ("Marketing Admin Role", "assignmentPermission", "team"),
+]
+
 # ``create`` is yes/no; the others are no/own/team/all. One ranking covers both.
-LEVEL_RANK: dict[str, int] = {"no": 0, "own": 1, "team": 2, "all": 3, "yes": 3}
+LEVEL_RANK: dict[str, int] = {"no": 0, "not-set": 0, "own": 1, "team": 2, "all": 3, "yes": 3}
 
 
 def _rank(level: Any) -> int:
@@ -128,6 +139,30 @@ async def main() -> int:
                 failed.append(f"{label} - read-back is missing {missing}: {stored}")
             else:
                 done.append(f"set {label} - read back OK: {stored}")
+                touched = True
+        except Exception as exc:  # noqa: BLE001
+            failed.append(f"{label} - {exc}")
+
+    for role_name, permission, level in ROLE_PERMISSIONS:
+        role = await _find_role(client, role_name)
+        if role is None:
+            failed.append(f"role '{role_name}' does not exist on this instance")
+            continue
+        current = role.get(permission)
+        if _rank(current) >= _rank(level):
+            skipped.append(f"{role_name}: {permission} already '{current}'")
+            continue
+        label = f"{role_name}: {permission} {current or '(not set)'} -> {level}"
+        if not apply:
+            done.append(f"WOULD set {label}")
+            continue
+        try:
+            await client.update("Role", role["id"], {permission: level})
+            back = await client.get("Role", role["id"])
+            if _rank(back.get(permission)) < _rank(level):
+                failed.append(f"{label} - read-back is '{back.get(permission)}'")
+            else:
+                done.append(f"set {label} - read back OK")
                 touched = True
         except Exception as exc:  # noqa: BLE001
             failed.append(f"{label} - {exc}")
