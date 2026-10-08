@@ -1,6 +1,6 @@
 # CBM Events & Webinars — Finalization Plan
 
-Last Updated: 10-08-26 00:09 · Revision 4.21 — see change log at the end.
+Last Updated: 10-08-26 00:22 · Revision 4.22 — see change log at the end.
 
 Companion to `CBM_Events_PRD.md`, `CBM_Events_Implementation_Plan.md` and
 `CBM_Events_Registration_Recognition_Plan.md`. Those three say what the feature
@@ -403,6 +403,20 @@ rulings. The design that follows them is drafted after they are complete.
    record. Not chosen: one switch per presenter (finer control, but an uneven
    page and the common mistake of a biography written and never ticked). Cost
    accepted: hiding one presenter's biography means leaving it empty.
+5. **A presenter shows name, title, company, biography and photo.** Title and
+   company come from the Contact (a mentor's title from `mentorTitle` on the
+   profile); the photo for a mentor comes from `CMentorProfile.profilePhoto`,
+   for a guest from an image field on the event-presenter record, uploaded in
+   the editor and served through a public image route on the event-graphic
+   pattern. Verified on crm-test 10-08-26: Contact has `title` and `account`
+   and no image field; the mentor profile has `profilePhoto`, `mentorTitle`
+   and `aboutMentor`. Not chosen: name and biography only (a page poorer than
+   the webinar pages visitors know), or title and company without a photo.
+   **Doug's condition:** the event administrator must be able to update a
+   mentor's photo to a more current one — whether that replaces the photo on
+   this event only or writes back to the mentor's profile is requirement 6.
+   Cost accepted: one more CRM field on the new record type, one more upload
+   path, and a panel that looks uneven when a guest's photo was never uploaded.
 
 **F5 — Upcoming internal events on the portal home page.**
 
@@ -623,6 +637,7 @@ attendance recorded → recording link pasted → the engagement rollup shows it
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 4.22 | 10-08-26 00:22 | Claude (Claude Code) | F4 requirement 5 ruled by Doug (10-08-26): a presenter shows name, title, company, biography and photo, on condition the event administrator can update a mentor's photo; the scope of that update is requirement 6. |
 | 4.21 | 10-08-26 00:09 | Claude (Claude Code) | F4 requirement 4 ruled by Doug (10-08-26): showing presenter biographies is one switch per event, stored on the event. |
 | 4.20 | 10-08-26 00:07 | Claude (Claude Code) | F4 requirement 3 ruled by Doug (10-08-26): a presenter is added from the editor, and an email the CRM does not hold creates the Contact (find-or-create by email). |
 | 4.19 | 10-08-26 00:05 | Claude (Claude Code) | F4 requirement 2 ruled by Doug (10-08-26): the mentor biography is copied once as static text and never updated from the profile; no re-copy control. |
