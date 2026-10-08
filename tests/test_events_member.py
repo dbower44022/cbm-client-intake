@@ -390,3 +390,16 @@ def test_cancel_endpoint_reports_a_refusal_readably(monkeypatch):
     r = build(monkeypatch, MENTOR, crm).post("/api/portal/events/ev1/cancel")
     assert r.status_code == 400
     assert "not registered" in r.json()["detail"]
+
+
+def test_detail_says_whether_the_public_pages_exist(monkeypatch):
+    """A Public event with no slug has no page anywhere; the member page must
+    not blame the deployment's public-pages switch for that (live pass 10-07)."""
+    crm = PortalCrm(events=[make_event(id="noslug", audience="Public", dateStart=SOON, slug="")])
+    ev = build(monkeypatch, MENTOR, crm).get("/api/portal/events/noslug").json()["event"]
+    assert ev["publicUrl"] in ("", None)
+    assert ev["publicPagesActive"] is False      # dry-run test app: public pages off
+    js = (__import__("pathlib").Path(__file__).resolve().parents[1]
+          / "portal" / "frontend" / "event.js").read_text()
+    assert "publicPagesActive === false" in js
+    assert "has no web address yet" in js

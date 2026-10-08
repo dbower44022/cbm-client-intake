@@ -260,10 +260,16 @@ async def detail(event_id: str, request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail=NOT_FOUND)
     email = await _member_email(client, user)
     mine = await _my_registrations(client, email, [event["id"]])
-    return {"event": detail_entry(
+    entry = detail_entry(
         event, base_url=settings.events_public_base,
         my_registration=mine.get(event["id"]),
-    )}
+    )
+    # A Public event with no slug has no page ANYWHERE (crm-test's seeded
+    # events; an event created in the CRM by hand). The page must tell that
+    # apart from "the public pages are switched off in this deployment" —
+    # it said the latter for the former on 2026-10-07 (F5 live pass, step 12).
+    entry["publicPagesActive"] = bool(settings.events_public_active)
+    return {"event": entry}
 
 
 @member_router.get("/{event_id}/image")

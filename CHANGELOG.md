@@ -4,6 +4,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.239.1] — 2026-10-07
+
+**fix(portal): the member page no longer blames the public-pages switch for a
+Public event that has no web address.** Found in the F5 live pass, section 5
+step 12: crm-test's seeded webinar "AI Tools for Small Business" has no slug,
+so it has no page anywhere (its public calendar card has no link either), and
+the member page said "the public webinar pages are not switched on in this
+deployment" — untrue, and pointing staff at the wrong fix. The detail payload
+now carries `publicPagesActive`, and the page says which of the two it is; for
+a missing address it tells staff that saving the event in Event
+Administration gives it one (the update path assigns a slug when there is
+none). One test.
+
 ## [0.239.0] — 2026-10-07
 
 **feat(events): partners and funders on an event, and an Events tab on the

@@ -99,8 +99,12 @@
         join.href = ev.publicUrl; join.target = "_blank"; join.rel = "noopener";
         links.appendChild(view); links.appendChild(join);
         box.appendChild(links);
-      } else {
+      } else if (ev.publicPagesActive === false) {
         box.appendChild(el("p", null, "The public webinar pages are not switched on in this deployment, so there is no website page to link to."));
+      } else {
+        // The pages are on, but this event has no web address (slug) — it was
+        // created outside Event Administration. Saving it there gives it one.
+        box.appendChild(el("p", null, "This event has no web address yet, so there is no website page to link to. Opening it in Event Administration and saving it gives it one."));
       }
       box.hidden = false;
       return;
