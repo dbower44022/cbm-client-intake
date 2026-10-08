@@ -1,6 +1,6 @@
 # Mailing list sync — Constant Contact setup and activation runbook
 
-Last Updated: 10-07-26 23:55 · Revision 0.2 — change log at the end.
+Last Updated: 10-08-26 10:40 · Revision 0.3 — change log at the end.
 
 How to register this application with Constant Contact, connect one
 deployment to one Constant Contact account, and switch the audience push on.
@@ -68,37 +68,59 @@ You will need:
 ## 0a. crm-test only — create the separate Constant Contact account
 
 Why this section exists: the ruling is that crm-test never touches the
-organisation's real Constant Contact account. The vendor's developer sign-up
-creates a trial Constant Contact account alongside the developer login, and
-that trial account is crm-test's. Skip this section for production.
+organisation's real Constant Contact account. The My Applications page needs
+a Constant Contact account to sign in with, and the vendor's sign-up creates
+a trial account that is crm-test's. Skip this section for production.
+
+(The address the vendor's older quick-start guide gives for a developer
+sign-in, `v3.developer.constantcontact.com/login/…`, answers *page not
+found* — verified 2026-10-08. The current developer portal says: "You need
+to have a Constant Contact account to use My Applications.")
 
 1. In a browser where you are **not** signed in to Constant Contact (a
    private window is simplest), open this address:
    ```
-   https://v3.developer.constantcontact.com/login/index.html
+   https://app.constantcontact.com/pages/dma/portal
    ```
-   You should see a sign-in page with a **Sign up** link under the My
-   Applications tab.
+   You should see a Constant Contact sign-in page (the address bar moves to
+   `login.constantcontact.com`), with a **Sign up** link or button on it.
+   If you see the My Applications page straight away, the browser is
+   already signed in to a Constant Contact account; stop and tell me which
+   account name it shows.
 
-2. On that page, click **Sign up**.
-   You should see a form asking for Email, Password, First Name, Last Name,
-   Organization Name and Phone Number.
+2. On that sign-in page, click **Sign up**.
+   You should see Constant Contact's account sign-up form. It asks for at
+   least an email address and a password; it may also ask for your name,
+   organisation name and phone number, and it may describe itself as a free
+   trial. If it asks for a credit card, stop and tell me.
 
-3. In the sign-up form, in the Email box, type an address the organisation
-   controls and that is not already a Constant Contact user — the test
-   mailbox the sandbox already uses is the natural choice. In Organization
-   Name type:
+3. In the sign-up form, in the email box, type an address the organisation
+   controls that is not already a Constant Contact user — the test mailbox
+   the sandbox already uses is the natural choice. Where it asks for an
+   organisation name, type:
    ```
    Cleveland Business Mentors — TEST
    ```
    Fill the remaining boxes and store the password with the other sandbox
    sign-ins.
 
-4. In the sign-up form, click **Get Started**.
-   You should see the My Applications page for the new account. If you are
-   asked to confirm the email address first, do so in that mailbox and
-   return to the same address as step 1. If the page says the email is
-   already in use, stop and tell me which address you used.
+4. In the sign-up form, click the button that completes it (its label is
+   **Get Started**, **Sign up** or **Create account**, depending on the
+   layout).
+   You should see either the My Applications page or the Constant Contact
+   product's home screen. If you are asked to confirm the email address
+   first, do so in that mailbox and then continue. If the page says the
+   email is already in use, stop and tell me which address you used.
+
+5. If step 4 left you on the Constant Contact product's home screen rather
+   than My Applications, open this address again in the same browser:
+   ```
+   https://app.constantcontact.com/pages/dma/portal
+   ```
+   You should see a page headed **My Applications** with a **New
+   Application** button. If instead you see a message about the API or
+   developer access being unavailable to this account, stop and tell me its
+   exact wording.
 
 Continue with section 1, signed in as this new account. (How long the trial
 account lives is not stated in the vendor's documentation; if it expires,
@@ -299,5 +321,6 @@ must be read as a plan before it is allowed to write.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.3 | 10-08-26 10:40 | Claude (Claude Code) | § 0a rewritten: the quick-start's developer sign-in address is a 404 (Doug hit it, verified); sign-up now goes through the My Applications address, which sends an unsigned-in browser to the Constant Contact sign-in/sign-up. |
 | 0.2 | 10-07-26 23:55 | Claude (Claude Code) | Ruling recorded: crm-test gets a separate Constant Contact account; section 0a added to create it through the developer sign-up. |
 | 0.1 | 10-07-26 23:40 | Claude (Claude Code) | First version from the Phase C design: the three shaping facts, the fixed redirect address per deployment, the developer-application steps (doable today), and the Settings panel, connection and first-pass steps as the design has them. |
