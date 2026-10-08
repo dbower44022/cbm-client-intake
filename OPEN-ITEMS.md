@@ -567,7 +567,7 @@ block a deploy.)*
     than before.
 
 35. **Event audience and display time (v0.233.0, F2 + F3) — reviewed live on
-    crm-test 2026-09-30; production and Boston owed.** Doug ran the review as
+    crm-test 2026-09-30; production done 2026-10-07; Boston owed.** Doug ran the review as
     two real non-admin accounts (Mark Marketing, Joe Mentor): the editor's
     conditional controls, the Shown column, an Internal event limited to a team
     seen by a member and hidden from an outsider, the public page refusing the
@@ -586,8 +586,10 @@ block a deploy.)*
        production console (step page https://claude.ai/artifact/EoSQ9EuKC4oWPFYWvpxQRe,
        private); verified 21:54 from inside the container as the org-wide key
        — all five fields present, `eventReleaseDate` already existed,
-       `registrationSource` offers `Portal`. Still owed from that page: the
-       conformance exit numbers (§ 2.10) and the editor check (§ 3). The
+       `registrationSource` offers `Portal`. Doug reported the conformance
+       check unchanged and the editor check matched (10-07-26 evening): the
+       Publishing panel shows Audience and Reach, and Internal reveals Limit to
+       teams and Takes registrations. **Production is complete.** The
        read-back step as first written used `curl`, which the container lacks,
        and then shell-eaten quotes; corrected twice (page revision 1.2).
        Originally: at a Sunday 17:00 UTC slot, from inside the web
