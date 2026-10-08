@@ -536,8 +536,10 @@ block a deploy.)*
     and feature-detected. **crm-test's CRM side is complete 2026-10-08**
     (`scripts/plans/cevent-presenters.json` applied and read back,
     `scripts/migrate_presenter_roles.py` applied, org key reads
-    `CEventPresenter`). Owed: (a) the **live pass on crm-test** as a real
-    Marketing Admin non-admin — switch on at `/setup`; add a mentor presenter
+    `CEventPresenter`). **Pushed 2026-10-08 10:35; all three apps report
+    0.241.0.** Owed: (a) the **live pass on crm-test** as a real
+    Marketing Admin non-admin, step page
+    https://claude.ai/artifact/RrS6SvEtMFNx2dTPckPkaZ (private) — switch on at `/setup`; add a mentor presenter
     and see the copied biography, title and photo; replace the photo and
     confirm the mentor's profile photo is unchanged; add a guest by a new
     email and find the `Presenter`-typed Contact; add the same email to a
