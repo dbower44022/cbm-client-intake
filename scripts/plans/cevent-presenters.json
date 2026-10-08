@@ -1,0 +1,78 @@
+{
+  "name": "cevent-presenters",
+  "description": "F4 presenters: one record per presenter per event \u2014 CBM_Events_Presenters_Design.md",
+  "entities": [
+    {
+      "name": "EventPresenter",
+      "type": "Base",
+      "labelSingular": "Event Presenter",
+      "labelPlural": "Event Presenters",
+      "stream": false
+    }
+  ],
+  "fields": [
+    {
+      "entity": "CEventPresenter",
+      "name": "biography",
+      "type": "wysiwyg",
+      "label": "Biography",
+      "tooltipText": "This presenter's biography for this event. Copied once from a mentor's profile; never refreshed."
+    },
+    {
+      "entity": "CEventPresenter",
+      "name": "presenterTitle",
+      "type": "varchar",
+      "maxLength": 150,
+      "label": "Title"
+    },
+    {
+      "entity": "CEventPresenter",
+      "name": "presenterCompany",
+      "type": "varchar",
+      "maxLength": 150,
+      "label": "Company"
+    },
+    {
+      "entity": "CEventPresenter",
+      "name": "photo",
+      "type": "image",
+      "label": "Photo",
+      "tooltipText": "This presenter's photo for this event. Copied once from a mentor's profile; never refreshed."
+    },
+    {
+      "entity": "CEventPresenter",
+      "name": "displayOrder",
+      "type": "int",
+      "min": 1,
+      "label": "Display order"
+    },
+    {
+      "entity": "CEvent",
+      "name": "showPresenterBios",
+      "type": "bool",
+      "default": false,
+      "label": "Show presenter biographies",
+      "tooltipText": "Off, the event page shows each presenter's name, title, company and photo only."
+    }
+  ],
+  "links": [
+    {
+      "entity": "CEventPresenter",
+      "link": "event",
+      "linkType": "manyToOne",
+      "entityForeign": "CEvent",
+      "linkForeign": "eventPresenters",
+      "label": "Event",
+      "labelForeign": "Presenters"
+    },
+    {
+      "entity": "CEventPresenter",
+      "link": "contact",
+      "linkType": "manyToOne",
+      "entityForeign": "Contact",
+      "linkForeign": "presenterAppearances",
+      "label": "Presenter",
+      "labelForeign": "Presenter appearances"
+    }
+  ]
+}
