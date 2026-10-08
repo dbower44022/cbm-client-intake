@@ -13,12 +13,17 @@ Grants, from ``prds/events/CBM_Events_Presenters_Design.md`` § 10 D1:
   ``CMentorProfile`` read all; ``CEventPresenter`` create yes, read/edit/delete all.
 * CustomAppAPIRole (the org-wide API key) — ``CEventPresenter`` read all, for the
   public and portal page reads.
-* Marketing Admin Role — **Assignment Permission ``team``** (was not set). Found
-  in the live pass 10-08-26: with it unset, ``POST Contact`` as a Marketing Admin
-  answered ``403 Assignment failure: assigned user or team not allowed`` even
-  with Contact create granted, because EspoCRM stamps the creator's team on a new
-  record and then checks the role may assign it. The Mentor Role, which creates
-  Contacts daily, carries ``team``; the API role needed the same lesson (#16).
+* Marketing Admin Role — **Assignment Permission ``all``** (was not set). Found
+  in the live pass 10-08-26: ``POST Contact`` as a Marketing Admin answered
+  ``403 Assignment failure: assigned user or team not allowed`` with Contact
+  create granted. Read from EspoCRM's own source on crm-test
+  (``Acl/AssignmentChecker/Helper.php``): at level ``no`` or ``team`` the checker
+  inspects the new record's teams and assigned users, and at ``team`` a record
+  with NEITHER a team NOR an assigned user is refused outright
+  (``isPermittedTeamsEmpty``) — which is exactly what a presenter's Contact is
+  (the app stamps neither, and Mark Marketing has no default team). Only
+  ``all`` skips both checks. The Partner Manager Role, the Client Assignment
+  Role and the API role all carry ``all`` for the same reason (#16).
 
 **Idempotent and merge-only.** A level already at or above the wanted one is left
 alone; nothing is ever lowered or removed. Needs an Admin-type login::
@@ -52,7 +57,7 @@ ROLE_SCOPE_GRANTS: list[tuple[str, str, dict[str, str]]] = [
 
 #: Role-level permissions (not per scope): (role name, permission, minimum level).
 ROLE_PERMISSIONS: list[tuple[str, str, str]] = [
-    ("Marketing Admin Role", "assignmentPermission", "team"),
+    ("Marketing Admin Role", "assignmentPermission", "all"),
 ]
 
 # ``create`` is yes/no; the others are no/own/team/all. One ranking covers both.
