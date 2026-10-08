@@ -382,7 +382,11 @@ Contact account yet.** Decided not to defer: crm-test's trial account
 production's half only:** access to the real account as the
 organisation-owned Constant Contact user — production's developer
 application, its connection, and the one-time migration all wait on it.
-The Phase C build was handed to a separate session on 2026-10-08.
+The Phase C build was handed to a separate session on 2026-10-08. **crm-test's
+separate Constant Contact account was created by Doug on 2026-10-08**
+(runbook § 0a, after its sign-in address was corrected — the vendor's old
+developer sign-in page is a 404). Next: runbook § 1, the developer
+application and the redirect address, in the setup session.
 
 **Production's `CEngagement.description` → wysiwyg conversion** (added
 2026-08-31) — `cengagement-description-wysiwyg-crm-handoff.md` § 3, at a
