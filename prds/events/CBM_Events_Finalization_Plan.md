@@ -1,6 +1,6 @@
 # CBM Events & Webinars — Finalization Plan
 
-Last Updated: 10-08-26 00:07 · Revision 4.20 — see change log at the end.
+Last Updated: 10-08-26 00:09 · Revision 4.21 — see change log at the end.
 
 Companion to `CBM_Events_PRD.md`, `CBM_Events_Implementation_Plan.md` and
 `CBM_Events_Registration_Recognition_Plan.md`. Those three say what the feature
@@ -396,6 +396,13 @@ rulings. The design that follows them is drafted after they are complete.
    Marketing Admin Role needs Contact create (verify on each CRM at design), and
    a guest presenter is a Contact with no other relationship to the
    organisation until one arises.
+4. **Showing presenter biographies is one switch per event.** The event either
+   shows biographies for all its presenters or names only; a presenter with an
+   empty biography shows as a name, which is the per-presenter escape hatch.
+   The switch is a field on the event record, not on the event-presenter
+   record. Not chosen: one switch per presenter (finer control, but an uneven
+   page and the common mistake of a biography written and never ticked). Cost
+   accepted: hiding one presenter's biography means leaving it empty.
 
 **F5 — Upcoming internal events on the portal home page.**
 
@@ -616,6 +623,7 @@ attendance recorded → recording link pasted → the engagement rollup shows it
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 4.21 | 10-08-26 00:09 | Claude (Claude Code) | F4 requirement 4 ruled by Doug (10-08-26): showing presenter biographies is one switch per event, stored on the event. |
 | 4.20 | 10-08-26 00:07 | Claude (Claude Code) | F4 requirement 3 ruled by Doug (10-08-26): a presenter is added from the editor, and an email the CRM does not hold creates the Contact (find-or-create by email). |
 | 4.19 | 10-08-26 00:05 | Claude (Claude Code) | F4 requirement 2 ruled by Doug (10-08-26): the mentor biography is copied once as static text and never updated from the profile; no re-copy control. |
 | 4.18 | 10-07-26 23:49 | Claude (Claude Code) | F4 requirement 1 ruled by Doug (10-07-26): a presenter biography belongs to the person-and-event pairing, copied from the mentor biography as a starting point; needs a new CRM joining record type. F4 state moved to Requirements being ruled. |
