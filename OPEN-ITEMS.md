@@ -370,6 +370,11 @@ Boston owed with their Phase A apply, and the roles standard capture
 (`prds/chapter-network/roles-standard/prod-capture-2026-08-31.json`) must gain
 the two cells when production does, or the conformance check reports crm-test
 as drifted.
+**Phase C designed 2026-10-07** (plan § 11, `MAILING-SETUP.md`): one
+developer application per Constant Contact account per deployment, redirect
+address `{APP_BASE_URL}/api/setup/mailing/callback`. **Decision owed:**
+which account crm-test connects to (plan § 11.11, recommended: a separate
+account). Nothing of Phase C is built.
 
 **Production's `CEngagement.description` → wysiwyg conversion** (added
 2026-08-31) — `cengagement-description-wysiwyg-crm-handoff.md` § 3, at a

@@ -1,8 +1,8 @@
 # Mailing List and Event Sponsorship — plan v0.1 (2026-10-07)
 
-Last Updated: 10-07-26 04:10 · Revision 0.4 — change log at the end.
+Last Updated: 10-07-26 23:45 · Revision 0.5 — change log at the end.
 
-**Status: rulings settled, nothing built.** This is the plan document for the
+**Status: Phases A and B done on crm-test; Phase C designed (§ 11), one decision open (§ 11.11), nothing of it built.** This is the plan document for the
 arc, in the style of the other arcs in `prds/`: it records Doug's rulings, the
 model that follows from them, the phases, and what is deliberately deferred.
 It is an implementation-level document, so it names the mailing service
@@ -205,12 +205,14 @@ the tab and its endpoint, the `contributions_link` precedent. Counts computed
 in `events/reporting.py` by one function, paged at 200, best-effort per row
 ("—", never 0, on a failed read). Analytics panels follow.
 
-**Phase C — the audience push (worker, `MAILING_SYNC`, off by default).**
-Constant Contact client in `core/`, OAuth2 refresh-token flow, secrets at
-`/setup`. Nightly push of qualifying Contacts, matched on email; hourly pull
-of unsubscribes and bounces onto the CRM email address flags. Alerts through
-the existing monitoring. The migration script ships with this phase and runs
-once, by hand, dry-run first.
+**Phase C — the audience push (worker, `MAILING_SYNC`, off by default).
+DESIGNED 2026-10-07 — § 11; setup runbook `MAILING-SETUP.md`; one decision
+open (§ 11.11).** Constant Contact client in `core/`, OAuth2 refresh-token
+flow, credentials and the connection at `/setup`. Nightly push of qualifying
+Contacts, matched on email; hourly pull of unsubscribes (and bounces, once
+their representation is verified) onto the CRM email address flags. Alerts
+through the existing monitoring. The migration script ships with this phase
+and runs once, by hand, dry-run first.
 
 **Phase D — Link a campaign (web, `MAILING_SYNC` too).** Campaign listing,
 the stamp, list attachment for drafts, counts on the Overview, the
@@ -331,6 +333,268 @@ valuable, each built on something already in place:
 - Constant Contact community, staff answer: *Switching modes of editing email
   campaign* (`community.constantcontact.com/t5/Get-Help/Switching-modes-of-editing-email-campaign/td-p/398863`).
 - GrapesJS newsletter preset (`github.com/GrapesJS/preset-newsletter`).
+- For § 11 (read 2026-10-07): *OAuth2 Overview* (`…/api_guide/auth_overview.html`
+  — flows, endpoints, token lifetimes, the private-application rule,
+  multiple redirect URIs), *Authorization Code Flow*
+  (`…/api_guide/server_flow.html` — parameters, Basic-auth token exchange,
+  the 300-second code), *Quick Start* (`…/api_guide/getting_started.html`
+  — the New Application dialog, Rotating Refresh, the once-shown secret),
+  *Scopes* (`…/api_guide/scopes.html`), *Contacts overview*
+  (`…/api_guide/contacts_overview.html` — bulk import limits), *Syncing
+  contacts* (`…/api_guide/contacts_sync.html` — `updated_after`,
+  `status=unsubscribed`, read lists before importing), *Rate limits*
+  (`…/api_guide/rate_limits.html`).
+
+---
+
+## 11. Phase C design — the audience push (2026-10-07)
+
+Everything here follows from rulings 1 to 4 and from three vendor facts read
+on 2026-10-07 (sources added to § 10). Confidence is stated per item: a fact
+read from the vendor's documentation is marked *read*; a behaviour not found
+in the pages read is marked *unverified* and listed in § 11.10, to be proved
+against a test account before the code that depends on it is written.
+
+### 11.1 Accounts and applications
+
+- **A new developer application is private to the Constant Contact user who
+  created it** (*read*). Only that user can authorise it; opening it to all
+  users means telephoning the vendor's support and an approval process. So
+  the application is created while signed in as the Constant Contact user
+  that will connect the deployment — the organisation-owned login of open
+  question 2 — and that same user authorises it. The My Applications page
+  lives inside the Constant Contact product itself
+  (`app.constantcontact.com/pages/dma/portal`), so the sign-in is the
+  ordinary Constant Contact sign-in (*read*).
+- **One Constant Contact account, one developer application, one
+  deployment.** Production connects to the organisation's real account.
+  crm-test connects through its own application to the account § 11.11
+  settles. The dev deployment never connects: it has no CRM to push from.
+  Boston registers its own application in its own account; the chapter
+  deployment guide gains a step when Phase C ships.
+- **Refresh-token method: Rotating Refresh**, the vendor's recommendation
+  (*read*). The cost is that every refresh yields a new refresh token that
+  must be stored before anything else happens, and two processes refreshing
+  at once would race. § 11.3 serialises the refresh in the database, so the
+  choice costs nothing at run time. Whether reusing a superseded token
+  revokes the whole grant is *unverified*; the design assumes it does and
+  never reuses one.
+
+### 11.2 The redirect address
+
+The address Constant Contact sends the authorisation back to must match,
+character for character, an address registered on the application (*read*:
+a mismatch is a 400; several absolute addresses may be registered per
+application). This application builds it as
+
+```
+{APP_BASE_URL}/api/setup/mailing/callback
+```
+
+from the `APP_BASE_URL` setting — **never from the request's Host header**,
+because production answers on both its custom domain and its
+`ondigitalocean.app` address and only one of them is registered. The
+Settings panel shows the computed address with a copy button, so the value
+registered is the value used. Fixed addresses per deployment:
+
+| Deployment | Redirect address |
+|---|---|
+| production | `https://apps.clevelandbusinessmentors.org/api/setup/mailing/callback` |
+| crm-test | `https://cbm-client-intake-svxs3.ondigitalocean.app/api/setup/mailing/callback` |
+| Boston | `https://apps.bbmentors.org/api/setup/mailing/callback` |
+
+A developer's `http://localhost:8000/api/setup/mailing/callback` may be
+added to the **crm-test** application only, never production's. (Community
+answers say plain `http` is accepted for localhost; *unverified*.)
+
+### 11.3 Connecting, and keeping the connection
+
+- **Start** — `GET /api/setup/mailing/connect`, EspoCRM administrators only
+  (the `/setup` gate). Builds the authorise URL with the client ID, the
+  redirect address above, `response_type=code`, the scopes
+  `contact_data campaign_data account_read offline_access`, and a `state`
+  signed with `SESSION_SECRET` carrying the administrator's user id and a
+  timestamp. `campaign_data` is requested now, though Phase C never uses it,
+  so Phase D does not force a second authorisation; `account_read` lets the
+  panel show which account is connected.
+- **Callback** — `GET /api/setup/mailing/callback?code&state`, same gate.
+  Verifies `state` (signature, age under ten minutes, same administrator),
+  exchanges the code at the token endpoint with HTTP Basic
+  `client_id:client_secret` (*read*), reads `/account/summary` for the
+  account's organisation name, stores the connection, records the action
+  (`record_action`, "Mailing service connected"), and redirects to `/setup/`.
+  An authorisation code lives 300 seconds (*read*), so the exchange happens
+  in the callback, never deferred.
+- **Where the connection lives** — a new table `mailing_connection`, one
+  row: access token and refresh token (both encrypted with
+  `APP_ENCRYPTION_KEY` through `core/crypto`; **refused without a cipher**,
+  the same rule the settings store applies to secrets), access-token expiry,
+  granted scopes, account label, connected-by, connected-at,
+  last-refresh-at, last-error. Added to `core/sandbox_reset.KEEP_TABLES`,
+  because a connection crm-test loses every night is no connection. Not an
+  `app_setting` row: it is not something an administrator edits, and the
+  history table would gain a "(secret set)" row per refresh.
+- **One refresher at a time** — any process needing a token runs
+  `SELECT … FOR UPDATE` on the row, re-reads the expiry under the lock,
+  refreshes only if the access token is within five minutes of expiry,
+  writes the new pair before releasing the lock. The vendor rate-limits the
+  token endpoint and says to refresh only near expiry (*read*). The access
+  token lives 24 hours (*read*: 1440 minutes), so a healthy deployment
+  refreshes about once a day.
+- **When refresh fails** — a 400/401 from the token endpoint marks the row
+  `needs_reauthorisation`, stops the push and pull until a human
+  reconnects, and raises **one** alert through the existing monitoring
+  ("Mailing service needs re-authorisation"), not one per cycle. This is
+  the single failure a human must fix; every other failure retries. A
+  refresh token unused for 180 days expires (*read*), which a daily push
+  never lets happen.
+- **Disconnect** — the panel's Disconnect deletes the row and records the
+  action. The vendor-side revocation endpoint is *unverified* and not
+  relied on.
+
+### 11.4 Settings
+
+| Key | Kind | Component | Default | Notes |
+|---|---|---|---|---|
+| `MAILING_SYNC` | bool | worker | off | The switch. Per-request, so `/setup` flips it. |
+| `MAILING_CLIENT_ID` | text | both | empty | The application's API key. |
+| `MAILING_CLIENT_SECRET` | secret | both | empty | Shown once by the vendor; stored encrypted; never read back. Not a `VERIFIED_KEYS` member — nothing can probe it without a user authorising, so the Connect step is its verification. |
+| `MAILING_LIST_NAME` | text | worker | `Event notices` | Open question 1's answer. Find-or-create by name on the first push. |
+| `MAILING_PUSH_SECONDS` | int | worker | 86400 | 0 disables the push and leaves the pull. |
+| `MAILING_PULL_SECONDS` | int | worker | 3600 | 0 disables the pull. |
+| `MAILING_BASE_URL` | text | both | `https://api.cc.email/v3` | Override only for a vendor change. |
+
+Readiness gains a `mailing` feature: flag `mailing_sync`, component
+`worker`, requires the client ID and secret, plus a connection-state line
+(connected as / not connected / needs re-authorisation) that no other
+feature has, because the credential here is a grant rather than a key.
+Setting labels say *Mailing service*, never the vendor's name, so the page
+reads the same on every chapter; the help text may name the vendor.
+
+### 11.5 The push (nightly, worker)
+
+1. **Audience** — every CRM Contact with a primary email address,
+   `cMarketingOptIn` true, `emailAddressIsOptedOut` false and
+   `emailAddressIsInvalid` false, read under the org-wide API key, paged at
+   200. The three bools are the whole rule (§ 4.1); mentors, partners and
+   funders join only when someone ticks the box (open question 3).
+2. **The list** — `GET /contact_lists`, matched on `MAILING_LIST_NAME`;
+   created when absent. Its id is cached on the connection row.
+3. **What the list holds now** — `GET /contacts?lists={id}&include=…`,
+   paged, to a set keyed on lower-cased email. The vendor's own sync guide
+   says to read list membership before importing, so a recent unsubscribe is
+   not re-added (*read*).
+4. **Add** — the audience minus the list, sent as
+   `POST /activities/contacts_json_import` with `list_ids=[id]` and, per
+   contact, `email`, `first_name`, `last_name` (*read*: up to 40,000 per
+   call, asynchronous, polled at `GET /activities/{id}`). Existing contacts
+   are updated only in the properties sent (*read*). The push never sends a
+   contact whose vendor-side `permission_to_send` is `unsubscribed` or
+   `temp_hold` (ruling 2: opt-out flows one way).
+5. **Remove** — the list minus the audience, sent as
+   `POST /activities/remove_list_memberships` by contact id. Removed from
+   the list, never deleted from the account (§ 4.1).
+6. **Pacing** — one bulk call each way per night, membership reads paged;
+   well inside 10,000 calls a day and 4 a second (*read*). Any 429 waits
+   and retries once, then the pass is reported as partial.
+7. **Plan then apply** — the same function is a `/setup` Operations job
+   (dry-run → apply that exact plan, refusing if the plan moved), which is
+   how the first run is read before it writes. The nightly timer calls it
+   with apply.
+
+### 11.6 The pull (hourly, worker)
+
+- `GET /contacts?status=unsubscribed&updated_after={cursor}` (*read*, the
+  vendor's sync guide). For each, the CRM Contact matched on email gets
+  `emailAddressIsOptedOut=true` on that address (through `emailAddressData`,
+  the write `comms/service.py` already makes). Advance-only: the pull never
+  clears a CRM opt-out and the push never re-adds an address the CRM holds
+  as opted out. The cursor is persisted on the connection row and moves only
+  after a pass completes.
+- **Bounces — unverified.** The vendor pages read today do not say how an
+  undeliverable address appears on a contact. Candidates: `permission_to_send
+  = temp_hold` (community answers describe it as a sticky hold), the
+  per-campaign bounce report under `/reports/email_reports`, or a contact
+  `status`. Until proved on a test account the pull applies unsubscribes
+  only; a hard bounce, once identifiable, sets `emailAddressIsInvalid=true`.
+- A contact the vendor reports that the CRM does not hold is logged and
+  skipped, never created (ruling 1).
+
+### 11.7 The one-time migration
+
+`scripts/import_mailing_contacts.py`: reads every active vendor contact,
+`find_create_or_fill` on email as `Contact` type `Prospect` with
+`cMarketingOptIn=true`, no provenance marker (ruling 4). Dry-run by default,
+idempotent through a ledger, run once by hand against production **before**
+the first production push — otherwise § 11.5 step 5 removes from the list
+every person staff entered directly, which is the number the runbook tells
+the operator to stop on.
+
+### 11.8 Monitoring and history
+
+Alerts through `core/monitoring`: re-authorisation needed (once), a push
+pass that failed or was partial, a pull cursor that has not advanced in a
+day. Connect, disconnect and every applied push go through `record_action`.
+The push's per-pass counts are kept on the connection row and shown on the
+readiness line, so "is it running?" is answered without a log.
+
+### 11.9 Build order
+
+1. `core/mailing.py` — the client: token store with the locked refresh,
+   `_request` with one re-auth on 401, contacts, lists, activities. Alembic
+   migration 0030 for `mailing_connection`; `KEEP_TABLES`.
+2. Settings and the readiness feature; the `/setup` panel rows (client ID,
+   secret, redirect address read-only, connection line with Connect /
+   Disconnect); the connect and callback routes.
+3. The push as a function, exposed as the Operations job, then on the worker
+   timer. The pull. Tests with a fake vendor client that enforces the 4-a-
+   second and page-size limits the way the EspoCRM fake enforces 200.
+4. The migration script.
+5. Review on crm-test as a real non-admin reading the results in the CRM,
+   then production.
+
+### 11.10 Verification owed before the dependent code is written
+
+- How a bounced address appears on a vendor contact (§ 11.6).
+- Whether reusing a superseded rotating refresh token revokes the grant
+  (§ 11.1); the design never reuses one either way.
+- The exact label of the redirect-address box on the application's edit
+  screen, and that it accepts an address with a path (the documentation
+  says "absolute URIs"; the quick-start page never mentions the box).
+- The maximum page size of `GET /contacts` (the design assumes 500; the
+  code reads whatever the documentation states).
+- How long the trial account a developer sign-up creates lives, if § 11.11
+  chooses it.
+
+### 11.11 Open decision — which account crm-test connects to
+
+crm-test holds training data: invented people with invented addresses, reset
+nightly. A push from it is a push of those people.
+
+- **A. A separate Constant Contact account for crm-test** (the trial account
+  a developer sign-up creates, or a second paid account). What it does well:
+  nothing crm-test does can reach a real person or the real list; the
+  review happens end to end, writes included. Cost: one more sign-in to
+  hold, and a trial account may expire and need re-creating (§ 11.10).
+  **Recommended** — the sandbox already refuses to touch production systems
+  by rule, and this keeps that rule.
+- **B. The real account, with crm-test confined to a list named
+  `Event notices — TEST`.** What it does well: no second account. Cost:
+  invented people enter the real account's contact base; one accidental send
+  to that list mails invented addresses, and the bounces count against the
+  organisation's sender reputation; a real person's unsubscribe pulled back
+  by crm-test lands on a sandbox record and is reset that night.
+- **C. crm-test never connects; the first review is production's dry-run
+  plan.** What it does well: nothing to set up twice. Cost: the write path
+  is first exercised on production, which breaks the crm-test-first gate
+  every other feature observed.
+
+### 11.12 Follow-on detail, settled
+
+The panel wording is *Mailing service*; the setting prefix is `MAILING_`;
+the route prefix is `/api/setup/mailing/`; the table is
+`mailing_connection`; the client module is `core/mailing.py`. The scopes
+requested are the four in § 11.3. The list name default is *Event notices*.
 
 ---
 
@@ -338,6 +602,7 @@ valuable, each built on something already in place:
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.5 | 10-07-26 23:45 | Claude (Claude Code) | Phase C designed: § 11 (accounts and the private-application rule, the fixed redirect address per deployment, the connection store with locked rotating refresh, settings, the push and pull, the migration, build order, verification owed, the crm-test account decision). Runbook `MAILING-SETUP.md`. Sources for § 11 added to § 10. |
 | 0.4 | 10-07-26 04:10 | Claude (Claude Code) | Phase B built (v0.239.0): pickers, the sponsors endpoint, the Events tab, the rollup. Analytics panels deferred to § 9. |
 | 0.3 | 10-07-26 03:45 | Claude (Claude Code) | Phase A applied to crm-test (all but the hand removal); the role grant ruled read-all and applied there. |
 | 0.2 | 10-07-26 03:40 | Claude (Claude Code) | Phase A handoff written: far-side link name is `sponsoredEvents` (mirrors the funder link as read from crm-test), relation table named; Marketing Admin Role gap added to the prerequisites. |
