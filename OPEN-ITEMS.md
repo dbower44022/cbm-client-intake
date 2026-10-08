@@ -376,7 +376,13 @@ address `{APP_BASE_URL}/api/setup/mailing/callback`. **Ruled 2026-10-07:**
 crm-test connects to a separate Constant Contact account of its own
 (plan § 11.11, option A; runbook § 0a creates it). Nothing of Phase C is
 built; Doug's section 0a + 1 of the runbook and the Phase C build can run
-in parallel.
+in parallel. **2026-10-08: Doug has no access to the organisation's Constant
+Contact account yet.** Decided not to defer: crm-test's trial account
+(runbook § 0a) and the build need no such access. **Prerequisite for
+production's half only:** access to the real account as the
+organisation-owned Constant Contact user — production's developer
+application, its connection, and the one-time migration all wait on it.
+The Phase C build was handed to a separate session on 2026-10-08.
 
 **Production's `CEngagement.description` → wysiwyg conversion** (added
 2026-08-31) — `cengagement-description-wysiwyg-crm-handoff.md` § 3, at a

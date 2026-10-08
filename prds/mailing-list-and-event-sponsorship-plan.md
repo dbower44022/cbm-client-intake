@@ -1,6 +1,6 @@
 # Mailing List and Event Sponsorship — plan v0.1 (2026-10-07)
 
-Last Updated: 10-07-26 23:55 · Revision 0.6 — change log at the end.
+Last Updated: 10-08-26 01:25 · Revision 0.7 — change log at the end.
 
 **Status: Phases A and B done on crm-test; Phase C designed (§ 11) and its one decision ruled (§ 11.11, option A), nothing of it built.** This is the plan document for the
 arc, in the style of the other arcs in `prds/`: it records Doug's rulings, the
@@ -593,6 +593,18 @@ nightly. A push from it is a push of those people.
   is first exercised on production, which breaks the crm-test-first gate
   every other feature observed.
 
+### 11.11a Access to the real account (2026-10-08)
+
+Doug does not yet have access to the organisation's Constant Contact
+account. Decided not to defer the arc: § 11.11's trial account and the build
+(§ 11.9 steps 1–4, tests against a fake vendor) need no such access, and the
+trial account answers most of § 11.10. **Access as the organisation-owned
+Constant Contact user is the prerequisite for production's half only**:
+production's developer application and connection, and the one-time
+migration (§ 11.7). Risk accepted: a trial account may restrict something
+the live check needs (inferred, not checked); if so the live check waits and
+nothing built is wasted.
+
 ### 11.12 Follow-on detail, settled
 
 The panel wording is *Mailing service*; the setting prefix is `MAILING_`;
@@ -606,6 +618,7 @@ requested are the four in § 11.3. The list name default is *Event notices*.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.7 | 10-08-26 01:25 | Claude (Claude Code) | § 11.11a: no access to the real account yet; arc proceeds on the trial account and the build; real-account access is production's prerequisite. Build handed to a separate session. |
 | 0.6 | 10-07-26 23:55 | Claude (Claude Code) | § 11.11 ruled: option A, a separate Constant Contact account for crm-test (Doug). |
 | 0.5 | 10-07-26 23:45 | Claude (Claude Code) | Phase C designed: § 11 (accounts and the private-application rule, the fixed redirect address per deployment, the connection store with locked rotating refresh, settings, the push and pull, the migration, build order, verification owed, the crm-test account decision). Runbook `MAILING-SETUP.md`. Sources for § 11 added to § 10. |
 | 0.4 | 10-07-26 04:10 | Claude (Claude Code) | Phase B built (v0.239.0): pickers, the sponsors endpoint, the Events tab, the rollup. Analytics panels deferred to § 9. |
