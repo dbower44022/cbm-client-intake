@@ -1,8 +1,8 @@
 # CBM Events — The Portal Calendar: Design (Track F, F5)
 
-Last Updated: 09-30-26 15:10 · Revision 0.3 — see change log at the end.
+Last Updated: 10-07-26 22:53 · Revision 0.4 — see change log at the end.
 
-**Status: BUILT as v0.235.0 (09-30-26), on Doug's approval, dark behind `PORTAL_CALENDAR`. Verified by tests only; the live pass is `OPEN-ITEMS.md` #37. § 10 records where the build departs from this design.** The requirements
+**Status: LIVE on production and crm-test since 10-07-26 (switch on at `/setup`; v0.239.1). Live pass done by Doug 10-07-26 (`OPEN-ITEMS.md` #37). § 10 records where the build departs from this design; D3 (10-07-26) is ruled and its build owed (#38).** The requirements
 are Doug's six rulings recorded in `CBM_Events_Finalization_Plan.md` revision
 4.11, section F5; they are cited below as *F5-n*. What F3 already settled for
 this surface is cited as *F3-n* and the F2/F3 design as *design § n*. Everything
@@ -333,12 +333,22 @@ Each is Claude's decision during the build, open to challenge.
    from the payload's date; § 4 gave the format without saying where the
    weekday came from.
 
+**D3 — Where an Internal event's join link comes from (ruled 10-07-26).**
+Found by the live pass: the Join URL field is app-managed, filled only by Zoom
+for Public events, so D2 had nothing to act on. Doug ruled, on Claude's
+recommendation, that the field becomes **editable in Event Administration for
+Internal events only** and stays read-only for Public events, where Zoom owns
+it. Not chosen: editable for every event (Zoom would silently overwrite a typed
+value), or dropping D2 and relying on the description (every member would see
+the link whatever the registration rule). Build owed — `OPEN-ITEMS.md` #38.
+
 ---
 
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.4 | 10-07-26 22:53 | Claude (Claude Code) | D3 ruled by Doug: the Join URL is editable for Internal events only. Status: live on production and crm-test since 10-07-26; D3's build owed. |
 | 0.3 | 09-30-26 15:10 | Claude (Claude Code) | Built as v0.235.0 on Doug's approval, dark behind `PORTAL_CALENDAR`. Status updated and § 10 added: seven places the build departs from the design. |
 | 0.2 | 09-30-26 14:56 | Claude (Claude Code) | D1 and D2 ruled by Doug: the member page address is the event's id; the join link shows to everyone when the event takes no registrations and to registered members only when it does. Status: awaiting approval to build. |
 | 0.1 | 09-30-26 14:55 | Claude (Claude Code) | First draft, from the six F5 rulings Doug made on 09-30-26 (Finalization Plan revision 4.11). Eleven findings verified in the code. Two decisions for Doug (D1 address, D2 join link). Awaiting review; nothing built. |

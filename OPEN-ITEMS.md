@@ -527,8 +527,15 @@ block a deploy.)*
     "paste your own meeting link into its description", which the member page
     renders as prose, not as a **Join online** fact. Decision for Doug: make
     the Join URL editable in the editor for Internal events (Zoom keeps owning
-    it for Public ones), or drop D2's fact and rely on the description. Until
-    ruled, the live pass below sets the field in the CRM directly.
+    it for Public ones), or drop D2's fact and rely on the description.
+    **Ruled by Doug 2026-10-07 (on Claude's recommendation): the Join URL
+    becomes editable in Event Administration for Internal events only;** it
+    stays read-only for Public events, where Zoom owns it and would overwrite a
+    typed value the day it is switched on. Build owed: one conditional field in
+    `events/config.EVENT_FIELDS` (app-managed unless audience is Internal), the
+    write whitelist to match, a guide line in `event-administration.md`, and
+    the staff guide's "paste your own meeting link into its description" line
+    replaced. Not yet built.
 
 37. ~~**The portal events rail and member page (v0.235.0, F5) — built dark,
     never seen.**~~ **Live pass done 2026-10-07** by Doug on crm-test as Joe
