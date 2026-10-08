@@ -1,6 +1,6 @@
 # CRM handoff — event audience and display time (Track F, F2 + F3)
 
-Last Updated: 10-07-26 04:32 · Revision 1.1 — see change log at the end.
+Last Updated: 10-07-26 21:55 · Revision 1.2 — see change log at the end.
 
 **What this adds:** five fields on `CEvent` and one registration-source option,
 so an event can be Internal or Public, reach named chapters, be limited to teams,
@@ -18,7 +18,7 @@ be applied to each system in its own time — nothing breaks in between.
 | System | State | Evidence |
 |---|---|---|
 | crm-test | **Done 2026-09-29 05:38 UTC** | Applied from this plan by the configuration admin account, with the CRM-changes skill's applier; the applier read every field back. Then verified as the org-wide API key: all six fields detected by the application, every option list correct, a `where` on `audience` answers 200, the existing events read as Public by the carry-over rule, `registrationSource` offers `Portal`. |
-| Production | **Owed** — Sunday 17:00 UTC slot | Whether production already has `eventReleaseDate` is inferred, not checked. The plan creates it if absent and skips it if present, so the answer does not change the steps. |
+| Production | **Done 2026-10-07** | Doug ran `scripts/migrate_event_audience_schema.py --apply` from inside the production web container (the console step page). Read back from inside that container as the org-wide API key at 21:54 UTC-4: `audience` `[Internal, Public]`, `publicReach` three options, `reachChapters` `[cleveland, boston]`, `internalTeams` multiEnum, `takesRegistrations` bool, `eventReleaseDate` datetime (it already existed, as inferred), `registrationSource` ends in `Portal`. Owed: the before/after conformance exit numbers and the editor check (page §§ 2.10, 3). |
 | Boston | **Owed** — with the release that carries the code | Built from crm-test's files, so it is expected to have `eventReleaseDate`. |
 
 crm-test's fields survive the nightly reset: they are Entity Manager work, which
@@ -154,5 +154,6 @@ event someone deliberately sets to Internal.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 10-07-26 21:55 | Claude (Claude Code) | Production applied by Doug 10-07-26 and read back as the org-wide key from inside the container; state table updated. |
 | 1.1 | 10-07-26 04:32 | Claude (Claude Code) | Production commands use `.venv/bin/python` (a bare `python` in the container lacks the packages); link to the 10-01-26 console step page. Production still owed — no run recorded. |
 | 1.0 | 09-29-26 01:45 | Claude (Claude Code) | First version. Applied to crm-test and verified; production and Boston owed. Records the applier's enum-option fix. |

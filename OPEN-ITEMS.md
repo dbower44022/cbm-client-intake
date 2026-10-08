@@ -582,10 +582,14 @@ block a deploy.)*
        (above). Only the portal registration
        (`POST /api/portal/events/{id}/register`) remains unexercised live; it is
        F5's Register button that will drive it.
-    3. **Production CRM** — console steps with expected output prepared
-       10-01-26 at Doug's request (https://claude.ai/artifact/EoSQ9EuKC4oWPFYWvpxQRe,
-       private); **no run recorded as of 10-07-26** — if it was run, the
-       dry-run output and the two conformance exit numbers close this item.
+    3. ~~**Production CRM**~~ — **done 2026-10-07**: Doug applied it from the
+       production console (step page https://claude.ai/artifact/EoSQ9EuKC4oWPFYWvpxQRe,
+       private); verified 21:54 from inside the container as the org-wide key
+       — all five fields present, `eventReleaseDate` already existed,
+       `registrationSource` offers `Portal`. Still owed from that page: the
+       conformance exit numbers (§ 2.10) and the editor check (§ 3). The
+       read-back step as first written used `curl`, which the container lacks,
+       and then shell-eaten quotes; corrected twice (page revision 1.2).
        Originally: at a Sunday 17:00 UTC slot, from inside the web
        container: `scripts/migrate_event_audience_schema.py`, runbook
        `cevent-audience-display-crm-handoff.md`. Confirms on the way whether

@@ -1,6 +1,6 @@
 # CBM Events & Webinars — Finalization Plan
 
-Last Updated: 09-30-26 15:10 · Revision 4.13 — see change log at the end.
+Last Updated: 10-07-26 21:55 · Revision 4.14 — see change log at the end.
 
 Companion to `CBM_Events_PRD.md`, `CBM_Events_Implementation_Plan.md` and
 `CBM_Events_Registration_Recognition_Plan.md`. Those three say what the feature
@@ -130,8 +130,8 @@ after Doug's requirements are gathered, and nothing is settled until he rules.
 | # | Feature | Raised by | State |
 |---|---|---|---|
 | F1 | Event topic: multiple selections, plus a user-entered value | User review, 09-2026 | Catalogued |
-| F2 | Display Date/Time: the moment an event may first appear on the public pages | User review, 09-2026 | Built v0.233.0 (09-29-26); CRM on crm-test; live review, production and Boston owed (`OPEN-ITEMS.md` #35) |
-| F3 | Event audience: Internal, a specific chapter, or Public — Internal events form a calendar on the chapter's portal | User review, 09-2026 | Built v0.233.0 (09-29-26); CRM on crm-test; live review, production and Boston owed (`OPEN-ITEMS.md` #35) |
+| F2 | Display Date/Time: the moment an event may first appear on the public pages | User review, 09-2026 | Built v0.233.0 (09-29-26); reviewed live on crm-test 09-30; **CRM applied to production 10-07-26**; Boston owed (`OPEN-ITEMS.md` #35) |
+| F3 | Event audience: Internal, a specific chapter, or Public — Internal events form a calendar on the chapter's portal | User review, 09-2026 | Built v0.233.0 (09-29-26); reviewed live on crm-test 09-30; **CRM applied to production 10-07-26**; Boston owed (`OPEN-ITEMS.md` #35) |
 | F4 | Presenters: select or add them per event, with an optional presenter biography on the event page | User review, 09-2026 | Catalogued |
 | F5 | Portal home page: a left-hand list of upcoming internal events, each opening its details | User review, 09-2026 | Built v0.235.0 (09-30-26), dark behind `PORTAL_CALENDAR`; live review owed (`OPEN-ITEMS.md` #37) |
 
@@ -574,6 +574,7 @@ attendance recorded → recording link pasted → the engagement rollup shows it
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 4.14 | 10-07-26 21:55 | Claude (Claude Code) | F2/F3 CRM change applied to production by Doug 10-07-26 and verified as the org-wide key; table updated. |
 | 4.13 | 09-30-26 15:10 | Claude (Claude Code) | F5 built as v0.235.0 on Doug's approval, dark behind `PORTAL_CALENDAR`; live review owed (#37). |
 | 4.12 | 09-30-26 14:56 | Claude (Claude Code) | F5 design decisions D1 and D2 ruled by Doug; design at revision 0.2, awaiting approval to build. |
 | 4.11 | 09-30-26 14:50 | Claude (Claude Code) | F5 ruling 6 (Doug, 09-30-26, on Claude's recommendation): a Public webinar's website link is on its member page, not in the row. All six F5 questions ruled; design to follow in `CBM_Events_Portal_Calendar_Design.md`. |
