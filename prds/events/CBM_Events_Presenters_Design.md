@@ -1,6 +1,6 @@
 # CBM Events — Presenters: Design (Track F, F4)
 
-Last Updated: 10-08-26 00:39 · Revision 0.1 — see change log at the end.
+Last Updated: 10-08-26 00:55 · Revision 0.2 — see change log at the end.
 
 **Status: DRAFT, awaiting Doug's review. Nothing is built and nothing has been
 applied to any CRM.** The requirements are the eight F4 rulings recorded in
@@ -9,8 +9,8 @@ applied to any CRM.** The requirements are the eight F4 rulings recorded in
 cited below as *F4-n*. What earlier designs settled for the surfaces this one
 touches is cited as *design § n* (the F2/F3 audience design) and *F5 § n* (the
 Portal Calendar design). Everything else is Claude's design and is marked
-where it is a choice. The two decisions in § 10 are for Doug; the design as a
-whole awaits his approval before anything is built.
+where it is a choice. Of the two decisions in § 10, D1 is ruled (10-08-26) and D2
+is open; the design as a whole awaits his approval before anything is built.
 
 **Terms used here.** A **presenter** is a person who speaks at an event. A
 **presenter entry** is the CRM record that joins one event to one presenter and
@@ -390,10 +390,17 @@ signed-in user. Two ways to give the feature what F4-3 and F4-5 need:
   EspoCRM is the API user, not the person; and a precedent that was made for
   aggregates would now cover a record create.
 
-*Recommendation: grant the role.* A person created by a staff member should
-say so in the CRM. Cost named above. Under either answer the
-`CEventPresenter` grants are needed, and the org-wide API role needs read on
-it for the public pages.
+*Ruled: grant the role* (Doug, 10-08-26, on Claude's recommendation). A
+person created by a staff member should say so in the CRM, and the CRM is
+the one enforcing the permission. Cost accepted: a merge-only role change on
+three CRMs, and Marketing Admin members gaining sight of every Contact. The
+grants, as they will be scripted: Marketing Admin Role — `Contact` create yes,
+read all, edit no, delete no; `CMentorProfile` read all; `CEventPresenter`
+create yes, read all, edit all, delete all. The org-wide API role
+(`CustomAppAPIRole`) — `CEventPresenter` read all, for the public pages. Every
+presenter read and write in § 6 runs **as the signed-in user**; the master key
+is used for the public and member page reads only, as every other public read
+is.
 
 **D2 — Title and company: static copies on the entry, or live from the
 Contact.** F4-5 says they "come from the Contact". Read live, a Contact's new
@@ -414,4 +421,5 @@ two more fields on the record type.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.2 | 10-08-26 00:55 | Claude (Claude Code) | D1 ruled by Doug: widen the Marketing Admin Role (Contact create + read, mentor profile read, CEventPresenter all) rather than use the org-wide key; the exact grants recorded. D2 open. |
 | 0.1 | 10-08-26 00:39 | Claude (Claude Code) | First draft, from the eight F4 requirements in the Finalization Plan revision 4.24. Twelve findings verified on crm-test and in the code (notably: the Marketing Admin Role has no Contact or mentor-profile grant; "Presenter" is already a Contact type; the applier is unproven on `image` fields). New record type `CEventPresenter` drawn in § 3, plan file in § 9. Two decisions for Doug (D1 grants, D2 title/company copies). Awaiting review; nothing built. |
