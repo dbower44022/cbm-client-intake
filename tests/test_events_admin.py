@@ -6,6 +6,8 @@ and the writes that would corrupt data if they misbehaved.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -17,6 +19,8 @@ from forms import ALL_SPECS
 
 from tests.test_events_registration import FakeCrm, NoZoom
 from tests.test_events_service import make_event
+
+ROOT = Path(__file__).resolve().parents[1]
 
 MARKETING = {"userName": "marcus", "name": "Marcus Admin", "userId": "u-1",
              "token": "t", "isAdmin": False, "teams": ["Marketing Admin Team"]}
@@ -348,3 +352,91 @@ async def test_field_options_survive_a_field_the_crm_lacks():
     options = await service.field_options(Crm())
     assert options["audience"] == []
     assert options["topic"] == ["A", "B"]
+
+
+# --- the Join URL: editable for Internal events only (D3, OPEN-ITEMS #38) ----
+
+from tests.test_events_visibility import MetaEspo  # noqa: E402
+
+
+class EditEspo(MetaEspo):
+    """MetaEspo whose ``get`` answers with the stored event, so an update can
+    be judged against the record as the CRM holds it."""
+
+    async def get(self, entity, record_id, select=None):
+        for row in self.events:
+            if row.get("id") == record_id:
+                return dict(row)
+        return await super().get(entity, record_id, select)
+
+
+MEET = "https://meet.google.com/abc-defg-hij"
+
+
+def test_join_url_is_app_managed_but_unlocked_for_internal_events():
+    spec = next(f for f in cfg.EVENT_FIELDS if f.name == "virtualMeetingUrl")
+    assert spec.app_managed
+    assert spec.editable_when == ("audience", ("Internal",))
+    assert "virtualMeetingUrl" not in cfg.EVENT_EDIT_NAMES
+    assert cfg.EVENT_CONDITIONAL_EDITS == {"virtualMeetingUrl": ("audience", ("Internal",))}
+
+
+async def test_internal_event_takes_a_typed_join_url():
+    crm = EditEspo([make_event(id="ev1", audience="Internal")])
+    await service.update_event(crm, "ev1", {"virtualMeetingUrl": MEET})
+    assert crm.updated[-1]["virtualMeetingUrl"] == MEET
+
+
+async def test_public_event_keeps_zooms_join_url():
+    """The editor posts every field back, so a Public event's Join URL rides
+    the save unchanged — and must be dropped, not written over Zoom's."""
+    zoom_url = "https://zoom.us/j/999"
+    crm = EditEspo([make_event(id="ev1", audience="Public", virtualMeetingUrl=zoom_url)])
+    await service.update_event(crm, "ev1", {"name": "Renamed",
+                                            "virtualMeetingUrl": MEET})
+    assert crm.updated[-1]["name"] == "Renamed"
+    assert "virtualMeetingUrl" not in crm.updated[-1]
+
+
+async def test_turning_internal_in_the_same_save_unlocks_the_join_url():
+    crm = EditEspo([make_event(id="ev1", audience="Public")])
+    await service.update_event(crm, "ev1", {"audience": "Internal",
+                                            "virtualMeetingUrl": MEET})
+    assert crm.updated[-1]["virtualMeetingUrl"] == MEET
+
+
+async def test_turning_public_in_the_same_save_locks_it_again():
+    crm = EditEspo([make_event(id="ev1", audience="Internal", virtualMeetingUrl=MEET)])
+    await service.update_event(crm, "ev1", {"audience": "Public",
+                                            "virtualMeetingUrl": "https://x.example/typed"})
+    assert "virtualMeetingUrl" not in crm.updated[-1]
+
+
+async def test_a_crm_without_the_audience_field_unlocks_nothing():
+    """Before F2/F3 every event is the public programme's: nothing to unlock."""
+    crm = EditEspo([make_event(id="ev1")], fields=())
+    await service.update_event(crm, "ev1", {"virtualMeetingUrl": MEET})
+    assert crm.updated == []   # nothing left to write
+
+
+async def test_create_accepts_a_join_url_for_an_internal_event():
+    crm = MetaEspo([])
+    await service.create_event(crm, {"name": "Team Meeting", "audience": "Internal",
+                                     "virtualMeetingUrl": MEET}, chapter_key="cleveland")
+    assert crm.created[-1]["virtualMeetingUrl"] == MEET
+
+
+def test_session_payload_carries_the_unlock_rule(monkeypatch):
+    client = build(monkeypatch, user=MARKETING, crm=MetaEspo([]))
+    fields = {f["name"]: f for f in client.get("/events/api/fields").json()["fields"]}
+    assert fields["virtualMeetingUrl"]["appManaged"] is True
+    assert fields["virtualMeetingUrl"]["editableWhen"] == {
+        "field": "audience", "values": ["Internal"]}
+
+
+def test_editor_renders_a_conditionally_editable_field():
+    """The editor skips app-managed fields; one carrying editableWhen must get
+    a control, shown under its rule."""
+    source = (ROOT / "events" / "frontend" / "app.js").read_text()
+    assert "!spec.editableWhen" in source
+    assert "spec.showWhen || spec.editableWhen" in source

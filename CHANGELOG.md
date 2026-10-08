@@ -4,6 +4,23 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.240.0] — 2026-10-07
+
+**feat(events): an Internal event's Join URL can be typed in Event
+Administration (F5 design D3, `OPEN-ITEMS.md` #38).** Found by the F5 live
+pass: the Join URL was app-managed and filled only by Zoom, and Zoom is for
+Public events only, so the member page's join-link rule had nothing to show
+for an Internal event and the staff guide sent people to the description.
+Doug's ruling (10-07-26): editable for Internal events only; Zoom keeps owning
+it for Public ones. The field spec gains `editable_when`, a rule that offers an
+app-managed field in the editor while another field holds a listed value and
+lets the update path admit it under the same condition, judged against the
+record **as saved** — so a Public event's posted-back value (the editor posts
+every field) is dropped rather than written over Zoom's, and a CRM without the
+audience field unlocks nothing. The Join URL moves to the Place & capacity
+group with help text naming the rule. Guide line replaced in
+`event-administration.md`. Nine tests. Verified by tests only.
+
 ## [0.239.1] — 2026-10-07
 
 **fix(portal): the member page no longer blames the public-pages switch for a

@@ -127,8 +127,12 @@ it does — so tick Takes registrations if you want to know who is coming before
 handing out the link.
 
 **Zoom webinars are for Public events only.** An Internal event never gets one,
-even from the Zoom button; paste your own meeting link into its description. An
-event that already has a webinar keeps it if you change it to Internal.
+even from the Zoom button. Instead, when the audience is Internal the form shows
+a **Join URL** box under Place & capacity: paste the meeting link members should
+join (Google Meet, your own Zoom room, Teams), and the member page shows it as
+**Join online** under the rule above. For a Public event the box is not offered
+— Zoom owns that link and would write over anything you typed. An event that
+already has a webinar keeps it if you change it to Internal.
 
 **About the form itself.** It opens as a large window sized to your screen, and
 you can drag the **bottom-right corner** to make it whatever size suits you. The

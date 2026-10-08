@@ -1,6 +1,6 @@
 # CBM Events & Webinars — Finalization Plan
 
-Last Updated: 10-07-26 22:49 · Revision 4.16 — see change log at the end.
+Last Updated: 10-07-26 23:42 · Revision 4.17 — see change log at the end.
 
 Companion to `CBM_Events_PRD.md`, `CBM_Events_Implementation_Plan.md` and
 `CBM_Events_Registration_Recognition_Plan.md`. Those three say what the feature
@@ -574,6 +574,7 @@ attendance recorded → recording link pasted → the engagement rollup shows it
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 4.17 | 10-07-26 23:42 | Claude (Claude Code) | F5's D3 (the Join URL editable for Internal events only, OPEN-ITEMS #38) built as v0.240.0; Track F's remaining work is Boston, then F4 and F1. |
 | 4.16 | 10-07-26 22:49 | Claude (Claude Code) | F5 switched on in production by Doug 10-07-26 after v0.239.1 deployed; Track F now has F2, F3 and F5 live on both Cleveland systems. |
 | 4.15 | 10-07-26 22:44 | Claude (Claude Code) | F5 live pass done on crm-test by Doug (10-07-26); v0.239.1 fix recorded; production switch-on is Doug's call. |
 | 4.14 | 10-07-26 21:55 | Claude (Claude Code) | F2/F3 CRM change applied to production by Doug 10-07-26 and verified as the org-wide key; table updated. |

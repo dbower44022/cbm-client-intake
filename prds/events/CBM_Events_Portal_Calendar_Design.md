@@ -1,6 +1,6 @@
 # CBM Events — The Portal Calendar: Design (Track F, F5)
 
-Last Updated: 10-07-26 22:53 · Revision 0.4 — see change log at the end.
+Last Updated: 10-07-26 23:42 · Revision 0.5 — see change log at the end.
 
 **Status: LIVE on production and crm-test since 10-07-26 (switch on at `/setup`; v0.239.1). Live pass done by Doug 10-07-26 (`OPEN-ITEMS.md` #37). § 10 records where the build departs from this design; D3 (10-07-26) is ruled and its build owed (#38).** The requirements
 are Doug's six rulings recorded in `CBM_Events_Finalization_Plan.md` revision
@@ -340,7 +340,13 @@ recommendation, that the field becomes **editable in Event Administration for
 Internal events only** and stays read-only for Public events, where Zoom owns
 it. Not chosen: editable for every event (Zoom would silently overwrite a typed
 value), or dropping D2 and relying on the description (every member would see
-the link whatever the registration rule). Build owed — `OPEN-ITEMS.md` #38.
+the link whatever the registration rule). **Built as v0.240.0 (10-07-26):** the
+field spec gained `editable_when`, a rule that offers an app-managed field in
+the editor and admits it on save only while another field holds a listed value;
+the Join URL moved to the Place & capacity group with that rule set to
+`audience = Internal`, and the server judges the condition against the record
+as saved, so a Public event's posted-back value is dropped rather than written
+over Zoom's. Verified by tests; live check owed with the next crm-test pass.
 
 ---
 
@@ -348,6 +354,7 @@ the link whatever the registration rule). Build owed — `OPEN-ITEMS.md` #38.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.5 | 10-07-26 23:42 | Claude (Claude Code) | D3 built as v0.240.0: `editable_when` on the field spec, the Join URL under Place & capacity for Internal events, server-side admission against the saved record. Tests only; live check owed. |
 | 0.4 | 10-07-26 22:53 | Claude (Claude Code) | D3 ruled by Doug: the Join URL is editable for Internal events only. Status: live on production and crm-test since 10-07-26; D3's build owed. |
 | 0.3 | 09-30-26 15:10 | Claude (Claude Code) | Built as v0.235.0 on Doug's approval, dark behind `PORTAL_CALENDAR`. Status updated and § 10 added: seven places the build departs from the design. |
 | 0.2 | 09-30-26 14:56 | Claude (Claude Code) | D1 and D2 ruled by Doug: the member page address is the event's id; the join link shows to everyone when the event takes no registrations and to registered members only when it does. Status: awaiting approval to build. |

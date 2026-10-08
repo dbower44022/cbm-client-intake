@@ -182,6 +182,10 @@ async def fields(request: Request) -> dict[str, Any]:
                     {"field": f.show_when[0], "values": list(f.show_when[1])}
                     if f.show_when else None
                 ),
+                "editableWhen": (
+                    {"field": f.editable_when[0], "values": list(f.editable_when[1])}
+                    if f.editable_when else None
+                ),
             }
             # F2/F3 fields appear only once the CRM has them (feature-detected).
             for f in service.editor_fields(available)

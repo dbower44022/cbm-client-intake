@@ -323,7 +323,12 @@ enforces their ACL and records them as modifier. The dev app (no
   from `/api/portal/events/{id}/image` because the public image route is keyed
   on the slug and gated on the public surface. Join link rule (D2): everyone
   when the event takes no registrations, registered members only when it does,
-  decided server-side. Design: `prds/events/CBM_Events_Portal_Calendar_Design.md`.
+  decided server-side. **Where the link comes from (D3, v0.240.0):** the Join
+  URL is **editable in Event Administration for Internal events only** — the
+  spec's `editable_when` rule offers an app-managed field under a condition
+  and `_writable` admits it only when the record *as saved* meets it; for a
+  Public event Zoom owns the field and a posted-back value is dropped.
+  Design: `prds/events/CBM_Events_Portal_Calendar_Design.md`.
 
 **Team gates** (each an env var, listed with its default):
 `ASSIGN_ALLOWED_TEAMS` = Client Administration Team · `MENTOR_ADMIN_ALLOWED_TEAMS`

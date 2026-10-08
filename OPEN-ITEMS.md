@@ -523,8 +523,15 @@ block a deploy.)*
 
 ## Live verification owed
 
-38. **An Internal event's join link cannot be set in Event Administration**
-    (found 2026-09-30 while writing the F5 live pass). `virtualMeetingUrl`
+38. ~~**An Internal event's join link cannot be set in Event Administration**~~
+    **Built 2026-10-07 as v0.240.0** — `virtualMeetingUrl` carries
+    `editable_when=("audience", ("Internal",))`: the editor shows a Join URL
+    box under Place & capacity for an Internal event, and `_writable` accepts
+    the value only when the record as saved is Internal (a Public event's
+    posted-back value is dropped, never written over Zoom's). Verified by
+    tests only; the live case is an Internal event on crm-test, Join URL typed,
+    Join online shown on the member page. Original finding, kept for the
+    record: (found 2026-09-30 while writing the F5 live pass). `virtualMeetingUrl`
     ("Join URL") is app-managed in `events/config.EVENT_FIELDS` — Zoom sync
     fills it, and Zoom is for Public events only (D2 of the F2/F3 design). So
     the F5 join-link rule (design § 5, decision D2) can only ever fire for a
@@ -540,7 +547,7 @@ block a deploy.)*
     `events/config.EVENT_FIELDS` (app-managed unless audience is Internal), the
     write whitelist to match, a guide line in `event-administration.md`, and
     the staff guide's "paste your own meeting link into its description" line
-    replaced. Not yet built.
+    replaced. ~~Not yet built.~~ Built.
 
 37. ~~**The portal events rail and member page (v0.235.0, F5) — built dark,
     never seen.**~~ **Live pass done 2026-10-07** by Doug on crm-test as Joe

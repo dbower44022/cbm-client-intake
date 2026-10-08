@@ -810,9 +810,11 @@
     var groups = {};
     state.fields.forEach(function (spec) {
       // App-managed fields (slug, Zoom ids) are the app's business — except the
-      // graphic, which is app-managed only because it uploads separately.
+      // graphic, which is app-managed only because it uploads separately, and a
+      // field the spec unlocks under a condition (the Join URL, Internal events
+      // only), which renders as a control shown under that condition.
       if (spec.hidden) return;   // derived, not entered (dateEnd)
-      if (spec.appManaged && spec.type !== "image") return;
+      if (spec.appManaged && spec.type !== "image" && !spec.editableWhen) return;
       (groups[spec.group] = groups[spec.group] || []).push(spec);
     });
     Object.keys(groups).forEach(function (groupName) {
@@ -831,7 +833,8 @@
         }
         var control = field(section, spec.name, spec.label, spec.type, value,
                             state.options[spec.name], spec.help, { big: spec.big });
-        if (spec.showWhen) control.closest(".ev__field").dataset.showWhen = JSON.stringify(spec.showWhen);
+        var rule = spec.showWhen || spec.editableWhen;
+        if (rule) control.closest(".ev__field").dataset.showWhen = JSON.stringify(rule);
       });
       host.appendChild(section);
     });

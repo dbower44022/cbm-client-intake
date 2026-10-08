@@ -810,15 +810,33 @@ def _writable(
     *,
     allow_managed: bool = False,
     available: Iterable[str] = (),
+    current: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     """Drop anything not in the field spec, and any F2/F3 field the live CRM
     does not have.
 
     The spec is the whitelist (the SESSION_FIELDS convention): a smuggled
     ``zoomWebinarId`` or an invented attribute never reaches the CRM.
+
+    A conditionally editable app-managed field (``EVENT_CONDITIONAL_EDITS``)
+    is accepted only when the record AS SAVED meets its condition — the value
+    in this very change set if it carries the deciding field, else the stored
+    one in ``current``. The Join URL is the case: typed for an Internal event,
+    Zoom's for a Public one, and a Public event's posted-back value is dropped
+    here rather than overwriting what Zoom wrote. A CRM without the deciding
+    field unlocks nothing.
     """
     allowed = set(cfg.EVENT_WRITABLE_NAMES if allow_managed else cfg.EVENT_EDIT_NAMES)
     allowed -= set(cfg.AUDIENCE_FIELDS) - set(available)
+    if not allow_managed:
+        present = set(available)
+        stored = current or {}
+        for name, (decider, values) in cfg.EVENT_CONDITIONAL_EDITS.items():
+            if decider in cfg.AUDIENCE_FIELDS and decider not in present:
+                continue
+            value = changes[decider] if decider in changes else stored.get(decider)
+            if value in values:
+                allowed.add(name)
     return {k: v for k, v in changes.items() if k in allowed}
 
 
@@ -941,10 +959,12 @@ async def update_event(
 ) -> dict[str, Any]:
     """Apply whitelisted changes; give the event a slug if it never had one."""
     available = await live_event_fields(client)
-    payload = _blank_enums_to_null(_writable(changes, available=available))
+    current = await client.get(cfg.EVENT, event_id, select=cfg.PUBLIC_SELECT)
+    payload = _blank_enums_to_null(
+        _writable(changes, available=available, current=current)
+    )
     if "name" in payload and not (payload["name"] or "").strip():
         raise EventError("An event needs a title.")
-    current = await client.get(cfg.EVENT, event_id, select=cfg.PUBLIC_SELECT)
     await _clean_multi_enums(client, payload)
     await _include_own_chapter(client, payload, current, available=available,
                                chapter_key=chapter_key)

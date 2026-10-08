@@ -172,6 +172,13 @@ class EventField:
     #: Show the control only while another field holds one of these values —
     #: ``("audience", ("Public",))``. The value is still posted when hidden.
     show_when: Optional[tuple[str, tuple[str, ...]]] = None
+    #: An app-managed field that staff MAY edit while another field holds one
+    #: of these values — ``("audience", ("Internal",))``. The editor offers the
+    #: control under that condition (as a show-when rule) and the update path
+    #: accepts the value only when the saved record meets it; otherwise the
+    #: field stays the app's, exactly as ``app_managed`` alone would make it.
+    #: Decides nothing when the condition's field is absent from the live CRM.
+    editable_when: Optional[tuple[str, tuple[str, ...]]] = None
 
 
 #: The curated subject categories, in the order the CRM lists them. Used to
@@ -217,6 +224,16 @@ EVENT_FIELDS: list[EventField] = [
     # Place & capacity
     EventField("location", "Location", "text", "Place & capacity",
                help="Venue for in-person and hybrid events."),
+    # Zoom fills this for Public webinars and owns it there. An Internal event
+    # never gets a webinar (F2/F3 design D2), so for one the staff member types
+    # the meeting link themselves and the member page shows it as "Join online"
+    # under the F5 join-link rule (Portal Calendar design D3, Doug 10-07-26).
+    EventField("virtualMeetingUrl", "Join URL", "url", "Place & capacity",
+               app_managed=True, editable_when=("audience", ("Internal",)),
+               help="Internal events only: paste the meeting link members should "
+                    "join (Google Meet, Zoom, Teams). Public webinars get theirs "
+                    "from Zoom. Shown to everyone when the event takes no "
+                    "registrations, and only to registered members when it does."),
     EventField("venueCapacity", "Capacity", "int", "Place & capacity",
                help="Seat cap. Leave empty or 0 for unlimited."),
 
@@ -263,7 +280,6 @@ EVENT_FIELDS: list[EventField] = [
 
     # Zoom (app-managed)
     EventField("zoomWebinarId", "Zoom webinar ID", "varchar", "Zoom", app_managed=True),
-    EventField("virtualMeetingUrl", "Join URL", "url", "Zoom", app_managed=True),
     EventField("registrationUrl", "Zoom registration URL", "url", "Zoom",
                app_managed=True),
 ]
@@ -302,3 +318,10 @@ EVENT_EDIT_NAMES: frozenset[str] = frozenset(
 
 #: Everything the app may write, including the fields it manages itself.
 EVENT_WRITABLE_NAMES: frozenset[str] = frozenset(f.name for f in EVENT_FIELDS)
+
+#: App-managed fields the editor accepts under a condition — field name to the
+#: ``(other field, values)`` rule that unlocks it. Today: the Join URL, for
+#: Internal events only.
+EVENT_CONDITIONAL_EDITS: dict[str, tuple[str, tuple[str, ...]]] = {
+    f.name: f.editable_when for f in EVENT_FIELDS if f.editable_when
+}
