@@ -1,6 +1,6 @@
 # Mailing list sync — Constant Contact setup and activation runbook
 
-Last Updated: 10-07-26 23:40 · Revision 0.1 — change log at the end.
+Last Updated: 10-07-26 23:55 · Revision 0.2 — change log at the end.
 
 How to register this application with Constant Contact, connect one
 deployment to one Constant Contact account, and switch the audience push on.
@@ -13,9 +13,9 @@ design this runbook follows).
 — the developer application and its redirect address do not depend on any
 code. Sections 2 to 4 describe a Settings page panel and a worker job that
 do not exist yet; they are written now so the design can be judged as the
-person doing it will meet it. **One decision is open before section 1 is
-run for crm-test:** which Constant Contact account crm-test connects to
-(plan § 11.11).
+person doing it will meet it. **Ruled 2026-10-07 (plan § 11.11): crm-test
+connects to a separate Constant Contact account of its own**, created in
+section 0a; the organisation's real account is production's alone.
 
 **Audience:** an EspoCRM administrator who can sign in to the organisation's
 Constant Contact account. No command line is needed.
@@ -56,11 +56,53 @@ button, so nobody types it. Until then, copy it from the table.
 
 You will need:
 
-- The sign-in for the organisation's Constant Contact account (for crm-test,
-  the sign-in the open decision names).
+- For production: the sign-in for the organisation's Constant Contact
+  account. For crm-test: the sign-in of the separate account section 0a
+  creates.
 - Somewhere safe to hold two values for a few minutes: the **API key** (the
   application's public identifier, also called the client ID) and the
   **client secret** (shown once, never again).
+
+---
+
+## 0a. crm-test only — create the separate Constant Contact account
+
+Why this section exists: the ruling is that crm-test never touches the
+organisation's real Constant Contact account. The vendor's developer sign-up
+creates a trial Constant Contact account alongside the developer login, and
+that trial account is crm-test's. Skip this section for production.
+
+1. In a browser where you are **not** signed in to Constant Contact (a
+   private window is simplest), open this address:
+   ```
+   https://v3.developer.constantcontact.com/login/index.html
+   ```
+   You should see a sign-in page with a **Sign up** link under the My
+   Applications tab.
+
+2. On that page, click **Sign up**.
+   You should see a form asking for Email, Password, First Name, Last Name,
+   Organization Name and Phone Number.
+
+3. In the sign-up form, in the Email box, type an address the organisation
+   controls and that is not already a Constant Contact user — the test
+   mailbox the sandbox already uses is the natural choice. In Organization
+   Name type:
+   ```
+   Cleveland Business Mentors — TEST
+   ```
+   Fill the remaining boxes and store the password with the other sandbox
+   sign-ins.
+
+4. In the sign-up form, click **Get Started**.
+   You should see the My Applications page for the new account. If you are
+   asked to confirm the email address first, do so in that mailbox and
+   return to the same address as step 1. If the page says the email is
+   already in use, stop and tell me which address you used.
+
+Continue with section 1, signed in as this new account. (How long the trial
+account lives is not stated in the vendor's documentation; if it expires,
+repeat this section and section 1, then section 3.)
 
 ---
 
@@ -71,7 +113,7 @@ this deployment, and the redirect address registered on it is the only
 address Constant Contact will send an authorisation back to.
 
 1. In a browser, signed in to Constant Contact as the organisation-owned
-   user, open this address:
+   user (for crm-test: the account from section 0a), open this address:
    ```
    https://app.constantcontact.com/pages/dma/portal
    ```
@@ -257,4 +299,5 @@ must be read as a plan before it is allowed to write.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.2 | 10-07-26 23:55 | Claude (Claude Code) | Ruling recorded: crm-test gets a separate Constant Contact account; section 0a added to create it through the developer sign-up. |
 | 0.1 | 10-07-26 23:40 | Claude (Claude Code) | First version from the Phase C design: the three shaping facts, the fixed redirect address per deployment, the developer-application steps (doable today), and the Settings panel, connection and first-pass steps as the design has them. |

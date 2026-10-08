@@ -372,9 +372,11 @@ the two cells when production does, or the conformance check reports crm-test
 as drifted.
 **Phase C designed 2026-10-07** (plan § 11, `MAILING-SETUP.md`): one
 developer application per Constant Contact account per deployment, redirect
-address `{APP_BASE_URL}/api/setup/mailing/callback`. **Decision owed:**
-which account crm-test connects to (plan § 11.11, recommended: a separate
-account). Nothing of Phase C is built.
+address `{APP_BASE_URL}/api/setup/mailing/callback`. **Ruled 2026-10-07:**
+crm-test connects to a separate Constant Contact account of its own
+(plan § 11.11, option A; runbook § 0a creates it). Nothing of Phase C is
+built; Doug's section 0a + 1 of the runbook and the Phase C build can run
+in parallel.
 
 **Production's `CEngagement.description` → wysiwyg conversion** (added
 2026-08-31) — `cengagement-description-wysiwyg-crm-handoff.md` § 3, at a

@@ -1,8 +1,8 @@
 # Mailing List and Event Sponsorship — plan v0.1 (2026-10-07)
 
-Last Updated: 10-07-26 23:45 · Revision 0.5 — change log at the end.
+Last Updated: 10-07-26 23:55 · Revision 0.6 — change log at the end.
 
-**Status: Phases A and B done on crm-test; Phase C designed (§ 11), one decision open (§ 11.11), nothing of it built.** This is the plan document for the
+**Status: Phases A and B done on crm-test; Phase C designed (§ 11) and its one decision ruled (§ 11.11, option A), nothing of it built.** This is the plan document for the
 arc, in the style of the other arcs in `prds/`: it records Doug's rulings, the
 model that follows from them, the phases, and what is deliberately deferred.
 It is an implementation-level document, so it names the mailing service
@@ -206,8 +206,8 @@ in `events/reporting.py` by one function, paged at 200, best-effort per row
 ("—", never 0, on a failed read). Analytics panels follow.
 
 **Phase C — the audience push (worker, `MAILING_SYNC`, off by default).
-DESIGNED 2026-10-07 — § 11; setup runbook `MAILING-SETUP.md`; one decision
-open (§ 11.11).** Constant Contact client in `core/`, OAuth2 refresh-token
+DESIGNED 2026-10-07 — § 11; setup runbook `MAILING-SETUP.md`; crm-test's
+account ruled (§ 11.11).** Constant Contact client in `core/`, OAuth2 refresh-token
 flow, credentials and the connection at `/setup`. Nightly push of qualifying
 Contacts, matched on email; hourly pull of unsubscribes (and bounces, once
 their representation is verified) onto the CRM email address flags. Alerts
@@ -566,7 +566,11 @@ readiness line, so "is it running?" is answered without a log.
 - How long the trial account a developer sign-up creates lives, if § 11.11
   chooses it.
 
-### 11.11 Open decision — which account crm-test connects to
+### 11.11 Which account crm-test connects to — RULED A (Doug, 2026-10-07 23:50)
+
+**Ruling: option A.** crm-test connects to a separate Constant Contact
+account of its own, through its own developer application; the real
+account is production's alone. The runbook's section 0a creates that account.
 
 crm-test holds training data: invented people with invented addresses, reset
 nightly. A push from it is a push of those people.
@@ -576,8 +580,8 @@ nightly. A push from it is a push of those people.
   nothing crm-test does can reach a real person or the real list; the
   review happens end to end, writes included. Cost: one more sign-in to
   hold, and a trial account may expire and need re-creating (§ 11.10).
-  **Recommended** — the sandbox already refuses to touch production systems
-  by rule, and this keeps that rule.
+  **Recommended and ruled** — the sandbox already refuses to touch
+  production systems by rule, and this keeps that rule.
 - **B. The real account, with crm-test confined to a list named
   `Event notices — TEST`.** What it does well: no second account. Cost:
   invented people enter the real account's contact base; one accidental send
@@ -602,6 +606,7 @@ requested are the four in § 11.3. The list name default is *Event notices*.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.6 | 10-07-26 23:55 | Claude (Claude Code) | § 11.11 ruled: option A, a separate Constant Contact account for crm-test (Doug). |
 | 0.5 | 10-07-26 23:45 | Claude (Claude Code) | Phase C designed: § 11 (accounts and the private-application rule, the fixed redirect address per deployment, the connection store with locked rotating refresh, settings, the push and pull, the migration, build order, verification owed, the crm-test account decision). Runbook `MAILING-SETUP.md`. Sources for § 11 added to § 10. |
 | 0.4 | 10-07-26 04:10 | Claude (Claude Code) | Phase B built (v0.239.0): pickers, the sponsors endpoint, the Events tab, the rollup. Analytics panels deferred to § 9. |
 | 0.3 | 10-07-26 03:45 | Claude (Claude Code) | Phase A applied to crm-test (all but the hand removal); the role grant ruled read-all and applied there. |
