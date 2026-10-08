@@ -1,6 +1,6 @@
 # CBM Events & Webinars — Finalization Plan
 
-Last Updated: 10-07-26 22:44 · Revision 4.15 — see change log at the end.
+Last Updated: 10-07-26 22:49 · Revision 4.16 — see change log at the end.
 
 Companion to `CBM_Events_PRD.md`, `CBM_Events_Implementation_Plan.md` and
 `CBM_Events_Registration_Recognition_Plan.md`. Those three say what the feature
@@ -133,7 +133,7 @@ after Doug's requirements are gathered, and nothing is settled until he rules.
 | F2 | Display Date/Time: the moment an event may first appear on the public pages | User review, 09-2026 | Built v0.233.0 (09-29-26); reviewed live on crm-test 09-30; **CRM applied to production 10-07-26**; Boston owed (`OPEN-ITEMS.md` #35) |
 | F3 | Event audience: Internal, a specific chapter, or Public — Internal events form a calendar on the chapter's portal | User review, 09-2026 | Built v0.233.0 (09-29-26); reviewed live on crm-test 09-30; **CRM applied to production 10-07-26**; Boston owed (`OPEN-ITEMS.md` #35) |
 | F4 | Presenters: select or add them per event, with an optional presenter biography on the event page | User review, 09-2026 | Catalogued |
-| F5 | Portal home page: a left-hand list of upcoming internal events, each opening its details | User review, 09-2026 | Built v0.235.0 (09-30-26); live pass on crm-test done 10-07-26, one fix (v0.239.1); switch on for crm-test, off on production (`OPEN-ITEMS.md` #37) |
+| F5 | Portal home page: a left-hand list of upcoming internal events, each opening its details | User review, 09-2026 | **Live on production and crm-test** since 10-07-26 (v0.239.1, switch on at `/setup`); Boston with its next release |
 
 **The catalog is complete at five features** (Doug, 09-27-26). Design proceeds
 one feature at a time, in the order Doug chooses.
@@ -574,6 +574,7 @@ attendance recorded → recording link pasted → the engagement rollup shows it
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 4.16 | 10-07-26 22:49 | Claude (Claude Code) | F5 switched on in production by Doug 10-07-26 after v0.239.1 deployed; Track F now has F2, F3 and F5 live on both Cleveland systems. |
 | 4.15 | 10-07-26 22:44 | Claude (Claude Code) | F5 live pass done on crm-test by Doug (10-07-26); v0.239.1 fix recorded; production switch-on is Doug's call. |
 | 4.14 | 10-07-26 21:55 | Claude (Claude Code) | F2/F3 CRM change applied to production by Doug 10-07-26 and verified as the org-wide key; table updated. |
 | 4.13 | 09-30-26 15:10 | Claude (Claude Code) | F5 built as v0.235.0 on Doug's approval, dark behind `PORTAL_CALENDAR`; live review owed (#37). |

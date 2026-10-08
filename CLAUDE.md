@@ -1669,8 +1669,9 @@ each block.
   was blamed on the public-pages switch); the phone strip verified in a stub
   harness only (`OPEN-ITEMS.md` #37 has the detail). The F2/F3 CRM change
   reached production the same day (#35), so production has the fields.
-  **`PORTAL_CALENDAR` is still off on production** — switching it on at
-  `/setup` after 0.239.1 deploys is Doug's call; crm-test's is on.
+  **`PORTAL_CALENDAR` is ON in production and crm-test** (Doug switched
+  production on at `/setup` 2026-10-07 22:50, after 0.239.1 deployed, and
+  saw the rail). Boston: off until asked.
 
 - **v0.234.0 / v0.234.1 (2026-09-29) — CoMentors column, and On-Hold counts
   as an active client.** Pushed and live on production and crm-test the same

@@ -549,8 +549,10 @@ block a deploy.)*
     verified instead in a stub harness at 390px (strip shown reading "Next: …
     · 2 more", panel hidden, no horizontal scroll, tap opens the rows and the
     fold line, tap closes) and at 1400px (no strip, two columns, `max-width:
-    none`). Still owed: `PORTAL_CALENDAR` on at production's `/setup` once
-    0.239.1 is deployed — Doug's call — and Boston with its next release.
+    none`). **Switched on in production by Doug 2026-10-07 22:50** after
+    0.239.1 deployed; he confirmed the rail displayed, and from here the member
+    page route answers 200 (it 404s while the switch is off). Still owed:
+    Boston with its next release. **Resolved for Cleveland.**
 
 36. **CoMentors column and On-Hold as active (v0.234.0 / v0.234.1) — live on
     both environments, never seen as a non-admin** (2026-09-29). Verified by
