@@ -1,6 +1,6 @@
 # CBM Events & Webinars — Finalization Plan
 
-Last Updated: 10-08-26 00:05 · Revision 4.19 — see change log at the end.
+Last Updated: 10-08-26 00:07 · Revision 4.20 — see change log at the end.
 
 Companion to `CBM_Events_PRD.md`, `CBM_Events_Implementation_Plan.md` and
 `CBM_Events_Registration_Recognition_Plan.md`. Those three say what the feature
@@ -384,6 +384,18 @@ rulings. The design that follows them is drafted after they are complete.
    the biography is event text once copied). Cost accepted: a presenter's
    biography on an upcoming event can go stale against their profile, and
    staff keep it current by hand.
+3. **The event manager adds a presenter from the editor; a presenter whose
+   email the CRM does not hold becomes a new Contact.** The picker finds an
+   existing Contact by email and reuses it, filling only empty fields, else
+   creates one — the same find-or-create rule the intake forms and the Partner
+   and Funder quick-add follow, so a presenter who later requests mentoring or
+   registers for a webinar lands on the same record. Not chosen: pick only from
+   existing Contacts (a round trip through another screen for every outside
+   presenter, and a picker that answers "not found" with no way forward). Cost
+   accepted: the events editor becomes a door that creates people, so the
+   Marketing Admin Role needs Contact create (verify on each CRM at design), and
+   a guest presenter is a Contact with no other relationship to the
+   organisation until one arises.
 
 **F5 — Upcoming internal events on the portal home page.**
 
@@ -604,6 +616,7 @@ attendance recorded → recording link pasted → the engagement rollup shows it
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 4.20 | 10-08-26 00:07 | Claude (Claude Code) | F4 requirement 3 ruled by Doug (10-08-26): a presenter is added from the editor, and an email the CRM does not hold creates the Contact (find-or-create by email). |
 | 4.19 | 10-08-26 00:05 | Claude (Claude Code) | F4 requirement 2 ruled by Doug (10-08-26): the mentor biography is copied once as static text and never updated from the profile; no re-copy control. |
 | 4.18 | 10-07-26 23:49 | Claude (Claude Code) | F4 requirement 1 ruled by Doug (10-07-26): a presenter biography belongs to the person-and-event pairing, copied from the mentor biography as a starting point; needs a new CRM joining record type. F4 state moved to Requirements being ruled. |
 | 4.17 | 10-07-26 23:42 | Claude (Claude Code) | F5's D3 (the Join URL editable for Internal events only, OPEN-ITEMS #38) built as v0.240.0; Track F's remaining work is Boston, then F4 and F1. |
