@@ -1,6 +1,6 @@
 # CBM Events & Webinars — Finalization Plan
 
-Last Updated: 10-07-26 23:49 · Revision 4.18 — see change log at the end.
+Last Updated: 10-08-26 00:05 · Revision 4.19 — see change log at the end.
 
 Companion to `CBM_Events_PRD.md`, `CBM_Events_Implementation_Plan.md` and
 `CBM_Events_Registration_Recognition_Plan.md`. Those three say what the feature
@@ -374,6 +374,16 @@ rulings. The design that follows them is drafted after they are complete.
    retired or kept as a mirror (design decision). Premise verified on crm-test
    10-07-26: `CEvent.presenters` ↔ `Contact.cPresenterEvents` exists and the
    application uses neither.
+2. **The mentor biography is copied once, as static text, and is never
+   updated from the profile afterwards.** The copy is a starting point that
+   will usually be edited to fit the event; nothing in the application
+   refreshes it, and there is no re-copy control. Not chosen: a copy that
+   follows the profile until edited (a rule the manager cannot see, and the
+   event's record of what was presented would change under it), and a visible
+   "Re-copy from mentor profile" button (Claude's recommendation, declined —
+   the biography is event text once copied). Cost accepted: a presenter's
+   biography on an upcoming event can go stale against their profile, and
+   staff keep it current by hand.
 
 **F5 — Upcoming internal events on the portal home page.**
 
@@ -594,6 +604,7 @@ attendance recorded → recording link pasted → the engagement rollup shows it
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 4.19 | 10-08-26 00:05 | Claude (Claude Code) | F4 requirement 2 ruled by Doug (10-08-26): the mentor biography is copied once as static text and never updated from the profile; no re-copy control. |
 | 4.18 | 10-07-26 23:49 | Claude (Claude Code) | F4 requirement 1 ruled by Doug (10-07-26): a presenter biography belongs to the person-and-event pairing, copied from the mentor biography as a starting point; needs a new CRM joining record type. F4 state moved to Requirements being ruled. |
 | 4.17 | 10-07-26 23:42 | Claude (Claude Code) | F5's D3 (the Join URL editable for Internal events only, OPEN-ITEMS #38) built as v0.240.0; Track F's remaining work is Boston, then F4 and F1. |
 | 4.16 | 10-07-26 22:49 | Claude (Claude Code) | F5 switched on in production by Doug 10-07-26 after v0.239.1 deployed; Track F now has F2, F3 and F5 live on both Cleveland systems. |
