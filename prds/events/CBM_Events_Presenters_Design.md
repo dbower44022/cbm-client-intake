@@ -2,15 +2,18 @@
 
 Last Updated: 10-08-26 01:09 · Revision 0.3 — see change log at the end.
 
-**Status: DRAFT, awaiting Doug's review. Nothing is built and nothing has been
-applied to any CRM.** The requirements are the eight F4 rulings recorded in
+**Status: BUILT as v0.241.0 on Doug's approval (10-08-26), dark behind
+`EVENT_PRESENTERS`; crm-test's CRM side applied and verified the same night;
+production and Boston owed (`cevent-presenters-crm-handoff.md`); live pass
+owed (`OPEN-ITEMS.md` #39). § 11 records where the build departs from this
+design.** The requirements are the eight F4 rulings recorded in
 `CBM_Events_Finalization_Plan.md` revision 4.24, section F4 — six are Doug's
 (10-07-26 and 10-08-26), two are Claude's under the two-part test. They are
 cited below as *F4-n*. What earlier designs settled for the surfaces this one
 touches is cited as *design § n* (the F2/F3 audience design) and *F5 § n* (the
 Portal Calendar design). Everything else is Claude's design and is marked
-where it is a choice. Both decisions in § 10 are ruled (10-08-26); the design as a
-whole awaits his approval before anything is built.
+where it is a choice. Both decisions in § 10 are ruled (10-08-26) and the design was
+approved the same night.
 
 **Terms used here.** A **presenter** is a person who speaks at an event. A
 **presenter entry** is the CRM record that joins one event to one presenter and
@@ -416,12 +419,43 @@ presented. Cost accepted: a title that changes before the event has to be
 corrected on the entry by hand, like the biography; and two more fields on
 the record type. The record type in § 3 and the plan in § 9 stand as drawn.
 
+## 11. As built — where the build departs from this design
+
+Each is Claude's decision during the build, open to challenge.
+
+1. **The presenter cards have one shared stylesheet**,
+   `frontend/shared/event-body.css`, loaded by both event pages, rather than
+   rules in `public.css` and the portal's styles (§ 5 said per page). One set
+   of rules for one renderer; tokens only, so a chapter's colours apply.
+2. **The search route is `/events/api/presenters/search`**, not
+   `/events/presenter-search`: anything under `/events/` after the event
+   routes would be captured by `/events/{{id}}`.
+3. **`GET /fields` reports `presenters: {{enabled, available}}`**, two facts not
+   one, so the editor can tell "switched off" (no group) from "this CRM lacks
+   the record type" (one explanatory line). The staff event payload carries
+   `presenters: null` in either of those cases and a list otherwise.
+4. **A mentor profile the user cannot read still adds the presenter**, with
+   the Contact's own title and an empty biography, logged. The copy is a
+   starting point, not the record; refusing the add for it would be wrong.
+5. **A new presenter's company is stored on the entry only.** No Account is
+   created or linked from the events editor; D2 made the entry's copy the
+   fact the page shows, and creating companies belongs to the quick-add doors.
+6. **The role script writes an explicit `no`** for the actions it does not
+   grant on a scope that was wholly absent, so the stored map is complete and
+   reads unambiguously as "create yes, read all, edit no, delete no".
+7. **The applier handled the `image` field** without a hand step (finding 12
+   settled on the first dry run): `Admin/fieldManager` accepts the type as
+   given, and the read-back verified it.
+8. **Removing a presenter asks its one-line confirmation in the card's own
+   action row** (Yes / No), the portal rail's pattern, rather than a dialog.
+
 ---
 
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.4 | 10-08-26 01:26 | Claude (Claude Code) | Approved by Doug and built as v0.241.0, dark behind `EVENT_PRESENTERS`. crm-test CRM change and role grants applied and verified; production and Boston owed. § 11 added: eight places the build departs from the design. |
 | 0.3 | 10-08-26 01:09 | Claude (Claude Code) | D2 ruled by Doug: title and company are static copies on the presenter entry. Both decisions ruled; awaiting approval to build. |
 | 0.2 | 10-08-26 00:55 | Claude (Claude Code) | D1 ruled by Doug: widen the Marketing Admin Role (Contact create + read, mentor profile read, CEventPresenter all) rather than use the org-wide key; the exact grants recorded. D2 open. |
 | 0.1 | 10-08-26 00:39 | Claude (Claude Code) | First draft, from the eight F4 requirements in the Finalization Plan revision 4.24. Twelve findings verified on crm-test and in the code (notably: the Marketing Admin Role has no Contact or mentor-profile grant; "Presenter" is already a Contact type; the applier is unproven on `image` fields). New record type `CEventPresenter` drawn in § 3, plan file in § 9. Two decisions for Doug (D1 grants, D2 title/company copies). Awaiting review; nothing built. |

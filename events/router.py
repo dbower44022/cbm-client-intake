@@ -117,6 +117,24 @@ class GraphicIn(BaseModel):
     dataBase64: str = ""
 
 
+class PresenterAddIn(BaseModel):
+    """Either an existing Contact (``contactId``) or a new person."""
+    contactId: str = ""
+    firstName: str = ""
+    lastName: str = ""
+    email: str = ""
+    title: str = ""
+    company: str = ""
+
+
+class PresenterIn(BaseModel):
+    changes: dict[str, Any] = {}
+
+
+class PresenterOrderIn(BaseModel):
+    ids: list[str] = []
+
+
 class WebinarIn(BaseModel):
     webinarId: str = ""
 
@@ -154,6 +172,7 @@ async def session(request: Request) -> dict[str, Any]:
 @api_router.get("/fields")
 async def fields(request: Request) -> dict[str, Any]:
     _, client = await _actor(request)
+    settings_now = get_settings()
     try:
         available = await service.live_event_fields(client)
         options = await service.field_options(client)
@@ -171,8 +190,16 @@ async def fields(request: Request) -> dict[str, Any]:
             })
     except EspoError as exc:
         raise _crm_failure(exc, "read the event field options") from exc
+    presenters_on = settings_now.event_presenters_active
     return {
         "links": links,
+        # F4. ``enabled`` is the switch; ``available`` is whether this CRM has
+        # the record type. The editor renders the group when enabled, and an
+        # explanatory line instead of controls when the CRM lacks it.
+        "presenters": {
+            "enabled": presenters_on,
+            "available": presenters_on and await service.presenters_available(client),
+        },
         "fields": [
             {
                 "name": f.name, "label": f.label, "type": f.type,
@@ -234,11 +261,15 @@ async def get_event(event_id: str, request: Request) -> dict[str, Any]:
         sponsors = await service.event_sponsors(
             client, event_id, await service.live_sponsor_links(client)
         )
+        presenters = await _staff_presenters(client, event_id)
     except EspoError as exc:
         raise _crm_failure(exc, "read the event") from exc
     settings = get_settings()
     return {
         "sponsors": sponsors,
+        # F4: None when the feature is off or the CRM lacks it (the editor tells
+        # "unavailable" from "none" by it), else the entries in order.
+        "presenters": presenters,
         "event": {
             **service.public_event_detail(
                 raw, base_url=settings.events_public_base_url
@@ -665,3 +696,208 @@ async def cancel(registration_id: str, request: Request) -> dict[str, Any]:
         actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
     )
     return result
+
+
+# --- presenters (Track F, F4) ----------------------------------------------
+# Design: prds/events/CBM_Events_Presenters_Design.md § 6. Entries are records
+# saved as they are edited, independent of the event form (the graphic's
+# pattern, not the sponsors'), so each write has its own endpoint and its own
+# action-history line. All run as the signed-in user (D1).
+
+
+async def _staff_presenters(client, event_id: str) -> Optional[list[dict[str, Any]]]:
+    settings = get_settings()
+    if not settings.event_presenters_active or not await service.presenters_available(client):
+        return None
+    rows = await service.list_presenters(client, event_id)
+    return [_staff_presenter(event_id, r) for r in rows]
+
+
+def _staff_presenter(event_id: str, row: dict[str, Any]) -> dict[str, Any]:
+    card = service.presenter_payload(
+        row, photo_url=service.staff_photo_url(event_id, row), include_bio=True,
+    )
+    card["contactId"] = row.get("contactId") or ""
+    card["displayOrder"] = row.get("displayOrder")
+    return card
+
+
+def _presenters_gate() -> None:
+    if not get_settings().event_presenters_active:
+        raise HTTPException(status_code=404, detail="Presenters are not switched on in this deployment.")
+
+
+def _presenter_failure(exc: Exception, what: str) -> HTTPException:
+    if isinstance(exc, service.PresenterNotFound):
+        return HTTPException(status_code=404, detail=str(exc))
+    if isinstance(exc, service.DuplicatePresenter):
+        return HTTPException(status_code=409, detail=str(exc))
+    if isinstance(exc, service.EventError):
+        return HTTPException(status_code=400, detail=str(exc))
+    if isinstance(exc, EspoError):
+        return _crm_failure(exc, what)
+    raise exc
+
+
+@api_router.get("/presenters/search")
+async def presenter_search(request: Request, q: str = "") -> dict[str, Any]:
+    _presenters_gate()
+    _, client = await _actor(request)
+    try:
+        rows = await service.search_presenter_contacts(client, q)
+    except EspoError as exc:
+        raise _crm_failure(exc, "search for a presenter") from exc
+    return {"contacts": rows}
+
+
+@api_router.get("/events/{event_id}/presenters")
+async def list_presenters(event_id: str, request: Request) -> dict[str, Any]:
+    _presenters_gate()
+    _, client = await _actor(request)
+    try:
+        rows = await service.list_presenters(client, event_id)
+    except EspoError as exc:
+        raise _crm_failure(exc, "read the event's presenters") from exc
+    return {"presenters": [_staff_presenter(event_id, r) for r in rows]}
+
+
+@api_router.post("/events/{event_id}/presenters")
+async def add_presenter(
+    event_id: str, payload: PresenterAddIn, request: Request
+) -> dict[str, Any]:
+    _presenters_gate()
+    user, client = await _actor(request)
+    try:
+        row = await service.add_presenter(
+            client, event_id, contact_id=payload.contactId.strip(),
+            new={"firstName": payload.firstName, "lastName": payload.lastName,
+                 "email": payload.email, "title": payload.title,
+                 "company": payload.company},
+        )
+    except Exception as exc:  # noqa: BLE001 — mapped below
+        raise _presenter_failure(exc, "add the presenter") from exc
+    await record_action(
+        client, app=APP_EVENTS, category=CAT_RECORD_EDIT, action="Presenter Added",
+        parent_type=cfg.EVENT, parent_id=event_id,
+        summary=f"Added presenter {row.get('name') or ''}".strip(),
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+        details={"contactId": row.get("contactId"), "entryId": row.get("id")},
+    )
+    return {"presenter": _staff_presenter(event_id, row)}
+
+
+@api_router.put("/events/{event_id}/presenters/order")
+async def reorder_presenters(
+    event_id: str, payload: PresenterOrderIn, request: Request
+) -> dict[str, Any]:
+    _presenters_gate()
+    user, client = await _actor(request)
+    try:
+        rows = await service.reorder_presenters(client, event_id, payload.ids)
+    except Exception as exc:  # noqa: BLE001
+        raise _presenter_failure(exc, "reorder the presenters") from exc
+    await record_action(
+        client, app=APP_EVENTS, category=CAT_RECORD_EDIT, action="Presenters Reordered",
+        parent_type=cfg.EVENT, parent_id=event_id,
+        summary="Reordered the presenters",
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+    )
+    return {"presenters": [_staff_presenter(event_id, r) for r in rows]}
+
+
+@api_router.put("/events/{event_id}/presenters/{entry_id}")
+async def update_presenter(
+    event_id: str, entry_id: str, payload: PresenterIn, request: Request
+) -> dict[str, Any]:
+    _presenters_gate()
+    user, client = await _actor(request)
+    try:
+        row = await service.update_presenter(client, event_id, entry_id, payload.changes)
+    except Exception as exc:  # noqa: BLE001
+        raise _presenter_failure(exc, "save the presenter") from exc
+    await record_action(
+        client, app=APP_EVENTS, category=CAT_RECORD_EDIT, action="Presenter Updated",
+        parent_type=cfg.EVENT, parent_id=event_id,
+        summary=f"Updated presenter {row.get('name') or ''}".strip(),
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+        details={"fields": sorted(k for k in payload.changes if k in cfg.PRESENTER_EDIT_FIELDS)},
+    )
+    return {"presenter": _staff_presenter(event_id, row)}
+
+
+@api_router.delete("/events/{event_id}/presenters/{entry_id}")
+async def remove_presenter(event_id: str, entry_id: str, request: Request) -> dict[str, Any]:
+    _presenters_gate()
+    user, client = await _actor(request)
+    try:
+        await service.remove_presenter(client, event_id, entry_id)
+    except Exception as exc:  # noqa: BLE001
+        raise _presenter_failure(exc, "remove the presenter") from exc
+    await record_action(
+        client, app=APP_EVENTS, category=CAT_RECORD_EDIT, action="Presenter Removed",
+        parent_type=cfg.EVENT, parent_id=event_id,
+        summary="Removed a presenter",
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+        details={"entryId": entry_id},
+    )
+    return {"ok": True}
+
+
+@api_router.post("/events/{event_id}/presenters/{entry_id}/photo")
+async def set_presenter_photo(
+    event_id: str, entry_id: str, payload: GraphicIn, request: Request
+) -> dict[str, Any]:
+    _presenters_gate()
+    user, client = await _actor(request)
+    try:
+        row = await service.set_presenter_photo(
+            client, event_id, entry_id, filename=payload.filename,
+            content_type=payload.contentType, data_base64=payload.dataBase64,
+        )
+    except Exception as exc:  # noqa: BLE001
+        raise _presenter_failure(exc, "save the presenter photo") from exc
+    await record_action(
+        client, app=APP_EVENTS, category=CAT_RECORD_EDIT, action="Presenter Photo Set",
+        parent_type=cfg.EVENT, parent_id=event_id,
+        summary=f"Set the photo of presenter {row.get('name') or ''}".strip(),
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+    )
+    return {"presenter": _staff_presenter(event_id, row)}
+
+
+@api_router.delete("/events/{event_id}/presenters/{entry_id}/photo")
+async def clear_presenter_photo(
+    event_id: str, entry_id: str, request: Request
+) -> dict[str, Any]:
+    _presenters_gate()
+    user, client = await _actor(request)
+    try:
+        row = await service.clear_presenter_photo(client, event_id, entry_id)
+    except Exception as exc:  # noqa: BLE001
+        raise _presenter_failure(exc, "remove the presenter photo") from exc
+    await record_action(
+        client, app=APP_EVENTS, category=CAT_RECORD_EDIT, action="Presenter Photo Cleared",
+        parent_type=cfg.EVENT, parent_id=event_id,
+        summary=f"Removed the photo of presenter {row.get('name') or ''}".strip(),
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+    )
+    return {"presenter": _staff_presenter(event_id, row)}
+
+
+@api_router.get("/events/{event_id}/presenters/{entry_id}/photo")
+async def get_presenter_photo(event_id: str, entry_id: str, request: Request) -> Response:
+    """The staff-side preview — authenticated, so it works for an unpublished
+    event, like the graphic's."""
+    _presenters_gate()
+    _, client = await _actor(request)
+    try:
+        result = await service.get_presenter_photo(client, event_id, entry_id)
+    except Exception as exc:  # noqa: BLE001
+        raise _presenter_failure(exc, "load the presenter photo") from exc
+    if result is None:
+        raise HTTPException(status_code=404, detail="This presenter has no photo.")
+    data, content_type = result
+    return Response(
+        content=data, media_type=content_type or "application/octet-stream",
+        headers={"Cache-Control": "private, max-age=60"},
+    )

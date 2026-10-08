@@ -183,11 +183,58 @@ async def event_detail(slug: str, request: Request, response: Response) -> dict[
                 default_image=settings.events_default_graphic_url,
                 seats_left=seats_left,
             )
+            cached["presenters"] = await _public_presenters(client, event, settings)
         except EspoError as exc:
             raise _crm_failure(exc, f"event {slug}") from exc
         _cache.put(key, cached)
     _cacheable(response, ttl)
     return {"success": True, "event": cached}
+
+
+async def _public_presenters(client, event: dict[str, Any], settings) -> list[dict[str, Any]]:
+    """F4: the presenter cards, biography omitted when the event's switch is
+    off. An empty list when the feature is off or the CRM lacks the record
+    type — the page then shows no section."""
+    if not settings.event_presenters_active or not await service.presenters_available(client):
+        return []
+    rows = await service.list_presenters(client, event["id"])
+    slug = event.get("slug") or ""
+    base = settings.app_base_url
+    return service.public_presenters(
+        rows, event,
+        photo_url_for=lambda r: service.public_photo_url(slug, r, base_url=base),
+    )
+
+
+@api_router.get("/{slug}/presenters/{entry_id}/photo")
+async def presenter_photo(
+    slug: str, entry_id: str, request: Request, response: Response
+) -> Response:
+    """A presenter's photo, keyed on the EVENT's slug and the entry — so the
+    read inherits the publish gate (the image route's reasoning) and an entry
+    id can never fetch a photo through another event. Same short, revocable
+    cache as the graphic."""
+    settings = get_settings()
+    if not settings.event_presenters_active:
+        raise HTTPException(status_code=404, detail="Not found.")
+    client = _client(request)
+    try:
+        event = await service.get_by_slug(client, slug)
+        if event is None:
+            raise HTTPException(status_code=404, detail="Not found.")
+        result = await service.get_presenter_photo(client, event["id"], entry_id)
+    except service.PresenterNotFound as exc:
+        raise HTTPException(status_code=404, detail="Not found.") from exc
+    except EspoError as exc:
+        raise _crm_failure(exc, f"presenter photo {slug}") from exc
+    if result is None:
+        raise HTTPException(status_code=404, detail="Not found.")
+    data, content_type = result
+    ttl = max(0, settings.events_cache_seconds)
+    return Response(
+        content=data, media_type=content_type or "application/octet-stream",
+        headers={"Cache-Control": f"public, max-age={ttl}, must-revalidate"},
+    )
 
 
 @api_router.get("/{slug}/image")

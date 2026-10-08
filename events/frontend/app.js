@@ -20,6 +20,7 @@
     events: [],
     fields: [],
     links: [],         // Phase B: the partner / funder pickers the live CRM supports
+    presenters: { enabled: false, available: false },  // F4: the switch, and whether this CRM has CEventPresenter
     options: {},
     optionLabels: {},   // { field: { storedValue: displayLabel } } from the CRM
     chapterKey: "",
@@ -418,6 +419,17 @@
         var rows = sponsors[link.name];
         factRow(host, link.label, rows && rows.length
           ? rows.map(function (r) { return r.name; }).join(", ") : "—");
+      });
+    }
+    // F4: who presents it, in order. null = the feature is off or the CRM
+    // lacks the record type (no group at all); [] = none ("—").
+    if (state.presenters.enabled && Array.isArray(state.current.presenters)) {
+      factGroup(host, "Presenters");
+      var people = state.current.presenters;
+      if (!people.length) factRow(host, "Presenters", "—");
+      people.forEach(function (p, i) {
+        factRow(host, i === 0 ? "Presenters" : "",
+          p.name + (p.title ? " — " + p.title : "") + (p.company ? ", " + p.company : ""));
       });
     }
 
@@ -839,6 +851,7 @@
       host.appendChild(section);
     });
     sponsorshipGroup(host, raw);
+    presentersGroup(host, raw);
     applyShowWhen(host);
     host.addEventListener("change", function () { applyShowWhen(host); });
   }
@@ -1091,6 +1104,344 @@
     }
   }
 
+  /* ---------- presenters (Track F, F4) ----------
+     Who presents this event. Entries are RECORDS (CEventPresenter) saved as
+     they are edited through their own endpoints, independent of the event
+     form's Save — the graphic's pattern, not the sponsors'. Nothing in this
+     group carries a [name] attribute: collectForm must never read these as
+     event fields. Design: prds/events/CBM_Events_Presenters_Design.md § 4. */
+
+  function presentersGroup(host, raw) {
+    var info = state.presenters || {};
+    if (!info.enabled) return;
+    var section = document.createElement("fieldset");
+    section.className = "ev__group ev__group--presenters";
+    var legend = document.createElement("legend");
+    legend.textContent = "Presenters";
+    section.appendChild(legend);
+    var note = document.createElement("small");
+    note.className = "ev__presenters-note";
+    if (!info.available) {
+      note.textContent = "Presenters need the CEventPresenter record type in this CRM — see the Events CRM handoff.";
+      section.appendChild(note); host.appendChild(section); return;
+    }
+    if (!raw.id) {
+      note.textContent = "Save the event first, then add its presenters here.";
+      section.appendChild(note); host.appendChild(section); return;
+    }
+    var list = document.createElement("div");
+    list.className = "ev__presenters";
+    section.appendChild(list);
+    renderPresenterList(list, raw);
+    presenterAdd(section, raw, list);
+    host.appendChild(section);
+  }
+
+  function presenterRows() {
+    return (state.current && Array.isArray(state.current.presenters)) ? state.current.presenters : [];
+  }
+
+  async function reloadPresenters(raw, list) {
+    var data = await api("/events/" + encodeURIComponent(raw.id) + "/presenters");
+    if (state.current) state.current.presenters = data.presenters || [];
+    renderPresenterList(list, raw);
+    if (state.current) renderOverview();
+  }
+
+  function renderPresenterList(list, raw) {
+    list.innerHTML = "";
+    var rows = presenterRows();
+    if (!rows.length) {
+      var empty = document.createElement("small");
+      empty.textContent = "No presenters yet.";
+      list.appendChild(empty);
+      return;
+    }
+    rows.forEach(function (p, i) { list.appendChild(presenterCard(p, i, rows.length, raw, list)); });
+  }
+
+  function presenterMedia(p, size) {
+    var media = document.createElement("div");
+    media.className = "ev__presenter-media";
+    if (p.photoUrl) {
+      var img = document.createElement("img");
+      img.className = "ev__presenter-photo";
+      img.alt = "";
+      img.src = p.photoUrl;
+      media.appendChild(img);
+    } else {
+      var initials = document.createElement("span");
+      initials.className = "ev__presenter-initials";
+      var parts = String(p.name || "").trim().split(/\s+/).filter(Boolean);
+      initials.textContent = (parts.length ? parts[0][0] : "") + (parts.length > 1 ? parts[parts.length - 1][0] : "");
+      media.appendChild(initials);
+    }
+    return media;
+  }
+
+  function smallButton(label, cls) {
+    var node = document.createElement("button");
+    node.type = "button";
+    node.className = "cbm-button cbm-button--secondary ev__presenter-btn" + (cls ? " " + cls : "");
+    node.textContent = label;
+    return node;
+  }
+
+  function presenterCard(p, index, total, raw, list) {
+    var card = document.createElement("div");
+    card.className = "ev__presenter";
+    card.appendChild(presenterMedia(p));
+    var body = document.createElement("div");
+    body.className = "ev__presenter-body";
+    var name = document.createElement("strong");
+    name.textContent = p.name || "(unnamed)";
+    body.appendChild(name);
+    var role = [p.title, p.company].filter(Boolean).join(" · ");
+    var roleLine = document.createElement("div");
+    roleLine.className = "ev__presenter-role";
+    roleLine.textContent = role || "—";
+    body.appendChild(roleLine);
+    var bioLine = document.createElement("div");
+    bioLine.className = "ev__presenter-biopreview";
+    var tmp = document.createElement("div");
+    tmp.innerHTML = p.biography || "";
+    var text = (tmp.textContent || "").trim();
+    bioLine.textContent = text ? (text.length > 140 ? text.slice(0, 140) + "…" : text) : "No biography yet.";
+    body.appendChild(bioLine);
+    card.appendChild(body);
+
+    var actions = document.createElement("div");
+    actions.className = "ev__presenter-actions";
+    var up = smallButton("Up"), down = smallButton("Down"), edit = smallButton("Edit"), remove = smallButton("Remove");
+    [up, down, edit, remove].forEach(function (b) { actions.appendChild(b); });
+    card.appendChild(actions);
+
+    // Never disabled: an edge move explains itself.
+    async function move(delta) {
+      var ids = presenterRows().map(function (r) { return r.id; });
+      var to = index + delta;
+      if (to < 0 || to >= ids.length) { notice(delta < 0 ? "Already first." : "Already last.", "warn"); return; }
+      ids.splice(to, 0, ids.splice(index, 1)[0]);
+      try {
+        await api("/events/" + encodeURIComponent(raw.id) + "/presenters/order", {
+          method: "PUT", body: JSON.stringify({ ids: ids }),
+        });
+        await reloadPresenters(raw, list);
+      } catch (err) { notice(err.message, "error"); }
+    }
+    up.addEventListener("click", function () { move(-1); });
+    down.addEventListener("click", function () { move(1); });
+    edit.addEventListener("click", function () { presenterEditor(card, p, raw, list); });
+    remove.addEventListener("click", function () {
+      // One-line confirmation in place, the rail's pattern.
+      actions.innerHTML = "";
+      var q = document.createElement("span");
+      q.className = "ev__presenter-confirm";
+      q.textContent = "Remove " + (p.name || "this presenter") + " from this event?";
+      var yes = smallButton("Yes"), no = smallButton("No");
+      actions.appendChild(q); actions.appendChild(yes); actions.appendChild(no);
+      no.addEventListener("click", function () { renderPresenterList(list, raw); });
+      yes.addEventListener("click", async function () {
+        try {
+          await api("/events/" + encodeURIComponent(raw.id) + "/presenters/" + encodeURIComponent(p.id), { method: "DELETE" });
+          notice("Presenter removed.", "ok");
+          await reloadPresenters(raw, list);
+        } catch (err) { notice(err.message, "error"); }
+      });
+    });
+    return card;
+  }
+
+  /* Edit in place: title, company, the biography in the shared rich-text
+     editor WITHOUT an uploadImage hook (public text; its readers cannot reach
+     the attachment proxy — the mentor-biography rule), and the photo, which
+     uploads at once like the event graphic. */
+  function presenterEditor(card, p, raw, list) {
+    card.innerHTML = "";
+    card.classList.add("ev__presenter--editing");
+    var base = "/events/" + encodeURIComponent(raw.id) + "/presenters/" + encodeURIComponent(p.id);
+
+    var photoWrap = document.createElement("div");
+    photoWrap.className = "ev__presenter-photoedit";
+    var media = presenterMedia(p);
+    photoWrap.appendChild(media);
+    var file = document.createElement("input");
+    file.type = "file"; file.className = "ev__filepick";
+    file.accept = "image/png,image/jpeg,image/webp,image/gif"; file.tabIndex = -1;
+    photoWrap.appendChild(file);
+    var choose = smallButton("Choose photo…"), uploadBtn = smallButton("Upload photo"), clearBtn = smallButton("Remove photo");
+    var chosenName = document.createElement("span");
+    chosenName.className = "ev__filename"; chosenName.textContent = "No image chosen";
+    var photoActions = document.createElement("div");
+    photoActions.className = "ev__graphicactions";
+    [choose, uploadBtn, clearBtn, chosenName].forEach(function (n) { photoActions.appendChild(n); });
+    photoWrap.appendChild(photoActions);
+    choose.addEventListener("click", function () { file.click(); });
+    file.addEventListener("change", function () {
+      var picked = file.files && file.files[0];
+      chosenName.textContent = picked ? picked.name : "No image chosen";
+    });
+    uploadBtn.addEventListener("click", function () {
+      var chosen = file.files && file.files[0];
+      if (!chosen) { notice("Choose an image file first.", "warn"); return; }
+      var reader = new FileReader();
+      reader.onload = async function () {
+        var base64 = String(reader.result || "").split(",")[1] || "";
+        try {
+          var result = await api(base + "/photo", {
+            method: "POST",
+            body: JSON.stringify({ filename: chosen.name, contentType: chosen.type, dataBase64: base64 }),
+          });
+          p = result.presenter || p;
+          photoWrap.replaceChild(presenterMedia(p), media); media = photoWrap.firstChild;
+          notice("Photo saved. The mentor's own profile photo is unchanged.", "ok");
+        } catch (err) { notice(err.message, "error"); }
+      };
+      reader.readAsDataURL(chosen);
+    });
+    clearBtn.addEventListener("click", async function () {
+      if (!p.photoUrl) { notice("This presenter has no photo.", "warn"); return; }
+      try {
+        var result = await api(base + "/photo", { method: "DELETE" });
+        p = result.presenter || p;
+        photoWrap.replaceChild(presenterMedia(p), media); media = photoWrap.firstChild;
+        notice("Photo removed.", "ok");
+      } catch (err) { notice(err.message, "error"); }
+    });
+    card.appendChild(photoWrap);
+
+    var form = document.createElement("div");
+    form.className = "ev__presenter-form";
+    var heading = document.createElement("strong");
+    heading.textContent = p.name || "(unnamed)";
+    form.appendChild(heading);
+    function textInput(label, value) {
+      var wrap = document.createElement("label");
+      wrap.className = "ev__field";
+      var cap = document.createElement("span"); cap.textContent = label; wrap.appendChild(cap);
+      var input = document.createElement("input");
+      input.type = "text"; input.value = value || "";
+      wrap.appendChild(input); form.appendChild(wrap);
+      return input;
+    }
+    var title = textInput("Title", p.title);
+    var company = textInput("Company", p.company);
+    var bioWrap = document.createElement("div");
+    bioWrap.className = "ev__field ev__field--wide";
+    var bioCap = document.createElement("span"); bioCap.textContent = "Biography (for this event)"; bioWrap.appendChild(bioCap);
+    var bio = window.CBMRichText && window.CBMRichText.create(p.biography || "", { minHeight: 180 });
+    if (!bio) { bio = document.createElement("textarea"); bio.rows = 8; bio.value = p.biography || ""; }
+    bioWrap.appendChild(bio);
+    var hint = document.createElement("small");
+    hint.textContent = "Copied once from a mentor's profile when they were added; edit it for this event. It is never updated from the profile, and images are not allowed here.";
+    bioWrap.appendChild(hint);
+    form.appendChild(bioWrap);
+
+    var buttons = document.createElement("div");
+    buttons.className = "ev__presenter-actions";
+    var save = smallButton("Save presenter", "cbm-button--primary"), cancel = smallButton("Cancel");
+    buttons.appendChild(save); buttons.appendChild(cancel);
+    form.appendChild(buttons);
+    card.appendChild(form);
+
+    cancel.addEventListener("click", function () { renderPresenterList(list, raw); });
+    save.addEventListener("click", async function () {
+      var changes = {
+        presenterTitle: title.value,
+        presenterCompany: company.value,
+        biography: bio._cbmRichText ? bio._cbmRichText.getValue() : bio.value,
+      };
+      try {
+        await api(base, { method: "PUT", body: JSON.stringify({ changes: changes }) });
+        notice("Presenter saved.", "ok");
+        await reloadPresenters(raw, list);
+      } catch (err) { notice(err.message, "error"); }
+    });
+  }
+
+  /* Add a presenter: search the CRM's Contacts by name or email, or add a
+     new person — found by email and reused, else created (F4-3). */
+  function presenterAdd(section, raw, list) {
+    var box = document.createElement("div");
+    box.className = "ev__presenters-add";
+    var cap = document.createElement("span");
+    cap.className = "ev__presenters-addcap";
+    cap.textContent = "Add a presenter";
+    box.appendChild(cap);
+    var search = document.createElement("input");
+    search.type = "search"; search.className = "ev__presenters-search";
+    search.placeholder = "Search contacts by name or email…";
+    box.appendChild(search);
+    var results = document.createElement("div");
+    results.className = "ev__presenters-results";
+    box.appendChild(results);
+
+    var timer = null;
+    search.addEventListener("input", function () {
+      clearTimeout(timer);
+      var q = search.value.trim();
+      if (q.length < 2) { results.innerHTML = ""; return; }
+      timer = setTimeout(async function () {
+        try {
+          var data = await api("/presenters/search?q=" + encodeURIComponent(q));
+          results.innerHTML = "";
+          var rows = data.contacts || [];
+          if (!rows.length) {
+            var none = document.createElement("small");
+            none.textContent = "No contact matches. Add them as a new presenter below.";
+            results.appendChild(none);
+          }
+          rows.forEach(function (c) {
+            var hit = document.createElement("button");
+            hit.type = "button"; hit.className = "ev__presenters-hit";
+            hit.textContent = c.name + (c.email ? " — " + c.email : "") + (c.company ? " · " + c.company : "") + (c.isMentor ? "  [Mentor]" : "");
+            hit.addEventListener("click", function () { addPresenter({ contactId: c.id }); });
+            results.appendChild(hit);
+          });
+        } catch (err) { notice(err.message, "error"); }
+      }, 250);
+    });
+
+    var newToggle = smallButton("+ New presenter");
+    box.appendChild(newToggle);
+    var form = document.createElement("div");
+    form.className = "ev__presenters-newform";
+    form.hidden = true;
+    function input(label, type) {
+      var wrap = document.createElement("label");
+      wrap.className = "ev__field";
+      var c = document.createElement("span"); c.textContent = label; wrap.appendChild(c);
+      var i = document.createElement("input"); i.type = type || "text"; wrap.appendChild(i);
+      form.appendChild(wrap); return i;
+    }
+    var first = input("First name"), last = input("Last name"), email = input("Email", "email"),
+        title = input("Title"), company = input("Company");
+    var addBtn = smallButton("Add presenter", "cbm-button--primary");
+    form.appendChild(addBtn);
+    box.appendChild(form);
+    newToggle.addEventListener("click", function () { form.hidden = !form.hidden; });
+    addBtn.addEventListener("click", function () {
+      // Validate on click and name what is missing — never a disabled button.
+      if (!first.value.trim() || !last.value.trim()) { notice("A new presenter needs a first and last name.", "warn"); return; }
+      if (!email.value.trim() || email.value.indexOf("@") === -1) { notice("A new presenter needs an email address.", "warn"); return; }
+      addPresenter({ firstName: first.value, lastName: last.value, email: email.value, title: title.value, company: company.value });
+    });
+
+    async function addPresenter(payload) {
+      try {
+        await api("/events/" + encodeURIComponent(raw.id) + "/presenters", {
+          method: "POST", body: JSON.stringify(payload),
+        });
+        search.value = ""; results.innerHTML = "";
+        [first, last, email, title, company].forEach(function (i) { i.value = ""; });
+        form.hidden = true;
+        notice("Presenter added.", "ok");
+        await reloadPresenters(raw, list);
+      } catch (err) { notice(err.message, "error"); }
+    }
+    section.appendChild(box);
+  }
+
   /* ---------- actions ---------- */
 
   function newEvent() {
@@ -1261,6 +1612,7 @@
       var fieldData = await api("/fields");
       state.fields = fieldData.fields || [];
       state.links = fieldData.links || [];
+      state.presenters = fieldData.presenters || { enabled: false, available: false };
       state.options = fieldData.options || {};
       state.optionLabels = fieldData.optionLabels || {};
       state.chapterKey = fieldData.chapterKey || "";

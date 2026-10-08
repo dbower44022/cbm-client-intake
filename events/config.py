@@ -92,6 +92,34 @@ AUDIENCE_FIELDS: tuple[str, ...] = (
     TAKES_REGISTRATIONS_FIELD, DISPLAY_FROM_FIELD,
 )
 
+# --- Presenters (Track F, F4) -----------------------------------------------
+# One ``CEventPresenter`` record per presenter per event (F4-1): the biography,
+# title, company and photo are COPIES made when the presenter is added and never
+# refreshed from the person (F4-2, F4-6). Built by ``scripts/plans/
+# cevent-presenters.json``; design ``prds/events/CBM_Events_Presenters_Design.md``.
+PRESENTER_ENTITY = "CEventPresenter"
+#: The reverse link on CEvent, which is what feature detection looks for.
+PRESENTERS_LINK = "eventPresenters"
+#: The one switch per event (F4-4). Feature-detected like the F2/F3 fields.
+SHOW_BIOS_FIELD = "showPresenterBios"
+PRESENTER_PHOTO_FIELD = "photo"
+PRESENTER_SELECT = ",".join([
+    "id", "name", "eventId", "contactId", "biography", "presenterTitle",
+    "presenterCompany", "photoId", "displayOrder",
+])
+#: What the staff editor may change on an entry — the spec is the whitelist.
+PRESENTER_EDIT_FIELDS: tuple[str, ...] = ("presenterTitle", "presenterCompany", "biography")
+#: A guest Contact the editor creates is typed this (an existing option on both
+#: CRMs, verified on crm-test 10-08-26). An existing Contact's type is never
+#: merged — a person's type is curated data.
+PRESENTER_CONTACT_TYPE = "Presenter"
+#: Fields on CEvent that exist only once their CRM change has landed.
+PRESENTER_FIELDS: tuple[str, ...] = (SHOW_BIOS_FIELD,)
+
+#: Every feature-detected CEvent field: present in the editor and the write
+#: whitelist only when the live CRM has it.
+DETECTED_FIELDS: tuple[str, ...] = AUDIENCE_FIELDS + PRESENTER_FIELDS
+
 #: Statuses that occupy a seat.
 SEAT_TAKING = (REG_REGISTERED, REG_ATTENDED, REG_NO_SHOW)
 #: Statuses that count as "did not attend but was expected".
@@ -119,6 +147,8 @@ PUBLIC_SELECT = ",".join([
     # public payload never exposes them.
     "audience", "publicReach", "reachChapters", "internalTeams",
     "takesRegistrations", "eventReleaseDate",
+    # F4. Same rule: an attribute the CRM lacks is ignored on read.
+    "showPresenterBios",
 ])
 
 # --- event graphic (EV-05b) -------------------------------------------------
@@ -274,6 +304,10 @@ EVENT_FIELDS: list[EventField] = [
     EventField("eventReleaseDate", "Display from", "datetime", "Publishing",
                help="Leave empty to show the event as soon as it is ticked. "
                     "Registration opens at this time too."),
+    EventField("showPresenterBios", "Show presenter biographies", "bool", "Publishing",
+               help="Off, the event page shows each presenter's name, title, company "
+                    "and photo only. A presenter with an empty biography shows the "
+                    "same either way."),
     EventField("slug", "URL slug", "varchar", "Publishing", app_managed=True),
     EventField("recordingUrl", "Recording URL", "url", "Publishing",
                help="Paste the YouTube link once the recording is published."),

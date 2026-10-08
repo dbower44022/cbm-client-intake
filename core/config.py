@@ -527,6 +527,11 @@ class Settings(BaseSettings):
     # How many days ahead the rail lists in full; events beyond fold behind one
     # line (F5-2). 0 puts every event in the fold-out.
     portal_events_window_days: int = 30
+    # Presenters on an event (Track F, F4): the Presenters group in the event
+    # editor and the presenter cards on the event pages. Off by default, and
+    # dark anyway until the CRM has CEventPresenter — the switch is the review
+    # gate, the detection is the safety.
+    event_presenters: bool = False
     # In-process cache for the public read endpoints. The WordPress plugin
     # caches too, so a normal page load makes no live call to us at all.
     events_cache_seconds: int = 60
@@ -810,6 +815,11 @@ class Settings(BaseSettings):
         """The portal's events rail and member page (F5): the switch AND the
         events feature it reads through."""
         return self.portal_calendar and self.events_active
+
+    @property
+    def event_presenters_active(self) -> bool:
+        """Presenters on events (F4): the switch AND the events feature."""
+        return self.event_presenters and self.events_active
 
     @property
     def events_public_active(self) -> bool:

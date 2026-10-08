@@ -1017,6 +1017,23 @@ would be indistinguishable from a slug.
   Marketing Admin Role reads partner and funder profiles, it does not edit
   them (Doug's ruling 2026-10-07). Production and Boston lack the partner
   link until the Phase A handoff is applied there, so they show Funders only.
+- **Presenters are RECORDS, one per presenter per event** (v0.241.0, Track F
+  F4, `prds/events/CBM_Events_Presenters_Design.md`). `CEventPresenter` holds
+  the biography, title, company, photo and order as **copies made when the
+  presenter is added and never refreshed** from the Contact or the mentor
+  profile (Doug's rulings 10-07/08-26) — a past event's page is the record of
+  what was presented. Added from the editor's Presenters group: a Contact
+  search, or a new person whose unknown email **creates a `Presenter`-typed
+  Contact** (an existing Contact is reused untouched — no null-fill, no type
+  merge). One switch per event, `showPresenterBios`. Every staff read and
+  write runs **as the signed-in user** (D1: the Marketing Admin Role carries
+  Contact create + read and mentor-profile read — `scripts/migrate_presenter_
+  roles.py`); the page reads run under the org key, whose role reads the
+  entity. Photos ride routes **keyed on the event and the entry** (public by
+  slug, portal by id, staff authenticated), never on an attachment id. Dark
+  behind `EVENT_PRESENTERS` AND feature detection (fails closed). The bare
+  `CEvent.presenters` link is unused and left in place. crm-test CRM done;
+  production and Boston owed (`cevent-presenters-crm-handoff.md`).
 - **Phase 6a attendance** (`events/attendance.py`, worker): pulls each finished
   online event's Zoom participant report and matches by email. An empty report
   means "not published yet", never "nobody came"; a `Manual`/`Check-in` source
@@ -1610,6 +1627,23 @@ with `main`; **Lakeside took it off the release lane by itself** (its
 unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
+
+- **v0.241.0 (2026-10-08) — presenters on an event (Track F, F4). Committed,
+  not pushed; ships DARK.** Doug's eight requirements were gathered one
+  question per turn on 10-07/08-26 and the design approved the same night;
+  standing rules in the Events section above. **crm-test's CRM side is
+  complete** — `scripts/plans/cevent-presenters.json` applied by the applier
+  (its first `image` field, no hand step) and `scripts/migrate_presenter_roles.py`
+  applied, both read back; the org key reads `CEventPresenter`. Verified by
+  tests only (21 new, suite green). Owed: the live pass as a real Marketing
+  Admin non-admin, production's CRM change and grants at a Sunday slot,
+  Boston with its release (`OPEN-ITEMS.md` #39). Switch off everywhere.
+
+- **v0.240.0 (2026-10-07) — an Internal event's Join URL is editable in Event
+  Administration** (F5 design D3, `OPEN-ITEMS.md` #38). Committed, not pushed.
+  `editable_when` on the field spec; the server admits the value only when the
+  record as saved is Internal. Verified by tests only; the live check rides
+  the next crm-test pass.
 
 - **v0.238.0 (2026-10-07) — the public forms HOLD a submission whose company
   exists at a different web address.** Pushed and live on all three apps

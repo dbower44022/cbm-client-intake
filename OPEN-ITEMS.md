@@ -531,6 +531,25 @@ block a deploy.)*
 
 ## Live verification owed
 
+39. **Presenters on events (v0.241.0, Track F F4) — built dark, never seen;
+    production and Boston CRM owed.** The code ships off (`EVENT_PRESENTERS`)
+    and feature-detected. **crm-test's CRM side is complete 2026-10-08**
+    (`scripts/plans/cevent-presenters.json` applied and read back,
+    `scripts/migrate_presenter_roles.py` applied, org key reads
+    `CEventPresenter`). Owed: (a) the **live pass on crm-test** as a real
+    Marketing Admin non-admin — switch on at `/setup`; add a mentor presenter
+    and see the copied biography, title and photo; replace the photo and
+    confirm the mentor's profile photo is unchanged; add a guest by a new
+    email and find the `Presenter`-typed Contact; add the same email to a
+    second event (no second Contact); reorder; remove; the switch on and off
+    against the public page signed out and the member page as a Mentor Team
+    account; a presenter photo URL with another event's slug answers 404.
+    (b) **Production**: plan + role script at a Sunday slot
+    (`cevent-presenters-crm-handoff.md` § 5), then the switch. (c) **Boston**
+    with its next release. (d) The bare `CEvent.presenters` link is unused and
+    still present on every CRM; removing it is a separate human decision.
+    Design: `prds/events/CBM_Events_Presenters_Design.md` (§ 11 as-built).
+
 38. ~~**An Internal event's join link cannot be set in Event Administration**~~
     **Built 2026-10-07 as v0.240.0** — `virtualMeetingUrl` carries
     `editable_when=("audience", ("Internal",))`: the editor shows a Join URL

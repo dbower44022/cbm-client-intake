@@ -4,6 +4,33 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.241.0] — 2026-10-08
+
+**feat(events): presenters on an event, with a biography and photo per
+event (Track F, F4).** Design `prds/events/CBM_Events_Presenters_Design.md`
+(Doug's eight requirements and two decisions, 10-07/08-26). A new CRM record
+type, `CEventPresenter`, joins one event to one presenter and carries the
+biography, title, company, photo and display order — **copies** made when the
+presenter is added and never refreshed from the person (F4-1, F4-2, F4-6). The
+event editor gains a Presenters group: search the CRM's Contacts by name or
+email, or add a new person, whose unknown email creates a `Presenter`-typed
+Contact (F4-3); a mentor's biography, title and photo are copied in once;
+edit in place (biography in the shared rich-text editor with no image button —
+public text), replace the photo for this event only, reorder, remove. One
+switch per event, **Show presenter biographies** (F4-4). The public and portal
+event pages show a presenter card per entry — name, title · company, photo or
+initials, biography when the switch is on — through the shared body renderer
+and a new shared stylesheet. Every staff read and write runs **as the
+signed-in user**; the Marketing Admin Role gains Contact create + read and
+mentor-profile read (`scripts/migrate_presenter_roles.py`, decision D1); the
+org-wide API role gains read on the new entity for the page reads. Ships
+**dark**: `EVENT_PRESENTERS` (off, `/setup` → Features) **and** CRM feature
+detection, which fails closed. **crm-test's CRM side is done** (plan
+`scripts/plans/cevent-presenters.json` applied and read back; the role script
+applied; the org key reads the entity); production and Boston are owed
+(`cevent-presenters-crm-handoff.md`). Twenty-one tests. **Verified by tests
+only** — the live pass is `OPEN-ITEMS.md` #39.
+
 ## [0.240.0] — 2026-10-07
 
 **feat(events): an Internal event's Join URL can be typed in Event

@@ -454,6 +454,11 @@ Honest list, so nothing surprises you mid-test:
   live there but has never been exercised end to end — do that before the
   redirect, with an obviously fake surname, and delete the Contact and its
   registration afterwards.
+- **Presenters ship dark (v0.241.0).** `EVENT_PRESENTERS` is off everywhere and
+  the feature also needs the `CEventPresenter` record type and the role grants
+  of `cevent-presenters-crm-handoff.md` — done on crm-test 2026-10-08, owed on
+  production and Boston. Switch it on at `/setup` → Features once the CRM has
+  it; the staff guide's *Presenters* section is the test script.
 - **No automatic attendance** — manual only, until Phase 6.
 - **No follow-up emails** — designed, not built.
 - **The staff app has been driven with a stubbed session**, not a real

@@ -242,6 +242,10 @@ SETTINGS: tuple[SettingSpec, ...] = (
        unit="days",
        help="How many days ahead the rail lists in full; events beyond fold behind "
             "one line. 0 folds everything."),
+    _s("event_presenters", GROUP_FEATURES, "Presenters on events", kind="bool",
+       help="The Presenters group in the event editor and the presenter cards on "
+            "the public and portal event pages. Stays hidden until the CRM has "
+            "CEventPresenter, so it is safe to switch on early."),
     _s("grants_enabled", GROUP_FEATURES, "Grants on funder records", kind="bool",
        help="The Grants tab in Funder Management — awards, deliverables and (later) "
             "funder reporting. Stays hidden until the CRM has CGrant and "

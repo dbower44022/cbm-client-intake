@@ -1,0 +1,38 @@
+/* Presenter cards on an event page (Track F, F4) — shared by the public event
+   page and the portal member page, which load this after their own styles.
+   Tokens only, so a chapter's colour file applies. These classes are the
+   pages' own: NOT part of the website stylesheet's class contract. */
+.evb-presenters { margin: 0 0 24px; }
+.evb-presenters__heading {
+  margin: 0 0 12px; font-size: 1.15rem; font-weight: 700;
+  color: var(--cbm-navy, #1d3557);
+}
+.evb-presenters__list { display: grid; grid-template-columns: 1fr; gap: 16px; }
+.evb-presenters__list--many { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.evb-presenter {
+  display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 14px;
+  align-items: start; padding: 14px; border-radius: 10px;
+  background: var(--cbm-surface, #f6f8fb); border: 1px solid var(--cbm-border, #e3e8ef);
+}
+.evb-presenter__media { width: 96px; height: 96px; }
+.evb-presenter__photo {
+  width: 96px; height: 96px; object-fit: cover; border-radius: 50%; display: block;
+}
+.evb-presenter__initials {
+  display: flex; align-items: center; justify-content: center;
+  width: 96px; height: 96px; border-radius: 50%;
+  background: var(--cbm-navy, #1d3557); color: #fff;
+  font-weight: 700; font-size: 1.6rem; letter-spacing: .02em;
+}
+.evb-presenter__body { min-width: 0; }
+.evb-presenter__name { margin: 0; font-size: 1.05rem; font-weight: 700; line-height: 1.3; }
+.evb-presenter__role { margin: 2px 0 8px; color: var(--cbm-slate-700, #4a5568); font-weight: 600; }
+.evb-presenter__bio { line-height: 1.55; }
+.evb-presenter__bio p { margin: 0 0 .6em; }
+.evb-presenter__bio p:last-child { margin-bottom: 0; }
+@media (max-width: 767px) {
+  .evb-presenters__list--many { grid-template-columns: 1fr; }
+  .evb-presenter { grid-template-columns: 72px minmax(0, 1fr); }
+  .evb-presenter__media, .evb-presenter__photo, .evb-presenter__initials { width: 72px; height: 72px; }
+  .evb-presenter__initials { font-size: 1.25rem; }
+}

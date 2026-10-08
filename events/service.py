@@ -25,6 +25,7 @@ timezone maths (EV-85).
 
 from __future__ import annotations
 
+import base64
 import logging
 import re
 import unicodedata
@@ -32,7 +33,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Optional
 from zoneinfo import ZoneInfo
 
-from core.espo import EspoApi, EspoError, is_forbidden
+from core.crm_upsert import find_create_or_fill
+from core.espo import EspoApi, EspoError, is_forbidden, is_not_found
 from core.youtube import thumbnail_url, video_id_from_url
 
 from . import config as cfg
@@ -60,6 +62,14 @@ _OPTION_FIELD_NAMES = ("status", *(
 
 class EventError(RuntimeError):
     """A problem the caller should surface, not a CRM transport failure."""
+
+
+class PresenterNotFound(EventError):
+    """No such presenter entry on THIS event — a 404, worded like an unknown id."""
+
+
+class DuplicatePresenter(EventError):
+    """The person is already a presenter on this event — a 409."""
 
 
 # --- time helpers ----------------------------------------------------------
@@ -180,7 +190,7 @@ async def live_event_fields(client: EspoApi) -> frozenset[str]:
     if reader is None:
         return frozenset()
     fields = await reader(f"entityDefs.{cfg.EVENT}.fields") or {}
-    return frozenset(name for name in cfg.AUDIENCE_FIELDS if name in fields)
+    return frozenset(name for name in cfg.DETECTED_FIELDS if name in fields)
 
 
 def _public_where(
@@ -801,7 +811,7 @@ def editor_fields(available: Iterable[str]) -> list[cfg.EventField]:
     present = set(available)
     return [
         f for f in cfg.EVENT_FIELDS
-        if f.name not in cfg.AUDIENCE_FIELDS or f.name in present
+        if f.name not in cfg.DETECTED_FIELDS or f.name in present
     ]
 
 
@@ -827,12 +837,12 @@ def _writable(
     field unlocks nothing.
     """
     allowed = set(cfg.EVENT_WRITABLE_NAMES if allow_managed else cfg.EVENT_EDIT_NAMES)
-    allowed -= set(cfg.AUDIENCE_FIELDS) - set(available)
+    allowed -= set(cfg.DETECTED_FIELDS) - set(available)
     if not allow_managed:
         present = set(available)
         stored = current or {}
         for name, (decider, values) in cfg.EVENT_CONDITIONAL_EDITS.items():
-            if decider in cfg.AUDIENCE_FIELDS and decider not in present:
+            if decider in cfg.DETECTED_FIELDS and decider not in present:
                 continue
             value = changes[decider] if decider in changes else stored.get(decider)
             if value in values:
@@ -1341,3 +1351,372 @@ async def set_event_sponsors(
             removed += 1
         result[name] = {"added": added, "removed": removed}
     return result
+
+
+# --- Presenters (Track F, F4) -----------------------------------------------
+# Design: prds/events/CBM_Events_Presenters_Design.md. One CEventPresenter per
+# presenter per event; biography, title, company and photo are copies made when
+# the presenter is added and never refreshed (F4-1, F4-2, F4-6). Every staff
+# read and write here runs AS THE SIGNED-IN USER (design D1 — the Marketing
+# Admin Role carries the Contact and mentor-profile grants); the public and
+# portal page reads run under the org-wide key like every other public read.
+
+
+async def presenters_available(client: EspoApi) -> bool:
+    """Whether the live CRM has the presenter record type, pointing where the
+    plan says. Fails CLOSED: no metadata reader, or a failed read, means no —
+    offering an editor whose save the CRM must refuse is worse than none."""
+    reader = getattr(client, "metadata", None)
+    if reader is None:
+        return False
+    try:
+        entity = await reader(f"entityDefs.{cfg.PRESENTER_ENTITY}")
+        links = await reader(f"entityDefs.{cfg.EVENT}.links") or {}
+    except EspoError as exc:
+        log.warning("presenters not detectable (%s); the feature stays dark", exc)
+        return False
+    link = links.get(cfg.PRESENTERS_LINK)
+    return (
+        isinstance(entity, dict) and bool(entity.get("fields"))
+        and isinstance(link, dict) and link.get("entity") == cfg.PRESENTER_ENTITY
+    )
+
+
+_TAG_STRIP = re.compile(
+    r"<(script|style|iframe|object|embed|form)\b.*?</\1\s*>|<(script|style|iframe|object|embed|form)\b[^>]*/?>",
+    re.I | re.S,
+)
+_IMG_STRIP = re.compile(r"<img\b[^>]*>", re.I)
+_ON_ATTR = re.compile(r"\s+on[a-z]+\s*=\s*(\"[^\"]*\"|'[^']*'|[^\s>]+)", re.I)
+_JS_URL = re.compile(r"\s+(href|src)\s*=\s*([\"'])\s*javascript:[^\"']*\2", re.I)
+
+
+def clean_biography(html: Optional[str]) -> str:
+    """A presenter biography is public text whose readers cannot reach the
+    attachment proxy (the same constraint as the mentor's public biography), so
+    inline images are stripped on save, along with anything that executes. The
+    page renderer sanitises again on display; this is the copy at rest."""
+    text = html or ""
+    text = _TAG_STRIP.sub("", text)
+    text = _IMG_STRIP.sub("", text)
+    text = _ON_ATTR.sub("", text)
+    text = _JS_URL.sub("", text)
+    return text.strip()
+
+
+def _order_key(row: dict[str, Any]) -> tuple[int, str]:
+    order = row.get("displayOrder")
+    return (order if isinstance(order, int) and order > 0 else 10**6,
+            (row.get("name") or "").lower())
+
+
+async def list_presenters(client: EspoApi, event_id: str) -> list[dict[str, Any]]:
+    """Every presenter entry of one event, in display order."""
+    rows: list[dict[str, Any]] = []
+    offset = 0
+    while True:
+        data = await client.list(
+            cfg.PRESENTER_ENTITY, select=cfg.PRESENTER_SELECT,
+            where=[{"type": "equals", "attribute": "eventId", "value": event_id}],
+            max_size=_PAGE, offset=offset,
+        )
+        page = data.get("list", [])
+        rows.extend(page)
+        if len(page) < _PAGE:
+            break
+        offset += _PAGE
+    rows.sort(key=_order_key)
+    return rows
+
+
+async def _presenter_on_event(
+    client: EspoApi, event_id: str, entry_id: str
+) -> dict[str, Any]:
+    """The entry, or :class:`PresenterNotFound` — including an entry that
+    exists on a DIFFERENT event, so an id can never be used across events."""
+    try:
+        row = await client.get(cfg.PRESENTER_ENTITY, entry_id, select=cfg.PRESENTER_SELECT)
+    except EspoError as exc:
+        if is_not_found(exc):
+            row = None
+        else:
+            raise
+    if not row or row.get("eventId") != event_id:
+        raise PresenterNotFound("That presenter could not be found on this event.")
+    return row
+
+
+def presenter_payload(
+    row: dict[str, Any], *, photo_url: str, include_bio: bool
+) -> dict[str, Any]:
+    """One presenter card. ``biography`` is OMITTED (empty), not hidden, when
+    the event's switch is off, so a page can never leak it (F4-4)."""
+    return {
+        "id": row.get("id"),
+        "name": row.get("name") or "",
+        "title": row.get("presenterTitle") or "",
+        "company": row.get("presenterCompany") or "",
+        "photoUrl": photo_url if row.get("photoId") else "",
+        "biography": clean_biography(row.get("biography")) if include_bio else "",
+    }
+
+
+def public_presenters(
+    rows: Iterable[dict[str, Any]], event: dict[str, Any], *,
+    photo_url_for,
+) -> list[dict[str, Any]]:
+    """The cards for an event page, in order. ``photo_url_for(row)`` builds the
+    route for the surface (public by slug, portal by id)."""
+    show = bool(event.get(cfg.SHOW_BIOS_FIELD))
+    return [
+        presenter_payload(r, photo_url=photo_url_for(r), include_bio=show)
+        for r in rows
+    ]
+
+
+def staff_photo_url(event_id: str, row: dict[str, Any]) -> str:
+    pid = row.get("photoId") or ""
+    return (f"/events/api/events/{event_id}/presenters/{row.get('id')}/photo?v={pid[:12]}"
+            if pid else "")
+
+
+def public_photo_url(slug: str, row: dict[str, Any], *, base_url: str = "") -> str:
+    pid = row.get("photoId") or ""
+    if not pid or not slug:
+        return ""
+    path = f"/api/events/{slug}/presenters/{row.get('id')}/photo?v={pid[:12]}"
+    return f"{base_url.rstrip('/')}{path}" if base_url else path
+
+
+def portal_photo_url(event_id: str, row: dict[str, Any]) -> str:
+    pid = row.get("photoId") or ""
+    return (f"/api/portal/events/{event_id}/presenters/{row.get('id')}/photo?v={pid[:12]}"
+            if pid else "")
+
+
+_CONTACT_SELECT = "id,name,firstName,lastName,emailAddress,title,accountName,cMentorProfileId"
+
+
+async def search_presenter_contacts(client: EspoApi, query: str) -> list[dict[str, Any]]:
+    """Contacts matching a name or email, for the add-presenter search box.
+    At most 20, name order; a mentor is marked so the editor can say so."""
+    q = (query or "").strip()
+    if len(q) < 2:
+        return []
+    data = await client.list(
+        "Contact", select=_CONTACT_SELECT,
+        where=[{"type": "or", "value": [
+            {"type": "contains", "attribute": "name", "value": q},
+            {"type": "contains", "attribute": "emailAddress", "value": q},
+        ]}],
+        max_size=20, order_by="name", order="asc",
+    )
+    out = []
+    for r in data.get("list", []):
+        if not r.get("id"):
+            continue
+        out.append({
+            "id": r["id"], "name": r.get("name") or "(unnamed)",
+            "email": r.get("emailAddress") or "", "company": r.get("accountName") or "",
+            "title": r.get("title") or "",
+            "isMentor": bool(r.get("cMentorProfileId")),
+        })
+    out.sort(key=lambda r: r["name"].lower())
+    return out
+
+
+async def _copy_photo(
+    client: EspoApi, attachment_id: str, *, tag: str
+) -> Optional[str]:
+    """Download an attachment and upload it again bound to a presenter entry's
+    photo field — a COPY, never a shared id, so the mentor replacing their own
+    photo later changes nothing here (F4-6). Best-effort: None on failure."""
+    try:
+        data, content_type = await client.download_attachment(attachment_id)
+        ext = {
+            "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif",
+        }.get((content_type or "").split(";")[0].strip().lower(), "jpg")
+        return await client.upload_attachment(
+            filename=f"presenter-{tag}.{ext}",
+            content_type=content_type or "image/jpeg",
+            data_base64=base64.b64encode(data).decode("ascii"),
+            related_type=cfg.PRESENTER_ENTITY, field=cfg.PRESENTER_PHOTO_FIELD,
+        )
+    except EspoError as exc:
+        log.warning("presenter photo copy from attachment %s failed: %s", attachment_id, exc)
+        return None
+
+
+async def add_presenter(
+    client: EspoApi,
+    event_id: str,
+    *,
+    contact_id: str = "",
+    new: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
+    """Add a presenter to an event (F4-3): an existing Contact by id, or a new
+    person — found by email and reused, else created typed ``Presenter``. A
+    mentor's biography, title and photo are copied in once (F4-5, F4-6); a
+    guest's title and company come from the Contact. Nothing on the Contact is
+    changed by adding them."""
+    if contact_id:
+        try:
+            contact = await client.get("Contact", contact_id, select=_CONTACT_SELECT)
+        except EspoError as exc:
+            if is_not_found(exc):
+                contact = None
+            else:
+                raise
+        if not contact:
+            raise EventError("That contact could not be found.")
+    else:
+        new = new or {}
+        first = (new.get("firstName") or "").strip()
+        last = (new.get("lastName") or "").strip()
+        email = (new.get("email") or "").strip().lower()
+        if not (first and last):
+            raise EventError("A new presenter needs a first and last name.")
+        if not email or "@" not in email:
+            raise EventError("A new presenter needs an email address.")
+        payload: dict[str, Any] = {
+            "firstName": first, "lastName": last, "emailAddress": email,
+            "cContactType": [cfg.PRESENTER_CONTACT_TYPE],
+        }
+        if (new.get("title") or "").strip():
+            payload["title"] = new["title"].strip()
+        # fill_keys=() — a matched Contact is reused exactly as it is: no
+        # null-fill, because adding someone as a presenter is not a reason to
+        # change what is stored about them (and the role has no Contact edit).
+        cid, _action = await find_create_or_fill(
+            client, "Contact", match_attr="emailAddress", match_value=email,
+            create_payload=payload, fill_keys=(),
+        )
+        contact = await client.get("Contact", cid, select=_CONTACT_SELECT) or {"id": cid, **payload}
+        if not contact.get("name"):
+            contact["name"] = f"{first} {last}"
+        if not contact.get("accountName") and (new.get("company") or "").strip():
+            contact["accountName"] = new["company"].strip()
+
+    existing = await list_presenters(client, event_id)
+    if any(r.get("contactId") == contact["id"] for r in existing):
+        raise DuplicatePresenter(
+            f"{contact.get('name') or 'This person'} is already a presenter on this event."
+        )
+
+    entry: dict[str, Any] = {
+        "name": contact.get("name") or "",
+        "eventId": event_id,
+        "contactId": contact["id"],
+        "presenterTitle": contact.get("title") or "",
+        "presenterCompany": contact.get("accountName") or "",
+        "biography": "",
+        "displayOrder": len(existing) + 1,
+    }
+    mentor_id = contact.get("cMentorProfileId")
+    if mentor_id:
+        try:
+            profile = await client.get(
+                "CMentorProfile", mentor_id, select="id,aboutMentor,mentorTitle,profilePhotoId",
+            ) or {}
+        except EspoError as exc:
+            # The add still succeeds; the copy is the starting point, not the record.
+            log.warning("mentor profile %s unreadable for presenter copy: %s", mentor_id, exc)
+            profile = {}
+        if profile.get("aboutMentor"):
+            entry["biography"] = clean_biography(profile["aboutMentor"])
+        if profile.get("mentorTitle"):
+            entry["presenterTitle"] = profile["mentorTitle"]
+        if profile.get("profilePhotoId"):
+            photo_id = await _copy_photo(client, profile["profilePhotoId"], tag=contact["id"])
+            if photo_id:
+                entry["photoId"] = photo_id
+
+    created = await client.create(cfg.PRESENTER_ENTITY, entry)
+    return {**entry, **(created or {})}
+
+
+async def update_presenter(
+    client: EspoApi, event_id: str, entry_id: str, changes: dict[str, Any]
+) -> dict[str, Any]:
+    """Change the text of one entry. The spec is the whitelist: a smuggled
+    ``contactId`` or ``eventId`` never reaches the CRM."""
+    await _presenter_on_event(client, event_id, entry_id)
+    payload = {k: v for k, v in changes.items() if k in cfg.PRESENTER_EDIT_FIELDS}
+    if "biography" in payload:
+        payload["biography"] = clean_biography(payload["biography"])
+    for key in ("presenterTitle", "presenterCompany"):
+        if key in payload:
+            payload[key] = (payload[key] or "").strip()
+    if payload:
+        await client.update(cfg.PRESENTER_ENTITY, entry_id, payload)
+    return await _presenter_on_event(client, event_id, entry_id)
+
+
+async def _renumber(client: EspoApi, rows: list[dict[str, Any]]) -> None:
+    """Make ``displayOrder`` 1..n in list order, writing only what moved."""
+    for position, row in enumerate(rows, start=1):
+        if row.get("displayOrder") != position:
+            await client.update(cfg.PRESENTER_ENTITY, row["id"], {"displayOrder": position})
+            row["displayOrder"] = position
+
+
+async def remove_presenter(client: EspoApi, event_id: str, entry_id: str) -> None:
+    """Delete the entry (the Contact is untouched) and close the gap in the order."""
+    await _presenter_on_event(client, event_id, entry_id)
+    await client.delete(cfg.PRESENTER_ENTITY, entry_id)
+    remaining = [r for r in await list_presenters(client, event_id) if r.get("id") != entry_id]
+    await _renumber(client, remaining)
+
+
+async def reorder_presenters(
+    client: EspoApi, event_id: str, ids: list[str]
+) -> list[dict[str, Any]]:
+    """Set the order to exactly ``ids`` (F4-7). Refuses a set that is not the
+    event's entries, so a stale editor cannot drop or invent one."""
+    rows = await list_presenters(client, event_id)
+    by_id = {r["id"]: r for r in rows if r.get("id")}
+    if sorted(ids) != sorted(by_id) or len(ids) != len(set(ids)):
+        raise EventError("The presenter list has changed — reload the event and try again.")
+    ordered = [by_id[i] for i in ids]
+    await _renumber(client, ordered)
+    return ordered
+
+
+async def set_presenter_photo(
+    client: EspoApi, event_id: str, entry_id: str, *,
+    filename: str, content_type: str, data_base64: str,
+) -> dict[str, Any]:
+    """Upload a photo for this entry (F4-6: this event only). Same rules as
+    the event graphic."""
+    await _presenter_on_event(client, event_id, entry_id)
+    if content_type not in cfg.ALLOWED_IMAGE_TYPES:
+        raise EventError("Please choose a JPEG, PNG, WebP or GIF image for the photo.")
+    if len(data_base64) > cfg.MAX_IMAGE_B64_CHARS:
+        raise EventError("That image is too large — please use one under 5 MB.")
+    attachment_id = await client.upload_attachment(
+        filename=filename or "presenter-photo", content_type=content_type,
+        data_base64=data_base64, related_type=cfg.PRESENTER_ENTITY,
+        field=cfg.PRESENTER_PHOTO_FIELD,
+    )
+    await client.update(cfg.PRESENTER_ENTITY, entry_id, {"photoId": attachment_id})
+    return await _presenter_on_event(client, event_id, entry_id)
+
+
+async def clear_presenter_photo(
+    client: EspoApi, event_id: str, entry_id: str
+) -> dict[str, Any]:
+    await _presenter_on_event(client, event_id, entry_id)
+    await client.update(cfg.PRESENTER_ENTITY, entry_id, {"photoId": None})
+    return await _presenter_on_event(client, event_id, entry_id)
+
+
+async def get_presenter_photo(
+    client: EspoApi, event_id: str, entry_id: str
+) -> Optional[tuple[bytes, str]]:
+    """The photo's bytes + type, or None. Raises PresenterNotFound for an
+    entry on another event — the route is keyed on the event for that reason."""
+    row = await _presenter_on_event(client, event_id, entry_id)
+    photo_id = row.get("photoId")
+    if not photo_id:
+        return None
+    return await client.download_attachment(photo_id)

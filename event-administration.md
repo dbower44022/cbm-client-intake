@@ -257,6 +257,51 @@ a graphic.
 
 ---
 
+## Presenters
+
+Needs **Presenters on events** switched on (System Settings → Features) and a
+CRM that has the presenter record type — until both are true the group below
+does not appear.
+
+**Who presents an event, and what the event page says about them.** On a saved
+event the form has a **Presenters** group under Sponsorship. Type a name or an
+email in the search box to find a person the CRM already knows and click them
+to add; a mentor is marked **Mentor**. If the person is not in the CRM, **+ New
+presenter** takes a first name, last name, email, title and company, and adds
+them — the email is what the CRM is checked against, so a presenter whose email
+is already on file is reused rather than duplicated, and a new email creates a
+contact typed *Presenter*. A new event has no Presenters group until its first
+Save.
+
+**What is copied, once.** Adding a mentor copies their public mentor biography,
+their mentor title and their profile photo onto *this event's* presenter entry.
+Adding anyone else brings their title and company from their contact record and
+leaves the biography and photo empty. From then on the entry is the event's own
+text: edit it to fit the talk, and nothing you change here touches the person's
+contact record or the mentor's profile. **It is never updated from the profile
+afterwards**, and there is no re-copy — a mentor who rewrites their profile
+biography next month changes nothing on this page, which is deliberate: a past
+event's page is the record of what was presented.
+
+**Edit, photo, order, remove.** **Edit** opens the entry in place: title,
+company and the biography in the usual rich-text editor, which has no image
+button here because the page's readers cannot reach pictures stored in the CRM.
+**Choose photo… / Upload photo** replaces the photo *for this event only* — the
+way to give a mentor a more current headshot without touching their profile;
+**Remove photo** clears it and the page shows their initials instead. **Up** and
+**Down** set the order on the page. **Remove** asks once in the row and then
+takes the person off the event; their contact record stays.
+
+**Show presenter biographies** is one tick on the event, in the Publishing
+group. Ticked, the event page shows each presenter's biography under their
+name; unticked, it shows name, title, company and photo only. To hide one
+presenter's biography while showing the others, leave theirs empty.
+
+**Where they appear.** On the public event page and the portal's member page,
+between the facts and the full description, one card per presenter with photo
+or initials, name, "title · company" and the biography when the tick is on.
+The calendar card and the portal rail do not list presenters.
+
 ## Publishing the recording
 
 After the event, upload the recording to YouTube yourself, then use **Add

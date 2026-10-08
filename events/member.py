@@ -269,7 +269,47 @@ async def detail(event_id: str, request: Request) -> dict[str, Any]:
     # apart from "the public pages are switched off in this deployment" —
     # it said the latter for the former on 2026-10-07 (F5 live pass, step 12).
     entry["publicPagesActive"] = bool(settings.events_public_active)
+    entry["presenters"] = await _portal_presenters(client, event, settings)
     return {"event": entry}
+
+
+async def _portal_presenters(client, event: dict[str, Any], settings) -> list[dict[str, Any]]:
+    """F4: the same cards the public page shows, photos through the portal
+    route. Empty when the feature is off or the CRM lacks the record type."""
+    if not settings.event_presenters_active or not await service.presenters_available(client):
+        return []
+    rows = await service.list_presenters(client, event["id"])
+    return service.public_presenters(
+        rows, event, photo_url_for=lambda r: service.portal_photo_url(event["id"], r),
+    )
+
+
+@member_router.get("/{event_id}/presenters/{entry_id}/photo")
+async def presenter_photo(event_id: str, entry_id: str, request: Request) -> Response:
+    """The portal twin of the public presenter-photo route: gated on the
+    portal surface, keyed on the event AND the entry, ``private`` cache."""
+    settings = get_settings()
+    if not settings.event_presenters_active:
+        raise HTTPException(status_code=404, detail="Not found.")
+    user = _user(request)
+    client = _client(request)
+    event = await _member_event(client, user, event_id)
+    if event is None:
+        raise HTTPException(status_code=404, detail="Not found.")
+    try:
+        result = await service.get_presenter_photo(client, event_id, entry_id)
+    except service.PresenterNotFound as exc:
+        raise HTTPException(status_code=404, detail="Not found.") from exc
+    except EspoError as exc:
+        raise HTTPException(status_code=502, detail="Image unavailable.") from exc
+    if result is None:
+        raise HTTPException(status_code=404, detail="Not found.")
+    data, content_type = result
+    ttl = max(0, settings.events_cache_seconds)
+    return Response(
+        content=data, media_type=content_type or "application/octet-stream",
+        headers={"Cache-Control": f"private, max-age={ttl}, must-revalidate"},
+    )
 
 
 @member_router.get("/{event_id}/image")

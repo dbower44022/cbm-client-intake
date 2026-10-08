@@ -8,7 +8,10 @@
  * (the public sign-up form; the member's Register / website links).
  *
  * The host page supplies elements with these ids: hero, eyebrow, title, when,
- * summary, facts, overview, syllabus. Nothing here reads the URL or fetches.
+ * summary, facts, presenters, overview, syllabus. Nothing here reads the URL
+ * or fetches. The presenter cards (Track F, F4) are styled by
+ * /shared/event-body.css, which both pages load — their classes are the
+ * pages' own, not the website stylesheet's contract classes.
  */
 (function () {
   "use strict";
@@ -65,6 +68,71 @@
     list.appendChild(dd);
   }
 
+  /* Presenter cards (F4): name, title · company, photo, and the biography
+     when the payload carries one — the server omits it when the event's
+     "Show presenter biographies" switch is off, so this never decides. */
+  function presenters(host, list) {
+    if (!host) return;
+    host.innerHTML = "";
+    var rows = Array.isArray(list) ? list : [];
+    if (!rows.length) { host.hidden = true; return; }
+    var heading = document.createElement("h2");
+    heading.className = "evb-presenters__heading";
+    heading.textContent = rows.length === 1 ? "Presenter" : "Presenters";
+    host.appendChild(heading);
+    var grid = document.createElement("div");
+    grid.className = "evb-presenters__list" + (rows.length > 1 ? " evb-presenters__list--many" : "");
+    rows.forEach(function (p) {
+      var card = document.createElement("article");
+      card.className = "evb-presenter";
+      var media = document.createElement("div");
+      media.className = "evb-presenter__media";
+      if (p.photoUrl) {
+        var img = document.createElement("img");
+        img.className = "evb-presenter__photo";
+        img.src = p.photoUrl;
+        img.alt = p.name || "";
+        img.addEventListener("error", function () { media.replaceChildren(initials(p.name)); });
+        media.appendChild(img);
+      } else {
+        media.appendChild(initials(p.name));
+      }
+      card.appendChild(media);
+      var body = document.createElement("div");
+      body.className = "evb-presenter__body";
+      var name = document.createElement("h3");
+      name.className = "evb-presenter__name";
+      name.textContent = p.name || "";
+      body.appendChild(name);
+      var role = [p.title, p.company].filter(Boolean).join(" \u00b7 ");
+      if (role) {
+        var line = document.createElement("p");
+        line.className = "evb-presenter__role";
+        line.textContent = role;
+        body.appendChild(line);
+      }
+      if (p.biography) {
+        var bio = document.createElement("div");
+        bio.className = "evb-presenter__bio";
+        safeHtml(bio, p.biography);
+        body.appendChild(bio);
+      }
+      card.appendChild(body);
+      grid.appendChild(card);
+    });
+    host.appendChild(grid);
+    host.hidden = false;
+  }
+
+  function initials(name) {
+    var node = document.createElement("span");
+    node.className = "evb-presenter__initials";
+    var parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+    node.textContent = (parts.length ? parts[0][0] : "") + (parts.length > 1 ? parts[parts.length - 1][0] : "");
+    node.setAttribute("aria-hidden", "true");
+    return node;
+  }
+
   /* Fill the body from an event payload. `extraFacts` is an array of
      [key, value] pairs appended after Location and Format — the public page
      adds Seats remaining, the member page adds Join online. */
@@ -87,9 +155,12 @@
       fact(facts, "Format", event.eventType);
       (extraFacts || []).forEach(function (pair) { fact(facts, pair[0], pair[1]); });
     }
+    presenters($("presenters"), event.presenters);
     safeHtml($("overview"), event.overview);
     safeHtml($("syllabus"), event.syllabus);
   }
 
-  window.CBMEventBody = { fill: fill, whenLine: whenLine, safeHtml: safeHtml, fact: fact };
+  window.CBMEventBody = {
+    fill: fill, whenLine: whenLine, safeHtml: safeHtml, fact: fact, presenters: presenters,
+  };
 })();
