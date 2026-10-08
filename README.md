@@ -170,3 +170,10 @@ an `orchestrator.py` (`async def submit(sub, client) -> dict`), and an
 > dropdowns are aligned to the live CRM enums. Note `forms/client_intake/`
 > ships a bespoke `frontend/app.js`; it can still migrate onto the shared
 > `wizard.js` controller (the other forms use it) for fuller frontend reuse.
+
+## License
+
+Copyright 2026 Douglas W Bower. Licensed under the
+[Apache License, Version 2.0](LICENSE); see also [NOTICE](NOTICE). The
+vendored Jodit editor under `frontend/shared/vendor/jodit/` keeps its own MIT
+license.
