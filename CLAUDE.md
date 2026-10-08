@@ -1663,14 +1663,14 @@ each block.
   commit built in three minutes. Doug's six rulings and two design decisions
   were gathered one question at a time on 09-30 and the design approved the
   same day; standing rules are in the Portal section above. **Ships dark**
-  behind `PORTAL_CALENDAR`, so a push changes nothing visible. **Verified by
-  tests only** — no browser, no real member; the live pass on crm-test as two
-  non-admin accounts (one inside a team limit, one outside), desktop and phone
-  width, is `OPEN-ITEMS.md` #37, and it needs an Internal event with a
-  graphic, no slug and Takes registrations on, created through `/events`
-  first. Production waits on that pass AND on the F2/F3 CRM change (#35),
-  which is what gives production the audience field and the `Portal`
-  registration source.
+  behind `PORTAL_CALENDAR`, so a push changes nothing visible. **Live pass
+  done 2026-10-07** by Doug on crm-test as two real non-admin accounts — every
+  step matched; one defect found and fixed (v0.239.1: a slug-less Public event
+  was blamed on the public-pages switch); the phone strip verified in a stub
+  harness only (`OPEN-ITEMS.md` #37 has the detail). The F2/F3 CRM change
+  reached production the same day (#35), so production has the fields.
+  **`PORTAL_CALENDAR` is still off on production** — switching it on at
+  `/setup` after 0.239.1 deploys is Doug's call; crm-test's is on.
 
 - **v0.234.0 / v0.234.1 (2026-09-29) — CoMentors column, and On-Hold counts
   as an active client.** Pushed and live on production and crm-test the same

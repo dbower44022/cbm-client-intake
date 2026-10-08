@@ -530,30 +530,27 @@ block a deploy.)*
     it for Public ones), or drop D2's fact and rely on the description. Until
     ruled, the live pass below sets the field in the CRM directly.
 
-37. **The portal events rail and member page (v0.235.0, F5) — built dark,
-    never seen** (2026-09-30; step-by-step pass with expected results:
-    https://claude.ai/artifact/47kkLsCn5xTSDK56akg9W1, private; no run
-    recorded as of 10-07-26). `PORTAL_CALENDAR` is off everywhere. Owed on
-    crm-test, as **two real non-admin accounts** (one in a team an Internal
-    event is limited to, one not), on a desktop and at phone width: (a) create
-    through `/events` an Internal event with a graphic and Takes
-    registrations on, and one limited to a team (the editor always generates
-    a slug — a slug-less event exists only when created directly in the CRM,
-    and is optional here); (b) switch `PORTAL_CALENDAR`
-    on at `/setup`; (c) the rail renders beside the tiles with no width cap,
-    the fold appears for an event beyond 30 days, both switches survive a
-    sign-out and a different browser; (d) Register from a row and from the
-    page, the row reads Registered, Cancel works, and `CEventRegistration`
-    shows source `Portal`; (e) the member page shows the graphic (the portal
-    image route), the join link only after registering (D2), and a Public
-    webinar's two website links; (f) a deep link to a member page from a
-    signed-out browser signs in and lands on the event; (g) the team-limited
-    event 404s for the outside account with the same words as a made-up id;
-    (h) the phone strip expands and collapses. Note the nightly reset takes the
-    registrations by morning. Production after this AND #35 (the CRM change
-    that gives production the audience field and the `Portal` source), then
-    `PORTAL_CALENDAR` on at `/setup`; Boston with its next release, flag off
-    until asked.
+37. ~~**The portal events rail and member page (v0.235.0, F5) — built dark,
+    never seen.**~~ **Live pass done 2026-10-07** by Doug on crm-test as Joe
+    Mentor (Mentor Team only) and Mark Marketing (Marketing Admin Team), from
+    the step page https://claude.ai/artifact/47kkLsCn5xTSDK56akg9W1 (private):
+    the rail beside the tiles with no width cap, the 30-day fold, both switches
+    surviving a sign-out and a second browser, Register from a row and from the
+    page with the one-line confirmation, Cancel, the member page's graphic and
+    its registered/unregistered states, a signed-out deep link signing in and
+    landing on the event, a made-up id and a team-limited event both answering
+    "That event could not be found", the Team mark for the inside account, and
+    `CEventRegistration` source `Portal` — every step matched. **One defect
+    found and fixed (v0.239.1, committed, not pushed):** the member page blamed
+    the public-pages switch for a Public event that merely had no slug
+    (crm-test's seeded webinar; saving it in Event Administration gave it one).
+    **The phone strip was NOT exercised on crm-test** — the first version of
+    that step sent Doug into Chrome's developer tools and he stopped; it was
+    verified instead in a stub harness at 390px (strip shown reading "Next: …
+    · 2 more", panel hidden, no horizontal scroll, tap opens the rows and the
+    fold line, tap closes) and at 1400px (no strip, two columns, `max-width:
+    none`). Still owed: `PORTAL_CALENDAR` on at production's `/setup` once
+    0.239.1 is deployed — Doug's call — and Boston with its next release.
 
 36. **CoMentors column and On-Hold as active (v0.234.0 / v0.234.1) — live on
     both environments, never seen as a non-admin** (2026-09-29). Verified by
