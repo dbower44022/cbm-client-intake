@@ -1,6 +1,6 @@
 # CBM Events & Webinars — Finalization Plan
 
-Last Updated: 10-08-26 00:24 · Revision 4.23 — see change log at the end.
+Last Updated: 10-08-26 00:25 · Revision 4.24 — see change log at the end.
 
 Companion to `CBM_Events_PRD.md`, `CBM_Events_Implementation_Plan.md` and
 `CBM_Events_Registration_Recognition_Plan.md`. Those three say what the feature
@@ -132,7 +132,7 @@ after Doug's requirements are gathered, and nothing is settled until he rules.
 | F1 | Event topic: multiple selections, plus a user-entered value | User review, 09-2026 | Catalogued |
 | F2 | Display Date/Time: the moment an event may first appear on the public pages | User review, 09-2026 | Built v0.233.0 (09-29-26); reviewed live on crm-test 09-30; **CRM applied to production 10-07-26**; Boston owed (`OPEN-ITEMS.md` #35) |
 | F3 | Event audience: Internal, a specific chapter, or Public — Internal events form a calendar on the chapter's portal | User review, 09-2026 | Built v0.233.0 (09-29-26); reviewed live on crm-test 09-30; **CRM applied to production 10-07-26**; Boston owed (`OPEN-ITEMS.md` #35) |
-| F4 | Presenters: select or add them per event, with an optional presenter biography on the event page | User review, 09-2026 | Requirements being ruled |
+| F4 | Presenters: select or add them per event, with an optional presenter biography on the event page | User review, 09-2026 | Requirements complete; design next |
 | F5 | Portal home page: a left-hand list of upcoming internal events, each opening its details | User review, 09-2026 | **Live on production and crm-test** since 10-07-26 (v0.239.1, switch on at `/setup`); Boston with its next release |
 
 **The catalog is complete at five features** (Doug, 09-27-26). Design proceeds
@@ -429,6 +429,26 @@ rulings. The design that follows them is drafted after they are complete.
    Administration changes it, and the next event copies the old one; the staff
    guide says so in one line.
 
+*Decided by Claude, 10-08-26, under the ARCHITECTURE two-part test (real
+downstream impact, no second option that changes what a user experiences
+enough to stop the flow). Doug may overrule either at design review.*
+
+7. **Presenters appear in the order the administrator sets, defaulting to the
+   order they were added.** An integer on the event-presenter record, moved
+   with up/down controls in the editor; no alphabetical rule, because a panel's
+   lead presenter is a fact the administrator knows and the page cannot guess.
+8. **A partner organisation as host is NOT part of this feature.** It was
+   answered by Phase B of the mailing-list and event-sponsorship plan
+   (v0.239.0): an event's partners and funders are relationships set in the
+   editor's Sponsorship group, and the old single `partnerHost` link is
+   retired. Presenters are people; sponsors are organisations; the two stay
+   separate on the record and on the page.
+
+*F4 requirements are complete at eight. The next step is the design document,
+`prds/events/CBM_Events_Presenters_Design.md`, drafted from these rulings and
+reviewed by Doug before anything is built; the CRM handoff for the new
+event-presenter record type is part of that design.*
+
 **F5 — Upcoming internal events on the portal home page.**
 
 *The need, as stated:* "Modify the initial page displayed after login to show a
@@ -648,6 +668,7 @@ attendance recorded → recording link pasted → the engagement rollup shows it
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 4.24 | 10-08-26 00:25 | Claude (Claude Code) | F4 requirements complete: 7 (presenter order, administrator-set, default added order) and 8 (partner host is Phase B's, not F4's) decided by Claude under the two-part test. F4 state moved to Requirements complete; design next. |
 | 4.23 | 10-08-26 00:24 | Claude (Claude Code) | F4 requirement 6 ruled by Doug (10-08-26): a replaced mentor photo changes this event only; the profile is never written from the events tool. |
 | 4.22 | 10-08-26 00:22 | Claude (Claude Code) | F4 requirement 5 ruled by Doug (10-08-26): a presenter shows name, title, company, biography and photo, on condition the event administrator can update a mentor's photo; the scope of that update is requirement 6. |
 | 4.21 | 10-08-26 00:09 | Claude (Claude Code) | F4 requirement 4 ruled by Doug (10-08-26): showing presenter biographies is one switch per event, stored on the event. |
