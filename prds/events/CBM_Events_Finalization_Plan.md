@@ -1,6 +1,6 @@
 # CBM Events & Webinars — Finalization Plan
 
-Last Updated: 10-07-26 23:42 · Revision 4.17 — see change log at the end.
+Last Updated: 10-07-26 23:49 · Revision 4.18 — see change log at the end.
 
 Companion to `CBM_Events_PRD.md`, `CBM_Events_Implementation_Plan.md` and
 `CBM_Events_Registration_Recognition_Plan.md`. Those three say what the feature
@@ -132,7 +132,7 @@ after Doug's requirements are gathered, and nothing is settled until he rules.
 | F1 | Event topic: multiple selections, plus a user-entered value | User review, 09-2026 | Catalogued |
 | F2 | Display Date/Time: the moment an event may first appear on the public pages | User review, 09-2026 | Built v0.233.0 (09-29-26); reviewed live on crm-test 09-30; **CRM applied to production 10-07-26**; Boston owed (`OPEN-ITEMS.md` #35) |
 | F3 | Event audience: Internal, a specific chapter, or Public — Internal events form a calendar on the chapter's portal | User review, 09-2026 | Built v0.233.0 (09-29-26); reviewed live on crm-test 09-30; **CRM applied to production 10-07-26**; Boston owed (`OPEN-ITEMS.md` #35) |
-| F4 | Presenters: select or add them per event, with an optional presenter biography on the event page | User review, 09-2026 | Catalogued |
+| F4 | Presenters: select or add them per event, with an optional presenter biography on the event page | User review, 09-2026 | Requirements being ruled |
 | F5 | Portal home page: a left-hand list of upcoming internal events, each opening its details | User review, 09-2026 | **Live on production and crm-test** since 10-07-26 (v0.239.1, switch on at `/setup`); Boston with its next release |
 
 **The catalog is complete at five features** (Doug, 09-27-26). Design proceeds
@@ -355,6 +355,26 @@ publicly (name, photo, title, company); presenter order on the page; and
 whether a partner organisation as host (`partnerHost`, D-10) is part of this
 feature or separate.
 
+*Requirements, ruled by Doug 10-07-26, one question per turn.* These are
+rulings. The design that follows them is drafted after they are complete.
+
+1. **A presenter biography belongs to the person-and-event pairing, not to the
+   person.** Each event holds its own copy of each presenter's biography. Adding
+   a mentor copies their public mentor biography (`CMentorProfile.aboutMentor`)
+   into this event's copy as a starting point; adding a guest or partner
+   contact leaves it empty for staff to write. Editing it changes this event's
+   page and nothing else, so a past talk's recording keeps the biography it was
+   presented with. Not chosen: one biography on the Contact reused everywhere
+   (the cheapest build, but an edit for one talk rewrites every event page,
+   past ones included). Cost accepted: the bare `presenters` link cannot carry
+   text, so this needs a new CRM record type joining one event to one presenter
+   and carrying the biography, the display order and the show-biography switch,
+   built on crm-test, production and Boston before the feature can go live; the
+   application stays dark on a CRM without it, and the existing link is either
+   retired or kept as a mirror (design decision). Premise verified on crm-test
+   10-07-26: `CEvent.presenters` ↔ `Contact.cPresenterEvents` exists and the
+   application uses neither.
+
 **F5 — Upcoming internal events on the portal home page.**
 
 *The need, as stated:* "Modify the initial page displayed after login to show a
@@ -574,6 +594,7 @@ attendance recorded → recording link pasted → the engagement rollup shows it
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 4.18 | 10-07-26 23:49 | Claude (Claude Code) | F4 requirement 1 ruled by Doug (10-07-26): a presenter biography belongs to the person-and-event pairing, copied from the mentor biography as a starting point; needs a new CRM joining record type. F4 state moved to Requirements being ruled. |
 | 4.17 | 10-07-26 23:42 | Claude (Claude Code) | F5's D3 (the Join URL editable for Internal events only, OPEN-ITEMS #38) built as v0.240.0; Track F's remaining work is Boston, then F4 and F1. |
 | 4.16 | 10-07-26 22:49 | Claude (Claude Code) | F5 switched on in production by Doug 10-07-26 after v0.239.1 deployed; Track F now has F2, F3 and F5 live on both Cleveland systems. |
 | 4.15 | 10-07-26 22:44 | Claude (Claude Code) | F5 live pass done on crm-test by Doug (10-07-26); v0.239.1 fix recorded; production switch-on is Doug's call. |
