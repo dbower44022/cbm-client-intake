@@ -549,7 +549,7 @@ block a deploy.)*
     snapshot), so the copy is re-run from the repository before a pass.
     Owed: (a) the **live pass as Mark Marketing** from the step page
     https://claude.ai/artifact/Me5JXig7rzCzy9c6RwvMNi (private, written 10-08-26;
-    needs crm-test on v0.242.0): Topics as a tick list where Topic
+    crm-test reported v0.242.0 at 23:47 on 10-08-26, so it can run): Topics as a tick list where Topic
     stood, no way to type one, two topics saved and shown on the Overview
     and as two grid chips, a recording with two topics offered under both in
     the public library and found by either, its page's eyebrow naming both,

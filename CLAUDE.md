@@ -1657,8 +1657,8 @@ Cleveland by design. What is *verified* is narrower than what is deployed — se
 each block.
 
 - **v0.242.0 (2026-10-08/09) — an event carries several curated topics
-  (Track F, F1). Committed, not pushed; ships dark (feature-detected, no
-  switch).** Doug struck the user-entered topic on 10-08 and ruled D1 (a new
+  (Track F, F1). Pushed and live on all three apps (23:47 on 10-08); ships
+  dark (feature-detected, no switch).** Doug struck the user-entered topic on 10-08 and ruled D1 (a new
   `topics` field with a one-time copy); standing rule in the Events section
   above; design `prds/events/CBM_Events_Topics_Design.md`. **crm-test's CRM
   side is done** (the field applied by the applier and read back as the org
