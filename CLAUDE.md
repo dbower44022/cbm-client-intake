@@ -982,8 +982,24 @@ would be indistinguishable from a slug.
   reloads on its own (`input`, not the `search` event, which Firefox does not
   raise). One CRM read serves the results, the topic list and the count:
   `published_recordings` plus the pure `filter_recordings` / `recording_topics`.
-  Order comes from `cfg.TOPIC_ORDER`; a value that has drifted out of the enum
+  Order follows the live field's option order (`service.live_topic_order`),
+  `cfg.TOPIC_ORDER` as the fallback; a value that has drifted out of the enum
   still appears.
+- **An event carries SEVERAL curated topics, and nobody types one** (v0.242.0,
+  Track F F1, Doug's ruling 2026-10-08: *"They must pick from the list, or
+  update the list if they do not like the choices."*). `CEvent.topics` is a
+  multiEnum with the same ten values as the single `topic` it supersedes.
+  **Feature-detected, no switch**: a CRM without `topics` behaves exactly as
+  before; on a CRM with it the single `topic` is **retired** from the editor,
+  the write whitelist and every read — `service.event_topics(row)` decides by
+  whether the row carries the `topics` key (a CRM that lacks the attribute
+  omits it), and never falls back to `topic` when `topics` is merely empty.
+  A chosen filter topic matches a recording carrying it among others; the
+  eyebrow, the grid chips and the Events tabs name all of them; public
+  payloads keep `category` (the first topic) and gain `categories`.
+  `scripts/migrate_event_topics.py` copies the old value once per CRM, after
+  `scripts/plans/cevent-topics.json`. The retired column stays until a removal
+  handoff. Design: `prds/events/CBM_Events_Topics_Design.md`.
 - **Panel wording is the SITE's, not ours** — "Calendar of Upcoming Webinars"
   and "Find a Recorded Webinar". Inventing better names put our page out of step
   with the one it replaces; don't re-invent them.
@@ -1639,6 +1655,19 @@ with `main`; **Lakeside took it off the release lane by itself** (its
 unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
+
+- **v0.242.0 (2026-10-08/09) — an event carries several curated topics
+  (Track F, F1). Committed, not pushed; ships dark (feature-detected, no
+  switch).** Doug struck the user-entered topic on 10-08 and ruled D1 (a new
+  `topics` field with a one-time copy); standing rule in the Events section
+  above; design `prds/events/CBM_Events_Topics_Design.md`. **crm-test's CRM
+  side is done** (the field applied by the applier and read back as the org
+  key; the copy script run — one event). Owed: the live pass as Mark
+  Marketing (`OPEN-ITEMS.md` #41, step page linked there), production at a
+  Sunday slot (plan + copy from the container), Boston with its release.
+  Note the nightly reset empties crm-test's `topics` values (the column is
+  rebuilt from files, the rows from the snapshot), so the copy is re-run
+  there before a pass.
 
 - **v0.241.0 / v0.241.1 (2026-10-08) — presenters on an event (Track F, F4).
   both pushed and live on all three apps (22:36 on 10-08); ships DARK.** Doug's eight requirements were gathered one question per

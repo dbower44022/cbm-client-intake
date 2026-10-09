@@ -538,6 +538,27 @@ block a deploy.)*
 
 ## Live verification owed
 
+41. **Topics on events (v0.242.0, Track F F1) — built dark, never seen.**
+    Doug's ruling 10-08-26: no user-entered topic; an event carries several
+    curated topics (`CEvent.topics`, multiEnum). Feature-detected, no switch.
+    **crm-test's CRM side is done 10-09-26 03:34 UTC**: `scripts/plans/
+    cevent-topics.json` applied by the shipped applier (fingerprint
+    `1a404fc9c337`) and read back as the org key; `scripts/migrate_event_topics.py`
+    run (dry run, then apply). **The nightly reset empties crm-test's
+    `topics` values** (column rebuilt from files, rows restored from the
+    snapshot), so the copy is re-run from the repository before a pass.
+    Owed: (a) the **live pass as Mark Marketing** from the step page
+    https://claude.ai/artifact/Me5JXig7rzCzy9c6RwvMNi (private, written 10-08-26;
+    needs crm-test on v0.242.0): Topics as a tick list where Topic
+    stood, no way to type one, two topics saved and shown on the Overview
+    and as two grid chips, a recording with two topics offered under both in
+    the public library and found by either, its page's eyebrow naming both,
+    an event with no topic still saving. (b) **Production** at a Sunday slot
+    from inside the web container: the plan, then the copy (ten published
+    recordings expected). (c) **Boston** with its next release. Design:
+    `prds/events/CBM_Events_Topics_Design.md`; handoff
+    `cevent-topics-crm-handoff.md`.
+
 39. **Presenters on events (v0.241.0 / v0.241.1, Track F F4) — live pass DONE
     on crm-test; production and Boston CRM owed.** The code ships off
     (`EVENT_PRESENTERS`) and feature-detected. **crm-test's CRM side is

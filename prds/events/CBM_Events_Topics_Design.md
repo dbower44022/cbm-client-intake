@@ -1,9 +1,12 @@
 # CBM Events — Topics: Design (Track F, F1)
 
-Last Updated: 10-08-26 23:25 · Revision 0.2 — see change log at the end.
+Last Updated: 10-08-26 23:50 · Revision 0.3 — see change log at the end.
 
-**Status: D1 ruled by Doug (10-08-26); awaiting his approval to build. Nothing
-built, nothing applied.** The
+**Status: BUILT as v0.242.0 on Doug's approval (10-08-26 23:26), no switch —
+dark until a CRM has `topics`; crm-test's field applied by the applier and
+read back (10-09-26 03:34 UTC) and the one-time copy run there; the live pass
+as a real non-admin, production and Boston owed (`cevent-topics-crm-handoff.md`,
+`OPEN-ITEMS.md` #41).** The
 requirements are the two F1 rulings recorded in
 `CBM_Events_Finalization_Plan.md` revision 4.29, section F1 — one is Doug's
 (10-08-26), one is Claude's under the two-part test. They are cited below as
@@ -312,5 +315,6 @@ fields until then. The design above stands as written.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.3 | 10-08-26 23:50 | Claude (Claude Code) | Approved by Doug and built as v0.242.0 (no switch, feature-detected). crm-test field applied and the copy run; live pass, production and Boston owed. |
 | 0.2 | 10-08-26 23:25 | Claude (Claude Code) | D1 ruled by Doug: a new `topics` field with a one-time copy, not an in-place change. Awaiting approval to build. |
 | 0.1 | 10-08-26 23:40 | Claude (Claude Code) | First draft, from the two F1 requirements in the Finalization Plan revision 4.29. Nine findings verified on crm-test and in the code (notably: the topic flows through seven places and the website renderer is not one of them; no report counts by topic; the CRM's field manager accepts a type change on update, unproven below the metadata). New field `CEvent.topics` drawn in § 3, the one-time copy in § 7, plan file in § 10. One decision for Doug (D1, new field or in-place change). Awaiting review; nothing built. |
