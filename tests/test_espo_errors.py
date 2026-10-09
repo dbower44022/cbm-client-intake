@@ -83,6 +83,19 @@ def test_forbidden_hint_names_operation_and_entity():
     )) == "edit access to CEngagement records"
 
 
+def test_forbidden_hint_names_an_assignment_refusal_not_the_scope():
+    """EspoCRM's AssignmentChecker refuses an unowned create for a role whose
+    Assignment Permission is not-set. Reported as "create access to Contact
+    records" it sent a funder manager to ask for a grant she already held
+    (live, crm-test, 2026-10-09)."""
+    hint = forbidden_hint(EspoError(
+        "create Contact failed: HTTP 403 "
+        "[Assignment failure: assigned user or team not allowed.]"
+    ))
+    assert hint.startswith("the Assignment Permission its Contact write needs")
+    assert "create access" not in hint
+
+
 def test_forbidden_hint_names_the_linked_record_on_foreign_denial():
     """noAccessToForeignRecord = the denial is on the LINKED record, not the
     relate's own entity (Anthony Sacco 2026-07-20: told 'edit access to

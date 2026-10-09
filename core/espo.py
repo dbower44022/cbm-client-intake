@@ -247,6 +247,17 @@ def forbidden_hint(exc: Exception) -> Optional[str]:
     if not m:
         return None
     op, entity = m.group(1), m.group(2)
+    if "Assignment failure" in text:
+        # EspoCRM's AssignmentChecker, not the scope table: the role's
+        # Assignment Permission (not-set reads as "no") refuses a record that
+        # is assigned to nobody, or to someone outside what the level allows.
+        # Reporting it as a missing create/edit grant sent a user to ask for a
+        # grant they already held (found live 2026-10-09, "+ Add funder").
+        return (
+            f"the Assignment Permission its {entity} write needs — the CRM "
+            f"refused the record's assigned user or team, not the {entity} "
+            "grant itself"
+        )
     if op in ("relate", "unrelate") and "noAccessToForeignRecord" in text:
         # The link name rides in the op prefix: "relate Entity/id/link failed".
         link = re.match(rf"^{op}\s+\S+/\S+/(\S+)", text)

@@ -667,6 +667,16 @@ one shared frontend that derives its domain from the first segment of its URL.
   "+ New company" picker (shared function). Compared through
   `core/crm_upsert.website_key` (scheme, `www.`, case, trailing slash
   ignored; the path counts). No stored website ⇒ match and null-fill it.
+  **The new contact is owned by its creator and the domain team** (v0.249.0,
+  Doug's ruling 2026-10-09): `_create_quick_contact` stamps a NEW contact with
+  `assignedUserId` + `assignedUsersIds` and `teamsIds`, exactly as the
+  profile is. Without it EspoCRM refuses the create for a role whose
+  Assignment Permission is *not-set* ("Assignment failure: assigned user or
+  team not allowed" — the Sponsor Manager Role on both CRMs), and a
+  team-read role could never see the contact it just made. The Partner
+  Manager Role only passed because it is *all*/*all*; the two doors share
+  the function and must stay identical. A reused contact is never
+  re-stamped. The company is still created unowned under the org-wide key.
 - **Contacts tables are per-domain**: mentor shows Role chips and an Agreements
   badge; partner/funder show neither (every contact has the same relationship to
   CBM, and the consent bools are a client-intake concept) but offer **Make
@@ -1680,6 +1690,14 @@ with `main`; **Lakeside took it off the release lane by itself** (its
 unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
+
+- **v0.249.0 (2026-10-09) — the quick-add contact is owned by its creator
+  and team, on both doors.** Committed, not pushed. Found live by Doug as
+  Sally Sponsor on crm-test ("+ Add funder" refused: the CRM's assignment
+  check, misreported as a missing Contact grant); standing rule in the
+  Session Management section. Verified by tests only — the live check is
+  "+ Add funder" on crm-test as Sally Sponsor after the push, the funder
+  saving and its Contacts table showing the contact (`OPEN-ITEMS.md` #43).
 
 - **v0.248.0 (2026-10-09) — the receipt sweep converges; a timing line per
   API request.** Committed, not pushed. The last two review items; standing

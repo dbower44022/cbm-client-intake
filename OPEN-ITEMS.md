@@ -6,6 +6,25 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+43. **"+ Add funder" as a real non-admin was refused by the CRM's assignment
+    check, misreported as a missing Contact grant** (found 2026-10-09 by Doug
+    on crm-test as Sally Sponsor; the first run of the quick-add create path
+    as a non-administrator, which #20 said had never been proven). The Sponsor
+    Manager Role holds Contact create; its Assignment Permission is *not-set*
+    on both CRMs, and the contact was created with no assigned user and no
+    team, so EspoCRM answered `Assignment failure: assigned user or team not
+    allowed` and the app's 403 wording blamed the create grant. **Fixed in
+    v0.249.0** (committed, not pushed): the new contact is owner-stamped like
+    the profile on both doors, and the hint names an assignment refusal.
+    **Owed:** (a) the live check after the push — "+ Add funder" on crm-test
+    as Sally Sponsor saves, and the funder's Contacts table shows the contact;
+    (b) "+ Add partner" as Pat Partner the same way (it passed only by the
+    looser role; the stamp must not have changed that); (c) the company is
+    still created unowned under the org-wide key — whether Sally can see it
+    on her new funder record is #40's question, not this one; (d) the orphan
+    `Account` "Acme Bank and Loan" the failed run left on crm-test — gone
+    with the nightly reset, nothing to do.
+
 42. **Events: the production end-to-end test, and the redirect deferred**
     (Doug's ruling 10-09-26: *"We are not planning on modifying the production
     web site for a few weeks. We want to test the events functionality to be
@@ -1182,6 +1201,7 @@ toggle.
       (`/mentoradmin`, `/mentorprofile`, `/directory` edit, volunteer,
       client intake) while you are there. Guide: `address-paste.md`;
       plan: `prds/address-paste-parsing-plan.md`.
+    - **Quick add — first non-admin run 2026-10-09 (funder door): refused by the CRM's assignment check; fixed in v0.249.0, re-check owed — see #43.**
     - **Quick add — "+ Add partner" / "+ Add funder" (v0.195.0)** — deployed to
       both environments; `RECORD_QUICK_ADD` gates it and `/setup` can now toggle
       it on either. **The UI is reviewed and signed off** (2026-08-12); what is

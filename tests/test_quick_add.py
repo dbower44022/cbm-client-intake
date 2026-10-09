@@ -196,6 +196,14 @@ async def test_creates_account_contact_profile_and_links_them():
     assert contact["phoneNumber"] == "+12165550134"   # E.164
     assert contact["title"] == "Director"
 
+    # The contact is owner-stamped like the profile (Doug's ruling 2026-10-09:
+    # a role at Assignment Permission not-set refuses an unowned create, and a
+    # team-read role could never see one it had made). Both spellings, the
+    # new-session precedent. No team resolved in this fake, so no teamsIds.
+    assert contact["assignedUserId"] == "u1"
+    assert contact["assignedUsersIds"] == ["u1"]
+    assert "teamsIds" not in contact
+
     profile = _payload(fake, "CPartnerProfile")
     assert profile["name"] == "Acme Supply Co."
     assert profile["partnerCompanyId"] == "account-1"
@@ -321,6 +329,32 @@ async def test_existing_contact_is_null_filled_never_overwritten():
     # lastName was empty -> filled; firstName and title were set -> untouched.
     assert fake.updates == [("Contact", "C-OLD", {"lastName": "Reyes"})]
     assert _payload(fake, "CPartnerProfile")["primaryPartnercontactId"] == "C-OLD"
+
+
+@pytest.mark.asyncio
+async def test_new_contact_carries_the_domain_team_on_both_doors():
+    """Partner and funder run the same code, so the stamp is the same on
+    both (Doug, 2026-10-09: "they should not be different"). When the domain
+    team resolves, the contact joins it exactly as the profile does — and a
+    contact created WITHOUT an email (the create-outright branch) is stamped
+    the same way."""
+    settings = get_settings()
+    for cfg, attr, entity in (
+        (PARTNER, "partner_team_name", "CPartnerProfile"),
+        (SPONSOR, "sponsor_team_name", "CSponsorProfile"),
+    ):
+        team_name = getattr(settings, attr)
+        fake = Fake(meta=_PARTNER_META, found={("Team", "name", team_name): {"id": "T-1"}})
+        await service.create_record(
+            cfg, fake, FakeApi(),
+            {"company": "Acme", "firstName": "Dana", "lastName": "Reyes"},  # no email
+            user_id="u1",
+        )
+        contact = _payload(fake, "Contact")
+        assert contact["teamsIds"] == ["T-1"], cfg.slug
+        assert contact["assignedUsersIds"] == ["u1"], cfg.slug
+        assert contact["assignedUserId"] == "u1", cfg.slug
+        assert _payload(fake, entity)["teamsIds"] == ["T-1"], cfg.slug
 
 
 @pytest.mark.asyncio

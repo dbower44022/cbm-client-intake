@@ -3238,7 +3238,8 @@ async def _find_or_create_company(
 
 
 async def _create_quick_contact(
-    cfg: DomainConfig, client: SessionClient, values: dict[str, Any], account_id: str
+    cfg: DomainConfig, client: SessionClient, values: dict[str, Any], account_id: str,
+    *, user_id: str = "", team_ids: Optional[list[str]] = None,
 ) -> tuple[Optional[str], bool]:
     """Find-or-create the primary contact from the form's contact block.
 
@@ -3247,6 +3248,18 @@ async def _create_quick_contact(
     null-filled — the ``find_create_or_fill`` policy the intake forms use, so
     entering a partner whose contact CBM already knows never duplicates them or
     overwrites curated data.
+
+    A NEW contact is owner-stamped like the profile: the creator as assigned
+    user (both spellings, the new-session precedent) and the domain's team.
+    EspoCRM refuses an unowned create outright for a role whose Assignment
+    Permission is *not-set* ("Assignment failure: assigned user or team not
+    allowed" — found live 2026-10-09, the Sponsor Manager Role on crm-test and
+    production), and a role that reads Contact at *team* could never see an
+    unowned contact it had just made. Doug's ruling 2026-10-09: the app owns
+    the contact it creates, on both doors, rather than loosening the role. A
+    REUSED contact is not re-stamped: a team-read role can only match a
+    contact it already reads, so the stamp would be either redundant or a
+    write it is not allowed to make.
     """
     first = (values.get("firstName") or "").strip()
     last = (values.get("lastName") or "").strip()
@@ -3270,6 +3283,11 @@ async def _create_quick_contact(
     normalized = e164_or_none(phone)  # an implausible number is dropped, never fatal
     if normalized:
         payload["phoneNumber"] = normalized
+    if user_id:
+        payload["assignedUserId"] = user_id
+        payload["assignedUsersIds"] = [user_id]
+    if team_ids:
+        payload["teamsIds"] = list(team_ids)
     if not email:
         # No natural key to match on — create outright.
         created = await create_dropping_invalid(client, CONTACT, payload)
@@ -3280,6 +3298,7 @@ async def _create_quick_contact(
         create_payload=payload,
         # Never back-write the match key, the company FK or the discriminator
         # onto a contact that already exists.
+        # (nor the owner stamps — see the docstring).
         fill_keys=("firstName", "lastName", "phoneNumber", "title"),
     )
     return contact_id, action == "created"
@@ -3336,8 +3355,9 @@ async def create_record(
     account_id, account_created = await _find_or_create_company(
         cfg, client, api_client, company, website
     )
+    team_ids = await _quick_add_team_ids(cfg, client)
     contact_id, contact_created = await _create_quick_contact(
-        cfg, client, values, account_id
+        cfg, client, values, account_id, user_id=user_id, team_ids=team_ids,
     )
 
     payload: dict[str, Any] = {"name": (values.get("name") or "").strip() or company}
@@ -3361,7 +3381,6 @@ async def create_record(
         manager_id = (values.get(CREATE_MANAGER_FIELD) or "").strip()
         if manager_id:
             payload[mgr_attr] = manager_id
-    team_ids = await _quick_add_team_ids(cfg, client)
     if team_ids:
         payload["teamsIds"] = team_ids
     # Owner-stamp the creator, so a role scoped to "own" can read back what it

@@ -4,6 +4,48 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.249.0] — 2026-10-09
+
+**fix(sessions): the quick-add contact is owned by its creator and team, on
+both doors; a 403 that is an assignment refusal says so.** Found live by Doug
+on crm-test as Sally Sponsor (Sponsor Management Team, not an administrator):
+"+ Add funder" answered *your CRM role is missing create access to Contact
+records*. The role holds Contact create. What the CRM actually answered was
+`HTTP 403 [Assignment failure: assigned user or team not allowed.]` — the
+Sponsor Manager Role's Assignment Permission is *not-set* (which EspoCRM
+reads as *no*: a regular user may only create a record assigned to themself),
+and the contact was created with no assigned user and no team. The company
+step had already run under the org-wide key, so one `Account` was left behind
+on crm-test (removed by the nightly reset).
+
+- **The contact is owner-stamped like the profile.** `_create_quick_contact`
+  now writes the creator as `assignedUserId` + `assignedUsersIds` (both
+  spellings, the new-session precedent) and the domain's team as `teamsIds`
+  on a NEW contact — exactly what the profile already carried. Partner and
+  funder share the function, so both doors behave the same (Doug's ruling
+  2026-10-09: "they are very similar actions, so they should not be
+  different"). The Partner Manager Role only ever passed because it carries
+  Assignment Permission *all* and reads Contact at *all* on both CRMs; the
+  Sponsor Manager Role is *not-set* and *team* on both. A reused contact is
+  not re-stamped — a team-read role can only match a contact it already
+  reads. **Why the app and not the role:** the stamp also makes the contact
+  visible to a team-read role, which no role change does, and it survives
+  the roles standard tightening. The company is still created unowned under
+  the org-wide key; whether a team-read role can see it is `OPEN-ITEMS.md`
+  #40's question.
+- **`forbidden_hint` names an assignment refusal.** A 403 whose body carries
+  `Assignment failure` is the AssignmentChecker, not the scope table; the
+  hint now reads *the Assignment Permission its Contact write needs — the
+  CRM refused the record's assigned user or team, not the Contact grant
+  itself*, so nobody is sent to ask for a grant they already hold. The Track
+  F production apply page's section 4, step 10 names the old wording; both
+  wordings mean the same thing there.
+
+Verified by tests only (two new in `tests/test_quick_add.py`, one in
+`tests/test_espo_errors.py`). The live check is "+ Add funder" on crm-test
+as Sally Sponsor: the funder saves, and its Contacts table shows the new
+contact. No flag; rollback is a revert.
+
 ## [0.248.0] — 2026-10-09
 
 **fix(receipts): the hourly sweep stops rewriting every receipt; perf: every
