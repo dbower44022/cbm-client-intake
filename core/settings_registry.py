@@ -416,6 +416,11 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="How long field definitions, layouts, labels and enum options are "
             "remembered before the CRM is asked again. A field built in the CRM "
             "shows within this window. 0 reads the CRM on every request."),
+    _s("request_timing_log_ms", GROUP_RELIABILITY, "Timing log threshold", kind="int",
+       unit="ms", component="web",
+       help="The web log carries one 'timing' line per API request: total time, "
+            "CRM calls and their time. 0 logs every API request; a higher value "
+            "logs only the requests slower than it."),
 
     # --- Team gates --------------------------------------------------------
     _s("assign_allowed_teams", GROUP_GATES, "Client Administration", kind="csv"),

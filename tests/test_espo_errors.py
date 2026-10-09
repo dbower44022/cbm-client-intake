@@ -476,3 +476,31 @@ async def test_an_absent_key_is_cached_as_absent(monkeypatch):
     assert await client.metadata_enum_options("CEvent", "audience") is None
     assert await client.metadata("entityDefs.CEvent.fields.audience.options") is None
     assert calls["n"] == 1, "all three read the same key"
+
+
+# --- per-request CRM call accounting (v0.248.0) --------------------------------
+
+async def test_crm_calls_are_counted_only_inside_an_accounting_scope(monkeypatch):
+    from core.espo import begin_crm_accounting, crm_calls
+
+    async def fake_request(self, method, url, **kwargs):
+        return httpx.Response(200, json={"id": "x"}, request=httpx.Request(method, url))
+
+    monkeypatch.setattr(httpx.AsyncClient, "request", fake_request)
+    client = EspoClient("https://crm.example", "k", 30)
+    crm_calls.set(None)
+    await client.get("Contact", "c1")          # no scope: nothing recorded
+    ledger = begin_crm_accounting()
+    await client.get("Contact", "c1")
+    await client.get("Contact", "c2")
+    assert len(ledger) == 2 and all(d >= 0 for d in ledger)
+
+    async def boom(self, method, url, **kwargs):
+        raise httpx.ConnectError("refused")
+
+    monkeypatch.setattr(httpx.AsyncClient, "request", boom)
+    with pytest.raises(EspoTransportError):
+        await client.get("Contact", "c3")
+    assert len(ledger) == 3, "a failed call still counts"
+    crm_calls.set(None)
+    await close_shared_http()

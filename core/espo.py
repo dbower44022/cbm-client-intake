@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import contextvars
 import copy
 import hashlib
 import json
@@ -313,6 +314,23 @@ def _json_or_none(resp: Any) -> Any:
         return None
 
 
+# --- per-request CRM call accounting ------------------------------------------
+# The web process's timing log (core/app._request_timing) reports, for every API
+# request, how many CRM calls it made and how long they took in total — the
+# number that explains a slow page. A contextvar is per request under asyncio.
+crm_calls: contextvars.ContextVar[Optional[list[float]]] = contextvars.ContextVar(
+    "crm_calls", default=None
+)
+
+
+def begin_crm_accounting() -> list[float]:
+    """Start counting CRM calls for the current request; returns the ledger
+    (one entry per call: its duration in seconds)."""
+    ledger: list[float] = []
+    crm_calls.set(ledger)
+    return ledger
+
+
 # --- the shared connection pool ---------------------------------------------
 # Every EspoClient sends through ONE process-wide httpx.AsyncClient, so a TCP +
 # TLS handshake is paid once per pooled connection and reused across calls
@@ -478,6 +496,17 @@ class EspoClient:
         net (P0-3, reliability review 2026-07-17). The message names the
         operation and the CRM host — never credentials (those live only in
         headers, which httpx error text does not include)."""
+        ledger = crm_calls.get()
+        started = time.perf_counter() if ledger is not None else 0.0
+        try:
+            return await self._send(method, url, op=op, params=params, json_body=json_body)
+        finally:
+            if ledger is not None:
+                ledger.append(time.perf_counter() - started)
+
+    async def _send(
+        self, method: str, url: str, *, op: str, params: Any, json_body: Any
+    ) -> httpx.Response:
         try:
             try:
                 return await shared_http().request(

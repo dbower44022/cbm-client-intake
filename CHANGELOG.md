@@ -4,6 +4,37 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.248.0] — 2026-10-09
+
+**fix(receipts): the hourly sweep stops rewriting every receipt; perf: every
+API request logs what it cost.** Two changes, the last two items of the
+10-09-26 performance review.
+
+- **The receipt comparison converges.** On production the hourly sweep
+  reported "211 checked, 0 created, 206 updated" — a rewrite of nearly every
+  receipt, every hour, ~400 needless CRM calls an hour. `sync_row` compared
+  the stored value to the expected one with a bare `!=`, and a text value the
+  CRM hands back is not byte-for-byte what was sent (an empty string reads
+  back as null; line endings and trailing whitespace are normalised).
+  `_same` now compares text the way a reader would (None ≡ "", CRLF ≡ LF,
+  trailing whitespace ignored), so a write happens only when the receipt
+  would actually say something different. **Which key was differing on
+  production is inferred, not verified** — crm-test holds no receipts and
+  production's key is not readable from a workstation — so the sweep's
+  summary line now ends with `differing keys: intakeMessage=206, …`, and a
+  per-receipt DEBUG line gives the stored/expected lengths (never the
+  content). The first production sweep after this deploys answers the
+  question; if the count does not fall, the named key is the next fix.
+- **A timing line per API request.** The web log had no request durations,
+  so slowness could only be felt. `_request_timing` logs
+  `timing GET /…/api/… 200 812ms crm=9/640ms` for every request whose path
+  contains `/api/` (pages, assets and `/healthz` are skipped): total time,
+  and how many CRM calls the request made and their total time, counted in
+  `EspoClient._request` through a per-request contextvar. The same figures
+  ride a `Server-Timing` header, so the browser's network panel shows them.
+  `REQUEST_TIMING_LOG_MS` (default 0 = every API request; `/setup` →
+  Reliability, web) raises the bar to only slower requests.
+
 ## [0.247.0] — 2026-10-09
 
 **perf(comms): the Gmail sync rebuilds its mailbox scopes only when the CRM

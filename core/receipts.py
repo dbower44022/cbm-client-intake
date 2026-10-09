@@ -361,6 +361,35 @@ _SYNC_KEYS = (
 )
 
 
+def _same(current: Any, expected: Any) -> bool:
+    """Does the CRM's stored value already say what we expect?
+
+    The sweep's comparison used to be a bare ``!=``, and on production it
+    rewrote 206 of 211 receipts EVERY hour (worker log 10-09-26: "211 checked,
+    0 created, 206 updated") — a write that never converged, because a text
+    value the CRM hands back is not byte-for-byte what was sent: an empty
+    string reads back as null, line endings and trailing whitespace are
+    normalised. Compare the two as a reader would, so the write happens only
+    when the receipt would actually say something different.
+    """
+    if isinstance(expected, str) or isinstance(current, str):
+        return _text_key(current) == _text_key(expected)
+    return current == expected
+
+
+def _text_key(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value).replace("\r\n", "\n").replace("\r", "\n").rstrip()
+
+
+def _differing_keys(current: dict[str, Any], expected: dict[str, Any]) -> list[str]:
+    return [
+        k for k, v in expected.items()
+        if k in _SYNC_KEYS and v is not None and not _same(current.get(k), v)
+    ]
+
+
 async def _prune_dangling_contact(client, fields: dict[str, Any]) -> dict[str, Any]:
     """Drop a ``contactId`` that points at a Contact the CRM no longer has
     (ZZTEST cleanups, hand-deleted records): EspoCRM rejects the WHOLE write
@@ -508,13 +537,16 @@ async def sync_row(
     row: dict[str, Any],
     *,
     extra: Optional[dict[str, Any]] = None,
+    drift: Optional[dict[str, int]] = None,
 ) -> str:
     """Converge this row's CRM receipt to the expected state.
 
     Returns ``"created"`` / ``"updated"`` / ``"ok"`` (no drift) /
     ``"failed"``. ``extra`` carries action-time-only stamps (the Approve /
     Re-drive dispositionedBy/At, which cannot be derived from the row later)
-    and is applied to whichever write happens now.
+    and is applied to whichever write happens now. ``drift``, when given,
+    counts which keys were found differing (the sweep reports them, so a
+    comparison that never converges names itself in the log).
     """
     expected = expected_fields(row)
     receipt_id = row.get("crm_receipt_id")
@@ -531,10 +563,18 @@ async def sync_row(
                 except Exception:  # noqa: BLE001 — deleted/unreadable: recreate below
                     current = None
             if current is not None:
-                changes = {
-                    k: v for k, v in expected.items()
-                    if k in _SYNC_KEYS and v is not None and current.get(k) != v
-                }
+                differing = _differing_keys(current, expected)
+                changes = {k: expected[k] for k in differing}
+                if drift is not None:
+                    for k in differing:
+                        drift[k] = drift.get(k, 0) + 1
+                if differing:
+                    log.debug(
+                        "receipt %s drift on %s (stored/expected lengths %s)",
+                        receipt_id, ",".join(differing),
+                        [(len(_text_key(current.get(k))), len(_text_key(expected[k])))
+                         for k in differing],
+                    )
                 if extra:
                     changes.update(extra)
                 if not changes:
@@ -619,6 +659,7 @@ async def run_receipt_sweep(client, store, settings: Settings,
     Idempotent, so it doubles as the manual "sync now" action. Persistent
     failures raise the drift alert (same admin channel as delivery alerts)."""
     stats = {"checked": 0, "created": 0, "updated": 0, "ok": 0, "failed": 0}
+    drift: dict[str, int] = {}
     offset = 0
     page = 500
     while True:
@@ -626,7 +667,7 @@ async def run_receipt_sweep(client, store, settings: Settings,
         if not rows:
             break
         for row in rows:
-            outcome = await sync_row(client, store, row)
+            outcome = await sync_row(client, store, row, drift=drift)
             stats["checked"] += 1
             stats[outcome] = stats.get(outcome, 0) + 1
         if len(rows) < page:
@@ -634,8 +675,11 @@ async def run_receipt_sweep(client, store, settings: Settings,
         offset += page
     if stats["created"] or stats["updated"] or stats["failed"]:
         log.info(
-            "receipt sweep: %(checked)s checked, %(created)s created, "
-            "%(updated)s updated, %(failed)s failed", stats,
+            "receipt sweep: %s checked, %s created, %s updated, %s failed; "
+            "differing keys: %s",
+            stats["checked"], stats["created"], stats["updated"], stats["failed"],
+            ", ".join(f"{k}={n}" for k, n in sorted(drift.items(), key=lambda kv: -kv[1]))
+            or "none",
         )
     if stats["failed"] and state is not None:
         from . import monitoring

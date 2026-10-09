@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     # feature-detected field therefore shows within this window of its build.
     # 0 = read the CRM every time. Scripts never cache (core/espo module note).
     crm_metadata_cache_seconds: int = 60
+    # The web log carries one "timing" line per API request (total ms, CRM
+    # calls and their ms). Raise this to log only requests slower than it.
+    request_timing_log_ms: int = 0
 
     # --- public intake POST limits (Phase 6, decision D3: 2 MB / 30 per
     # 10 min). The volunteer form keeps a larger body cap sized for its

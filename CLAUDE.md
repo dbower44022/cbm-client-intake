@@ -1435,6 +1435,19 @@ Conventions. Plan: `prds/action-history-plan.md`;
   case buried in its `except EspoError`** — check before adding another.
   A stale id is deliberately NOT rewritten when this happens: it is the audit
   trail of what the delivery created, so the note recurs by design.
+- **A CRM text value does not read back byte-for-byte** — an empty string
+  reads back as null; line endings and trailing whitespace are normalised. A
+  "converge if different" comparison with a bare `!=` therefore never
+  converges: the hourly receipt sweep rewrote 206 of 211 production receipts
+  every hour until v0.248.0 (`core/receipts._same`). Compare text as a reader
+  would, and make a reconciliation loop REPORT what it found differing
+  (the sweep's summary line names the keys), so a loop that never converges
+  names itself.
+- **Every API request logs what it cost** (v0.248.0):
+  `timing GET /…/api/… 200 812ms crm=9/640ms` in the web log, plus a
+  `Server-Timing` header. Start a slowness report there — the CRM-call count
+  and their time is usually the whole story. `REQUEST_TIMING_LOG_MS` raises
+  the bar.
 - **Implausible phone numbers are dropped, not fatal** — `e164_or_none` returns
   None for <10 or >15 digits, and the Contact create omits the field rather than
   losing the lead. `create_dropping_invalid` handles a CRM-side `valid`/`pattern`
@@ -1668,16 +1681,23 @@ unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
 
+- **v0.248.0 (2026-10-09) — the receipt sweep converges; a timing line per
+  API request.** Committed, not pushed. The last two review items; standing
+  rules in the Gotchas (*This application*). **The receipt fix is inferred**:
+  the live check is the first production sweep's summary line after deploy —
+  `updated` should be near 0, and `differing keys:` names whatever still
+  is. The timing line is the new starting point for any slowness report.
+
 - **v0.247.0 (2026-10-09) — the Gmail sync rebuilds its scopes only when the
-  CRM changed.** Committed, not pushed. Third review item, Doug's option A;
+  CRM changed.** Pushed 10-09-26 with v0.246.0. Third review item, Doug's option A;
   standing rule in the Email section above. Verified by tests plus a
   read-only probe that the modified-after filter counts on crm-test. The
   live check is the production worker log: "scopes reused" at debug, one
   "scopes rebuilt (…)" an hour, and the CRM call count per pass falling
   from ~400 to single figures.
 
-- **v0.246.0 (2026-10-09) — CRM metadata is cached for a minute.** Committed,
-  not pushed. Second review item; standing rule in the `espo.py` line above.
+- **v0.246.0 (2026-10-09) — CRM metadata is cached for a minute.** Pushed
+  10-09-26. Second review item; standing rule in the `espo.py` line above.
   What it changes for a live pass: **a field built in the CRM shows in the
   app within a minute, not instantly** — wait, or set the cache to 0 at
   `/setup` → Reliability for the pass. Scripts are unaffected (not armed).

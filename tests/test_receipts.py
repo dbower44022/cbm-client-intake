@@ -418,3 +418,54 @@ async def test_an_unreadable_reread_keeps_the_last_good_list():
     out = await receipts._gate_status(Broken(), {"intakeStatus": "Held-Company"})
     assert out["intakeStatus"] == "Received"       # the stale list, not a crash
     _reset_status_cache()
+
+
+# --- the comparison converges (v0.248.0) ---------------------------------------
+# On production the hourly sweep rewrote 206 of 211 receipts every hour: the
+# bare ``!=`` saw a difference the CRM's normalisation of text guarantees —
+# "" reads back as null, line endings and trailing whitespace change.
+
+def test_same_reads_text_the_way_the_crm_hands_it_back():
+    assert receipts._same(None, "")
+    assert receipts._same("", None)
+    assert receipts._same("a\r\nb", "a\nb")
+    assert receipts._same("a\n", "a")
+    assert receipts._same("x", "x")
+    assert not receipts._same("x", "y")
+    assert not receipts._same(None, "x")
+    assert receipts._same(None, None) and not receipts._same(3, 4)
+
+
+@pytest.mark.anyio
+async def test_sync_does_not_rewrite_a_receipt_the_crm_normalised():
+    espo, row = FakeEspo(), _row()
+    store = FakeStore([row])
+    assert await receipts.sync_row(espo, store, row) == "created"
+    # What the CRM hands back for an empty intakeMessage, and a payload whose
+    # CRLF became LF with the trailing newline gone.
+    stored = espo.records["r1"]
+    stored["intakeMessage"] = None
+    stored["payload"] = stored["payload"].replace("\n", "\r\n") + "\n"
+    drift: dict[str, int] = {}
+    assert await receipts.sync_row(espo, store, row, drift=drift) == "ok"
+    assert drift == {}
+
+
+@pytest.mark.anyio
+async def test_sweep_names_the_keys_that_differed(caplog):
+    import logging
+
+    class Cfg:
+        alert_cooldown_seconds = 3600
+        environment = "test"
+
+    espo = FakeEspo()
+    rows = [_row(id="s1", submission_token="t1"), _row(id="s2", submission_token="t2")]
+    store = FakeStore(rows)
+    await receipts.run_receipt_sweep(espo, store, Cfg())
+    for r in rows:
+        espo.records[r["crm_receipt_id"]]["intakeStatus"] = "Error"
+    with caplog.at_level(logging.INFO, logger="cbm_intake.receipts"):
+        stats = await receipts.run_receipt_sweep(espo, store, Cfg())
+    assert stats["updated"] == 2
+    assert "differing keys: intakeStatus=2" in caplog.text

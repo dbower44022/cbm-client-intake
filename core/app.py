@@ -784,6 +784,35 @@ def create_app(
         )
 
     @app.middleware("http")
+    async def _request_timing(request: Request, call_next):
+        """One line per API request with what it cost — the number a slowness
+        report needs and the log did not have (10-09-26 review): total time,
+        and how many CRM calls it made and how long they took. Static files,
+        pages and /healthz are skipped; `REQUEST_TIMING_LOG_MS` raises the bar
+        to only requests slower than it. The same figures ride a
+        ``Server-Timing`` header, so the browser's network panel shows them."""
+        path = request.url.path
+        if "/api/" not in path:
+            return await call_next(request)
+        from .espo import begin_crm_accounting
+
+        ledger = begin_crm_accounting()
+        started = time.perf_counter()
+        response = await call_next(request)
+        total_ms = (time.perf_counter() - started) * 1000
+        crm_ms = sum(ledger) * 1000
+        response.headers["Server-Timing"] = (
+            f'app;dur={total_ms:.0f}, crm;dur={crm_ms:.0f};desc="{len(ledger)} calls"'
+        )
+        if total_ms >= get_settings().request_timing_log_ms:
+            log.info(
+                "timing %s %s %s %.0fms crm=%d/%.0fms",
+                request.method, path, response.status_code,
+                total_ms, len(ledger), crm_ms,
+            )
+        return response
+
+    @app.middleware("http")
     async def _revalidate_frontend(request: Request, call_next):
         """Make the frontend always revalidate so deploys take effect at once.
 
