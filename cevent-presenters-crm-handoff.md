@@ -1,6 +1,6 @@
 # CRM handoff — presenters on events (Track F, F4)
 
-Last Updated: 10-08-26 23:45 · Revision 1.3 — see change log at the end.
+Last Updated: 10-09-26 00:25 · Revision 1.4 — see change log at the end.
 
 One new record type, `CEventPresenter`, joining one event to one presenter and
 carrying that presenter's biography, title, company, photo and display order
@@ -113,7 +113,7 @@ container (`[[do-app-console-scripting]]`): § 2 dry run, § 2 apply, § 3 dry
 run, § 3 apply, § 4 steps 1 and 2. Then `EVENT_PRESENTERS` on at `/setup`, and
 § 4 step 3 as a real non-admin. Record the result in § 0.
 
-**The step page for all of it, written 10-08-26:** https://claude.ai/artifact/1KzCM3LbjyvGWp4k2BXP23
+**The step page for all of it, written 10-08-26 and extended 10-09-26 (rev 2.0, now *Track F Production Apply*: the F1 topics change rides the same console session, `cevent-topics-crm-handoff.md` § 5):** https://claude.ai/artifact/1KzCM3LbjyvGWp4k2BXP23
 (Doug's private page) — six sections: the version check and the console,
 the twelve console commands with their expected output (the dry run's nine
 lines and fingerprint `5a78484e6b9c`, the apply with `--production`, the role
@@ -146,6 +146,7 @@ computer using Boston's settings file. Switch stays off until Boston's staff ask
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.4 | 10-09-26 00:25 | Claude (Claude Code) | The Sunday step page now carries the topics change too (rev 2.0, renamed Track F Production Apply); the prerequisite is v0.242.0, live since 23:47 on 10-08. |
 | 1.3 | 10-08-26 23:45 | Claude (Claude Code) | § 2 and § 3 name the committed applier (`scripts/apply_crm_plan.py`, v0.241.2 — the skill copy was never in a container); the expected fingerprint `5a78484e6b9c` recorded; § 5 carries the container commands and the production step page https://claude.ai/artifact/1KzCM3LbjyvGWp4k2BXP23; § 0 names the v0.241.2 prerequisite. |
 | 1.2 | 10-08-26 11:11 | Claude (Claude Code) | Assignment Permission raised to `all`: `team` still refused (a record with neither team nor assigned user fails the team-level check, read from EspoCRM's source). Applied on crm-test 11:11. |
 | 1.1 | 10-08-26 11:04 | Claude (Claude Code) | Live pass step 3.10 refused Contact create with an assignment failure; the role script now also sets the Marketing Admin Role's Assignment Permission to `team`, applied on crm-test 11:03. |

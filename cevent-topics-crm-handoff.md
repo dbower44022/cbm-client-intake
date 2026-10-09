@@ -1,6 +1,6 @@
 # CRM handoff — topics on events (Track F, F1)
 
-Last Updated: 10-09-26 00:05 · Revision 1.2 — see change log at the end.
+Last Updated: 10-09-26 00:25 · Revision 1.3 — see change log at the end.
 
 One new field on the event, `CEvent.topics` — a multiple-choice field with the
 same ten values as the single `topic` it supersedes — and a one-time copy of
@@ -112,6 +112,11 @@ PYTHONPATH=/app .venv/bin/python scripts/migrate_event_topics.py
 PYTHONPATH=/app .venv/bin/python scripts/migrate_event_topics.py --apply
 ```
 
+**The step page for Sunday covers this together with the presenters change:**
+https://claude.ai/artifact/1KzCM3LbjyvGWp4k2BXP23 (Doug's private page, *Track F
+Production Apply*, rev 2.0 — section 2 steps 11–15 are this handoff's § 2–§ 4,
+section 5 the public library, section 6 the CRM read).
+
 Between the plan and the copy the editor already shows Topics (the field
 exists) and an event opened in it shows none until the copy has run —
 minutes, in the same window. The public library's filter is empty for the
@@ -127,6 +132,7 @@ administrator and Boston's settings file. Zero events are expected to copy.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 10-09-26 00:25 | Claude (Claude Code) | § 5 points at the Sunday step page, which now carries the topics steps beside the presenters ones. |
 | 1.2 | 10-09-26 00:05 | Claude (Claude Code) | crm-test live pass done by Doug as Mark Marketing (§ 4 step 2); evidence from the web log. Production and Boston owed. |
 | 1.1 | 10-08-26 23:50 | Claude (Claude Code) | v0.242.0 live on production, crm-test and dev (23:47); the crm-test live pass and production's § 5 can run. |
 | 1.0 | 10-08-26 23:55 | Claude (Claude Code) | Written after the crm-test run: field applied and verified, the copy run and read back. Production and Boston owed. |

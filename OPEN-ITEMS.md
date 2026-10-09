@@ -559,7 +559,9 @@ block a deploy.)*
     the public library and found by either, its page's eyebrow naming both,
     an event with no topic still saving. (b) **Production** at a Sunday slot
     from inside the web container: the plan, then the copy (ten published
-    recordings expected). (c) **Boston** with its next release. Design:
+    recordings expected) — folded into the Sunday step page
+    https://claude.ai/artifact/1KzCM3LbjyvGWp4k2BXP23 (rev 2.0, *Track F Production
+    Apply*: section 2 steps 11–15, section 5, section 6 step 4). (c) **Boston** with its next release. Design:
     `prds/events/CBM_Events_Topics_Design.md`; handoff
     `cevent-topics-crm-handoff.md`.
 
@@ -585,7 +587,7 @@ block a deploy.)*
     is a read-only mirror of the account-contact role (v0.241.1, title copied
     onto the entry — pushed 2026-10-08 22:34, all three apps report 0.241.1). Owed: (b) **Production**: plan
     + role script at a Sunday slot (`cevent-presenters-crm-handoff.md` § 5),
-    then the switch at `/setup` — **step page written 10-08-26:**
+    then the switch at `/setup` — **step page written 10-08-26 (rev 2.0 on 10-09 also carries #41's topics steps; titled *Track F Production Apply*):**
     https://claude.ai/artifact/1KzCM3LbjyvGWp4k2BXP23 (private; console commands with
     expected output, the switch, a non-admin pass on two unticked check
     events, the CRM reads, the clean-up). **Prerequisite: production on
