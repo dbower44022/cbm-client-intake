@@ -1,6 +1,6 @@
 # CBM Events & Webinars — Finalization Plan
 
-Last Updated: 10-08-26 00:42 · Revision 4.25 — see change log at the end.
+Last Updated: 10-08-26 23:20 · Revision 4.28 — see change log at the end.
 
 Companion to `CBM_Events_PRD.md`, `CBM_Events_Implementation_Plan.md` and
 `CBM_Events_Registration_Recognition_Plan.md`. Those three say what the feature
@@ -129,7 +129,7 @@ after Doug's requirements are gathered, and nothing is settled until he rules.
 
 | # | Feature | Raised by | State |
 |---|---|---|---|
-| F1 | Event topic: multiple selections, plus a user-entered value | User review, 09-2026 | Catalogued |
+| F1 | Event topic: multiple selections from the curated list (the user-entered value was struck 10-08-26) | User review, 09-2026 | Requirements in progress — 1 ruled 10-08-26 |
 | F2 | Display Date/Time: the moment an event may first appear on the public pages | User review, 09-2026 | Built v0.233.0 (09-29-26); reviewed live on crm-test 09-30; **CRM applied to production 10-07-26**; Boston owed (`OPEN-ITEMS.md` #35) |
 | F3 | Event audience: Internal, a specific chapter, or Public — Internal events form a calendar on the chapter's portal | User review, 09-2026 | Built v0.233.0 (09-29-26); reviewed live on crm-test 09-30; **CRM applied to production 10-07-26**; Boston owed (`OPEN-ITEMS.md` #35) |
 | F4 | Presenters: select or add them per event, with an optional presenter biography on the event page | User review, 09-2026 | Built v0.241.0/.1 (dark); crm-test CRM done and live pass done 10-08-26; production, Boston owed |
@@ -158,11 +158,22 @@ pre-defined topics."
 - A user-entered value is new. It has no precedent in the 07-25 ruling, and
   EspoCRM refuses a multi-enum value outside the field's option list.
 
-*Questions to settle at design, not yet asked:* who may enter a new value
-(staff only, surely); whether a user-entered value appears in the public topic
-filter; whether it is stored beside the curated values or in its own field;
-whether a repeated user-entered value is ever promoted into the curated list;
-and how an event with two topics is counted in the programme reports.
+*Requirements, ruled by Doug 10-08-26.* These are rulings; the design is not
+drafted.
+
+1. **No user-entered topic. The editor offers the curated list only.** A
+   staff member who finds no fit for an event changes the list, not the
+   event: the list is CRM configuration (`CEvent.topic`'s options), changed
+   by the CRM administrator and, under the chapter standard, carried by the
+   plan that builds every chapter's CRM. Ruled 10-08-26 on a three-option
+   question (the list grows from the editor; the event keeps a typed value;
+   the event keeps it with suggestions) — Doug struck the typed value
+   outright: *"They must pick from the list, or update the list if they do
+   not like the choices."* This supersedes the user-entered half of the
+   stated need; the multiple-selection half stands. Four of the catalogued
+   questions fall with it (who may enter a value, whether it is filterable,
+   where it is stored, promotion). What remains to rule: how an event with
+   two topics is counted and filtered.
 
 **F2 — Display Date/Time.**
 
@@ -673,6 +684,7 @@ attendance recorded → recording link pasted → the engagement rollup shows it
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 4.28 | 10-08-26 23:20 | Claude (Claude Code) | F1 requirement 1 ruled by Doug (10-08-26): no user-entered topic — pick from the curated list or change the list in the CRM. Four of the five open questions fall; the two-topic counting question remains. F1 state moved to Requirements in progress. |
 | 4.27 | 10-08-26 22:31 | Claude (Claude Code) | F4 live pass done on crm-test 10-08-26; two defects found and fixed. |
 | 4.26 | 10-08-26 01:26 | Claude (Claude Code) | F4 design approved (D1, D2 ruled) and built as v0.241.0, dark; crm-test CRM side applied; F4 state moved to Built. |
 | 4.25 | 10-08-26 00:42 | Claude (Claude Code) | F4 design drafted (`CBM_Events_Presenters_Design.md` rev 0.1, plan file `scripts/plans/cevent-presenters.json`); F4 state moved to Design drafted, awaiting review. |
