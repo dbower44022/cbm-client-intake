@@ -4,6 +4,31 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.242.0] — 2026-10-09
+
+**feat(events): an event carries several curated topics (Track F, F1).**
+Design `prds/events/CBM_Events_Topics_Design.md` (Doug's ruling 10-08-26:
+no user-entered topic — staff pick from the list or change the list in the
+CRM; one decision, D1, ruled the same night). A new multiple-choice field on
+the event, `topics`, holds every subject with the same ten values as the
+single `topic` it supersedes; the editor shows **Topics** as the existing
+tick list where Topic stood; the recorded library's filter offers every
+topic any recording carries and a chosen topic matches a recording carrying
+it among others (F1-2); the event page's eyebrow and the staff grid's chips
+name all of them; the public payloads keep `category` (the first topic) and
+gain `categories`; the Events tabs' Topic column names every topic.
+**Feature-detected, no switch** (the F2/F3 pattern): a CRM without `topics`
+behaves exactly as v0.241.2, and on a CRM with it the single `topic` is
+retired from the editor, the write whitelist and every read
+(`service.event_topics` — the retired column stays in the CRM). The public
+filter's order now follows the live field's option order, with
+`cfg.TOPIC_ORDER` as the fallback. `scripts/migrate_event_topics.py` copies
+each event's single topic into the new field once (dry-run by default,
+idempotent, refuses to run before the plan, names a value outside the list
+rather than writing it); it ships in the image so production's copy runs
+from inside the container. Plan file `scripts/plans/cevent-topics.json`.
+Fifteen tests.
+
 ## [0.241.2] — 2026-10-08
 
 **chore(crm): the CRM-plan applier ships in the image.** The applier that

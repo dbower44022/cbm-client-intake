@@ -143,7 +143,7 @@
       hero.hidden = false;
       hero.addEventListener("error", function () { hero.hidden = true; });
     }
-    if ($("eyebrow")) $("eyebrow").textContent = [event.category, event.format].filter(Boolean).join(" · ");
+    if ($("eyebrow")) $("eyebrow").textContent = ((event.categories && event.categories.length) ? event.categories : [event.category]).concat([event.format]).filter(Boolean).join(" · ");
     if ($("title")) $("title").textContent = event.topic || "Workshop";
     if ($("when")) $("when").textContent = whenLine(event);
     if ($("summary")) $("summary").textContent = event.summary || "";

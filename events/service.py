@@ -255,18 +255,64 @@ async def published_recordings(client: EspoApi) -> list[dict[str, Any]]:
     return [r for r in _shown_publicly(rows, now) if (r.get("recordingUrl") or "").strip()]
 
 
-def recording_topics(rows: list[dict[str, Any]]) -> list[str]:
+def event_topics(event: dict[str, Any]) -> list[str]:
+    """The topics an event carries, whichever field this CRM holds them in (F1).
+
+    A row read from a CRM that HAS ``topics`` carries the key (a list, or null
+    for an event never given one), and that list is the whole answer — even
+    when it is empty, because the single ``topic`` is retired on such a CRM
+    (design § 3) and reading it as a fallback would resurrect a value staff
+    had deliberately cleared. A row WITHOUT the key comes from a CRM before
+    the change (selecting an attribute the CRM lacks is silently ignored,
+    verified 09-29-26), where the single topic is the only one there is.
+    """
+    if cfg.TOPICS_FIELD in event:
+        values = event.get(cfg.TOPICS_FIELD) or []
+        if isinstance(values, str):
+            values = [values]
+        return list(dict.fromkeys(
+            v.strip() for v in values if isinstance(v, str) and v.strip()
+        ))
+    single = (event.get(cfg.TOPIC_FIELD) or "").strip()
+    return [single] if single else []
+
+
+async def live_topic_order(client: EspoApi) -> Optional[list[str]]:
+    """The topic list in the CRM's own order, or None when it cannot be read.
+
+    F1-1 makes the list a thing the CRM administrator changes, so the public
+    filter should sort a value they add where the CRM puts it, not last. Read
+    from the field the live CRM holds topics in; ``cfg.TOPIC_ORDER`` is the
+    fallback the caller applies when this answers None.
+    """
+    reader = getattr(client, "metadata_enum_options", None)
+    if reader is None:
+        return None
+    try:
+        fields = await live_event_fields(client)
+        name = cfg.TOPICS_FIELD if cfg.TOPICS_FIELD in fields else cfg.TOPIC_FIELD
+        options = await reader(cfg.EVENT, name)
+    except (EspoError, ValueError):
+        return None
+    return [o for o in (options or []) if isinstance(o, str) and o] or None
+
+
+def recording_topics(
+    rows: list[dict[str, Any]], *, order: Optional[Iterable[str]] = None
+) -> list[str]:
     """The topics that actually have a recording, in the CRM's own order.
 
     Derived from the recordings rather than from the CRM's ten curated options,
     because a filter offering a topic with nothing behind it is a dead end — the
     visitor picks it and the panel empties. Deliberately NOT narrowed by the
     current search, so the list does not shift under the reader between one
-    search and the next.
+    search and the next. A recording with several topics (F1-2) counts under
+    each of them. ``order`` is the live option order; ``cfg.TOPIC_ORDER`` when
+    it could not be read.
     """
-    present = {(r.get("topic") or "").strip() for r in rows}
-    present.discard("")
-    ordered = [t for t in cfg.TOPIC_ORDER if t in present]
+    present = {t for r in rows for t in event_topics(r)}
+    sequence = list(order) if order else list(cfg.TOPIC_ORDER)
+    ordered = [t for t in sequence if t in present]
     # Anything the CRM has since added to the enum, or a stored value that has
     # drifted out of it, still appears rather than vanishing from the filter.
     return ordered + sorted(present - set(ordered))
@@ -276,17 +322,19 @@ def filter_recordings(
     rows: list[dict[str, Any]], *, query: str = "", topic: str = "", limit: int = 50
 ) -> list[dict[str, Any]]:
     """Search and topic filter, both server-side (EV-04), so the browser never
-    receives the whole archive to sift. Pure — testable without a CRM."""
+    receives the whole archive to sift. Pure — testable without a CRM. A chosen
+    topic matches a recording carrying it among others (F1-2)."""
     hits = rows
     wanted = (topic or "").strip().lower()
     if wanted:
-        hits = [r for r in hits if (r.get("topic") or "").strip().lower() == wanted]
+        hits = [r for r in hits if wanted in [t.lower() for t in event_topics(r)]]
     needle = (query or "").strip().lower()
     if needle:
         hits = [
             r for r in hits
             if needle in " ".join(
-                str(r.get(key) or "") for key in ("name", "description", "topic")
+                [str(r.get("name") or ""), str(r.get("description") or ""),
+                 *event_topics(r)]
             ).lower()
         ]
     return hits[: max(1, limit)]
@@ -515,6 +563,7 @@ def public_event(
 
     video_id = video_id_from_url(event.get("recordingUrl") or "")
     slug = event.get("slug") or ""
+    topics = event_topics(event)
 
     payload: dict[str, Any] = {
         # --- the existing contract (do not rename) ---
@@ -535,7 +584,10 @@ def public_event(
         "endsAtUtc": end.isoformat() if end else None,
         "eventType": event.get("eventType") or "",
         "format": event.get("format") or "",
-        "category": event.get("topic") or "",      # the CRM subject category
+        # The CRM subject categories (F1-2). ``category`` keeps the contract's
+        # shape — one string, the first topic — and ``categories`` carries all.
+        "category": (topics[0] if topics else ""),
+        "categories": topics,
         "location": (event.get("location") or "").strip(),
         "status": event.get("status") or "",
         "seatsRemaining": seats_left,
@@ -575,13 +627,15 @@ def public_recording(
     local = to_local(start) if start else None
     video_id = video_id_from_url(event.get("recordingUrl") or "")
     slug = event.get("slug") or ""
+    topics = event_topics(event)
     return {
         "id": event.get("id"),
         "title": event.get("name") or "",
         "summary": (event.get("description") or "").strip(),
         "date": local.strftime("%Y-%m-%d") if local else None,
         "dateLabel": local.strftime("%b %-d, %Y").upper() if local else "",
-        "category": event.get("topic") or "",
+        "category": (topics[0] if topics else ""),
+        "categories": topics,
         "recordingUrl": event.get("recordingUrl") or "",
         "videoId": video_id or "",
         "thumbnailUrl": thumbnail_url(video_id) if video_id else "",
@@ -807,11 +861,14 @@ async def option_labels(client: EspoApi) -> dict[str, dict[str, str]]:
 
 
 def editor_fields(available: Iterable[str]) -> list[cfg.EventField]:
-    """The field spec, less the F2/F3 fields the live CRM does not have."""
+    """The field spec, less the feature-detected fields the live CRM does not
+    have, and less any field a present one retires (``topic`` once the CRM has
+    ``topics``, F1)."""
     present = set(available)
     return [
         f for f in cfg.EVENT_FIELDS
-        if f.name not in cfg.DETECTED_FIELDS or f.name in present
+        if (f.name not in cfg.DETECTED_FIELDS or f.name in present)
+        and not (f.retired_by and f.retired_by in present)
     ]
 
 
@@ -838,6 +895,9 @@ def _writable(
     """
     allowed = set(cfg.EVENT_WRITABLE_NAMES if allow_managed else cfg.EVENT_EDIT_NAMES)
     allowed -= set(cfg.DETECTED_FIELDS) - set(available)
+    # A retired field is never written once its successor exists (F1): a
+    # posted-back ``topic`` on a CRM with ``topics`` is dropped here.
+    allowed -= {name for name, by in cfg.RETIRED_BY.items() if by in set(available)}
     if not allow_managed:
         present = set(available)
         stored = current or {}

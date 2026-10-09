@@ -47,6 +47,7 @@ ENGAGEMENT_CONTACT_FK = "primaryEngagementContactId"
 def _event_ref(event: dict[str, Any]) -> dict[str, Any]:
     start = service.parse_crm_datetime(event.get("dateStart"))
     local = service.to_local(start) if start else None
+    topics = service.event_topics(event)
     return {
         "id": event.get("id"),
         "title": event.get("name") or "(untitled)",
@@ -54,7 +55,10 @@ def _event_ref(event: dict[str, Any]) -> dict[str, Any]:
         "date": local.strftime("%Y-%m-%d") if local else None,
         "dateLabel": local.strftime("%b %-d, %Y") if local else "",
         "startsAtUtc": start.isoformat() if start else None,
-        "category": event.get("topic") or "",
+        # F1-2: the Topic column names every topic; ``category`` is a label
+        # here, not the public contract, so it carries all of them.
+        "category": ", ".join(topics),
+        "categories": topics,
         "format": event.get("format") or "",
     }
 

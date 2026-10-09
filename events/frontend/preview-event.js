@@ -93,7 +93,7 @@
       $("hero").src = event.imageUrl;
       $("hero").hidden = false;
     }
-    $("eyebrow").textContent = [event.category, event.format].filter(Boolean).join(" · ");
+    $("eyebrow").textContent = ((event.categories && event.categories.length) ? event.categories : [event.category]).concat([event.format]).filter(Boolean).join(" · ");
     $("title").textContent = event.topic || "(untitled)";
     $("when").textContent = [event.month, event.day, event.time].filter(Boolean).join(" ")
       || "Date to be confirmed";

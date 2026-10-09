@@ -136,11 +136,14 @@ async def recordings(
             # ONE read; the search, the topic filter and the topic list are all
             # derived from it.
             rows = await service.published_recordings(_client(request))
+            # F1: the filter follows the CRM's own option order (None ⇒ the
+            # code's fallback order), read once per cache miss.
+            order = await service.live_topic_order(_client(request))
         except EspoError as exc:
             raise _crm_failure(exc, "recordings") from exc
         hits = service.filter_recordings(rows, query=q, topic=topic, limit=limit)
         cached = {
-            "topics": service.recording_topics(rows),
+            "topics": service.recording_topics(rows, order=order),
             "recordings": [
                 service.public_recording(
                     r,

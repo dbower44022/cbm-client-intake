@@ -116,9 +116,22 @@ PRESENTER_CONTACT_TYPE = "Presenter"
 #: Fields on CEvent that exist only once their CRM change has landed.
 PRESENTER_FIELDS: tuple[str, ...] = (SHOW_BIOS_FIELD,)
 
+# --- Topics (Track F, F1) ---------------------------------------------------
+# An event carries SEVERAL curated topics (F1-2) in ``topics`` — a multiEnum
+# with the same ten values as the single ``topic`` it supersedes. Nobody types
+# a topic into an event (F1-1, Doug 10-08-26): the list is CRM configuration,
+# changed in the CRM. Built by ``scripts/plans/cevent-topics.json``; design
+# ``prds/events/CBM_Events_Topics_Design.md``. Feature-detected: a CRM without
+# ``topics`` keeps the single ``topic`` everywhere, exactly as before; a CRM
+# with it retires ``topic`` from the editor, the whitelist and every read
+# (``service.event_topics``). The retired column stays in the CRM.
+TOPIC_FIELD = "topic"
+TOPICS_FIELD = "topics"
+TOPIC_FIELDS: tuple[str, ...] = (TOPICS_FIELD,)
+
 #: Every feature-detected CEvent field: present in the editor and the write
 #: whitelist only when the live CRM has it.
-DETECTED_FIELDS: tuple[str, ...] = AUDIENCE_FIELDS + PRESENTER_FIELDS
+DETECTED_FIELDS: tuple[str, ...] = AUDIENCE_FIELDS + PRESENTER_FIELDS + TOPIC_FIELDS
 
 #: Statuses that occupy a seat.
 SEAT_TAKING = (REG_REGISTERED, REG_ATTENDED, REG_NO_SHOW)
@@ -149,6 +162,10 @@ PUBLIC_SELECT = ",".join([
     "takesRegistrations", "eventReleaseDate",
     # F4. Same rule: an attribute the CRM lacks is ignored on read.
     "showPresenterBios",
+    # F1. Same rule. A row from a CRM that has the field carries the key (a
+    # list or null); a row from one that does not has no key — which is how
+    # ``service.event_topics`` tells the two apart.
+    "topics",
 ])
 
 # --- event graphic (EV-05b) -------------------------------------------------
@@ -209,6 +226,10 @@ class EventField:
     #: field stays the app's, exactly as ``app_managed`` alone would make it.
     #: Decides nothing when the condition's field is absent from the live CRM.
     editable_when: Optional[tuple[str, tuple[str, ...]]] = None
+    #: The feature-detected field that SUPERSEDES this one: once the live CRM
+    #: has it, this field leaves the editor and the write whitelist. The single
+    #: ``topic`` is the case, retired by ``topics`` (F1).
+    retired_by: Optional[str] = None
 
 
 #: The curated subject categories, in the order the CRM lists them. Used to
@@ -216,7 +237,10 @@ class EventField:
 #: Event Administration does. Only the ones that actually have a recording are
 #: offered, and a value that has drifted out of this list still appears rather
 #: than disappearing from the filter — the CRM stays the source of truth, this
-#: is only an ordering.
+#: is only an ordering — and since F1 the FALLBACK ordering: the filter follows
+#: the live field's own option order (``service.live_topic_order``) so a value
+#: the CRM administrator adds sorts where the CRM puts it, and this list only
+#: when the metadata cannot be read.
 TOPIC_ORDER: tuple[str, ...] = (
     "Business Fundamentals",
     "Marketing & Sales",
@@ -240,7 +264,14 @@ EVENT_FIELDS: list[EventField] = [
     EventField("format", "Format", "enum", "Event",
                help="Virtual or Hybrid events get a Zoom webinar."),
     EventField("topic", "Topic", "enum", "Event",
-               help="Subject category used by the website's recorded-webinar search."),
+               help="Subject category used by the website's recorded-webinar search.",
+               retired_by=TOPICS_FIELD),
+    # F1: several topics, curated list only. Shown in place of Topic once the
+    # CRM has the field; the control is the existing multiEnum tick list.
+    EventField(TOPICS_FIELD, "Topics", "multiEnum", "Event",
+               help="Every subject this event covers. The website's recorded-webinar "
+                    "filter lists the event under each one. To add a subject to the "
+                    "list, change the field in the CRM."),
 
     # Schedule
     EventField("dateStart", "Starts", "datetime", "Schedule"),
@@ -359,3 +390,7 @@ EVENT_WRITABLE_NAMES: frozenset[str] = frozenset(f.name for f in EVENT_FIELDS)
 EVENT_CONDITIONAL_EDITS: dict[str, tuple[str, tuple[str, ...]]] = {
     f.name: f.editable_when for f in EVENT_FIELDS if f.editable_when
 }
+
+#: Field name to the feature-detected field that retires it. Today: ``topic``
+#: by ``topics`` (F1).
+RETIRED_BY: dict[str, str] = {f.name: f.retired_by for f in EVENT_FIELDS if f.retired_by}

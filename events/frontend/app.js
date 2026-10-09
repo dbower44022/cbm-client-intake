@@ -117,7 +117,7 @@
     var needle = state.search.trim().toLowerCase();
     if (needle) {
       rows = rows.filter(function (e) {
-        return [e.topic, e.summary, e.category, e.status, e.format, e.location]
+        return [e.topic, e.summary, e.category, (e.categories || []).join(" "), e.status, e.format, e.location]
           .join(" ").toLowerCase().indexOf(needle) !== -1;
       });
     }
@@ -161,12 +161,16 @@
       var strong = document.createElement("strong");
       strong.textContent = item.topic || "(untitled)";
       nameCell.appendChild(strong);
-      if (item.category) {
+      // One chip per topic (F1-2); `category` alone is a row from a CRM that
+      // still holds the single topic.
+      var subjects = (item.categories && item.categories.length)
+        ? item.categories : (item.category ? [item.category] : []);
+      subjects.forEach(function (subject) {
         var chip = document.createElement("span");
         chip.className = "ev__chip";
-        chip.textContent = item.category;
+        chip.textContent = subject;
         nameCell.appendChild(chip);
-      }
+      });
       cell(fmtWhen(item));
       cell(item.format || "—");
       cell(item.status || "—");
