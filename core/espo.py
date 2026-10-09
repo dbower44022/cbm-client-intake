@@ -12,6 +12,7 @@ end-to-end locally without a live instance.
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import logging
@@ -309,6 +310,48 @@ def _json_or_none(resp: Any) -> Any:
         return None
 
 
+# --- the shared connection pool ---------------------------------------------
+# Every EspoClient sends through ONE process-wide httpx.AsyncClient, so a TCP +
+# TLS handshake is paid once per pooled connection and reused across calls
+# (HTTP keep-alive) rather than once per CRM call. Before v0.245.0 ``_request``
+# opened a fresh AsyncClient per call: measured 10-09-26, a fresh-connection
+# call to the production CRM cost ~100-125 ms against ~37 ms on a reused
+# connection, and a record page makes nine such calls in a row. Credentials
+# are NOT pooled — they ride per request in the headers, so the per-user
+# token clients and the API-key client share the same sockets safely.
+#
+# The pool is bound to the running event loop (a client built on one loop
+# cannot be used from another — pytest gives every test its own) and rebuilt
+# when the loop changes or the pool was closed. ``close_shared_http`` is the
+# lifespan hook; a process that never calls it just lets the sockets die.
+_pool: Optional[httpx.AsyncClient] = None
+_pool_loop: Any = None
+
+# Keep idle connections a little SHORTER than the CRM's nginx keepalive_timeout
+# (65 s by default), so we rarely pick a socket the server has already closed.
+_POOL_LIMITS = httpx.Limits(
+    max_connections=20, max_keepalive_connections=10, keepalive_expiry=55.0
+)
+
+
+def shared_http() -> httpx.AsyncClient:
+    """The process-wide HTTP connection pool, built on first use per loop."""
+    global _pool, _pool_loop
+    loop = asyncio.get_running_loop()
+    if _pool is None or _pool.is_closed or _pool_loop is not loop:
+        _pool = httpx.AsyncClient(limits=_POOL_LIMITS)
+        _pool_loop = loop
+    return _pool
+
+
+async def close_shared_http() -> None:
+    """Close the pool (lifespan shutdown). Safe to call when there is none."""
+    global _pool, _pool_loop
+    pool, _pool, _pool_loop = _pool, None, None
+    if pool is not None and not pool.is_closed:
+        await pool.aclose()
+
+
 class EspoClient:
     def __init__(
         self,
@@ -361,9 +404,22 @@ class EspoClient:
         operation and the CRM host — never credentials (those live only in
         headers, which httpx error text does not include)."""
         try:
-            async with httpx.AsyncClient(timeout=self._timeout) as client:
-                return await client.request(
-                    method, url, params=params, json=json_body, headers=self._headers
+            try:
+                return await shared_http().request(
+                    method, url, params=params, json=json_body,
+                    headers=self._headers, timeout=self._timeout,
+                )
+            except httpx.RemoteProtocolError:
+                # A pooled connection the server closed while idle fails on
+                # first use with "server disconnected" rather than a clean
+                # refusal. The pool drops that socket; one retry on a fresh
+                # one is safe for a READ, and only a read — a write must
+                # never be replayed on a guess.
+                if method.upper() != "GET":
+                    raise
+                return await shared_http().request(
+                    method, url, params=params, json=json_body,
+                    headers=self._headers, timeout=self._timeout,
                 )
         except httpx.HTTPError as exc:
             host = httpx.URL(url).host

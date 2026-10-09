@@ -309,3 +309,82 @@ async def test_enum_options_still_parse_a_real_list(monkeypatch):
 async def test_metadata_that_is_not_json_reads_as_none(monkeypatch):
     client = _metadata_client(monkeypatch, b"<html>maintenance</html>")
     assert await client.metadata("scopes") is None
+
+
+# --- the shared connection pool (v0.245.0) -------------------------------------
+# Every CRM call used to open its own httpx.AsyncClient — a TCP + TLS handshake
+# per call (~100-125 ms against ~37 ms reused, measured 10-09-26). All calls now
+# go through one process-wide pool, bound to the running loop.
+
+from core.espo import close_shared_http, shared_http  # noqa: E402
+
+
+@pytest.mark.asyncio
+async def test_every_call_shares_one_pool(monkeypatch):
+    seen: list[httpx.AsyncClient] = []
+
+    async def fake_request(self, method, url, **kwargs):
+        seen.append(self)
+        return httpx.Response(200, json={"id": "x"}, request=httpx.Request(method, url))
+
+    monkeypatch.setattr(httpx.AsyncClient, "request", fake_request)
+    await close_shared_http()
+    a = EspoClient("https://crm.example", "k", 30)
+    b = EspoClient.for_user_token("https://crm.example", "u", "t")
+    await a.get("Contact", "c1")
+    await b.get("Contact", "c2")
+    await a.get("Contact", "c3")
+    assert len(seen) == 3
+    assert len({id(c) for c in seen}) == 1, "one pool for every client and call"
+    assert seen[0] is shared_http()
+    await close_shared_http()
+    assert seen[0].is_closed
+
+
+@pytest.mark.asyncio
+async def test_pool_is_rebuilt_after_close(monkeypatch):
+    await close_shared_http()
+    first = shared_http()
+    assert shared_http() is first
+    await close_shared_http()
+    second = shared_http()
+    assert second is not first and not second.is_closed
+    await close_shared_http()
+
+
+@pytest.mark.asyncio
+async def test_per_call_timeout_rides_the_request(monkeypatch):
+    captured = {}
+
+    async def fake_request(self, method, url, **kwargs):
+        captured.update(kwargs)
+        return httpx.Response(200, json={}, request=httpx.Request(method, url))
+
+    monkeypatch.setattr(httpx.AsyncClient, "request", fake_request)
+    await EspoClient("https://crm.example", "k", 7).get("Contact", "c1")
+    assert captured["timeout"] == 7
+    assert captured["headers"] == {"X-Api-Key": "k"}
+    await close_shared_http()
+
+
+@pytest.mark.asyncio
+async def test_stale_pooled_connection_retries_a_read_once(monkeypatch):
+    """A keep-alive socket the server closed while idle fails on first use with
+    RemoteProtocolError. A GET is retried once on a fresh socket; nothing else is."""
+    calls = {"n": 0}
+
+    async def flaky(self, method, url, **kwargs):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise httpx.RemoteProtocolError("Server disconnected")
+        return httpx.Response(200, json={"id": "c1"}, request=httpx.Request(method, url))
+
+    monkeypatch.setattr(httpx.AsyncClient, "request", flaky)
+    assert (await EspoClient("https://crm.example", "k").get("Contact", "c1"))["id"] == "c1"
+    assert calls["n"] == 2
+
+    calls["n"] = 0
+    with pytest.raises(EspoTransportError):
+        await EspoClient("https://crm.example", "k").update("Contact", "c1", {"a": 1})
+    assert calls["n"] == 1, "a write is never replayed"
+    await close_shared_http()

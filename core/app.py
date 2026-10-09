@@ -605,6 +605,10 @@ def create_app(
                 liveness_task.cancel()
             if settings_task is not None:
                 settings_task.cancel()
+            # The CRM client's shared connection pool (core/espo.shared_http).
+            from .espo import close_shared_http
+
+            await close_shared_http()
 
     app = FastAPI(
         title=f"{settings.organization_abbreviation} Intake Forms",

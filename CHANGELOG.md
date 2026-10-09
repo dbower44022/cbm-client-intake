@@ -4,6 +4,28 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.245.0] — 2026-10-09
+
+**perf(espo): every CRM call shares one connection pool.** `EspoClient._request`
+opened a fresh `httpx.AsyncClient` per call, so each call paid a TCP + TLS
+handshake. Doug reported pages getting slower; the review (10-09-26) found a
+session-tool record page making nine such calls in a row (~0.8 s on
+production) and measured a fresh-connection call at ~100-125 ms against ~37 ms
+reused. All calls now go through one process-wide pool (`core/espo.shared_http`,
+keep-alive 55 s — under the CRM's nginx 65 s — 20 connections, 10 kept), bound
+to the running loop and closed by the web lifespan and the worker's exit.
+Credentials still ride per request in the headers, so the per-user token
+clients and the API-key client share sockets safely. A pooled socket the server
+closed while idle is retried once on a fresh one for a **GET only** — a write
+is never replayed. Measured against crm-test, eight sequential metadata reads:
+~1,530 ms per-call client → ~940 ms pooled (−40%). No flag; the rollback is a
+revert. The other integration clients (Drive, Calendar, Zoom, Directory,
+mailing) still open a client per call — lower volume, a follow-up. Also from
+the review and still owed: a short-TTL metadata cache, the hourly receipt
+sweep rewriting 206 of 211 production receipts (a comparison that never
+converges — a defect), and the Gmail sync rebuilding every manager's scope
+every five minutes (~87 CRM calls/min on production).
+
 ## [0.244.1] — 2026-10-09
 
 **fix(mailing): a vendor contact on Temporary Hold is withheld from the push,

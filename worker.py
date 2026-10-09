@@ -636,5 +636,16 @@ async def run_gmail_cycle(settings: Settings, comms_store) -> None:
     await run_summary_pass(settings, espo)
 
 
+async def _run() -> None:
+    """``main`` plus the one thing it must not forget on the way out: the CRM
+    client's shared connection pool (core/espo.shared_http)."""
+    from core.espo import close_shared_http
+
+    try:
+        await main()
+    finally:
+        await close_shared_http()
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(_run())

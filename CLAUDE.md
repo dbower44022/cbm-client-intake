@@ -187,7 +187,9 @@ staff/mentor tool.
     Also `GET /` (portal, or the form index on dev), `GET /healthz`, `/shared/`.
     Honeypot (`company_url`) and submission-token idempotency live here.
   - `espo.py` — `EspoClient` (real) and `DryRunEspoClient`. All calls funnel
-    through `_request`, which wraps httpx transport failures as
+    through `_request`, which sends through **one process-wide connection
+    pool** (`shared_http`, closed by the lifespan / worker exit — v0.245.0;
+    a per-call client cost a TLS handshake on every CRM call) and wraps httpx transport failures as
     `EspoTransportError(EspoError)` so every `except EspoError` net covers CRM
     outages. `forbidden_hint` turns a 403 into a message naming the exact denied
     entity and operation.
@@ -1655,6 +1657,19 @@ with `main`; **Lakeside took it off the release lane by itself** (its
 unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
+
+- **v0.245.0 (2026-10-09) — every CRM call shares one connection pool.**
+  Committed, not pushed. From the performance review Doug asked for on
+  10-09-26 (pages "getting a little slower"): a record page made nine
+  sequential CRM calls, each on a fresh TLS connection. Measured against
+  crm-test: eight metadata reads 1,530 ms → 940 ms. No flag; rollback is a
+  revert. Verified by tests and that timing only — the live check is the
+  same pages on crm-test after deploy, and the worker log still reaching
+  its Gmail passes. **Still owed from the review**, in order: a short-TTL
+  metadata cache; the hourly receipt sweep rewriting 206 of 211 production
+  receipts every hour (`sync_row` never converges — find the key, a
+  defect); the Gmail sync rebuilding every manager's scope every five
+  minutes (~87 CRM calls/min on production); a request-duration log line.
 
 - **v0.242.0 (2026-10-08/09) — an event carries several curated topics
   (Track F, F1). Pushed and live on all three apps (23:47 on 10-08); ships
