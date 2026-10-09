@@ -1,6 +1,6 @@
 # CBM Events & Webinars — Finalization Plan
 
-Last Updated: 10-08-26 23:20 · Revision 4.28 — see change log at the end.
+Last Updated: 10-08-26 23:40 · Revision 4.29 — see change log at the end.
 
 Companion to `CBM_Events_PRD.md`, `CBM_Events_Implementation_Plan.md` and
 `CBM_Events_Registration_Recognition_Plan.md`. Those three say what the feature
@@ -129,7 +129,7 @@ after Doug's requirements are gathered, and nothing is settled until he rules.
 
 | # | Feature | Raised by | State |
 |---|---|---|---|
-| F1 | Event topic: multiple selections from the curated list (the user-entered value was struck 10-08-26) | User review, 09-2026 | Requirements in progress — 1 ruled 10-08-26 |
+| F1 | Event topic: multiple selections from the curated list (the user-entered value was struck 10-08-26) | User review, 09-2026 | Design drafted 10-08-26 (`CBM_Events_Topics_Design.md` rev 0.1), awaiting review; D1 open |
 | F2 | Display Date/Time: the moment an event may first appear on the public pages | User review, 09-2026 | Built v0.233.0 (09-29-26); reviewed live on crm-test 09-30; **CRM applied to production 10-07-26**; Boston owed (`OPEN-ITEMS.md` #35) |
 | F3 | Event audience: Internal, a specific chapter, or Public — Internal events form a calendar on the chapter's portal | User review, 09-2026 | Built v0.233.0 (09-29-26); reviewed live on crm-test 09-30; **CRM applied to production 10-07-26**; Boston owed (`OPEN-ITEMS.md` #35) |
 | F4 | Presenters: select or add them per event, with an optional presenter biography on the event page | User review, 09-2026 | Built v0.241.0/.1 (dark); crm-test CRM done and live pass done 10-08-26; production, Boston owed |
@@ -172,8 +172,22 @@ drafted.
    not like the choices."* This supersedes the user-entered half of the
    stated need; the multiple-selection half stands. Four of the catalogued
    questions fall with it (who may enter a value, whether it is filterable,
-   where it is stored, promotion). What remains to rule: how an event with
-   two topics is counted and filtered.
+   where it is stored, promotion).
+2. **An event with several topics appears under each of them.** The recorded
+   library's filter offers every topic any recording carries, a chosen topic
+   matches a recording carrying it among others, and the event page names
+   all of them. No report counts events by topic today (verified 10-08-26:
+   `events/reporting.py` carries the topic only as a label); when one is
+   built, an event counts once under each of its topics and the report says
+   so. *Decided by Claude under the two-part test* (10-08-26): the one
+   alternative, counting and filtering by the first topic only, hides a
+   recording from the visitor who filtered on its second subject, and no
+   surface today would show a difference.
+
+*Requirements complete at two.* Design: `CBM_Events_Topics_Design.md`
+(rev 0.1, 10-08-26; one decision for Doug, D1 — a new `topics` field with a
+one-time copy, or the existing field changed in place); plan file
+`scripts/plans/cevent-topics.json`.
 
 **F2 — Display Date/Time.**
 
@@ -684,6 +698,7 @@ attendance recorded → recording link pasted → the engagement rollup shows it
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 4.29 | 10-08-26 23:40 | Claude (Claude Code) | F1 requirement 2 decided by Claude under the two-part test (an event appears under each of its topics; no report counts by topic today). F1 requirements complete; design drafted (`CBM_Events_Topics_Design.md` rev 0.1, plan file `scripts/plans/cevent-topics.json`); F1 state moved to Design drafted, awaiting review. |
 | 4.28 | 10-08-26 23:20 | Claude (Claude Code) | F1 requirement 1 ruled by Doug (10-08-26): no user-entered topic — pick from the curated list or change the list in the CRM. Four of the five open questions fall; the two-topic counting question remains. F1 state moved to Requirements in progress. |
 | 4.27 | 10-08-26 22:31 | Claude (Claude Code) | F4 live pass done on crm-test 10-08-26; two defects found and fixed. |
 | 4.26 | 10-08-26 01:26 | Claude (Claude Code) | F4 design approved (D1, D2 ruled) and built as v0.241.0, dark; crm-test CRM side applied; F4 state moved to Built. |
