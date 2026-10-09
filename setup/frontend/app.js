@@ -452,7 +452,15 @@
         + (conn.connectedBy ? " by " + esc(conn.connectedBy) : "")
         + (conn.connectedAt ? " on " + esc(conn.connectedAt.slice(0, 10)) : "")
         + (conn.lastRefreshAt ? " · token refreshed " + esc(conn.lastRefreshAt.slice(0, 16).replace("T", " ")) : "")
-        + ".";
+        + "."
+        + (conn.lastPushSummary
+            ? " Last push " + esc((conn.lastPushAt || "").slice(0, 16).replace("T", " "))
+              + ": audience " + esc(String(conn.lastPushSummary.audience))
+              + ", added " + esc(String(conn.lastPushSummary.added))
+              + ", removed " + esc(String(conn.lastPushSummary.removed))
+              + (conn.lastPushSummary.partial ? ' <span class="su__bad">(partial)</span>' : "")
+              + "."
+            : " No push has run yet.");
     } else if (conn) {
       line = '<span class="su__bad">Needs re-authorisation</span>'
         + (conn.lastError ? " — " + esc(conn.lastError) : "")

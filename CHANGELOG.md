@@ -4,6 +4,25 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.244.0] — 2026-10-09
+
+**feat(mailing): the audience push and the unsubscribe pull (Phase C piece
+3, plan § 11.5–11.8).** `core/mailing_sync.py`: the audience is every CRM
+Contact with the marketing opt-in and a usable primary address (opted-out and
+invalid addresses excluded, read under the org-wide key at the CRM's page
+limit); the plan adds the audience minus the list, removes the list minus
+the audience (removed from the list, never deleted), and **withholds anyone
+the vendor holds as unsubscribed** (ruling 2); the list is found by name and
+created when absent. The pull reads unsubscribes since the cursor and marks
+the matching Contact address opted out through `emailAddressData`,
+advance-only, skipping anyone the CRM does not hold; the cursor moves only
+after a clean pass and to the pass's start. Two **Operations jobs**,
+*Mailing list push* and *Mailing list unsubscribe pull*, each dry-run then
+apply-that-plan, so the first run is read before it writes; the **worker**
+runs the same functions nightly and hourly behind `MAILING_SYNC`, with
+alerts said once (re-authorisation weekly, a failed or partial pass daily).
+The Readiness line shows the last push's counts. Twenty-one tests.
+
 ## [0.243.0] — 2026-10-09
 
 **feat(mailing): the mailing service can be connected from System Settings

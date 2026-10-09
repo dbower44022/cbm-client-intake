@@ -389,7 +389,13 @@ developer sign-in page is a 404). **Runbook § 1 done the same evening:**
 the TEST developer application exists with the crm-test redirect address,
 Authorization Code/Implicit flow and Rotating Refresh Tokens (read back from
 its details screen); API key and client secret in Doug's password manager.
-Next for crm-test: runbook § 2 once the Phase C build lands.
+**Phase C built 2026-10-09 in the setup session** (§ 11.9 steps 1–3:
+v0.243.0 deployed dark to crm-test and production 02:10; v0.244.0, the push
+and pull, committed). Next for crm-test: Doug runs runbook §§ 2–4 from the
+standing page (the first browser pass, and the first secret ever stored from
+/setup on a live deployment). Still owed: § 11.9 step 4, the one-time
+migration script (production only); the five inferred vendor shapes in
+§ 11.10 are checked by § 4's dry run.
 
 **Production's `CEngagement.description` → wysiwyg conversion** (added
 2026-08-31) — `cengagement-description-wysiwyg-crm-handoff.md` § 3, at a

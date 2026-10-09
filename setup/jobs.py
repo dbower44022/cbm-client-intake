@@ -145,7 +145,70 @@ async def _schema_drift(settings: Settings) -> str:
     )
 
 
+async def _mailing_push_dry(settings: Settings) -> str:
+    from core.mailing_sync import run_push
+
+    result = await run_push(settings, apply=False)
+    if not result.ok:
+        raise RuntimeError(result.text)
+    return result.text
+
+
+async def _mailing_push_apply(settings: Settings) -> str:
+    from core.mailing_sync import run_push
+
+    result = await run_push(settings, apply=True)
+    if not result.ok:
+        raise RuntimeError(result.text)
+    return result.text
+
+
+async def _mailing_pull_dry(settings: Settings) -> str:
+    from core.mailing_sync import run_pull
+
+    result = await run_pull(settings, apply=False)
+    if not result.ok and not result.summary:
+        raise RuntimeError(result.text)
+    return result.text
+
+
+async def _mailing_pull_apply(settings: Settings) -> str:
+    from core.mailing_sync import run_pull
+
+    result = await run_pull(settings, apply=True)
+    if not result.ok and not result.summary:
+        raise RuntimeError(result.text)
+    return result.text
+
+
 JOBS: tuple[JobSpec, ...] = (
+    JobSpec(
+        key="mailing_push",
+        name="Mailing list push",
+        description=(
+            "Compares the CRM's opted-in contacts with the mailing service's list and "
+            "shows who would be added and who removed (removed from the list, never "
+            "deleted from the account; anyone unsubscribed there is never re-added). "
+            "Applying makes the list match. This is the same pass the worker runs "
+            "nightly once Mailing list sync is on — read it here first."
+        ),
+        mutating=True,
+        dry_run=_mailing_push_dry,
+        apply=_mailing_push_apply,
+    ),
+    JobSpec(
+        key="mailing_pull",
+        name="Mailing list unsubscribe pull",
+        description=(
+            "Reads who unsubscribed at the mailing service since the last pass and "
+            "shows which CRM contacts would be marked opted out. Applying writes the "
+            "opt-out (advance-only) and moves the cursor. The worker runs this hourly "
+            "once Mailing list sync is on."
+        ),
+        mutating=True,
+        dry_run=_mailing_pull_dry,
+        apply=_mailing_pull_apply,
+    ),
     JobSpec(
         key="stamp_audit",
         name="Assignment-stamp audit and heal",

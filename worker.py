@@ -416,6 +416,13 @@ async def main() -> None:
             settings.setup_refresh_seconds,
         )
 
+    # Mailing list sync (Phase C, plan § 11.5–11.8): the nightly audience push
+    # and the hourly unsubscribe pull. Gated per cycle on the switch, so a
+    # /setup flip is honoured within the settings refresh; inert in dry-run.
+    # Failures are alerted once (re-authorisation weekly) through alert_state.
+    next_mailing_push = datetime.now(timezone.utc)
+    next_mailing_pull = datetime.now(timezone.utc)
+
     while not stop.is_set():
         claimed = await run_cycle(store, settings, stop)
 
@@ -452,6 +459,30 @@ async def main() -> None:
             except Exception as exc:  # noqa: BLE001 — never crashes delivery
                 log.warning("event reminder pass failed: %s", exc)
             next_reminder = now_cfg + timedelta(seconds=settings.events_reminder_seconds)
+        mailing_on = settings.mailing_sync and not settings.espo_dry_run
+        if mailing_on and settings.mailing_push_seconds > 0 and now_cfg >= next_mailing_push:
+            try:
+                from core.mailing_sync import alerts_for, run_push
+
+                result = await run_push(settings, apply=True)
+                log.info("mailing push: %s", (result.text or "").splitlines()[-1] if result.text else result.error)
+                for key, text, cooldown in alerts_for(result, kind="push", settings=settings):
+                    if monitoring._due(alert_state, key, now_cfg, cooldown):
+                        await monitoring.send_alert(settings, text)
+            except Exception as exc:  # noqa: BLE001 — never crashes delivery
+                log.warning("mailing push failed: %s", exc)
+            next_mailing_push = now_cfg + timedelta(seconds=settings.mailing_push_seconds)
+        if mailing_on and settings.mailing_pull_seconds > 0 and now_cfg >= next_mailing_pull:
+            try:
+                from core.mailing_sync import alerts_for, run_pull
+
+                result = await run_pull(settings, apply=True)
+                for key, text, cooldown in alerts_for(result, kind="pull", settings=settings):
+                    if monitoring._due(alert_state, key, now_cfg, cooldown):
+                        await monitoring.send_alert(settings, text)
+            except Exception as exc:  # noqa: BLE001
+                log.warning("mailing pull failed: %s", exc)
+            next_mailing_pull = now_cfg + timedelta(seconds=settings.mailing_pull_seconds)
         if settings_store is not None and now_cfg >= next_review:
             try:
                 overdue = await overdue_reviews(settings_store)

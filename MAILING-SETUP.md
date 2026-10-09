@@ -1,6 +1,6 @@
 # Mailing list sync — Constant Contact setup and activation runbook
 
-Last Updated: 10-09-26 00:40 · Revision 0.5 — change log at the end.
+Last Updated: 10-09-26 02:17 · Revision 0.6 — change log at the end.
 
 How to register this application with Constant Contact, connect one
 deployment to one Constant Contact account, and switch the audience push on.
@@ -9,11 +9,12 @@ own Constant Contact application. Plan and the rulings behind it:
 `prds/mailing-list-and-event-sponsorship-plan.md` (§ 11 is the Phase C
 design this runbook follows).
 
-**Status (2026-10-09): sections 2 and 3 are BUILT (v0.243.0, committed, not
-yet deployed)** — the seven settings, the *Mailing list sync* readiness
-block with the connection line and the redirect address, and the Connect /
-callback / Disconnect round trip. Section 4 (the push and pull) is the next
-piece and is still as designed. **Ruled 2026-10-07 (plan § 11.11): crm-test
+**Status (2026-10-09): sections 2, 3 and 4 are BUILT** — sections 2 and 3
+in v0.243.0 (deployed to crm-test and production 2026-10-09 02:10, dark:
+nothing connects until an administrator does), section 4 in v0.244.0
+(committed): the push and pull as two Operations jobs and the worker's
+nightly and hourly timers behind the *Mailing list sync* switch. Doug's live
+run of sections 2–4 on crm-test is the first browser pass. **Ruled 2026-10-07 (plan § 11.11): crm-test
 connects to a separate Constant Contact account of its own**, created in
 section 0a; the organisation's real account is production's alone.
 
@@ -329,40 +330,58 @@ deleted and the action recorded; Connect again restores it.
 
 ## 4. In the application — switch the sync on and watch the first pass
 
-*Not built yet.*
+*Built 2026-10-09 (v0.244.0).*
 
 Why this section exists: the connection alone sends nothing anywhere. The
 switch starts the worker's nightly push and hourly pull, and the first push
 must be read as a plan before it is allowed to write.
 
-1. On the System Settings page, under the **Operations** tab, find the job
-   **Mailing audience push** and click **Dry run**.
-   You should see a plan: how many Contacts qualify, how many would be
-   added to the list named in **Mailing list name** (default *Event
-   notices*), how many would be removed, and the list's current size in
-   Constant Contact. Nothing has been written.
+1. At the top of the System Settings page, click the **Operations** tab and
+   find the job **Mailing list push**.
+   You should see its description, a Reason box, and two buttons: **Dry
+   run** and **Apply the plan**.
 
-2. Read the plan. The number to be added should be close to the number of
-   CRM Contacts with the marketing opt-in ticked and a usable email address.
-   If the number to be removed is large on a first run against a list staff
-   already use, stop and tell me the numbers — the removals are the people
-   staff entered directly, and plan ruling 4 says they are migrated into the
-   CRM first, not dropped.
+2. In the Mailing list push job, click **Dry run**.
+   You should see a plan appear under the job, beginning `Mailing list:
+   'Event notices'`, then *Audience (CRM, opted in, address usable)*, *On the
+   list now*, *Already in step*, *ADD to the list* with one `+ address` line
+   per person, and *REMOVE from the list (stay in the account)* with one
+   `- address` line per person. On a trial account that has never held the
+   list, the first line ends *does not exist yet; apply CREATES it* and
+   nothing is on the list. Nothing has been written. If the text begins
+   *Not connected* or *Re-authorisation needed*, stop and tell me its exact
+   wording.
 
-3. On the same Operations tab, click **Apply** on that same plan.
-   You should see the result: added, removed, skipped, and any addresses
-   Constant Contact refused by name. If the plan has moved since the dry
-   run, the apply refuses and says so; run the dry run again.
+3. Read the plan. The audience number should be close to the number of CRM
+   Contacts with the marketing opt-in ticked and a usable email address. If
+   the REMOVE count is large on a first run against a list staff already
+   use, stop and tell me the numbers — the removals are the people staff
+   entered directly, and plan ruling 4 says they are migrated into the CRM
+   first, not dropped. (crm-test's trial account holds nobody, so this
+   cannot arise there.)
 
-4. On the System Settings page, under **Features**, set **Mailing list sync**
-   to **on** and click its **Save**.
-   You should see the readiness panel's **Mailing list sync** line turn
-   ready, naming the worker as the component that runs it.
+4. In the Mailing list push job, type a reason into the Reason box and
+   click **Apply the plan**.
+   You should see the same plan again followed by `Applied: added N, removed
+   M, list created.` If it says *The plan changed since you reviewed it —
+   nothing was applied*, the world moved between the two clicks; click Dry
+   run again and then Apply the plan. If it ends *PARTIAL*, stop and tell me
+   the line after it.
 
-5. The next morning, on the System Settings page, under **Operations**, open
-   the job's history.
-   You should see one overnight push with counts, and hourly pulls each
-   reporting how many unsubscribes were applied (usually 0).
+5. On the Settings tab, under the **Features** heading, click the row
+   **Mailing list sync**, choose **On** in the Change setting dialog, type a
+   reason, and click **Save**.
+   You should see the row read **On** with an *override* chip. On the Feature
+   readiness tab the Mailing list sync block should read **ready**, badged
+   *worker*; if it instead warns that the worker has not checked in, stop and
+   tell me.
+
+6. The next day, on the Feature readiness tab, read the Mailing list sync
+   block's line.
+   You should see *Last push <date time>: audience N, added A, removed R.*
+   On the Operations tab, **Mailing list unsubscribe pull** can be dry-run at
+   any time to see who unsubscribed since the last pass; the worker applies
+   it hourly.
 
 ---
 
@@ -382,6 +401,7 @@ must be read as a plan before it is allowed to write.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.6 | 10-09-26 02:17 | Claude (Claude Code) | § 4 rewritten to the built Operations jobs (Mailing list push / unsubscribe pull, dry run then apply, the plan's exact lines), the Features switch, and the last-push line. Status updated; v0.243.0 deployment recorded. |
 | 0.5 | 10-09-26 00:40 | Claude (Claude Code) | §§ 2–3 rewritten to the built page (v0.243.0): the two credential rows and the Change setting dialog, the Mailing list sync block on the Feature readiness tab with the connection line, the redirect address with Copy, Connect / Disconnect, and the outcome banner. Status updated. |
 | 0.4 | 10-08-26 21:40 | Claude (Claude Code) | crm-test sections 0a and 1 recorded done (Doug, 2026-10-08). Step 5 carries the vendor's exact refresh-token wording; a read-back of the application details screen (OAuth type, Private notice, the authorise and token addresses) added after step 12 for the build. |
 | 0.3 | 10-08-26 10:40 | Claude (Claude Code) | § 0a rewritten: the quick-start's developer sign-in address is a 404 (Doug hit it, verified); sign-up now goes through the My Applications address, which sends an unsigned-in browser to the Constant Contact sign-in/sign-up. |

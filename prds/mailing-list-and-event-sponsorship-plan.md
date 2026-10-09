@@ -1,6 +1,6 @@
 # Mailing List and Event Sponsorship — plan v0.1 (2026-10-07)
 
-Last Updated: 10-09-26 00:27 · Revision 0.8 — change log at the end.
+Last Updated: 10-09-26 02:17 · Revision 0.9 — change log at the end.
 
 **Status: Phases A and B done on crm-test; Phase C designed (§ 11) and its one decision ruled (§ 11.11, option A), nothing of it built.** This is the plan document for the
 arc, in the style of the other arcs in `prds/`: it records Doug's rulings, the
@@ -551,10 +551,17 @@ readiness line, so "is it running?" is answered without a log.
    the Postgres test caught and the fake could not.
 2. Settings and the readiness feature; the `/setup` panel rows (client ID,
    secret, redirect address read-only, connection line with Connect /
-   Disconnect); the connect and callback routes.
+   Disconnect); the connect and callback routes. **Built 2026-10-09
+   (v0.243.0, deployed the same night, dark).** The controls live in the
+   *Mailing list sync* block of the Feature readiness tab rather than as
+   settings rows: the connection is a grant, not a value.
 3. The push as a function, exposed as the Operations job, then on the worker
    timer. The pull. Tests with a fake vendor client that enforces the 4-a-
    second and page-size limits the way the EspoCRM fake enforces 200.
+   **Built 2026-10-09 (v0.244.0)** — `core/mailing_sync.py`; the pull is an
+   Operations job too. One detail settled in the build: the pull's first
+   cursor is the connection time, because anything unsubscribed before that
+   is handled by the push's withholding rather than by a write.
 4. The migration script.
 5. Review on crm-test as a real non-admin reading the results in the CRM,
    then production.
@@ -639,6 +646,7 @@ requested are the four in § 11.3. The list name default is *Event notices*.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.9 | 10-09-26 02:17 | Claude (Claude Code) | § 11.9 steps 2 and 3 built (v0.243.0 deployed dark; v0.244.0 committed); the first pull cursor noted. |
 | 0.8 | 10-09-26 00:27 | Claude (Claude Code) | § 11.9 step 1 built (client, locked store, migration 0030, keep-table); § 11.10 gains the five inferred vendor shapes owed to the first dry-run; § 11.11a notes the build moved into the setup session. |
 | 0.7 | 10-08-26 01:25 | Claude (Claude Code) | § 11.11a: no access to the real account yet; arc proceeds on the trial account and the build; real-account access is production's prerequisite. Build handed to a separate session. |
 | 0.6 | 10-07-26 23:55 | Claude (Claude Code) | § 11.11 ruled: option A, a separate Constant Contact account for crm-test (Doug). |
