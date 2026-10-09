@@ -1654,6 +1654,8 @@ each block.
   CRM change and grants at a Sunday slot, Boston with its release, and one
   design follow-up (a guest's title and company do not carry to a second
   event). Switch off everywhere but crm-test.
+  **Kickoff prompt for the next Track F session:**
+  `prompts/track-f-session-2026-10-08.md` (production slot, Boston, then F1).
 
 - **v0.240.0 (2026-10-07) — an Internal event's Join URL is editable in Event
   Administration** (F5 design D3, `OPEN-ITEMS.md` #38). Committed, not pushed.

@@ -569,7 +569,7 @@ block a deploy.)*
     from the pass: the wording of the red message when the event save was
     refused twice at step 3.18 (01:13) before succeeding; the server logged
     only the two 400s. Design: `prds/events/CBM_Events_Presenters_Design.md`
-    (§ 11 as-built).
+    (§ 11 as-built). Next-session kickoff: `prompts/track-f-session-2026-10-08.md`.
 
 38. ~~**An Internal event's join link cannot be set in Event Administration**~~
     **Built 2026-10-07 as v0.240.0** — `virtualMeetingUrl` carries
