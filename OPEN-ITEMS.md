@@ -393,9 +393,20 @@ its details screen); API key and client secret in Doug's password manager.
 v0.243.0 deployed dark to crm-test and production 02:10; v0.244.0, the push
 and pull, committed). Next for crm-test: Doug runs runbook §§ 2–4 from the
 standing page (the first browser pass, and the first secret ever stored from
-/setup on a live deployment). Still owed: § 11.9 step 4, the one-time
-migration script (production only); the five inferred vendor shapes in
-§ 11.10 are checked by § 4's dry run.
+/setup on a live deployment). **Live pass 2026-10-09 (Doug, crm-test):** §§ 2–3 passed — the client
+secret stored from /setup (the first live secret through that path), Connect
+round-tripped, connected as the trial account; § 4 dry run read 0 (correct:
+no sandbox Contact was opted in), `scripts/sandbox_mailing_optin.py` ticked
+three, the plan listed them, apply created *Event notices* and imported the
+three, verified at the vendor. Four of the five inferred shapes answered
+correctly (list lookup/create, list members, status read, JSON import);
+the fifth (`remove_list_memberships`) runs the first night the reset clears
+the ticks. **Still owed:** the pull's unsubscribe path has never run live —
+a staff user cannot unsubscribe a contact at the vendor (only Subscribed /
+Temporary Hold); proving it needs a real recipient (Doug's own address as a
+contact, a test campaign from the trial account, the unsubscribe link
+clicked, then the pull dry run). § 11.9 step 4, the one-time migration
+script (production only).
 
 **Production's `CEngagement.description` → wysiwyg conversion** (added
 2026-08-31) — `cengagement-description-wysiwyg-crm-handoff.md` § 3, at a

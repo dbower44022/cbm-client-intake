@@ -75,10 +75,11 @@ def vendor(cid, email, permission="implicit"):
 
 
 class FakeMail:
-    def __init__(self, *, lists=(), members=(), unsubscribed=(), rate_limit_import=False):
+    def __init__(self, *, lists=(), members=(), unsubscribed=(), on_hold=(), rate_limit_import=False):
         self._lists = list(lists)
         self._members = list(members)
         self._unsub = list(unsubscribed)
+        self._hold = list(on_hold)
         self.imports = []
         self.removals = []
         self.created = []
@@ -94,7 +95,9 @@ class FakeMail:
 
     async def contacts(self, *, list_id=None, status=None, updated_after=None, include=()):
         self.contacts_calls.append({"list_id": list_id, "status": status, "updated_after": updated_after})
-        rows = self._members if list_id else (self._unsub if status == "unsubscribed" else [])
+        rows = (self._members if list_id
+                else self._unsub if status == "unsubscribed"
+                else self._hold if status == "temp_hold" else [])
         for r in rows:
             yield r
 
@@ -193,6 +196,18 @@ async def test_plan_adds_the_missing_removes_the_extra_and_withholds_the_unsubsc
     assert "REMOVE from the list (stay in the account): 1" in text and "- old@x.org" in text
     assert "Withheld" in text and "! gone@x.org" in text
     assert plan.render() == text  # stable
+
+
+async def test_a_contact_on_temporary_hold_at_the_vendor_is_withheld_too():
+    """Ruling 2 names both states; Temporary Hold is the one staff can set by hand."""
+    crm = FakeCRM([contact("c1", "held@x.org"), contact("c2", "ok@x.org")])
+    mail = FakeMail(lists=[{"list_id": "L1", "name": "Event notices"}],
+                    on_hold=[vendor("v-h", "held@x.org", "temp_hold")])
+    plan = await _plan(crm, mail)
+    assert [p.email for p in plan.withheld] == ["held@x.org"]
+    assert [p.email for p in plan.add] == ["ok@x.org"]
+    assert [c["status"] for c in mail.contacts_calls if c["status"]] == ["unsubscribed", "temp_hold"]
+    assert "unsubscribed or on hold" in plan.render()
 
 
 async def test_plan_without_the_list_says_apply_creates_it():

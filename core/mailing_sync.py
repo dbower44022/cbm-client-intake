@@ -144,8 +144,8 @@ class Plan:
         lines += [f"  - {m.email}" for m in self.remove]
         if self.withheld:
             lines.append(
-                f"Withheld — opted in here, unsubscribed at the mailing service "
-                f"(never re-added): {len(self.withheld)}"
+                f"Withheld — opted in here, unsubscribed or on hold at the mailing "
+                f"service (never re-added): {len(self.withheld)}"
             )
             lines += [f"  ! {p.email}" for p in self.withheld]
         return "\n".join(lines)
@@ -234,12 +234,20 @@ async def members(mail: MailingClient, list_id: str) -> dict[str, Member]:
     return out
 
 
+#: Vendor contact statuses the push never adds (ruling 2). ``temp_hold`` is the
+#: only one a staff user can set by hand at the vendor — "Temporary Hold" on the
+#: contact — so it is also how the withhold path is exercised on a trial account.
+WITHHOLD_STATUSES: tuple[str, ...] = ("unsubscribed", "temp_hold")
+
+
 async def vendor_unsubscribed(mail: MailingClient) -> set[str]:
+    """Addresses the vendor holds as unsubscribed or on temporary hold."""
     out: set[str] = set()
-    async for c in mail.contacts(status="unsubscribed"):
-        key = _vendor_email(c)
-        if key:
-            out.add(key)
+    for status in WITHHOLD_STATUSES:
+        async for c in mail.contacts(status=status):
+            key = _vendor_email(c)
+            if key:
+                out.add(key)
     return out
 
 

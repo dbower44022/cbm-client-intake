@@ -4,6 +4,22 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.244.1] — 2026-10-09
+
+**fix(mailing): a vendor contact on Temporary Hold is withheld from the push,
+as ruling 2 says.** The plan swept only `status=unsubscribed`; it now sweeps
+`temp_hold` too (`WITHHOLD_STATUSES`), so a contact staff put on hold at the
+mailing service is never re-added by the nightly push. Found in the crm-test
+live pass: the vendor's contact screen offers staff only *Subscribed* and
+*Temporary Hold* — a contact can be unsubscribed only by the recipient
+clicking an email's link — so Temporary Hold is both a real state and the
+only way to exercise the withhold path on a trial account. The pull still
+applies unsubscribes only (§ 11.6, bounces unverified). Live pass so far:
+sections 2 and 3 passed (first secret ever stored from /setup on a live
+deployment; Connect round trip; connected as the trial account); § 4's dry
+run, apply (list created, three sandbox contacts imported) and the vendor's
+list verified by Doug.
+
 ## [0.244.0] — 2026-10-09
 
 **feat(mailing): the audience push and the unsubscribe pull (Phase C piece

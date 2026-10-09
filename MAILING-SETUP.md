@@ -1,6 +1,6 @@
 # Mailing list sync — Constant Contact setup and activation runbook
 
-Last Updated: 10-09-26 02:17 · Revision 0.6 — change log at the end.
+Last Updated: 10-09-26 11:35 · Revision 0.7 — change log at the end.
 
 How to register this application with Constant Contact, connect one
 deployment to one Constant Contact account, and switch the audience push on.
@@ -393,6 +393,7 @@ must be read as a plan before it is allowed to write.
 | The permission screen says the application is not available to this user | The signed-in Constant Contact user is not the one who created the application. Sign out of Constant Contact and sign in as that user. |
 | **Connected as** disappears and the row reads **Re-authorise** | The refresh token was refused — the user's password changed, the secret was regenerated, or the token went unused for 180 days. Repeat section 3. An alert email names this when it happens. |
 | The push reports HTTP 429 | The vendor's rate limit (10,000 calls a day, 4 a second). The push paces itself; a 429 means something else on the same key is calling too. |
+| You want to unsubscribe a contact at Constant Contact by hand and the contact screen offers only **Subscribed** and **Temporary Hold** | That is the vendor's rule: only the recipient can unsubscribe, through an email's link. **Temporary Hold** is the staff-set state, and the push treats it exactly like unsubscribed — never re-added. The pull brings back unsubscribes only. |
 | The nightly push never runs | The switch is on but the worker has not refreshed its settings, or the worker is down — check the readiness panel's worker heartbeat. |
 
 ---
@@ -401,6 +402,7 @@ must be read as a plan before it is allowed to write.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.7 | 10-09-26 11:35 | Claude (Claude Code) | Live pass on crm-test: §§ 2–3 passed, § 4 dry run, apply and the vendor's list verified (Doug). § 5 gains the no-manual-unsubscribe row; Temporary Hold withheld as of v0.244.1. |
 | 0.6 | 10-09-26 02:17 | Claude (Claude Code) | § 4 rewritten to the built Operations jobs (Mailing list push / unsubscribe pull, dry run then apply, the plan's exact lines), the Features switch, and the last-push line. Status updated; v0.243.0 deployment recorded. |
 | 0.5 | 10-09-26 00:40 | Claude (Claude Code) | §§ 2–3 rewritten to the built page (v0.243.0): the two credential rows and the Change setting dialog, the Mailing list sync block on the Feature readiness tab with the connection line, the redirect address with Copy, Connect / Disconnect, and the outcome banner. Status updated. |
 | 0.4 | 10-08-26 21:40 | Claude (Claude Code) | crm-test sections 0a and 1 recorded done (Doug, 2026-10-08). Step 5 carries the vendor's exact refresh-token wording; a read-back of the application details screen (OAuth type, Private notice, the authorise and token addresses) added after step 12 for the build. |
