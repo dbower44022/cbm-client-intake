@@ -6,6 +6,48 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+42. **Events: the production end-to-end test, and the redirect deferred**
+    (Doug's ruling 10-09-26: *"We are not planning on modifying the production
+    web site for a few weeks. We want to test the events functionality to be
+    sure it works and has all current data before we proceed."*). The redirect
+    (Track A, A8) waits; the test runs on **production**, approved 10-09-26,
+    because that is where the data and the roles are and crm-test wipes itself
+    nightly. **Step page written 10-09-26 17:05:**
+    https://claude.ai/artifact/Dkbb1t7MKFb9vnjabpcyMc (private, *Events
+    Production Test*, rev 1.0): a console check that the Sunday CRM change
+    landed and the YouTube import dry run (the library is complete when it
+    prints `0 to import`); the three sessions the website lists today created
+    in Event Administration as a real non-admin (Business LaunchPad 5-Part
+    Weekly Series 10-19 7:00 PM in person at Westlake Porter Public Library;
+    Get Your Board Fundraising 10-21 12:00 PM; Is Starting a Nonprofit Right
+    for You? 11-18 12:00 PM — read from the live site's Apps Script feed
+    10-09-26); the public page side by side with the website; one registration
+    through the Sign Up dialog, a second for another session, a repeat of the
+    first that the near-duplicate hold should catch; the Registrants tab,
+    Submission Admin and the portal rail; the CRM records; the test registrant
+    removed, the three sessions kept. **Runs after the Sunday page**
+    (#39/#41). Verified from here 10-09-26 16:52: production's public calendar
+    holds **0** upcoming events and the library 10 recordings; the website's
+    feed holds the three above.
+    **Two findings while writing the page, both to settle before the redirect:**
+    (a) **both public sign-up doors tell the visitor "Check your email for the
+    confirmation" and nothing is sent** — the only email a registration
+    triggers is Zoom's (off everywhere) and the confirmation email is Track D
+    D3, not built. Either D3 lands first or the wording changes; recommend D3.
+    (b) **the Duration list has no 75- or 90-minute choice** (5, 10, 15, 30,
+    45 min, 1, 2, 3 h — `CEvent.duration.options` on crm-test 10-09-26, the
+    same list the shared control defaults to), and both live webinars run
+    75 minutes; the test enters them as 1 hour. Fix is a one-line CRM plan
+    adding 4500 and 5400 to the field's options, at a Sunday slot.
+    **Decision for Doug:** the five-week in-person series is one entry on the
+    website and one event on the page; check-in and attendance are per
+    event, so five sessions in one record means one check-in list for the
+    series. One event per session (five, each with its presenter) is the
+    alternative; recommend it once the test has run, not before.
+    Also open from the plan: during the parallel weeks a visitor who registers
+    on our page for a **webinar** gets no Zoom join link (Zoom is off), so
+    the website keeps taking registrations until the redirect.
+
 40. **The training sandbox's funders were invisible to the Funder Management
     demo login** (found 2026-10-07 during the Phase B live pass, section 5).
     Sally Sponsor's role (Sponsor Manager Role, the roles standard) reads

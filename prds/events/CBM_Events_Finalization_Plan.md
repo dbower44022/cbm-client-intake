@@ -1,6 +1,6 @@
 # CBM Events & Webinars — Finalization Plan
 
-Last Updated: 10-09-26 00:05 · Revision 4.32 — see change log at the end.
+Last Updated: 10-09-26 17:10 · Revision 4.33 — see change log at the end.
 
 Companion to `CBM_Events_PRD.md`, `CBM_Events_Implementation_Plan.md` and
 `CBM_Events_Registration_Recognition_Plan.md`. Those three say what the feature
@@ -113,7 +113,7 @@ website, and it is one redirect rule.
 | A5 | **Share the Apps Script source and its Google Sheet.** Now needed only to confirm nothing else runs on it before it is retired — it is no longer a parity baseline, because we are not reimplementing its rendering. | Doug | — | Owed |
 | A6 | **Export the current `/webinars/` page content** as the rollback copy, and confirm who can edit the page and add a redirect. | Doug | — | Owed |
 | A7 | ~~**Switch production on**~~ **Done 2026-09-14.** Originally:: probe the prod events schema and diff against crm-test; set `EVENTS_ENABLED` and `EVENTS_PUBLIC_API` at `/setup`; confirm `APP_BASE_URL` is set, because every shared event link derives from it; confirm the Marketing Admin Team is the right administrator group. Full list: `OPEN-ITEMS.md` 19g. | Doug + build | A3, A4 | Owed |
-| A8 | **Create the upcoming events in production `/events`**, so the page is not empty at the swap, then **add the redirect** from `clevelandbusinessmentors.org/webinars/` to the app's programme page. Runbook: `EVENTS-SETUP.md` § 6. Register once with obvious test data and delete the records. | Doug + verify | A7 | Owed |
+| A8 | **Create the upcoming events in production `/events`**, so the page is not empty at the swap, then **add the redirect** from `clevelandbusinessmentors.org/webinars/` to the app's programme page. Runbook: `EVENTS-SETUP.md` § 6. Register once with obvious test data and delete the records. | Doug + verify | A7 | **Split 10-09-26 (Doug's ruling): the website is not changed for a few weeks; the events are created and the whole flow tested on production first** — step page *Events Production Test*, `OPEN-ITEMS.md` #42, after the Sunday Track F apply. The redirect follows the test. |
 | A9 | **Retire.** After a rollback window of one event cycle, remove the Apps Script, **rotate the exposed YouTube key** (R-7), and fix the mismatched contact address (R-8: the footer says `info@clbmentors.org`, the presenting section `info@cbmentors.org`; the second is the real domain). | Doug | A8 | Owed |
 
 **The rollback is the redirect.** Removing it puts the old page back exactly as
@@ -662,7 +662,13 @@ C1 (Doug) ─> C2 ─> C3 ─> C4 ─> C5      (optional before A8)
 D1 (Doug) ─> D2 D3 ─> D4
 ```
 
-The critical path is A2 → A3/A4 → A7 → A8. Nothing on it is long: A3 is a small
+**10-09-26:** the redirect is deferred a few weeks by Doug's ruling. The
+sequence is now: Sunday's Track F CRM apply → the production end-to-end test
+(`OPEN-ITEMS.md` #42, which also enters the three current sessions) → the
+two findings it raised (the confirmation email, D3, and the 75-minute
+duration choice) → A8's redirect.
+
+The critical path was A2 → A3/A4 → A7 → A8. Nothing on it is long: A3 is a small
 extension to an existing query, A4 is a decision plus a line of markup, and A8
 is one redirect rule on the website. The build half of Track A is finished.
 
@@ -698,6 +704,7 @@ attendance recorded → recording link pasted → the engagement rollup shows it
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 4.33 | 10-09-26 17:10 | Claude (Claude Code) | Doug's ruling 10-09-26: the website redirect waits a few weeks; the events functionality is tested end to end on production first, with the three current sessions entered. A8 split; sequence note in § 5; step page and two findings in `OPEN-ITEMS.md` #42. |
 | 4.32 | 10-09-26 00:05 | Claude (Claude Code) | F1 live pass done on crm-test 10-09-26; production and Boston owed. |
 | 4.31 | 10-08-26 23:50 | Claude (Claude Code) | F1 approved by Doug and built as v0.242.0; crm-test field applied and the copy run. F1 state moved to Built. |
 | 4.30 | 10-08-26 23:25 | Claude (Claude Code) | F1 design D1 ruled by Doug (new field + one-time copy). F1 state: awaiting approval to build. |
