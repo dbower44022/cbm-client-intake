@@ -1,6 +1,6 @@
 # Mailing list sync — Constant Contact setup and activation runbook
 
-Last Updated: 10-08-26 10:40 · Revision 0.3 — change log at the end.
+Last Updated: 10-08-26 21:40 · Revision 0.4 — change log at the end.
 
 How to register this application with Constant Contact, connect one
 deployment to one Constant Contact account, and switch the audience push on.
@@ -16,6 +16,16 @@ do not exist yet; they are written now so the design can be judged as the
 person doing it will meet it. **Ruled 2026-10-07 (plan § 11.11): crm-test
 connects to a separate Constant Contact account of its own**, created in
 section 0a; the organisation's real account is production's alone.
+
+**crm-test: sections 0a and 1 are DONE (2026-10-08, Doug).** The separate
+account exists (owned by Doug's own CBM mailbox — the only user who can
+authorise crm-test's connection, since a developer application is private
+to its creator); the application `Cleveland Business Mentors applications —
+TEST` exists with the crm-test redirect address saved; the API key and
+client secret are in Doug's password manager; the details screen reads
+*OAuth Type: Authorization Code/Implicit* and *Rotating Refresh Tokens*
+(read back from the screen 2026-10-08). Section 2 waits on the Phase C
+build. Production's sections 1 to 4 wait on access to the real account.
 
 **Audience:** an EspoCRM administrator who can sign in to the organisation's
 Constant Contact account. No command line is needed.
@@ -162,7 +172,9 @@ address Constant Contact will send an authorisation back to.
    runs on a server and can.)
 
 5. In the same dialog, under the refresh-token method, select **Rotating
-   Refresh**. (The application stores each new refresh token the moment it
+   Refresh Tokens** (the other choice reads *Long Lived Refresh Tokens*;
+   wording verified on the application's details screen 2026-10-08). (The
+   application stores each new refresh token the moment it
    receives one and lets only one process refresh at a time, which is what
    makes rotation safe here.)
 
@@ -202,6 +214,18 @@ address Constant Contact will send an authorisation back to.
     You should see the My Applications page or the details screen with no
     unsaved-changes warning. If a message says the redirect address is not
     valid, stop and tell me the exact wording.
+
+**What the details screen shows afterwards** (read back on crm-test's
+application 2026-10-08, so the build can rely on it): a heading
+*Application OAuth2 Settings*; *OAuth Type: Authorization Code/Implicit*;
+a *Private* notice saying the application can only use data from the
+creating account and that making it public means telephoning the vendor's
+support line (this is the fact section 0 rests on); the authorisation
+address `https://authz.constantcontact.com/oauth2/default/v1/authorize`
+(GET) and the token address
+`https://authz.constantcontact.com/oauth2/default/v1/token` (POST, exchanges
+authorisation codes for bearer tokens); and the refresh-token choice with
+*Rotating Refresh Tokens* selected.
 
 ---
 
@@ -321,6 +345,7 @@ must be read as a plan before it is allowed to write.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.4 | 10-08-26 21:40 | Claude (Claude Code) | crm-test sections 0a and 1 recorded done (Doug, 2026-10-08). Step 5 carries the vendor's exact refresh-token wording; a read-back of the application details screen (OAuth type, Private notice, the authorise and token addresses) added after step 12 for the build. |
 | 0.3 | 10-08-26 10:40 | Claude (Claude Code) | § 0a rewritten: the quick-start's developer sign-in address is a 404 (Doug hit it, verified); sign-up now goes through the My Applications address, which sends an unsigned-in browser to the Constant Contact sign-in/sign-up. |
 | 0.2 | 10-07-26 23:55 | Claude (Claude Code) | Ruling recorded: crm-test gets a separate Constant Contact account; section 0a added to create it through the developer sign-up. |
 | 0.1 | 10-07-26 23:40 | Claude (Claude Code) | First version from the Phase C design: the three shaping facts, the fixed redirect address per deployment, the developer-application steps (doable today), and the Settings panel, connection and first-pass steps as the design has them. |
