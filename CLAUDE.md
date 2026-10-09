@@ -1641,8 +1641,7 @@ Cleveland by design. What is *verified* is narrower than what is deployed — se
 each block.
 
 - **v0.241.0 / v0.241.1 (2026-10-08) — presenters on an event (Track F, F4).
-  v0.241.0 pushed and live on all three apps; v0.241.1 committed, not pushed;
-  ships DARK.** Doug's eight requirements were gathered one question per
+  both pushed and live on all three apps (22:36 on 10-08); ships DARK.** Doug's eight requirements were gathered one question per
   turn on 10-07/08-26 and the design approved the same night; standing rules
   in the Events section above. **crm-test's CRM side is complete** (the plan
   applied by the applier — its first `image` field, no hand step — and the

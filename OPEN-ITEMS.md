@@ -558,7 +558,7 @@ block a deploy.)*
     script updated — a role that creates a record the app leaves unassigned
     needs it), and a new guest's typed title was lost because `Contact.title`
     is a read-only mirror of the account-contact role (v0.241.1, title copied
-    onto the entry — **committed, not pushed**). Owed: (b) **Production**: plan
+    onto the entry — pushed 2026-10-08 22:34, all three apps report 0.241.1). Owed: (b) **Production**: plan
     + role script at a Sunday slot (`cevent-presenters-crm-handoff.md` § 5),
     then the switch at `/setup`. (c) **Boston** with its next release. (d) The
     bare `CEvent.presenters` link is unused and still present on every CRM;
