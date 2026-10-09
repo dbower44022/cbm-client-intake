@@ -1,16 +1,16 @@
 # CBM Events — Topics: Design (Track F, F1)
 
-Last Updated: 10-08-26 23:40 · Revision 0.1 — see change log at the end.
+Last Updated: 10-08-26 23:25 · Revision 0.2 — see change log at the end.
 
-**Status: DRAFT, awaiting Doug's review. Nothing built, nothing applied.** The
+**Status: D1 ruled by Doug (10-08-26); awaiting his approval to build. Nothing
+built, nothing applied.** The
 requirements are the two F1 rulings recorded in
 `CBM_Events_Finalization_Plan.md` revision 4.29, section F1 — one is Doug's
 (10-08-26), one is Claude's under the two-part test. They are cited below as
 *F1-n*. What earlier designs settled for the surfaces this one touches is cited
 as *F2/F3 design § n* (`CBM_Events_Audience_and_Display_Design.md`) and *F4
 design § n* (`CBM_Events_Presenters_Design.md`). Everything else is Claude's
-design and is marked where it is a choice. One decision is open for Doug
-(§ 11).
+design and is marked where it is a choice. The one decision (§ 11) is ruled.
 
 **Terms used here.** A **topic** is a subject category an event carries, such
 as *Finance & Accounting*. The **topic list** is the fixed set of values an
@@ -303,8 +303,14 @@ two ways to get a multiple-choice topic:
 until a removal handoff, which is the same cost the unused `CEvent.presenters`
 link already carries.
 
+*Ruled: the new field* (Doug, 10-08-26, on Claude's recommendation). Cost
+accepted: `CEvent.topic` stays in every CRM, holding yesterday's value, until
+a removal handoff; staff opening an event in the CRM itself see two topic
+fields until then. The design above stands as written.
+
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.2 | 10-08-26 23:25 | Claude (Claude Code) | D1 ruled by Doug: a new `topics` field with a one-time copy, not an in-place change. Awaiting approval to build. |
 | 0.1 | 10-08-26 23:40 | Claude (Claude Code) | First draft, from the two F1 requirements in the Finalization Plan revision 4.29. Nine findings verified on crm-test and in the code (notably: the topic flows through seven places and the website renderer is not one of them; no report counts by topic; the CRM's field manager accepts a type change on update, unproven below the metadata). New field `CEvent.topics` drawn in § 3, the one-time copy in § 7, plan file in § 10. One decision for Doug (D1, new field or in-place change). Awaiting review; nothing built. |
