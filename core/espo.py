@@ -14,9 +14,12 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import copy
+import hashlib
 import json
 import logging
 import re
+import time
 from typing import Any, Optional, Protocol
 
 import httpx
@@ -351,6 +354,53 @@ async def close_shared_http() -> None:
     if pool is not None and not pool.is_closed:
         await pool.aclose()
 
+# --- the metadata cache -------------------------------------------------------
+# Field definitions, layouts, labels and enum options are read from the CRM on
+# every request — a session-tool record page made six such reads in a row, and
+# nothing above the client remembered them across requests (the per-request
+# caches in directory/ and sessions/ end with the request). They now live here
+# for ``CRM_METADATA_CACHE_SECONDS`` (default 60; 0 disables), keyed by the CRM
+# address AND the caller's identity — a user with a team layout set, or an
+# admin (who gets more of the metadata tree), never sees another's copy.
+#
+# ARMED, not merely configured: only the web process and the worker switch it
+# on (``arm_metadata_cache`` from ``create_app`` / ``worker.main``). A script
+# that builds an EspoClient — the CRM-plan applier above all, which creates a
+# field and then reads the metadata back to prove it landed — gets exact reads,
+# because a cached "absent" there would read as "the build failed".
+#
+# Values are deep-copied on the way out so a caller that edits what it got
+# (dropping a field, say) cannot corrupt the next reader's copy. Errors are
+# never cached; an empty body (``None``, "the CRM has no such key") is — an
+# absence is as stable as a presence inside the window, and a feature-detected
+# field therefore appears within a minute of its build, never a deploy.
+_meta_cache: dict[tuple, tuple[float, Any]] = {}
+_meta_armed = False
+_META_CACHE_MAX = 4000
+
+
+def arm_metadata_cache(on: bool = True) -> None:
+    """Switch the cache on for this process (the web app and the worker do)."""
+    global _meta_armed
+    _meta_armed = on
+    if not on:
+        _meta_cache.clear()
+
+
+def clear_metadata_cache() -> None:
+    _meta_cache.clear()
+
+
+def _metadata_ttl() -> float:
+    if not _meta_armed:
+        return 0.0
+    try:
+        from .config import get_settings  # lazy — config is the import root
+
+        return float(get_settings().crm_metadata_cache_seconds or 0)
+    except Exception:  # noqa: BLE001 — a settings fault never breaks a read
+        return 0.0
+
 
 class EspoClient:
     def __init__(
@@ -367,6 +417,31 @@ class EspoClient:
         # the request as that logged-in user and enforces their ACL.
         self._headers = auth_headers if auth_headers is not None else {"X-Api-Key": api_key}
         self._timeout = timeout
+        # The metadata cache's identity key: a digest of the credential, so the
+        # cache never holds a token in a key and two clients for the same user
+        # share an entry.
+        self._identity = hashlib.sha256(
+            "\n".join(f"{k}={v}" for k, v in sorted(self._headers.items())).encode()
+        ).hexdigest()[:16]
+
+    async def _cached(self, kind: str, key: str, fetch):
+        """Serve ``fetch()`` from the metadata cache when it is armed."""
+        ttl = _metadata_ttl()
+        if ttl <= 0:
+            return await fetch()
+        ck = (self._base, self._identity, kind, key)
+        now = time.monotonic()
+        hit = _meta_cache.get(ck)
+        if hit is not None and hit[0] > now:
+            return copy.deepcopy(hit[1])
+        value = await fetch()
+        if len(_meta_cache) >= _META_CACHE_MAX:
+            for stale in [k for k, (exp, _) in _meta_cache.items() if exp <= now]:
+                _meta_cache.pop(stale, None)
+            if len(_meta_cache) >= _META_CACHE_MAX:
+                _meta_cache.clear()
+        _meta_cache[ck] = (now + ttl, copy.deepcopy(value))
+        return value
 
     @classmethod
     def for_user_token(
@@ -591,7 +666,11 @@ class EspoClient:
             )
 
     async def metadata(self, key: str) -> Any:
-        """Fetch an arbitrary EspoCRM metadata key (e.g. an entity's field defs)."""
+        """Fetch an arbitrary EspoCRM metadata key (e.g. an entity's field defs).
+        Cached when the metadata cache is armed (see the module note)."""
+        return await self._cached("metadata", key, lambda: self._metadata_live(key))
+
+    async def _metadata_live(self, key: str) -> Any:
         resp = await self._request(
             "GET", f"{self._base}/Metadata", op=f"metadata {key}", params={"key": key}
         )
@@ -617,7 +696,12 @@ class EspoClient:
         returns the detail panels (``[{rows:[[{name}...]], customLabel/tabLabel,
         ...}]``). Used so directory grids/detail views MATCH the CRM's own
         layout and stay in sync automatically. Readable by any authenticated
-        user (the CRM front-end fetches these too)."""
+        user (the CRM front-end fetches these too). Cached when armed."""
+        return await self._cached(
+            "layout", f"{entity}/{name}", lambda: self._layout_live(entity, name)
+        )
+
+    async def _layout_live(self, entity: str, name: str) -> Any:
         resp = await self._request(
             "GET", f"{self._base}/{entity}/layout/{name}",
             op=f"layout {entity}/{name}",
@@ -634,7 +718,10 @@ class EspoClient:
         ``{"<scope>": {"fields": {field: label, ...}, "labels": {...}, ...}}`` —
         so a grid header reads exactly like the CRM ("CBM Email", not a
         humanized guess). Address sub-fields can be absent; callers fall back to
-        a humanizer for those."""
+        a humanizer for those. Cached when armed."""
+        return await self._cached("i18n", scope, lambda: self._i18n_live(scope))
+
+    async def _i18n_live(self, scope: str) -> dict[str, Any]:
         resp = await self._request(
             "GET", f"{self._base}/I18n", op=f"i18n {scope}", params={"scope": scope}
         )
@@ -651,18 +738,24 @@ class EspoClient:
         """The live option set of an enum/multiEnum field, for schema-drift checks.
 
         Returns None if the field/options aren't found (so callers can skip it).
+        Cached when armed, under the same key as the equivalent ``metadata``.
         """
-        params = {"key": f"entityDefs.{entity}.fields.{field}.options"}
+        key = f"entityDefs.{entity}.fields.{field}.options"
+        options = await self._cached(
+            "metadata", key, lambda: self._enum_options_live(entity, field, key)
+        )
+        return options if isinstance(options, list) else None
+
+    async def _enum_options_live(self, entity: str, field: str, key: str) -> Any:
         resp = await self._request(
             "GET", f"{self._base}/Metadata",
-            op=f"metadata {entity}.{field}", params=params,
+            op=f"metadata {entity}.{field}", params={"key": key},
         )
         if resp.status_code >= 400:
             raise EspoError(
                 f"metadata {entity}.{field} failed: {http_error_detail(resp)}"
             )
-        options = _json_or_none(resp)
-        return options if isinstance(options, list) else None
+        return _json_or_none(resp)
 
     async def upload_attachment(
         self,

@@ -406,6 +406,11 @@ SETTINGS: tuple[SettingSpec, ...] = (
        unit="s", help="How long a session's cached team membership stays trusted."),
     _s("request_timeout_seconds", GROUP_RELIABILITY, "CRM request timeout", kind="int",
        unit="s", component="both"),
+    _s("crm_metadata_cache_seconds", GROUP_RELIABILITY, "CRM metadata cache", kind="int",
+       unit="s", component="both",
+       help="How long field definitions, layouts, labels and enum options are "
+            "remembered before the CRM is asked again. A field built in the CRM "
+            "shows within this window. 0 reads the CRM on every request."),
 
     # --- Team gates --------------------------------------------------------
     _s("assign_allowed_teams", GROUP_GATES, "Client Administration", kind="csv"),

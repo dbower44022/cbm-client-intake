@@ -462,6 +462,11 @@ def create_app(
     # is what makes it true. Never raises, and degrades to the deployment's own
     # values rather than to code defaults. See core/boot_overrides.
     boot_overrides.load_at_boot(settings)
+    # The CRM metadata cache is ARMED here, not merely configured — a script
+    # that builds its own EspoClient keeps exact reads (core/espo module note).
+    from .espo import arm_metadata_cache
+
+    arm_metadata_cache()
     setup_logging(settings.log_level)
     # Fail-fast on contradictory config (Phase 6, reliability review
     # 2026-07-17): these combinations used to boot fine and fail at runtime —

@@ -388,3 +388,91 @@ async def test_stale_pooled_connection_retries_a_read_once(monkeypatch):
         await EspoClient("https://crm.example", "k").update("Contact", "c1", {"a": 1})
     assert calls["n"] == 1, "a write is never replayed"
     await close_shared_http()
+
+
+# --- the metadata cache (v0.246.0) ---------------------------------------------
+# Field definitions, layouts, labels and enum options are remembered for
+# CRM_METADATA_CACHE_SECONDS, keyed by CRM address + caller identity, and ONLY
+# when the process armed the cache (the web app and the worker do; a script
+# never does, so the CRM-plan applier's read-back after a build stays exact).
+
+from core.espo import arm_metadata_cache, clear_metadata_cache  # noqa: E402
+
+
+def _counting_client(monkeypatch, body=b'{"name": {"type": "varchar"}}', **kw):
+    client = EspoClient("https://crm.example", kw.pop("key", "k"), 30, **kw)
+    calls = {"n": 0}
+
+    async def fake_request(method, url, *, op, params=None, json_body=None):
+        calls["n"] += 1
+        return httpx.Response(200, content=body, request=httpx.Request(method, url))
+
+    monkeypatch.setattr(client, "_request", fake_request)
+    return client, calls
+
+
+async def test_metadata_is_not_cached_unless_armed(monkeypatch):
+    client, calls = _counting_client(monkeypatch)
+    await client.metadata("entityDefs.Contact.fields")
+    await client.metadata("entityDefs.Contact.fields")
+    assert calls["n"] == 2
+
+
+async def test_armed_cache_serves_repeat_reads_from_memory(monkeypatch):
+    arm_metadata_cache()
+    client, calls = _counting_client(monkeypatch)
+    first = await client.metadata("entityDefs.Contact.fields")
+    again = await client.metadata("entityDefs.Contact.fields")
+    assert calls["n"] == 1 and again == first
+    # A caller editing what it got does not corrupt the next reader's copy.
+    again.clear()
+    assert await client.metadata("entityDefs.Contact.fields") == first
+    # Layouts, labels and enum options ride the same cache …
+    await client.layout("Contact", "detail"); await client.layout("Contact", "detail")
+    await client.i18n("Contact"); await client.i18n("Contact")
+    assert calls["n"] == 3
+    # … and a different key, a different CRM or a different identity does not hit.
+    await client.metadata("entityDefs.Account.fields")
+    other_user = EspoClient.for_user_token("https://crm.example", "u", "t")
+    monkeypatch.setattr(other_user, "_request", client._request)
+    await other_user.metadata("entityDefs.Contact.fields")
+    assert calls["n"] == 5
+    clear_metadata_cache()
+    await client.metadata("entityDefs.Contact.fields")
+    assert calls["n"] == 6
+
+
+async def test_cache_honours_the_setting_and_never_holds_an_error(monkeypatch):
+    from core.config import get_settings
+
+    arm_metadata_cache()
+    monkeypatch.setattr(get_settings(), "crm_metadata_cache_seconds", 0)
+    client, calls = _counting_client(monkeypatch)
+    await client.metadata("entityDefs.Contact.fields")
+    await client.metadata("entityDefs.Contact.fields")
+    assert calls["n"] == 2, "0 = read the CRM every time"
+    monkeypatch.setattr(get_settings(), "crm_metadata_cache_seconds", 60)
+
+    failing = EspoClient("https://crm.example", "k", 30)
+    n = {"v": 0}
+
+    async def boom(method, url, *, op, params=None, json_body=None):
+        n["v"] += 1
+        return httpx.Response(500, content=b"down", request=httpx.Request(method, url))
+
+    monkeypatch.setattr(failing, "_request", boom)
+    for _ in range(2):
+        with pytest.raises(EspoError):
+            await failing.metadata("entityDefs.Contact.fields")
+    assert n["v"] == 2
+
+
+async def test_an_absent_key_is_cached_as_absent(monkeypatch):
+    """EspoCRM answers a key it lacks with 200 + empty body → None. Absence is
+    as stable as presence inside the window (a built field shows within it)."""
+    arm_metadata_cache()
+    client, calls = _counting_client(monkeypatch, body=b"")
+    assert await client.metadata_enum_options("CEvent", "audience") is None
+    assert await client.metadata_enum_options("CEvent", "audience") is None
+    assert await client.metadata("entityDefs.CEvent.fields.audience.options") is None
+    assert calls["n"] == 1, "all three read the same key"

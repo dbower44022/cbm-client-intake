@@ -189,7 +189,11 @@ staff/mentor tool.
   - `espo.py` — `EspoClient` (real) and `DryRunEspoClient`. All calls funnel
     through `_request`, which sends through **one process-wide connection
     pool** (`shared_http`, closed by the lifespan / worker exit — v0.245.0;
-    a per-call client cost a TLS handshake on every CRM call) and wraps httpx transport failures as
+    a per-call client cost a TLS handshake on every CRM call), serves
+    metadata / layout / i18n / enum-option reads from a **process-wide cache
+    for `CRM_METADATA_CACHE_SECONDS`** (60; keyed by CRM + caller identity;
+    v0.246.0 — ARMED only by `create_app` and `worker.main`, so a script's
+    read-back after a CRM build stays exact) and wraps httpx transport failures as
     `EspoTransportError(EspoError)` so every `except EspoError` net covers CRM
     outages. `forbidden_hint` turns a 403 into a message naming the exact denied
     entity and operation.
@@ -1658,8 +1662,16 @@ unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
 
+- **v0.246.0 (2026-10-09) — CRM metadata is cached for a minute.** Committed,
+  not pushed. Second review item; standing rule in the `espo.py` line above.
+  What it changes for a live pass: **a field built in the CRM shows in the
+  app within a minute, not instantly** — wait, or set the cache to 0 at
+  `/setup` → Reliability for the pass. Scripts are unaffected (not armed).
+  Verified by tests only; the live check is the record page's CRM-call count
+  dropping on a second open within a minute.
+
 - **v0.245.0 (2026-10-09) — every CRM call shares one connection pool.**
-  Committed, not pushed. From the performance review Doug asked for on
+  Pushed 10-09-26 (production and crm-test built from it). From the performance review Doug asked for on
   10-09-26 (pages "getting a little slower"): a record page made nine
   sequential CRM calls, each on a fresh TLS connection. Measured against
   crm-test: eight metadata reads 1,530 ms → 940 ms. No flag; rollback is a

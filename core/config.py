@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     espo_dry_run: bool = True
     allowed_origins: str = "http://localhost:8000"
     request_timeout_seconds: int = 20
+    # How long the web process and the worker remember CRM metadata (field
+    # definitions, layouts, labels, enum options) before re-reading it. A
+    # feature-detected field therefore shows within this window of its build.
+    # 0 = read the CRM every time. Scripts never cache (core/espo module note).
+    crm_metadata_cache_seconds: int = 60
 
     # --- public intake POST limits (Phase 6, decision D3: 2 MB / 30 per
     # 10 min). The volunteer form keeps a larger body cap sized for its

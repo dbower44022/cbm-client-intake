@@ -4,6 +4,26 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.246.0] — 2026-10-09
+
+**perf(espo): CRM metadata is remembered for a minute.** Field definitions,
+layouts, translated labels and enum options were read from the CRM on every
+request — a session-tool record page made six such reads in a row (~0.77 s on
+production), and the per-request caches in `directory/` and `sessions/` ended
+with the request. `EspoClient.metadata` / `layout` / `i18n` /
+`metadata_enum_options` now serve repeat reads from a process-wide cache for
+`CRM_METADATA_CACHE_SECONDS` (default 60, `/setup` → Reliability; 0 reads
+the CRM every time), keyed by CRM address **and caller identity** (a digest of
+the credential — a user with a team layout set, or an admin, never sees
+another's copy). Values are deep-copied out; errors are never cached; an
+absent key (200 + empty body → None) is, so a feature-detected field shows
+within a minute of its build. **Armed, not merely configured**: only
+`create_app` and `worker.main` switch it on, so a script that builds its own
+client — the CRM-plan applier above all, which reads metadata back after a
+build to prove it landed — keeps exact reads. `tests/conftest.py` disarms and
+empties it before every test. Second of the four 10-09-26 review items; the
+receipt-sweep defect and the Gmail scope rebuild are still owed.
+
 ## [0.245.0] — 2026-10-09
 
 **perf(espo): every CRM call shares one connection pool.** `EspoClient._request`

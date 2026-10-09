@@ -239,6 +239,9 @@ async def run_cycle(
 async def main() -> None:
     settings = get_settings()
     setup_logging(settings.log_level)
+    from core.espo import arm_metadata_cache
+
+    arm_metadata_cache()  # the worker is the other long-lived CRM reader
     store = store_mod.make_store(settings)
     if store is None:
         # No database configured (e.g. before Phase 1 is activated). Stay up but
