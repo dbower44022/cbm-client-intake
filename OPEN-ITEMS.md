@@ -538,7 +538,7 @@ block a deploy.)*
 
 ## Live verification owed
 
-41. **Topics on events (v0.242.0, Track F F1) — built dark, never seen.**
+41. **Topics on events (v0.242.0, Track F F1) — live pass DONE on crm-test 10-09-26; production and Boston owed.**
     Doug's ruling 10-08-26: no user-entered topic; an event carries several
     curated topics (`CEvent.topics`, multiEnum). Feature-detected, no switch.
     **crm-test's CRM side is done 10-09-26 03:34 UTC**: `scripts/plans/
@@ -547,7 +547,11 @@ block a deploy.)*
     run (dry run, then apply). **The nightly reset empties crm-test's
     `topics` values** (column rebuilt from files, rows restored from the
     snapshot), so the copy is re-run from the repository before a pass.
-    Owed: (a) the **live pass as Mark Marketing** from the step page
+    **Live pass done 10-09-26 03:50–03:59 UTC by Doug as Mark Marketing** from the
+    step page below — every step matched (verified in the web log: the three saves answered 200 at 03:51, 03:52 and 03:53 UTC (AI Tools for Small Business, Reading Your Own Financials, Pricing for Profit), the library read with each of the two topic filters 200, the event page 200 at 03:58, no 4xx or 5xx in the window; the CRM read-back was lost to the 04:00 UTC reset, which ran one minute before it). One step of the page was
+    wrong, not the feature: a library card's title plays the recording by
+    design, so the eyebrow check opens the event page by address (rev 1.1).
+    ~~Owed: (a)~~ Done: (a) the **live pass as Mark Marketing** from the step page
     https://claude.ai/artifact/Me5JXig7rzCzy9c6RwvMNi (private, written 10-08-26;
     crm-test reported v0.242.0 at 23:47 on 10-08-26, so it can run): Topics as a tick list where Topic
     stood, no way to type one, two topics saved and shown on the Overview

@@ -1,6 +1,6 @@
 # CRM handoff — topics on events (Track F, F1)
 
-Last Updated: 10-08-26 23:50 · Revision 1.1 — see change log at the end.
+Last Updated: 10-09-26 00:05 · Revision 1.2 — see change log at the end.
 
 One new field on the event, `CEvent.topics` — a multiple-choice field with the
 same ten values as the single `topic` it supersedes — and a one-time copy of
@@ -15,7 +15,7 @@ application (the column and its values stay).
 
 | CRM | State | Evidence |
 |---|---|---|
-| crm-test | **Done 10-09-26 03:34 UTC** — the plan applied by the shipped applier as the configuration administrator (dry-run fingerprint `1a404fc9c337`, one line: `create field CEvent.topics (multiEnum)`), the field read back from metadata by the applier and again as the org-wide key (`multiEnum`, ten options in order, `isCustom`); the copy run (dry run, then apply): one event, *AI Tools for Small Business*, `topics` ← `[Business Fundamentals]`, read back; four events had no topic to copy. **The nightly reset empties `topics` on every row** (the column is rebuilt from files, the rows restored from the snapshot) — re-run § 3 there before a live pass. | This document's § 2 and § 3 output, 10-09-26 03:33–03:36 UTC. |
+| crm-test | **Done 10-09-26 03:34 UTC** — the plan applied by the shipped applier as the configuration administrator (dry-run fingerprint `1a404fc9c337`, one line: `create field CEvent.topics (multiEnum)`), the field read back from metadata by the applier and again as the org-wide key (`multiEnum`, ten options in order, `isCustom`); the copy run (dry run, then apply): one event, *AI Tools for Small Business*, `topics` ← `[Business Fundamentals]`, read back; four events had no topic to copy. **The nightly reset empties `topics` on every row** (the column is rebuilt from files, the rows restored from the snapshot) — re-run § 3 there before a live pass. **§ 4 step 2 done 10-09-26** by Doug as Mark Marketing, every step matched; verified in the web log: the three saves answered 200 at 03:51, 03:52 and 03:53 UTC (AI Tools for Small Business, Reading Your Own Financials, Pricing for Profit), the library read with each of the two topic filters 200, the event page 200 at 03:58, no 4xx or 5xx in the window; the CRM read-back was lost to the 04:00 UTC reset, which ran one minute before it. | This document's § 2 and § 3 output, 10-09-26 03:33–03:36 UTC. |
 | Production | **Owed** — Sunday 17:00 UTC slot, from inside the deployed web container. v0.242.0 reported by production at 23:47 on 10-08-26, so the container carries the plan and the copy script. | *Inferred:* production has `topic` and not `topics`; ten published recordings carry a topic each (09-14-26). The dry run in § 2 proves the first; the copy's dry run in § 3 counts the second. |
 | Boston | **Owed** — with the release that carries v0.242.0. | *Inferred:* built from crm-test's files before this change. |
 
@@ -127,5 +127,6 @@ administrator and Boston's settings file. Zero events are expected to copy.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 10-09-26 00:05 | Claude (Claude Code) | crm-test live pass done by Doug as Mark Marketing (§ 4 step 2); evidence from the web log. Production and Boston owed. |
 | 1.1 | 10-08-26 23:50 | Claude (Claude Code) | v0.242.0 live on production, crm-test and dev (23:47); the crm-test live pass and production's § 5 can run. |
 | 1.0 | 10-08-26 23:55 | Claude (Claude Code) | Written after the crm-test run: field applied and verified, the copy run and read back. Production and Boston owed. |

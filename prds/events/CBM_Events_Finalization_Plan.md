@@ -1,6 +1,6 @@
 # CBM Events & Webinars — Finalization Plan
 
-Last Updated: 10-08-26 23:50 · Revision 4.31 — see change log at the end.
+Last Updated: 10-09-26 00:05 · Revision 4.32 — see change log at the end.
 
 Companion to `CBM_Events_PRD.md`, `CBM_Events_Implementation_Plan.md` and
 `CBM_Events_Registration_Recognition_Plan.md`. Those three say what the feature
@@ -129,7 +129,7 @@ after Doug's requirements are gathered, and nothing is settled until he rules.
 
 | # | Feature | Raised by | State |
 |---|---|---|---|
-| F1 | Event topic: multiple selections from the curated list (the user-entered value was struck 10-08-26) | User review, 09-2026 | **Built v0.242.0** (10-08-26, dark until a CRM has `topics`); crm-test field applied and copy run 10-09-26; live pass, production, Boston owed (`OPEN-ITEMS.md` #41) |
+| F1 | Event topic: multiple selections from the curated list (the user-entered value was struck 10-08-26) | User review, 09-2026 | **Built v0.242.0** (10-08-26, dark until a CRM has `topics`); crm-test CRM done and **live pass done 10-09-26**; production and Boston owed (`OPEN-ITEMS.md` #41) |
 | F2 | Display Date/Time: the moment an event may first appear on the public pages | User review, 09-2026 | Built v0.233.0 (09-29-26); reviewed live on crm-test 09-30; **CRM applied to production 10-07-26**; Boston owed (`OPEN-ITEMS.md` #35) |
 | F3 | Event audience: Internal, a specific chapter, or Public — Internal events form a calendar on the chapter's portal | User review, 09-2026 | Built v0.233.0 (09-29-26); reviewed live on crm-test 09-30; **CRM applied to production 10-07-26**; Boston owed (`OPEN-ITEMS.md` #35) |
 | F4 | Presenters: select or add them per event, with an optional presenter biography on the event page | User review, 09-2026 | Built v0.241.0/.1 (dark); crm-test CRM done and live pass done 10-08-26; production, Boston owed |
@@ -698,6 +698,7 @@ attendance recorded → recording link pasted → the engagement rollup shows it
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 4.32 | 10-09-26 00:05 | Claude (Claude Code) | F1 live pass done on crm-test 10-09-26; production and Boston owed. |
 | 4.31 | 10-08-26 23:50 | Claude (Claude Code) | F1 approved by Doug and built as v0.242.0; crm-test field applied and the copy run. F1 state moved to Built. |
 | 4.30 | 10-08-26 23:25 | Claude (Claude Code) | F1 design D1 ruled by Doug (new field + one-time copy). F1 state: awaiting approval to build. |
 | 4.29 | 10-08-26 23:40 | Claude (Claude Code) | F1 requirement 2 decided by Claude under the two-part test (an event appears under each of its topics; no report counts by topic today). F1 requirements complete; design drafted (`CBM_Events_Topics_Design.md` rev 0.1, plan file `scripts/plans/cevent-topics.json`); F1 state moved to Design drafted, awaiting review. |

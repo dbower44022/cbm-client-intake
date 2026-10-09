@@ -1662,9 +1662,10 @@ each block.
   `topics` field with a one-time copy); standing rule in the Events section
   above; design `prds/events/CBM_Events_Topics_Design.md`. **crm-test's CRM
   side is done** (the field applied by the applier and read back as the org
-  key; the copy script run — one event). Owed: the live pass as Mark
-  Marketing (`OPEN-ITEMS.md` #41, step page linked there), production at a
-  Sunday slot (plan + copy from the container), Boston with its release.
+  key; the copy script run — one event). **Live pass done 10-09-26 by Doug
+  as Mark Marketing**, every step matched, verified in the web log
+  (`OPEN-ITEMS.md` #41). Owed: production at a Sunday slot (plan + copy from
+  the container), Boston with its release.
   Note the nightly reset empties crm-test's `topics` values (the column is
   rebuilt from files, the rows from the snapshot), so the copy is re-run
   there before a pass.
