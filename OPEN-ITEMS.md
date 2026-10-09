@@ -548,8 +548,20 @@ block a deploy.)*
     script updated. **Step 3.10 passed 11:1x** (Mark created the guest Contact,
     typed Presenter) and found a second defect: the typed title was lost
     because `Contact.title` is a read-only mirror of the account-contact role —
-    fixed in v0.241.1 (title copied onto the entry), not yet pushed. Steps
-    3.11 onwards have not run. Owed: (a) the rest of
+    fixed in v0.241.1 (title copied onto the entry), not yet pushed. **Sections
+    3–6 ran 2026-10-08 21:10–21:21** (server log + CRM read): duplicate
+    refused (409), reorder, photo copy and replacement, biography edit, event
+    save, public page with both cards and the photo route, the cross-event
+    photo 404, the member page, remove, and the guest reused on a second
+    event with no second Contact. Two things to settle: (i) the event save
+    at step 3.18 answered 400 twice before succeeding — wording owed from
+    Doug; (ii) section 6.1 unticked **Show this event** instead of **Show
+    presenter biographies** (CRM: `publishToWebsite` false,
+    `showPresenterBios` still true), so section 7 saw the publish gate's 404,
+    not the switch — redo 6.1 and 7. Section 8 (CRM checks) unconfirmed.
+    Design follow-up: a guest's title and company live on each event's entry
+    and do not carry to a second event (the Contact holds neither) — decide
+    whether a second add should copy from the person's latest entry. Owed: (a) the rest of
     the **live pass on crm-test** as a real
     Marketing Admin non-admin, step page
     https://claude.ai/artifact/RrS6SvEtMFNx2dTPckPkaZ (private) — switch on at `/setup`; add a mentor presenter
