@@ -15,7 +15,7 @@ behind `EVENT_PRESENTERS` until this change has landed.
 | CRM | State | Evidence |
 |---|---|---|
 | crm-test | **Done 10-08-26** (role script re-run 11:03 and 11:11 for the assignment permission, `team` then `all`) — plan applied by the shipping applier as the configuration administrator (fingerprint `5a78484e6b9c`), every entity, field and link read back from metadata; the role script applied and each grant read back; `GET /CEventPresenter?maxSize=1` as the org-wide key answers 200. | This document's § 2 and § 3 output, 10-08-26 01:12–01:25 local. |
-| Production | **Owed** — Sunday 17:00 UTC slot, from inside the deployed web container, from the console step page https://claude.ai/artifact/1KzCM3LbjyvGWp4k2BXP23 (Doug's private page, written 10-08-26). **Needs the container on v0.241.2 or later** — the build that ships the applier. | *Inferred:* production has neither the entity nor the field; it has `CEvent.presenters` (the bare link) like crm-test. The dry run in § 2 proves it. |
+| Production | **Owed** — Sunday 17:00 UTC slot, from inside the deployed web container, from the console step page https://claude.ai/artifact/1KzCM3LbjyvGWp4k2BXP23 (Doug's private page, written 10-08-26). **Needs the container on v0.241.2 or later** — the build that ships the applier; production reported 0.241.2 at 23:07 on 10-08-26, so the prerequisite is met. | *Inferred:* production has neither the entity nor the field; it has `CEvent.presenters` (the bare link) like crm-test. The dry run in § 2 proves it. |
 | Boston | **Owed** — with the release that carries v0.241.0. | *Inferred:* built from crm-test's files before this change. |
 
 ## 1. The naming rules

@@ -1654,6 +1654,11 @@ each block.
   CRM change and grants at a Sunday slot, Boston with its release, and one
   design follow-up (a guest's title and company do not carry to a second
   event). Switch off everywhere but crm-test.
+  **Production's step page is written** (10-08-26, linked from #39 and the
+  handoff § 5) and its prerequisite is met: **v0.241.2**, which moves the
+  CRM-plan applier into `scripts/` so it ships in the image (the skill's copy
+  under `.claude/` was never in a container), is live on all three apps
+  (23:07 on 10-08).
   **Kickoff prompt for the next Track F session:**
   `prompts/track-f-session-2026-10-08.md` (production slot, Boston, then F1).
 

@@ -565,8 +565,9 @@ block a deploy.)*
     expected output, the switch, a non-admin pass on two unticked check
     events, the CRM reads, the clean-up). **Prerequisite: production on
     v0.241.2**, the build that ships the applier (`scripts/apply_crm_plan.py`;
-    the skill's copy under `.claude/` was never in a container) — committed,
-    waits on the push. (c) **Boston** with its next release. (d) The
+    the skill's copy under `.claude/` was never in a container) — **pushed
+    10-08-26 23:05; production and crm-test reported 0.241.2 at 23:07.** The
+    page can run at the Sunday slot. (c) **Boston** with its next release. (d) The
     bare `CEvent.presenters` link is unused and still present on every CRM;
     removing it is a separate human decision. (e) **Design follow-up for
     Doug:** a guest's title and company live on each event's entry and do not
