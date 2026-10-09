@@ -225,9 +225,12 @@ async def test_a_new_email_creates_a_presenter_typed_contact():
     contact_create = next(p for e, p in c.created if e == "Contact")
     assert contact_create["emailAddress"] == "ada@example.org"
     assert contact_create["cContactType"] == [cfg.PRESENTER_CONTACT_TYPE]
-    assert contact_create["title"] == "Engineer"
+    # Contact.title is a read-only mirror of the account-contact role in EspoCRM
+    # (not storable); the typed title must land on the ENTRY, not be sent there.
+    assert "title" not in contact_create
     _, entry = c.created[-1]
     assert entry["name"] == "Ada Lovelace"
+    assert entry["presenterTitle"] == "Engineer"
     assert entry["presenterCompany"] == "Analytical Engines"   # on the entry, not the Contact
 
 

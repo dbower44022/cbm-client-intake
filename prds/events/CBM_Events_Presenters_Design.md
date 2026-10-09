@@ -455,6 +455,17 @@ Each is Claude's decision during the build, open to challenge.
    given, and the read-back verified it.
 8. **Removing a presenter asks its one-line confirmation in the card's own
    action row** (Yes / No), the portal rail's pattern, rather than a dialog.
+9. **Finding 4 was wrong about `Contact.title`** (found by the live pass,
+   v0.241.1): it is not a stored varchar but a read-only mirror of the
+   person's role at their primary Company (`notStorable`, selected from
+   `accountContactPrimary.role`). A Contact with no Company has no title, so
+   the add no longer sends a typed title to the Contact and copies it onto
+   the entry's `presenterTitle` — which D2 had already made the fact the
+   page shows. An existing guest picked from the search still contributes
+   their title when their Company gives them one.
+10. **The role's Assignment Permission is `all`** (D1 as ruled said nothing of
+    it): EspoCRM refuses, at *not set* or *team*, a new record with neither a
+    team nor an assigned user, which a presenter's Contact is.
 
 ---
 
@@ -462,6 +473,7 @@ Each is Claude's decision during the build, open to challenge.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.7 | 10-08-26 21:12 | Claude (Claude Code) | § 11 items 9 and 10 from the live pass: Contact.title is a read-only mirror (typed title now lands on the entry, v0.241.1); assignment permission `all`. |
 | 0.6 | 10-08-26 11:11 | Claude (Claude Code) | D1's assignment permission is `all`, not `team`: the team level refuses a record with neither team nor assigned user (EspoCRM source). |
 | 0.5 | 10-08-26 11:04 | Claude (Claude Code) | D1 gains Assignment Permission `team` on the Marketing Admin Role, found by the live pass (Contact create refused with an assignment failure). |
 | 0.4 | 10-08-26 01:26 | Claude (Claude Code) | Approved by Doug and built as v0.241.0, dark behind `EVENT_PRESENTERS`. crm-test CRM change and role grants applied and verified; production and Boston owed. § 11 added: eight places the build departs from the design. |

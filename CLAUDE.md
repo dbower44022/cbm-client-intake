@@ -1346,6 +1346,12 @@ Conventions. Plan: `prds/action-history-plan.md`;
 - **Foreign fields are read-only mirrors** of a linked record's field — "shows
   but can't be edited" is usually this, not a bug
   ([[espo-foreign-fields-are-readonly-mirrors]]).
+- **`Contact.title` is one of those mirrors, and it is not stored at all**
+  (`notStorable`, selected from `accountContactPrimary.role` — read on
+  crm-test 2026-10-08): a Contact with no Company has no title, and a title
+  sent on create or update is silently discarded, HTTP 200. Keep a person's
+  job title on the record that needs it (the presenter entry does), never on
+  a Company-less Contact.
 - **Switching an entity to Multiple Assigned Users disables the single
   `assignedUser`**: reads return null (hiding previously-stored values) and
   writes are silently ignored. All five assigned entities are now collaborators;
@@ -1634,8 +1640,9 @@ unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
 
-- **v0.241.0 (2026-10-08) — presenters on an event (Track F, F4). Committed,
-  not pushed; ships DARK.** Doug's eight requirements were gathered one
+- **v0.241.0 / v0.241.1 (2026-10-08) — presenters on an event (Track F, F4).
+  v0.241.0 pushed and live on all three apps; v0.241.1 committed, not pushed;
+  ships DARK.** Doug's eight requirements were gathered one
   question per turn on 10-07/08-26 and the design approved the same night;
   standing rules in the Events section above. **crm-test's CRM side is
   complete** — `scripts/plans/cevent-presenters.json` applied by the applier

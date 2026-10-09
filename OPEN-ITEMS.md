@@ -545,7 +545,11 @@ block a deploy.)*
     create refused (`Assignment failure`) — `team` was not enough (a record
     with neither team nor assigned user fails that level, per EspoCRM's
     source); fixed by Assignment Permission `all` on the role, applied 11:11,
-    script updated. Owed: (a) the rest of
+    script updated. **Step 3.10 passed 11:1x** (Mark created the guest Contact,
+    typed Presenter) and found a second defect: the typed title was lost
+    because `Contact.title` is a read-only mirror of the account-contact role —
+    fixed in v0.241.1 (title copied onto the entry), not yet pushed. Steps
+    3.11 onwards have not run. Owed: (a) the rest of
     the **live pass on crm-test** as a real
     Marketing Admin non-admin, step page
     https://claude.ai/artifact/RrS6SvEtMFNx2dTPckPkaZ (private) — switch on at `/setup`; add a mentor presenter

@@ -4,6 +4,21 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.241.1] — 2026-10-08
+
+**fix(events): a new presenter's typed title lands on the presenter entry.**
+Found by the live pass (`OPEN-ITEMS.md` #39, section 3 step 10): the guest's
+card showed the company but no title. EspoCRM's `Contact.title` is not a
+stored field — it is a read-only mirror of the person's role at their primary
+Company (`notStorable`, selected from `accountContactPrimary.role`), so a
+Contact with no Company has no title and the typed one was discarded. The add
+no longer sends it to the Contact and copies it onto the entry's
+`presenterTitle` instead (where D2 put every presenter fact). The same pass
+found the Marketing Admin Role needs **Assignment Permission `all`**, not
+`team` (EspoCRM refuses, at the team level, a new record with neither a team
+nor an assigned user); `scripts/migrate_presenter_roles.py` now sets it, and
+crm-test has it. One test changed.
+
 ## [0.241.0] — 2026-10-08
 
 **feat(events): presenters on an event, with a biography and photo per

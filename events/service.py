@@ -1582,8 +1582,11 @@ async def add_presenter(
             "firstName": first, "lastName": last, "emailAddress": email,
             "cContactType": [cfg.PRESENTER_CONTACT_TYPE],
         }
-        if (new.get("title") or "").strip():
-            payload["title"] = new["title"].strip()
+        # NOT ``title``: on EspoCRM's Contact it is a read-only MIRROR of the
+        # person's role at their primary Company (``notStorable``, selected from
+        # ``accountContactPrimary.role`` — read on crm-test 10-08-26), so a
+        # Contact with no Company has no title and a typed one is discarded.
+        # The typed title goes onto the presenter entry below instead (D2).
         # fill_keys=() — a matched Contact is reused exactly as it is: no
         # null-fill, because adding someone as a presenter is not a reason to
         # change what is stored about them (and the role has no Contact edit).
@@ -1596,6 +1599,8 @@ async def add_presenter(
             contact["name"] = f"{first} {last}"
         if not contact.get("accountName") and (new.get("company") or "").strip():
             contact["accountName"] = new["company"].strip()
+        if not contact.get("title") and (new.get("title") or "").strip():
+            contact["title"] = new["title"].strip()
 
     existing = await list_presenters(client, event_id)
     if any(r.get("contactId") == contact["id"] for r in existing):
