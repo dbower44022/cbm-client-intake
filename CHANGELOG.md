@@ -4,6 +4,22 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.241.2] — 2026-10-08
+
+**chore(crm): the CRM-plan applier ships in the image.** The applier that
+built `CEventPresenter` on crm-test (`apply_crm_plan.py`, with its credential
+helper `espo_admin.py` and the `run_with_admin.py` launcher) lived only in the
+CRM-changes skill directory under `.claude/`, which is not tracked, so it was
+in no deployed container, and production's structural changes run from inside
+the deployed web container. All three now live under `scripts/` and the skill
+directory keeps shims that run them, so a plan file under `scripts/plans/` can
+be applied to production the same way it was applied to crm-test, with the
+same fingerprint. A new test pins the naming rules and the presenters plan's
+dry-run fingerprint (`5a78484e6b9c`) on a CRM without the entity, and the
+refusal of a non-crm-test target without `--production`. No application code
+changed; the version moves so `/healthz` can say whether a container carries
+the applier (`cevent-presenters-crm-handoff.md` § 5).
+
 ## [0.241.1] — 2026-10-08
 
 **fix(events): a new presenter's typed title lands on the presenter entry.**

@@ -1,6 +1,6 @@
 # CRM handoff — presenters on events (Track F, F4)
 
-Last Updated: 10-08-26 11:11 · Revision 1.2 — see change log at the end.
+Last Updated: 10-08-26 23:45 · Revision 1.3 — see change log at the end.
 
 One new record type, `CEventPresenter`, joining one event to one presenter and
 carrying that presenter's biography, title, company, photo and display order
@@ -15,7 +15,7 @@ behind `EVENT_PRESENTERS` until this change has landed.
 | CRM | State | Evidence |
 |---|---|---|
 | crm-test | **Done 10-08-26** (role script re-run 11:03 and 11:11 for the assignment permission, `team` then `all`) — plan applied by the shipping applier as the configuration administrator (fingerprint `5a78484e6b9c`), every entity, field and link read back from metadata; the role script applied and each grant read back; `GET /CEventPresenter?maxSize=1` as the org-wide key answers 200. | This document's § 2 and § 3 output, 10-08-26 01:12–01:25 local. |
-| Production | **Owed** — Sunday 17:00 UTC slot, from inside the deployed web container. | *Inferred:* production has neither the entity nor the field; it has `CEvent.presenters` (the bare link) like crm-test. The dry run in § 2 proves it. |
+| Production | **Owed** — Sunday 17:00 UTC slot, from inside the deployed web container, from the console step page https://claude.ai/artifact/1KzCM3LbjyvGWp4k2BXP23 (Doug's private page, written 10-08-26). **Needs the container on v0.241.2 or later** — the build that ships the applier. | *Inferred:* production has neither the entity nor the field; it has `CEvent.presenters` (the bare link) like crm-test. The dry run in § 2 proves it. |
 | Boston | **Owed** — with the release that carries v0.241.0. | *Inferred:* built from crm-test's files before this change. |
 
 ## 1. The naming rules
@@ -31,7 +31,11 @@ all of this; verify with `GET /Metadata`, never by reading a label.
 
 From the repository root, as the configuration administrator (credentials in
 `.env` as `ESPO_ADMIN_BASE` / `ESPO_ADMIN_USER` / `ESPO_ADMIN_PASS`; in a
-deployed container they are the web component's provisioning admin):
+deployed container they are the web component's provisioning admin). **The
+applier is `scripts/apply_crm_plan.py` since v0.241.2** — it used to live only
+in the CRM-changes skill directory under `.claude/`, which is not tracked and
+so was in no deployed container; the skill's copy is now a shim that runs the
+committed file.
 
 ```bash
 cd /home/doug/Dropbox/Projects/cbm-client-intake
@@ -40,16 +44,20 @@ cd /home/doug/Dropbox/Projects/cbm-client-intake
 Dry run, which changes nothing and prints the plan and its fingerprint:
 
 ```bash
-PYTHONPATH=. uv run python .claude/skills/espo-crm-changes/scripts/apply_crm_plan.py \
-  scripts/plans/cevent-presenters.json
+PYTHONPATH=. uv run python scripts/apply_crm_plan.py scripts/plans/cevent-presenters.json
 ```
 
 Read the plan it prints. Then apply exactly that plan:
 
 ```bash
-PYTHONPATH=. uv run python .claude/skills/espo-crm-changes/scripts/apply_crm_plan.py \
-  scripts/plans/cevent-presenters.json --apply --expect <fingerprint>
+PYTHONPATH=. uv run python scripts/apply_crm_plan.py scripts/plans/cevent-presenters.json --apply --expect <fingerprint>
 ```
+
+The fingerprint is a hash of the work, not of the file: on a CRM that has none
+of this change it is **`5a78484e6b9c`** (crm-test 10-08-26 before its apply;
+pinned by `tests/test_apply_crm_plan.py`), so production's dry run should
+print the same value. A target that is not crm-test also needs
+`--production`.
 
 The applier rebuilds and reads every name back. On crm-test the whole run,
 including the `image` field (the applier's first), took under a minute and
@@ -61,9 +69,11 @@ Decision D1 (Doug, 10-08-26): presenter reads and writes run as the signed-in
 user. The Marketing Admin Role held nothing on `Contact` or `CMentorProfile`.
 
 ```bash
-PYTHONPATH=. uv run python .claude/skills/espo-crm-changes/scripts/run_with_admin.py \
-  scripts/migrate_presenter_roles.py
+PYTHONPATH=. uv run python scripts/run_with_admin.py scripts/migrate_presenter_roles.py
 ```
+
+(Inside a container the three `ESPO_ADMIN_*` variables are exported from the
+provisioning account instead, and the script runs directly.)
 
 Dry run first (above), then `--apply`. It grants: Marketing Admin Role —
 `Contact` create yes, read all (edit stays **no**); `CMentorProfile` read all;
@@ -103,6 +113,29 @@ container (`[[do-app-console-scripting]]`): § 2 dry run, § 2 apply, § 3 dry
 run, § 3 apply, § 4 steps 1 and 2. Then `EVENT_PRESENTERS` on at `/setup`, and
 § 4 step 3 as a real non-admin. Record the result in § 0.
 
+**The step page for all of it, written 10-08-26:** https://claude.ai/artifact/1KzCM3LbjyvGWp4k2BXP23
+(Doug's private page) — six sections: the version check and the console,
+the twelve console commands with their expected output (the dry run's nine
+lines and fingerprint `5a78484e6b9c`, the apply with `--production`, the role
+dry run's six lines from the 08-31-26 capture of production's roles, the
+read-back as the org-wide key), the switch, the non-admin pass on two
+unticked check events, the CRM reads, and the removal of every check record.
+**It needs the container on v0.241.2 or later**, the build that ships the
+applier; section 1, step 1 checks `/healthz` for it.
+
+Inside the container, the commands are:
+
+```bash
+export ESPO_ADMIN_BASE="$ESPO_BASE_URL"
+export ESPO_ADMIN_USER="$ESPO_PROVISION_USERNAME"
+export ESPO_ADMIN_PASS="$ESPO_PROVISION_PASSWORD"
+cd /app
+PYTHONPATH=/app .venv/bin/python scripts/apply_crm_plan.py scripts/plans/cevent-presenters.json
+PYTHONPATH=/app .venv/bin/python scripts/apply_crm_plan.py scripts/plans/cevent-presenters.json --apply --production --expect 5a78484e6b9c
+PYTHONPATH=/app .venv/bin/python scripts/migrate_presenter_roles.py
+PYTHONPATH=/app .venv/bin/python scripts/migrate_presenter_roles.py --apply
+```
+
 ## 6. Then Boston
 
 With the release that carries v0.241.0: the same four runs against
@@ -113,6 +146,7 @@ computer using Boston's settings file. Switch stays off until Boston's staff ask
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 10-08-26 23:45 | Claude (Claude Code) | § 2 and § 3 name the committed applier (`scripts/apply_crm_plan.py`, v0.241.2 — the skill copy was never in a container); the expected fingerprint `5a78484e6b9c` recorded; § 5 carries the container commands and the production step page https://claude.ai/artifact/1KzCM3LbjyvGWp4k2BXP23; § 0 names the v0.241.2 prerequisite. |
 | 1.2 | 10-08-26 11:11 | Claude (Claude Code) | Assignment Permission raised to `all`: `team` still refused (a record with neither team nor assigned user fails the team-level check, read from EspoCRM's source). Applied on crm-test 11:11. |
 | 1.1 | 10-08-26 11:04 | Claude (Claude Code) | Live pass step 3.10 refused Contact create with an assignment failure; the role script now also sets the Marketing Admin Role's Assignment Permission to `team`, applied on crm-test 11:03. |
 | 1.0 | 10-08-26 01:26 | Claude (Claude Code) | Written after the crm-test run: plan applied and verified, role grants applied and read back, org-key read proven. Production and Boston owed. |

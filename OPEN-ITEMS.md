@@ -560,7 +560,13 @@ block a deploy.)*
     is a read-only mirror of the account-contact role (v0.241.1, title copied
     onto the entry — pushed 2026-10-08 22:34, all three apps report 0.241.1). Owed: (b) **Production**: plan
     + role script at a Sunday slot (`cevent-presenters-crm-handoff.md` § 5),
-    then the switch at `/setup`. (c) **Boston** with its next release. (d) The
+    then the switch at `/setup` — **step page written 10-08-26:**
+    https://claude.ai/artifact/1KzCM3LbjyvGWp4k2BXP23 (private; console commands with
+    expected output, the switch, a non-admin pass on two unticked check
+    events, the CRM reads, the clean-up). **Prerequisite: production on
+    v0.241.2**, the build that ships the applier (`scripts/apply_crm_plan.py`;
+    the skill's copy under `.claude/` was never in a container) — committed,
+    waits on the push. (c) **Boston** with its next release. (d) The
     bare `CEvent.presenters` link is unused and still present on every CRM;
     removing it is a separate human decision. (e) **Design follow-up for
     Doug:** a guest's title and company live on each event's entry and do not

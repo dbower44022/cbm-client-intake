@@ -1,6 +1,6 @@
 # Kickoff prompt — Track F, after the presenters live pass
 
-Last Updated: 10-08-26 22:43 · Revision 1.0 — see change log at the end.
+Last Updated: 10-08-26 23:50 · Revision 1.1 — see change log at the end.
 
 Paste this into a fresh Claude Code session rooted in `cbm-client-intake`.
 It carries the state of the events arc (Track F of the Finalization Plan) at
@@ -63,8 +63,11 @@ as-built), `CBM_Events_Portal_Calendar_Design.md`,
    § 5: plan dry run, plan apply, role script dry run, role script apply, the
    § 4 reads (metadata; `GET /CEventPresenter?maxSize=1` as the org key is
    200). Then `EVENT_PRESENTERS` on at `/setup`, and § 4 step 3 as a real
-   non-admin. Prepare the step page; do not run anything against production
-   yourself. Record the result in the handoff's § 0 and `OPEN-ITEMS.md` #39.
+   non-admin. **The step page is written (10-08-26 23:40):**
+   https://claude.ai/artifact/1KzCM3LbjyvGWp4k2BXP23 — it needs production on
+   v0.241.2, the build that ships the applier (`scripts/apply_crm_plan.py`).
+   Do not run anything against production yourself. Record the result in the
+   handoff's § 0 and `OPEN-ITEMS.md` #39.
 2. **Boston** takes F2/F3, F5 and F4's CRM changes with its next release
    (`CHAPTER_KEY=boston` first, per the F2/F3 notes). Owed, not scheduled.
 3. **Two small things owed from the pass**, when Doug offers them: his
@@ -102,4 +105,5 @@ as-built), `CBM_Events_Portal_Calendar_Design.md`,
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 10-08-26 23:50 | Claude (Claude Code) | Item 1's step page written and linked; v0.241.2 (the applier ships in the image) named as its prerequisite. |
 | 1.0 | 10-08-26 22:43 | Claude (Claude Code) | Written at the close of the 10-07/08-26 sessions: v0.240.0 and v0.241.0/.1 live, the presenters live pass done, F1 next. |
