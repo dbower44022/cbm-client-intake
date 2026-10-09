@@ -322,6 +322,11 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("alert_webhook_url", GROUP_EMAIL, "Alert webhook", component="both"),
     _s("gmail_sync_seconds", GROUP_EMAIL, "Gmail sync cadence", kind="int", unit="s",
        component="worker"),
+    _s("comms_scope_rebuild_seconds", GROUP_EMAIL, "Mailbox scope rebuild", kind="int",
+       unit="s", component="worker",
+       help="How long the sync may reuse its map of who handles which records "
+            "before rebuilding it from the CRM. Between rebuilds each pass only "
+            "asks the CRM whether anything changed. 0 rebuilds every pass."),
     _s("gmail_backfill", GROUP_EMAIL, "Initial sync window", component="worker"),
     _s("gmail_dead_letter_passes", GROUP_EMAIL, "Dead-letter after", kind="int",
        unit="passes", component="worker"),

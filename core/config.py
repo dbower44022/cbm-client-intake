@@ -345,6 +345,10 @@ class Settings(BaseSettings):
     # Email Setup) with gmail.readonly + gmail.send authorized for delegation.
     gmail_sync: bool = False
     gmail_sync_seconds: int = 300           # worker sync cadence
+    # How long a pass may reuse the previous pass's mailbox scopes before a full
+    # rebuild. In between, each pass asks the CRM only whether any watched
+    # record changed (comms/scopes.py). 0 = rebuild every pass.
+    comms_scope_rebuild_seconds: int = 3600
     # One-shot ops lever: on worker start, clear every mailbox's sync cursor so
     # the next pass re-runs the initial backfill (Message-ID dedup makes that
     # idempotent — already-stored mail is skipped). Set true, deploy, let one

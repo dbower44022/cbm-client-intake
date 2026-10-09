@@ -4,6 +4,29 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.247.0] — 2026-10-09
+
+**perf(comms): the Gmail sync rebuilds its mailbox scopes only when the CRM
+has changed.** `crm.build_scopes` read every manager's engagements, partners
+and funders and each record's contacts on every five-minute pass — about 400
+CRM reads a pass on production, most of the worker's CRM load (the 10-09-26
+review: ~87 CRM calls a minute). `comms/scopes.scopes_for_pass` now keeps the
+previous pass's scopes and asks the CRM five one-row questions instead — any
+`CMentorProfile` / `CEngagement` / `CPartnerProfile` / `CSponsorProfile` /
+`Contact` row modified since the last build? — rebuilding when one says yes,
+when the check cannot be answered (fail open to freshness), or when the scopes
+are older than `COMMS_SCOPE_REBUILD_SECONDS` (default 3600, `/setup` → Email;
+0 rebuilds every pass, the old behaviour). The watermark sits 60 s behind the
+build so a write racing the read is not missed. **Doug's ruling 10-09-26,
+option A**: the one path the check does not see at once is linking an
+already-known contact to an existing record, which (inferred, not checked)
+leaves the record's modification time alone — a message from that person
+inside the hour is skipped by the stale scope and, because a skipped message's
+cursor moves on, is not captured for that record; the hourly rebuild bounds
+it. Verified against crm-test that the modified-after filter answers a count
+for all five entities. Third of the four review items; the receipt-sweep
+defect is still owed.
+
 ## [0.246.0] — 2026-10-09
 
 **perf(espo): CRM metadata is remembered for a minute.** Field definitions,

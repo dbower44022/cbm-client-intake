@@ -1157,7 +1157,13 @@ Umbrella reference: **`email-management.md`**. Deep dives:
   service-account + domain-wide-delegation stack, historyId cursors with
   expired-cursor and new-address backfills, RFC Message-ID dedup across
   co-mentor mailboxes, and upsert into `CConversation`/`CCommunication` with
-  parent/contact links. A failed message ingest **holds the cursor** (the replay
+  parent/contact links. **The scopes (who handles which records) are cached
+  across passes** (`comms/scopes.py`, v0.247.0): each pass asks the CRM only
+  whether any of the five watched entities changed since the last build, and
+  rebuilds every `COMMS_SCOPE_REBUILD_SECONDS` (3600) regardless. Doug's
+  ruling (option A, 10-09-26): linking an already-known contact to an existing
+  record is not seen until the hourly rebuild, and a message skipped meanwhile
+  is not captured for that record — set the interval to 0 if that ever bites. A failed message ingest **holds the cursor** (the replay
   is cheap thanks to dedup) and dead-letters after 5 consecutive failing passes.
 - **`core/email_clean.py`** produces two zones: quoted reply demoted into
   `blockquote.quoted-reply`, signatures and boilerplate deleted. **Outbound
@@ -1661,6 +1667,14 @@ with `main`; **Lakeside took it off the release lane by itself** (its
 unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
+
+- **v0.247.0 (2026-10-09) — the Gmail sync rebuilds its scopes only when the
+  CRM changed.** Committed, not pushed. Third review item, Doug's option A;
+  standing rule in the Email section above. Verified by tests plus a
+  read-only probe that the modified-after filter counts on crm-test. The
+  live check is the production worker log: "scopes reused" at debug, one
+  "scopes rebuilt (…)" an hour, and the CRM call count per pass falling
+  from ~400 to single figures.
 
 - **v0.246.0 (2026-10-09) — CRM metadata is cached for a minute.** Committed,
   not pushed. Second review item; standing rule in the `espo.py` line above.

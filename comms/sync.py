@@ -492,7 +492,9 @@ async def run_gmail_sync(
     """
     from core.monitoring import send_alert
 
-    scopes = await crm.build_scopes(espo, settings)
+    from . import scopes as scope_cache
+
+    scopes = await scope_cache.scopes_for_pass(espo, settings)
     totals: dict[str, Any] = {
         "mailboxes": len(scopes), "fetched": 0, "stored": 0,
         "failed": 0, "deadLettered": 0, "errors": 0,
