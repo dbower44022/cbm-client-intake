@@ -12,7 +12,7 @@ design this runbook follows).
 **Status (2026-10-09): sections 2, 3 and 4 are BUILT** — sections 2 and 3
 in v0.243.0 (deployed to crm-test and production 2026-10-09 02:10, dark:
 nothing connects until an administrator does), section 4 in v0.244.0
-(committed): the push and pull as two Operations jobs and the worker's
+(deployed to both 2026-10-09 09:33): the push and pull as two Operations jobs and the worker's
 nightly and hourly timers behind the *Mailing list sync* switch. Doug's live
 run of sections 2–4 on crm-test is the first browser pass. **Ruled 2026-10-07 (plan § 11.11): crm-test
 connects to a separate Constant Contact account of its own**, created in
