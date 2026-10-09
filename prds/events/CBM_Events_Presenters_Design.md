@@ -2,11 +2,12 @@
 
 Last Updated: 10-08-26 01:09 · Revision 0.3 — see change log at the end.
 
-**Status: BUILT as v0.241.0 on Doug's approval (10-08-26), dark behind
-`EVENT_PRESENTERS`; crm-test's CRM side applied and verified the same night;
-production and Boston owed (`cevent-presenters-crm-handoff.md`); live pass
-owed (`OPEN-ITEMS.md` #39). § 11 records where the build departs from this
-design.** The requirements are the eight F4 rulings recorded in
+**Status: BUILT as v0.241.0 / v0.241.1 on Doug's approval (10-08-26), dark
+behind `EVENT_PRESENTERS`; crm-test's CRM side applied and verified; **live
+pass done on crm-test 10-08-26 by Doug as real non-admins** (`OPEN-ITEMS.md`
+#39), which found and fixed two defects (§ 11 items 9 and 10); production and
+Boston owed (`cevent-presenters-crm-handoff.md`). § 11 records where the
+build departs from this design.** The requirements are the eight F4 rulings recorded in
 `CBM_Events_Finalization_Plan.md` revision 4.24, section F4 — six are Doug's
 (10-07-26 and 10-08-26), two are Claude's under the two-part test. They are
 cited below as *F4-n*. What earlier designs settled for the surfaces this one
@@ -473,6 +474,7 @@ Each is Claude's decision during the build, open to challenge.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.8 | 10-08-26 22:31 | Claude (Claude Code) | Live pass done on crm-test 10-08-26 as Mark Marketing and Joe Mentor; every step matched after the two fixes. Status updated. |
 | 0.7 | 10-08-26 21:12 | Claude (Claude Code) | § 11 items 9 and 10 from the live pass: Contact.title is a read-only mirror (typed title now lands on the entry, v0.241.1); assignment permission `all`. |
 | 0.6 | 10-08-26 11:11 | Claude (Claude Code) | D1's assignment permission is `all`, not `team`: the team level refuses a record with neither team nor assigned user (EspoCRM source). |
 | 0.5 | 10-08-26 11:04 | Claude (Claude Code) | D1 gains Assignment Permission `team` on the Marketing Admin Role, found by the live pass (Contact create refused with an assignment failure). |

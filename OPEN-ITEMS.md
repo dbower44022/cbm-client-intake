@@ -538,47 +538,38 @@ block a deploy.)*
 
 ## Live verification owed
 
-39. **Presenters on events (v0.241.0, Track F F4) — built dark, never seen;
-    production and Boston CRM owed.** The code ships off (`EVENT_PRESENTERS`)
-    and feature-detected. **crm-test's CRM side is complete 2026-10-08**
-    (`scripts/plans/cevent-presenters.json` applied and read back,
-    `scripts/migrate_presenter_roles.py` applied, org key reads
-    `CEventPresenter`). **Pushed 2026-10-08 10:35; all three apps report
-    0.241.0.** Live pass started 2026-10-08 11:00; step 3.10 found Contact
-    create refused (`Assignment failure`) — `team` was not enough (a record
-    with neither team nor assigned user fails that level, per EspoCRM's
-    source); fixed by Assignment Permission `all` on the role, applied 11:11,
-    script updated. **Step 3.10 passed 11:1x** (Mark created the guest Contact,
-    typed Presenter) and found a second defect: the typed title was lost
-    because `Contact.title` is a read-only mirror of the account-contact role —
-    fixed in v0.241.1 (title copied onto the entry), not yet pushed. **Sections
-    3–6 ran 2026-10-08 21:10–21:21** (server log + CRM read): duplicate
-    refused (409), reorder, photo copy and replacement, biography edit, event
-    save, public page with both cards and the photo route, the cross-event
-    photo 404, the member page, remove, and the guest reused on a second
-    event with no second Contact. Two things to settle: (i) the event save
-    at step 3.18 answered 400 twice before succeeding — wording owed from
-    Doug; (ii) section 6.1 unticked **Show this event** instead of **Show
-    presenter biographies** (CRM: `publishToWebsite` false,
-    `showPresenterBios` still true), so section 7 saw the publish gate's 404,
-    not the switch — redo 6.1 and 7. Section 8 (CRM checks) unconfirmed.
-    Design follow-up: a guest's title and company live on each event's entry
-    and do not carry to a second event (the Contact holds neither) — decide
-    whether a second add should copy from the person's latest entry. Owed: (a) the rest of
-    the **live pass on crm-test** as a real
-    Marketing Admin non-admin, step page
-    https://claude.ai/artifact/RrS6SvEtMFNx2dTPckPkaZ (private) — switch on at `/setup`; add a mentor presenter
-    and see the copied biography, title and photo; replace the photo and
-    confirm the mentor's profile photo is unchanged; add a guest by a new
-    email and find the `Presenter`-typed Contact; add the same email to a
-    second event (no second Contact); reorder; remove; the switch on and off
-    against the public page signed out and the member page as a Mentor Team
-    account; a presenter photo URL with another event's slug answers 404.
-    (b) **Production**: plan + role script at a Sunday slot
-    (`cevent-presenters-crm-handoff.md` § 5), then the switch. (c) **Boston**
-    with its next release. (d) The bare `CEvent.presenters` link is unused and
-    still present on every CRM; removing it is a separate human decision.
-    Design: `prds/events/CBM_Events_Presenters_Design.md` (§ 11 as-built).
+39. **Presenters on events (v0.241.0 / v0.241.1, Track F F4) — live pass DONE
+    on crm-test; production and Boston CRM owed.** The code ships off
+    (`EVENT_PRESENTERS`) and feature-detected. **crm-test's CRM side is
+    complete 2026-10-08** (`scripts/plans/cevent-presenters.json` applied and
+    read back; `scripts/migrate_presenter_roles.py` applied — Contact create +
+    read, mentor-profile read, the new entity, **Assignment Permission `all`**;
+    org key reads `CEventPresenter`). **Live pass done 2026-10-08 21:10–22:27
+    by Doug as Mark Marketing (Marketing Admin Team, non-admin) and Joe Mentor**,
+    from the step pages https://claude.ai/artifact/RrS6SvEtMFNx2dTPckPkaZ and
+    https://claude.ai/artifact/Pb5RFr7k5Rn2nzWCn7UpQK (private); every step
+    confirmed by Doug and by the server log and a CRM read: mentor copy of
+    biography, title and photo; photo replaced on the event only (profile
+    untouched); guest created once, typed Presenter, created by Mark; duplicate
+    refused; reorder; remove; the same guest reused on a second event with no
+    second Contact; both event pages with the cards and the photo routes; the
+    cross-event photo 404; the switch on and off. **Two defects found and
+    fixed by the pass:** the role needed Assignment Permission `all` (applied,
+    script updated — a role that creates a record the app leaves unassigned
+    needs it), and a new guest's typed title was lost because `Contact.title`
+    is a read-only mirror of the account-contact role (v0.241.1, title copied
+    onto the entry — **committed, not pushed**). Owed: (b) **Production**: plan
+    + role script at a Sunday slot (`cevent-presenters-crm-handoff.md` § 5),
+    then the switch at `/setup`. (c) **Boston** with its next release. (d) The
+    bare `CEvent.presenters` link is unused and still present on every CRM;
+    removing it is a separate human decision. (e) **Design follow-up for
+    Doug:** a guest's title and company live on each event's entry and do not
+    carry to a second event (the Contact holds neither) — decide whether a
+    second add should copy from the person's latest entry. (f) Still owed
+    from the pass: the wording of the red message when the event save was
+    refused twice at step 3.18 (01:13) before succeeding; the server logged
+    only the two 400s. Design: `prds/events/CBM_Events_Presenters_Design.md`
+    (§ 11 as-built).
 
 38. ~~**An Internal event's join link cannot be set in Event Administration**~~
     **Built 2026-10-07 as v0.240.0** — `virtualMeetingUrl` carries

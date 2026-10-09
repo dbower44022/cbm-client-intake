@@ -1642,15 +1642,19 @@ each block.
 
 - **v0.241.0 / v0.241.1 (2026-10-08) — presenters on an event (Track F, F4).
   v0.241.0 pushed and live on all three apps; v0.241.1 committed, not pushed;
-  ships DARK.** Doug's eight requirements were gathered one
-  question per turn on 10-07/08-26 and the design approved the same night;
-  standing rules in the Events section above. **crm-test's CRM side is
-  complete** — `scripts/plans/cevent-presenters.json` applied by the applier
-  (its first `image` field, no hand step) and `scripts/migrate_presenter_roles.py`
-  applied, both read back; the org key reads `CEventPresenter`. Verified by
-  tests only (21 new, suite green). Owed: the live pass as a real Marketing
-  Admin non-admin, production's CRM change and grants at a Sunday slot,
-  Boston with its release (`OPEN-ITEMS.md` #39). Switch off everywhere.
+  ships DARK.** Doug's eight requirements were gathered one question per
+  turn on 10-07/08-26 and the design approved the same night; standing rules
+  in the Events section above. **crm-test's CRM side is complete** (the plan
+  applied by the applier — its first `image` field, no hand step — and the
+  role script applied, both read back; the org key reads `CEventPresenter`).
+  **Live pass done 2026-10-08 by Doug as real non-admins** (`OPEN-ITEMS.md`
+  #39): every step matched once two defects the pass found were fixed — the
+  role needed **Assignment Permission `all`** (a role that creates a record
+  the app leaves unassigned needs it), and a guest's typed title was lost
+  because `Contact.title` is a read-only mirror (v0.241.1). Owed: production's
+  CRM change and grants at a Sunday slot, Boston with its release, and one
+  design follow-up (a guest's title and company do not carry to a second
+  event). Switch off everywhere but crm-test.
 
 - **v0.240.0 (2026-10-07) — an Internal event's Join URL is editable in Event
   Administration** (F5 design D3, `OPEN-ITEMS.md` #38). Committed, not pushed.

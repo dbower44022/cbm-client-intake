@@ -132,7 +132,7 @@ after Doug's requirements are gathered, and nothing is settled until he rules.
 | F1 | Event topic: multiple selections, plus a user-entered value | User review, 09-2026 | Catalogued |
 | F2 | Display Date/Time: the moment an event may first appear on the public pages | User review, 09-2026 | Built v0.233.0 (09-29-26); reviewed live on crm-test 09-30; **CRM applied to production 10-07-26**; Boston owed (`OPEN-ITEMS.md` #35) |
 | F3 | Event audience: Internal, a specific chapter, or Public — Internal events form a calendar on the chapter's portal | User review, 09-2026 | Built v0.233.0 (09-29-26); reviewed live on crm-test 09-30; **CRM applied to production 10-07-26**; Boston owed (`OPEN-ITEMS.md` #35) |
-| F4 | Presenters: select or add them per event, with an optional presenter biography on the event page | User review, 09-2026 | Built v0.241.0 (dark); crm-test CRM done; live pass, production, Boston owed |
+| F4 | Presenters: select or add them per event, with an optional presenter biography on the event page | User review, 09-2026 | Built v0.241.0/.1 (dark); crm-test CRM done and live pass done 10-08-26; production, Boston owed |
 | F5 | Portal home page: a left-hand list of upcoming internal events, each opening its details | User review, 09-2026 | **Live on production and crm-test** since 10-07-26 (v0.239.1, switch on at `/setup`); Boston with its next release |
 
 **The catalog is complete at five features** (Doug, 09-27-26). Design proceeds
@@ -450,8 +450,9 @@ enough to stop the flow). Doug may overrule either at design review.*
 Doug's review and carried two decisions (D1 role grants, D2 title and company
 as static copies), both ruled 10-08-26. **Approved and built the same night as
 v0.241.0**, dark behind `EVENT_PRESENTERS`; crm-test's CRM change and role
-grants applied and verified; production, Boston and the live pass are
-`OPEN-ITEMS.md` #39.*
+grants applied and verified; **live pass done 10-08-26** as real non-admins,
+two defects found and fixed (assignment permission, the Contact title
+mirror); production and Boston are `OPEN-ITEMS.md` #39.*
 
 **F5 — Upcoming internal events on the portal home page.**
 
@@ -672,6 +673,7 @@ attendance recorded → recording link pasted → the engagement rollup shows it
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 4.27 | 10-08-26 22:31 | Claude (Claude Code) | F4 live pass done on crm-test 10-08-26; two defects found and fixed. |
 | 4.26 | 10-08-26 01:26 | Claude (Claude Code) | F4 design approved (D1, D2 ruled) and built as v0.241.0, dark; crm-test CRM side applied; F4 state moved to Built. |
 | 4.25 | 10-08-26 00:42 | Claude (Claude Code) | F4 design drafted (`CBM_Events_Presenters_Design.md` rev 0.1, plan file `scripts/plans/cevent-presenters.json`); F4 state moved to Design drafted, awaiting review. |
 | 4.24 | 10-08-26 00:25 | Claude (Claude Code) | F4 requirements complete: 7 (presenter order, administrator-set, default added order) and 8 (partner host is Phase B's, not F4's) decided by Claude under the two-part test. F4 state moved to Requirements complete; design next. |
