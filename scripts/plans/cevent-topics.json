@@ -1,0 +1,26 @@
+{
+  "name": "cevent-topics",
+  "description": "F1 topics: an event carries several curated topics — CBM_Events_Topics_Design.md",
+  "entities": [],
+  "fields": [
+    {
+      "entity": "CEvent",
+      "name": "topics",
+      "type": "multiEnum",
+      "options": [
+        "Business Fundamentals",
+        "Marketing & Sales",
+        "Finance & Accounting",
+        "Legal & Compliance",
+        "Operations",
+        "Technology & Digital",
+        "Leadership & People",
+        "Industry-Specific",
+        "Networking",
+        "Other"
+      ],
+      "label": "Topics",
+      "tooltipText": "Every subject this event covers. The website's recorded-webinar filter lists the event under each one. Add a subject to this list here, never on an event."
+    }
+  ]
+}
