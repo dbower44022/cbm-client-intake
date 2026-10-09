@@ -1,6 +1,6 @@
 # Mailing List and Event Sponsorship — plan v0.1 (2026-10-07)
 
-Last Updated: 10-08-26 01:25 · Revision 0.7 — change log at the end.
+Last Updated: 10-09-26 00:27 · Revision 0.8 — change log at the end.
 
 **Status: Phases A and B done on crm-test; Phase C designed (§ 11) and its one decision ruled (§ 11.11, option A), nothing of it built.** This is the plan document for the
 arc, in the style of the other arcs in `prds/`: it records Doug's rulings, the
@@ -542,7 +542,13 @@ readiness line, so "is it running?" is answered without a log.
 
 1. `core/mailing.py` — the client: token store with the locked refresh,
    `_request` with one re-auth on 401, contacts, lists, activities. Alembic
-   migration 0030 for `mailing_connection`; `KEEP_TABLES`.
+   migration 0030 for `mailing_connection`; `KEEP_TABLES`. **Built
+   2026-10-09** (31 tests against a fake vendor transport that enforces the
+   page size, the import chunk and the per-second pace; the store's four
+   Postgres tests run green against a throwaway Postgres 16). A refusal from
+   the token endpoint is marked in its own transaction, after the lock —
+   raising inside the locked transaction rolled the mark back with it, which
+   the Postgres test caught and the fake could not.
 2. Settings and the readiness feature; the `/setup` panel rows (client ID,
    secret, redirect address read-only, connection line with Connect /
    Disconnect); the connect and callback routes.
@@ -565,6 +571,19 @@ readiness line, so "is it running?" is answered without a log.
   code reads whatever the documentation states).
 - How long the trial account a developer sign-up creates lives, if § 11.11
   chooses it.
+- **Added 2026-10-09, from the build:** the vendor's API reference is a
+  script-rendered page the tools could not read, so five shapes in
+  `core/mailing.py` are *inferred* from the vendor's conventions and marked
+  so in its docstring: the `GET /contacts` page size (500) and the
+  `_links.next.href` next-page path; the `POST /contact_lists` body
+  (`name`); the `remove_list_memberships` body (`source.contact_ids` +
+  `list_ids`); the activity `state` vocabulary; and `organization_name` on
+  `/account/summary`. The first dry-run against the trial account (§ 11.5
+  step 7) exercises every one of them read-only, which is where a wrong
+  guess surfaces. Read for certain the same day: the import item key is
+  `email` (the sync guide's example), 40,000 per import, 4 a second and
+  10,000 a day with 429 and no promised `Retry-After`, the token calls'
+  parameters and Basic auth.
 
 ### 11.11 Which account crm-test connects to — RULED A (Doug, 2026-10-07 23:50)
 
@@ -603,7 +622,9 @@ Constant Contact user is the prerequisite for production's half only**:
 production's developer application and connection, and the one-time
 migration (§ 11.7). Risk accepted: a trial account may restrict something
 the live check needs (inferred, not checked); if so the live check waits and
-nothing built is wasted.
+nothing built is wasted. **2026-10-09:** the separate build session had
+not started; the build moved into the setup session at Doug's request and
+proceeds piece by piece under DETAIL mode (§ 11.9 order).
 
 ### 11.12 Follow-on detail, settled
 
@@ -618,6 +639,7 @@ requested are the four in § 11.3. The list name default is *Event notices*.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.8 | 10-09-26 00:27 | Claude (Claude Code) | § 11.9 step 1 built (client, locked store, migration 0030, keep-table); § 11.10 gains the five inferred vendor shapes owed to the first dry-run; § 11.11a notes the build moved into the setup session. |
 | 0.7 | 10-08-26 01:25 | Claude (Claude Code) | § 11.11a: no access to the real account yet; arc proceeds on the trial account and the build; real-account access is production's prerequisite. Build handed to a separate session. |
 | 0.6 | 10-07-26 23:55 | Claude (Claude Code) | § 11.11 ruled: option A, a separate Constant Contact account for crm-test (Doug). |
 | 0.5 | 10-07-26 23:45 | Claude (Claude Code) | Phase C designed: § 11 (accounts and the private-application rule, the fixed redirect address per deployment, the connection store with locked rotating refresh, settings, the push and pull, the migration, build order, verification owed, the crm-test account decision). Runbook `MAILING-SETUP.md`. Sources for § 11 added to § 10. |
