@@ -759,6 +759,26 @@ class MailingClient:
         return last
 
 
+def make_connection_store(settings: Any) -> Optional[ConnectionStore]:
+    """The connection store for this deployment, or None without a database.
+
+    Carries the Fernet cipher when ``APP_ENCRYPTION_KEY`` is configured. Without
+    one the store still answers reads (there is nothing to read) and refuses
+    every token write — a connection is never stored in plain text.
+    """
+    if not getattr(settings, "database_url", ""):
+        return None
+    cipher = None
+    if getattr(settings, "app_encryption_key", ""):
+        try:
+            from core.crypto import SecretCipher
+
+            cipher = SecretCipher(settings.app_encryption_key)
+        except Exception as exc:  # noqa: BLE001 — no cipher is a working (read-only) state
+            log.warning("mailing: encryption key unusable, connection cannot be stored: %s", exc)
+    return ConnectionStore(settings.database_url, cipher)
+
+
 def make_client(store: ConnectionStore, client_id: str, client_secret: str, *, base_url: str = DEFAULT_BASE_URL) -> MailingClient:
     """A client whose tokens come from the connection store, refreshed under its lock."""
 

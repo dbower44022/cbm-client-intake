@@ -431,8 +431,124 @@
         + (f.note ? '<p class="su__rowhelp">' + esc(f.note) + "</p>" : "")
         + warn
         + (checks ? "<ul class=\"su__checks\">" + checks + "</ul>" : "")
+        + (f.key === "mailing" ? renderMailing(data.mailing) : "")
         + "</section>";
     }).join("");
+  }
+
+  // --- mailing service connection (Phase C) -----------------------------------
+  // The credential here is a GRANT: after the client ID and secret are set, an
+  // administrator connects the account in a browser round trip. The redirect
+  // address is computed server-side from APP_BASE_URL and shown here with a
+  // copy button, so the value registered on the vendor's application is the
+  // value used. Buttons are never hidden or disabled (convention): Connect
+  // explains itself server-side with a 400 when something is missing.
+  function renderMailing(mail) {
+    if (!mail) return "";
+    var conn = mail.connection;
+    var line;
+    if (conn && conn.status === "connected") {
+      line = "Connected as <strong>" + esc(conn.accountLabel || "the mailing account") + "</strong>"
+        + (conn.connectedBy ? " by " + esc(conn.connectedBy) : "")
+        + (conn.connectedAt ? " on " + esc(conn.connectedAt.slice(0, 10)) : "")
+        + (conn.lastRefreshAt ? " · token refreshed " + esc(conn.lastRefreshAt.slice(0, 16).replace("T", " ")) : "")
+        + ".";
+    } else if (conn) {
+      line = '<span class="su__bad">Needs re-authorisation</span>'
+        + (conn.lastError ? " — " + esc(conn.lastError) : "")
+        + ". Connect again to restore the push and pull.";
+    } else {
+      line = "Not connected.";
+    }
+    var redirect = mail.redirectUri
+      ? '<code class="su__code" id="mailingRedirect">' + esc(mail.redirectUri) + "</code> "
+        + '<button type="button" class="cbm-button cbm-button--secondary su__mini" data-copy="mailingRedirect">Copy</button>'
+      : '<span class="su__bad">APP_BASE_URL is not set, so the address cannot be built.</span>';
+    return '<div class="su__mailing">'
+      + '<p class="su__mailing-line">' + line + "</p>"
+      + '<p class="su__rowhelp">Redirect address to register on the developer application: ' + redirect + "</p>"
+      + '<p class="su__mailing-actions">'
+      + '<a class="cbm-button" href="/api/setup/mailing/connect" data-mailing-connect="1">'
+      + (conn ? "Reconnect" : "Connect") + "</a> "
+      + '<button type="button" class="cbm-button cbm-button--secondary" data-mailing-disconnect="1">Disconnect</button>'
+      + '<span class="su__muted" id="mailingMsg"></span>'
+      + "</p></div>";
+  }
+
+  async function copyText(id, btn) {
+    var el = $(id);
+    if (!el) return;
+    var value = el.textContent;
+    try {
+      await navigator.clipboard.writeText(value);
+      var was = btn.textContent; btn.textContent = "Copied";
+      setTimeout(function () { btn.textContent = was; }, 1200);
+    } catch (e) {
+      var range = document.createRange(); range.selectNodeContents(el);
+      var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+    }
+  }
+
+  var mailingDisconnectArmed = 0;
+
+  async function disconnectMailing(btn) {
+    var msg = $("mailingMsg");
+    // Two clicks inside five seconds: the page cannot show a confirm() dialog,
+    // and the button must never be hidden. Reversible anyway — Connect again.
+    var now = Date.now();
+    if (now - mailingDisconnectArmed > 5000) {
+      mailingDisconnectArmed = now;
+      text(msg, "Click Disconnect again within five seconds to remove the connection.");
+      return;
+    }
+    mailingDisconnectArmed = 0;
+    try {
+      var r = await fetch("/api/setup/mailing/disconnect", {
+        method: "POST", credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+      });
+      var body = null; try { body = await r.json(); } catch (e) { body = null; }
+      if (!r.ok) throw new Error((body && body.detail) || ("HTTP " + r.status));
+      text(msg, body.removed ? "Disconnected." : "There was no connection to remove.");
+      loadReadiness().catch(function () {});
+    } catch (e) {
+      text(msg, e.message);
+    }
+  }
+
+  async function connectMailing(ev) {
+    // A plain link would land on a JSON 400 when something is missing; ask
+    // first so the reason shows here, and only then let the browser go.
+    ev.preventDefault();
+    var msg = $("mailingMsg");
+    text(msg, "");
+    try {
+      var r = await fetch("/api/setup/mailing/connect", { credentials: "same-origin", redirect: "manual" });
+      if (r.status === 400) {
+        var body = null; try { body = await r.json(); } catch (e) { body = null; }
+        text(msg, (body && body.detail) || "Connect is not possible yet.");
+        return;
+      }
+    } catch (e) { /* an opaque redirect response is the success case */ }
+    window.location.href = "/api/setup/mailing/connect";
+  }
+
+  function announceMailingOutcome() {
+    var q = new URLSearchParams(window.location.search);
+    var outcome = q.get("mailing");
+    if (!outcome) return false;
+    var detail = q.get("detail") || "";
+    var banner = $("restartBanner");
+    var wording = {
+      connected: "Mailing service connected" + (detail ? " as " + detail : "") + ".",
+      declined: "The mailing service authorisation was declined" + (detail ? ": " + detail : "") + ".",
+      failed: "The mailing service could not be connected" + (detail ? ": " + detail : "") + ".",
+    }[outcome] || ("Mailing service: " + outcome);
+    banner.textContent = wording;
+    banner.hidden = false;
+    // Never leave the outcome in the address bar — a reload would re-announce it.
+    history.replaceState(null, "", window.location.pathname + "#readiness");
+    return true;
   }
 
   // --- environment diff ------------------------------------------------------
@@ -624,6 +740,7 @@
       "This deployment: " + state.page.environment
       + (state.page.writable ? "" : " · read-only (no database attached)"));
     renderAll();
+    if (announceMailingOutcome() || window.location.hash === "#readiness") selectTab("readiness");
   }
 
   document.addEventListener("click", function (ev) {
@@ -633,6 +750,9 @@
     if (t.dataset && t.dataset.dry) { runJob(t.dataset.dry, false); return; }
     if (t.dataset && t.dataset.apply) { runJob(t.dataset.apply, true); return; }
     if (t.dataset && t.dataset.run) { toggleRunOutput(t.dataset.run); return; }
+    if (t.dataset && t.dataset.copy) { copyText(t.dataset.copy, t); return; }
+    if (t.dataset && t.dataset.mailingDisconnect) { disconnectMailing(t); return; }
+    if (t.dataset && t.dataset.mailingConnect) { connectMailing(ev); return; }
     if (t.classList && t.classList.contains("su__tab")) { selectTab(t.dataset.tab); return; }
   });
 

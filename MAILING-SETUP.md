@@ -1,6 +1,6 @@
 # Mailing list sync — Constant Contact setup and activation runbook
 
-Last Updated: 10-08-26 21:40 · Revision 0.4 — change log at the end.
+Last Updated: 10-09-26 00:40 · Revision 0.5 — change log at the end.
 
 How to register this application with Constant Contact, connect one
 deployment to one Constant Contact account, and switch the audience push on.
@@ -9,11 +9,11 @@ own Constant Contact application. Plan and the rulings behind it:
 `prds/mailing-list-and-event-sponsorship-plan.md` (§ 11 is the Phase C
 design this runbook follows).
 
-**Status (2026-10-07): designed, nothing built.** Section 1 can be done today
-— the developer application and its redirect address do not depend on any
-code. Sections 2 to 4 describe a Settings page panel and a worker job that
-do not exist yet; they are written now so the design can be judged as the
-person doing it will meet it. **Ruled 2026-10-07 (plan § 11.11): crm-test
+**Status (2026-10-09): sections 2 and 3 are BUILT (v0.243.0, committed, not
+yet deployed)** — the seven settings, the *Mailing list sync* readiness
+block with the connection line and the redirect address, and the Connect /
+callback / Disconnect round trip. Section 4 (the push and pull) is the next
+piece and is still as designed. **Ruled 2026-10-07 (plan § 11.11): crm-test
 connects to a separate Constant Contact account of its own**, created in
 section 0a; the organisation's real account is production's alone.
 
@@ -231,8 +231,8 @@ authorisation codes for bearer tokens); and the refresh-token choice with
 
 ## 2. In the application, signed in as an EspoCRM administrator — enter the credentials
 
-*Not built yet. This is what the panel will ask for; it follows the shape of
-the Zoom and Fathom rows on the same page.*
+*Built 2026-10-09 (v0.243.0). The two credential rows sit with the other
+integrations; the connection itself lives on the **Feature readiness** tab.*
 
 Why this section exists: the API key and client secret let the application
 ask Constant Contact for an authorisation; without them the Connect button
@@ -242,51 +242,88 @@ explains itself and does nothing else.
    ```
    https://cbm-client-intake-svxs3.ondigitalocean.app/setup/
    ```
-   You should see the System Settings page with its group headings. If you
-   are asked to sign in, sign in with your EspoCRM administrator login.
+   You should see the System Settings page with the **Settings** tab open and
+   its group headings (Features, Integrations, …). If you are asked to sign
+   in, sign in with your EspoCRM administrator login.
 
-2. On the System Settings page, under the **Integrations** heading, find the
-   row **Mailing service client ID** and paste the *API key* from section 1,
-   step 8, then click that row's **Save**.
-   You should see the row show the pasted value and a saved confirmation.
+2. On the Settings tab, under the **Integrations** heading, click the row
+   named **Mailing service client ID**.
+   You should see a dialog headed **Change setting** with a Value box and a
+   Reason box.
 
-3. On the same page, in the row **Mailing service client secret**, paste the
-   *client secret* from section 1, step 11, then click that row's **Save**.
-   You should see the row read **set** (the value itself is never shown
-   back). If it says the secret cannot be stored without an encryption key,
-   stop and tell me — the deployment is missing `APP_ENCRYPTION_KEY`.
+3. In the Change setting dialog, paste the *API key* from section 1, step 8
+   into the Value box, type a reason such as `crm-test Constant Contact
+   application` into the Reason box, and click **Save**.
+   You should see the dialog close and the row show the pasted value with an
+   *override* chip.
 
-4. On the same page, in the row **Mailing service redirect address**,
-   confirm the address shown is, character for character, the address you
-   registered in section 1, step 9.
-   If the two differ in any character, do not continue; stop and tell me
-   both addresses exactly.
+4. On the Settings tab, under the **Integrations** heading, click the row
+   named **Mailing service client secret**.
+   You should see the Change setting dialog again.
+
+5. In the Change setting dialog, paste the *client secret* from section 1,
+   step 11 into the Value box, type a reason, and click **Save**.
+   You should see the dialog close and the row read **set** — the value is
+   never shown back. If a message says the secret cannot be stored without
+   an encryption key, stop and tell me: the deployment is missing
+   `APP_ENCRYPTION_KEY` (crm-test has carried one since 2026-09-12; this is
+   the first secret ever stored from the page there).
+
+6. At the top of the page, click the **Feature readiness** tab.
+   You should see one block per feature; find **Mailing list sync**. Its
+   checks should read `mailing_client_id` ✓ set, `mailing_client_secret` ✓
+   set, `DATABASE_URL` ✓ attached, and **connection ✗ not connected**. Below
+   the checks is a line *Not connected.*, the redirect address with a
+   **Copy** button, and the buttons **Connect** and **Disconnect**.
+
+7. In the Mailing list sync block, compare the redirect address shown with
+   the address you registered in section 1, step 9 — for crm-test:
+   ```
+   https://cbm-client-intake-svxs3.ondigitalocean.app/api/setup/mailing/callback
+   ```
+   They should be identical, character for character. If they differ, do
+   not continue; stop and tell me both addresses exactly (the app builds its
+   address from `APP_BASE_URL`, so a difference means that setting is wrong).
 
 ---
 
 ## 3. In the application — connect the account
 
-*Not built yet.*
+*Built 2026-10-09 (v0.243.0).*
 
 Why this section exists: the connection is a one-time browser authorisation
 by the Constant Contact user who created the application; it gives the
 application a refresh token, which it keeps encrypted and renews by itself.
 
-1. On the System Settings page, under the **Integrations** heading, in the
-   row **Mailing service connection**, click **Connect**.
-   You should be taken to a Constant Contact sign-in page.
+1. On the Feature readiness tab, in the **Mailing list sync** block, click
+   **Connect**.
+   You should be taken to a Constant Contact sign-in page, or straight to a
+   permission screen if that browser is already signed in to Constant
+   Contact. If instead a message appears beside the buttons, it names what
+   is missing (a credential, `APP_BASE_URL`, the encryption key); stop and
+   tell me its exact wording.
 
 2. On the Constant Contact sign-in page, sign in as the same user who
-   created the application in section 1.
-   You should see a permission screen naming the application and listing
-   what it asks for: contact data, campaign data, account information, and
-   continued access when you are not signed in.
+   created the application in section 1 (for crm-test: the section 0a
+   account).
+   You should see a permission screen naming **Cleveland Business Mentors
+   applications — TEST** and listing what it asks for: contact data,
+   campaign data, account information, and continued access when you are
+   not signed in.
 
 3. On the permission screen, click **Allow**.
-   You should be returned to the System Settings page, and the row **Mailing
-   service connection** should read **Connected as** followed by the
-   Constant Contact account's organisation name and the date. If the row
-   instead shows a red message, stop and tell me its exact wording.
+   You should be returned to the System Settings page, open on the Feature
+   readiness tab, with a blue banner reading **Mailing service connected as**
+   followed by the account's organisation name. In the Mailing list sync
+   block the check now reads **connection ✓ connected as …** and the line
+   reads *Connected as … by <your login> on <today's date>*. If the banner
+   is red, or says *declined* or *could not be connected*, stop and tell me
+   its exact wording.
+
+**To disconnect** (not part of the setup): in the same block click
+**Disconnect** twice within five seconds — the second click is the
+confirmation, because the page cannot show a confirm dialog. The row is
+deleted and the action recorded; Connect again restores it.
 
 ---
 
@@ -345,6 +382,7 @@ must be read as a plan before it is allowed to write.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.5 | 10-09-26 00:40 | Claude (Claude Code) | §§ 2–3 rewritten to the built page (v0.243.0): the two credential rows and the Change setting dialog, the Mailing list sync block on the Feature readiness tab with the connection line, the redirect address with Copy, Connect / Disconnect, and the outcome banner. Status updated. |
 | 0.4 | 10-08-26 21:40 | Claude (Claude Code) | crm-test sections 0a and 1 recorded done (Doug, 2026-10-08). Step 5 carries the vendor's exact refresh-token wording; a read-back of the application details screen (OAuth type, Private notice, the authorise and token addresses) added after step 12 for the build. |
 | 0.3 | 10-08-26 10:40 | Claude (Claude Code) | § 0a rewritten: the quick-start's developer sign-in address is a 404 (Doug hit it, verified); sign-up now goes through the My Applications address, which sends an unsigned-in browser to the Constant Contact sign-in/sign-up. |
 | 0.2 | 10-07-26 23:55 | Claude (Claude Code) | Ruling recorded: crm-test gets a separate Constant Contact account; section 0a added to create it through the developer sign-up. |

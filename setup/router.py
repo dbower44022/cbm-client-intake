@@ -305,7 +305,9 @@ async def get_history(
 async def get_readiness(request: Request) -> dict:
     _require_admin(request)
     return await readiness_mod.readiness_payload(
-        get_settings(), getattr(request.app.state, "submission_store", None)
+        get_settings(),
+        getattr(request.app.state, "submission_store", None),
+        getattr(request.app.state, "mailing_store", None),
     )
 
 

@@ -115,6 +115,14 @@ FEATURES: tuple[Feature, ...] = (
              "it shows mentors a transcription failure on every Scheduled save.",
     ),
     Feature(
+        key="mailing", name="Mailing list sync", flag="mailing_sync",
+        component="worker",
+        requires=("mailing_client_id", "mailing_client_secret"), needs_database=True,
+        note="The CRM's opted-in contacts mirrored to the mailing service's list. "
+             "The credential here is a GRANT, not a key: after the client ID and "
+             "secret are set, an administrator connects the account below.",
+    ),
+    Feature(
         key="fathom", name="Fathom transcripts", flag="fathom_transcripts",
         component="worker", requires=("fathom_api_key",),
         crm_fields=(("CSession", "sessionTranscription"),),
@@ -230,9 +238,50 @@ def _crm_rows(feature: Feature, crm: Optional[dict[str, Any]]) -> list[dict[str,
     return rows
 
 
-async def readiness_payload(settings: Settings, store: Any = None) -> dict[str, Any]:
+async def _mailing_block(settings: Settings, mailing_store: Any) -> dict[str, Any]:
+    """The connection state and the redirect address the panel shows (plan § 11.4).
+
+    The connection is a grant, so no other feature has this line. ``connection``
+    is never a token — ``Connection.as_dict`` carries none.
+    """
+    redirect = settings.mailing_redirect_uri
+    block: dict[str, Any] = {
+        "redirectUri": redirect,
+        "connection": None,
+        "storeAvailable": mailing_store is not None,
+    }
+    if mailing_store is None:
+        block["check"] = {"kind": "connection", "label": "connection", "ok": None,
+                          "detail": "no database, or no encryption key — cannot hold a connection"}
+        return block
+    try:
+        conn = await mailing_store.get()
+    except Exception as exc:  # noqa: BLE001 — best effort, never an error page
+        log.debug("readiness: mailing connection unreadable: %s", exc)
+        block["check"] = {"kind": "connection", "label": "connection", "ok": None,
+                          "detail": "could not be read"}
+        return block
+    if conn is None:
+        block["check"] = {"kind": "connection", "label": "connection", "ok": False,
+                          "detail": "not connected"}
+    elif conn.usable:
+        block["connection"] = conn.as_dict()
+        block["check"] = {"kind": "connection", "label": "connection", "ok": True,
+                          "detail": "connected as " + (conn.account_label or "the mailing account")}
+    else:
+        block["connection"] = conn.as_dict()
+        block["check"] = {"kind": "connection", "label": "connection", "ok": False,
+                          "detail": "needs re-authorisation"
+                                    + (f": {conn.last_error}" if conn.last_error else "")}
+    return block
+
+
+async def readiness_payload(
+    settings: Settings, store: Any = None, mailing_store: Any = None
+) -> dict[str, Any]:
     """One row per feature: flag, requirements, CRM prerequisites, component."""
     crm = await _crm_snapshot(settings)
+    mailing = await _mailing_block(settings, mailing_store)
 
     heartbeat_age: Optional[float] = None
     if store is not None:
@@ -250,6 +299,8 @@ async def readiness_payload(settings: Settings, store: Any = None) -> dict[str, 
     for feature in FEATURES:
         on = bool(getattr(settings, feature.flag, False)) if feature.flag else True
         checks = _requirement_rows(feature, settings) + _crm_rows(feature, crm)
+        if feature.key == "mailing":
+            checks.append(mailing["check"])
         unmet = [c for c in checks if c["ok"] is False]
         unknown = [c for c in checks if c["ok"] is None]
         # A worker feature that is ON with no live worker is the exact shape of
@@ -284,4 +335,5 @@ async def readiness_payload(settings: Settings, store: Any = None) -> dict[str, 
         "workerHeartbeatAgeSeconds": heartbeat_age,
         "workerStale": worker_stale,
         "workerThresholdSeconds": settings.worker_heartbeat_alert_seconds,
+        "mailing": mailing,
     }

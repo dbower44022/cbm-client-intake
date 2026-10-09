@@ -633,6 +633,12 @@ def create_app(
     from core.settings_store import make_settings_store
 
     app.state.settings_store = make_settings_store(settings)
+    # The mailing service connection (Phase C). Like the override store it
+    # exists whenever a database is attached: the worker's push reads it with
+    # the page off, and the page is only how it gets written.
+    from core.mailing import make_connection_store
+
+    app.state.mailing_store = make_connection_store(settings)
     if settings.setup_active:
         from setup.jobs import make_job_store
 
@@ -905,8 +911,13 @@ def create_app(
         # feature is on AND there is a database to hold the overrides.
         if settings.setup_active:
             from setup import api_router as setup_router
+            from setup import mailing_router as setup_mailing_router
 
             app.include_router(setup_router)
+            # Connect / callback / disconnect for the mailing service — the
+            # callback's address is registered on the vendor's application, so
+            # it lives on /api/setup/mailing/, not the page's own prefix.
+            app.include_router(setup_mailing_router)
         # Event Administration — the staff app; team-gated like the others.
         if settings.events_active:
             from events.member import member_router as events_member_router

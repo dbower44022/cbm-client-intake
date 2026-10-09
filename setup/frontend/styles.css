@@ -151,3 +151,10 @@
 .su__countdown { font-variant-numeric: tabular-nums; font-weight: 600; }
 .su__verified { font-size: 0.82rem; margin-top: 0.3rem; color: #2b6a3f; }
 .su__verified--unknown { color: #7a5200; }
+
+/* --- mailing service connection (readiness panel) --- */
+.su__mailing { margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px dashed var(--color-border, #e2e2e2); }
+.su__mailing-line { margin: 0 0 0.3rem; }
+.su__mailing-actions { margin: 0.5rem 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.su__code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85rem; background: #f4f6f8; padding: 0.1rem 0.35rem; border-radius: 3px; word-break: break-all; }
+.su__mini { padding: 0.1rem 0.5rem; font-size: 0.8rem; }

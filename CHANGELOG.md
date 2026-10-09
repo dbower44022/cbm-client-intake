@@ -4,6 +4,34 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.243.0] — 2026-10-09
+
+**feat(mailing): the mailing service can be connected from System Settings
+(Phase C, pieces 1 and 2 of `prds/mailing-list-and-event-sponsorship-plan.md`
+§ 11).** `core/mailing.py` is the whole vendor boundary for Constant Contact:
+OAuth2 state signing and the authorise address, the code exchange and
+rotating refresh with Basic auth, a one-row `mailing_connection` table
+(migration 0030, kept by the sandbox reset) holding the token pair as Fernet
+ciphertext and **refused without `APP_ENCRYPTION_KEY`**, the
+one-refresher-at-a-time rule under `SELECT … FOR UPDATE`, and an API client
+paced at the vendor's four a second with one refresh-and-retry on 401 and
+one Retry-After wait on 429. Seven settings under the *Mailing service*
+label (`MAILING_SYNC` off by default on the worker; the client ID and secret,
+the secret masked and encrypted; list name, push and pull intervals, base
+URL). The **Feature readiness** tab gains *Mailing list sync* with a
+connection line no other feature has (connected as / not connected / needs
+re-authorisation), the redirect address computed from `APP_BASE_URL` with a
+Copy button, and **Connect** / **Disconnect**; `/api/setup/mailing/connect`,
+`/callback` and `/disconnect` sit behind the page's admin gate and the
+outcome lands on the Readiness tab as a banner. Every connect and disconnect
+is action-logged, naming the account and never a token. **Nothing pushes or
+pulls yet** — that is section 4 of `MAILING-SETUP.md`, the next piece. The
+five vendor shapes the guide pages do not state are marked *inferred* in
+the module docstring and listed in plan § 11.10 for the first dry-run.
+Fifty-six tests; the store's four Postgres tests ran green against a
+throwaway Postgres 16, and one caught a mark rolled back inside the locked
+transaction.
+
 ## [0.242.0] — 2026-10-09
 
 **feat(events): an event carries several curated topics (Track F, F1).**

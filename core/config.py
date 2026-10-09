@@ -497,6 +497,17 @@ class Settings(BaseSettings):
     # The single licensed host every webinar runs under.
     zoom_host_email: str = "zweb@cbmentors.org"
     zoom_base_url: str = "https://api.zoom.us/v2"
+    # --- Mailing service (Constant Contact, Phase C of the mailing-list arc) ---
+    # The CRM is the system of record; the mailing service mirrors it (plan
+    # § 11.4). One account per deployment, connected from /setup through OAuth2;
+    # the connection itself lives in the mailing_connection table, not here.
+    mailing_sync: bool = False                 # the switch (worker)
+    mailing_client_id: str = ""                # the developer application's API key
+    mailing_client_secret: str = ""            # SECRET (web + worker); shown once by the vendor
+    mailing_list_name: str = "Event notices"   # find-or-create by name on the first push
+    mailing_push_seconds: int = 86400          # 0 disables the push and leaves the pull
+    mailing_pull_seconds: int = 3600           # 0 disables the pull
+    mailing_base_url: str = "https://api.cc.email/v3"
     # --- Phase 6a: attendance from the Zoom participant report ---
     # The worker pulls each finished online event's report and matches
     # participants to registrations by email. Inert without Zoom. 0 disables.
@@ -846,6 +857,18 @@ class Settings(BaseSettings):
             return explicit.rstrip("/")
         root = (self.app_base_url or "").strip().rstrip("/")
         return f"{root}/webinars" if root else ""
+
+    @property
+    def mailing_redirect_uri(self) -> str:
+        """The address the mailing service sends an authorisation back to.
+
+        Built from ``APP_BASE_URL`` and NEVER from a request's Host header
+        (plan § 11.2): production answers on two hostnames and only one is
+        registered on the developer application. Empty when the base is unset,
+        and the Connect button explains itself instead of guessing.
+        """
+        root = (self.app_base_url or "").strip().rstrip("/")
+        return f"{root}/api/setup/mailing/callback" if root else ""
 
     @property
     def youtube_playlist_ids(self) -> list[str]:

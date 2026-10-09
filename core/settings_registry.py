@@ -184,6 +184,7 @@ SECRET_KEYS: frozenset[str] = frozenset({
     "fathom_api_key",
     "youtube_api_key",
     "setup_peer_token",
+    "mailing_client_secret",
 })
 
 
@@ -213,6 +214,11 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("zoom_events", GROUP_FEATURES, "Zoom webinar provisioning", kind="bool",
        component="both",
        help="Public webinars only — mentor 1:1 sessions never use the {{abbr}} Zoom account."),
+    _s("mailing_sync", GROUP_FEATURES, "Mailing list sync", kind="bool",
+       component="worker",
+       help="Pushes the CRM's opted-in contacts to the mailing service's list each "
+            "night and pulls unsubscribes back each hour. Needs the mailing service "
+            "credentials AND a connected account (Readiness → Mailing list sync)."),
     _s("events_reminders", GROUP_FEATURES, "Event reminder emails", kind="bool",
        component="worker",
        help="The only time-driven follow-up. Needs the EventReminder template in "
@@ -498,6 +504,21 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("zoom_client_secret", GROUP_INTEGRATIONS, "Zoom client secret", component="both",
        help="Public webinars only. Mentor sessions never use the {{abbr}} Zoom account."),
     _s("fathom_api_key", GROUP_INTEGRATIONS, "Fathom API key", component="worker"),
+    _s("mailing_client_id", GROUP_INTEGRATIONS, "Mailing service client ID", component="both",
+       help="The developer application's API key (Constant Contact). One application "
+            "per deployment, created by the account's own user — it is private to them."),
+    _s("mailing_client_secret", GROUP_INTEGRATIONS, "Mailing service client secret",
+       component="both",
+       help="Shown once by the vendor when generated. Its check is the Connect step on "
+            "the Readiness tab — nothing can probe it without a user authorising."),
+    _s("mailing_list_name", GROUP_INTEGRATIONS, "Mailing list name", component="worker",
+       help="The list the push maintains; found by name, created when absent."),
+    _s("mailing_push_seconds", GROUP_INTEGRATIONS, "Mailing push interval", kind="int",
+       unit="s", component="worker", help="0 disables the push and leaves the pull."),
+    _s("mailing_pull_seconds", GROUP_INTEGRATIONS, "Mailing pull interval", kind="int",
+       unit="s", component="worker", help="0 disables the pull of unsubscribes."),
+    _s("mailing_base_url", GROUP_INTEGRATIONS, "Mailing service API base URL",
+       component="both", help="Override only for a vendor change."),
     _s("youtube_api_key", GROUP_INTEGRATIONS, "YouTube API key",
        help="The recorded-webinar library."),
 
