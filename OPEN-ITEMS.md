@@ -14,7 +14,7 @@ found; move resolved items to the bottom with the resolution date.
     on both CRMs, and the contact was created with no assigned user and no
     team, so EspoCRM answered `Assignment failure: assigned user or team not
     allowed` and the app's 403 wording blamed the create grant. **Fixed in
-    v0.249.0** (committed, not pushed): the new contact is owner-stamped like
+    v0.249.0** (pushed 10-09-26 22:29): the new contact is owner-stamped like
     the profile on both doors, and the hint names an assignment refusal.
     **Owed:** (a) the live check after the push — "+ Add funder" on crm-test
     as Sally Sponsor saves, and the funder's Contacts table shows the contact;

@@ -1692,7 +1692,8 @@ Cleveland by design. What is *verified* is narrower than what is deployed — se
 each block.
 
 - **v0.249.0 (2026-10-09) — the quick-add contact is owned by its creator
-  and team, on both doors.** Committed, not pushed. Found live by Doug as
+  and team, on both doors.** Pushed 10-09-26 22:29 with v0.248.0 and
+  v0.240.0 (crm-test and production building from it). Found live by Doug as
   Sally Sponsor on crm-test ("+ Add funder" refused: the CRM's assignment
   check, misreported as a missing Contact grant); standing rule in the
   Session Management section. Verified by tests only — the live check is
@@ -1700,7 +1701,7 @@ each block.
   saving and its Contacts table showing the contact (`OPEN-ITEMS.md` #43).
 
 - **v0.248.0 (2026-10-09) — the receipt sweep converges; a timing line per
-  API request.** Committed, not pushed. The last two review items; standing
+  API request.** Pushed 10-09-26 22:29. The last two review items; standing
   rules in the Gotchas (*This application*). **The receipt fix is inferred**:
   the live check is the first production sweep's summary line after deploy —
   `updated` should be near 0, and `differing keys:` names whatever still
@@ -1772,7 +1773,7 @@ each block.
   `prompts/track-f-session-2026-10-08.md` (production slot, Boston, then F1).
 
 - **v0.240.0 (2026-10-07) — an Internal event's Join URL is editable in Event
-  Administration** (F5 design D3, `OPEN-ITEMS.md` #38). Committed, not pushed.
+  Administration** (F5 design D3, `OPEN-ITEMS.md` #38). Pushed 10-09-26 22:29.
   `editable_when` on the field spec; the server admits the value only when the
   record as saved is Internal. Verified by tests only; the live check rides
   the next crm-test pass.
