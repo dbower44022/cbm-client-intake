@@ -222,19 +222,25 @@ async def test_existing_company_is_reused_and_gains_the_type():
     """A company CBM already knows as a Client becoming a Partner must gain the
     type — cCompanyType is the discriminator the whole CRM filters on — but
     never lose what it already is."""
-    fake = Fake(
-        meta=_PARTNER_META,
+    fake = Fake(meta=_PARTNER_META)
+    api = FakeApi(
         found={("Account", "name", "Acme Supply Co."):
                {"id": "A-OLD", "name": "Acme Supply Co.", "cCompanyType": ["Client"]}},
     )
-    api = FakeApi()
     res = await service.create_record(
         PARTNER, fake, api, {"company": "Acme Supply Co.", "name": "Acme"}, user_id="u1",
     )
     assert not api.created                       # nothing new created
-    assert fake.updates == [("Account", "A-OLD", {"cCompanyType": ["Client", "Partner"]})]
+    assert fake.updates == []                    # the user client writes nothing here
     assert _payload(fake, "CPartnerProfile")["partnerCompanyId"] == "A-OLD"
     assert res["accountCreated"] is False
+    # Both writes ride the API client: the type merge, then the owner stamp
+    # (v0.249.1 — a team-read role must be able to read the company the new
+    # contact links to).
+    assert api.updates == [
+        ("Account", "A-OLD", {"cCompanyType": ["Client", "Partner"]}),
+        ("Account", "A-OLD", {"assignedUsersIds": ["u1"]}),
+    ]
 
 
 @pytest.mark.asyncio
@@ -243,13 +249,12 @@ async def test_same_name_different_website_is_refused_not_merged():
     website is a different address is a different company — the save is
     refused with the existing company named, and nothing is written (Doug's
     ruling 2026-10-07: refuse and explain, never a second same-named Account)."""
-    fake = Fake(
-        meta=_PARTNER_META,
+    fake = Fake(meta=_PARTNER_META)
+    api = FakeApi(
         found={("Account", "name", "Acme Supply Co."):
                {"id": "A-OLD", "name": "Acme Supply Co.", "cCompanyType": ["Client"],
                 "website": "https://acme-ohio.com"}},
     )
-    api = FakeApi()
     with pytest.raises(service.SessionError) as excinfo:
         await service.create_record(
             PARTNER, fake, api,
@@ -258,76 +263,109 @@ async def test_same_name_different_website_is_refused_not_merged():
         )
     msg = str(excinfo.value)
     assert "Acme Supply Co." in msg and "https://acme-ohio.com" in msg
-    assert not api.created and not fake.created and not fake.updates
+    assert not api.created and not fake.created and not fake.updates and not api.updates
 
 
 @pytest.mark.asyncio
 async def test_same_name_same_website_in_another_form_still_matches():
     """acme.com, https://www.acme.com/ and HTTP://Acme.com are one site."""
-    fake = Fake(
-        meta=_PARTNER_META,
+    fake = Fake(meta=_PARTNER_META)
+    api = FakeApi(
         found={("Account", "name", "Acme Supply Co."):
                {"id": "A-OLD", "name": "Acme Supply Co.", "cCompanyType": ["Partner"],
-                "website": "https://www.acme.com/"}},
+                "website": "https://www.acme.com/", "assignedUsersIds": ["u1"]}},
     )
-    api = FakeApi()
     res = await service.create_record(
         PARTNER, fake, api,
         {"company": "Acme Supply Co.", "website": "HTTP://Acme.com", "name": "Acme"},
         user_id="u1",
     )
     assert res["accountCreated"] is False and not api.created
-    assert fake.updates == []     # type present, website present: nothing to write
+    # type present, website present, already owned: nothing to write
+    assert fake.updates == [] and api.updates == []
 
 
 @pytest.mark.asyncio
 async def test_same_name_no_stored_website_matches_and_fills_it():
-    fake = Fake(
-        meta=_PARTNER_META,
+    fake = Fake(meta=_PARTNER_META)
+    api = FakeApi(
         found={("Account", "name", "Acme Supply Co."):
-               {"id": "A-OLD", "name": "Acme Supply Co.", "cCompanyType": ["Partner"]}},
+               {"id": "A-OLD", "name": "Acme Supply Co.", "cCompanyType": ["Partner"],
+                "assignedUsersIds": ["u1"]}},
     )
-    api = FakeApi()
     res = await service.create_record(
         PARTNER, fake, api,
         {"company": "Acme Supply Co.", "website": "acme.com", "name": "Acme"},
         user_id="u1",
     )
     assert res["accountCreated"] is False
-    assert fake.updates == [("Account", "A-OLD", {"website": "https://acme.com"})]
+    assert api.updates == [("Account", "A-OLD", {"website": "https://acme.com"})]
+    assert fake.updates == []
 
 
 @pytest.mark.asyncio
 async def test_no_website_entered_matches_by_name_as_before():
-    fake = Fake(
-        meta=_PARTNER_META,
+    fake = Fake(meta=_PARTNER_META)
+    api = FakeApi(
         found={("Account", "name", "Acme Supply Co."):
                {"id": "A-OLD", "name": "Acme Supply Co.", "cCompanyType": ["Partner"],
-                "website": "https://acme-ohio.com"}},
+                "website": "https://acme-ohio.com", "assignedUsersIds": ["u1"]}},
     )
-    api = FakeApi()
     res = await service.create_record(
         PARTNER, fake, api, {"company": "Acme Supply Co.", "name": "Acme"}, user_id="u1",
     )
-    assert res["accountCreated"] is False and fake.updates == []
+    assert res["accountCreated"] is False and fake.updates == [] and api.updates == []
+
+
+@pytest.mark.asyncio
+async def test_company_match_runs_under_the_api_key_so_a_team_read_user_never_duplicates():
+    """The match used to run as the user. A role reading Account at *team*
+    cannot see an unowned company the previous attempt created, so every
+    retry made another same-named Account (three on crm-test, 2026-10-09).
+    Now the API client finds it, and the reused company gains the creator and
+    the domain team so the user can read it and link the contact to it."""
+    settings = get_settings()
+    team_name = settings.sponsor_team_name
+    fake = Fake(meta=_PARTNER_META)          # the USER sees nothing by name
+    api = FakeApi(found={
+        ("Account", "name", "Acme Bank and Loan"):
+            {"id": "A-UNOWNED", "name": "Acme Bank and Loan", "cCompanyType": ["Sponsor"],
+             "teamsIds": [], "assignedUsersIds": []},
+        ("Team", "name", team_name): {"id": "T-S"},
+    })
+    res = await service.create_record(
+        SPONSOR, fake, api,
+        {"company": "Acme Bank and Loan", "firstName": "Wendy", "lastName": "Kay"},
+        user_id="u1",
+    )
+    assert res["accountCreated"] is False and not api.created
+    assert api.updates == [
+        ("Account", "A-UNOWNED", {"assignedUsersIds": ["u1"], "teamsIds": ["T-S"]}),
+    ]
+    contact = _payload(fake, "Contact")
+    assert contact["accountId"] == "A-UNOWNED"
+    assert contact["teamsIds"] == ["T-S"] and contact["assignedUsersIds"] == ["u1"]
+    assert _payload(fake, "CSponsorProfile")["teamsIds"] == ["T-S"]
 
 
 @pytest.mark.asyncio
 async def test_existing_contact_is_null_filled_never_overwritten():
-    fake = Fake(
-        meta=_PARTNER_META,
+    fake = Fake(meta=_PARTNER_META)
+    api = FakeApi(
         found={("Contact", "emailAddress", "dana@acme.com"):
                {"id": "C-OLD", "firstName": "Dana", "lastName": "", "title": "VP"}},
     )
     await service.create_record(
-        PARTNER, fake, FakeApi(),
+        PARTNER, fake, api,
         {"company": "Acme", "firstName": "D.", "lastName": "Reyes",
          "emailAddress": "dana@acme.com", "title": "Director"},
         user_id="u1",
     )
     assert not _has(fake, "Contact")
     # lastName was empty -> filled; firstName and title were set -> untouched.
+    # The null-fill runs AS THE USER; the owner stamp rides the API client.
     assert fake.updates == [("Contact", "C-OLD", {"lastName": "Reyes"})]
+    assert api.updates == [("Contact", "C-OLD", {"assignedUsersIds": ["u1"]})]
     assert _payload(fake, "CPartnerProfile")["primaryPartnercontactId"] == "C-OLD"
 
 
@@ -344,9 +382,10 @@ async def test_new_contact_carries_the_domain_team_on_both_doors():
         (SPONSOR, "sponsor_team_name", "CSponsorProfile"),
     ):
         team_name = getattr(settings, attr)
-        fake = Fake(meta=_PARTNER_META, found={("Team", "name", team_name): {"id": "T-1"}})
+        fake = Fake(meta=_PARTNER_META)
+        api = FakeApi(found={("Team", "name", team_name): {"id": "T-1"}})
         await service.create_record(
-            cfg, fake, FakeApi(),
+            cfg, fake, api,
             {"company": "Acme", "firstName": "Dana", "lastName": "Reyes"},  # no email
             user_id="u1",
         )
@@ -355,6 +394,9 @@ async def test_new_contact_carries_the_domain_team_on_both_doors():
         assert contact["assignedUsersIds"] == ["u1"], cfg.slug
         assert contact["assignedUserId"] == "u1", cfg.slug
         assert _payload(fake, entity)["teamsIds"] == ["T-1"], cfg.slug
+        # the company is owned the same way, under the API client
+        account = _payload(api, "Account")
+        assert account["teamsIds"] == ["T-1"] and account["assignedUsersIds"] == ["u1"], cfg.slug
 
 
 @pytest.mark.asyncio

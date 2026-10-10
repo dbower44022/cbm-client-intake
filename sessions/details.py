@@ -25,6 +25,7 @@ from .service import (
     SessionClient,
     SessionError,
     _find_or_create_company,
+    _quick_add_team_ids,
     _is_forbidden,
     company_id_attr,
     fill_company_fallback,
@@ -528,7 +529,7 @@ async def search_contacts(client: SessionClient, query: str) -> list[dict[str, A
 
 async def create_company(
     cfg: DomainConfig, client: SessionClient, api_client: Any,
-    name: str, website: str = "",
+    name: str, website: str = "", user_id: str = "",
 ) -> dict[str, Any]:
     """Find-or-create the company Account that the Details tab's Company picker
     will point at, and return ``{id, name, created}``.
@@ -552,7 +553,10 @@ async def create_company(
     url = (website or "").strip()
     if url and "://" not in url:
         url = f"https://{url}"  # Account.website is a url field
-    account_id, created = await _find_or_create_company(cfg, client, api_client, label, url)
+    team_ids = await _quick_add_team_ids(cfg, api_client)
+    account_id, created = await _find_or_create_company(
+        cfg, client, api_client, label, url, user_id=user_id or "", team_ids=team_ids,
+    )
     # ``label`` is what the user typed; a reused Account may be stored with
     # different capitalisation. The save's reload re-reads the record from the
     # CRM, so the picker corrects itself immediately either way.

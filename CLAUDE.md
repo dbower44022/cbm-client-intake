@@ -675,8 +675,14 @@ one shared frontend that derives its domain from the first segment of its URL.
   team not allowed" — the Sponsor Manager Role on both CRMs), and a
   team-read role could never see the contact it just made. The Partner
   Manager Role only passed because it is *all*/*all*; the two doors share
-  the function and must stay identical. A reused contact is never
-  re-stamped. The company is still created unowned under the org-wide key.
+  the function and must stay identical. **The company too** (v0.249.1):
+  the match, the null-fill, the type merge, the team lookup and the create
+  all run under the intake API client (a team-read user matching as
+  themself created a duplicate per attempt; the Sponsor Manager Role has no
+  Team read), a NEW company carries the creator and the team, and a REUSED
+  company or contact GAINS them when missing (`_merge_owner_stamps`,
+  merge-only, best-effort) — the contact's company link needs the user to
+  read the company. Null-fills and creates still run as the user.
 - **Contacts tables are per-domain**: mentor shows Role chips and an Agreements
   badge; partner/funder show neither (every contact has the same relationship to
   CBM, and the consent bools are a client-intake concept) but offer **Make
@@ -1691,14 +1697,18 @@ unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
 
-- **v0.249.0 (2026-10-09) — the quick-add contact is owned by its creator
-  and team, on both doors.** Pushed 10-09-26 22:29 with v0.248.0 and
-  v0.240.0 (crm-test and production building from it). Found live by Doug as
-  Sally Sponsor on crm-test ("+ Add funder" refused: the CRM's assignment
-  check, misreported as a missing Contact grant); standing rule in the
-  Session Management section. Verified by tests only — the live check is
-  "+ Add funder" on crm-test as Sally Sponsor after the push, the funder
-  saving and its Contacts table showing the contact (`OPEN-ITEMS.md` #43).
+- **v0.249.0 / v0.249.1 (2026-10-09) — the quick-add contact AND company
+  are owned by their creator and team, on both doors.** v0.249.0 pushed
+  10-09-26 22:29 and live on crm-test and production 22:32; **v0.249.1
+  committed, not pushed.** Found live by Doug as Sally Sponsor on crm-test:
+  first the CRM's assignment check (misreported as a missing Contact
+  grant), then — on the v0.249.0 build — a refused read of the unowned
+  company the contact linked to, plus a duplicate company per attempt
+  because the match ran as a team-read user. Standing rules in the Session
+  Management section. Verified by tests only — the live check is
+  "+ Add funder" on crm-test as Sally Sponsor after the next push, the
+  funder saving and its Contacts table showing the contact
+  (`OPEN-ITEMS.md` #43).
 
 - **v0.248.0 (2026-10-09) — the receipt sweep converges; a timing line per
   API request.** Pushed 10-09-26 22:29. The last two review items; standing

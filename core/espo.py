@@ -258,6 +258,19 @@ def forbidden_hint(exc: Exception) -> Optional[str]:
             f"refused the record's assigned user or team, not the {entity} "
             "grant itself"
         )
+    if "cannotRelateForbidden" in text or "No foreign record access" in text:
+        # A create/update that sets a link (``accountId`` on a Contact, say)
+        # needs READ on the record being linked; EspoCRM refuses with this
+        # body when the user cannot. Found live 2026-10-09: a funder manager
+        # at Contact create was told she lacked Contact create, when the gap
+        # was reading the unowned company the contact pointed at.
+        fe = re.search(r'"foreignEntityType"\s*:\s*"([A-Za-z0-9_]+)"', text)
+        action = re.search(r'"action"\s*:\s*"([a-z]+)"', text)
+        what = fe.group(1) if fe else "linked"
+        return (
+            f"{action.group(1) if action else 'read'} access to the {what} record "
+            f"this {entity} links to — the linked record, not the {entity} itself"
+        )
     if op in ("relate", "unrelate") and "noAccessToForeignRecord" in text:
         # The link name rides in the op prefix: "relate Entity/id/link failed".
         link = re.match(rf"^{op}\s+\S+/\S+/(\S+)", text)

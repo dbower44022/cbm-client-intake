@@ -16,8 +16,16 @@ found; move resolved items to the bottom with the resolution date.
     allowed` and the app's 403 wording blamed the create grant. **Fixed in
     v0.249.0** (pushed 10-09-26 22:29): the new contact is owner-stamped like
     the profile on both doors, and the hint names an assignment refusal.
-    **Owed:** (a) the live check after the push — "+ Add funder" on crm-test
-    as Sally Sponsor saves, and the funder's Contacts table shows the contact;
+    **The v0.249.0 live check (10-09-26 22:36 UTC+4) got one step further
+    and found two more defects, fixed in v0.249.1 (committed, not pushed):**
+    the contact's company link was refused because the company was unowned
+    (`cannotRelateForbidden`, Account read), and the company match ran as
+    the user, so each attempt created another same-named Account (three
+    "Acme Bank" rows on crm-test, gone with the reset). The match, the team
+    lookup and the ownership now ride the API client; see the changelog.
+    **Owed:** (a) the live check after the next push — "+ Add funder" on
+    crm-test as Sally Sponsor saves, and the funder's Contacts table shows
+    the contact;
     (b) "+ Add partner" as Pat Partner the same way (it passed only by the
     looser role; the stamp must not have changed that); (c) the company is
     still created unowned under the org-wide key — whether Sally can see it

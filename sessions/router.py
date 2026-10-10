@@ -623,6 +623,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             try:
                 result = await details_svc.create_company(
                     cfg, client, _api_client(settings), body.name, body.website or "",
+                    user_id=user.get("userId") or "",
                 )
             except service.SessionError as exc:
                 raise HTTPException(status_code=400, detail=str(exc))

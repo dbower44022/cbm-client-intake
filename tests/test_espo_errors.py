@@ -96,6 +96,20 @@ def test_forbidden_hint_names_an_assignment_refusal_not_the_scope():
     assert "create access" not in hint
 
 
+def test_forbidden_hint_names_the_record_a_create_links_to():
+    """A Contact create carrying accountId needs READ on that Account; EspoCRM
+    refuses with cannotRelateForbidden. Reported as "create access to Contact"
+    it blamed the wrong grant (live, crm-test, 2026-10-09)."""
+    hint = forbidden_hint(EspoError(
+        "create Contact failed: HTTP 403 [No foreign record access for link "
+        "operation (Contact:account).] {\"messageTranslation\":{\"label\":"
+        "\"cannotRelateForbidden\",\"scope\":null,\"data\":{\"foreignEntityType\":"
+        "\"Account\",\"action\":\"read\"}}}"
+    ))
+    assert hint == ("read access to the Account record this Contact links to — "
+                    "the linked record, not the Contact itself")
+
+
 def test_forbidden_hint_names_the_linked_record_on_foreign_denial():
     """noAccessToForeignRecord = the denial is on the LINKED record, not the
     relate's own entity (Anthony Sacco 2026-07-20: told 'edit access to

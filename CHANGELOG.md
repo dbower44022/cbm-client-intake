@@ -4,6 +4,46 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.249.1] — 2026-10-09
+
+**fix(sessions): the quick-add matches and owns the COMPANY under the
+application key too; a refused link read is named as one.** The live check
+of v0.249.0 as Sally Sponsor on crm-test got past the assignment check and
+hit the next refusal, which the 403 wording again blamed on the Contact
+grant. The web log had the real body: `HTTP 403 [No foreign record access
+for link operation (Contact:account).] … cannotRelateForbidden … Account …
+read`. The contact's `accountId` link needs the user to READ the company,
+and the company had been created unowned under the org-wide key.
+
+The same run found the worse defect: the company MATCH ran as the user, and
+a role reading Account at *team* cannot see an unowned company — so each
+attempt created another same-named Account (three "Acme Bank" rows on
+crm-test by 02:36 UTC), exactly what the website rule exists to prevent. And
+the Sponsor Manager Role holds no Team read, so the team lookup, also as
+the user, silently resolved nothing: no record the funder manager created
+carried the Sponsor Management Team.
+
+- **Company match, website null-fill, type merge, team lookup and create all
+  run under the intake API client** (`_find_or_create_company`,
+  `_quick_add_team_ids`): its role reads Account and Team at *all* and holds
+  Account create and edit. The user's read scope no longer decides whether
+  a company is found — the public forms' behaviour. The Details tab's
+  "+ New company" picker shares the function and gains the same.
+- **The company is owned like the contact**: a NEW Account carries the
+  creator and the domain team; a REUSED one GAINS them when missing
+  (`_merge_owner_stamps`, org key, merge-only, best-effort). The contact's
+  email match moved under the API client for the same duplicate reason; a
+  reused contact gains the stamps the same way, and its null-fill still
+  runs as the user, as does every create, so the CRM records the creator.
+- **`forbidden_hint` names a refused link read**: a `cannotRelateForbidden`
+  body on a create or update now reads *read access to the Account record
+  this Contact links to — the linked record, not the Contact itself*.
+
+Verified by tests only (one new quick-add test, one hint test, the Details
+picker tests moved onto the API fake). The live check is unchanged:
+"+ Add funder" on crm-test as Sally Sponsor saves and its Contacts table
+shows the contact. The three stray Accounts go with the nightly reset.
+
 ## [0.249.0] — 2026-10-09
 
 **fix(sessions): the quick-add contact is owned by its creator and team, on

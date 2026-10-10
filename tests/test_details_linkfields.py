@@ -294,35 +294,46 @@ async def test_link_options_page_size_stays_within_the_crm_limit():
 
 
 class _CoFake:
-    """Client for the create-company path: find_one + the type-merge update."""
+    """The USER's client on the create-company path. Since v0.249.1 it is
+    asked nothing here — the match, the merges and the create all ride the
+    API client — so any call on it is a regression."""
 
-    def __init__(self, existing=None):
-        self._existing = existing
+    def __init__(self):
         self.updates = []
 
     async def find_one(self, entity, attribute, value, select="id"):
-        return self._existing
+        raise AssertionError("the company match must not run as the user")
+
+    async def update(self, entity, record_id, payload):
+        raise AssertionError("the company merge must not run as the user")
+
+
+class _CoApi:
+    """The intake API client — reads Account at all, holds create and edit."""
+
+    def __init__(self, existing=None):
+        self._existing = existing
+        self.created = []
+        self.updates = []
+
+    async def find_one(self, entity, attribute, value, select="id"):
+        return self._existing if entity == "Account" else None
+
+    async def create(self, entity, payload):
+        self.created.append((entity, payload))
+        return {"id": "acct-new"}
 
     async def update(self, entity, record_id, payload):
         self.updates.append((entity, record_id, payload))
         return {"id": record_id}
 
 
-class _CoApi:
-    """The intake API client — holds Account create where gate roles don't."""
-
-    def __init__(self):
-        self.created = []
-
-    async def create(self, entity, payload):
-        self.created.append((entity, payload))
-        return {"id": "acct-new"}
-
-
 @pytest.mark.asyncio
 async def test_create_company_creates_typed_account_via_api_client():
     client, api = _CoFake(), _CoApi()
-    res = await details.create_company(PARTNER, client, api, " Buckeye Community Bank ", "buckeye.com")
+    res = await details.create_company(
+        PARTNER, client, api, " Buckeye Community Bank ", "buckeye.com", user_id="u1",
+    )
     assert res == {"id": "acct-new", "name": "Buckeye Community Bank", "created": True}
     entity, payload = api.created[0]
     assert entity == "Account"
@@ -330,17 +341,20 @@ async def test_create_company_creates_typed_account_via_api_client():
     # the discriminator the whole CRM filters on, and a usable url field
     assert payload["cCompanyType"] == ["Partner"]
     assert payload["website"] == "https://buckeye.com"
+    # owned by its creator (v0.249.1), so a team-read role can read and link it
+    assert payload["assignedUsersIds"] == ["u1"]
 
 
 @pytest.mark.asyncio
 async def test_create_company_reuses_a_same_named_account_and_merges_the_type():
-    client = _CoFake(existing={"id": "A1", "name": "Key Bank", "cCompanyType": ["Client"]})
-    api = _CoApi()
+    client = _CoFake()
+    api = _CoApi(existing={"id": "A1", "name": "Key Bank", "cCompanyType": ["Client"]})
     res = await details.create_company(SPONSOR, client, api, "Key Bank")
     assert res == {"id": "A1", "name": "Key Bank", "created": False}
     assert not api.created  # never duplicates a company CBM already knows
-    # merge-only: the existing type survives, the domain's is added
-    assert client.updates == [("Account", "A1", {"cCompanyType": ["Client", "Sponsor"]})]
+    # merge-only: the existing type survives, the domain's is added (no user
+    # id given, so no owner stamp to merge)
+    assert api.updates == [("Account", "A1", {"cCompanyType": ["Client", "Sponsor"]})]
 
 
 @pytest.mark.asyncio
@@ -348,17 +362,17 @@ async def test_create_company_refuses_a_same_name_with_a_different_website():
     """The Details picker shares the quick-add rule: a same-named company at a
     different web address is a different company, and the save is refused
     with the existing one named rather than merged or duplicated."""
-    client = _CoFake(existing={"id": "A1", "name": "Key Bank", "cCompanyType": ["Client"],
-                               "website": "https://key.com"})
-    api = _CoApi()
+    client = _CoFake()
+    api = _CoApi(existing={"id": "A1", "name": "Key Bank", "cCompanyType": ["Client"],
+                           "website": "https://key.com"})
     with pytest.raises(service.SessionError, match="https://key.com"):
         await details.create_company(SPONSOR, client, api, "Key Bank", "keybank-foundation.org")
-    assert not api.created and client.updates == []
+    assert not api.created and api.updates == []
 
 
 def test_create_company_route_returns_the_refusal_as_a_400(monkeypatch):
-    fake = _CoFake(existing={"id": "A1", "name": "Key Bank", "website": "https://key.com"})
-    with TestClient(_route_app(monkeypatch, fake)) as c:
+    api = _CoApi(existing={"id": "A1", "name": "Key Bank", "website": "https://key.com"})
+    with TestClient(_route_app(monkeypatch, _CoFake(), api)) as c:
         r = c.post("/partnersessions/api/records/P1/company",
                    json={"name": "Key Bank", "website": "keybank-foundation.org"})
     assert r.status_code == 400
@@ -380,7 +394,7 @@ _ROUTE_USER = {
 }
 
 
-def _route_app(monkeypatch, client):
+def _route_app(monkeypatch, client, api=None):
     monkeypatch.setenv("SESSION_SECRET", "test-secret")
     # Deliberately OFF: this is a repair path for records that already exist, so
     # it must not ride on the quick-add flag the way the Add button does.
@@ -388,7 +402,10 @@ def _route_app(monkeypatch, client):
     get_settings.cache_clear()
     monkeypatch.setattr("sessions.router.current_user", lambda request, key=None: _ROUTE_USER)
     monkeypatch.setattr("sessions.router.client_for", lambda settings, user: client)
-    monkeypatch.setattr("sessions.router._api_client", lambda settings: _CoApi(), raising=False)
+    # The router's API-client factory is a closure (not patchable by name); in
+    # tests it builds the dry-run client, imported at call time from core.espo —
+    # so the fake rides in through that name.
+    monkeypatch.setattr("core.espo.DryRunEspoClient", lambda: api or _CoApi())
     return create_app([info_request.SPEC])
 
 

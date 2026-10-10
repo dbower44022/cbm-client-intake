@@ -32,7 +32,7 @@ from core import inline_images
 from core.config import get_settings
 from core.crm_upsert import (
     COMPANY_SELECT, conflicting_website, create_dropping_invalid, fill_company_website,
-    find_create_or_fill, merge_company_type,
+    merge_company_type, _is_empty,
 )
 from core.espo import EspoError, is_forbidden
 from core.phone import e164_or_none, format_us
@@ -3182,17 +3182,74 @@ async def manager_options(
     }
 
 
+def _owner_stamps(user_id: str, team_ids: Optional[list[str]]) -> dict[str, Any]:
+    """The ownership a quick-added record carries: the creator as assigned user
+    (both spellings, the new-session precedent) and the domain's team."""
+    stamps: dict[str, Any] = {}
+    if user_id:
+        stamps["assignedUserId"] = user_id
+        stamps["assignedUsersIds"] = [user_id]
+    if team_ids:
+        stamps["teamsIds"] = list(team_ids)
+    return stamps
+
+
+async def _merge_owner_stamps(
+    api_client: Any, entity: str, record: dict[str, Any],
+    user_id: str, team_ids: Optional[list[str]],
+) -> bool:
+    """Give a REUSED record the creator and the domain team it lacks, under the
+    org-wide key: merge-only (nothing is ever removed) and best-effort (a
+    refusal is logged, never fatal). Why: a role that reads at *team* cannot
+    see — or link to — a record that belongs to nobody, and a quick-add that
+    matches such a record would otherwise fail on the very next write (the
+    contact's company link 403'd ``cannotRelateForbidden`` on crm-test,
+    2026-10-09, after the company had been matched under the org key).
+    ``record`` must have been read with ``teamsIds,assignedUsersIds``; a
+    missing key reads as empty."""
+    users = list(record.get("assignedUsersIds") or [])
+    teams = list(record.get("teamsIds") or [])
+    payload: dict[str, Any] = {}
+    if user_id and user_id not in users:
+        payload["assignedUsersIds"] = users + [user_id]
+    for tid in team_ids or []:
+        if tid not in teams:
+            teams.append(tid)
+            payload["teamsIds"] = teams
+    if not payload:
+        return False
+    try:
+        await api_client.update(entity, record["id"], payload)
+        return True
+    except EspoError as exc:
+        log.warning("could not stamp %s/%s with its owner/team (%s)", entity, record["id"], exc)
+        return False
+
+
+#: What a quick-add company match must read: the website/type keys plus the
+#: ownership the merge needs.
+_COMPANY_MATCH_SELECT = COMPANY_SELECT + ",teamsIds,assignedUsersIds"
+
+
 async def _find_or_create_company(
     cfg: DomainConfig, client: SessionClient, api_client: Any,
-    name: str, website: str,
+    name: str, website: str, *, user_id: str = "", team_ids: Optional[list[str]] = None,
 ) -> tuple[str, bool]:
     """An Account id for ``name`` — reuse a same-named one, else create it.
 
-    Returns ``(id, created)``. Reads run as the user; the CREATE goes through
-    the intake API client, whose role holds Account create where the staff
-    gate roles may not (the ``comms_service.resolve_company`` precedent — a
-    partner manager without the grant would otherwise get a 403 on a brand-new
-    company).
+    Returns ``(id, created)``. **Every step runs through the intake API
+    client** (v0.249.1): its role reads Account at *all* and holds Account
+    create and edit, where a staff gate role may read at *team* and hold
+    neither. The match used to run as the user, and a team-read user could
+    not see the unowned Account the previous attempt had created — so every
+    retry made another same-named company (three on crm-test, 2026-10-09),
+    exactly what the website rule below exists to prevent. The CREATE was
+    always the API client's (the ``comms_service.resolve_company`` precedent).
+
+    **The company is owned by its creator and the domain team**, new or
+    reused (:func:`_owner_stamps` / :func:`_merge_owner_stamps`): the
+    contact's ``accountId`` link needs the user to READ the company, and a
+    team-read role cannot read one that belongs to nobody.
 
     On a REUSED Account the domain's company type is merged into
     ``cCompanyType`` when missing — ``core.crm_upsert.merge_company_type``,
@@ -3214,7 +3271,7 @@ async def _find_or_create_company(
     case and a trailing slash never count as a difference.
     """
     spec = cfg.create_spec
-    existing = await client.find_one(ACCOUNT, "name", name, select=COMPANY_SELECT)
+    existing = await api_client.find_one(ACCOUNT, "name", name, select=_COMPANY_MATCH_SELECT)
     if existing:
         stored = conflicting_website(existing, website)
         if stored:
@@ -3224,21 +3281,29 @@ async def _find_or_create_company(
                 f"tells them apart (for example a city). If it is the same company, "
                 f"clear the website and save again."
             )
-        await fill_company_website(client, existing, website)
+        await fill_company_website(api_client, existing, website)
         if spec:
-            await merge_company_type(client, existing, spec.company_type)
+            await merge_company_type(api_client, existing, spec.company_type)
+        await _merge_owner_stamps(api_client, ACCOUNT, existing, user_id, team_ids)
         return existing["id"], False
     payload: dict[str, Any] = {"name": name}
     if spec:
         payload["cCompanyType"] = [spec.company_type]
     if website:
         payload["website"] = website
+    payload.update(_owner_stamps(user_id, team_ids))
     created = await api_client.create(ACCOUNT, payload)
     return created["id"], True
 
 
+#: The contact fields a quick-add may null-fill on a reused contact — never
+#: the match key, the company FK, the discriminator or the owner stamps.
+_CONTACT_FILL_KEYS = ("firstName", "lastName", "phoneNumber", "title")
+
+
 async def _create_quick_contact(
-    cfg: DomainConfig, client: SessionClient, values: dict[str, Any], account_id: str,
+    cfg: DomainConfig, client: SessionClient, api_client: Any,
+    values: dict[str, Any], account_id: str,
     *, user_id: str = "", team_ids: Optional[list[str]] = None,
 ) -> tuple[Optional[str], bool]:
     """Find-or-create the primary contact from the form's contact block.
@@ -3256,10 +3321,16 @@ async def _create_quick_contact(
     allowed" — found live 2026-10-09, the Sponsor Manager Role on crm-test and
     production), and a role that reads Contact at *team* could never see an
     unowned contact it had just made. Doug's ruling 2026-10-09: the app owns
-    the contact it creates, on both doors, rather than loosening the role. A
-    REUSED contact is not re-stamped: a team-read role can only match a
-    contact it already reads, so the stamp would be either redundant or a
-    write it is not allowed to make.
+    the contact it creates, on both doors, rather than loosening the role.
+
+    The email MATCH runs under the intake API client (v0.249.1) so a contact
+    the CRM already knows is found whatever the user's read scope — a
+    team-read user matching as themself would create a duplicate instead
+    (the company's lesson). A REUSED contact gains the creator and the team
+    it lacks (:func:`_merge_owner_stamps`, org key, merge-only, best-effort),
+    so the user can see and null-fill it; the null-fill itself still runs
+    **as the user**, and the CREATE runs as the user, so the CRM records
+    them as creator.
     """
     first = (values.get("firstName") or "").strip()
     last = (values.get("lastName") or "").strip()
@@ -3283,31 +3354,37 @@ async def _create_quick_contact(
     normalized = e164_or_none(phone)  # an implausible number is dropped, never fatal
     if normalized:
         payload["phoneNumber"] = normalized
-    if user_id:
-        payload["assignedUserId"] = user_id
-        payload["assignedUsersIds"] = [user_id]
-    if team_ids:
-        payload["teamsIds"] = list(team_ids)
+    payload.update(_owner_stamps(user_id, team_ids))
     if not email:
         # No natural key to match on — create outright.
         created = await create_dropping_invalid(client, CONTACT, payload)
         return created["id"], True
-    contact_id, action = await find_create_or_fill(
-        client, CONTACT,
-        match_attr="emailAddress", match_value=email,
-        create_payload=payload,
-        # Never back-write the match key, the company FK or the discriminator
-        # onto a contact that already exists.
-        # (nor the owner stamps — see the docstring).
-        fill_keys=("firstName", "lastName", "phoneNumber", "title"),
+    existing = await api_client.find_one(
+        CONTACT, "emailAddress", email,
+        select="id," + ",".join(_CONTACT_FILL_KEYS) + ",teamsIds,assignedUsersIds",
     )
-    return contact_id, action == "created"
+    if existing is None:
+        created = await create_dropping_invalid(client, CONTACT, payload)
+        return created["id"], True
+    await _merge_owner_stamps(api_client, CONTACT, existing, user_id, team_ids)
+    # Null-fill only — never the match key, the company FK, the discriminator
+    # or the stamps — as the user, the ``find_create_or_fill`` policy.
+    fill = {
+        k: payload[k] for k in _CONTACT_FILL_KEYS
+        if k in payload and not _is_empty(payload[k]) and _is_empty(existing.get(k))
+    }
+    if fill:
+        await client.update(CONTACT, existing["id"], fill)
+    return existing["id"], False
 
 
-async def _quick_add_team_ids(cfg: DomainConfig, client: SessionClient) -> list[str]:
-    """Team ids to stamp on the new profile so team-scoped roles can see it in
-    the grid. Best-effort — an unresolvable team logs and returns [] rather
-    than blocking the create (the intake orchestrators' rule)."""
+async def _quick_add_team_ids(cfg: DomainConfig, client: Any) -> list[str]:
+    """Team ids to stamp on the new records so team-scoped roles can see them.
+    Best-effort — an unresolvable team logs and returns [] rather than
+    blocking the create (the intake orchestrators' rule). Pass the **intake
+    API client** (v0.249.1): its role reads Team; the Sponsor Manager Role
+    does not, so looked up as the user the team silently never resolved and
+    nothing the funder manager created carried it (crm-test, 2026-10-09)."""
     spec = cfg.create_spec
     if not spec:
         return []
@@ -3352,12 +3429,12 @@ async def create_record(
     if website and "://" not in website:
         website = f"https://{website}"  # Account.website is a url field
 
+    team_ids = await _quick_add_team_ids(cfg, api_client)
     account_id, account_created = await _find_or_create_company(
-        cfg, client, api_client, company, website
+        cfg, client, api_client, company, website, user_id=user_id, team_ids=team_ids,
     )
-    team_ids = await _quick_add_team_ids(cfg, client)
     contact_id, contact_created = await _create_quick_contact(
-        cfg, client, values, account_id, user_id=user_id, team_ids=team_ids,
+        cfg, client, api_client, values, account_id, user_id=user_id, team_ids=team_ids,
     )
 
     payload: dict[str, Any] = {"name": (values.get("name") or "").strip() or company}
