@@ -1699,8 +1699,8 @@ each block.
 
 - **v0.249.0 / v0.249.1 (2026-10-09) — the quick-add contact AND company
   are owned by their creator and team, on both doors.** v0.249.0 pushed
-  10-09-26 22:29 and live on crm-test and production 22:32; **v0.249.1
-  committed, not pushed.** Found live by Doug as Sally Sponsor on crm-test:
+  10-09-26 22:29 and live on crm-test and production 22:32; v0.249.1
+  pushed 22:52 (both building from it). Found live by Doug as Sally Sponsor on crm-test:
   first the CRM's assignment check (misreported as a missing Contact
   grant), then — on the v0.249.0 build — a refused read of the unowned
   company the contact linked to, plus a duplicate company per attempt

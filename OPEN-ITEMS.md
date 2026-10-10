@@ -17,7 +17,7 @@ found; move resolved items to the bottom with the resolution date.
     v0.249.0** (pushed 10-09-26 22:29): the new contact is owner-stamped like
     the profile on both doors, and the hint names an assignment refusal.
     **The v0.249.0 live check (10-09-26 22:36 UTC+4) got one step further
-    and found two more defects, fixed in v0.249.1 (committed, not pushed):**
+    and found two more defects, fixed in v0.249.1 (pushed 10-09-26 22:52):**
     the contact's company link was refused because the company was unowned
     (`cannotRelateForbidden`, Account read), and the company match ran as
     the user, so each attempt created another same-named Account (three
