@@ -1709,6 +1709,16 @@ each block.
   rule in the Events section. Verified by tests only — the live check is the
   same tab as Pat Partner after the push (`OPEN-ITEMS.md` #44).
 
+- **v0.250.0 (2026-10-11) — the demo events carry presenters, a partner
+  and a funder, seeded so a re-baseline keeps them.** Committed, not pushed.
+  The sandbox's golden baseline (09-07-26) predates the presenter entity and
+  the partner-event link, so the reset truncates both tables nightly (its
+  log names them) — a standing rule now in `SANDBOX-RESET.md` § *Re-baseline*:
+  **a CRM change that adds a table always needs a re-baseline.** Dry runs
+  clean on crm-test; **the applies and the recapture are Doug's**
+  (`OPEN-ITEMS.md` #45), on a morning after a reset with no release test
+  running. Showcase event: `Hiring Your First Employee` (`demo-records.md`).
+
 - **v0.249.0 / v0.249.1 (2026-10-09) — the quick-add contact AND company
   are owned by their creator and team, on both doors.** v0.249.0 pushed
   10-09-26 22:29 and live on crm-test and production 22:32; v0.249.1

@@ -133,6 +133,45 @@ REFERRALS = {
     "Salt & Sable Catering — Mentoring": "Northgate Chamber of Commerce",
 }
 
+#: Presenters, partners, funders and topics on the seeded events (10-11-26), so
+#: an event opened in a demo shows every relationship and the Events tab on the
+#: partner and funder showcase records has rows with counts. Presenters are
+#: added through the application's own ``events.service.add_presenter`` so a
+#: mentor's biography, title and photo are the COPIES a real add makes
+#: (``prds/events/CBM_Events_Presenters_Design.md``, F4-5/F4-6). A presenter
+#: named as a string is an existing Contact; a dict is a guest the editor
+#: would create — a ``Presenter``-typed Contact, reused on the next run.
+#: Topics ride here too: the nightly reset empties ``CEvent.topics`` (the
+#: column is rebuilt from files, the rows from the snapshot), so they have to
+#: be seeded and re-baselined like everything else.
+#: (event, presenters, partners, funders, topics)
+GUEST_PRESENTER = {
+    "firstName": "Lena", "lastName": "Okafor",
+    "email": "lena.okafor@sandbox.cbmentors.org",
+    "title": "Founder", "company": "Okafor Growth Studio",
+}
+EVENT_SHOWCASE: tuple[tuple[str, tuple, tuple[str, ...], tuple[str, ...], tuple[str, ...]], ...] = (
+    ("Hiring Your First Employee",
+     ("Joe Mentor", "Terrence Boyd"),
+     ("Cuyahoga Small Business Alliance",),
+     ("Harrowgate Family Trust",),
+     ("Leadership & People", "Operations")),
+    ("Pricing for Profit",
+     ("Matt Mentor",),
+     ("Northgate Chamber of Commerce",),
+     ("Harrowgate Family Trust",),
+     ("Finance & Accounting",)),
+    ("Marketing on a Shoestring",
+     (GUEST_PRESENTER,),
+     ("Cuyahoga Small Business Alliance",),
+     ("Blue Heron Foundation",),
+     ("Marketing & Sales",)),
+    ("Reading Your Own Financials", (), (), (),
+     ("Finance & Accounting", "Business Fundamentals")),
+    ("AI Tools for Small Business", (), (), (),
+     ("Technology & Digital",)),
+)
+
 
 class Enricher:
     def __init__(self, client: EspoClient, *, apply: bool) -> None:
@@ -329,6 +368,104 @@ async def add_events(e: Enricher, now: datetime) -> None:
         })
 
 
+async def add_event_showcase(e: Enricher) -> None:
+    """Presenters, sponsorship links, the biographies switch and topics.
+
+    Every part is feature-detected the way the application detects it, so on
+    a CRM without the presenter entity, a sponsorship link or the topics field
+    the part is reported and skipped rather than failed — this script must
+    keep working on the day the sandbox is rebuilt from an older standard.
+    Never removes anything: a link the record already holds is kept, which is
+    what lets ``deepen_showcase_records.py`` relate the funder as well.
+    """
+    from events import config as ecfg
+    from events import service as events_service
+
+    presenters_ok = await events_service.presenters_available(e.client)
+    links = {l.name: l for l in await events_service.live_sponsor_links(e.client)}
+    fields = await e.client.metadata(f"entityDefs.{ecfg.EVENT}.fields") or {}
+    topics_ok = ecfg.TOPICS_FIELD in fields
+    bios_ok = ecfg.SHOW_BIOS_FIELD in fields
+    topic_options = (await e.client.metadata_enum_options(ecfg.EVENT, ecfg.TOPICS_FIELD)
+                     or []) if topics_ok else []
+    for what, ok in (("presenters", presenters_ok),
+                     ("partner link", "partnerProfiles" in links),
+                     ("funder link", "sponsorProfiles" in links),
+                     ("topics", topics_ok), ("biographies switch", bios_ok)):
+        if not ok:
+            await e.note(f"! this CRM has no {what} — that part is skipped")
+
+    for name, presenters, partners, funders, topics in EVENT_SHOWCASE:
+        event = await e.by_name("CEvent", name)
+        if not event:
+            await e.note(f"! no event {name!r} — skipped")
+            continue
+        event_id = event["id"]
+
+        if presenters_ok and presenters:
+            have = {r.get("contactId") for r in await events_service.list_presenters(
+                e.client, event_id)}
+            for who in presenters:
+                if isinstance(who, dict):
+                    label = f"{who['firstName']} {who['lastName']} (guest)"
+                    contact = await e.client.find_one(
+                        "Contact", "emailAddress", who["email"])
+                    kwargs = {"new": who} if not contact else {"contact_id": contact["id"]}
+                else:
+                    label = who
+                    contact = await e.by_name("Contact", who)
+                    if not contact:
+                        await e.note(f"! no contact {who!r} for {name} — skipped")
+                        continue
+                    kwargs = {"contact_id": contact["id"]}
+                if contact and contact["id"] in have:
+                    continue
+                await e.note(f"add presenter {label} to {name}")
+                if e.apply:
+                    try:
+                        await events_service.add_presenter(e.client, event_id, **kwargs)
+                    except events_service.DuplicatePresenter:
+                        pass
+
+        for link_name, wanted, entity in (("partnerProfiles", partners, "CPartnerProfile"),
+                                          ("sponsorProfiles", funders, "CSponsorProfile")):
+            if link_name not in links or not wanted:
+                continue
+            current = await e.client.list_related(
+                "CEvent", event_id, link_name, select="id", max_size=200)
+            have_ids = {r["id"] for r in current.get("list", []) if r.get("id")}
+            for record_name in wanted:
+                record = await e.by_name(entity, record_name)
+                if not record:
+                    await e.note(f"! no {entity} {record_name!r} — skipped")
+                    continue
+                if record["id"] in have_ids:
+                    continue
+                await e.note(f"relate {name} .{link_name} -> {record_name}")
+                if e.apply:
+                    await e.client.relate("CEvent", event_id, link_name, record["id"])
+
+        changes: dict = {}
+        row = await e.client.get(
+            "CEvent", event_id,
+            select=",".join(f for f, ok in ((ecfg.TOPICS_FIELD, topics_ok),
+                                            (ecfg.SHOW_BIOS_FIELD, bios_ok)) if ok) or "id",
+        ) or {}
+        if topics_ok and topics:
+            valid = [t for t in topics if t in topic_options]
+            for t in topics:
+                if t not in topic_options:
+                    await e.note(f"! topic {t!r} is not a live option — dropped")
+            if valid and set(row.get(ecfg.TOPICS_FIELD) or []) != set(valid):
+                changes[ecfg.TOPICS_FIELD] = valid
+        if bios_ok and presenters and presenters_ok and not row.get(ecfg.SHOW_BIOS_FIELD):
+            changes[ecfg.SHOW_BIOS_FIELD] = True
+        if changes:
+            await e.note(f"set {', '.join(sorted(changes))} on {name}")
+            if e.apply:
+                await e.client.update("CEvent", event_id, changes)
+
+
 async def add_notes_and_referrals(e: Enricher) -> None:
     for engagement_name, note in ENGAGEMENT_NOTES.items():
         record = await e.by_name("CEngagement", engagement_name)
@@ -372,6 +509,7 @@ async def main() -> int:
         await add_domain_sessions(e, now)
         await add_contributions(e, now)
         await add_events(e, now)
+        await add_event_showcase(e)
         await add_notes_and_referrals(e)
     except EspoError as exc:
         print(f"\nSTOPPED: {exc}")

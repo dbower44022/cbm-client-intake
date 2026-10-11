@@ -380,7 +380,7 @@ async def fill_partner_and_funder(d: Deepener, now: datetime) -> None:
         "description": "County-wide small business alliance; refers programme "
                        "graduates into mentoring.",
     })
-    await d.relate("CPartnerProfile", PARTNER, "hostedEvents",
+    await d.relate("CPartnerProfile", PARTNER, "sponsoredEvents",
                    "CEvent", "Hiring Your First Employee")
 
     await d.update("CSponsorProfile", FUNDER, {

@@ -698,6 +698,43 @@ async def seed_funders(s: Seeder, profiles: dict[str, str]) -> None:
             )
 
 
+#: Which team owns the records each management tool lists, by entity. The
+#: names are the settings the quick-add stamps on a new record (v0.249.0).
+MANAGEMENT_TEAMS: tuple[tuple[str, str], ...] = (
+    ("CPartnerProfile", "partner_team_name"),
+    ("CSponsorProfile", "sponsor_team_name"),
+)
+
+
+async def stamp_management_teams(s: Seeder) -> None:
+    """Put every partner and funder profile in its management team.
+
+    The Sponsor Manager Role (the roles standard, crm-test since 2026-09-13)
+    reads ``CSponsorProfile`` at *team*, so a funder carrying no team is
+    invisible to Sally Sponsor while an administrator sees all six — found
+    2026-10-07, worked around by hand, and reset away that night
+    (``OPEN-ITEMS.md`` #40). Stamping here, then re-baselining, is what makes
+    the fix survive the restore. Merge-only: a team the record already holds
+    is kept, exactly as the application's own owner stamps behave.
+    """
+    settings = get_settings()
+    for entity, attr in MANAGEMENT_TEAMS:
+        team_name = (getattr(settings, attr, "") or "").strip()
+        team = await s.client.find_one("Team", "name", team_name) if team_name else None
+        if not team:
+            print(f"  ! team {team_name!r} not found — {entity} left as is")
+            continue
+        rows = (await s.client.list(entity, select="id,name,teamsIds", max_size=200)).get("list", [])
+        missing = [r for r in rows if team["id"] not in (r.get("teamsIds") or [])]
+        print(f"  {entity}: {len(rows)} records, {len(missing)} missing {team_name}")
+        for row in missing:
+            print(f"    {'' if s.apply else 'would '}add {team_name} to {row.get('name')}")
+            if s.apply:
+                await s.client.update(entity, row["id"], {
+                    "teamsIds": sorted(set(row.get("teamsIds") or []) | {team["id"]}),
+                })
+
+
 # --------------------------------------------------------------------------
 
 async def main() -> int:
@@ -743,6 +780,7 @@ async def main() -> int:
         await stamp_last_assigned(seeder)
         await seed_partners(seeder, profiles)
         await seed_funders(seeder, profiles)
+        await stamp_management_teams(seeder)
     except EspoError as exc:
         print(f"\nSTOPPED: {exc}")
         return 1

@@ -186,7 +186,14 @@ worker flag too, or accept that the app tables clear while the CRM does not;
 for a release test in progress the CRM state is usually the part that matters.
 
 **Re-baseline** after deliberately improving the training data, adding a user
-who should persist, or a CRM change you want in the pristine state:
+who should persist, or a CRM change you want in the pristine state — and
+**always after a CRM change that adds a table**. A record table newer than the
+baseline is not in the dump, so the reset truncates it every night (the log
+names them: `N table(s) newer than the baseline will be truncated: …`). From
+10-08-26 to 10-11-26 that was `c_event_presenter` and
+`c_partner_profile_event`: every presenter and every partner-event link made
+on crm-test vanished at 04:00 UTC until the seeders learned to make them and
+the baseline was recaptured.
 
 ```bash
 ssh root@104.131.45.208 'python3 /usr/local/sbin/reset_crm_sandbox.py baseline --apply'
@@ -200,7 +207,19 @@ someone typed this.
 
 ```bash
 uv run python scripts/sandbox/seed_training_data.py --apply
+uv run python scripts/sandbox/enrich_training_data.py --apply
+uv run python scripts/sandbox/deepen_showcase_records.py --apply
+uv run python scripts/sandbox/audit_showcase_records.py
+uv run python scripts/sandbox/check_containment.py
 ```
+
+All three seeders are idempotent, so the full set is the habit: each one owns
+data the others do not (the seed owns the records and their management teams,
+the enrichment owns threads, gifts, events, presenters, sponsorship links and
+topics, the deepening owns the showcase records' every field). Pick a morning
+straight after the 04:00 UTC reset with no release test running — whatever is
+on crm-test at capture time is pristine from then on, including a tester's
+half-finished partner.
 
 The baseline freezes dates, so the training data ages against the calendar: two
 clients seeded as "assigned 9 and 24 days ago" are two months old by October,

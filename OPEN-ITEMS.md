@@ -6,6 +6,34 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+45. **The training sandbox loses every presenter and partner-event link at
+    04:00 UTC, and the demo events had none to lose** (10-11-26, Doug's
+    request: demo events with presenters that are also related to a partner
+    and a funder). The golden baseline dates from 09-07-26; `c_event_presenter`
+    and `c_partner_profile_event` were built after it, and the reset's own log
+    names them as the two tables it truncates nightly. **Built (v0.250.0):**
+    `enrich_training_data.py` gained `add_event_showcase` — presenters through
+    the application's own `add_presenter` (a mentor's biography, title and
+    photo copied; a guest `Presenter`-typed Contact created), the partner and
+    funder links, `showPresenterBios`, and `topics` (also emptied nightly);
+    `seed_training_data.py` gained `stamp_management_teams` (#40a);
+    `deepen_showcase_records.py`'s partner relate named the host link removed
+    on 10-07 and now names `sponsoredEvents`. All feature-detected, idempotent,
+    merge-only; dry runs clean against crm-test 10-11-26 (27 enrichment
+    changes, 8 partners + 6 funders missing their team). **Owed — Doug's
+    morning after a reset, with no release test running:** the three
+    `--apply` runs, the audit and containment checks, then on the droplet
+    `purge-deleted --apply` and `baseline --apply`, then `reset --apply` by
+    hand and the event, partner and funder opened as Mark Marketing, Partner
+    Manager and Sally Sponsor (`SANDBOX-RESET.md` § *Re-baseline*). Two
+    things the dry run could not prove: (a) whether the intake API key's role
+    may CREATE `CEventPresenter` — the org key reads it (handoff § 2); if the
+    apply 403s, run the enrichment under `scripts/run_with_admin.py`; (b) the
+    capture freezes whatever is on crm-test — today that includes the "Acme
+    Bank and Loan" partner and funder from the #43/#44 live checks (created
+    15:26 and 15:29 UTC), which must be gone (tonight's reset) or deleted
+    before the baseline is taken.
+
 44. **A contact's Events tab in the directory 403'd for every
     non-administrator** (found 2026-10-11 by Doug as Pat Partner, opening the
     contact he had just created through "+ Add partner"): *your CRM role is
@@ -103,9 +131,12 @@ found; move resolved items to the bottom with the resolution date.
     roles standard on 2026-09-13, which is the likely moment it broke.
     **Worked around 2026-10-07:** all six funders were put in the Sponsor
     Management Team on crm-test by the configuration administrator (data only,
-    no role change). **Owed:** (a) the nightly reset restores the data
-    snapshot, so this is gone by morning unless the sandbox is re-baselined
-    (`SANDBOX-RESET.md`); (b) check whether production's funder records carry
+    no role change). **Owed:** (a) ~~the nightly reset restores the data
+    snapshot, so this is gone by morning unless the sandbox is re-baselined~~
+    — **the seeder stamps it now** (10-11-26, `stamp_management_teams` in
+    `seed_training_data.py`, merge-only, both management teams on every
+    partner and funder profile); it holds once the re-baseline in #45 is
+    captured; (b) check whether production's funder records carry
     the Sponsor Management Team or assigned users — if they do not, every
     non-admin Funder Management user on production sees an empty grid too, and
     the fix is data (teams on the records) rather than the role; (c) the same

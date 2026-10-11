@@ -4,6 +4,44 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.250.0] — 2026-10-11
+
+**feat(sandbox): the demo events carry presenters, a partner and a funder —
+and the seeders make them, so a re-baseline keeps them.** Doug asked for
+training data that shows events with presenters that are also related to a
+partner and a funder. The droplet's reset log answered the second half of the
+question before it was asked: the golden baseline dates from 09-07-26, and
+`c_event_presenter` and `c_partner_profile_event` are the two record tables
+newer than it, truncated at 04:00 UTC every night. Anything added by hand was
+gone by morning; only a seeder stage plus a recapture survives.
+
+- **`enrich_training_data.py` gained `add_event_showcase`** (`EVENT_SHOWCASE`):
+  on `Hiring Your First Employee` Joe Mentor and the partner's contact
+  Terrence Boyd present, Cuyahoga Small Business Alliance is the partner and
+  Harrowgate Family Trust the funder; `Pricing for Profit` adds Matt Mentor,
+  Northgate Chamber of Commerce and the funder it already had; `Marketing on
+  a Shoestring` adds a guest presenter who exists only as a `Presenter`-typed
+  Contact (Lena Okafor), the showcase partner and Blue Heron Foundation. The
+  other two events get topics only. Presenters go through the application's
+  own `events.service.add_presenter`, so a mentor's biography, title and
+  photo are the copies a real add makes and a guest is created the way the
+  editor's "new person" path creates one. Topics ride here because the reset
+  empties `CEvent.topics` too. Every part is feature-detected as the
+  application detects it (presenter entity, each sponsorship link, the
+  topics field, the biographies switch) and skipped with a note on a CRM
+  without it; a link already held is kept, never removed.
+- **`seed_training_data.py` gained `stamp_management_teams`** — every partner
+  and funder profile carries its management team, merge-only
+  (`OPEN-ITEMS.md` #40a: the hand fix of 10-07 had already been reset away).
+- **`deepen_showcase_records.py` related the partner through `hostedEvents`**,
+  the single host link removed from crm-test on 10-07-26, so that write had
+  failed quietly on every run since; it names `sponsoredEvents` now.
+- Dry runs against crm-test are clean; `tests/test_sandbox_seed_scripts.py`
+  proves idempotency, merge-only and the feature-detection skips against a
+  fake CRM. Owed: the apply and the re-baseline (`OPEN-ITEMS.md` #45,
+  `SANDBOX-RESET.md` § *Re-baseline*, which now says why a CRM change that
+  adds a table always needs one).
+
 ## [0.249.2] — 2026-10-11
 
 **fix(events): the contact and engagement Events tabs read registrations

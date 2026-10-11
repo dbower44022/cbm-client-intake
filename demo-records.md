@@ -135,6 +135,7 @@ Paused and Inactive, so the status filter has something to do.
 | Sessions | **4 quarterly meetings** |
 | Communications | A **4-message thread**, "Spring referral cohort" |
 | Referred Clients | **2 engagements** credited to this partner — Ashgrove Cabinetry and Riverbend Cycles |
+| Events | **2 events** this partner is linked to — `Hiring Your First Employee` (Terrence Boyd presents) and `Marketing on a Shoestring` — with registered / attended / became-a-client counts |
 | Contacts | Terrence Boyd, with Make primary |
 
 The grid lists all 8 partners, so the search and filter behaviour is visible
@@ -153,6 +154,7 @@ unique to one record.
 | Sessions | **4 quarterly meetings** |
 | Communications | A **3-message thread**, "Renewal of the 2027 grant" |
 | Contributions | **5 gifts, $63,700 total**, deliberately across the lifecycle |
+| Events | **2 events** this funder is linked to — `Pricing for Profit` (held, with an attended registration) and `Hiring Your First Employee` (upcoming) |
 | Contacts | Eleanor Harrowgate |
 
 The contributions are the reason this is the funder showcase — Received,
@@ -181,7 +183,28 @@ grids are all populated (30 companies, 56 contacts, 8 partners).
 Five published workshops: two held (`Pricing for Profit`,
 `Reading Your Own Financials`) and three upcoming (`Marketing on a Shoestring`,
 `Hiring Your First Employee`, `AI Tools for Small Business`). Enough for the
-calendar and the recorded library to both render.
+calendar and the recorded library to both render. Every event carries curated
+topics.
+
+**Open: `Hiring Your First Employee`** — the event showcase (since 10-11-26).
+It has every relationship an event can hold:
+
+| Where | What is there |
+|---|---|
+| Presenters group | **Joe Mentor** (a mentor — his biography, title and photo were copied from his profile when he was added) and **Terrence Boyd** (the partner's contact, a guest — title and company from his Contact), biographies switched on |
+| Sponsorship group | Partner **Cuyahoga Small Business Alliance**, funder **Harrowgate Family Trust** — the same event appears on both showcase records' Events tab |
+| Topics | Leadership & People, Operations |
+
+Two more events show the variations: `Pricing for Profit` has one mentor
+presenter (Matt Mentor), a second partner (Northgate Chamber of Commerce) and
+the funder; `Marketing on a Shoestring` has a **guest presenter who exists
+only as a `Presenter`-typed Contact** (Lena Okafor, created the way the
+editor's "new person" path creates one), the showcase partner and a second
+funder (Blue Heron Foundation). All of it is seeded by
+`scripts/sandbox/enrich_training_data.py` (`EVENT_SHOWCASE`) and survives the
+nightly reset only because the sandbox was re-baselined after it ran — the
+presenter table and the partner-event link table are newer than the previous
+baseline and were being truncated every night (`SANDBOX-RESET.md`).
 
 Note that `/events` is **live on crm-test but off in production**, so treat it
 as a preview rather than something staff will use on Monday.
