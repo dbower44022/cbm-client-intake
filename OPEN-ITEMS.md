@@ -34,19 +34,25 @@ found; move resolved items to the bottom with the resolution date.
     15:26 and 15:29 UTC), which must be gone (tonight's reset) or deleted
     before the baseline is taken.
 
-47. **Funder Notes as rich text (v0.252.0) — the CRM field conversion is
-    owed on all three CRMs, then the pass** (Doug's request 2026-10-11). The
-    app follows the field's live type, so nothing shows until
-    `CSponsorProfile.description` is `wysiwyg`. Step page for the whole
-    crm-test rollout: https://claude.ai/artifact/59ZYyJM492BZFG8bMbbLtX
-    (private, *Funder Notes Rollout*, written 10-11-26). **Owed, in order:** (a)
-    crm-test — Doug runs § 1 of `csponsorprofile-description-wysiwyg-crm-handoff.md`
-    over SSH (one PHP heredoc and a rebuild; the file already carries the
-    entry as `text`); (b) the pass as sally.sponsor from § 2 — the Overview's
-    Funder Notes opens the rich editor, existing plain notes keep their line
-    breaks, an image round-trips (a 403 naming Attachment create is a role
-    grant, not this build); (c) production and Boston the same way at a
-    Sunday slot.
+47. **Funder Notes as rich text (v0.252.0) — crm-test converted; the pass
+    waits for v0.252.2; production and Boston owed** (Doug's request
+    2026-10-11). The app follows the field's live type. Step page for the
+    whole crm-test rollout: https://claude.ai/artifact/59ZYyJM492BZFG8bMbbLtX
+    (private, *Funder Notes Rollout*, written 10-11-26). **Done:** (a)
+    crm-test — Doug ran § 1 of `csponsorprofile-description-wysiwyg-crm-handoff.md`
+    on 10-11-26 (the field reads `wysiwyg` as the org key, 18:40); the plain
+    box it still showed was v0.252.1, live 14:30. **Owed, in order:** (b)
+    push v0.252.2 — the review of the handoff found the session tools did
+    NOT up-convert a legacy plain note's line breaks (Client Administration
+    did; the handoff had copied its sentence), so step 2.2 of the pass would
+    have failed and the first save would have stored the note collapsed;
+    (c) the pass as sally.sponsor from § 2 on that build — the Overview's
+    Funder Notes and the Details tab open the rich editor, existing plain
+    notes keep their line breaks in the editor and the read views, an image
+    round-trips (a 403 naming Attachment create is a role grant, not this
+    build); (d) production and Boston the same way at a Sunday slot — the
+    handoff's § 3 now covers a file with no entry and Boston's possibly
+    missing file.
 
 46. **Additional managers on partner and funder records (v0.251.0) — CRM
     change owed on all three CRMs, live pass owed** (built 2026-10-11 on

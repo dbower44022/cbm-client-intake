@@ -965,13 +965,13 @@
     // A wysiwyg field that's "empty" can still hold blank markup (<p><br></p>).
     var isEmpty = !raw.trim();
     if (!isEmpty && n.type === "html") {
-      var probe = document.createElement("div"); probe.innerHTML = sanitizeHtml(raw);
+      var probe = document.createElement("div"); probe.innerHTML = notesHtml(raw);
       isEmpty = !(probe.textContent || "").trim();
     }
     if (isEmpty) {
       body.className += " sx__muted";
       body.textContent = "No " + String(n.label || "notes").toLowerCase() + " recorded yet.";
-    } else if (n.type === "html") { body.innerHTML = sanitizeHtml(raw); }
+    } else if (n.type === "html") { body.innerHTML = notesHtml(raw); }
     else { body.className += " sx__pre"; body.textContent = raw; }
     card.appendChild(head); card.appendChild(body);
     card.appendChild(notesResizeBar(body));
@@ -1067,7 +1067,7 @@
     var body = document.createElement("div"); body.className = "sx__overall-body sx__notesview-body";
     var raw = n.value == null ? "" : String(n.value);
     if (!raw.trim()) { body.className += " sx__muted"; body.textContent = "No " + String(n.label || "notes").toLowerCase() + " recorded yet."; }
-    else if (n.type === "html") { body.innerHTML = sanitizeHtml(raw); }
+    else if (n.type === "html") { body.innerHTML = notesHtml(raw); }
     else { body.className += " sx__pre"; body.textContent = raw; }
     card.appendChild(head); card.appendChild(body);
     overlay.appendChild(backdrop); overlay.appendChild(card);
@@ -1232,7 +1232,7 @@
     var box = document.createElement("div"); box.className = "sx__block";
     var h = document.createElement("h4"); h.className = "sx__block-h"; h.textContent = item.label;
     var body = document.createElement("div"); body.className = "sx__block-body";
-    if (item.type === "html") { body.innerHTML = sanitizeHtml(String(item.value || "")); }
+    if (item.type === "html") { body.innerHTML = notesHtml(item.value || ""); }
     else { body.className += " sx__pre"; body.textContent = item.value == null ? "—" : String(item.value); }
     box.appendChild(h); box.appendChild(body); return box;
   }
@@ -4626,7 +4626,7 @@
     else if (t === "bool") { v.textContent = val ? "Yes" : "No"; }
     else if (t === "date") { v.textContent = fmtDate(val); }
     else if (t === "datetime") { v.textContent = fmtWhen(val); }
-    else if (t === "wysiwyg") { v.innerHTML = sanitizeHtml(String(val)); }
+    else if (t === "wysiwyg") { v.innerHTML = notesHtml(val); }
     else if (t === "text") { v.className += " sx__pre"; v.textContent = String(val); }
     // A read-only mirror of an email address (EspoCRM "foreign" field, e.g. the
     // partnership's Primary contact email) still opens the compose dialog — no
@@ -7859,10 +7859,10 @@
       // Jodit, so the big-editor height rides the option, not CSS. Stored
       // inline-image references open in display (proxy) form; a pasted image
       // is uploaded as a CRM attachment via the hook (save rewrites back).
-      el = (window.CBMRichText && window.CBMRichText.create(inlineImgToDisplay(value), {
+      el = (window.CBMRichText && window.CBMRichText.create(inlineImgToDisplay(plainToHtml(value)), {
         minHeight: f.big ? 360 : 160,
         uploadImage: function (dataUri) { return uploadInlineImage(dataUri, f.name, f.entity); },
-      })) || makeWysiwyg(value);
+      })) || makeWysiwyg(plainToHtml(value));
     } else if (f.type === "text") {
       el = document.createElement("textarea"); el.rows = 3; el.value = value == null ? "" : value;
     } else {
@@ -8032,6 +8032,26 @@
       body: JSON.stringify(body),
     });
     return API + "/attachments/" + r.id;
+  }
+
+  // A notes value stored before its field went rich is plain text. Handed to
+  // an HTML editor or rendered as HTML as-is, its line breaks collapse into one
+  // run (and its first save would store it that way), so it is escaped and
+  // <br>-joined on the way in. Anything already carrying markup passes through.
+  // The Client Administration Notes column has the same helper; the two must
+  // agree. Found by review before the funder-notes pass (v0.252.2).
+  function plainToHtml(s) {
+    if (!s || /<[a-z][\s\S]*>/i.test(s)) return s || "";
+    return String(s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/\r?\n/g, "<br>");
+  }
+
+  // Display form of a wysiwyg NOTES value: legacy plain text up-converted,
+  // then sanitized. Only for record notes — a transcript or AI summary is
+  // plain text by design and keeps its own rendering.
+  function notesHtml(raw) {
+    return sanitizeHtml(plainToHtml(raw == null ? "" : String(raw)));
   }
 
   function sanitizeHtml(html) {

@@ -4,6 +4,25 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.252.2] — 2026-10-11
+
+**fix(sessions): a plain-text note opened in the rich editor keeps its line
+breaks.** Found by review of the funder-notes handoff before Doug's pass:
+the handoff promised that "the editor up-converts line breaks when it
+opens", which was true of the Client Administration Notes column (its own
+`plainToHtml`, v0.218.0) and not of the session tools. A funder note typed
+as plain text before the field went wysiwyg was handed straight to the
+editor and to every HTML read view, where HTML collapses its line breaks
+into one run, and the first save would have stored it that way. The
+session tools now carry the same helper (a guard test pins the two bodies
+byte for byte): the rich editor and its legacy fallback open on the
+converted value, and every record-notes render — the Overview panel and
+its View pop-up, the Overview's rich blocks, the Details facts — goes
+through `notesHtml` (up-convert, then sanitize). A transcript and an AI
+summary are plain text by design and keep the bare sanitizer. Verified by
+tests only (eight new, the helper run under node); the live check is step
+2.2 of the rollout page as sally.sponsor.
+
 ## [0.252.1] — 2026-10-11
 
 **fix(sessions): the live notes-type read asked for a scalar metadata key,
