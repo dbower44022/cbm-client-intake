@@ -1734,11 +1734,11 @@ each block.
   sign-in Show button out of the tab order.** Pushed 10-11-26 14:09; **v0.252.1**
   (the scalar-metadata-key fix, found by the live pass) pushed 14:28 and
   live on both 14:30. **crm-test's field is converted** (Doug, 10-11-26,
-  read back `wysiwyg` as the org key). **v0.252.2** (committed, not pushed)
-  is the review's find: the session tools did not up-convert a legacy plain
+  read back `wysiwyg` as the org key). **v0.252.2** (pushed 10-11-26 19:02, live on both 19:04, the served
+  script carries the helper) is the review's find: the session tools did not up-convert a legacy plain
   note's line breaks (Client Administration did), so the pass as
-  sally.sponsor (`OPEN-ITEMS.md` #47) waits for that push; production and
-  Boston after, handoff § 3. The tab-order fix is live.
+  sally.sponsor (`OPEN-ITEMS.md` #47) can run now; production and Boston
+  after, handoff § 3. The tab-order fix is live.
 
 - **v0.251.0 (2026-10-11) — additional managers on partner and funder
   records.** Committed, not pushed; ships dark (feature-detected). Doug's

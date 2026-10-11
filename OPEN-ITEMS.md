@@ -41,12 +41,13 @@ found; move resolved items to the bottom with the resolution date.
     (private, *Funder Notes Rollout*, written 10-11-26). **Done:** (a)
     crm-test — Doug ran § 1 of `csponsorprofile-description-wysiwyg-crm-handoff.md`
     on 10-11-26 (the field reads `wysiwyg` as the org key, 18:40); the plain
-    box it still showed was v0.252.1, live 14:30. **Owed, in order:** (b)
-    push v0.252.2 — the review of the handoff found the session tools did
-    NOT up-convert a legacy plain note's line breaks (Client Administration
-    did; the handoff had copied its sentence), so step 2.2 of the pass would
-    have failed and the first save would have stored the note collapsed;
-    (c) the pass as sally.sponsor from § 2 on that build — the Overview's
+    box it still showed was v0.252.1, live 14:30; (b) v0.252.2 pushed
+    10-11-26 19:02 and live on crm-test and production 19:04 — the review
+    of the handoff found the session tools did NOT up-convert a legacy
+    plain note's line breaks (Client Administration did; the handoff had
+    copied its sentence), so step 2.2 of the pass would have failed and
+    the first save would have stored the note collapsed. **Owed, in
+    order:** (c) the pass as sally.sponsor from § 2 on that build — the Overview's
     Funder Notes and the Details tab open the rich editor, existing plain
     notes keep their line breaks in the editor and the read views, an image
     round-trips (a 403 naming Attachment create is a role grant, not this
