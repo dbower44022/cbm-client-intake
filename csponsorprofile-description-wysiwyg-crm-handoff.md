@@ -1,6 +1,6 @@
 # CRM handoff — convert `CSponsorProfile.description` (Funder Notes) from text to wysiwyg
 
-Last Updated: 10-11-26 18:55 · Revision 1.1
+Last Updated: 10-11-26 19:35 · Revision 1.2
 
 **Why:** Doug, 2026-10-11: *"The funder notes should be wysiwyg."* The Funder
 Management Overview's notes panel and the Details tab's Notes field should
@@ -95,10 +95,23 @@ later** (the footer, or `/healthz`):
 
 ## 3. Then production and Boston
 
-At a Sunday 17:00 UTC slot, by a human, one instance at a time. Hosts,
-containers and the SSH route per instance are in
-`prds/chapter-network/crm-update-runbook.md` (Boston's CRM is its own
-droplet, `crm.bbmentors.org`). Same one-key edit of that instance's
+By a human, one instance at a time (Doug's ruling 10-11-26: production
+today rather than the Sunday slot). Production's CRM is the droplet
+`cbm-espocrm-prod` (147.182.135.50), dockerized exactly like crm-test
+(container `espocrm`, same file path; read 10-11-26 19:30, both files
+carrying `description: {"type": "text"}`); Boston's is `crm.bbmentors.org`.
+**One line from the repository root does both notes fields on an instance**
+— this one and the engagement's — with a timestamped backup each, one
+rebuild, and the types read back:
+
+```bash
+ssh root@147.182.135.50 bash -s < scripts/convert_notes_wysiwyg.sh
+```
+
+(`scripts/convert_notes_wysiwyg.sh`; idempotent, a field already wysiwyg is
+left alone, a missing or unparsable file is skipped with nothing written.
+Its PHP edit was exercised on five sample files in a PHP container 10-11-26.)
+The hand steps below remain for a single field or a non-docker host. Same one-key edit of that instance's
 `custom/Espo/Custom/Resources/metadata/entityDefs/CSponsorProfile.json`,
 same rebuild, same verification including the non-admin pass — the
 Attachment-create grant on the Sponsor Manager Role must be confirmed on each
@@ -122,5 +135,6 @@ today — the app detects `text` and changes nothing.
 
 | Rev | Date | Author | Change |
 |---|---|---|---|
+| 1.2 | 10-11-26 19:35 | Claude (Claude Code) | § 3: production's host and container named (read live), the one-line script that converts both notes fields per instance, Doug's ruling to run production today. |
 | 1.1 | 10-11-26 18:55 | Claude (Claude Code) | Review fixes. § 0: crm-test converted (read live); the line-break claim corrected — the session tools up-convert only from v0.252.2, built with this revision. § 2: the pass needs v0.252.2, checks the Details tab too, and names the collapsed-note symptom. § 3: Boston named, runbook pointer, the missing-entry and missing-file cases. |
 | 1.0 | 10-11-26 14:10 | Claude (Claude Code) | First version, with the v0.252.0 build. |

@@ -88,7 +88,15 @@ Team** (an admin bypasses ACL and proves nothing):
 
 ## 3. Then production
 
-At the Sunday 17:00 UTC slot, by a human. Same one-key edit of
+**Since 10-11-26 one line does this field and the funder's together**, on
+any dockerized instance, from the repository root — see
+`csponsorprofile-description-wysiwyg-crm-handoff.md` § 3:
+
+```bash
+ssh root@147.182.135.50 bash -s < scripts/convert_notes_wysiwyg.sh
+```
+
+By a human. Same one-key edit of
 `custom/Espo/Custom/Resources/metadata/entityDefs/CEngagement.json` on the
 production instance, same rebuild, same verification — including the non-admin
 pass, because prod's roles drift from crm-test's and the Attachment-create
