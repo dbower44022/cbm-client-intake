@@ -572,6 +572,11 @@ one shared frontend that derives its domain from the first segment of its URL.
   Analytics (when enabled). Each optional tab is gated by a `DomainConfig` field
   that controls **both the tab and the endpoint registration** — a router that
   doesn't own the feature never registers its routes.
+- **The Overview notes editor follows the field's LIVE CRM type** (v0.252.0,
+  `service.live_notes_type`): wysiwyg ⇒ the rich editor, text ⇒ the plain
+  box. Funder Notes (`CSponsorProfile.description`) is text on both CRMs
+  until converted per instance — `csponsorprofile-description-wysiwyg-crm-handoff.md`
+  (Doug 2026-10-11: "the funder notes should be wysiwyg").
 - **Overview** is a facts rail + notes feed with drag splitters, an aggregated
   Company peek, a Next-session callout with a Start/Open button, and (partner +
   funder) a **Discussion pane** — an app-only, append-only, attributed comment
@@ -1717,6 +1722,13 @@ with `main`; **Lakeside took it off the release lane by itself** (its
 unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
+
+- **v0.252.0 (2026-10-11) — rich Funder Notes (live-typed), and the
+  sign-in Show button out of the tab order.** Committed, not pushed. Ships
+  dark on the notes side: the CRM field conversion is Doug's SSH step on
+  crm-test (`csponsorprofile-description-wysiwyg-crm-handoff.md` § 1), then
+  the pass as sally.sponsor (`OPEN-ITEMS.md` #47); production and Boston
+  after. The tab-order fix is live on push.
 
 - **v0.251.0 (2026-10-11) — additional managers on partner and funder
   records.** Committed, not pushed; ships dark (feature-detected). Doug's

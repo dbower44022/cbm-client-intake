@@ -593,7 +593,10 @@ SPONSOR_CREATE_FIELDS: tuple[dict, ...] = (
      "section": "profile", "required": True},
     # CSponsorProfile has no status/type enum of its own — the funder's standing
     # is its contribution ledger. ``description`` IS the funder notes field
-    # (SPONSOR.overall_notes_attr), and it is a plain longtext, not wysiwyg.
+    # (SPONSOR.overall_notes_attr): a plain text field until each CRM converts
+    # it to wysiwyg (csponsorprofile-description-wysiwyg-crm-handoff.md, Doug
+    # 2026-10-11); the Overview's editor follows the LIVE type
+    # (``service.live_notes_type``). This quick-add box stays plain text.
     {"name": "description", "label": "Notes", "type": "text", "section": "profile"},
 )
 

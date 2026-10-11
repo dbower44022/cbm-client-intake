@@ -4,6 +4,32 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.252.0] — 2026-10-11
+
+**feat(sessions): the Overview notes editor follows the field's live CRM
+type — rich Funder Notes once the CRM converts the field; fix(portal): the
+password Show button leaves the sign-in tab order.** Two requests from Doug,
+2026-10-11.
+
+- **Funder Notes as rich text.** `CSponsorProfile.description` is a plain
+  `text` field on both CRMs, and the Overview panel was configured
+  `longtext`. The panel's editor kind is now decided per load by the
+  field's LIVE type (`service.live_notes_type`, the `live_wysiwyg_fields`
+  pattern): wysiwyg ⇒ the shared rich editor with images, text ⇒ the plain
+  box, a failed read ⇒ the configured default. The Details tab already
+  rendered from live metadata, and the image upload hook already refuses a
+  non-wysiwyg field, so nothing else changes. **The CRM half is a file-level
+  type change per instance** — Entity Manager cannot change a field's type
+  — written up in `csponsorprofile-description-wysiwyg-crm-handoff.md`
+  (the engagement-notes recipe); crm-test first, by Doug over SSH. The
+  quick-add form's Notes box stays plain text.
+- **Sign-in tab order.** The **Show** button beside the password field is
+  `tabindex="-1"`, so Tab goes Username → Password → Sign in; the button
+  still works by mouse and stays in the accessibility tree. A guard test
+  pins it.
+
+Verified by tests only (one new sessions test, one portal test).
+
 ## [0.251.0] — 2026-10-11
 
 **feat(sessions): additional managers on partner and funder records — the

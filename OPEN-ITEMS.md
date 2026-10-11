@@ -34,6 +34,18 @@ found; move resolved items to the bottom with the resolution date.
     15:26 and 15:29 UTC), which must be gone (tonight's reset) or deleted
     before the baseline is taken.
 
+47. **Funder Notes as rich text (v0.252.0) — the CRM field conversion is
+    owed on all three CRMs, then the pass** (Doug's request 2026-10-11). The
+    app follows the field's live type, so nothing shows until
+    `CSponsorProfile.description` is `wysiwyg`. **Owed, in order:** (a)
+    crm-test — Doug runs § 1 of `csponsorprofile-description-wysiwyg-crm-handoff.md`
+    over SSH (one PHP heredoc and a rebuild; the file already carries the
+    entry as `text`); (b) the pass as sally.sponsor from § 2 — the Overview's
+    Funder Notes opens the rich editor, existing plain notes keep their line
+    breaks, an image round-trips (a 403 naming Attachment create is a role
+    grant, not this build); (c) production and Boston the same way at a
+    Sunday slot.
+
 46. **Additional managers on partner and funder records (v0.251.0) — CRM
     change owed on all three CRMs, live pass owed** (built 2026-10-11 on
     Doug's requirement; changelog has the design). Step page for the whole

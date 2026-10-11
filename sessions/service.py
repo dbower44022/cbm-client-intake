@@ -75,6 +75,31 @@ _PAGE = 200
 _COMENTOR_LINK = "additionalMentors"
 
 
+async def live_notes_type(cfg: DomainConfig, client: SessionClient) -> str:
+    """The Overview notes panel's editor kind — ``html`` (the shared rich
+    editor) or ``longtext`` (a plain textarea) — decided by the field's LIVE
+    CRM type, the ``live_wysiwyg_fields`` pattern. Doug asked for rich funder
+    notes (2026-10-11); ``CSponsorProfile.description`` is a plain ``text``
+    field until each CRM converts it (csponsorprofile-description-wysiwyg-
+    crm-handoff.md), and only a real wysiwyg field may hold an inline image
+    (the Wysiwyg saver binds the attachment). So: wysiwyg on the live CRM ⇒
+    ``html``; anything else, or a failed read ⇒ the configured default."""
+    if not cfg.overall_notes_attr:
+        return cfg.overall_notes_type
+    try:
+        ftype = await client.metadata(
+            f"entityDefs.{cfg.parent_entity}.fields.{cfg.overall_notes_attr}.type"
+        )
+    except Exception as exc:  # noqa: BLE001 — never block the Overview
+        log.info("%s.%s type not readable (%s)", cfg.parent_entity, cfg.overall_notes_attr, exc)
+        return cfg.overall_notes_type
+    if ftype == "wysiwyg":
+        return "html"
+    if ftype in ("text", "varchar"):
+        return "longtext"
+    return cfg.overall_notes_type
+
+
 async def comanager_link_available(cfg: DomainConfig, client: SessionClient) -> bool:
     """Whether this domain's additional-manager link exists on the live CRM.
     The engagement's ``additionalMentors`` is long-standing and taken as read;
@@ -734,7 +759,7 @@ async def get_detail(
         overall_notes = {
             "label": cfg.overall_notes_label,
             "value": "" if val in (None, []) else val,
-            "type": cfg.overall_notes_type,
+            "type": await live_notes_type(cfg, client),
             # Inline editing on the Overview (Doug's ruling 2026-07-18: notes
             # are the most important item on partners/sponsors — no extra
             # clicks): the frontend PUTs /details/{entity}/{parent id} with

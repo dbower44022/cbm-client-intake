@@ -807,6 +807,34 @@ async def test_add_and_remove_additional_manager_on_a_partner_relate_and_note_on
         svc.post_stream_note = orig
 
 
+@pytest.mark.asyncio
+async def test_overview_notes_editor_follows_the_live_field_type():
+    """Doug 2026-10-11: funder notes should be rich text. The CRM field is
+    converted per instance, so the Overview's editor kind follows the field's
+    LIVE type — wysiwyg => the rich editor, text => the plain box — and a
+    failed read keeps the configured default."""
+    class Typed(Fake):
+        def __init__(self, ftype, **kw):
+            super().__init__(**kw); self.ftype = ftype
+        async def metadata(self, key):
+            if key.endswith(".fields.description.type"):
+                return self.ftype
+            return self.meta_fields
+    recs = {("CSponsorProfile", "S1"): {"name": "Harrowgate", "description": "plain words"}}
+    d = await service.get_detail(SPONSOR, Typed("wysiwyg", records=dict(recs)), "S1")
+    assert d["overallNotes"]["type"] == "html"
+    d = await service.get_detail(SPONSOR, Typed("text", records=dict(recs)), "S1")
+    assert d["overallNotes"]["type"] == "longtext"
+
+    class Broken(Fake):
+        async def metadata(self, key):
+            if key.endswith(".type"):
+                raise RuntimeError("metadata unavailable")
+            return self.meta_fields
+    d = await service.get_detail(SPONSOR, Broken(records=dict(recs)), "S1")
+    assert d["overallNotes"]["type"] == SPONSOR.overall_notes_type
+
+
 # --- Details tab -----------------------------------------------------------
 
 def test_details_label_humanizes_field_names():

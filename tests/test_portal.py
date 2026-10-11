@@ -361,3 +361,14 @@ def test_home_page_carries_the_rail_and_the_strip():
     js = (root / "portal" / "frontend" / "app.js").read_text()
     assert "/portal/events/" in js          # the sign-in deep-link rule
     assert "eventsCalendar" in js
+
+
+
+def test_login_show_button_is_out_of_the_tab_order():
+    """Doug 2026-10-11: Tab on the sign-in form goes Username -> Password ->
+    Sign in; the Show button beside the password is reached by mouse only."""
+    import re
+    from pathlib import Path
+    html = Path("portal/frontend/index.html").read_text(encoding="utf-8")
+    btn = re.search(r'<button[^>]*id="pwToggle"[^>]*>', html)
+    assert btn and 'tabindex="-1"' in btn.group(0)
