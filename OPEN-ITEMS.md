@@ -14,7 +14,7 @@ found; move resolved items to the bottom with the resolution date.
     registration record type on crm-test or production, and the tab read the
     registrations as the user — as did the engagement record's Events tab in
     Client Management, which no mentor can have seen work either. **Fixed in
-    v0.249.2** (committed, not pushed) by Doug's ruling, option B: the user's
+    v0.249.2** (pushed 10-11-26 11:42) by Doug's ruling, option B: the user's
     own read of the contact / the engagement's contacts gates the tab, and
     the history reads under the org-wide key (the partner / funder Events
     tab rule). **Owed:** (a) the live check after the push — the same

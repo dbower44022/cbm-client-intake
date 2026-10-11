@@ -1702,7 +1702,7 @@ Cleveland by design. What is *verified* is narrower than what is deployed — se
 each block.
 
 - **v0.249.2 (2026-10-11) — the contact and engagement Events tabs read
-  under the org-wide key.** Committed, not pushed. Found live by Doug as Pat
+  under the org-wide key.** Pushed 10-11-26 11:42. Found live by Doug as Pat
   Partner on a contact's Events tab in the directory (403 on
   `CEventRegistration`, which no team role reads — every non-administrator
   since Phase 6c). Doug's ruling: option B, the sibling tabs' rule; standing
