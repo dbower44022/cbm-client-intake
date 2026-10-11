@@ -36,7 +36,10 @@ found; move resolved items to the bottom with the resolution date.
 
 45. **Additional managers on partner and funder records (v0.251.0) — CRM
     change owed on all three CRMs, live pass owed** (built 2026-10-11 on
-    Doug's requirement; changelog has the design). The code is live-dark
+    Doug's requirement; changelog has the design). Step page for the whole
+    crm-test rollout — apply, push, live pass as the two managers, My Email
+    as the added person: https://claude.ai/artifact/9aW3mVrfdcHa3gnKMACHTp
+    (private, *Additional Managers Rollout*, written 10-11-26). The code is live-dark
     until a CRM has the two links. **Owed, in order:** (a) crm-test — Doug
     runs, from the repository root:
     `PYTHONPATH=. uv run python scripts/run_with_admin.py scripts/apply_crm_plan.py scripts/plans/additional-managers.json --apply --expect f2d6a41ea16c`
