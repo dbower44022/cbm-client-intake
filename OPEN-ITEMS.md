@@ -104,10 +104,14 @@ found; move resolved items to the bottom with the resolution date.
     them. **v0.250.0** (pushed 10-11-26 12:13) adds a phase to the worker's
     nightly stamp reconciliation that merges the domain team onto every
     partner / funder record, its company and its contacts, on every
-    deployment, every night — no re-baseline, no console run. **Owed:** the
-    first nightly summary line on the production and crm-test workers
-    (`teamHealed` near the counts above, then 0), and sally.sponsor seeing
-    all sandbox funders the morning after; then resolve.
+    deployment, every night — no re-baseline, no console run. **First pass
+    ran on deploy, 10-11-26 16:15–16:17 UTC, no errors:** production
+    `teamRecords 35, teamHealed 27`; crm-test `teamRecords 17, teamHealed
+    14` (the six sandbox funders, their companies and contacts joined the
+    Sponsor Management Team, named one by one in the worker log). **Owed:**
+    sally.sponsor seeing all eight sandbox funders in Funder Management
+    (and again the morning after a reset); the production partner records
+    with no company (9) remain a separate data gap; then resolve.
 
 34. **The worker reads its mail switches only at start-up, from the
     environment** (found 2026-09-23, reviewing the deployment guide before the

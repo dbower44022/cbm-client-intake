@@ -1712,10 +1712,10 @@ each block.
   Pushed 10-11-26 12:13. `OPEN-ITEMS.md` #40, Doug's ruling option B;
   standing rule in the Assignment stamps section. The read-only count that
   sized it ran inside the production container (4 funders, 1 in team; 31
-  partners, 17 in team, 9 with no company). Verified by tests only — the
-  live check is the first nightly summary line on each worker:
-  `teamHealed` near those counts, then 0; and the sandbox funders visible
-  to sally.sponsor the morning after.
+  partners, 17 in team, 9 with no company). **First pass verified in both
+  worker logs on deploy** (production 35 records / 27 healed, crm-test 17 /
+  14, no errors). Owed: sally.sponsor seeing all sandbox funders, and the
+  same after a reset.
 
 - **v0.249.2 (2026-10-11) — the contact and engagement Events tabs read
   under the org-wide key.** Pushed 10-11-26 11:42. Found live by Doug as Pat
