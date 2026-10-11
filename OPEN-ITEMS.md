@@ -34,6 +34,23 @@ found; move resolved items to the bottom with the resolution date.
     15:26 and 15:29 UTC), which must be gone (tonight's reset) or deleted
     before the baseline is taken.
 
+45. **Additional managers on partner and funder records (v0.251.0) — CRM
+    change owed on all three CRMs, live pass owed** (built 2026-10-11 on
+    Doug's requirement; changelog has the design). The code is live-dark
+    until a CRM has the two links. **Owed, in order:** (a) crm-test — Doug
+    runs, from the repository root:
+    `PYTHONPATH=. uv run python scripts/run_with_admin.py scripts/apply_crm_plan.py scripts/plans/additional-managers.json --apply --expect f2d6a41ea16c`
+    (dry run printed the two links and that fingerprint on 10-11-26; the
+    applier reads the links back); (b) the live pass on crm-test as
+    partner.manager and sally.sponsor — the Details tab's CBM Contacts card
+    offers *Select existing CBM contact…*, the add records a history note,
+    the person then appears in the Overview's CBM Contacts, their My Email
+    lists the record, Remove works; (c) production and Boston at a Sunday
+    slot from the same plan (`cpartner-csponsor-additional-managers-crm-handoff.md`);
+    (d) the Gmail sync scope now also covers co-mentored engagements, which
+    it never did — watch production's first "scopes rebuilt" line after
+    the deploy for a larger record count, not an error.
+
 42. **Events: the production end-to-end test, and the redirect deferred**
     (Doug's ruling 10-09-26: *"We are not planning on modifying the production
     web site for a few weeks. We want to test the events functionality to be

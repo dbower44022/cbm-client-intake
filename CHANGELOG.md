@@ -4,6 +4,62 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.251.0] — 2026-10-11
+
+**feat(sessions): additional managers on partner and funder records — the
+co-mentor model on both doors.** Doug's requirement 2026-10-11: *"We need
+the ability to add multiple CBM contacts to a funder record. Much like
+co-mentors on an engagement there is a primary funder contact, but we may
+need to add additional users who have contact with funder and need to
+review or add information to the funder"* — and, asked, the same for
+partners ("this applies to both"). Every Sponsor Management Team member
+could already open and edit every funder record (team-level role, the
+records teamed since v0.250.0); what the manager link controls is
+attribution and email. An additional manager now gets the four things a
+co-mentor gets: a place on the record, their mail with the record's
+contacts captured on its Communications tab, the record in their My Email,
+and an invitation to its sessions.
+
+- **CRM:** one many-to-many link per record type to `CMentorProfile` —
+  `CPartnerProfile.additionalManagers` ↔ `CMentorProfile.comanagedPartners`
+  and `CSponsorProfile.additionalManagers` ↔ `CMentorProfile.comanagedSponsors`
+  (`scripts/plans/additional-managers.json`, fingerprint `f2d6a41ea16c`;
+  handoff `cpartner-csponsor-additional-managers-crm-handoff.md`).
+  **Feature-detected**: a CRM without the link shows and offers nothing
+  (`service.comanager_link_available`, the cached metadata read), so the
+  code is dark until each CRM is built.
+- **App:** `DomainConfig` gains `comanager_link` (the parent's hasMany),
+  `comanager_word` and the two role labels; partner and funder set
+  `supports_comentor`, `manager_comentor_link` and the link names. The
+  co-mentor routes, the CBM-contacts card on the Details tab (Add / Remove)
+  and the Overview's CBM Contacts list are the same code on all three doors;
+  `add_comentor` / `remove_comentor` take the domain and, off the
+  engagement, do the link plus a history note only — no visibility stamps
+  (those roles read at team level and the record types carry the single
+  `assignedUser`) and no session backfill. History: *Additional Manager
+  Added / Removed*.
+- **Email scope** (`comms/crm._DOMAINS`): each domain's second reverse link
+  — `engagements`, `comanagedPartners`, `comanagedSponsors` — is read beside
+  the owned one, so an additional manager's mailbox covers the record. A
+  link the CRM lacks answers 404 and is skipped at debug, never an hourly
+  warning. **Finding on the way:** co-mentored engagements were not in the
+  sync scope before this (only `engagements1` was), so a co-mentor's mail
+  with the client was never captured; it is now. My Email already followed
+  `manager_comentor_link`.
+- **Drive folder grants** (`docs/grants.entitled_emails`): additional
+  managers are entitled to the record's folder, as co-mentors are; a 404
+  on the link entitles nobody extra.
+- Details tab: the CBM Contacts card names the manager by the domain's own
+  link (`partnerManager`, `cBMSponsorManager`) with the role labels *Partner
+  Manager* / *Funder Manager* and *Additional manager*; the engagement-only
+  stamping of a newly linked contact is guarded by entity, not by the flag.
+
+Verified by tests only (five new across sessions, comms scopes and
+documents). **crm-test's CRM change is owed to Doug** — the applier's apply
+is blocked for the assistant — then the live pass as partner.manager and
+sally.sponsor; production and Boston at a Sunday slot. The frontend needed
+no change: every string already said "CBM contact".
+
 ## [0.250.0] — 2026-10-11
 
 **feat(sandbox): the demo events carry presenters, a partner and a funder —

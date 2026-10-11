@@ -702,6 +702,18 @@ one shared frontend that derives its domain from the first segment of its URL.
   *virtual* type — the frontend translates the Duration select into a recomputed
   `dateEnd`. The time picker **shades slots that conflict** with the user's own
   Google calendar (advisory only — a shaded slot stays selectable).
+- **Additional managers on partner and funder records** (v0.251.0, Doug's
+  requirement 2026-10-11, both doors alike): the co-mentor model —
+  `CPartnerProfile.additionalManagers` / `CSponsorProfile.additionalManagers`
+  (many-to-many to `CMentorProfile`, reverses `comanagedPartners` /
+  `comanagedSponsors`), **feature-detected** per request
+  (`service.comanager_link_available`) so a CRM without the build shows
+  nothing. Same routes, same CBM-contacts card, same picker; off the
+  engagement the add is the link plus a history note — no stamps, no
+  session backfill. The email scope reads every domain's second reverse
+  link (a 404 is skipped at debug); Drive grants entitle them; My Email
+  already did. Plan `scripts/plans/additional-managers.json`; handoff
+  `cpartner-csponsor-additional-managers-crm-handoff.md`.
 - **Co-mentor visibility** requires two things, both in the app: reading the
   `engagements` reverse link *and* stamping the co-mentor's User into the
   engagement's `assignedUsers` (Mentor Role reads CEngagement at "own", which
@@ -1705,6 +1717,16 @@ with `main`; **Lakeside took it off the release lane by itself** (its
 unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
+
+- **v0.251.0 (2026-10-11) — additional managers on partner and funder
+  records.** Committed, not pushed; ships dark (feature-detected). Doug's
+  requirement, built the same afternoon; standing rule in the Session
+  Management section. **The crm-test CRM change is Doug's to apply** (the
+  applier's apply is blocked for the assistant):
+  `scripts/apply_crm_plan.py scripts/plans/additional-managers.json --apply
+  --expect f2d6a41ea16c` via `run_with_admin.py`. Then the live pass as
+  partner.manager and sally.sponsor (`OPEN-ITEMS.md` #45); production and
+  Boston at a Sunday slot.
 
 - **v0.250.0 / v0.249.3 (2026-10-11) — the nightly reconciliation puts
   partner and funder records, their companies and contacts into the domain

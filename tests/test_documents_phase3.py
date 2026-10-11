@@ -171,6 +171,32 @@ async def test_entitled_partner_and_sponsor_manager():
     }
 
 
+async def test_entitled_partner_and_sponsor_additional_managers():
+    """v0.251.0: the co-mentor rule on both doors — an additional manager is
+    entitled to the record's folder; a CRM without the link (404) entitles
+    nobody extra and raises nothing."""
+    from core.espo import EspoError
+
+    espo = FakeEspo()
+    espo.records[("CSponsorProfile", "S1")] = {"cBMSponsorManagerId": "MP2"}
+    espo.records[("CMentorProfile", "MP2")] = {"cbmEmail": "sm@cbmentors.org"}
+    espo.related[("CSponsorProfile", "S1", "additionalManagers")] = [
+        {"cbmEmail": "Extra@cbmentors.org"}, {"cbmEmail": ""},
+    ]
+    assert await grants.entitled_emails(espo, "CSponsorProfile", "S1") == {
+        "sm@cbmentors.org", "extra@cbmentors.org",
+    }
+
+    class NoLink(FakeEspo):
+        async def list_related(self, entity, record_id, link, select=None, max_size=50):
+            raise EspoError(f"list_related {entity}/{record_id}/{link} failed: HTTP 404 Not Found")
+
+    espo = NoLink()
+    espo.records[("CPartnerProfile", "P1")] = {"partnerManagerId": "MP1"}
+    espo.records[("CMentorProfile", "MP1")] = {"cbmEmail": "pm@cbmentors.org"}
+    assert await grants.entitled_emails(espo, "CPartnerProfile", "P1") == {"pm@cbmentors.org"}
+
+
 async def test_entitled_contact_folders_are_application_only():
     """Mentor personnel folders are granted to NO ONE (D-09)."""
     espo = FakeEspo()

@@ -1,0 +1,26 @@
+{
+  "name": "additional-managers",
+  "description": "Additional CBM managers on partner and funder records (Doug's requirement 2026-10-11): one many-to-many link per record type to CMentorProfile, the co-mentor model applied to both doors. Reverse links feed My Email and the Gmail sync scopes.",
+  "links": [
+    {
+      "entity": "CPartnerProfile",
+      "link": "additionalManagers",
+      "linkType": "manyToMany",
+      "entityForeign": "CMentorProfile",
+      "linkForeign": "comanagedPartners",
+      "relationName": "cPartnerProfileMentorProfile",
+      "label": "Additional Managers",
+      "labelForeign": "Co-managed Partners"
+    },
+    {
+      "entity": "CSponsorProfile",
+      "link": "additionalManagers",
+      "linkType": "manyToMany",
+      "entityForeign": "CMentorProfile",
+      "linkForeign": "comanagedSponsors",
+      "relationName": "cSponsorProfileMentorProfile",
+      "label": "Additional Managers",
+      "labelForeign": "Co-managed Funders"
+    }
+  ]
+}

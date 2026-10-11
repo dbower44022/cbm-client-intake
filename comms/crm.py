@@ -23,7 +23,7 @@ from typing import Any, Iterable, Optional
 # crm), which broke any process whose FIRST comms import reached this module
 # (the worker's gmail cycle via comms.summarize, single-file test
 # collection). Live failure 2026-07-23; keep this import lazy.
-from core.espo import EspoError
+from core.espo import EspoError, is_not_found
 
 log = logging.getLogger("cbm_intake.comms.crm")
 
@@ -111,10 +111,18 @@ class MailboxScope:
 # Per-domain: (profile reverse link, contacts link, status attr, mode)
 # mode "include" keeps only the listed statuses; "exclude" drops them;
 # "all" takes everything. Status lists come from Settings (plan §5.1).
+# Each domain twice: the records the person MANAGES (the belongsTo's reverse)
+# and the records they are an ADDITIONAL manager on (the many-to-many's
+# reverse — co-mentors, and since v0.251.0 partner / funder additional
+# managers). A reverse link a CRM does not have yet answers 404 and is
+# skipped quietly; any other failure is still a warning.
 _DOMAINS = (
     ("CEngagement", "engagements1", "engagementContacts", "engagementStatus", "include"),
+    ("CEngagement", "engagements", "engagementContacts", "engagementStatus", "include"),
     ("CPartnerProfile", "managedPartners", "contacts", "partnershipStatus", "exclude"),
+    ("CPartnerProfile", "comanagedPartners", "contacts", "partnershipStatus", "exclude"),
     ("CSponsorProfile", "managedSponsors", "sponsorContacts", None, "all"),
+    ("CSponsorProfile", "comanagedSponsors", "sponsorContacts", None, "all"),
 )
 
 
@@ -174,7 +182,10 @@ async def build_scopes(client: Any, settings: Any) -> list[MailboxScope]:
                     max_size=_PAGE,
                 )
             except EspoError as exc:
-                log.warning("scope: %s/%s unreadable: %s", mailbox, reverse_link, exc)
+                if is_not_found(exc):  # a link this CRM does not have yet
+                    log.debug("scope: %s/%s absent on this CRM", mailbox, reverse_link)
+                else:
+                    log.warning("scope: %s/%s unreadable: %s", mailbox, reverse_link, exc)
                 continue
             for rec in related.get("list", []):
                 status = rec.get(status_attr) if status_attr else None

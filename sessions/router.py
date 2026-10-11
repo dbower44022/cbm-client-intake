@@ -414,7 +414,9 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             # grants link). The tab itself still asks the CRM whether CGrant
             # exists before it renders anything.
             "grantsEnabled": bool(get_settings().grants_enabled and cfg.grants_link),
-            "supportsComentor": cfg.supports_comentor,
+            "supportsComentor": await service.comanager_link_available(
+                cfg, client_for(get_settings(), user)
+            ),
             "defaultSessionType": cfg.default_session_type,
             # True => the Communications tab talks to the real endpoints below;
             # false => the frontend keeps its sample-data scaffold.
@@ -1354,19 +1356,20 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             try:
                 result = await service.add_comentor(
                     client, parent_id, body.mentorProfileId,
-                    actor=user.get("name") or user.get("userName"),
+                    actor=user.get("name") or user.get("userName"), cfg=cfg,
                     # A foreign-record denial (the OTHER mentor's profile) is
                     # retried under the provisioning admin — see
                     # service._link_or_escalate.
                     admin_factory=admin_client_factory(get_settings()),
                 )
             except EspoError as exc:
-                raise _crm_failure(request, exc, "Could not add co-mentor")
+                raise _crm_failure(request, exc, f"Could not add the {cfg.comanager_word}")
             await action_log.log_action(
                 app=cfg.title, category=action_log.CAT_ASSIGNMENT,
-                action=action_log.ACT_COMENTOR_ADDED,
+                action=(action_log.ACT_COMENTOR_ADDED if cfg.parent_entity == "CEngagement"
+                        else action_log.ACT_COMANAGER_ADDED),
                 parent_type=cfg.parent_entity, parent_id=parent_id,
-                summary="Co-mentor added.",
+                summary=f"{cfg.comanager_word.capitalize()} added.",
                 actor_id=user["userId"], actor_name=user["name"],
                 details={"mentorProfileId": body.mentorProfileId, **(result or {})},
             )
@@ -1389,14 +1392,15 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             try:
                 result = await service.remove_comentor(
                     client, parent_id, mentor_profile_id,
-                    actor=user.get("name") or user.get("userName"),
+                    actor=user.get("name") or user.get("userName"), cfg=cfg,
                     admin_factory=admin_client_factory(get_settings()),
                 )
             except EspoError as exc:
-                raise _crm_failure(request, exc, "Could not remove the co-mentor")
+                raise _crm_failure(request, exc, f"Could not remove the {cfg.comanager_word}")
             await action_log.log_action(
                 app=cfg.title, category=action_log.CAT_ASSIGNMENT,
-                action=action_log.ACT_COMENTOR_REMOVED,
+                action=(action_log.ACT_COMENTOR_REMOVED if cfg.parent_entity == "CEngagement"
+                        else action_log.ACT_COMANAGER_REMOVED),
                 parent_type=cfg.parent_entity, parent_id=parent_id,
                 summary="Co-mentor removed.",
                 actor_id=user["userId"], actor_name=user["name"],

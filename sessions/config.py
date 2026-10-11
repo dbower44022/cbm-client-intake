@@ -246,8 +246,19 @@ class DomainConfig:
     overall_notes_label: str = "Notes"
     overall_notes_type: str = "html"  # html (wysiwyg) | longtext (plain text)
 
-    # Mentor-only: attach co-mentors to the engagement (additionalMentors).
+    # Attach additional CBM managers to the record (co-mentors on an
+    # engagement; "additional managers" on a partner / funder — Doug's
+    # requirement 2026-10-11, both doors alike). ``comanager_link`` is the
+    # hasMany on the PARENT; for partner / funder it is feature-detected on
+    # the live CRM (``service.comanager_link_available``) so a CRM without the
+    # build shows and offers nothing.
     supports_comentor: bool = False
+    comanager_link: str = "additionalMentors"
+    # The word the UI and the history use for an additional person.
+    comanager_word: str = "co-mentor"
+    # Role labels on the Details tab's CBM Contacts card.
+    manager_role_label: str = "Mentor"
+    comanager_role_label: str = "Co-mentor"
     # Optional second reverse link on the manager's CMentorProfile: parents where
     # they are a CO-mentor (reverse of CEngagement.additionalMentors — the CRM
     # link is named ``engagements``, verified live on crm-test AND prod
@@ -732,6 +743,14 @@ PARTNER = DomainConfig(
     session_parent_link="partnerSession",
     manager_owned_link="managedPartners",  # reverse of CPartnerProfile.partnerManager
     parent_manager_link="partnerManager",
+    # Additional managers (v0.251.0): CPartnerProfile.additionalManagers <->
+    # CMentorProfile.comanagedPartners, feature-detected per request.
+    supports_comentor=True,
+    comanager_link="additionalManagers",
+    manager_comentor_link="comanagedPartners",
+    comanager_word="additional manager",
+    manager_role_label="Partner Manager",
+    comanager_role_label="Additional manager",
     parent_sessions_link="sessions",
     parent_contacts_link="contacts",
     primary_contact_id_attr="primaryPartnercontactId",
@@ -864,6 +883,14 @@ SPONSOR = DomainConfig(
     session_parent_link="sponsorProfile",
     manager_owned_link="managedSponsors",  # reverse of CSponsorProfile.cBMSponsorManager
     parent_manager_link="cBMSponsorManager",
+    # Additional managers (v0.251.0): CSponsorProfile.additionalManagers <->
+    # CMentorProfile.comanagedSponsors, feature-detected per request.
+    supports_comentor=True,
+    comanager_link="additionalManagers",
+    manager_comentor_link="comanagedSponsors",
+    comanager_word="additional manager",
+    manager_role_label="Funder Manager",
+    comanager_role_label="Additional manager",
     parent_sessions_link="sponsorSessions",
     parent_contacts_link="sponsorContacts",
     primary_contact_id_attr="sponsorContactId",

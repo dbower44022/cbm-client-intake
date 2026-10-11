@@ -118,13 +118,19 @@ def test_domain_links_match_crm():
 
     assert PARTNER.session_parent_link == "partnerSession" and PARTNER.session_parent_fk == "partnerSessionId"
     assert PARTNER.manager_owned_link == "managedPartners"
-    assert PARTNER.manager_comentor_link is None
+    # Additional managers (v0.251.0, Doug's requirement 2026-10-11, both doors):
+    # CPartnerProfile.additionalManagers <-> CMentorProfile.comanagedPartners.
+    assert PARTNER.manager_comentor_link == "comanagedPartners"
     assert PARTNER.parent_sessions_link == "sessions"
-    assert PARTNER.supports_comentor is False
+    assert PARTNER.supports_comentor is True
+    assert PARTNER.comanager_link == "additionalManagers"
+    assert MENTOR.comanager_link == "additionalMentors"
 
     assert SPONSOR.session_parent_link == "sponsorProfile" and SPONSOR.session_parent_fk == "sponsorProfileId"
     assert SPONSOR.manager_owned_link == "managedSponsors"  # reverse of cBMSponsorManager
     assert SPONSOR.parent_sessions_link == "sponsorSessions"
+    assert SPONSOR.manager_comentor_link == "comanagedSponsors"
+    assert SPONSOR.comanager_link == "additionalManagers" and SPONSOR.supports_comentor is True
 
 
 # --- resolve manager profile ----------------------------------------------
@@ -747,6 +753,60 @@ async def test_get_detail_includes_comentors_for_mentor():
     ]
 
 
+@pytest.mark.asyncio
+async def test_get_detail_includes_additional_managers_for_a_funder():
+    """Partner / funder records carry additional managers since v0.251.0 —
+    read through the domain's own link, feature-detected on the live CRM."""
+    fake = Fake(
+        records={("CSponsorProfile", "S1"): {"name": "Harrowgate"}},
+        related={"additionalManagers": [{"id": "m2", "name": "Sally Sponsor", "contactRecordId": "ct2"}]},
+        meta_fields={"type": "hasMany", "entity": "CMentorProfile"},
+    )
+    d = await service.get_detail(SPONSOR, fake, "S1")
+    assert d["supportsComentor"] is True
+    assert d["coMentors"] == [{"id": "m2", "name": "Sally Sponsor", "contactId": "ct2"}]
+
+
+@pytest.mark.asyncio
+async def test_get_detail_stays_dark_on_a_crm_without_the_additional_managers_link():
+    class NoLink(Fake):
+        async def metadata(self, key):
+            if ".links." in key:
+                return None  # a key the CRM does not have answers nothing
+            return self.meta_fields
+    fake = NoLink(records={("CPartnerProfile", "P1"): {"name": "Key Bank"}},
+                  related={"additionalManagers": [{"id": "m2", "name": "X"}]})
+    d = await service.get_detail(PARTNER, fake, "P1")
+    assert d["supportsComentor"] is False and "coMentors" not in d
+
+
+@pytest.mark.asyncio
+async def test_add_and_remove_additional_manager_on_a_partner_relate_and_note_only():
+    """On a partner / funder the add is the link plus a history note: no
+    visibility stamps (those roles read at team level, and the record types
+    carry the single assignedUser only) and no session backfill."""
+    notes = []
+
+    async def fake_note(client, parent_type, parent_id, text):
+        notes.append((parent_type, parent_id, text)); return True
+
+    import sessions.service as svc
+    orig = svc.post_stream_note
+    svc.post_stream_note = fake_note
+    try:
+        fake = Fake(records={("CMentorProfile", "m2"): {"name": "Pat Partner", "assignedUserId": "u9"}})
+        res = await service.add_comentor(fake, "P1", "m2", actor="Mark", cfg=PARTNER)
+        assert res == {"status": "ok"}
+        assert fake.relates == [("CPartnerProfile", "P1", "additionalManagers", "m2")]
+        assert fake.updates == []                      # no stamps
+        assert notes[-1][:2] == ("CPartnerProfile", "P1") and "additional manager Pat Partner" in notes[-1][2]
+        res = await service.remove_comentor(fake, "P1", "m2", actor="Mark", cfg=PARTNER)
+        assert fake.unrelates == [("CPartnerProfile", "P1", "additionalManagers", "m2")]
+        assert "Removed additional manager Pat Partner" in notes[-1][2]
+    finally:
+        svc.post_stream_note = orig
+
+
 # --- Details tab -----------------------------------------------------------
 
 def test_details_label_humanizes_field_names():
@@ -883,9 +943,11 @@ async def test_build_details_splits_sections_and_contacts():
     assert d["contacts"][0]["entity"] == "Contact"
     # the Contact field spec ships for the create-new-contact form.
     assert [f["name"] for f in d["contactSpec"]] == ["title", "website"]
-    # no ACL restrictions => everything editable; partner domain has no CBM card.
+    # no ACL restrictions => everything editable. The CBM card exists on the
+    # partner domain since v0.251.0 (this fake answers every metadata key with
+    # a dict, so the additional-managers link reads as present) — empty here.
     assert all(s["editable"] for s in d["sections"]) and d["contacts"][0]["editable"]
-    assert "cbmContacts" not in d
+    assert d["cbmContacts"] == []
 
 
 @pytest.mark.asyncio
@@ -2195,7 +2257,9 @@ def test_accept_endpoint_maps_stale_guard_to_400(monkeypatch):
     assert r.status_code == 400 and "no longer" in r.json()["detail"]
 
 
-def test_partner_has_no_comentor_endpoints(monkeypatch):
+def test_every_domain_has_the_comanager_picker_endpoint(monkeypatch):
+    """The additional-manager picker is the same CBM-contact picker on all
+    three doors (v0.251.0 — partners and funders gained additional managers)."""
     _as(monkeypatch, _USER)
 
     async def fake_mentors(client):
@@ -2203,8 +2267,8 @@ def test_partner_has_no_comentor_endpoints(monkeypatch):
 
     monkeypatch.setattr("sessions.service.mentor_options", fake_mentors)
     with TestClient(_app(monkeypatch)) as c:
-        # /mentors is mentor-only: registered for mentor, absent for partner.
-        assert c.get("/partnersessions/api/mentors").status_code == 404
+        assert c.get("/partnersessions/api/mentors").status_code == 200
+        assert c.get("/sponsorsessions/api/mentors").status_code == 200
         assert c.get("/mentorsessions/api/mentors").status_code == 200
 
 
@@ -2266,8 +2330,9 @@ def test_remove_contact_and_comentor_endpoints(monkeypatch):
     async def fake_unlink(cfg, client, parent_id, contact_id):
         unlinked.append((cfg.slug, parent_id, contact_id))
 
-    async def fake_remove(client, engagement_id, mentor_profile_id, actor=None, admin_factory=None):
-        removed.append((engagement_id, mentor_profile_id))
+    async def fake_remove(client, engagement_id, mentor_profile_id, actor=None,
+                          admin_factory=None, cfg=None):
+        removed.append((cfg.slug if cfg else None, engagement_id, mentor_profile_id))
         return {"status": "ok"}
 
     monkeypatch.setattr("sessions.details.unlink_contact", fake_unlink)
@@ -2276,11 +2341,11 @@ def test_remove_contact_and_comentor_endpoints(monkeypatch):
         r = c.delete("/mentorsessions/api/records/E1/contacts/c9")
         assert r.status_code == 200 and unlinked == [("mentorsessions", "E1", "c9")]
         r = c.delete("/mentorsessions/api/records/E1/comentors/m2")
-        assert r.status_code == 200 and removed == [("E1", "m2")]
-        # co-mentor removal is mentor-only, like the add (no partner route; the
-        # unmatched DELETE falls through to the static mount, hence 405 not 404)
-        assert c.delete("/partnersessions/api/records/P1/comentors/m2").status_code in (404, 405)
-        assert removed == [("E1", "m2")]  # nothing extra was removed
+        assert r.status_code == 200 and removed == [("mentorsessions", "E1", "m2")]
+        # Since v0.251.0 the partner and funder doors carry the same route,
+        # handing the service their own domain so it uses the right link.
+        assert c.delete("/partnersessions/api/records/P1/comentors/m2").status_code == 200
+        assert removed[-1] == ("partnersessions", "P1", "m2")
 
 
 def test_contact_endpoints_require_auth(monkeypatch):

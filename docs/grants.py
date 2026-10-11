@@ -7,8 +7,8 @@ Drive access exists solely as per-person, folder-level **Commenter** grants
 that mirror CRM entitlements:
 
   * ``CEngagement`` folders   -> the assigned mentor + co-mentors
-  * ``CPartnerProfile``       -> the assigned partner manager
-  * ``CSponsorProfile``       -> the assigned sponsor manager
+  * ``CPartnerProfile``       -> the assigned partner manager + additional managers
+  * ``CSponsorProfile``       -> the assigned sponsor manager + additional managers
   * ``Contact`` (mentor personnel folders) -> **NO ONE** — application-only
 
 The person's Workspace address is their ``CMentorProfile.cbmEmail``.
@@ -31,7 +31,7 @@ import logging
 from typing import Any, Optional
 
 from core.config import Settings
-from core.espo import EspoClient
+from core.espo import EspoClient, EspoError, is_not_found
 from core.gdrive import DriveClient, DriveNoAccountError
 
 log = logging.getLogger("cbm_intake.docs.grants")
@@ -86,6 +86,8 @@ _MENTOR_PROFILE = "CMentorProfile"
 
 # The parent-manager FK per profile entity (single manager).
 _MANAGER_FK = {_PARTNER: "partnerManagerId", _SPONSOR: "cBMSponsorManagerId"}
+# The additional-managers link on both (v0.251.0, feature-detected by its 404).
+_ADDITIONAL_MANAGERS = "additionalManagers"
 
 
 def grants_enabled(settings: Settings) -> bool:
@@ -157,6 +159,20 @@ async def entitled_emails(espo: Any, entity_type: str, record_id: str) -> set[st
         record = await espo.get(entity_type, record_id, select=fk)
         if record.get(fk):
             email = await _profile_email(espo, record[fk])
+            if email:
+                emails.add(email)
+        # Additional managers (v0.251.0): the co-mentor rule on both doors. A
+        # CRM without the link answers 404 — nobody extra is entitled there.
+        try:
+            related = await espo.list_related(
+                entity_type, record_id, _ADDITIONAL_MANAGERS, select="cbmEmail", max_size=50
+            )
+        except EspoError as exc:
+            if not is_not_found(exc):
+                raise
+            related = {}
+        for row in related.get("list", []) or []:
+            email = (row.get("cbmEmail") or "").strip()
             if email:
                 emails.add(email)
     return {e.lower() for e in emails}

@@ -22,6 +22,7 @@ from core.phone import to_e164
 
 from .config import CONTACT, MENTOR_PROFILE, DomainConfig
 from .service import (
+    comanager_link_available as _svc_comanager_available,
     SessionClient,
     SessionError,
     _find_or_create_company,
@@ -426,7 +427,7 @@ async def build_details(
             result["linkOptions"] = options
     if contacts_restricted:
         result["contactsRestricted"] = True
-    if cfg.supports_comentor:
+    if await _svc_comanager_available(cfg, client):
         result["cbmContacts"] = await _cbm_contacts(
             cfg, client, parent_id, parent_values, contact_spec, contact_raw, levels, user_id,
         )
@@ -465,7 +466,10 @@ async def _cbm_contacts(
     """
     people: list[dict[str, Any]] = []
     seen: set[str] = set()
-    mentor_id = parent_values.get("mentorProfileId")
+    # The manager link is per domain (CEngagement.mentorProfile,
+    # CPartnerProfile.partnerManager, CSponsorProfile.cBMSponsorManager).
+    mgr_link = cfg.parent_manager_link or "mentorProfile"
+    mentor_id = parent_values.get(f"{mgr_link}Id")
     if mentor_id:
         seen.add(mentor_id)
         contact_id = None
@@ -475,12 +479,12 @@ async def _cbm_contacts(
         except EspoError:
             pass
         people.append({
-            "profileId": mentor_id, "name": parent_values.get("mentorProfileName"),
-            "role": "Mentor", "_contactId": contact_id,
+            "profileId": mentor_id, "name": parent_values.get(f"{mgr_link}Name"),
+            "role": cfg.manager_role_label, "_contactId": contact_id,
         })
     try:
         co = await client.list_related(
-            cfg.parent_entity, parent_id, "additionalMentors",
+            cfg.parent_entity, parent_id, cfg.comanager_link,
             select="name,contactRecordId", max_size=200,
         )
         rows = co.get("list", [])
@@ -492,7 +496,7 @@ async def _cbm_contacts(
         seen.add(m["id"])
         people.append({
             "profileId": m["id"], "name": m.get("name"),
-            "role": "Co-mentor", "_contactId": m.get("contactRecordId"),
+            "role": cfg.comanager_role_label, "_contactId": m.get("contactRecordId"),
         })
 
     out: list[dict[str, Any]] = []
@@ -602,8 +606,8 @@ async def _stamp_mentor_team(
     session-attendee 403 class). Mentor domain only; best-effort — a stamp
     failure never fails the link (the nightly reconciliation is the backstop).
     Merge-only: existing assigned users are always kept."""
-    if not cfg.supports_comentor:  # mentor domain only — no manager stamping elsewhere
-        return
+    if not cfg.supports_comentor or cfg.parent_entity != "CEngagement":
+        return  # the engagement's read-own machinery; partner / funder roles read at team
     try:
         from .service import _engagement_mentor_user_ids
 

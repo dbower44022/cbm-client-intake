@@ -73,6 +73,24 @@ log = logging.getLogger("cbm_intake.sessions.service")
 
 _PAGE = 200
 _COMENTOR_LINK = "additionalMentors"
+
+
+async def comanager_link_available(cfg: DomainConfig, client: SessionClient) -> bool:
+    """Whether this domain's additional-manager link exists on the live CRM.
+    The engagement's ``additionalMentors`` is long-standing and taken as read;
+    a partner / funder ``additionalManagers`` is a 2026-10-11 build that lands
+    one CRM at a time, so the feature stays dark where it is missing (the
+    metadata read is cached a minute). Fails closed on any error."""
+    if not cfg.supports_comentor:
+        return False
+    if cfg.parent_entity == ENGAGEMENT:
+        return True
+    try:
+        defs = await client.metadata(f"entityDefs.{cfg.parent_entity}.links.{cfg.comanager_link}")
+    except Exception as exc:  # noqa: BLE001 — a probe never raises
+        log.info("%s.%s not detectable (%s)", cfg.parent_entity, cfg.comanager_link, exc)
+        return False
+    return isinstance(defs, dict) and bool(defs)
 _ATTENDEE_LINK = "sessionAttendees"
 
 # Preferred meeting service (mentor-supplied Zoom, 2026-07-24): a mentor whose
@@ -743,12 +761,12 @@ async def get_detail(
         # whose profile link is empty; the frontend guards on truthiness.
         "clientProfileId": parent.get("engagementClientId"),
         "sessions": sessions,
-        "supportsComentor": cfg.supports_comentor,
+        "supportsComentor": await comanager_link_available(cfg, client),
     }
     co_mentors: list[dict[str, Any]] = []
-    if cfg.supports_comentor:
+    if detail["supportsComentor"]:
         co_data = await client.list_related(
-            cfg.parent_entity, parent_id, _COMENTOR_LINK,
+            cfg.parent_entity, parent_id, cfg.comanager_link,
             select="name,cbmEmail,contactRecordId", max_size=_PAGE,
         )
         co_mentors = co_data.get("list", [])
@@ -891,10 +909,10 @@ async def cbm_member_email_map(
                 "member-email map: manager profile unreadable for %s %s: %s",
                 cfg.parent_entity, parent_id, exc,
             )
-    if parent_id and cfg.supports_comentor:
+    if parent_id and await comanager_link_available(cfg, client):
         try:
             co_data = await client.list_related(
-                cfg.parent_entity, parent_id, _COMENTOR_LINK,
+                cfg.parent_entity, parent_id, cfg.comanager_link,
                 select="name,cbmEmail,contactRecordId", max_size=_PAGE,
             )
             profiles.extend(co_data.get("list", []))
@@ -1436,9 +1454,9 @@ async def _maybe_create_follow_up(
         )
         attendee_ids = [str(c["id"]) for c in contacts.get("list", [])]
         co_mentors: list[dict[str, Any]] = []
-        if cfg.supports_comentor:
+        if await comanager_link_available(cfg, client):
             co_data = await client.list_related(
-                cfg.parent_entity, parent_id, _COMENTOR_LINK,
+                cfg.parent_entity, parent_id, cfg.comanager_link,
                 select="name,cbmEmail,contactRecordId", max_size=_PAGE,
             )
             co_mentors = co_data.get("list", [])
@@ -1850,8 +1868,8 @@ async def _engagement_mentor_user_ids(
     domain only (other domains have no co-mentors); best-effort — an unreadable
     link just yields fewer users, never an error.
     """
-    if not cfg.supports_comentor:
-        return []
+    if not cfg.supports_comentor or cfg.parent_entity != ENGAGEMENT:
+        return []  # the stamping machinery is the engagement's (read-own roles)
     ids: list[str] = []
     try:
         eng = await client.get(ENGAGEMENT, parent_id, select="mentorProfileId")
@@ -1988,6 +2006,7 @@ async def _link_or_escalate(
     engagement_id: str,
     link: str,
     related_id: str,
+    entity: str = ENGAGEMENT,
 ) -> None:
     """relate/unrelate as the signed-in user, falling back to the provisioning
     admin ONLY for a foreign-record denial.
@@ -2010,7 +2029,7 @@ async def _link_or_escalate(
     still gets the readable "missing grant" 403.
     """
     try:
-        await getattr(client, op)(ENGAGEMENT, engagement_id, link, related_id)
+        await getattr(client, op)(entity, engagement_id, link, related_id)
         return
     except EspoError as exc:
         escalatable = is_forbidden(exc) and "noAccessToForeignRecord" in str(exc)
@@ -2019,11 +2038,11 @@ async def _link_or_escalate(
         log.info(
             "%s %s/%s/%s denied on the linked record — retrying as the "
             "provisioning admin (the user's edit access to the engagement "
-            "already passed)", op, ENGAGEMENT, engagement_id, link,
+            "already passed)", op, entity, engagement_id, link,
         )
         try:
             admin = await admin_factory()
-            await getattr(admin, op)(ENGAGEMENT, engagement_id, link, related_id)
+            await getattr(admin, op)(entity, engagement_id, link, related_id)
         except Exception as admin_exc:  # noqa: BLE001
             # Surface the USER's error — it names the missing grant, which is
             # the actionable fact; the admin fallback failing is our problem.
@@ -2033,7 +2052,7 @@ async def _link_or_escalate(
 
 async def add_comentor(
     client: SessionClient, engagement_id: str, mentor_profile_id: str,
-    actor: Optional[str] = None, admin_factory=None,
+    actor: Optional[str] = None, admin_factory=None, cfg: Optional[DomainConfig] = None,
 ) -> dict[str, Any]:
     """Attach a co-mentor (CMentorProfile) to an engagement (additionalMentors).
     ``actor`` (the signed-in user's display name) is woven into the stream note
@@ -2053,6 +2072,20 @@ async def add_comentor(
     The link itself goes through :func:`_link_or_escalate` — see there for why a
     foreign-record denial is retried under the provisioning admin.
     """
+    if cfg is not None and cfg.parent_entity != ENGAGEMENT:
+        # Partner / funder (v0.251.0): the link and a history note. No
+        # visibility stamps — those roles read at team level, and the record
+        # types carry the single assignedUser only — and no session backfill.
+        await _link_or_escalate(
+            client, admin_factory, "relate", engagement_id, cfg.comanager_link,
+            mentor_profile_id, entity=cfg.parent_entity,
+        )
+        name = await _profile_display_name(client, mentor_profile_id)
+        await post_stream_note(
+            client, cfg.parent_entity, engagement_id,
+            f"Added {cfg.comanager_word} {name} via the session tools{_by(actor)}.",
+        )
+        return {"status": "ok"}
     await _link_or_escalate(
         client, admin_factory, "relate", engagement_id, _COMENTOR_LINK, mentor_profile_id
     )
@@ -2135,7 +2168,7 @@ async def add_comentor(
 
 async def remove_comentor(
     client: SessionClient, engagement_id: str, mentor_profile_id: str,
-    actor: Optional[str] = None, admin_factory=None,
+    actor: Optional[str] = None, admin_factory=None, cfg: Optional[DomainConfig] = None,
 ) -> dict[str, Any]:
     """Detach a co-mentor from an engagement — the reverse of :func:`add_comentor`.
     ``actor`` names the signed-in user in the stream note, like the add.
@@ -2149,6 +2182,17 @@ async def remove_comentor(
     a failure here leaves harmless extra visibility, never a broken remove. A
     stream note on the engagement records what was done.
     """
+    if cfg is not None and cfg.parent_entity != ENGAGEMENT:
+        await _link_or_escalate(
+            client, admin_factory, "unrelate", engagement_id, cfg.comanager_link,
+            mentor_profile_id, entity=cfg.parent_entity,
+        )
+        name = await _profile_display_name(client, mentor_profile_id)
+        await post_stream_note(
+            client, cfg.parent_entity, engagement_id,
+            f"Removed {cfg.comanager_word} {name} via the session tools{_by(actor)}.",
+        )
+        return {"status": "ok"}
     await _link_or_escalate(
         client, admin_factory, "unrelate", engagement_id, _COMENTOR_LINK, mentor_profile_id
     )
@@ -2230,7 +2274,7 @@ async def remove_comentor(
 
 
 async def mentor_options(client: SessionClient) -> list[dict[str, Any]]:
-    """id/name of mentor profiles, for the co-mentor picker (mentor domain)."""
+    """id/name of mentor profiles, for the co-manager picker (every domain)."""
     data = await client.list(MENTOR_PROFILE, select="name", max_size=_PAGE, order_by="name")
     return [{"id": r["id"], "name": r.get("name")} for r in data.get("list", [])]
 

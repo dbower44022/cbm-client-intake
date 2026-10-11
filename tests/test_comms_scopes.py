@@ -123,3 +123,34 @@ async def test_the_sync_pass_uses_the_cache(monkeypatch):
     monkeypatch.setattr(scopes, "scopes_for_pass", fake_scopes)
     out = await sync.run_gmail_sync(Cfg(), None, FakeEspo(), {})
     assert seen["n"] == 1 and out["mailboxes"] == 0
+
+
+@pytest.mark.asyncio
+async def test_scope_build_reads_the_additional_manager_links_and_skips_an_absent_one(caplog):
+    """v0.251.0: a manager's mailbox covers the records they are an ADDITIONAL
+    manager on (co-mentored engagements, co-managed partners and funders),
+    read through the second reverse link per domain. A CRM that lacks the
+    link answers 404, which is skipped quietly — never an hourly warning."""
+    from comms.crm import build_scopes
+
+    class Espo(FakeEspo):
+        async def list_related(self, entity, record_id, link, *, select=None, max_size=50, **kw):
+            self.calls.append(f"related {entity}/{link}")
+            if link == "comanagedSponsors":
+                raise EspoError("list_related CMentorProfile/mp1/comanagedSponsors failed: HTTP 404 Not Found")
+            if link == "comanagedPartners":
+                return {"list": [{"id": "p9", "name": "Key Bank", "partnershipStatus": "Active"}]}
+            if link == "contacts":
+                return {"list": [{"id": "c-kb", "name": "Dana", "emailAddress": "dana@keybank.example"}]}
+            return await super().list_related(entity, record_id, link, select=select, max_size=max_size, **kw)
+
+    espo = Espo()
+    with caplog.at_level("WARNING"):
+        built = await build_scopes(espo, Cfg())
+    assert "related CMentorProfile/engagements" in espo.calls       # co-mentored engagements
+    assert "related CMentorProfile/comanagedPartners" in espo.calls
+    assert "related CMentorProfile/comanagedSponsors" in espo.calls
+    assert "comanagedSponsors" not in caplog.text                    # the 404 is not a warning
+    scope = built[0]
+    assert any(r.id == "p9" and "dana@keybank.example" in r.addresses for r in scope.records)
+
