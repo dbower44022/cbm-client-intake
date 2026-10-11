@@ -1723,10 +1723,13 @@ each block.
   requirement, built the same afternoon; standing rule in the Session
   Management section. **The crm-test CRM change is Doug's to apply** (the
   applier's apply is blocked for the assistant):
-  `scripts/apply_crm_plan.py scripts/plans/additional-managers.json --apply
-  --expect f2d6a41ea16c` via `run_with_admin.py`. Then the live pass as
-  partner.manager and sally.sponsor (`OPEN-ITEMS.md` #45); production and
-  Boston at a Sunday slot.
+  — **applied by Doug 10-11-26 13:46**, both links read back. **Live pass
+  done the same afternoon** as partner.manager and sally.sponsor: the
+  partner add, the funder add and the remove all 200 in the web log, the
+  reverse link read back as administrator (`OPEN-ITEMS.md` #45). Pushed
+  with the pass. Owed: production and Boston at a Sunday slot; a role
+  ruling for a Mentor-Role-only user named on a funder (no CSponsorProfile
+  read).
 
 - **v0.250.0 / v0.249.3 (2026-10-11) — the nightly reconciliation puts
   partner and funder records, their companies and contacts into the domain

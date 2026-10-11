@@ -39,12 +39,27 @@ found; move resolved items to the bottom with the resolution date.
     Doug's requirement; changelog has the design). Step page for the whole
     crm-test rollout — apply, push, live pass as the two managers, My Email
     as the added person: https://claude.ai/artifact/9aW3mVrfdcHa3gnKMACHTp
-    (private, *Additional Managers Rollout*, written 10-11-26). The code is live-dark
+    (private, *Additional Managers Rollout*, written 10-11-26, rev 1.1).
+    **crm-test done 2026-10-11:** (a) Doug applied the plan (both links
+    created and read back, 13:46); (b) the live pass ran — the partner add
+    as partner.manager (POST 200 at 17:49 UTC) and the funder add and remove
+    as sally.sponsor (POST 200 at 17:51:41, DELETE 200 at 17:51:56 after the
+    expected escalation to the administrator on the mentor-profile side) are
+    in the web log, and the CRM read back as administrator afterwards shows
+    Acme Bank and Loan on Joe Mentor's `comanagedPartners`. Section 4's
+    first wording expected My Email to list records; it lists mail threads,
+    so the sandbox's empty inbox was the right result (page rev 1.1).
+    **Two follow-ups, neither a build defect:** the Mentor Role holds no
+    read on `CSponsorProfile` on crm-test or production, so a mentor named
+    additional manager on a FUNDER sees it in neither Funder Management nor
+    My Email (the mail sync is unaffected — its scope runs under the org
+    key); a role ruling is owed before that case is used. And a Sponsor
+    Manager cannot unrelate the mentor profile herself (no edit on
+    `CMentorProfile`): the app's escalation covers it, as for co-mentors. The code is live-dark
     until a CRM has the two links. **Owed, in order:** (a) crm-test — Doug
     runs, from the repository root:
-    `PYTHONPATH=. uv run python scripts/run_with_admin.py scripts/apply_crm_plan.py scripts/plans/additional-managers.json --apply --expect f2d6a41ea16c`
-    (dry run printed the two links and that fingerprint on 10-11-26; the
-    applier reads the links back); (b) the live pass on crm-test as
+    ~~`PYTHONPATH=. uv run python scripts/run_with_admin.py scripts/apply_crm_plan.py scripts/plans/additional-managers.json --apply --expect f2d6a41ea16c`~~
+    — done, see above; ~~(b) the live pass on crm-test as~~ done; the rest of (b) as
     partner.manager and sally.sponsor — the Details tab's CBM Contacts card
     offers *Select existing CBM contact…*, the add records a history note,
     the person then appears in the Overview's CBM Contacts, their My Email
