@@ -1350,6 +1350,13 @@ Conventions. Plan: `prds/action-history-plan.md`;
   (v0.235.1). `EspoClient.metadata` / `metadata_enum_options` now read an empty
   or non-JSON body as None; any new metadata read must go through them, and a
   feature-detected field's OPTIONS read must tolerate the field being absent.
+- **A SCALAR metadata key comes back as a bare unquoted string** (verified on
+  crm-test 2026-10-11: `Metadata?key=entityDefs.CSponsorProfile.fields.description.type`
+  → 200, body `wysiwyg`, no quotes). That is not JSON, so `EspoClient.metadata`
+  reads it as None, exactly like a missing key — which is how the converted
+  Funder Notes field still opened the plain box (v0.252.1). Read the
+  enclosing dict (`…fields.description`) and index it; never a `.type` /
+  `.entity` / `.foreign` key on its own.
 - **Field-level ACL silently strips writes** — a 200 OK where one field didn't
   store. Newer fields saving while older ones don't is the tell. Diagnose by
   reading each role's `fieldData` as admin
@@ -1724,7 +1731,8 @@ Cleveland by design. What is *verified* is narrower than what is deployed — se
 each block.
 
 - **v0.252.0 (2026-10-11) — rich Funder Notes (live-typed), and the
-  sign-in Show button out of the tab order.** Pushed 10-11-26 14:09. Ships
+  sign-in Show button out of the tab order.** Pushed 10-11-26 14:09; **v0.252.1**
+  (the scalar-metadata-key fix, found by the live pass) committed. Ships
   dark on the notes side: the CRM field conversion is Doug's SSH step on
   crm-test (`csponsorprofile-description-wysiwyg-crm-handoff.md` § 1), then
   the pass as sally.sponsor (`OPEN-ITEMS.md` #47); production and Boston

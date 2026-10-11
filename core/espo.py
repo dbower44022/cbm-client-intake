@@ -332,6 +332,10 @@ def _json_or_none(resp: Any) -> Any:
     body = getattr(resp, "content", b"") or b""
     if not body.strip():
         return None
+    # A SCALAR key (``…fields.x.type``) comes back as a bare unquoted string
+    # (``wysiwyg``), which is not JSON and reads as None here — so callers
+    # read the enclosing dict and index it (sessions.service.live_notes_type,
+    # found live 2026-10-11).
     try:
         return resp.json()
     except ValueError:

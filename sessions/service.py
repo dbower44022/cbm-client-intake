@@ -86,13 +86,19 @@ async def live_notes_type(cfg: DomainConfig, client: SessionClient) -> str:
     ``html``; anything else, or a failed read ⇒ the configured default."""
     if not cfg.overall_notes_attr:
         return cfg.overall_notes_type
+    # Read the FIELD's defs (a dict), never the ``.type`` key itself: EspoCRM
+    # answers a scalar metadata key as a bare unquoted string (``wysiwyg``,
+    # not ``"wysiwyg"``), which is not JSON and so reads as None through
+    # ``_json_or_none`` — found live on crm-test 2026-10-11, when the field
+    # had been converted and the panel still opened the plain box.
     try:
-        ftype = await client.metadata(
-            f"entityDefs.{cfg.parent_entity}.fields.{cfg.overall_notes_attr}.type"
+        defs = await client.metadata(
+            f"entityDefs.{cfg.parent_entity}.fields.{cfg.overall_notes_attr}"
         )
     except Exception as exc:  # noqa: BLE001 — never block the Overview
         log.info("%s.%s type not readable (%s)", cfg.parent_entity, cfg.overall_notes_attr, exc)
         return cfg.overall_notes_type
+    ftype = defs.get("type") if isinstance(defs, dict) else None
     if ftype == "wysiwyg":
         return "html"
     if ftype in ("text", "varchar"):

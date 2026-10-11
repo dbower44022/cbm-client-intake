@@ -817,8 +817,13 @@ async def test_overview_notes_editor_follows_the_live_field_type():
         def __init__(self, ftype, **kw):
             super().__init__(**kw); self.ftype = ftype
         async def metadata(self, key):
-            if key.endswith(".fields.description.type"):
-                return self.ftype
+            # The FIELD's defs, a dict. (A scalar ``.type`` key would come back
+            # from EspoCRM as a bare unquoted string, which reads as None —
+            # the first build of this read did that and stayed on the plain
+            # box after the CRM was converted, crm-test 2026-10-11.)
+            assert not key.endswith(".type"), "read the field defs, not the scalar"
+            if key.endswith(".fields.description"):
+                return {"type": self.ftype}
             return self.meta_fields
     recs = {("CSponsorProfile", "S1"): {"name": "Harrowgate", "description": "plain words"}}
     d = await service.get_detail(SPONSOR, Typed("wysiwyg", records=dict(recs)), "S1")
@@ -828,7 +833,7 @@ async def test_overview_notes_editor_follows_the_live_field_type():
 
     class Broken(Fake):
         async def metadata(self, key):
-            if key.endswith(".type"):
+            if key.endswith(".fields.description"):
                 raise RuntimeError("metadata unavailable")
             return self.meta_fields
     d = await service.get_detail(SPONSOR, Broken(records=dict(recs)), "S1")

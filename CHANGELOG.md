@@ -4,6 +4,21 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.252.1] — 2026-10-11
+
+**fix(sessions): the live notes-type read asked for a scalar metadata key,
+which EspoCRM answers unquoted.** Found live by Doug on crm-test within
+minutes of v0.252.0: the field was converted (the administrator read showed
+`wysiwyg`) and the Funder Notes panel still opened the plain box. The web
+log showed the read of `…fields.description.type`; EspoCRM answers a scalar
+key as a bare `wysiwyg`, not `"wysiwyg"`, which is not JSON, so
+`_json_or_none` returned None and the read fell back to the configured
+default. `live_notes_type` now reads the field's defs (a dict) and takes
+`type` from it. Standing rule in the Gotchas: never read a scalar metadata
+key through the client; read the enclosing dict. Verified by tests (the
+fake now refuses a scalar key); the live check is section 2 of the rollout
+page again.
+
 ## [0.252.0] — 2026-10-11
 
 **feat(sessions): the Overview notes editor follows the field's live CRM
