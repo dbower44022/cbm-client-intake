@@ -34,53 +34,6 @@ found; move resolved items to the bottom with the resolution date.
     15:26 and 15:29 UTC), which must be gone (tonight's reset) or deleted
     before the baseline is taken.
 
-44. **A contact's Events tab in the directory 403'd for every
-    non-administrator** (found 2026-10-11 by Doug as Pat Partner, opening the
-    contact he had just created through "+ Add partner"): *your CRM role is
-    missing read access to CEventRegistration records*. The Mentor Role, the
-    Partner Manager Role and the Sponsor Manager Role hold no access to the
-    registration record type on crm-test or production, and the tab read the
-    registrations as the user — as did the engagement record's Events tab in
-    Client Management, which no mentor can have seen work either. **Fixed in
-    v0.249.2** (pushed 10-11-26 11:42) by Doug's ruling, option B: the user's
-    own read of the contact / the engagement's contacts gates the tab, and
-    the history reads under the org-wide key (the partner / funder Events
-    tab rule). Step page for #43 and #44 together:
-    https://claude.ai/artifact/MrVb46cEZE5cdngyzo4NKZ (private, *Quick-Add
-    Live Check*, written 10-11-26). **Owed:** (a) the live check after the
-    push — the same contact's Events tab as partner.manager shows the history (empty is fine for
-    a contact with no registrations: "no events", not a red message); (b)
-    an engagement's Events tab as a real mentor on crm-test, never seen
-    working by a non-administrator.
-
-43. **"+ Add funder" as a real non-admin was refused by the CRM's assignment
-    check, misreported as a missing Contact grant** (found 2026-10-09 by Doug
-    on crm-test as Sally Sponsor; the first run of the quick-add create path
-    as a non-administrator, which #20 said had never been proven). The Sponsor
-    Manager Role holds Contact create; its Assignment Permission is *not-set*
-    on both CRMs, and the contact was created with no assigned user and no
-    team, so EspoCRM answered `Assignment failure: assigned user or team not
-    allowed` and the app's 403 wording blamed the create grant. **Fixed in
-    v0.249.0** (pushed 10-09-26 22:29): the new contact is owner-stamped like
-    the profile on both doors, and the hint names an assignment refusal.
-    **The v0.249.0 live check (10-09-26 22:36 UTC+4) got one step further
-    and found two more defects, fixed in v0.249.1 (pushed 10-09-26 22:52):**
-    the contact's company link was refused because the company was unowned
-    (`cannotRelateForbidden`, Account read), and the company match ran as
-    the user, so each attempt created another same-named Account (three
-    "Acme Bank" rows on crm-test, gone with the reset). The match, the team
-    lookup and the ownership now ride the API client; see the changelog.
-    **Owed:** (a) the live check after the next push — "+ Add funder" on
-    crm-test as Sally Sponsor saves, and the funder's Contacts table shows
-    the contact;
-    ~~(b) "+ Add partner" as Pat Partner the same way~~ — **done 2026-10-11
-    by Doug** (a partner for "Acme Bank and Loan" with Wendy Kay as the
-    contact saved on v0.249.1 and the contact opened from the directory); (c) the company is
-    still created unowned under the org-wide key — whether Sally can see it
-    on her new funder record is #40's question, not this one; (d) the orphan
-    `Account` "Acme Bank and Loan" the failed run left on crm-test — gone
-    with the nightly reset, nothing to do.
-
 42. **Events: the production end-to-end test, and the redirect deferred**
     (Doug's ruling 10-09-26: *"We are not planning on modifying the production
     web site for a few weeks. We want to test the events functionality to be
@@ -1404,6 +1357,62 @@ toggle.
     over the fix on 2026-10-07, so the fix is still owed.
 
 ## Resolved
+
+**RESOLVED 2026-10-11 — #43 and #44 verified live by Doug on crm-test from the
+step page https://claude.ai/artifact/MrVb46cEZE5cdngyzo4NKZ, every step
+matched, confirmed in the web log: "+ Add funder" as sally.sponsor answered
+200 at 15:54:30 UTC (10 CRM calls), Wendy Kay's Events tab as partner.manager
+200 at 15:55:46, an engagement's Events tab as joe.mentor 200 at 15:56:51.
+Still open from #43 (c): whether a team-read funder manager can see the
+company on an existing, unowned funder record — that is #40.**
+
+44. **A contact's Events tab in the directory 403'd for every
+    non-administrator** (found 2026-10-11 by Doug as Pat Partner, opening the
+    contact he had just created through "+ Add partner"): *your CRM role is
+    missing read access to CEventRegistration records*. The Mentor Role, the
+    Partner Manager Role and the Sponsor Manager Role hold no access to the
+    registration record type on crm-test or production, and the tab read the
+    registrations as the user — as did the engagement record's Events tab in
+    Client Management, which no mentor can have seen work either. **Fixed in
+    v0.249.2** (pushed 10-11-26 11:42) by Doug's ruling, option B: the user's
+    own read of the contact / the engagement's contacts gates the tab, and
+    the history reads under the org-wide key (the partner / funder Events
+    tab rule). Step page for #43 and #44 together:
+    https://claude.ai/artifact/MrVb46cEZE5cdngyzo4NKZ (private, *Quick-Add
+    Live Check*, written 10-11-26). **Owed:** (a) the live check after the
+    push — the same contact's Events tab as partner.manager shows the history (empty is fine for
+    a contact with no registrations: "no events", not a red message); (b)
+    an engagement's Events tab as a real mentor on crm-test, never seen
+    working by a non-administrator.
+
+43. **"+ Add funder" as a real non-admin was refused by the CRM's assignment
+    check, misreported as a missing Contact grant** (found 2026-10-09 by Doug
+    on crm-test as Sally Sponsor; the first run of the quick-add create path
+    as a non-administrator, which #20 said had never been proven). The Sponsor
+    Manager Role holds Contact create; its Assignment Permission is *not-set*
+    on both CRMs, and the contact was created with no assigned user and no
+    team, so EspoCRM answered `Assignment failure: assigned user or team not
+    allowed` and the app's 403 wording blamed the create grant. **Fixed in
+    v0.249.0** (pushed 10-09-26 22:29): the new contact is owner-stamped like
+    the profile on both doors, and the hint names an assignment refusal.
+    **The v0.249.0 live check (10-09-26 22:36 UTC+4) got one step further
+    and found two more defects, fixed in v0.249.1 (pushed 10-09-26 22:52):**
+    the contact's company link was refused because the company was unowned
+    (`cannotRelateForbidden`, Account read), and the company match ran as
+    the user, so each attempt created another same-named Account (three
+    "Acme Bank" rows on crm-test, gone with the reset). The match, the team
+    lookup and the ownership now ride the API client; see the changelog.
+    **Owed:** (a) the live check after the next push — "+ Add funder" on
+    crm-test as Sally Sponsor saves, and the funder's Contacts table shows
+    the contact;
+    ~~(b) "+ Add partner" as Pat Partner the same way~~ — **done 2026-10-11
+    by Doug** (a partner for "Acme Bank and Loan" with Wendy Kay as the
+    contact saved on v0.249.1 and the contact opened from the directory); (c) the company is
+    still created unowned under the org-wide key — whether Sally can see it
+    on her new funder record is #40's question, not this one; (d) the orphan
+    `Account` "Acme Bank and Loan" the failed run left on crm-test — gone
+    with the nightly reset, nothing to do.
+
 
 39. **RESOLVED 2026-10-07 — Phase B of the mailing-list and event-sponsorship
     plan, the partner / funder pickers and the Events tab (v0.239.0).** The

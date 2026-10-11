@@ -1706,8 +1706,9 @@ each block.
   Partner on a contact's Events tab in the directory (403 on
   `CEventRegistration`, which no team role reads — every non-administrator
   since Phase 6c). Doug's ruling: option B, the sibling tabs' rule; standing
-  rule in the Events section. Verified by tests only — the live check is the
-  same tab as Pat Partner after the push (`OPEN-ITEMS.md` #44).
+  rule in the Events section. **Verified live by Doug 10-11-26** on crm-test as
+  partner.manager (contact tab) and joe.mentor (engagement tab), both 200 in
+  the web log (`OPEN-ITEMS.md` #44, resolved).
 
 - **v0.250.0 (2026-10-11) — the demo events carry presenters, a partner
   and a funder, seeded so a re-baseline keeps them.** Committed, not pushed.
@@ -1727,10 +1728,9 @@ each block.
   grant), then — on the v0.249.0 build — a refused read of the unowned
   company the contact linked to, plus a duplicate company per attempt
   because the match ran as a team-read user. Standing rules in the Session
-  Management section. Verified by tests only — the live check is
-  "+ Add funder" on crm-test as Sally Sponsor after the next push, the
-  funder saving and its Contacts table showing the contact
-  (`OPEN-ITEMS.md` #43).
+  Management section. **Verified live by Doug 10-11-26** on crm-test as
+  sally.sponsor: the funder saved (200, ten CRM calls) and its Details tab
+  listed the contact (`OPEN-ITEMS.md` #43, resolved).
 
 - **v0.248.0 (2026-10-09) — the receipt sweep converges; a timing line per
   API request.** Pushed 10-09-26 22:29. The last two review items; standing
