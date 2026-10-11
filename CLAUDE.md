@@ -1732,7 +1732,8 @@ each block.
 
 - **v0.252.0 (2026-10-11) — rich Funder Notes (live-typed), and the
   sign-in Show button out of the tab order.** Pushed 10-11-26 14:09; **v0.252.1**
-  (the scalar-metadata-key fix, found by the live pass) committed. Ships
+  (the scalar-metadata-key fix, found by the live pass) pushed 14:28 and
+  live on both 14:30. Ships
   dark on the notes side: the CRM field conversion is Doug's SSH step on
   crm-test (`csponsorprofile-description-wysiwyg-crm-handoff.md` § 1), then
   the pass as sally.sponsor (`OPEN-ITEMS.md` #47); production and Boston
