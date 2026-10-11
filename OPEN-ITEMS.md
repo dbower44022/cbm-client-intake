@@ -45,8 +45,10 @@ found; move resolved items to the bottom with the resolution date.
     v0.249.2** (pushed 10-11-26 11:42) by Doug's ruling, option B: the user's
     own read of the contact / the engagement's contacts gates the tab, and
     the history reads under the org-wide key (the partner / funder Events
-    tab rule). **Owed:** (a) the live check after the push — the same
-    contact's Events tab as Pat Partner shows the history (empty is fine for
+    tab rule). Step page for #43 and #44 together:
+    https://claude.ai/artifact/MrVb46cEZE5cdngyzo4NKZ (private, *Quick-Add
+    Live Check*, written 10-11-26). **Owed:** (a) the live check after the
+    push — the same contact's Events tab as partner.manager shows the history (empty is fine for
     a contact with no registrations: "no events", not a red message); (b)
     an engagement's Events tab as a real mentor on crm-test, never seen
     working by a non-administrator.
