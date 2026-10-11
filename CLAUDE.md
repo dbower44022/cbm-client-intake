@@ -1726,7 +1726,7 @@ each block.
   — **applied by Doug 10-11-26 13:46**, both links read back. **Live pass
   done the same afternoon** as partner.manager and sally.sponsor: the
   partner add, the funder add and the remove all 200 in the web log, the
-  reverse link read back as administrator (`OPEN-ITEMS.md` #45). Pushed
+  reverse link read back as administrator (`OPEN-ITEMS.md` #46). Pushed
   with the pass. Owed: production and Boston at a Sunday slot; a role
   ruling for a Mentor-Role-only user named on a funder (no CSponsorProfile
   read).

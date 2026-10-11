@@ -34,7 +34,7 @@ found; move resolved items to the bottom with the resolution date.
     15:26 and 15:29 UTC), which must be gone (tonight's reset) or deleted
     before the baseline is taken.
 
-45. **Additional managers on partner and funder records (v0.251.0) — CRM
+46. **Additional managers on partner and funder records (v0.251.0) — CRM
     change owed on all three CRMs, live pass owed** (built 2026-10-11 on
     Doug's requirement; changelog has the design). Step page for the whole
     crm-test rollout — apply, push, live pass as the two managers, My Email
