@@ -211,6 +211,7 @@ async def test_creates_account_contact_profile_and_links_them():
     assert profile["partnerManagerId"] == "MP1"
     assert profile["partnershipStatus"] == "Candidate"
     assert profile["assignedUsersIds"] == ["u1"]      # owner-stamped
+    assert profile["assignedUserId"] == "u1"          # … in both spellings (v0.249.3)
 
     # The contact joins the profile's Contacts hasMany, as intake does.
     assert fake.related == [("CPartnerProfile", res["id"], "contacts", "contact-1")]

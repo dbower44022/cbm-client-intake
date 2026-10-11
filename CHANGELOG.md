@@ -42,6 +42,21 @@ gone by morning; only a seeder stage plus a recapture survives.
   `SANDBOX-RESET.md` § *Re-baseline*, which now says why a CRM change that
   adds a table always needs one).
 
+## [0.249.3] — 2026-10-11
+
+**fix(sessions): the quick-added partner / funder record is owner-stamped in
+both spellings.** Found while counting ownership for `OPEN-ITEMS.md` #40:
+`CPartnerProfile` and `CSponsorProfile` carry the SINGLE `assignedUser`
+field on crm-test (no `assignedUsers`), so the `assignedUsersIds` the
+quick-add wrote since v0.195.0 was silently ignored there — the counts read
+0 assigned users across 17 records — and the team was the only thing making
+a new record visible to its creator (which, for a funder manager with no
+Team read, never resolved before v0.249.1). `create_record` now writes
+`assignedUserId` and `assignedUsersIds` both (`_owner_stamps`), the
+contact's and company's rule. Production's `CSponsorProfile` answered one
+record WITH a multi-user value, so the two CRMs may differ on the field;
+writing both covers either. Verified by tests only.
+
 ## [0.249.2] — 2026-10-11
 
 **fix(events): the contact and engagement Events tabs read registrations

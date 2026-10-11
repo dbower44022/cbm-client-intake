@@ -3462,9 +3462,12 @@ async def create_record(
         payload["teamsIds"] = team_ids
     # Owner-stamp the creator, so a role scoped to "own" can read back what it
     # just made (the new-session precedent — without the stamp the CREATE
-    # itself 403s, because EspoCRM ACL-checks the read-back).
-    if user_id:
-        payload["assignedUsersIds"] = [user_id]
+    # itself 403s, because EspoCRM ACL-checks the read-back). Both spellings:
+    # CPartnerProfile / CSponsorProfile carry the SINGLE ``assignedUser`` on
+    # crm-test (read 2026-10-11), so the multi-user id alone — all this wrote
+    # since v0.195.0 — was silently ignored there, and the team was the only
+    # thing making a new record visible to its creator.
+    payload.update(_owner_stamps(user_id, None))
 
     created = await client.create(cfg.parent_entity, payload)
     record_id = created["id"]
