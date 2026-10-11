@@ -37,7 +37,9 @@ found; move resolved items to the bottom with the resolution date.
 47. **Funder Notes as rich text (v0.252.0) — the CRM field conversion is
     owed on all three CRMs, then the pass** (Doug's request 2026-10-11). The
     app follows the field's live type, so nothing shows until
-    `CSponsorProfile.description` is `wysiwyg`. **Owed, in order:** (a)
+    `CSponsorProfile.description` is `wysiwyg`. Step page for the whole
+    crm-test rollout: https://claude.ai/artifact/59ZYyJM492BZFG8bMbbLtX
+    (private, *Funder Notes Rollout*, written 10-11-26). **Owed, in order:** (a)
     crm-test — Doug runs § 1 of `csponsorprofile-description-wysiwyg-crm-handoff.md`
     over SSH (one PHP heredoc and a rebuild; the file already carries the
     entry as `text`); (b) the pass as sally.sponsor from § 2 — the Overview's
