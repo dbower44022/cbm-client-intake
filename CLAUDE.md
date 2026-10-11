@@ -1714,8 +1714,8 @@ each block.
   sized it ran inside the production container (4 funders, 1 in team; 31
   partners, 17 in team, 9 with no company). **First pass verified in both
   worker logs on deploy** (production 35 records / 27 healed, crm-test 17 /
-  14, no errors). Owed: sally.sponsor seeing all sandbox funders, and the
-  same after a reset.
+  14, no errors) **and by Doug as sally.sponsor the same day** — every
+  sandbox funder in the grid (`OPEN-ITEMS.md` #40, resolved).
 
 - **v0.249.2 (2026-10-11) — the contact and engagement Events tabs read
   under the org-wide key.** Pushed 10-11-26 11:42. Found live by Doug as Pat

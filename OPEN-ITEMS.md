@@ -76,43 +76,6 @@ found; move resolved items to the bottom with the resolution date.
     on our page for a **webinar** gets no Zoom join link (Zoom is off), so
     the website keeps taking registrations until the redirect.
 
-40. **The training sandbox's funders were invisible to the Funder Management
-    demo login** (found 2026-10-07 during the Phase B live pass, section 5).
-    Sally Sponsor's role (Sponsor Manager Role, the roles standard) reads
-    `CSponsorProfile` at **team**, and none of the six sandbox funders carried
-    a team or an assigned user, so her grid was empty while an administrator
-    saw all six (administrators bypass ACL). The demo in `demo-records.md`
-    ("Open: Harrowgate Family Trust") predates crm-test being brought to the
-    roles standard on 2026-09-13, which is the likely moment it broke.
-    **Worked around 2026-10-07:** all six funders were put in the Sponsor
-    Management Team on crm-test by the configuration administrator (data only,
-    no role change). **Owed:** (a) ~~the nightly reset restores the data
-    snapshot, so this is gone by morning unless the sandbox is re-baselined~~
-    — **the seeder stamps it now** (10-11-26, `stamp_management_teams` in
-    `seed_training_data.py`, merge-only, both management teams on every
-    partner and funder profile); it holds once the re-baseline in #45 is
-    captured; (b) check whether production's funder records carry
-    the Sponsor Management Team or assigned users — if they do not, every
-    non-admin Funder Management user on production sees an empty grid too, and
-    the fix is data (teams on the records) rather than the role; (c) the same
-    question for partners, whose role reads at **all** today and so hides
-    nothing, but would if the standard ever tightened it.
-    **2026-10-11 — counted and built (Doug's ruling, option B):** production
-    has 4 funders with 1 in the team and 31 partners with 17 (and 9 partners
-    with no company at all, a separate data gap not yet looked at); crm-test
-    8 funders with 2, 9 partners with 1 — (a) confirmed, the reset un-teamed
-    them. **v0.250.0** (pushed 10-11-26 12:13) adds a phase to the worker's
-    nightly stamp reconciliation that merges the domain team onto every
-    partner / funder record, its company and its contacts, on every
-    deployment, every night — no re-baseline, no console run. **First pass
-    ran on deploy, 10-11-26 16:15–16:17 UTC, no errors:** production
-    `teamRecords 35, teamHealed 27`; crm-test `teamRecords 17, teamHealed
-    14` (the six sandbox funders, their companies and contacts joined the
-    Sponsor Management Team, named one by one in the worker log). **Owed:**
-    sally.sponsor seeing all eight sandbox funders in Funder Management
-    (and again the morning after a reset); the production partner records
-    with no company (9) remain a separate data gap; then resolve.
-
 34. **The worker reads its mail switches only at start-up, from the
     environment** (found 2026-09-23, reviewing the deployment guide before the
     first real chapter). `worker.py` decides `inbound_on` (the info@ poller) and
@@ -361,6 +324,14 @@ empty company on a partner/funder now renders as "—" and is fixable in the app
    crm-test) — fix in the CRM UI if wanted.
 
 ## Data cleanup
+
+- **Nine production partner records have no company linked** (found
+  2026-10-11 by the ownership count for #40: 22 of 31 `CPartnerProfile`
+  rows carry a `partnerCompanyId`). Not looked into: which nine, whether
+  the company exists unlinked, or whether the record is a programme with
+  no organisation (Doug's 2026-08-14 ruling allows that). A read-only
+  listing first; the Details tab's "+ New company" picker is the repair
+  path for any that should have one.
 
 10. **Two prod CBM members have no linked Contact — and one has no mentor
     status** (found 2026-07-28, probing the birthday roster; both CRMs read
@@ -1372,6 +1343,52 @@ toggle.
     over the fix on 2026-10-07, so the fix is still owed.
 
 ## Resolved
+
+**RESOLVED 2026-10-11 — #40: verified live by Doug on crm-test as
+sally.sponsor after the v0.250.0 deploy: Funder Management listed all the
+sandbox funders (grid read 200 at 16:19 UTC in the web log). The nightly
+reconciliation re-heals the sandbox after every reset, so no re-baseline
+is needed; the morning-after look is the reconciliation's own log line.
+Left behind as a separate data gap: nine production partner records with
+no company linked — see the Data cleanup section.**
+
+40. **The training sandbox's funders were invisible to the Funder Management
+    demo login** (found 2026-10-07 during the Phase B live pass, section 5).
+    Sally Sponsor's role (Sponsor Manager Role, the roles standard) reads
+    `CSponsorProfile` at **team**, and none of the six sandbox funders carried
+    a team or an assigned user, so her grid was empty while an administrator
+    saw all six (administrators bypass ACL). The demo in `demo-records.md`
+    ("Open: Harrowgate Family Trust") predates crm-test being brought to the
+    roles standard on 2026-09-13, which is the likely moment it broke.
+    **Worked around 2026-10-07:** all six funders were put in the Sponsor
+    Management Team on crm-test by the configuration administrator (data only,
+    no role change). **Owed:** (a) ~~the nightly reset restores the data
+    snapshot, so this is gone by morning unless the sandbox is re-baselined~~
+    — **the seeder stamps it now** (10-11-26, `stamp_management_teams` in
+    `seed_training_data.py`, merge-only, both management teams on every
+    partner and funder profile); it holds once the re-baseline in #45 is
+    captured; (b) check whether production's funder records carry
+    the Sponsor Management Team or assigned users — if they do not, every
+    non-admin Funder Management user on production sees an empty grid too, and
+    the fix is data (teams on the records) rather than the role; (c) the same
+    question for partners, whose role reads at **all** today and so hides
+    nothing, but would if the standard ever tightened it.
+    **2026-10-11 — counted and built (Doug's ruling, option B):** production
+    has 4 funders with 1 in the team and 31 partners with 17 (and 9 partners
+    with no company at all, a separate data gap not yet looked at); crm-test
+    8 funders with 2, 9 partners with 1 — (a) confirmed, the reset un-teamed
+    them. **v0.250.0** (pushed 10-11-26 12:13) adds a phase to the worker's
+    nightly stamp reconciliation that merges the domain team onto every
+    partner / funder record, its company and its contacts, on every
+    deployment, every night — no re-baseline, no console run. **First pass
+    ran on deploy, 10-11-26 16:15–16:17 UTC, no errors:** production
+    `teamRecords 35, teamHealed 27`; crm-test `teamRecords 17, teamHealed
+    14` (the six sandbox funders, their companies and contacts joined the
+    Sponsor Management Team, named one by one in the worker log). **Owed:**
+    sally.sponsor seeing all eight sandbox funders in Funder Management
+    (and again the morning after a reset); the production partner records
+    with no company (9) remain a separate data gap; then resolve.
+
 
 **RESOLVED 2026-10-11 — #43 and #44 verified live by Doug on crm-test from the
 step page https://claude.ai/artifact/MrVb46cEZE5cdngyzo4NKZ, every step
