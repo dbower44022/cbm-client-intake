@@ -101,7 +101,7 @@ found; move resolved items to the bottom with the resolution date.
     has 4 funders with 1 in the team and 31 partners with 17 (and 9 partners
     with no company at all, a separate data gap not yet looked at); crm-test
     8 funders with 2, 9 partners with 1 — (a) confirmed, the reset un-teamed
-    them. **v0.250.0** (committed, not pushed) adds a phase to the worker's
+    them. **v0.250.0** (pushed 10-11-26 12:13) adds a phase to the worker's
     nightly stamp reconciliation that merges the domain team onto every
     partner / funder record, its company and its contacts, on every
     deployment, every night — no re-baseline, no console run. **Owed:** the

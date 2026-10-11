@@ -1709,7 +1709,7 @@ each block.
 - **v0.250.0 / v0.249.3 (2026-10-11) — the nightly reconciliation puts
   partner and funder records, their companies and contacts into the domain
   team; the quick-added record is owner-stamped in both spellings.**
-  Committed, not pushed. `OPEN-ITEMS.md` #40, Doug's ruling option B;
+  Pushed 10-11-26 12:13. `OPEN-ITEMS.md` #40, Doug's ruling option B;
   standing rule in the Assignment stamps section. The read-only count that
   sized it ran inside the production container (4 funders, 1 in team; 31
   partners, 17 in team, 9 with no company). Verified by tests only — the
