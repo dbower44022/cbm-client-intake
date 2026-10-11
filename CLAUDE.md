@@ -1737,8 +1737,9 @@ each block.
   read back `wysiwyg` as the org key). **v0.252.2** (pushed 10-11-26 19:02, live on both 19:04, the served
   script carries the helper) is the review's find: the session tools did not up-convert a legacy plain
   note's line breaks (Client Administration did), so the pass as
-  sally.sponsor (`OPEN-ITEMS.md` #47) can run now; production and Boston
-  after, handoff § 3. The tab-order fix is live.
+  sally.sponsor (`OPEN-ITEMS.md` #47) **passed the same evening**; production
+  still shows the plain box because its field is unconverted — handoff § 3
+  at a Sunday slot, with the engagement conversion still owed there too. The tab-order fix is live.
 
 - **v0.251.0 (2026-10-11) — additional managers on partner and funder
   records.** Committed, not pushed; ships dark (feature-detected). Doug's

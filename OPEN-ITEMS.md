@@ -46,14 +46,14 @@ found; move resolved items to the bottom with the resolution date.
     of the handoff found the session tools did NOT up-convert a legacy
     plain note's line breaks (Client Administration did; the handoff had
     copied its sentence), so step 2.2 of the pass would have failed and
-    the first save would have stored the note collapsed. **Owed, in
-    order:** (c) the pass as sally.sponsor from § 2 on that build — the Overview's
-    Funder Notes and the Details tab open the rich editor, existing plain
-    notes keep their line breaks in the editor and the read views, an image
-    round-trips (a 403 naming Attachment create is a role grant, not this
-    build); (d) production and Boston the same way at a Sunday slot — the
-    handoff's § 3 now covers a file with no entry and Boston's possibly
-    missing file.
+    the first save would have stored the note collapsed; (c) **the pass as
+    sally.sponsor done 10-11-26 evening** (Doug: "testing completed on
+    test"). **Owed:** (d) production and Boston — Doug tried production the
+    same evening and the Funder Notes edit still opened the plain box,
+    which is the app detecting the unconverted `text` field, not a defect:
+    the handoff's § 3 edit at a Sunday slot (it now covers a file with no
+    entry and Boston's possibly missing file), alongside the still-owed
+    `CEngagement.description` conversion there.
 
 46. **Additional managers on partner and funder records (v0.251.0) — CRM
     change owed on all three CRMs, live pass owed** (built 2026-10-11 on
