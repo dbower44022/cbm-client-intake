@@ -4,6 +4,32 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.249.2] — 2026-10-11
+
+**fix(events): the contact and engagement Events tabs read registrations
+under the application key, after the user's own read gates the tab.**
+Found live by Doug as Pat Partner (Mentor Team + Partner Management Team,
+not an administrator) on a contact's Events tab in the directory: *your
+CRM role is missing read access to CEventRegistration records*. Verified on
+crm-test as administrator and in the 08-31-26 capture of production's
+roles: the Mentor Role, the Partner Manager Role and the Sponsor Manager
+Role hold no access to `CEventRegistration` at all, so the tab — which read
+the registrations as the signed-in user — has 403'd for every
+non-administrator since Phase 6c shipped (administrators bypass ACL, which
+is how it went unseen). The engagement record's Events tab in Client
+Management read the same records the same way.
+
+Doug's ruling 2026-10-11, option B over a role change on three CRMs: the
+user's own read (the contact; the engagement's contacts) still gates the
+tab, answering the same 403 / 404 as the rest of the record, and the history
+itself rides the org-wide key — the partner / funder Events tab's rule and
+the mentor-availability aggregate's. The cost, named: on these two screens
+the CRM role no longer decides who sees which webinars a person attended;
+anyone who may read the contact may. A keyless deploy reads as the user.
+
+Verified by tests only (a guard test pins both routers' shape). The live
+check is the same contact's Events tab as Pat Partner.
+
 ## [0.249.1] — 2026-10-09
 
 **fix(sessions): the quick-add matches and owns the COMPANY under the

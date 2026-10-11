@@ -6,6 +6,23 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+44. **A contact's Events tab in the directory 403'd for every
+    non-administrator** (found 2026-10-11 by Doug as Pat Partner, opening the
+    contact he had just created through "+ Add partner"): *your CRM role is
+    missing read access to CEventRegistration records*. The Mentor Role, the
+    Partner Manager Role and the Sponsor Manager Role hold no access to the
+    registration record type on crm-test or production, and the tab read the
+    registrations as the user — as did the engagement record's Events tab in
+    Client Management, which no mentor can have seen work either. **Fixed in
+    v0.249.2** (committed, not pushed) by Doug's ruling, option B: the user's
+    own read of the contact / the engagement's contacts gates the tab, and
+    the history reads under the org-wide key (the partner / funder Events
+    tab rule). **Owed:** (a) the live check after the push — the same
+    contact's Events tab as Pat Partner shows the history (empty is fine for
+    a contact with no registrations: "no events", not a red message); (b)
+    an engagement's Events tab as a real mentor on crm-test, never seen
+    working by a non-administrator.
+
 43. **"+ Add funder" as a real non-admin was refused by the CRM's assignment
     check, misreported as a missing Contact grant** (found 2026-10-09 by Doug
     on crm-test as Sally Sponsor; the first run of the quick-add create path
@@ -26,8 +43,9 @@ found; move resolved items to the bottom with the resolution date.
     **Owed:** (a) the live check after the next push — "+ Add funder" on
     crm-test as Sally Sponsor saves, and the funder's Contacts table shows
     the contact;
-    (b) "+ Add partner" as Pat Partner the same way (it passed only by the
-    looser role; the stamp must not have changed that); (c) the company is
+    ~~(b) "+ Add partner" as Pat Partner the same way~~ — **done 2026-10-11
+    by Doug** (a partner for "Acme Bank and Loan" with Wendy Kay as the
+    contact saved on v0.249.1 and the contact opened from the directory); (c) the company is
     still created unowned under the org-wide key — whether Sally can see it
     on her new funder record is #40's question, not this one; (d) the orphan
     `Account` "Acme Bank and Loan" the failed run left on crm-test — gone

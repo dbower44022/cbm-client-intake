@@ -42,7 +42,9 @@ log = logging.getLogger("cbm_intake.sessions")
 def _system_client(settings):
     """The org-wide API-key CRM client (None in dry-run / keyless deploys).
 
-    Used only for the partner / funder Events tab's COUNTS, which are
+    Used for the partner / funder Events tab's COUNTS, and since v0.249.2
+    for the engagement Events tab's rollup after the user's own read of the
+    engagement's contacts (Doug's ruling 2026-10-11). The counts are
     non-sensitive aggregates (events are not confidential — ruling D4 — and
     a registration count names nobody). The Partner Manager and Sponsor
     Manager roles hold no access to events, registrations or engagements
@@ -838,15 +840,26 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         @router.get("/records/{parent_id}/events")
         async def record_events(parent_id: str, request: Request) -> dict:
             user = _require_user(request)
-            client = client_for(get_settings(), user)
+            settings = get_settings()
+            client = client_for(settings, user)
             from events.reporting import engagement_rollup
 
+            # The user's own read of the engagement's contacts gates the tab;
+            # the rollup itself reads registrations under the org-wide key
+            # (Doug's ruling 2026-10-11, option B, the same rule as the
+            # contact's Events tab in the directory and the partner / funder
+            # one below): the Mentor Role reads no CEventRegistration, so as
+            # the user this tab 403'd for every mentor.
             try:
                 contacts = await client.list_related(
                     cfg.parent_entity, parent_id, cfg.parent_contacts_link,
                     select="id,name", max_size=200,
                 )
-                rows = await engagement_rollup(client, contacts.get("list", []))
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not read this record's contacts")
+            reader = _system_client(settings) or client
+            try:
+                rows = await engagement_rollup(reader, contacts.get("list", []))
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not load the events history")
             return {"events": rows}

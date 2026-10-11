@@ -8,6 +8,7 @@ engagement to postdate the first attended event.
 from __future__ import annotations
 
 import pytest
+from pathlib import Path
 
 from events import config as cfg
 from events import reporting
@@ -201,6 +202,26 @@ def test_contact_event_history_is_served_by_the_directory_not_the_events_app():
     assert "from events.reporting import contact_history" in router
     # Events off must be an empty panel, never an error.
     assert 'return {"events": [], "enabled": False}' in router
+
+
+def test_both_history_tabs_read_registrations_under_the_org_key_after_the_users_own_gate():
+    """No team role reads CEventRegistration (crm-test and production, read
+    2026-10-11), so a history computed AS THE USER 403s for every
+    non-administrator — found live by Doug as a partner manager on a
+    contact's Events tab. Doug's ruling (option B): the user's own read of
+    the contact / the engagement's contacts gates the tab, and the history
+    itself rides the org-wide key, the partner / funder Events tab's rule."""
+    directory = Path("directory/router.py").read_text(encoding="utf-8")
+    body = directory.split('"/records/{record_id}/events"', 1)[1].split("if cfg.mentor_page", 1)[0]
+    assert 'client.get("Contact", record_id, select="id")' in body
+    assert "reader = _system_client(settings) or client" in body
+    assert "contact_history(reader, record_id)" in body
+
+    sessions = Path("sessions/router.py").read_text(encoding="utf-8")
+    body = sessions.split("async def record_events(parent_id", 1)[1].split("sponsored_events_link", 1)[0]
+    assert "client.list_related(" in body            # gated as the user
+    assert "reader = _system_client(settings) or client" in body
+    assert "engagement_rollup(reader," in body
 
 
 def test_contact_event_history_frontend_is_wired():

@@ -33,8 +33,10 @@ log = logging.getLogger("cbm_intake.directory")
 def _system_client(settings: Settings) -> Optional[EspoClient]:
     """The org-wide API-key CRM client (None in dry-run / keyless deploys).
 
-    Used only for the mentor-availability aggregate, which must not vary with
-    the viewing mentor's ACL (they can't read peers' engagements)."""
+    Used for the mentor-availability aggregate, which must not vary with the
+    viewing mentor's ACL (they can't read peers' engagements), and since
+    v0.249.2 for a contact's event history, after the user's own read of the
+    contact has gated the tab (no team role reads CEventRegistration)."""
     if settings.espo_dry_run or not settings.espo_api_key:
         return None
     return EspoClient(
@@ -194,8 +196,21 @@ def make_router(cfg: DirectoryConfig) -> APIRouter:
         client = client_for(settings, user)
         from events.reporting import contact_history
 
+        # The user's own ACL gates the tab: a contact they may not read is the
+        # same 403 / 404 the rest of the record answers with.
         try:
-            return {"events": await contact_history(client, record_id), "enabled": True}
+            if not await client.get("Contact", record_id, select="id"):
+                raise HTTPException(status_code=404, detail="Record not found.")
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not read this contact")
+        # The history itself reads under the org-wide key (Doug's ruling
+        # 2026-10-11, option B — the partner / funder Events tab precedent):
+        # no team role reads CEventRegistration, so as the user this tab
+        # 403'd for every non-administrator since it shipped (found live by
+        # Doug as a partner manager). A keyless deploy reads as the user.
+        reader = _system_client(settings) or client
+        try:
+            return {"events": await contact_history(reader, record_id), "enabled": True}
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not load the event history")
 

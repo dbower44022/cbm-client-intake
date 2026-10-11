@@ -1093,7 +1093,11 @@ would be indistinguishable from a slug.
   (attendance rolled up across all of a client's contacts, deduplicated by
   event), the contact **Events tab** in the directory, and programme + conversion
   reports in `/events`. Conversion counts an attendee only when their engagement
-  postdates their first attended event.
+  postdates their first attended event. **Both record tabs read the
+  registrations under the org-wide key after the user's own read gates the
+  tab** (v0.249.2, Doug's ruling 2026-10-11, option B): no team role reads
+  `CEventRegistration`, so as the user they 403'd for every non-administrator
+  since they shipped. Same rule as the partner / funder Events tab.
 - **Registration recognition is designed, not built** —
   `prds/events/CBM_Events_Registration_Recognition_Plan.md` (Doug's rulings
   2026-08-17): recognise a returning registrant by a signed device token, else
@@ -1696,6 +1700,14 @@ with `main`; **Lakeside took it off the release lane by itself** (its
 unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
+
+- **v0.249.2 (2026-10-11) — the contact and engagement Events tabs read
+  under the org-wide key.** Committed, not pushed. Found live by Doug as Pat
+  Partner on a contact's Events tab in the directory (403 on
+  `CEventRegistration`, which no team role reads — every non-administrator
+  since Phase 6c). Doug's ruling: option B, the sibling tabs' rule; standing
+  rule in the Events section. Verified by tests only — the live check is the
+  same tab as Pat Partner after the push (`OPEN-ITEMS.md` #44).
 
 - **v0.249.0 / v0.249.1 (2026-10-09) — the quick-add contact AND company
   are owned by their creator and team, on both doors.** v0.249.0 pushed
