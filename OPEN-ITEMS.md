@@ -48,12 +48,16 @@ found; move resolved items to the bottom with the resolution date.
     copied its sentence), so step 2.2 of the pass would have failed and
     the first save would have stored the note collapsed; (c) **the pass as
     sally.sponsor done 10-11-26 evening** (Doug: "testing completed on
-    test"). **Owed:** (d) production and Boston — Doug tried production the
-    same evening and the Funder Notes edit still opened the plain box,
-    which is the app detecting the unconverted `text` field, not a defect:
-    the handoff's § 3 edit at a Sunday slot (it now covers a file with no
-    entry and Boston's possibly missing file), alongside the still-owed
-    `CEngagement.description` conversion there.
+    test"). **Owed:** (d) production — Doug tried production the same evening
+    and the Funder Notes edit still opened the plain box, which is the app
+    detecting the unconverted `text` field, not a defect. Doug ruled
+    10-11-26 19:2x: run it today. Step page for production, both notes
+    fields in one command plus the three passes:
+    https://claude.ai/artifact/Gm48QrmUkKyLpMYj1ss8pk (private, *Production
+    Notes Conversion*, written 10-11-26 19:40); the command is
+    `scripts/convert_notes_wysiwyg.sh` over SSH, read-only probe of both
+    files done 19:30 (both `text`). (e) Boston, same one line against its
+    droplet, when asked.
 
 46. **Additional managers on partner and funder records (v0.251.0) — CRM
     change owed on all three CRMs, live pass owed** (built 2026-10-11 on
@@ -524,8 +528,9 @@ clicked, then the pull dry run). § 11.9 step 4, the one-time migration
 script (production only).
 
 **Production's `CEngagement.description` → wysiwyg conversion** (added
-2026-08-31) — `cengagement-description-wysiwyg-crm-handoff.md` § 3, at a
-Sunday 17:00 UTC slot. It is the switch that turns Client Administration's
+2026-08-31) — `cengagement-description-wysiwyg-crm-handoff.md` § 3. **Rides
+the funder-notes production page** (#47 (d), 10-11-26): one command converts
+both fields, and section 3 of that page is this field's non-admin pass. It is the switch that turns Client Administration's
 Notes column rich on production (the app feature-detects the field's type per
 load, so nothing else is needed); crm-test's conversion is done and verified.
 The handoff's crm-test commands were verified against that droplet only —
