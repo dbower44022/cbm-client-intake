@@ -4,20 +4,31 @@ worker's nightly merge-only reconciliation; stamp-drift layer 3)."""
 from __future__ import annotations
 
 from core.config import Settings
+from core.espo import EspoError
 from assignments import stamps
 
 
 class FakeEspo:
-    def __init__(self, engagements=None, records=None, related=None, profiles=None):
+    def __init__(self, engagements=None, records=None, related=None, profiles=None,
+                 partners=None, sponsors=None, teams=None):
         self.engagements = engagements or []
         self.profiles = profiles or []           # CMentorProfile roster (phase A)
+        self.partners = partners or []           # CPartnerProfile rows (phase C)
+        self.sponsors = sponsors or []           # CSponsorProfile rows (phase C)
+        self.teams = dict(teams or {})           # team name -> id (phase C)
         self.records = dict(records or {})       # (entity, id) -> dict
         self.related = dict(related or {})       # (entity, id, link) -> [rows]
         self.updates: list[tuple[str, str, dict]] = []
 
     async def list(self, entity, *, select=None, max_size=200, offset=0, **kw):
-        rows = {"CEngagement": self.engagements, "CMentorProfile": self.profiles}[entity]
+        rows = {"CEngagement": self.engagements, "CMentorProfile": self.profiles,
+                "CPartnerProfile": self.partners, "CSponsorProfile": self.sponsors}[entity]
         return {"list": rows[offset:offset + max_size]}
+
+    async def find_one(self, entity, attribute, value, select="id"):
+        if entity == "Team" and value in self.teams:
+            return {"id": self.teams[value]}
+        return None
 
     async def list_related(self, entity, record_id, link, *, select=None, max_size=50):
         return {"list": self.related.get((entity, record_id, link), [])}
@@ -28,6 +39,13 @@ class FakeEspo:
     async def update(self, entity, record_id, payload):
         self.updates.append((entity, record_id, dict(payload)))
         self.records.setdefault((entity, record_id), {}).update(payload)
+        # A list row or a related row is the same record: keep them in step so
+        # a second pass sees what the first wrote (the idempotency tests).
+        for rows in (self.engagements, self.profiles, self.partners, self.sponsors,
+                     *self.related.values()):
+            for row in rows:
+                if row.get("id") == record_id:
+                    row.update(payload)
         return {"id": record_id}
 
 
@@ -196,3 +214,73 @@ async def test_ensure_user_on_record_is_noop_when_present():
     assert espo.updates == []
     assert await stamps.ensure_user_on_record(espo, "Contact", "c1", "u2") is True
     assert espo.updates == [("Contact", "c1", {"assignedUsersIds": ["u1", "u2"]})]
+
+
+# --- phase C: the domain team on partner / funder records (#40) ----------------
+
+def _team_fake(**over):
+    """One funder record out of its team, its company half in, two contacts:
+    one in, one out. One partner already fully in."""
+    values = dict(
+        teams={"Sponsor Management Team": "T-S", "Partner Management Team": "T-P"},
+        sponsors=[{"id": "S1", "name": "Harrowgate", "teamsIds": [], "sponsorCompanyId": "A-S"}],
+        partners=[{"id": "P1", "name": "Key Bank", "teamsIds": ["T-P"], "partnerCompanyId": "A-P"}],
+        records={
+            ("Account", "A-S"): {"teamsIds": ["T-Other"]},
+            ("Account", "A-P"): {"teamsIds": ["T-P"]},
+        },
+        related={
+            ("CSponsorProfile", "S1", "sponsorContacts"): [
+                {"id": "C-in", "teamsIds": ["T-S"]}, {"id": "C-out", "teamsIds": []},
+            ],
+            ("CPartnerProfile", "P1", "contacts"): [{"id": "C-P", "teamsIds": ["T-P"]}],
+        },
+    )
+    values.update(over)
+    return FakeEspo(**values)
+
+
+async def test_team_reconciliation_stamps_record_company_and_contacts_merge_only():
+    espo = _team_fake()
+    summary = await stamps.run_stamp_reconciliation(_settings(), client=espo)
+    assert summary["teamRecords"] == 2 and summary["teamHealed"] == 1
+    writes = {(e, r): p["teamsIds"] for e, r, p in espo.updates if "teamsIds" in p}
+    assert writes[("CSponsorProfile", "S1")] == ["T-S"]
+    assert writes[("Account", "A-S")] == ["T-Other", "T-S"]     # merge-only: the other team stays
+    assert writes[("Contact", "C-out")] == ["T-S"]
+    assert ("Contact", "C-in") not in writes                    # already in: no write
+    assert not any(e == "CPartnerProfile" for e, _, _ in espo.updates)  # fully in: untouched
+
+
+async def test_team_reconciliation_is_idempotent():
+    espo = _team_fake()
+    await stamps.run_stamp_reconciliation(_settings(), client=espo)
+    first = len(espo.updates)
+    summary = await stamps.run_stamp_reconciliation(_settings(), client=espo)
+    assert len(espo.updates) == first and summary["teamHealed"] == 0
+
+
+async def test_team_reconciliation_skips_a_domain_whose_team_is_missing(caplog):
+    espo = _team_fake(teams={"Partner Management Team": "T-P"})   # no sponsor team on this CRM
+    with caplog.at_level("WARNING"):
+        summary = await stamps.run_stamp_reconciliation(_settings(), client=espo)
+    assert "Sponsor Management Team" in caplog.text and "not found" in caplog.text
+    assert summary["teamRecords"] == 1          # the partner domain still ran
+    assert not any(e == "CSponsorProfile" for e, _, _ in espo.updates)
+
+
+async def test_team_reconciliation_one_record_failure_never_stops_the_pass():
+    class Flaky(FakeEspo):
+        async def list_related(self, entity, record_id, link, *, select=None, max_size=50):
+            if record_id == "S1":
+                raise EspoError("list_related CSponsorProfile/S1/sponsorContacts failed: HTTP 500")
+            return await super().list_related(entity, record_id, link, select=select, max_size=max_size)
+    espo = _team_fake()
+    espo.__class__ = Flaky
+    summary = await stamps.run_stamp_reconciliation(_settings(), client=espo)
+    assert summary["errors"] == 1
+    # the record and its company were stamped before the contacts read failed…
+    assert any(e == "CSponsorProfile" for e, _, _ in espo.updates)
+    # …and the partner domain still ran
+    assert summary["teamRecords"] == 2
+

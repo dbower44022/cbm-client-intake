@@ -1306,7 +1306,12 @@ the record lacks their `assignedUsers` stamp. Four layers handle it, all
 
 1. `scripts/audit_assignment_stamps.py` — read-only report, `--heal` to fix.
 2. The **Repair assignment** action in Client Administration.
-3. A **nightly reconciliation** in the worker.
+3. A **nightly reconciliation** in the worker — which since v0.250.0 also
+   puts every partner / funder record, its company and its contacts into
+   the **domain team** (`run_team_reconciliation`, Doug's ruling 2026-10-11:
+   the Sponsor Manager Role reads at *team*, so an un-teamed record is
+   invisible to its own managers; merge-only, re-heals the sandbox after
+   each reset, `teamRecords` / `teamHealed` on the summary line).
 4. **Heal-on-access** in `/mentorprofile` for the mentor's own Contact.
 
 Provisioning now stamps the Contact at source, which closed the largest inflow.
@@ -1700,6 +1705,17 @@ with `main`; **Lakeside took it off the release lane by itself** (its
 unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
+
+- **v0.250.0 / v0.249.3 (2026-10-11) — the nightly reconciliation puts
+  partner and funder records, their companies and contacts into the domain
+  team; the quick-added record is owner-stamped in both spellings.**
+  Committed, not pushed. `OPEN-ITEMS.md` #40, Doug's ruling option B;
+  standing rule in the Assignment stamps section. The read-only count that
+  sized it ran inside the production container (4 funders, 1 in team; 31
+  partners, 17 in team, 9 with no company). Verified by tests only — the
+  live check is the first nightly summary line on each worker:
+  `teamHealed` near those counts, then 0; and the sandbox funders visible
+  to sally.sponsor the morning after.
 
 - **v0.249.2 (2026-10-11) — the contact and engagement Events tabs read
   under the org-wide key.** Pushed 10-11-26 11:42. Found live by Doug as Pat

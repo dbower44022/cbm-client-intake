@@ -42,6 +42,41 @@ gone by morning; only a seeder stage plus a recapture survives.
   `SANDBOX-RESET.md` § *Re-baseline*, which now says why a CRM change that
   adds a table always needs one).
 
+## [0.250.0] — 2026-10-11
+
+**feat(stamps): the nightly reconciliation puts every partner and funder
+record, its company and its contacts into the domain team.** `OPEN-ITEMS.md`
+#40, Doug's ruling 2026-10-11 (option B over a one-off script). The Sponsor
+Manager Role reads funders, companies and contacts at *team*, and a record
+that belongs to no team is invisible to every non-administrator on the team.
+A read-only count on 10-11-26: production had 4 funder records with 1 in the
+Sponsor Management Team, and 31 partner records with 17 in the Partner
+Management Team (partners are unaffected today, the Partner Manager Role
+reading at *all*, and would vanish the day the standard tightens it);
+crm-test had 8 funders with 2 and 9 partners with 1 — the six sandbox
+funders put in the team by hand on 10-07 were un-teamed again by the nightly
+snapshot restore, as #40 predicted.
+
+- **Phase C of `assignments/stamps.run_stamp_reconciliation`**
+  (`run_team_reconciliation`): for each of `CPartnerProfile` /
+  `CSponsorProfile`, resolve the domain team by the `partner_team_name` /
+  `sponsor_team_name` setting, then merge it onto every record, the company
+  its FK names and every contact its contacts link lists. Merge-only (a team
+  is added, never removed), best-effort per record, one warning and a skip
+  for a CRM without the team. Same timer (`ASSIGNMENT_RECONCILE_SECONDS`,
+  daily), same summary line, which now carries `teamRecords` and
+  `teamHealed`. Runs on every deployment including Boston, and re-heals
+  the training sandbox every morning after its reset, so no re-baseline
+  is needed. The accepted cost is the reconciliation's own: a record
+  deliberately removed from its team is put back the next night.
+- The quick-add stamps new records at source since v0.249.1; this pass
+  converges what predates it.
+
+Verified by tests only (four new in `tests/test_stamps.py`; the fake now
+keeps list rows in step with updates). The live check is the first nightly
+summary line on each worker after the deploy — `teamHealed` near the
+counts above on the first night, then 0.
+
 ## [0.249.3] — 2026-10-11
 
 **fix(sessions): the quick-added partner / funder record is owner-stamped in

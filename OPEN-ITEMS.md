@@ -97,6 +97,17 @@ found; move resolved items to the bottom with the resolution date.
     the fix is data (teams on the records) rather than the role; (c) the same
     question for partners, whose role reads at **all** today and so hides
     nothing, but would if the standard ever tightened it.
+    **2026-10-11 — counted and built (Doug's ruling, option B):** production
+    has 4 funders with 1 in the team and 31 partners with 17 (and 9 partners
+    with no company at all, a separate data gap not yet looked at); crm-test
+    8 funders with 2, 9 partners with 1 — (a) confirmed, the reset un-teamed
+    them. **v0.250.0** (committed, not pushed) adds a phase to the worker's
+    nightly stamp reconciliation that merges the domain team onto every
+    partner / funder record, its company and its contacts, on every
+    deployment, every night — no re-baseline, no console run. **Owed:** the
+    first nightly summary line on the production and crm-test workers
+    (`teamHealed` near the counts above, then 0), and sally.sponsor seeing
+    all sandbox funders the morning after; then resolve.
 
 34. **The worker reads its mail switches only at start-up, from the
     environment** (found 2026-09-23, reviewing the deployment guide before the

@@ -179,6 +179,127 @@ async def all_mentor_profiles(client: Any) -> list[dict[str, Any]]:
         offset += _PAGE
 
 
+# --- partner / funder records: the domain TEAM (the THIRD drift class) --------
+# ``OPEN-ITEMS.md`` #40, Doug's ruling 2026-10-11 (option B): the Partner
+# Manager and Sponsor Manager roles read their records, companies and contacts
+# at *team* (the sponsor one today, the partner one the day the standard
+# tightens it), and a record that belongs to no team is invisible to every
+# non-administrator on that team — three of production's four funders were,
+# and the training sandbox's six are again every morning, because the nightly
+# reset restores a snapshot taken before they were put in the team by hand.
+# Same contract as the user stamps: merge-only (a team is added, never
+# removed), best-effort per record, the CRM's own links decide which company
+# and contacts belong to the record. The quick-add stamps new records at
+# source (v0.249.1); this pass converges everything that predates it or was
+# un-teamed by hand.
+
+#: (profile entity, the Settings attribute naming its team, the company FK,
+#: the contacts link) — the sessions ``DomainConfig`` facts, repeated here so
+#: the worker never imports the sessions package.
+TEAM_DOMAINS: tuple[tuple[str, str, str, str], ...] = (
+    ("CPartnerProfile", "partner_team_name", "partnerCompanyId", "contacts"),
+    ("CSponsorProfile", "sponsor_team_name", "sponsorCompanyId", "sponsorContacts"),
+)
+ACCOUNT = "Account"
+
+
+async def team_id_by_name(client: Any, name: str) -> Optional[str]:
+    """The Team id for ``name``, or None when it does not exist / is unreadable."""
+    if not (name or "").strip():
+        return None
+    team = await client.find_one("Team", "name", name.strip(), select="id")
+    return team["id"] if team else None
+
+
+async def ensure_team_on_record(
+    client: Any, entity: str, record_id: str, team_id: str,
+    current: Optional[list[str]] = None,
+) -> bool:
+    """Merge ONE team onto ONE record's ``teamsIds`` if missing. ``current`` is
+    the record's teams when the caller already read them (a list row); None
+    reads the record first. Returns True when a write happened."""
+    if current is None:
+        rec = await client.get(entity, record_id, select="teamsIds")
+        current = rec.get("teamsIds") or []
+    if team_id in current:
+        return False
+    await client.update(entity, record_id, {"teamsIds": list(current) + [team_id]})
+    return True
+
+
+async def all_domain_records(client: Any, entity: str, company_fk: str) -> list[dict[str, Any]]:
+    """Every partner / funder record (paged) with its teams and company id."""
+    rows: list[dict[str, Any]] = []
+    offset = 0
+    while True:
+        data = await client.list(
+            entity, select=f"id,name,teamsIds,{company_fk}", max_size=_PAGE, offset=offset
+        )
+        page = data.get("list", [])
+        rows.extend(page)
+        if len(page) < _PAGE:
+            return rows
+        offset += _PAGE
+
+
+async def run_team_reconciliation(
+    settings: Settings, client: Any, summary: dict[str, int]
+) -> None:
+    """One pass of the domain-team heal, adding to ``summary``: for every
+    partner / funder record, the record itself, its company and its contacts
+    carry the domain's team. A team the CRM does not have is logged once and
+    that domain skipped (nothing can be stamped); a record that fails is
+    counted and the pass goes on."""
+    for entity, team_attr, company_fk, contacts_link in TEAM_DOMAINS:
+        team_name = getattr(settings, team_attr, "") or ""
+        try:
+            team_id = await team_id_by_name(client, team_name)
+        except EspoError as exc:
+            summary["errors"] += 1
+            log.warning("team reconciliation: Team %r lookup failed: %s", team_name, exc)
+            continue
+        if not team_id:
+            log.warning(
+                "team reconciliation: Team %r not found — %s records cannot be "
+                "stamped on this CRM", team_name, entity,
+            )
+            continue
+        try:
+            records = await all_domain_records(client, entity, company_fk)
+        except EspoError as exc:
+            summary["errors"] += 1
+            log.warning("team reconciliation: %s listing failed: %s", entity, exc)
+            continue
+        for rec in records:
+            summary["teamRecords"] += 1
+            healed_here = False
+            try:
+                if await ensure_team_on_record(client, entity, rec["id"], team_id, rec.get("teamsIds") or []):
+                    healed_here = True
+                    log.info("team reconciliation: %s/%s %r joined %r",
+                             entity, rec["id"], rec.get("name"), team_name)
+                company_id = rec.get(company_fk)
+                if company_id and await ensure_team_on_record(client, ACCOUNT, company_id, team_id):
+                    healed_here = True
+                    log.info("team reconciliation: company Account/%s of %r joined %r",
+                             company_id, rec.get("name"), team_name)
+                contacts = await client.list_related(
+                    entity, rec["id"], contacts_link, select="id,teamsIds", max_size=_PAGE,
+                )
+                for ct in contacts.get("list", []):
+                    if await ensure_team_on_record(client, CONTACT, ct["id"], team_id, ct.get("teamsIds") or []):
+                        healed_here = True
+                        log.info("team reconciliation: Contact/%s of %r joined %r",
+                                 ct["id"], rec.get("name"), team_name)
+            except EspoError as exc:
+                summary["errors"] += 1
+                log.warning("team reconciliation: %s %r (%s) failed: %s",
+                            entity, rec.get("name"), rec["id"], exc)
+                continue
+            if healed_here:
+                summary["teamHealed"] += 1
+
+
 def system_client(settings: Settings) -> EspoClient:
     """The app's API-key client — entitlement derivation and healing must not
     vary with any staff user's ACL (the docs.grants pattern)."""
@@ -194,7 +315,9 @@ async def run_stamp_reconciliation(
 
     For every assigned, non-terminal engagement: derive the entitled users
     from the CRM's own links and MERGE any that are missing onto the
-    engagement / contacts / client profile / company. Corrections and
+    engagement / contacts / client profile / company. Then (phase C) every
+    partner / funder record, its company and its contacts carry the domain
+    team. Corrections and
     problems are logged (no alert — merges are the routine self-heal; the
     on-demand audit script is the reporting surface). Returns a summary, or
     None when there is no real CRM to run against."""
@@ -205,6 +328,7 @@ async def run_stamp_reconciliation(
         "audited": 0, "engagementsHealed": 0, "recordsHealed": 0,
         "profilesWithoutUser": 0, "errors": 0,
         "mentorProfiles": 0, "mentorContactsHealed": 0,
+        "teamRecords": 0, "teamHealed": 0,
     }
 
     # Phase A — mentor personnel: every profile's linked Contact must carry the
@@ -269,5 +393,13 @@ async def run_stamp_reconciliation(
                 "stamp reconciliation: engagement %r (%s) failed: %s",
                 eng.get("name"), eng["id"], exc,
             )
+    # Phase C — partner / funder records, their companies and contacts carry
+    # the domain team (#40, Doug's ruling 2026-10-11). Same timer, same
+    # summary line, so one log entry a night says what every pass found.
+    try:
+        await run_team_reconciliation(settings, client, summary)
+    except Exception as exc:  # noqa: BLE001 — never takes the user phases down with it
+        summary["errors"] += 1
+        log.warning("team reconciliation failed: %s", exc)
     log.info("assignment stamp reconciliation done: %s", summary)
     return summary
