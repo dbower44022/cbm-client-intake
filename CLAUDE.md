@@ -1740,6 +1740,13 @@ unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
 
+- **v0.253.0 (2026-10-12) — "Make primary" on a partner's or funder's
+  CBM contacts.** Committed, not pushed. Doug's request the same day, after
+  additional managers went live on production; his ruling: the former
+  manager is kept as an additional manager (option 1). No CRM change;
+  standing rule in the Session Management section. Verified by tests only
+  — the live pass is `OPEN-ITEMS.md` #48 (crm-test as sally.sponsor).
+
 - **v0.252.0 (2026-10-11) — rich Funder Notes (live-typed), and the
   sign-in Show button out of the tab order.** Pushed 10-11-26 14:09; **v0.252.1**
   (the scalar-metadata-key fix, found by the live pass) pushed 14:28 and

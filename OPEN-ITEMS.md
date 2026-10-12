@@ -34,6 +34,18 @@ found; move resolved items to the bottom with the resolution date.
     15:26 and 15:29 UTC), which must be gone (tonight's reset) or deleted
     before the baseline is taken.
 
+48. **"Make primary" on a partner's or funder's CBM contacts (v0.253.0) —
+    committed 10-12-26, live pass owed** (Doug's request and ruling
+    2026-10-12: the former manager is kept as an additional manager).
+    Needs no CRM change — it rides the additional-managers links, so it
+    works wherever those exist (crm-test, production; Boston with its
+    release). **Owed:** the pass on crm-test as sally.sponsor on a funder
+    that has an additional manager: the Make primary button on that row,
+    the swap (the row becomes Funder Manager, the former manager becomes an
+    additional manager, the Overview's manager fact follows), one click on
+    the former manager's row swapping back, and the former manager's My
+    Email still listing the record. Then production as a real non-admin.
+
 47. **Funder Notes as rich text (v0.252.0) — crm-test and production
     converted and passed 10-11-26; Boston owed** (Doug's request
     2026-10-11). The app follows the field's live type. Step page for the
