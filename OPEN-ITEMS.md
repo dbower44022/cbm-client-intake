@@ -35,7 +35,9 @@ found; move resolved items to the bottom with the resolution date.
     before the baseline is taken.
 
 48. **"Make primary" on a partner's or funder's CBM contacts (v0.253.0) —
-    live on crm-test and production 10-12-26 14:28, live pass owed** (Doug's request and ruling
+    live on crm-test and production 10-12-26 14:28; the pass matched
+    (Doug, 10-12-26 afternoon: "all steps passed") — RESOLVED except
+    Boston, which takes it with its release** (Doug's request and ruling
     2026-10-12: the former manager is kept as an additional manager).
     Needs no CRM change — it rides the additional-managers links, so it
     works wherever those exist (crm-test, production; Boston with its

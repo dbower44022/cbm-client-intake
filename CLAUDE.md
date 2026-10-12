@@ -1745,8 +1745,8 @@ each block.
   14:28 (the served script carries the button). Doug's request the same day, after
   additional managers went live on production; his ruling: the former
   manager is kept as an additional manager (option 1). No CRM change;
-  standing rule in the Session Management section. Verified by tests only
-  — the live pass is `OPEN-ITEMS.md` #48 (crm-test as sally.sponsor).
+  standing rule in the Session Management section. **Live pass matched
+  the same afternoon** (`OPEN-ITEMS.md` #48, Doug as sally.sponsor).
 
 - **v0.252.0 (2026-10-11) — rich Funder Notes (live-typed), and the
   sign-in Show button out of the tab order.** Pushed 10-11-26 14:09; **v0.252.1**
