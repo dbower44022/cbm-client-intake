@@ -1741,7 +1741,8 @@ Cleveland by design. What is *verified* is narrower than what is deployed — se
 each block.
 
 - **v0.253.0 (2026-10-12) — "Make primary" on a partner's or funder's
-  CBM contacts.** Committed, not pushed. Doug's request the same day, after
+  CBM contacts.** Pushed 10-12-26 14:25, live on crm-test and production
+  14:28 (the served script carries the button). Doug's request the same day, after
   additional managers went live on production; his ruling: the former
   manager is kept as an additional manager (option 1). No CRM change;
   standing rule in the Session Management section. Verified by tests only
