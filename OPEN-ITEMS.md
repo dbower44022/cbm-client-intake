@@ -34,8 +34,8 @@ found; move resolved items to the bottom with the resolution date.
     15:26 and 15:29 UTC), which must be gone (tonight's reset) or deleted
     before the baseline is taken.
 
-49. **The quick-add's Company picker (v0.254.0) — committed 10-12-26,
-    live pass owed.** Doug's question the same day; no CRM change. **Owed:**
+49. **The quick-add's Company picker (v0.254.0) — live on crm-test and
+    production 10-12-26 14:49, live pass owed.** Doug's question the same day; no CRM change. **Owed:**
     on crm-test as sally.sponsor, "+ Add funder": the Company box offers
     every company with its website beside the name; pick one that already
     has a partner profile (Key Bank, if the sandbox has it), leave the name
