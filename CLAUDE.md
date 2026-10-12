@@ -1766,13 +1766,14 @@ each block.
 
 - **v0.256.1 (2026-10-12) — the popup's Internal Notes render rich on a
   rich field; the discard dialog says Keep editing / Discard changes.**
-  Committed, not pushed. Doug's two reports the same evening; the Cancel
+  Pushed 18:15 with v0.256.0, live on crm-test and production 18:18 (the
+  served script carries both). Doug's two reports the same evening; the Cancel
   one could not be reproduced in the browser on either deployment (every
   path exits or asks), so the fix is the dialog's wording — if it recurs,
   ask which button was pressed and look in that browser's console.
 
 - **v0.256.0 (2026-10-12) — the referring partner named prominently in
-  the Client Administration popup.** Committed, not pushed. Doug's request
+  the Client Administration popup.** Pushed 18:15, live on both 18:18. Doug's request
   the same evening; standing rule in the Client Administration section.
   No CRM change, no flag. Verified by tests only; the live check is part of
   `OPEN-ITEMS.md` #50.
