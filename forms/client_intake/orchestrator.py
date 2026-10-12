@@ -93,6 +93,10 @@ _CONTACT_FILL_KEYS = (
 
 # --- Link names ---
 ENGAGEMENT_CONTACTS = "engagementContacts"  # CEngagement hasMany Contact
+PARTNER_PROFILE = "CPartnerProfile"
+REFERRING_PARTNER_ID = "referringPartnerId"  # CEngagement belongsTo CPartnerProfile
+# The engagement-notes line that records the attribution came from the link.
+REFERRAL_NOTE = "Referred through {name}'s client intake link."
 
 # --- System-set values (Requirements Specification §5.4) ---
 CLIENT = "Client"
@@ -270,11 +274,39 @@ async def _create_engagement(
     if requested:
         payload["requestedMentorId"] = requested
 
+    # The referring partner, when the form was opened through a partner's
+    # intake link (2026-10-12). Same validate-or-drop rule as the mentor
+    # request: the id arrives from a public URL, and a stale one would 400 the
+    # whole create. The notes line is deliberate — an app write and a staff
+    # hand-edit of the same field are indistinguishable in the CRM history, so
+    # this is the only record that the LINK made the attribution.
+    notes: list[str] = []
+    partner = await _valid_referring_partner(client, sub.referring_partner_id)
+    if partner:
+        payload[REFERRING_PARTNER_ID] = partner["id"]
+        notes.append(REFERRAL_NOTE.format(name=partner.get("name") or partner["id"]))
+
     note = san.note()
     if note:
-        payload["description"] = note
+        notes.append(note)
+    if notes:
+        payload["description"] = "\n".join(notes)
     created = await client.create(ENGAGEMENT, payload)
     return created["id"]
+
+
+async def _valid_referring_partner(client: EspoApi, partner_id: Optional[str]) -> Optional[dict]:
+    """The partner record (id + name) if ``partner_id`` names a real
+    CPartnerProfile, else None. Never raises: an optional attribution never
+    blocks the submission."""
+    if not partner_id:
+        return None
+    try:
+        found = await client.get(PARTNER_PROFILE, partner_id, select="id,name")
+    except Exception as exc:  # noqa: BLE001 — an optional attribution never blocks
+        log.warning("referring partner %r not usable (%s) — dropped", partner_id, exc)
+        return None
+    return found if found and found.get("id") else None
 
 
 async def _valid_requested_mentor(client: EspoApi, mentor_id: Optional[str]) -> Optional[str]:

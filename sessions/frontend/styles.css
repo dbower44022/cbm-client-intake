@@ -201,6 +201,10 @@ body.sx__col-resizing, body.sx__col-resizing * { cursor: col-resize !important; 
 .sxd__count { font-size: 12px; color: #77828f; font-weight: 400; }
 .sxd__card-h .sxd__btn, .sxd__card-h .sxd__addwrap { margin-left: auto; }
 .sxd__card-b { padding: 12px 16px; }
+/* The partner's own client intake link (Details tab): one read-only line + Copy. */
+.sxd__intake-link .cbm-help { margin: 0 0 8px; }
+.sxd__intake-link-row { display: flex; gap: 8px; align-items: center; }
+.sxd__intake-link-row input { flex: 1 1 auto; min-width: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; padding: 6px 8px; border: 1px solid #dfe3e8; border-radius: 4px; background: #f8f9fa; }
 .sxd__none { padding: 0.8rem 1rem; margin: 0; }
 
 /* 2/3. Two-column labeled row grid (Company / profile cards). */

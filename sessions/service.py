@@ -469,6 +469,15 @@ async def list_records(
     return {"records": records, "profileFound": True}
 
 
+def intake_referral_link(base_url: str, form_slug: str, record_id: str) -> str:
+    """The public intake link that credits ``record_id`` as the referring
+    partner: ``<base>/<form>/?partner=<id>``. ``base_url`` is the deployment's
+    own address (``APP_BASE_URL``, else the request's origin), so every
+    chapter hands out links to its own form with nothing to configure."""
+    base = (base_url or "").strip().rstrip("/")
+    return f"{base}/{form_slug.strip('/')}/?partner={record_id}"
+
+
 # The client engagements referred by a partner (the Referred Clients tab). One
 # read of CPartnerProfile.engagements; "Last Contact" reads the dedicated
 # ``lastContactDate`` field, advanced whenever an outbound email is sent or a

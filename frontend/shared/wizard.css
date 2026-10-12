@@ -12,6 +12,7 @@ body { margin: 0; padding: 2rem 0 4rem; }
 .intake__header { text-align: center; margin-bottom: 1.5rem; }
 .intake__header h1 { font-size: 2.25rem; }
 .intake__sub { color: var(--cbm-text); margin: 0 auto; max-width: 36rem; }
+.intake__referral { margin: 0.75rem auto 0; max-width: 36rem; padding: 0.5rem 0.9rem; border-radius: 6px; background: #fdf6e3; background: color-mix(in srgb, var(--cbm-gold) 15%, #fff); color: var(--cbm-text); font-size: 0.95rem; }
 
 /* Progress indicator */
 .wizard__progress {

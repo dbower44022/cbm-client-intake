@@ -310,6 +310,13 @@ class DomainConfig:
     # gating precedent). Each row is a referred engagement; clicking its name
     # opens the engagement in the mentor domain's own record page.
     referred_clients_link: Optional[str] = None
+    # The public intake form whose launch URL takes ``?partner=<this record's
+    # id>`` — a partner's own intake link (Doug's requirement 2026-10-12, the
+    # link form ruled "the CRM id"). Setting it puts the link, with a Copy
+    # button, on the record's Details tab; the form writes the engagement's
+    # referring partner, which the Referred Clients tab above then shows.
+    # Derived from the deployment's base address, never stored.
+    intake_link_form: Optional[str] = None
     #: EV-72 — the Events tab: which CBM events this record's people have
     #: attended, rolled up across ALL of its contacts. Mentor domain only:
     #: a client is a company, so the question is whether the CLIENT engaged
@@ -850,6 +857,8 @@ PARTNER = DomainConfig(
     # Client engagements that name this partner as their referring partner
     # (reverse of CEngagement.referringPartner) — the Referred Clients tab.
     referred_clients_link="engagements",
+    # This partner's own client intake link (?partner=<id>) on the Details tab.
+    intake_link_form="client-intake",
     # Events this partner is associated with (reverse of CEvent.partnerProfiles).
     sponsored_events_link="sponsoredEvents",
     # Reuse the existing date field — advanced on outbound email / recorded session.

@@ -528,11 +528,21 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         """The Details tab: editable field sections for the company, profile, and
         related contacts behind this record."""
         user = _require_user(request)
-        client = client_for(get_settings(), user)
+        settings = get_settings()
+        client = client_for(settings, user)
         try:
-            return await details_svc.build_details(cfg, client, parent_id, user.get("userId"))
+            result = await details_svc.build_details(cfg, client, parent_id, user.get("userId"))
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not load details")
+        # The record's own public intake link (partner domain): derived here,
+        # where the deployment's address is known, never stored on the record.
+        if cfg.intake_link_form:
+            base = (settings.app_base_url or "").strip() or str(request.base_url)
+            result["intakeLink"] = {
+                "url": service.intake_referral_link(base, cfg.intake_link_form, parent_id),
+                "label": "Client intake link",
+            }
+        return result
 
     # The Details tab only ever edits this domain's configured entities plus
     # the related-contact rows. Without this allowlist the PUT below is a

@@ -1,4 +1,5 @@
-"""The client-intake form's one extra public route: the mentor roster.
+"""The client-intake form's two extra public routes: the mentor roster and
+the referring-partner lookup.
 
 Why a live endpoint rather than a value baked into ``frontend/options.js`` (the
 repo's usual pattern for CRM-backed dropdowns): the roster is *operational*
@@ -11,15 +12,23 @@ Exposure: the endpoint returns NAMES ONLY, and only for mentors whose
 ``publicProfile`` is already true — i.e. people already listed on
 clevelandbusinessmentors.org. No email, phone, capacity or status is returned,
 so this publishes nothing that is not already public.
+
+The partner lookup (2026-10-12) answers ``?partner=<CPartnerProfile id>`` on the
+form's launch URL — a partner's own intake link — with the partner's NAME so
+the applicant sees "You were referred by …". Same exposure rule: name only,
+and the ids are random 17-character values, so the route cannot be walked
+through to list partners. An unknown id is a 404 and the form behaves as if
+no link had been used.
 """
 
 from __future__ import annotations
 
 import logging
+import re
 import time
 from typing import Any, Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from core.espo import EspoApi
 
@@ -27,6 +36,9 @@ log = logging.getLogger("cbm_intake.client_intake.roster")
 
 MENTOR_PROFILE = "CMentorProfile"
 MENTOR_STATUS_ACTIVE = "Active"
+PARTNER_PROFILE = "CPartnerProfile"
+# An EspoCRM record id (17 alphanumerics today; bounded, never a path).
+_RECORD_ID = re.compile(r"^[A-Za-z0-9]{1,32}$")
 
 # The roster changes rarely and this endpoint is public, so a short in-process
 # cache keeps a burst of form loads (or a bot) off the CRM. Matches the app's
@@ -63,6 +75,16 @@ async def fetch_mentors(client: EspoApi) -> list[dict[str, str]]:
     return mentors
 
 
+async def fetch_partner(client: EspoApi, partner_id: str) -> Optional[dict[str, str]]:
+    """``{id, name}`` for a real partner profile, else None. Name only."""
+    if not _RECORD_ID.match(partner_id or ""):
+        return None
+    record = await client.get(PARTNER_PROFILE, partner_id, select="id,name")
+    if not record or not record.get("id") or not record.get("name"):
+        return None
+    return {"id": record["id"], "name": record["name"]}
+
+
 def make_router(client_factory) -> APIRouter:
     """``client_factory`` is called per request to build an EspoApi (the app
     already owns credential handling; this module never sees them)."""
@@ -86,5 +108,20 @@ def make_router(client_factory) -> APIRouter:
         _cache["mentors"] = found
         _cache["at"] = now
         return {"mentors": found}
+
+    @router.get("/partner/{partner_id}")
+    async def partner(partner_id: str) -> dict:
+        """The referring partner's name for the form's banner. Every failure —
+        a malformed id, an unknown record, a CRM outage — is the same 404, so
+        the form simply shows no banner; the attribution itself is decided at
+        delivery, not here."""
+        try:
+            found = await fetch_partner(client_factory(), partner_id)
+        except Exception as exc:  # noqa: BLE001 — degrade, never 500
+            log.warning("referring partner lookup failed: %s", exc)
+            found = None
+        if not found:
+            raise HTTPException(status_code=404, detail="Not found")
+        return {"partner": found}
 
     return router

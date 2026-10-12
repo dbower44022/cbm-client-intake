@@ -3859,6 +3859,7 @@
     (currentDetails.sections || []).forEach(function (sec, i) {
       host.appendChild(sec.kind === "parent" ? parentStrip(sec, "parent") : orgCard(sec, "org" + i));
     });
+    if (currentDetails.intakeLink) host.appendChild(intakeLinkCard());
     host.appendChild(clientContactsCard());
     if (currentDetails.cbmContacts) host.appendChild(cbmContactsCard());
   }
@@ -3891,7 +3892,38 @@
     }
     if (key === "clientContacts") return clientContactsCard();
     if (key === "cbmContacts") return cbmContactsCard();
+    if (key === "intakeLink") return currentDetails.intakeLink ? intakeLinkCard() : null;
     return null;
+  }
+
+  // The record's own public intake link (partner domain, 2026-10-12): the
+  // address a partner places in an email or on their website so that every
+  // mentor request made through it credits them as the referring partner.
+  // Read-only — the server derives it from the deployment's address — with a
+  // Copy button; the result shows on the Referred Clients tab.
+  function intakeLinkCard() {
+    var info = currentDetails.intakeLink || {};
+    var card = document.createElement("div"); card.className = "sxd__card"; card.dataset.dkey = "intakeLink";
+    card.appendChild(cardHeadEl(info.label || "Client intake link", null));
+    var body = document.createElement("div"); body.className = "sxd__card-b sxd__intake-link";
+    var help = document.createElement("p"); help.className = "cbm-help";
+    help.textContent = "Give this link to the partner for their emails or website. Every mentor request made through it names them as the referring partner, and those requests appear on the Referred Clients tab.";
+    var row = document.createElement("div"); row.className = "sxd__intake-link-row";
+    var inp = document.createElement("input"); inp.type = "text"; inp.readOnly = true; inp.value = info.url || "";
+    inp.setAttribute("aria-label", info.label || "Client intake link");
+    inp.addEventListener("focus", function () { inp.select(); });
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "sxd__btn"; btn.textContent = "Copy link";
+    btn.addEventListener("click", function () {
+      var text = inp.value;
+      var done = function () { btn.textContent = "Copied"; setTimeout(function () { btn.textContent = "Copy link"; }, 1500); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text); done(); });
+      } else { fallbackCopy(text); done(); }
+    });
+    row.appendChild(inp); row.appendChild(btn);
+    body.appendChild(help); body.appendChild(row);
+    card.appendChild(body);
+    return card;
   }
 
   // === Section edit screens (prompt v0.2 / Company mockup v3) ================

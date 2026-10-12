@@ -88,6 +88,47 @@
       /* roster unavailable — the field stays hidden, the form works as before */
     });
 
+  // A partner's intake link (?partner=<CPartnerProfile id>, 2026-10-12): the
+  // id rides in a hidden field for the whole wizard and is written to the
+  // engagement's referring partner at delivery. The banner and the preset
+  // "How did you hear" are courtesy only — they appear when the partner
+  // resolves, and a bad or stale id leaves the form exactly as it was. The
+  // attribution itself is validated again server-side, so nothing here is
+  // load-bearing.
+  const referralInput = document.getElementById("referring_partner_id");
+  const referralParam = (function () {
+    try {
+      return (new URLSearchParams(window.location.search).get("partner") || "").trim();
+    } catch (e) {
+      return "";
+    }
+  })();
+  if (referralInput && /^[A-Za-z0-9]{1,32}$/.test(referralParam)) {
+    referralInput.value = referralParam;
+    fetch("/api/client-intake/partner/" + encodeURIComponent(referralParam), {
+      headers: { Accept: "application/json" },
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((body) => {
+        const partner = body && body.partner;
+        if (!partner || !partner.name) return;
+        const banner = document.getElementById("referral_banner");
+        const nameEl = document.getElementById("referral_partner_name");
+        if (banner && nameEl) {
+          nameEl.textContent = partner.name;
+          banner.hidden = false;
+        }
+        // Preset, never forced: the applicant can still pick another answer.
+        const heard = document.getElementById("how_did_you_hear");
+        if (heard && !heard.value && OPT.howDidYouHear.indexOf("Partner Referral") >= 0) {
+          heard.value = "Partner Referral";
+        }
+      })
+      .catch(() => {
+        /* lookup unavailable — no banner; the id still rides with the submission */
+      });
+  }
+
   // Multi-select focus areas as checkboxes
   const focusWrap = document.getElementById("mentoring_focus_areas");
   const focusLabels = [];
@@ -254,12 +295,16 @@
       ["Phone", val("phone")],
       ["Zip", val("zip_code")],
       ["How heard", val("how_did_you_hear")],
+    ];
+    const referredBy = document.getElementById("referral_partner_name");
+    if (referredBy && referredBy.textContent) rows.push(["Referred by", referredBy.textContent]);
+    rows.push(
       ["Areas of mentoring", areas.length ? areas.join(", ") : "—"],
       ["Needs", val("mentoring_needs_description")],
       ["Meeting preference", val("meeting_preference")],
       ["Notification preference", val("notification_preference")],
-      ["Business stage", val("business_stage")],
-    ];
+      ["Business stage", val("business_stage")]
+    );
     if (stageSel.value && stageSel.value !== "Pre-Startup") {
       rows.push(
         ["Business name", val("business_name")],
@@ -311,6 +356,7 @@
         .getElementById("mentoring_needs_description")
         .value.trim(),
       requested_mentor_id: strOrNull("requested_mentor_id"),
+      referring_partner_id: strOrNull("referring_partner_id"),
       meeting_preference: strOrNull("meeting_preference"),
       notification_preference: strOrNull("notification_preference"),
       business_stage: stageSel.value,

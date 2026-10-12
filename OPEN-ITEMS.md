@@ -34,6 +34,19 @@ found; move resolved items to the bottom with the resolution date.
     15:26 and 15:29 UTC), which must be gone (tonight's reset) or deleted
     before the baseline is taken.
 
+50. **A partner's own client intake link (v0.255.0) — committed, live
+    pass owed.** Doug's requirement 10-12-26, link form ruled the CRM id;
+    no CRM change. **Owed, on crm-test:** as partner.manager open a
+    partner's Details tab, copy the *Client intake link* (it should read
+    `https://cbm-client-intake-svxs3.ondigitalocean.app/client-intake/?partner=<id>`);
+    open it signed out — the banner "You were referred by <partner>"
+    shows and "How did you hear" reads *Partner Referral*; submit a test
+    request; after delivery the engagement in Client Administration shows
+    that Referring partner, its notes carry "Referred through …'s client
+    intake link.", and the partner's Referred Clients tab lists it. Then
+    the same link with the id altered: no banner, the form works, no
+    partner on the engagement. Then production as a real non-admin.
+
 49. **The quick-add's Company picker (v0.254.0) — live on crm-test and
     production 10-12-26 14:49, live pass owed.** Doug's question the same day; no CRM change. **Owed:**
     on crm-test as sally.sponsor, "+ Add funder": the Company box offers

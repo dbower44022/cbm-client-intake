@@ -4,6 +4,46 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.255.0] — 2026-10-12
+
+**feat(client-intake): a partner's own intake link credits them as the
+referring partner.** Doug's requirement 2026-10-12: a link a partner can
+place in an email or on their website so that every mentor request made
+through it names that partner on the engagement. Link form ruled **the CRM
+id** (over a signed token or a readable code): no CRM change, nothing to
+administer, works today for every partner; the ids are random
+seventeen-character values, so the cost is only that a swapped id credits
+the wrong partner, which staff can correct in Client Administration.
+
+- **The form reads `?partner=<CPartnerProfile id>`** from its launch URL
+  into a hidden field that rides the whole wizard and the captured payload
+  (`referring_partner_id`, bounded like the requested mentor), so a held
+  submission delivered later still attributes.
+- **The applicant sees it**: a banner under the heading, "You were referred
+  by <partner>", and "How did you hear" preset to *Partner Referral* (still
+  editable). Both come from a new public lookup,
+  `GET /api/client-intake/partner/{id}`, which answers the name only and
+  404s on a malformed id, an unknown record or a CRM outage, so a bad link
+  leaves the form exactly as it was. The review step shows "Referred by".
+- **Delivery writes `CEngagement.referringPartnerId`** after the same
+  validate-or-drop read the requested mentor gets (an unknown id drops the
+  attribution, never the submission), and appends *"Referred through
+  <partner>'s client intake link."* to the engagement notes, because an app
+  write and a staff hand-edit of that field are indistinguishable in the
+  CRM history. The Referred Clients tab on the partner record, which
+  already existed, is where the result shows.
+- **The link is on the partner's Details tab** with a Copy button, in a
+  card under the summary strip. `DomainConfig.intake_link_form`
+  (partner only) gates it; the router derives the address from
+  `APP_BASE_URL` (else the request's origin) through
+  `service.intake_referral_link`, so each chapter hands out links to its
+  own form with nothing configured and nothing stored on the record.
+- Deliberately not built: click tracking (only completed submissions are
+  known), a partner-status check (a Candidate's link still attributes), the
+  parameter on the other forms, a "Referred by" chip in Submission Admin.
+- No flag; rollback is a revert. Verified by tests only — the live pass is
+  `OPEN-ITEMS.md` #50.
+
 ## [0.254.0] — 2026-10-12
 
 **feat(sessions): the quick-add's Company is a picker.** Doug's question

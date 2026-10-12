@@ -17,6 +17,9 @@
     <header class="intake__header">
       <h1>Request a Mentor</h1>
       <p class="intake__sub">Tell us about you and your business, and what you'd like help with. It takes a few minutes.</p>
+      <!-- Shown only when the form was opened through a partner's intake link
+           (?partner=<id>) AND the partner resolves — an unknown id shows nothing. -->
+      <p class="intake__referral" id="referral_banner" hidden>You were referred by <strong id="referral_partner_name"></strong>.</p>
     </header>
 
     <!-- Progress -->
@@ -28,6 +31,8 @@
     </ol>
 
     <form id="intakeForm" novalidate>
+      <!-- The referring partner from the launch URL (?partner=<id>); never typed. -->
+      <input type="hidden" id="referring_partner_id" name="referring_partner_id" />
       <!-- Honeypot: visually hidden, must stay empty -->
       <div class="hp" aria-hidden="true">
         <label>Leave this field empty <input type="text" name="xtra_note" id="xtra_note" tabindex="-1" autocomplete="off" /></label>

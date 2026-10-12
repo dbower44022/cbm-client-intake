@@ -83,6 +83,17 @@ Cross-form behaviour worth knowing before changing an orchestrator:
 - Volunteer's `contact_preference`, `currently_employed` and `how_did_you_hear`
   are **required in the form only** (frontend `required` + `checkValidity()`),
   deliberately NOT in the Pydantic schema — a direct API call may omit them.
+- **A partner's intake link credits them as the referring partner**
+  (v0.255.0, Doug's requirement 2026-10-12, link form ruled **the CRM id**):
+  `client-intake/?partner=<CPartnerProfile id>` rides a hidden field and the
+  captured payload (`referring_partner_id`); delivery writes
+  `CEngagement.referringPartnerId` after a validate-or-drop read (an unknown
+  id drops the attribution, never the submission) and appends a notes line
+  saying the LINK did it. The banner and the *Partner Referral* preset come
+  from the public name-only lookup `GET /api/client-intake/partner/{id}`,
+  which 404s on anything it cannot resolve. The link itself is on the
+  partner's Details tab (`DomainConfig.intake_link_form`), derived from
+  `APP_BASE_URL`, never stored.
 - Every input collected across all five forms maps to a real CRM field; nothing
   is silently dropped. Record: `field-mapping-completion-plan.md`.
 
@@ -714,6 +725,12 @@ one shared frontend that derives its domain from the first segment of its URL.
   *virtual* type — the frontend translates the Duration select into a recomputed
   `dateEnd`. The time picker **shades slots that conflict** with the user's own
   Google calendar (advisory only — a shaded slot stays selectable).
+- **The partner's Details tab carries its client intake link** (v0.255.0):
+  a card under the summary strip with the `?partner=<id>` address and a
+  Copy button, gated by `DomainConfig.intake_link_form` (partner only) and
+  derived in the router from `APP_BASE_URL`, else the request's origin.
+  What the link produces shows on the Referred Clients tab. Rule in the
+  five-forms section above.
 - **Additional managers on partner and funder records** (v0.251.0, Doug's
   requirement 2026-10-11, both doors alike): the co-mentor model —
   `CPartnerProfile.additionalManagers` / `CSponsorProfile.additionalManagers`
@@ -1743,6 +1760,12 @@ with `main`; **Lakeside took it off the release lane by itself** (its
 unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
+
+- **v0.255.0 (2026-10-12) — a partner's own client intake link.**
+  Committed, not pushed. Doug's requirement the same afternoon, discussed
+  first; link form ruled the CRM id. No CRM change, no flag; rollback is a
+  revert. Standing rules in the five-forms and Session Management
+  sections. Verified by tests only — the live pass is `OPEN-ITEMS.md` #50.
 
 - **v0.254.0 (2026-10-12) — the quick-add's Company is a picker.**
   Pushed 14:46, live on crm-test and production 14:49 (the served script

@@ -48,6 +48,12 @@ class IntakeSubmission(BaseSubmission):
     # Free string, not a Literal: the roster is live data (see the
     # non-required-enums-never-block policy).
     requested_mentor_id: Optional[str] = Field(default=None, max_length=32)
+    # The partner whose intake link opened the form (a CPartnerProfile id read
+    # from the launch URL's ``?partner=`` parameter — Doug's requirement
+    # 2026-10-12, link form ruled "the CRM id"). Written to the engagement's
+    # referring partner after the same validate-or-drop read the requested
+    # mentor gets: an unknown id drops the attribution, never the submission.
+    referring_partner_id: Optional[str] = Field(default=None, max_length=32)
 
     # --- Step 3: Your Business (-> Account). All optional even when shown,
     # per Requirements Specification §5.2; business_stage is the branch trigger. ---
