@@ -1762,7 +1762,8 @@ Cleveland by design. What is *verified* is narrower than what is deployed — se
 each block.
 
 - **v0.255.0 (2026-10-12) — a partner's own client intake link.**
-  Committed, not pushed. Doug's requirement the same afternoon, discussed
+  Pushed 17:40, live on crm-test and production 17:42 (both served scripts
+  carry the new code; the lookup 404s an unknown id on both). Doug's requirement the same afternoon, discussed
   first; link form ruled the CRM id. No CRM change, no flag; rollback is a
   revert. Standing rules in the five-forms and Session Management
   sections. Verified by tests only — the live pass is `OPEN-ITEMS.md` #50.

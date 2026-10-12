@@ -34,8 +34,8 @@ found; move resolved items to the bottom with the resolution date.
     15:26 and 15:29 UTC), which must be gone (tonight's reset) or deleted
     before the baseline is taken.
 
-50. **A partner's own client intake link (v0.255.0) — committed, live
-    pass owed.** Doug's requirement 10-12-26, link form ruled the CRM id;
+50. **A partner's own client intake link (v0.255.0) — live on crm-test
+    and production 10-12-26 17:42, live pass owed.** Doug's requirement 10-12-26, link form ruled the CRM id;
     no CRM change. **Owed, on crm-test:** as partner.manager open a
     partner's Details tab, copy the *Client intake link* (it should read
     `https://cbm-client-intake-svxs3.ondigitalocean.app/client-intake/?partner=<id>`);
