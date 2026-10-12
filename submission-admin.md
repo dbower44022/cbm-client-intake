@@ -121,6 +121,14 @@ that reconciliation on demand (safe to press any time).
   Contact, plus the Information Request — exactly as if the person had used
   the website form (marked as source "Email"). **Discard** is the spam
   button: the email leaves the queue and nothing is ever written to the CRM.
+  **An email never creates a company, partner or funder** — an email names
+  no company the way a form does, so the sender's Contact is created with
+  no company, under the placeholder name taken from their address. A
+  company the message mentions (a sponsor's payment notice, say) is added
+  by hand in Partner or Funder Management. **A comment on the row records
+  a decision; it changes nothing in the CRM** — "Added X to Partners" in
+  the comments is a note of something done elsewhere, not a record (10-12-26,
+  reference `020223a3`: the note was true of no CRM record).
 
 ## The submission page
 

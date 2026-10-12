@@ -1458,6 +1458,27 @@ toggle.
 
 ## Resolved
 
+**RESOLVED 2026-10-12 — an info@ submission "that created a partner" never
+did, and nothing was lost.** Doug asked why the partner from reference
+`020223a3` could not be seen. The row is an inbound info@ email (a funder's
+sponsorship-payment notice, 10-02-26), not a partner form; its delivery
+created the sender's Contact and an Information Request, exactly its scope.
+The "partner" was a staff comment on the row, "Added PNC Bank to Partners.",
+written six seconds before Approve. Read as administrator on production:
+no Company, partner, funder or Contact named PNC exists; nothing
+partner-shaped was created or edited on 10-02/03; the Action Log holds no
+partner action; and the commenter is in no Partner Management team and
+holds no role that creates a partner profile, so the comment describes
+something outside the CRM. No defect. Two lessons kept in
+`submission-admin.md`: an email never creates a company, and a comment is
+a note, not a record. Follow-up is Doug's: ask the commenter where PNC was
+added, or enter PNC Bank as a **funder** (the payment makes it one).
+**How it was read:** a submission reference is the first eight characters
+of the row id; the production row came from `/ops/api/submissions` under
+Doug's portal session, and the CRM-side checks ran as Doug's administrator
+session in the browser — crm-test's receipts are emptied by the nightly
+reset, so a reference that matches nothing there is a production one.**
+
 **RESOLVED 2026-10-11 — #40: verified live by Doug on crm-test as
 sally.sponsor after the v0.250.0 deploy: Funder Management listed all the
 sandbox funders (grid read 200 at 16:19 UTC in the web log). The nightly
