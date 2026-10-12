@@ -669,7 +669,8 @@
       showConfirmModal({
         title: "Discard your changes?",
         body: "The edits you made to this engagement have not been saved.",
-        confirmLabel: "Discard",
+        cancelLabel: "Keep editing",
+        confirmLabel: "Discard changes",
       }, function () { closeModal(true); });
       return;
     }
@@ -844,8 +845,19 @@
 
     renderRichText($("modalNeeds"), d.needs);
     renderRichText($("modalNotes"), d.notes);
-    // The grid's internal process notes (CEngagement.description) — plain text.
-    $("modalInternalNotes").textContent = d.internalNotes || "—";
+    // The grid's internal process notes (CEngagement.description). Rendered
+    // as rich text when the LIVE field is wysiwyg (crm-test and production
+    // since 10-11-26 — a plain textContent render showed the stored <p> tags
+    // as literal text, Doug 10-12-26); a plain field still renders as text.
+    // A legacy plain note on a rich field keeps its line breaks (plainToHtml).
+    var internal = $("modalInternalNotes");
+    if (notesRich) {
+      internal.className = "modal__rich";
+      renderRichText(internal, plainToHtml(d.internalNotes || ""));
+    } else {
+      internal.className = "modal__plain";
+      internal.textContent = d.internalNotes || "—";
+    }
   }
 
   // The referring partner band in the popup head (Doug, 2026-10-12): the
@@ -1154,7 +1166,8 @@
     showConfirmModal({
       title: "Discard your changes?",
       body: "The edits you made to this engagement have not been saved.",
-      confirmLabel: "Discard",
+      cancelLabel: "Keep editing",
+      confirmLabel: "Discard changes",
     }, exitEditMode);
   }
 

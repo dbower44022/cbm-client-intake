@@ -4,6 +4,30 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.256.1] — 2026-10-12
+
+**fix(assignments): the popup's Internal Notes render as rich text on a
+rich field; the discard dialog's buttons say what they do.** Doug's two
+reports 2026-10-12 on the engagement popup ("View details").
+
+- **Internal Notes showed the stored `<p>` tags as literal text.** The
+  view rendered `CEngagement.description` with `textContent`, which was
+  right while the field was plain text — crm-test and production converted
+  it to wysiwyg on 10-11-26 (v0.252.x), and the edit form and the grid's
+  Notes column followed the live type while the view did not. It now
+  renders through the shared sanitizing rich renderer when the server
+  reports the field rich (`notesRich`), up-converting a legacy plain note's
+  line breaks, and stays plain text on a plain field.
+- **"Cancel does nothing."** Reproduced in the browser on crm-test (every
+  row) and production (ten rows, untouched, a changed input and a typed
+  rich editor): Cancel exits an untouched form and raises *Discard your
+  changes?* on a touched one in every case, with no console error. The
+  one path that reads as nothing happening is the dialog's own *Cancel*
+  button, which keeps editing — a Cancel reached by pressing Cancel. The
+  dialog's buttons are now **Keep editing** / **Discard changes**, on both
+  doors (the Cancel button and the popup's ×). If the report was something
+  else, the browser the report came from is the next place to look.
+
 ## [0.256.0] — 2026-10-12
 
 **feat(assignments): the referring partner is named prominently in the
