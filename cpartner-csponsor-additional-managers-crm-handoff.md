@@ -14,7 +14,7 @@ the record appears in their My Email, and they are invited to its sessions.
 | CRM | State |
 |---|---|
 | crm-test | **Done 10-11-26 13:46** (Doug, the applier; both links read back; live pass the same afternoon, `OPEN-ITEMS.md` #46) |
-| production | **Owed — step page written 10-12-26**, https://claude.ai/artifact/Lq7rbijp2bJVqizQR9TmGT: from inside the production web container, same plan, same fingerprint |
+| production | **Applied 10-12-26 ~14:00** (Doug, from inside the production web container, fingerprint `f2d6a41ea16c`; both links verified by the applier and read back from the droplet) — the non-admin pass is owed, step page https://claude.ai/artifact/Lq7rbijp2bJVqizQR9TmGT §§ 2–3 |
 | Boston | Owed — with its next release, same plan |
 
 ## 3. The change, as the applier makes it (preferred)

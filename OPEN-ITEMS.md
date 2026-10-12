@@ -111,9 +111,12 @@ found; move resolved items to the bottom with the resolution date.
     https://claude.ai/artifact/Lq7rbijp2bJVqizQR9TmGT (private, *Production
     Additional Managers*, 10-12-26 14:05): the applier from inside the
     production web console, dry run then `--apply --production --expect
-    f2d6a41ea16c`, the pass as a non-admin Sponsor Management Team member,
-    the Entity Manager check; Boston with its next release from the same
-    plan (`cpartner-csponsor-additional-managers-crm-handoff.md`);
+    f2d6a41ea16c`. **Applied by Doug 10-12-26 ~14:00** (as mentoradmin;
+    both links created and verified by the applier; both files and the
+    mentor-profile reverses read back from the droplet 14:04). Owed: the
+    page's sections 2 and 3 — the pass as a non-admin Sponsor Management
+    Team member, the Entity Manager check; Boston with its next release
+    from the same plan (`cpartner-csponsor-additional-managers-crm-handoff.md`);
     (d) the Gmail sync scope now also covers co-mentored engagements, which
     it never did — watch production's first "scopes rebuilt" line after
     the deploy for a larger record count, not an error.
