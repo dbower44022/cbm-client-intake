@@ -275,9 +275,26 @@ async def get_engagement_detail(
         select=(
             "name,engagementStatus,createdAt,meetingCadence,mentoringFocusAreas,"
             "mentoringNeedsDescription,engagementNotes,primaryEngagementContactId,"
-            "engagementClientName,requestedMentorId,requestedMentorName,description"
+            "engagementClientName,requestedMentorId,requestedMentorName,"
+            "referringPartnerId,referringPartnerName,description"
         ),
     )
+
+    # Referring partner (CEngagement.referringPartner → CPartnerProfile): set by
+    # a partner's own intake link (v0.255.0) or by staff in the edit form.
+    # Shown PROMINENTLY in the popup's head, view and edit alike (Doug,
+    # 2026-10-12). Same name fallback as the requested mentor below.
+    referring_partner = None
+    partner_id = eng.get("referringPartnerId")
+    if partner_id:
+        pname = eng.get("referringPartnerName")
+        if not pname:
+            try:
+                prof = await client.get(PARTNER_PROFILE, partner_id, select="name")
+                pname = prof.get("name")
+            except EspoError:
+                pname = None
+        referring_partner = {"id": partner_id, "name": pname}
 
     # Requested mentor (DAT-026): a belongsTo → CMentorProfile the client/staff
     # asked for. The `*Name` accessor isn't a defined field, so fall back to a
@@ -320,6 +337,7 @@ async def get_engagement_detail(
         "meetingCadence": eng.get("meetingCadence"),
         "clientName": eng.get("engagementClientName"),
         "requestedMentor": requested_mentor,
+        "referringPartner": referring_partner,
         "contact": contact,
         "focusAreas": focus,
         # Rich-text (wysiwyg) HTML — sanitized + rendered by the frontend.

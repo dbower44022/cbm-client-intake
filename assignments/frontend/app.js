@@ -794,6 +794,7 @@
     $("modalTitle").textContent = d.name || "Engagement";
     var st = $("modalStatus");
     if (d.status) { st.textContent = d.status; st.hidden = false; } else { st.hidden = true; }
+    setReferralBand(d.referringPartner);
 
     // Top panel split into two columns: contact identity on the left, the
     // engagement meta (meeting cadence + create date) on the right.
@@ -847,11 +848,25 @@
     $("modalInternalNotes").textContent = d.internalNotes || "—";
   }
 
+  // The referring partner band in the popup head (Doug, 2026-10-12): the
+  // partner whose intake link brought the request in, named where it cannot
+  // be missed — in view AND edit mode, since the head is outside the body the
+  // two modes swap. A linked-but-nameless value means the partner record was
+  // deleted; say so rather than hide it. No partner ⇒ no band.
+  function setReferralBand(partner) {
+    var band = $("modalReferral");
+    if (!band) return;
+    if (!partner) { band.hidden = true; return; }
+    $("modalReferralName").textContent = partner.name || "(partner no longer in the system)";
+    band.hidden = false;
+  }
+
   async function openDetail(id) {
     currentDetailId = id;
     exitEditMode();
     $("modalTitle").textContent = "Loading…";
     $("modalStatus").hidden = true;
+    setReferralBand(null);
     $("modalContact").innerHTML = "";
     $("modalFocus").innerHTML = "";
     $("modalNeeds").textContent = "";

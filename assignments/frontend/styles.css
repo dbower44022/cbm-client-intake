@@ -459,6 +459,20 @@ body { display: flex; flex-direction: column; }
 .modal__close:hover { color: var(--cbm-ink); }
 .modal__head { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; padding-right: 2rem; }
 .modal__title { color: var(--cbm-navy); font-family: var(--cbm-font-serif); margin: 0; font-size: var(--cbm-h4); }
+/* Referring partner band — full width under the title, gold-tinted so it is
+   the first thing read after the name; stays visible in edit mode too. */
+.modal__referral {
+  flex-basis: 100%;
+  margin: 0;
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--cbm-radius);
+  background: #fdf6e3;
+  background: color-mix(in srgb, var(--cbm-gold) 15%, #fff);
+  border-left: 4px solid var(--cbm-gold);
+  color: var(--cbm-navy);
+  font-size: var(--cbm-text-md, 1rem);
+}
+.modal__referral strong { font-weight: 700; }
 
 /* Contact card at the top — two columns: identity (left) + meta (right) */
 .modal__contact {

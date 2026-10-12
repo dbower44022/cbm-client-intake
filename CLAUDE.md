@@ -451,7 +451,10 @@ full-height grid with a status multi-select, and assigns each to a mentor.
   metadata, link-picker options are **paged at 200** (an oversized page is a 403,
   not a truncation), a forbidden list degrades the field to read-only, a stored
   value outside the option list keeps its place, and Save sends only what
-  changed. **The assigned mentor is deliberately not an editable field** —
+  changed. **The referring partner is named in the popup's HEAD** (v0.256.0,
+  Doug's request 2026-10-12): a "Referred by <partner>" band under the
+  title, visible in view and edit mode alike because the head is outside
+  the swapped body; no partner, no band. **The assigned mentor is deliberately not an editable field** —
   swapping `mentorProfile` re-homes contacts, client profile, company and
   sessions, so the row hands off to Assign/Reassign instead.
 
@@ -1760,6 +1763,12 @@ with `main`; **Lakeside took it off the release lane by itself** (its
 unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
+
+- **v0.256.0 (2026-10-12) — the referring partner named prominently in
+  the Client Administration popup.** Committed, not pushed. Doug's request
+  the same evening; standing rule in the Client Administration section.
+  No CRM change, no flag. Verified by tests only; the live check is part of
+  `OPEN-ITEMS.md` #50.
 
 - **v0.255.0 (2026-10-12) — a partner's own client intake link.**
   Pushed 17:40, live on crm-test and production 17:42 (both served scripts

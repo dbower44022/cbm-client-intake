@@ -4,6 +4,22 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.256.0] — 2026-10-12
+
+**feat(assignments): the referring partner is named prominently in the
+engagement popup.** Doug's request 2026-10-12, following v0.255.0: when a
+request arrives through a partner's intake link, Client Administration
+should show who referred it where it cannot be missed. The popup's head
+now carries a gold-tinted **"Referred by <partner>"** band under the title,
+and because the head sits outside the body that view and edit mode swap,
+the band is visible in **both** — the edit form's Attribution picker still
+changes the value, and a save refreshes the band. No partner, no band; a
+partner record that no longer exists says so rather than hiding.
+`service.get_engagement_detail` reads `referringPartnerId/Name` and
+answers `referringPartner: {id, name}` with the same name fallback the
+requested mentor has. Verified by tests only; the live check rides
+`OPEN-ITEMS.md` #50.
+
 ## [0.255.0] — 2026-10-12
 
 **feat(client-intake): a partner's own intake link credits them as the

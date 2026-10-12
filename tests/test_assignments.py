@@ -1278,6 +1278,21 @@ async def test_get_engagement_detail_single_focus_string_coerced():
     assert d["focusAreas"] == ["Marketing"]
 
 
+async def test_referring_partner_absent_is_none():
+    client = FakeClient(engagement={"name": "Y"})
+    d = await service.get_engagement_detail(client, "e1")
+    assert d["referringPartner"] is None
+
+
+async def test_referring_partner_uses_inline_name_without_extra_read():
+    client = FakeClient(engagement={
+        "name": "Y", "referringPartnerId": "p1", "referringPartnerName": "Greater Cleveland SBDC",
+    })
+    d = await service.get_engagement_detail(client, "e1")
+    assert d["referringPartner"] == {"id": "p1", "name": "Greater Cleveland SBDC"}
+    assert not any(u for u in client.list_calls if u[0] == service.PARTNER_PROFILE)
+
+
 async def test_requested_mentor_absent_is_none():
     client = FakeClient(engagement={"name": "Y"})
     d = await service.get_engagement_detail(client, "e1")
