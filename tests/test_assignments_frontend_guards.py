@@ -18,7 +18,7 @@ HTML = (ROOT / "assignments" / "frontend" / "index.html").read_text()
 JS = (ROOT / "assignments" / "frontend" / "app.js").read_text()
 
 # Classes the page toggles with the hidden attribute (markup or script).
-TOGGLED = ("modal__footactions", "modal", "modal__referral")
+TOGGLED = ("modal__footactions", "modal", "modal__referral", "edit-form")
 
 
 def _display_rules(cls: str) -> list[str]:

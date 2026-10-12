@@ -393,7 +393,9 @@ body { display: flex; flex-direction: column; }
    Panels are grids that gain COLUMNS as the popup widens, rather than one
    lonely field stretched across a 4K screen (the same packing rule as the
    events editor). Long-form controls take the whole row. */
-.edit-form { display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem; }
+/* :not([hidden]) — same trap as the footer actions (v0.256.2): the empty
+   form rendered as a zero-height flex box in view mode. */
+.edit-form:not([hidden]) { display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem; }
 .edit-group {
   border: 1px solid var(--cbm-border);
   border-radius: var(--cbm-radius);

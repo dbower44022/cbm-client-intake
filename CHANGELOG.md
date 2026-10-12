@@ -4,6 +4,15 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.256.3] — 2026-10-12
+
+**fix(assignments): the edit form's own display rule gets the same
+`:not([hidden])` gate.** Found by the v0.256.2 live check, which this time
+read computed styles: `#modalEdit` kept `display: flex` through its
+`hidden` attribute. Harmless today only because the script empties the
+form on exit (a zero-height box), so this closes the latent half of the
+same defect and the guard test now covers `.edit-form`.
+
 ## [0.256.2] — 2026-10-12
 
 **fix(assignments): the popup's Cancel and Save buttons no longer show in
