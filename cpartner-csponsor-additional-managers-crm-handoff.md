@@ -1,6 +1,6 @@
 # CRM handoff — additional managers on partner and funder records
 
-Last Updated: 10-12-26 14:05 · Revision 1.1
+Last Updated: 10-12-26 14:10 · Revision 1.2
 
 ## 1. What this adds, in one sentence
 
@@ -14,7 +14,7 @@ the record appears in their My Email, and they are invited to its sessions.
 | CRM | State |
 |---|---|
 | crm-test | **Done 10-11-26 13:46** (Doug, the applier; both links read back; live pass the same afternoon, `OPEN-ITEMS.md` #46) |
-| production | **Applied 10-12-26 ~14:00** (Doug, from inside the production web container, fingerprint `f2d6a41ea16c`; both links verified by the applier and read back from the droplet) — the non-admin pass is owed, step page https://claude.ai/artifact/Lq7rbijp2bJVqizQR9TmGT §§ 2–3 |
+| production | **Done 10-12-26** — applied ~14:00 by Doug from inside the production web container (fingerprint `f2d6a41ea16c`, both links verified by the applier and read back from the droplet); the non-admin pass and the Entity Manager check matched the same afternoon (step page https://claude.ai/artifact/Lq7rbijp2bJVqizQR9TmGT) |
 | Boston | Owed — with its next release, same plan |
 
 ## 3. The change, as the applier makes it (preferred)
@@ -74,5 +74,6 @@ reverse link. Nothing is visible on a CRM without the link.
 
 | Rev | Date | Author | Change |
 |---|---|---|---|
+| 1.2 | 10-12-26 14:10 | Claude (Claude Code) | § 2: production done and passed; Boston the only instance owed. |
 | 1.1 | 10-12-26 14:05 | Claude (Claude Code) | § 2: crm-test done; production's step page linked. |
 | 1.0 | 10-11-26 13:40 | Claude (Claude Code) | First version, with the v0.251.0 build. |

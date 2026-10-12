@@ -76,8 +76,8 @@ found; move resolved items to the bottom with the resolution date.
     it by themselves) and set Boston's chapter key to `boston` at its
     System Settings page before any event is saved there (v0.233.0).
 
-46. **Additional managers on partner and funder records (v0.251.0) — CRM
-    change owed on all three CRMs, live pass owed** (built 2026-10-11 on
+46. **Additional managers on partner and funder records (v0.251.0) —
+    crm-test and production done and passed; Boston owed** (built 2026-10-11 on
     Doug's requirement; changelog has the design). Step page for the whole
     crm-test rollout — apply, push, live pass as the two managers, My Email
     as the added person: https://claude.ai/artifact/9aW3mVrfdcHa3gnKMACHTp
@@ -113,10 +113,11 @@ found; move resolved items to the bottom with the resolution date.
     production web console, dry run then `--apply --production --expect
     f2d6a41ea16c`. **Applied by Doug 10-12-26 ~14:00** (as mentoradmin;
     both links created and verified by the applier; both files and the
-    mentor-profile reverses read back from the droplet 14:04). Owed: the
-    page's sections 2 and 3 — the pass as a non-admin Sponsor Management
-    Team member, the Entity Manager check; Boston with its next release
-    from the same plan (`cpartner-csponsor-additional-managers-crm-handoff.md`);
+    mentor-profile reverses read back from the droplet 14:04); **the
+    pass as a non-admin Sponsor Management Team member and the Entity
+    Manager check both matched the same afternoon** (Doug: "all steps
+    passed"). **Owed:** Boston with its next release from the same plan
+    (`cpartner-csponsor-additional-managers-crm-handoff.md`);
     (d) the Gmail sync scope now also covers co-mentored engagements, which
     it never did — watch production's first "scopes rebuilt" line after
     the deploy for a larger record count, not an error.

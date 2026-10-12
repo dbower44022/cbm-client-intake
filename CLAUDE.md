@@ -721,7 +721,9 @@ one shared frontend that derives its domain from the first segment of its URL.
   session backfill. The email scope reads every domain's second reverse
   link (a 404 is skipped at debug); Drive grants entitle them; My Email
   already did. Plan `scripts/plans/additional-managers.json`; handoff
-  `cpartner-csponsor-additional-managers-crm-handoff.md`.
+  `cpartner-csponsor-additional-managers-crm-handoff.md`. The links exist
+  on crm-test and production (10-11/12-26, both passed as non-admins);
+  Boston owed with its next release.
 - **Co-mentor visibility** requires two things, both in the app: reading the
   `engagements` reverse link *and* stamping the co-mentor's User into the
   engagement's `assignedUsers` (Mentor Role reads CEngagement at "own", which
@@ -1755,9 +1757,10 @@ each block.
   done the same afternoon** as partner.manager and sally.sponsor: the
   partner add, the funder add and the remove all 200 in the web log, the
   reverse link read back as administrator (`OPEN-ITEMS.md` #46). Pushed
-  with the pass. Owed: production and Boston at a Sunday slot; a role
-  ruling for a Mentor-Role-only user named on a funder (no CSponsorProfile
-  read).
+  with the pass. **Production applied and passed 10-12-26** (Doug, from
+  the production web console; step page linked from #46). Owed: Boston
+  with its next release; a role ruling for a Mentor-Role-only user named
+  on a funder (no CSponsorProfile read).
 
 - **v0.250.0 / v0.249.3 (2026-10-11) — the nightly reconciliation puts
   partner and funder records, their companies and contacts into the domain
