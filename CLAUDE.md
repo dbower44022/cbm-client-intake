@@ -1764,13 +1764,19 @@ unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
 
+- **v0.256.2 (2026-10-12) — the popup's Cancel/Save pair no longer shows
+  in view mode; the referring-partner band renders on every engagement.**
+  Committed, not pushed. Doug's screenshot settled the Cancel report: a bare
+  `display: flex` beat the `hidden` attribute since v0.210.0, and the
+  v0.256.1 reproduction read the attribute, not the rendered state.
+  Guarded by `tests/test_assignments_frontend_guards.py`.
+
 - **v0.256.1 (2026-10-12) — the popup's Internal Notes render rich on a
   rich field; the discard dialog says Keep editing / Discard changes.**
   Pushed 18:15 with v0.256.0, live on crm-test and production 18:18 (the
   served script carries both). Doug's two reports the same evening; the Cancel
-  one could not be reproduced in the browser on either deployment (every
-  path exits or asks), so the fix is the dialog's wording — if it recurs,
-  ask which button was pressed and look in that browser's console.
+  one was NOT reproduced — the check read the `hidden` attribute, and the
+  real fault (v0.256.2) was the buttons rendering through it.
 
 - **v0.256.0 (2026-10-12) — the referring partner named prominently in
   the Client Administration popup.** Pushed 18:15, live on both 18:18. Doug's request

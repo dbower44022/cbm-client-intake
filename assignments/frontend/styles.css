@@ -381,7 +381,10 @@ body { display: flex; flex-direction: column; }
   background: var(--cbm-white);
   padding: 0.75rem 2.1rem 0.75rem 1.8rem;
 }
-.modal__footactions { display: flex; gap: 0.6rem; margin-left: auto; }
+/* :not([hidden]) — a bare display:flex beats the hidden attribute, so the
+   edit-mode Cancel/Save pair showed in VIEW mode too, where Cancel had
+   nothing to cancel (Doug's screenshot 10-12-26; latent since v0.210.0). */
+.modal__footactions:not([hidden]) { display: flex; gap: 0.6rem; margin-left: auto; }
 .modal__msg { margin: 0; font-size: var(--cbm-text-sm); color: var(--cbm-slate-700); }
 .modal__msg.is-error { color: var(--cbm-error, #b3261e); }
 .modal__msg.is-success { color: var(--cbm-navy); }
@@ -473,6 +476,7 @@ body { display: flex; flex-direction: column; }
   font-size: var(--cbm-text-md, 1rem);
 }
 .modal__referral strong { font-weight: 700; }
+.modal__referral--none { background: var(--cbm-surface); border-left-color: var(--cbm-border); color: var(--cbm-slate-700); }
 
 /* Contact card at the top — two columns: identity (left) + meta (right) */
 .modal__contact {

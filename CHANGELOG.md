@@ -4,6 +4,32 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.256.2] — 2026-10-12
+
+**fix(assignments): the popup's Cancel and Save buttons no longer show in
+VIEW mode; the referring-partner band renders on every engagement.**
+Doug's screenshot 2026-10-12 18:45 settled the Cancel report that v0.256.1
+could not reproduce: the view screen carried **Edit, Cancel AND Save
+changes** together, and Cancel did nothing because there was no edit to
+cancel.
+
+- **Cause:** `.modal__footactions { display: flex }` — a bare display rule
+  beats the `hidden` attribute the script toggles, so the edit-mode pair
+  has rendered in view mode since the popup became editable (v0.210.0).
+  The v0.256.1 reproduction read the attribute, not the rendered state,
+  which is exactly the trap `[[harness-js-clicks-bypass-overlays]]` names.
+  The rule is now `.modal__footactions:not([hidden])`, the pattern the
+  rest of the stylesheet already uses, and
+  `tests/test_assignments_frontend_guards.py` fails on any toggled
+  container that sets `display` without the gate.
+- **The referring-partner band is always there** (Doug: "this is the page
+  that should also be showing the referral partner"): a muted *Referring
+  partner: none recorded* when the engagement has none, the gold
+  *Referred by <partner>* when it has one — an empty slot that vanishes
+  reads as a missing feature.
+- The v0.256.1 wording change (Keep editing / Discard changes) stands; it
+  was not the fault.
+
 ## [0.256.1] — 2026-10-12
 
 **fix(assignments): the popup's Internal Notes render as rich text on a
@@ -18,7 +44,10 @@ reports 2026-10-12 on the engagement popup ("View details").
   renders through the shared sanitizing rich renderer when the server
   reports the field rich (`notesRich`), up-converting a legacy plain note's
   line breaks, and stays plain text on a plain field.
-- **"Cancel does nothing."** Reproduced in the browser on crm-test (every
+- **"Cancel does nothing."** *(Superseded by v0.256.2: the fault was the
+  edit-mode buttons rendering in view mode, which this reproduction missed
+  by reading the `hidden` attribute instead of the rendered state.)*
+  Reproduced in the browser on crm-test (every
   row) and production (ten rows, untouched, a changed input and a typed
   rich editor): Cancel exits an untouched form and raises *Discard your
   changes?* on a touched one in every case, with no console error. The

@@ -153,8 +153,9 @@
           <h2 class="modal__title" id="modalTitle">Loading…</h2>
           <span class="eng-status" id="modalStatus" hidden></span>
           <!-- The referring partner, prominent in BOTH view and edit mode (the
-               head is outside the swapped body). Hidden when there is none. -->
-          <p class="modal__referral" id="modalReferral" hidden>Referred by <strong id="modalReferralName"></strong></p>
+               head is outside the swapped body). Always rendered — an empty
+               slot that vanishes reads as a missing feature — muted when none. -->
+          <p class="modal__referral" id="modalReferral" hidden></p>
         </div>
 
         <div class="modal__body">

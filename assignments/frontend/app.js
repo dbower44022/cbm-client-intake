@@ -864,12 +864,24 @@
   // partner whose intake link brought the request in, named where it cannot
   // be missed — in view AND edit mode, since the head is outside the body the
   // two modes swap. A linked-but-nameless value means the partner record was
-  // deleted; say so rather than hide it. No partner ⇒ no band.
-  function setReferralBand(partner) {
+  // deleted; say so rather than hide it. No partner ⇒ the band still renders,
+  // muted, saying so: an empty slot that disappears reads as a missing
+  // feature (Doug's screenshot 10-12-26 asked where the partner was).
+  function setReferralBand(partner, loading) {
     var band = $("modalReferral");
     if (!band) return;
-    if (!partner) { band.hidden = true; return; }
-    $("modalReferralName").textContent = partner.name || "(partner no longer in the system)";
+    band.innerHTML = "";
+    if (loading) { band.hidden = true; return; }
+    if (!partner) {
+      band.className = "modal__referral modal__referral--none";
+      band.textContent = "Referring partner: none recorded";
+    } else {
+      band.className = "modal__referral";
+      band.appendChild(document.createTextNode("Referred by "));
+      var strong = document.createElement("strong");
+      strong.textContent = partner.name || "(partner no longer in the system)";
+      band.appendChild(strong);
+    }
     band.hidden = false;
   }
 
@@ -878,7 +890,7 @@
     exitEditMode();
     $("modalTitle").textContent = "Loading…";
     $("modalStatus").hidden = true;
-    setReferralBand(null);
+    setReferralBand(null, true);
     $("modalContact").innerHTML = "";
     $("modalFocus").innerHTML = "";
     $("modalNeeds").textContent = "";
