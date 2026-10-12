@@ -723,7 +723,12 @@ one shared frontend that derives its domain from the first segment of its URL.
   already did. Plan `scripts/plans/additional-managers.json`; handoff
   `cpartner-csponsor-additional-managers-crm-handoff.md`. The links exist
   on crm-test and production (10-11/12-26, both passed as non-admins);
-  Boston owed with its next release.
+  Boston owed with its next release. **"Make primary" on a CBM row**
+  (v0.253.0, Doug's ruling 2026-10-12): `service.promote_comanager` writes
+  the manager link first as the user, moves the new manager out of
+  `additionalManagers`, and **keeps the former manager as an additional
+  manager** (non-destructive, one click undoes it); partner and funder
+  only — the engagement's mentor is Client Administration's.
 - **Co-mentor visibility** requires two things, both in the app: reading the
   `engagements` reverse link *and* stamping the co-mentor's User into the
   engagement's `assignedUsers` (Mentor Role reads CEngagement at "own", which

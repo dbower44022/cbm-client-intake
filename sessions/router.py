@@ -1413,6 +1413,44 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             )
             return result
 
+    if cfg.supports_comentor and cfg.parent_manager_link and cfg.parent_entity != "CEngagement":
+        # "Make primary" on a CBM contact (v0.253.0) — partner + funder only:
+        # an engagement's mentor is re-assigned in Client Administration by
+        # ruling, so the mentor router never carries this route.
+
+        @router.post("/records/{parent_id}/comentors/{mentor_profile_id}/primary")
+        async def promote_comanager(
+            parent_id: str, mentor_profile_id: str, request: Request
+        ) -> dict:
+            """Make an additional manager the record's manager; the former
+            manager becomes an additional manager."""
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            try:
+                result = await service.promote_comanager(
+                    cfg, client, parent_id, mentor_profile_id,
+                    actor=user.get("name") or user.get("userName"),
+                    admin_factory=admin_client_factory(get_settings()),
+                )
+            except service.SessionError as exc:
+                raise HTTPException(status_code=400, detail=str(exc))
+            except EspoError as exc:
+                raise _crm_failure(request, exc, f"Could not change the {cfg.manager_role_label.lower()}")
+            if result.get("changed"):
+                await action_log.log_action(
+                    app=cfg.title, category=action_log.CAT_ASSIGNMENT,
+                    action=action_log.ACT_MANAGER_SET,
+                    parent_type=cfg.parent_entity, parent_id=parent_id,
+                    summary=f"{cfg.manager_role_label} set to {result.get('name')}.",
+                    actor_id=user["userId"], actor_name=user["name"], details=result,
+                )
+                # The reverse links moved, so the Drive grants follow (DOC-09,
+                # best-effort — nightly reconciliation backstop).
+                await doc_grants.sync_record_grants_safe(
+                    get_settings(), cfg.parent_entity, parent_id
+                )
+            return result
+
     # --- Communications tab (Gmail conversation integration) -----------------
     # Everything below 503s unless GMAIL_SYNC is enabled; the frontend keeps
     # its sample-data scaffold in that case (config.commsEnabled).

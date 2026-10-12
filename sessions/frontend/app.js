@@ -5060,6 +5060,15 @@
           !detailsEditSet[editKey] && sec.id !== currentDetails.primaryContactId) {
         act.appendChild(makePrimaryBtn(sec));
       }
+      // The same one click on a CBM row (v0.253.0, Doug's request 2026-10-12):
+      // an additional manager becomes the record's manager and the former
+      // manager stays on as an additional one. Never on the manager's own row
+      // (it carries the role badge), and only where the domain owns the link
+      // (partner / funder — the engagement's mentor is Client Administration's).
+      if (!isClient && currentDetails.managerSettable && item.profileId && !item.primary &&
+          !detailsEditSet[editKey]) {
+        act.appendChild(makePrimaryManagerBtn(item));
+      }
       // Remove = an unrelate on the PARENT record. The assigned Mentor row is
       // never removable here (that link is managed in Client Administration —
       // a design exclusion, not a permission hide); a user without edit on the
@@ -5133,6 +5142,37 @@
         refreshRecordViews();  // the Overview's Primary contact fact follows
         notice("detailsNotice",
           (res.contactName || "That contact") + " is now the primary contact.", "success");
+      } catch (e) {
+        if (e.status === 401) { showLogin(); return; }
+        btn.disabled = false;
+        notice("detailsNotice", e.message, "error");
+      }
+    });
+    return btn;
+  }
+  // The CBM-contacts twin of makePrimaryBtn: POST …/comentors/{profile}/primary.
+  // Non-destructive (the former manager becomes an additional manager) and
+  // undone by clicking their row, so no two-step arming; a user without edit
+  // on the parent gets the reason on click, never a hidden button.
+  function makePrimaryManagerBtn(item) {
+    var btn = document.createElement("button"); btn.type = "button";
+    btn.className = "sxd__rowedit sxd__rowprimary"; btn.textContent = "Make primary";
+    btn.addEventListener("click", async function () {
+      if (!parentEditable()) {
+        notice("detailsNotice", "You don't have permission to change who manages this record — " +
+          "ask {{abbr}} staff if you need it.", "error");
+        return;
+      }
+      btn.disabled = true;
+      try {
+        var res = await api("/records/" + encodeURIComponent(currentDetail.id) +
+          "/comentors/" + encodeURIComponent(item.profileId) + "/primary", { method: "POST" });
+        await loadDetails(currentDetail.id);
+        refreshRecordViews();  // the Overview's manager fact and CBM list follow
+        notice("detailsNotice",
+          (res && res.warning) || ((res.name || item.name || "That contact") + " is now the primary {{abbr}} contact." +
+            (res.formerName ? " " + res.formerName + " stays on as an additional manager." : "")),
+          res && res.warning ? "error" : "success");
       } catch (e) {
         if (e.status === 401) { showLogin(); return; }
         btn.disabled = false;

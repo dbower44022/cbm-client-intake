@@ -2197,6 +2197,101 @@ async def add_comentor(
     return {"status": "ok"}
 
 
+async def promote_comanager(
+    cfg: DomainConfig,
+    client: SessionClient,
+    parent_id: str,
+    mentor_profile_id: str,
+    actor: Optional[str] = None,
+    admin_factory=None,
+) -> dict[str, Any]:
+    """Make one of a partner's / funder's additional managers THE manager —
+    the CBM Contacts card's "Make primary" (Doug's request 2026-10-12: now
+    that a record carries several CBM contacts, which one is primary must be
+    settable in one click, as it is for the record's client contacts).
+
+    Three writes, in an order that never strands anyone: the manager link
+    (``partnerManager`` / ``cBMSponsorManager``) is written FIRST, as the
+    signed-in user — the same write the Details picker makes, so EspoCRM's
+    ACL is the gate; then the new manager leaves ``additionalManagers`` (they
+    are the manager now, and the card dedupes anyway); then the FORMER
+    manager joins ``additionalManagers`` — Doug's ruling 2026-10-12 (option
+    1): the swap is non-destructive, so the former manager keeps the record
+    in their grid, My Email and Drive grant, and one click on their row undoes
+    it. The links go through :func:`_link_or_escalate` (a foreign-record
+    denial on the mentor profile is retried as the provisioning admin, the
+    co-mentor rule). A failed step 3 is reported as a ``warning``, never a
+    failure — the promotion already happened. Engagements are excluded by
+    ruling (their mentor is re-assigned in Client Administration).
+    """
+    if (
+        not cfg.supports_comentor
+        or cfg.parent_entity == ENGAGEMENT
+        or not cfg.parent_manager_link
+    ):
+        raise SessionError("This record's manager cannot be changed here.")
+    attr = f"{cfg.parent_manager_link}Id"
+    related = await client.list_related(
+        cfg.parent_entity, parent_id, cfg.comanager_link, select="name", max_size=_PAGE,
+    )
+    match = next((m for m in related.get("list", []) if m.get("id") == mentor_profile_id), None)
+    if match is None:
+        raise SessionError(
+            f"That person isn't an {cfg.comanager_word} on this record — add them first."
+        )
+    rec = await client.get(cfg.parent_entity, parent_id, select=attr)
+    current = rec.get(attr)
+    name = match.get("name") or f"{abbr()} contact"
+    role = cfg.manager_role_label.lower()
+    if current == mentor_profile_id:
+        return {"status": "ok", "changed": False, "profileId": mentor_profile_id, "name": name}
+    # 1. the manager link, as the user (the Details picker's own write)
+    await client.update(cfg.parent_entity, parent_id, {attr: mentor_profile_id})
+    # 2. the new manager is no longer an "additional" one
+    await _link_or_escalate(
+        client, admin_factory, "unrelate", parent_id, cfg.comanager_link,
+        mentor_profile_id, entity=cfg.parent_entity,
+    )
+    # 3. the former manager stays on the record as an additional manager
+    former_name = None
+    warning = None
+    if current:
+        former_name = await _profile_display_name(client, current)
+        try:
+            await _link_or_escalate(
+                client, admin_factory, "relate", parent_id, cfg.comanager_link,
+                current, entity=cfg.parent_entity,
+            )
+        except EspoError as exc:
+            log.warning(
+                "promote: former %s %s could not be kept on %s %s as %s: %s",
+                role, current, cfg.parent_entity, parent_id, cfg.comanager_word, exc,
+            )
+            warning = (
+                f"{name} is now the {role}, but {former_name} could not be kept as an "
+                f"{cfg.comanager_word} — add them back from the {abbr()} Contacts card if "
+                "they should keep this record."
+            )
+    log.info(
+        "%s %s %s %s -> %s", cfg.parent_entity, parent_id, role, current, mentor_profile_id
+    )
+    kept = (
+        f"; {former_name} kept as an {cfg.comanager_word}" if current and not warning
+        else (f"; {former_name} could NOT be kept as an {cfg.comanager_word}" if current else "")
+    )
+    await post_stream_note(
+        client, cfg.parent_entity, parent_id,
+        f"{name} set as the {role} via the session tools{_by(actor)}{kept}.",
+    )
+    result: dict[str, Any] = {
+        "status": "ok", "changed": True, "profileId": mentor_profile_id, "name": name,
+        "formerProfileId": current, "formerName": former_name,
+    }
+    if warning:
+        result["warning"] = warning
+    return result
+
+
 async def remove_comentor(
     client: SessionClient, engagement_id: str, mentor_profile_id: str,
     actor: Optional[str] = None, admin_factory=None, cfg: Optional[DomainConfig] = None,

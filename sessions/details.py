@@ -431,6 +431,12 @@ async def build_details(
         result["cbmContacts"] = await _cbm_contacts(
             cfg, client, parent_id, parent_values, contact_spec, contact_raw, levels, user_id,
         )
+        # Whether an additional manager can be made THE manager from the CBM
+        # Contacts card (partner / funder; never the engagement, whose mentor
+        # is re-assigned in Client Administration by ruling).
+        result["managerSettable"] = bool(
+            cfg.parent_manager_link and cfg.parent_entity != "CEngagement"
+        )
     return result
 
 
@@ -481,6 +487,9 @@ async def _cbm_contacts(
         people.append({
             "profileId": mentor_id, "name": parent_values.get(f"{mgr_link}Name"),
             "role": cfg.manager_role_label, "_contactId": contact_id,
+            # The row that IS the manager — the frontend puts "Make primary"
+            # on every other CBM row (v0.253.0).
+            "primary": True,
         })
     try:
         co = await client.list_related(

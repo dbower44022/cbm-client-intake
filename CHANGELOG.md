@@ -4,6 +4,39 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.253.0] — 2026-10-12
+
+**feat(sessions): "Make primary" on a partner's or funder's CBM contacts.**
+Doug's request 2026-10-12: *"Now that there are multiple CBM contacts on a
+partner or funder, we need a function to identify which is the primary
+contact … Add a button on each contact that will change that contact to
+the primary contact much like we do on engagements."*
+
+- The CBM Contacts card on the Details tab puts **Make primary** on every
+  additional-manager row (the manager's own row carries the role badge and
+  no button — `primary` on the Details row, `managerSettable` on the
+  payload). One click, no arming, the client-contacts button's pattern; a
+  user without edit on the record gets the reason on click, never a hidden
+  button.
+- `service.promote_comanager`, behind `POST
+  /records/{id}/comentors/{profile}/primary` on the partner and funder
+  routers only (the engagement's mentor stays Client Administration's by
+  ruling). Three writes in an order that strands nobody: the manager link
+  (`partnerManager` / `cBMSponsorManager`) first, as the signed-in user —
+  the Details picker's own write, so EspoCRM's ACL is the gate; then the
+  new manager leaves `additionalManagers`; then **the former manager joins
+  them** — Doug's ruling 2026-10-12 (option 1): the swap is non-destructive,
+  the former manager keeps the record in their grid, My Email and Drive
+  grant, and one click on their row undoes it. Both links ride
+  `_link_or_escalate` (a foreign-record denial on the mentor profile is
+  retried as the provisioning admin). A refused step 3 is a `warning` on a
+  successful promotion, never a failure. History note on the record, a
+  `Manager Set` action-log row, and the Drive grants re-synced because the
+  reverse links moved.
+- Verified by tests only (four new); the live case is a funder with an
+  additional manager on crm-test as sally.sponsor — the swap, the Overview
+  following, and the former manager's My Email still listing the record.
+
 ## [0.252.2] — 2026-10-11
 
 **fix(sessions): a plain-text note opened in the rich editor keeps its line

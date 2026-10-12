@@ -299,6 +299,51 @@ def test_primary_contact_endpoint_not_registered_on_the_mentor_domain(monkeypatc
         ).status_code in (404, 405)
 
 
+class _PromoteClient(_PrimaryClient):
+    """The CBM-contacts twin: the additional managers, the manager link, and
+    relate / unrelate recorders."""
+
+    def __init__(self):
+        super().__init__(contacts=(("m2", "Pat Partner"),), current="m1")
+        self.relates: list[tuple] = []
+        self.unrelates: list[tuple] = []
+
+    async def get(self, entity, record_id, select=None):
+        if entity == "CMentorProfile":
+            return {"id": record_id, "name": {"m1": "Sally Manager", "m2": "Pat Partner"}.get(record_id)}
+        return {"id": record_id, "partnerManagerId": self._current}
+
+    async def relate(self, entity, record_id, link, related_id):
+        self.relates.append((entity, record_id, link, related_id))
+
+    async def unrelate(self, entity, record_id, link, related_id):
+        self.unrelates.append((entity, record_id, link, related_id))
+
+
+def test_promote_comanager_endpoint_swaps_and_keeps_the_former_manager(monkeypatch):
+    """v0.253.0 — "Make primary" on a CBM row (Doug's ruling 2026-10-12, option 1)."""
+    client = _PromoteClient()
+    _as(monkeypatch, _USER, client)
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.post("/partnersessions/api/records/P1/comentors/m2/primary")
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["changed"] is True and body["name"] == "Pat Partner"
+        assert body["formerName"] == "Sally Manager" and "warning" not in body
+        assert client.updates == [("CPartnerProfile", "P1", {"partnerManagerId": "m2"})]
+        assert client.unrelates == [("CPartnerProfile", "P1", "additionalManagers", "m2")]
+        assert client.relates == [("CPartnerProfile", "P1", "additionalManagers", "m1")]
+        # A stranger to the additional managers is refused with a readable 400.
+        r = c.post("/partnersessions/api/records/P1/comentors/m9/primary")
+        assert r.status_code == 400 and "add them first" in r.json()["detail"]
+
+
+def test_promote_comanager_endpoint_not_registered_on_the_mentor_domain(monkeypatch):
+    _as(monkeypatch, _USER, _PromoteClient())
+    with TestClient(_app(monkeypatch)) as c:
+        assert c.post("/mentorsessions/api/records/E1/comentors/m2/primary").status_code in (404, 405)
+
+
 # --- Referred Clients tab (partner domain only) -----------------------------
 
 class _ReferredClient:

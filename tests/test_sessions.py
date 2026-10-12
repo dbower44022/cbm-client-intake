@@ -808,6 +808,110 @@ async def test_add_and_remove_additional_manager_on_a_partner_relate_and_note_on
 
 
 @pytest.mark.asyncio
+async def test_promote_additional_manager_swaps_with_the_former_manager():
+    """Doug's request 2026-10-12: "Make primary" on a CBM contact. The manager
+    link is written first (as the user), the new manager leaves the additional
+    managers, and the FORMER manager joins them (Doug's ruling: option 1, the
+    non-destructive swap)."""
+    notes = []
+
+    async def fake_note(client, parent_type, parent_id, text):
+        notes.append((parent_type, parent_id, text)); return True
+
+    import sessions.service as svc
+    orig = svc.post_stream_note
+    svc.post_stream_note = fake_note
+    try:
+        fake = Fake(
+            records={
+                ("CSponsorProfile", "S1"): {"name": "Harrowgate", "cBMSponsorManagerId": "m1"},
+                ("CMentorProfile", "m1"): {"name": "Sally Sponsor"},
+                ("CMentorProfile", "m2"): {"name": "Pat Partner"},
+            },
+            related={"additionalManagers": [{"id": "m2", "name": "Pat Partner"}]},
+        )
+        res = await service.promote_comanager(SPONSOR, fake, "S1", "m2", actor="Mark")
+        assert res["changed"] is True and res["name"] == "Pat Partner"
+        assert res["formerProfileId"] == "m1" and res["formerName"] == "Sally Sponsor"
+        assert "warning" not in res
+        assert fake.updates == [("CSponsorProfile", "S1", {"cBMSponsorManagerId": "m2"})]
+        assert fake.unrelates == [("CSponsorProfile", "S1", "additionalManagers", "m2")]
+        assert fake.relates == [("CSponsorProfile", "S1", "additionalManagers", "m1")]
+        assert notes[-1][:2] == ("CSponsorProfile", "S1")
+        assert "Pat Partner set as the funder manager" in notes[-1][2]
+        assert "Sally Sponsor kept as an additional manager" in notes[-1][2]
+    finally:
+        svc.post_stream_note = orig
+
+
+@pytest.mark.asyncio
+async def test_promote_additional_manager_refuses_a_stranger_and_noops_the_manager():
+    fake = Fake(
+        records={("CPartnerProfile", "P1"): {"name": "Key Bank", "partnerManagerId": "m1"}},
+        related={"additionalManagers": [{"id": "m2", "name": "Pat"}]},
+    )
+    with pytest.raises(service.SessionError):
+        await service.promote_comanager(PARTNER, fake, "P1", "m9")
+    assert fake.updates == [] and fake.relates == [] and fake.unrelates == []
+    # The engagement never offers it — its mentor is Client Administration's.
+    with pytest.raises(service.SessionError):
+        await service.promote_comanager(MENTOR, fake, "E1", "m2")
+
+
+@pytest.mark.asyncio
+async def test_promote_additional_manager_warns_when_the_former_manager_cannot_be_kept():
+    """Step 3 failing is a warning, never a failure — the promotion happened."""
+    import sessions.service as svc
+    orig = svc.post_stream_note
+
+    async def fake_note(*a):
+        return True
+
+    class RelateRefused(Fake):
+        async def relate(self, entity, record_id, link, related_id):
+            raise EspoError("403 forbidden")
+
+    svc.post_stream_note = fake_note
+    try:
+        fake = RelateRefused(
+            records={
+                ("CPartnerProfile", "P1"): {"name": "Key Bank", "partnerManagerId": "m1"},
+                ("CMentorProfile", "m1"): {"name": "Old Manager"},
+            },
+            related={"additionalManagers": [{"id": "m2", "name": "New Manager"}]},
+        )
+        res = await service.promote_comanager(PARTNER, fake, "P1", "m2")
+        assert res["changed"] is True
+        assert "Old Manager could not be kept" in res["warning"]
+        assert fake.updates == [("CPartnerProfile", "P1", {"partnerManagerId": "m2"})]
+    finally:
+        svc.post_stream_note = orig
+
+
+@pytest.mark.asyncio
+async def test_details_marks_the_manager_row_and_says_whether_it_is_settable():
+    """The CBM Contacts rows: the manager row carries ``primary``; the payload
+    says whether "Make primary" applies (partner / funder, never engagement)."""
+    from sessions import details
+    fake = Fake(
+        records={
+            ("CSponsorProfile", "S1"): {"name": "Harrowgate", "cBMSponsorManagerId": "m1",
+                                        "cBMSponsorManagerName": "Sally Sponsor"},
+            ("CMentorProfile", "m1"): {"name": "Sally Sponsor", "contactRecordId": None},
+        },
+        related={"additionalManagers": [{"id": "m2", "name": "Pat Partner", "contactRecordId": None}]},
+        meta_fields={"type": "hasMany", "entity": "CMentorProfile"},
+    )
+    rows = await details._cbm_contacts(SPONSOR, fake, "S1",
+                                       {"cBMSponsorManagerId": "m1", "cBMSponsorManagerName": "Sally Sponsor"},
+                                       [], {}, {}, None)
+    by_id = {r["profileId"]: r for r in rows}
+    assert by_id["m1"].get("primary") is True and by_id["m1"]["role"] == "Funder Manager"
+    assert "primary" not in by_id["m2"] and by_id["m2"]["role"] == "Additional manager"
+
+
+
+@pytest.mark.asyncio
 async def test_overview_notes_editor_follows_the_live_field_type():
     """Doug 2026-10-11: funder notes should be rich text. The CRM field is
     converted per instance, so the Overview's editor kind follows the field's
