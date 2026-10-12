@@ -34,8 +34,8 @@ found; move resolved items to the bottom with the resolution date.
     15:26 and 15:29 UTC), which must be gone (tonight's reset) or deleted
     before the baseline is taken.
 
-47. **Funder Notes as rich text (v0.252.0) — crm-test converted; the pass
-    waits for v0.252.2; production and Boston owed** (Doug's request
+47. **Funder Notes as rich text (v0.252.0) — crm-test and production
+    converted and passed 10-11-26; Boston owed** (Doug's request
     2026-10-11). The app follows the field's live type. Step page for the
     whole crm-test rollout: https://claude.ai/artifact/59ZYyJM492BZFG8bMbbLtX
     (private, *Funder Notes Rollout*, written 10-11-26). **Done:** (a)
@@ -48,16 +48,16 @@ found; move resolved items to the bottom with the resolution date.
     copied its sentence), so step 2.2 of the pass would have failed and
     the first save would have stored the note collapsed; (c) **the pass as
     sally.sponsor done 10-11-26 evening** (Doug: "testing completed on
-    test"). **Owed:** (d) production — Doug tried production the same evening
-    and the Funder Notes edit still opened the plain box, which is the app
-    detecting the unconverted `text` field, not a defect. Doug ruled
-    10-11-26 19:2x: run it today. Step page for production, both notes
-    fields in one command plus the three passes:
-    https://claude.ai/artifact/Gm48QrmUkKyLpMYj1ss8pk (private, *Production
-    Notes Conversion*, written 10-11-26 19:40); the command is
-    `scripts/convert_notes_wysiwyg.sh` over SSH, read-only probe of both
-    files done 19:30 (both `text`). (e) Boston, same one line against its
-    droplet, when asked.
+    test"). (d) **production done 10-11-26** — Doug's first look that
+    evening showed the plain box (the unconverted `text` field, not a
+    defect); Doug ruled to run it that day rather than at the Sunday slot,
+    and ran the step page https://claude.ai/artifact/Gm48QrmUkKyLpMYj1ss8pk
+    (private, *Production Notes Conversion*): `scripts/convert_notes_wysiwyg.sh`
+    over SSH converted both notes fields at 20:32 (backups stamped
+    `20261012-003237` beside the files, both read back `wysiwyg` at 20:37),
+    and all three passes — funder manager, client administrator, CRM
+    administrator — matched ("all tests passed"). **Owed:** (e) Boston, the
+    same one line against its droplet, when asked.
 
 46. **Additional managers on partner and funder records (v0.251.0) — CRM
     change owed on all three CRMs, live pass owed** (built 2026-10-11 on
@@ -528,9 +528,10 @@ clicked, then the pull dry run). § 11.9 step 4, the one-time migration
 script (production only).
 
 **Production's `CEngagement.description` → wysiwyg conversion** (added
-2026-08-31) — `cengagement-description-wysiwyg-crm-handoff.md` § 3. **Rides
-the funder-notes production page** (#47 (d), 10-11-26): one command converts
-both fields, and section 3 of that page is this field's non-admin pass. It is the switch that turns Client Administration's
+2026-08-31) — **DONE 10-11-26 20:32** with the funder-notes conversion (#47
+(d)): `scripts/convert_notes_wysiwyg.sh` converted both fields in one run,
+and the Client Administration pass as a non-administrator matched. Boston is
+owed with #47 (e). It is the switch that turns Client Administration's
 Notes column rich on production (the app feature-detects the field's type per
 load, so nothing else is needed); crm-test's conversion is done and verified.
 The handoff's crm-test commands were verified against that droplet only —

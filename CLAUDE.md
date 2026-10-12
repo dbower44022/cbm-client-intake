@@ -428,8 +428,9 @@ full-height grid with a status multi-select, and assigns each to a mentor.
   field's live CRM type (`service.live_wysiwyg_fields`): wysiwyg ⇒ the shared
   editor with images, text ⇒ the textarea, because only a wysiwyg field binds
   its inline attachments (an unbound one is collected by EspoCRM's cleanup).
-  crm-test is converted; production's conversion is a tracked CRM
-  prerequisite (`cengagement-description-wysiwyg-crm-handoff.md`). The popup's
+  crm-test and production are converted (production 10-11-26,
+  `scripts/convert_notes_wysiwyg.sh`); Boston is owed
+  (`cengagement-description-wysiwyg-crm-handoff.md`). The popup's
   Engagement-notes and Mentoring-needs fields are wysiwyg on both CRMs and take
   images now.
 - **The View-details popup is editable** (v0.210.0). It opens at 90% of the
@@ -574,9 +575,11 @@ one shared frontend that derives its domain from the first segment of its URL.
   doesn't own the feature never registers its routes.
 - **The Overview notes editor follows the field's LIVE CRM type** (v0.252.0,
   `service.live_notes_type`): wysiwyg ⇒ the rich editor, text ⇒ the plain
-  box. Funder Notes (`CSponsorProfile.description`) is text on both CRMs
-  until converted per instance — `csponsorprofile-description-wysiwyg-crm-handoff.md`
-  (Doug 2026-10-11: "the funder notes should be wysiwyg").
+  box. Funder Notes (`CSponsorProfile.description`) is wysiwyg on crm-test
+  and production since 10-11-26 (one command per instance,
+  `scripts/convert_notes_wysiwyg.sh`; Boston owed) —
+  `csponsorprofile-description-wysiwyg-crm-handoff.md` (Doug 2026-10-11:
+  "the funder notes should be wysiwyg").
 - **Overview** is a facts rail + notes feed with drag splitters, an aggregated
   Company peek, a Next-session callout with a Start/Open button, and (partner +
   funder) a **Discussion pane** — an app-only, append-only, attributed comment
@@ -1737,9 +1740,11 @@ each block.
   read back `wysiwyg` as the org key). **v0.252.2** (pushed 10-11-26 19:02, live on both 19:04, the served
   script carries the helper) is the review's find: the session tools did not up-convert a legacy plain
   note's line breaks (Client Administration did), so the pass as
-  sally.sponsor (`OPEN-ITEMS.md` #47) **passed the same evening**; production
-  still shows the plain box because its field is unconverted — handoff § 3
-  at a Sunday slot, with the engagement conversion still owed there too. The tab-order fix is live.
+  sally.sponsor (`OPEN-ITEMS.md` #47) **passed the same evening**;
+  **production converted the same night** (Doug's ruling: today, not the
+  Sunday slot) — both notes fields in one run of
+  `scripts/convert_notes_wysiwyg.sh` at 20:32, all three passes matched.
+  Boston owed. The tab-order fix is live.
 
 - **v0.251.0 (2026-10-11) — additional managers on partner and funder
   records.** Committed, not pushed; ships dark (feature-detected). Doug's

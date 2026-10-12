@@ -96,6 +96,9 @@ any dockerized instance, from the repository root — see
 ssh root@147.182.135.50 bash -s < scripts/convert_notes_wysiwyg.sh
 ```
 
+**Production done 10-11-26 20:32** by that line (with the funder field);
+the Client Administration pass as a non-administrator matched. Boston owed.
+
 By a human. Same one-key edit of
 `custom/Espo/Custom/Resources/metadata/entityDefs/CEngagement.json` on the
 production instance, same rebuild, same verification — including the non-admin

@@ -1,6 +1,6 @@
 # CRM handoff — convert `CSponsorProfile.description` (Funder Notes) from text to wysiwyg
 
-Last Updated: 10-11-26 19:35 · Revision 1.2
+Last Updated: 10-11-26 20:40 · Revision 1.3
 
 **Why:** Doug, 2026-10-11: *"The funder notes should be wysiwyg."* The Funder
 Management Overview's notes panel and the Details tab's Notes field should
@@ -111,7 +111,13 @@ ssh root@147.182.135.50 bash -s < scripts/convert_notes_wysiwyg.sh
 (`scripts/convert_notes_wysiwyg.sh`; idempotent, a field already wysiwyg is
 left alone, a missing or unparsable file is skipped with nothing written.
 Its PHP edit was exercised on five sample files in a PHP container 10-11-26.)
-The hand steps below remain for a single field or a non-docker host. Same one-key edit of that instance's
+The hand steps below remain for a single field or a non-docker host.
+
+**Production done 10-11-26 20:32** (Doug): both fields converted in one
+run, backups `*.bak-desc-wysiwyg-20261012-003237` beside the files, both
+read back `wysiwyg` at 20:37, and the funder-manager, client-administrator
+and CRM-administrator passes all matched. **Boston owed** — the same line
+against its droplet. Same one-key edit of that instance's
 `custom/Espo/Custom/Resources/metadata/entityDefs/CSponsorProfile.json`,
 same rebuild, same verification including the non-admin pass — the
 Attachment-create grant on the Sponsor Manager Role must be confirmed on each
@@ -135,6 +141,7 @@ today — the app detects `text` and changes nothing.
 
 | Rev | Date | Author | Change |
 |---|---|---|---|
+| 1.3 | 10-11-26 20:40 | Claude (Claude Code) | § 3: production done, passes matched; Boston the only instance owed. |
 | 1.2 | 10-11-26 19:35 | Claude (Claude Code) | § 3: production's host and container named (read live), the one-line script that converts both notes fields per instance, Doug's ruling to run production today. |
 | 1.1 | 10-11-26 18:55 | Claude (Claude Code) | Review fixes. § 0: crm-test converted (read live); the line-break claim corrected — the session tools up-convert only from v0.252.2, built with this revision. § 2: the pass needs v0.252.2, checks the Details tab too, and names the collapsed-note symptom. § 3: Boston named, runbook pointer, the missing-entry and missing-file cases. |
 | 1.0 | 10-11-26 14:10 | Claude (Claude Code) | First version, with the v0.252.0 build. |
