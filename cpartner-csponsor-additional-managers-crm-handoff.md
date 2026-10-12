@@ -1,6 +1,6 @@
 # CRM handoff — additional managers on partner and funder records
 
-Last Updated: 10-11-26 13:40 · Revision 1.0
+Last Updated: 10-12-26 14:05 · Revision 1.1
 
 ## 1. What this adds, in one sentence
 
@@ -13,8 +13,8 @@ the record appears in their My Email, and they are invited to its sessions.
 
 | CRM | State |
 |---|---|
-| crm-test | **Owed** — Doug runs the applier line in § 3 (dry run done 10-11-26, fingerprint `f2d6a41ea16c`) |
-| production | Owed — Sunday 17:00 UTC slot, from inside the production web container, same plan |
+| crm-test | **Done 10-11-26 13:46** (Doug, the applier; both links read back; live pass the same afternoon, `OPEN-ITEMS.md` #46) |
+| production | **Owed — step page written 10-12-26**, https://claude.ai/artifact/Lq7rbijp2bJVqizQR9TmGT: from inside the production web container, same plan, same fingerprint |
 | Boston | Owed — with its next release, same plan |
 
 ## 3. The change, as the applier makes it (preferred)
@@ -74,4 +74,5 @@ reverse link. Nothing is visible on a CRM without the link.
 
 | Rev | Date | Author | Change |
 |---|---|---|---|
+| 1.1 | 10-12-26 14:05 | Claude (Claude Code) | § 2: crm-test done; production's step page linked. |
 | 1.0 | 10-11-26 13:40 | Claude (Claude Code) | First version, with the v0.251.0 build. |

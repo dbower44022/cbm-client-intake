@@ -105,8 +105,15 @@ found; move resolved items to the bottom with the resolution date.
     partner.manager and sally.sponsor — the Details tab's CBM Contacts card
     offers *Select existing CBM contact…*, the add records a history note,
     the person then appears in the Overview's CBM Contacts, their My Email
-    lists the record, Remove works; (c) production and Boston at a Sunday
-    slot from the same plan (`cpartner-csponsor-additional-managers-crm-handoff.md`);
+    lists the record, Remove works; (c) **production** — Doug found the
+    card inactive on production 10-12-26 (both links absent, read from the
+    droplet's customization files 13:57) and asked for the steps; step page
+    https://claude.ai/artifact/Lq7rbijp2bJVqizQR9TmGT (private, *Production
+    Additional Managers*, 10-12-26 14:05): the applier from inside the
+    production web console, dry run then `--apply --production --expect
+    f2d6a41ea16c`, the pass as a non-admin Sponsor Management Team member,
+    the Entity Manager check; Boston with its next release from the same
+    plan (`cpartner-csponsor-additional-managers-crm-handoff.md`);
     (d) the Gmail sync scope now also covers co-mentored engagements, which
     it never did — watch production's first "scopes rebuilt" line after
     the deploy for a larger record count, not an error.
