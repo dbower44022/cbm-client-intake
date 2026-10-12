@@ -64,7 +64,17 @@ found; move resolved items to the bottom with the resolution date.
     characters). Read-only probe 20:43: Boston's `CSponsorProfile.description`
     is `text`; its `CEngagement.description` is ALREADY `wysiwyg` (a
     `.bak-desc-wysiwyg` from the chapter build sits beside it), so the run
-    converts the funder field only.
+    converts the funder field only. **Boston's applications run v0.232.0**
+    (the last release-lane cut), which predates the Overview following the
+    live type (v0.252.0) and the line-break fix (v0.252.2). Doug's ruling
+    10-11-26 20:5x: **convert the CRM tonight, release next Sunday** — the
+    Details tab's Funder notes panel goes rich at once; the Overview stays
+    a plain box and shows a rich note's tags until the release (page rev
+    1.1 checks the Details tab and tells Boston staff to edit there
+    meanwhile). **Next Sunday:** cut v0.252.2 to the release lane
+    (`scripts/cut_release.sh`, then its push line; Boston and Lakeside take
+    it by themselves) and set Boston's chapter key to `boston` at its
+    System Settings page before any event is saved there (v0.233.0).
 
 46. **Additional managers on partner and funder records (v0.251.0) — CRM
     change owed on all three CRMs, live pass owed** (built 2026-10-11 on
