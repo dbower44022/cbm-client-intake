@@ -576,3 +576,156 @@ def test_create_endpoint_reports_a_bad_request_readably(monkeypatch):
         r = c.post("/partnersessions/api/records", json={"changes": {"name": "Acme"}})
     assert r.status_code == 400
     assert "company name" in r.json()["detail"]
+
+
+# --- the Company picker (v0.254.0) ------------------------------------------
+# Doug's request 2026-10-12: "a way to select a company instead of hoping to
+# match the company name / website". A chosen company's id rides as
+# ``companyId`` beside (or instead of) the typed name; the typed name stays
+# the "+ New company" path and keeps the name-and-website rule.
+
+class PickerApi(FakeApi):
+    """The org-wide API client with a company directory: ``get`` for the
+    chosen company and a paged ``list`` for the picker's options."""
+
+    def __init__(self, companies=None, **kw):
+        super().__init__(**kw)
+        self.companies = companies if companies is not None else {
+            "A1": {"id": "A1", "name": "Key Bank", "website": "https://keybank.com",
+                   "cCompanyType": ["Partner"], "teamsIds": [], "assignedUsersIds": []},
+            "A2": {"id": "A2", "name": "Key Bank", "website": None,
+                   "cCompanyType": [], "teamsIds": [], "assignedUsersIds": []},
+        }
+        self.gets = []
+
+    async def get(self, entity, record_id, select=None):
+        self.gets.append((entity, record_id))
+        rec = self.companies.get(record_id)
+        if rec is None:
+            raise EspoError("HTTP 404: Not Found")
+        return dict(rec)
+
+    async def list(self, entity, **kw):
+        if entity == "Account":
+            rows = sorted(self.companies.values(), key=lambda a: a["name"])
+            off = kw.get("offset", 0); size = kw.get("max_size", 200)
+            return {"list": [dict(r) for r in rows[off:off + size]], "total": len(rows)}
+        return await super().list(entity, **kw)
+
+
+@pytest.mark.asyncio
+async def test_chosen_company_is_used_without_a_name_match_or_website_check():
+    """The picker's id wins: no find_one, no website refusal even though the
+    typed website differs from the stored one, the domain type merged in,
+    the website left alone (null-fill only), and the record named after the
+    company when no name was typed."""
+    api = PickerApi()
+    client = Fake(meta=_PARTNER_META)
+    res = await service.create_record(
+        PARTNER, client, api,
+        {"companyId": "A1", "website": "https://other-site.example", "partnershipStatus": "Active"},
+        user_id="u1",
+    )
+    assert api.gets[0] == ("Account", "A1")
+    assert res["accountId"] == "A1" and res["accountCreated"] is False
+    assert res["name"] == "Key Bank"
+    assert not _has(api, "Account")                      # nothing created
+    # The stored website is kept (null-fill only) and no type merge was
+    # needed — Partner is already on it. (The owner stamps still merge.)
+    touched = {}
+    for e, i, p in api.updates:
+        if e == "Account":
+            touched.update(p)
+    assert "website" not in touched and "cCompanyType" not in touched
+    assert _payload(client, "CPartnerProfile")["partnerCompanyId"] == "A1"
+
+
+@pytest.mark.asyncio
+async def test_chosen_company_gains_the_type_and_the_website_by_null_fill():
+    api = PickerApi()
+    client = Fake(meta=_PARTNER_META)
+    await service.create_record(
+        SPONSOR, client, api, {"companyId": "A2", "website": "example.org", "name": "KB grant"},
+        user_id="u1",
+    )
+    account_updates = [p for e, i, p in api.updates if e == "Account" and i == "A2"]
+    merged = {}
+    for p in account_updates:
+        merged.update(p)
+    assert merged.get("website") == "https://example.org"
+    assert merged.get("cCompanyType") == ["Sponsor"]
+    assert _payload(client, "CSponsorProfile")["sponsorCompanyId"] == "A2"
+
+
+@pytest.mark.asyncio
+async def test_chosen_company_that_is_gone_is_a_readable_refusal_not_a_create():
+    api = PickerApi()
+    client = Fake(meta=_PARTNER_META)
+    with pytest.raises(service.SessionError) as exc:
+        await service.create_record(PARTNER, client, api, {"companyId": "NOPE", "company": "Typed Name"},
+                                    user_id="u1")
+    assert "no longer in the CRM" in str(exc.value)
+    assert not _has(api, "Account") and not _has(client, "CPartnerProfile")
+
+
+@pytest.mark.asyncio
+async def test_typed_name_without_a_choice_still_takes_the_match_path():
+    api = PickerApi()
+    client = Fake(meta=_PARTNER_META)
+    res = await service.create_record(PARTNER, client, api, {"company": "Brand New Co"}, user_id="u1")
+    assert res["accountCreated"] is True and api.gets == []
+    assert _payload(api, "Account")["name"] == "Brand New Co"
+
+
+@pytest.mark.asyncio
+async def test_nothing_chosen_and_nothing_typed_is_refused():
+    with pytest.raises(service.SessionError) as exc:
+        await service.create_record(PARTNER, Fake(meta=_PARTNER_META), PickerApi(), {"website": "x.org"},
+                                    user_id="u1")
+    assert "pick a company" in str(exc.value)
+
+
+@pytest.mark.asyncio
+async def test_company_options_page_at_200_and_carry_the_website():
+    companies = {f"A{i:04d}": {"id": f"A{i:04d}", "name": f"Co {i:04d}", "website": "https://w.example" if i % 2 else None}
+                 for i in range(450)}
+    api = PickerApi(companies=companies)
+    opts = await service.quick_add_company_options(api)
+    assert len(opts) == 450
+    assert opts[0] == {"id": "A0000", "name": "Co 0000", "website": ""}
+    assert opts[1]["website"] == "https://w.example"
+
+
+def test_createcompanies_endpoint_reads_under_the_api_client(monkeypatch):
+    _as(monkeypatch)
+    # The router builds the org-wide client itself (dry-run in tests), so the
+    # directory rides in through the dry-run client's constructor.
+    monkeypatch.setattr("core.espo.DryRunEspoClient", lambda: PickerApi())
+    with TestClient(_app(monkeypatch, quick_add=True)) as c:
+        r = c.get("/partnersessions/api/createcompanies")
+        assert r.status_code == 200
+        names = [a["name"] for a in r.json()["companies"]]
+        assert names == ["Key Bank", "Key Bank"]
+    with TestClient(_app(monkeypatch, quick_add=False)) as c:
+        assert c.get("/partnersessions/api/createcompanies").status_code == 503
+
+
+def test_create_endpoint_accepts_a_chosen_company(monkeypatch):
+    _as(monkeypatch)
+    monkeypatch.setattr("core.espo.DryRunEspoClient", lambda: PickerApi())
+    with TestClient(_app(monkeypatch, quick_add=True)) as c:
+        r = c.post("/partnersessions/api/records", json={"changes": {"companyId": "A1"}})
+        assert r.status_code == 200, r.text
+        assert r.json()["accountId"] == "A1" and r.json()["name"] == "Key Bank"
+
+
+_APP_JS = (
+    __import__("pathlib").Path(__file__).resolve().parent.parent / "sessions" / "frontend" / "app.js"
+).read_text()
+
+
+def test_quick_add_form_carries_the_company_picker():
+    assert 'f.name === "company" && qadd.companies && qadd.companies.length' in _APP_JS
+    assert '{ id: "__new__", label: "+ New company…", muted: true }' in _APP_JS
+    assert "if (chosen) changes.companyId = chosen.id;" in _APP_JS
+    assert 'await api("/createcompanies")' in _APP_JS

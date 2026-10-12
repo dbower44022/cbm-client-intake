@@ -6981,6 +6981,13 @@
         qadd.options = res.options || {};
         qadd.managers = res.managers || [];
         qadd.defaultManagerId = res.defaultManagerId || null;
+        // The Company picker's options (v0.254.0): every company, read under
+        // the org-wide key. Best-effort — without the list the form falls
+        // back to the typed name and the name-and-website rule.
+        try {
+          var comp = await api("/createcompanies");
+          qadd.companies = (comp && comp.companies) || [];
+        } catch (e2) { qadd.companies = []; }
         qadd.loaded = true;
       } catch (e) {
         hide($("qaddLoading"));
@@ -6997,6 +7004,7 @@
     hide($("qaddModal"));
     qadd.fieldEls = {};
     qadd.nameAuto = "";
+    qadd.companyChoice = null;
     qadd.discardArmed = false;
   }
 
@@ -7057,7 +7065,11 @@
         }
       });
     }
-    if (companyEl) companyEl.focus();
+    if (companyEl && !companyEl.hidden) companyEl.focus();
+    else if (companyEl && companyEl.parentNode) {
+      var picker = companyEl.parentNode.querySelector("input[role=combobox]");
+      if (picker) picker.focus();
+    }
   }
 
   function qaddField(f) {
@@ -7067,7 +7079,44 @@
     label.textContent = f.label + (f.required ? " *" : "");
     wrap.appendChild(label);
     var el;
-    if (f.type === "enum") {
+    if (f.name === "company" && qadd.companies && qadd.companies.length) {
+      // The Company picker (v0.254.0, Doug's request 2026-10-12): choose an
+      // existing company and the add uses its id — no name match, no website
+      // check. "+ New company…" reveals the typed-name box, which is the
+      // original path (name match + the website rule). The typed box is the
+      // field element, so qaddValue("company") stays the NEW company's name
+      // and the chosen id rides separately as companyId.
+      qadd.companyChoice = null;
+      var newBox = document.createElement("input"); newBox.type = "text";
+      newBox.placeholder = "New company name"; newBox.hidden = true;
+      var combo = makeCombobox({
+        placeholder: "Type to search companies…",
+        onSelect: function (id, o) {
+          if (id === "__new__") {
+            qadd.companyChoice = null; newBox.hidden = false; newBox.focus();
+            if (qadd.fieldEls.name && qadd.fieldEls.name.value === qadd.nameAuto) {
+              qadd.nameAuto = ""; qadd.fieldEls.name.value = "";
+            }
+          } else {
+            qadd.companyChoice = { id: id, name: o.name || o.label };
+            newBox.hidden = true; newBox.value = "";
+            // The record name mirrors the chosen company until the user edits it.
+            if (qadd.fieldEls.name && qadd.fieldEls.name.value === qadd.nameAuto) {
+              qadd.nameAuto = qadd.companyChoice.name; qadd.fieldEls.name.value = qadd.nameAuto;
+            }
+          }
+        },
+      });
+      var opts = qadd.companies.map(function (a) {
+        var site = (a.website || "").replace(/^https?:\/\//i, "").replace(/^www\./i, "").replace(/\/$/, "");
+        return { id: a.id, name: a.name, label: a.name + (site ? " — " + site : "") };
+      });
+      opts.push({ id: "__new__", label: "+ New company…", muted: true });
+      combo.setOptions(opts);
+      combo.input.className += " qadd__input";
+      wrap.appendChild(combo.el);
+      el = newBox;
+    } else if (f.type === "enum") {
       el = document.createElement("select");
       var blank = document.createElement("option"); blank.value = ""; blank.textContent = "—";
       el.appendChild(blank);
@@ -7106,11 +7155,17 @@
     if (qadd.saving || !qadd.spec) return;
     hide($("qaddNotice"));
     var changes = {}, missing = [];
+    var chosen = qadd.companyChoice && qadd.companyChoice.id ? qadd.companyChoice : null;
     (qadd.spec || []).forEach(function (f) {
       var v = qaddValue(f.name);
-      if (f.required && (v === "" || v == null)) missing.push(f.label);
+      if (f.name === "company" && chosen) return;  // the picker answered it
+      if (f.required && (v === "" || v == null)) {
+        missing.push(f.name === "company" && qadd.companies && qadd.companies.length
+          ? "Company (pick one, or choose \"+ New company…\" and type its name)" : f.label);
+      }
       if (v !== "" && v != null && v !== false) changes[f.name] = v;
     });
+    if (chosen) changes.companyId = chosen.id;
     if (missing.length) {
       notice("qaddNotice", "Please complete: " + missing.join(", ") + ".", "error");
       return;

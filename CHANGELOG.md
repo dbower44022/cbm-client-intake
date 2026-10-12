@@ -4,6 +4,37 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.254.0] — 2026-10-12
+
+**feat(sessions): the quick-add's Company is a picker.** Doug's question
+2026-10-12: *"is there a way to select a company instead of hoping to match
+the company name / website?"* There was not — the Add-partner / Add-funder
+form's Company was a typed name behind a name-and-website match, so making
+a company that is both a partner and a funder meant copying the name
+exactly. Now:
+
+- The Company box on both quick-adds is the type-ahead the Details tab and
+  the compose dialog already use, listing every company with its website
+  beside the name (two same-named companies tell apart), plus **+ New
+  company…**, which reveals the typed-name box — the original path, with
+  the name match and the website rule unchanged.
+- A chosen company rides as `companyId` beside the spec's fields (not a
+  spec field — never laid out or written as one). `service.create_record`
+  takes it ahead of the typed name: no match, no website check, the same
+  follow-through as a match (website null-filled, the domain's type merged
+  in, owner stamps merged), and the record named after the company when no
+  name was typed. An id the CRM no longer has is a readable refusal, never
+  a create under the typed name.
+- `GET /createcompanies` serves the options **under the org-wide API
+  client**, as the match runs: a team-read role would otherwise see only
+  the companies its team already owns — exactly the ones it does not need
+  a picker for. Paged at 200 to a cap of 1,000. Behind the same quick-add
+  switch as the form; without the list the form falls back to the typed
+  name.
+- Verified by tests only (nine new); the live case is "+ Add funder" on
+  crm-test as sally.sponsor picking a company that already has a partner
+  profile, and reading `cCompanyType` as `Partner, Sponsor` afterwards.
+
 ## [0.253.0] — 2026-10-12
 
 **feat(sessions): "Make primary" on a partner's or funder's CBM contacts.**

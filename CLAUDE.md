@@ -672,7 +672,11 @@ one shared frontend that derives its domain from the first segment of its URL.
   different company, and the save is **refused with the existing company
   named** — never a second same-named Account, which would make every
   name-based match in the CRM ambiguous. Same rule on the Details tab's
-  "+ New company" picker (shared function). Compared through
+  "+ New company" picker (shared function). **Since v0.254.0 the quick-add's
+  Company is a picker** (every company under the org-wide key, website
+  beside the name, "+ New company…" for the typed path): a chosen company's
+  id rides as `companyId` and skips the match and the website rule — the
+  way to make a company that is both a partner and a funder. Compared through
   `core/crm_upsert.website_key` (scheme, `www.`, case, trailing slash
   ignored; the path counts). No stored website ⇒ match and null-fill it.
   **The new contact is owned by its creator and the domain team** (v0.249.0,
@@ -1739,6 +1743,11 @@ with `main`; **Lakeside took it off the release lane by itself** (its
 unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
+
+- **v0.254.0 (2026-10-12) — the quick-add's Company is a picker.**
+  Committed, not pushed. Doug's question the same afternoon; standing rule
+  in the Session Management section. No CRM change. Verified by tests
+  only — the live pass is `OPEN-ITEMS.md` #49.
 
 - **v0.253.0 (2026-10-12) — "Make primary" on a partner's or funder's
   CBM contacts.** Pushed 10-12-26 14:25, live on crm-test and production

@@ -708,6 +708,22 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not load the form")
 
+        @router.get("/createcompanies")
+        async def create_companies(request: Request) -> dict:
+            """Every company, for the Add form's Company picker (v0.254.0) —
+            read under the org-wide API client, as the company match is, so
+            a team-read role sees the companies it does not yet own."""
+            _require_user(request)
+            _require_quick_add()
+            try:
+                return {
+                    "companies": await service.quick_add_company_options(
+                        _api_client(get_settings())
+                    )
+                }
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load companies")
+
         @router.post("/records")
         async def create_record(body: RecordCreateIn, request: Request) -> dict:
             """Create a new partner / funder — Account → Contact → profile."""

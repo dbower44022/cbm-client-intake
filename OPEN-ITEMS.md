@@ -34,6 +34,16 @@ found; move resolved items to the bottom with the resolution date.
     15:26 and 15:29 UTC), which must be gone (tonight's reset) or deleted
     before the baseline is taken.
 
+49. **The quick-add's Company picker (v0.254.0) — committed 10-12-26,
+    live pass owed.** Doug's question the same day; no CRM change. **Owed:**
+    on crm-test as sally.sponsor, "+ Add funder": the Company box offers
+    every company with its website beside the name; pick one that already
+    has a partner profile (Key Bank, if the sandbox has it), leave the name
+    to mirror, save — the funder is linked to that company (the notice says
+    "Linked to the existing company"), and the company's type reads
+    `Partner, Sponsor` in the CRM; then "+ New company…" still creates a
+    typed one. Then production as a real non-admin.
+
 48. **"Make primary" on a partner's or funder's CBM contacts (v0.253.0) —
     live on crm-test and production 10-12-26 14:28; the pass matched
     (Doug, 10-12-26 afternoon: "all steps passed") — RESOLVED except

@@ -34,7 +34,7 @@ from core.crm_upsert import (
     COMPANY_SELECT, conflicting_website, create_dropping_invalid, fill_company_website,
     merge_company_type, _is_empty,
 )
-from core.espo import EspoError, is_forbidden
+from core.espo import EspoError, is_forbidden, is_not_found
 from core.phone import e164_or_none, format_us
 from core.stream import post_stream_note
 
@@ -3400,6 +3400,70 @@ async def _merge_owner_stamps(
 #: ownership the merge needs.
 _COMPANY_MATCH_SELECT = COMPANY_SELECT + ",teamsIds,assignedUsersIds"
 
+#: The quick-add's chosen-company field (v0.254.0): the picker posts the
+#: Account id under this key, beside (or instead of) the typed ``company``
+#: name. Not a spec field — it is never laid out or written as one.
+CREATE_COMPANY_ID_FIELD = "companyId"
+
+
+_COMPANY_OPTIONS_MAX = 1000
+
+
+async def quick_add_company_options(api_client: Any) -> list[dict[str, Any]]:
+    """Every company, for the quick-add's Company picker (v0.254.0, Doug's
+    request 2026-10-12: "a way to select a company instead of hoping to match
+    the company name / website").
+
+    Read under the **intake API client**, like the match itself
+    (:func:`_find_or_create_company`): a staff gate role may read Account at
+    *team* and would see only the companies its team already owns — exactly
+    the ones it does NOT need a picker for. Pages at 200 (an oversized page
+    is a 403, not a truncation — [[espo-list-maxsize-limit]]) up to a
+    CBM-scale cap. Name and website only; the website is what the picker
+    shows beside a name so two same-named companies can be told apart.
+    """
+    out: list[dict[str, Any]] = []
+    offset = 0
+    while offset < _COMPANY_OPTIONS_MAX:
+        data = await api_client.list(
+            ACCOUNT, select="name,website", max_size=_PAGE, offset=offset, order_by="name",
+        )
+        rows = data.get("list", [])
+        out.extend(
+            {"id": a["id"], "name": a.get("name") or "", "website": a.get("website") or ""}
+            for a in rows
+        )
+        if len(rows) < _PAGE:
+            break
+        offset += _PAGE
+    return out
+
+
+async def _use_chosen_company(
+    cfg: DomainConfig, api_client: Any, account_id: str, website: str,
+    *, user_id: str = "", team_ids: Optional[list[str]] = None,
+) -> str:
+    """The quick-add's "I picked this company" path (v0.254.0): no name match
+    and no website check — the person chose the record, so the choice IS the
+    answer. Same follow-through as a name match: the website null-fills,
+    the domain's type merges in, the owner stamps merge. An id the CRM does
+    not have (a stale list, a deleted company) is a readable refusal, never
+    a create under the typed name."""
+    try:
+        existing = await api_client.get(ACCOUNT, account_id, select=_COMPANY_MATCH_SELECT + ",name")
+    except EspoError as exc:
+        if is_not_found(exc):
+            raise SessionError(
+                "That company is no longer in the CRM — pick again, or choose "
+                "\"+ New company\" to create it."
+            ) from None
+        raise
+    await fill_company_website(api_client, existing, website)
+    if cfg.create_spec:
+        await merge_company_type(api_client, existing, cfg.create_spec.company_type)
+    await _merge_owner_stamps(api_client, ACCOUNT, existing, user_id, team_ids)
+    return existing["id"]
+
 
 async def _find_or_create_company(
     cfg: DomainConfig, client: SessionClient, api_client: Any,
@@ -3592,22 +3656,39 @@ async def create_record(
     allowed = {f["name"]: f for f in create_field_spec(cfg)}
     values = {k: v for k, v in changes.items() if k in allowed}
 
+    # A chosen company (the picker, v0.254.0) wins over a typed name; the
+    # typed name is the "+ New company" path and the name-and-website rule.
+    chosen_id = (str(changes.get(CREATE_COMPANY_ID_FIELD) or "")).strip()
     company = (values.get("company") or "").strip()
-    if not company:
-        raise SessionError("A company name is required.")
+    if not company and not chosen_id:
+        raise SessionError("A company name is required — pick a company, or type a new company's name.")
     website = (values.get("website") or "").strip()
     if website and "://" not in website:
         website = f"https://{website}"  # Account.website is a url field
 
     team_ids = await _quick_add_team_ids(cfg, api_client)
-    account_id, account_created = await _find_or_create_company(
-        cfg, client, api_client, company, website, user_id=user_id, team_ids=team_ids,
-    )
+    if chosen_id:
+        account_id = await _use_chosen_company(
+            cfg, api_client, chosen_id, website, user_id=user_id, team_ids=team_ids,
+        )
+        account_created = False
+        if not company:
+            # The record name mirrors the company; read it when nothing was typed.
+            try:
+                company = (await api_client.get(ACCOUNT, account_id, select="name")).get("name") or ""
+            except EspoError:
+                company = ""
+    else:
+        account_id, account_created = await _find_or_create_company(
+            cfg, client, api_client, company, website, user_id=user_id, team_ids=team_ids,
+        )
     contact_id, contact_created = await _create_quick_contact(
         cfg, client, api_client, values, account_id, user_id=user_id, team_ids=team_ids,
     )
 
     payload: dict[str, Any] = {"name": (values.get("name") or "").strip() or company}
+    if not payload["name"]:
+        raise SessionError("A name for the record is required.")
     for f in spec.profile_fields:
         if f["name"] == "name":
             continue
