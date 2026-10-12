@@ -56,8 +56,15 @@ found; move resolved items to the bottom with the resolution date.
     over SSH converted both notes fields at 20:32 (backups stamped
     `20261012-003237` beside the files, both read back `wysiwyg` at 20:37),
     and all three passes — funder manager, client administrator, CRM
-    administrator — matched ("all tests passed"). **Owed:** (e) Boston, the
-    same one line against its droplet, when asked.
+    administrator — matched ("all tests passed"). **Owed:** (e) Boston — Doug asked for it the same night (20:43); step
+    page https://claude.ai/artifact/NbHtjXjEUHskC5ExWTK7Tg (private, *Boston
+    Notes Conversion*, 10-11-26 20:50), command
+    `scripts/on_crm.sh boston scripts/convert_notes_wysiwyg.sh` (the wrapper
+    exists because Boston's key pushes the bare ssh line past 70
+    characters). Read-only probe 20:43: Boston's `CSponsorProfile.description`
+    is `text`; its `CEngagement.description` is ALREADY `wysiwyg` (a
+    `.bak-desc-wysiwyg` from the chapter build sits beside it), so the run
+    converts the funder field only.
 
 46. **Additional managers on partner and funder records (v0.251.0) — CRM
     change owed on all three CRMs, live pass owed** (built 2026-10-11 on
