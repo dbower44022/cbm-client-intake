@@ -50,7 +50,9 @@ found; move resolved items to the bottom with the resolution date.
     partner on the engagement. Then production as a real non-admin.
 
 49. **The quick-add's Company picker (v0.254.0) — live on crm-test and
-    production 10-12-26 14:49, live pass owed.** Doug's question the same day; no CRM change. **Owed:**
+    production 10-12-26 14:49; the pass matched (Doug, 10-12-26: "all
+    steps passed") — RESOLVED except Boston, which takes it with its
+    release.** Doug's question the same day; no CRM change. **Owed:**
     on crm-test as sally.sponsor, "+ Add funder": the Company box offers
     every company with its website beside the name; pick one that already
     has a partner profile (Key Bank, if the sandbox has it), leave the name

@@ -1803,8 +1803,8 @@ each block.
 - **v0.254.0 (2026-10-12) — the quick-add's Company is a picker.**
   Pushed 14:46, live on crm-test and production 14:49 (the served script
   carries the picker). Doug's question the same afternoon; standing rule
-  in the Session Management section. No CRM change. Verified by tests
-  only — the live pass is `OPEN-ITEMS.md` #49.
+  in the Session Management section. No CRM change. **Live pass matched
+  the same afternoon** (`OPEN-ITEMS.md` #49, Doug as sally.sponsor).
 
 - **v0.253.0 (2026-10-12) — "Make primary" on a partner's or funder's
   CBM contacts.** Pushed 10-12-26 14:25, live on crm-test and production
