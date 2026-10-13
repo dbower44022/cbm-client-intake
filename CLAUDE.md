@@ -1769,8 +1769,9 @@ each block.
   Pushed 18:54, live on crm-test and production 18:56; **verified in the
   browser by computed style** on crm-test: view mode shows Edit only, edit
   mode shows Cancel/Save, Cancel returns to view, the band reads "none
-  recorded". v0.256.3 (committed, not pushed) gates the edit form's own
-  display the same way — the live check found it still flex when hidden. Doug's screenshot settled the Cancel report: a bare
+  recorded". v0.256.3 (pushed 21:02, live on both 21:05) gates the edit
+  form's own display the same way — the live check found it still flex
+  when hidden. Doug's screenshot settled the Cancel report: a bare
   `display: flex` beat the `hidden` attribute since v0.210.0, and the
   v0.256.1 reproduction read the attribute, not the rendered state.
   Guarded by `tests/test_assignments_frontend_guards.py`.
