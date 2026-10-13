@@ -11,7 +11,10 @@ deploy marker on App Platform.
 read computed styles: `#modalEdit` kept `display: flex` through its
 `hidden` attribute. Harmless today only because the script empties the
 form on exit (a zero-height box), so this closes the latent half of the
-same defect and the guard test now covers `.edit-form`.
+same defect and the guard test now covers `.edit-form`. Live on crm-test
+and production 21:05; **verified in the browser 21:08** by computed style
+(view: Edit alone, form and Cancel/Save at display none; edit: swapped;
+Cancel returns to view) and by screenshot.
 
 ## [0.256.2] — 2026-10-12
 

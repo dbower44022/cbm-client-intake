@@ -1771,7 +1771,11 @@ each block.
   mode shows Cancel/Save, Cancel returns to view, the band reads "none
   recorded". v0.256.3 (pushed 21:02, live on both 21:05) gates the edit
   form's own display the same way — the live check found it still flex
-  when hidden. Doug's screenshot settled the Cancel report: a bare
+  when hidden. **Verified in the browser 21:08** on crm-test at v0.256.3
+  by computed style and screenshot: view mode shows Edit alone with the
+  form and the Cancel/Save pair at display none, edit mode swaps them,
+  Cancel returns to view, Internal Notes render formatted. Closed; the
+  only open item from the day is `OPEN-ITEMS.md` #50. Doug's screenshot settled the Cancel report: a bare
   `display: flex` beat the `hidden` attribute since v0.210.0, and the
   v0.256.1 reproduction read the attribute, not the rendered state.
   Guarded by `tests/test_assignments_frontend_guards.py`.
