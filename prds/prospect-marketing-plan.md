@@ -1,4 +1,4 @@
-# Prospect Marketing — plan v0.4 draft (2026-10-14)
+# Prospect Marketing — plan v0.5 draft (2026-10-14)
 
 **STRAWMAN — not an approved plan.** Sections marked *Doug's rulings* record
 decisions already made in the 2026-08-11 session. Everything marked **PROPOSAL**
@@ -20,8 +20,12 @@ that leads to a personalized landing page and then into the existing intake
 forms.
 
 Status: **NOT BUILT.** No code, no CRM entity, no vendor account. The
-process is now ruled end to end (section of 2026-10-13/14); the next step is
-a build plan.
+process is ruled end to end (section of 2026-10-13/14) and **the build plan
+is written: `prds/prospect-marketing-build-plan.md` (v0.1, 2026-10-14)** —
+the record model, the doors, the campaign engine, the landing page,
+conversion, reporting, five phases with their CRM handoffs and verification
+scripts, and seven questions for Doug. This document stays the record of the
+rulings; the build plan is where the build is described.
 
 ---
 
@@ -791,8 +795,10 @@ other source consumes a service before mentoring.
 - The earlier open questions (what the outside filter delivers and how; the
   postcard offer and creative; which address is mailed) are unchanged.
 
-**Next step:** a build plan, not a build — the prompt is
-`prompts/prospect-marketing-build-plan-prompt-v0.1.md`.
+**Next step:** the build plan is written (`prds/prospect-marketing-build-plan.md`,
+2026-10-14); its § 9 holds the seven questions that gate the CRM handoff, and
+`prompts/prospect-marketing-crm-handoff-prompt-v0.1.md` is the kickoff for
+writing that handoff once questions 1 and 3 are answered.
 
 ---
 
@@ -801,8 +807,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — plan |
-| Version | v0.4 draft — **process ruled end to end, build plan not yet written**; the storage section above is superseded by ruling 21 |
-| Last Updated | 10-14-26 17:18 |
+| Version | v0.5 draft — **process ruled end to end; build plan written as a sibling document**; the storage section above is superseded by ruling 21 |
+| Last Updated | 10-14-26 10-14-26 17:34 |
 | Prepared by | Claude, for D. Bower |
 | Session | 2026-08-11 requirements elicitation; 2026-09-01 funnel-stage discussion; 2026-09-02 funnel diagram review (paused at the first question); 2026-10-13/14 source-by-source walk (rulings 9–27) |
 | Related | `research/registry-enrichment/enrichment-findings.md`, `cinformation-request-entity.md`, `prds/intake-receipt-redesign-plan.md`, `prompts/prospect-marketing-funnel-2026-09-02.png`, `prompts/prospect-marketing-process-session-prompt-v0.1.md` |
@@ -811,6 +817,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| v0.5 draft | 10-14-26 10-14-26 17:34 | Claude (Claude Code) | Status, next step and header now point at the build plan (`prds/prospect-marketing-build-plan.md` v0.1). No ruling changed. |
 | v0.4 draft | 10-14-26 17:18 | Claude (Claude Code) | Added the 2026-10-13/14 section: the source-by-source walk, rulings 9–27 (SMS consent; Qualified = fit only and Active Prospect = campaign membership; the quarantine storage model; a relationship always creates a Company; Source unchanged plus a new Campaign entity), the withdrawn proposals, the ladder and the per-source walk tables, the open list. Header, status and revision rows updated; the 2026-09-02 open list marked closed. |
 | v0.3 draft | 09-02-26 | Claude | Doug's funnel diagram recorded; first review point; paused at the Qualified question. |
 | v0.2 draft | 09-01-26 | Claude | Funnel-stage discussion recorded — ideas only. |
