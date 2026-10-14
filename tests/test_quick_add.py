@@ -729,3 +729,112 @@ def test_quick_add_form_carries_the_company_picker():
     assert '{ id: "__new__", label: "+ New company…", muted: true }' in _APP_JS
     assert "if (chosen) changes.companyId = chosen.id;" in _APP_JS
     assert 'await api("/createcompanies")' in _APP_JS
+
+
+# --- the inherited primary contact (v0.257.0) ---------------------------------
+# Doug's request 2026-10-14: a partner made from a funder's company, with no
+# contact entered, takes the funder's primary contact — and the reverse.
+
+class SiblingApi(PickerApi):
+    """The org-wide client with the other door's records on the company and
+    the contacts they name."""
+
+    def __init__(self, profiles=None, contacts=None, **kw):
+        super().__init__(**kw)
+        self.profiles = profiles if profiles is not None else [
+            {"id": "SP-old", "name": "Old grant", "sponsorCompanyId": "A1", "sponsorContactId": None},
+            {"id": "SP-new", "name": "New grant", "sponsorCompanyId": "A1", "sponsorContactId": "C-fund"},
+        ]
+        self.contacts = contacts if contacts is not None else {
+            "C-fund": {"id": "C-fund", "name": "Fran Funder", "teamsIds": ["T-sponsor"], "assignedUsersIds": []},
+        }
+        self.listed = []
+        self.relates = []
+
+    async def list(self, entity, **kw):
+        self.listed.append((entity, kw.get("where")))
+        if entity in ("CSponsorProfile", "CPartnerProfile"):
+            fk = "sponsorCompanyId" if entity == "CSponsorProfile" else "partnerCompanyId"
+            acc = kw["where"][0]["value"]
+            rows = [p for p in self.profiles if p.get(fk) == acc]
+            rows = list(reversed(rows))  # newest first, as the real order_by would
+            return {"list": rows, "total": len(rows)}
+        return await super().list(entity, **kw)
+
+    async def get(self, entity, record_id, select=None):
+        if entity == "Contact":
+            rec = self.contacts.get(record_id)
+            if rec is None:
+                raise EspoError("HTTP 404: Not Found")
+            return dict(rec)
+        return await super().get(entity, record_id, select)
+
+    async def relate(self, entity, record_id, link, related_id):
+        self.relates.append((entity, record_id, link, related_id))
+
+
+@pytest.mark.asyncio
+async def test_partner_from_a_funder_company_inherits_the_funder_primary_contact():
+    api = SiblingApi()
+    client = Fake(meta=_PARTNER_META)
+    res = await service.create_record(PARTNER, client, api, {"companyId": "A1"}, user_id="u1")
+    # The newest funder record WITH a contact wins (the older one had none).
+    assert res["contactId"] == "C-fund" and res["contactInheritedFrom"] == "Funder"
+    assert res["contactCreated"] is False and res["contactLinked"] is True
+    assert not _has(client, "Contact") and not _has(api, "Contact")
+    assert _payload(client, "CPartnerProfile")["primaryPartnercontactId"] == "C-fund"
+    assert ("CPartnerProfile", "cpartnerprofile-1", "contacts", "C-fund") in client.related
+    # The lookup went to the OTHER door, scoped to the company.
+    assert ("CSponsorProfile", [{"type": "equals", "attribute": "sponsorCompanyId", "value": "A1"}]) in api.listed
+    # The contact gained the creator and the partner team (merge-only).
+    stamp = next(p for e, i, p in api.updates if e == "Contact" and i == "C-fund")
+    assert "u1" in stamp.get("assignedUsersIds", [])
+
+
+@pytest.mark.asyncio
+async def test_funder_from_a_partner_company_inherits_the_partner_primary_contact():
+    api = SiblingApi(profiles=[
+        {"id": "PP1", "name": "Key Bank partnership", "partnerCompanyId": "A2", "primaryPartnercontactId": "C-part"},
+    ], contacts={"C-part": {"id": "C-part", "name": "Pat", "teamsIds": [], "assignedUsersIds": []}})
+    client = Fake(meta=_PARTNER_META)
+    res = await service.create_record(SPONSOR, client, api, {"companyId": "A2"}, user_id="u1")
+    assert res["contactId"] == "C-part" and res["contactInheritedFrom"] == "Partner"
+    assert _payload(client, "CSponsorProfile")["sponsorContactId"] == "C-part"
+
+
+@pytest.mark.asyncio
+async def test_entered_contact_wins_over_the_inherited_one():
+    api = SiblingApi()
+    client = Fake(meta=_PARTNER_META)
+    res = await service.create_record(
+        PARTNER, client, api, {"companyId": "A1", "firstName": "Dana", "lastName": "Reyes"}, user_id="u1",
+    )
+    assert res["contactInheritedFrom"] is None and res["contactCreated"] is True
+    assert all(e not in ("CSponsorProfile", "CPartnerProfile") for e, _ in api.listed)
+
+
+@pytest.mark.asyncio
+async def test_no_inheritance_without_a_chosen_company_or_a_sibling_contact():
+    # Typed name (even one that matches): the form's own rule, no lookup.
+    api = SiblingApi()
+    res = await service.create_record(PARTNER, Fake(meta=_PARTNER_META), api, {"company": "Key Bank"}, user_id="u1")
+    assert res["contactId"] is None and res["contactInheritedFrom"] is None
+    # Chosen company whose other-door records name no contact: nothing.
+    api = SiblingApi(profiles=[{"id": "SP1", "sponsorCompanyId": "A1", "sponsorContactId": None}])
+    res = await service.create_record(PARTNER, Fake(meta=_PARTNER_META), api, {"companyId": "A1"}, user_id="u1")
+    assert res["contactId"] is None and res["contactInheritedFrom"] is None
+
+
+@pytest.mark.asyncio
+async def test_inherited_contact_link_falls_back_to_the_org_key():
+    """The user's relate may be refused on the contact side (it belongs to
+    the other door's team); the org key links it instead."""
+    api = SiblingApi()
+    client = Fake(meta=_PARTNER_META, relate_error=True)
+    res = await service.create_record(PARTNER, client, api, {"companyId": "A1"}, user_id="u1")
+    assert res["contactLinked"] is True
+    assert ("CPartnerProfile", "cpartnerprofile-1", "contacts", "C-fund") in api.relates
+
+
+def test_quick_add_notice_names_the_inherited_contact():
+    assert "Primary contact copied from the company's" in _APP_JS

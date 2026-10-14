@@ -4,6 +4,34 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.257.0] — 2026-10-14
+
+**feat(sessions): a quick-add from the other door's company inherits its
+primary contact.** Doug's request 2026-10-14: *"When a user creates a
+partner, and selects the company record of a funder and does not add any
+contact information, copy the funder primary contact as the partner
+primary contact. The same in reverse."*
+
+- `service._inherit_primary_contact`: when the Company was **picked** (the
+  v0.254.0 picker) and the contact block was left empty, the other door's
+  records on that company are read under the org-wide API client (a
+  Sponsor Manager cannot read partner records, nor the reverse); the
+  **newest one that names a primary contact** wins (several per company
+  are allowed since 2026-08-14). That contact becomes the new record's
+  primary contact and is linked into its contacts list, and it gains the
+  creator and this door's team (merge-only, best-effort) so a team-read
+  role can see what it inherited. A refused user-side link is retried
+  under the org key, since the contact belongs to the other door's team.
+- An entered contact always wins; a typed company name (even one that
+  matches) takes no lookup — the inheritance is a property of choosing a
+  record. No other-door contact ⇒ exactly the empty-block behaviour.
+- The create notice says *"Primary contact copied from the company's
+  funder record."* (`contactInheritedFrom` on the result).
+- Verified by tests only (six new); the live case is "+ Add partner" on
+  crm-test as partner.manager, picking a funder's company and leaving the
+  contact empty — the partner's Contacts table shows the funder's primary
+  contact, marked Primary.
+
 ## [0.256.3] — 2026-10-12
 
 **fix(assignments): the edit form's own display rule gets the same

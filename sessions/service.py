@@ -3474,6 +3474,63 @@ async def _use_chosen_company(
     return existing["id"]
 
 
+#: The other door on the same company: a partner made from a funder's
+#: company inherits the funder's primary contact, and the reverse.
+_SIBLING_SLUG = {"partnersessions": "sponsorsessions", "sponsorsessions": "partnersessions"}
+
+
+async def _inherit_primary_contact(
+    cfg: DomainConfig, api_client: Any, account_id: str,
+    *, user_id: str = "", team_ids: Optional[list[str]] = None,
+) -> tuple[Optional[str], Optional[str]]:
+    """The primary contact of the chosen company's OTHER-door record, for a
+    quick-add that named no contact (Doug's request 2026-10-14: a partner
+    made from a funder's company takes the funder's primary contact, and a
+    funder made from a partner's company takes the partner's). Returns
+    ``(contact id, the other door's record label)`` or ``(None, None)``.
+
+    Read under the intake API client: a Sponsor Manager cannot read partner
+    records (nor the reverse), so the lookup would otherwise see nothing.
+    Several other-door records on one company (allowed since 2026-08-14):
+    the newest one that HAS a primary contact wins. The contact then gains
+    the creator and this door's team (:func:`_merge_owner_stamps`, merge-only,
+    best-effort) so a team-read role can see the contact it just inherited.
+    Best-effort throughout — a failed lookup means no contact, exactly as
+    if the block had been left empty.
+    """
+    from .config import DOMAINS
+    other = DOMAINS.get(_SIBLING_SLUG.get(cfg.slug, ""))
+    if other is None:
+        return None, None
+    fk, attr = company_id_attr(other), other.primary_contact_id_attr
+    if not fk or not attr:
+        return None, None
+    try:
+        data = await api_client.list(
+            other.parent_entity,
+            where=[{"type": "equals", "attribute": fk, "value": account_id}],
+            select=f"name,{attr}", max_size=_PAGE, order_by="createdAt", order="desc",
+        )
+    except EspoError as exc:
+        log.warning("inherit-contact: %s lookup for Account/%s failed: %s",
+                    other.parent_entity, account_id, exc)
+        return None, None
+    for row in data.get("list", []):
+        contact_id = row.get(attr)
+        if not contact_id:
+            continue
+        try:
+            contact = await api_client.get(
+                CONTACT, contact_id, select="name,teamsIds,assignedUsersIds"
+            )
+            await _merge_owner_stamps(api_client, CONTACT, contact, user_id, team_ids)
+        except EspoError as exc:
+            log.warning("inherit-contact: Contact/%s unreadable or unstampable: %s",
+                        contact_id, exc)
+        return contact_id, other.parent_label
+    return None, None
+
+
 async def _find_or_create_company(
     cfg: DomainConfig, client: SessionClient, api_client: Any,
     name: str, website: str, *, user_id: str = "", team_ids: Optional[list[str]] = None,
@@ -3694,6 +3751,13 @@ async def create_record(
     contact_id, contact_created = await _create_quick_contact(
         cfg, client, api_client, values, account_id, user_id=user_id, team_ids=team_ids,
     )
+    contact_inherited_from = None
+    if contact_id is None and chosen_id:
+        # No contact entered and a company chosen: the other door's primary
+        # contact on that company carries over (v0.257.0).
+        contact_id, contact_inherited_from = await _inherit_primary_contact(
+            cfg, api_client, account_id, user_id=user_id, team_ids=team_ids,
+        )
 
     payload: dict[str, Any] = {"name": (values.get("name") or "").strip() or company}
     if not payload["name"]:
@@ -3743,8 +3807,21 @@ async def create_record(
             await client.relate(cfg.parent_entity, record_id, cfg.parent_contacts_link, contact_id)
             linked = True
         except EspoError as exc:
-            log.warning("could not link Contact/%s to %s/%s: %s",
-                        contact_id, cfg.parent_entity, record_id, exc)
+            if contact_inherited_from:
+                # An inherited contact belongs to the other door's team; the
+                # user's own relate may be refused on the contact side, and
+                # the org key holds both edits.
+                try:
+                    await api_client.relate(
+                        cfg.parent_entity, record_id, cfg.parent_contacts_link, contact_id
+                    )
+                    linked = True
+                except EspoError as exc2:
+                    log.warning("could not link inherited Contact/%s to %s/%s: %s",
+                                contact_id, cfg.parent_entity, record_id, exc2)
+            else:
+                log.warning("could not link Contact/%s to %s/%s: %s",
+                            contact_id, cfg.parent_entity, record_id, exc)
     return {
         "id": record_id,
         "name": payload["name"],
@@ -3752,6 +3829,7 @@ async def create_record(
         "accountCreated": account_created,
         "contactId": contact_id,
         "contactCreated": contact_created,
+        "contactInheritedFrom": contact_inherited_from,
         "contactLinked": linked,
         "managerId": payload.get(mgr_attr) if mgr_attr else None,
     }

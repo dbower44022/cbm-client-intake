@@ -7219,7 +7219,9 @@
     // already knows should see that it was matched, not silently deduped.
     var parts = [(config.parentLabel || "Record") + " " + (res.name || "") + " created."];
     if (res.contactId) {
-      parts.push(res.contactCreated ? "New contact added." : "Matched the existing contact.");
+      parts.push(res.contactInheritedFrom
+        ? "Primary contact copied from the company's " + String(res.contactInheritedFrom).toLowerCase() + " record."
+        : (res.contactCreated ? "New contact added." : "Matched the existing contact."));
     }
     if (!res.accountCreated) parts.push("Linked to the existing company.");
     if (res.contactId && !res.contactLinked) {
