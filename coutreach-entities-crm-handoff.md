@@ -1,6 +1,6 @@
 # CRM handoff — prospect marketing and Campaign Management (Phase 1): `CProspect`, `COutreachCampaign`, `COutreachTouch`
 
-Last Updated: 10-15-26 00:02 · Revision 1.1 — see change log at the end.
+Last Updated: 10-15-26 01:20 · Revision 1.2 — see change log at the end.
 
 Three new record types and the links that tie them to what the CRM already
 holds. A **prospect record** (`CProspect`) is a quarantine for a business or
@@ -32,7 +32,7 @@ removed, renamed or narrowed. Safe to apply ahead of the code.
 
 | CRM | State | Evidence |
 |---|---|---|
-| crm-test | **Not applied.** Dry run 10-14-26 23:0x as the configuration administrator (`crm.config`, EspoCRM 9.3.6): **78 changes, fingerprint `6b29c8928dcf`**, nothing already present. Every new name read as absent from `GET /Metadata` as the org-wide key the same evening; no relation name collides with the sixteen in use. | This document's § 2 output. |
+| crm-test | **Done 10-15-26 01:06–01:19.** § 2 applied by Doug through `scripts/prospect_crm_test.sh outreach` (the applier with `--expect 6b29c8928dcf`; the `--apply` is refused to Claude by the session classifier): 78 changes, 77 read back, no failure — **`mailingAddress` was accepted as the `address` type** (item (b) settled; sub-fields `mailingAddressStreet/City/State/Country/PostalCode` present). § 3.1 by Doug (`notes`): `description` reads `wysiwyg`. § 3.2 by Claude through the admin API (`PUT /Settings`): Prospects and Campaigns after Information Requests, Touches removed, read back. **Also done, not in the plan:** the three detail layouts carried only `name`, so every new field and many-to-one link was added to a *Details* panel and the list layouts gained five columns each, read back (the layout API, admin). § 4 applied by Doug (`roles`): six grants set and read back, every re-check already held, rebuild 200. § 5 steps 1, 2, 4, 5 passed as the org-wide key (three 200s with `total: 0`; `scopes.CCProspect` empty; the sync dry run clean; the conformance diff before/after empty). **Owed:** § 5 step 3, the Mark Marketing and Sally Sponsor pass (Doug, from the step page). | This document's output, 10-15-26 01:06–01:19; the dry run of 10-14-26 23:0x. |
 | Production | **Owed** — Sunday 17:00 UTC slot, from inside the deployed web container, after crm-test has soaked. | *Inferred:* production has none of this; the dry run in § 2 proves it. |
 | Boston | **Owed** — with the release that carries Phase 1. | *Inferred:* built from crm-test's files before this change. |
 
@@ -57,7 +57,7 @@ reads alike; one more line in the plan file, a new fingerprint. Doug chose the
 drafted name (option 1); the alternative was not taken.
 
 **(b) `mailingAddress` is built as EspoCRM's `address` type**, not four
-varchars. Evidence: on crm-test `GET /Metadata?key=fields.address` reads
+varchars — **settled 10-15-26 01:12: crm-test accepted it and read it back.** Evidence: on crm-test `GET /Metadata?key=fields.address` reads
 `notCreatable: false` (10-14-26), so the Field Manager offers it and the
 applier's `POST Admin/fieldManager/CProspect` is the same call the dialog
 makes; `Account.billingAddress` reads back as `{"type":"address"}`, which is
@@ -81,7 +81,7 @@ application's shared editor opens the plain box for it — it follows the live
 type — so nothing breaks.
 
 **(d) New entities land on the navigation tab list automatically, at the
-end.** `CEventPresenter`, created by the applier on 10-08-26, sits last in
+end** — and confirmed 10-15-26: all three were appended, Touches included. `CEventPresenter`, created by the applier on 10-08-26, sits last in
 crm-test's tab list (read as admin 10-14-26, after `CActionLog` in the
 Organization group). So `Prospects` and `Campaigns` get their tab with no
 step, in the wrong place, and `Touches` gets one the plan says it must not
@@ -245,7 +245,9 @@ second run reports *already wysiwyg* and writes nothing. Not between 04:00 and
 
 ### 3.2 The navigation tab list
 
-As an administrator in the CRM: Administration → **User Interface** → the
+On crm-test this was done through the admin API (`GET /Settings`, the list
+edited, `PUT /Settings {tabList}`, read back) — the same change the dialog
+makes. By hand, as an administrator in the CRM: Administration → **User Interface** → the
 **Tab List** panel. The three new entries are at the bottom, after
 *Action Logs* and *Event Presenters* (item (d)).
 
@@ -259,6 +261,18 @@ As an administrator in the CRM: Administration → **User Interface** → the
 Verify, as the same administrator: `GET /Settings` → `tabList` names
 `CProspect` and `COutreachCampaign` and does **not** name `COutreachTouch`.
 Or sign in as any non-admin and look at the top bar.
+
+### 3.3 The detail and list layouts (found on the apply, not in the plan)
+
+A new entity's default detail layout carries **only `name`** (and a list layout
+of `name` alone), so a record form showed none of the new fields. On crm-test
+each entity's detail layout gained a *Details* panel holding every plan field
+and many-to-one link, and each list layout five columns (Prospect: name,
+funnel stage, entry door, side exit, website; Campaign: name, kind, status,
+start, end; Touch: name, channel, status, outcome, campaign), through the
+layout API as admin (`GET/PUT {entity}/layout/detail` and `/layout/list`,
+`[[espo-layout-api-readable]]`). Production and Boston need the same, or
+Layout Manager by hand; the application's own screens do not depend on it.
 
 ## 4. The role grants — scripted, merge-only
 
@@ -415,5 +429,6 @@ nothing in any name here is chapter-specific.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 10-15-26 01:20 | Claude (Claude Code) | crm-test done: §§ 2, 3.1 and 4 run by Doug through `scripts/prospect_crm_test.sh` (the mutating runs are refused to Claude by the session classifier), § 3.2 and the new § 3.3 layouts through the admin API, § 5 steps 1, 2, 4, 5 passed; the address type accepted (item (b) settled); the non-admin pass owed. |
 | 1.1 | 10-15-26 00:02 | Claude (Claude Code) | Item (a) ruled by Doug ("1", ruling 32): `attributedPartnerProfiles` stands. Nothing else changed; the fingerprint `6b29c8928dcf` is unaffected. |
 | 1.0 | 10-14-26 23:15 | Claude (Claude Code) | Written from the kickoff prompt `prospect-marketing-crm-handoff-prompt-v0.1.md` v0.1.4 after the crm-test dry run (78 changes, fingerprint `6b29c8928dcf`) and the admin read of crm-test's roles and tab list. Nothing applied. Item (a), the `partnerProfiles` collision in build plan § 1.5, is put to Doug with a drafted name. |

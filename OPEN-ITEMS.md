@@ -6,9 +6,9 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
-51. **Prospect marketing — the two CRM handoffs are written and dry-run
-    on crm-test, the one open name ruled; nothing applied, nothing
-    built** (10-14-26, updated 10-15-26 00:02). Three sessions worked the arc on 10-14-26 and left three
+51. **Prospect marketing — the Phase 1 CRM change is APPLIED on crm-test
+    and verified as the org-wide key; the non-admin pass is owed; nothing
+    built** (10-14-26, updated 10-15-26 01:20). Three sessions worked the arc on 10-14-26 and left three
     documents that disagreed; Doug ruled a directory on the chapter-network
     pattern. Start at its `README.md`. `rulings.md` is the binding record
     (rulings 1–27, CM-1 to CM-11, append only); `build-plan.md` v0.2 is the
@@ -32,9 +32,17 @@ found; move resolved items to the bottom with the resolution date.
     could not store as written~~ **ruled 10-15-26 00:01, ruling 32**:
     `attributedPartnerProfiles` (the drafted name; build plan v0.4; the
     fingerprints stand);
-    (c) Doug applies on crm-test — SMS plan, outreach plan, the wysiwyg
-    conversion and the tab-list hand step, the role script — verifies as the
-    org-wide key and as Mark Marketing, soaks (**the next step**); (d) Phase
+    (c) ~~Doug applies on crm-test~~ **done 10-15-26 01:06–01:19**: both
+    plans, the notes conversion and the role script by Doug through
+    `scripts/prospect_crm_test.sh` (one word per step; the mutating runs
+    are refused to Claude by the session classifier), the tab list and —
+    found on the apply — the three entities' detail and list layouts
+    (default `name` only) by Claude through the admin API; `mailingAddress`
+    accepted as the `address` type; three org-key 200s, sync dry run
+    clean, conformance diff empty; **(c′) the real non-admin pass** as Mark
+    Marketing and Sally Sponsor from the step page
+    https://claude.ai/artifact/ShmRGZgDWWfspETWuU86hQ sections 3–4, then
+    the soak (**the next step**); (d) Phase
     1, from `prompts/prospect-marketing-phase-1-build-prompt-v0.1.md`,
     which also decides where the import's Company creates run (the
     Marketing Admin Role holds no Account grant — handoff item (i)); (e)

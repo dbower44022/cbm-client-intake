@@ -1,6 +1,6 @@
 # CRM handoff — text message (SMS) opt-in on Contact
 
-Last Updated: 10-14-26 23:15 · Revision 1.0 — see change log at the end.
+Last Updated: 10-15-26 01:20 · Revision 1.1 — see change log at the end.
 
 One new field on Contact, `cSmsOptIn`: a person's consent to receive **text
 messages** from the chapter, its own tick beside the existing email marketing
@@ -22,7 +22,7 @@ the field simply stays false.
 
 | CRM | State | Evidence |
 |---|---|---|
-| crm-test | **Not applied.** Dry run 10-14-26 23:0x as the configuration administrator: one change, fingerprint **`0bc7219ab932`**. `Contact.cSmsOptIn` is absent (read from `entityDefs.Contact.fields` as the org-wide API key, 10-14-26). | This document's § 2 output. |
+| crm-test | **Done 10-15-26 01:05** — applied by Doug through `scripts/prospect_crm_test.sh sms` (the applier with `--expect 0bc7219ab932`), `Contact.cSmsOptIn` read back as `{"type":"bool","isCustom":true}`; `entityDefs.Contact.fields.smsOptIn` empty; `GET /Contact?maxSize=1&select=cSmsOptIn` as the org-wide key 200 with `cSmsOptIn: false`; the field-level report shows no `fieldData` rule on any role. **Owed:** § 4 step 3, the real non-admin tick (Doug, from the step page). | This document's § 2 and § 4 output, 10-15-26 01:05–01:18. |
 | Production | **Owed** — Sunday 17:00 UTC slot, from inside the deployed web container, after crm-test has soaked. | *Inferred:* production has no such field; the dry run in § 2 proves it. |
 | Boston | **Owed** — with the release that carries Phase 1. | *Inferred:* built from crm-test's files before this change. |
 
@@ -184,4 +184,5 @@ computer using Boston's settings file
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 10-15-26 01:20 | Claude (Claude Code) | crm-test applied (Doug, 01:05, via `scripts/prospect_crm_test.sh sms` — the applier's `--apply` is refused to Claude by the session classifier) and read back; the non-admin tick owed. |
 | 1.0 | 10-14-26 23:15 | Claude (Claude Code) | Written from the kickoff prompt `prospect-marketing-crm-handoff-prompt-v0.1.md` v0.1.4 after the crm-test dry run (fingerprint `0bc7219ab932`) and the admin read of every role's `fieldData`. Nothing applied. |

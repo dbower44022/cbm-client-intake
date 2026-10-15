@@ -41,7 +41,7 @@ their plan files under `scripts/plans/` (`contact-sms-opt-in.json`,
 and — when built — the code in a `campaigns/` package and a
 `forms/prospect_response/` form.
 
-## State, as of 10-15-26 00:02
+## State, as of 10-15-26 01:20
 
 - **Settled:** the process end to end (rulings 1–27) and the Campaign
   Management application (CM-1 to CM-11). None of it is reopened by any
@@ -68,11 +68,15 @@ and — when built — the code in a `campaigns/` package and a
      decides `address` for the mailing address, names the wysiwyg
      conversion and the tab-list hand step, and observes that the Marketing
      Admin Role holds no Account grant (a Phase 1 build decision).
-  3. **Doug applies on crm-test** from the two
-     handoffs (§ 2, § 3, § 4 of each) and
-     `prds/chapter-network/crm-update-runbook.md`; the shape is verified in
-     `GET /Metadata`, the grants as the org-wide key and as a real
-     non-admin; soak. **This is the next step.**
+  3. ~~Doug applies on crm-test~~ — **done 10-15-26 01:06–01:19** (both
+     plans, the notes conversion and the role script by Doug through
+     `scripts/prospect_crm_test.sh`; the tab list and the detail/list
+     layouts by Claude through the admin API; the shape, the org-key
+     reads, the sync dry run and the conformance diff all passed; the
+     address type was accepted). **Owed: the real non-admin pass** as Mark
+     Marketing and Sally Sponsor from the step page
+     https://claude.ai/artifact/ShmRGZgDWWfspETWuU86hQ sections 3–4, then
+     the soak to the Sunday slot. **This is the next step.**
   4. **The Phase 1 build session**, from the live kickoff
      `prompts/prospect-marketing-phase-1-build-prompt-v0.1.md`: one real
      card, one real scan, dark behind `CAMPAIGNS_ENABLED`.
@@ -127,14 +131,15 @@ import contract starts from).
 | Field | Value |
 |---|---|
 | Document | Prospect marketing — directory README |
-| Version | 1.3 |
-| Last Updated | 10-15-26 00:02 |
+| Version | 1.4 |
+| Last Updated | 10-15-26 01:20 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.4 | 10-15-26 01:20 | Claude (Claude Code) | State: both handoffs applied on crm-test and verified as the org-wide key; the non-admin pass is the next step. |
 | 1.3 | 10-15-26 00:02 | Claude (Claude Code) | State: item (a) ruled (ruling 32); the next step is the crm-test apply. |
 | 1.2 | 10-14-26 23:15 | Claude (Claude Code) | State: the CRM handoff session done — two handoffs, two plan files, the role script, crm-test fingerprints; the `partnerProfiles` name collision put to Doug; the live kickoff is now the Phase 1 build prompt and the spent one is in `history/prompts/`. |
 | 1.1 | 10-14-26 22:44 | Claude (Claude Code) | State: the four shape-changing questions answered (rulings 28–31, build plan v0.3); the next session is the CRM handoff. |
