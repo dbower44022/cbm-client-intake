@@ -4,6 +4,16 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.258.1] — 2026-10-15
+
+**fix(campaigns): a record tab blocked by the single-tab lock can be opened
+anyway, and the lock names what answered.** Doug's live pass, section 4: "This
+campaign is open in another tab" with one tab open. The election yields only
+when another tab answers, so something did; the browser console now logs that
+message (`record lock yielded`), and the blocked view offers **Open here
+anyway** beside Reload — the person decides, since the lock exists to stop
+editing one record in two tabs, not to lock them out of it.
+
 ## [0.258.0] — 2026-10-15
 
 **feat(campaigns): Campaign Management, prospect marketing Phase 1 — one real

@@ -80,7 +80,11 @@
         var m = ev.data || {};
         if (!m || m.key !== key || m.tabId === me.tabId) return;
         if (m.type === "hello") { try { ch.postMessage({ type: "present", key: key, openedAt: me.openedAt, tabId: me.tabId }); } catch (_) {} }
-        if ((m.type === "hello" || m.type === "present") && isOlder(m, me) && !decided) { decided = true; owner = false; resolve(false); }
+        if ((m.type === "hello" || m.type === "present") && isOlder(m, me) && !decided) {
+          // Named in the console so a false block can be traced to whatever answered.
+          try { console.info("[campaigns] record lock yielded to an older tab", m); } catch (_) {}
+          decided = true; owner = false; resolve(false);
+        }
         if (m.type === "bye" && m.owner && !owner) location.reload();
       };
       try { ch.postMessage({ type: "hello", key: key, openedAt: me.openedAt, tabId: me.tabId }); } catch (_) {}
@@ -725,6 +729,13 @@
   $("prospectRefreshBtn").addEventListener("click", loadProspects);
   $("importBtn").addEventListener("click", openImport); $("importBtn2").addEventListener("click", openImport);
   $("blockedReloadBtn").addEventListener("click", function () { location.reload(); });
+  // The lock guards against editing one record in two tabs. When the other tab
+  // is not where the person is, they decide: open here anyway (the other tab,
+  // if real, keeps working; the last save wins).
+  $("blockedOpenBtn").addEventListener("click", async function () {
+    hide($("blockedView"));
+    await loadRecord();
+  });
   wireSort("campaignGrid", state.sort, renderCampaigns);
   wireSort("prospectGrid", state.psort, renderProspects);
 

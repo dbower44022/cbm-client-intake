@@ -39,8 +39,12 @@
     </section>
     <section class="cm__panel cm__blocked" id="blockedView" hidden>
       <h2>This campaign is open in another tab</h2>
-      <p>Only one tab may edit a record at a time. Close the other tab, or reload here to take over.</p>
-      <button type="button" class="cbm-button" id="blockedReloadBtn">Reload</button>
+      <p>Only one tab may edit a record at a time. Close the other tab and reload here, or open the record here anyway if there is no other tab.</p>
+      <p class="cm__hint">The browser console names the tab that answered (look for "record lock yielded").</p>
+      <div class="cm__runactions">
+        <button type="button" class="cbm-button cbm-button--secondary" id="blockedReloadBtn">Reload</button>
+        <button type="button" class="cbm-button" id="blockedOpenBtn">Open here anyway</button>
+      </div>
     </section>
 
     <!-- ========================== CAMPAIGNS ========================== -->
