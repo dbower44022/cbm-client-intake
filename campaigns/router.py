@@ -645,6 +645,20 @@ async def list_prospects(request: Request, stage: Optional[str] = None, exit: Op
     return {"prospects": rows}
 
 
+# Declared BEFORE /prospects/{prospect_id}, or "imports" is read as an id (a 502 on 10-15-26).
+@api_router.get("/prospects/imports")
+async def recent_imports(request: Request) -> dict[str, Any]:
+    _actor(request)
+    store = _store(request)
+    rows = await store.recent_batches()
+    return {"batches": [{
+        "id": b["id"], "name": b["name"], "door": b["door"], "rowCount": b["row_count"],
+        "status": b["status"], "createdAt": b["created_at"].isoformat() if b.get("created_at") else None,
+        "appliedAt": b["applied_at"].isoformat() if b.get("applied_at") else None,
+        "counts": (b.get("plan") or {}).get("counts"), "result": b.get("result"),
+    } for b in rows]}
+
+
 @api_router.get("/prospects/{prospect_id}")
 async def get_prospect(prospect_id: str, request: Request) -> dict[str, Any]:
     user, client = _actor(request)
@@ -702,25 +716,19 @@ async def import_apply(body: ImportApplyIn, request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not apply the import")
-    await record_action(
-        client, app=APP_CAMPAIGNS, category=CAT_RECORD_EDIT, action="Prospects Imported",
-        parent_type=cfg.PROSPECT, parent_id="",
-        summary=(f"Imported \"{batch['name']}\" ({batch['door']}): {result['created']} prospect records, "
-                 f"{result['alreadyKnown']} already known, {result['companies']} companies and "
-                 f"{result['contacts']} contacts typed Prospect, {result['errors']} errors"),
-        actor_id=user.get("userId", ""), actor_name=user.get("name", ""), details=result,
-    )
+    # The action log needs a record to hang on; an import has many. The first
+    # prospect record it made stands for the batch (an empty id is refused by
+    # both the stream note and the CActionLog row — seen 10-15-26).
+    first_id = result.get("firstProspectId")
+    if first_id:
+        await record_action(
+            client, app=APP_CAMPAIGNS, category=CAT_RECORD_EDIT, action="Prospects Imported",
+            parent_type=cfg.PROSPECT, parent_id=first_id,
+            summary=(f"Imported \"{batch['name']}\" ({batch['door']}): {result['created']} prospect records, "
+                     f"{result['alreadyKnown']} already known, {result['companies']} companies and "
+                     f"{result['contacts']} contacts typed Prospect, {result['errors']} errors"),
+            actor_id=user.get("userId", ""), actor_name=user.get("name", ""), details=result,
+        )
     return {"batchId": batch["id"], "result": result}
 
 
-@api_router.get("/prospects/imports")
-async def recent_imports(request: Request) -> dict[str, Any]:
-    _actor(request)
-    store = _store(request)
-    rows = await store.recent_batches()
-    return {"batches": [{
-        "id": b["id"], "name": b["name"], "door": b["door"], "rowCount": b["row_count"],
-        "status": b["status"], "createdAt": b["created_at"].isoformat() if b.get("created_at") else None,
-        "appliedAt": b["applied_at"].isoformat() if b.get("applied_at") else None,
-        "counts": (b.get("plan") or {}).get("counts"), "result": b.get("result"),
-    } for b in rows]}

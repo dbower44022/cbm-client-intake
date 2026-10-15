@@ -4,6 +4,24 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.258.3] — 2026-10-15
+
+**fix(campaigns): three import defects from Doug's live pass (section 3).**
+(1) Creating the prospect record as the signed-in user **403'd whenever it
+carried a Company link** (`No foreign record access for link operation
+(CProspect:alreadyKnownCompany)`): EspoCRM checks read access on the foreign
+record when a link rides a create, and the Marketing Admin Role reads no
+Company. The record is still created as the user (ruling 33); its links to the
+Company and the Contact are now the API client's second write. (2) A partially
+applied batch left its landed rows unrecognised and its promoted Company and
+Contact made the failed rows read "already known" on the next plan: a recorded
+ledger row now counts whatever happened to the rest of its batch, a Company or
+Contact typed Prospect is never an already-known match (it is a promoted
+prospect — rulings 12 and 21), and the promotion step reuses one that exists.
+(3) `GET /prospects/imports` was shadowed by `/prospects/{id}` (a 502 on the
+Imports tab), and the import's action-log entry carried no record id and was
+refused; it now hangs on the first prospect record the batch made.
+
 ## [0.258.2] — 2026-10-15
 
 **fix(campaigns): hidden panels rendered through the `hidden` attribute.** The

@@ -358,15 +358,16 @@ class CampaignStore:
             )
 
     async def known_row_hashes(self, hashes: list[str]) -> set[str]:
-        """Which of these rows an APPLIED batch already created — the across-batch
-        duplicate check and what makes a re-upload a no-op."""
+        """Which of these rows an earlier apply already created — the across-batch
+        duplicate check and what makes a re-upload a no-op. A recorded row is a
+        prospect record that exists, whatever happened to the rest of its batch
+        (a partial apply with two 403s left three real rows on 10-15-26)."""
         if not hashes:
             return set()
-        r, b = prospect_import_row, prospect_import_batch
+        r = prospect_import_row
         async with self._engine.begin() as conn:
             rows = (await conn.execute(
-                select(r.c.row_hash).select_from(r.join(b, r.c.batch_id == b.c.id))
-                .where(and_(r.c.row_hash.in_(hashes), b.c.status == BATCH_APPLIED))
+                select(r.c.row_hash).where(r.c.row_hash.in_(hashes))
             )).all()
         return {x[0] for x in rows}
 

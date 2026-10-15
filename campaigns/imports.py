@@ -142,34 +142,55 @@ async def already_known(api_client: EspoApi, row: dict[str, Any]) -> Optional[di
     if name and zip5:
         try:
             page = await api_client.list(
-                cfg.ACCOUNT, select="id,name,billingAddressPostalCode,website", max_size=20,
+                cfg.ACCOUNT, select="id,name,billingAddressPostalCode,website,cCompanyType", max_size=20,
                 where=[{"type": "equals", "attribute": "name", "value": name}],
             )
             for c in page.get("list", []):
+                if _is_prospect_typed(c, "cCompanyType"):
+                    continue
                 if ((c.get("billingAddressPostalCode") or "")[:5]) == zip5:
                     return {"kind": "company", "id": c["id"], "name": c.get("name"), "by": "name and postal code"}
         except EspoError as exc:
             log.warning("already-known name check failed for %r: %s", name, exc)
-    key = website_key(row.get("website")) if row.get("website") else ""
-    if key:
-        host = key.split("/")[0]
+    if row.get("website"):
         try:
-            page = await api_client.list(
-                cfg.ACCOUNT, select="id,name,website", max_size=50,
-                where=[{"type": "contains", "attribute": "website", "value": host}],
-            )
-            for c in page.get("list", []):
-                if website_key(c.get("website")) == key:
-                    return {"kind": "company", "id": c["id"], "name": c.get("name"), "by": "website"}
+            c = await company_by_website(api_client, row["website"])
+            if c and not _is_prospect_typed(c, "cCompanyType"):
+                return {"kind": "company", "id": c["id"], "name": c.get("name"), "by": "website"}
         except EspoError as exc:
-            log.warning("already-known website check failed for %r: %s", key, exc)
+            log.warning("already-known website check failed for %r: %s", row["website"], exc)
     if row.get("email"):
         try:
-            found = await api_client.find_one(cfg.CONTACT, "emailAddress", row["email"], select="id,name")
-            if found:
+            found = await api_client.find_one(cfg.CONTACT, "emailAddress", row["email"], select="id,name,cContactType")
+            if found and not _is_prospect_typed(found, "cContactType"):
                 return {"kind": "contact", "id": found["id"], "name": found.get("name"), "by": "email"}
         except EspoError as exc:
             log.warning("already-known email check failed for %r: %s", row["email"], exc)
+    return None
+
+
+def _is_prospect_typed(record: dict[str, Any], type_field: str) -> bool:
+    """A Company or Contact typed Prospect is a PROMOTED prospect (ruling 21), not
+    a known client or contact (ruling 12): the import reuses it at promotion
+    rather than counting the row as already known."""
+    types = record.get(type_field) or []
+    return cfg.COMPANY_TYPE_PROSPECT in types and len(types) == 1
+
+
+async def company_by_website(api_client: EspoApi, website: str) -> Optional[dict[str, Any]]:
+    """The Company at this web address, by website key (scheme, www., case and a
+    trailing slash ignored; the path counts), or None."""
+    key = website_key(website)
+    if not key:
+        return None
+    host = key.split("/")[0]
+    page = await api_client.list(
+        cfg.ACCOUNT, select="id,name,website,cCompanyType", max_size=50,
+        where=[{"type": "contains", "attribute": "website", "value": host}],
+    )
+    for c in page.get("list", []):
+        if website_key(c.get("website")) == key:
+            return c
     return None
 
 
@@ -271,11 +292,18 @@ def _prospect_payload(row: dict[str, Any], plan: dict[str, Any], batch_name: str
         payload["sideExitAt"] = now
         match = entry.get("match") or {}
         payload["sideExitNote"] = f"Matched {match.get('name') or match.get('id')} by {match.get('by')} at import."
-        if match.get("kind") == "company":
-            payload["alreadyKnownCompanyId"] = match["id"]
-        elif match.get("kind") == "contact":
-            payload["promotedContactId"] = match["id"]
     return {k: v for k, v in payload.items() if v is not None}
+
+
+def _match_links(entry: dict[str, Any]) -> dict[str, str]:
+    match = entry.get("match") or {}
+    if entry.get("outcome") != OUTCOME_ALREADY_KNOWN or not match.get("id"):
+        return {}
+    if match.get("kind") == "company":
+        return {"alreadyKnownCompanyId": match["id"]}
+    if match.get("kind") == "contact":
+        return {"promotedContactId": match["id"]}
+    return {}
 
 
 async def _company_type_has_prospect(api_client: EspoApi) -> bool:
@@ -307,8 +335,18 @@ async def apply_import(api_client: EspoApi, user_client: EspoApi, store, batch: 
         row = entry["row"]
         try:
             payload = _prospect_payload(row, plan, batch["name"], entry)
+            # The links to a Company or Contact are written AFTER the create,
+            # under the API client (ruling 33): EspoCRM checks read access on the
+            # foreign record when a link rides a create, and the Marketing Admin
+            # Role reads no Company — found live 10-15-26 (two 403s per import).
+            links: dict[str, str] = _match_links(entry)
             if outcome == OUTCOME_CREATE:
                 if entry.get("promoteCompany"):
+                    existing = await company_by_website(api_client, row["website"])
+                    if existing is not None:
+                        # A promoted company from an earlier (partial) run: reuse it.
+                        links["promotedCompanyId"] = existing["id"]
+                if entry.get("promoteCompany") and "promotedCompanyId" not in links:
                     company: dict[str, Any] = {
                         "name": payload["businessName"], "website": row.get("website"),
                         "cFunnelStage": stage, "cEntryStage": stage,
@@ -321,22 +359,31 @@ async def apply_import(api_client: EspoApi, user_client: EspoApi, store, batch: 
                     if type_ok:
                         company["cCompanyType"] = [cfg.COMPANY_TYPE_PROSPECT]
                     created = await api_client.create(cfg.ACCOUNT, {k: v for k, v in company.items() if v})
-                    payload["promotedCompanyId"] = created["id"]
+                    links["promotedCompanyId"] = created["id"]
                     result["companies"] += 1
                 if entry.get("promoteContact"):
+                    found = await api_client.find_one(cfg.CONTACT, "emailAddress", row["email"], select="id,cContactType")
+                    if found is not None:
+                        links["promotedContactId"] = found["id"]
+                if entry.get("promoteContact") and "promotedContactId" not in links:
                     contact = {
                         "firstName": payload.get("firstName") or "", "lastName": payload.get("lastName") or payload["businessName"][:100],
                         "emailAddress": row.get("email"), "phoneNumber": row.get("phone") or None,
                         "cContactType": [cfg.CONTACT_TYPE_PROSPECT],
                         "cFunnelStage": stage, "cEntryStage": stage,
                     }
-                    if payload.get("promotedCompanyId"):
-                        contact["accountId"] = payload["promotedCompanyId"]
+                    if links.get("promotedCompanyId"):
+                        contact["accountId"] = links["promotedCompanyId"]
                     created = await create_dropping_invalid(api_client, cfg.CONTACT, {k: v for k, v in contact.items() if v})
-                    payload["promotedContactId"] = created["id"]
+                    links["promotedContactId"] = created["id"]
                     result["contacts"] += 1
+            # The prospect record is the signed-in user's (ruling 33); its links
+            # to the Company and the Contact are the API client's second write.
             prospect = await user_client.create(cfg.PROSPECT, payload)
+            if links:
+                await api_client.update(cfg.PROSPECT, prospect["id"], links)
             result["created" if outcome == OUTCOME_CREATE else "alreadyKnown"] += 1
+            result.setdefault("firstProspectId", prospect.get("id"))
             ledger.append({"row_hash": entry["hash"], "external_reference": row.get("external_reference") or None,
                            "business_name": payload.get("businessName"), "postal_code": payload.get("mailingAddressPostalCode"),
                            "outcome": outcome, "prospect_id": prospect.get("id")})

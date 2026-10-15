@@ -545,6 +545,11 @@ def test_plan_classifies_every_row_and_apply_writes_exactly_that():
     assert (result["created"], result["alreadyKnown"], result["companies"], result["contacts"], result["errors"]) == (2, 1, 1, 1, 0)
     prospects = list(crm.rows[cfg.PROSPECT].values())
     assert len(prospects) == 3
+    # The prospect record is created as the user WITHOUT its company links; the
+    # links are the API client's second write (a user without Account read 403s
+    # on a create that carries one — found live 10-15-26).
+    prospect_creates = [p for e, p in crm.created if e == cfg.PROSPECT]
+    assert all("promotedCompanyId" not in p and "alreadyKnownCompanyId" not in p for p in prospect_creates)
     acme = next(p for p in prospects if p["businessName"] == "Acme Widgets")
     assert acme["funnelStage"] == "Qualified" and acme["entryDoor"] == "State filing" and acme["qualifiedBy"] == "Filter v1"
     assert acme["mailingAddressState"] == "OH" and acme["promotedCompanyId"]
@@ -697,3 +702,42 @@ def test_hidden_attribute_beats_every_display_rule(sheet):
     from pathlib import Path
     css = (Path(__file__).resolve().parents[1] / sheet).read_text()
     assert "[hidden] { display: none !important; }" in css
+
+
+def test_a_partial_apply_resumes_without_doubling_records():
+    """Two rows 403 on the first apply (the live case): the three that landed are
+    recorded, so a re-plan knows them; the promoted company and contact of the
+    failed rows are reused, never created twice; a re-apply finishes the batch."""
+    crm = FakeCrm(); store = FakeStore()
+    plan = asyncio.run(imports.plan_import(crm, store, text=CSV, name="Filings Oct", door=cfg.DOOR_FILING, qualified_by="Filter v1"))
+    batch = asyncio.run(store.get_batch(plan["batchId"]))
+    # Make the FIRST prospect create fail once (Acme, the row with a website).
+    real_create = crm.create
+    state = {"failed": False}
+    async def flaky_create(entity, payload):
+        if entity == cfg.PROSPECT and payload.get("businessName") == "Acme Widgets" and not state["failed"]:
+            state["failed"] = True
+            from core.espo import EspoError
+            raise EspoError("create CProspect failed: HTTP 403 [No foreign record access]")
+        return await real_create(entity, payload)
+    crm.create = flaky_create
+    first = asyncio.run(imports.apply_import(crm, crm, store, batch, user_name="Mark"))
+    assert first["errors"] == 1 and first["created"] == 2 and first["companies"] == 1   # Known Client is a create here: no such Account in this CRM
+    assert asyncio.run(store.get_batch(batch["id"]))["status"] == "planned"
+    # A re-plan of the same file: the landed rows are known; Acme is NOT "already
+    # known" through its own promoted company, it is still to create.
+    again = asyncio.run(imports.plan_import(crm, store, text=CSV, name="Filings Oct 2", door=cfg.DOOR_FILING, qualified_by="Filter v1"))
+    assert again["counts"]["knownRow"] == 2 and again["counts"]["create"] == 1 and again["nothingToDo"] is False
+    batch2 = asyncio.run(store.get_batch(again["batchId"]))
+    second = asyncio.run(imports.apply_import(crm, crm, store, batch2, user_name="Mark"))
+    assert second["created"] == 1 and second["companies"] == 0            # the company was reused
+    companies = [c for c in crm.rows["Account"].values() if c.get("name") == "Acme Widgets"]
+    assert len(companies) == 1
+    acme = next(p for p in crm.rows[cfg.PROSPECT].values() if p["businessName"] == "Acme Widgets")
+    assert acme["promotedCompanyId"] == companies[0]["id"]
+
+
+def test_imports_list_route_is_not_shadowed_by_the_record_route(monkeypatch):
+    client = build(monkeypatch, user=MARKETING, crm=FakeCrm(), store=FakeStore())
+    resp = client.get("/campaigns/api/prospects/imports")
+    assert resp.status_code == 200 and resp.json() == {"batches": []}
