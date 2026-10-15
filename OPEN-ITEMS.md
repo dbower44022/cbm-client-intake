@@ -66,8 +66,9 @@ found; move resolved items to the bottom with the resolution date.
     the same link with the id altered: no banner, the form works, no
     partner on the engagement. Then production as a real non-admin.
 
-50. **A quick-add from the other door's company inherits its primary
-    contact (v0.257.0) — committed 10-14-26, live pass owed.** Doug's
+52. **A quick-add from the other door's company inherits its primary
+    contact (v0.257.0) — live on crm-test and production by 10-14-26
+    22:06, live pass owed** (another session had taken #50 and #51). Doug's
     request the same day; no CRM change. **Owed:** on crm-test as
     partner.manager, "+ Add partner": pick a company that has a funder
     record with a primary contact, leave the contact block empty, save —

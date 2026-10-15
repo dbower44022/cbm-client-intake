@@ -1772,9 +1772,11 @@ Cleveland by design. What is *verified* is narrower than what is deployed — se
 each block.
 
 - **v0.257.0 (2026-10-14) — a quick-add from the other door's company
-  inherits its primary contact.** Committed, not pushed. Doug's request the
-  same day; standing rule in the Session Management section. No CRM
-  change. Verified by tests only — the live pass is `OPEN-ITEMS.md` #50.
+  inherits its primary contact.** Pushed with another session's commits
+  the same evening; both deployments report it and serve the notice by
+  22:06. Doug's request the same day; standing rule in the Session
+  Management section. No CRM change. Verified by tests only — the live
+  pass is `OPEN-ITEMS.md` #52.
 
 - **v0.256.2 (2026-10-12) — the popup's Cancel/Save pair no longer shows
   in view mode; the referring-partner band renders on every engagement.**
