@@ -4,6 +4,14 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.258.5] — 2026-10-15
+
+**fix(campaigns): a promoted company was selected beside its own prospect
+record — two cards to one business, against ruling 14.** Found on the live
+pass's first run (5 pieces for 4 businesses). The selection now treats a
+prospect record as standing for the company it was promoted to, and a card
+sent to either side counts for both.
+
 ## [0.258.4] — 2026-10-15
 
 **fix(campaigns): the API role needs edit on the campaign.** The worker's run

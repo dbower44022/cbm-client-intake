@@ -416,8 +416,19 @@ def test_selection_applies_rulings_10_14_15():
     targets = asyncio.run(postcard.select_targets(crm, {"stages": ["Qualified"], "includeCompanies": True}))
     names = sorted(t["name"] for t in targets)
     assert names == ["Acme", "Promoted Co"]
+    # A prospect record stands for the company it was promoted to: one card per
+    # business (two went to Lakeview Bakery on 10-15-26).
+    linked = crm.add("Account", {"name": "Linked Co", "cCompanyType": ["Prospect"], "cFunnelStage": "Qualified",
+                                 "billingAddressStreet": "9 Main", "billingAddressCity": "Akron", "billingAddressState": "OH", "billingAddressPostalCode": "44308"})
+    crm.rows[cfg.PROSPECT][a["id"]]["promotedCompanyId"] = linked["id"]
+    again = asyncio.run(postcard.select_targets(crm, {"stages": ["Qualified"], "includeCompanies": True}))
+    assert sorted(t["name"] for t in again) == ["Acme", "Promoted Co"]
+    # ...and a card already sent to that company counts for the record too.
+    crm.add(cfg.TOUCH, {"channel": "Postcard", "touchStatus": "Sent", "companyId": linked["id"]})
+    third = asyncio.run(postcard.select_targets(crm, {"stages": ["Qualified"], "includeCompanies": True}))
+    assert sorted(t["name"] for t in third) == ["Promoted Co"]
     with_lead = asyncio.run(postcard.select_targets(crm, {"stages": ["Qualified", "Lead"], "includeCompanies": False}))
-    assert sorted(t["name"] for t in with_lead) == ["Acme", "Lead only"]
+    assert sorted(t["name"] for t in with_lead) == ["Lead only"]   # Acme is carded through its company now
 
 
 def test_build_list_reconciles_planned_touches_and_moves_draft_to_awaiting():

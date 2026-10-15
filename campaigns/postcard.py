@@ -101,6 +101,10 @@ async def select_targets(client: EspoApi, rule: dict[str, Any]) -> list[dict[str
     rule = normalise_rule(rule)
     carded = await _carded_targets(client)
     targets: list[dict[str, Any]] = []
+    # A business is ONE target: a prospect record stands for the company it was
+    # promoted to, so that company is never selected a second time (two cards to
+    # Lakeview Bakery on 10-15-26), and a card to either side counts for both.
+    promoted: set[str] = set()
 
     prospects = await service._page_all(
         client, cfg.PROSPECT, select=cfg.PROSPECT_SELECT,
@@ -111,10 +115,12 @@ async def select_targets(client: EspoApi, rule: dict[str, Any]) -> list[dict[str
         order_by="createdAt", order="asc", limit=10000,
     )
     for p in prospects:
+        if p.get("promotedCompanyId"):
+            promoted.add(p["promotedCompanyId"])
         if p.get("sideExit"):
             continue
         key = f"prospect:{p['id']}"
-        if key in carded:
+        if key in carded or (p.get("promotedCompanyId") and f"company:{p['promotedCompanyId']}" in carded):
             continue
         address = _prospect_address(p)
         if not address.is_complete():
@@ -136,7 +142,7 @@ async def select_targets(client: EspoApi, rule: dict[str, Any]) -> list[dict[str
             if cfg.COMPANY_TYPE_PROSPECT not in types:
                 continue
             key = f"company:{c['id']}"
-            if key in carded:
+            if key in carded or c["id"] in promoted:
                 continue
             address = Address(
                 name=c.get("name") or "", line1=c.get("billingAddressStreet") or "",
