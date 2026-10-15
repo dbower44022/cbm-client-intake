@@ -119,7 +119,13 @@ read back `wysiwyg` at 20:37, and the funder-manager, client-administrator
 and CRM-administrator passes all matched. **Boston** — its droplet needs its own key, so the line is the wrapper:
 `scripts/on_crm.sh boston scripts/convert_notes_wysiwyg.sh` (chapters:
 `test`, `production`, `boston`). Probe 10-11-26 20:43: the funder field is
-`text`, the engagement field already `wysiwyg` from the chapter build. Same one-key edit of that instance's
+`text`, the engagement field already `wysiwyg` from the chapter build.
+**Boston done 10-11-26 21:06** (Doug, the wrapper line; found 10-14-26 22:00
+by a read-only probe — the field reads `wysiwyg` under the org key and the
+droplet holds `CSponsorProfile.json.bak-desc-wysiwyg-20261012-010651`
+beside the file). The pass on Boston waits for its release (the Overview
+editor follows the live type only from v0.252.0): sections 3 and 5 of
+https://claude.ai/artifact/Covmt3vPbZnvWpr8WdQBY6 (private, *Boston Release Changes*). Same one-key edit of that instance's
 `custom/Espo/Custom/Resources/metadata/entityDefs/CSponsorProfile.json`,
 same rebuild, same verification including the non-admin pass — the
 Attachment-create grant on the Sponsor Manager Role must be confirmed on each
@@ -143,6 +149,7 @@ today — the app detects `text` and changes nothing.
 
 | Rev | Date | Author | Change |
 |---|---|---|---|
+| 1.5 | 10-14-26 22:15 | Claude (Claude Code) | § 3: Boston converted 10-11-26 21:06 (found by probe); its pass rides the release step page. |
 | 1.4 | 10-11-26 20:55 | Claude (Claude Code) | § 3: Boston's line through `scripts/on_crm.sh`; its probe result. |
 | 1.3 | 10-11-26 20:40 | Claude (Claude Code) | § 3: production done, passes matched; Boston the only instance owed. |
 | 1.2 | 10-11-26 19:35 | Claude (Claude Code) | § 3: production's host and container named (read live), the one-line script that converts both notes fields per instance, Doug's ruling to run production today. |

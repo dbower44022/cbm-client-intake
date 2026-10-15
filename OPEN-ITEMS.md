@@ -103,8 +103,8 @@ found; move resolved items to the bottom with the resolution date.
     Email still listing the record. Then production as a real non-admin.
 
 47. **Funder Notes as rich text (v0.252.0) — crm-test and production
-    converted and passed 10-11-26; Boston owed** (Doug's request
-    2026-10-11). The app follows the field's live type. Step page for the
+    converted and passed 10-11-26; Boston's CRM converted 10-11-26, its
+    release owed** (Doug's request 2026-10-11). The app follows the field's live type. Step page for the
     whole crm-test rollout: https://claude.ai/artifact/59ZYyJM492BZFG8bMbbLtX
     (private, *Funder Notes Rollout*, written 10-11-26). **Done:** (a)
     crm-test — Doug ran § 1 of `csponsorprofile-description-wysiwyg-crm-handoff.md`
@@ -132,7 +132,15 @@ found; move resolved items to the bottom with the resolution date.
     characters). Read-only probe 20:43: Boston's `CSponsorProfile.description`
     is `text`; its `CEngagement.description` is ALREADY `wysiwyg` (a
     `.bak-desc-wysiwyg` from the chapter build sits beside it), so the run
-    converts the funder field only. **Boston's applications run v0.232.0**
+    converts the funder field only. **(e) ran on the CRM 10-11-26 21:06** —
+    found 10-14-26 22:00 by a read-only probe for the Boston release page:
+    `CSponsorProfile.description` reads `wysiwyg` under the org key and the
+    droplet holds `CSponsorProfile.json.bak-desc-wysiwyg-20261012-010651`
+    beside the file; this item had not recorded the run. What remains of
+    (e) is the release and the Overview half of the pass (sections 3 and
+    5 of https://claude.ai/artifact/Covmt3vPbZnvWpr8WdQBY6, private, *Boston Release
+    Changes*, 10-14-26 22:10 — one page for both of this arc's Boston
+    changes, with #46). **Boston's applications run v0.232.0**
     (the last release-lane cut), which predates the Overview following the
     live type (v0.252.0) and the line-break fix (v0.252.2). Doug's ruling
     10-11-26 20:5x: **convert the CRM tonight, release next Sunday** — the
@@ -185,7 +193,20 @@ found; move resolved items to the bottom with the resolution date.
     pass as a non-admin Sponsor Management Team member and the Entity
     Manager check both matched the same afternoon** (Doug: "all steps
     passed"). **Owed:** Boston with its next release from the same plan
-    (`cpartner-csponsor-additional-managers-crm-handoff.md`);
+    (`cpartner-csponsor-additional-managers-crm-handoff.md`) — **prepared
+    10-14-26 22:00, awaiting Doug's go**: the read-only probe found both
+    links and both mentor-profile reverses absent on Boston, the applier's
+    dry run against Boston signed in as its administrator and printed the
+    same fingerprint `f2d6a41ea16c`, and Boston holds one mentor profile,
+    no partner and no funder records (the add itself cannot be exercised
+    there until a second profile exists). Boston's image is v0.232.0, which
+    predates the applier shipping in the image, so the apply runs from this
+    computer through the new `scripts/apply_plan.sh boston …` wrapper
+    (parses `~/.config/cbm-boston/boston.env`, never sources it). Step page
+    https://claude.ai/artifact/Covmt3vPbZnvWpr8WdQBY6 (private, *Boston Release
+    Changes*, 10-14-26 22:10): sections 1–2 today (apply, Entity Manager),
+    3–6 on Sunday (the release cut and push, Boston's chapter label at
+    `/setup`, the pass on a test funder, its removal);
     (d) the Gmail sync scope now also covers co-mentored engagements, which
     it never did — watch production's first "scopes rebuilt" line after
     the deploy for a larger record count, not an error.

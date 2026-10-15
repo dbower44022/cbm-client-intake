@@ -15,6 +15,10 @@ Usage::
     PYTHONPATH=. uv run python \\
       scripts/run_with_admin.py \\
       scripts/migrate_grant_schema.py            # add --apply as needed
+
+    # Another chapter's CRM: name its credential file (parsed, never sourced).
+    PYTHONPATH=. uv run python scripts/run_with_admin.py \\
+      --env ~/.config/cbm-boston/boston.env scripts/apply_crm_plan.py plan.json
 """
 
 from __future__ import annotations
@@ -31,10 +35,21 @@ from espo_admin import credentials, load_env  # noqa: E402
 
 
 def main() -> int:
-    if len(sys.argv) < 2:
+    argv = sys.argv[1:]
+    env_file: Path | None = None
+    if argv[:1] == ["--env"]:
+        if len(argv) < 2:
+            print(__doc__, file=sys.stderr)
+            return 2
+        env_file = Path(argv[1]).expanduser()
+        argv = argv[2:]
+        if not env_file.is_file():
+            print(f"No credential file at {env_file}.", file=sys.stderr)
+            return 2
+    if not argv:
         print(__doc__, file=sys.stderr)
         return 2
-    base, user, password = credentials(load_env())
+    base, user, password = credentials(load_env(env_file, prefer_file=env_file is not None))
     if not (base and user and password):
         print("No admin credential in .env — see SETUP.md.", file=sys.stderr)
         return 2
@@ -51,7 +66,7 @@ def main() -> int:
     })
     # No shell: the arguments go to exec directly, so nothing can interpret,
     # word-split or echo the password.
-    return subprocess.call([sys.executable, *sys.argv[1:]], env=env, cwd=REPO)
+    return subprocess.call([sys.executable, *argv], env=env, cwd=REPO)
 
 
 if __name__ == "__main__":

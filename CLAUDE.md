@@ -1831,9 +1831,10 @@ each block.
 - **v0.252.0–v0.252.2 (2026-10-11) — rich Funder Notes, live-typed; the
   sign-in Show button out of the tab order.** Live on crm-test and
   production; both CRMs' notes fields converted and the passes matched
-  (`OPEN-ITEMS.md` #47). **Owed: Boston's conversion**
-  (`scripts/on_crm.sh boston scripts/convert_notes_wysiwyg.sh`, step page
-  linked from #47). Standing rules: the Overview notes editor follows the
+  (`OPEN-ITEMS.md` #47). **Boston's conversion ran 10-11-26 21:06** (found
+  10-14-26 by a read-only probe; the item had not recorded it) — owed there
+  is only the release, which brings the Overview editor that follows the
+  live type. Standing rules: the Overview notes editor follows the
   field's live type (Session Management section); never read a scalar
   metadata key (Gotchas).
 
@@ -1842,7 +1843,12 @@ each block.
   Doug and the non-admin passes matched (`OPEN-ITEMS.md` #46). Standing rule
   in the Session Management section. **Owed: Boston's two links** with its
   next release (`scripts/plans/additional-managers.json`, fingerprint
-  `f2d6a41ea16c`), and **a role ruling**: a Mentor-Role-only user named
+  `f2d6a41ea16c`) — **prepared 10-14-26**: both links read absent on
+  Boston, the dry run matched, and the apply is one line from this
+  computer, `scripts/apply_plan.sh boston <plan> <fingerprint>` (the
+  chapter-aware front door to `scripts/apply_crm_plan.py`; Boston's image
+  predates the applier shipping in it), awaiting Doug's go on the step
+  page in `OPEN-ITEMS.md` #46 — and **a role ruling**: a Mentor-Role-only user named
   additional manager on a FUNDER sees it in neither Funder Management nor
   My Email, because that role reads no `CSponsorProfile` (the mail sync is
   unaffected — its scope runs under the org key).

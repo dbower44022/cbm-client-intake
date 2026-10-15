@@ -59,18 +59,29 @@ PROBES: tuple[tuple[str, str], ...] = (
 )
 
 
-def load_env() -> dict[str, str]:
+def load_env(path: Path | None = None, *, prefer_file: bool = False) -> dict[str, str]:
     """Read ``.env`` directly. These are developer credentials, deliberately
     absent from ``core.config.Settings`` — the application itself must never be
-    able to change the CRM's structure."""
+    able to change the CRM's structure.
+
+    ``path`` names another chapter's credential file (``~/.config/cbm-boston/boston.env``)
+    in place of the repository's ``.env``; with ``prefer_file`` its values beat
+    the process environment, so a stale export cannot silently redirect a run
+    at crm-test."""
     env = dict(os.environ)
-    path = REPO / ".env"
+    path = path or REPO / ".env"
     if path.exists():
         for raw in path.read_text(encoding="utf-8").splitlines():
             line = raw.strip()
             if line and not line.startswith("#") and "=" in line:
                 key, value = line.split("=", 1)
-                env.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+                key, value = key.strip(), value.strip().strip('"').strip("'")
+                if key.startswith("export "):
+                    key = key[len("export "):].strip()
+                if prefer_file:
+                    env[key] = value
+                else:
+                    env.setdefault(key, value)
     return env
 
 
