@@ -1,6 +1,6 @@
 # Kickoff prompt — write the prospect marketing CRM handoffs
 
-**Written 10-14-26 10-14-26 17:34. For a fresh Claude Code session rooted in
+**Written 10-14-26 17:34; gated 10-14-26 21:55. For a fresh Claude Code session rooted in
 `cbm-client-intake`.** A handoff-writing session: it produces the two CRM
 handoff documents, their plan files and the role script that Phase 1 of the
 build plan needs. It builds no application code, changes no CRM and opens no
@@ -12,6 +12,12 @@ Operating mode: ARCHITECTURE.
 ---
 
 ## Before anything: two answers this session needs from Doug
+
+**Gate added 10-14-26 21:55: do not run this session until build plan v0.2
+exists.** The Campaign Management requirements (plan section *Requirements —
+Campaign Management application (10-14-26)*, CM-1 to CM-11) change the
+campaign entity's kinds, add partner and event links and a link record, so
+a handoff written from v0.1 would build the wrong entity.
 
 Read `prds/prospect-marketing-build-plan.md` § 9 first. Two of its questions
 change what the handoff says, so ask for them in the first reply and write
@@ -96,12 +102,13 @@ with its release), and name the next kickoff: the Phase 1 build session.
 | Field | Value |
 |---|---|
 | Document | Kickoff prompt — prospect marketing CRM handoffs |
-| Version | v0.1 |
-| Last Updated | 10-14-26 10-14-26 17:34 |
+| Version | v0.1.1 |
+| Last Updated | 10-14-26 21:55 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
-| v0.1 | 10-14-26 10-14-26 17:34 | Claude (Claude Code) | Written at the close of the 2026-10-14 planning session (build plan v0.1). |
+| v0.1.1 | 10-14-26 21:55 | Claude (Claude Code) | Gate added: waits for build plan v0.2 (the Campaign Management requirements). Duplicated date fixed. |
+| v0.1 | 10-14-26 17:34 | Claude (Claude Code) | Written at the close of the 2026-10-14 planning session (build plan v0.1). |

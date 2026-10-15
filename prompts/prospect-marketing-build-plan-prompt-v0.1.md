@@ -1,10 +1,18 @@
 # Kickoff prompt — write the prospect marketing build plan
 
-**Written 10-14-26 17:18. For a fresh Claude Code session rooted in
-`cbm-client-intake`.** This is a planning session, not a build session and
-not a discussion session. The process is ruled end to end; the job now is to
-turn the rulings into a build plan with phases, a CRM handoff list and a
-verification script, in the shape the other plan documents in `prds/` have.
+**Written 10-14-26 17:18; revised 10-14-26 21:55. For a fresh Claude Code
+session rooted in `cbm-client-intake`.** This is a planning session, not a
+build session and not a discussion session. The process is ruled end to end;
+the job now is to turn the rulings into a build plan with phases, a CRM
+handoff list and a verification script, in the shape the other plan
+documents in `prds/` have.
+
+**State as of 10-14-26 21:55:** the build plan exists
+(`prds/prospect-marketing-build-plan.md`, v0.1.1) and was written before the
+Campaign Management application was defined. **This session's job is now
+v0.2 of that plan**: revise it against the requirements section named in
+*Read first* item 8, working through the section-by-section list at the end
+of that requirements section, and keep everything else. Do not start over.
 
 Operating mode: ARCHITECTURE.
 
@@ -47,6 +55,15 @@ nothing. You change no CRM. You open no vendor account.
 7. `prds/mailing-list-and-event-sponsorship-plan.md` § on Constant Contact
    — the campaign entity must not collide with Constant Contact's own
    campaigns in name or meaning; decide and say which word the UI uses.
+8. **`prds/prospect-marketing-plan.md`, section *Requirements — Campaign
+   Management application (10-14-26)*** — Doug's requirements CM-1 to
+   CM-11 for the application marketing users create campaigns and links
+   in, gathered one question at a time after the build plan's first
+   version. **They are Doug's and are not reopened.** They settle item 7's
+   word (Campaign; a Constant Contact send is a notice), the kinds (SMS and
+   social media added), partners and events on a campaign, what a link is
+   and looks like, the campaign-page / Analytics split, and where the tool
+   lives. The section ends with what v0.1 must change, by section.
 
 ### What the plan must contain
 
@@ -138,12 +155,13 @@ the CRM handoff, write its kickoff prompt as
 | Field | Value |
 |---|---|
 | Document | Kickoff prompt — prospect marketing build plan |
-| Version | v0.1 |
-| Last Updated | 10-14-26 17:18 |
+| Version | v0.2 |
+| Last Updated | 10-14-26 21:55 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| v0.2 | 10-14-26 21:55 | Claude (Claude Code) | The build plan now exists (v0.1.1); the session's job becomes v0.2 against the Campaign Management requirements. *Read first* item 8 added. |
 | v0.1 | 10-14-26 17:18 | Claude (Claude Code) | Written at the close of the 2026-10-13/14 discussion session, which ruled the process end to end (plan v0.4 draft, rulings 9–27). |

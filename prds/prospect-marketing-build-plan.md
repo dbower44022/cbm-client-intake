@@ -1,6 +1,6 @@
-# Prospect Marketing — build plan v0.1 (2026-10-14)
+# Prospect Marketing — build plan v0.1.1 (2026-10-14)
 
-Last Updated: 10-14-26 10-14-26 17:34 · Revision 0.1 — change log at the end.
+Last Updated: 10-14-26 21:55 · Revision 0.1.1 — change log at the end.
 
 **Status: a plan, not a build.** Nothing here is built, no CRM is changed, no
 vendor account exists. This document turns the rulings of
@@ -12,6 +12,17 @@ it is longer than the document it serves. Where this plan had to choose, the
 choice is stated as a draft with its cost; the choices that pass the two-part
 test are in § 9 as numbered questions, and the plan is written on the
 recommended answer to each so that a "yes" costs Doug nothing.
+
+**⚠️ Superseded in part, 10-14-26 evening.** The Campaign Management
+application was defined after this plan was written:
+`prds/prospect-marketing-plan.md`, section *Requirements — Campaign
+Management application (10-14-26)*, requirements CM-1 to CM-11. Where this
+plan differs — the campaign kinds (SMS and social media), partners and
+events on a campaign, named links with short resolvable addresses, the
+campaign page's tabs and numbers, the tile *Campaign Management* and the
+word *campaign* — the requirements win. That section ends with a
+section-by-section list of what v0.2 of this plan must change (§§ 1.3, 1.5,
+3.1, 3.5, 3.6, 4, 5, 6, 9). Nothing below has been revised yet.
 
 **Written in the house vocabulary.** Entity, field and link names are the
 names EspoCRM will store, computed by its three prefix rules (§ 1.10). A
@@ -945,8 +956,8 @@ best-effort mirror.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — build plan |
-| Version | v0.1 — a plan, nothing built; seven questions open |
-| Last Updated | 10-14-26 10-14-26 17:34 |
+| Version | v0.1.1 — a plan, nothing built; seven questions open; **superseded in part by the Campaign Management requirements, v0.2 owed** |
+| Last Updated | 10-14-26 21:55 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session, from `prompts/prospect-marketing-build-plan-prompt-v0.1.md` |
 | Related | `prds/prospect-marketing-plan.md` (the rulings), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
@@ -955,4 +966,5 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
-| 0.1 | 10-14-26 10-14-26 17:34 | Claude (Claude Code) | First version: the record model in Entity Manager vocabulary (three custom entities, fifteen links, the stage fields, the relabel), the two import doors, the three campaign kinds on one engine, the landing page as a sixth form kind, conversion per door, reporting, five phases with handoffs and verification scripts, the open list, seven questions. Finding recorded: the native marketing module is hidden on crm-test and the org key 403s on Lead and Campaign. |
+| 0.1.1 | 10-14-26 21:55 | Claude (Claude Code) | Pointer added at the top: superseded in part by *Requirements — Campaign Management application (10-14-26)* in the plan (CM-1 to CM-11); the sections v0.2 must revise are named there. No section revised. Duplicated date in Last Updated fixed. |
+| 0.1 | 10-14-26 17:34 | Claude (Claude Code) | First version: the record model in Entity Manager vocabulary (three custom entities, fifteen links, the stage fields, the relabel), the two import doors, the three campaign kinds on one engine, the landing page as a sixth form kind, conversion per door, reporting, five phases with handoffs and verification scripts, the open list, seven questions. Finding recorded: the native marketing module is hidden on crm-test and the org key 403s on Lead and Campaign. |

@@ -1,4 +1,4 @@
-# Prospect Marketing — plan v0.5 draft (2026-10-14)
+# Prospect Marketing — plan v0.6 draft (2026-10-14)
 
 **STRAWMAN — not an approved plan.** Sections marked *Doug's rulings* record
 decisions already made in the 2026-08-11 session. Everything marked **PROPOSAL**
@@ -24,8 +24,11 @@ process is ruled end to end (section of 2026-10-13/14) and **the build plan
 is written: `prds/prospect-marketing-build-plan.md` (v0.1, 2026-10-14)** —
 the record model, the doors, the campaign engine, the landing page,
 conversion, reporting, five phases with their CRM handoffs and verification
-scripts, and seven questions for Doug. This document stays the record of the
-rulings; the build plan is where the build is described.
+scripts, and seven questions for Doug. **The Campaign Management application
+is defined** (section *Requirements — Campaign Management application
+(10-14-26)*, CM-1 to CM-11, the same evening) and the build plan, written
+before it, is owed a v0.2 against it. This document stays the record of the
+rulings and the requirements; the build plan is where the build is described.
 
 ---
 
@@ -795,29 +798,243 @@ other source consumes a service before mentoring.
 - The earlier open questions (what the outside filter delivers and how; the
   postcard offer and creative; which address is mailed) are unchanged.
 
-**Next step:** the build plan is written (`prds/prospect-marketing-build-plan.md`,
-2026-10-14); its § 9 holds the seven questions that gate the CRM handoff, and
-`prompts/prospect-marketing-crm-handoff-prompt-v0.1.md` is the kickoff for
-writing that handoff once questions 1 and 3 are answered.
+**Next step (as of the walk):** the build plan is written
+(`prds/prospect-marketing-build-plan.md`, 2026-10-14); its § 9 holds the
+seven questions that gate the CRM handoff. **Superseded the same evening by
+the section below**: the build plan must first be revised to v0.2 against
+the Campaign Management requirements, and the CRM handoff waits for that
+revision, because the campaign entity's kinds, partners, events and links
+all changed.
 
 ---
+
+## Requirements — Campaign Management application (10-14-26)
+
+The definition session the 2026-10-13/14 walk called for
+(`prompts/prospect-marketing-campaign-app-prompt-v0.1.md`), run the same
+evening in DETAIL mode, one question per turn. Seven questions were put to
+Doug in the prompt's order and every one was answered. **Everything under
+"Doug's requirements" was stated by Doug on 10-14-26** and is dated as such;
+"working positions" were said in the discussion and may be revised;
+"strawmen" are mine and were not adopted. Rulings 1–27 were not reopened.
+
+**Read this before the build plan.** `prds/prospect-marketing-build-plan.md`
+v0.1 was written earlier the same day, before these requirements existed,
+and differs from them in the places listed at the end of this section. The
+requirements win; the build plan is revised to v0.2 against them.
+
+### Doug's requirements (10-14-26)
+
+Numbered CM-1 onward so they are never confused with rulings 1–27.
+
+- **CM-1. The Marketing Admin Team creates and runs campaigns.** The same
+  team that works Submission Admin and Event Administration and signs a
+  postcard run under ruling 13. No new team.
+- **CM-2. A campaign names one or more associated partners.**
+- **CM-3. The campaign kinds are postcard, email, SMS, call and social
+  media** (Meta, YouTube and the like). SMS and social media were added by
+  Doug to the three kinds the walk produced.
+- **CM-4. A form that receives a campaign link looks up the campaign's
+  partner or partners and, by that form's own logic, relates them to the
+  records it creates.** Nothing about a partner rides in the link; the
+  campaign is the source of the partner at delivery.
+- **CM-5. Every partner's Overview has a Campaigns tab** listing the
+  campaigns that partner sponsors.
+- **CM-6. A campaign can be linked to events**, so a campaign that
+  advertises events ties every registration made through its link to the
+  campaign and to the campaign's partners.
+- **CM-7. What a link is** (a strawman Doug adopted as written): a link is
+  created inside a campaign by a marketing user, has its own name, and
+  points at one destination. The destinations are any of the five public
+  intake forms, the public workshops-and-webinars programme page, or one
+  event's own page. A campaign has any number of links, each counted on
+  its own. A link to the programme page carries the campaign through to
+  whichever event registration the visitor makes from it. The postcard
+  campaign has exactly one link, pointing at the landing page, and each
+  card's code is that link plus the card's own prospect token.
+- **CM-8. A campaign link is a short address of its own that the
+  application resolves** to the destination and stamps with the campaign
+  as it sends the visitor on, never the CRM id in the open. Accepted with
+  it, as the behaviours the short address exists for: the destination can
+  be corrected after the link is published; a link can be retired, and a
+  retired link still opens its destination with the response marked late;
+  the QR code is generated by the application from the short address.
+- **CM-9. The numbers are split by who changes them.** The campaign's own
+  page shows what the application's records know, fixed and the same on
+  every chapter: a row per link with visits and submissions by form, the
+  campaign totals, the latest responses with a way through to each record,
+  and for a postcard campaign the pieces mailed, the undeliverable returns
+  and the scans. Conversion down the funnel (Candidate, Client, read from
+  the engagement; registered and attended for an event campaign) and any
+  comparison between campaigns are Analytics: a dashboard scoped to the
+  campaign, plus whatever cross-campaign pages the Analytics administrators
+  author.
+- **CM-10. Its own portal tile**, gated to the Marketing Admin Team, in the
+  house shape: a grid of campaigns with status and kind, and a record page
+  per campaign that opens in its own stable browser tab, with Overview,
+  Links, Responses and Analytics tabs; the partners and events a campaign
+  is tied to are on its Overview.
+- **CM-11. The word on the screen is Campaign.** Accepted with it: the tile
+  is *Campaign Management*, beside Client, Partner and Funder Management;
+  in this application a Constant Contact send is a **notice**, never a
+  campaign, so the mailing plan's unbuilt Phase D button *Link a campaign*
+  is built as *Link a notice*.
+
+### Working positions (said in discussion, not ruled)
+
+- No mentor, client administrator or partner manager ever creates a
+  campaign. A partner's own intake link is their referral mechanism; a
+  campaign is a chapter-level marketing act. Doug did not object.
+- The create screen asks for six things: name, kind, status, a start and
+  end date, an owner (defaulting to the creator) and a notes box. No budget
+  or cost field: a postcard run's cost comes from the run under ruling 13,
+  an email campaign costs nothing and a call campaign costs time. No
+  creative, template or artwork on the record; design stays in the vendor's
+  tools (mailing plan ruling 6). Doug added partners and kinds to this
+  strawman and struck nothing from it.
+- The dormant-client campaign is an email or call campaign with a
+  different selection rule (ruling 25), not a sixth kind.
+- A social media campaign selects nobody from the CRM. It is a broadcast
+  whose footprint here is its links and their responses, so a selection
+  rule is a property of some kinds and not others.
+- There is no enforced two-person rule on spending: the sign-off of ruling
+  13 is recorded by name and time, by the same team that built the
+  campaign. The cost was named and accepted.
+- "Linked to events" was said in the plural; the working position is one
+  or more events per campaign.
+- The campaign-to-event link and the mailing plan's `noticeCampaignId`
+  (Phase D, unbuilt) cover the same ground and should become one design,
+  not two fields that mean nearly the same.
+- The engagement holds one referring partner today. A campaign with several
+  partners needs the build plan to say what CM-4's "relate the partner"
+  means on an engagement: a second, many-partner link, or a rule for the
+  single field.
+
+### Strawmen (mine, not adopted)
+
+- Status vocabulary *draft / approved / running / closed*. The build plan's
+  six states are its own draft; neither is ruled.
+- Social media as one kind with a platform field (Meta, YouTube, …) rather
+  than one kind per platform.
+- The short address as `<app>/c/<token>`, resolved by a link record that
+  holds the destination, with the resolve route rate-limited because a
+  short address that resolves to something is a thing people probe.
+- A link's "visit" is the resolve; the form's banner lookup is no longer
+  the open count.
+- The programme-page carry-through as the campaign id held by the page and
+  appended to every event link it renders, so the registration form
+  receives it.
+
+### The campaign's fields, as named
+
+| Field | Named by | Notes |
+|---|---|---|
+| Name | strawman, unopposed | |
+| Kind | Doug | postcard · email · SMS · call · social media (Meta, YouTube, …) — CM-3 |
+| Status | strawman, unopposed | vocabulary open |
+| Start and end date | strawman, unopposed | the shared date control |
+| Owner | strawman, unopposed | defaults to the creator |
+| Notes | strawman, unopposed | the shared rich-text editor |
+| Partners (one or more) | Doug | CM-2; drives CM-4 and CM-5 |
+| Events (one or more) | Doug | CM-6; plurality a working position |
+| Links (any number) | Doug, via CM-7 | each named, one destination, own count |
+| Budget / cost | — | deliberately absent; the postcard run computes its cost (ruling 13) |
+
+### The link's shape
+
+| Property | Value |
+|---|---|
+| Address | a short address of the application's own, resolved server-side (CM-8) |
+| Carries | the campaign; for a postcard also the card's prospect token (CM-7); never a partner (CM-4) |
+| Destinations | the five intake forms · the programme page (carry-through) · one event's page |
+| After publishing | destination correctable; retire-but-still-open, late-marked |
+| QR code | generated by the application from the short address |
+| Count | per link: visits, submissions by form (CM-9) |
+
+### The screens
+
+- **Portal tile** *Campaign Management*, Marketing Admin Team (CM-10,
+  CM-11).
+- **Campaign grid**: status, kind; the house grid shape.
+- **Campaign record page**, one stable tab per record: Overview (fields,
+  partners, events), Links (create, name, copy, correct destination,
+  retire, QR), Responses (latest responses through to each record; the
+  postcard block), Analytics (the campaign-scoped dashboard).
+- **Partner Overview**: a Campaigns tab (CM-5).
+- Conventions noted where a screen is named, not re-litigated: no page
+  width cap; every button always visible and clickable, explaining itself
+  on a missing input or grant; every date through the shared date control;
+  every rich-text field through the shared editor; every mutating action
+  action-logged.
+
+### Still open after this session
+
+- CM-4 on an engagement when a campaign has several partners (above).
+- Social media: one kind with a platform field or one kind per platform,
+  and what counts as a response from it.
+- SMS: there is no sending path in the application today; ruling 9 settled
+  the consent, not the vendor. The build plan reserved the kind; CM-3
+  offers it.
+- One event or many per campaign.
+- The status vocabulary.
+- Who may correct or retire a link (presumably the same team).
+- The programme-page carry-through mechanism.
+- Where the prospect screens of the build plan (Prospects, Calls, Review)
+  live now that the tile is *Campaign Management*: inside it, or their own.
+- The build plan's § 6 says a per-campaign dashboard scope is "not in this
+  arc"; CM-9 requires one.
+
+### What build plan v0.1 must change to meet these requirements
+
+Listed by section so the v0.2 session can work through it.
+
+- **§ 1.3 the campaign entity**: kinds gain SMS and social media (CM-3);
+  an owner; the entity's *label* reads Campaign on screen (CM-11) whatever
+  its stored name.
+- **§ 1.5 links**: a many-to-many between the campaign and partner
+  profiles (CM-2, CM-5); the single `event` link becomes one or more
+  (CM-6, working position); a link record per campaign link, or an
+  application-side table, holding name, destination, token, state (CM-7,
+  CM-8).
+- **§ 3.1 and § 3.5 the engine and screens**: the tile is *Campaign
+  Management* at its own route, not *Prospect Marketing* at `/outreach`
+  (CM-10); the campaign page gains the Links and Responses tabs; the links
+  card's derived `?campaign=<id>` addresses are replaced by resolvable
+  short addresses (CM-8); the selection rule applies to the kinds that
+  select (working position).
+- **§ 3.6 the word**: *outreach campaign* becomes *campaign* in every
+  user-facing string; *notice* stands (CM-11).
+- **§ 4 the landing page**: the card's code is the campaign's one link plus
+  the prospect token (CM-7), generated by the application (CM-8).
+- **§ 5 conversion**: the form receives the campaign from the resolved link,
+  looks up the campaign's partners and relates them by its own logic
+  (CM-4); the "a campaign link carries no partner" sentence stands, the
+  "both are written only if a chapter gives a partner a campaign link"
+  sentence does not; event registrations through a campaign link tie to
+  the campaign and its partners (CM-6).
+- **§ 6 reporting**: the campaign page's fixed numbers and the
+  campaign-scoped Analytics dashboard (CM-9); the "not in this arc" line
+  goes.
+- **§ 9 questions**: the still-open list above joins it.
+
 
 ## Revision control
 
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — plan |
-| Version | v0.5 draft — **process ruled end to end; build plan written as a sibling document**; the storage section above is superseded by ruling 21 |
-| Last Updated | 10-14-26 10-14-26 17:34 |
+| Version | v0.6 draft — **process ruled end to end; Campaign Management application defined (CM-1 to CM-11); build plan v0.1 written before the definition and owed a v0.2**; the storage section above is superseded by ruling 21 |
+| Last Updated | 10-14-26 21:55 |
 | Prepared by | Claude, for D. Bower |
-| Session | 2026-08-11 requirements elicitation; 2026-09-01 funnel-stage discussion; 2026-09-02 funnel diagram review (paused at the first question); 2026-10-13/14 source-by-source walk (rulings 9–27) |
-| Related | `research/registry-enrichment/enrichment-findings.md`, `cinformation-request-entity.md`, `prds/intake-receipt-redesign-plan.md`, `prompts/prospect-marketing-funnel-2026-09-02.png`, `prompts/prospect-marketing-process-session-prompt-v0.1.md` |
+| Session | 2026-08-11 requirements elicitation; 2026-09-01 funnel-stage discussion; 2026-09-02 funnel diagram review (paused at the first question); 2026-10-13/14 source-by-source walk (rulings 9–27); 2026-10-14 Campaign Management definition (CM-1 to CM-11) |
+| Related | `research/registry-enrichment/enrichment-findings.md`, `cinformation-request-entity.md`, `prds/intake-receipt-redesign-plan.md`, `prompts/prospect-marketing-funnel-2026-09-02.png`, `prompts/prospect-marketing-process-session-prompt-v0.1.md`, `prompts/prospect-marketing-campaign-app-prompt-v0.1.md`, `prds/prospect-marketing-build-plan.md` |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
-| v0.5 draft | 10-14-26 10-14-26 17:34 | Claude (Claude Code) | Status, next step and header now point at the build plan (`prds/prospect-marketing-build-plan.md` v0.1). No ruling changed. |
+| v0.6 draft | 10-14-26 21:55 | Claude (Claude Code) | Added *Requirements — Campaign Management application (10-14-26)*: Doug's eleven requirements CM-1 to CM-11 (Marketing Admin Team; partners on a campaign; kinds gain SMS and social media; forms relate the campaign's partners; a partner Campaigns tab; campaign-to-event links; named links of any number with programme-page carry-through; short resolvable addresses with correctable destinations, retire-but-open and QR generated here; the campaign-page / Analytics split; its own tile with a record page; the word Campaign, a Constant Contact send a notice), the working positions, the strawmen, the field, link and screen tables, the open list, and the section-by-section list of what build plan v0.1 must change. Status and next step updated; the duplicated date in Last Updated fixed. No ruling changed. |
+| v0.5 draft | 10-14-26 17:34 | Claude (Claude Code) | Status, next step and header now point at the build plan (`prds/prospect-marketing-build-plan.md` v0.1). No ruling changed. |
 | v0.4 draft | 10-14-26 17:18 | Claude (Claude Code) | Added the 2026-10-13/14 section: the source-by-source walk, rulings 9–27 (SMS consent; Qualified = fit only and Active Prospect = campaign membership; the quarantine storage model; a relationship always creates a Company; Source unchanged plus a new Campaign entity), the withdrawn proposals, the ladder and the per-source walk tables, the open list. Header, status and revision rows updated; the 2026-09-02 open list marked closed. |
 | v0.3 draft | 09-02-26 | Claude | Doug's funnel diagram recorded; first review point; paused at the Qualified question. |
 | v0.2 draft | 09-01-26 | Claude | Funnel-stage discussion recorded — ideas only. |
