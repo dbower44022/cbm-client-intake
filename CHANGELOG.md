@@ -4,6 +4,16 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.258.4] — 2026-10-15
+
+**fix(campaigns): the API role needs edit on the campaign.** The worker's run
+moves a signed-off campaign to Running and Complete under the org-wide key, and
+the grant list in build plan § 7 gave that role read only — so the run was
+refused every minute with *No edit access* (crm-test, 10-15-26 15:37, Doug's
+live pass). `scripts/migrate_outreach_roles.py` now grants
+`COutreachCampaign` edit all to `CustomAppAPIRole` (merge-only; re-run it);
+the handoff's § 4 table says so.
+
 ## [0.258.3] — 2026-10-15
 
 **fix(campaigns): three import defects from Doug's live pass (section 3).**

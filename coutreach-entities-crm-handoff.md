@@ -296,7 +296,7 @@ skipped and nothing is ever lowered or removed. Every change is read back.
 |---|---|---|---|
 | **CustomAppAPIRole** (the `customapps` API user — the application) | `CProspect` | create yes · read all · edit all | the imports, the promotion links, the rung |
 | | `COutreachTouch` | create yes · read all · edit all | the selection run, the scan, the vendor callback |
-| | `COutreachCampaign` | read all | resolving a campaign id at delivery; the `partnerProfiles` relationship read (needs read on both ends — `CPartnerProfile` read is held) |
+| | `COutreachCampaign` | read all · **edit all** | resolving a campaign id at delivery; the `partnerProfiles` relationship read (needs read on both ends — `CPartnerProfile` read is held); **the worker's run**, which moves the campaign to Running and Complete and stamps the run (edit added 10-15-26 after the live pass found the run refused with *No edit access*; re-run the script) |
 | | `CEngagement` edit all · `CPartnerProfile` edit all · `Contact` edit all · `Account` edit all | **re-checks** | held on crm-test 10-14-26; named so a CRM that lacks one gains it rather than failing the `referringPartners` relate (both sides are checked) or a stage write |
 | **Marketing Admin Role** (Marketing Admin Team — CM-1) | `CProspect`, `COutreachCampaign`, `COutreachTouch` | create yes · read all · edit all | marketing users create and run campaigns; **no delete** — a campaign is Cancelled |
 | | `CEvent` read all · `CPartnerProfile` read all | **re-checks** | the events picker (CM-6) and the partners picker (CM-2); both held |

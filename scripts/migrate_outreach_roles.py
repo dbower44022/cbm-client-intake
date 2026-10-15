@@ -9,7 +9,7 @@ three entities ``scripts/plans/coutreach-entities.json`` creates (``CProspect``,
 * **CustomAppAPIRole** (the org-wide API key the application runs on) —
   ``CProspect`` create yes, read all, edit all (the imports, the promotion
   links, the rung); ``COutreachTouch`` create yes, read all, edit all (the
-  selection run, the scan, the vendor callback); ``COutreachCampaign`` read all
+  selection run, the scan, the vendor callback); ``COutreachCampaign`` read all and edit all (the worker's run moves it to Running and Complete)
   (the resolve of a campaign id at delivery, and the ``partnerProfiles``
   relationship read — a relationship read needs read on both ends, and the
   role holds ``CPartnerProfile`` read already). Re-checked, never lowered:
@@ -69,7 +69,11 @@ NEW_ENTITIES: tuple[str, ...] = ("CProspect", "COutreachCampaign", "COutreachTou
 ROLE_SCOPE_GRANTS: list[tuple[str, str, dict[str, str]]] = [
     ("CustomAppAPIRole", "CProspect", {"create": "yes", "read": "all", "edit": "all"}),
     ("CustomAppAPIRole", "COutreachTouch", {"create": "yes", "read": "all", "edit": "all"}),
-    ("CustomAppAPIRole", "COutreachCampaign", {"read": "all"}),
+    # Edit as well as read: the worker's run moves the campaign to Running and
+    # Complete and stamps runStartedAt / runCompletedAt under this role. Read
+    # alone (the plan's § 7 list) left the run refused every minute with
+    # "No edit access" on crm-test, 10-15-26 15:37.
+    ("CustomAppAPIRole", "COutreachCampaign", {"read": "all", "edit": "all"}),
     # Re-checks: held on crm-test 10-14-26, named here so a CRM that lacks one
     # gains it rather than failing the referringPartners relate or a stage write.
     ("CustomAppAPIRole", "CEngagement", {"edit": "all"}),
