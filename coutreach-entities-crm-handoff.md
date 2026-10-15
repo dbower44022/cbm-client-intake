@@ -1,6 +1,6 @@
 # CRM handoff — prospect marketing and Campaign Management (Phase 1): `CProspect`, `COutreachCampaign`, `COutreachTouch`
 
-Last Updated: 10-14-26 23:15 · Revision 1.0 — see change log at the end.
+Last Updated: 10-15-26 00:02 · Revision 1.1 — see change log at the end.
 
 Three new record types and the links that tie them to what the CRM already
 holds. A **prospect record** (`CProspect`) is a quarantine for a business or
@@ -33,14 +33,16 @@ removed, renamed or narrowed. Safe to apply ahead of the code.
 | CRM | State | Evidence |
 |---|---|---|
 | crm-test | **Not applied.** Dry run 10-14-26 23:0x as the configuration administrator (`crm.config`, EspoCRM 9.3.6): **78 changes, fingerprint `6b29c8928dcf`**, nothing already present. Every new name read as absent from `GET /Metadata` as the org-wide key the same evening; no relation name collides with the sixteen in use. | This document's § 2 output. |
-| Production | **Owed** — Sunday 17:00 UTC slot, from inside the deployed web container, after crm-test has soaked and Doug has ruled on item (a) below. | *Inferred:* production has none of this; the dry run in § 2 proves it. |
+| Production | **Owed** — Sunday 17:00 UTC slot, from inside the deployed web container, after crm-test has soaked. | *Inferred:* production has none of this; the dry run in § 2 proves it. |
 | Boston | **Owed** — with the release that carries Phase 1. | *Inferred:* built from crm-test's files before this change. |
 
-Nine things to know before the apply. The first is Doug's to rule on; the
-rest are decided here and said so.
+Nine things to know before the apply. The first was Doug's to rule on and
+is ruled; the rest are decided here and said so.
 
-**(a) One name in the plan's § 1.5 cannot be stored as written — put to
-Doug.** The table gives `COutreachCampaign.partnerProfiles` to two different
+**(a) One name in the plan's § 1.5 could not be stored as written — RULED
+10-15-26 00:01, ruling 32: the drafted name `attributedPartnerProfiles`
+stands; build plan v0.4 carries it; the plan file and fingerprint are
+unchanged.** The table gave `COutreachCampaign.partnerProfiles` to two different
 links: the many-to-many to `CPartnerProfile` (CM-2, the partners a campaign
 names) **and** the reverse of `CPartnerProfile.outreachCampaign` (ruling 27,
 the partner profiles a campaign's link created). EspoCRM refuses a second link
@@ -51,9 +53,8 @@ reverse **`attributedPartnerProfiles`** (label *Partners created through this
 campaign*). Cost: it no longer matches its sibling `sponsorProfiles` on the
 funder side. The alternative is to rename both attribution reverses
 (`attributedPartnerProfiles` and `attributedSponsorProfiles`) so the family
-reads alike; one more line in the plan file, a new fingerprint. **Approve the
-drafted name or choose the alternative before § 2's apply**; then build plan
-§ 1.5 and § 1.10 take the ruled name.
+reads alike; one more line in the plan file, a new fingerprint. Doug chose the
+drafted name (option 1); the alternative was not taken.
 
 **(b) `mailingAddress` is built as EspoCRM's `address` type**, not four
 varchars. Evidence: on crm-test `GET /Metadata?key=fields.address` reads
@@ -379,7 +380,7 @@ again each morning, as the plan's § 7 step 14 says.
 ## 7. Then production
 
 At the Sunday 17:00 UTC slot, by a human, from inside the deployed **web**
-container (`[[do-app-console-scripting]]`), **after item (a) is ruled**: § 2
+container (`[[do-app-console-scripting]]`), § 2
 dry run, § 2 apply, § 4 dry run, § 4 apply, § 5 steps 1 and 2; then § 3.1 from
 the build computer (`scripts/on_crm.sh production scripts/convert_notes_wysiwyg.sh COutreachCampaign`)
 and § 3.2 in production's CRM; then § 5 step 3 as a real non-admin. Record the
@@ -414,4 +415,5 @@ nothing in any name here is chapter-specific.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 10-15-26 00:02 | Claude (Claude Code) | Item (a) ruled by Doug ("1", ruling 32): `attributedPartnerProfiles` stands. Nothing else changed; the fingerprint `6b29c8928dcf` is unaffected. |
 | 1.0 | 10-14-26 23:15 | Claude (Claude Code) | Written from the kickoff prompt `prospect-marketing-crm-handoff-prompt-v0.1.md` v0.1.4 after the crm-test dry run (78 changes, fingerprint `6b29c8928dcf`) and the admin read of crm-test's roles and tab list. Nothing applied. Item (a), the `partnerProfiles` collision in build plan § 1.5, is put to Doug with a drafted name. |

@@ -7,8 +7,8 @@ found; move resolved items to the bottom with the resolution date.
 ## Needs a fix / decision
 
 51. **Prospect marketing — the two CRM handoffs are written and dry-run
-    on crm-test; one name awaits Doug's ruling; nothing applied, nothing
-    built** (10-14-26, updated 10-14-26 23:15). Three sessions worked the arc on 10-14-26 and left three
+    on crm-test, the one open name ruled; nothing applied, nothing
+    built** (10-14-26, updated 10-15-26 00:02). Three sessions worked the arc on 10-14-26 and left three
     documents that disagreed; Doug ruled a directory on the chapter-network
     pattern. Start at its `README.md`. `rulings.md` is the binding record
     (rulings 1–27, CM-1 to CM-11, append only); `build-plan.md` v0.2 is the
@@ -28,11 +28,10 @@ found; move resolved items to the bottom with the resolution date.
     every re-check already held; no role carries a `fieldData` rule on
     Contact or Account), both fingerprints pinned in
     `tests/test_apply_crm_plan.py`; the spent prompt is in
-    `prds/prospect-marketing/history/prompts/`; (b′) **Doug rules on the one
-    name the plan could not store as written** — build plan § 1.5 gives
-    `COutreachCampaign.partnerProfiles` to two links; the plan file drafts
-    `attributedPartnerProfiles` for the ruling-27 reverse
-    (`coutreach-entities-crm-handoff.md` § 0 item (a), with the alternative);
+    `prds/prospect-marketing/history/prompts/`; (b′) ~~the one name the plan
+    could not store as written~~ **ruled 10-15-26 00:01, ruling 32**:
+    `attributedPartnerProfiles` (the drafted name; build plan v0.4; the
+    fingerprints stand);
     (c) Doug applies on crm-test — SMS plan, outreach plan, the wysiwyg
     conversion and the tab-list hand step, the role script — verifies as the
     org-wide key and as Mark Marketing, soaks (**the next step**); (d) Phase

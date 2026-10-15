@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-14-26 22:42 · Revision 1.0 — change log at the end.
+Last Updated: 10-15-26 00:02 · Revision 1.2 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -179,6 +179,18 @@ marks the question answered.
     not as a fourth CRM entity; the resolve route never calls the CRM.
     (10-14-26)
 
+### Doug's ruling (10-15-26, on the CRM handoff's one open name)
+
+`coutreach-entities-crm-handoff.md` § 0 item (a) put one name to Doug: build
+plan § 1.5 gave `COutreachCampaign.partnerProfiles` to two links. Doug's
+reply at 00:01 on 10-15-26: "1" — the drafted name.
+
+32. **The reverse of `CPartnerProfile.outreachCampaign` on the campaign is
+    `attributedPartnerProfiles`** (the handoff's drafted name, option 1).
+    `partnerProfiles` stays the CM-2 many-to-many to the partners a
+    campaign names; the funder-side reverse `sponsorProfiles` is unchanged.
+    (10-15-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -299,8 +311,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.1 |
-| Last Updated | 10-14-26 22:42 |
+| Version | 1.2 |
+| Last Updated | 10-15-26 00:02 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -308,5 +320,6 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 10-15-26 00:02 | Claude (Claude Code) | Ruling 32 appended: the ruling-27 reverse link on the campaign is `attributedPartnerProfiles` (Doug's "1" to the handoff's item (a)). |
 | 1.1 | 10-14-26 22:42 | Claude (Claude Code) | Rulings 28–31 appended: Doug's answers to build plan § 9 questions 1, 3, 8 and 9 (custom entities; `Unverified`; multiple referring partners on an engagement; links in the application database). |
 | 1.0 | 10-14-26 22:25 | Claude (Claude Code) | Created when the arc was consolidated into `prds/prospect-marketing/` (Doug's ruling, 10-14-26: a directory on the chapter-network pattern). Rulings 1–27, CM-1 to CM-11 and the two tables copied verbatim from the process plan; no ruling changed. |

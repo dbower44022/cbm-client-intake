@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-14-26 22:43 · Revision 0.3 — change log at the end.
+Last Updated: 10-15-26 00:02 · Revision 0.4 — change log at the end.
 
 **Where this document lives.** `prds/prospect-marketing/` is the whole arc;
 start at its `README.md`. The binding decisions are in `rulings.md` beside
@@ -247,7 +247,7 @@ custom; names on the custom entities stay as typed.
 | `CEngagement` | `outreachCampaign` | many-to-one | `COutreachCampaign` | `engagements` | Ruling 27: every time |
 | `CInformationRequest` | `outreachCampaign` | many-to-one | `COutreachCampaign` | `informationRequests` | Ruling 27 |
 | `CEventRegistration` | `outreachCampaign` | many-to-one | `COutreachCampaign` | `eventRegistrations` | Ruling 27. **Replaces** the mailing plan's planned `CEventRegistration.noticeCampaignId` (Phase D, unbuilt): a notice's Register link is a campaign link (§ 3.7). `CEvent.noticeCampaignId`, which notice announced the event, stays that plan's |
-| `CPartnerProfile` | `outreachCampaign` | many-to-one | `COutreachCampaign` | `partnerProfiles` | Ruling 27 |
+| `CPartnerProfile` | `outreachCampaign` | many-to-one | `COutreachCampaign` | `attributedPartnerProfiles` | Ruling 27. **Ruling 32**: not `partnerProfiles`, which this entity already uses for the CM-2 many-to-many above — EspoCRM refuses a second link under a name the entity has |
 | `CSponsorProfile` | `outreachCampaign` | many-to-one | `COutreachCampaign` | `sponsorProfiles` | Ruling 27 |
 
 Seventeen links, fourteen many-to-one and three many-to-many, none `hasOne` —
@@ -355,6 +355,7 @@ so the relabel needs no per-door code. `Presenter`, `Member`, `Donor` and
 | `outreachCampaigns` | reverse link on `CEvent` | `outreachCampaigns` | Custom entity: as typed |
 | `referringPartners` | link on `CEngagement` | `referringPartners` | Custom entity: as typed (beside the existing `referringPartner`) |
 | `referredEngagements` | reverse link on `CPartnerProfile` | `referredEngagements` | Custom entity: as typed (`engagements` is already the single link's reverse) |
+| `attributedPartnerProfiles` | reverse link on `COutreachCampaign` | `attributedPartnerProfiles` | Custom entity: as typed (ruling 32 — `partnerProfiles` is the CM-2 many-to-many) |
 
 Verified after the build by `GET /Metadata` → `entityDefs.<Entity>`, never
 by the Entity Manager list view (the label hides the prefix). Nothing in any
@@ -1257,8 +1258,8 @@ best-effort mirror.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — build plan |
-| Version | v0.3 — a plan, nothing built; questions 1, 3, 8 and 9 answered (rulings 28–31), multiple referring partners on an engagement; eight questions open, none shaping the CRM |
-| Last Updated | 10-14-26 22:43 |
+| Version | v0.4 — a plan, nothing built; questions 1, 3, 8 and 9 answered (rulings 28–31), multiple referring partners on an engagement; the handoff's one open name ruled (32); eight questions open, none shaping the CRM |
+| Last Updated | 10-15-26 00:02 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
 | Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
@@ -1267,6 +1268,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.4 | 10-15-26 00:02 | Claude (Claude Code) | Ruling 32: § 1.5's reverse of `CPartnerProfile.outreachCampaign` is `attributedPartnerProfiles` (the row had named `partnerProfiles` twice; found by the handoff session's dry run, drafted there, chosen by Doug); § 1.10 gains the row. The plan files were already written on this name, so the fingerprints stand. |
 | 0.3 | 10-14-26 22:43 | Claude (Claude Code) | Doug's answers to questions 1, 3, 8 and 9 recorded (rulings 28–31). Question 8 against the recommendation: `CEngagement.referringPartners` many-to-many to `CPartnerProfile` (reverse `referredEngagements`) added — seventeen links; step 6a rewritten (the many link holds every referring partner, the single link stays the partner link's own, readers take the union); the per-door table, the coexist paragraph, Phase 1's handoff and grants, Phase 2's build and verification, § 8 and § 9 updated. |
 | 0.2.1 | 10-14-26 22:27 | Claude (Claude Code) | Moved from `prds/prospect-marketing-build-plan.md` into `prds/prospect-marketing/` (Doug's consolidation ruling, 10-14-26); references to the process plan now point at `rulings.md` and `history/`. No section revised. |
 | 0.2 | 10-14-26 22:09 | Claude (Claude Code) | Revised against the Campaign Management requirements (CM-1 to CM-11): the campaign is labelled Campaign and names partners and events (two many-to-many links, sixteen in all); five kinds with the SMS kind (§ 3.5) and the social media kind (§ 3.6) added; a new § 3.7 for links as short resolvable addresses in the application's database, with correct, retire, the programme-page carry-through and the QR generator; the screens rebuilt around the Campaign Management tile, the campaign record page (Overview / Links / Responses / Analytics) and the partner's Campaigns tab; the forms carry the link token and relate the campaign's partners by door (step 6a); reporting gains the campaign page's own numbers and a campaign dashboard scope; the phases, their flags (`CAMPAIGNS_*`, `PROSPECT_STALE_DAYS`) and verification scripts updated; the requirements' open list answered in § 8; questions 8–12 added. The superseded-in-part pointer replaced by this revision note. |

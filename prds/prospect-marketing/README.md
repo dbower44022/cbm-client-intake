@@ -41,7 +41,7 @@ their plan files under `scripts/plans/` (`contact-sms-opt-in.json`,
 and — when built — the code in a `campaigns/` package and a
 `forms/prospect_response/` form.
 
-## State, as of 10-14-26 23:15
+## State, as of 10-15-26 00:02
 
 - **Settled:** the process end to end (rulings 1–27) and the Campaign
   Management application (CM-1 to CM-11). None of it is reopened by any
@@ -61,15 +61,14 @@ and — when built — the code in a `campaigns/` package and a
      handoffs, two plan files and the role script are written; crm-test dry
      runs clean (`contact-sms-opt-in` fingerprint `0bc7219ab932`, one
      change; `coutreach-entities` fingerprint `6b29c8928dcf`, 78 changes).
-     Nothing applied. **One ruling owed first:** build plan § 1.5 names
-     `COutreachCampaign.partnerProfiles` twice (the CM-2 many-to-many and
-     the reverse of `CPartnerProfile.outreachCampaign`); the plan file
-     drafts `attributedPartnerProfiles` for the second —
-     `coutreach-entities-crm-handoff.md` § 0 item (a). The handoff also
+     Nothing applied. The one name the plan could not store as written
+     (build plan § 1.5 named `COutreachCampaign.partnerProfiles` twice) is
+     **ruled 10-15-26 — ruling 32, `attributedPartnerProfiles`**, build
+     plan v0.4; the fingerprints stand. The handoff also
      decides `address` for the mailing address, names the wysiwyg
      conversion and the tab-list hand step, and observes that the Marketing
      Admin Role holds no Account grant (a Phase 1 build decision).
-  3. **Doug rules on item (a), then applies on crm-test** from the two
+  3. **Doug applies on crm-test** from the two
      handoffs (§ 2, § 3, § 4 of each) and
      `prds/chapter-network/crm-update-runbook.md`; the shape is verified in
      `GET /Metadata`, the grants as the org-wide key and as a real
@@ -128,14 +127,15 @@ import contract starts from).
 | Field | Value |
 |---|---|
 | Document | Prospect marketing — directory README |
-| Version | 1.2 |
-| Last Updated | 10-14-26 23:15 |
+| Version | 1.3 |
+| Last Updated | 10-15-26 00:02 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 10-15-26 00:02 | Claude (Claude Code) | State: item (a) ruled (ruling 32); the next step is the crm-test apply. |
 | 1.2 | 10-14-26 23:15 | Claude (Claude Code) | State: the CRM handoff session done — two handoffs, two plan files, the role script, crm-test fingerprints; the `partnerProfiles` name collision put to Doug; the live kickoff is now the Phase 1 build prompt and the spent one is in `history/prompts/`. |
 | 1.1 | 10-14-26 22:44 | Claude (Claude Code) | State: the four shape-changing questions answered (rulings 28–31, build plan v0.3); the next session is the CRM handoff. |
 | 1.0 | 10-14-26 22:26 | Claude (Claude Code) | Created. Doug's ruling the same evening: consolidate the arc's three sessions' output into one directory on the chapter-network pattern. The process plan, the build plan, the funnel diagram and the three spent kickoff prompts moved here; `rulings.md` extracted; the live kickoff stays in `prompts/`. |
