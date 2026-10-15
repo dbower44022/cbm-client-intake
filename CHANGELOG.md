@@ -4,6 +4,15 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.258.2] — 2026-10-15
+
+**fix(campaigns): hidden panels rendered through the `hidden` attribute.** The
+page's panels are `display: grid`, which beats `[hidden]` — the trap CLAUDE.md
+already names — so the blocked view and the "not available" view both showed on
+a working record page (Doug's live pass, 10-15-26 10:27). Both stylesheets now
+carry `[hidden] { display: none !important; }`, guarded by a test. The v0.258.1
+block was this, not a second tab.
+
 ## [0.258.1] — 2026-10-15
 
 **fix(campaigns): a record tab blocked by the single-tab lock can be opened

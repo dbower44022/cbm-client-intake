@@ -687,3 +687,13 @@ def test_every_public_form_carries_the_hidden_fields_and_the_sms_tick(form):
     assert 'id="campaign_banner"' in html
     assert "/shared/campaign-link.js" in html
     assert 'id="sms_consent"' in html and "sms_consent" in js, form
+
+
+@pytest.mark.parametrize("sheet", ["campaigns/frontend/styles.css", "campaigns/landing_frontend/landing.css"])
+def test_hidden_attribute_beats_every_display_rule(sheet):
+    """A panel set to display: grid renders THROUGH the hidden attribute unless the
+    sheet says otherwise — the blocked view and the "not available" view both
+    showed on a working record page on 10-15-26."""
+    from pathlib import Path
+    css = (Path(__file__).resolve().parents[1] / sheet).read_text()
+    assert "[hidden] { display: none !important; }" in css

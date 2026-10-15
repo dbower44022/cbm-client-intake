@@ -1,5 +1,10 @@
 /* Campaign Management. Tokens from /shared/tokens.css; no page width cap (density
    by packing — 4K users). */
+/* The hidden attribute must beat every display rule below — a panel set to
+   display: grid otherwise renders through [hidden] (the trap CLAUDE.md names:
+   "display:flex beats the [hidden] attribute"). Found live 10-15-26: the blocked
+   view and the "not available" view both showed on a working record page. */
+[hidden] { display: none !important; }
 body { margin: 0; background: var(--cbm-bg, #f6f7f9); color: var(--cbm-text, #1e2a33);
        font-family: "Roboto", system-ui, sans-serif; line-height: 1.45; }
 .cm { padding: 1rem 1.25rem 2rem; display: grid; gap: 1rem; }

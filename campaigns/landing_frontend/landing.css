@@ -1,5 +1,6 @@
 /* The postcard landing page. Reads the chapter's tokens from /shared/tokens.css
    (and the chapter override it may load). No page width cap on purpose. */
+[hidden] { display: none !important; }   /* the thank-you card is display: grid */
 .lp { margin: 0; background: var(--cbm-bg, #f6f7f9); color: var(--cbm-text, #1e2a33);
       font-family: "Roboto", system-ui, sans-serif; line-height: 1.5; }
 .lp__main { padding: 1.5rem clamp(1rem, 4vw, 3rem) 3rem; display: grid; gap: 1.25rem; }
