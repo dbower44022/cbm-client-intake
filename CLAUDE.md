@@ -1628,16 +1628,18 @@ rollout, the intake-receipt redesign, Meet and Fathom transcripts, submission-ad
 collaboration, workspace directories, transcription-vendor options, **grant
 management**, **the rating engine** and **the mailing list and event
 sponsorship arc** — Constant Contact as a mirror of the CRM, partner
-many-to-many, the deferred in-app designer) and **prospect marketing** —
-`prospect-marketing-plan.md` holds rulings 1–27 and the Campaign Management
-requirements CM-1 to CM-11, all settled; `prospect-marketing-build-plan.md`
-v0.1.1 predates those requirements and is owed a v0.2 before any CRM handoff
-or code; nothing of the arc is built) — each records
+many-to-many, the deferred in-app designer) — each records
 the decisions and Doug's rulings behind that arc, so read the relevant one before
 reworking a feature. The chapter network is
 **not** one of those plans any more — it is its own project directory,
 **`prds/chapter-network/`**, worked separately from the app's feature arcs; start
-at its `README.md`. Eight settled rulings, a phase file each for phases 0–6, a
+at its `README.md`. **Prospect marketing and Campaign Management are a directory
+too** (consolidated 10-14-26 after three sessions in one day left three
+documents that disagreed): **`prds/prospect-marketing/`** — start at its
+`README.md`; `rulings.md` holds rulings 1–27 and CM-1 to CM-11 and is the
+binding record (append only); `build-plan.md` v0.2 is the one plan; the CRM
+handoff waits on four of its § 9 questions; nothing of the arc is built.
+**One session on that arc at a time.** Eight settled rulings, a phase file each for phases 0–6, a
 decision log, and its own task list. Phase 0 (de-Cleveland) is **built**; **Phase
 1, CRM configuration as a versioned build artifact, is the next one and the only
 genuinely new engineering in the plan** — its conformance check is built, its

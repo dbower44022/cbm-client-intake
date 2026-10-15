@@ -6,22 +6,26 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
-51. **Prospect marketing — build plan v0.2 owed, nothing built** (10-14-26).
-    The process is ruled end to end (`prds/prospect-marketing-plan.md`,
-    rulings 1–27) and the Campaign Management application is defined
-    (same document, CM-1 to CM-11, 10-14-26 evening). The build plan
-    (`prds/prospect-marketing-build-plan.md` v0.1.1) was written the same
-    afternoon, before the definition, and its header names the sections
-    v0.2 must revise. **Owed, in order:** (a) build plan v0.2 from
-    `prompts/prospect-marketing-build-plan-prompt-v0.1.md` (v0.2, item 8);
-    (b) Doug's answers to the build plan's § 9 questions — question 1
-    (custom entities or EspoCRM's own Lead and Campaign; the native module
-    is hidden on crm-test and the org key 403s on both) and question 3
-    (rung 1's stored name, `Unverified` recommended) gate the CRM handoff;
-    questions 2 (the outside filter's file), 4 (mail vendor, Doug opens the
-    account) and 5 (the card) gate the first real card; (c) the two CRM
-    handoffs from `prompts/prospect-marketing-crm-handoff-prompt-v0.1.md`,
-    gated on (a); (d) Phase 1. No CRM change, no vendor account, no code.
+51. **Prospect marketing — consolidated into `prds/prospect-marketing/`;
+    the CRM handoff waits on four answers; nothing built** (10-14-26, updated
+    10-14-26 22:28). Three sessions worked the arc on 10-14-26 and left three
+    documents that disagreed; Doug ruled a directory on the chapter-network
+    pattern. Start at its `README.md`. `rulings.md` is the binding record
+    (rulings 1–27, CM-1 to CM-11, append only); `build-plan.md` v0.2 is the
+    one plan (revised against CM-1 to CM-11 at 22:09); the process plan and
+    the three spent kickoff prompts are under `history/`. **Owed, in
+    order:** (a) Doug's answers to build plan § 9 questions 1 (custom
+    entities or EspoCRM's own Lead and Campaign), 3 (rung 1 stored
+    `Unverified` or `Unqualified`), 8 (a many-partner link on the engagement
+    or none) and 9 (campaign links in the application's database or a fourth
+    entity) — each recorded in `rulings.md` as ruling 28 onward; (b) the two
+    CRM handoffs, plan files and role script from
+    `prompts/prospect-marketing-crm-handoff-prompt-v0.1.md` (v0.1.3), dry-run
+    fingerprints only; (c) Doug applies on crm-test, verifies, soaks;
+    (d) Phase 1; (e) questions 2, 4 and 5 before the first real card;
+    (f) production at the Sunday slot, Boston with its release, a seeder and
+    a sandbox re-baseline (both handoffs add tables). No CRM change, no
+    vendor account, no code. **One session on this arc at a time.**
 
 45. **The training sandbox loses every presenter and partner-event link at
     04:00 UTC, and the demo events had none to lose** (10-11-26, Doug's

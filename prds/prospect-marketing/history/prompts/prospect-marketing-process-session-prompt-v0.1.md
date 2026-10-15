@@ -1,5 +1,10 @@
 # Kickoff prompt — walk the prospect marketing process, source by source
 
+> **Done — history.** This kickoff was run and its product is recorded; it was
+> moved here on 10-14-26 when the arc was consolidated into
+> `prds/prospect-marketing/`. Paths below predate the move; start at the
+> directory's `README.md`.
+
 **Written 2026-09-02. For a fresh Claude Code session rooted in
 `cbm-client-intake`.** This is a discussion session, not a build session. Its
 purpose is to find out whether the funnel needs more status buckets than the

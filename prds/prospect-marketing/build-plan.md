@@ -1,10 +1,14 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-14-26 22:09 · Revision 0.2 — change log at the end.
+Last Updated: 10-14-26 22:27 · Revision 0.2.1 — change log at the end.
+
+**Where this document lives.** `prds/prospect-marketing/` is the whole arc;
+start at its `README.md`. The binding decisions are in `rulings.md` beside
+this file; the discussion that produced them is under `history/`.
 
 **Status: a plan, not a build.** Nothing here is built, no CRM is changed, no
 vendor account exists. This document turns the rulings of
-`prds/prospect-marketing-plan.md` (rulings 1–8 of 2026-08-11 and 9–27 of
+`rulings.md` (rulings 1–8 of 2026-08-11 and 9–27 of
 2026-10-13/14, all settled and none reopened here) into the record model, the
 screens, the phases, the CRM handoffs and the verification scripts the build
 needs. It is a sibling of that document rather than a section of it because
@@ -14,8 +18,10 @@ test are in § 9 as numbered questions, and the plan is written on the
 recommended answer to each so that a "yes" costs Doug nothing.
 
 **Revised to v0.2 on 10-14-26 against the Campaign Management
-requirements** — `prds/prospect-marketing-plan.md`, section *Requirements —
-Campaign Management application (10-14-26)*, CM-1 to CM-11, which Doug
+requirements** — `rulings.md`, *Requirements — the Campaign Management
+application*, CM-1 to CM-11 (gathered in
+`history/prospect-marketing-plan.md`, section *Requirements — Campaign
+Management application (10-14-26)*), which Doug
 stated after v0.1 was written. **Those requirements are Doug's and are not
 reopened here.** Sections revised: 0, 1.3–1.5, 1.10, 3 (two new kinds, a
 new links section, the screens, the word), 4, 5, 6, 7, 8 and 9. Where the
@@ -1089,7 +1095,7 @@ Not planned, no dates: the partner-file import (ruling 23); **sending** texts th
 
 ## 8. The open list — each item answered or put to Doug
 
-From `prds/prospect-marketing-plan.md`, *Open after this session*:
+From `history/prospect-marketing-plan.md`, *Open after this session*:
 
 | Item | Status | Where |
 |---|---|---|
@@ -1221,16 +1227,17 @@ best-effort mirror.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — build plan |
-| Version | v0.2 — a plan, nothing built; revised against the Campaign Management requirements (CM-1 to CM-11); twelve questions open |
-| Last Updated | 10-14-26 22:09 |
+| Version | v0.2.1 — a plan, nothing built; revised against the Campaign Management requirements (CM-1 to CM-11); twelve questions open |
+| Last Updated | 10-14-26 22:27 |
 | Prepared by | Claude (Claude Code), for D. Bower |
-| Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `prompts/prospect-marketing-build-plan-prompt-v0.1.md` |
-| Related | `prds/prospect-marketing-plan.md` (the rulings and, since 10-14-26, the Campaign Management requirements CM-1 to CM-11), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
+| Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
+| Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.2.1 | 10-14-26 22:27 | Claude (Claude Code) | Moved from `prds/prospect-marketing-build-plan.md` into `prds/prospect-marketing/` (Doug's consolidation ruling, 10-14-26); references to the process plan now point at `rulings.md` and `history/`. No section revised. |
 | 0.2 | 10-14-26 22:09 | Claude (Claude Code) | Revised against the Campaign Management requirements (CM-1 to CM-11): the campaign is labelled Campaign and names partners and events (two many-to-many links, sixteen in all); five kinds with the SMS kind (§ 3.5) and the social media kind (§ 3.6) added; a new § 3.7 for links as short resolvable addresses in the application's database, with correct, retire, the programme-page carry-through and the QR generator; the screens rebuilt around the Campaign Management tile, the campaign record page (Overview / Links / Responses / Analytics) and the partner's Campaigns tab; the forms carry the link token and relate the campaign's partners by door (step 6a); reporting gains the campaign page's own numbers and a campaign dashboard scope; the phases, their flags (`CAMPAIGNS_*`, `PROSPECT_STALE_DAYS`) and verification scripts updated; the requirements' open list answered in § 8; questions 8–12 added. The superseded-in-part pointer replaced by this revision note. |
 | 0.1.1 | 10-14-26 21:55 | Claude (Claude Code) | Pointer added at the top: superseded in part by *Requirements — Campaign Management application (10-14-26)* in the plan (CM-1 to CM-11); the sections v0.2 must revise are named there. No section revised. Duplicated date in Last Updated fixed. |
 | 0.1 | 10-14-26 17:34 | Claude (Claude Code) | First version: the record model in Entity Manager vocabulary (three custom entities, fifteen links, the stage fields, the relabel), the two import doors, the three campaign kinds on one engine, the landing page as a sixth form kind, conversion per door, reporting, five phases with handoffs and verification scripts, the open list, seven questions. Finding recorded: the native marketing module is hidden on crm-test and the org key 403s on Lead and Campaign. |
