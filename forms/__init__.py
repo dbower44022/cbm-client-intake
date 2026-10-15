@@ -10,6 +10,7 @@ from . import (
     info_email,
     info_request,
     partner,
+    prospect_response,
     sponsor,
     volunteer,
 )
@@ -32,5 +33,10 @@ DELIVERY_ONLY_SPECS = [info_email.SPEC]
 # the spec is registered for DELIVERY only. The worker, /ops redrive and the
 # resumable machinery all work exactly as they do for the public forms.
 DELIVERY_ONLY_SPECS.append(event_registration.SPEC)
+
+# The postcard landing page's response arrives at POST /api/campaigns/landing/{token}
+# (the card's token comes from the URL), never at a generic route. Delivery only,
+# for the same reasons as event registration (prds/prospect-marketing/build-plan.md § 4).
+DELIVERY_ONLY_SPECS.append(prospect_response.SPEC)
 
 SPECS_BY_SLUG = {spec.slug: spec for spec in ALL_SPECS + DELIVERY_ONLY_SPECS}

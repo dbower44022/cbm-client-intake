@@ -6,10 +6,10 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
-51. **Prospect marketing — the Phase 1 CRM change is COMPLETE on
-    crm-test (applied, verified as the org-wide key and as real non-admins)
-    and soaking; production and Boston owed; nothing built** (10-14-26,
-    updated 10-15-26 01:50). Three sessions worked the arc on 10-14-26 and left three
+51. **Prospect marketing — Phase 1 BUILT (v0.258.0, 10-15-26, dark behind
+    `CAMPAIGNS_ENABLED`); the CRM change is complete on crm-test and soaking;
+    Doug's Phase 1 live pass is owed; production and Boston owed** (10-14-26,
+    updated 10-15-26 03:05). Three sessions worked the arc on 10-14-26 and left three
     documents that disagreed; Doug ruled a directory on the chapter-network
     pattern. Start at its `README.md`. `rulings.md` is the binding record
     (rulings 1–27, CM-1 to CM-11, append only); `build-plan.md` v0.2 is the
@@ -45,14 +45,23 @@ found; move resolved items to the bottom with the resolution date.
     https://claude.ai/artifact/ShmRGZgDWWfspETWuU86hQ; the partner relate
     as a Marketing Admin answered *operation requires edit access to
     foreign record*, the expected both-sides check the build handles with
-    the admin fallback); soaking to the Sunday slot; (d) Phase
-    1 (**the next step** — its gate is open), from `prompts/prospect-marketing-phase-1-build-prompt-v0.1.md`,
-    which also decides where the import's Company creates run (the
-    Marketing Admin Role holds no Account grant — handoff item (i)); (e)
+    the admin fallback); soaking to the Sunday slot; (d) ~~Phase 1~~ **built 10-15-26 03:05, v0.258.0** (ruling 33: the
+    import's Company and Contact writes run under the intake API client);
+    (d′) **Doug's Phase 1 live pass on crm-test** from the step page
+    https://claude.ai/artifact/XSEA7eWTx3yhXkH6Kw9oLD (written 10-15-26 03:05,
+    ten sections): switch `CAMPAIGNS_ENABLED` and
+    `CAMPAIGNS_LANDING_PUBLIC` on at `/setup`, apply the receipt option
+    (`! scripts/prospect_crm_test.sh receipt`, fingerprint `cb685b7372b1`),
+    then the fourteen steps of build plan § 7 Phase 1 (**the next step**);
+    (d″) Phase 2 from `prompts/prospect-marketing-phase-2-build-prompt-v0.1.md`
+    once the pass matches; (e)
     questions 2, 4 and 5 before the first real card; (f) production at the
-    Sunday slot, Boston with its release, a seeder and a sandbox
-    re-baseline (the outreach handoff adds six tables; the SMS one adds a
-    column, which survives the reset). No CRM change, no vendor account, no
+    Sunday slot (both plans, the receipt option, the role script, the notes
+    conversion, the tab list, the three entities' layouts — handoff § 3.3),
+    Boston with its release, a seeder and a sandbox re-baseline (the
+    outreach handoff adds six tables; the SMS one adds a column, which
+    survives the reset); the application's four new tables reset nightly
+    too, so a demo campaign's links need the seeder. No CRM change, no vendor account, no
     code. **One session on this arc at a time.**
 
 45. **The training sandbox loses every presenter and partner-event link at

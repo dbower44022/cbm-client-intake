@@ -412,6 +412,13 @@ PYTHONPATH=/app .venv/bin/python scripts/migrate_outreach_roles.py
 PYTHONPATH=/app .venv/bin/python scripts/migrate_outreach_roles.py --apply
 ```
 
+Also at the same slot: **`scripts/plans/cintake-submission-prospect-response.json`**
+(one enum option, `CIntakeSubmission.form` gains *Prospect Response*,
+fingerprint `cb685b7372b1`) — the landing-page response's receipt vocabulary,
+found while building Phase 1; without it the receipt is written without its
+form, with a warning. And the three entities' **detail and list layouts**
+(§ 3.3), which production's CRM needs exactly as crm-test did.
+
 Production's `Held-Company` option (`OPEN-ITEMS.md` #11) and the intake API
 role's Team read plus Assignment Permission (#16) are separate owed changes
 and are not in this plan.

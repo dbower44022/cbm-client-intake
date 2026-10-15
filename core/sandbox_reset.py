@@ -68,6 +68,13 @@ RESET_TABLES: tuple[str, ...] = (
     "analytics_cache",
     # Runtime job ledger.
     "app_job",
+    # Campaign Management (prospect marketing Phase 1): the campaign links,
+    # their visits and the import ledger. Training data, like the CRM rows they
+    # point at — the seeder recreates the demo campaign's links.
+    "campaign_link_visit",
+    "campaign_link",
+    "prospect_import_row",
+    "prospect_import_batch",
 )
 
 #: Configuration, authored artefacts and instance bookkeeping: never touched.

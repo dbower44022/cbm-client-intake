@@ -4,6 +4,73 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.258.0] — 2026-10-15
+
+**feat(campaigns): Campaign Management, prospect marketing Phase 1 — one real
+card, one real scan.** Built from `prompts/prospect-marketing-phase-1-build-prompt-v0.1.md`
+against `prds/prospect-marketing/build-plan.md` v0.4 and rulings 1–33. Ships
+**dark**: `CAMPAIGNS_ENABLED` (off) and `CAMPAIGNS_LANDING_PUBLIC` (off), both
+read per request, so a `/setup` flip needs no restart; the mail vendor defaults
+to the dry run (`POSTAL_PROVIDER=dryrun`, `POSTAL_TEST_MODE=true`). Needs the
+Phase 1 CRM change (`coutreach-entities-crm-handoff.md`, on crm-test since
+10-15-26; production and Boston owed) — every read feature-detects it and a CRM
+without it answers "not available" with the reason.
+
+- **`campaigns/`** — the house shape: `config.py` (the stored CRM names, the one
+  declared campaign field spec that is both layout and whitelist), `service.py`
+  (as the signed-in user; aggregates under the org key), `router.py`
+  (`/campaigns/api`, Marketing Admin Team, every mutation action-logged),
+  `public.py` (the link resolve `/c/{token}`, a card's `/c/{token}/{scan}` and
+  its QR PNG, the name-only banner lookup, the printed-only prospect prefill,
+  the vendor webhook), `landing.py` + `landing_frontend/` (`/p/{token}`),
+  `imports.py` (plan, then apply; the already-known check of ruling 12; a
+  re-upload is a no-op), `postcard.py` (selection under rulings 10, 14 and 15;
+  sign-off by typed piece count — ruling 13; the worker run; the vendor's
+  events), `store.py` (four application tables — ruling 31) and `frontend/`
+  (the Campaigns grid, a record page per campaign in its own stable tab with
+  Overview / Links / Responses, the Prospects grid, Imports).
+- **Rulings 32 and 33 recorded on the way**: the ruling-27 partner reverse on
+  the campaign is `attributedPartnerProfiles`; the import's Company and Contact
+  writes run under the intake API client (the Marketing Admin Role holds no
+  Account grant).
+- **`core/postal.py`** — `DryRunPostalClient` (default; mails nothing, accepts
+  every piece under `dryrun-<touch id>`) and `LobPostalClient`, written from the
+  vendor's published API and never run against it (question 4 is Doug's). The
+  idempotency key on every create is the touch id. `POSTAL_UNIT_COST` and
+  `POSTAL_CURRENCY` give the sign-off its estimate; the dry run is zero.
+- **`core/qr.py`** — QR codes from `segno` (pure Python, no dependencies, PNG
+  through the standard library). New dependency.
+- **The sixth form kind, `forms/prospect_response/`** — the landing page's
+  response, delivered by the worker: corrections to the prospect record, the
+  person promoted by email and the business by website (ruling 21), a
+  same-named company at another web address held as `held_company`, consent
+  written true-only, the rung to Lead advance-only. `duplicate_scope_key`
+  is the card's token. Its receipt value needs the `Prospect Response` option
+  (`scripts/plans/cintake-submission-prospect-response.json`); until then the
+  receipt is written without a form, with a warning.
+- **Every public door** carries `campaign_id`, `campaign_link` and
+  `prospect_id` (declared on `BaseSubmission` so capture keeps them; **captured
+  and ignored at delivery** — Phase 2 honours them) and an **SMS consent tick**
+  worded for texts, written true-only to `Contact.cSmsOptIn` (ruling 9): the
+  five intake forms, the event page's form and the calendar modal. The shared
+  `frontend/shared/campaign-link.js` fills the hidden fields from
+  `?campaign=&link=&prospect=`, shows the banner from the name-only lookup, and
+  prefills what the card printed; the person's own details travel from the
+  landing page in `sessionStorage` only (ruling 16).
+- **The partner's Campaigns tab** (CM-5): `DomainConfig.sponsored_campaigns_link`
+  on the partner domain gates the tab and `/records/{id}/sponsoredcampaigns`;
+  the user's own read gates it, the campaigns and their counts read under the
+  org key, feature-detected.
+- **Worker**: `run_campaign_cycle` every `CAMPAIGNS_RUN_SECONDS` (60) — the
+  CRM's campaign status is the queue (Signed off is picked up, Running
+  resumed, Complete left).
+- **Portal tile** *Campaign Management*; alias `/campaigns`; the GET rate limit
+  now covers `/c/` and `/api/campaigns/public/` (a public GET was otherwise
+  unthrottled); migration `0031_campaign_links`; the four tables classified as
+  reset-nightly on the sandbox.
+- Verified by tests only (36 new in `tests/test_campaigns.py`; the suite green).
+  The live pass is Doug's, from the step page named in `OPEN-ITEMS.md` #51.
+
 ## [0.257.0] — 2026-10-14
 
 **feat(sessions): a quick-add from the other door's company inherits its

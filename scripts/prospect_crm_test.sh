@@ -5,6 +5,7 @@
 #   scripts/prospect_crm_test.sh outreach   apply scripts/plans/coutreach-entities.json  (fingerprint 6b29c8928dcf)
 #   scripts/prospect_crm_test.sh roles      scripts/migrate_outreach_roles.py --apply
 #   scripts/prospect_crm_test.sh notes      COutreachCampaign.description text -> wysiwyg, on the droplet
+#   scripts/prospect_crm_test.sh receipt    apply scripts/plans/cintake-submission-prospect-response.json (fingerprint cb685b7372b1)
 #
 # Exists for the same reason as scripts/on_crm.sh and scripts/apply_plan.sh: each
 # full invocation is far past the one-line limit a pasted command survives, and
@@ -20,5 +21,6 @@ case "${1:-}" in
   outreach) exec scripts/apply_plan.sh test scripts/plans/coutreach-entities.json 6b29c8928dcf ;;
   roles)    exec uv run python scripts/run_with_admin.py scripts/migrate_outreach_roles.py --apply ;;
   notes)    exec scripts/on_crm.sh test scripts/convert_notes_wysiwyg.sh COutreachCampaign ;;
-  *) echo "usage: scripts/prospect_crm_test.sh <sms|outreach|roles|notes>" >&2; exit 64 ;;
+  receipt)  exec scripts/apply_plan.sh test scripts/plans/cintake-submission-prospect-response.json cb685b7372b1 ;;
+  *) echo "usage: scripts/prospect_crm_test.sh <sms|outreach|roles|notes|receipt>" >&2; exit 64 ;;
 esac

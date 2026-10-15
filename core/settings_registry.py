@@ -185,6 +185,8 @@ SECRET_KEYS: frozenset[str] = frozenset({
     "youtube_api_key",
     "setup_peer_token",
     "mailing_client_secret",
+    "postal_api_key",
+    "postal_webhook_secret",
 })
 
 
@@ -223,6 +225,39 @@ SETTINGS: tuple[SettingSpec, ...] = (
        component="worker",
        help="The only time-driven follow-up. Needs the EventReminder template in "
             "the CRM; every send refuses by name until it exists."),
+    _s("campaigns_enabled", GROUP_FEATURES, "Campaign Management", kind="bool",
+       component="both",
+       help="The Campaign Management tile, the Prospects grid and import, the "
+            "postcard kind and the campaign links at /c/. Read per request: no "
+            "restart. Needs the CProspect, COutreachCampaign and COutreachTouch "
+            "entities in the CRM (coutreach-entities-crm-handoff.md)."),
+    _s("campaigns_landing_public", GROUP_FEATURES, "Postcard landing page", kind="bool",
+       help="The public page a postcard's QR code opens (/p/{token}). Off, the "
+            "page answers 404; a card already mailed waits for it."),
+    _s("postal_provider", GROUP_INTEGRATIONS, "Mail vendor", kind="choice",
+       choices=("dryrun", "lob"), component="both",
+       help="'dryrun' mails nothing and produces the preview pieces. 'lob' is the "
+            "real adapter and needs the key below."),
+    _s("postal_api_key", GROUP_INTEGRATIONS, "Mail vendor API key", component="both",
+       help="The vendor's API key. With 'Mail vendor test mode' on, a test key is "
+            "the right one: the whole pipeline runs and nothing is printed."),
+    _s("postal_webhook_secret", GROUP_INTEGRATIONS, "Mail vendor webhook secret",
+       help="Signs the delivery and return events the vendor posts to "
+            "/api/campaigns/postal/events. Unset, that route is not mounted."),
+    _s("postal_test_mode", GROUP_INTEGRATIONS, "Mail vendor test mode", kind="bool",
+       component="both",
+       help="On (the default), even a real key mails nothing. Switch it off for "
+            "ONE real run and back on afterwards (build plan § 7 Phase 1)."),
+    _s("postal_unit_cost", GROUP_INTEGRATIONS, "Postcard unit cost", kind="float",
+       help="The per-piece price from the vendor's price sheet; the sign-off shows "
+            "pieces × this. 0 (the dry run's price) until the vendor is chosen."),
+    _s("postal_currency", GROUP_INTEGRATIONS, "Postcard cost currency",
+       help="The three-letter code the estimated cost is written in (the CRM's "
+            "currency field needs it on every write)."),
+    _s("campaigns_run_seconds", GROUP_FEATURES, "Campaign run poll", kind="int",
+       unit="s", component="worker",
+       help="How often the worker looks for a signed-off postcard campaign to run. "
+            "0 disables the run."),
     _s("gmail_sync", GROUP_FEATURES, "Gmail conversation sync", kind="bool",
        component="both",
        help="The whole Communications pipeline. Needs the Google service account."),
@@ -434,6 +469,7 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("session_sponsor_allowed_teams", GROUP_GATES, "Funder Management", kind="csv"),
     _s("workspace_allowed_teams", GROUP_GATES, "Workspace Directories", kind="csv"),
     _s("events_allowed_teams", GROUP_GATES, "Event Administration", kind="csv"),
+    _s("campaigns_allowed_teams", GROUP_GATES, "Campaign Management", kind="csv"),
     _s("analytics_view_allowed_teams", GROUP_GATES, "Analytics — view", kind="csv"),
     _s("analytics_admin_allowed_teams", GROUP_GATES, "Analytics — author", kind="csv"),
     _s("mentor_team_name", GROUP_GATES, "Mentor team (provisioning)"),

@@ -541,6 +541,31 @@ class Settings(BaseSettings):
 
     # Team gate for the /events staff app (Phase 5).
     events_allowed_teams: str = "Marketing Admin Team"
+    # --- Prospect marketing and Campaign Management (prds/prospect-marketing/) ---
+    # Phase 1: the Campaign Management tile, the Prospects grid and import, the
+    # postcard kind with a dry-run vendor, the links at /c/{token}, the landing
+    # page at /p/{token}. Read PER REQUEST (never at mount time), so a /setup
+    # change needs no restart: the routers are mounted with the staff stack and
+    # answer 404 while the switch is off. CM-1: the Marketing Admin Team.
+    campaigns_enabled: bool = False
+    campaigns_allowed_teams: str = "Marketing Admin Team"
+    # The public postcard landing page /p/{token} (build plan § 4). Its own
+    # switch so the staff tile can be reviewed before any card is mailed.
+    campaigns_landing_public: bool = False
+    # The mail vendor (build plan § 3.2). ``dryrun`` mails nothing and produces
+    # the preview artefacts; ``lob`` is the one real adapter. A real key in test
+    # mode still mails nothing (the vendor's own test environment).
+    postal_provider: Literal["dryrun", "lob"] = "dryrun"
+    postal_api_key: str = ""           # SECRET (worker + web for address checks)
+    postal_webhook_secret: str = ""    # SECRET (web) — the vendor's event signature
+    postal_test_mode: bool = True
+    # The per-piece price from the vendor's price sheet, for the sign-off's
+    # estimated cost (ruling 13); the dry run reports zero. The currency is the
+    # CRM's companion field's value.
+    postal_unit_cost: float = 0.0
+    postal_currency: str = "USD"
+    # How often the worker looks for a campaign at Signed off to run. 0 disables.
+    campaigns_run_seconds: int = 60
     # --- F5: the portal calendar (prds/events/CBM_Events_Portal_Calendar_Design.md) ---
     # The rail of upcoming events on the portal home page and the member page
     # behind it. Off by default so crm-test can show it to a real member first:
@@ -832,6 +857,26 @@ class Settings(BaseSettings):
     def events_active(self) -> bool:
         """The Events feature as a whole (staff app + CRM writes)."""
         return self.events_enabled and self.assignments_active
+
+    @property
+    def campaigns_allowed_teams_list(self) -> list[str]:
+        return [t.strip() for t in self.campaigns_allowed_teams.split(",") if t.strip()]
+
+    @property
+    def campaigns_active(self) -> bool:
+        """Campaign Management: the switch AND the staff stack it lives in.
+        Read per request — the routers are mounted whenever the staff stack is."""
+        return self.campaigns_enabled and self.assignments_active
+
+    @property
+    def campaigns_landing_active(self) -> bool:
+        """The public postcard landing page: both switches, and a real CRM to
+        resolve the card's token against (nothing to show in dry-run)."""
+        return (
+            self.campaigns_enabled
+            and self.campaigns_landing_public
+            and not self.espo_dry_run
+        )
 
     @property
     def portal_calendar_active(self) -> bool:

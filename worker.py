@@ -425,6 +425,11 @@ async def main() -> None:
     # Failures are alerted once (re-authorisation weekly) through alert_state.
     next_mailing_push = datetime.now(timezone.utc)
     next_mailing_pull = datetime.now(timezone.utc)
+    # Campaign Management: the postcard run (prds/prospect-marketing/build-plan.md
+    # § 3.2). The CRM's campaign status is the queue — Signed off is picked up,
+    # Running resumed. Gated per cycle on the switch; inert in dry-run and
+    # without the application database that holds the campaign's link.
+    next_campaign_run = datetime.now(timezone.utc)
 
     while not stop.is_set():
         claimed = await run_cycle(store, settings, stop)
@@ -462,6 +467,16 @@ async def main() -> None:
             except Exception as exc:  # noqa: BLE001 — never crashes delivery
                 log.warning("event reminder pass failed: %s", exc)
             next_reminder = now_cfg + timedelta(seconds=settings.events_reminder_seconds)
+        campaigns_on = (settings.campaigns_enabled and not settings.espo_dry_run
+                        and settings.campaigns_run_seconds > 0 and settings.store_enabled)
+        if campaigns_on and now_cfg >= next_campaign_run:
+            try:
+                from campaigns.postcard import run_campaign_cycle
+
+                await run_campaign_cycle(settings, stop=stop)
+            except Exception as exc:  # noqa: BLE001 — never crashes delivery
+                log.warning("campaign run pass failed: %s", exc)
+            next_campaign_run = now_cfg + timedelta(seconds=settings.campaigns_run_seconds)
         mailing_on = settings.mailing_sync and not settings.espo_dry_run
         if mailing_on and settings.mailing_push_seconds > 0 and now_cfg >= next_mailing_push:
             try:

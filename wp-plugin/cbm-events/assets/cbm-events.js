@@ -298,6 +298,18 @@
     ));
     consentLabel.appendChild(consentText);
     form.appendChild(consentLabel);
+    // Texts are a separate consent (the chapter's ruling 9): its own tick,
+    // worded for texts, recorded true-only.
+    var smsLabel = el("label", "cbm-consent");
+    var smsBox = document.createElement("input");
+    smsBox.type = "checkbox";
+    smsBox.className = "cbm-consent-box";
+    smsBox.id = "cbm-signup-sms";
+    smsLabel.appendChild(smsBox);
+    var smsText = el("span", "cbm-consent-text");
+    smsText.appendChild(document.createTextNode("You may send me text messages (SMS) about this event at the phone number above."));
+    smsLabel.appendChild(smsText);
+    form.appendChild(smsLabel);
 
     var submit = el("button", "cbm-submit-btn", "Register");
     submit.type = "submit";
@@ -361,6 +373,7 @@
         phone: inputs.phone.value.trim(),
         zip: inputs.zip.value.trim(),
         consent: consentBox.checked,
+        smsConsent: smsBox.checked,
       };
       // Validate on click and name what is missing, rather than sitting there
       // disabled with no explanation.

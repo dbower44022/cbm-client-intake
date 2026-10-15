@@ -332,6 +332,13 @@ class DomainConfig:
     #: endpoint also feature-detects the link on the live CRM and answers
     #: ``available: false`` with a reason until the build lands there.
     sponsored_events_link: Optional[str] = None
+    #: The campaigns this partner is named on (CM-5: the reverse of
+    #: ``COutreachCampaign.partnerProfiles``, ``sponsoredCampaigns``). Gates BOTH
+    #: the Campaigns tab and ``/records/{id}/sponsoredcampaigns``; the endpoint
+    #: feature-detects the link on the live CRM and answers ``available: false``
+    #: with a reason until the build lands there. Partner only (CM-5 named
+    #: partners; a funder tab is one line here if ever asked for).
+    sponsored_campaigns_link: Optional[str] = None
 
     # --- Last contact date (Doug's request 2026-07-25). The record field that is
     # advanced to the contact date whenever an outbound email is sent from the
@@ -861,6 +868,8 @@ PARTNER = DomainConfig(
     intake_link_form="client-intake",
     # Events this partner is associated with (reverse of CEvent.partnerProfiles).
     sponsored_events_link="sponsoredEvents",
+    # Campaigns this partner is named on (reverse of COutreachCampaign.partnerProfiles) — CM-5.
+    sponsored_campaigns_link="sponsoredCampaigns",
     # Reuse the existing date field — advanced on outbound email / recorded session.
     last_contact_attr="lastContacted",
     last_contact_type="date",

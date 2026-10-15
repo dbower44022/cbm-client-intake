@@ -75,6 +75,7 @@ C_HOW_HEARD = "cHowDidYouHear"       # enum on Contact
 C_MEETING_PREF = "cMeetingPreference"  # enum on Contact
 C_NOTIFICATION_PREF = "cNotificationPreference"  # enum on Contact
 C_MARKETING_OPT_IN = "cMarketingOptIn"     # bool on Contact
+C_SMS_OPT_IN = "cSmsOptIn"                 # bool on Contact — texts (ruling 9), true-only
 # The single consent checkbox ("...agree to the Code of Conduct, Terms of Use, and
 # Privacy Policy") sets all three Contact bools.
 C_TERMS_ACCEPTED = "cTermsOfUseAccepted"      # bool on Contact
@@ -87,7 +88,7 @@ ENGAGEMENT_STATUS = "engagementStatus"
 # so they are never back-written over a curated record).
 _CONTACT_FILL_KEYS = (
     "firstName", "lastName", "addressPostalCode", "phoneNumber",
-    C_HOW_HEARD, C_MEETING_PREF, C_NOTIFICATION_PREF, C_MARKETING_OPT_IN,
+    C_HOW_HEARD, C_MEETING_PREF, C_NOTIFICATION_PREF, C_MARKETING_OPT_IN, C_SMS_OPT_IN,
     C_TERMS_ACCEPTED, C_PRIVACY_ACCEPTED, C_CODE_OF_CONDUCT,
 )
 
@@ -179,6 +180,9 @@ async def _find_or_create_contact(
         C_PRIVACY_ACCEPTED: bool(sub.terms_accepted),
         C_CODE_OF_CONDUCT: bool(sub.terms_accepted),
     }
+    if sub.sms_consent:
+        # True-only: an unticked box never flips a prior opt-in (the EV-12 rule).
+        payload[C_SMS_OPT_IN] = True
     phone = e164_or_none(sub.phone)  # omit an implausible phone rather than 400
     if phone:
         payload["phoneNumber"] = phone

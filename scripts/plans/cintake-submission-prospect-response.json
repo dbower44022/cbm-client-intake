@@ -1,0 +1,7 @@
+{
+  "name": "cintake-submission-prospect-response",
+  "description": "The receipt vocabulary for the sixth form kind: a CIntakeSubmission.form option 'Prospect Response' so a postcard landing-page response classifies on its receipt (core/receipts._FORM_VALUES). Without it the receipt is still written, without its form (core/receipts.py logs a warning). Additive; crm-test first, production at the Sunday slot with coutreach-entities.json. Found while building Phase 1 (10-15-26).",
+  "enumOptions": [
+    {"entity": "CIntakeSubmission", "field": "form", "add": ["Prospect Response"]}
+  ]
+}

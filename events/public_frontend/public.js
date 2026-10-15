@@ -41,6 +41,16 @@
    * things the record is about to claim they agreed to. It used to be hardcoded
    * false — the old line mentioned only emails, so recording three acceptances
    * would have been untrue, and recording none was the lesser wrong. */
+  // Campaign attribution (prospect marketing § 3.7): the id and link token a
+  // visitor arrived with ride the registration; the carry-through across the
+  // page's event links is Phase 2.
+  function campaignParam(name) {
+    try {
+      var v = (new URLSearchParams(window.location.search).get(name) || "").trim();
+      return v && /^[A-Za-z0-9]{1,32}$/.test(v) ? v : null;
+    } catch (_) { return null; }
+  }
+
   async function register(item, fields) {
     var body = {
       submission_token: (window.crypto && window.crypto.randomUUID)
@@ -53,6 +63,9 @@
       phone: fields.phone,
       zip_code: fields.zip,
       consent: !!fields.consent,
+      sms_consent: !!fields.smsConsent,
+      campaign_id: campaignParam("campaign"),
+      campaign_link: campaignParam("link"),
     };
     var resp = await fetch(
       "/api/events/" + encodeURIComponent(item.slug || "") + "/register",

@@ -1,0 +1,43 @@
+/* The postcard landing page. Reads the chapter's tokens from /shared/tokens.css
+   (and the chapter override it may load). No page width cap on purpose. */
+.lp { margin: 0; background: var(--cbm-bg, #f6f7f9); color: var(--cbm-text, #1e2a33);
+      font-family: "Roboto", system-ui, sans-serif; line-height: 1.5; }
+.lp__main { padding: 1.5rem clamp(1rem, 4vw, 3rem) 3rem; display: grid; gap: 1.25rem; }
+.lp__head h1 { font-family: "Roboto Slab", Georgia, serif; font-weight: 600; font-size: clamp(1.4rem, 2.6vw, 2.1rem);
+               margin: .2rem 0 .6rem; text-wrap: balance; }
+.lp__eyebrow { margin: 0; text-transform: uppercase; letter-spacing: .08em; font-size: .8rem; font-weight: 500;
+               color: var(--cbm-primary, #1d5c63); }
+.lp__lede { margin: 0; max-width: 64ch; color: var(--cbm-muted, #4b5a63); }
+.lp__preview { margin: .75rem 0 0; padding: .5rem .75rem; border-radius: 6px;
+               background: var(--cbm-warn-bg, #fbf1e3); color: var(--cbm-warn, #8a4b08); font-weight: 500; }
+.lp__form { display: grid; gap: 1.25rem; }
+.lp__card { background: var(--cbm-surface, #fff); border: 1px solid var(--cbm-border, #d9dee3); border-radius: 8px;
+            padding: 1.25rem; display: grid; gap: .75rem; }
+.lp__card h2 { margin: 0; font-size: 1.1rem; font-family: "Roboto Slab", Georgia, serif; font-weight: 600; }
+.lp__hint { margin: 0; color: var(--cbm-muted, #4b5a63); font-size: .9rem; }
+.lp__opt { color: var(--cbm-muted, #4b5a63); font-weight: 400; font-size: .85em; }
+.lp__row { display: flex; flex-wrap: wrap; gap: .75rem; }
+.lp__grow { flex: 1 1 14rem; min-width: 0; }
+.lp__state { flex: 0 0 5rem; }
+.lp__zip { flex: 0 0 8rem; }
+.lp .cbm-field { display: grid; gap: .3rem; margin: 0; }
+.lp .cbm-field label { font-weight: 500; font-size: .95rem; }
+.lp .cbm-field input { font: inherit; padding: .55rem .7rem; border: 1px solid var(--cbm-border, #c9d1d8);
+                       border-radius: 6px; background: var(--cbm-input-bg, #fff); color: inherit; min-width: 0; }
+.lp .cbm-field input:focus-visible { outline: 2px solid var(--cbm-primary, #1d5c63); outline-offset: 1px; }
+.lp__check { display: flex; gap: .6rem; align-items: flex-start; font-size: .95rem; }
+.lp__check input { margin-top: .25rem; width: 1.1rem; height: 1.1rem; }
+.lp__hp { position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; }
+.lp__actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+.lp__actions .lp__hint { flex-basis: 100%; }
+.lp__msg { flex-basis: 100%; margin: 0; padding: .6rem .8rem; border-radius: 6px; font-weight: 500; }
+.lp__msg--error { background: var(--cbm-error-bg, #fde8e8); color: var(--cbm-error, #8f1d1d); }
+.lp__msg--ok { background: var(--cbm-ok-bg, #e5f4ea); color: var(--cbm-ok, #1d6b3a); }
+.lp__thanks h2 { color: var(--cbm-primary, #1d5c63); }
+.lp__footer { padding: 1rem clamp(1rem, 4vw, 3rem) 2rem; color: var(--cbm-muted, #4b5a63); font-size: .85rem; }
+.lp__footer p { margin: .2rem 0; }
+.lp__legal a { color: inherit; margin-right: .75rem; }
+@media (max-width: 600px) {
+  .lp__state, .lp__zip { flex: 1 1 6rem; }
+  .lp__actions .cbm-button { flex: 1 1 100%; }
+}

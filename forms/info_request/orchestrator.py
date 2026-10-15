@@ -50,6 +50,7 @@ FORM_SLUG = "info-request"  # value written to CInformationRequest.form
 A_COMPANY_TYPE = "cCompanyType"    # multiEnum on Account/Company — the type discriminator
 A_CLIENT_STATUS = "cClientStatus"  # enum on Account
 C_CONTACT_TYPE = "cContactType"    # multiEnum on Contact
+C_SMS_OPT_IN = "cSmsOptIn"         # bool on Contact — texts (ruling 9), true-only
 
 CLIENT = "Client"
 PROSPECT = "Prospect"
@@ -184,6 +185,12 @@ async def submit_request(
 
         if not await run_step_once(client, f"append-description:{contact_id}", _append):
             log.info("description append already recorded for Contact %s (retry)", contact_id)
+        if getattr(sub, "sms_consent", False):
+            # True-only, best-effort: the tick is consent, never a reason to lose the request.
+            try:
+                await client.update(CONTACT, contact_id, {C_SMS_OPT_IN: True})
+            except Exception as exc:  # noqa: BLE001
+                log.warning("could not record the SMS opt-in on Contact %s: %s", contact_id, exc)
         account_id = None  # existing contact's account is left untouched (by design)
     else:
         account_id = await _find_or_create_account(sub, client) if sub.company else None
@@ -199,6 +206,8 @@ async def submit_request(
             payload["phoneNumber"] = phone
         if account_id:
             payload["accountId"] = account_id
+        if getattr(sub, "sms_consent", False):
+            payload[C_SMS_OPT_IN] = True   # true-only (ruling 9)
         created = await create_dropping_invalid(client, CONTACT, payload)
         contact_id = created["id"]
 

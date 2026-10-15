@@ -64,6 +64,8 @@ SESSIONS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "sessions" / "f
 DIRECTORY_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "directory" / "frontend"
 MYEMAIL_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "myemail" / "frontend"
 EVENTS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "events" / "frontend"
+CAMPAIGNS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "campaigns" / "frontend"
+CAMPAIGNS_LANDING_DIR = Path(__file__).resolve().parent.parent / "campaigns" / "landing_frontend"
 EVENTS_PUBLIC_FRONTEND_DIR = (
     Path(__file__).resolve().parent.parent / "events" / "public_frontend"
 )
@@ -629,6 +631,11 @@ def create_app(
         app.state.analytics_store = make_analytics_store(settings)
     else:
         app.state.analytics_store = None
+    # Campaign Management (prospect marketing Phase 1): the links and the import
+    # ledger live in the application database (ruling 31). None without one.
+    from campaigns.store import make_campaign_store
+
+    app.state.campaign_store = make_campaign_store(settings)
     # Exposed to the public Events API — the API-key CRM client (no session).
     # A factory rather than a client so tests can substitute a fake, and so the
     # client is built per request like the intake handlers do.
@@ -700,11 +707,36 @@ def create_app(
             ("/register", "/cancel")
         ):
             return settings.intake_max_body_mb * _mb
+        # Campaign Management's public writes: the landing page's response and
+        # the mail vendor's event callback (build plan § 3.2, § 4).
+        if path.startswith("/api/campaigns/landing/") or path == "/api/campaigns/postal/events":
+            return settings.intake_max_body_mb * _mb
         return None
+
+    def _public_get_limited(path: str) -> bool:
+        """Public GETs that resolve a token or an id, and so could be probed:
+        the campaign link resolve and the campaign-name lookup. Everything else
+        the middleware throttles is a POST (build plan § 3.7)."""
+        return path.startswith("/c/") or path.startswith("/api/campaigns/public/")
 
     @app.middleware("http")
     async def _intake_limits(request: Request, call_next):
         cap = _body_cap(request.url.path)
+        limited_get = request.method == "GET" and _public_get_limited(request.url.path)
+        if limited_get and settings.intake_rate_limit > 0:
+            now = time.time()
+            window = settings.intake_rate_window_seconds
+            ip = _client_ip(request)
+            hits = [t for t in _rate_hits.get(ip, []) if now - t < window]
+            if len(hits) >= settings.intake_rate_limit:
+                log.warning("public GET rate limit hit for %s (%s)", ip, request.url.path)
+                return JSONResponse(
+                    status_code=429,
+                    content={"detail": "Too many requests from your network — please wait a few minutes."},
+                    headers={"Retry-After": str(window)},
+                )
+            hits.append(now)
+            _rate_hits[ip] = hits
         if cap is not None and request.method == "POST":
             length = request.headers.get("content-length", "")
             if length.isdigit() and int(length) > cap:
@@ -956,6 +988,12 @@ def create_app(
             # callback's address is registered on the vendor's application, so
             # it lives on /api/setup/mailing/, not the page's own prefix.
             app.include_router(setup_mailing_router)
+        # Campaign Management — prospect marketing Phase 1. Mounted with the
+        # staff stack and gated PER REQUEST on CAMPAIGNS_ENABLED (404 while
+        # off), so the switch needs no restart.
+        from campaigns.router import api_router as campaigns_router
+
+        app.include_router(campaigns_router)
         # Event Administration — the staff app; team-gated like the others.
         if settings.events_active:
             from events.member import member_router as events_member_router
@@ -1007,6 +1045,29 @@ def create_app(
                 )
             )
         )
+
+    # Campaign Management's public half: the link resolve /c/{token}, a card's
+    # code and QR image, and the campaign-name lookup the forms' banner reads.
+    # Always included — it answers 404 per request while CAMPAIGNS_ENABLED is
+    # off, so the switch needs no restart. Registered before the static mounts
+    # so /c/... is never read as a file path.
+    from campaigns.public import public_router as campaigns_public_router
+
+    app.include_router(campaigns_public_router)
+    # The postcard landing page /p/{token} and its response, over the same
+    # durable pipeline as every form (the card's token comes from the URL).
+    # Both answer 404 per request until CAMPAIGNS_LANDING_PUBLIC is on.
+    from campaigns.landing import make_landing_routes, page_router as campaigns_landing_router
+    from forms import prospect_response as _prospect_response
+
+    app.include_router(campaigns_landing_router)
+    app.include_router(
+        make_landing_routes(
+            lambda body: _process_submission(
+                _prospect_response.SPEC, settings, processed, store, body
+            )
+        )
+    )
 
     @app.get("/", response_class=HTMLResponse)
     async def index() -> HTMLResponse:
@@ -1061,6 +1122,8 @@ def create_app(
         if settings.events_active:
             alias_targets["events"] = "/events/"
             alias_targets["eventadmin"] = "/events/"
+        alias_targets["campaigns"] = "/campaigns/"
+        alias_targets["campaign"] = "/campaigns/"
         if settings.setup_active:
             alias_targets["setup"] = "/setup/"
             alias_targets["settings"] = "/setup/"
@@ -1113,6 +1176,36 @@ def create_app(
             "/events",
             BrandedStaticFiles(directory=str(EVENTS_FRONTEND_DIR), html=True),
             name="events-frontend",
+        )
+    if settings.assignments_active and CAMPAIGNS_FRONTEND_DIR.is_dir():
+        # Campaign Management: the grid, plus a record page per campaign at
+        # /campaigns/record/{id} (the sessions pattern — the same frontend
+        # booted into one record, with a <base> so its assets resolve).
+
+        def _campaign_record_page(record_id: str) -> HTMLResponse:
+            html = render_branding(
+                (CAMPAIGNS_FRONTEND_DIR / "index.html").read_text(encoding="utf-8"),
+                settings,
+            )
+            html = html.replace("<head>", '<head><base href="/campaigns/">', 1)
+            return HTMLResponse(html, headers={"Cache-Control": "no-store"})
+
+        app.add_api_route(
+            "/campaigns/record/{record_id}", _campaign_record_page, methods=["GET"],
+            response_class=HTMLResponse, include_in_schema=False,
+        )
+        app.mount(
+            "/campaigns",
+            BrandedStaticFiles(directory=str(CAMPAIGNS_FRONTEND_DIR), html=True),
+            name="campaigns-frontend",
+        )
+    if CAMPAIGNS_LANDING_DIR.is_dir():
+        # The landing page's own CSS and JS, at a separate top-level path
+        # because /p/{token} is a route (the /webinars-assets reasoning).
+        app.mount(
+            "/landing-assets",
+            BrandedStaticFiles(directory=str(CAMPAIGNS_LANDING_DIR)),
+            name="campaigns-landing-assets",
         )
     if settings.events_public_active and EVENTS_PUBLIC_FRONTEND_DIR.is_dir():
         # The public pages' own CSS and JS. A separate top-level path rather

@@ -978,6 +978,82 @@ the crm-test overlay, so every prod flag change needed `doctl`. Runbook:
   crossing the wire), and an **operations** tab whose mutating jobs are
   **dry-run → apply that exact plan**, refusing if the plan moved.
 
+### Campaign Management — `/campaigns`
+
+Marketing Admin Team (`CAMPAIGNS_ALLOWED_TEAMS`), behind **`CAMPAIGNS_ENABLED`**
+(off; read **per request**, so a `/setup` flip needs no restart — the routers
+mount with the staff stack and answer 404 while off). Prospect marketing
+Phase 1 (v0.258.0, 10-15-26); the arc is `prds/prospect-marketing/` (its
+`README.md` first; `rulings.md` 1–33 binding; `build-plan.md` v0.4). Package
+`campaigns/` in the house shape. **Needs the Phase 1 CRM change**
+(`coutreach-entities-crm-handoff.md`, `contact-sms-opt-in-crm-handoff.md`):
+every read feature-detects `CProspect` / `COutreachCampaign` / `COutreachTouch`
+and the campaign's links, and a CRM without them answers *not available* with
+the reason.
+
+- **Who acts:** campaign reads and writes run as the signed-in user (the
+  Marketing Admin Role creates/reads/edits the three entities). Aggregates and
+  machine writes — the postcard selection and its Planned touches, the import's
+  already-known reads and its Company/Contact creates (**ruling 33**), the
+  counts on the partner's Campaigns tab — run under the **org-wide API key**.
+  Relating a campaign to a partner needs edit on the partner, which that role
+  lacks by ruling, so `service._link_or_escalate` retries only a
+  `noAccessToForeignRecord` denial as the admin account.
+- **Links live in the application database** (ruling 31; `campaigns/store.py`,
+  migration 0031: `campaign_link`, `campaign_link_visit`, the import ledger).
+  `GET /c/{token}` **never calls the CRM**: it counts the visit and 302s to the
+  destination with `?campaign=&link=`. A token that resolves to nothing is a 404
+  in the same words whatever the reason; a **retired link still opens** and its
+  visit is flagged late; an event link's slug is cached and refreshed whenever
+  staff open the Links tab. A postcard's per-card code is `/c/{link}/{scan}`,
+  its QR PNG `…/qr.png` (`core/qr.py`, `segno`).
+- **The postcard kind** (`campaigns/postcard.py`): *Build the list* selects
+  under rulings 10, 14 (one card per business, ever — any Sent/Delivered/
+  Returned postcard touch from any campaign excludes the target) and 15 (a dead
+  address is skipped), reconciles this campaign's Planned touches (kept /
+  created / Cancelled) and moves Draft → Awaiting sign-off. *Sign off and run*
+  needs the **typed piece count** (ruling 13), stamps the campaign and sets
+  **Signed off, which is the worker's queue** (`run_campaign_cycle`, every
+  `CAMPAIGNS_RUN_SECONDS`): each Planned touch becomes a vendor piece with the
+  **touch id as the idempotency key**, then Sent with `scanToken`,
+  `mailedAddress` (the snapshot) and `stageAtTouch`; Complete when none is left.
+  The vendor is `core/postal.py` — `DryRunPostalClient` by default (nothing
+  printed, `dryrun-<touch id>`), `LobPostalClient` written from the published
+  API and **never run**. Delivery events arrive signed at
+  `POST /api/campaigns/postal/events` (404 until `POSTAL_WEBHOOK_SECRET` is
+  set); a returned piece marks the **address** dead and leaves the rung
+  (ruling 15). In dry run a staff *Simulate* button posts the same event.
+- **The landing page `/p/{token}`** (`campaigns/landing.py`, behind
+  `CAMPAIGNS_LANDING_PUBLIC`): the scan writes `firstScannedAt` once,
+  `scanCount`, outcome Scanned and moves the record to **Lead, advance-only**
+  (ruling 16); a Planned touch is a preview and writes nothing. The page shows
+  **only what the card printed** — the business name and the address as mailed
+  — never an email, phone or person's name the chapter holds. Its response is
+  the sixth form kind, `forms/prospect_response/` (delivery-only, scoped
+  duplicate hold by `scan_token`, `company_keys` for the `held_company` hold):
+  email promotes the person, website the business (ruling 21), consent
+  **true-only**, never a relationship record. A mentor or information request
+  then opens the standard form with `?prospect=&campaign=&link=`; the typed
+  details travel in `sessionStorage` only, and `GET /api/campaigns/prospect/{id}`
+  serves the printed facts alone.
+- **Every public door carries `campaign_id`, `campaign_link`, `prospect_id`**
+  (declared on `core/forms.BaseSubmission` — an undeclared key is dropped by
+  capture) and the **SMS tick** `sms_consent` → `Contact.cSmsOptIn`, true-only
+  (ruling 9). **Captured and ignored at delivery until Phase 2.** The shared
+  `frontend/shared/campaign-link.js` fills the hidden fields, shows the banner
+  from the name-only lookup `GET /api/campaigns/public/{id}` and prefills the
+  printed facts. The GET rate limit covers `/c/` and `/api/campaigns/public/`.
+- **The import** (`campaigns/imports.py`): plan, then apply; the file is read
+  in the browser and posted as text (no multipart); the already-known check is
+  Company by name **and** postal code, Company by website key, Contact by email
+  (ruling 12) — a match still creates the prospect record, with the *Already
+  known* side exit; a re-upload of the same file is a no-op through the ledger.
+- **The partner's Campaigns tab** (CM-5): `DomainConfig.sponsored_campaigns_link`
+  on the partner domain only, the Events-tab shape exactly.
+- Owed: Doug's live pass (`OPEN-ITEMS.md` #51), production's CRM change at a
+  Sunday slot (plus the `Prospect Response` receipt option and the entities'
+  layouts), Boston with its release, a seeder and sandbox re-baseline, Phase 2.
+
 ### Events & Webinars — `/events`
 
 Replaces the data layer behind `clevelandbusinessmentors.org/webinars/`, which
@@ -1638,9 +1714,10 @@ too** (consolidated 10-14-26 after three sessions in one day left three
 documents that disagreed): **`prds/prospect-marketing/`** — start at its
 `README.md`; `rulings.md` holds rulings 1–31 and CM-1 to CM-11 and is the
 binding record (append only); `build-plan.md` v0.3 is the one plan; its two
-CRM handoffs are written and dry-run (10-14-26 — `contact-sms-opt-in-crm-handoff.md`,
-`coutreach-entities-crm-handoff.md`), awaiting one name ruling and Doug's
-crm-test apply; nothing of the arc is built.
+CRM handoffs (`contact-sms-opt-in-crm-handoff.md`,
+`coutreach-entities-crm-handoff.md`) are complete on crm-test (10-15-26) and
+owed on production and Boston; **Phase 1 is built** (v0.258.0, dark —
+the Campaign Management section above); Doug's live pass is owed.
 **One session on that arc at a time.** Eight settled rulings, a phase file each for phases 0–6, a
 decision log, and its own task list. Phase 0 (de-Cleveland) is **built**; **Phase
 1, CRM configuration as a versioned build artifact, is the next one and the only
@@ -2286,6 +2363,17 @@ sentence is a convenience.
   buttons). Verified in a stub harness only — but `/events` is **live on
   crm-test**, so the live pass can be done today; prod has the router unmounted
   (`/events/api/session` 404s there, 401s on crm-test).
+
+- **v0.258.0 (2026-10-15) — Campaign Management, prospect marketing Phase 1.**
+  Committed, not pushed. Dark behind `CAMPAIGNS_ENABLED` and
+  `CAMPAIGNS_LANDING_PUBLIC`; the mail vendor is the dry run. Standing rules
+  in the Campaign Management section above; the CRM change it needs is
+  complete on crm-test (10-15-26 01:06–01:49, both handoffs). **Verified by
+  tests only** (36 new); Doug's fourteen-step live pass on crm-test is
+  `OPEN-ITEMS.md` #51, from the step page there. Owed after it: production's
+  CRM change at a Sunday slot (plus the `Prospect Response` receipt option
+  and the three entities' layouts), Boston, a seeder and re-baseline, Phase 2
+  (`prompts/prospect-marketing-phase-2-build-prompt-v0.1.md`).
 
 *(The v0.198.0 company-link arc — the Company picker, the many-to-one CRM
 change for partners and funders, the client one-to-one ruling — is deployed and

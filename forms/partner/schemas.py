@@ -43,6 +43,8 @@ class PartnerApplication(BaseSubmission):
     how_did_you_hear: Optional[str] = Field(default=None, max_length=255)
     # Single consent checkbox: Code of Conduct + Terms of Use + Privacy Policy.
     terms_accepted: bool = False
+    # Ruling 9: consent to TEXTS is its own tick, written true-only (cSmsOptIn).
+    sms_consent: bool = False
 
     # submission_token + company_url (honeypot) are inherited from BaseSubmission.
 

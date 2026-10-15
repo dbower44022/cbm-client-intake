@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="cbm-org" content="{{org}}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>{{org}} — Tell us how we can help</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="/shared/address-paste.css" />
+  <link rel="stylesheet" href="/landing-assets/landing.css" />
+  <!-- busy.js must load FIRST: it wraps fetch to give every button press
+       immediate feedback (product-wide convention). -->
+  <script src="/shared/busy.js"></script>
+</head>
+<body class="lp"
+      data-scan-token="{{scanToken}}" data-campaign-id="{{campaignId}}"
+      data-link-token="{{linkToken}}" data-prospect-id="{{prospectId}}"
+      data-preview="{{preview}}">
+  <main class="lp__main">
+    <header class="lp__head">
+      <p class="lp__eyebrow">{{org}}</p>
+      <h1>Thanks for scanning. Tell us how we can help <strong id="bizTitle">{{businessName}}</strong>.</h1>
+      <p class="lp__lede">
+        {{abbr}} pairs business owners with experienced volunteer mentors at no
+        charge. Check that we have your business right, tell us how to reach
+        you, and pick what you would like next.
+      </p>
+      <p class="lp__preview" id="previewNote" hidden>Preview — this card has not been mailed; nothing you enter here is saved.</p>
+    </header>
+
+    <form class="lp__form" id="landingForm" novalidate>
+      <section class="lp__card">
+        <h2>Your business, as we have it</h2>
+        <p class="lp__hint">This is what was printed on your card. Correct anything that is wrong.</p>
+        <div class="cbm-field">
+          <label for="business_name">Business name</label>
+          <input id="business_name" name="business_name" type="text" maxlength="255" value="{{businessName}}" autocomplete="organization" />
+        </div>
+        <div class="cbm-field">
+          <label for="mailing_street">Street address</label>
+          <input id="mailing_street" name="mailing_street" type="text" maxlength="255" value="{{street}}" autocomplete="street-address" />
+        </div>
+        <div class="lp__row">
+          <div class="cbm-field lp__grow">
+            <label for="mailing_city">City</label>
+            <input id="mailing_city" name="mailing_city" type="text" maxlength="100" value="{{city}}" autocomplete="address-level2" />
+          </div>
+          <div class="cbm-field lp__state">
+            <label for="mailing_state">State</label>
+            <input id="mailing_state" name="mailing_state" type="text" maxlength="2" value="{{state}}" autocomplete="address-level1" />
+          </div>
+          <div class="cbm-field lp__zip">
+            <label for="mailing_zip">ZIP</label>
+            <input id="mailing_zip" name="mailing_zip" type="text" maxlength="10" value="{{postalCode}}" autocomplete="postal-code" />
+          </div>
+        </div>
+        <div class="cbm-field">
+          <label for="website">Website <span class="lp__opt">(optional)</span></label>
+          <input id="website" name="website" type="text" maxlength="255" placeholder="example.com" autocomplete="url" />
+        </div>
+      </section>
+
+      <section class="lp__card">
+        <h2>How to reach you</h2>
+        <div class="lp__row">
+          <div class="cbm-field lp__grow">
+            <label for="first_name">First name</label>
+            <input id="first_name" name="first_name" type="text" maxlength="100" autocomplete="given-name" />
+          </div>
+          <div class="cbm-field lp__grow">
+            <label for="last_name">Last name</label>
+            <input id="last_name" name="last_name" type="text" maxlength="100" autocomplete="family-name" />
+          </div>
+        </div>
+        <div class="lp__row">
+          <div class="cbm-field lp__grow">
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" maxlength="254" autocomplete="email" />
+          </div>
+          <div class="cbm-field lp__grow">
+            <label for="phone">Phone</label>
+            <input id="phone" name="phone" type="tel" maxlength="40" autocomplete="tel" />
+          </div>
+        </div>
+        <label class="lp__check">
+          <input type="checkbox" id="marketing_consent" name="marketing_consent" />
+          <span>You may <strong>email</strong> me about {{abbr}} services and events.</span>
+        </label>
+        <label class="lp__check">
+          <input type="checkbox" id="sms_consent" name="sms_consent" />
+          <span>You may <strong>text</strong> me at the phone number above.</span>
+        </label>
+        <!-- Honeypot: real people never see or fill it. -->
+        <div class="lp__hp" aria-hidden="true">
+          <label for="company_url">Leave this field empty</label>
+          <input id="company_url" name="company_url" type="text" tabindex="-1" autocomplete="off" />
+        </div>
+      </section>
+
+      <section class="lp__actions">
+        <p class="lp__msg" id="formMsg" role="status" hidden></p>
+        <button type="button" class="cbm-button" data-action="mentor">Request a mentor</button>
+        <button type="button" class="cbm-button cbm-button--secondary" data-action="info">Request information</button>
+        <button type="button" class="cbm-button cbm-button--secondary" data-action="update">Just update my details</button>
+        <p class="lp__hint">A mentor request or an information request opens our standard form with what you entered here already filled in.</p>
+      </section>
+    </form>
+
+    <section class="lp__card lp__thanks" id="thanks" hidden>
+      <h2>Thank you</h2>
+      <p>We have your details. Someone from {{org}} will be in touch only in the ways you allowed.</p>
+    </section>
+  </main>
+
+  <footer class="lp__footer">
+    <p>&copy; <span data-cbm-year></span> {{org}}. All rights reserved. <span data-cbm-version></span></p>
+  </footer>
+
+  <script src="/shared/footer.js"></script>
+  <script src="/shared/address-paste.js"></script>
+  <script src="/landing-assets/landing.js"></script>
+</body>
+</html>

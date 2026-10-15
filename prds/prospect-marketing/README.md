@@ -29,23 +29,34 @@ exists.**
 | `rulings.md` | **The binding record.** Rulings 1–27 and requirements CM-1 to CM-11, verbatim, with the ladder and the walk tables | Append only. A new decision is ruling 28 onward, dated |
 | `build-plan.md` | **The one plan**, v0.2: the record model in Entity Manager vocabulary, the doors, the campaign engine, the landing page, conversion, reporting, five phases with their CRM handoffs and verification scripts, and § 9, the open questions | Revised in place with a change-log row. Never forked, never a second plan document |
 | `history/prospect-marketing-plan.md` | The process plan, v0.6: the 2026-08-11 elicitation, the September funnel discussions, the 2026-10-13/14 walk and the 10-14-26 definition session, with every proposal, working position and strawman labelled | Frozen on 10-14-26. Read it for *why*; cite `rulings.md` for *what* |
-| `history/prompts/` | The four kickoff prompts that produced the above, each marked done | Frozen |
+| `history/prompts/` | The five kickoff prompts that produced the above, each marked done | Frozen |
 | `history/prospect-marketing-funnel-2026-09-02.png` | Doug's funnel diagram, which the ladder table transcribes | Frozen |
-| `prompts/prospect-marketing-phase-1-build-prompt-v0.1.md` (repository root) | **The live kickoff**: the Phase 1 build session | Lives with the other kickoff prompts until it is spent, then moves here |
+| `prompts/prospect-marketing-phase-2-build-prompt-v0.1.md` (repository root) | **The live kickoff**: the Phase 2 build session, gated on Doug's Phase 1 live pass | Lives with the other kickoff prompts until it is spent, then moves here |
 
 Where things live, by the house conventions: the two CRM handoffs at the
 repository root (`contact-sms-opt-in-crm-handoff.md`,
 `coutreach-entities-crm-handoff.md` — **written 10-14-26, nothing applied**),
 their plan files under `scripts/plans/` (`contact-sms-opt-in.json`,
 `coutreach-entities.json`), the role script `scripts/migrate_outreach_roles.py`,
-and — when built — the code in a `campaigns/` package and a
-`forms/prospect_response/` form.
+and the code: the `campaigns/` package, `core/postal.py`, `core/qr.py`,
+`forms/prospect_response/` and `frontend/shared/campaign-link.js` (**Phase 1
+built 10-15-26, v0.258.0, dark behind `CAMPAIGNS_ENABLED`**).
 
-## State, as of 10-15-26 01:50
+## State, as of 10-15-26 03:05
 
-- **Settled:** the process end to end (rulings 1–27) and the Campaign
-  Management application (CM-1 to CM-11). None of it is reopened by any
+- **Settled:** the process end to end (rulings 1–27), the Campaign
+  Management application (CM-1 to CM-11), and the build's own rulings 28–33
+  (custom entities; `Unverified`; multiple referring partners; links in the
+  application database; `attributedPartnerProfiles`; the import's Company and
+  Contact writes under the intake API client). None of it is reopened by any
   session.
+- **Built:** Phase 1 (10-15-26, v0.258.0) — the Campaign Management tile,
+  grid and record page (Overview / Links / Responses), links as short
+  resolvable addresses with QR codes, the Prospects grid and the state-filing
+  import, the postcard kind end to end with the dry-run vendor, the landing
+  page and the `prospect-response` form kind, the partner's Campaigns tab,
+  the SMS tick and the three hidden fields on every public door. Dark behind
+  `CAMPAIGNS_ENABLED`; nothing honours the ids at delivery yet (Phase 2).
 - **Written:** the two CRM handoffs, their plan files and the role script
   (10-14-26 23:15, step 2 below); build plan v0.3 — v0.2 (10-14-26 22:09) revised against
   CM-1 to CM-11, then v0.3 (22:43) for Doug's answers to the four
@@ -77,10 +88,13 @@ and — when built — the code in a `campaigns/` package and a
      Marketing and Sally Sponsor, step page
      https://claude.ai/artifact/ShmRGZgDWWfspETWuU86hQ). crm-test is
      complete and soaking to the Sunday slot.
-  4. **The Phase 1 build session**, from the live kickoff
-     `prompts/prospect-marketing-phase-1-build-prompt-v0.1.md`: one real
-     card, one real scan, dark behind `CAMPAIGNS_ENABLED`. Its gate (the
-     crm-test apply and ruling 32) is open. **This is the next step.**
+  4. ~~The Phase 1 build session~~ — **done 10-15-26 03:05** (v0.258.0,
+     committed, not pushed; verified by tests only). **Owed: Doug's live
+     pass on crm-test** from the step page linked in `OPEN-ITEMS.md` #51 —
+     the fourteen steps of build plan § 7 Phase 1 as Mark Marketing, signed
+     out, partner.manager and sally.sponsor. **This is the next step.**
+     Then the Phase 2 build session from
+     `prompts/prospect-marketing-phase-2-build-prompt-v0.1.md`.
   5. **Before the first real card:** questions 2 (what the outside filter
      delivers), 4 (the mail vendor — Doug opens the account) and 5 (the card
      itself).
@@ -132,14 +146,15 @@ import contract starts from).
 | Field | Value |
 |---|---|
 | Document | Prospect marketing — directory README |
-| Version | 1.5 |
-| Last Updated | 10-15-26 01:50 |
+| Version | 1.6 |
+| Last Updated | 10-15-26 03:05 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.6 | 10-15-26 03:05 | Claude (Claude Code) | State: Phase 1 built (v0.258.0); the live pass is next; the live kickoff is Phase 2. |
 | 1.5 | 10-15-26 01:50 | Claude (Claude Code) | State: the non-admin pass matched; crm-test complete and soaking; the Phase 1 build session is next. |
 | 1.4 | 10-15-26 01:20 | Claude (Claude Code) | State: both handoffs applied on crm-test and verified as the org-wide key; the non-admin pass is the next step. |
 | 1.3 | 10-15-26 00:02 | Claude (Claude Code) | State: item (a) ruled (ruling 32); the next step is the crm-test apply. |

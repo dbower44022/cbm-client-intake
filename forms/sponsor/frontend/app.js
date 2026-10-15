@@ -45,6 +45,10 @@
       message: val("message"),
       how_did_you_hear: strOrNull("how_did_you_hear"),
       terms_accepted: document.getElementById("terms_accepted").checked,
+      sms_consent: document.getElementById("sms_consent").checked,
+      campaign_id: document.getElementById("campaign_id").value || null,
+      campaign_link: document.getElementById("campaign_link").value || null,
+      prospect_id: document.getElementById("prospect_id").value || null,
     };
   }
 

@@ -301,6 +301,7 @@
     if (tab === "referredClients") renderReferredClients();
     if (tab === "events") renderEvents();
     if (tab === "sponsoredEvents") renderSponsoredEvents();
+    if (tab === "sponsoredCampaigns") renderSponsoredCampaigns();
     if (tab === "communications") renderComms();
     if (tab === "documents") renderDocuments();
     if (tab === "analytics") renderAnalytics();
@@ -5968,6 +5969,69 @@
     }
   );
   if ($("speTable")) makeColumnsResizable($("speTable"));
+
+  // --- Campaigns tab (partner domain only — CM-5) -----------------------------
+  // The campaigns this partner is named on. Counts come from the application's
+  // own records (links, visits, submissions); a count the server could not
+  // supply arrives as null and renders "—". A row opens the campaign for a user
+  // the Campaign Management tile admits, else it is plain text.
+  var spc = { forId: null, rows: [], canOpen: false };
+
+  function paintSpc() {
+    var body = $("spcBody");
+    body.innerHTML = "";
+    spc.rows.forEach(function (r) {
+      var tr = document.createElement("tr");
+      var nameTd = document.createElement("td");
+      if (spc.canOpen) {
+        var a = document.createElement("a");
+        a.className = "sx__link"; a.textContent = r.name || "(unnamed)";
+        a.href = "/campaigns/record/" + encodeURIComponent(r.id);
+        a.addEventListener("click", function (ev) {
+          if (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button === 1) return;
+          ev.preventDefault(); window.open(a.href, "cbm-rec-campaigns-" + r.id);
+        });
+        nameTd.appendChild(a);
+      } else nameTd.textContent = r.name || "(unnamed)";
+      tr.appendChild(nameTd);
+      function cell(text, cls) {
+        var td = document.createElement("td");
+        if (cls) td.className = cls;
+        td.textContent = text == null || text === "" ? "—" : text;
+        tr.appendChild(td);
+      }
+      cell(r.kind); cell(r.status);
+      cell((r.startDate || r.endDate) ? ((r.startDate || "…") + " – " + (r.endDate || "…")) : null);
+      cell(speNum(r.links), "sx__num"); cell(speNum(r.visits), "sx__num"); cell(speNum(r.submissions), "sx__num");
+      body.appendChild(tr);
+    });
+    if (spc.rows.length) { show($("spcTable")); hide($("noSpc")); }
+    else { hide($("spcTable")); show($("noSpc")); }
+  }
+
+  async function renderSponsoredCampaigns() {
+    if (!currentDetail || !$("spcBody")) return;
+    if (spc.forId === currentDetail.id) { paintSpc(); return; }
+    spc.forId = currentDetail.id;
+    spc.rows = [];
+    hide($("spcNotice")); hide($("spcTable")); hide($("noSpc")); hide($("spcUnavailable"));
+    show($("spcLoading"));
+    try {
+      var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/sponsoredcampaigns");
+      if (res.available === false) {
+        $("spcUnavailable").textContent = res.reason || "Campaigns are not available on this CRM yet.";
+        show($("spcUnavailable"));
+        return;
+      }
+      spc.rows = res.campaigns || [];
+      spc.canOpen = !!res.canOpen;
+      paintSpc();
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      spc.forId = null;
+      notice("spcNotice", e.message, "error");
+    } finally { hide($("spcLoading")); }
+  }
 
   // --- Contributions tab (the funder ledger — sponsor domain only) ----------
   // prds/funder-contributions-plan.md. Panel + endpoints exist only when the

@@ -252,6 +252,35 @@
         </p>
       </div>
 
+      <!-- Campaigns (partner domain only — CM-5, prds/prospect-marketing/build-plan.md
+           § 3.8): the campaigns this partner is named on, with link, visit and
+           submission counts. Read-only; the partners are named on the campaign
+           in Campaign Management. -->
+      <div class="sx__dpanel" data-dpanel="sponsoredCampaigns" hidden>
+        <div class="sx__comm-head">
+          <h3>Campaigns</h3>
+        </div>
+        <p class="sx__notice" id="spcNotice" role="status" hidden></p>
+        <p class="sx__loading" id="spcLoading" hidden>Loading…</p>
+        <p class="sx__muted" id="spcUnavailable" hidden></p>
+        <table class="sx__table" id="spcTable" hidden>
+          <thead><tr>
+            <th scope="col">Campaign</th>
+            <th scope="col">Kind</th>
+            <th scope="col">Status</th>
+            <th scope="col">Window</th>
+            <th scope="col">Links</th>
+            <th scope="col">Visits</th>
+            <th scope="col">Submissions</th>
+          </tr></thead>
+          <tbody id="spcBody"></tbody>
+        </table>
+        <p class="sx__muted" id="noSpc" hidden>
+          No campaign names this partner yet. Partners are named on a campaign in
+          Campaign Management.
+        </p>
+      </div>
+
       <!-- Contributions: the funder ledger (sponsor domain only —
            prds/funder-contributions-plan.md). Four Received-only tiles +
            recency callout + rolling-window rollup + grid. Soft delete = the

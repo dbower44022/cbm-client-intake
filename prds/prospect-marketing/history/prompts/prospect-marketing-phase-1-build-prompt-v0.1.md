@@ -1,5 +1,13 @@
 # Kickoff prompt — prospect marketing Phase 1: one real card, one real scan
 
+**DONE 10-15-26 03:05.** Spent by the session that ran it: v0.258.0, the
+`campaigns/` package, `core/postal.py`, `core/qr.py`,
+`forms/prospect_response/`, the hidden fields and SMS tick on every public
+door, the partner's Campaigns tab, the worker run, migration 0031, 36 tests;
+rulings 32 and 33 recorded on the way. Dark behind `CAMPAIGNS_ENABLED`.
+Doug's live pass is owed from the step page in `OPEN-ITEMS.md` #51. Next
+kickoff: `prompts/prospect-marketing-phase-2-build-prompt-v0.1.md`.
+
 **Written 10-14-26 23:15. For a fresh Claude Code session rooted in
 `cbm-client-intake`.** A build session: it produces the `campaigns/` package,
 the `forms/prospect_response/` form, the postcard pipeline with a dry-run
@@ -104,12 +112,13 @@ kickoff (Phase 2, after Doug's live pass).
 | Field | Value |
 |---|---|
 | Document | Kickoff prompt — prospect marketing Phase 1 build |
-| Version | v0.1 |
-| Last Updated | 10-14-26 23:15 |
+| Version | v0.1.1 |
+| Last Updated | 10-15-26 03:05 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| v0.1.1 | 10-15-26 03:05 | Claude (Claude Code) | Marked done and moved to `prds/prospect-marketing/history/prompts/`. |
 | v0.1 | 10-14-26 23:15 | Claude (Claude Code) | Written at the close of the CRM handoff session; gated on the crm-test apply and the item (a) ruling. |

@@ -67,6 +67,8 @@ class IntakeSubmission(BaseSubmission):
 
     # --- Step 4: Review and Submit ---
     marketing_consent: bool = False
+    # Ruling 9: consent to TEXTS is its own tick, written true-only (cSmsOptIn).
+    sms_consent: bool = False
     terms_accepted: bool
 
     # submission_token + company_url (honeypot) are inherited from BaseSubmission.

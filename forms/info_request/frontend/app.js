@@ -46,6 +46,10 @@
       company: strOrNull("company"),
       message: val("message"),
       how_did_you_hear: strOrNull("how_did_you_hear"),
+      sms_consent: !!(document.getElementById("sms_consent") && document.getElementById("sms_consent").checked),
+      campaign_id: strOrNull("campaign_id"),
+      campaign_link: strOrNull("campaign_link"),
+      prospect_id: strOrNull("prospect_id"),
     };
   }
 

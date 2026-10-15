@@ -104,6 +104,10 @@ def _apps_for(user: dict[str, Any], settings: Settings) -> list[dict[str, str]]:
     # Event Administration — the public workshop/webinar programme.
     if settings.events_active and is_member(user, settings.events_allowed_teams_list):
         apps.append({"title": "Event Administration", "url": "/events/", "target": "cbm-events"})
+    # Campaign Management — prospect marketing (CM-10, CM-11). Read per request:
+    # the switch needs no restart, and the tile appears the moment it is on.
+    if settings.campaigns_active and is_member(user, settings.campaigns_allowed_teams_list):
+        apps.append({"title": "Campaign Management", "url": "/campaigns/", "target": "cbm-campaigns"})
     # A mentor's self-service profile editor (own record + website preview).
     if is_member(user, settings.mentor_profile_allowed_teams_list):
         apps.append({"title": "My Mentor Profile", "url": "/mentorprofile/", "target": "cbm-mentorprofile"})

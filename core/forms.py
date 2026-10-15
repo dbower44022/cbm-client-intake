@@ -25,6 +25,15 @@ class BaseSubmission(BaseModel):
     submission_token: str = Field(min_length=8, max_length=100)
     # Honeypot anti-spam field — real users never see or fill it.
     company_url: str = ""
+    # Campaign attribution (prds/prospect-marketing/build-plan.md § 3.7, § 5):
+    # the campaign id and the link token a public door was opened through, and
+    # the prospect record a postcard landing page carried over. Hidden fields on
+    # every public form; declared here so capture keeps them (an undeclared key
+    # is dropped by model_dump). Phase 1 CAPTURES them; Phase 2 honours them at
+    # delivery, so no orchestrator reads them yet.
+    campaign_id: Optional[str] = Field(default=None, max_length=32)
+    campaign_link: Optional[str] = Field(default=None, max_length=16)
+    prospect_id: Optional[str] = Field(default=None, max_length=32)
 
 
 # An orchestrator turns a validated submission into created EspoCRM record ids.

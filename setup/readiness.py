@@ -115,6 +115,15 @@ FEATURES: tuple[Feature, ...] = (
              "it shows mentors a transcription failure on every Scheduled save.",
     ),
     Feature(
+        key="campaigns", name="Campaign Management", flag="campaigns_enabled",
+        component="both", needs_database=True,
+        crm_entities=("CProspect", "COutreachCampaign", "COutreachTouch"),
+        crm_fields=(("Contact", "cSmsOptIn"), ("Contact", "cFunnelStage"),
+                    ("Account", "cFunnelStage"), ("CEngagement", "referringPartners")),
+        note="Prospect marketing Phase 1. The links and the import ledger live in "
+             "the application database; the mail vendor defaults to the dry run.",
+    ),
+    Feature(
         key="mailing", name="Mailing list sync", flag="mailing_sync",
         component="worker",
         requires=("mailing_client_id", "mailing_client_secret"), needs_database=True,

@@ -35,3 +35,5 @@ class EventRegistration(BaseSubmission):
     #: forms capture (D-19). Never written as false: a registrant who does not
     #: opt in simply leaves the Contact's existing preferences alone.
     consent: bool = False
+    #: Ruling 9: consent to TEXTS is its own tick, written true-only (cSmsOptIn).
+    sms_consent: bool = False

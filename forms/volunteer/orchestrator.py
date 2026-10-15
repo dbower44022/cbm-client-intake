@@ -48,6 +48,7 @@ C_EMPLOYMENT = "cEmploymentStatus"    # enum
 C_HOW_HEARD = "cHowDidYouHear"        # enum on Contact (same as the other forms)
 # The single consent checkbox sets all three Contact bools.
 C_TERMS_ACCEPTED = "cTermsOfUseAccepted"       # bool on Contact
+C_SMS_OPT_IN = "cSmsOptIn"                     # bool on Contact — texts (ruling 9), true-only
 C_PRIVACY_ACCEPTED = "cPrivacyPolicyAccepted"  # bool on Contact
 C_CODE_OF_CONDUCT = "cCodeOfConductAccepted"   # bool on Contact
 
@@ -55,6 +56,7 @@ C_CODE_OF_CONDUCT = "cCodeOfConductAccepted"   # bool on Contact
 # any FK, and the cContactType discriminator are excluded so they are never
 # back-written over a curated record).
 _CONTACT_FILL_KEYS = (
+    C_SMS_OPT_IN,
     "firstName", "lastName", "middleName", C_PREFERRED_NAME, "addressStreet",
     "addressPostalCode", "phoneNumber", C_LINKEDIN, C_CONTACT_METHOD, C_EMPLOYMENT,
     C_HOW_HEARD, C_TERMS_ACCEPTED, C_PRIVACY_ACCEPTED, C_CODE_OF_CONDUCT,
@@ -130,6 +132,9 @@ async def _find_or_create_mentor_contact(
         if how_heard:
             payload[C_HOW_HEARD] = how_heard
 
+    if sub.sms_consent:
+        # True-only: an unticked box never flips a prior opt-in (the EV-12 rule).
+        payload[C_SMS_OPT_IN] = True
     contact_id, action = await find_create_or_fill(
         client, CONTACT,
         match_attr="emailAddress", match_value=str(sub.email),

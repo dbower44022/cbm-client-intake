@@ -1,0 +1,689 @@
+"""Campaign Management, Phase 1 (prds/prospect-marketing/build-plan.md).
+
+The boundaries: who may reach the staff API and when the switch is off; what a
+link resolve does and never does (no CRM call, same 404 for every reason, a
+retired link still opens and counts late); the postcard selection and the
+sign-off gate; the import plan's outcomes; the landing page's scan write and the
+response orchestrator's promotion rules; the dry-run vendor and the event
+signature.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import hashlib
+import hmac
+import json
+import time
+from typing import Any, Optional
+
+import pytest
+from fastapi.testclient import TestClient
+
+from campaigns import config as cfg
+from campaigns import imports, postcard, service
+from campaigns.public import destination_path
+from campaigns.tokens import looks_like_token, new_link_token, new_scan_token
+from core.app import create_app
+from core.config import Settings, get_settings
+from core.postal import (
+    Address, DryRunPostalClient, PostalSignatureError, estimated_cost, sign_event,
+)
+from forms import ALL_SPECS
+from forms.prospect_response.orchestrator import orchestrate as respond
+from forms.prospect_response.schemas import ProspectResponse
+
+MARKETING = {"userName": "mark", "name": "Mark Marketing", "userId": "u-1",
+             "token": "t", "isAdmin": False, "teams": ["Marketing Admin Team"]}
+OUTSIDER = {"userName": "sally", "name": "Sally Sponsor", "userId": "u-2",
+            "token": "t", "isAdmin": False, "teams": ["Sponsor Management Team"]}
+
+
+@pytest.fixture(autouse=True)
+def _clear_settings_cache():
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
+# --- fakes -------------------------------------------------------------------------------
+
+class FakeCrm:
+    """Enough of EspoClient for the campaigns code: records by entity, where
+    clauses of type equals / in, metadata for the three entities, relate and
+    unrelate on a campaign."""
+
+    def __init__(self, *, with_entities: bool = True):
+        self.rows: dict[str, dict[str, dict[str, Any]]] = {}
+        self.created: list[tuple[str, dict]] = []
+        self.updated: list[tuple[str, str, dict]] = []
+        self.related: dict[tuple[str, str, str], set[str]] = {}
+        self.with_entities = with_entities
+        self._n = 0
+
+    def add(self, entity: str, row: dict[str, Any]) -> dict[str, Any]:
+        self._n += 1
+        row = {"id": row.get("id") or f"{entity.lower()}-{self._n}", **row}
+        self.rows.setdefault(entity, {})[row["id"]] = row
+        return row
+
+    async def metadata(self, key: str):
+        if key.startswith("scopes."):
+            entity = key.split(".", 1)[1]
+            if entity in (cfg.PROSPECT, cfg.CAMPAIGN, cfg.TOUCH):
+                return {"entity": True, "isCustom": True} if self.with_entities else None
+            return {"entity": True}
+        if key == f"entityDefs.{cfg.CAMPAIGN}.links":
+            return {cfg.LINK_PARTNERS: {"type": "hasMany"}, cfg.LINK_EVENTS: {"type": "hasMany"},
+                    cfg.LINK_TOUCHES: {"type": "hasMany"}} if self.with_entities else {}
+        if key == f"entityDefs.{cfg.CAMPAIGN}.fields":
+            return {"campaignKind": {"options": ["Postcard", "Email", "SMS", "Call", "Social media"]},
+                    "platform": {"options": ["", "Meta", "YouTube"]},
+                    "campaignStatus": {"options": ["Draft", "Awaiting sign-off", "Signed off", "Running", "Complete", "Cancelled"]},
+                    "postcardSize": {"options": ["", "4x6", "6x9", "6x11"]}}
+        if key == f"entityDefs.{cfg.PROSPECT}.fields":
+            return {"funnelStage": {"options": list(cfg.STAGES)}, "entryDoor": {"options": ["State filing", "List"]},
+                    "sideExit": {"options": ["", "Already known", "Stale"]}, "addressStatus": {"options": ["Usable", "Dead"]}}
+        return None
+
+    async def metadata_enum_options(self, entity, field):
+        if entity == "Account" and field == "cCompanyType":
+            return ["Client", "Sponsor", "Partner", "Other", "Prospect"]
+        return None
+
+    def _match(self, row, clause) -> bool:
+        t, attr, val = clause.get("type"), clause.get("attribute"), clause.get("value")
+        if t == "equals":
+            return row.get(attr) == val
+        if t == "in":
+            return row.get(attr) in (val or [])
+        if t == "isNull":
+            return row.get(attr) in (None, "")
+        if t == "contains":
+            return str(val).lower() in str(row.get(attr) or "").lower()
+        return True
+
+    async def list(self, entity, *, where=None, select=None, max_size=50, offset=0, order_by=None, order=None):
+        rows = [r for r in self.rows.get(entity, {}).values() if all(self._match(r, c) for c in (where or []))]
+        return {"total": len(rows), "list": rows[offset: offset + max_size]}
+
+    async def list_related(self, entity, record_id, link, *, select=None, max_size=200):
+        ids = self.related.get((entity, record_id, link), set())
+        foreign = {cfg.LINK_PARTNERS: "CPartnerProfile", cfg.LINK_EVENTS: "CEvent", cfg.LINK_TOUCHES: cfg.TOUCH}.get(link, "")
+        rows = [self.rows.get(foreign, {}).get(i, {"id": i, "name": i}) for i in sorted(ids)]
+        return {"total": len(rows), "list": rows}
+
+    async def get(self, entity, record_id, select=None):
+        return dict(self.rows.get(entity, {}).get(record_id) or {})
+
+    async def find_one(self, entity, attribute, value, select="id"):
+        for r in self.rows.get(entity, {}).values():
+            if r.get(attribute) == value:
+                return r
+        return None
+
+    async def create(self, entity, payload):
+        row = self.add(entity, dict(payload))
+        self.created.append((entity, payload))
+        return row
+
+    async def update(self, entity, record_id, payload):
+        self.rows.setdefault(entity, {}).setdefault(record_id, {"id": record_id}).update(payload)
+        self.updated.append((entity, record_id, payload))
+        return self.rows[entity][record_id]
+
+    async def relate(self, entity, record_id, link, related_id):
+        self.related.setdefault((entity, record_id, link), set()).add(related_id)
+
+    async def unrelate(self, entity, record_id, link, related_id):
+        self.related.setdefault((entity, record_id, link), set()).discard(related_id)
+
+
+class FakeStore:
+    """The campaign store, in memory."""
+
+    def __init__(self):
+        self.links: dict[str, dict] = {}
+        self.visits: list[dict] = []
+        self.batches: dict[str, dict] = {}
+        self.rows: list[dict] = []
+
+    async def create_link(self, **kw):
+        row = {"id": f"l-{len(self.links) + 1}", "token": new_link_token(), "state": cfg.LINK_ACTIVE,
+               "history": [], "retired_by": None, "retired_at": None, **kw}
+        self.links[row["id"]] = row
+        return row
+
+    async def get_link(self, link_id): return self.links.get(link_id)
+    async def get_link_by_token(self, token):
+        return next((l for l in self.links.values() if l["token"] == token), None)
+    async def list_links(self, campaign_id):
+        return [l for l in self.links.values() if l["campaign_id"] == campaign_id]
+    async def landing_link(self, campaign_id):
+        return next((l for l in self.links.values() if l["campaign_id"] == campaign_id and l["destination_kind"] == cfg.DEST_LANDING), None)
+    async def correct_destination(self, link_id, **kw):
+        l = self.links[link_id]; l.update(destination_kind=kw["destination_kind"], destination_target=kw["destination_target"], destination_slug=kw["destination_slug"]); return l
+    async def refresh_slug(self, link_id, slug): self.links[link_id]["destination_slug"] = slug
+    async def set_state(self, link_id, state, actor): self.links[link_id]["state"] = state; return self.links[link_id]
+    async def record_visit(self, link, *, address, user_agent, salt, scan_token=None):
+        self.visits.append({"link_id": link["id"], "late": link["state"] == cfg.LINK_RETIRED, "scan": scan_token})
+    async def visit_counts(self, ids):
+        out = {i: {"visits": 0, "late": 0, "scans": 0} for i in ids}
+        for v in self.visits:
+            if v["link_id"] in out:
+                out[v["link_id"]]["visits"] += 1; out[v["link_id"]]["late"] += int(v["late"]); out[v["link_id"]]["scans"] += int(bool(v["scan"]))
+        return out
+    async def submissions_by_link(self, tokens): return {t: {} for t in tokens}
+    async def recent_submissions(self, campaign_id, limit=50): return []
+    async def find_batch_by_file(self, sha): return None
+    async def get_batch(self, batch_id): return self.batches.get(batch_id)
+    async def create_batch(self, **kw):
+        row = {"id": f"b-{len(self.batches) + 1}", "status": "planned", "applied_at": None, **kw}
+        self.batches[row["id"]] = row; return row
+    async def mark_applied(self, batch_id, result): self.batches[batch_id].update(status="applied", result=result)
+    async def known_row_hashes(self, hashes): return {r["row_hash"] for r in self.rows if r["row_hash"] in set(hashes)}
+    async def record_rows(self, batch_id, rows): self.rows.extend(rows)
+    async def recent_batches(self, limit=25): return list(self.batches.values())
+
+
+def build(monkeypatch, user=None, crm=None, store=None, enabled="true"):
+    monkeypatch.setenv("CAMPAIGNS_ENABLED", enabled)
+    monkeypatch.setenv("SESSION_SECRET", "test-secret")
+    monkeypatch.setenv("ESPO_DRY_RUN", "true")
+    get_settings.cache_clear()
+    app = create_app(ALL_SPECS)
+    app.state.campaign_store = store
+    import campaigns.router as router_mod
+    monkeypatch.setattr(router_mod, "current_user", lambda request: user)
+    if crm is not None:
+        monkeypatch.setattr(router_mod, "client_for", lambda settings, u: crm)
+
+    async def _no_log(*a, **kw):
+        return None
+    monkeypatch.setattr(router_mod, "record_action", _no_log)
+    return TestClient(app)
+
+
+# --- the gate ---------------------------------------------------------------------------------
+
+def test_signed_out_is_401(monkeypatch):
+    assert build(monkeypatch, user=None).get("/campaigns/api/session").status_code == 401
+
+
+def test_wrong_team_is_403_naming_the_team(monkeypatch):
+    resp = build(monkeypatch, user=OUTSIDER).get("/campaigns/api/session")
+    assert resp.status_code == 403
+    assert "Marketing Admin Team" in resp.json()["detail"]
+
+
+def test_switch_off_is_404_per_request(monkeypatch):
+    client = build(monkeypatch, user=MARKETING, enabled="false")
+    assert client.get("/campaigns/api/session").status_code == 404
+    assert client.get("/c/abcdefgh", follow_redirects=False).status_code == 404
+    assert client.get("/api/campaigns/public/abc123").status_code == 404
+
+
+def test_marketing_admin_session_reports_availability(monkeypatch):
+    client = build(monkeypatch, user=MARKETING, crm=FakeCrm(), store=FakeStore())
+    body = client.get("/campaigns/api/session").json()
+    assert body["name"] == "Mark Marketing"
+    assert body["available"] is True
+    assert body["storeAvailable"] is True
+    assert body["postal"]["provider"] == "dryrun"
+
+
+def test_crm_without_the_entities_reads_unavailable(monkeypatch):
+    client = build(monkeypatch, user=MARKETING, crm=FakeCrm(with_entities=False))
+    body = client.get("/campaigns/api/session").json()
+    assert body["available"] is False
+    assert "CProspect" in body["reason"]
+
+
+def test_portal_tile_follows_the_switch(monkeypatch):
+    from portal.router import _apps_for
+    monkeypatch.setenv("SESSION_SECRET", "test-secret")
+    monkeypatch.setenv("CAMPAIGNS_ENABLED", "true")
+    get_settings.cache_clear()
+    titles = [a["title"] for a in _apps_for(MARKETING, get_settings())]
+    assert "Campaign Management" in titles
+    assert "Campaign Management" not in [a["title"] for a in _apps_for(OUTSIDER, get_settings())]
+    monkeypatch.setenv("CAMPAIGNS_ENABLED", "false")
+    get_settings.cache_clear()
+    assert "Campaign Management" not in [a["title"] for a in _apps_for(MARKETING, get_settings())]
+
+
+# --- links and the resolve (§ 3.7) ----------------------------------------------------------------
+
+def test_tokens_have_no_ambiguous_glyphs():
+    for _ in range(50):
+        t = new_link_token()
+        assert len(t) == 8 and looks_like_token(t)
+        assert not set(t) & set("01OIl")
+    assert len(new_scan_token()) == 12
+    assert not looks_like_token("abc")
+    assert not looks_like_token("has space")
+
+
+def test_destination_paths_carry_campaign_and_link():
+    link = {"campaign_id": "camp1", "token": "abcdefgh", "destination_kind": cfg.DEST_FORM, "destination_target": "client-intake"}
+    assert destination_path(link) == "/client-intake/?campaign=camp1&link=abcdefgh"
+    link["destination_kind"] = cfg.DEST_PROGRAMME
+    assert destination_path(link) == "/webinars/?campaign=camp1&link=abcdefgh"
+    link["destination_kind"] = cfg.DEST_EVENT; link["destination_slug"] = "oct-webinar"
+    assert destination_path(link) == "/webinars/oct-webinar?campaign=camp1&link=abcdefgh"
+    link["destination_slug"] = None
+    assert destination_path(link) == "/webinars/?campaign=camp1&link=abcdefgh"
+    link["destination_kind"] = cfg.DEST_LANDING
+    assert destination_path(link) is None                      # a card's code is needed
+    assert destination_path(link, scan_token="23456789abcd") == "/p/23456789abcd?link=abcdefgh"
+    link["destination_kind"] = cfg.DEST_FORM; link["destination_target"] = "not-a-form"
+    assert destination_path(link) is None
+
+
+def test_resolve_counts_the_visit_and_redirects_302(monkeypatch):
+    store = FakeStore()
+    client = build(monkeypatch, user=None, store=store)
+    link = asyncio.run(store.create_link(campaign_id="camp1", name="Post", destination_kind=cfg.DEST_FORM,
+                                         destination_target="info-request", destination_slug=None, created_by="t"))
+    resp = client.get(f"/c/{link['token']}", follow_redirects=False)
+    assert resp.status_code == 302
+    assert resp.headers["location"] == f"/info-request/?campaign=camp1&link={link['token']}"
+    assert resp.headers["cache-control"] == "no-store"
+    assert len(store.visits) == 1 and store.visits[0]["late"] is False
+
+
+def test_retired_link_still_opens_and_counts_late(monkeypatch):
+    store = FakeStore()
+    client = build(monkeypatch, user=None, store=store)
+    link = asyncio.run(store.create_link(campaign_id="camp1", name="Post", destination_kind=cfg.DEST_PROGRAMME,
+                                         destination_target=None, destination_slug=None, created_by="t"))
+    asyncio.run(store.set_state(link["id"], cfg.LINK_RETIRED, "t"))
+    resp = client.get(f"/c/{link['token']}", follow_redirects=False)
+    assert resp.status_code == 302
+    assert store.visits[0]["late"] is True
+
+
+def test_unknown_malformed_and_cardless_landing_tokens_404_alike(monkeypatch):
+    store = FakeStore()
+    client = build(monkeypatch, user=None, store=store)
+    landing = asyncio.run(store.create_link(campaign_id="camp1", name="Landing", destination_kind=cfg.DEST_LANDING,
+                                            destination_target=None, destination_slug=None, created_by="t"))
+    answers = {
+        client.get("/c/zzzzzzzz", follow_redirects=False).json()["detail"],
+        client.get("/c/bad!token", follow_redirects=False).json()["detail"],
+        client.get(f"/c/{landing['token']}", follow_redirects=False).json()["detail"],
+    }
+    assert answers == {"Not found"}
+    card = client.get(f"/c/{landing['token']}/23456789abcd", follow_redirects=False)
+    assert card.status_code == 302 and card.headers["location"] == f"/p/23456789abcd?link={landing['token']}"
+    assert store.visits[-1]["scan"] == "23456789abcd"
+    png = client.get(f"/c/{landing['token']}/23456789abcd/qr.png")
+    assert png.status_code == 200 and png.headers["content-type"] == "image/png"
+    assert png.content[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+def test_staff_link_crud_and_counts(monkeypatch):
+    crm = FakeCrm(); store = FakeStore()
+    camp = crm.add(cfg.CAMPAIGN, {"name": "Social October", "campaignKind": "Social media", "campaignStatus": "Draft"})
+    client = build(monkeypatch, user=MARKETING, crm=crm, store=store)
+    made = client.post(f"/campaigns/api/campaigns/{camp['id']}/links", json={"name": "Facebook post", "kind": "form", "target": "client-intake"})
+    assert made.status_code == 200
+    link = made.json()["link"]
+    assert made.json()["shortUrl"].endswith("/c/" + link["token"])
+    bad = client.post(f"/campaigns/api/campaigns/{camp['id']}/links", json={"name": "x", "kind": "form", "target": "nope"})
+    assert bad.status_code == 400
+    client.get(f"/c/{link['token']}", follow_redirects=False)
+    listed = client.get(f"/campaigns/api/campaigns/{camp['id']}/links").json()["links"]
+    assert listed[0]["counts"]["visits"] == 1 and listed[0]["state"] == "active"
+    corrected = client.put(f"/campaigns/api/campaigns/{camp['id']}/links/{link['id']}", json={"kind": "programme"})
+    assert corrected.json()["link"]["destination_kind"] == "programme"
+    retired = client.post(f"/campaigns/api/campaigns/{camp['id']}/links/{link['id']}/retire")
+    assert retired.json()["link"]["state"] == "retired"
+    qr = client.get(f"/campaigns/api/campaigns/{camp['id']}/links/{link['id']}/qr.png")
+    assert qr.status_code == 200 and qr.headers["content-type"] == "image/png"
+
+
+# --- campaigns (§ 3.1, § 3.6) -----------------------------------------------------------------------
+
+def test_create_campaign_whitelists_and_refuses_unbuilt_kinds(monkeypatch):
+    crm = FakeCrm()
+    client = build(monkeypatch, user=MARKETING, crm=crm, store=FakeStore())
+    refused = client.post("/campaigns/api/campaigns", json={"changes": {"name": "Calls", "campaignKind": "Call"}})
+    assert refused.status_code == 400 and "not built yet" in refused.json()["detail"]
+    nameless = client.post("/campaigns/api/campaigns", json={"changes": {"campaignKind": "Postcard"}})
+    assert nameless.status_code == 400
+    made = client.post("/campaigns/api/campaigns", json={
+        "changes": {"name": "Filings Nov", "campaignKind": "Postcard", "platform": "Meta", "pieceCount": 99, "campaignStatus": "Running"},
+        "partnerIds": ["p-1"], "eventIds": [],
+    })
+    assert made.status_code == 200
+    created = crm.created[0][1]
+    assert created["campaignStatus"] == "Draft"          # the application moves it
+    assert "pieceCount" not in created                    # not in the whitelist
+    assert created["platform"] is None                    # social media only
+    assert created["assignedUserId"] == "u-1"
+    assert crm.related[(cfg.CAMPAIGN, made.json()["campaign"]["id"], cfg.LINK_PARTNERS)] == {"p-1"}
+
+
+def test_manual_status_moves_per_kind():
+    social = {"campaignKind": "Social media", "campaignStatus": "Draft"}
+    assert set(service.manual_moves(social)) == {"Running", "Cancelled"}
+    postcard_signed = {"campaignKind": "Postcard", "campaignStatus": "Signed off"}
+    assert service.manual_moves(postcard_signed) == ("Cancelled",)
+    running = {"campaignKind": "Postcard", "campaignStatus": "Running"}
+    assert service.manual_moves(running) == ()
+
+
+def test_advance_stage_is_advance_only():
+    assert service.advance_stage("Qualified", "Lead") == "Lead"
+    assert service.advance_stage("Lead", "Qualified") is None
+    assert service.advance_stage("Warm Lead", "Lead") is None
+    assert service.advance_stage(None, "Lead") == "Lead"
+    assert service.advance_stage("Qualified", "Client") is None   # never stored
+
+
+def test_address_text_round_trip():
+    p = {"mailingAddressStreet": "100 Public Sq", "mailingAddressCity": "Cleveland", "mailingAddressState": "OH",
+         "mailingAddressPostalCode": "44113", "mailingAddressCountry": ""}
+    text = service.mailing_address_text(p)
+    assert text == "100 Public Sq\nCleveland, OH 44113"
+    back = service.parse_address_text(text)
+    assert back == {"street": "100 Public Sq", "city": "Cleveland", "state": "OH", "postalCode": "44113", "country": ""}
+
+
+# --- the postcard kind (§ 3.2) ------------------------------------------------------------------------
+
+def _prospect(crm, name, *, stage="Qualified", exit_=None, address=True, status="Usable"):
+    row = {"name": name, "businessName": name, "funnelStage": stage, "addressStatus": status, "sideExit": exit_}
+    if address:
+        row.update(mailingAddressStreet="1 Main St", mailingAddressCity="Cleveland", mailingAddressState="OH", mailingAddressPostalCode="44113")
+    return crm.add(cfg.PROSPECT, row)
+
+
+def test_selection_applies_rulings_10_14_15():
+    crm = FakeCrm()
+    a = _prospect(crm, "Acme")
+    _prospect(crm, "Dead address", status="Dead")
+    _prospect(crm, "Already known", exit_="Already known")
+    _prospect(crm, "No address", address=False)
+    _prospect(crm, "Lead only", stage="Lead")
+    carded = _prospect(crm, "Carded")
+    crm.add(cfg.TOUCH, {"channel": "Postcard", "touchStatus": "Sent", "prospectId": carded["id"]})
+    crm.add("Account", {"name": "Promoted Co", "cCompanyType": ["Prospect"], "cFunnelStage": "Qualified",
+                        "billingAddressStreet": "2 Main", "billingAddressCity": "Akron", "billingAddressState": "OH", "billingAddressPostalCode": "44308"})
+    crm.add("Account", {"name": "Plain Client", "cCompanyType": ["Client"], "cFunnelStage": "Qualified",
+                        "billingAddressStreet": "3 Main", "billingAddressCity": "Akron", "billingAddressState": "OH", "billingAddressPostalCode": "44308"})
+    targets = asyncio.run(postcard.select_targets(crm, {"stages": ["Qualified"], "includeCompanies": True}))
+    names = sorted(t["name"] for t in targets)
+    assert names == ["Acme", "Promoted Co"]
+    with_lead = asyncio.run(postcard.select_targets(crm, {"stages": ["Qualified", "Lead"], "includeCompanies": False}))
+    assert sorted(t["name"] for t in with_lead) == ["Acme", "Lead only"]
+
+
+def test_build_list_reconciles_planned_touches_and_moves_draft_to_awaiting():
+    crm = FakeCrm()
+    camp = crm.add(cfg.CAMPAIGN, {"name": "Nov cards", "campaignKind": "Postcard", "campaignStatus": "Draft"})
+    a = _prospect(crm, "Acme"); b = _prospect(crm, "Beta")
+    settings = Settings(_env_file=None)
+    first = asyncio.run(postcard.build_list(crm, crm, camp, None, settings))
+    assert first["pieces"] == 2 and first["created"] == 2
+    assert crm.rows[cfg.CAMPAIGN][camp["id"]]["campaignStatus"] == "Awaiting sign-off"
+    assert "Qualified" in crm.rows[cfg.CAMPAIGN][camp["id"]]["selectionSummary"]
+    # Beta leaves the ladder; the rebuild cancels its Planned row and keeps Acme's.
+    crm.rows[cfg.PROSPECT][b["id"]]["sideExit"] = "Stale"
+    camp = crm.rows[cfg.CAMPAIGN][camp["id"]]
+    second = asyncio.run(postcard.build_list(crm, crm, camp, None, settings))
+    assert second == {**second, "pieces": 1, "created": 0, "kept": 1, "cancelled": 1}
+    statuses = sorted(t["touchStatus"] for t in crm.rows[cfg.TOUCH].values())
+    assert statuses == ["Cancelled", "Planned"]
+
+
+def test_sign_off_needs_the_typed_count_and_stamps_the_campaign(monkeypatch):
+    crm = FakeCrm()
+    camp = crm.add(cfg.CAMPAIGN, {"name": "Nov cards", "campaignKind": "Postcard", "campaignStatus": "Awaiting sign-off"})
+    for n in range(3):
+        crm.add(cfg.TOUCH, {"channel": "Postcard", "touchStatus": "Planned", "outreachCampaignId": camp["id"]})
+    monkeypatch.setenv("DATABASE_URL", "postgresql://x/y")
+    settings = Settings(_env_file=None, database_url="postgresql://x/y", postal_provider="lob", postal_api_key="k", postal_unit_cost=0.95)
+    with pytest.raises(service.CampaignError):
+        asyncio.run(postcard.sign_off(crm, crm, camp, confirm="2", user_name="Mark", settings=settings))
+    updated = asyncio.run(postcard.sign_off(crm, crm, camp, confirm="3", user_name="Mark", settings=settings))
+    assert updated["campaignStatus"] == "Signed off"
+    assert updated["pieceCount"] == 3 and updated["estimatedCost"] == 2.85 and updated["estimatedCostCurrency"] == "USD"
+    assert updated["signedOffByName"] == "Mark"
+
+
+def test_run_mails_each_planned_touch_once_and_completes():
+    crm = FakeCrm(); store = FakeStore(); vendor = DryRunPostalClient()
+    camp = crm.add(cfg.CAMPAIGN, {"name": "Nov cards", "campaignKind": "Postcard", "campaignStatus": "Signed off"})
+    a = _prospect(crm, "Acme"); none = _prospect(crm, "No address", address=False)
+    t1 = crm.add(cfg.TOUCH, {"channel": "Postcard", "touchStatus": "Planned", "outreachCampaignId": camp["id"], "prospectId": a["id"]})
+    t2 = crm.add(cfg.TOUCH, {"channel": "Postcard", "touchStatus": "Planned", "outreachCampaignId": camp["id"], "prospectId": none["id"]})
+    settings = Settings(_env_file=None, app_base_url="https://apps.example.org")
+    totals = asyncio.run(postcard.run_campaign(crm, camp, vendor=vendor, store=store, settings=settings))
+    assert totals == {"sent": 1, "failed": 0, "skipped": 1}
+    sent = crm.rows[cfg.TOUCH][t1["id"]]
+    assert sent["touchStatus"] == "Sent" and sent["vendorPieceId"] == f"dryrun-{t1['id']}"
+    assert looks_like_token(sent["scanToken"]) and "Cleveland, OH 44113" in sent["mailedAddress"]
+    assert sent["stageAtTouch"] == "Qualified"
+    assert crm.rows[cfg.TOUCH][t2["id"]]["touchStatus"] == "Cancelled"
+    assert crm.rows[cfg.CAMPAIGN][camp["id"]]["campaignStatus"] == "Complete"
+    link = asyncio.run(store.landing_link(camp["id"]))
+    assert link is not None and vendor.created[0]["merge_variables"]["card_url"] == f"https://apps.example.org/c/{link['token']}/{sent['scanToken']}"
+    assert vendor.created[0]["key"] == t1["id"]                      # the idempotency key is the touch id
+
+
+def test_returned_event_kills_the_address_and_leaves_the_rung():
+    crm = FakeCrm()
+    p = _prospect(crm, "Acme", stage="Lead")
+    t = crm.add(cfg.TOUCH, {"touchStatus": "Sent", "vendorPieceId": "psc_1", "prospectId": p["id"]})
+    result = asyncio.run(postcard.apply_event(crm, piece_id="psc_1", kind="returned", vendor_status="returned_to_sender"))
+    assert result["applied"] is True
+    assert crm.rows[cfg.TOUCH][t["id"]]["touchStatus"] == "Returned"
+    assert crm.rows[cfg.PROSPECT][p["id"]]["addressStatus"] == "Dead"
+    assert crm.rows[cfg.PROSPECT][p["id"]]["funnelStage"] == "Lead"
+    unknown = asyncio.run(postcard.apply_event(crm, piece_id="psc_nope", kind="delivered", vendor_status="x"))
+    assert unknown["applied"] is False
+
+
+def test_dry_run_vendor_and_event_signature():
+    vendor = DryRunPostalClient()
+    with pytest.raises(Exception):
+        asyncio.run(vendor.create_postcard(idempotency_key="t", to=Address(name="", line1="", city="", state="", postal_code=""),
+                                           template="", size="4x6", merge_variables={}, metadata={}))
+    body = json.dumps({"event": "returned", "piece_id": "dryrun-t1"}).encode()
+    headers = sign_event(body, "secret")
+    events = vendor.parse_events(headers=headers, body=body, secret="secret")
+    assert events[0].kind == "returned" and events[0].piece_id == "dryrun-t1"
+    with pytest.raises(PostalSignatureError):
+        vendor.parse_events(headers=headers, body=body, secret="other")
+    with pytest.raises(PostalSignatureError):
+        vendor.parse_events(headers={}, body=body, secret="secret")
+    assert estimated_cost(Settings(_env_file=None), 10) == 0.0
+    assert estimated_cost(Settings(_env_file=None, postal_provider="lob", postal_unit_cost=1.1), 10) == 11.0
+
+
+def test_webhook_refuses_without_secret_and_applies_signed_events(monkeypatch):
+    crm = FakeCrm()
+    client = build(monkeypatch, user=None, crm=crm, store=FakeStore())
+    body = json.dumps({"event": "delivered", "piece_id": "dryrun-x"}).encode()
+    assert client.post("/api/campaigns/postal/events", content=body).status_code == 404   # no secret → not mounted
+    monkeypatch.setenv("POSTAL_WEBHOOK_SECRET", "s3")
+    get_settings.cache_clear()
+    bad = client.post("/api/campaigns/postal/events", content=body, headers=sign_event(body, "wrong"))
+    assert bad.status_code == 401
+    import core.app as app_mod
+    crm.add(cfg.TOUCH, {"touchStatus": "Sent", "vendorPieceId": "dryrun-x"})
+    client.app.state.events_client_factory = lambda: crm
+    ok = client.post("/api/campaigns/postal/events", content=body, headers=sign_event(body, "s3"))
+    assert ok.status_code == 200 and ok.json()["results"][0]["applied"] is True
+
+
+# --- the import doors (§ 2) ----------------------------------------------------------------------------
+
+CSV = (
+    "business_name,mailing_street,mailing_city,mailing_state,mailing_zip,external_reference,website,email\n"
+    "Acme Widgets,1 Main St,Cleveland,oh,44113,F-1,acme.com,\n"
+    "Known Client,5 Euclid Ave,Cleveland,OH,44115,F-2,,\n"
+    "Person Shop,9 Lake Rd,Cleveland,OH,44102,F-3,,owner@shop-example.com\n"
+    "Acme Widgets,1 Main St,Cleveland,OH,44113,F-1,acme.com,\n"
+    "No Address,,,,,F-4,,\n"
+)
+
+
+def test_plan_classifies_every_row_and_apply_writes_exactly_that():
+    crm = FakeCrm(); store = FakeStore()
+    crm.add("Account", {"name": "Known Client", "billingAddressPostalCode": "44115", "website": ""})
+    plan = asyncio.run(imports.plan_import(crm, store, text=CSV, name="Filings Oct", door=cfg.DOOR_FILING, qualified_by="Filter v1"))
+    c = plan["counts"]
+    assert (c["rows"], c["create"], c["alreadyKnown"], c["duplicate"], c["invalid"]) == (5, 2, 1, 1, 1)
+    assert c["promoteCompany"] == 1 and c["promoteContact"] == 1
+    outcomes = {r["name"]: r["outcome"] for r in plan["rows"]}
+    assert outcomes["Known Client"] == "already_known" and outcomes["No Address"] == "invalid"
+    batch = asyncio.run(store.get_batch(plan["batchId"]))
+    result = asyncio.run(imports.apply_import(crm, crm, store, batch, user_name="Mark"))
+    assert (result["created"], result["alreadyKnown"], result["companies"], result["contacts"], result["errors"]) == (2, 1, 1, 1, 0)
+    prospects = list(crm.rows[cfg.PROSPECT].values())
+    assert len(prospects) == 3
+    acme = next(p for p in prospects if p["businessName"] == "Acme Widgets")
+    assert acme["funnelStage"] == "Qualified" and acme["entryDoor"] == "State filing" and acme["qualifiedBy"] == "Filter v1"
+    assert acme["mailingAddressState"] == "OH" and acme["promotedCompanyId"]
+    company = crm.rows["Account"][acme["promotedCompanyId"]]
+    assert company["cCompanyType"] == ["Prospect"] and company["cFunnelStage"] == "Qualified"
+    known = next(p for p in prospects if p["businessName"] == "Known Client")
+    assert known["sideExit"] == "Already known" and known["alreadyKnownCompanyId"]
+    shop = next(p for p in prospects if p["businessName"] == "Person Shop")
+    contact = crm.rows["Contact"][shop["promotedContactId"]]
+    assert contact["cContactType"] == ["Prospect"] and contact["emailAddress"] == "owner@shop-example.com"
+    # The same file again is a no-op.
+    again = asyncio.run(imports.plan_import(crm, store, text=CSV, name="Filings Oct again", door=cfg.DOOR_FILING, qualified_by="Filter v1"))
+    assert again["nothingToDo"] is True and again["counts"]["knownRow"] == 3
+
+
+def test_plan_names_a_missing_column_and_the_list_door_enters_unverified():
+    crm = FakeCrm(); store = FakeStore()
+    with pytest.raises(service.CampaignError) as exc:
+        asyncio.run(imports.plan_import(crm, store, text="name,zip\nA,1\n", name="x", door=cfg.DOOR_FILING, qualified_by=""))
+    assert "business_name" in str(exc.value)
+    plan = asyncio.run(imports.plan_import(crm, store, text=CSV.splitlines()[0] + "\n" + CSV.splitlines()[1] + "\n",
+                                           name="Vendor list", door=cfg.DOOR_LIST, qualified_by="", list_source="Dun"))
+    batch = asyncio.run(store.get_batch(plan["batchId"]))
+    asyncio.run(imports.apply_import(crm, crm, store, batch, user_name="Mark"))
+    p = next(iter(crm.rows[cfg.PROSPECT].values()))
+    assert p["funnelStage"] == "Unverified" and p["entryDoor"] == "List" and p["importBatch"].startswith("Dun — ")
+    assert "qualifiedBy" not in p
+
+
+# --- the landing page and the response (§ 4) -------------------------------------------------------
+
+def test_landing_scan_moves_to_lead_once_and_counts():
+    from campaigns.landing import record_scan
+    crm = FakeCrm()
+    p = _prospect(crm, "Acme")
+    t = crm.add(cfg.TOUCH, {"touchStatus": "Sent", "prospectId": p["id"], "scanToken": "abcdefghjkmn", "scanCount": 0})
+    out = asyncio.run(record_scan(crm, crm.rows[cfg.TOUCH][t["id"]]))
+    assert out["written"] is True and out["stage"] == "Lead"
+    touch = crm.rows[cfg.TOUCH][t["id"]]
+    assert touch["scanCount"] == 1 and touch["outcome"] == "Scanned" and touch["firstScannedAt"]
+    first = touch["firstScannedAt"]
+    out2 = asyncio.run(record_scan(crm, dict(touch)))
+    assert "stage" not in out2 and crm.rows[cfg.TOUCH][t["id"]]["scanCount"] == 2
+    assert crm.rows[cfg.TOUCH][t["id"]]["firstScannedAt"] == first
+    planned = crm.add(cfg.TOUCH, {"touchStatus": "Planned", "prospectId": p["id"], "scanToken": "planned12345"})
+    assert asyncio.run(record_scan(crm, planned)) == {"written": False, "preview": True}
+
+
+def test_landing_page_is_404_until_switched_on_and_404s_unknown_tokens(monkeypatch):
+    crm = FakeCrm()
+    client = build(monkeypatch, user=None, crm=crm, store=FakeStore())
+    assert client.get("/p/abcdefghjkmn").status_code == 404
+    monkeypatch.setenv("CAMPAIGNS_LANDING_PUBLIC", "true")
+    monkeypatch.setenv("ESPO_DRY_RUN", "false"); monkeypatch.setenv("ESPO_BASE_URL", "https://crm.example"); monkeypatch.setenv("ESPO_API_KEY", "k")
+    get_settings.cache_clear()
+    client.app.state.events_client_factory = lambda: crm
+    # No store in tests, so the response delivers inline; the pipeline's own
+    # client is swapped for the fake the page reads from.
+    import core.app as app_mod
+    monkeypatch.setattr(app_mod, "_make_client", lambda settings: crm)
+    assert client.get("/p/abcdefghjkmn").json()["detail"] == "Not found"
+    p = _prospect(crm, "Acme & Sons")
+    crm.add(cfg.TOUCH, {"touchStatus": "Sent", "prospectId": p["id"], "prospectName": "Acme & Sons", "scanToken": "abcdefghjkmn",
+                        "mailedAddress": "1 Main St\nCleveland, OH 44113", "outreachCampaignId": "camp1", "outreachCampaignName": "Nov"})
+    page = client.get("/p/abcdefghjkmn?link=linktok1")
+    assert page.status_code == 200
+    html = page.text
+    assert "Acme &amp; Sons" in html and 'value="1 Main St"' in html and 'value="44113"' in html
+    assert 'data-campaign-id="camp1"' in html and 'data-link-token="linktok1"' in html
+    assert "owner@" not in html                               # nothing a person's; ruling 16
+    posted = client.post("/api/campaigns/landing/abcdefghjkmn", json={
+        "submission_token": "tok-12345678", "action": "update", "business_name": "Acme & Sons",
+        "first_name": "Ann", "email": "ann@acme-example.com", "sms_consent": True,
+    })
+    assert posted.status_code == 200
+
+
+def test_response_orchestrator_promotes_by_email_and_website_and_is_true_only():
+    crm = FakeCrm()
+    p = _prospect(crm, "Acme")
+    crm.add(cfg.TOUCH, {"touchStatus": "Sent", "prospectId": p["id"], "scanToken": "abcdefghjkmn", "outreachCampaignId": "camp1"})
+    sub = ProspectResponse(submission_token="tok-12345678", scan_token="abcdefghjkmn", action="mentor",
+                           business_name="Acme Widgets", mailing_street="2 New St", mailing_city="Cleveland", mailing_state="OH", mailing_zip="44113",
+                           first_name="Ann", last_name="Lee", email="ann@acme-example.com", phone="2165550143", website="https://www.acme.com/",
+                           marketing_consent=False, sms_consent=True)
+    result = asyncio.run(respond(sub, crm))
+    prospect = crm.rows[cfg.PROSPECT][p["id"]]
+    assert prospect["businessName"] == "Acme Widgets" and prospect["mailingAddressStreet"] == "2 New St"
+    assert prospect["funnelStage"] == "Lead" and prospect["promotedCompanyId"] and prospect["promotedContactId"]
+    company = crm.rows["Account"][result["companyId"]]
+    assert company["cCompanyType"] == ["Prospect"] and company["cOutreachCampaignId"] == "camp1"
+    contact = crm.rows["Contact"][result["contactId"]]
+    assert contact["cSmsOptIn"] is True and "cMarketingOptIn" not in contact   # true-only
+    assert contact["cContactType"] == ["Prospect"] and contact["accountId"] == company["id"]
+    assert result["action"] == "mentor"
+
+
+def test_response_orchestrator_holds_a_same_named_company_at_another_website():
+    from core.crm_upsert import CompanyConflict
+    crm = FakeCrm()
+    crm.add("Account", {"name": "Acme Widgets", "website": "https://acme-other.example", "cCompanyType": ["Client"]})
+    p = _prospect(crm, "Acme Widgets")
+    crm.add(cfg.TOUCH, {"touchStatus": "Sent", "prospectId": p["id"], "scanToken": "abcdefghjkmn"})
+    sub = ProspectResponse(submission_token="tok-12345678", scan_token="abcdefghjkmn", website="acme.com")
+    with pytest.raises(CompanyConflict):
+        asyncio.run(respond(sub, crm))
+
+
+def test_response_without_email_or_website_promotes_nothing():
+    crm = FakeCrm()
+    p = _prospect(crm, "Acme")
+    crm.add(cfg.TOUCH, {"touchStatus": "Sent", "prospectId": p["id"], "scanToken": "abcdefghjkmn"})
+    sub = ProspectResponse(submission_token="tok-12345678", scan_token="abcdefghjkmn", first_name="Ann")
+    result = asyncio.run(respond(sub, crm))
+    assert "contactId" not in result and "companyId" not in result
+    assert not crm.rows.get("Contact") and not crm.rows.get("Account")
+    assert crm.rows[cfg.PROSPECT][p["id"]]["funnelStage"] == "Lead"
+
+
+# --- the hidden fields and the SMS tick on every door ------------------------------------------------
+
+def test_every_submission_model_carries_the_campaign_fields_and_sms_tick():
+    from forms import SPECS_BY_SLUG
+    for slug, spec in SPECS_BY_SLUG.items():
+        fields = spec.submission_model.model_fields
+        assert {"campaign_id", "campaign_link", "prospect_id"} <= set(fields), slug
+        if slug not in ("info-email",):
+            assert "sms_consent" in fields or slug == "info-request", slug
+
+
+@pytest.mark.parametrize("form", ["client_intake", "volunteer", "info_request", "partner", "sponsor"])
+def test_every_public_form_carries_the_hidden_fields_and_the_sms_tick(form):
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1] / "forms" / form / "frontend"
+    html = (root / "index.html").read_text()
+    js = (root / "app.js").read_text()
+    for field in ("campaign_id", "campaign_link", "prospect_id"):
+        assert f'id="{field}"' in html, (form, field)
+        assert field in js, (form, field)
+    assert 'id="campaign_banner"' in html
+    assert "/shared/campaign-link.js" in html
+    assert 'id="sms_consent"' in html and "sms_consent" in js, form

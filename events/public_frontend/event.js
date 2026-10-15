@@ -80,6 +80,13 @@
     $("eventBody").hidden = false;
   }
 
+  function campaignParam(name) {
+    try {
+      var v = (new URLSearchParams(window.location.search).get(name) || "").trim();
+      return v && /^[A-Za-z0-9]{1,32}$/.test(v) ? v : null;
+    } catch (_) { return null; }
+  }
+
   async function submit() {
     var out = $("registerResult");
     out.hidden = false;
@@ -97,6 +104,9 @@
       // and links them, so a true here is a real agreement rather than an
       // assumption drawn from small print.
       consent: !!$("consent").checked,
+      sms_consent: !!($("smsConsent") && $("smsConsent").checked),
+      campaign_id: campaignParam("campaign"),
+      campaign_link: campaignParam("link"),
     };
     // Never disable the button — validate on click and name what is missing.
     if (!body.first_name || !body.email) {

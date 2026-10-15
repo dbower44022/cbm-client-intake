@@ -73,6 +73,8 @@ class VolunteerApplication(BaseSubmission):
     how_did_you_hear: Optional[str] = None
     felony_conviction: bool = False
     terms_accepted: bool
+    # Ruling 9: consent to TEXTS is its own tick, written true-only (cSmsOptIn).
+    sms_consent: bool = False
 
     @model_validator(mode="after")
     def _cross_field(self) -> "VolunteerApplication":

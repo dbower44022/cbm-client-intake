@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="cbm-org" content="{{org}}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{org}} — Campaign Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="/shared/vendor/jodit/jodit.min.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <!-- busy.js must load FIRST: it wraps fetch/XHR to give every button press
+       immediate feedback (product-wide convention). -->
+  <script src="/shared/busy.js"></script>
+</head>
+<body>
+  <main class="cm">
+    <header class="cm__topbar">
+      <div class="cm__title">
+        <h1 id="pageTitle">Campaign Management</h1>
+        <p class="cm__sub" id="pageSub">Campaigns, their links, the prospects they reach, and what came back.</p>
+      </div>
+      <nav class="cm__nav" id="sectionNav">
+        <button type="button" class="cm__navbtn is-active" data-section="campaigns">Campaigns</button>
+        <button type="button" class="cm__navbtn" data-section="prospects">Prospects</button>
+        <button type="button" class="cm__navbtn" data-section="imports">Imports</button>
+      </nav>
+      <div class="cm__usercorner" id="userCorner" hidden>
+        <span class="cm__who">Signed in as <strong id="whoName"></strong></span>
+        <a class="cbm-button cbm-button--secondary" href="/">Portal</a>
+      </div>
+    </header>
+
+    <div class="cm__notice" id="notice" hidden></div>
+    <section class="cm__panel" id="offPanel" hidden>
+      <h2>Campaign Management is not available here</h2>
+      <p id="offReason"></p>
+    </section>
+    <section class="cm__panel cm__blocked" id="blockedView" hidden>
+      <h2>This campaign is open in another tab</h2>
+      <p>Only one tab may edit a record at a time. Close the other tab, or reload here to take over.</p>
+      <button type="button" class="cbm-button" id="blockedReloadBtn">Reload</button>
+    </section>
+
+    <!-- ========================== CAMPAIGNS ========================== -->
+    <section class="cm__panel" id="campaignsPanel" hidden>
+      <div class="cm__controls">
+        <label class="cm__filter">Status
+          <select id="statusFilter"><option value="">All</option></select>
+        </label>
+        <label class="cm__filter">Kind
+          <select id="kindFilter"><option value="">All</option></select>
+        </label>
+        <input type="search" id="campaignSearch" placeholder="Search campaigns…" aria-label="Search campaigns" autocomplete="off" />
+        <span class="cm__count" id="campaignCount"></span>
+        <div class="cm__actions">
+          <button type="button" class="cbm-button" id="newCampaignBtn">+ New campaign</button>
+          <button type="button" class="cbm-button cbm-button--secondary" id="refreshBtn">Refresh</button>
+        </div>
+      </div>
+      <div class="cm__gridwrap">
+        <table class="cm__grid" id="campaignGrid">
+          <thead><tr>
+            <th data-sort="name">Campaign</th>
+            <th data-sort="campaignKind">Kind</th>
+            <th data-sort="campaignStatus">Status</th>
+            <th data-sort="assignedUserName">Owner</th>
+            <th>Partners</th>
+            <th data-sort="startDate">Window</th>
+            <th data-sort="links" class="num">Links</th>
+            <th data-sort="visits" class="num">Visits</th>
+            <th data-sort="submissions" class="num">Submissions</th>
+          </tr></thead>
+          <tbody id="campaignRows"></tbody>
+        </table>
+        <p class="cm__empty" id="campaignsEmpty" hidden>No campaigns yet. Make the first one with + New campaign.</p>
+      </div>
+    </section>
+
+    <!-- ========================== PROSPECTS ========================== -->
+    <section class="cm__panel" id="prospectsPanel" hidden>
+      <div class="cm__controls">
+        <label class="cm__filter">Rung <select id="stageFilter"><option value="">All</option></select></label>
+        <label class="cm__filter">Side exit
+          <select id="exitFilter"><option value="">All</option><option value="none">On the ladder</option></select>
+        </label>
+        <label class="cm__filter">Door <select id="doorFilter"><option value="">All</option></select></label>
+        <input type="search" id="prospectSearch" placeholder="Search prospects…" aria-label="Search prospects" autocomplete="off" />
+        <span class="cm__count" id="prospectCount"></span>
+        <div class="cm__actions">
+          <button type="button" class="cbm-button" id="importBtn">Import…</button>
+          <button type="button" class="cbm-button cbm-button--secondary" id="prospectRefreshBtn">Refresh</button>
+        </div>
+      </div>
+      <div class="cm__gridwrap">
+        <table class="cm__grid" id="prospectGrid">
+          <thead><tr>
+            <th data-sort="name">Business</th>
+            <th data-sort="funnelStage">Rung</th>
+            <th data-sort="sideExit">Side exit</th>
+            <th data-sort="entryDoor">Door</th>
+            <th data-sort="mailingAddressCity">City</th>
+            <th data-sort="addressStatus">Address</th>
+            <th data-sort="importBatch">Batch</th>
+            <th data-sort="createdAt">Imported</th>
+          </tr></thead>
+          <tbody id="prospectRows"></tbody>
+        </table>
+        <p class="cm__empty" id="prospectsEmpty" hidden>No prospect records match.</p>
+      </div>
+    </section>
+
+    <!-- =========================== IMPORTS =========================== -->
+    <section class="cm__panel" id="importsPanel" hidden>
+      <div class="cm__controls">
+        <span class="cm__count" id="importsCount"></span>
+        <div class="cm__actions">
+          <button type="button" class="cbm-button" id="importBtn2">Import…</button>
+        </div>
+      </div>
+      <table class="cm__grid" id="importsGrid">
+        <thead><tr><th>Batch</th><th>Door</th><th>Rows</th><th>Status</th><th>Planned</th><th>Applied</th><th>Result</th></tr></thead>
+        <tbody id="importRows"></tbody>
+      </table>
+      <p class="cm__empty" id="importsEmpty" hidden>No imports yet.</p>
+    </section>
+
+    <!-- ========================== RECORD PAGE ========================== -->
+    <section class="cm__panel" id="recordPanel" hidden>
+      <div class="cm__recordhead">
+        <div>
+          <p class="cm__eyebrow"><span id="recKind"></span> campaign · <span class="cm__badge" id="recStatus"></span></p>
+          <h2 id="recName"></h2>
+        </div>
+        <div class="cm__recordactions">
+          <button type="button" class="cbm-button cbm-button--secondary" id="editBtn">Edit</button>
+          <span id="statusActions"></span>
+        </div>
+      </div>
+      <nav class="cm__tabs" id="recordTabs">
+        <button type="button" class="cm__tab is-active" data-tab="overview">Overview</button>
+        <button type="button" class="cm__tab" data-tab="links">Links</button>
+        <button type="button" class="cm__tab" data-tab="responses">Responses</button>
+      </nav>
+
+      <div class="cm__tabpanel cm__overview" data-panel="overview">
+        <div class="cm__ovleft">
+          <div class="cm__facts" id="recFacts"></div>
+          <section class="cm__card">
+            <h3>Partners</h3>
+            <p class="cm__hint">The partners this campaign is for (CM-2). A client who arrives through it is credited to every one of them.</p>
+            <ul class="cm__chips" id="recPartners"></ul>
+          </section>
+          <section class="cm__card">
+            <h3>Events</h3>
+            <p class="cm__hint">The events this campaign advertises (CM-6).</p>
+            <ul class="cm__chips" id="recEvents"></ul>
+          </section>
+        </div>
+        <div class="cm__ovright">
+          <section class="cm__card" id="postcardCard" hidden>
+            <h3>Postcard run</h3>
+            <div class="cm__tiles" id="touchTiles"></div>
+            <div class="cm__rule" id="ruleBox">
+              <p class="cm__hint">Who gets a card. One card per business, ever (ruling 14); a dead address is skipped until a better one arrives (ruling 15).</p>
+              <label class="cm__check"><input type="checkbox" id="ruleQualified" checked disabled /> Prospect records at <strong>Qualified</strong></label>
+              <label class="cm__check"><input type="checkbox" id="ruleLead" /> …and at <strong>Lead</strong> (re-reach a scanner)</label>
+              <label class="cm__check"><input type="checkbox" id="ruleCompanies" checked /> Include promoted companies typed Prospect</label>
+              <p class="cm__summary" id="ruleSummary"></p>
+            </div>
+            <div class="cm__runactions">
+              <button type="button" class="cbm-button cbm-button--secondary" id="buildBtn">Build the list</button>
+              <button type="button" class="cbm-button" id="signoffBtn">Sign off and run</button>
+            </div>
+            <p class="cm__runnote" id="runNote"></p>
+          </section>
+          <section class="cm__card">
+            <h3>Notes</h3>
+            <div class="cm__prose" id="recNotes"></div>
+          </section>
+        </div>
+      </div>
+
+      <div class="cm__tabpanel" data-panel="links" hidden>
+        <div class="cm__controls">
+          <p class="cm__hint cm__grow">Each link is a short address of its own. The printed or posted address never changes; where it goes can be corrected, and a retired link still opens (its visits count as late).</p>
+          <div class="cm__actions"><button type="button" class="cbm-button" id="newLinkBtn">+ New link</button></div>
+        </div>
+        <p class="cm__notice" id="linksNotice" hidden></p>
+        <table class="cm__grid" id="linksGrid">
+          <thead><tr>
+            <th>Link</th><th>Short address</th><th>Opens</th><th>State</th>
+            <th class="num">Visits</th><th class="num">Late</th><th class="num">Scans</th><th>Submissions</th><th>QR</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="linkRows"></tbody>
+        </table>
+        <p class="cm__empty" id="linksEmpty" hidden>No links yet.</p>
+      </div>
+
+      <div class="cm__tabpanel" data-panel="responses" hidden>
+        <div class="cm__tiles" id="responseTiles"></div>
+        <h3 class="cm__h3">Latest responses</h3>
+        <table class="cm__grid" id="responsesGrid">
+          <thead><tr><th>Received</th><th>Form</th><th>Status</th><th>Link</th><th>Email</th><th>Record</th></tr></thead>
+          <tbody id="responseRows"></tbody>
+        </table>
+        <p class="cm__empty" id="responsesEmpty" hidden>No responses yet.</p>
+        <div id="touchSection" hidden>
+          <h3 class="cm__h3">Touches</h3>
+          <table class="cm__grid" id="touchGrid">
+            <thead><tr><th>Target</th><th>Status</th><th>Outcome</th><th>Sent</th><th>Piece</th><th>Scans</th><th>Address as mailed</th><th>Actions</th></tr></thead>
+            <tbody id="touchRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============================ MODAL ============================ -->
+  <div class="cm__modal-overlay" id="modal" hidden>
+    <div class="cm__modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button type="button" class="cm__modal-close" id="modalClose" aria-label="Close">×</button>
+      <h3 id="modalTitle"></h3>
+      <div class="cm__modal-body" id="modalBody"></div>
+      <div class="cm__modal-foot">
+        <span class="cm__modal-msg" id="modalMsg"></span>
+        <button type="button" class="cbm-button cbm-button--secondary" id="modalCancel">Cancel</button>
+        <button type="button" class="cbm-button" id="modalSave">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="cm__footer">
+    <p>&copy; <span data-cbm-year></span> {{org}}. All rights reserved. <span data-cbm-version></span></p>
+  </footer>
+
+  <script src="/shared/footer.js"></script>
+  <script src="/shared/vendor/jodit/jodit.min.js"></script>
+  <script src="/shared/richtext.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

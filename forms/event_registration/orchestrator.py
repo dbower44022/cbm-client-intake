@@ -54,6 +54,7 @@ CONTACT = "Contact"
 # Contact fields (custom fields on a native entity carry the ``c`` prefix).
 C_CONTACT_TYPE = "cContactType"
 C_MARKETING_OPT_IN = "cMarketingOptIn"
+C_SMS_OPT_IN = "cSmsOptIn"           # texts (ruling 9), true-only
 C_TERMS_ACCEPTED = "cTermsOfUseAccepted"
 C_PRIVACY_ACCEPTED = "cPrivacyPolicyAccepted"
 C_CODE_OF_CONDUCT = "cCodeOfConductAccepted"
@@ -66,6 +67,7 @@ PROSPECT = "Prospect"
 _CONTACT_FILL_KEYS = (
     "firstName", "lastName", "phoneNumber", "addressPostalCode",
     C_MARKETING_OPT_IN, C_TERMS_ACCEPTED, C_PRIVACY_ACCEPTED, C_CODE_OF_CONDUCT,
+    C_SMS_OPT_IN,
 )
 
 
@@ -170,6 +172,8 @@ def _contact_payload(sub: EventRegistration, *, is_new: bool) -> dict[str, Any]:
         payload[C_TERMS_ACCEPTED] = True
         payload[C_PRIVACY_ACCEPTED] = True
         payload[C_CODE_OF_CONDUCT] = True
+    if sub.sms_consent:
+        payload[C_SMS_OPT_IN] = True
     return payload
 
 

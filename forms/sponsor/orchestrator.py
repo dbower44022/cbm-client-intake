@@ -52,12 +52,14 @@ C_CONTACT_TYPE = "cContactType"   # multiEnum on Contact
 C_HOW_HEARD = "cHowDidYouHear"    # enum on Contact
 # The single consent checkbox sets all three Contact bools.
 C_TERMS_ACCEPTED = "cTermsOfUseAccepted"       # bool on Contact
+C_SMS_OPT_IN = "cSmsOptIn"                     # bool on Contact — texts (ruling 9), true-only
 C_PRIVACY_ACCEPTED = "cPrivacyPolicyAccepted"  # bool on Contact
 C_CODE_OF_CONDUCT = "cCodeOfConductAccepted"   # bool on Contact
 
 # Contact fields eligible for null-fill on a repeat submission (match key, FK,
 # and discriminator excluded so they are never back-written).
 _CONTACT_FILL_KEYS = (
+    C_SMS_OPT_IN,
     "firstName", "lastName", "phoneNumber", C_HOW_HEARD,
     C_TERMS_ACCEPTED, C_PRIVACY_ACCEPTED, C_CODE_OF_CONDUCT,
 )
@@ -126,6 +128,9 @@ async def _find_or_create_contact(
         how_heard = await san.enum(CONTACT, C_HOW_HEARD, sub.how_did_you_hear)
         if how_heard:
             payload[C_HOW_HEARD] = how_heard
+    if sub.sms_consent:
+        # True-only: an unticked box never flips a prior opt-in (the EV-12 rule).
+        payload[C_SMS_OPT_IN] = True
     contact_id, action = await find_create_or_fill(
         client, CONTACT,
         match_attr="emailAddress", match_value=str(sub.email),

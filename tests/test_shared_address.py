@@ -61,7 +61,19 @@ ADDRESS_PAGES = [
     ROOT / "directory" / "frontend" / "index.html",
     ROOT / "forms" / "volunteer" / "frontend" / "index.html",
     ROOT / "forms" / "client_intake" / "frontend" / "index.html",
+    # The postcard landing page (prospect marketing § 4): its script is served
+    # from /landing-assets, not beside the page.
+    ROOT / "campaigns" / "landing_frontend" / "landing.html",
 ]
+
+
+def _app_script_index(html: str) -> int:
+    """Where the page's own script tag sits — ``app.js`` beside the page, or the
+    landing page's script under its own assets path."""
+    for marker in ('src="app.js"', 'src="/landing-assets/landing.js"'):
+        if marker in html:
+            return html.index(marker)
+    raise AssertionError("no app script tag found")
 
 
 @pytest.mark.parametrize("page", ADDRESS_PAGES, ids=lambda p: p.parent.parent.name)
@@ -76,7 +88,7 @@ def test_module_loads_before_the_app_script(page):
     """`attach` is called during the app's own render, so the module has to be
     in place first — a later tag makes the feature silently absent."""
     html = page.read_text()
-    assert html.index("/shared/address-paste.js") < html.index('src="app.js"')
+    assert html.index("/shared/address-paste.js") < _app_script_index(html)
 
 
 @pytest.mark.parametrize("script,call", [
@@ -86,6 +98,7 @@ def test_module_loads_before_the_app_script(page):
     (ROOT / "directory" / "frontend" / "app.js", "window.CBMAddress.attach({"),
     (ROOT / "forms" / "volunteer" / "frontend" / "app.js", "window.CBMAddress.attach({"),
     (ROOT / "forms" / "client_intake" / "frontend" / "app.js", "window.CBMAddress.attach({"),
+    (ROOT / "campaigns" / "landing_frontend" / "landing.js", "window.CBMAddress.attach({"),
 ])
 def test_each_surface_actually_attaches(script, call):
     assert call in script.read_text()

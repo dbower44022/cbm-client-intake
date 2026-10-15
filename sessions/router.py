@@ -290,6 +290,11 @@ def _detail_tabs(
         comms = next((i for i, t in enumerate(tabs) if t["key"] == "communications"),
                      len(tabs))
         tabs.insert(comms, {"key": "sponsoredEvents", "label": "Events"})
+    # CM-5 — the campaigns a partner is named on, right after its events.
+    if cfg.sponsored_campaigns_link and get_settings().campaigns_enabled:
+        comms = next((i for i, t in enumerate(tabs) if t["key"] == "communications"),
+                     len(tabs))
+        tabs.insert(comms, {"key": "sponsoredCampaigns", "label": "Campaigns"})
     if analytics:
         tabs.append({"key": "analytics", "label": "Analytics"})
     return tabs
@@ -936,6 +941,73 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 return await sponsor_rollup(reader, cfg.parent_entity, parent_id, link)
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not load this record's events")
+
+    if cfg.sponsored_campaigns_link:
+        # CM-5 (prds/prospect-marketing/build-plan.md § 3.8): the campaigns this
+        # partner is named on, with their link, visit and submission counts.
+        # Registered only on the partner domain. Read-only. The user's own read
+        # of the partner record gates the tab; the campaigns and their counts are
+        # read under the org-wide key (the Partner Manager Role holds no campaign
+        # access and the numbers are aggregates — the Events-tab precedent).
+
+        @router.get("/records/{parent_id}/sponsoredcampaigns")
+        async def sponsored_campaigns(parent_id: str, request: Request) -> dict:
+            user = _require_user(request)
+            settings = get_settings()
+            client = client_for(settings, user)
+            link = cfg.sponsored_campaigns_link
+            if not settings.campaigns_enabled:
+                return {"available": False, "campaigns": [], "reason": "Campaign Management is switched off on this deployment."}
+            try:
+                if not await client.get(cfg.parent_entity, parent_id, select="id"):
+                    raise HTTPException(status_code=404, detail="Record not found.")
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not read this record")
+            reader = _system_client(settings) or client
+            try:
+                defs = await reader.metadata(f"entityDefs.{cfg.parent_entity}.links.{link}")
+            except Exception as exc:  # noqa: BLE001 — a probe never raises
+                log.info("%s.%s not detectable (%s)", cfg.parent_entity, link, exc)
+                defs = None
+            if not isinstance(defs, dict) or not defs:
+                return {
+                    "available": False, "campaigns": [],
+                    "reason": (f"This CRM does not link campaigns to partners yet "
+                               f"({cfg.parent_entity}.{link} is missing). Once the CRM build "
+                               "lands, this tab fills in by itself."),
+                }
+            try:
+                page = await reader.list_related(
+                    cfg.parent_entity, parent_id, link,
+                    select="id,name,campaignKind,campaignStatus,startDate,endDate,assignedUserName",
+                    max_size=200,
+                )
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load this partner's campaigns")
+            rows = [r for r in page.get("list", []) if r.get("id")]
+            store = getattr(request.app.state, "campaign_store", None)
+            counts: dict[str, dict] = {}
+            if store is not None and rows:
+                for r in rows:
+                    links = await store.list_links(r["id"])
+                    visits = await store.visit_counts([l["id"] for l in links])
+                    subs = await store.submissions_by_link([l["token"] for l in links])
+                    counts[r["id"]] = {
+                        "links": len(links),
+                        "visits": sum(v.get("visits", 0) for v in visits.values()),
+                        "submissions": sum(sum(s.values()) for s in subs.values()),
+                    }
+            can_open = is_member(user, settings.campaigns_allowed_teams_list)
+            return {
+                "available": True,
+                "canOpen": can_open,
+                "campaigns": [{
+                    "id": r["id"], "name": r.get("name"), "kind": r.get("campaignKind"),
+                    "status": r.get("campaignStatus"), "startDate": r.get("startDate"),
+                    "endDate": r.get("endDate"), "owner": r.get("assignedUserName"),
+                    **(counts.get(r["id"]) or {"links": None, "visits": None, "submissions": None}),
+                } for r in rows],
+            }
 
     if cfg.contributions_link:
         # The funder ledger (prds/funder-contributions-plan.md) — registered

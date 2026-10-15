@@ -22,3 +22,5 @@ class InfoRequest(BaseSubmission):
     company: Optional[str] = Field(default=None, max_length=255)
     message: str = Field(min_length=1, max_length=10_000)
     how_did_you_hear: Optional[str] = Field(default=None, max_length=255)
+    # Ruling 9: consent to TEXTS is its own tick, written true-only (cSmsOptIn).
+    sms_consent: bool = False
