@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-15-26 00:02 · Revision 1.2 — change log at the end.
+Last Updated: 10-15-26 02:16 · Revision 1.3 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -191,6 +191,23 @@ reply at 00:01 on 10-15-26: "1" — the drafted name.
     campaign names; the funder-side reverse `sponsorProfiles` is unchanged.
     (10-15-26)
 
+### Doug's ruling (10-15-26, at the start of the Phase 1 build session)
+
+The CRM handoff's item (i) left one decision to the build: whose credential
+makes the Company and Contact writes, and the already-known reads, when an
+import row carries a website or an email. Put as option A (the intake API
+client, the quick-add precedent) against option B (Company create and read
+plus Contact edit on the Marketing Admin Role). Doug's reply at 02:15: "a".
+
+33. **The import's already-known reads, Company and Contact creates and
+    null-fills run under the intake API client** (option A). The
+    marketing user's team seat gates the screen; the action log and the
+    batch field record who ran the import; Created By on those records is
+    the API user, as on every intake-created record. The prospect records
+    themselves are created as the signed-in user. No role change. The
+    Marketing Admin Role's Contact edit stays *no* (the presenters ruling
+    of 10-08-26). Every later import door inherits this shape. (10-15-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -311,8 +328,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.2 |
-| Last Updated | 10-15-26 00:02 |
+| Version | 1.3 |
+| Last Updated | 10-15-26 02:16 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -320,6 +337,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 10-15-26 02:16 | Claude (Claude Code) | Ruling 33 appended: the import's Company and Contact writes run under the intake API client (Doug's "a" at the start of the Phase 1 build). |
 | 1.2 | 10-15-26 00:02 | Claude (Claude Code) | Ruling 32 appended: the ruling-27 reverse link on the campaign is `attributedPartnerProfiles` (Doug's "1" to the handoff's item (a)). |
 | 1.1 | 10-14-26 22:42 | Claude (Claude Code) | Rulings 28–31 appended: Doug's answers to build plan § 9 questions 1, 3, 8 and 9 (custom entities; `Unverified`; multiple referring partners on an engagement; links in the application database). |
 | 1.0 | 10-14-26 22:25 | Claude (Claude Code) | Created when the arc was consolidated into `prds/prospect-marketing/` (Doug's ruling, 10-14-26: a directory on the chapter-network pattern). Rulings 1–27, CM-1 to CM-11 and the two tables copied verbatim from the process plan; no ruling changed. |
