@@ -13,11 +13,17 @@ Operating mode: ARCHITECTURE.
 
 ## Before anything: two answers this session needs from Doug
 
-**Gate added 10-14-26 21:55: do not run this session until build plan v0.2
-exists.** The Campaign Management requirements (plan section *Requirements —
-Campaign Management application (10-14-26)*, CM-1 to CM-11) change the
-campaign entity's kinds, add partner and event links and a link record, so
-a handoff written from v0.1 would build the wrong entity.
+**Gate of 10-14-26 21:55 met at 10-14-26 22:09: build plan v0.2 exists.** Read
+v0.2, not v0.1 — § 1.3 (kinds, `platform`), § 1.5 (sixteen links, two of
+them many-to-many: `partnerProfiles` and `events`) and § 1.10 changed. Two
+of v0.2's new questions also change the CRM's shape and must be answered
+with questions 1 and 3 before anything is written:
+
+- **Question 8** — whether the engagement gains a many-partner link (the
+  plan's recommendation adds none).
+- **Question 9** — whether campaign links live in the application's
+  database (recommended, no CRM change) or as a fourth entity
+  `CCampaignLink`.
 
 Read `prds/prospect-marketing-build-plan.md` § 9 first. Two of its questions
 change what the handoff says, so ask for them in the first reply and write
@@ -29,7 +35,7 @@ nothing until they are answered:
 - **Question 3** — rung 1's stored enum value, `Unverified` (recommended) or
   `Unqualified`.
 
-Questions 2, 4, 5, 6 and 7 do not change the CRM shape and can stay open
+Questions 2, 4, 5, 6, 7, 10, 11 and 12 do not change the CRM shape and can stay open
 (question 6 may add a Mentor Role grant later; note it as owed).
 
 ## The prompt
@@ -102,13 +108,14 @@ with its release), and name the next kickoff: the Phase 1 build session.
 | Field | Value |
 |---|---|
 | Document | Kickoff prompt — prospect marketing CRM handoffs |
-| Version | v0.1.1 |
-| Last Updated | 10-14-26 21:55 |
+| Version | v0.1.2 |
+| Last Updated | 10-14-26 22:09 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| v0.1.2 | 10-14-26 22:09 | Claude (Claude Code) | Gate met (build plan v0.2); questions 8 and 9 added to the answers needed first; the read list points at v0.2's changed sections. |
 | v0.1.1 | 10-14-26 21:55 | Claude (Claude Code) | Gate added: waits for build plan v0.2 (the Campaign Management requirements). Duplicated date fixed. |
 | v0.1 | 10-14-26 17:34 | Claude (Claude Code) | Written at the close of the 2026-10-14 planning session (build plan v0.1). |

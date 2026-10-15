@@ -7,12 +7,15 @@ the job now is to turn the rulings into a build plan with phases, a CRM
 handoff list and a verification script, in the shape the other plan
 documents in `prds/` have.
 
-**State as of 10-14-26 21:55:** the build plan exists
-(`prds/prospect-marketing-build-plan.md`, v0.1.1) and was written before the
-Campaign Management application was defined. **This session's job is now
-v0.2 of that plan**: revise it against the requirements section named in
-*Read first* item 8, working through the section-by-section list at the end
-of that requirements section, and keep everything else. Do not start over.
+**State as of 10-14-26 22:09: both sessions this prompt describes have run.**
+The build plan was written (v0.1, 17:34) and revised against the Campaign
+Management requirements (v0.2, the same evening); it stands at
+`prds/prospect-marketing-build-plan.md` with twelve questions in its § 9.
+**Running this prompt again is not the next step.** The next step is the
+CRM handoff session, `prompts/prospect-marketing-crm-handoff-prompt-v0.1.md`,
+once questions 1, 3, 8 and 9 are answered. Keep this prompt as the record of
+how the plan was produced; if the plan ever needs a v0.3 against new
+requirements, run it again with a new *Read first* item naming them.
 
 Operating mode: ARCHITECTURE.
 
@@ -155,13 +158,14 @@ the CRM handoff, write its kickoff prompt as
 | Field | Value |
 |---|---|
 | Document | Kickoff prompt — prospect marketing build plan |
-| Version | v0.2 |
-| Last Updated | 10-14-26 21:55 |
+| Version | v0.3 |
+| Last Updated | 10-14-26 22:09 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| v0.3 | 10-14-26 22:09 | Claude (Claude Code) | Both sessions done (build plan v0.1 and v0.2); the state note now points at the CRM handoff prompt as the next step. |
 | v0.2 | 10-14-26 21:55 | Claude (Claude Code) | The build plan now exists (v0.1.1); the session's job becomes v0.2 against the Campaign Management requirements. *Read first* item 8 added. |
 | v0.1 | 10-14-26 17:18 | Claude (Claude Code) | Written at the close of the 2026-10-13/14 discussion session, which ruled the process end to end (plan v0.4 draft, rulings 9–27). |

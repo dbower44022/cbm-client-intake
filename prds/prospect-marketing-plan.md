@@ -1,4 +1,4 @@
-# Prospect Marketing — plan v0.6 draft (2026-10-14)
+# Prospect Marketing — plan v0.6.1 draft (2026-10-14)
 
 **STRAWMAN — not an approved plan.** Sections marked *Doug's rulings* record
 decisions already made in the 2026-08-11 session. Everything marked **PROPOSAL**
@@ -26,9 +26,10 @@ the record model, the doors, the campaign engine, the landing page,
 conversion, reporting, five phases with their CRM handoffs and verification
 scripts, and seven questions for Doug. **The Campaign Management application
 is defined** (section *Requirements — Campaign Management application
-(10-14-26)*, CM-1 to CM-11, the same evening) and the build plan, written
-before it, is owed a v0.2 against it. This document stays the record of the
-rulings and the requirements; the build plan is where the build is described.
+(10-14-26)*, CM-1 to CM-11, the same evening) and **the build plan is
+revised against it (v0.2, 10-14-26 evening)**. This document stays the
+record of the rulings and the requirements; the build plan is where the
+build is described.
 
 ---
 
@@ -802,9 +803,9 @@ other source consumes a service before mentoring.
 (`prds/prospect-marketing-build-plan.md`, 2026-10-14); its § 9 holds the
 seven questions that gate the CRM handoff. **Superseded the same evening by
 the section below**: the build plan must first be revised to v0.2 against
-the Campaign Management requirements, and the CRM handoff waits for that
-revision, because the campaign entity's kinds, partners, events and links
-all changed.
+the Campaign Management requirements — **done, v0.2, the same evening** —
+and the CRM handoff then waits for the answers to build plan questions 1, 3,
+8 and 9, which change the CRM's shape.
 
 ---
 
@@ -819,9 +820,11 @@ Doug in the prompt's order and every one was answered. **Everything under
 "strawmen" are mine and were not adopted. Rulings 1–27 were not reopened.
 
 **Read this before the build plan.** `prds/prospect-marketing-build-plan.md`
-v0.1 was written earlier the same day, before these requirements existed,
-and differs from them in the places listed at the end of this section. The
-requirements win; the build plan is revised to v0.2 against them.
+v0.1 was written earlier the same day, before these requirements existed.
+**Its v0.2 (the same evening) is revised against them**, section by section
+per the list at the end of this section; the five choices that revision had
+to make are its questions 8–12. The requirements win where anything still
+differs.
 
 ### Doug's requirements (10-14-26)
 
@@ -1023,8 +1026,8 @@ Listed by section so the v0.2 session can work through it.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — plan |
-| Version | v0.6 draft — **process ruled end to end; Campaign Management application defined (CM-1 to CM-11); build plan v0.1 written before the definition and owed a v0.2**; the storage section above is superseded by ruling 21 |
-| Last Updated | 10-14-26 21:55 |
+| Version | v0.6.1 draft — **process ruled end to end; Campaign Management application defined (CM-1 to CM-11); build plan v0.2 revised against it**; the storage section above is superseded by ruling 21 |
+| Last Updated | 10-14-26 22:09 |
 | Prepared by | Claude, for D. Bower |
 | Session | 2026-08-11 requirements elicitation; 2026-09-01 funnel-stage discussion; 2026-09-02 funnel diagram review (paused at the first question); 2026-10-13/14 source-by-source walk (rulings 9–27); 2026-10-14 Campaign Management definition (CM-1 to CM-11) |
 | Related | `research/registry-enrichment/enrichment-findings.md`, `cinformation-request-entity.md`, `prds/intake-receipt-redesign-plan.md`, `prompts/prospect-marketing-funnel-2026-09-02.png`, `prompts/prospect-marketing-process-session-prompt-v0.1.md`, `prompts/prospect-marketing-campaign-app-prompt-v0.1.md`, `prds/prospect-marketing-build-plan.md` |
@@ -1033,6 +1036,7 @@ Listed by section so the v0.2 session can work through it.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| v0.6.1 draft | 10-14-26 22:09 | Claude (Claude Code) | Status, the requirements section's pointer and the next step now say the build plan is revised (v0.2) and name the four build-plan questions that gate the CRM handoff. No requirement or ruling changed. |
 | v0.6 draft | 10-14-26 21:55 | Claude (Claude Code) | Added *Requirements — Campaign Management application (10-14-26)*: Doug's eleven requirements CM-1 to CM-11 (Marketing Admin Team; partners on a campaign; kinds gain SMS and social media; forms relate the campaign's partners; a partner Campaigns tab; campaign-to-event links; named links of any number with programme-page carry-through; short resolvable addresses with correctable destinations, retire-but-open and QR generated here; the campaign-page / Analytics split; its own tile with a record page; the word Campaign, a Constant Contact send a notice), the working positions, the strawmen, the field, link and screen tables, the open list, and the section-by-section list of what build plan v0.1 must change. Status and next step updated; the duplicated date in Last Updated fixed. No ruling changed. |
 | v0.5 draft | 10-14-26 17:34 | Claude (Claude Code) | Status, next step and header now point at the build plan (`prds/prospect-marketing-build-plan.md` v0.1). No ruling changed. |
 | v0.4 draft | 10-14-26 17:18 | Claude (Claude Code) | Added the 2026-10-13/14 section: the source-by-source walk, rulings 9–27 (SMS consent; Qualified = fit only and Active Prospect = campaign membership; the quarantine storage model; a relationship always creates a Company; Source unchanged plus a new Campaign entity), the withdrawn proposals, the ladder and the per-source walk tables, the open list. Header, status and revision rows updated; the 2026-09-02 open list marked closed. |

@@ -1,6 +1,6 @@
-# Prospect Marketing — build plan v0.1.1 (2026-10-14)
+# Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-14-26 21:55 · Revision 0.1.1 — change log at the end.
+Last Updated: 10-14-26 22:09 · Revision 0.2 — change log at the end.
 
 **Status: a plan, not a build.** Nothing here is built, no CRM is changed, no
 vendor account exists. This document turns the rulings of
@@ -13,16 +13,15 @@ choice is stated as a draft with its cost; the choices that pass the two-part
 test are in § 9 as numbered questions, and the plan is written on the
 recommended answer to each so that a "yes" costs Doug nothing.
 
-**⚠️ Superseded in part, 10-14-26 evening.** The Campaign Management
-application was defined after this plan was written:
-`prds/prospect-marketing-plan.md`, section *Requirements — Campaign
-Management application (10-14-26)*, requirements CM-1 to CM-11. Where this
-plan differs — the campaign kinds (SMS and social media), partners and
-events on a campaign, named links with short resolvable addresses, the
-campaign page's tabs and numbers, the tile *Campaign Management* and the
-word *campaign* — the requirements win. That section ends with a
-section-by-section list of what v0.2 of this plan must change (§§ 1.3, 1.5,
-3.1, 3.5, 3.6, 4, 5, 6, 9). Nothing below has been revised yet.
+**Revised to v0.2 on 10-14-26 against the Campaign Management
+requirements** — `prds/prospect-marketing-plan.md`, section *Requirements —
+Campaign Management application (10-14-26)*, CM-1 to CM-11, which Doug
+stated after v0.1 was written. **Those requirements are Doug's and are not
+reopened here.** Sections revised: 0, 1.3–1.5, 1.10, 3 (two new kinds, a
+new links section, the screens, the word), 4, 5, 6, 7, 8 and 9. Where the
+plan had to choose *how* to meet a requirement the choice is a draft with
+its cost; the five that pass the two-part test are questions 8–12 in § 9,
+and the plan is written on the recommended answer to each.
 
 **Written in the house vocabulary.** Entity, field and link names are the
 names EspoCRM will store, computed by its three prefix rules (§ 1.10). A
@@ -37,13 +36,16 @@ relationship beginning through a standard intake form (ruling 22).
 
 ## 0. What this plan decides, in one screen
 
-- **Three custom entities** — `CProspect` (the quarantine record), `COutreachCampaign` (the campaign) and `COutreachTouch` (one row per attempt, which is also campaign membership) — rather than EspoCRM's own Lead and Campaign entities. The finding and the cost are in § 1.1; it is question 1.
+- **Three custom entities** — `CProspect` (the quarantine record), `COutreachCampaign` (the campaign, labelled **Campaign** on every screen) and `COutreachTouch` (one row per attempt, which is also campaign membership) — rather than EspoCRM's own Lead and Campaign entities. The finding and the cost are in § 1.1; it is question 1.
+- **A campaign names its partners and its events** (CM-2, CM-6): two many-to-many links. The forms relate the campaign's partners to what they create, by each door's own rule (CM-4, § 5); a partner's record page gains a Campaigns tab (CM-5).
+- **Five kinds** (CM-3): postcard, email, SMS and call select an audience and run the shared engine; social media selects nobody and is its links alone (§ 3.6).
+- **A link is a record of the application's own with a short resolvable address** (CM-7, CM-8): named, any number per campaign, pointing at one of the five forms, the programme page or one event; destination correctable after publishing; retire-but-still-open; the QR code generated here (§ 3.7). Where the link lives is question 9.
 - **The rung continues after promotion as a field on the Contact and on the Company** (`cFunnelStage`), not through the link to the prospect record, because a webinar registrant has no prospect record to read through (§ 1.8).
-- **One word for one thing.** An *outreach campaign* is ours. A *notice* is a Constant Contact send, as the mailing-list plan already calls it (§ 3.6).
+- **One word for one thing** (CM-11). A *campaign* is ours; the tool is **Campaign Management**, its own portal tile (CM-10). A *notice* is a Constant Contact send, as the mailing-list plan already calls it (§ 3.9).
 - **The landing page is a sixth form kind** (`forms/prospect_response/`), so it inherits durable capture, holds and Submission Admin visibility; a scan is logged on the page load, before any form (§ 4).
-- **The standard forms carry two hidden ids**, `prospect` and `campaign`, exactly as the partner link carries one, and honour them at delivery with the same validate-or-drop rule (§ 5).
+- **The standard forms carry three hidden values**, `prospect`, `campaign` and the link's token, exactly as the partner link carries one id, and honour them at delivery with the same validate-or-drop rule (§ 5). The campaign page shows the application's own numbers; conversion is an Analytics dashboard scoped to the campaign (CM-9, § 6).
 - **Five phases, each dark behind a flag or feature detection**; Phase 1 mails one real card and records one real scan, and needs two CRM handoffs applied first (§ 7).
-- **Seven questions for Doug** (§ 9). Three gate Phase 1: the entity choice, the vendor, and what the outside filter delivers.
+- **Twelve questions for Doug** (§ 9). Four gate Phase 1's handoff: the entity choice, the vendor, what the outside filter delivers, and where links live.
 
 ---
 
@@ -83,7 +85,7 @@ the application runs on.
 3. **The word.** A native Campaign tab would put a third "campaign" in front
    of staff beside ours and Constant Contact's.
 
-**Cost of the recommendation, honestly named:** three entities and fifteen
+**Cost of the recommendation, honestly named:** three entities and sixteen
 links to build and keep in the standard, and the native `campaign` link on
 Contact and Account stays unused forever (it points at the native entity and
 cannot be re-pointed). **Cost of the alternative:** the role grants, the tab
@@ -134,13 +136,26 @@ Links stored on `CProspect` (§ 1.5 has the full table): `promotedCompany`,
 
 ### 1.3 `COutreachCampaign` — the campaign
 
-Create Entity: Name **`OutreachCampaign`**, label *Outreach Campaign*, plural
-*Outreach Campaigns*, Type **BasePlus**, Stream **on**, tab **on**.
+Create Entity: Name **`OutreachCampaign`**, label **Campaign**, plural
+**Campaigns**, Type **BasePlus**, Stream **on**, tab **on**. The stored name
+keeps a distinguishing word because EspoCRM's own hidden entity is
+`Campaign`; the label, the tab and every screen say *Campaign* (CM-11).
+BasePlus gives it `assignedUser` — the **owner**, defaulting to the creator
+— and `teams`, so no owner field is added.
+
+**What a marketing user fills in** (the working position recorded with
+CM-1 to CM-11, plus CM-2 and CM-6): name, kind (and platform for social
+media), status, start and end date, owner, notes, partners, events. The
+selection rule is set on the Overview for the kinds that select; the
+sign-off and run stamps below are written by the application, never typed.
+No budget or cost field — a postcard run's cost comes from the run (ruling
+13).
 
 | Field | Type | Notes |
 |---|---|---|
 | `name` | varchar, required | "State New Business Filing — Postcard, 2026-11" is a name, not a source value (ruling 26) |
-| `campaignKind` | enum: `Postcard` · `Email` · `Call` | Which engine runs it (§ 3). `Text` is reserved, not offered, until a text campaign is ruled |
+| `campaignKind` | enum: `Postcard` · `Email` · `SMS` · `Call` · `Social media` | CM-3. The first four select an audience and run the engine (§ 3.1–3.5); social media is its links alone (§ 3.6) |
+| `platform` | enum: `` · `Meta` · `YouTube` · `LinkedIn` · `Instagram` · `X` · `Other` | Social media only; one kind with a platform rather than a kind per platform — question 10 |
 | `campaignStatus` | enum: `Draft` · `Awaiting sign-off` · `Signed off` · `Running` · `Complete` · `Cancelled` | The application moves it; `Cancelled` instead of delete |
 | `selectionRule` | text | The rule as the screen saved it, JSON the application owns (§ 3.1). Never hand-edited |
 | `selectionSummary` | text | The same rule in words, for the record and the sign-off |
@@ -152,11 +167,14 @@ Create Entity: Name **`OutreachCampaign`**, label *Outreach Campaign*, plural
 | `vendorTemplateId` | varchar | The mail vendor's template for the card (Postcard) |
 | `postcardSize` | enum: `4x6` · `6x9` · `6x11` | Constrains the template; question 5 |
 | `runStartedAt`, `runCompletedAt` | datetime | The execution run |
-| `description` | wysiwyg | The brief, the offer, the creative notes — the shared editor |
+| `description` | wysiwyg | The notes box: the brief, the offer, the creative notes — the shared editor |
 
-Links stored on it: `event` (optional, a card or notice that promotes one
-webinar), and the reverse links from touches, Contacts, Companies and the
-five relationship records (§ 1.5).
+Links stored on it: `partnerProfiles` (many-to-many, the partners the
+campaign names — CM-2) and `events` (many-to-many, the events it advertises
+— CM-6; one or more, the working position), plus the reverse links from
+touches, Contacts, Companies and the five relationship records (§ 1.5).
+The campaign's **links** in the CM-7 sense are not CRM links at all; they
+are the application's own records (§ 3.7, question 9).
 
 ### 1.4 `COutreachTouch` — one attempt, and campaign membership
 
@@ -175,7 +193,7 @@ reports delivery.
 | Field | Type | Notes |
 |---|---|---|
 | `name` | varchar | Set by the application: campaign name — target name |
-| `channel` | enum: `Postcard` · `Email` · `Call` | Copied from the campaign so a touch reads alone |
+| `channel` | enum: `Postcard` · `Email` · `SMS` · `Call` | Copied from the campaign so a touch reads alone. Social media has no touches: nobody is selected |
 | `touchStatus` | enum: `Planned` · `Sent` · `Delivered` · `Returned` · `Done` · `Cancelled` | Postcard: Planned → Sent → Delivered or Returned. Call: Planned → Done. Email: Planned → Sent. A refused sign-off cancels every Planned row |
 | `outcome` | enum: `` · `Scanned` · `Clicked` · `No answer` · `Interested` · `Declined` | What came back. Ruling 20's three call outcomes are the last three |
 | `stageAtTouch` | enum, the rung options | Stamped when the row leaves `Planned`, so the campaign's reports stay honest after the record moves |
@@ -208,17 +226,21 @@ custom; names on the custom entities stay as typed.
 | `COutreachTouch` | `prospect` | many-to-one | `CProspect` | `touches` | Ruling 21: every touch while a prospect |
 | `COutreachTouch` | `contact` | many-to-one | `Contact` | `cOutreachTouches` | Touches after promotion, and ruling 25 |
 | `COutreachTouch` | `company` | many-to-one | `Account` | `cOutreachTouches` | Same |
-| `COutreachCampaign` | `event` | many-to-one | `CEvent` | `outreachCampaigns` | Optional |
+| `COutreachCampaign` | `partnerProfiles` | many-to-many | `CPartnerProfile` | `sponsoredCampaigns` | CM-2: the partners a campaign names. The reverse feeds the partner's Campaigns tab (CM-5) |
+| `COutreachCampaign` | `events` | many-to-many | `CEvent` | `outreachCampaigns` | CM-6: the events a campaign advertises; one or more (working position) |
 | `Contact` | `cOutreachCampaign` | many-to-one | `COutreachCampaign` | `contacts` | Ruling 27: only when the submission created the Contact |
 | `Account` | `cOutreachCampaign` | many-to-one | `COutreachCampaign` | `companies` | Ruling 27: same for the Company |
 | `CEngagement` | `outreachCampaign` | many-to-one | `COutreachCampaign` | `engagements` | Ruling 27: every time |
 | `CInformationRequest` | `outreachCampaign` | many-to-one | `COutreachCampaign` | `informationRequests` | Ruling 27 |
-| `CEventRegistration` | `outreachCampaign` | many-to-one | `COutreachCampaign` | `eventRegistrations` | Ruling 27. Distinct from the existing `noticeCampaignId` varchar, which is the Constant Contact notice |
+| `CEventRegistration` | `outreachCampaign` | many-to-one | `COutreachCampaign` | `eventRegistrations` | Ruling 27. **Replaces** the mailing plan's planned `CEventRegistration.noticeCampaignId` (Phase D, unbuilt): a notice's Register link is a campaign link (§ 3.7). `CEvent.noticeCampaignId`, which notice announced the event, stays that plan's |
 | `CPartnerProfile` | `outreachCampaign` | many-to-one | `COutreachCampaign` | `partnerProfiles` | Ruling 27 |
 | `CSponsorProfile` | `outreachCampaign` | many-to-one | `COutreachCampaign` | `sponsorProfiles` | Ruling 27 |
 
-Fifteen links, all many-to-one, none `hasOne` — the cardinality that has
-twice silently moved a record off its owner is not used anywhere here.
+Sixteen links, fourteen many-to-one and two many-to-many, none `hasOne` —
+the cardinality that has twice silently moved a record off its owner is not
+used anywhere here. Both many-to-many links are **relationships** in
+EspoCRM's sense: read through `list_related`, written with relate and
+unrelate, never through a `*Ids` attribute on the record write.
 
 ### 1.6 Fields on Contact and Account
 
@@ -314,6 +336,9 @@ so the relabel needs no per-door code. `Presenter`, `Member`, `Donor` and
 | `outreachCampaign` | link on `Contact` | `cOutreachCampaign` | Link on a native entity: `c` added |
 | `prospectRecords` | reverse link on `Account` | `cProspectRecords` | Same |
 | `touches` | reverse link on `CProspect` | `touches` | As typed |
+| `partnerProfiles` | link on `COutreachCampaign` | `partnerProfiles` | As typed |
+| `sponsoredCampaigns` | reverse link on `CPartnerProfile` | `sponsoredCampaigns` | Custom entity: as typed |
+| `outreachCampaigns` | reverse link on `CEvent` | `outreachCampaigns` | Custom entity: as typed |
 
 Verified after the build by `GET /Metadata` → `entityDefs.<Entity>`, never
 by the Entity Manager list view (the label hides the prefix). Nothing in any
@@ -379,7 +404,7 @@ the same company") — the one staff-set rung move, back to the entry rung.
 Same file contract, plus `list_source` (free text naming the vendor or
 partner, stored in `importBatch`). Rows enter at `funnelStage=Unverified`,
 `entryStage=Unverified`, `entryDoor=List`; `qualifiedBy` is empty until the
-**review screen** (§ 3.5) moves a record to Qualified with the reviewer's
+**review screen** (§ 3.8) moves a record to Qualified with the reviewer's
 name and time, or out by `Unqualified` with a note. A row carrying an email
 or website promotes at import exactly as § 2.1 — identity is separate from
 fit.
@@ -396,21 +421,31 @@ specialised import, when it is built, needs no CRM change.
 
 ### 3.1 The shared engine
 
-One package, `outreach/`, in the house shape: `service.py` (the CRM logic
+One package, `campaigns/`, in the house shape: `service.py` (the CRM logic
 and the field whitelists), `router.py` (endpoints, the team gate, the
 `_crm_failure` mapping, every mutating action through `record_action`),
-`frontend/` (vanilla JavaScript, no build). Gated by `OUTREACH_ENABLED`
-(off) and `OUTREACH_ALLOWED_TEAMS` (default Marketing Admin Team, the same
-team as Submission Admin, matching ruling 13's sign-off team). Mounted at
-`/outreach`; portal tile *Prospect Marketing*.
+`frontend/` (vanilla JavaScript, no build). Gated by `CAMPAIGNS_ENABLED`
+(off) and `CAMPAIGNS_ALLOWED_TEAMS` (default Marketing Admin Team — CM-1,
+the same team as Submission Admin and Event Administration, matching ruling
+13's sign-off team). Mounted at `/campaigns`; portal tile **Campaign
+Management** (CM-10, CM-11). The prospect screens (import, review, calls)
+live under the same tile as secondary grids — question 12.
 
-Every campaign kind runs the same five steps; only step 4 differs.
+The four kinds that select an audience — postcard, email, SMS, call — run
+the same five steps; only step 4 differs. Social media runs none of them
+(§ 3.6): it is created, given links, and run by posting them.
 
 1. **Create.** A marketing user names the campaign, picks the kind, sets
-   the window, writes the brief (the shared rich-text editor), and sets the
-   selection rule from the screen's choices. The screen offers only the
-   choices the kind allows (§ 3.2–3.4); the rule is saved as JSON the
-   application owns plus its sentence in `selectionSummary`.
+   the window, names the **partners** (a picker over the partner profiles
+   the user may read — the Marketing Admin Role reads them since
+   2026-10-07) and the **events** it advertises (a picker over events),
+   writes the notes (the shared rich-text editor), and sets the selection
+   rule from the screen's choices. The screen offers only the choices the
+   kind allows (§ 3.2–3.5); the rule is saved as JSON the application owns
+   plus its sentence in `selectionSummary`. Partners and events are written
+   through relate / unrelate (two relationships), action-logged. The
+   campaign's **links** are made on its Links tab (§ 3.7); a postcard
+   campaign gets its one link on creation.
 2. **Select.** "Build the list" evaluates the rule against the CRM, under
    the org-wide key (an aggregate over records the Marketing Admin Role may
    not read one by one — the directory-availability precedent), and creates
@@ -467,7 +502,7 @@ including the callback, without printing — question 4. Settings:
 true: a real key in test mode still mails nothing).
 
 **Undeliverable returns** (ruling 15): the vendor posts delivery events to
-`POST /api/outreach/postal/events` on the web process, signature-verified,
+`POST /api/campaigns/postal/events` on the web process, signature-verified,
 otherwise unauthenticated. A returned-to-sender event sets the touch to
 `Returned` with `returnedAt`, and the prospect record's `addressStatus` to
 `Dead` with `addressDeadAt`. The rung is untouched; the record is selectable
@@ -475,12 +510,16 @@ again the moment an import row brings a new address (the import resets
 `addressStatus` when the address changes). Delivered events set `Delivered`.
 The campaign screen counts Returned separately from the silent.
 
-**The QR code** carries the touch's `scanToken` only. The token resolves
-server-side to the touch, the prospect record and the campaign, so the card
-carries neither id in the clear. Rendered by the application as a PNG at
-`GET /p/{token}/qr.png` for the vendor's template to fetch, or inlined as a
-data address in the merge variables — whichever the chosen vendor's template
-supports; the dry-run client writes both.
+**The QR code** encodes the campaign's one link plus the card's own token
+(CM-7): `{APP_BASE_URL}/c/{linkToken}/{scanToken}`. The resolve route
+(§ 3.7) counts the visit on the link and opens the landing page
+`/p/{scanToken}`; the scan token resolves server-side to the touch, the
+prospect record and the campaign, so the card carries neither id in the
+clear. **The image is generated by the application** (CM-8), as a PNG at
+`GET /c/{linkToken}/{scanToken}/qr.png` for the vendor's template to fetch,
+or inlined as a data address in the merge variables — whichever the chosen
+vendor's template supports; the dry-run client writes both. The same
+generator serves every link's QR on the Links tab.
 
 ### 3.3 The email kind — ruling 19, and the mailing-list plan
 
@@ -496,8 +535,10 @@ email without consent is simply absent from the rule.
 Contacts as a **named Constant Contact list** (one list per email
 campaign, named after it) through the same push `core/mailing_sync.py`
 makes nightly for the standing list, and shows the campaign's links
-(§ 3.5) for staff to paste into the notice they design and send there
-(mailing-list ruling 6). The touch moves to `Sent` when the mailing-list
+(§ 3.7) for staff to paste into the notice they design and send there
+(mailing-list ruling 6). **A notice's Register link is therefore a campaign
+link**, and the registration attribution the mailing plan's Phase D meant
+to carry as `noticeCampaignId` on the registration is this (§ 1.5). The touch moves to `Sent` when the mailing-list
 plan's Phase D reads the notice's send report, or by a *Mark as sent* button
 on the campaign until Phase D exists. **Cost:** the push today manages one
 list under `MAILING_LIST_NAME`; generalising it to several named lists is
@@ -513,7 +554,7 @@ anywhere. Ruling 9's text consent is irrelevant to a voice call and is not a
 term.
 
 **Execution: people.** The campaign becomes a **call list**: every Planned
-touch is a row on the call screen (§ 3.5), filtered to the caller's own
+touch is a row on the call screen (§ 3.8), filtered to the caller's own
 rows when the campaign assigns callers, else the whole list. A caller opens
 a row, sees the name, the number and the brief, dials, and records one of
 three outcomes: **No answer** (the touch is Done, a touch only, and *Call
@@ -528,11 +569,139 @@ Who calls is question 6. The plan drafts: members of the campaign's teams
 Mentor Team to a campaign's teams opens its call screen to mentors without a
 second gate.
 
-### 3.5 The screens
+### 3.5 The SMS kind — CM-3 and ruling 9
 
-All under `/outreach`, one page with four tabs, each a grid in the house
-shape (full width, sortable, searchable, right-click menus, every button
-always clickable and explaining itself on a missing input or grant):
+**Selection rule:** a **Contact** holding a phone number with `cSmsOptIn`
+true and `phoneNumberIsOptedOut` false, typed Prospect with a stored rung in
+the chosen set, or the dormant-client term of ruling 25. A prospect record
+is never selected: consent lives on the Contact (ruling 9), and a prospect
+record with a phone and no consent is the call kind's (§ 3.4). The text
+consent is the whole gate — ruling 9 was written for exactly this.
+
+**Execution: deferred to a vendor ruling** (question 11). No text-sending
+path exists in the application, and the plan does not invent one. In this
+arc the SMS kind runs as the email kind does before the mailing plan's
+Phase D: the campaign builds and signs off its list, shows its links, and
+offers an **export of the list** and *Mark as sent*; the touch moves to
+`Sent` by that button. The short address (§ 3.7) matters most here — a text
+has 160 characters and a link of forty is a third of it. **Cost:** a kind
+that selects and reports but does not send, until a vendor is ruled; the
+alternative is to leave SMS out of the enum, which CM-3 does not allow.
+
+### 3.6 The social media kind — CM-3
+
+A broadcast. **No selection rule, no touches, no sign-off**: nothing is
+spent through the application and nobody is chosen from the CRM (the
+working position recorded with the requirements). The campaign is created
+with its platform, its partners and its events, moves to `Running` and
+`Complete` by the user's hand, and consists of its **links** (§ 3.7) — one
+per post or placement, each named for where it goes ("Facebook post 10-20",
+"YouTube description, October webinar"). Its whole footprint is visits and
+submissions per link and whatever those submissions become; the Responses
+tab and the Analytics tab read exactly as for any other kind. **Draft:** one
+kind with a `platform` field rather than a kind per platform, because the
+kinds differ in *how they run* and every social platform runs the same way
+— question 10.
+
+### 3.7 Links — the short resolvable address (CM-7, CM-8)
+
+**What a link is.** A record of the application's own, owned by one
+campaign: a name, a destination, a token, a state, who made it and when,
+and its counts. Any number per campaign; each counted on its own. The
+destinations are closed: one of the five public intake forms
+(`client-intake`, `info-request`, `volunteer`, `partner`, `sponsor`), the
+public programme page (`/webinars/`), one event's own page
+(`/webinars/{slug}`, chosen by event id so a slug change cannot strand it),
+or — created by the application for a postcard campaign only, exactly one
+— the landing page. Nothing about a partner rides in a link (CM-4).
+
+**Where it lives — decided as a draft, question 9: the application's
+database.** Two tables by Alembic migration: `campaign_link` (id, campaign
+CRM id, token, name, destination kind, destination target, state
+`active` / `retired`, created by / at, retired by / at) and
+`campaign_link_visit` (link id, visited at, a salted hash of the address,
+late flag, user-agent class). Reasons: the resolve route runs on every
+public click and must answer without a CRM call; visit counts are
+write-heavy rows the CRM should never carry; correcting a destination is
+then an application write, not a CRM write under a public identity. The
+CRM holds the campaign; the relationship records hold the campaign id
+(ruling 27); the link is one level finer and stays in the application.
+**Cost:** links are invisible inside EspoCRM, and on the training sandbox
+they vanish with the nightly application-database reset until the seeder
+recreates the demo campaign's links (`SANDBOX-RESET.md`). The alternative
+is a fourth custom entity, `CCampaignLink`, visible in the CRM and in the
+Analytics builder, with visits still counted in the application.
+
+**The address.** `{APP_BASE_URL}/c/{token}`; the token is eight characters
+from `secrets` with the ambiguous glyphs removed (0/O, 1/l/I), so a printed
+card or a text message carries about forty characters. `GET /c/{token}`
+records the visit, then answers a 302 to the destination with
+`?campaign=<campaign id>&link=<token>` appended (for the landing page,
+`/p/{scanToken}` with the link token held on the response). Rate-limited
+per address like the intake endpoints; a token that resolves to nothing is
+a 404 in the same words whatever the reason. **A visit is the resolve**; the
+form's name-only banner lookup no longer counts as an open.
+
+**After publishing.** The destination can be **corrected** (the printed or
+posted address never changes), action-logged with the old and new
+destination. A link can be **retired**: it still resolves and still
+redirects — a visitor holding a card never meets a dead page — and the
+visit and any submission through it are flagged **late**; the Links tab
+shows late counts apart. Who may correct or retire: the campaign's team,
+the same gate as the page (draft).
+
+**The programme-page carry-through** (CM-7). `/webinars/?campaign=&link=`
+is rendered as today; the page's own script reads the two parameters and
+appends them to every event address it renders, the event page's
+registration form and the calendar modal carry them as hidden fields, and
+the registration arrives with both. Nothing is stored server-side and
+nothing about a person is in the address bar — a campaign id and an opaque
+token. **Cost:** a visitor who types an event's address afresh, or follows
+a link from elsewhere on the site, has left the campaign behind; that is
+the honest limit of a query-string carry, and the alternative (a cookie on
+the public page) was not chosen because the public pages set none today.
+
+**What the forms do with it.** Every public form and the registration form
+carry `campaign_id` and `campaign_link` as hidden fields into the captured
+payload (§ 5). Submissions per link, by form, are counted from the durable
+submission store on the Links tab; the CRM record gets only the campaign.
+
+**The banner.** A form opened through a link shows *"You arrived through
+<campaign name>"* from a public name-only lookup,
+`GET /api/campaigns/public/{id}`, which answers the name or a 404 and
+nothing else — the partner lookup's shape and the harvester rule.
+
+**The QR code.** `GET /api/campaigns/{id}/links/{linkId}/qr.png` renders any
+link's code for the Links tab (download, paste into a post); the public
+`GET /c/{linkToken}/{scanToken}/qr.png` serves the vendor's template for
+cards (§ 3.2). One generator, a small pure-Python encoder, no external
+service — the same code whoever prints the next batch (CM-8).
+
+### 3.8 The screens
+
+The tile **Campaign Management** opens at `/campaigns` on the **Campaigns
+grid** (CM-10): every campaign with status, kind, owner, partners, window,
+links, visits and submissions, sortable and searchable, *New campaign*,
+right-click menus. A campaign opens as a **record page in its own stable
+browser tab** (the single-tab guard the session tools use), with four tabs:
+
+- **Overview** — the fields of § 1.3, the partners and the events (CM-10),
+  the notes, and for the kinds that select: the rule builder, *Build the
+  list*, *Sign off and run*, the run's progress.
+- **Links** (CM-7, CM-8) — the campaign's links: *New link* (name,
+  destination), each row with its short address and a Copy button, its QR
+  code, *Correct destination*, *Retire*, and its counts: visits, late
+  visits, submissions by form. A postcard campaign shows its one link and
+  the note that each card's code is that link plus the card's token.
+- **Responses** (CM-9) — the latest responses with a way through to each
+  record (the engagement in Client Administration, the information request
+  in Submission Admin, the registration in Event Administration), the
+  totals, and for a postcard campaign the block: pieces, delivered,
+  returned, scanned; the touch grid for every kind that selects.
+- **Analytics** (CM-9) — the campaign-scoped dashboard of § 6: conversion
+  down the funnel and whatever the Analytics administrators add.
+
+Under the same tile, as secondary grids (question 12):
 
 - **Prospects** — every `CProspect`, filter chips by rung, side exit, entry
   door and batch; *Import…* (state filing or list; plan, then apply);
@@ -540,30 +709,35 @@ always clickable and explaining itself on a missing input or grant):
   required), *Do Not Contact*, *Not the same company* (reverses Already
   known), *Open the Company* / *Open the Contact* when promoted. A detail
   popup shows the record, its touches and its promotion links.
-- **Campaigns** — every `COutreachCampaign`; *New campaign*; the campaign
-  page with the brief, the rule builder, *Build the list*, *Sign off and
-  run*, the live counts, the touch grid, and the **links card**: the
-  addresses this campaign owns, each with a Copy button, derived from
-  `APP_BASE_URL` and never stored —
-  `/client-intake/?campaign=<id>`, `/info-request/?campaign=<id>`,
-  `/webinars/<slug>?campaign=<id>` when an event is linked, and for a
-  postcard the note that its link rides in each card's QR code.
 - **Calls** — the call screen of § 3.4, across every Running call
   campaign the user may see.
 - **Review** — the Unverified queue of § 2.3, which is the Prospects grid
-  pre-filtered; kept as its own tab so the review has a home.
+  pre-filtered; kept as its own grid so the review has a home.
+
+**The partner's Campaigns tab** (CM-5) is on the Partner Management record
+page, after the Events tab, gated per domain by a new
+`DomainConfig.sponsored_campaigns_link` set only on the partner domain
+(`sponsoredCampaigns`, the reverse of § 1.5) — the Events-tab precedent in
+every part: the tab and its endpoint registered together, the user's own
+read of the partner record gating it, the campaigns and their counts read
+under the org-wide key (the Partner Manager Role holds no campaign access
+and the numbers are aggregates). Rows: campaign, kind, status, window,
+links, visits, submissions; a row opens the campaign for a user the tile
+admits, else it is plain text.
 
 Every date and time on these screens is the shared `CBMDateTime` control;
 the brief is the shared `CBMRichText` editor; the page loads `busy.js`
 first, carries `<meta name="cbm-org">` and uses the `{{org}}` and
 `{{abbr}}` tokens; no page width cap.
 
-### 3.6 The word — campaign is ours, notice is Constant Contact's
+### 3.9 The word — campaign is ours, notice is Constant Contact's
 
 Three things could be called a campaign: ours, EspoCRM's native entity
-(hidden, § 1.1), and a Constant Contact send. **Decided:** in this
-application an **outreach campaign** is the `COutreachCampaign` record and
-the word *campaign* on screen means that and nothing else. A Constant
+(hidden, § 1.1), and a Constant Contact send. **Decided by Doug (CM-11):**
+in this application a **campaign** is the `COutreachCampaign` record and
+the word on screen means that and nothing else; *outreach* appears in no
+user-facing string and survives only in stored names, where it keeps ours
+apart from the native entity. A Constant
 Contact send is a **notice**, the word the mailing-list plan already uses
 for it (§ 4.2 there: "one notice about the event"; the field
 `noticeCampaignId`). One correction follows for that plan's unbuilt Phase
@@ -574,9 +748,9 @@ when built. Recorded here so the two arcs do not ship two meanings.
 
 ## 4. The postcard landing page — `/p/{token}`
 
-A public route on the web process, gated by `OUTREACH_LANDING_PUBLIC`
-(default false; off, the route 404s). Package `outreach/landing.py` plus
-`outreach/landing_frontend/`; the page is a route, not a static file, for
+A public route on the web process, gated by `CAMPAIGNS_LANDING_PUBLIC`
+(default false; off, the route 404s). Package `campaigns/landing.py` plus
+`campaigns/landing_frontend/`; the page is a route, not a static file, for
 the same reasons the event pages are: the body is filled server-side and an
 unknown, cancelled or dead token must 404 in the same words as a missing
 one.
@@ -606,9 +780,10 @@ collect that when a relationship begins.
 **Three actions, all always clickable, validated on click:**
 
 - **Request information** → saves the response, then opens
-  `/info-request/?prospect=<id>&campaign=<id>`.
+  `/info-request/?prospect=<id>&campaign=<id>&link=<token>` — the
+  campaign's one link, so the submission counts on it (§ 3.7).
 - **Request a mentor** → saves the response, then opens
-  `/client-intake/?prospect=<id>&campaign=<id>`.
+  `/client-intake/?prospect=<id>&campaign=<id>&link=<token>`.
 - **Just update my details** → saves the response and thanks them. Without
   this, a person who wants nothing today but gives consent is lost — and
   consent capture is ruling 19's whole point.
@@ -645,7 +820,7 @@ orchestrator, at delivery:
    the standard forms; the engagement or the information request is theirs.
 
 **Carrying the typed details into the standard form without echoing them.**
-The server lookup the standard forms call, `GET /api/outreach/prospect/{id}`,
+The server lookup the standard forms call, `GET /api/campaigns/prospect/{id}`,
 returns **only the business name and the mailing address** — ruling 16
 applies to the prefill as it does to the page, since the id is in a URL.
 The name, email and phone the person just typed travel **in the browser
@@ -660,12 +835,14 @@ rule is unbroken.
 
 The partner link (v0.255.0) is the precedent in every part: a hidden field,
 the captured payload, a validate-or-drop read, a delivery-time write, and a
-notes line saying the link did it. Each public form gains two optional
-schema fields, `prospect_id` and `campaign_id` (32 characters at most,
-`Optional[str]`), two hidden inputs filled from `?prospect=` and
-`?campaign=`, and a courtesy banner from the name-only lookups. Nothing
-here is load-bearing: a missing, stale or forged id leaves the form exactly
-as it is today.
+notes line saying the link did it. Each public form gains three optional
+schema fields, `prospect_id`, `campaign_id` (32 characters at most,
+`Optional[str]`) and `campaign_link` (the token, 16 at most), three hidden
+inputs filled from `?prospect=`, `?campaign=` and `?link=` — which the
+resolve route of § 3.7 appends — and a courtesy banner from the name-only
+lookups. Nothing here is load-bearing: a missing, stale or forged value
+leaves the form exactly as it is today. The link token is captured for the
+per-link counts and never written to the CRM.
 
 **At delivery, every orchestrator that receives the ids:**
 
@@ -685,6 +862,17 @@ as it is today.
 6. **The campaign id is written** (ruling 27): on the relationship record
    every time; on the Contact and on the Company only when this
    orchestrator's find-or-create returned `created`.
+6a. **The campaign's partners are related** (CM-4). The orchestrator reads
+   the campaign's `partnerProfiles` (under the intake API client, which
+   needs `CPartnerProfile` read — it creates partner profiles today, so it
+   has it; the handoff re-checks) and applies the door's own rule, in the
+   per-door table below. The engagement is the only relationship record
+   with a partner field, and it holds exactly one: **the plan writes it only
+   when the campaign names exactly one partner and no partner link already
+   named one** — a partner's own intake link always wins, because it is the
+   more specific claim. A campaign with several partners writes no partner
+   onto the engagement; the attribution is the campaign's, one hop away on
+   its Responses tab and on each partner's Campaigns tab. Question 8.
 7. **The relabel** (§ 1.9): `merge_contact_type` and `merge_company_type`
    append the door's type and remove `Prospect`.
 8. A notes line on the relationship record: *"Arrived through the campaign
@@ -693,14 +881,14 @@ as it is today.
 
 **Per door:**
 
-| Door | Relationship record | Rung evidence written | Type appended |
-|---|---|---|---|
-| client-intake | `CEngagement.outreachCampaign` | none stored — Candidate is read from the engagement | Client (Contact and Company) |
-| info-request | `CInformationRequest.outreachCampaign` | `cFunnelStage=Warm Lead` on the Contact, and on the Company it created, advance-only (ruling 17) | none — Prospect stays until a relationship |
-| event registration (`/webinars/{slug}?campaign=`) | `CEventRegistration.outreachCampaign` | `cFunnelStage=Warm Lead` on the Contact, advance-only; `Opportunity` when attendance is later recorded (§ 6) | none (D-09 stands) |
-| partner | `CPartnerProfile.outreachCampaign` | — | Partner |
-| sponsor | `CSponsorProfile.outreachCampaign` | — | Sponsor |
-| volunteer | — (no campaign reaches it; ruling 26 names the intake forms) | — | — |
+| Door | Relationship record | Rung evidence written | Type appended | Campaign partners (CM-4) |
+|---|---|---|---|---|
+| client-intake | `CEngagement.outreachCampaign` | none stored — Candidate is read from the engagement | Client (Contact and Company) | `referringPartnerId` when the campaign names exactly one partner and no partner link named one; a notes line *"Referring partner set from the campaign <name>."* Several partners: none written |
+| info-request | `CInformationRequest.outreachCampaign` | `cFunnelStage=Warm Lead` on the Contact, and on the Company it created, advance-only (ruling 17) | none — Prospect stays until a relationship | no partner field exists; through the campaign |
+| event registration (`/webinars/{slug}?campaign=&link=`) | `CEventRegistration.outreachCampaign` | `cFunnelStage=Warm Lead` on the Contact, advance-only; `Opportunity` when attendance is later recorded (§ 6) | none (D-09 stands) | through the campaign (CM-6). The event's own `partnerProfiles` are the event's and are not rewritten by a campaign |
+| partner | `CPartnerProfile.outreachCampaign` | — | Partner | through the campaign |
+| sponsor | `CSponsorProfile.outreachCampaign` | — | Sponsor | through the campaign |
+| volunteer | `—` (CM-7 allows a link to it; ruling 27 names no relationship record for it, so the campaign is counted from the submission store only) | — | — | — |
 
 **The dormant-client campaign (ruling 25)** is a selection rule in § 3.3
 and § 3.4, never a rung: a former client who responds submits the intake
@@ -710,8 +898,11 @@ attribution.
 
 **The referring partner and the campaign coexist** on an engagement: two
 different links, two different notes lines. A partner's intake link carries
-no campaign; a campaign link carries no partner. If a chapter ever gives a
-partner a campaign link, both are written.
+no campaign; a campaign link carries no partner (CM-4) — the partner comes
+from the campaign at delivery, by the rule in step 6a. When both arrive
+(a partner pastes a campaign link into their own outreach), the partner
+link's partner is written and the campaign is written; the campaign's
+partners are not consulted.
 
 **Where the type question for the information request stands.** Today
 that door creates its Company typed `Client` with `cClientStatus=Prospect`
@@ -725,9 +916,18 @@ every door — question 7, because it changes a live door's behaviour.
 
 ## 6. Reporting
 
-**Three reads, one rule.** Every funnel number comes from
-`outreach/reporting.py`, so every screen agrees (the active-client-count
-discipline).
+**Four reads, one rule.** Every number comes from `campaigns/reporting.py`,
+so every screen agrees (the active-client-count discipline). CM-9 splits
+them by who changes them: the first read below is the campaign page's own
+and fixed; the funnel and conversion are Analytics.
+
+0. **The campaign page's numbers** (CM-9) — from the application's own
+   data, never cached: per link, visits, late visits and submissions by
+   form (`campaign_link_visit` and the durable submission store, keyed on
+   the captured `campaign_id` and `campaign_link`); the campaign totals;
+   the latest responses with their record ids from the submission result;
+   for a postcard campaign the touch counts (pieces, delivered, returned,
+   scanned).
 
 1. **The funnel** — a count per rung over the **union** of three sets:
    `CProspect` records with no side exit and no `promotedCompany` or
@@ -751,7 +951,7 @@ discipline).
 - **Touches by campaign** and **entry rung per door** are single-entity
   counts with filters and a breakdown — exactly what the Analytics builder
   makes self-serve (entity + filters + aggregation, `breakdown` shape). They
-  ship as built-in metrics on a new Analytics page *Prospect Marketing*, and
+  ship as built-in metrics on a new Analytics page *Campaigns*, and
   admins can derive more without a deploy. The campaign page shows its own
   row of the same numbers from the shared module.
 - **The funnel** is a union across three entities with a dedupe rule and
@@ -759,9 +959,18 @@ discipline).
   **built-in computed metric** (`analytics/computed.py`, the operational
   metrics' home), shape `rows`, under the org-wide key. It renders on the
   same Analytics page and as the campaign tab's header strip.
-- **Per-campaign dashboards** would need a new dashboard scope (one per
-  record type is the rule). Not in this arc; the campaign page's own counts
-  serve.
+- **The campaign's Analytics tab** (CM-9) is a **new dashboard scope**,
+  `COutreachCampaign` — the eighth record view to host one, under the
+  one-dashboard-per-record-type rule — with a starter dashboard: Candidates
+  and Clients from the engagements carrying the campaign (the existing
+  engagement-derived rules), registered and attended from the registrations
+  carrying it, information requests, partner and funder profiles, each a
+  record-scoped metric filtered on the `outreachCampaign` link, **run live
+  as the user and never cached** (the Analytics rule for record scope).
+  Cross-campaign comparison is a page the Analytics administrators author
+  from the same metrics. **Cost:** a new scope in `analytics/registry.py`
+  and the record-page host, plus the Analytics Admin Team building anything
+  beyond the starter before the tab says more than it ships with.
 
 **Opportunity** is written when attendance is recorded on a
 `CEventRegistration` whose Contact is typed Prospect, whatever the
@@ -770,7 +979,7 @@ check-in. No new attendance work is in this arc; the write hangs off the
 existing attendance update.
 
 **Stale.** A worker sweep, nightly, moves a prospect record with no stage
-change for `OUTREACH_STALE_DAYS` (default 180) and no Planned touch to
+change for `PROSPECT_STALE_DAYS` (default 180) and no Planned touch to
 `sideExit=Stale`. Records are never deleted; Stale is the re-entry point if
 a second-card campaign is ever designed. The period is a setting at
 `/setup`.
@@ -794,26 +1003,28 @@ training sandbox's nightly reset will truncate them until a re-baseline
 **CRM handoffs first (both additive):**
 
 - `contact-sms-opt-in-crm-handoff.md` + `scripts/plans/contact-sms-opt-in.json` — `Contact.cSmsOptIn`; the field-level check on every role that edits Contact.
-- `coutreach-entities-crm-handoff.md` + `scripts/plans/coutreach-entities.json` — the three entities, their fields, all fifteen links of § 1.5 (the five relationship-record links are additive and cheap now, and Phase 2 then needs no CRM change), the four stage fields, the `Prospect` option on `cCompanyType`, and `scripts/migrate_outreach_roles.py` for the grants: the intake API role (`CProspect` create/read/edit, `COutreachTouch` create/read/edit, `COutreachCampaign` read, and the new Contact/Account fields), the Marketing Admin Role (all three: create/read/edit at `all`, **Assignment Permission `all`** — a role that creates a record the application leaves unassigned needs it, the presenters finding).
+- `coutreach-entities-crm-handoff.md` + `scripts/plans/coutreach-entities.json` — the three entities, their fields (kinds per CM-3, `platform`), all sixteen links of § 1.5 including the two many-to-many (partners — CM-2; events — CM-6; the five relationship-record links are additive and cheap now, and Phase 2 then needs no CRM change), the four stage fields, the `Prospect` option on `cCompanyType`, and `scripts/migrate_outreach_roles.py` for the grants: the intake API role (`CProspect` create/read/edit, `COutreachTouch` create/read/edit, `COutreachCampaign` read **and its `partnerProfiles` relationship read**, and the new Contact/Account fields), the Marketing Admin Role (all three: create/read/edit at `all`, **Assignment Permission `all`** — a role that creates a record the application leaves unassigned needs it, the presenters finding — plus `CEvent` read for the events picker, which it holds). The links of CM-7 need no CRM change (§ 3.7, question 9).
 
-**Flags:** `OUTREACH_ENABLED`, `OUTREACH_ALLOWED_TEAMS`, `OUTREACH_LANDING_PUBLIC`, `POSTAL_PROVIDER` (`dryrun`), `POSTAL_API_KEY`, `POSTAL_WEBHOOK_SECRET`, `POSTAL_TEST_MODE`.
+**Flags:** `CAMPAIGNS_ENABLED`, `CAMPAIGNS_ALLOWED_TEAMS`, `CAMPAIGNS_LANDING_PUBLIC`, `POSTAL_PROVIDER` (`dryrun`), `POSTAL_API_KEY`, `POSTAL_WEBHOOK_SECRET`, `POSTAL_TEST_MODE`. The resolve route `/c/` is on whenever `CAMPAIGNS_ENABLED` is — a published link must keep working.
 
-**Build:** the `outreach/` package with the Prospects and Campaigns tabs; the state-filing import (upload, plan, apply) with the already-known check; the postcard kind end to end — selection, sign-off, the worker run, `core/postal.py` with the dry-run client and the chosen vendor's adapter, the callback; the landing page and `forms/prospect_response/`; the SMS tick on the five intake forms and the event registration form (true-only, beside the marketing opt-in, wording naming texts); the two hidden ids on the client-intake and info-request forms, **carried and ignored** at delivery (Phase 2 honours them); the funnel read's first version for the campaign page's counts. Migration: one Postgres table for the import ledger (batch, row hash, result) so a re-upload of the same file is a no-op.
+**Build:** the `campaigns/` package — the Campaign Management tile, the Campaigns grid, the record page with Overview, Links and Responses (the Analytics tab is Phase 4), partners and events on the Overview, the Prospects grid; the link tables, the resolve route, correct and retire, the QR generator, the visit count (§ 3.7); the social media kind (links only — it needs nothing else and gives the Links tab a real user from day one); the state-filing import (upload, plan, apply) with the already-known check; the postcard kind end to end — selection, sign-off, the worker run, `core/postal.py` with the dry-run client and the chosen vendor's adapter, the callback, the one link and the per-card code; the landing page and `forms/prospect_response/`; the partner's Campaigns tab (CM-5 — a config line, an endpoint and a grid on the existing record page); the SMS tick on the five intake forms and the event registration form (true-only, beside the marketing opt-in, wording naming texts); the three hidden values on every public form and the registration form, **captured and ignored** at delivery (Phase 2 honours them) — captured, because the per-link counts come from the store. Migrations: `campaign_link`, `campaign_link_visit`, and the import ledger (batch, row hash, result) so a re-upload of the same file is a no-op.
 
 **Live verification, on crm-test, as Mark Marketing (Marketing Admin Team), then once more as the org-wide key where stated:**
 
 1. `GET /api/v1/CProspect?maxSize=1`, `COutreachCampaign`, `COutreachTouch` as the org key → HTTP 200 (a 403 is a missed grant).
-2. Sign in as Mark Marketing; the portal shows *Prospect Marketing*; open it. Import a five-row CSV: one row naming an existing sandbox client company and its postal code, one with a website, one with an email, two with address only. The plan shows: 1 Already known, 1 Company typed Prospect to create, 1 Contact typed Prospect to create, 5 prospect records; apply; the Prospects grid shows five rows at Qualified, one flagged Already known with the company linked.
+2. Sign in as Mark Marketing; the portal shows **Campaign Management**; open it; the Campaigns grid is empty. Open Prospects. Import a five-row CSV: one row naming an existing sandbox client company and its postal code, one with a website, one with an email, two with address only. The plan shows: 1 Already known, 1 Company typed Prospect to create, 1 Contact typed Prospect to create, 5 prospect records; apply; the Prospects grid shows five rows at Qualified, one flagged Already known with the company linked.
 3. Re-upload the same file: the plan shows nothing to do.
-4. New campaign, kind Postcard, rule Qualified + usable address; *Build the list* → 4 Planned touches (the Already known row absent); *Sign off and run* shows 4 pieces and the dry-run cost; confirm. The worker log shows 4 pieces accepted by the dry-run client; the touches read Sent with a `scanToken` each; the preview artefacts show the QR.
+4. New campaign, kind Postcard, name a sandbox partner on it, rule Qualified + usable address; the Links tab shows its one link; *Build the list* → 4 Planned touches (the Already known row absent); *Sign off and run* shows 4 pieces and the dry-run cost; confirm. The worker log shows 4 pieces accepted by the dry-run client; the touches read Sent with a `scanToken` each; the preview artefacts show the QR, and decoding one gives `/c/<link>/<scan>`.
+4a. New campaign, kind Social media, platform Meta, two links: one to the client-intake form, one to the programme page. Signed out, open each short address: the first lands on the form with the banner naming the campaign; the second lands on the programme page and every event address on it carries `campaign` and `link`. Back on the Links tab both read 1 visit. *Correct destination* on the first to the info-request form: the same short address now opens that form. *Retire* the second: it still opens the programme page; its next visit counts as late.
+4b. As `partner.manager`, open the partner named in step 4: the Campaigns tab lists both the postcard campaign and nothing else (the social one named no partner); the row shows its link count and visits.
 5. *Build the list* again on a second postcard campaign → 0 (ruling 14).
-6. Signed out, open `/p/<token>` from touch 1: the page shows that row's business name and mailed address, nothing else; the touch now reads Scanned with `firstScannedAt`; the prospect record reads Lead. Reload: `scanCount` 2, `firstScannedAt` unchanged.
+6. Signed out, open the card's address `/c/<link>/<scan>` from touch 1: it resolves to `/p/<scan>`, the postcard link reads one more visit, and the page shows that row's business name and mailed address, nothing else; the touch now reads Scanned with `firstScannedAt`; the prospect record reads Lead. Reload: `scanCount` 2, `firstScannedAt` unchanged.
 7. On that page enter a name, an email the sandbox does not hold, both ticks, press *Just update my details*: a `prospect-response` row delivers; a Contact typed Prospect exists with `cMarketingOptIn`, `cSmsOptIn`, `cFunnelStage=Lead`, `cEntryStage=Qualified`, `cOutreachCampaign` set; the prospect record's `promotedContact` points at it.
 8. On touch 2's page enter a website whose host matches an existing sandbox company under a **different** name: a new Company typed Prospect is created (name match is by name; a different name is a different company). On touch 3's page enter the name and website of an existing company whose stored website differs: the row holds as `held_company` in Submission Admin, and *Same company* delivers it against the existing record with `Prospect` **not** appended.
 9. Post a dry-run *returned* event to the callback for touch 4: the touch reads Returned, the record's `addressStatus` reads Dead, the rung is unchanged; the campaign's counts show 1 returned.
-10. Press *Request a mentor* on touch 1's page: the client-intake form opens with the business name and address prefilled, the banner names the campaign, the typed name and email are filled from the browser; submit; the engagement is created **as today, with no campaign on it** (Phase 2 owed).
+10. Press *Request a mentor* on touch 1's page: the client-intake form opens with the business name and address prefilled, the banner names the campaign, the typed name and email are filled from the browser; submit; the engagement is created **as today, with no campaign and no partner on it** (Phase 2 owed), and the Links tab shows 1 submission (client-intake) on the postcard link — the count comes from the store, not the CRM.
 11. Open the client-intake form with the campaign id altered: no banner, the form works.
-12. As `sally.sponsor` (no team seat): `/outreach` answers 403 naming the Marketing Admin Team.
+12. As `sally.sponsor` (no team seat): `/campaigns` answers 403 naming the Marketing Admin Team; `/c/<link>` still resolves for her signed-out browser — the resolve route is public.
 13. Tick the SMS box on the public client-intake form and submit: the Contact reads `cSmsOptIn` true; submit once more unticked for the same email: still true.
 14. Then, on a morning after a reset with no release test running: seed and re-baseline the sandbox so the three tables survive the night.
 
@@ -824,13 +1035,15 @@ training sandbox's nightly reset will truncate them until a re-baseline
 **CRM change:** none (the links shipped with Phase 1's handoff).
 **Flag:** none — dark by nature (no id, no change) and feature-detected per link from metadata, so a CRM without the links drops the attribution with a logged note.
 
-**Build:** § 5 in the five orchestrators (client intake, info request, event registration, partner, sponsor); `merge_contact_type` and the relabel rule in `core/crm_upsert.py`; the campaign banner on the forms and the event page; the hidden ids on the partner and sponsor forms and the event page's registration form; the information request's Company typed Prospect (question 7); the notes lines; the campaign page's *responded* and *converted* counts.
+**Build:** § 5 in the five orchestrators (client intake, info request, event registration, partner, sponsor), including step 6a's partner rule (CM-4); `merge_contact_type` and the relabel rule in `core/crm_upsert.py`; the campaign banner on the forms and the event page; the programme-page carry-through and the hidden values on the event page's registration form and the calendar modal (§ 3.7); the information request's Company typed Prospect (question 7); the notes lines; the Responses tab's record links and the campaign page's *responded* and *converted* counts.
 
 **Live verification, as Mark Marketing for the reads and signed out for the forms, on crm-test:**
 
-1. A card's *Request a mentor* through to delivery: the engagement carries the campaign and the notes line; the Contact and Company created by it carry `cOutreachCampaign`; the prospect record's promotion links are set; the Contact's type reads `Client` with no `Prospect`; the Company's type reads `Client` with no `Prospect`.
+1. A card's *Request a mentor* through to delivery, the postcard campaign naming one partner: the engagement carries the campaign, that partner as referring partner, and both notes lines; the partner's Referred Clients tab lists it; the Contact and Company created by it carry `cOutreachCampaign`; the prospect record's promotion links are set; the Contact's type reads `Client` with no `Prospect`; the Company's type reads `Client` with no `Prospect`.
+1a. The same through a campaign naming **two** partners: the engagement carries the campaign and **no** referring partner; it appears on the campaign's Responses tab and on both partners' Campaigns tabs through the campaign.
+1b. The partner's own intake link with a campaign's `?campaign=&link=` appended (a partner reposting a campaign link): the referring partner is the link's partner, the campaign is written, the campaign's partners are not consulted.
 2. The same person again through `/info-request/?campaign=<a second campaign>`: the information request carries the second campaign; the Contact keeps the first (ruling 27).
-3. A Contact typed Prospect from Phase 1 registers through `/webinars/<slug>?campaign=<id>`: the registration carries the campaign, the Contact's `cFunnelStage` reads Warm Lead and its type is unchanged (D-09).
+3. From the social campaign's programme-page link (step 4a of Phase 1): open it signed out, pick an event from the page, register as a Contact typed Prospect from Phase 1: the registration carries the campaign, the Links tab shows 1 submission (event registration) on that link, the Contact's `cFunnelStage` reads Warm Lead and its type is unchanged (D-09). Register for the same event from a freshly typed address: no campaign — the carry-through's honest limit.
 4. A Company typed Prospect submits the partner form: `cCompanyType` reads `Partner` with no `Prospect`; the partner profile carries the campaign.
 5. An altered campaign id on each form: the record is created, no campaign, a warning in the web log.
 6. The Client Administration popup opens the engagement from step 1 and shows the notes line; Submission Admin shows the `prospect-response` rows with their references.
@@ -838,9 +1051,9 @@ training sandbox's nightly reset will truncate them until a re-baseline
 ### Phase 3 — lists, review, calls
 
 **CRM change:** none.
-**Flags:** `OUTREACH_CALLS` (the Calls tab and the call kind), inside `OUTREACH_ENABLED`.
+**Flags:** `CAMPAIGNS_CALLS` (the Calls grid and the call kind), inside `CAMPAIGNS_ENABLED`.
 
-**Build:** the list import with `list_source`; the Review tab with *Qualify* and *Unqualified* (note required, reviewer stamped); *Do Not Contact* and *Not the same company*; the call kind: rule, call list, the recording screen with the three outcomes and *Call again*; `Declined`; the nightly Stale sweep with `OUTREACH_STALE_DAYS`; the touches-by-campaign and entry-rung metrics on the new Analytics page.
+**Build:** the list import with `list_source`; the Review tab with *Qualify* and *Unqualified* (note required, reviewer stamped); *Do Not Contact* and *Not the same company*; the call kind: rule, call list, the recording screen with the three outcomes and *Call again*; `Declined`; the nightly Stale sweep with `PROSPECT_STALE_DAYS`; the touches-by-campaign and entry-rung metrics on the new Analytics page.
 
 **Live verification, as Mark Marketing, and as a second non-admin on a team the campaign names for the calls:**
 
@@ -848,15 +1061,15 @@ training sandbox's nightly reset will truncate them until a re-baseline
 2. New campaign, kind Call, rule Qualified + phone held: *Build the list* → the rows with a phone (the Unverified one absent); sign off.
 3. As the second user on the campaign's team: the Calls tab lists the rows; record *No answer* on one (Done; *Call again* plans a fresh row), *Interested* on another (the record reads Lead), *Declined* on the third (side exit Declined, absent from every later build).
 4. As a user on no team the campaign names: the Calls tab is empty with a message naming the team.
-5. Set `OUTREACH_STALE_DAYS=0` at `/setup`, run the sweep from Operations as a dry run then apply: untouched Qualified records read Stale; Lead records with a scan today do not. Reset the setting.
+5. Set `PROSPECT_STALE_DAYS=0` at `/setup`, run the sweep from Operations as a dry run then apply: untouched Qualified records read Stale; Lead records with a scan today do not. Reset the setting.
 6. The Analytics page shows touches by campaign and entry rung per door matching the grids.
 
-### Phase 4 — email campaigns and the funnel
+### Phase 4 — email and SMS campaigns, the funnel, the campaign dashboard
 
 **CRM change:** none.
-**Flags:** `OUTREACH_EMAIL` (the email kind), inside `OUTREACH_ENABLED` and the mailing-list connection.
+**Flags:** `CAMPAIGNS_EMAIL` (the email kind), inside `CAMPAIGNS_ENABLED` and the mailing-list connection; `CAMPAIGNS_SMS` (the SMS kind: rule, list, export, *Mark as sent* — no sending, question 11).
 
-**Build:** the email kind: rule (opted-in Contacts; the dormant-client term), the per-campaign named list push through `core/mailing_sync.py` generalised to several lists, the links card, *Mark as sent*, and the Phase D read when that exists; the funnel computed metric and the campaign tab's header strip; `Opportunity` on attendance.
+**Build:** the email kind: rule (opted-in Contacts; the dormant-client term), the per-campaign named list push through `core/mailing_sync.py` generalised to several lists, *Mark as sent*, and the Phase D read when that exists; the SMS kind (§ 3.5) to the same shape, with the list export; the funnel computed metric and the Analytics page *Campaigns*; **the `COutreachCampaign` dashboard scope and its starter dashboard on the record page's Analytics tab** (CM-9, § 6); `Opportunity` on attendance.
 
 **Live verification, as Mark Marketing, on crm-test with its own Constant Contact account (the mailing-list plan's ruling A):**
 
@@ -865,10 +1078,12 @@ training sandbox's nightly reset will truncate them until a re-baseline
 3. The dormant-client rule with N=0 lists the sandbox's closed-engagement clients with the tick; N=3650 lists none.
 4. The funnel on the Analytics page: counts per rung add up to the union of the three grids with the dedupe rule, checked against the CRM's own list counts by hand once.
 5. Record attendance on a registration whose Contact is typed Prospect: the Contact reads Opportunity.
+6. New campaign, kind SMS, rule Prospect + phone + text consent: the list holds only Contacts with `cSmsOptIn` true (the Phase 1 step-7 Contact is in it; a Contact with a phone and no tick is not); sign off; the export downloads those numbers; *Mark as sent* moves the touches to Sent.
+7. The postcard campaign's Analytics tab shows the starter dashboard: one Candidate (Phase 2 step 1), registered and attended counts matching Event Administration, every panel rendered as Mark Marketing without a 403.
 
 ### Phase 5 — deferred, named so they are not forgotten
 
-Not planned, no dates: the partner-file import (ruling 23); text campaigns (`cSmsOptIn` exists from Phase 1; the kind, a vendor and a ruling do not); a second-card campaign (ruling 14 waits for a measured response rate; the Stale exit is its entry point); a watched Drive folder or a posting endpoint for the outside filter (question 2); a dashboard scope per campaign; Phase D of the mailing-list plan feeding email touches.
+Not planned, no dates: the partner-file import (ruling 23); **sending** texts through a vendor (the SMS kind, its rule, its list and its export ship in Phase 4; the vendor is question 11); a second-card campaign (ruling 14 waits for a measured response rate; the Stale exit is its entry point); a watched Drive folder or a posting endpoint for the outside filter (question 2); a funder Campaigns tab (one `DomainConfig` line if ever asked for — CM-5 named partners); Phase D of the mailing-list plan feeding email touches.
 
 ---
 
@@ -881,9 +1096,9 @@ From `prds/prospect-marketing-plan.md`, *Open after this session*:
 | Rung 1's name | **Put to Doug** — the plan stores `Unverified` and recommends it; the enum value is a one-word change before the handoff is applied | Question 3 |
 | Where the rung continues after promotion | **Answered:** a field on Contact and Account, because two sources never have a prospect record | § 1.8 |
 | The call campaign's recording screen | **Answered:** the Calls tab, three outcomes, *Call again*, the warning that an unrecorded call reads as never contacted | § 3.4 |
-| Retention | **Answered as a draft:** Stale after `OUTREACH_STALE_DAYS` (180), never deleted, a `/setup` setting | § 6 |
+| Retention | **Answered as a draft:** Stale after `PROSPECT_STALE_DAYS` (180), never deleted, a `/setup` setting | § 6 |
 | Attendance evidence for Opportunity | **Answered:** written off the existing attendance update whatever its source; no new attendance work | § 6 |
-| The campaign entity's shape | **Answered:** § 1.3, § 1.5, § 3.5; the QR carries a token that resolves to both ids; which forms honour the id is § 5's table; the partner link and the campaign link coexist as two links | §§ 1, 3, 5 |
+| The campaign entity's shape | **Answered, and since defined by Doug (CM-1 to CM-11):** § 1.3, § 1.5, § 3.7, § 3.8; the card's code is the campaign's link plus the card's token; which forms honour the id is § 5's table; the partner link and the campaign link coexist as two links, with the campaign's partners related by step 6a | §§ 1, 3, 5 |
 | The Prospect-to-type relabel | **Answered:** one rule in the two merge functions; every door inherits it | § 1.9, § 5 |
 | Chapter-network vocabulary | **Answered:** every name checked in § 1.10; `externalReference` and `State filing` replace the state-specific words | § 1.10 |
 | What the outside filter delivers, and how | **Put to Doug** | Question 2 |
@@ -894,15 +1109,32 @@ Two items this plan added: the entity choice (question 1) and the vendor
 (question 4); who makes the calls (question 6) and the information
 request's company type (question 7).
 
+**The requirements section's own open list** (*Still open after this
+session*, 10-14-26), each answered here or put to Doug:
+
+| Item | Status | Where |
+|---|---|---|
+| Several partners on one engagement (CM-4) | **Put to Doug** — written on: the single referring partner only when the campaign names exactly one | § 5 step 6a, question 8 |
+| Social media: one kind with a platform, or a kind per platform | **Put to Doug** — written on: one kind, a `platform` field | § 3.6, question 10 |
+| SMS has no sending path | **Put to Doug** — written on: the kind ships with its rule, list and export; sending waits for a vendor | § 3.5, question 11 |
+| One event or many per campaign | **Answered as a draft:** many (a many-to-many), from Doug's plural and the programme-page link | § 1.5 |
+| The status vocabulary | **Answered as a draft:** the six states of § 1.3, which the application moves; Doug's four-word strawman maps onto them | § 1.3 |
+| Who may correct or retire a link | **Answered as a draft:** the campaign's team, action-logged with old and new | § 3.7 |
+| The programme-page carry-through | **Answered:** query-string carry by the page's own script, with its honest limit named | § 3.7 |
+| Where the prospect screens live | **Put to Doug** — written on: under the Campaign Management tile as secondary grids | § 3.8, question 12 |
+| A per-campaign Analytics dashboard | **Answered:** a new dashboard scope, starter dashboard, Phase 4 | § 6 |
+| Where links live (new in this revision) | **Put to Doug** — written on: the application's database | § 3.7, question 9 |
+
 ---
 
 ## 9. Questions for Doug
 
-Each is written on the recommended answer; a "yes" to all seven changes
-nothing above.
+Each is written on the recommended answer; a "yes" to all twelve changes
+nothing above. Questions 8–12 were added in v0.2, from the Campaign
+Management requirements.
 
 1. **Custom entities, or EspoCRM's own Lead and Campaign?** Recommended:
-   custom (§ 1.1). Cost: three entities and fifteen links in the standard,
+   custom (§ 1.1). Cost: three entities and sixteen links in the standard,
    and the native `campaign` link stays unused. The alternative's cost: core
    grants, tabs and a required-flag change on every chapter's CRM, two of
    them unverified.
@@ -929,6 +1161,39 @@ nothing above.
    `cClientStatus=Prospect`? It makes the relabel at conversion read the
    same for every door. Cost: a live door's behaviour changes, and existing
    records keep the old shape unless a one-time script relabels them.
+8. **A campaign with several partners, on an engagement.** The engagement
+   holds one referring partner. Recommended: write it only when the
+   campaign names exactly one partner (and no partner link named one);
+   otherwise the engagement carries the campaign alone and the partners are
+   one hop away. Cost: a client who came through a two-partner campaign is
+   absent from both partners' Referred Clients tabs and present on their
+   Campaigns tabs instead. The alternative is a second, many-partner link
+   on the engagement (one more CRM link; the Referred Clients tab reads
+   two links and every count that reads `referringPartner` reads both).
+9. **Where campaign links live.** Recommended: the application's own
+   database (§ 3.7) — the resolve route never calls the CRM, visits are
+   write-heavy rows, a destination correction is not a CRM write. Cost:
+   links are invisible inside EspoCRM and vanish nightly on the sandbox
+   until seeded. The alternative is a fourth custom entity,
+   `CCampaignLink`, visible in the CRM and to the Analytics builder, with
+   visits still counted in the application; it changes the Phase 1 handoff.
+10. **Social media: one kind with a platform field** (recommended — every
+    platform runs the same way, so the kinds stay about *how a campaign
+    runs*) **or one kind per platform** (Meta, YouTube, … each its own enum
+    value). Cost of the recommendation: a second field to fill in; of the
+    alternative: the kind list grows with every platform and a filter by
+    "social" becomes a list of values.
+11. **SMS sending.** Recommended: ship the kind with its selection rule, its
+    signed-off list and an export, and no sending, until you name a vendor.
+    Cost: a kind that does not send; staff send from the vendor's own tool
+    with the exported list and press *Mark as sent*. The alternative is to
+    rule a vendor now (Twilio is the usual one), which adds a client, a
+    secret, a sender number and the opt-out handling the law requires.
+12. **The prospect screens' home.** Recommended: Prospects, Review and Calls
+    as secondary grids under the *Campaign Management* tile — one tile for
+    the whole marketing workspace, the same team either way. Cost: a tile
+    named for campaigns also holds the import; the alternative is a second
+    tile, *Prospects*, on a portal that already shows a staff user twelve.
 
 ---
 
@@ -956,15 +1221,16 @@ best-effort mirror.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — build plan |
-| Version | v0.1.1 — a plan, nothing built; seven questions open; **superseded in part by the Campaign Management requirements, v0.2 owed** |
-| Last Updated | 10-14-26 21:55 |
+| Version | v0.2 — a plan, nothing built; revised against the Campaign Management requirements (CM-1 to CM-11); twelve questions open |
+| Last Updated | 10-14-26 22:09 |
 | Prepared by | Claude (Claude Code), for D. Bower |
-| Session | 2026-10-14 planning session, from `prompts/prospect-marketing-build-plan-prompt-v0.1.md` |
-| Related | `prds/prospect-marketing-plan.md` (the rulings), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
+| Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `prompts/prospect-marketing-build-plan-prompt-v0.1.md` |
+| Related | `prds/prospect-marketing-plan.md` (the rulings and, since 10-14-26, the Campaign Management requirements CM-1 to CM-11), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.2 | 10-14-26 22:09 | Claude (Claude Code) | Revised against the Campaign Management requirements (CM-1 to CM-11): the campaign is labelled Campaign and names partners and events (two many-to-many links, sixteen in all); five kinds with the SMS kind (§ 3.5) and the social media kind (§ 3.6) added; a new § 3.7 for links as short resolvable addresses in the application's database, with correct, retire, the programme-page carry-through and the QR generator; the screens rebuilt around the Campaign Management tile, the campaign record page (Overview / Links / Responses / Analytics) and the partner's Campaigns tab; the forms carry the link token and relate the campaign's partners by door (step 6a); reporting gains the campaign page's own numbers and a campaign dashboard scope; the phases, their flags (`CAMPAIGNS_*`, `PROSPECT_STALE_DAYS`) and verification scripts updated; the requirements' open list answered in § 8; questions 8–12 added. The superseded-in-part pointer replaced by this revision note. |
 | 0.1.1 | 10-14-26 21:55 | Claude (Claude Code) | Pointer added at the top: superseded in part by *Requirements — Campaign Management application (10-14-26)* in the plan (CM-1 to CM-11); the sections v0.2 must revise are named there. No section revised. Duplicated date in Last Updated fixed. |
 | 0.1 | 10-14-26 17:34 | Claude (Claude Code) | First version: the record model in Entity Manager vocabulary (three custom entities, fifteen links, the stage fields, the relabel), the two import doors, the three campaign kinds on one engine, the landing page as a sixth form kind, conversion per door, reporting, five phases with handoffs and verification scripts, the open list, seven questions. Finding recorded: the native marketing module is hidden on crm-test and the org key 403s on Lead and Campaign. |
