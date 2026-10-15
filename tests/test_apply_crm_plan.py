@@ -1,8 +1,10 @@
 """The CRM-plan applier ships in the image (``scripts/apply_crm_plan.py``) so a
 production change can run from inside the deployed web container. These tests
 pin the two things a console step page relies on: the naming rules, and the
-fingerprint a dry run prints for the presenters plan on a CRM that does not
-have the entity yet (``5a78484e6b9c`` on crm-test, 10-08-26)."""
+fingerprint a dry run prints for a plan on a CRM that does not have it yet —
+the presenters plan (``5a78484e6b9c`` on crm-test, 10-08-26), the SMS opt-in
+plan (``0bc7219ab932``) and the outreach entities plan (``6b29c8928dcf``), the
+last two on crm-test 10-14-26."""
 from __future__ import annotations
 
 import asyncio
@@ -86,3 +88,74 @@ def test_apply_refuses_a_non_crm_test_target_without_the_flag(monkeypatch, capsy
                                       str(ROOT / "scripts/plans/cevent-presenters.json"), "--apply"])
     assert asyncio.run(applier.main()) == 2
     assert "pass --production" in capsys.readouterr().err
+
+
+class _FakeCrmTest(_FakeClient):
+    """crm-test as it stood on 10-14-26 for the prospect-marketing plans: the
+    native Contact and Account, the custom entities the links hang on, no
+    ``COutreach*`` entity, none of the new fields, and ``Account.cCompanyType``
+    without the ``Prospect`` option."""
+
+    CUSTOM = {"CEvent", "CEngagement", "CPartnerProfile", "CSponsorProfile",
+              "CInformationRequest", "CEventRegistration"}
+    SYSTEM = {"Contact", "Account"}
+
+    async def _request(self, method, url, op="", params=None, json_body=None):
+        if method != "GET":
+            self.writes.append((method, url))
+            return _Resp(200, {})
+        key = (params or {}).get("key", "")
+        if key.startswith("scopes."):
+            entity = key[len("scopes."):]
+            if entity in self.CUSTOM:
+                return _Resp(200, {"isCustom": True, "entity": True})
+            if entity in self.SYSTEM:
+                return _Resp(200, {"entity": True})
+            return _Resp(200)
+        if url.endswith("/Admin/fieldManager/Account/cCompanyType"):
+            return _Resp(200, {"type": "multiEnum",
+                               "options": ["", "Client", "Sponsor", "Partner", "Other"]})
+        if "/Admin/fieldManager/" in url:
+            return _Resp(404)
+        return _Resp(200)
+
+
+def test_sms_opt_in_plan_dry_run_fingerprint_on_a_crm_without_the_field():
+    plan = json.loads((ROOT / "scripts/plans/contact-sms-opt-in.json").read_text())
+    client = _FakeCrmTest()
+    app = applier.Applier(client, plan, apply=False)
+    asyncio.run(app.run())
+    assert not app.failed
+    assert client.writes == []
+    assert app.actions == ["create field Contact.cSmsOptIn (bool)  [typed 'smsOptIn']"]
+    assert app.fingerprint() == "0bc7219ab932"
+
+
+def test_outreach_entities_plan_dry_run_fingerprint_on_a_crm_without_them():
+    plan = json.loads((ROOT / "scripts/plans/coutreach-entities.json").read_text())
+    client = _FakeCrmTest()
+    app = applier.Applier(client, plan, apply=False)
+    asyncio.run(app.run())
+    assert not app.failed
+    assert client.writes == []
+    assert app.fingerprint() == "6b29c8928dcf"
+    assert len(app.actions) == 78
+    assert "create entity CProspect (from name 'Prospect', type BasePlus)" in app.actions
+    # Native-entity names gain the prefix; custom-entity names are stored as typed.
+    assert "create field Contact.cFunnelStage (enum)  [typed 'funnelStage']" in app.actions
+    assert ("create link Contact.cOutreachCampaign -> COutreachCampaign.contacts "
+            "(manyToOne)") in app.actions
+    assert ("create link CEngagement.referringPartners -> "
+            "CPartnerProfile.referredEngagements (manyToMany)") in app.actions
+    assert "add enum options to Account.cCompanyType: Prospect" in app.actions
+    # The plan names seventeen links and never a one-to-one.
+    links = plan["links"]
+    assert len(links) == 17
+    assert {l["linkType"] for l in links} == {"manyToOne", "manyToMany"}
+    assert all(l.get("relationName") for l in links if l["linkType"] == "manyToMany")
+    # Two links may not share a name on one entity (build plan section 1.5 did).
+    seen: set[tuple[str, str]] = set()
+    for l in links:
+        for pair in ((l["entity"], l["link"]), (l["entityForeign"], l["linkForeign"])):
+            assert pair not in seen, f"duplicate link name {pair}"
+            seen.add(pair)

@@ -1,5 +1,15 @@
 # Kickoff prompt — write the prospect marketing CRM handoffs
 
+**DONE 10-14-26 23:15.** Spent by the session that ran it the same evening:
+`contact-sms-opt-in-crm-handoff.md` (fingerprint `0bc7219ab932`) and
+`coutreach-entities-crm-handoff.md` (78 changes, fingerprint `6b29c8928dcf`)
+at the repository root, their plan files under `scripts/plans/`,
+`scripts/migrate_outreach_roles.py`, two fingerprint pins in
+`tests/test_apply_crm_plan.py`. Nothing applied. One name in build plan § 1.5
+could not be stored as written (`COutreachCampaign.partnerProfiles` named
+twice) and is put to Doug in that handoff's § 0 item (a). Next kickoff:
+`prompts/prospect-marketing-phase-1-build-prompt-v0.1.md`.
+
 **Written 10-14-26 17:34; revised 10-14-26 22:44. For a fresh Claude Code session
 rooted in `cbm-client-intake`.** A handoff-writing session: it produces the
 two CRM handoff documents, their plan files and the role script that Phase 1
@@ -109,14 +119,15 @@ done.
 | Field | Value |
 |---|---|
 | Document | Kickoff prompt — prospect marketing CRM handoffs |
-| Version | v0.1.4 |
-| Last Updated | 10-14-26 22:44 |
+| Version | v0.1.5 |
+| Last Updated | 10-14-26 23:15 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| v0.1.5 | 10-14-26 23:15 | Claude (Claude Code) | Marked done and moved to `prds/prospect-marketing/history/prompts/`; the outputs and the one open name named at the top. |
 | v0.1.4 | 10-14-26 22:44 | Claude (Claude Code) | Gate open: questions 1, 3, 8 and 9 answered (rulings 28–31); the seventeenth link (`CEngagement.referringPartners`) named; rung 1 fixed as `Unverified`. |
 | v0.1.3 | 10-14-26 22:28 | Claude (Claude Code) | Paths follow the consolidation into `prds/prospect-marketing/`; the gate section rewritten as one list of the four shape-changing questions (1, 3, 8, 9), each answer recorded as a ruling; "fifteen links" corrected to sixteen with the two many-to-many named; the one-session rule and the end-of-session bookkeeping added. |
 | v0.1.2 | 10-14-26 22:09 | Claude (Claude Code) | Gate met (build plan v0.2); questions 8 and 9 added to the answers needed first; the read list points at v0.2's changed sections. |

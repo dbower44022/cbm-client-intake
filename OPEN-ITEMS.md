@@ -6,9 +6,9 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
-51. **Prospect marketing — consolidated into `prds/prospect-marketing/`;
-    the CRM handoff waits on four answers; nothing built** (10-14-26, updated
-    10-14-26 22:28). Three sessions worked the arc on 10-14-26 and left three
+51. **Prospect marketing — the two CRM handoffs are written and dry-run
+    on crm-test; one name awaits Doug's ruling; nothing applied, nothing
+    built** (10-14-26, updated 10-14-26 23:15). Three sessions worked the arc on 10-14-26 and left three
     documents that disagreed; Doug ruled a directory on the chapter-network
     pattern. Start at its `README.md`. `rulings.md` is the binding record
     (rulings 1–27, CM-1 to CM-11, append only); `build-plan.md` v0.2 is the
@@ -18,14 +18,32 @@ found; move resolved items to the bottom with the resolution date.
     engagement** via a new many-to-many `CEngagement.referringPartners`,
     links in the application database); the process plan and the three
     spent kickoff prompts are under `history/`. **Owed, in order:** (a)
-    ~~the four answers~~ done 10-14-26 22:41; (b) the two CRM handoffs, plan
-    files and role script from
-    `prompts/prospect-marketing-crm-handoff-prompt-v0.1.md` (v0.1.4, gate
-    open — **the next session**), dry-run fingerprints only; (c) Doug applies on crm-test, verifies, soaks;
-    (d) Phase 1; (e) questions 2, 4 and 5 before the first real card;
-    (f) production at the Sunday slot, Boston with its release, a seeder and
-    a sandbox re-baseline (both handoffs add tables). No CRM change, no
-    vendor account, no code. **One session on this arc at a time.**
+    ~~the four answers~~ done 10-14-26 22:41; (b) ~~the two CRM
+    handoffs, plan files and role script~~ **done 10-14-26 23:15** —
+    `contact-sms-opt-in-crm-handoff.md` + `scripts/plans/contact-sms-opt-in.json`
+    (one change, fingerprint `0bc7219ab932`), `coutreach-entities-crm-handoff.md`
+    + `scripts/plans/coutreach-entities.json` (three entities, 57 fields, 17
+    links, one enum option: 78 changes, fingerprint `6b29c8928dcf`),
+    `scripts/migrate_outreach_roles.py` (merge-only; six grants on crm-test,
+    every re-check already held; no role carries a `fieldData` rule on
+    Contact or Account), both fingerprints pinned in
+    `tests/test_apply_crm_plan.py`; the spent prompt is in
+    `prds/prospect-marketing/history/prompts/`; (b′) **Doug rules on the one
+    name the plan could not store as written** — build plan § 1.5 gives
+    `COutreachCampaign.partnerProfiles` to two links; the plan file drafts
+    `attributedPartnerProfiles` for the ruling-27 reverse
+    (`coutreach-entities-crm-handoff.md` § 0 item (a), with the alternative);
+    (c) Doug applies on crm-test — SMS plan, outreach plan, the wysiwyg
+    conversion and the tab-list hand step, the role script — verifies as the
+    org-wide key and as Mark Marketing, soaks (**the next step**); (d) Phase
+    1, from `prompts/prospect-marketing-phase-1-build-prompt-v0.1.md`,
+    which also decides where the import's Company creates run (the
+    Marketing Admin Role holds no Account grant — handoff item (i)); (e)
+    questions 2, 4 and 5 before the first real card; (f) production at the
+    Sunday slot, Boston with its release, a seeder and a sandbox
+    re-baseline (the outreach handoff adds six tables; the SMS one adds a
+    column, which survives the reset). No CRM change, no vendor account, no
+    code. **One session on this arc at a time.**
 
 45. **The training sandbox loses every presenter and partner-event link at
     04:00 UTC, and the demo events had none to lose** (10-11-26, Doug's

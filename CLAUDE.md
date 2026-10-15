@@ -1636,9 +1636,11 @@ reworking a feature. The chapter network is
 at its `README.md`. **Prospect marketing and Campaign Management are a directory
 too** (consolidated 10-14-26 after three sessions in one day left three
 documents that disagreed): **`prds/prospect-marketing/`** — start at its
-`README.md`; `rulings.md` holds rulings 1–27 and CM-1 to CM-11 and is the
-binding record (append only); `build-plan.md` v0.2 is the one plan; the CRM
-handoff waits on four of its § 9 questions; nothing of the arc is built.
+`README.md`; `rulings.md` holds rulings 1–31 and CM-1 to CM-11 and is the
+binding record (append only); `build-plan.md` v0.3 is the one plan; its two
+CRM handoffs are written and dry-run (10-14-26 — `contact-sms-opt-in-crm-handoff.md`,
+`coutreach-entities-crm-handoff.md`), awaiting one name ruling and Doug's
+crm-test apply; nothing of the arc is built.
 **One session on that arc at a time.** Eight settled rulings, a phase file each for phases 0–6, a
 decision log, and its own task list. Phase 0 (de-Cleveland) is **built**; **Phase
 1, CRM configuration as a versioned build artifact, is the next one and the only
@@ -1665,7 +1667,9 @@ the Notes column's field to wysiwyg — the switch that turns rich notes on),
 crm-test done, production and Boston owed),
 `cevent-partner-sponsorship-crm-handoff.md` (many partners per event +
 the notice-campaign id — written, nothing applied), `cnetworkstandard-entity-crm-handoff.md` (the chapter network's config-version
-stamp — pending on both CRMs), `cintake-submission-*.md` (incl. `cintake-submission-company-status.md`, the
+stamp — pending on both CRMs), `contact-sms-opt-in-crm-handoff.md` and
+`coutreach-entities-crm-handoff.md` (prospect marketing Phase 1 — written
+10-14-26, dry-run on crm-test, nothing applied), `cintake-submission-*.md` (incl. `cintake-submission-company-status.md`, the
 `Held-Company` option — pending on both CRMs), `cinformation-request-entity.md`,
 `cconversation-entity.md`, `cevent-entities-crm-handoff.md`,
 `csession-*.md`, `cmentorprofile-*.md`, `clastcontactdate-field.md`,

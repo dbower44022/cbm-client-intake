@@ -1,0 +1,15 @@
+{
+  "name": "contact-sms-opt-in",
+  "description": "Ruling 9 of prds/prospect-marketing/rulings.md (10-14-26): a person's consent to receive TEXT messages is its own tick beside the existing marketing opt-in (Contact.cMarketingOptIn), because the law treats a text differently from an email. One bool on Contact, typed unprefixed and stored cSmsOptIn. Written true-only by every door that captures the marketing opt-in (the five public forms, event registration, the postcard landing page); never ticked by staff on a person's behalf. Handoff: contact-sms-opt-in-crm-handoff.md.",
+
+  "fields": [
+    {
+      "entity": "Contact",
+      "name": "smsOptIn",
+      "type": "bool",
+      "default": false,
+      "label": "Text message (SMS) opt-in",
+      "tooltipText": "Ticked when this person agreed to receive text messages (SMS) from the chapter. A text campaign selects on a phone number held plus this tick. Set by the public forms when the person ticks the box that names texts; the email marketing opt-in beside it does not imply it."
+    }
+  ]
+}
