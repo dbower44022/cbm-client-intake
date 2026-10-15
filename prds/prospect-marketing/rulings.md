@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-14-26 22:25 · Revision 1.0 — change log at the end.
+Last Updated: 10-14-26 22:42 · Revision 1.0 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -156,6 +156,29 @@ changes an earlier one, the earlier one is named.
     submission created them**, so a person who arrives through two campaigns
     over the years keeps both. (10-14-26)
 
+### Doug's rulings (10-14-26, on the build plan's § 9 questions)
+
+Answered in one reply at 22:41 on 10-14-26: "your recommendation, except
+for #3 [question 8] — we need to support multiple partner referrals to a
+single engagement." Each is recorded as the ruling it is; the build plan
+marks the question answered.
+
+28. **Custom entities, not EspoCRM's own Lead and Campaign** (build plan
+    question 1). `CProspect`, `COutreachCampaign` and `COutreachTouch` are
+    built as custom entities; the native marketing module stays hidden and
+    the native `campaign` link on Contact and Account stays unused.
+    (10-14-26)
+29. **Rung 1 is stored as `Unverified`** (question 3). `Unqualified` remains
+    the fit-failure side exit only. (10-14-26)
+30. **An engagement supports multiple referring partners** (question 8 —
+    the recommendation of a single partner was declined). A client who
+    arrives through a campaign naming several partners is credited to every
+    one of them. The build plan says how the single referring partner of
+    v0.255.0 and the many-partner link coexist. (10-14-26)
+31. **Campaign links live in the application's own database** (question 9),
+    not as a fourth CRM entity; the resolve route never calls the CRM.
+    (10-14-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -276,8 +299,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.0 |
-| Last Updated | 10-14-26 22:25 |
+| Version | 1.1 |
+| Last Updated | 10-14-26 22:42 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -285,4 +308,5 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 10-14-26 22:42 | Claude (Claude Code) | Rulings 28–31 appended: Doug's answers to build plan § 9 questions 1, 3, 8 and 9 (custom entities; `Unverified`; multiple referring partners on an engagement; links in the application database). |
 | 1.0 | 10-14-26 22:25 | Claude (Claude Code) | Created when the arc was consolidated into `prds/prospect-marketing/` (Doug's ruling, 10-14-26: a directory on the chapter-network pattern). Rulings 1–27, CM-1 to CM-11 and the two tables copied verbatim from the process plan; no ruling changed. |

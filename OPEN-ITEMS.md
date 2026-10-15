@@ -12,16 +12,16 @@ found; move resolved items to the bottom with the resolution date.
     documents that disagreed; Doug ruled a directory on the chapter-network
     pattern. Start at its `README.md`. `rulings.md` is the binding record
     (rulings 1–27, CM-1 to CM-11, append only); `build-plan.md` v0.2 is the
-    one plan (revised against CM-1 to CM-11 at 22:09); the process plan and
-    the three spent kickoff prompts are under `history/`. **Owed, in
-    order:** (a) Doug's answers to build plan § 9 questions 1 (custom
-    entities or EspoCRM's own Lead and Campaign), 3 (rung 1 stored
-    `Unverified` or `Unqualified`), 8 (a many-partner link on the engagement
-    or none) and 9 (campaign links in the application's database or a fourth
-    entity) — each recorded in `rulings.md` as ruling 28 onward; (b) the two
-    CRM handoffs, plan files and role script from
-    `prompts/prospect-marketing-crm-handoff-prompt-v0.1.md` (v0.1.3), dry-run
-    fingerprints only; (c) Doug applies on crm-test, verifies, soaks;
+    one plan (v0.2 against CM-1 to CM-11 at 22:09; **v0.3 at 22:43 with
+    Doug's answers to the four shape-changing questions, rulings 28–31** —
+    custom entities, `Unverified`, **multiple referring partners on an
+    engagement** via a new many-to-many `CEngagement.referringPartners`,
+    links in the application database); the process plan and the three
+    spent kickoff prompts are under `history/`. **Owed, in order:** (a)
+    ~~the four answers~~ done 10-14-26 22:41; (b) the two CRM handoffs, plan
+    files and role script from
+    `prompts/prospect-marketing-crm-handoff-prompt-v0.1.md` (v0.1.4, gate
+    open — **the next session**), dry-run fingerprints only; (c) Doug applies on crm-test, verifies, soaks;
     (d) Phase 1; (e) questions 2, 4 and 5 before the first real card;
     (f) production at the Sunday slot, Boston with its release, a seeder and
     a sandbox re-baseline (both handoffs add tables). No CRM change, no

@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-14-26 22:27 · Revision 0.2.1 — change log at the end.
+Last Updated: 10-14-26 22:43 · Revision 0.3 — change log at the end.
 
 **Where this document lives.** `prds/prospect-marketing/` is the whole arc;
 start at its `README.md`. The binding decisions are in `rulings.md` beside
@@ -16,6 +16,13 @@ it is longer than the document it serves. Where this plan had to choose, the
 choice is stated as a draft with its cost; the choices that pass the two-part
 test are in § 9 as numbered questions, and the plan is written on the
 recommended answer to each so that a "yes" costs Doug nothing.
+
+**v0.3 (10-14-26 22:41): questions 1, 3, 8 and 9 are answered** — rulings
+28–31 in `rulings.md`. Three as recommended; question 8 against it: **an
+engagement supports multiple referring partners** (ruling 30), so the
+engagement gains a many-to-many link `referringPartners` beside the single
+`referringPartner` of v0.255.0 (§ 1.5, § 5). Eight questions stay open;
+none changes the CRM's shape.
 
 **Revised to v0.2 on 10-14-26 against the Campaign Management
 requirements** — `rulings.md`, *Requirements — the Campaign Management
@@ -43,7 +50,7 @@ relationship beginning through a standard intake form (ruling 22).
 ## 0. What this plan decides, in one screen
 
 - **Three custom entities** — `CProspect` (the quarantine record), `COutreachCampaign` (the campaign, labelled **Campaign** on every screen) and `COutreachTouch` (one row per attempt, which is also campaign membership) — rather than EspoCRM's own Lead and Campaign entities. The finding and the cost are in § 1.1; it is question 1.
-- **A campaign names its partners and its events** (CM-2, CM-6): two many-to-many links. The forms relate the campaign's partners to what they create, by each door's own rule (CM-4, § 5); a partner's record page gains a Campaigns tab (CM-5).
+- **A campaign names its partners and its events** (CM-2, CM-6): two many-to-many links. The forms relate the campaign's partners to what they create, by each door's own rule (CM-4, § 5) — **an engagement carries every one of them** through a new many-to-many `referringPartners` (ruling 30); a partner's record page gains a Campaigns tab (CM-5).
 - **Five kinds** (CM-3): postcard, email, SMS and call select an audience and run the shared engine; social media selects nobody and is its links alone (§ 3.6).
 - **A link is a record of the application's own with a short resolvable address** (CM-7, CM-8): named, any number per campaign, pointing at one of the five forms, the programme page or one event; destination correctable after publishing; retire-but-still-open; the QR code generated here (§ 3.7). Where the link lives is question 9.
 - **The rung continues after promotion as a field on the Contact and on the Company** (`cFunnelStage`), not through the link to the prospect record, because a webinar registrant has no prospect record to read through (§ 1.8).
@@ -51,7 +58,7 @@ relationship beginning through a standard intake form (ruling 22).
 - **The landing page is a sixth form kind** (`forms/prospect_response/`), so it inherits durable capture, holds and Submission Admin visibility; a scan is logged on the page load, before any form (§ 4).
 - **The standard forms carry three hidden values**, `prospect`, `campaign` and the link's token, exactly as the partner link carries one id, and honour them at delivery with the same validate-or-drop rule (§ 5). The campaign page shows the application's own numbers; conversion is an Analytics dashboard scoped to the campaign (CM-9, § 6).
 - **Five phases, each dark behind a flag or feature detection**; Phase 1 mails one real card and records one real scan, and needs two CRM handoffs applied first (§ 7).
-- **Twelve questions for Doug** (§ 9). Four gate Phase 1's handoff: the entity choice, the vendor, what the outside filter delivers, and where links live.
+- **Twelve questions for Doug** (§ 9); the four that shaped the CRM (1, 3, 8, 9) are answered as rulings 28–31, so Phase 1's handoff can be written. Three gate the first real card: the vendor, what the outside filter delivers, and the card itself.
 
 ---
 
@@ -234,6 +241,7 @@ custom; names on the custom entities stay as typed.
 | `COutreachTouch` | `company` | many-to-one | `Account` | `cOutreachTouches` | Same |
 | `COutreachCampaign` | `partnerProfiles` | many-to-many | `CPartnerProfile` | `sponsoredCampaigns` | CM-2: the partners a campaign names. The reverse feeds the partner's Campaigns tab (CM-5) |
 | `COutreachCampaign` | `events` | many-to-many | `CEvent` | `outreachCampaigns` | CM-6: the events a campaign advertises; one or more (working position) |
+| `CEngagement` | `referringPartners` | many-to-many | `CPartnerProfile` | `referredEngagements` | **Ruling 30**: every partner that referred this client — the partner link's partner and every partner the campaign names. Beside the single `referringPartner` (v0.255.0), whose reverse `engagements` stays the Referred Clients tab's first read (§ 5) |
 | `Contact` | `cOutreachCampaign` | many-to-one | `COutreachCampaign` | `contacts` | Ruling 27: only when the submission created the Contact |
 | `Account` | `cOutreachCampaign` | many-to-one | `COutreachCampaign` | `companies` | Ruling 27: same for the Company |
 | `CEngagement` | `outreachCampaign` | many-to-one | `COutreachCampaign` | `engagements` | Ruling 27: every time |
@@ -242,9 +250,9 @@ custom; names on the custom entities stay as typed.
 | `CPartnerProfile` | `outreachCampaign` | many-to-one | `COutreachCampaign` | `partnerProfiles` | Ruling 27 |
 | `CSponsorProfile` | `outreachCampaign` | many-to-one | `COutreachCampaign` | `sponsorProfiles` | Ruling 27 |
 
-Sixteen links, fourteen many-to-one and two many-to-many, none `hasOne` —
+Seventeen links, fourteen many-to-one and three many-to-many, none `hasOne` —
 the cardinality that has twice silently moved a record off its owner is not
-used anywhere here. Both many-to-many links are **relationships** in
+used anywhere here. All three many-to-many links are **relationships** in
 EspoCRM's sense: read through `list_related`, written with relate and
 unrelate, never through a `*Ids` attribute on the record write.
 
@@ -345,6 +353,8 @@ so the relabel needs no per-door code. `Presenter`, `Member`, `Donor` and
 | `partnerProfiles` | link on `COutreachCampaign` | `partnerProfiles` | As typed |
 | `sponsoredCampaigns` | reverse link on `CPartnerProfile` | `sponsoredCampaigns` | Custom entity: as typed |
 | `outreachCampaigns` | reverse link on `CEvent` | `outreachCampaigns` | Custom entity: as typed |
+| `referringPartners` | link on `CEngagement` | `referringPartners` | Custom entity: as typed (beside the existing `referringPartner`) |
+| `referredEngagements` | reverse link on `CPartnerProfile` | `referredEngagements` | Custom entity: as typed (`engagements` is already the single link's reverse) |
 
 Verified after the build by `GET /Metadata` → `entityDefs.<Entity>`, never
 by the Entity Manager list view (the label hides the prefix). Nothing in any
@@ -868,17 +878,24 @@ per-link counts and never written to the CRM.
 6. **The campaign id is written** (ruling 27): on the relationship record
    every time; on the Contact and on the Company only when this
    orchestrator's find-or-create returned `created`.
-6a. **The campaign's partners are related** (CM-4). The orchestrator reads
-   the campaign's `partnerProfiles` (under the intake API client, which
-   needs `CPartnerProfile` read — it creates partner profiles today, so it
-   has it; the handoff re-checks) and applies the door's own rule, in the
-   per-door table below. The engagement is the only relationship record
-   with a partner field, and it holds exactly one: **the plan writes it only
-   when the campaign names exactly one partner and no partner link already
-   named one** — a partner's own intake link always wins, because it is the
-   more specific claim. A campaign with several partners writes no partner
-   onto the engagement; the attribution is the campaign's, one hop away on
-   its Responses tab and on each partner's Campaigns tab. Question 8.
+6a. **The campaign's partners are related** (CM-4, ruling 30). The
+   orchestrator reads the campaign's `partnerProfiles` (under the intake
+   API client, which needs `CPartnerProfile` read — it creates partner
+   profiles today, so it has it; the handoff re-checks) and applies the
+   door's own rule, in the per-door table below. The engagement is the only
+   relationship record with partner links, and it has two: the single
+   `referringPartner` of v0.255.0 and the many-to-many `referringPartners`
+   (§ 1.5). **The rule:** `referringPartners` holds **every** referring
+   partner — the partner link's partner when one arrived, and every partner
+   the campaign names — written by relate, under the intake API client
+   (relate checks both sides, so the client needs `CPartnerProfile` edit —
+   it holds it, as the partner form's creator; the handoff re-checks). The
+   single `referringPartner` is written **only** by a partner's own intake
+   link, as today — it is the specific claim and the popup band's first
+   name — and never by a campaign. The Referred Clients tab and every
+   count that reads a referring partner read the **union** of the two
+   links, deduplicated. A notes line names the partners the campaign set:
+   *"Referring partners set from the campaign <name>: <names>."*
 7. **The relabel** (§ 1.9): `merge_contact_type` and `merge_company_type`
    append the door's type and remove `Prospect`.
 8. A notes line on the relationship record: *"Arrived through the campaign
@@ -889,7 +906,7 @@ per-link counts and never written to the CRM.
 
 | Door | Relationship record | Rung evidence written | Type appended | Campaign partners (CM-4) |
 |---|---|---|---|---|
-| client-intake | `CEngagement.outreachCampaign` | none stored — Candidate is read from the engagement | Client (Contact and Company) | `referringPartnerId` when the campaign names exactly one partner and no partner link named one; a notes line *"Referring partner set from the campaign <name>."* Several partners: none written |
+| client-intake | `CEngagement.outreachCampaign` | none stored — Candidate is read from the engagement | Client (Contact and Company) | every partner the campaign names into `referringPartners` (ruling 30); `referringPartnerId` untouched; a notes line *"Referring partners set from the campaign <name>: <names>."* |
 | info-request | `CInformationRequest.outreachCampaign` | `cFunnelStage=Warm Lead` on the Contact, and on the Company it created, advance-only (ruling 17) | none — Prospect stays until a relationship | no partner field exists; through the campaign |
 | event registration (`/webinars/{slug}?campaign=&link=`) | `CEventRegistration.outreachCampaign` | `cFunnelStage=Warm Lead` on the Contact, advance-only; `Opportunity` when attendance is later recorded (§ 6) | none (D-09 stands) | through the campaign (CM-6). The event's own `partnerProfiles` are the event's and are not rewritten by a campaign |
 | partner | `CPartnerProfile.outreachCampaign` | — | Partner | through the campaign |
@@ -902,13 +919,20 @@ form as today, which creates a new engagement on the existing client
 profile; the engagement carries the campaign id, and that is the whole
 attribution.
 
-**The referring partner and the campaign coexist** on an engagement: two
-different links, two different notes lines. A partner's intake link carries
-no campaign; a campaign link carries no partner (CM-4) — the partner comes
-from the campaign at delivery, by the rule in step 6a. When both arrive
-(a partner pastes a campaign link into their own outreach), the partner
-link's partner is written and the campaign is written; the campaign's
-partners are not consulted.
+**The referring partner and the campaign coexist** on an engagement: the
+campaign link, the single partner link and the many-partner link, each
+with its own notes line. A partner's intake link carries no campaign; a
+campaign link carries no partner (CM-4) — the partners come from the
+campaign at delivery, by the rule in step 6a. When both arrive (a partner
+pastes a campaign link into their own outreach), the partner link's
+partner is written to `referringPartner` **and** to `referringPartners`,
+the campaign is written, and the campaign's partners are added to
+`referringPartners` too — the client is credited to everyone who referred
+them (ruling 30). **What reads the union:** the Client Administration
+popup's *Referred by* band (every name, the single link's first), the
+partner's Referred Clients tab (`engagements` plus `referredEngagements`,
+deduplicated by engagement), and the Analytics engagement metrics that
+filter on a referring partner.
 
 **Where the type question for the information request stands.** Today
 that door creates its Company typed `Client` with `cClientStatus=Prospect`
@@ -1009,7 +1033,7 @@ training sandbox's nightly reset will truncate them until a re-baseline
 **CRM handoffs first (both additive):**
 
 - `contact-sms-opt-in-crm-handoff.md` + `scripts/plans/contact-sms-opt-in.json` — `Contact.cSmsOptIn`; the field-level check on every role that edits Contact.
-- `coutreach-entities-crm-handoff.md` + `scripts/plans/coutreach-entities.json` — the three entities, their fields (kinds per CM-3, `platform`), all sixteen links of § 1.5 including the two many-to-many (partners — CM-2; events — CM-6; the five relationship-record links are additive and cheap now, and Phase 2 then needs no CRM change), the four stage fields, the `Prospect` option on `cCompanyType`, and `scripts/migrate_outreach_roles.py` for the grants: the intake API role (`CProspect` create/read/edit, `COutreachTouch` create/read/edit, `COutreachCampaign` read **and its `partnerProfiles` relationship read**, and the new Contact/Account fields), the Marketing Admin Role (all three: create/read/edit at `all`, **Assignment Permission `all`** — a role that creates a record the application leaves unassigned needs it, the presenters finding — plus `CEvent` read for the events picker, which it holds). The links of CM-7 need no CRM change (§ 3.7, question 9).
+- `coutreach-entities-crm-handoff.md` + `scripts/plans/coutreach-entities.json` — the three entities, their fields (kinds per CM-3, `platform`), all seventeen links of § 1.5 including the three many-to-many (partners — CM-2; events — CM-6; `CEngagement.referringPartners` — ruling 30; the five relationship-record links are additive and cheap now, and Phase 2 then needs no CRM change), the four stage fields, the `Prospect` option on `cCompanyType`, and `scripts/migrate_outreach_roles.py` for the grants: the intake API role (`CProspect` create/read/edit, `COutreachTouch` create/read/edit, `COutreachCampaign` read **and its `partnerProfiles` relationship read**, `CEngagement` edit with `CPartnerProfile` edit for the `referringPartners` relate — both held today, re-checked — and the new Contact/Account fields), the Marketing Admin Role (all three: create/read/edit at `all`, **Assignment Permission `all`** — a role that creates a record the application leaves unassigned needs it, the presenters finding — plus `CEvent` read for the events picker, which it holds). The links of CM-7 need no CRM change (§ 3.7, question 9).
 
 **Flags:** `CAMPAIGNS_ENABLED`, `CAMPAIGNS_ALLOWED_TEAMS`, `CAMPAIGNS_LANDING_PUBLIC`, `POSTAL_PROVIDER` (`dryrun`), `POSTAL_API_KEY`, `POSTAL_WEBHOOK_SECRET`, `POSTAL_TEST_MODE`. The resolve route `/c/` is on whenever `CAMPAIGNS_ENABLED` is — a published link must keep working.
 
@@ -1041,13 +1065,13 @@ training sandbox's nightly reset will truncate them until a re-baseline
 **CRM change:** none (the links shipped with Phase 1's handoff).
 **Flag:** none — dark by nature (no id, no change) and feature-detected per link from metadata, so a CRM without the links drops the attribution with a logged note.
 
-**Build:** § 5 in the five orchestrators (client intake, info request, event registration, partner, sponsor), including step 6a's partner rule (CM-4); `merge_contact_type` and the relabel rule in `core/crm_upsert.py`; the campaign banner on the forms and the event page; the programme-page carry-through and the hidden values on the event page's registration form and the calendar modal (§ 3.7); the information request's Company typed Prospect (question 7); the notes lines; the Responses tab's record links and the campaign page's *responded* and *converted* counts.
+**Build:** § 5 in the five orchestrators (client intake, info request, event registration, partner, sponsor), including step 6a's partner rule (CM-4, ruling 30) and the union reads on the popup band and the Referred Clients tab; `merge_contact_type` and the relabel rule in `core/crm_upsert.py`; the campaign banner on the forms and the event page; the programme-page carry-through and the hidden values on the event page's registration form and the calendar modal (§ 3.7); the information request's Company typed Prospect (question 7); the notes lines; the Responses tab's record links and the campaign page's *responded* and *converted* counts.
 
 **Live verification, as Mark Marketing for the reads and signed out for the forms, on crm-test:**
 
-1. A card's *Request a mentor* through to delivery, the postcard campaign naming one partner: the engagement carries the campaign, that partner as referring partner, and both notes lines; the partner's Referred Clients tab lists it; the Contact and Company created by it carry `cOutreachCampaign`; the prospect record's promotion links are set; the Contact's type reads `Client` with no `Prospect`; the Company's type reads `Client` with no `Prospect`.
-1a. The same through a campaign naming **two** partners: the engagement carries the campaign and **no** referring partner; it appears on the campaign's Responses tab and on both partners' Campaigns tabs through the campaign.
-1b. The partner's own intake link with a campaign's `?campaign=&link=` appended (a partner reposting a campaign link): the referring partner is the link's partner, the campaign is written, the campaign's partners are not consulted.
+1. A card's *Request a mentor* through to delivery, the postcard campaign naming one partner: the engagement carries the campaign and that partner in `referringPartners` (the single `referringPartner` stays empty), and both notes lines; the partner's Referred Clients tab lists it; the popup's *Referred by* band names it; the Contact and Company created by it carry `cOutreachCampaign`; the prospect record's promotion links are set; the Contact's type reads `Client` with no `Prospect`; the Company's type reads `Client` with no `Prospect`.
+1a. The same through a campaign naming **two** partners: the engagement carries the campaign and **both** partners in `referringPartners` (ruling 30); it appears on the campaign's Responses tab, on both partners' Referred Clients tabs and on both partners' Campaigns tabs; the band names both.
+1b. The partner's own intake link with a campaign's `?campaign=&link=` appended (a partner reposting a campaign link): `referringPartner` is the link's partner, `referringPartners` holds that partner **and** the campaign's partners, the campaign is written; the Referred Clients tab of each lists the engagement once.
 2. The same person again through `/info-request/?campaign=<a second campaign>`: the information request carries the second campaign; the Contact keeps the first (ruling 27).
 3. From the social campaign's programme-page link (step 4a of Phase 1): open it signed out, pick an event from the page, register as a Contact typed Prospect from Phase 1: the registration carries the campaign, the Links tab shows 1 submission (event registration) on that link, the Contact's `cFunnelStage` reads Warm Lead and its type is unchanged (D-09). Register for the same event from a freshly typed address: no campaign — the carry-through's honest limit.
 4. A Company typed Prospect submits the partner form: `cCompanyType` reads `Partner` with no `Prospect`; the partner profile carries the campaign.
@@ -1099,7 +1123,7 @@ From `history/prospect-marketing-plan.md`, *Open after this session*:
 
 | Item | Status | Where |
 |---|---|---|
-| Rung 1's name | **Put to Doug** — the plan stores `Unverified` and recommends it; the enum value is a one-word change before the handoff is applied | Question 3 |
+| Rung 1's name | **Ruled (29, 10-14-26): `Unverified`** | Question 3 |
 | Where the rung continues after promotion | **Answered:** a field on Contact and Account, because two sources never have a prospect record | § 1.8 |
 | The call campaign's recording screen | **Answered:** the Calls tab, three outcomes, *Call again*, the warning that an unrecorded call reads as never contacted | § 3.4 |
 | Retention | **Answered as a draft:** Stale after `PROSPECT_STALE_DAYS` (180), never deleted, a `/setup` setting | § 6 |
@@ -1120,7 +1144,7 @@ session*, 10-14-26), each answered here or put to Doug:
 
 | Item | Status | Where |
 |---|---|---|
-| Several partners on one engagement (CM-4) | **Put to Doug** — written on: the single referring partner only when the campaign names exactly one | § 5 step 6a, question 8 |
+| Several partners on one engagement (CM-4) | **Ruled (30, 10-14-26): multiple referring partners** — a many-to-many `referringPartners` beside the single link; the recommendation was declined | § 1.5, § 5 step 6a, question 8 |
 | Social media: one kind with a platform, or a kind per platform | **Put to Doug** — written on: one kind, a `platform` field | § 3.6, question 10 |
 | SMS has no sending path | **Put to Doug** — written on: the kind ships with its rule, list and export; sending waits for a vendor | § 3.5, question 11 |
 | One event or many per campaign | **Answered as a draft:** many (a many-to-many), from Doug's plural and the programme-page link | § 1.5 |
@@ -1129,18 +1153,20 @@ session*, 10-14-26), each answered here or put to Doug:
 | The programme-page carry-through | **Answered:** query-string carry by the page's own script, with its honest limit named | § 3.7 |
 | Where the prospect screens live | **Put to Doug** — written on: under the Campaign Management tile as secondary grids | § 3.8, question 12 |
 | A per-campaign Analytics dashboard | **Answered:** a new dashboard scope, starter dashboard, Phase 4 | § 6 |
-| Where links live (new in this revision) | **Put to Doug** — written on: the application's database | § 3.7, question 9 |
+| Where links live (new in this revision) | **Ruled (31, 10-14-26): the application's database** | § 3.7, question 9 |
 
 ---
 
 ## 9. Questions for Doug
 
-Each is written on the recommended answer; a "yes" to all twelve changes
-nothing above. Questions 8–12 were added in v0.2, from the Campaign
-Management requirements.
+Each is written on the recommended answer. **Questions 1, 3, 8 and 9 were
+answered on 10-14-26 (rulings 28–31)** and are kept here with their
+answers; question 8 went against the recommendation and §§ 0, 1.5, 1.10,
+5, 7 and 8 were revised to match. Questions 8–12 were added in v0.2, from
+the Campaign Management requirements.
 
-1. **Custom entities, or EspoCRM's own Lead and Campaign?** Recommended:
-   custom (§ 1.1). Cost: three entities and sixteen links in the standard,
+1. **Custom entities, or EspoCRM's own Lead and Campaign?** **Answered:
+   custom (ruling 28).** Recommended: custom (§ 1.1). Cost: three entities and sixteen links in the standard,
    and the native `campaign` link stays unused. The alternative's cost: core
    grants, tabs and a required-flag change on every chapter's CRM, two of
    them unverified.
@@ -1150,7 +1176,7 @@ Management requirements.
    business's own address. Nothing is built for the delivery path until this
    is answered; the upload works for any answer.
 3. **Rung 1's stored name: `Unverified` (recommended) or `Unqualified`?**
-   `Unqualified` is a terminal reject in every surveyed CRM and is also the
+   **Answered: `Unverified` (ruling 29).** `Unqualified` is a terminal reject in every surveyed CRM and is also the
    fit-failure side exit here, so one word would mean two things.
 4. **Which mail vendor: Lob (recommended) or PostGrid?** Price is a wash
    (ruling 2); Lob's test key runs the whole pipeline, callback included,
@@ -1167,8 +1193,11 @@ Management requirements.
    `cClientStatus=Prospect`? It makes the relabel at conversion read the
    same for every door. Cost: a live door's behaviour changes, and existing
    records keep the old shape unless a one-time script relabels them.
-8. **A campaign with several partners, on an engagement.** The engagement
-   holds one referring partner. Recommended: write it only when the
+8. **A campaign with several partners, on an engagement.** **Answered
+   against the recommendation: multiple referring partners (ruling 30)** —
+   the alternative below is what is built (§ 1.5 `referringPartners`,
+   § 5 step 6a). The engagement
+   holds one referring partner today. Recommended: write it only when the
    campaign names exactly one partner (and no partner link named one);
    otherwise the engagement carries the campaign alone and the partners are
    one hop away. Cost: a client who came through a two-partner campaign is
@@ -1176,7 +1205,8 @@ Management requirements.
    Campaigns tabs instead. The alternative is a second, many-partner link
    on the engagement (one more CRM link; the Referred Clients tab reads
    two links and every count that reads `referringPartner` reads both).
-9. **Where campaign links live.** Recommended: the application's own
+9. **Where campaign links live.** **Answered: the application's database
+   (ruling 31).** Recommended: the application's own
    database (§ 3.7) — the resolve route never calls the CRM, visits are
    write-heavy rows, a destination correction is not a CRM write. Cost:
    links are invisible inside EspoCRM and vanish nightly on the sandbox
@@ -1227,8 +1257,8 @@ best-effort mirror.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — build plan |
-| Version | v0.2.1 — a plan, nothing built; revised against the Campaign Management requirements (CM-1 to CM-11); twelve questions open |
-| Last Updated | 10-14-26 22:27 |
+| Version | v0.3 — a plan, nothing built; questions 1, 3, 8 and 9 answered (rulings 28–31), multiple referring partners on an engagement; eight questions open, none shaping the CRM |
+| Last Updated | 10-14-26 22:43 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
 | Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
@@ -1237,6 +1267,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.3 | 10-14-26 22:43 | Claude (Claude Code) | Doug's answers to questions 1, 3, 8 and 9 recorded (rulings 28–31). Question 8 against the recommendation: `CEngagement.referringPartners` many-to-many to `CPartnerProfile` (reverse `referredEngagements`) added — seventeen links; step 6a rewritten (the many link holds every referring partner, the single link stays the partner link's own, readers take the union); the per-door table, the coexist paragraph, Phase 1's handoff and grants, Phase 2's build and verification, § 8 and § 9 updated. |
 | 0.2.1 | 10-14-26 22:27 | Claude (Claude Code) | Moved from `prds/prospect-marketing-build-plan.md` into `prds/prospect-marketing/` (Doug's consolidation ruling, 10-14-26); references to the process plan now point at `rulings.md` and `history/`. No section revised. |
 | 0.2 | 10-14-26 22:09 | Claude (Claude Code) | Revised against the Campaign Management requirements (CM-1 to CM-11): the campaign is labelled Campaign and names partners and events (two many-to-many links, sixteen in all); five kinds with the SMS kind (§ 3.5) and the social media kind (§ 3.6) added; a new § 3.7 for links as short resolvable addresses in the application's database, with correct, retire, the programme-page carry-through and the QR generator; the screens rebuilt around the Campaign Management tile, the campaign record page (Overview / Links / Responses / Analytics) and the partner's Campaigns tab; the forms carry the link token and relate the campaign's partners by door (step 6a); reporting gains the campaign page's own numbers and a campaign dashboard scope; the phases, their flags (`CAMPAIGNS_*`, `PROSPECT_STALE_DAYS`) and verification scripts updated; the requirements' open list answered in § 8; questions 8–12 added. The superseded-in-part pointer replaced by this revision note. |
 | 0.1.1 | 10-14-26 21:55 | Claude (Claude Code) | Pointer added at the top: superseded in part by *Requirements — Campaign Management application (10-14-26)* in the plan (CM-1 to CM-11); the sections v0.2 must revise are named there. No section revised. Duplicated date in Last Updated fixed. |

@@ -1,6 +1,6 @@
 # Kickoff prompt — write the prospect marketing CRM handoffs
 
-**Written 10-14-26 17:34; revised 10-14-26 22:28. For a fresh Claude Code session
+**Written 10-14-26 17:34; revised 10-14-26 22:44. For a fresh Claude Code session
 rooted in `cbm-client-intake`.** A handoff-writing session: it produces the
 two CRM handoff documents, their plan files and the role script that Phase 1
 of the build plan needs. It builds no application code, changes no CRM and
@@ -16,28 +16,17 @@ Operating mode: ARCHITECTURE.
 
 ---
 
-## Before anything: four answers this session needs from Doug
+## The gate is open: the four shape-changing questions are answered
 
-Four of the build plan's § 9 questions change the CRM's shape. **Ask for
-them in the first reply, in plain prose, and write nothing until all four
-are answered.** Each is written on a recommended answer, so "yes to all"
-is a complete answer. Record each answer in `rulings.md` as a dated ruling
-(28 onward) before writing the handoff.
-
-- **Question 1** — custom entities (recommended) or EspoCRM's own Lead and
-  Campaign. The handoff below assumes custom; the other answer is a
-  different session.
-- **Question 3** — rung 1's stored enum value, `Unverified` (recommended)
-  or `Unqualified`.
-- **Question 8** — whether the engagement gains a many-partner link (the
-  recommendation adds none).
-- **Question 9** — whether campaign links live in the application's
-  database (recommended, no CRM change) or as a fourth entity
-  `CCampaignLink`.
-
-Questions 2, 4, 5, 6, 7, 10, 11 and 12 do not change the CRM's shape and
-can stay open (question 6 may add a Mentor Role grant later; note it as
-owed).
+Build plan § 9 questions 1, 3, 8 and 9 were answered by Doug on 10-14-26
+at 22:41 and are **rulings 28–31 in `rulings.md`**: custom entities; rung 1
+stored `Unverified`; **multiple referring partners on an engagement** (the
+recommendation was declined — `CEngagement.referringPartners`, a
+many-to-many to `CPartnerProfile`, reverse `referredEngagements`, build plan
+v0.3 § 1.5 and § 5 step 6a); campaign links in the application's database.
+Nothing to ask first. Questions 2, 4, 5, 6, 7, 10, 11 and 12 stay open and
+do not change the CRM's shape (question 6 may add a Mentor Role grant
+later; note it as owed).
 
 ## The prompt
 
@@ -45,9 +34,9 @@ Use the `espo-crm-changes` skill from the first step. Read, in order:
 
 1. This repo's `CLAUDE.md`, the Gotchas on EspoCRM behaviour and the
    Conventions on feature detection.
-2. `prds/prospect-marketing/build-plan.md` § 1 in full — every entity,
+2. `prds/prospect-marketing/build-plan.md` (v0.3) § 1 in full — every entity,
    field and link is specified there with its stored name (§ 1.3 the kinds
-   and `platform`, § 1.5 the sixteen links, § 1.10 the prefix check) — and
+   and `platform`, § 1.5 the seventeen links, § 1.10 the prefix check) — and
    § 7 Phase 1 for the grants and the two file names.
 3. `prds/chapter-network/crm-update-runbook.md` §§ 3 and 7.
 4. `.claude/skills/espo-crm-changes/references/api-contract.md` for the
@@ -69,11 +58,12 @@ Produce, at the repository root and under `scripts/plans/`:
    **`scripts/plans/coutreach-entities.json`** — the three entities
    (`Prospect`, `OutreachCampaign`, `OutreachTouch`, typed without the `C`),
    every field of § 1.2–1.4 with the enum options exactly as the plan lists
-   them (rung 1 per question 3), **all sixteen links of § 1.5** in plan-file
-   form (`link` on `entity`, `linkForeign` on `entityForeign`, never the
-   dialog's inverted boxes) — fourteen many-to-one and the two many-to-many
-   (`partnerProfiles` to `CPartnerProfile`, `events` to `CEvent`), plus
-   whatever question 8 adds — the four stage fields on Contact and Account,
+   them (rung 1 is `Unverified`, ruling 29), **all seventeen links of § 1.5**
+   in plan-file form (`link` on `entity`, `linkForeign` on `entityForeign`,
+   never the dialog's inverted boxes) — fourteen many-to-one and the three
+   many-to-many (`partnerProfiles` to `CPartnerProfile`, `events` to
+   `CEvent`, and `CEngagement.referringPartners` to `CPartnerProfile`,
+   ruling 30) — the four stage fields on Contact and Account,
    and the `Prospect` option added to `Account.cCompanyType`. Decide and
    state how the `mailingAddress` field is built: test whether the applier
    accepts the `address` type on crm-test with a dry run; if it does not,
@@ -119,14 +109,15 @@ done.
 | Field | Value |
 |---|---|
 | Document | Kickoff prompt — prospect marketing CRM handoffs |
-| Version | v0.1.3 |
-| Last Updated | 10-14-26 22:28 |
+| Version | v0.1.4 |
+| Last Updated | 10-14-26 22:44 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| v0.1.4 | 10-14-26 22:44 | Claude (Claude Code) | Gate open: questions 1, 3, 8 and 9 answered (rulings 28–31); the seventeenth link (`CEngagement.referringPartners`) named; rung 1 fixed as `Unverified`. |
 | v0.1.3 | 10-14-26 22:28 | Claude (Claude Code) | Paths follow the consolidation into `prds/prospect-marketing/`; the gate section rewritten as one list of the four shape-changing questions (1, 3, 8, 9), each answer recorded as a ruling; "fifteen links" corrected to sixteen with the two many-to-many named; the one-session rule and the end-of-session bookkeeping added. |
 | v0.1.2 | 10-14-26 22:09 | Claude (Claude Code) | Gate met (build plan v0.2); questions 8 and 9 added to the answers needed first; the read list points at v0.2's changed sections. |
 | v0.1.1 | 10-14-26 21:55 | Claude (Claude Code) | Gate added: waits for build plan v0.2 (the Campaign Management requirements). Duplicated date fixed. |

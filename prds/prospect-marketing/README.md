@@ -1,6 +1,6 @@
 # Prospect marketing and Campaign Management
 
-Last Updated: 10-14-26 22:26 · Revision 1.0 — change log at the end.
+Last Updated: 10-14-26 22:44 · Revision 1.0 — change log at the end.
 
 **Read this first if you are working on prospects or campaigns.** This
 directory is the whole arc: the rulings, the build plan, and the record of
@@ -39,24 +39,24 @@ the CRM handoffs at the repository root (`contact-sms-opt-in-crm-handoff.md`,
 `scripts/plans/`, the role script under `scripts/`, and the code in a
 `campaigns/` package and a `forms/prospect_response/` form.
 
-## State, as of 10-14-26 22:26
+## State, as of 10-14-26 22:44
 
 - **Settled:** the process end to end (rulings 1–27) and the Campaign
   Management application (CM-1 to CM-11). None of it is reopened by any
   session.
-- **Written:** build plan v0.2 (10-14-26 22:09), revised against CM-1 to
-  CM-11. Its § 9 holds twelve questions, each written on a recommended
-  answer so that a "yes" costs nothing.
+- **Written:** build plan v0.3 — v0.2 (10-14-26 22:09) revised against
+  CM-1 to CM-11, then v0.3 (22:43) for Doug's answers to the four
+  shape-changing questions (rulings 28–31): custom entities, `Unverified`,
+  **multiple referring partners on an engagement** (against the
+  recommendation — a many-to-many `referringPartners`, seventeen links in
+  all), links in the application database. Eight questions stay open; none
+  changes the CRM.
 - **Owed, in this order:**
-  1. **Doug answers the four questions that change the CRM's shape** —
-     build plan § 9 questions 1 (custom entities or EspoCRM's own Lead and
-     Campaign), 3 (rung 1 stored as `Unverified` or `Unqualified`), 8 (a
-     many-partner link on the engagement, or none) and 9 (campaign links in
-     the application's database, or a fourth entity). Each answer is
-     recorded in `rulings.md` as a ruling.
-  2. **The CRM handoff session**, from the live kickoff prompt: two
-     handoffs, two plan files, one role script, dry-run fingerprints from
-     crm-test. No apply.
+  1. ~~Doug answers the four questions that change the CRM's shape~~ —
+     **done 10-14-26 22:41**, rulings 28–31.
+  2. **The CRM handoff session**, from the live kickoff prompt (v0.1.4, the
+     gate is open): two handoffs, two plan files, one role script, dry-run
+     fingerprints from crm-test. No apply. **This is the next session.**
   3. **Doug applies on crm-test** from `prds/chapter-network/crm-update-runbook.md`;
      the shape is verified in `GET /Metadata`, the grants as the org-wide
      key and as a real non-admin; soak.
@@ -113,12 +113,13 @@ import contract starts from).
 | Field | Value |
 |---|---|
 | Document | Prospect marketing — directory README |
-| Version | 1.0 |
-| Last Updated | 10-14-26 22:26 |
+| Version | 1.1 |
+| Last Updated | 10-14-26 22:44 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 10-14-26 22:44 | Claude (Claude Code) | State: the four shape-changing questions answered (rulings 28–31, build plan v0.3); the next session is the CRM handoff. |
 | 1.0 | 10-14-26 22:26 | Claude (Claude Code) | Created. Doug's ruling the same evening: consolidate the arc's three sessions' output into one directory on the chapter-network pattern. The process plan, the build plan, the funnel diagram and the three spent kickoff prompts moved here; `rulings.md` extracted; the live kickoff stays in `prompts/`. |
