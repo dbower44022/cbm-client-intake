@@ -6,6 +6,23 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+51. **Prospect marketing — build plan v0.2 owed, nothing built** (10-14-26).
+    The process is ruled end to end (`prds/prospect-marketing-plan.md`,
+    rulings 1–27) and the Campaign Management application is defined
+    (same document, CM-1 to CM-11, 10-14-26 evening). The build plan
+    (`prds/prospect-marketing-build-plan.md` v0.1.1) was written the same
+    afternoon, before the definition, and its header names the sections
+    v0.2 must revise. **Owed, in order:** (a) build plan v0.2 from
+    `prompts/prospect-marketing-build-plan-prompt-v0.1.md` (v0.2, item 8);
+    (b) Doug's answers to the build plan's § 9 questions — question 1
+    (custom entities or EspoCRM's own Lead and Campaign; the native module
+    is hidden on crm-test and the org key 403s on both) and question 3
+    (rung 1's stored name, `Unverified` recommended) gate the CRM handoff;
+    questions 2 (the outside filter's file), 4 (mail vendor, Doug opens the
+    account) and 5 (the card) gate the first real card; (c) the two CRM
+    handoffs from `prompts/prospect-marketing-crm-handoff-prompt-v0.1.md`,
+    gated on (a); (d) Phase 1. No CRM change, no vendor account, no code.
+
 45. **The training sandbox loses every presenter and partner-event link at
     04:00 UTC, and the demo events had none to lose** (10-11-26, Doug's
     request: demo events with presenters that are also related to a partner

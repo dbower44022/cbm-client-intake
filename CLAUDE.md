@@ -1628,7 +1628,11 @@ rollout, the intake-receipt redesign, Meet and Fathom transcripts, submission-ad
 collaboration, workspace directories, transcription-vendor options, **grant
 management**, **the rating engine** and **the mailing list and event
 sponsorship arc** — Constant Contact as a mirror of the CRM, partner
-many-to-many, the deferred in-app designer) — each records
+many-to-many, the deferred in-app designer) and **prospect marketing** —
+`prospect-marketing-plan.md` holds rulings 1–27 and the Campaign Management
+requirements CM-1 to CM-11, all settled; `prospect-marketing-build-plan.md`
+v0.1.1 predates those requirements and is owed a v0.2 before any CRM handoff
+or code; nothing of the arc is built) — each records
 the decisions and Doug's rulings behind that arc, so read the relevant one before
 reworking a feature. The chapter network is
 **not** one of those plans any more — it is its own project directory,
