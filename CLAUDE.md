@@ -1822,74 +1822,24 @@ each block.
   standing rule in the Session Management section. **Live pass matched
   the same afternoon** (`OPEN-ITEMS.md` #48, Doug as sally.sponsor).
 
-- **v0.252.0 (2026-10-11) — rich Funder Notes (live-typed), and the
-  sign-in Show button out of the tab order.** Pushed 10-11-26 14:09; **v0.252.1**
-  (the scalar-metadata-key fix, found by the live pass) pushed 14:28 and
-  live on both 14:30. **crm-test's field is converted** (Doug, 10-11-26,
-  read back `wysiwyg` as the org key). **v0.252.2** (pushed 10-11-26 19:02, live on both 19:04, the served
-  script carries the helper) is the review's find: the session tools did not up-convert a legacy plain
-  note's line breaks (Client Administration did), so the pass as
-  sally.sponsor (`OPEN-ITEMS.md` #47) **passed the same evening**;
-  **production converted the same night** (Doug's ruling: today, not the
-  Sunday slot) — both notes fields in one run of
-  `scripts/convert_notes_wysiwyg.sh` at 20:32, all three passes matched.
-  Boston owed. The tab-order fix is live.
+- **v0.252.0–v0.252.2 (2026-10-11) — rich Funder Notes, live-typed; the
+  sign-in Show button out of the tab order.** Live on crm-test and
+  production; both CRMs' notes fields converted and the passes matched
+  (`OPEN-ITEMS.md` #47). **Owed: Boston's conversion**
+  (`scripts/on_crm.sh boston scripts/convert_notes_wysiwyg.sh`, step page
+  linked from #47). Standing rules: the Overview notes editor follows the
+  field's live type (Session Management section); never read a scalar
+  metadata key (Gotchas).
 
 - **v0.251.0 (2026-10-11) — additional managers on partner and funder
-  records.** Committed, not pushed; ships dark (feature-detected). Doug's
-  requirement, built the same afternoon; standing rule in the Session
-  Management section. **The crm-test CRM change is Doug's to apply** (the
-  applier's apply is blocked for the assistant):
-  — **applied by Doug 10-11-26 13:46**, both links read back. **Live pass
-  done the same afternoon** as partner.manager and sally.sponsor: the
-  partner add, the funder add and the remove all 200 in the web log, the
-  reverse link read back as administrator (`OPEN-ITEMS.md` #46). Pushed
-  with the pass. **Production applied and passed 10-12-26** (Doug, from
-  the production web console; step page linked from #46). Owed: Boston
-  with its next release; a role ruling for a Mentor-Role-only user named
-  on a funder (no CSponsorProfile read).
-
-- **v0.250.0 / v0.249.3 (2026-10-11) — the nightly reconciliation puts
-  partner and funder records, their companies and contacts into the domain
-  team; the quick-added record is owner-stamped in both spellings.**
-  Pushed 10-11-26 12:13. `OPEN-ITEMS.md` #40, Doug's ruling option B;
-  standing rule in the Assignment stamps section. The read-only count that
-  sized it ran inside the production container (4 funders, 1 in team; 31
-  partners, 17 in team, 9 with no company). **First pass verified in both
-  worker logs on deploy** (production 35 records / 27 healed, crm-test 17 /
-  14, no errors) **and by Doug as sally.sponsor the same day** — every
-  sandbox funder in the grid (`OPEN-ITEMS.md` #40, resolved).
-
-- **v0.249.2 (2026-10-11) — the contact and engagement Events tabs read
-  under the org-wide key.** Pushed 10-11-26 11:42. Found live by Doug as Pat
-  Partner on a contact's Events tab in the directory (403 on
-  `CEventRegistration`, which no team role reads — every non-administrator
-  since Phase 6c). Doug's ruling: option B, the sibling tabs' rule; standing
-  rule in the Events section. **Verified live by Doug 10-11-26** on crm-test as
-  partner.manager (contact tab) and joe.mentor (engagement tab), both 200 in
-  the web log (`OPEN-ITEMS.md` #44, resolved).
-
-- **v0.250.0 (2026-10-11) — the demo events carry presenters, a partner
-  and a funder, seeded so a re-baseline keeps them.** Committed, not pushed.
-  The sandbox's golden baseline (09-07-26) predates the presenter entity and
-  the partner-event link, so the reset truncates both tables nightly (its
-  log names them) — a standing rule now in `SANDBOX-RESET.md` § *Re-baseline*:
-  **a CRM change that adds a table always needs a re-baseline.** Dry runs
-  clean on crm-test; **the applies and the recapture are Doug's**
-  (`OPEN-ITEMS.md` #45), on a morning after a reset with no release test
-  running. Showcase event: `Hiring Your First Employee` (`demo-records.md`).
-
-- **v0.249.0 / v0.249.1 (2026-10-09) — the quick-add contact AND company
-  are owned by their creator and team, on both doors.** v0.249.0 pushed
-  10-09-26 22:29 and live on crm-test and production 22:32; v0.249.1
-  pushed 22:52 (both building from it). Found live by Doug as Sally Sponsor on crm-test:
-  first the CRM's assignment check (misreported as a missing Contact
-  grant), then — on the v0.249.0 build — a refused read of the unowned
-  company the contact linked to, plus a duplicate company per attempt
-  because the match ran as a team-read user. Standing rules in the Session
-  Management section. **Verified live by Doug 10-11-26** on crm-test as
-  sally.sponsor: the funder saved (200, ten CRM calls) and its Details tab
-  listed the contact (`OPEN-ITEMS.md` #43, resolved).
+  records.** Live on crm-test and production, both CRMs' links applied by
+  Doug and the non-admin passes matched (`OPEN-ITEMS.md` #46). Standing rule
+  in the Session Management section. **Owed: Boston's two links** with its
+  next release (`scripts/plans/additional-managers.json`, fingerprint
+  `f2d6a41ea16c`), and **a role ruling**: a Mentor-Role-only user named
+  additional manager on a FUNDER sees it in neither Funder Management nor
+  My Email, because that role reads no `CSponsorProfile` (the mail sync is
+  unaffected — its scope runs under the org key).
 
 - **v0.248.0 (2026-10-09) — the receipt sweep converges; a timing line per
   API request.** Pushed 10-09-26 22:29. The last two review items; standing
