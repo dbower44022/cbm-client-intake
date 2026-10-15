@@ -41,7 +41,7 @@ their plan files under `scripts/plans/` (`contact-sms-opt-in.json`,
 and — when built — the code in a `campaigns/` package and a
 `forms/prospect_response/` form.
 
-## State, as of 10-15-26 01:20
+## State, as of 10-15-26 01:50
 
 - **Settled:** the process end to end (rulings 1–27) and the Campaign
   Management application (CM-1 to CM-11). None of it is reopened by any
@@ -73,13 +73,14 @@ and — when built — the code in a `campaigns/` package and a
      `scripts/prospect_crm_test.sh`; the tab list and the detail/list
      layouts by Claude through the admin API; the shape, the org-key
      reads, the sync dry run and the conformance diff all passed; the
-     address type was accepted). **Owed: the real non-admin pass** as Mark
-     Marketing and Sally Sponsor from the step page
-     https://claude.ai/artifact/ShmRGZgDWWfspETWuU86hQ sections 3–4, then
-     the soak to the Sunday slot. **This is the next step.**
+     address type was accepted). **The non-admin pass matched 10-15-26 01:49** (Doug as Mark
+     Marketing and Sally Sponsor, step page
+     https://claude.ai/artifact/ShmRGZgDWWfspETWuU86hQ). crm-test is
+     complete and soaking to the Sunday slot.
   4. **The Phase 1 build session**, from the live kickoff
      `prompts/prospect-marketing-phase-1-build-prompt-v0.1.md`: one real
-     card, one real scan, dark behind `CAMPAIGNS_ENABLED`.
+     card, one real scan, dark behind `CAMPAIGNS_ENABLED`. Its gate (the
+     crm-test apply and ruling 32) is open. **This is the next step.**
   5. **Before the first real card:** questions 2 (what the outside filter
      delivers), 4 (the mail vendor — Doug opens the account) and 5 (the card
      itself).
@@ -131,14 +132,15 @@ import contract starts from).
 | Field | Value |
 |---|---|
 | Document | Prospect marketing — directory README |
-| Version | 1.4 |
-| Last Updated | 10-15-26 01:20 |
+| Version | 1.5 |
+| Last Updated | 10-15-26 01:50 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.5 | 10-15-26 01:50 | Claude (Claude Code) | State: the non-admin pass matched; crm-test complete and soaking; the Phase 1 build session is next. |
 | 1.4 | 10-15-26 01:20 | Claude (Claude Code) | State: both handoffs applied on crm-test and verified as the org-wide key; the non-admin pass is the next step. |
 | 1.3 | 10-15-26 00:02 | Claude (Claude Code) | State: item (a) ruled (ruling 32); the next step is the crm-test apply. |
 | 1.2 | 10-14-26 23:15 | Claude (Claude Code) | State: the CRM handoff session done — two handoffs, two plan files, the role script, crm-test fingerprints; the `partnerProfiles` name collision put to Doug; the live kickoff is now the Phase 1 build prompt and the spent one is in `history/prompts/`. |

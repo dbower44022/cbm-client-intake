@@ -6,9 +6,10 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
-51. **Prospect marketing — the Phase 1 CRM change is APPLIED on crm-test
-    and verified as the org-wide key; the non-admin pass is owed; nothing
-    built** (10-14-26, updated 10-15-26 01:20). Three sessions worked the arc on 10-14-26 and left three
+51. **Prospect marketing — the Phase 1 CRM change is COMPLETE on
+    crm-test (applied, verified as the org-wide key and as real non-admins)
+    and soaking; production and Boston owed; nothing built** (10-14-26,
+    updated 10-15-26 01:50). Three sessions worked the arc on 10-14-26 and left three
     documents that disagreed; Doug ruled a directory on the chapter-network
     pattern. Start at its `README.md`. `rulings.md` is the binding record
     (rulings 1–27, CM-1 to CM-11, append only); `build-plan.md` v0.2 is the
@@ -39,11 +40,13 @@ found; move resolved items to the bottom with the resolution date.
     found on the apply — the three entities' detail and list layouts
     (default `name` only) by Claude through the admin API; `mailingAddress`
     accepted as the `address` type; three org-key 200s, sync dry run
-    clean, conformance diff empty; **(c′) the real non-admin pass** as Mark
-    Marketing and Sally Sponsor from the step page
-    https://claude.ai/artifact/ShmRGZgDWWfspETWuU86hQ sections 3–4, then
-    the soak (**the next step**); (d) Phase
-    1, from `prompts/prospect-marketing-phase-1-build-prompt-v0.1.md`,
+    clean, conformance diff empty; (c′) ~~the real non-admin pass~~ **matched 10-15-26 01:49** (Doug as
+    Mark Marketing and Sally Sponsor, step page
+    https://claude.ai/artifact/ShmRGZgDWWfspETWuU86hQ; the partner relate
+    as a Marketing Admin answered *operation requires edit access to
+    foreign record*, the expected both-sides check the build handles with
+    the admin fallback); soaking to the Sunday slot; (d) Phase
+    1 (**the next step** — its gate is open), from `prompts/prospect-marketing-phase-1-build-prompt-v0.1.md`,
     which also decides where the import's Company creates run (the
     Marketing Admin Role holds no Account grant — handoff item (i)); (e)
     questions 2, 4 and 5 before the first real card; (f) production at the
