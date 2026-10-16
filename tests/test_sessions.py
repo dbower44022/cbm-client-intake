@@ -2414,7 +2414,7 @@ def test_create_session_endpoint(monkeypatch):
 
     async def fake_create(cfg, client, parent_id, changes, attendees,
                           owner_user_id=None, settings=None, skip_calendar=False,
-                          skip_follow_up_invite=False):
+                          skip_follow_up_invite=False, **kwargs):
         return {"id": "s1", "parent": parent_id, "attendees": attendees,
                 "owner": owner_user_id, "skipCal": skip_calendar, **changes}
 
@@ -2443,7 +2443,7 @@ def test_contact_search_and_add_endpoints(monkeypatch):
     async def fake_link(cfg, client, parent_id, contact_id):
         linked.append((cfg.slug, parent_id, contact_id))
 
-    async def fake_create(cfg, client, parent_id, changes):
+    async def fake_create(cfg, client, parent_id, changes, *args, **kwargs):
         created.append((cfg.slug, parent_id, changes))
         return {"id": "new1"}
 
@@ -2696,7 +2696,7 @@ def _no_create_tokens():
 def _stub_create(monkeypatch, calls):
     async def fake_create(cfg, client, parent_id, changes, attendees,
                           owner_user_id=None, settings=None, skip_calendar=False,
-                          skip_follow_up_invite=False):
+                          skip_follow_up_invite=False, **kwargs):
         calls.append(parent_id)
         return {"id": "s%d" % len(calls), "parent": parent_id, **changes}
 
@@ -2832,6 +2832,58 @@ async def test_update_session_clean_attendee_sync_has_no_warning():
     assert ("CSession", "s1", "sessionAttendees", "c1") in fake.relates
 
 
+@pytest.mark.asyncio
+async def test_update_session_attendee_relate_escalates_to_admin_on_foreign_403():
+    """Greg Malkin's live incident (2026-10-15): a mentor (edit: own) adding an
+    attendee assigned to someone else 403'd (noAccessToForeignRecord). The relate
+    now escalates to the provisioning admin — same path co-mentor linking uses —
+    so a reachable admin clears it and the save carries no attendee warning."""
+    _ATT_403 = EspoError(
+        "relate CSession/s1/sessionAttendees failed: HTTP 403 "
+        '[No foreign record access for link operation (CSession:sessionAttendees).] '
+        '{"messageTranslation":{"label":"noAccessToForeignRecord","scope":null,'
+        '"data":{"action":"edit"}}}'
+    )
+
+    class AttendeeForeignDenied(Fake):
+        async def relate(self, entity, record_id, link, related_id):
+            raise _ATT_403
+
+    denied = AttendeeForeignDenied(records={("CSession", "s1"): {"name": "Kickoff"}})
+    admin = Fake()
+
+    async def factory():
+        return admin
+
+    session = await service.update_session(
+        MENTOR, denied, "s1", {"sessionNotes": "<p>x</p>"},
+        attendees=["c1"], admin_factory=factory,
+    )
+    # The admin made the attendee link; the save is clean (no warning).
+    assert admin.relates == [("CSession", "s1", "sessionAttendees", "c1")]
+    assert "warning" not in session
+
+
+@pytest.mark.asyncio
+async def test_update_session_attendee_relate_warns_when_no_admin_configured():
+    """With no admin factory the foreign-record 403 still surfaces as the
+    success-with-warning the recovery advice depends on — unchanged behaviour."""
+    _ATT_403 = EspoError(
+        "relate CSession/s1/sessionAttendees failed: HTTP 403 "
+        '{"messageTranslation":{"label":"noAccessToForeignRecord"}}'
+    )
+
+    class AttendeeForeignDenied(Fake):
+        async def relate(self, entity, record_id, link, related_id):
+            raise _ATT_403
+
+    denied = AttendeeForeignDenied(records={("CSession", "s1"): {"name": "Kickoff"}})
+    session = await service.update_session(
+        MENTOR, denied, "s1", {"sessionNotes": "<p>x</p>"}, attendees=["c1"],
+    )
+    assert "1 attendee change(s)" in session["warning"]
+
+
 # --- mentor-team stamp on contact link/create (stamp-drift layer 2) -----------
 
 
@@ -2923,7 +2975,7 @@ def test_create_session_writes_action_log_rows(monkeypatch):
 
     async def fake_create(cfg, client, parent_id, changes, attendees,
                           owner_user_id=None, settings=None, skip_calendar=False,
-                          skip_follow_up_invite=False):
+                          skip_follow_up_invite=False, **kwargs):
         return {"id": "s1", "name": "2026-07-20 - Acme", "status": "Completed",
                 "sessionType": "Client Session",
                 "engagement": {"activated": True, "from": "Assigned", "to": "Active"}}

@@ -1238,19 +1238,27 @@ async def fetch_inline_image(
 
 
 async def _sync_attendees(
-    client: SessionClient, session_id: str, attendees: list[str]
+    client: SessionClient, session_id: str, attendees: list[str],
+    admin_factory=None,
 ) -> int:
     """Make the session's attendee set exactly ``attendees``, via the relationship
     link endpoints. Setting ``sessionAttendeesIds`` on a record update does NOT
     reliably sync this custom many-to-many (same reason co-mentors use ``relate``),
     so we relate the added contacts and unrelate the removed ones.
 
+    Each link goes through :func:`_link_or_escalate`: EspoCRM checks edit on BOTH
+    sides of a relate, so attaching an attendee needs edit on the foreign Contact,
+    which a Mentor Role scoped ``edit: own`` does not grant for a contact assigned
+    to someone else (Greg Malkin's live incident, 2026-10-15 — the exact wall
+    co-mentor linking hit on 2026-07-26). Only a ``noAccessToForeignRecord``
+    denial is retried under the provisioning admin; a denial on the SESSION half
+    still raises, so the user's own read/edit of the session remains the gate.
+
     Per-contact best-effort, returning the failure count (2026-07-20, Anthony
     Sacco's live incident): the FIELD edits are already saved when this runs, so
-    a relate/unrelate rejection (typically EspoCRM's edit-on-the-foreign-Contact
-    requirement) must surface as a warning on a successful save — raising made
-    the whole save read as failed, and it was the exact recovery step the
-    create-path warning tells users to take."""
+    a relate/unrelate rejection that even the admin fallback cannot clear must
+    surface as a warning on a successful save — raising made the whole save read
+    as failed."""
     current = set((await get_session(client, session_id)).get("attendees") or [])
     target = set(attendees or [])
     add, remove = target - current, current - target
@@ -1259,7 +1267,10 @@ async def _sync_attendees(
     failed = 0
     for cid in add:
         try:
-            await client.relate(SESSION, session_id, _ATTENDEE_LINK, cid)
+            await _link_or_escalate(
+                client, admin_factory, "relate", session_id, _ATTENDEE_LINK, cid,
+                entity=SESSION,
+            )
         except EspoError as exc:
             failed += 1
             log.warning(
@@ -1268,7 +1279,10 @@ async def _sync_attendees(
             )
     for cid in remove:
         try:
-            await client.unrelate(SESSION, session_id, _ATTENDEE_LINK, cid)
+            await _link_or_escalate(
+                client, admin_factory, "unrelate", session_id, _ATTENDEE_LINK, cid,
+                entity=SESSION,
+            )
         except EspoError as exc:
             failed += 1
             log.warning(
@@ -1678,6 +1692,7 @@ async def create_session(
     settings: Optional[Any] = None,
     skip_calendar: bool = False,
     skip_follow_up_invite: bool = False,
+    admin_factory=None,
 ) -> dict[str, Any]:
     """Create a ``CSession`` linked to ``parent_id`` and return it (with id).
 
@@ -1722,7 +1737,10 @@ async def create_session(
         failed: list[str] = []
         for cid in attendees:
             try:
-                await client.relate(SESSION, created["id"], _ATTENDEE_LINK, cid)
+                await _link_or_escalate(
+                    client, admin_factory, "relate", created["id"],
+                    _ATTENDEE_LINK, cid, entity=SESSION,
+                )
             except EspoError as exc:
                 failed.append(cid)
                 log.warning(
@@ -1800,11 +1818,14 @@ async def update_session(
     user_id: Optional[str] = None,
     settings: Optional[Any] = None,
     skip_follow_up_invite: bool = False,
+    admin_factory=None,
 ) -> dict[str, Any]:
     """Update whitelisted fields on a session; sync attendees separately.
 
     ``attendees=None`` leaves the attendee set untouched; a list (incl. ``[]``)
-    replaces it via the relationship endpoints (see :func:`_sync_attendees`)."""
+    replaces it via the relationship endpoints (see :func:`_sync_attendees`).
+    ``admin_factory`` is threaded to the attendee sync for the foreign-record
+    escalation — see :func:`_sync_attendees`."""
     payload = _session_payload(changes)
     stripped_images = _strip_embedded_images(payload)
     await _sanitize_enum_payload(client, payload)
@@ -1812,7 +1833,9 @@ async def update_session(
         await client.update(SESSION, session_id, payload)
     attendee_failures = 0
     if attendees is not None:
-        attendee_failures = await _sync_attendees(client, session_id, attendees)
+        attendee_failures = await _sync_attendees(
+            client, session_id, attendees, admin_factory=admin_factory
+        )
     session = await get_session(client, session_id)
     warnings: list[str] = []
     if stripped_images:

@@ -1351,6 +1351,10 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 owner_user_id=user["userId"], settings=get_settings(),
                 skip_calendar=body.skipCalendar,
                 skip_follow_up_invite=body.skipFollowUpInvite,
+                # Attaching an attendee the mentor cannot edit (edit: own)
+                # is retried under the provisioning admin — same foreign-record
+                # escalation co-mentor linking uses. See _link_or_escalate.
+                admin_factory=admin_client_factory(get_settings()),
             )
         except service.SessionError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
@@ -1413,6 +1417,10 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 cfg, client, session_id, body.changes, body.attendees,
                 user_id=user["userId"], settings=get_settings(),
                 skip_follow_up_invite=body.skipFollowUpInvite,
+                # Attaching/removing an attendee the mentor cannot edit
+                # (edit: own) is retried under the provisioning admin — the
+                # foreign-record escalation co-mentor linking uses.
+                admin_factory=admin_client_factory(get_settings()),
             )
         except service.SessionError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
