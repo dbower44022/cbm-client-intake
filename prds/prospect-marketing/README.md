@@ -42,7 +42,7 @@ and the code: the `campaigns/` package, `core/postal.py`, `core/qr.py`,
 `forms/prospect_response/` and `frontend/shared/campaign-link.js` (**Phase 1
 built 10-15-26, v0.258.0, dark behind `CAMPAIGNS_ENABLED`**).
 
-## State, as of 10-15-26 03:05
+## State, as of 10-17-26 01:45
 
 - **Settled:** the process end to end (rulings 1–27), the Campaign
   Management application (CM-1 to CM-11), and the build's own rulings 28–33
@@ -88,13 +88,12 @@ built 10-15-26, v0.258.0, dark behind `CAMPAIGNS_ENABLED`**).
      Marketing and Sally Sponsor, step page
      https://claude.ai/artifact/ShmRGZgDWWfspETWuU86hQ). crm-test is
      complete and soaking to the Sunday slot.
-  4. ~~The Phase 1 build session~~ — **done 10-15-26 03:05** (v0.258.0,
-     committed, not pushed; verified by tests only). **Owed: Doug's live
-     pass on crm-test** from the step page linked in `OPEN-ITEMS.md` #51 —
-     the fourteen steps of build plan § 7 Phase 1 as Mark Marketing, signed
-     out, partner.manager and sally.sponsor. **This is the next step.**
-     Then the Phase 2 build session from
-     `prompts/prospect-marketing-phase-2-build-prompt-v0.1.md`.
+  4. ~~The Phase 1 build session~~ — **done 10-15-26** (v0.258.0) and
+     **live-passed on crm-test 10-15/17-26** (Doug, from the step page in
+     `OPEN-ITEMS.md` #51; five fixes on the way, v0.258.1–.5, the API
+     role's **edit** on the campaign among them). **Next: the Phase 2
+     build session** from `prompts/prospect-marketing-phase-2-build-prompt-v0.1.md`,
+     and production's CRM change at the Sunday slot (step 6).
   5. **Before the first real card:** questions 2 (what the outside filter
      delivers), 4 (the mail vendor — Doug opens the account) and 5 (the card
      itself).
@@ -146,14 +145,15 @@ import contract starts from).
 | Field | Value |
 |---|---|
 | Document | Prospect marketing — directory README |
-| Version | 1.6 |
-| Last Updated | 10-15-26 03:05 |
+| Version | 1.7 |
+| Last Updated | 10-17-26 01:45 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.7 | 10-17-26 01:45 | Claude (Claude Code) | State: Phase 1 live-passed on crm-test; Phase 2 and the production slot are next. |
 | 1.6 | 10-15-26 03:05 | Claude (Claude Code) | State: Phase 1 built (v0.258.0); the live pass is next; the live kickoff is Phase 2. |
 | 1.5 | 10-15-26 01:50 | Claude (Claude Code) | State: the non-admin pass matched; crm-test complete and soaking; the Phase 1 build session is next. |
 | 1.4 | 10-15-26 01:20 | Claude (Claude Code) | State: both handoffs applied on crm-test and verified as the org-wide key; the non-admin pass is the next step. |

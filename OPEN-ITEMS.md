@@ -6,10 +6,10 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
-51. **Prospect marketing — Phase 1 BUILT (v0.258.0, 10-15-26, dark behind
-    `CAMPAIGNS_ENABLED`); the CRM change is complete on crm-test and soaking;
-    Doug's Phase 1 live pass is owed; production and Boston owed** (10-14-26,
-    updated 10-15-26 03:05). Three sessions worked the arc on 10-14-26 and left three
+51. **Prospect marketing — Phase 1 BUILT and LIVE-PASSED on crm-test
+    (v0.258.0–v0.258.5, 10-15/17-26, dark behind `CAMPAIGNS_ENABLED`);
+    production and Boston owed; Phase 2 is next** (10-14-26, updated
+    10-17-26 01:25). Three sessions worked the arc on 10-14-26 and left three
     documents that disagreed; Doug ruled a directory on the chapter-network
     pattern. Start at its `README.md`. `rulings.md` is the binding record
     (rulings 1–27, CM-1 to CM-11, append only); `build-plan.md` v0.2 is the
@@ -47,14 +47,25 @@ found; move resolved items to the bottom with the resolution date.
     foreign record*, the expected both-sides check the build handles with
     the admin fallback); soaking to the Sunday slot; (d) ~~Phase 1~~ **built 10-15-26 03:05, v0.258.0** (ruling 33: the
     import's Company and Contact writes run under the intake API client);
-    (d′) **Doug's Phase 1 live pass on crm-test** from the step page
-    https://claude.ai/artifact/XSEA7eWTx3yhXkH6Kw9oLD (written 10-15-26 03:05,
-    ten sections): switch `CAMPAIGNS_ENABLED` and
-    `CAMPAIGNS_LANDING_PUBLIC` on at `/setup`, apply the receipt option
-    (`! scripts/prospect_crm_test.sh receipt`, fingerprint `cb685b7372b1`),
-    then the fourteen steps of build plan § 7 Phase 1 (**the next step**);
-    (d″) Phase 2 from `prompts/prospect-marketing-phase-2-build-prompt-v0.1.md`
-    once the pass matches; (e)
+    (d′) ~~Doug's Phase 1 live pass on crm-test~~ **run 10-15-26 and
+    10-17-26** from the step page
+    https://claude.ai/artifact/XSEA7eWTx3yhXkH6Kw9oLD (both switches on at
+    `/setup` on crm-test, the receipt option applied 10-15-26 10:23); Doug
+    reported the pass complete 10-17-26 01:2x with no failure outstanding
+    after the fixes it found — v0.258.1/.2 (`[hidden]` lost to
+    `display:grid`, every panel rendered at once), v0.258.3 (a prospect
+    create carrying a Company link 403s as a Marketing Admin; a partial
+    import now resumes; the Imports route was shadowed), v0.258.4 (the API
+    role needs **edit** on `COutreachCampaign` for the worker's run — re-run
+    `scripts/migrate_outreach_roles.py` on every CRM) and v0.258.5 (a
+    promoted company was selected beside its own prospect record). Two
+    notes from the pass, not defects: the portal's CRM link is Mentor Team
+    only by the v0.30.0 rule (Doug: leave it); Submission Admin's hardcoded
+    form filter list (`ops/frontend/app.js` `FORMS`) lacks
+    `prospect-response` and `event-registration` — a delivered response is
+    found under the **Closed** chip (cosmetic; owed);
+    (d″) **Phase 2** from `prompts/prospect-marketing-phase-2-build-prompt-v0.1.md`
+    (**the next build step**); (e)
     questions 2, 4 and 5 before the first real card; (f) production at the
     Sunday slot (both plans, the receipt option, the role script, the notes
     conversion, the tab list, the three entities' layouts — handoff § 3.3),
