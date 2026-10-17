@@ -1625,9 +1625,21 @@
         notice("The public website is not reading from this app yet — events "
              + "here are not visible on clevelandbusinessmentors.org.", "warn");
       }
+      // A deep link straight to one event — `/events/?event=<id>` — the
+      // address the Campaign Management Responses tab uses for a registration
+      // (the registrants are on the event's own Registrants tab).
+      var wanted = deepLinkedEvent();
+      if (wanted) await openEvent(wanted);
     } catch (e) {
       notice(e.message, "error");
     }
+  }
+
+  function deepLinkedEvent() {
+    try {
+      var v = (new URLSearchParams(window.location.search).get("event") || "").trim();
+      return /^[A-Za-z0-9]{1,32}$/.test(v) ? v : null;
+    } catch (_) { return null; }
   }
 
   document.addEventListener("DOMContentLoaded", boot);

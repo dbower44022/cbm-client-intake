@@ -1,5 +1,14 @@
 # Kickoff prompt — prospect marketing Phase 2: the doors honour the ids
 
+> **Done — history.** This kickoff was run on 10-17-26 (01:52–02:24): question
+> 7 was put to Doug first and answered "A" (ruling 34); Phase 2 was built as
+> v0.259.0 (`campaigns/attribution.py`, the five orchestrators, the union
+> readers, `merge_contact_type`, the carry-through, the Responses tab, the
+> relabel script, 38 new tests, suite green) and committed, not pushed; Doug's
+> six-step live pass is `OPEN-ITEMS.md` #51 (step page
+> https://claude.ai/artifact/JLZyupBD4i6scAogws6sWD). Moved here the same night. The
+> next kickoff is `prompts/prospect-marketing-phase-3-build-prompt-v0.1.md`.
+
 **Written 10-15-26; revised 10-17-26 01:49 for a fresh Claude Code session
 rooted in `cbm-client-intake`.** A build session: the five orchestrators
 honour the campaign id, the link token and the prospect id that Phase 1

@@ -49,7 +49,10 @@ class CapturingClient:
         # Matched records report only an id, so every other field reads as empty
         # (null) -> the orchestrator's null-fill path updates them.
         if entity == CONTACT and self._existing_contact:
-            return {"id": self._existing_contact}
+            # A returning client already carries the type, so the § 1.9 relabel
+            # (merge_contact_type) has nothing to write and the first update is
+            # the null-fill.
+            return {"id": self._existing_contact, "cContactType": ["Client"]}
         if entity == ACCOUNT and self._existing_account:
             return {"id": self._existing_account}
         if entity == CLIENT_PROFILE and self._existing_profile:

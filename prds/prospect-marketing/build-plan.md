@@ -935,13 +935,15 @@ partner's Referred Clients tab (`engagements` plus `referredEngagements`,
 deduplicated by engagement), and the Analytics engagement metrics that
 filter on a referring partner.
 
-**Where the type question for the information request stands.** Today
-that door creates its Company typed `Client` with `cClientStatus=Prospect`
-("nearest fit", from before a Prospect type existed on Companies). Ruling
-21's vocabulary wants a Company typed `Prospect`. The plan recommends the
-door create it typed `Prospect` once the option exists, with
-`cClientStatus` untouched, so the relabel at conversion reads the same for
-every door — question 7, because it changes a live door's behaviour.
+**The type question for the information request — ruled (34, 10-17-26).**
+Until then that door created its Company typed `Client` with
+`cClientStatus=Prospect` ("nearest fit", from before a Prospect type existed
+on Companies). The door now creates it typed `Prospect` with `cClientStatus`
+untouched, so the relabel at conversion reads the same for every door; a
+company the CRM already knows keeps the types it has; the write
+feature-detects the `Prospect` option and falls back to the old shape until
+a CRM carries it; `scripts/relabel_info_request_companies.py` relabels the
+companies created under the old shape, once per CRM.
 
 ---
 
@@ -1062,6 +1064,11 @@ training sandbox's nightly reset will truncate them until a re-baseline
 **Not before the first real card:** question 2 (the filter's file), question 4 (the vendor account — Doug opens it), question 5 (the card itself). The first real run is 25–50 pieces, signed off by Doug, with `POSTAL_TEST_MODE=false` set at `/setup` for that run only.
 
 ### Phase 2 — the doors honour the ids
+
+**Built 10-17-26, v0.259.0** (`campaigns/attribution.py` and the five
+orchestrators; the union reads; `merge_contact_type`; ruling 34; the
+carry-through; the Responses tab's counts and links). Verified by tests only
+— the six steps below are Doug's live pass, `OPEN-ITEMS.md` #51.
 
 **CRM change:** none (the links shipped with Phase 1's handoff).
 **Flag:** none — dark by nature (no id, no change) and feature-detected per link from metadata, so a CRM without the links drops the attribution with a logged note.
@@ -1191,9 +1198,14 @@ the Campaign Management requirements.
    `COutreachTouch` and read on `CProspect` in the Mentor Role.
 7. **Should the information request door create its company typed
    `Prospect`** (recommended) instead of today's `Client` with
-   `cClientStatus=Prospect`? It makes the relabel at conversion read the
-   same for every door. Cost: a live door's behaviour changes, and existing
-   records keep the old shape unless a one-time script relabels them.
+   `cClientStatus=Prospect`? **Answered 10-17-26: yes (ruling 34).** A
+   matched company keeps the types it has; the write feature-detects the
+   option and falls back to the old shape until a CRM carries it;
+   `scripts/relabel_info_request_companies.py` relabels the companies
+   created under the old shape, dry-run first, Doug runs it. It makes the
+   relabel at conversion read the same for every door. Cost: a live door's
+   behaviour changes, and existing records keep the old shape unless a
+   one-time script relabels them.
 8. **A campaign with several partners, on an engagement.** **Answered
    against the recommendation: multiple referring partners (ruling 30)** —
    the alternative below is what is built (§ 1.5 `referringPartners`,
@@ -1258,8 +1270,8 @@ best-effort mirror.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — build plan |
-| Version | v0.4 — a plan, nothing built; questions 1, 3, 8 and 9 answered (rulings 28–31), multiple referring partners on an engagement; the handoff's one open name ruled (32); eight questions open, none shaping the CRM |
-| Last Updated | 10-15-26 00:02 |
+| Version | v0.5 — Phases 1 and 2 built (v0.258.0, v0.259.0); questions 1, 3, 7, 8 and 9 answered (rulings 28–32, 34); seven questions open, none shaping the CRM |
+| Last Updated | 10-17-26 02:20 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
 | Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |

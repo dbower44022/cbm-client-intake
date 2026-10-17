@@ -25,6 +25,11 @@ Rules that are easy to get wrong, so they are stated here and tested:
   and NOT pushed to Zoom.
 * **Zoom is best-effort.** A Zoom failure leaves a complete CRM record and is
   retried by the redrive path; it never loses the registration.
+* **A campaign id rides the registration** (prospect marketing § 5, Phase 2):
+  validated or dropped, written on the registration when it is CREATED (a
+  repeat sign-up keeps the first campaign — ruling 27's rule for the person,
+  applied to the record), on a NEW Contact only, and the person moves to
+  Warm Lead, advance-only (§ 1.8). Their type is untouched (D-09 stands).
 
 Delivery runs through the durable pipeline (capture → worker → here), so every
 create is guarded by a named resumable step and a retry converges on one clean
@@ -37,6 +42,9 @@ import logging
 from datetime import datetime, timezone
 from typing import Any, Optional
 
+from campaigns import attribution as attrib
+from campaigns import config as campaign_cfg
+from campaigns.attribution import Attribution
 from core.crm_upsert import find_create_or_fill
 from core.espo import EspoApi, EspoError
 from core.phone import e164_or_none
@@ -60,6 +68,8 @@ C_PRIVACY_ACCEPTED = "cPrivacyPolicyAccepted"
 C_CODE_OF_CONDUCT = "cCodeOfConductAccepted"
 
 PROSPECT = "Prospect"
+#: A registration is rung evidence (§ 1.8, the per-door table): Warm Lead.
+WARM_LEAD = campaign_cfg.STAGE_WARM_LEAD
 
 #: Fields that may be null-filled on an EXISTING Contact. Deliberately excludes
 #: ``cContactType`` (D-09 — never relabel someone for attending a webinar) and
@@ -226,16 +236,28 @@ async def deliver(
             f"No event exists with the slug {sub.event_slug!r}."
         )
 
+    # The campaign id the programme page or the event page carried, validated
+    # or dropped (prospect marketing § 5 step 1).
+    attr = await attrib.resolve(client, sub, entity=cfg.REGISTRATION)
+    rung = await attrib.rung_available(client, CONTACT)
+
     email = str(sub.email)
     existing_contact = await client.find_one(
-        CONTACT, "emailAddress", email, select="id"
+        CONTACT, "emailAddress", email, select=f"id,{attrib.FUNNEL_STAGE}"
     )
+    contact_payload = _contact_payload(sub, is_new=existing_contact is None)
+    if existing_contact is None:
+        # A NEW contact carries the campaign (ruling 27) and enters at Warm Lead.
+        attrib.stamp_new(contact_payload, attr, stage=WARM_LEAD if rung else None)
     contact_id, action = await find_create_or_fill(
         client, CONTACT,
         match_attr="emailAddress", match_value=email,
-        create_payload=_contact_payload(sub, is_new=existing_contact is None),
+        create_payload=contact_payload,
         fill_keys=_CONTACT_FILL_KEYS,
     )
+    if existing_contact is not None and rung:
+        # Advance-only: registering is evidence, never a demotion.
+        await attrib.advance_rung(client, CONTACT, existing_contact, WARM_LEAD)
 
     existing = await _existing_registration(client, event["id"], email)
     status = await _seat_status(
@@ -272,6 +294,10 @@ async def deliver(
         payload["registrationDate"] = datetime.now(timezone.utc).strftime(
             "%Y-%m-%d %H:%M:%S"
         )
+        if attr.campaign:
+            # The campaign lands on the relationship record (ruling 27) — on
+            # the create only, so a repeat sign-up keeps the first.
+            payload[attrib.CAMPAIGN_FK] = attr.campaign["id"]
         created = await client.create(cfg.REGISTRATION, payload)
         registration_id = created["id"]
         outcome = "created"
@@ -283,7 +309,10 @@ async def deliver(
         "eventRegistrationId": registration_id,
         "registrationStatus": status,
         "outcome": outcome,
+        **attr.result(),
     }
+    # The prospect record points at the person it became (§ 5 step 4).
+    await attrib.link_promotion(client, attr, contact_id=contact_id)
 
     if status == cfg.REG_REGISTERED:
         zoom_result = await _push_to_zoom(

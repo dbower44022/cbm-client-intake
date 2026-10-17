@@ -16,7 +16,7 @@ Returns ``(record_id, action)`` with ``action`` in ``{"created", "updated",
 from __future__ import annotations
 
 import logging
-from typing import Any, Iterable, Optional
+from typing import Any, Awaitable, Callable, Iterable, Optional
 
 from .espo import EspoApi, EspoError, validation_field
 
@@ -91,6 +91,34 @@ async def create_dropping_invalid(
 # and report filters on. One company may hold several values.
 COMPANY_TYPE_FIELD = "cCompanyType"
 COMPANY_SELECT = "id,cCompanyType,website"   # what a company find must select
+# The Contact type discriminator, the same shape.
+CONTACT_TYPE_FIELD = "cContactType"
+
+# The Prospect relabel (prds/prospect-marketing/build-plan.md § 1.9, ruling 21):
+# ``Prospect`` is the type a promoted business or person carries BEFORE any
+# relationship exists. Appending a RELATIONSHIP type replaces it — the one
+# sanctioned type rewrite. ``Presenter``, ``Member``, ``Donor`` and
+# ``Administrator`` are not relationship types for this rule and leave it.
+PROSPECT_TYPE = "Prospect"
+RELATIONSHIP_TYPES = frozenset({"Client", "Partner", "Sponsor", "Mentor"})
+
+
+def merged_types(types: Any, new_type: str) -> Optional[list[str]]:
+    """The stored type list after this door appends ``new_type``, or None when
+    nothing changes.
+
+    * a value already present is left alone — nothing ELSE is ever removed;
+    * a missing value is appended;
+    * a relationship type (:data:`RELATIONSHIP_TYPES`) removes ``Prospect``
+      (§ 1.9 — the relabel at conversion), any other type leaves it.
+    """
+    current = [t for t in (types or []) if t]
+    out = list(current)
+    if new_type not in out:
+        out.append(new_type)
+    if new_type in RELATIONSHIP_TYPES and PROSPECT_TYPE in out and new_type != PROSPECT_TYPE:
+        out = [t for t in out if t != PROSPECT_TYPE]
+    return None if out == current else out
 
 
 def website_key(value: Any) -> str:
@@ -172,7 +200,9 @@ async def merge_company_type(client: EspoApi, existing: dict[str, Any], company_
     new ``cCompanyType`` value, or every screen keyed on that type misses it.
     The rule, shared by the public forms and the staff quick-add:
 
-    * a value already present is left alone — nothing is ever removed;
+    * a value already present is left alone — nothing is ever removed, with
+      ONE exception: a relationship type replaces ``Prospect``
+      (:func:`merged_types`, § 1.9 of the prospect marketing build plan);
     * a missing value is appended with one update;
     * a refused update is logged and swallowed — the type is a classification,
       never a reason to lose the submission.
@@ -181,17 +211,45 @@ async def merge_company_type(client: EspoApi, existing: dict[str, Any], company_
     :data:`COMPANY_SELECT` on that read or the stored list reads as empty and
     the merge would overwrite it. Returns True when a write was made.
     """
-    types = list(existing.get(COMPANY_TYPE_FIELD) or [])
-    if company_type in types:
+    types = merged_types(existing.get(COMPANY_TYPE_FIELD), company_type)
+    if types is None:
         return False
     try:
-        await client.update(
-            "Account", existing["id"], {COMPANY_TYPE_FIELD: types + [company_type]}
-        )
+        await client.update("Account", existing["id"], {COMPANY_TYPE_FIELD: types})
     except EspoError as exc:
         log.warning(
             "could not add %s to Account/%s %s: %s",
             company_type, existing.get("id"), COMPANY_TYPE_FIELD, exc,
+        )
+        return False
+    return True
+
+
+async def merge_contact_type(client: EspoApi, existing: dict[str, Any], contact_type: str) -> bool:
+    """The Contact sibling of :func:`merge_company_type`, and the ONE reason a
+    door ever touches a matched contact's type (§ 1.9, ruling 21).
+
+    A person's ``cContactType`` is curated data: it is never null-filled and
+    never merged for a door's convenience — an existing Client who asks a
+    question is not a Prospect, a Mentor who registers for a webinar stays a
+    Mentor. The exception is conversion: when a relationship door (client
+    intake, partner, sponsor) matches a Contact typed ``Prospect``, the
+    relationship type is appended and ``Prospect`` removed. Any other stored
+    type is left in place and only the missing value is appended. Merge-only
+    on everything but ``Prospect``, best-effort, returns True when written.
+
+    ``existing`` must have been read with ``cContactType`` selected, or the
+    stored list reads as empty and the merge would overwrite it.
+    """
+    types = merged_types(existing.get(CONTACT_TYPE_FIELD), contact_type)
+    if types is None:
+        return False
+    try:
+        await client.update("Contact", existing["id"], {CONTACT_TYPE_FIELD: types})
+    except EspoError as exc:
+        log.warning(
+            "could not add %s to Contact/%s %s: %s",
+            contact_type, existing.get("id"), CONTACT_TYPE_FIELD, exc,
         )
         return False
     return True
@@ -206,6 +264,8 @@ async def find_create_or_fill(
     create_payload: dict[str, Any],
     fill_keys: Optional[Iterable[str]] = None,
     droppable: Iterable[str] = DROPPABLE_CONTACT_FIELDS,
+    select_extra: Iterable[str] = (),
+    on_match: Optional[Callable[[dict[str, Any]], Awaitable[Any]]] = None,
 ) -> tuple[str, str]:
     """Find ``entity`` by ``match_attr == match_value``; create or null-fill.
 
@@ -215,11 +275,16 @@ async def find_create_or_fill(
     is updated only when the desired value is non-empty AND the stored value is
     empty.
 
+    ``on_match`` is called with the matched record (as read, with ``id``,
+    the fill keys and ``select_extra``) before the null-fill — the hook the
+    relationship doors use for the Prospect relabel (:func:`merge_contact_type`)
+    without a second read. It never changes the fill.
+
     The create goes through :func:`create_dropping_invalid`, so one CRM-rejected
     value in a ``droppable`` field costs that field, not the submission.
     """
     keys = list(fill_keys) if fill_keys is not None else list(create_payload.keys())
-    select = ",".join(dict.fromkeys(["id", *keys]))
+    select = ",".join(dict.fromkeys(["id", *keys, *select_extra]))
     existing = await client.find_one(entity, match_attr, match_value, select=select)
     if existing is None:
         created = await create_dropping_invalid(
@@ -227,6 +292,8 @@ async def find_create_or_fill(
         )
         return created["id"], "created"
 
+    if on_match is not None:
+        await on_match(existing)
     fill = {
         k: create_payload[k]
         for k in keys

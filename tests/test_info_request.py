@@ -130,15 +130,14 @@ async def test_existing_contact_with_empty_description():
 
 
 @pytest.mark.asyncio
-async def test_existing_company_gains_the_client_type():
+async def test_existing_company_keeps_the_types_it_has():
     """A funder's company asking for information is reused, not duplicated,
-    and gains Client on cCompanyType while keeping Sponsor (v0.236.0)."""
+    and its types are left alone — an information request is not a
+    relationship (ruling 34, 10-17-26; before it the door appended Client)."""
     client = CapturingClient(existing_account="account-9")
     ids = await submit_request(_request(company="Generous Corp"), client)
     assert [e for e, _ in client.creates] == [CONTACT, INFO_REQUEST]
-    assert [u for u in client.updates if u[0] == ACCOUNT] == [
-        (ACCOUNT, "account-9", {"cCompanyType": ["Sponsor", "Client"]})
-    ]
+    assert [u for u in client.updates if u[0] == ACCOUNT] == []
     assert ids["accountId"] == "account-9"
 
 

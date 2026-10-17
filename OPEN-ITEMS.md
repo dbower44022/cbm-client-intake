@@ -8,8 +8,9 @@ found; move resolved items to the bottom with the resolution date.
 
 51. **Prospect marketing — Phase 1 BUILT and LIVE-PASSED on crm-test
     (v0.258.0–v0.258.5, 10-15/17-26, dark behind `CAMPAIGNS_ENABLED`);
-    production and Boston owed; Phase 2 is next** (10-14-26, updated
-    10-17-26 01:25). Three sessions worked the arc on 10-14-26 and left three
+    Phase 2 BUILT (v0.259.0, 10-17-26, tests only) — Doug's Phase 2 live
+    pass, production and Boston owed** (10-14-26, updated
+    10-17-26 02:20). Three sessions worked the arc on 10-14-26 and left three
     documents that disagreed; Doug ruled a directory on the chapter-network
     pattern. Start at its `README.md`. `rulings.md` is the binding record
     (rulings 1–27, CM-1 to CM-11, append only); `build-plan.md` v0.2 is the
@@ -64,8 +65,21 @@ found; move resolved items to the bottom with the resolution date.
     form filter list (`ops/frontend/app.js` `FORMS`) lacks
     `prospect-response` and `event-registration` — a delivered response is
     found under the **Closed** chip (cosmetic; owed);
-    (d″) **Phase 2** from `prompts/prospect-marketing-phase-2-build-prompt-v0.1.md`
-    (**the next build step**); (e)
+    (d″) ~~Phase 2~~ **built 10-17-26, v0.259.0** (the five doors honour the
+    campaign id and the prospect id through `campaigns/attribution.py`; the
+    engagement's `referringPartners` and the three union readers; the relabel
+    at conversion in `core/crm_upsert.py`; **ruling 34**, the information
+    request door's company typed Prospect, with
+    `scripts/relabel_info_request_companies.py` for the companies created
+    under the old shape — dry-run first, Doug runs it on each CRM once the
+    Prospect option is there; the programme page's carry-through; the
+    Responses tab's *Responded* / *Converted* and record links; the Submission
+    Admin filter note above closed). **Verified by tests only** (2,557 green,
+    38 new). (d‴) **Doug's Phase 2 live pass on crm-test** — the six steps of
+    build plan § 7 Phase 2, step page https://claude.ai/artifact/JLZyupBD4i6scAogws6sWD, as Mark Marketing for the
+    reads and signed out for the forms; and the relabel script's dry run on
+    crm-test (`uv run python scripts/relabel_info_request_companies.py`), then
+    `--apply`; (e)
     questions 2, 4 and 5 before the first real card; (f) production at the
     Sunday slot (both plans, the receipt option, the role script, the notes
     conversion, the tab list, the three entities' layouts — handoff § 3.3),

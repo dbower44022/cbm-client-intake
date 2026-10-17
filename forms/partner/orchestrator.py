@@ -34,9 +34,11 @@ from __future__ import annotations
 import logging
 
 from core.config import get_settings
+from campaigns import attribution as attrib
+from campaigns.attribution import Attribution
 from core.crm_upsert import (
     COMPANY_SELECT, CompanyConflict, conflicting_website, fill_company_website,
-    find_create_or_fill, merge_company_type,
+    find_create_or_fill, merge_company_type, merge_contact_type,
 )
 from core.enum_filter import EnumSanitizer
 from core.espo import EspoApi, EspoError
@@ -84,12 +86,26 @@ CONTACT_TYPE_PARTNER = "Partner"
 PARTNERSHIP_STATUS_NEW = "Candidate"
 
 
-async def _find_or_create_account(sub: PartnerApplication, client: EspoApi) -> str:
+async def _find_or_create_account(
+    sub: PartnerApplication, client: EspoApi, attr: Attribution | None = None
+) -> str:
     """Find-or-create the partner Account by name and return its id.
 
     Reusing a same-named Account dedupes repeat submitters and avoids EspoCRM's
-    duplicate-detection 409 (same rule as the client-intake form).
+    duplicate-detection 409 (same rule as the client-intake form). A prospect
+    record's PROMOTED company is used by id before any name match (prospect
+    marketing § 5 step 3); typed Prospect, it becomes a Partner through
+    ``merge_company_type`` (the § 1.9 relabel).
     """
+    attr = attr or Attribution()
+    promoted = await attrib.promoted_company(client, attr, select=COMPANY_SELECT)
+    if promoted is not None:
+        log.info("using promoted Account %s from prospect record %s", promoted["id"],
+                 (attr.prospect or {}).get("id"))
+        await fill_company_website(client, promoted, sub.business_website)
+        await merge_company_type(client, promoted, COMPANY_TYPE_PARTNER)
+        return promoted["id"]
+
     existing = await client.find_one(ACCOUNT, "name", sub.company, select=COMPANY_SELECT)
     if existing:
         log.info("matched existing Account %s for %r", existing["id"], sub.company)
@@ -109,18 +125,25 @@ async def _find_or_create_account(sub: PartnerApplication, client: EspoApi) -> s
     }
     if sub.business_website:
         payload["website"] = sub.business_website
+    # This submission creates the company, so it carries the campaign (ruling 27).
+    attrib.stamp_new(payload, attr)
     created = await client.create(ACCOUNT, payload)
     return created["id"]
 
 
 async def _find_or_create_contact(
-    sub: PartnerApplication, client: EspoApi, account_id: str, san: EnumSanitizer
+    sub: PartnerApplication, client: EspoApi, account_id: str, san: EnumSanitizer,
+    attr: Attribution | None = None,
 ) -> str:
     """Find-or-create the applicant Contact by email and return its id.
 
     On a repeat email the matched Contact is reused and any *empty* field is
     backfilled — never overwriting curated data (see ``find_create_or_fill``).
+    The one exception is the type: a matched Contact typed Prospect gains this
+    door's type and loses Prospect (``merge_contact_type``, the § 1.9 relabel).
+    A NEW contact carries the campaign it arrived through (ruling 27).
     """
+    attr = attr or Attribution()
     payload: dict = {
         "firstName": sub.first_name,
         "lastName": sub.last_name,
@@ -141,10 +164,16 @@ async def _find_or_create_contact(
     if sub.sms_consent:
         # True-only: an unticked box never flips a prior opt-in (the EV-12 rule).
         payload[C_SMS_OPT_IN] = True
+    attrib.stamp_new(payload, attr)
+
+    async def _relabel(existing: dict) -> None:
+        await merge_contact_type(client, existing, CONTACT_TYPE_PARTNER)
+
     contact_id, action = await find_create_or_fill(
         client, CONTACT,
         match_attr="emailAddress", match_value=str(sub.email),
         create_payload=payload, fill_keys=_CONTACT_FILL_KEYS,
+        select_extra=(C_CONTACT_TYPE,), on_match=_relabel,
     )
     log.info("Contact %s (%s) for %s", contact_id, action, sub.email)
     return contact_id
@@ -178,7 +207,7 @@ async def _partner_team_ids(client: EspoApi) -> list[str]:
 
 async def _create_partner_profile(
     sub: PartnerApplication, client: EspoApi, account_id: str, contact_id: str,
-    san: EnumSanitizer,
+    san: EnumSanitizer, attr: Attribution | None = None,
 ) -> str:
     """Create the CPartnerProfile hub linked to the Account and Contact.
 
@@ -204,9 +233,18 @@ async def _create_partner_profile(
         partnership_value = await san.multi(PARTNER_PROFILE, P_VALUE, sub.partnership_value)
         if partnership_value:
             payload[P_VALUE] = partnership_value
+    attr = attr or Attribution()
+    notes: list[str] = []
+    if attr.campaign:
+        # The campaign lands on the relationship record every time (ruling 27),
+        # with the notes line that says the LINK did it (§ 5 step 8).
+        payload[attrib.CAMPAIGN_FK] = attr.campaign["id"]
+        notes.append(attr.note())
     note = san.note()
     if note:
-        payload[P_DESCRIPTION] = note
+        notes.append(note)
+    if notes:
+        payload[P_DESCRIPTION] = "\n".join(notes)
     created = await client.create(PARTNER_PROFILE, payload)
     return created["id"]
 
@@ -218,14 +256,20 @@ async def submit_partner(sub: PartnerApplication, client: EspoApi) -> dict[str, 
     routes to the failed-submission store and already-created records are kept.
     """
     san = EnumSanitizer(client)
-    account_id = await _find_or_create_account(sub, client)
-    contact_id = await _find_or_create_contact(sub, client, account_id, san)
-    profile_id = await _create_partner_profile(sub, client, account_id, contact_id, san)
+    # The campaign id and the prospect id the form carried, validated or
+    # dropped (prospect marketing § 5 step 1) — never a reason to lose the lead.
+    attr = await attrib.resolve(client, sub, entity=PARTNER_PROFILE)
+    account_id = await _find_or_create_account(sub, client, attr)
+    contact_id = await _find_or_create_contact(sub, client, account_id, san, attr)
+    profile_id = await _create_partner_profile(sub, client, account_id, contact_id, san, attr)
     # Add the applicant to the profile's Contacts (hasMany), alongside the
     # primaryPartnercontact set on the profile itself.
     await client.relate(PARTNER_PROFILE, profile_id, PARTNER_CONTACTS, contact_id)
+    # The prospect record points at what it became (§ 5 step 4).
+    await attrib.link_promotion(client, attr, contact_id=contact_id, company_id=account_id)
     return {
         "accountId": account_id,
         "contactId": contact_id,
         "partnerProfileId": profile_id,
+        **attr.result(),
     }

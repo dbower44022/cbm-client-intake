@@ -47,9 +47,11 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
+from campaigns import attribution as attrib
+from campaigns.attribution import Attribution
 from core.crm_upsert import (
     COMPANY_SELECT, CompanyConflict, conflicting_website, fill_company_website,
-    find_create_or_fill, merge_company_type,
+    find_create_or_fill, merge_company_type, merge_contact_type,
 )
 from core.enum_filter import EnumSanitizer
 from core.espo import EspoApi
@@ -105,9 +107,16 @@ STATUS_SUBMITTED = "Submitted"
 
 
 async def _find_or_create_account(
-    sub: IntakeSubmission, client: EspoApi, san: EnumSanitizer
+    sub: IntakeSubmission, client: EspoApi, san: EnumSanitizer,
+    attr: Optional[Attribution] = None,
 ) -> str:
     """Find-or-create the client Account by name and return its id.
+
+    A prospect record's PROMOTED company is used by id before any name match
+    (prospect marketing § 5 step 3): the landing page already created the
+    business the person named, so matching the name again could hand the
+    client a same-named stranger's company. The promoted company is typed
+    Prospect, and ``merge_company_type`` turns that into Client (§ 1.9).
 
     Reusing a same-named Account dedupes repeat submitters and avoids EspoCRM's
     duplicate-detection 409, which would otherwise fail the whole submission.
@@ -124,6 +133,16 @@ async def _find_or_create_account(
     else:
         name = sub.business_name or f"{sub.first_name} {sub.last_name}"
 
+    attr = attr or Attribution()
+    website = sub.business_website if sub.business_stage != "Pre-Startup" else None
+    promoted = await attrib.promoted_company(client, attr, select=COMPANY_SELECT)
+    if promoted is not None:
+        log.info("using promoted Account %s from prospect record %s", promoted["id"],
+                 (attr.prospect or {}).get("id"))
+        await fill_company_website(client, promoted, website)
+        await merge_company_type(client, promoted, CLIENT)   # Prospect -> Client
+        return promoted["id"]
+
     existing = await client.find_one(ACCOUNT, "name", name, select=COMPANY_SELECT)
     if existing:
         log.info("matched existing Account %s for %r", existing["id"], name)
@@ -132,12 +151,12 @@ async def _find_or_create_account(
         # different company: hold for staff before anything is written —
         # here a wrong match would also hand the client another business's
         # client profile and engagement (company-website-hold-plan.md).
-        website = sub.business_website if sub.business_stage != "Pre-Startup" else None
         stored = conflicting_website(existing, website)
         if stored:
             raise CompanyConflict(name, existing["id"], stored, website or "")
         await fill_company_website(client, existing, website)
-        # A company CBM knows in another role gains this one (merge-only).
+        # A company CBM knows in another role gains this one (merge-only; a
+        # company typed Prospect becomes a Client — the § 1.9 relabel).
         await merge_company_type(client, existing, CLIENT)
         return existing["id"]
 
@@ -145,6 +164,8 @@ async def _find_or_create_account(
         "name": name,
         A_COMPANY_TYPE: [CLIENT],   # type discriminator — never sanitized
     }
+    # This submission creates the company, so it carries the campaign (ruling 27).
+    attrib.stamp_new(payload, attr)
     # User-supplied enums: drop a drifted value rather than 400 the create.
     business_stage = await san.enum(ACCOUNT, A_BUSINESS_STAGE, sub.business_stage)
     if business_stage:
@@ -161,13 +182,19 @@ async def _find_or_create_account(
 
 
 async def _find_or_create_contact(
-    sub: IntakeSubmission, client: EspoApi, account_id: str, san: EnumSanitizer
+    sub: IntakeSubmission, client: EspoApi, account_id: str, san: EnumSanitizer,
+    attr: Optional[Attribution] = None,
 ) -> str:
     """Find-or-create the Contact by email (Technical Design §4.2).
 
     On a repeat email the matched Contact is reused and any *empty* field is
     backfilled — never overwriting curated data (see ``find_create_or_fill``).
+    The one exception is the type: a matched Contact typed Prospect gains
+    Client and loses Prospect (``merge_contact_type``, the § 1.9 relabel);
+    any other stored type is kept and Client appended. A NEW contact carries
+    the campaign it arrived through (ruling 27).
     """
+    attr = attr or Attribution()
     payload = {
         "firstName": sub.first_name,
         "lastName": sub.last_name,
@@ -198,10 +225,16 @@ async def _find_or_create_contact(
         notif = await san.enum(CONTACT, C_NOTIFICATION_PREF, sub.notification_preference)
         if notif:
             payload[C_NOTIFICATION_PREF] = notif
+    attrib.stamp_new(payload, attr)
+
+    async def _relabel(existing: dict) -> None:
+        await merge_contact_type(client, existing, CLIENT)
+
     contact_id, action = await find_create_or_fill(
         client, CONTACT,
         match_attr="emailAddress", match_value=str(sub.email),
         create_payload=payload, fill_keys=_CONTACT_FILL_KEYS,
+        select_extra=(C_CONTACT_TYPE,), on_match=_relabel,
     )
     log.info("Contact %s (%s) for %s", contact_id, action, sub.email)
     return contact_id
@@ -249,14 +282,22 @@ async def _find_or_create_client_profile(
 
 async def _create_engagement(
     sub: IntakeSubmission, client: EspoApi, client_profile_id: str, contact_id: str,
-    account_id: str, san: EnumSanitizer,
+    account_id: str, san: EnumSanitizer, attr: Optional[Attribution] = None,
 ) -> str:
     """Create the Engagement linked to the CClientProfile, Contact, and Account.
 
     Drops any drifted ``mentoringFocusAreas`` value and records everything dropped
     across the whole chain (Account + Engagement) on ``description`` for follow-up,
     so a stale enum option never blocks capturing the request + contact info.
+
+    The campaign (prospect marketing § 5) rides the create as ``outreachCampaign``
+    with its own notes line, and the referring partners are related AFTER the
+    create (step 6a, ruling 30): ``referringPartners`` holds EVERY referring
+    partner — the partner link's partner when one arrived, plus every partner
+    the campaign names — while the single ``referringPartner`` stays the partner
+    link's own claim and is never written by a campaign.
     """
+    attr = attr or Attribution()
     focus_areas = await san.multi(ENGAGEMENT, "mentoringFocusAreas", sub.mentoring_focus_areas)
     payload = {
         "name": f"{sub.first_name} {sub.last_name} — Intake {datetime.now(timezone.utc):%Y-%m-%d}",
@@ -290,12 +331,27 @@ async def _create_engagement(
         payload[REFERRING_PARTNER_ID] = partner["id"]
         notes.append(REFERRAL_NOTE.format(name=partner.get("name") or partner["id"]))
 
+    # The campaign and the partners it names (read before the create so the
+    # notes line rides the same write; related after it).
+    campaign_partners = await attrib.campaign_partners(client, attr)
+    if attr.campaign:
+        payload[attrib.CAMPAIGN_FK] = attr.campaign["id"]
+        notes.append(attr.note())
+        partners_line = attrib.partners_note(attr, campaign_partners)
+        if partners_line:
+            notes.append(partners_line)
+
     note = san.note()
     if note:
         notes.append(note)
     if notes:
         payload["description"] = "\n".join(notes)
     created = await client.create(ENGAGEMENT, payload)
+
+    referring = ([partner["id"]] if partner else []) + [p["id"] for p in campaign_partners]
+    related = await attrib.relate_referring_partners(client, created["id"], referring)
+    if related:
+        attr.written["referringPartnerIds"] = related
     return created["id"]
 
 
@@ -333,20 +389,27 @@ async def submit_intake(sub: IntakeSubmission, client: EspoApi) -> dict[str, str
     records are valid canonical data and are not deleted.
     """
     san = EnumSanitizer(client)
-    account_id = await _find_or_create_account(sub, client, san)
-    contact_id = await _find_or_create_contact(sub, client, account_id, san)
+    # The campaign id and the prospect id the form carried, validated or
+    # dropped (prospect marketing § 5 step 1) — never a reason to lose the lead.
+    attr = await attrib.resolve(client, sub, entity=ENGAGEMENT)
+    account_id = await _find_or_create_account(sub, client, san, attr)
+    contact_id = await _find_or_create_contact(sub, client, account_id, san, attr)
     client_profile_id = await _find_or_create_client_profile(
         sub, client, account_id, contact_id
     )
     engagement_id = await _create_engagement(
-        sub, client, client_profile_id, contact_id, account_id, san
+        sub, client, client_profile_id, contact_id, account_id, san, attr
     )
     # Also add the applicant to the Engagement Contacts (hasMany) link, alongside
     # the primaryEngagementContact set on the engagement itself.
     await client.relate(ENGAGEMENT, engagement_id, ENGAGEMENT_CONTACTS, contact_id)
+    # The prospect record points at what it became (§ 5 step 4); its stage
+    # stops changing here.
+    await attrib.link_promotion(client, attr, contact_id=contact_id, company_id=account_id)
     return {
         "accountId": account_id,
         "contactId": contact_id,
         "clientProfileId": client_profile_id,
         "engagementId": engagement_id,
+        **attr.result(),
     }

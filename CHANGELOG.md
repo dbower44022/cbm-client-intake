@@ -4,6 +4,72 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.259.0] — 2026-10-17
+
+**feat(prospects): Phase 2 — the doors honour the ids** (prospect marketing
+build plan § 5, § 1.9, § 3.7, § 7 Phase 2; rulings 21, 27, 30 and the new
+**ruling 34**). Dark by nature: a submission that carries no campaign id and
+no prospect id is delivered exactly as before, and every write below
+feature-detects its link or field from CRM metadata, so a CRM without the
+Phase 1 change (production until its Sunday slot) drops the attribution with
+a logged note. No CRM change, no switch; rollback is a revert.
+
+- **The five orchestrators** (client intake, information request, event
+  registration, partner, sponsor) go through one new module,
+  `campaigns/attribution.py`: a validate-or-drop read of the campaign and of
+  the prospect record (an unknown, stale, cancelled or forged id drops the
+  attribution, never the submission); the campaign written on the
+  relationship record every time and on the Contact and the Company only when
+  this submission created them (ruling 27); a prospect record's promoted
+  company used **by id before any name match**, its promotion links set if
+  empty; the rung evidence per door (information request and registration:
+  Warm Lead on the Contact, advance-only, and the entry stage written once on
+  a new record); the notes line *"Arrived through the campaign <name>."*.
+- **Step 6a on the engagement (CM-4, ruling 30):** `referringPartners` holds
+  every referring partner — the partner link's partner when one arrived, plus
+  every partner the campaign names — related after the create under the
+  intake API client; the single `referringPartner` stays the partner link's
+  own and is never written by a campaign; a notes line *"Referring partners
+  set from the campaign <name>: <names>."*. **The three readers take the
+  union**, deduplicated by engagement: the Client Administration popup's
+  *Referred by* band names every partner (the single link first), the
+  partner's Referred Clients tab reads `engagements` plus
+  `referredEngagements`, and the Partner Analytics metrics (*Clients
+  referred*, *Referrals per month*) count both links once.
+- **The relabel at conversion is one rule** (§ 1.9): `core/crm_upsert.merged_types`
+  appends a type and removes `Prospect` only for Client, Partner, Sponsor or
+  Mentor; `merge_company_type` gains it, and the new `merge_contact_type` is
+  the ONE reason a door touches a matched contact's type. Every door that
+  appends a relationship type goes through the two functions
+  (`find_create_or_fill` gained `select_extra` and an `on_match` hook so the
+  relabel costs no second read); the staff quick-add inherits the rule.
+- **Ruling 34 (10-17-26, build plan § 9 question 7, option A):** the
+  information request door creates its company typed **Prospect** with
+  `cClientStatus` untouched; a company the CRM already knows keeps the types
+  it has (it used to gain Client); the write feature-detects the `Prospect`
+  option and falls back to the old shape until a CRM carries it.
+  `scripts/relabel_info_request_companies.py` (dry-run by default) relabels
+  the companies created under the old shape — exactly `[Client]` with status
+  Prospect and no client profile — once per CRM; Doug runs it.
+- **The programme page's carry-through** (§ 3.7): `/webinars/?campaign=&link=`
+  appends both to every event address it renders (`CBMEvents.config.eventUrlQuery`
+  in the renderer, set by the page's own script), so the event page's form
+  receives them as the calendar modal already did. Honest limit: a visitor
+  who types an event's address afresh has left the campaign.
+- **The Responses tab** leads with *Responded* and *Converted* (§ 6 item 2:
+  every counted submission; those whose delivery created an engagement, a
+  partner or a funder profile) and links through to each record: the
+  engagement in Client Administration's popup (new deep link
+  `/assignments/?engagement=<id>`), a partner or funder on its record page,
+  the registration on its event in Event Administration (new deep link
+  `/events/?event=<id>`), the information request in Submission Admin.
+- **Submission Admin's form filter** lists `event-registration` and
+  `prospect-response` (the Phase 1 pass's note).
+- Tests: `tests/test_campaign_attribution.py` (38) plus the ruling-34 and
+  union updates in `test_info_request.py`, `test_client_intake.py` and
+  `test_partner_management.py`. Verified by tests only; Doug's six-step live
+  pass is `OPEN-ITEMS.md` #51.
+
 ## [0.258.5] — 2026-10-15
 
 **fix(campaigns): a promoted company was selected beside its own prospect

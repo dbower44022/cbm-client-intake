@@ -56,11 +56,18 @@
    * LIVE site's address — correct on the website, a 404 anywhere else — so a
    * host that renders somewhere other than the website (the app's preview) sets
    * this and gets links that resolve where it is actually running.
+   *
+   * config.eventUrlQuery is a query string ("?campaign=…&link=…", or "") the
+   * host appends to every event address it renders — the campaign
+   * carry-through (prospect marketing § 3.7): a visitor who reached the
+   * programme page through a campaign link keeps the campaign on the way to
+   * an event's own page. Nothing about a person rides in it.
    */
   CBMEvents.config = {
     thumbnailProxy: null,
     imageProxy: null,
     eventUrlBase: null,
+    eventUrlQuery: "",
   };
 
   /* The live page truncates both summaries at 140 characters and offers an
@@ -92,12 +99,18 @@
 
   /* Where this event's own page lives, or "" when it has none. */
   function eventUrl(item) {
+    var href = "";
     if (CBMEvents.config.eventUrlBase) {
-      return item.slug
+      href = item.slug
         ? CBMEvents.config.eventUrlBase + encodeURIComponent(item.slug)
         : "";
+    } else {
+      href = item.url || "";
     }
-    return item.url || "";
+    if (href && CBMEvents.config.eventUrlQuery) {
+      href += (href.indexOf("?") >= 0 ? "&" : "?") + CBMEvents.config.eventUrlQuery.replace(/^[?&]/, "");
+    }
+    return href;
   }
 
   function el(tag, className, text) {

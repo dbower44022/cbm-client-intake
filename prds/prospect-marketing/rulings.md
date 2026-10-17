@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-15-26 02:16 · Revision 1.3 — change log at the end.
+Last Updated: 10-17-26 01:54 · Revision 1.4 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -208,6 +208,22 @@ plus Contact edit on the Marketing Admin Role). Doug's reply at 02:15: "a".
     Marketing Admin Role's Contact edit stays *no* (the presenters ruling
     of 10-08-26). Every later import door inherits this shape. (10-15-26)
 
+### Doug's ruling (10-17-26, at the start of the Phase 2 build session)
+
+Build plan § 9 question 7, put as a consequential decision: option A, the
+information request door creates its company typed `Prospect` with
+`cClientStatus` untouched, against option B, today's `Client` with
+`cClientStatus=Prospect`. Doug's reply at 01:53: "A".
+
+34. **The information request door creates a new company typed `Prospect`**
+    (option A), `cClientStatus` untouched, so the relabel at conversion
+    (ruling 21, § 1.9) is one rule for every door. A company the CRM already
+    knows is left with the types it has — the door appends nothing to it.
+    The write feature-detects the `Prospect` option on `cCompanyType` and
+    falls back to today's shape until a CRM has it (production until its
+    Sunday slot). Companies the door created before are relabelled by a
+    one-time, dry-run-first script that Doug runs. (10-17-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -328,8 +344,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.3 |
-| Last Updated | 10-15-26 02:16 |
+| Version | 1.4 |
+| Last Updated | 10-17-26 01:54 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -337,6 +353,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.4 | 10-17-26 01:54 | Claude (Claude Code) | Ruling 34 appended: the information request door creates its company typed `Prospect` (Doug's "A" to build plan § 9 question 7, at the start of the Phase 2 build). |
 | 1.3 | 10-15-26 02:16 | Claude (Claude Code) | Ruling 33 appended: the import's Company and Contact writes run under the intake API client (Doug's "a" at the start of the Phase 1 build). |
 | 1.2 | 10-15-26 00:02 | Claude (Claude Code) | Ruling 32 appended: the ruling-27 reverse link on the campaign is `attributedPartnerProfiles` (Doug's "1" to the handoff's item (a)). |
 | 1.1 | 10-14-26 22:42 | Claude (Claude Code) | Rulings 28–31 appended: Doug's answers to build plan § 9 questions 1, 3, 8 and 9 (custom entities; `Unverified`; multiple referring partners on an engagement; links in the application database). |

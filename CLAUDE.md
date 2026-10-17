@@ -1039,7 +1039,8 @@ the reason.
 - **Every public door carries `campaign_id`, `campaign_link`, `prospect_id`**
   (declared on `core/forms.BaseSubmission` — an undeclared key is dropped by
   capture) and the **SMS tick** `sms_consent` → `Contact.cSmsOptIn`, true-only
-  (ruling 9). **Captured and ignored at delivery until Phase 2.** The shared
+  (ruling 9). **Honoured at delivery since Phase 2 (v0.259.0)** — the next
+  bullet. The shared
   `frontend/shared/campaign-link.js` fills the hidden fields, shows the banner
   from the name-only lookup `GET /api/campaigns/public/{id}` and prefills the
   printed facts. The GET rate limit covers `/c/` and `/api/campaigns/public/`.
@@ -1050,9 +1051,52 @@ the reason.
   known* side exit; a re-upload of the same file is a no-op through the ledger.
 - **The partner's Campaigns tab** (CM-5): `DomainConfig.sponsored_campaigns_link`
   on the partner domain only, the Events-tab shape exactly.
-- Owed: Doug's live pass (`OPEN-ITEMS.md` #51), production's CRM change at a
-  Sunday slot (plus the `Prospect Response` receipt option and the entities'
-  layouts), Boston with its release, a seeder and sandbox re-baseline, Phase 2.
+- **Phase 2 — the doors honour the ids** (v0.259.0, 10-17-26; build plan
+  § 5). One module, `campaigns/attribution.py`, serves the five
+  orchestrators (client intake, information request, event registration,
+  partner, sponsor): a **validate-or-drop** read of the campaign and of the
+  prospect record (unknown, stale, cancelled, forged, or a CRM without the
+  link ⇒ the attribution is dropped with a logged note, never the
+  submission — every write feature-detects its link or field, so
+  production until its Sunday slot behaves exactly as before); the campaign
+  on the **relationship record every time** (`outreachCampaignId`) and on
+  the Contact and Company (`cOutreachCampaignId`) **only when that
+  orchestrator created them** (ruling 27 — on a registration, the create
+  only, so a repeat sign-up keeps the first); a prospect record's
+  **promoted company used by id before any name match**, its promotion
+  links set if empty; the rung as evidence, advance-only (information
+  request and registration ⇒ Warm Lead on the Contact, the entry stage
+  written once on a new record; a client has no stored rung — Candidate is
+  read from the engagement); the notes line *"Arrived through the campaign
+  <name>."*. **Step 6a (ruling 30):** the engagement's `referringPartners`
+  holds EVERY referring partner — the partner link's partner plus every
+  partner the campaign names — related after the create; the single
+  `referringPartner` is the partner link's own and is never written by a
+  campaign; the three readers (the popup's *Referred by* band, the
+  Referred Clients tab via `engagements` + `referredEngagements`, the
+  Partner Analytics metrics) take the **union**, deduplicated by
+  engagement. **The relabel at conversion is one rule** (§ 1.9):
+  `core/crm_upsert.merged_types` — appending Client, Partner, Sponsor or
+  Mentor removes `Prospect`, nothing else is ever removed; both
+  `merge_company_type` and the new `merge_contact_type` apply it, and
+  `merge_contact_type` is the ONE reason a door touches a matched contact's
+  type (the information request and registration doors never do). **Ruling
+  34:** the information request door creates its company typed `Prospect`,
+  `cClientStatus` untouched, a matched company left alone (it used to gain
+  Client), feature-detected with the old shape as the fallback;
+  `scripts/relabel_info_request_companies.py` (dry-run default) relabels
+  the old-shape companies once per CRM — Doug runs it. **The carry-through:**
+  the programme page appends `?campaign=&link=` to every event address it
+  renders (`CBMEvents.config.eventUrlQuery`); a freshly typed address has
+  left the campaign. **The Responses tab** leads with *Responded* /
+  *Converted* (`campaigns/router.summarize_responses`) and links through:
+  `/assignments/?engagement=<id>` opens the popup, `/events/?event=<id>`
+  the event (both new deep links), partner / funder record pages,
+  Submission Admin for an information request.
+- Owed: Doug's Phase 2 live pass (`OPEN-ITEMS.md` #51), production's CRM
+  change at a Sunday slot (plus the `Prospect Response` receipt option, the
+  entities' layouts and the relabel script), Boston with its release, a
+  seeder and sandbox re-baseline, Phase 3 (lists, review, calls).
 
 ### Events & Webinars — `/events`
 
@@ -2363,6 +2407,18 @@ sentence is a convenience.
   buttons). Verified in a stub harness only — but `/events` is **live on
   crm-test**, so the live pass can be done today; prod has the router unmounted
   (`/events/api/session` 404s there, 401s on crm-test).
+
+- **v0.259.0 (2026-10-17) — prospect marketing Phase 2, the doors honour
+  the ids.** Committed, not pushed. Dark by nature (no id, no change; every
+  write feature-detected), no switch, no CRM change; standing rules in the
+  Campaign Management section above. Question 7 was put to Doug first and
+  answered "A" — **ruling 34**, the information request door's company
+  typed Prospect, with `scripts/relabel_info_request_companies.py` for the
+  companies created under the old shape (dry-run first; Doug runs it per
+  CRM once the Prospect option is there). **Verified by tests only** (38
+  new, 2,557 green); Doug's six-step live pass on crm-test is
+  `OPEN-ITEMS.md` #51, from its step page. Next kickoff:
+  `prompts/prospect-marketing-phase-3-build-prompt-v0.1.md`.
 
 - **v0.258.0 (2026-10-15) — Campaign Management, prospect marketing Phase 1.**
   Committed, not pushed. Dark behind `CAMPAIGNS_ENABLED` and

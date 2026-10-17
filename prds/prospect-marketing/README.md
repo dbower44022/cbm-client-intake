@@ -1,6 +1,6 @@
 # Prospect marketing and Campaign Management
 
-Last Updated: 10-14-26 22:44 · Revision 1.0 — change log at the end.
+Last Updated: 10-17-26 02:20 · Revision 1.8 — change log at the end.
 
 **Read this first if you are working on prospects or campaigns.** This
 directory is the whole arc: the rulings, the build plan, and the record of
@@ -31,7 +31,7 @@ exists.**
 | `history/prospect-marketing-plan.md` | The process plan, v0.6: the 2026-08-11 elicitation, the September funnel discussions, the 2026-10-13/14 walk and the 10-14-26 definition session, with every proposal, working position and strawman labelled | Frozen on 10-14-26. Read it for *why*; cite `rulings.md` for *what* |
 | `history/prompts/` | The five kickoff prompts that produced the above, each marked done | Frozen |
 | `history/prospect-marketing-funnel-2026-09-02.png` | Doug's funnel diagram, which the ladder table transcribes | Frozen |
-| `prompts/prospect-marketing-phase-2-build-prompt-v0.1.md` (repository root) | **The live kickoff**: the Phase 2 build session, gated on Doug's Phase 1 live pass | Lives with the other kickoff prompts until it is spent, then moves here |
+| `prompts/prospect-marketing-phase-3-build-prompt-v0.1.md` (repository root) | **The live kickoff**: the Phase 3 build session (lists, review, calls), gated on Doug's Phase 2 live pass | Lives with the other kickoff prompts until it is spent, then moves here |
 
 Where things live, by the house conventions: the two CRM handoffs at the
 repository root (`contact-sms-opt-in-crm-handoff.md`,
@@ -42,13 +42,14 @@ and the code: the `campaigns/` package, `core/postal.py`, `core/qr.py`,
 `forms/prospect_response/` and `frontend/shared/campaign-link.js` (**Phase 1
 built 10-15-26, v0.258.0, dark behind `CAMPAIGNS_ENABLED`**).
 
-## State, as of 10-17-26 01:45
+## State, as of 10-17-26 02:20
 
 - **Settled:** the process end to end (rulings 1–27), the Campaign
-  Management application (CM-1 to CM-11), and the build's own rulings 28–33
+  Management application (CM-1 to CM-11), and the build's own rulings 28–34
   (custom entities; `Unverified`; multiple referring partners; links in the
   application database; `attributedPartnerProfiles`; the import's Company and
-  Contact writes under the intake API client). None of it is reopened by any
+  Contact writes under the intake API client; **the information request
+  door's company typed Prospect**, 10-17-26). None of it is reopened by any
   session.
 - **Built:** Phase 1 (10-15-26, v0.258.0) — the Campaign Management tile,
   grid and record page (Overview / Links / Responses), links as short
@@ -56,7 +57,13 @@ built 10-15-26, v0.258.0, dark behind `CAMPAIGNS_ENABLED`**).
   import, the postcard kind end to end with the dry-run vendor, the landing
   page and the `prospect-response` form kind, the partner's Campaigns tab,
   the SMS tick and the three hidden fields on every public door. Dark behind
-  `CAMPAIGNS_ENABLED`; nothing honours the ids at delivery yet (Phase 2).
+  `CAMPAIGNS_ENABLED`. **Phase 2 (10-17-26, v0.259.0)** — the five doors
+  honour the campaign id and the prospect id (`campaigns/attribution.py`),
+  the engagement's `referringPartners` and the three union readers, the
+  relabel at conversion (`merge_contact_type`), ruling 34 with its relabel
+  script, the programme page's carry-through, the Responses tab's
+  *Responded* / *Converted* and record links. Dark by nature: no id, no
+  change. Verified by tests only.
 - **Written:** the two CRM handoffs, their plan files and the role script
   (10-14-26 23:15, step 2 below); build plan v0.3 — v0.2 (10-14-26 22:09) revised against
   CM-1 to CM-11, then v0.3 (22:43) for Doug's answers to the four
@@ -91,16 +98,22 @@ built 10-15-26, v0.258.0, dark behind `CAMPAIGNS_ENABLED`**).
   4. ~~The Phase 1 build session~~ — **done 10-15-26** (v0.258.0) and
      **live-passed on crm-test 10-15/17-26** (Doug, from the step page in
      `OPEN-ITEMS.md` #51; five fixes on the way, v0.258.1–.5, the API
-     role's **edit** on the campaign among them). **Next: the Phase 2
-     build session** from `prompts/prospect-marketing-phase-2-build-prompt-v0.1.md`,
-     and production's CRM change at the Sunday slot (step 6).
+     role's **edit** on the campaign among them).
+  4a. ~~The Phase 2 build session~~ — **done 10-17-26** (v0.259.0; the
+     spent prompt is in `history/prompts/`). **Next: Doug's Phase 2 live
+     pass on crm-test** (the six steps of build plan § 7 Phase 2, the step
+     page https://claude.ai/artifact/JLZyupBD4i6scAogws6sWD) and the relabel
+     script's dry run;
+     then production's CRM change at the Sunday slot (step 6); then the
+     Phase 3 build session from
+     `prompts/prospect-marketing-phase-3-build-prompt-v0.1.md`.
   5. **Before the first real card:** questions 2 (what the outside filter
      delivers), 4 (the mail vendor — Doug opens the account) and 5 (the card
      itself).
   6. **Production at the Sunday 17:00 UTC slot, Boston with its release**,
      and a seeder plus a sandbox re-baseline, because both handoffs add
      tables the nightly reset truncates.
-- **Open and not blocking:** questions 6, 7, 10, 11 and 12.
+- **Open and not blocking:** questions 6, 10, 11 and 12.
 
 ## Rules for working in this directory
 
@@ -145,14 +158,15 @@ import contract starts from).
 | Field | Value |
 |---|---|
 | Document | Prospect marketing — directory README |
-| Version | 1.7 |
-| Last Updated | 10-17-26 01:45 |
+| Version | 1.8 |
+| Last Updated | 10-17-26 02:20 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.8 | 10-17-26 02:20 | Claude (Claude Code) | State: Phase 2 built (v0.259.0), ruling 34; Doug's Phase 2 live pass is next, then the Sunday slot, then Phase 3; the live kickoff is the Phase 3 prompt. |
 | 1.7 | 10-17-26 01:45 | Claude (Claude Code) | State: Phase 1 live-passed on crm-test; Phase 2 and the production slot are next. |
 | 1.6 | 10-15-26 03:05 | Claude (Claude Code) | State: Phase 1 built (v0.258.0); the live pass is next; the live kickoff is Phase 2. |
 | 1.5 | 10-15-26 01:50 | Claude (Claude Code) | State: the non-admin pass matched; crm-test complete and soaking; the Phase 1 build session is next. |

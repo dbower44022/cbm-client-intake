@@ -617,19 +617,44 @@ async def responses(campaign_id: str, request: Request) -> dict[str, Any]:
     await _campaign_or_404(request, client, campaign_id)
     store = _store(request)
     rows = await store.recent_submissions(campaign_id)
+    return summarize_responses(rows)
+
+
+#: The result keys that mean a RELATIONSHIP record was created (build plan § 6
+#: item 2: *converted* = a relationship record carrying the campaign).
+_RELATIONSHIP_KEYS = ("engagementId", "partnerProfileId", "sponsorProfileId")
+#: Rows that never count: the honeypot and a discard.
+_NOT_A_RESPONSE = ("held_honeypot", "discarded")
+
+
+def summarize_responses(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """The Responses tab's payload: the rows with their record ids, the per-form
+    totals, and the two campaign counts of § 6 item 2 — *responded* (every
+    delivered or pending submission that carried the campaign, the honeypot
+    and discards excluded) and *converted* (those whose delivery created a
+    relationship record: an engagement, a partner or a funder profile)."""
     totals: dict[str, int] = {}
-    for r in rows:
-        totals[r["form_slug"]] = totals.get(r["form_slug"], 0) + 1
+    responded = converted = 0
     out = []
     for r in rows:
         result = r.get("result") or {}
+        records = ({k: v for k, v in result.items() if isinstance(v, str) and k.endswith("Id")}
+                   if isinstance(result, dict) else {})
+        counted = r["status"] not in _NOT_A_RESPONSE
+        is_conversion = counted and any(records.get(k) for k in _RELATIONSHIP_KEYS)
+        if counted:
+            totals[r["form_slug"]] = totals.get(r["form_slug"], 0) + 1
+            responded += 1
+        if is_conversion:
+            converted += 1
+        received = r.get("received_at")
         out.append({
             "id": r["id"], "form": r["form_slug"], "status": r["status"],
-            "receivedAt": r["received_at"].isoformat() if r.get("received_at") else None,
+            "receivedAt": received.isoformat() if hasattr(received, "isoformat") else received,
             "linkToken": r.get("link_token"), "email": r.get("email"),
-            "records": {k: v for k, v in result.items() if isinstance(v, str) and k.endswith("Id")} if isinstance(result, dict) else {},
+            "records": records, "converted": is_conversion,
         })
-    return {"responses": out, "totals": totals}
+    return {"responses": out, "totals": totals, "responded": responded, "converted": converted}
 
 
 # --- prospects (§ 3.8) ------------------------------------------------------------------------------

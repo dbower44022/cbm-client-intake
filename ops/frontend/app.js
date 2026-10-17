@@ -51,7 +51,11 @@
   var RESPONSE_RANK = { "Reply owed": 0, "Delivery failed": 1, "Awaiting review": 2, "In progress": 3, "New": 4, "Waiting on them": 5, "Responded": 6, "Closed": 7, "—": 8 };
   // info-email = an inbound email to the shared info@ mailbox, captured by the
   // worker's poller (held_review until staff Approve or Discard it).
-  var FORMS = ["client-intake", "volunteer", "info-request", "partner", "sponsor", "info-email"];
+  // event-registration = a webinar sign-up; prospect-response = a postcard
+  // landing-page response (prospect marketing § 4). Both are delivery-only
+  // kinds that land here like any other row.
+  var FORMS = ["client-intake", "volunteer", "info-request", "partner", "sponsor", "info-email",
+               "event-registration", "prospect-response"];
   // Re-drive includes discarded so a mistaken discard can be undone (re-queued).
   var REDRIVABLE = { held_honeypot: 1, held_review: 1, held_duplicate: 1, needs_attention: 1, retry: 1, discarded: 1 };
   // A company hold is resolved through its own two-way control, never a bare

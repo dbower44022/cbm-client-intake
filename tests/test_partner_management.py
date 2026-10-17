@@ -377,9 +377,12 @@ async def test_list_referred_clients_reads_the_reverse_link():
     client = _ReferredClient(_ENG_ROWS)
     res = await service.list_referred_clients(PARTNER, client, "P1")
     # reads CPartnerProfile.engagements (reverse of CEngagement.referringPartner)
-    assert client.calls == [("CPartnerProfile", "P1", "engagements")]
+    # AND referredEngagements (reverse of the many-to-many referringPartners a
+    # campaign fills — prospect marketing ruling 30), deduplicated by engagement
+    assert client.calls == [("CPartnerProfile", "P1", "engagements"),
+                            ("CPartnerProfile", "P1", "referredEngagements")]
     rows = res["records"]
-    assert [r["id"] for r in rows] == ["E2", "E1"]  # newest createdAt first
+    assert [r["id"] for r in rows] == ["E2", "E1"]  # newest createdAt first, each once
     e1 = next(r for r in rows if r["id"] == "E1")
     assert e1["name"] == "Acme Weight Loss" and e1["status"] == "Active"
     assert e1["startDate"] == "2026-01-05"
@@ -387,6 +390,38 @@ async def test_list_referred_clients_reads_the_reverse_link():
     assert e1["mentorName"] == "Milt Sierra" and e1["mentorId"] == "M9"
     assert e1["contactName"] == "Ann Client" and e1["contactId"] == "C1"
     assert e1["totalSessions"] == 4
+
+
+class _ReferredClientTwoLinks(_ReferredClient):
+    """The single link and the many link disagree: the union is what shows."""
+
+    def __init__(self, single, many, *, many_fails=False):
+        super().__init__(single)
+        self._many = many
+        self._many_fails = many_fails
+
+    async def list_related(self, entity, record_id, link, **kw):
+        self.calls.append((entity, record_id, link))
+        if link == "referredEngagements":
+            if self._many_fails:
+                raise EspoError("list_related failed: 404 Not Found")
+            return {"list": list(self._many)}
+        return {"list": list(self._engagements)}
+
+
+@pytest.mark.asyncio
+async def test_referred_clients_is_the_union_of_both_links():
+    e3 = {**_ENG_ROWS[0], "id": "E3", "name": "Gamma Co", "createdAt": "2026-03-01 10:00:00"}
+    client = _ReferredClientTwoLinks([_ENG_ROWS[0]], [_ENG_ROWS[0], e3])
+    rows = (await service.list_referred_clients(PARTNER, client, "P1"))["records"]
+    assert [r["id"] for r in rows] == ["E3", "E1"]   # E1 once, though on both links
+
+
+@pytest.mark.asyncio
+async def test_referred_clients_survives_a_crm_without_the_many_link():
+    client = _ReferredClientTwoLinks(_ENG_ROWS, [], many_fails=True)
+    rows = (await service.list_referred_clients(PARTNER, client, "P1"))["records"]
+    assert [r["id"] for r in rows] == ["E2", "E1"]
 
 
 @pytest.mark.asyncio

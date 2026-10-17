@@ -795,7 +795,7 @@
     $("modalTitle").textContent = d.name || "Engagement";
     var st = $("modalStatus");
     if (d.status) { st.textContent = d.status; st.hidden = false; } else { st.hidden = true; }
-    setReferralBand(d.referringPartner);
+    setReferralBand(d.referringPartner, false, d.referringPartners);
 
     // Top panel split into two columns: contact identity on the left, the
     // engagement meta (meeting cadence + create date) on the right.
@@ -867,20 +867,28 @@
   // deleted; say so rather than hide it. No partner ⇒ the band still renders,
   // muted, saying so: an empty slot that disappears reads as a missing
   // feature (Doug's screenshot 10-12-26 asked where the partner was).
-  function setReferralBand(partner, loading) {
+  // The band names EVERY referring partner (prospect marketing ruling 30): the
+  // partner's own intake link first, then the partners a campaign credited.
+  // `partners` is the server's deduplicated union; `partner` the single link,
+  // kept as the fallback for a payload from before the union shipped.
+  function setReferralBand(partner, loading, partners) {
     var band = $("modalReferral");
     if (!band) return;
     band.innerHTML = "";
     if (loading) { band.hidden = true; return; }
-    if (!partner) {
+    var list = (partners && partners.length) ? partners : (partner ? [partner] : []);
+    if (!list.length) {
       band.className = "modal__referral modal__referral--none";
       band.textContent = "Referring partner: none recorded";
     } else {
       band.className = "modal__referral";
-      band.appendChild(document.createTextNode("Referred by "));
-      var strong = document.createElement("strong");
-      strong.textContent = partner.name || "(partner no longer in the system)";
-      band.appendChild(strong);
+      band.appendChild(document.createTextNode(list.length > 1 ? "Referred by " : "Referred by "));
+      list.forEach(function (p, i) {
+        if (i > 0) band.appendChild(document.createTextNode(i === list.length - 1 ? " and " : ", "));
+        var strong = document.createElement("strong");
+        strong.textContent = p.name || "(partner no longer in the system)";
+        band.appendChild(strong);
+      });
     }
     band.hidden = false;
   }
@@ -1918,11 +1926,23 @@
     ok.focus();
   }
 
+  // A deep link straight to one engagement's popup — `/assignments/?engagement=<id>`
+  // — the address the Campaign Management Responses tab and alert emails use.
+  // Read once at boot; a malformed id is ignored.
+  function deepLinkedEngagement() {
+    try {
+      var v = (new URLSearchParams(location.search).get("engagement") || "").trim();
+      return /^[A-Za-z0-9]{1,32}$/.test(v) ? v : null;
+    } catch (_) { return null; }
+  }
+
   // --- boot ---
   (async function init() {
     try {
       var user = await api("/session");
       showDashboard(user);
+      var wanted = deepLinkedEngagement();
+      if (wanted) openDetail(wanted).catch(function (e) { notice(e.message || "That engagement could not be opened.", "error"); });
     } catch (e) {
       bootFail(e);
     }

@@ -42,13 +42,21 @@
    * false — the old line mentioned only emails, so recording three acceptances
    * would have been untrue, and recording none was the lesser wrong. */
   // Campaign attribution (prospect marketing § 3.7): the id and link token a
-  // visitor arrived with ride the registration; the carry-through across the
-  // page's event links is Phase 2.
+  // visitor arrived with ride the registration (the calendar modal) and are
+  // carried on every event address this page renders (Phase 2, the
+  // carry-through), so the event page's own form receives them too. Honest
+  // limit: a visitor who types an event's address afresh has left the campaign.
   function campaignParam(name) {
     try {
       var v = (new URLSearchParams(window.location.search).get(name) || "").trim();
       return v && /^[A-Za-z0-9]{1,32}$/.test(v) ? v : null;
     } catch (_) { return null; }
+  }
+
+  function campaignQuery() {
+    var c = campaignParam("campaign"), l = campaignParam("link");
+    if (!c) return "";
+    return "campaign=" + encodeURIComponent(c) + (l ? "&link=" + encodeURIComponent(l) : "");
   }
 
   async function register(item, fields) {
@@ -212,6 +220,9 @@
     }
     // Each event's own page is served by this app at /webinars/<slug>.
     window.CBMEvents.config.eventUrlBase = "/webinars/";
+    // The campaign carry-through: a campaign on THIS page rides to every event
+    // page it links to (prospect marketing § 3.7).
+    window.CBMEvents.config.eventUrlQuery = campaignQuery();
     // The three documents the consent tick names. Substituted server-side as
     // this file is served, so a chapter points at its own without a code
     // change; the renderer itself is served without substitution, which is why

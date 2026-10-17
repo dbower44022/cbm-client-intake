@@ -158,6 +158,35 @@ class AssignError(Exception):
     """The chosen mentor is ineligible — a 400-level, user-facing condition."""
 
 
+REFERRING_PARTNERS_LINK = "referringPartners"   # CEngagement many-to-many → CPartnerProfile
+
+
+async def _referring_partners(
+    client: Any, engagement_id: str, single: Optional[dict]
+) -> list[dict]:
+    """Every referring partner of an engagement — the single ``referringPartner``
+    first, then the many-to-many ``referringPartners`` (ruling 30), each id
+    once. Unreadable many side ⇒ the single alone."""
+    out: list[dict] = []
+    seen: set[str] = set()
+    if single and single.get("id"):
+        out.append(single)
+        seen.add(single["id"])
+    try:
+        data = await client.list_related(
+            ENGAGEMENT, engagement_id, REFERRING_PARTNERS_LINK, select="id,name", max_size=200
+        )
+    except Exception as exc:  # noqa: BLE001 — a CRM without the link, or no read
+        log.debug("referringPartners of %s not readable: %s", engagement_id, exc)
+        return out
+    for row in data.get("list", []) if isinstance(data, dict) else []:
+        rid = row.get("id")
+        if rid and rid not in seen:
+            seen.add(rid)
+            out.append({"id": rid, "name": row.get("name")})
+    return out
+
+
 async def list_engagements(
     client: AssignClient, statuses: list[str]
 ) -> list[dict[str, Any]]:
@@ -295,6 +324,12 @@ async def get_engagement_detail(
             except EspoError:
                 pname = None
         referring_partner = {"id": partner_id, "name": pname}
+    # EVERY referring partner (prospect marketing ruling 30, v0.259.0): the
+    # union of the single link and the many-to-many ``referringPartners`` a
+    # campaign fills at delivery, the single link's partner first, deduplicated.
+    # Best-effort — a CRM without the link (production until its Sunday slot)
+    # answers 404 and the band shows the single link alone.
+    referring_partners = await _referring_partners(client, engagement_id, referring_partner)
 
     # Requested mentor (DAT-026): a belongsTo → CMentorProfile the client/staff
     # asked for. The `*Name` accessor isn't a defined field, so fall back to a
@@ -338,6 +373,7 @@ async def get_engagement_detail(
         "clientName": eng.get("engagementClientName"),
         "requestedMentor": requested_mentor,
         "referringPartner": referring_partner,
+        "referringPartners": referring_partners,
         "contact": contact,
         "focusAreas": focus,
         # Rich-text (wysiwyg) HTML — sanitized + rendered by the frontend.

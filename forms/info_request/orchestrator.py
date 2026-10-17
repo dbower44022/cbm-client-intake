@@ -11,10 +11,16 @@ Mapping (reconciled against crm-test.clevelandbusinessmentors.org, 2026-06-12):
     is not a new Prospect. Requires *edit* on Contact for the intake API user.
   * Account — created/linked only when a company name is given AND the contact
     is new (linking would otherwise risk detaching an existing contact's
-    account). Find-or-create by name like client-intake; on create it gets
-    cCompanyType=["Client"] (the type discriminator; nearest fit) and
-    cClientStatus="Prospect" — the staff worklist marker. A matched existing
-    Account keeps its current status.
+    account). Find-or-create by name like client-intake. On create it is
+    typed **Prospect** (ruling 34, 10-17-26 — the type a business carries
+    before any relationship, so the relabel at conversion is one rule for
+    every door) with `cClientStatus` untouched; on a CRM that does not carry
+    the Prospect option yet (production until its Sunday slot) the door
+    falls back to the old shape, cCompanyType=["Client"] +
+    cClientStatus="Prospect". A matched existing Account keeps the types it
+    has — an information request is not a relationship, so nothing is
+    appended (ruling 34). A prospect record's promoted company is used by id
+    before any name match (prospect marketing § 5).
   * No CClientProfile / CEngagement — those represent an actual mentoring
     relationship; client-intake creates them if the prospect converts.
   * CInformationRequest — a dedicated, self-contained record of the request
@@ -33,7 +39,10 @@ import json
 import logging
 from datetime import datetime, timezone
 
-from core.crm_upsert import COMPANY_SELECT, create_dropping_invalid, merge_company_type
+from campaigns import attribution as attrib
+from campaigns import config as campaign_cfg
+from campaigns.attribution import Attribution
+from core.crm_upsert import COMPANY_SELECT, create_dropping_invalid
 from core.espo import EspoApi
 from core.phone import e164_or_none
 from core.resumable import run_step_once
@@ -55,6 +64,9 @@ C_SMS_OPT_IN = "cSmsOptIn"         # bool on Contact — texts (ruling 9), true-
 CLIENT = "Client"
 PROSPECT = "Prospect"
 REQUEST_STATUS_NEW = "New"
+#: Ruling 17: an information request lands on Warm Lead — "asked the chapter
+#: for something and gave their details to get it". Advance-only (§ 1.8).
+WARM_LEAD = campaign_cfg.STAGE_WARM_LEAD
 
 
 def _description_block(
@@ -71,21 +83,41 @@ def _description_block(
     return "\n".join(lines)
 
 
-async def _find_or_create_account(sub: InfoRequest, client: EspoApi) -> str:
+async def _find_or_create_account(
+    sub: InfoRequest, client: EspoApi, attr: Attribution | None = None
+) -> str:
+    """The company the request names, by id from the prospect record first,
+    then by name, else created typed Prospect (ruling 34)."""
+    attr = attr or Attribution()
+    select = f"{COMPANY_SELECT},{attrib.FUNNEL_STAGE}"
+    promoted = await attrib.promoted_company(client, attr, select=select)
+    if promoted is not None:
+        log.info("using promoted Account %s from prospect record %s", promoted["id"],
+                 (attr.prospect or {}).get("id"))
+        # The business has now asked for something: Warm Lead, advance-only.
+        if await attrib.rung_available(client, ACCOUNT):
+            await attrib.advance_rung(client, ACCOUNT, promoted, WARM_LEAD)
+        return promoted["id"]
+
     existing = await client.find_one(ACCOUNT, "name", sub.company, select=COMPANY_SELECT)
     if existing:
         log.info("matched existing Account %s for %r", existing["id"], sub.company)
-        # A company CBM knows in another role gains this one (merge-only).
-        await merge_company_type(client, existing, CLIENT)
+        # Ruling 34: a company the CRM already knows keeps the types it has. An
+        # information request is not a relationship, so nothing is appended —
+        # a partner that asks a question stays a partner.
         return existing["id"]
-    created = await client.create(
-        ACCOUNT,
-        {
-            "name": sub.company,
-            A_COMPANY_TYPE: [CLIENT],
-            A_CLIENT_STATUS: PROSPECT,
-        },
-    )
+
+    if await attrib.prospect_type_available(client):
+        payload: dict = {"name": sub.company, A_COMPANY_TYPE: [PROSPECT]}
+        # This submission creates the company: it carries the campaign (ruling
+        # 27) and enters the funnel at Warm Lead (ruling 17, § 1.8).
+        stage = WARM_LEAD if await attrib.rung_available(client, ACCOUNT) else None
+        attrib.stamp_new(payload, attr, stage=stage)
+    else:
+        # The shape this door wrote before ruling 34, kept until the CRM has
+        # the Prospect option — EspoCRM refuses an unknown multiEnum value.
+        payload = {"name": sub.company, A_COMPANY_TYPE: [CLIENT], A_CLIENT_STATUS: PROSPECT}
+    created = await client.create(ACCOUNT, payload)
     return created["id"]
 
 
@@ -111,6 +143,7 @@ async def _create_information_request(
     form_slug: str = FORM_SLUG,
     channel: str = "the website",
     source: str | None = None,
+    attr: Attribution | None = None,
 ) -> str | None:
     """Create the dedicated CInformationRequest record, linked to the Contact.
 
@@ -142,6 +175,11 @@ async def _create_information_request(
         payload["source"] = source or sub.how_did_you_hear
     if account_id:
         payload["infoRequestCompanyId"] = account_id  # belongsTo Account link
+    if attr is not None and attr.campaign:
+        # The campaign lands on the relationship record every time (ruling 27),
+        # with the notes line that says the LINK did it (§ 5 step 8).
+        payload[attrib.CAMPAIGN_FK] = attr.campaign["id"]
+        payload["description"] = f"{attr.note()}\n\n{payload['description']}"
     try:
         created = await create_dropping_invalid(client, INFO_REQUEST, payload)
         log.info("created %s %s for contact %s", INFO_REQUEST, created["id"], contact_id)
@@ -166,11 +204,18 @@ async def submit_request(
     reuse the whole mapping — the info-email kind (inbound info@ mail approved
     in /ops, v0.110.0) passes its own form value, "via email" wording, and
     ``source="Email"``; the defaults keep the website form's exact behavior."""
+    # The campaign id and the prospect id the form carried, validated or
+    # dropped (prospect marketing § 5 step 1) — never a reason to lose the lead.
+    attr = await attrib.resolve(client, sub, entity=INFO_REQUEST)
     existing = await client.find_one(
-        CONTACT, "emailAddress", str(sub.email), select="id,description"
+        CONTACT, "emailAddress", str(sub.email), select=f"id,description,{attrib.FUNNEL_STAGE}"
     )
     if existing:
         contact_id = existing["id"]
+        # Rung evidence (ruling 17): the person asked for something. Advance-
+        # only, best-effort, and only on a CRM that carries the field.
+        if await attrib.rung_available(client, CONTACT):
+            await attrib.advance_rung(client, CONTACT, existing, WARM_LEAD)
 
         # The append ACCUMULATES, so a delivery retry must not re-run it
         # (pipeline-M1: a partial failure after this update used to duplicate
@@ -193,7 +238,7 @@ async def submit_request(
                 log.warning("could not record the SMS opt-in on Contact %s: %s", contact_id, exc)
         account_id = None  # existing contact's account is left untouched (by design)
     else:
-        account_id = await _find_or_create_account(sub, client) if sub.company else None
+        account_id = await _find_or_create_account(sub, client, attr) if sub.company else None
         payload = {
             "firstName": sub.first_name,
             "lastName": sub.last_name,
@@ -201,6 +246,10 @@ async def submit_request(
             C_CONTACT_TYPE: [PROSPECT],
             "description": _description_block(sub, include_company=False, via=via),
         }
+        # A NEW contact carries the campaign (ruling 27) and enters the funnel
+        # at Warm Lead (ruling 17) — the entry stage is written once, here.
+        stage = WARM_LEAD if await attrib.rung_available(client, CONTACT) else None
+        attrib.stamp_new(payload, attr, stage=stage)
         phone = e164_or_none(sub.phone)  # omit an implausible phone rather than 400
         if phone:
             payload["phoneNumber"] = phone
@@ -218,8 +267,11 @@ async def submit_request(
     # top of the Contact.description stamp and the generic CIntakeSubmission log.
     info_request_id = await _create_information_request(
         sub, client, contact_id, account_id,
-        form_slug=form_slug, channel=channel, source=source,
+        form_slug=form_slug, channel=channel, source=source, attr=attr,
     )
     if info_request_id:
         ids["informationRequestId"] = info_request_id
+    # The prospect record points at what it became (§ 5 step 4).
+    await attrib.link_promotion(client, attr, contact_id=contact_id, company_id=account_id)
+    ids.update(attr.result())
     return ids

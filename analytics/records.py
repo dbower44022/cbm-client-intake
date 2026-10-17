@@ -282,14 +282,39 @@ async def _engagement_recent_sessions(ctx: MetricContext):
     name="Clients referred",
     shape=SHAPE_SCALAR, default_viz=VIZ_STAT, cache_mode="live",
     applies_to=(PARTNER,),
-    description="Client engagements naming this partner as the referring partner.",
+    description="Client engagements naming this partner as a referring partner (the partner's own link or a campaign's).",
 )
 async def _partner_referred_clients(ctx: MetricContext):
     rid = _rid(ctx)
     if not rid:
         return _no_record(SHAPE_SCALAR)
-    return scalar(await crm.count(ctx.espo, ENGAGEMENT, [_eq("referringPartnerId", rid)]),
-                  unit="clients")
+    return scalar(len(await _referred_engagements(ctx, rid, "id")), unit="clients")
+
+
+#: The reverse of ``CEngagement.referringPartners`` on the partner (prospect
+#: marketing ruling 30) — the many side of the referring-partner union.
+REFERRED_MANY_LINK = "referredEngagements"
+
+
+async def _referred_engagements(ctx: MetricContext, partner_id: str, select: str) -> list[dict]:
+    """Every engagement that names this partner as A referring partner: the
+    union of the single ``referringPartner`` link and the many-to-many
+    ``referringPartners`` a campaign fills at delivery (ruling 30),
+    deduplicated by engagement. A CRM without the many link (production until
+    its Sunday slot) 404s it and the single link is the whole answer."""
+    select = ",".join(dict.fromkeys(["id", *select.split(",")]))
+    rows = {r["id"]: r for r in await crm.sweep(
+        ctx.espo, ENGAGEMENT, select, where=[_eq("referringPartnerId", partner_id)],
+        order_by="createdAt", order="asc") if r.get("id")}
+    try:
+        more = await ctx.espo.list_related(PARTNER, partner_id, REFERRED_MANY_LINK,
+                                           select=select, max_size=200)
+    except Exception:  # noqa: BLE001 — no link, or no read: the single link alone
+        more = {}
+    for r in more.get("list", []) if isinstance(more, dict) else []:
+        if r.get("id"):
+            rows.setdefault(r["id"], r)
+    return sorted(rows.values(), key=lambda r: r.get("createdAt") or "")
 
 
 @metric(
@@ -319,9 +344,7 @@ async def _partner_referrals_per_month(ctx: MetricContext):
     rid = _rid(ctx)
     if not rid:
         return _no_record(SHAPE_SERIES)
-    recs = await crm.sweep(ctx.espo, ENGAGEMENT, "createdAt",
-                           where=[_eq("referringPartnerId", rid)],
-                           order_by="createdAt", order="asc")
+    recs = await _referred_engagements(ctx, rid, "createdAt")
     return _months(recs, "createdAt", ctx)
 
 

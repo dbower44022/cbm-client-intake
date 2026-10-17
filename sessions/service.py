@@ -509,9 +509,10 @@ def _referred_row(r: dict[str, Any]) -> dict[str, Any]:
 async def list_referred_clients(
     cfg: DomainConfig, client: SessionClient, parent_id: str
 ) -> dict[str, Any]:
-    """Client engagements that name this partner as their referring partner
-    (``CEngagement.referringPartner`` → this ``CPartnerProfile``), read through
-    the parent's reverse link AS THE SIGNED-IN USER — the related read requires
+    """Client engagements that name this partner as a referring partner — the
+    single ``CEngagement.referringPartner`` AND the many-to-many
+    ``referringPartners`` (ruling 30) — read through the parent's reverse
+    links AS THE SIGNED-IN USER — the related read requires
     read access to the parent, so it is the ACL gate, and the engagements are
     ACL-filtered too. Sorted newest-first. Returns ``{"records": [...]}``.
 
@@ -527,7 +528,24 @@ async def list_referred_clients(
         select=REFERRED_CLIENT_SELECT,
         max_size=_PAGE,
     )
-    records = [_referred_row(r) for r in data.get("list", [])]
+    rows = {r["id"]: r for r in data.get("list", []) if r.get("id")}
+    # The UNION with the many-to-many (prospect marketing ruling 30): a client
+    # a campaign credited to this partner, deduplicated by engagement. A CRM
+    # without the link (production until its Sunday slot) 404s it — then the
+    # single link is the whole answer.
+    if cfg.referred_clients_many_link:
+        try:
+            more = await client.list_related(
+                cfg.parent_entity, parent_id, cfg.referred_clients_many_link,
+                select=REFERRED_CLIENT_SELECT, max_size=_PAGE,
+            )
+        except EspoError as exc:
+            log.debug("%s of %s not readable: %s", cfg.referred_clients_many_link, parent_id, exc)
+            more = {}
+        for r in more.get("list", []):
+            if r.get("id"):
+                rows.setdefault(r["id"], r)
+    records = [_referred_row(r) for r in rows.values()]
     records.sort(key=lambda x: (x.get("createdAt") or ""), reverse=True)
     return {"records": records}
 

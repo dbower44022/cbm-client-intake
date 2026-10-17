@@ -310,6 +310,11 @@ class DomainConfig:
     # gating precedent). Each row is a referred engagement; clicking its name
     # opens the engagement in the mentor domain's own record page.
     referred_clients_link: Optional[str] = None
+    # The reverse of the MANY-to-many ``CEngagement.referringPartners`` (prospect
+    # marketing ruling 30, filled by a campaign at delivery). Read in union with
+    # the single link above, deduplicated by engagement; a CRM without it
+    # (production until its Sunday slot) is skipped at debug.
+    referred_clients_many_link: Optional[str] = None
     # The public intake form whose launch URL takes ``?partner=<this record's
     # id>`` — a partner's own intake link (Doug's requirement 2026-10-12, the
     # link form ruled "the CRM id"). Setting it puts the link, with a Copy
@@ -864,6 +869,8 @@ PARTNER = DomainConfig(
     # Client engagements that name this partner as their referring partner
     # (reverse of CEngagement.referringPartner) — the Referred Clients tab.
     referred_clients_link="engagements",
+    # …and the clients a campaign credited to this partner (ruling 30).
+    referred_clients_many_link="referredEngagements",
     # This partner's own client intake link (?partner=<id>) on the Details tab.
     intake_link_form="client-intake",
     # Events this partner is associated with (reverse of CEvent.partnerProfiles).

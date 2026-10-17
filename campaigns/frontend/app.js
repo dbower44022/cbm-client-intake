@@ -526,20 +526,29 @@
   function renderResponses() {
     var r = state.responses || { responses: [], totals: {} }, rec = state.record || {};
     var sum = rec.touchSummary || {};
-    var t = Object.keys(r.totals || {}).map(function (k) { return [k, r.totals[k]]; });
+    // Responded and converted lead (build plan § 6 item 2), then the per-form
+    // totals, then a postcard campaign's piece counts.
+    var t = [["Responded", r.responded || 0], ["Converted", r.converted || 0]];
+    t = t.concat(Object.keys(r.totals || {}).map(function (k) { return [k, r.totals[k]]; }));
     if ((rec.campaign || {}).campaignKind === "Postcard") t = t.concat([["Pieces", sum.pieces], ["Delivered", sum.delivered], ["Returned", sum.returned], ["Scanned", sum.scanned]]);
-    tiles($("responseTiles"), t.length ? t : [["Responses", 0]]);
+    tiles($("responseTiles"), t);
     var body = $("responseRows"); body.innerHTML = "";
     (r.responses || []).forEach(function (x) {
       var tr = el("tr");
       tr.appendChild(el("td", null, fmtDate(x.receivedAt))); tr.appendChild(el("td", null, x.form)); tr.appendChild(el("td", null, x.status));
       tr.appendChild(el("td", "cm__short", x.linkToken || "—")); tr.appendChild(el("td", null, x.email || "—"));
       var recTd = el("td");
+      // Through to the record each door created: the engagement opens in
+      // Client Administration's popup, a partner or funder on its own record
+      // page, a registration on its event in Event Administration, and an
+      // information request in Submission Admin — plus the submission itself.
       var ids = x.records || {}; var links = [];
-      if (ids.engagementId) links.push(["Engagement", "/assignments/"]);
-      if (ids.informationRequestId || x.form === "info-request" || x.form === "info-email") links.push(["Submission", "/ops/?submission=" + encodeURIComponent(x.id)]);
-      if (ids.registrationId || x.form === "event-registration") links.push(["Registration", "/events/"]);
-      if (!links.length) links.push(["Submission", "/ops/?submission=" + encodeURIComponent(x.id)]);
+      if (ids.engagementId) links.push(["Engagement", "/assignments/?engagement=" + encodeURIComponent(ids.engagementId)]);
+      if (ids.partnerProfileId) links.push(["Partner", "/partnersessions/record/" + encodeURIComponent(ids.partnerProfileId)]);
+      if (ids.sponsorProfileId) links.push(["Funder", "/sponsorsessions/record/" + encodeURIComponent(ids.sponsorProfileId)]);
+      if (ids.eventRegistrationId && ids.eventId) links.push(["Registration", "/events/?event=" + encodeURIComponent(ids.eventId)]);
+      if (ids.informationRequestId || x.form === "info-request" || x.form === "info-email") links.push(["Information request", "/ops/?submission=" + encodeURIComponent(x.id)]);
+      else links.push(["Submission", "/ops/?submission=" + encodeURIComponent(x.id)]);
       links.forEach(function (l) { var a = el("a", "cm__link", l[0]); a.href = l[1]; a.target = "_blank"; a.rel = "noopener"; recTd.appendChild(a); recTd.appendChild(document.createTextNode(" ")); });
       tr.appendChild(recTd); body.appendChild(tr);
     });
