@@ -4,7 +4,8 @@
 > 7 was put to Doug first and answered "A" (ruling 34); Phase 2 was built as
 > v0.259.0 (`campaigns/attribution.py`, the five orchestrators, the union
 > readers, `merge_contact_type`, the carry-through, the Responses tab, the
-> relabel script, 38 new tests, suite green) and committed, not pushed; Doug's
+> relabel script, 38 new tests, suite green), pushed 10:52 and live on both
+> deployments 10:54; Doug's
 > six-step live pass is `OPEN-ITEMS.md` #51 (step page
 > https://claude.ai/artifact/JLZyupBD4i6scAogws6sWD). Moved here the same night. The
 > next kickoff is `prompts/prospect-marketing-phase-3-build-prompt-v0.1.md`.

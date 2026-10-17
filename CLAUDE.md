@@ -2409,7 +2409,8 @@ sentence is a convenience.
   (`/events/api/session` 404s there, 401s on crm-test).
 
 - **v0.259.0 (2026-10-17) — prospect marketing Phase 2, the doors honour
-  the ids.** Committed, not pushed. Dark by nature (no id, no change; every
+  the ids.** Pushed 10:52, live on crm-test and production 10:54 (both
+  `/healthz` read 0.259.0). Dark by nature (no id, no change; every
   write feature-detected), no switch, no CRM change; standing rules in the
   Campaign Management section above. Question 7 was put to Doug first and
   answered "A" — **ruling 34**, the information request door's company
