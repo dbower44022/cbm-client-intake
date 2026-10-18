@@ -162,6 +162,8 @@ found; move resolved items to the bottom with the resolution date.
     the notice says the primary contact was copied from the funder record,
     and the new partner's Details tab lists that contact, marked Primary;
     then the reverse as sally.sponsor. Then production as a real non-admin.
+    ClickUp: https://app.clickup.com/t/86bcm41wq (awaiting qa) — move it to
+    released when the pass matches.
 
 49. **The quick-add's Company picker (v0.254.0) — live on crm-test and
     production 10-12-26 14:49; the pass matched (Doug, 10-12-26: "all
