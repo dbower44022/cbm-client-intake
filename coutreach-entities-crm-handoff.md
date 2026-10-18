@@ -408,7 +408,7 @@ again each morning, as the plan's § 7 step 14 says.
 
 ## 7. Then production
 
-**The step page for the slot (written 10-18-26):** https://claude.ai/artifact/fFgNZ5bR0xnHfvWyPXqhJT
+**The step page for the slot (written 10-18-26):** https://claude.ai/artifact/DPDwikp24BWMsg2UZs3naF
 — the whole change as one word per step inside the web container,
 `bash scripts/prospect_crm_prod.sh <whoami|sms|outreach|receipt|roles|labels|ui|verify> [apply]`
 (fingerprints pinned in the script; `ui` is `scripts/apply_outreach_ui.py`, the
