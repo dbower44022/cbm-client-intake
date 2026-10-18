@@ -408,6 +408,14 @@ again each morning, as the plan's § 7 step 14 says.
 
 ## 7. Then production
 
+**The step page for the slot (written 10-18-26):** https://claude.ai/artifact/fFgNZ5bR0xnHfvWyPXqhJT
+— the whole change as one word per step inside the web container,
+`bash scripts/prospect_crm_prod.sh <whoami|sms|outreach|receipt|roles|labels|ui|verify> [apply]`
+(fingerprints pinned in the script; `ui` is `scripts/apply_outreach_ui.py`, the
+tab list and layouts of § 3.2–3.3 as a script; `verify` is § 5 steps 1–2 as the
+org-wide key), plus the notes conversion from the build computer. Needs the
+container on v0.260.3 or later. The detail below is the same change by hand.
+
 At the Sunday 17:00 UTC slot, by a human, from inside the deployed **web**
 container (`[[do-app-console-scripting]]`), § 2
 dry run, § 2 apply, § 4 dry run, § 4 apply, § 5 steps 1 and 2; then § 3.1 from

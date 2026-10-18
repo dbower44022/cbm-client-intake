@@ -4,6 +4,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+
+## [0.260.3] — 2026-10-18
+
+**chore(prospects): the production slot as one word per step.**
+`scripts/prospect_crm_prod.sh` runs the whole Phase 1 CRM change from inside
+the production web container — `whoami`, `sms`, `outreach`, `receipt`,
+`roles`, `labels`, `ui`, `verify`, each a dry run, `apply` as the second word
+— with the three plan fingerprints pinned. `scripts/apply_outreach_ui.py` is
+the handoff's § 3.2–3.3 (the tab list; the three entities' detail and list
+layouts, which a new entity ships with `name` alone) as an idempotent,
+dry-run-first script, and `--verify` is § 5 steps 1–2 as the org-wide key.
+Both dry-run clean against crm-test (nothing to do; every check passes). No
+behaviour change; the bump is so `/healthz` proves the image carries them.
 ## [0.260.2] — 2026-10-18
 
 **fix(prospects): no Warm Lead on a record that already holds a relationship —
