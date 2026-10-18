@@ -2528,8 +2528,10 @@ sentence is a convenience.
 - **v0.262.0–v0.264.0 (2026-10-18) — prospect marketing Phase 4.**
   Committed, not pushed. Rulings 38 (texts sent by the application) and 39
   (the wording in `COutreachCampaign.smsMessage`, a CRM field owed on every
-  CRM). Standing rules in the Campaign Management section. Tests and a stub
-  harness only; Doug's pass https://claude.ai/artifact/96dzUAsNAfkbJCx2eDu91g.
+  CRM). Standing rules in the Campaign Management section. **Live-passed
+  on crm-test 10-18-26 15:05** (Doug as Mark Marketing); the pass found
+  ruling 40 (Read-only campaign fields dropped every write — v0.264.1,
+  proven on the text campaign's stored sign-off).
 
 - **v0.260.0 / v0.260.1 (2026-10-17/18) — the browser reports its own
   failures.** v0.260.0 pushed and live on both deployments 23:14 (served

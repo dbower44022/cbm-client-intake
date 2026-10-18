@@ -30,10 +30,18 @@ found; move resolved items to the bottom with the resolution date.
     its notes line; the forged id dropped with the worker's warning; the
     relabel script's dry run on crm-test: nothing carries the old shape);
     Phase 3 BUILT and LIVE-PASSED on crm-test (v0.261.0–v0.261.1,
-    10-18-26, dark behind `CAMPAIGNS_CALLS`); Phase 4 BUILT (v0.262.0–
-    v0.264.0, 10-18-26, dark behind `CAMPAIGNS_SMS` / `CAMPAIGNS_EMAIL`,
-    tests and a stub harness only) — Doug's Phase 4 pass, production and
-    Boston owed** (10-14-26, updated 10-18-26 02:24). **Phase 4:** rulings 38
+    10-18-26, dark behind `CAMPAIGNS_CALLS`); Phase 4 BUILT and
+    LIVE-PASSED on crm-test (v0.262.0–v0.264.1, 10-18-26, dark behind
+    `CAMPAIGNS_SMS` / `CAMPAIGNS_EMAIL`) — production and Boston owed**
+    (**Phase 4 pass, 10-18-26 10:40–15:05, Doug as Mark Marketing; read
+    back by Claude:** the email list pushed as *Campaign — Phase 4 pass —
+    email* with Ann, Ben, Sam and Tess and marked sent; the text sent to Ann
+    only, delivered, her STOP turning her text opt-in off and a second list
+    reading 0; Ben attended → Opportunity; the funnel 0/1/1/3/1/7/8
+    matched a hand count; the campaign tab's Registered 2, Attended 1. The
+    pass found ruling 40 — fixed in v0.264.1 and proven on the text
+    campaign's stored sign-off — and a stale Responses tab (fixed, not
+    pushed)) (10-14-26, updated 10-18-26 02:24). **Phase 4:** rulings 38
     (the application sends texts — Twilio behind a dry run; the account, a
     sender number and A2P 10DLC registration are Doug's before any real
     text) and 39 (`COutreachCampaign.smsMessage`, plan

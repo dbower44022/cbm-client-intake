@@ -119,7 +119,8 @@ built 10-15-26, v0.258.0, dark behind `CAMPAIGNS_ENABLED`**).
      https://claude.ai/artifact/D8atEqEdRaRBKh4mmxiPsj. The
      Phase 4 kickoff ran the same night (4d).
   4d. ~~The Phase 4 build session~~ — **done 10-18-26** (v0.262.0–v0.264.0;
-     rulings 38, 39). **Next: Doug's Phase 4 pass** from
+     rulings 38, 39). **Phase 4 pass matched 10-18-26 15:05** (ruling 40 found
+     and fixed on the way, v0.264.1). Step page
      https://claude.ai/artifact/96dzUAsNAfkbJCx2eDu91g (push, the
      `smstext` field on crm-test, both switches on, then the steps). No
      further phase is planned: Phase 5 is the deferred list; the next work
