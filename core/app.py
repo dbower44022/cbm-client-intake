@@ -26,6 +26,7 @@ from pydantic import ValidationError
 from starlette.middleware.sessions import SessionMiddleware
 
 from . import boot_overrides
+from . import client_errors
 from . import network_standard as _network_standard
 from . import receipts
 from . import store as store_mod
@@ -830,13 +831,31 @@ def create_app(
 
         ledger = begin_crm_accounting()
         started = time.perf_counter()
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception:
+            # A request that crashed still gets its line, at ERROR, with the
+            # traceback (v0.260.0 — before, the line was simply skipped).
+            total_ms = (time.perf_counter() - started) * 1000
+            log.exception(
+                "timing %s %s 500 %.0fms crm=%d/%.0fms CRASHED",
+                request.method, path, total_ms, len(ledger), sum(ledger) * 1000,
+            )
+            raise
         total_ms = (time.perf_counter() - started) * 1000
         crm_ms = sum(ledger) * 1000
         response.headers["Server-Timing"] = (
             f'app;dur={total_ms:.0f}, crm;dur={crm_ms:.0f};desc="{len(ledger)} calls"'
         )
-        if total_ms >= get_settings().request_timing_log_ms:
+        # A 5xx is always written, at WARNING, whatever the timing threshold —
+        # so a failure stands out from the INFO lines around it (v0.260.0).
+        if response.status_code >= 500:
+            log.warning(
+                "timing %s %s %s %.0fms crm=%d/%.0fms",
+                request.method, path, response.status_code,
+                total_ms, len(ledger), crm_ms,
+            )
+        elif total_ms >= get_settings().request_timing_log_ms and path != client_errors.PATH:
             log.info(
                 "timing %s %s %s %.0fms crm=%d/%.0fms",
                 request.method, path, response.status_code,
@@ -869,6 +888,11 @@ def create_app(
 
     # Idempotency cache shared across forms (Technical Design §4 wants a durable store).
     processed: dict[str, dict] = {}
+
+    # The browser's own failures (a request that never got an answer, a
+    # timeout, a 5xx, a script error) — reported by frontend/shared/busy.js,
+    # written as WARNING "client-error" lines (core/client_errors.py).
+    app.include_router(client_errors.router)
 
     @app.get("/healthz")
     async def healthz(response: Response) -> dict:

@@ -4,6 +4,32 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.260.0] — 2026-10-17
+
+**feat(logging): the browser reports its own failures to the server log.**
+On the Phase 2 live pass a Campaign Management save failed in Doug's browser
+with "Failed to fetch", and no log anywhere recorded it — the request never
+reached the server. Doug's ruling the same evening (option A):
+
+- **`frontend/shared/busy.js`**, which every page loads first and which every
+  request passes through, now reports a request that got no answer, a
+  timeout, a 5xx answer, an uncaught script error and an unhandled promise
+  rejection to **`POST /api/client-errors`** (`core/client_errors.py`). Each
+  report becomes one WARNING line in the web log, prefix **`client-error`**:
+  the kind, the page, the method and path, the status, the time, the
+  signed-in user (from the session, never the report), the browser and the
+  message. Never a body, a form field or a query string. A report a broken
+  connection could not send waits in the tab's session storage and goes with
+  the next request that works (`queued=Ns` on the line). At most twenty per
+  page; the endpoint has its own per-address limit (thirty per five minutes)
+  so reports can never use up a visitor's submission allowance; it always
+  answers 204 and never errors back.
+- **The timing line** now writes every 5xx at WARNING whatever
+  `REQUEST_TIMING_LOG_MS` says, and a request that crashed gets its line at
+  ERROR with the traceback — before, a crash skipped the line.
+- No switch; rollback is a revert. Verified by tests (9 new); the browser
+  half has not run in a real browser yet.
+
 ## [0.259.1] — 2026-10-17
 
 **fix(prospects): the worker dropped every campaign at delivery.** Found on

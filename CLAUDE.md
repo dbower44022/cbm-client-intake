@@ -1649,6 +1649,12 @@ Conventions. Plan: `prds/action-history-plan.md`;
   would, and make a reconciliation loop REPORT what it found differing
   (the sweep's summary line names the keys), so a loop that never converges
   names itself.
+- **The browser's failures are in the web log too** (v0.260.0): search the
+  DigitalOcean runtime log for **`client-error`**. `busy.js` reports a
+  request that got no answer ("Failed to fetch"), a timeout, a 5xx and a
+  script error to `POST /api/client-errors`; a report delayed by the broken
+  connection carries `queued=Ns`. A 5xx timing line is WARNING and a crash
+  ERROR. Start any "it didn't save" report there.
 - **Every API request logs what it cost** (v0.248.0):
   `timing GET /…/api/… 200 812ms crm=9/640ms` in the web log, plus a
   `Server-Timing` header. Start a slowness report there — the CRM-call count

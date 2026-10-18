@@ -127,13 +127,123 @@
 
   // --- transport instrumentation ------------------------------------------
 
+  // --- failure reports (v0.260.0) -------------------------------------------
+  // A request that never reaches the server leaves no trace in any server log
+  // ("Failed to fetch" on the Phase 2 live pass, 10-17-26). Every page loads
+  // this file first and every request passes through it, so this is where the
+  // browser reports its own failures: a request that got no answer, a timeout,
+  // a 5xx, an uncaught script error. POST /api/client-errors writes each as a
+  // WARNING "client-error" line (core/client_errors.py). Never a body, never a
+  // form field, never a query string — the path, the method, the status, the
+  // time and the message. Silent by design: a report never shows the user
+  // anything, never blocks a page, never reports itself.
+  var REPORT_PATH = "/api/client-errors";
+  var REPORT_MAX = 20;            // per page load
+  var QUEUE_KEY = "cbm-client-errors";
+  var reportsSent = 0;
+  var realFetch = window.fetch ? window.fetch.bind(window) : null;
+
+  function pathOf(url) {
+    try {
+      var u = new URL(String(url), location.href);
+      if (u.origin !== location.origin) return null;   // our own requests only
+      return u.pathname;
+    } catch (_) { return null; }
+  }
+
+  function readQueue() {
+    try { return JSON.parse(sessionStorage.getItem(QUEUE_KEY) || "[]") || []; } catch (_) { return []; }
+  }
+  function writeQueue(q) {
+    try {
+      if (q.length) sessionStorage.setItem(QUEUE_KEY, JSON.stringify(q.slice(-10)));
+      else sessionStorage.removeItem(QUEUE_KEY);
+    } catch (_) { /* storage blocked: the report is simply lost */ }
+  }
+
+  function send(reports) {
+    if (!realFetch || !reports.length) return;
+    var now = Date.now();
+    var body = JSON.stringify({ reports: reports.map(function (r) {
+      var out = {}; for (var k in r) out[k] = r[k];
+      if (r.at) out.queued = Math.round((now - r.at) / 1000);
+      delete out.at;
+      return out;
+    }) });
+    try {
+      realFetch(REPORT_PATH, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: body, credentials: "same-origin", keepalive: true,
+      }).then(function (resp) {
+        if (!resp.ok && resp.status !== 204) writeQueue(readQueue().concat(reports));
+      }, function () {
+        // The connection is the thing that failed — keep it for the next try.
+        writeQueue(readQueue().concat(reports));
+      });
+    } catch (_) { writeQueue(readQueue().concat(reports)); }
+  }
+
+  function report(r) {
+    if (reportsSent >= REPORT_MAX) return;
+    reportsSent += 1;
+    r.page = location.pathname;
+    r.at = Date.now();
+    send([r]);
+  }
+
+  // Reports a broken connection could not deliver go with the next request
+  // that worked — the connection is back, so this is when they get through.
+  function flushQueue() {
+    var q = readQueue();
+    if (!q.length) return;
+    writeQueue([]);
+    send(q);
+  }
+
+  function watch(promise, method, path, started) {
+    if (!path || path === REPORT_PATH) return;
+    promise.then(function (resp) {
+      if (resp && resp.status >= 500) {
+        report({ kind: "http", method: method, url: path, status: resp.status,
+                 ms: Date.now() - started, message: resp.statusText || "" });
+      } else {
+        flushQueue();
+      }
+    }, function (err) {
+      var ms = Date.now() - started;
+      var aborted = err && err.name === "AbortError";
+      // An abort the page asked for a moment after starting is the page
+      // moving on, not a failure; a long one is a timeout.
+      if (aborted && ms < 10000) return;
+      report({ kind: aborted ? "timeout" : "network", method: method, url: path,
+               status: 0, ms: ms, message: (err && (err.message || err.name)) || "" });
+    });
+  }
+
+  window.addEventListener("error", function (e) {
+    if (!e || !e.message) return;
+    report({ kind: "script", url: e.filename ? (pathOf(e.filename) || "-") : "-",
+             message: e.message + (e.lineno ? " (line " + e.lineno + ")" : "") });
+  });
+  window.addEventListener("unhandledrejection", function (e) {
+    var reason = e && e.reason;
+    var msg = reason && (reason.message || String(reason));
+    if (!msg) return;
+    // A request failure already reported itself above; don't count it twice.
+    if (reason && (reason.name === "TypeError" && /fetch/i.test(msg))) return;
+    report({ kind: "rejection", message: msg });
+  });
+
   if (window.fetch) {
-    var realFetch = window.fetch;
-    window.fetch = function () {
+    var wrappedFetch = window.fetch;
+    window.fetch = function (input, init) {
       var done = attach();
+      var started = Date.now();
+      var method = String((init && init.method) || (input && input.method) || "GET").toUpperCase();
+      var path = pathOf(input && input.url ? input.url : input);
       var out;
       try {
-        out = realFetch.apply(this, arguments);
+        out = wrappedFetch.apply(this, arguments);
       } catch (err) {
         if (done) done();
         throw err;
@@ -144,21 +254,48 @@
       } else if (done) {
         done();
       }
+      if (out && out.then) watch(out, method, path, started);
       return out;
     };
   }
 
   if (window.XMLHttpRequest) {
+    var realOpen = window.XMLHttpRequest.prototype.open;
+    window.XMLHttpRequest.prototype.open = function (method, url) {
+      this._cbmMethod = String(method || "GET").toUpperCase();
+      this._cbmPath = pathOf(url);
+      return realOpen.apply(this, arguments);
+    };
     var realSend = window.XMLHttpRequest.prototype.send;
     window.XMLHttpRequest.prototype.send = function () {
       var done = attach();
+      var xhr = this, started = Date.now();
       if (done) {
         // loadend fires for success, error, abort and timeout alike.
         this.addEventListener("loadend", done);
       }
+      if (xhr._cbmPath && xhr._cbmPath !== REPORT_PATH) {
+        xhr.addEventListener("error", function () {
+          report({ kind: "network", method: xhr._cbmMethod, url: xhr._cbmPath, status: 0,
+                   ms: Date.now() - started, message: "The request got no answer" });
+        });
+        xhr.addEventListener("timeout", function () {
+          report({ kind: "timeout", method: xhr._cbmMethod, url: xhr._cbmPath, status: 0,
+                   ms: Date.now() - started, message: "The request timed out" });
+        });
+        xhr.addEventListener("load", function () {
+          if (xhr.status >= 500) {
+            report({ kind: "http", method: xhr._cbmMethod, url: xhr._cbmPath, status: xhr.status,
+                     ms: Date.now() - started, message: xhr.statusText || "" });
+          }
+        });
+      }
       return realSend.apply(this, arguments);
     };
   }
+
+  // A page that opens after a broken connection sends what the last one queued.
+  setTimeout(flushQueue, 2000);
 
   // --- request timeout -----------------------------------------------------
   // A request that hangs forever is what made a save look like it had failed
