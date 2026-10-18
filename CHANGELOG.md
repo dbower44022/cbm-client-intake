@@ -5,6 +5,30 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.264.1] — 2026-10-18
+
+**fix(prospects): a campaign's rule and sign-off are stored at last — ruling
+40.** Doug's Phase 4 pass, step B2: after *Build the list* the card's ticks
+went back to the defaults. The eight campaign fields the application writes
+(the rule and its summary, the signed-off count and cost, who signed off and
+when, the run's start and finish) were built Read-only, and EspoCRM enforces
+Read-only as a global restriction on every writer — the application's own key
+included — dropping the write with HTTP 200 (`Acl/GlobalRestriction`, read on
+crm-test). None of them had stored on any campaign since Phase 1.
+
+- `scripts/plans/coutreach-campaign-app-fields.json` (fingerprint
+  `965d932407f3`) clears Read-only on the eight; `scripts/apply_crm_plan.py`
+  gained a `fieldParams` change type to do it, with a read-back.
+- `scripts/migrate_outreach_roles.py` sets the Marketing Admin Role's field
+  rule *read, not edit* on the eight — the one restriction the script makes.
+- The application writes the eight under the org-wide API key
+  (`service.stamp_campaign`): the person's own change (the status) as the
+  user first, then the stamps.
+- Owed on every CRM: `prospect_crm_test.sh appfields` + `roles`; the same
+  two words in `prospect_crm_prod.sh`. The `espo-crm-changes` skill's
+  reference and the memory note that said Read-only was UI-only are
+  corrected.
+
 ## [0.264.0] — 2026-10-18
 
 **feat(prospects): Phase 4, part 3 — the email kind (build plan § 3.3;

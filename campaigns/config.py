@@ -155,6 +155,15 @@ CAMPAIGN_FIELDS: tuple[FieldSpec, ...] = (
 )
 CAMPAIGN_EDIT_NAMES: frozenset[str] = frozenset(f.name for f in CAMPAIGN_FIELDS)
 CAMPAIGN_ENUM_NAMES: frozenset[str] = frozenset(f.name for f in CAMPAIGN_FIELDS if f.type == "enum")
+#: The campaign fields the APPLICATION writes (ruling 40): never staff. They
+#: are written under the org-wide API client — the Marketing Admin Role holds
+#: a field rule of read-only on them (scripts/migrate_outreach_roles.py), and
+#: before ruling 40 they were Read-only in the CRM, which dropped every write.
+CAMPAIGN_APP_FIELDS: frozenset[str] = frozenset({
+    "selectionRule", "selectionSummary", "pieceCount", "estimatedCost", "estimatedCostCurrency",
+    "signedOffByName", "signedOffAt", "runStartedAt", "runCompletedAt",
+})
+
 #: Fields a CRM may not carry yet (feature-detected, dropped from the form and
 #: the write when absent): ruling 39's text-message wording.
 CAMPAIGN_OPTIONAL_FIELDS: frozenset[str] = frozenset({"smsMessage"})

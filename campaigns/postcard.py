@@ -221,7 +221,7 @@ async def build_list(api_client: EspoApi, user_client: EspoApi, campaign: dict[s
     }
     if status == cfg.STATUS_DRAFT:
         stamps["campaignStatus"] = cfg.STATUS_AWAITING
-    await user_client.update(cfg.CAMPAIGN, campaign["id"], stamps)
+    await service.stamp_campaign(user_client, api_client, campaign["id"], stamps)
     return {"pieces": pieces, "created": created, "kept": kept, "cancelled": cancelled,
             "estimatedCost": estimated_cost(settings, pieces), "currency": settings.postal_currency,
             "rule": rule, "summary": stamps["selectionSummary"]}
@@ -255,7 +255,7 @@ async def sign_off(api_client: EspoApi, user_client: EspoApi, campaign: dict[str
         "signedOffAt": _crm_now(),
         "campaignStatus": cfg.STATUS_SIGNED_OFF,
     }
-    return await user_client.update(cfg.CAMPAIGN, campaign["id"], stamps)
+    return await service.stamp_campaign(user_client, api_client, campaign["id"], stamps)
 
 
 # --- the run (worker) ------------------------------------------------------------------

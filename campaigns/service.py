@@ -282,6 +282,27 @@ async def set_status(client: EspoApi, campaign: dict[str, Any], status: str) -> 
     return await client.update(cfg.CAMPAIGN, campaign["id"], {"campaignStatus": status})
 
 
+async def stamp_campaign(user_client: EspoApi, api_client: Optional[EspoApi], campaign_id: str,
+                         payload: dict[str, Any]) -> dict[str, Any]:
+    """One campaign write split by who owns each field (ruling 40): the
+    person's own change (the status) as the signed-in user, first — a refused
+    grant changes nothing — then the application's stamps (the rule, the
+    sign-off, the run) under the org-wide API client. Returns the record with
+    both halves applied."""
+    app = {k: v for k, v in payload.items() if k in cfg.CAMPAIGN_APP_FIELDS}
+    own = {k: v for k, v in payload.items() if k not in cfg.CAMPAIGN_APP_FIELDS}
+    result: dict[str, Any] = {}
+    if own:
+        result = dict(await user_client.update(cfg.CAMPAIGN, campaign_id, own) or {})
+    if app:
+        writer = api_client or user_client
+        result.update(await writer.update(cfg.CAMPAIGN, campaign_id, app) or {})
+    result.update(app)
+    result.update(own)
+    result.setdefault("id", campaign_id)
+    return result
+
+
 async def set_teams(client: EspoApi, campaign_id: str, team_ids: list[str]) -> dict[str, Any]:
     """The campaign's own teams — for a call campaign, who calls (ruling 36).
     ``teams`` is EspoCRM's native link, which an update writes through

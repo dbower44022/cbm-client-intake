@@ -311,6 +311,24 @@ in the CRM; option B, the application's own database beside the links
     chapter time; an interrupted send is flagged for review, never resent
     by itself. (10-18-26)
 
+### Doug's ruling (10-18-26, on the Phase 4 pass's finding)
+
+The pass (step B2) found the campaign card's ticks snapping back after
+*Build the list*: the eight campaign fields the application writes had been
+built Read-only, which EspoCRM enforces as a restriction on every writer, so
+none had ever stored. Put as a consequential decision: option A, clear
+Read-only and keep staff off by field-level rule; option B, clear it only;
+option C, store them in the application's database. Doug's reply at 11:05:
+"a".
+
+40. **The fields the application writes on a campaign are not Read-only in
+    the CRM; staff are kept off them by field-level rule** (option A). The
+    eight — the rule and its summary, the signed-off count and cost, who
+    signed off and when, the run's start and finish — are written by the
+    application under the org-wide API key; the Marketing Admin Role reads
+    them and cannot edit them. Never build a field the application writes as
+    Read-only. (10-18-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -431,8 +449,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.9 |
-| Last Updated | 10-18-26 02:00 |
+| Version | 1.10 |
+| Last Updated | 10-18-26 11:20 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -440,6 +458,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.10 | 10-18-26 11:20 | Claude (Claude Code) | Ruling 40 appended: app-written campaign fields are not Read-only; a field rule keeps staff off them (Doug's "a", Phase 4 pass finding). |
 | 1.9 | 10-18-26 02:00 | Claude (Claude Code) | Ruling 39 appended: the text's wording is a campaign field in the CRM (Doug's "a"), with the follow-on details decided. |
 | 1.8 | 10-18-26 01:55 | Claude (Claude Code) | Ruling 38 appended: the application sends text-message campaigns itself (Doug's "b" to build plan § 9 question 11, against the recommendation). |
 | 1.7 | 10-18-26 00:16 | Claude (Claude Code) | Ruling 37 appended: no rung evidence on a record already holding a relationship type (Doug's "a", Phase 2 live pass finding). |

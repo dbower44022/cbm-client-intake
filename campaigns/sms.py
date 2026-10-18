@@ -143,7 +143,7 @@ async def build_list(api_client: EspoApi, user_client: EspoApi, campaign: dict[s
     stamps: dict[str, Any] = {"selectionRule": json.dumps(rule), "selectionSummary": rule_summary(rule)}
     if status == cfg.STATUS_DRAFT:
         stamps["campaignStatus"] = cfg.STATUS_AWAITING
-    await user_client.update(cfg.CAMPAIGN, campaign["id"], stamps)
+    await service.stamp_campaign(user_client, api_client, campaign["id"], stamps)
     return {"pieces": kept + created, "created": created, "kept": kept, "cancelled": cancelled,
             "rule": rule, "summary": stamps["selectionSummary"]}
 
@@ -176,7 +176,7 @@ async def sign_off(api_client: EspoApi, user_client: EspoApi, campaign: dict[str
         raise CampaignError("Build the list first — there is nobody on it to text.")
     if str(confirm or "").strip() != str(count):
         raise CampaignError(f"Type the number of people, {count}, to confirm. A text cannot be called back.")
-    return await user_client.update(cfg.CAMPAIGN, campaign["id"], {
+    return await service.stamp_campaign(user_client, api_client, campaign["id"], {
         "pieceCount": count, "signedOffByName": user_name[:255], "signedOffAt": _crm_now(),
         "campaignStatus": cfg.STATUS_SIGNED_OFF,
     })

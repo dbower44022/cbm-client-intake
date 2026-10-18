@@ -6,6 +6,7 @@
 #   scripts/prospect_crm_test.sh roles      scripts/migrate_outreach_roles.py --apply
 #   scripts/prospect_crm_test.sh notes      COutreachCampaign.description text -> wysiwyg, on the droplet
 #   scripts/prospect_crm_test.sh receipt    apply scripts/plans/cintake-submission-prospect-response.json (fingerprint cb685b7372b1)
+#   scripts/prospect_crm_test.sh appfields  apply scripts/plans/coutreach-campaign-app-fields.json (fingerprint 965d932407f3; ruling 40)
 #   scripts/prospect_crm_test.sh smstext    apply scripts/plans/coutreach-sms-message.json (fingerprint 7a68865149b4; Phase 4, ruling 39)
 #
 # Exists for the same reason as scripts/on_crm.sh and scripts/apply_plan.sh: each
@@ -23,6 +24,7 @@ case "${1:-}" in
   roles)    exec uv run python scripts/run_with_admin.py scripts/migrate_outreach_roles.py --apply ;;
   notes)    exec scripts/on_crm.sh test scripts/convert_notes_wysiwyg.sh COutreachCampaign ;;
   receipt)  exec scripts/apply_plan.sh test scripts/plans/cintake-submission-prospect-response.json cb685b7372b1 ;;
+  appfields) exec scripts/apply_plan.sh test scripts/plans/coutreach-campaign-app-fields.json 965d932407f3 ;;
   smstext)  exec scripts/apply_plan.sh test scripts/plans/coutreach-sms-message.json 7a68865149b4 ;;
-  *) echo "usage: scripts/prospect_crm_test.sh <sms|outreach|roles|notes|receipt|smstext>" >&2; exit 64 ;;
+  *) echo "usage: scripts/prospect_crm_test.sh <sms|outreach|roles|notes|receipt|smstext|appfields>" >&2; exit 64 ;;
 esac

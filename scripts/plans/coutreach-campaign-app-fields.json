@@ -1,0 +1,14 @@
+{
+  "name": "coutreach-campaign-app-fields",
+  "description": "Prospect marketing, ruling 40: the eight campaign fields the application writes stop being Read-only (a Read-only field drops every API write); staff are kept off them by field-level ACL instead (scripts/migrate_outreach_roles.py) — coutreach-entities-crm-handoff.md § 10",
+  "fieldParams": [
+    {"entity": "COutreachCampaign", "name": "selectionRule", "params": {"readOnly": false}},
+    {"entity": "COutreachCampaign", "name": "selectionSummary", "params": {"readOnly": false}},
+    {"entity": "COutreachCampaign", "name": "pieceCount", "params": {"readOnly": false}},
+    {"entity": "COutreachCampaign", "name": "estimatedCost", "params": {"readOnly": false}},
+    {"entity": "COutreachCampaign", "name": "signedOffByName", "params": {"readOnly": false}},
+    {"entity": "COutreachCampaign", "name": "signedOffAt", "params": {"readOnly": false}},
+    {"entity": "COutreachCampaign", "name": "runStartedAt", "params": {"readOnly": false}},
+    {"entity": "COutreachCampaign", "name": "runCompletedAt", "params": {"readOnly": false}}
+  ]
+}

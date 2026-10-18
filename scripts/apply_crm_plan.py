@@ -217,6 +217,33 @@ class Applier:
                 + ("" if stored == given else f"  [typed '{given}']"),
             )
 
+    async def do_field_params(self) -> None:
+        """Change parameters of fields that already exist (``fieldParams``):
+        ``{"entity", "name", "params": {...}}``. Only the named parameters are
+        compared and written; the field's other settings are sent back as they
+        are. Added 10-18-26 to clear ``readOnly`` on fields the application
+        writes — a Read-only field is a global ACL restriction that silently
+        drops every API write (``Acl/GlobalRestriction``)."""
+        for spec in self.plan.get("fieldParams", []):
+            entity, given, params = spec["entity"], spec["name"], dict(spec.get("params") or {})
+            if not await self._exists(entity):
+                self.failed.append(f"{entity} does not exist — cannot change field {given}")
+                continue
+            stored = await self.stored_field(entity, given)
+            existing = await self._read_field(entity, stored)
+            if existing is None:
+                self.failed.append(f"field {entity}.{stored} does not exist — cannot change it")
+                continue
+            differ = {k: v for k, v in params.items() if existing.get(k, None if v is not False else False) != v}
+            if not differ:
+                self.skipped.append(f"field {entity}.{stored} already has {params}")
+                continue
+            body = {k: v for k, v in existing.items() if k not in ("name", "isCustom")}
+            body.update(params)
+            shown = ", ".join(f"{k}: {existing.get(k)!r} -> {v!r}" for k, v in sorted(differ.items()))
+            await self._write("PUT", f"Admin/fieldManager/{entity}/{stored}", body,
+                              f"change field {entity}.{stored} ({shown})")
+
     async def _read_field(self, entity: str, stored: str) -> dict[str, Any] | None:
         resp = await self.c._request(
             "GET", f"{self.c._base}/Admin/fieldManager/{entity}/{stored}",
@@ -324,6 +351,20 @@ class Applier:
             else:
                 self.failed.append(f"VERIFY field {entity}.{stored} is not present")
 
+        for spec in self.plan.get("fieldParams", []):
+            entity = spec["entity"]
+            stored = await self.stored_field(entity, spec["name"])
+            defs = await self._meta(f"entityDefs.{entity}.fields") or {}
+            have = defs.get(stored) if isinstance(defs, dict) else None
+            wrong = {k: (have or {}).get(k) for k, v in (spec.get("params") or {}).items()
+                     if (have or {}).get(k, None if v is not False else False) != v}
+            if have is None:
+                self.failed.append(f"VERIFY field {entity}.{stored} is not present")
+            elif wrong:
+                self.failed.append(f"VERIFY field {entity}.{stored} still reads {wrong}")
+            else:
+                self.actions.append(f"verified field {entity}.{stored} params")
+
         for spec in self.plan.get("links", []):
             near, far = spec["entity"], spec["entityForeign"]
             stored_near = await self.stored_field(near, spec["link"])
@@ -355,6 +396,7 @@ class Applier:
             # metadata is not visible until a rebuild.
             await self.rebuild()
         await self.do_fields()
+        await self.do_field_params()
         await self.do_links()
         await self.do_enum_options()
         await self.rebuild()

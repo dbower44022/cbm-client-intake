@@ -1,6 +1,6 @@
 # CRM handoff — prospect marketing and Campaign Management (Phase 1): `CProspect`, `COutreachCampaign`, `COutreachTouch`
 
-Last Updated: 10-18-26 02:00 · Revision 1.6 — see change log at the end.
+Last Updated: 10-18-26 11:20 · Revision 1.7 — see change log at the end.
 
 Three new record types and the links that tie them to what the CRM already
 holds. A **prospect record** (`CProspect`) is a quarantine for a business or
@@ -487,10 +487,40 @@ the entity.
   reads `type: text`; the campaign's detail layout gains the field by the
   layout API (`scripts/apply_outreach_ui.py` once it lists it).
 
+
+## 10. The app-owned campaign fields stop being Read-only (ruling 40, 10-18-26)
+
+**Found on the Phase 4 pass:** the eight `COutreachCampaign` fields the
+application writes — `selectionRule`, `selectionSummary`, `pieceCount`,
+`estimatedCost`, `signedOffByName`, `signedOffAt`, `runStartedAt`,
+`runCompletedAt` — were built Read-only (§ 2's plan). EspoCRM turns a
+Read-only field into a **global ACL restriction** (`Acl/GlobalRestriction`)
+that silently drops every API write, the application's own key included, so
+none of them has ever been stored on any CRM. Doug's ruling 40 (option A):
+
+1. **Clear Read-only** — `scripts/plans/coutreach-campaign-app-fields.json`,
+   fingerprint `965d932407f3` (dry run on crm-test 10-18-26 11:1x: eight
+   `change field … (readOnly: True -> False)`). The applier gained a
+   `fieldParams` change type for this.
+2. **Keep staff off them by field rule** — `scripts/migrate_outreach_roles.py`
+   now sets the Marketing Admin Role's field rule *read yes, edit no* on the
+   eight (dry run: one `WOULD set`). The application writes them under the
+   API role, which carries no field rule.
+
+- **crm-test:** `scripts/prospect_crm_test.sh appfields`, then
+  `scripts/prospect_crm_test.sh roles` (Doug).
+- **Production:** `bash scripts/prospect_crm_prod.sh appfields` (+ `apply`)
+  and `… roles` (+ `apply`), inside the web container, at a Sunday slot.
+- **Boston:** with its release.
+- **Verify:** `entityDefs.COutreachCampaign.fields.<field>.readOnly` reads
+  false for the eight; build a list as Mark Marketing and read
+  `selectionRule` back non-empty.
+
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.7 | 10-18-26 11:20 | Claude (Claude Code) | § 10: ruling 40 — the eight app-owned campaign fields stop being Read-only (plan `coutreach-campaign-app-fields.json`, `965d932407f3`) and take a field rule on the Marketing Admin Role. |
 | 1.6 | 10-18-26 02:00 | Claude (Claude Code) | § 9: the text-message field (rulings 38, 39), plan `coutreach-sms-message.json`, fingerprint `7a68865149b4`; one word in each slot script. |
 | 1.5 | 10-18-26 00:30 | Claude (Claude Code) | § 4: the Mentor Role's grants for ruling 36 (call campaigns, Phase 3) — `COutreachTouch` read/edit, `CProspect` read, `Contact` read re-checked; owed on crm-test (re-run `roles`), production and Boston. |
 | 1.4 | 10-17-26 22:50 | Claude (Claude Code) | § 3.4 added: the CRM labels "Outreach Campaign" (ruling 35), crm-test done; production § 7 and Boston carry the step. |

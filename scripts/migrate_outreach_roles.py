@@ -106,6 +106,23 @@ ROLE_PERMISSIONS: list[tuple[str, str, str]] = [
     ("Marketing Admin Role", "assignmentPermission", "all"),
 ]
 
+#: Field-level rules (ruling 40, 10-18-26): the eight campaign fields the
+#: APPLICATION writes are readable but not editable by the people who run
+#: campaigns. They were built Read-only, which turned out to be a global ACL
+#: restriction that drops every API write — the application's own included —
+#: so ``scripts/plans/coutreach-campaign-app-fields.json`` clears Read-only and
+#: this rule keeps staff off them instead. The application writes them under
+#: the API role, which carries no field rule. The ONE place this script
+#: restricts rather than grants: it only ever adds ``edit: no`` on these named
+#: fields, and leaves every other field rule alone.
+APP_OWNED_CAMPAIGN_FIELDS: tuple[str, ...] = (
+    "selectionRule", "selectionSummary", "pieceCount", "estimatedCost",
+    "signedOffByName", "signedOffAt", "runStartedAt", "runCompletedAt",
+)
+FIELD_RULES: list[tuple[str, str, tuple[str, ...], dict[str, str]]] = [
+    ("Marketing Admin Role", "COutreachCampaign", APP_OWNED_CAMPAIGN_FIELDS, {"read": "yes", "edit": "no"}),
+]
+
 #: The fields the two plan files add to native entities, as STORED.
 NEW_NATIVE_FIELDS: dict[str, tuple[str, ...]] = {
     "Contact": ("cSmsOptIn", "cFunnelStage", "cEntryStage", "cOutreachCampaign"),
@@ -280,6 +297,37 @@ async def main() -> int:
             back = await client.get("Role", role["id"])
             if _rank(back.get(permission)) < _rank(level):
                 failed.append(f"{label} - read-back is '{back.get(permission)}'")
+            else:
+                done.append(f"set {label} - read back OK")
+                touched = True
+        except Exception as exc:  # noqa: BLE001
+            failed.append(f"{label} - {exc}")
+
+    for role_name, scope, fields, rule in FIELD_RULES:
+        role = await _find_role(client, role_name)
+        if role is None:
+            failed.append(f"role '{role_name}' does not exist on this instance")
+            continue
+        field_data: dict[str, Any] = dict(role.get("fieldData") or {})
+        scope_rules: dict[str, Any] = dict(field_data.get(scope) or {})
+        todo = [f for f in fields if (scope_rules.get(f) or {}) != rule]
+        if not todo:
+            skipped.append(f"{role_name}: {scope} field rules already {rule} on {len(fields)} fields")
+            continue
+        label = f"{role_name}: {scope} fields {', '.join(todo)} -> {rule}"
+        if not apply:
+            done.append(f"WOULD set {label}")
+            continue
+        for f in todo:
+            scope_rules[f] = dict(rule)
+        field_data[scope] = scope_rules
+        try:
+            await client.update("Role", role["id"], {"fieldData": field_data})
+            back = await client.get("Role", role["id"])
+            stored = ((back.get("fieldData") or {}).get(scope) or {})
+            short = [f for f in fields if (stored.get(f) or {}) != rule]
+            if short:
+                failed.append(f"{label} - read-back differs on {short}")
             else:
                 done.append(f"set {label} - read back OK")
                 touched = True

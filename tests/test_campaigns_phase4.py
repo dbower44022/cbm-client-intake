@@ -84,3 +84,31 @@ def test_attendance_moves_a_prospect_to_opportunity_and_never_a_client():
     assert crm.rows["Contact"]["c-p"]["cFunnelStage"] == "Opportunity"
     assert run(attribution.opportunity_on_attendance(crm, "r2")) is None          # ruling 37
     assert run(attribution.opportunity_on_attendance(crm, "r3")) is None
+
+
+def test_campaign_writes_split_the_applications_stamps_from_the_persons_change():
+    """Ruling 40: the eight app-owned campaign fields go through the API client
+    (the Marketing Admin Role may not edit them); the status as the user."""
+    from campaigns import service
+    user, api = FakeCrm(), FakeCrm()
+    camp = user.add(cfg.CAMPAIGN, {"name": "X", "campaignStatus": "Draft"})
+    api.rows = user.rows
+    out = run(service.stamp_campaign(user, api, camp["id"], {
+        "campaignStatus": "Awaiting sign-off", "selectionRule": "{}", "selectionSummary": "s",
+        "signedOffByName": "Mark", "estimatedCostCurrency": "USD"}))
+    assert user.updated == [(cfg.CAMPAIGN, camp["id"], {"campaignStatus": "Awaiting sign-off"})]
+    assert api.updated == [(cfg.CAMPAIGN, camp["id"], {"selectionRule": "{}", "selectionSummary": "s",
+                                                       "signedOffByName": "Mark", "estimatedCostCurrency": "USD"})]
+    assert out["campaignStatus"] == "Awaiting sign-off" and out["selectionSummary"] == "s"
+
+
+def test_the_applier_changes_a_field_parameter_and_reads_it_back():
+    import importlib.util, json, pathlib
+    plan = json.loads(pathlib.Path("scripts/plans/coutreach-campaign-app-fields.json").read_text())
+    assert [f["name"] for f in plan["fieldParams"]] == [
+        "selectionRule", "selectionSummary", "pieceCount", "estimatedCost",
+        "signedOffByName", "signedOffAt", "runStartedAt", "runCompletedAt"]
+    assert all(f["params"] == {"readOnly": False} for f in plan["fieldParams"])
+    from scripts.migrate_outreach_roles import APP_OWNED_CAMPAIGN_FIELDS
+    assert set(APP_OWNED_CAMPAIGN_FIELDS) == {f["name"] for f in plan["fieldParams"]}
+    assert set(APP_OWNED_CAMPAIGN_FIELDS) <= cfg.CAMPAIGN_APP_FIELDS
