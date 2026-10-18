@@ -309,3 +309,27 @@ async def relate_referring_partners(client: EspoApi, engagement_id: str,
         except EspoError as exc:
             log.warning("could not relate partner %s to engagement %s: %s", pid, engagement_id, exc)
     return done
+
+
+
+async def opportunity_on_attendance(api_client: EspoApi, registration_id: str) -> Optional[str]:
+    """Build plan § 6: attendance recorded on a registration whose Contact is
+    typed Prospect moves the Contact to Opportunity — advance-only, never on a
+    record holding a relationship type (ruling 37), whatever the attendance
+    source (a manual mark, a door check-in or the Zoom pull). Under the
+    org-wide API client: the Marketing Admin Role does not edit Contacts.
+    Best-effort; returns the rung written, or None."""
+    try:
+        reg = await api_client.get("CEventRegistration", registration_id, select="id,contactId,attendanceStatus")
+        if not reg or reg.get("attendanceStatus") != "Attended" or not reg.get("contactId"):
+            return None
+        if not await rung_available(api_client, "Contact"):
+            return None
+        contact = await api_client.get("Contact", reg["contactId"],
+                                       select=f"id,cContactType,{FUNNEL_STAGE}")
+    except EspoError as exc:
+        log.warning("opportunity on attendance: registration %s unreadable: %s", registration_id, exc)
+        return None
+    if not contact or "Prospect" not in (contact.get("cContactType") or []):
+        return None
+    return await advance_rung(api_client, "Contact", contact, cfg.STAGE_OPPORTUNITY)

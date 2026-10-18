@@ -5,6 +5,35 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.263.0] — 2026-10-18
+
+**feat(prospects): Phase 4, part 2 — the funnel, the campaign's dashboard,
+Opportunity on attendance.** No flag: each reads what the CRM holds.
+
+- **The funnel** (`campaigns/reporting.funnel`, metric `prospect_funnel`,
+  first panel on the *Campaigns* Analytics page): a count per rung over § 6
+  item 1's union, nothing counted twice — prospect records on the ladder and
+  never promoted, Companies typed Prospect, Contacts typed Prospect not
+  counted under a Company typed Prospect (§ 1.8), then **Candidate** (an
+  engagement Submitted, Pending Acceptance, Assigned or Assignment Dormant —
+  no session yet) and **Client** (Active or On-Hold — the first completed
+  session is what moves an engagement to Active).
+- **The campaign's Analytics tab** (CM-9): a new dashboard scope,
+  `COutreachCampaign`, with a starter page *Campaign Analytics* — Candidates,
+  Clients, Registered, Attended, Information requests, Partner profiles,
+  Funder profiles, each the records carrying the campaign. **The counts run
+  under the org-wide key after the user's own read of the campaign** — the
+  Marketing Admin Role holds no engagement read, and these are aggregates
+  (the Events tab's precedent, v0.249.2). Campaigns join the Analytics
+  builder's entity list.
+- **Opportunity on attendance** (§ 6): attendance recorded on a registration
+  whose Contact is typed Prospect — a manual mark, a door check-in or the
+  Zoom pull — moves the Contact to Opportunity, advance-only, never on a
+  record holding a relationship type (ruling 37). Under the org-wide key;
+  best-effort, it never fails the attendance save.
+
+Verified by tests only (4 new).
+
 ## [0.262.0] — 2026-10-18
 
 **feat(prospects): Phase 4, part 1 — the text-message kind, sent by the

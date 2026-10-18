@@ -751,8 +751,37 @@
       Array.prototype.forEach.call(document.querySelectorAll("#recordPanel .cm__tabpanel"), function (p) { p.hidden = p.getAttribute("data-panel") !== tab; });
       if (tab === "links") loadLinks();
       if (tab === "responses") loadResponses();
+      if (tab === "analytics") loadAnalytics(false);
     });
   });
+
+  // --- analytics tab: the campaign's dashboard (CM-9, § 6) -------------------------------------
+  var anaLoaded = false;
+  async function loadAnalytics(force) {
+    if (anaLoaded && !force) return;
+    anaLoaded = true;
+    var grid = $("anaGrid"), msg = $("anaMsg");
+    grid.innerHTML = ""; msg.hidden = false; msg.textContent = "Loading…";
+    try {
+      var url = "/analytics/api/record/COutreachCampaign/" + encodeURIComponent(RECORD_ID);
+      var r = await fetch(url, { credentials: "same-origin", headers: { Accept: "application/json" } });
+      var body = await r.json();
+      if (!r.ok) throw new Error((body && body.detail) || ("Request failed (" + r.status + ")"));
+      if (!body.available) { msg.textContent = "No dashboard has been set up for campaigns yet (Analytics must be on at /setup)."; return; }
+      var panels = body.panels || [];
+      if (!panels.length) { msg.textContent = "No panels to show."; return; }
+      msg.hidden = true;
+      panels.forEach(function (p) {
+        var art = el("article", "an-panel"); art.style.setProperty("--span", Math.max(3, Math.min(12, p.width || 4)));
+        var head = el("header", "an-panel__head"); head.appendChild(el("h3", null, p.title));
+        var bodyEl = el("div", "an-panel__body"); art.appendChild(head); art.appendChild(bodyEl);
+        try { CBMCharts.renderPanel(bodyEl, p, { crmUrl: body.crmUrl }); }
+        catch (e) { bodyEl.innerHTML = ""; bodyEl.appendChild(el("p", "anc-err", "Could not render this panel.")); }
+        grid.appendChild(art);
+      });
+    } catch (e) { anaLoaded = false; msg.hidden = false; msg.textContent = e.message; }
+  }
+  $("anaRefreshBtn").addEventListener("click", function () { loadAnalytics(true); });
 
   // --- prospects -----------------------------------------------------------------------------------
   async function loadProspects() {

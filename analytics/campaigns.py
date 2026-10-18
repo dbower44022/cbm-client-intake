@@ -15,7 +15,9 @@ import logging
 
 from .registry import (
     SHAPE_ROWS,
+    SHAPE_SCALAR,
     SRC_COMPUTED,
+    VIZ_STAT,
     VIZ_TABLE,
     MetricContext,
     PageSpec,
@@ -23,6 +25,7 @@ from .registry import (
     metric,
     register_page,
     rows,
+    scalar,
     unavailable,
 )
 
@@ -118,6 +121,94 @@ async def _prospect_entry_rungs(ctx: MetricContext):
     return rows(columns, out)
 
 
+@metric(
+    key="prospect_funnel",
+    name="The prospect funnel",
+    shape=SHAPE_ROWS,
+    source=SRC_COMPUTED,
+    default_viz=VIZ_TABLE,
+    cache_mode="live",
+    description=("A count per rung, nothing counted twice: prospect records still on the ladder, "
+                 "Companies typed Prospect, Contacts typed Prospect not counted under their company, "
+                 "and Candidate and Client from the engagements (build plan § 6 item 1)."),
+)
+async def _prospect_funnel(ctx: MetricContext):
+    reason = await _ready(ctx)
+    if reason:
+        return unavailable(SHAPE_ROWS, reason)
+    from campaigns import reporting
+
+    data = await reporting.funnel(ctx.espo)
+    columns = [{"key": "band", "label": "Band"}, {"key": "rung", "label": "Rung"},
+               {"key": "count", "label": "Count", "align": "right"}]
+    return rows(columns, data)
+
+
+# --- the campaign's own dashboard (CM-9, § 6): the COutreachCampaign scope ---------------
+CAMPAIGN = "COutreachCampaign"
+
+_CAMPAIGN_RESULTS = (
+    ("campaign_candidates", "Candidates", "candidates", "Engagements carrying the campaign that have no session yet."),
+    ("campaign_clients", "Clients", "clients", "Engagements carrying the campaign in active mentoring."),
+    ("campaign_registered", "Registered", "registered", "Event registrations carrying the campaign."),
+    ("campaign_attended", "Attended", "attended", "Event registrations carrying the campaign marked attended."),
+    ("campaign_info_requests", "Information requests", "informationRequests", "Information requests carrying the campaign."),
+    ("campaign_partners", "Partner profiles", "partners", "Partner profiles carrying the campaign."),
+    ("campaign_funders", "Funder profiles", "funders", "Funder profiles carrying the campaign."),
+)
+
+
+def _org_client(ctx: MetricContext):
+    """The counts are aggregates over records the Marketing Admin Role does not
+    read one by one (it holds no engagement read): they run under the org-wide
+    key AFTER the record view has read the campaign as the user — the Events
+    tab's precedent (v0.249.2, Doug's ruling 10-11-26). Never cached."""
+    s = ctx.settings
+    if s is None or getattr(s, "espo_dry_run", True) or not getattr(s, "espo_api_key", ""):
+        return None
+    from core.espo import EspoClient
+    return EspoClient(s.espo_base_url, s.espo_api_key, s.request_timeout_seconds)
+
+
+def _campaign_metric(key: str, name: str, field: str, description: str):
+    async def compute(ctx: MetricContext):
+        if not ctx.record or ctx.record.entity != CAMPAIGN:
+            return unavailable(SHAPE_SCALAR, "This metric only works on a campaign's Analytics tab.")
+        client = _org_client(ctx) or ctx.espo
+        try:
+            from campaigns import reporting
+            eq = [{"type": "equals", "attribute": "outreachCampaignId", "value": ctx.record.record_id}]
+            extra = {
+                "candidates": [{"type": "in", "attribute": "engagementStatus", "value": list(reporting.CANDIDATE_STATUSES)}],
+                "clients": [{"type": "in", "attribute": "engagementStatus", "value": list(reporting.CLIENT_STATUSES)}],
+                "attended": [{"type": "equals", "attribute": "attendanceStatus", "value": "Attended"}],
+            }.get(field, [])
+            entity = {"candidates": "CEngagement", "clients": "CEngagement", "registered": "CEventRegistration",
+                      "attended": "CEventRegistration", "informationRequests": "CInformationRequest",
+                      "partners": "CPartnerProfile", "funders": "CSponsorProfile"}[field]
+            n = await reporting._count(client, entity, eq + extra)
+        except Exception as exc:  # noqa: BLE001 — a panel reads unavailable, never a 500
+            log.warning("campaign metric %s failed: %s", key, exc)
+            return unavailable(SHAPE_SCALAR, "This count could not be read.")
+        return scalar(n)
+
+    compute.__name__ = f"_{key}"
+    return metric(key=key, name=name, shape=SHAPE_SCALAR, source=SRC_COMPUTED, default_viz=VIZ_STAT,
+                  applies_to=(CAMPAIGN,), cache_mode="live", description=description)(compute)
+
+
+for _key, _name, _field, _desc in _CAMPAIGN_RESULTS:
+    _campaign_metric(_key, _name, _field, _desc)
+
+
+register_page(PageSpec(
+    key="record-campaign", title="Campaign Analytics", scope=CAMPAIGN,
+    subtitle="What this campaign produced, down the funnel.",
+    default_range="all",
+    panels=[PanelSpec(k, n, k, VIZ_STAT, width=3) for k, n, _f, _d in _CAMPAIGN_RESULTS],
+))
+
+
 register_page(PageSpec(
     key="campaigns",
     title="Campaigns",
@@ -125,6 +216,7 @@ register_page(PageSpec(
     scope="system",
     default_range="all",
     panels=[
+        PanelSpec("funnel", "The prospect funnel", "prospect_funnel", VIZ_TABLE, width=12),
         PanelSpec("touches", "Touches by campaign", "campaign_touches", VIZ_TABLE, width=12),
         PanelSpec("entry_rungs", "Entry rung per door", "prospect_entry_rungs", VIZ_TABLE, width=12),
     ],

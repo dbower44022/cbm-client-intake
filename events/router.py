@@ -637,6 +637,19 @@ async def add_registrant(
     return {"registration": registration}
 
 
+async def _opportunity_on_attendance(request: Request, registration_id: str) -> None:
+    """Prospect marketing § 6: an attended Prospect moves to Opportunity, under
+    the org-wide client (best-effort; never fails the attendance save)."""
+    factory = getattr(request.app.state, "events_client_factory", None)
+    if factory is None:
+        return
+    try:
+        from campaigns.attribution import opportunity_on_attendance
+        await opportunity_on_attendance(factory(), registration_id)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("opportunity on attendance failed for %s: %s", registration_id, exc)
+
+
 @api_router.put("/registrations/{registration_id}/attendance")
 async def set_attendance(
     registration_id: str, payload: AttendanceIn, request: Request
@@ -650,6 +663,7 @@ async def set_attendance(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except EspoError as exc:
         raise _crm_failure(exc, "save the attendance") from exc
+    await _opportunity_on_attendance(request, registration_id)
     await record_action(
         client, app=APP_EVENTS, category=CAT_STATUS, action="Attendance Recorded",
         parent_type=cfg.REGISTRATION, parent_id=registration_id,
@@ -666,6 +680,7 @@ async def check_in(registration_id: str, request: Request) -> dict[str, Any]:
         registration = await service.check_in(client, registration_id)
     except EspoError as exc:
         raise _crm_failure(exc, "check the registrant in") from exc
+    await _opportunity_on_attendance(request, registration_id)
     await record_action(
         client, app=APP_EVENTS, category=CAT_STATUS, action="Checked In",
         parent_type=cfg.REGISTRATION, parent_id=registration_id,

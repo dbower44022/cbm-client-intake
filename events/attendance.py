@@ -184,6 +184,15 @@ async def apply_attendance(
                 "attendance: could not update registration %s for event %s: %s",
                 reg["id"], event.get("id"), exc,
             )
+            continue
+        if payload["attendanceStatus"] == cfg.REG_ATTENDED:
+            # Prospect marketing § 6: an attended Prospect reaches Opportunity.
+            # Best-effort: it never changes this pass's attendance summary.
+            try:
+                from campaigns.attribution import opportunity_on_attendance
+                await opportunity_on_attendance(client, reg["id"])
+            except Exception as exc:  # noqa: BLE001
+                log.warning("attendance: opportunity for registration %s failed: %s", reg["id"], exc)
 
     for facts in unmatched:
         # EV-32: recorded for review, NOT silently dropped. No Contact is

@@ -388,7 +388,7 @@ def test_the_campaigns_analytics_page_and_its_metrics_are_registered():
     import analytics  # noqa: F401 — registers
     from analytics.registry import MetricContext, get_metric, get_page
     page = get_page("campaigns")
-    assert page is not None and [p.metric_key for p in page.panels] == ["campaign_touches", "prospect_entry_rungs"]
+    assert page is not None and [p.metric_key for p in page.panels] == ["prospect_funnel", "campaign_touches", "prospect_entry_rungs"]
     crm = FakeCrm()
     crm.add(cfg.PROSPECT, {"entryDoor": "List", "entryStage": "Unverified"})
     result = run(get_metric("prospect_entry_rungs").compute(MetricContext(settings=_settings(), espo=crm)))

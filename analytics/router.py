@@ -68,6 +68,7 @@ BUILDER_ENTITIES = [
     ("CSession", "Sessions"),
     ("CContribution", "Contributions"),
     ("CInformationRequest", "Information Requests"),
+    ("COutreachCampaign", "Campaigns"),
 ]
 _BUILDER_ENTITY_SET = {e for e, _ in BUILDER_ENTITIES}
 

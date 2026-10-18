@@ -171,3 +171,74 @@ def stage_text(stages: Optional[dict[str, int]]) -> str:
     if not stages:
         return "—"
     return " · ".join(f"{k} {v}" for k, v in stages.items())
+
+
+# --- the funnel (§ 6 item 1) --------------------------------------------------------------
+
+#: The ladder's bands (rulings.md, *The ladder as it stands*).
+BANDS = {
+    cfg.STAGE_UNVERIFIED: "Prospect Marketing", cfg.STAGE_QUALIFIED: "Prospect Marketing",
+    cfg.STAGE_LEAD: "Lead Marketing", cfg.STAGE_WARM_LEAD: "Lead Marketing",
+    cfg.STAGE_OPPORTUNITY: "Lead Marketing", "Candidate": "Lead Marketing", "Client": "Client Management",
+}
+#: Candidate: asked for mentoring, no session yet. Client: active mentoring.
+#: Read from the engagement's status, which the first completed session moves
+#: from Assigned to Active (the activation rule) — so the status IS the
+#: "has a completed session" test.
+CANDIDATE_STATUSES = ("Submitted", "Pending Acceptance", "Assigned", "Assignment Dormant")
+CLIENT_STATUSES = ("Active", "On-Hold")
+
+
+async def funnel(client: EspoApi) -> list[dict[str, Any]]:
+    """A count per rung over the union of § 6 item 1, nothing counted twice:
+    prospect records still on the ladder and never promoted; Companies typed
+    Prospect; Contacts typed Prospect whose Company is not itself a Company
+    typed Prospect (the person is counted under the company, § 1.8); then
+    Candidate and Client from the engagements."""
+    counts = {s: 0 for s in cfg.STAGES}
+    for p in await service._page_all(client, cfg.PROSPECT,
+                                     select="id,funnelStage,sideExit,promotedCompanyId,promotedContactId",
+                                     where=[{"type": "isNull", "attribute": "sideExit"}], limit=50000):
+        if p.get("sideExit") or p.get("promotedCompanyId") or p.get("promotedContactId"):
+            continue
+        if p.get("funnelStage") in counts:
+            counts[p["funnelStage"]] += 1
+    prospect_companies: set[str] = set()
+    for a in await service._page_all(client, cfg.ACCOUNT, select="id,cCompanyType,cFunnelStage",
+                                     where=[{"type": "in", "attribute": "cFunnelStage", "value": list(cfg.STAGES)}],
+                                     limit=50000):
+        if cfg.COMPANY_TYPE_PROSPECT in (a.get("cCompanyType") or []):
+            prospect_companies.add(a["id"])
+            counts[a["cFunnelStage"]] += 1
+    for c in await service._page_all(client, cfg.CONTACT, select="id,cContactType,cFunnelStage,accountId",
+                                     where=[{"type": "in", "attribute": "cFunnelStage", "value": list(cfg.STAGES)}],
+                                     limit=50000):
+        if cfg.CONTACT_TYPE_PROSPECT not in (c.get("cContactType") or []):
+            continue
+        if c.get("accountId") and c["accountId"] in prospect_companies:
+            continue
+        counts[c["cFunnelStage"]] += 1
+    out = [{"band": BANDS[s], "rung": s, "count": counts[s]} for s in cfg.STAGES]
+    for rung, statuses in (("Candidate", CANDIDATE_STATUSES), ("Client", CLIENT_STATUSES)):
+        out.append({"band": BANDS[rung], "rung": rung,
+                    "count": await _count(client, "CEngagement", [
+                        {"type": "in", "attribute": "engagementStatus", "value": list(statuses)}])})
+    return out
+
+
+async def campaign_results(client: EspoApi, campaign_id: str) -> dict[str, int]:
+    """One campaign's results down the funnel (§ 6, the campaign dashboard):
+    the relationship records and registrations carrying it."""
+    eq = {"type": "equals", "attribute": "outreachCampaignId", "value": campaign_id}
+    return {
+        "candidates": await _count(client, "CEngagement", [eq, {"type": "in", "attribute": "engagementStatus",
+                                                                "value": list(CANDIDATE_STATUSES)}]),
+        "clients": await _count(client, "CEngagement", [eq, {"type": "in", "attribute": "engagementStatus",
+                                                             "value": list(CLIENT_STATUSES)}]),
+        "registered": await _count(client, "CEventRegistration", [eq]),
+        "attended": await _count(client, "CEventRegistration", [eq, {"type": "equals", "attribute": "attendanceStatus",
+                                                                     "value": "Attended"}]),
+        "informationRequests": await _count(client, "CInformationRequest", [eq]),
+        "partners": await _count(client, "CPartnerProfile", [eq]),
+        "funders": await _count(client, "CSponsorProfile", [eq]),
+    }

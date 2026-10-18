@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/shared/tokens.css" />
   <link rel="stylesheet" href="/shared/vendor/jodit/jodit.min.css" />
+  <link rel="stylesheet" href="/shared/charts.css" />
   <link rel="stylesheet" href="styles.css" />
   <!-- busy.js must load FIRST: it wraps fetch/XHR to give every button press
        immediate feedback (product-wide convention). -->
@@ -167,6 +168,7 @@
         <button type="button" class="cm__tab is-active" data-tab="overview">Overview</button>
         <button type="button" class="cm__tab" data-tab="links">Links</button>
         <button type="button" class="cm__tab" data-tab="responses">Responses</button>
+        <button type="button" class="cm__tab" data-tab="analytics">Analytics</button>
       </nav>
 
       <div class="cm__tabpanel cm__overview" data-panel="overview">
@@ -259,6 +261,15 @@
         <p class="cm__empty" id="linksEmpty" hidden>No links yet.</p>
       </div>
 
+      <div class="cm__tabpanel" data-panel="analytics" hidden>
+        <div class="cm__controls">
+          <p class="cm__hint cm__grow">What this campaign produced, down the funnel (CM-9): the records carrying it. The counts are read across the whole CRM, after your own read of this campaign.</p>
+          <div class="cm__actions"><button type="button" class="cbm-button cbm-button--secondary" id="anaRefreshBtn">Refresh</button></div>
+        </div>
+        <p class="cm__hint" id="anaMsg" hidden></p>
+        <div class="an__grid" id="anaGrid"></div>
+      </div>
+
       <div class="cm__tabpanel" data-panel="responses" hidden>
         <div class="cm__tiles" id="responseTiles"></div>
         <h3 class="cm__h3">Latest responses</h3>
@@ -278,6 +289,7 @@
     </section>
   </main>
 
+  <!-- (the Analytics tab panel is inside the record panel, below) -->
   <!-- ============================ MODAL ============================ -->
   <div class="cm__modal-overlay" id="modal" hidden>
     <div class="cm__modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
@@ -299,6 +311,7 @@
   <script src="/shared/footer.js"></script>
   <script src="/shared/vendor/jodit/jodit.min.js"></script>
   <script src="/shared/richtext.js"></script>
+  <script src="/shared/charts.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
