@@ -387,8 +387,68 @@
       else if (c.campaignStatus === "Complete") text(note, "Complete. Every planned piece was handed to the vendor.");
       else text(note, "Build the list, read the count and the cost, then sign off. Nothing is mailed until signed (ruling 13).");
     } else hide(pc);
+    renderCallCard(rec);
     show($("recordPanel"));
   }
+
+  // --- the call kind (§ 3.4; ruling 36) ------------------------------------------------------
+  function callsPageUrl() { return location.origin + "/campaigns/calls.html"; }
+
+  function renderCallCard(rec) {
+    var c = rec.campaign, card = $("callCard");
+    if (c.campaignKind !== "Call") { hide(card); return; }
+    show(card);
+    var sum = rec.touchSummary || {}, b = rec.callBreakdown || {};
+    tiles($("callTiles"), [["To call", sum.planned], ["Called", b.done], ["No answer", b["No answer"]], ["Interested", b.Interested], ["Declined", b.Declined]]);
+    var host = $("callStages"); host.innerHTML = "";
+    var chosen = (rec.rule && rec.rule.stages) || ["Qualified"];
+    var editable = !c.campaignStatus || c.campaignStatus === "Draft" || c.campaignStatus === "Awaiting sign-off";
+    (state.session.callStages || ["Qualified", "Lead", "Warm Lead", "Opportunity"]).forEach(function (st) {
+      var lab = el("label", "cm__check"); var cb = el("input"); cb.type = "checkbox"; cb.value = st; cb.checked = chosen.indexOf(st) >= 0;
+      cb.disabled = !editable; cb.setAttribute("data-callstage", st);
+      lab.appendChild(cb); lab.appendChild(document.createTextNode(" Records at ")); lab.appendChild(el("strong", null, st)); host.appendChild(lab);
+    });
+    text($("callRuleSummary"), c.selectionSummary || "The list has not been built yet.");
+    var note = $("callNote");
+    if (c.campaignStatus === "Running") text(note, "Running. Callers see each row on the Calls page until it is recorded; the campaign completes itself when the last row is.");
+    else if (c.campaignStatus === "Complete") text(note, "Complete. Every row was recorded.");
+    else text(note, "Build the list, read who is on it, then sign off. Nobody is called until you do.");
+    text($("callersLine"), rec.callerTeams ? "Who calls: members of " + rec.callerTeams.join(", ") + " (the teams named on this campaign in the CRM — ruling 36)." : "Who calls: the teams named on this campaign could not be read.");
+    text($("callsUrl"), callsPageUrl());
+    if (!state.session.callsOn) text(note, "Campaign calls are switched off on this deployment (CAMPAIGNS_CALLS at /setup), so this list cannot be built or run.");
+  }
+
+  function chosenCallStages() {
+    return Array.prototype.filter.call(document.querySelectorAll("[data-callstage]"), function (cb) { return cb.checked; }).map(function (cb) { return cb.value; });
+  }
+
+  $("callBuildBtn").addEventListener("click", async function () {
+    if (!state.record) return;
+    var c = state.record.campaign;
+    if (["Draft", "Awaiting sign-off", null, undefined, ""].indexOf(c.campaignStatus) < 0) { notice("The list cannot be rebuilt once the campaign is " + c.campaignStatus + ".", "warn"); return; }
+    var stages = chosenCallStages();
+    if (!stages.length) { notice("Tick at least one rung to call.", "warn"); return; }
+    try {
+      var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/build", { method: "POST", body: { rule: { stages: stages } } });
+      notice("List built: " + res.pieces + " to call (" + res.created + " new, " + res.cancelled + " dropped).", "ok");
+      loadRecord();
+    } catch (e) { notice(e.message, "error"); }
+  });
+
+  $("callSignoffBtn").addEventListener("click", function () {
+    if (!state.record) return;
+    var c = state.record.campaign, sum = state.record.touchSummary || {};
+    if (!sum.planned) { notice("Build the list first — there is nobody on it to call.", "warn"); return; }
+    var body = el("div", "cm__plan");
+    body.appendChild(el("p", null, sum.planned + " " + (sum.planned === 1 ? "person goes" : "people go") + " on the call list, for " + ((state.record.callerTeams || []).join(", ") || "the campaign's teams") + " to call."));
+    body.appendChild(el("p", "cm__hint", "Signing off starts the list at once: no worker runs a call campaign, people do."));
+    openModal("Sign off and start calling", body, async function () {
+      await api("/campaigns/" + encodeURIComponent(c.id) + "/signoff", { method: "POST", body: { confirm: "" } });
+      closeModal(); notice("Signed off. The list is on the Calls page now.", "ok"); loadRecord();
+    }, "Sign off and start");
+  });
+
+  $("callsUrlCopy").addEventListener("click", function () { copyText(callsPageUrl(), $("callsUrlCopy")); });
 
   function currentRule() {
     var stages = ["Qualified"]; if ($("ruleLead").checked) stages.push("Lead");
@@ -644,8 +704,84 @@
         res.touches.forEach(function (t) { var tr = el("tr"); [t.outreachCampaignName, t.channel, t.touchStatus, t.outcome || "—", t.sentAt ? fmtDate(t.sentAt) : "—", "scans " + (t.scanCount || 0)].forEach(function (v) { tr.appendChild(el("td", null, v)); }); tb.appendChild(tr); });
         tbl.appendChild(tb); body.appendChild(tbl);
       }
+      body.appendChild(el("h4", null, "Review"));
+      body.appendChild(reviewActions(p, function () { closeModal(); loadProspects(); }));
       openModal(p.businessName || p.name, body, null);
     } catch (e) { notice(e.message, "error"); }
+  }
+
+  // --- review actions (§ 2.3, § 3.8) ----------------------------------------------------------
+  // Every action is offered on every record; one that does not apply explains
+  // itself on click (buttons are never hidden or disabled).
+  var REVIEW_ACTIONS = [
+    ["qualify", "Qualify", "Note (optional)", false],
+    ["unqualify", "Unqualified…", "Why is it unqualified? (required)", true],
+    ["do-not-contact", "Do Not Contact…", "Note (optional)", false],
+    ["not-same-company", "Not the same company…", "Note (optional)", false],
+  ];
+
+  function reviewWhyNot(p, action) {
+    if (action === "not-same-company") return p.sideExit === "Already known" ? "" : "Only a record that left as Already known can be told it is not the same company.";
+    if (p.sideExit) return "This record has already left the ladder by " + p.sideExit + "; a side exit is never written over another.";
+    if ((action === "qualify" || action === "unqualify") && p.funnelStage !== "Unverified") return "Only an Unverified record is reviewed; this one is at " + (p.funnelStage || "no rung") + ".";
+    return "";
+  }
+
+  function reviewActions(p, after) {
+    var box = el("div", "cm__runactions");
+    REVIEW_ACTIONS.forEach(function (a) {
+      var b = el("button", "cbm-button cbm-button--secondary", a[1]); b.type = "button";
+      b.addEventListener("click", function () { runReview(p, a, after); });
+      box.appendChild(b);
+    });
+    return box;
+  }
+
+  function runReview(p, a, after) {
+    var why = reviewWhyNot(p, a[0]);
+    if (why) { notice(why, "warn"); modalMsg(why, "warn"); return; }
+    var body = el("div", "cm__plan");
+    body.appendChild(el("p", null, (p.businessName || p.name) + " — " + a[1].replace("…", "")));
+    var f = el("div", "cm__field cm__field--wide"); var lab = el("label", null, a[2]); lab.htmlFor = "rv_note";
+    var ta = el("textarea"); ta.id = "rv_note"; ta.rows = 3; ta.maxLength = 4000; f.appendChild(lab); f.appendChild(ta); body.appendChild(f);
+    openModal(a[1].replace("…", ""), body, async function () {
+      if (a[3] && !ta.value.trim()) { modalMsg("Say why — the note is required.", "error"); return; }
+      await api("/prospects/" + encodeURIComponent(p.id) + "/review", { method: "POST", body: { action: a[0], note: ta.value } });
+      closeModal(); notice(a[1].replace("…", "") + ": " + (p.businessName || p.name) + ".", "ok");
+      if (after) after();
+    }, a[1].replace("…", ""));
+    setTimeout(function () { ta.focus(); }, 50);
+  }
+
+  // --- the Review tab: the Prospects grid pre-filtered to Unverified ------------------------------
+  async function loadReview() {
+    try {
+      state.review = (await api("/prospects?stage=Unverified&exit=none")).prospects || [];
+      renderReview();
+    } catch (e) { notice(e.message, "error"); }
+  }
+
+  function renderReview() {
+    var q = ($("reviewSearch").value || "").toLowerCase();
+    var rows = (state.review || []).filter(function (p) {
+      return !q || [p.businessName, p.name, p.firstName, p.lastName, p.email, p.phone, p.website, p.mailingAddressCity, p.importBatch].join(" ").toLowerCase().indexOf(q) >= 0;
+    });
+    var body = $("reviewRows"); body.innerHTML = "";
+    rows.forEach(function (p) {
+      var tr = el("tr");
+      var nTd = el("td"); var a = el("a", "cm__link", p.businessName || p.name || "(unnamed)"); a.href = "#"; a.addEventListener("click", function (ev) { ev.preventDefault(); openProspect(p.id); }); nTd.appendChild(a); tr.appendChild(nTd);
+      tr.appendChild(el("td", null, [p.firstName, p.lastName].filter(Boolean).join(" ") || "—"));
+      tr.appendChild(el("td", null, p.phone || "—")); tr.appendChild(el("td", null, p.email || "—")); tr.appendChild(el("td", null, p.website || "—"));
+      tr.appendChild(el("td", null, p.mailingAddressCity || "—")); tr.appendChild(el("td", null, p.importBatch || "—"));
+      var aTd = el("td");
+      [REVIEW_ACTIONS[0], REVIEW_ACTIONS[1]].forEach(function (act) {
+        var b = el("button", "cm__rowbtn", act[1]); b.type = "button";
+        b.addEventListener("click", function () { runReview(p, act, loadReview); }); aTd.appendChild(b);
+      });
+      tr.appendChild(aTd); body.appendChild(tr);
+    });
+    text($("reviewCount"), rows.length + " waiting");
+    $("reviewEmpty").hidden = rows.length > 0;
   }
 
   // --- imports ---------------------------------------------------------------------------------------
@@ -676,7 +812,7 @@
     var ls = el("input"); ls.type = "text"; ls.id = "im_ls"; ls.placeholder = "Vendor or partner"; field("List source (lists)", ls);
     var file = el("input"); file.type = "file"; file.id = "im_file"; file.accept = ".csv,text/csv"; field("CSV file", file, true);
     body.appendChild(fields);
-    body.appendChild(el("p", "cm__hint", "Columns: business_name (required), mailing_street, mailing_city, mailing_state, mailing_zip (required as a set), and optionally external_reference, website, email, phone, contact_first_name, contact_last_name, qualified_by. Unknown columns ride along into the record."));
+    body.appendChild(el("p", "cm__hint", "Columns: business_name (required), mailing_street, mailing_city, mailing_state, mailing_zip (required as a set), and optionally external_reference, website, email, phone, contact_first_name, contact_last_name, qualified_by. A list (the Unverified door) names its vendor or partner in List source; its rows wait in the Review tab. Unknown columns ride along into the record."));
     var planBox = el("div", "cm__plan"); body.appendChild(planBox);
     var planned = null;
     function readFile() { return new Promise(function (resolve, reject) { var f = file.files && file.files[0]; if (!f) { reject(new Error("Choose a CSV file.")); return; } var r = new FileReader(); r.onload = function () { resolve(String(r.result || "")); }; r.onerror = function () { reject(new Error("The file could not be read.")); }; r.readAsText(f); }); }
@@ -711,10 +847,15 @@
     state.section = name;
     Array.prototype.forEach.call(document.querySelectorAll("#sectionNav .cm__navbtn"), function (b) { b.classList.toggle("is-active", b.getAttribute("data-section") === name); });
     $("campaignsPanel").hidden = name !== "campaigns"; $("prospectsPanel").hidden = name !== "prospects"; $("importsPanel").hidden = name !== "imports";
+    $("reviewPanel").hidden = name !== "review";
     if (name === "prospects") loadProspects();
+    if (name === "review") loadReview();
     if (name === "imports") loadImports();
   }
-  Array.prototype.forEach.call(document.querySelectorAll("#sectionNav .cm__navbtn"), function (b) { b.addEventListener("click", function () { showSection(b.getAttribute("data-section")); }); });
+  Array.prototype.forEach.call(document.querySelectorAll("#sectionNav button.cm__navbtn"), function (b) { b.addEventListener("click", function () { showSection(b.getAttribute("data-section")); }); });
+  $("callsNavLink").addEventListener("click", function (ev) {
+    if (state.session && !state.session.callsOn) { ev.preventDefault(); notice("Campaign calls are switched off on this deployment (CAMPAIGNS_CALLS at /setup).", "warn"); }
+  });
 
   function wireSort(tableId, sortState, render) {
     Array.prototype.forEach.call(document.querySelectorAll("#" + tableId + " th[data-sort]"), function (th) {
@@ -736,6 +877,8 @@
   $("prospectSearch").addEventListener("input", renderProspects);
   ["stageFilter", "exitFilter", "doorFilter"].forEach(function (id) { $(id).addEventListener("change", loadProspects); });
   $("prospectRefreshBtn").addEventListener("click", loadProspects);
+  $("reviewRefreshBtn").addEventListener("click", loadReview);
+  $("reviewSearch").addEventListener("input", renderReview);
   $("importBtn").addEventListener("click", openImport); $("importBtn2").addEventListener("click", openImport);
   $("blockedReloadBtn").addEventListener("click", function () { location.reload(); });
   // The lock guards against editing one record in two tabs. When the other tab
@@ -774,7 +917,7 @@
       show($("campaignsPanel"));
       await loadCampaigns();
       var hash = (location.hash || "").replace("#", "");
-      if (hash === "prospects" || hash === "imports") showSection(hash);
+      if (hash === "prospects" || hash === "imports" || hash === "review") showSection(hash);
     }
   })();
 })();

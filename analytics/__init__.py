@@ -8,6 +8,7 @@ package registers the seeded metrics + the System Analytics page.
 from __future__ import annotations
 
 from . import computed  # noqa: F401 — registers operational/computed metrics
+from . import campaigns  # noqa: F401 — prospect marketing's two reads + the Campaigns page
 from . import dashboard  # noqa: F401 — registers metrics + the seeded system page
 from . import records  # noqa: F401 — registers the per-record starter dashboards
 from .router import router as api_router

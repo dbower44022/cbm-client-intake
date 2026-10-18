@@ -37,6 +37,13 @@ SELECTING_KINDS = (KIND_POSTCARD, KIND_EMAIL, KIND_SMS, KIND_CALL)
 #: Phase 1 builds the postcard and the social kind; the rest are offered on the
 #: screen only when their phase lands.
 PHASE_1_KINDS = (KIND_POSTCARD, KIND_SOCIAL)
+#: Phase 3 adds the call kind, behind CAMPAIGNS_CALLS.
+CALL_KINDS = (KIND_CALL,)
+
+
+def kinds_built(calls_on: bool) -> tuple[str, ...]:
+    """The kinds a campaign may be created as on this deployment."""
+    return PHASE_1_KINDS + (CALL_KINDS if calls_on else ())
 
 STATUS_DRAFT = "Draft"
 STATUS_AWAITING = "Awaiting sign-off"
@@ -53,6 +60,11 @@ TOUCH_RETURNED = "Returned"
 TOUCH_DONE = "Done"
 TOUCH_CANCELLED = "Cancelled"
 OUTCOME_SCANNED = "Scanned"
+#: Ruling 20's three call outcomes (§ 3.4).
+OUTCOME_NO_ANSWER = "No answer"
+OUTCOME_INTERESTED = "Interested"
+OUTCOME_DECLINED = "Declined"
+CALL_OUTCOMES = (OUTCOME_NO_ANSWER, OUTCOME_INTERESTED, OUTCOME_DECLINED)
 
 # --- prospect records (§ 1.2) --------------------------------------------------
 STAGE_UNVERIFIED = "Unverified"
@@ -94,13 +106,13 @@ PROSPECT_SELECT = (
     "addressDeadAt,website,email,phone,funnelStage,entryStage,stageChangedAt,entryDoor,"
     "externalReference,importBatch,qualifiedBy,qualifiedAt,sideExit,sideExitAt,"
     "sideExitNote,promotedCompanyId,promotedCompanyName,promotedContactId,"
-    "promotedContactName,alreadyKnownCompanyId,alreadyKnownCompanyName,createdAt"
+    "promotedContactName,alreadyKnownCompanyId,alreadyKnownCompanyName,description,createdAt"
 )
 TOUCH_SELECT = (
     "id,name,channel,touchStatus,outcome,stageAtTouch,plannedAt,sentAt,deliveredAt,"
     "returnedAt,doneAt,scanToken,firstScannedAt,scanCount,vendorPieceId,vendorStatus,"
     "mailedAddress,calledPhone,callNotes,outreachCampaignId,outreachCampaignName,"
-    "prospectId,prospectName,contactId,contactName,companyId,companyName"
+    "prospectId,prospectName,contactId,contactName,companyId,companyName,assignedUserId"
 )
 
 

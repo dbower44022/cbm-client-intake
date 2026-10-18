@@ -29,7 +29,8 @@ from core.qr import qr_png, qr_svg
 from forms import SPECS_BY_SLUG
 
 from . import config as cfg
-from . import imports, postcard, service
+from . import calls, imports, postcard, reporting, review, service
+from .reporting import summarize_responses  # noqa: F401 — re-exported
 from .public import destination_path
 from .service import CampaignError
 
@@ -56,6 +57,25 @@ def _require_user(request: Request) -> dict:
             detail=(f"Your account is not authorized to use Campaign Management "
                     f"(requires the {', '.join(teams) or 'admin'} team)."),
         )
+    return user
+
+
+def _require_calls(settings: Settings) -> None:
+    if not settings.campaigns_calls:
+        raise HTTPException(status_code=404, detail="Campaign calls are switched off (CAMPAIGNS_CALLS at /setup).")
+
+
+def _require_caller(request: Request) -> dict:
+    """The Calls screen's gate (ruling 36): signed in, Campaign Management and
+    its calls switched on. The team check is per campaign — the members of the
+    teams it names — so it happens in ``calls``, not here."""
+    settings = get_settings()
+    if not settings.campaigns_enabled:
+        raise HTTPException(status_code=404, detail="Campaign Management is switched off.")
+    _require_calls(settings)
+    user = current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated.")
     return user
 
 
@@ -135,7 +155,9 @@ async def session(request: Request) -> dict[str, Any]:
         "postal": {"provider": settings.postal_provider, "testMode": settings.postal_test_mode,
                    "unitCost": settings.postal_unit_cost, "currency": settings.postal_currency},
         "baseUrl": _base_url(request, settings),
-        "kindsBuilt": list(cfg.PHASE_1_KINDS),
+        "kindsBuilt": list(cfg.kinds_built(settings.campaigns_calls)),
+        "callsOn": settings.campaigns_calls,
+        "callStages": list(calls.CALLABLE_STAGES),
         "formDestinations": [{"slug": s, "title": SPECS_BY_SLUG[s].title}
                              for s in cfg.FORM_DESTINATIONS if s in SPECS_BY_SLUG],
     }
@@ -145,7 +167,7 @@ async def session(request: Request) -> dict[str, Any]:
 async def fields(request: Request) -> dict[str, Any]:
     user, client = _actor(request)
     try:
-        options = await service.field_options(client)
+        options = await service.field_options(client, calls_on=get_settings().campaigns_calls)
         partners = await service.picker_options(client, cfg.PARTNER_PROFILE)
         events = await service.picker_options(client, cfg.EVENT)
     except EspoError as exc:
@@ -208,7 +230,8 @@ async def create_campaign(body: CampaignIn, request: Request) -> dict[str, Any]:
     user, client = _actor(request)
     settings = get_settings()
     try:
-        created = await service.create_campaign(client, body.changes, user_id=user.get("userId", ""))
+        created = await service.create_campaign(client, body.changes, user_id=user.get("userId", ""),
+                                                calls_on=settings.campaigns_calls)
         moved = await service.set_relations(
             client, created["id"],
             {k: v for k, v in ((cfg.LINK_PARTNERS, body.partnerIds), (cfg.LINK_EVENTS, body.eventIds)) if v is not None},
@@ -243,13 +266,25 @@ async def get_campaign(campaign_id: str, request: Request) -> dict[str, Any]:
     if row.get("selectionRule"):
         try:
             import json
-            rule = postcard.normalise_rule(json.loads(row["selectionRule"]))
+            saved = json.loads(row["selectionRule"])
+            rule = (calls.normalise_rule(saved) if row.get("campaignKind") == cfg.KIND_CALL
+                    else postcard.normalise_rule(saved))
         except Exception:  # noqa: BLE001
             rule = None
+    caller_teams = None
+    if row.get("campaignKind") == cfg.KIND_CALL:
+        # The teams named on the campaign decide who calls (ruling 36); a whole
+        # read carries them (the field select does not).
+        try:
+            caller_teams = calls.campaign_team_names(await client.get(cfg.CAMPAIGN, campaign_id),
+                                                     settings.campaigns_allowed_teams_list)
+        except EspoError as exc:
+            log.warning("teams of %s unreadable: %s", campaign_id, exc)
     return {
-        "campaign": row, "partners": partners, "events": events,
+        "campaign": row, "partners": partners, "events": events, "callerTeams": caller_teams,
         "touches": touches, "touchSummary": service.touch_summary(touches),
-        "rule": rule or postcard.DEFAULT_RULE,
+        "callBreakdown": reporting.touch_breakdown(touches),
+        "rule": rule or (calls.DEFAULT_RULE if row.get("campaignKind") == cfg.KIND_CALL else postcard.DEFAULT_RULE),
         "manualMoves": service.manual_moves(row),
         "estimatedCost": estimated_cost(settings, service.touch_summary(touches)["planned"]),
         "currency": settings.postal_currency,
@@ -265,7 +300,8 @@ async def update_campaign(campaign_id: str, body: ChangesIn, request: Request) -
     user, client = _actor(request)
     row = await _campaign_or_404(request, client, campaign_id)
     try:
-        updated = await service.update_campaign(client, row, body.changes)
+        updated = await service.update_campaign(client, row, body.changes,
+                                                calls_on=get_settings().campaigns_calls)
     except CampaignError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
@@ -342,7 +378,11 @@ async def build_list(campaign_id: str, body: BuildIn, request: Request) -> dict[
     row = await _campaign_or_404(request, client, campaign_id)
     api_client = _api_client(settings, request)
     try:
-        result = await postcard.build_list(api_client, client, row, body.rule, settings)
+        if row.get("campaignKind") == cfg.KIND_CALL:
+            _require_calls(settings)
+            result = await calls.build_list(api_client, client, row, body.rule)
+        else:
+            result = await postcard.build_list(api_client, client, row, body.rule, settings)
     except CampaignError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
@@ -368,8 +408,14 @@ async def sign_off(campaign_id: str, body: SignOffIn, request: Request) -> dict[
     row = await _campaign_or_404(request, client, campaign_id)
     api_client = _api_client(settings, request)
     try:
-        updated = await postcard.sign_off(api_client, client, row, confirm=body.confirm,
-                                          user_name=user.get("name") or user.get("userName") or "", settings=settings)
+        if row.get("campaignKind") == cfg.KIND_CALL:
+            _require_calls(settings)
+            updated = await calls.sign_off(api_client, client, row,
+                                           user_name=user.get("name") or user.get("userName") or "")
+        else:
+            updated = await postcard.sign_off(api_client, client, row, confirm=body.confirm,
+                                              user_name=user.get("name") or user.get("userName") or "",
+                                              settings=settings)
     except CampaignError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
@@ -377,7 +423,9 @@ async def sign_off(campaign_id: str, body: SignOffIn, request: Request) -> dict[
     await record_action(
         client, app=APP_CAMPAIGNS, category=CAT_STATUS, action="Campaign Signed Off",
         parent_type=cfg.CAMPAIGN, parent_id=campaign_id,
-        summary=(f"Signed off \"{row.get('name')}\": {updated.get('pieceCount')} pieces, "
+        summary=(f"Signed off the call list of \"{row.get('name')}\" — it is running"
+                 if row.get("campaignKind") == cfg.KIND_CALL else
+                 f"Signed off \"{row.get('name')}\": {updated.get('pieceCount')} pieces, "
                  f"estimated {updated.get('estimatedCost')} {updated.get('estimatedCostCurrency')}"),
         actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
     )
@@ -620,41 +668,8 @@ async def responses(campaign_id: str, request: Request) -> dict[str, Any]:
     return summarize_responses(rows)
 
 
-#: The result keys that mean a RELATIONSHIP record was created (build plan § 6
-#: item 2: *converted* = a relationship record carrying the campaign).
-_RELATIONSHIP_KEYS = ("engagementId", "partnerProfileId", "sponsorProfileId")
-#: Rows that never count: the honeypot and a discard.
-_NOT_A_RESPONSE = ("held_honeypot", "discarded")
-
-
-def summarize_responses(rows: list[dict[str, Any]]) -> dict[str, Any]:
-    """The Responses tab's payload: the rows with their record ids, the per-form
-    totals, and the two campaign counts of § 6 item 2 — *responded* (every
-    delivered or pending submission that carried the campaign, the honeypot
-    and discards excluded) and *converted* (those whose delivery created a
-    relationship record: an engagement, a partner or a funder profile)."""
-    totals: dict[str, int] = {}
-    responded = converted = 0
-    out = []
-    for r in rows:
-        result = r.get("result") or {}
-        records = ({k: v for k, v in result.items() if isinstance(v, str) and k.endswith("Id")}
-                   if isinstance(result, dict) else {})
-        counted = r["status"] not in _NOT_A_RESPONSE
-        is_conversion = counted and any(records.get(k) for k in _RELATIONSHIP_KEYS)
-        if counted:
-            totals[r["form_slug"]] = totals.get(r["form_slug"], 0) + 1
-            responded += 1
-        if is_conversion:
-            converted += 1
-        received = r.get("received_at")
-        out.append({
-            "id": r["id"], "form": r["form_slug"], "status": r["status"],
-            "receivedAt": received.isoformat() if hasattr(received, "isoformat") else received,
-            "linkToken": r.get("link_token"), "email": r.get("email"),
-            "records": records, "converted": is_conversion,
-        })
-    return {"responses": out, "totals": totals, "responded": responded, "converted": converted}
+# summarize_responses lives in campaigns/reporting.py (§ 6: one module for every
+# number); imported here so the route and older imports keep the name.
 
 
 # --- prospects (§ 3.8) ------------------------------------------------------------------------------
@@ -757,3 +772,103 @@ async def import_apply(body: ImportApplyIn, request: Request) -> dict[str, Any]:
     return {"batchId": batch["id"], "result": result}
 
 
+
+
+# --- review (§ 2.3, § 3.8; rulings 18 and 29) ---------------------------------------------------
+
+class ReviewIn(BaseModel):
+    action: str
+    note: str = Field(default="", max_length=4000)
+
+
+@api_router.post("/prospects/{prospect_id}/review")
+async def review_prospect(prospect_id: str, body: ReviewIn, request: Request) -> dict[str, Any]:
+    """Qualify, Unqualified, Do Not Contact or Not the same company — the record
+    written as the reviewer, the one link clear under the API client."""
+    user, client = _actor(request)
+    settings = get_settings()
+    if body.action not in review.ACTIONS:
+        raise HTTPException(status_code=400, detail="Unknown review action.")
+    try:
+        prospect = await service.get_prospect(client, prospect_id)
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not read the prospect record")
+    if not prospect or not prospect.get("id"):
+        raise HTTPException(status_code=404, detail="Prospect record not found.")
+    try:
+        result = await review.apply_action(client, _system_client(settings), prospect, body.action,
+                                           reviewer=user.get("name") or user.get("userName") or "",
+                                           note=body.note)
+    except CampaignError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not save the review")
+    name = prospect.get("businessName") or prospect.get("name") or prospect_id
+    await record_action(
+        client, app=APP_CAMPAIGNS, category=CAT_STATUS, action=review.ACTION_LABELS[body.action],
+        parent_type=cfg.PROSPECT, parent_id=prospect_id,
+        summary=(f"{review.ACTION_LABELS[body.action]}: \"{name}\""
+                 + (f" — {body.note.strip()}" if body.note.strip() else "")),
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+        details={"written": result["written"], "was": {"funnelStage": prospect.get("funnelStage"),
+                                                       "sideExit": prospect.get("sideExit")}},
+    )
+    return result
+
+
+# --- calls (§ 3.4; ruling 36) ---------------------------------------------------------------------
+
+@api_router.get("/calls/session")
+async def calls_session(request: Request) -> dict[str, Any]:
+    """Who is signed in, for the Calls page a caller outside the campaigns team
+    opens directly."""
+    user = _require_caller(request)
+    return {"name": user.get("name"), "userName": user.get("userName"),
+            "isAdmin": bool(user.get("isAdmin")),
+            "campaignsTeam": is_member(user, get_settings().campaigns_allowed_teams_list)}
+
+
+@api_router.get("/calls")
+async def call_list(request: Request) -> dict[str, Any]:
+    user = _require_caller(request)
+    settings = get_settings()
+    client = client_for(settings, user)
+    api_client = _api_client(settings, request)
+    try:
+        return await calls.call_list(api_client, client, user, settings)
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not read the call list")
+
+
+class OutcomeIn(BaseModel):
+    outcome: str
+    notes: str = Field(default="", max_length=8000)
+    callAgain: bool = False
+
+
+@api_router.post("/calls/{touch_id}/outcome")
+async def record_outcome(touch_id: str, body: OutcomeIn, request: Request) -> dict[str, Any]:
+    user = _require_caller(request)
+    settings = get_settings()
+    client = client_for(settings, user)
+    api_client = _api_client(settings, request)
+    try:
+        result = await calls.record_outcome(api_client, client, user, touch_id, outcome=body.outcome,
+                                            notes=body.notes, call_again=body.callAgain, settings=settings)
+    except CampaignError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not record the call")
+    await record_action(
+        client, app=APP_CAMPAIGNS, category=CAT_STATUS, action="Call Recorded",
+        parent_type=cfg.TOUCH, parent_id=touch_id,
+        summary=(f"Recorded a call on \"{result.get('campaignName')}\": {body.outcome}"
+                 + (", call again" if body.callAgain else "")),
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+        details={"consequences": result["consequences"], "warnings": result["warnings"]},
+    )
+    return result

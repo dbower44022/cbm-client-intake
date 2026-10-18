@@ -5,6 +5,51 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.261.0] — 2026-10-18
+
+**feat(prospects): Phase 3 — lists, review, calls (dark behind
+`CAMPAIGNS_CALLS`).** Prospect marketing build plan § 7 Phase 3; rulings 36 and
+37 recorded at the start of the session. No CRM change except the Mentor
+Role's grants for ruling 36 (`scripts/migrate_outreach_roles.py`, merge-only —
+two `WOULD set` lines on crm-test; Doug applies with
+`scripts/prospect_crm_test.sh roles`).
+
+- **The list import** — the Unverified door was already shared with the
+  state-filing import in Phase 1; the screen now says where a list's rows go,
+  and the tests prove a list row with an email or website still promotes.
+- **The Review tab** — the Prospects grid pre-filtered to Unverified with
+  *Qualify* (reviewer in `qualifiedBy`, time in `qualifiedAt`) and
+  *Unqualified* (note required, reviewer named in the note); *Do Not Contact*
+  and *Not the same company* (clears *Already known* and the
+  `alreadyKnownCompany` link, under the API client) on every prospect record's
+  popup. `campaigns/review.py`. No side exit is ever written over another.
+  Every action is action-logged.
+- **The call kind** (`campaigns/calls.py`) — the selection (a phone on a
+  prospect record, or on a Contact typed Prospect not opted out and not
+  do-not-call; the chosen rungs; no side exit; never Declined anywhere; a
+  promoted record is its Contact), *Build the list*, *Sign off and start
+  calling* (no piece count; the list runs at once and completes itself when
+  the last row is recorded). **The Calls page** `/campaigns/calls.html`:
+  every Planned call of every Running call campaign whose teams include the
+  caller (ruling 36; a campaign naming no team is the Marketing Admin
+  Team's), the warning that an unrecorded call reads as never contacted, and
+  the three outcomes — *No answer* (with *Call again*), *Interested* (Lead,
+  advance-only), *Declined* (the `Declined` side exit on a prospect record).
+  The touch is written as the caller; the rung, the exit, the fresh row and
+  the completion under the API client.
+- **The Stale sweep** (`campaigns/stale.py`) — an Unverified or Qualified
+  record with no touch for `PROSPECT_STALE_DAYS` (180) and no planned touch
+  leaves by `Stale`; the worker runs it every `PROSPECT_STALE_SWEEP_SECONDS`
+  (nightly) while Campaign Management is on, and `/setup` → Operations runs
+  it as dry run → apply (*Prospect Stale sweep*).
+- **The two Analytics reads** — *Touches by campaign* and *Entry rung per
+  door* on a new built-in Analytics page *Campaigns* (`analytics/campaigns.py`),
+  every number from the new `campaigns/reporting.py`, which the record page
+  and the Responses tab now read too.
+
+New settings: `CAMPAIGNS_CALLS` (off), `PROSPECT_STALE_DAYS`,
+`PROSPECT_STALE_SWEEP_SECONDS`. Verified by tests only (25 new).
+
 ## [0.260.3] — 2026-10-18
 
 **chore(prospects): the production slot as one word per step.**

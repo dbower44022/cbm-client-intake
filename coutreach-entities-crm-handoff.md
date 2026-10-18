@@ -1,6 +1,6 @@
 # CRM handoff — prospect marketing and Campaign Management (Phase 1): `CProspect`, `COutreachCampaign`, `COutreachTouch`
 
-Last Updated: 10-15-26 01:50 · Revision 1.3 — see change log at the end.
+Last Updated: 10-18-26 00:30 · Revision 1.5 — see change log at the end.
 
 Three new record types and the links that tie them to what the CRM already
 holds. A **prospect record** (`CProspect`) is a quarantine for a business or
@@ -315,6 +315,9 @@ skipped and nothing is ever lowered or removed. Every change is read back.
 | | `CEngagement` edit all · `CPartnerProfile` edit all · `Contact` edit all · `Account` edit all | **re-checks** | held on crm-test 10-14-26; named so a CRM that lacks one gains it rather than failing the `referringPartners` relate (both sides are checked) or a stage write |
 | **Marketing Admin Role** (Marketing Admin Team — CM-1) | `CProspect`, `COutreachCampaign`, `COutreachTouch` | create yes · read all · edit all | marketing users create and run campaigns; **no delete** — a campaign is Cancelled |
 | | `CEvent` read all · `CPartnerProfile` read all | **re-checks** | the events picker (CM-6) and the partners picker (CM-2); both held |
+| **Mentor Role** (ruling 36, added 10-18-26 for Phase 3) | `COutreachTouch` | read all · edit all | a mentor on a call campaign naming the Mentor Team reads the call list and records the outcome on the touch **as themself** |
+| | `CProspect` | read all | the call screen reads the record being called; the rung and the side exit an outcome causes are written under the API role, so **no edit** |
+| | `Contact` read all | **re-check** | a phone can live on a Contact typed Prospect; held on production 08-31-26 |
 | | Assignment Permission | `all` | **re-check** — already `all` since 10-08-26. A role that creates a record the application leaves unassigned needs it: at *not set* or *team* EspoCRM refuses a record with neither a team nor an assigned user outright (read from `Acl/AssignmentChecker/Helper.php` on crm-test 10-08-26) |
 
 Expected on crm-test: six `WOULD set` lines (the three new scopes on each
@@ -330,9 +333,14 @@ strip `cFunnelStage`, `cEntryStage`, `cOutreachCampaign` or the companion
 handoff's `cSmsOptIn` — a hand edit on that role, on both instances in the
 same session.
 
-No new team. The Mentor Role gains nothing here; question 6 of the plan (who
-makes the calls) may add `COutreachTouch` read and edit and `CProspect` read
-to it later — noted as owed, not done.
+No new team. **The Mentor Role's three lines were added 10-18-26** when Doug
+answered question 6 (ruling 36: callers are the teams named on the campaign,
+each acting as themself). On crm-test they are owed: re-run § 4 —
+`scripts/prospect_crm_test.sh roles` — and expect two `WOULD set` lines for
+the Mentor Role, `COutreachTouch` (read and edit) and `CProspect` (read), and
+the Contact line skipped as held (the dry run read exactly that on crm-test,
+10-18-26 00:31). Production and Boston take
+them with the rest of § 4.
 
 ## 5. Verification — read the data back
 
@@ -461,6 +469,7 @@ nothing in any name here is chapter-specific.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.5 | 10-18-26 00:30 | Claude (Claude Code) | § 4: the Mentor Role's grants for ruling 36 (call campaigns, Phase 3) — `COutreachTouch` read/edit, `CProspect` read, `Contact` read re-checked; owed on crm-test (re-run `roles`), production and Boston. |
 | 1.4 | 10-17-26 22:50 | Claude (Claude Code) | § 3.4 added: the CRM labels "Outreach Campaign" (ruling 35), crm-test done; production § 7 and Boston carry the step. |
 | 1.3 | 10-15-26 01:50 | Claude (Claude Code) | The non-admin pass matched (Doug, 01:49): crm-test complete, soaking. The partner relate's refusal as a Marketing Admin recorded as the expected both-sides check. |
 | 1.2 | 10-15-26 01:20 | Claude (Claude Code) | crm-test done: §§ 2, 3.1 and 4 run by Doug through `scripts/prospect_crm_test.sh` (the mutating runs are refused to Claude by the session classifier), § 3.2 and the new § 3.3 layouts through the admin API, § 5 steps 1, 2, 4, 5 passed; the address type accepted (item (b) settled); the non-admin pass owed. |

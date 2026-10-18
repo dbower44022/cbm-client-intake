@@ -24,6 +24,8 @@
       <nav class="cm__nav" id="sectionNav">
         <button type="button" class="cm__navbtn is-active" data-section="campaigns">Campaigns</button>
         <button type="button" class="cm__navbtn" data-section="prospects">Prospects</button>
+        <button type="button" class="cm__navbtn" data-section="review">Review</button>
+        <a class="cm__navbtn" id="callsNavLink" href="/campaigns/calls.html" target="cbm-campaign-calls">Calls</a>
         <button type="button" class="cm__navbtn" data-section="imports">Imports</button>
       </nav>
       <div class="cm__usercorner" id="userCorner" hidden>
@@ -115,6 +117,25 @@
       </div>
     </section>
 
+    <!-- ============================ REVIEW ============================ -->
+    <section class="cm__panel" id="reviewPanel" hidden>
+      <div class="cm__controls">
+        <p class="cm__hint cm__grow">Records a purchased or partner list brought in wait here at Unverified until a person reviews them (ruling 18). <strong>Qualify</strong> puts a record on the ladder at Qualified with your name on it; <strong>Unqualified</strong> takes it off, with your reason.</p>
+        <input type="search" id="reviewSearch" placeholder="Search…" aria-label="Search the review queue" autocomplete="off" />
+        <span class="cm__count" id="reviewCount"></span>
+        <div class="cm__actions"><button type="button" class="cbm-button cbm-button--secondary" id="reviewRefreshBtn">Refresh</button></div>
+      </div>
+      <div class="cm__gridwrap">
+        <table class="cm__grid" id="reviewGrid">
+          <thead><tr>
+            <th>Business</th><th>Person</th><th>Phone</th><th>Email</th><th>Website</th><th>City</th><th>Batch</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="reviewRows"></tbody>
+        </table>
+        <p class="cm__empty" id="reviewEmpty" hidden>Nothing waiting for review.</p>
+      </div>
+    </section>
+
     <!-- =========================== IMPORTS =========================== -->
     <section class="cm__panel" id="importsPanel" hidden>
       <div class="cm__controls">
@@ -178,6 +199,22 @@
               <button type="button" class="cbm-button" id="signoffBtn">Sign off and run</button>
             </div>
             <p class="cm__runnote" id="runNote"></p>
+          </section>
+          <section class="cm__card" id="callCard" hidden>
+            <h3>Call list</h3>
+            <div class="cm__tiles" id="callTiles"></div>
+            <div class="cm__rule">
+              <p class="cm__hint">Who gets a call: a prospect record or a Contact typed Prospect holding a phone number, not opted out and not do-not-call, with no side exit, who has never Declined a call (ruling 20).</p>
+              <div id="callStages"></div>
+              <p class="cm__summary" id="callRuleSummary"></p>
+            </div>
+            <div class="cm__runactions">
+              <button type="button" class="cbm-button cbm-button--secondary" id="callBuildBtn">Build the list</button>
+              <button type="button" class="cbm-button" id="callSignoffBtn">Sign off and start calling</button>
+            </div>
+            <p class="cm__runnote" id="callNote"></p>
+            <p class="cm__hint" id="callersLine"></p>
+            <p class="cm__hint">Callers record each call on the Calls page: <span class="cm__short" id="callsUrl"></span> <button type="button" class="cm__rowbtn" id="callsUrlCopy">Copy</button></p>
           </section>
           <section class="cm__card">
             <h3>Notes</h3>

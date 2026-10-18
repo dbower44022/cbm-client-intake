@@ -25,6 +25,9 @@ three entities ``scripts/plans/coutreach-entities.json`` creates (``CProspect``,
   neither a team nor an assigned user is refused outright). Re-checked:
   ``CEvent`` read all (the events picker, CM-6) and ``CPartnerProfile`` read all
   (the partners picker, CM-2) — both held on crm-test 10-14-26.
+* **Mentor Role** (ruling 36, Phase 3: a mentor on a campaign naming the Mentor
+  Team makes calls as themself) — ``COutreachTouch`` read all and edit all,
+  ``CProspect`` read all. Re-checked: ``Contact`` read all.
 
 **Field-level access is reported, never changed.** A role with a ``fieldData``
 rule on ``Contact`` or ``Account`` silently strips a write to a field the rule
@@ -86,6 +89,16 @@ ROLE_SCOPE_GRANTS: list[tuple[str, str, dict[str, str]]] = [
     # Re-checks for the two pickers on a campaign (CM-2 partners, CM-6 events).
     ("Marketing Admin Role", "CEvent", {"read": "all"}),
     ("Marketing Admin Role", "CPartnerProfile", {"read": "all"}),
+    # Ruling 36 (10-18-26, Phase 3): callers are the members of the teams named
+    # on a call campaign, each acting as themself, so a mentor on a campaign
+    # naming the Mentor Team reads the call list and records the outcome on the
+    # touch as themself. The rung and the side exit the outcome causes are the
+    # application's writes, under the API role — the Mentor Role gains no
+    # CProspect edit. Contact read all is held (re-checked: a phone can live on
+    # a Contact typed Prospect).
+    ("Mentor Role", "COutreachTouch", {"read": "all", "edit": "all"}),
+    ("Mentor Role", "CProspect", {"read": "all"}),
+    ("Mentor Role", "Contact", {"read": "all"}),
 ]
 
 #: Role-level permissions (not per scope): (role name, permission, minimum level).

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="cbm-org" content="{{org}}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{org}} — Campaign Calls</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <!-- busy.js must load FIRST: it wraps fetch/XHR to give every button press
+       immediate feedback (product-wide convention). -->
+  <script src="/shared/busy.js"></script>
+</head>
+<body>
+  <main class="cm">
+    <header class="cm__topbar">
+      <div class="cm__title">
+        <h1>Campaign Calls</h1>
+        <p class="cm__sub">Every call on the running call campaigns you call for. Ring the number, then record what happened.</p>
+      </div>
+      <div class="cm__usercorner" id="userCorner" hidden>
+        <span class="cm__who">Signed in as <strong id="whoName"></strong></span>
+        <a class="cbm-button cbm-button--secondary" id="campaignsLink" href="/campaigns/" hidden>Campaign Management</a>
+        <a class="cbm-button cbm-button--secondary" href="/">Portal</a>
+      </div>
+    </header>
+
+    <div class="cm__notice" id="notice" hidden></div>
+    <section class="cm__panel" id="offPanel" hidden>
+      <h2>Calls are not available here</h2>
+      <p id="offReason"></p>
+    </section>
+
+    <section class="cm__panel" id="callsPanel" hidden>
+      <p class="cm__warning" id="callWarning"></p>
+      <p class="cm__notice" id="callMessage" hidden></p>
+      <div class="cm__controls">
+        <label class="cm__filter">Campaign <select id="campaignFilter"><option value="">All</option></select></label>
+        <input type="search" id="callSearch" placeholder="Search…" aria-label="Search the call list" autocomplete="off" />
+        <span class="cm__count" id="callCount"></span>
+        <div class="cm__actions"><button type="button" class="cbm-button cbm-button--secondary" id="callRefreshBtn">Refresh</button></div>
+      </div>
+      <div class="cm__gridwrap">
+        <table class="cm__grid" id="callGrid">
+          <thead><tr><th>Business</th><th>Person</th><th>Number</th><th>Rung</th><th>Campaign</th><th>Planned</th><th>Actions</th></tr></thead>
+          <tbody id="callRows"></tbody>
+        </table>
+        <p class="cm__empty" id="callsEmpty" hidden>Nobody left to call.</p>
+      </div>
+      <section class="cm__card" id="briefs" hidden>
+        <h3>The brief</h3>
+        <div id="briefList"></div>
+      </section>
+    </section>
+  </main>
+
+  <footer class="cm__footer">
+    <p>&copy; <span data-cbm-year></span> {{org}}. All rights reserved. <span data-cbm-version></span></p>
+  </footer>
+
+  <script src="/shared/footer.js"></script>
+  <script src="/shared/richtext.js"></script>
+  <script src="calls.js"></script>
+</body>
+</html>

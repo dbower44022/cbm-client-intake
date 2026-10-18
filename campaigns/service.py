@@ -78,7 +78,7 @@ async def _enum_options(client: EspoApi, entity: str, names: Iterable[str]) -> d
     return out
 
 
-async def field_options(client: EspoApi) -> dict[str, Any]:
+async def field_options(client: EspoApi, *, calls_on: bool = False) -> dict[str, Any]:
     """Enum options for the campaign form and the prospect filters, live from
     the CRM. A kind outside this phase is listed but marked so the screen can
     say which phase brings it."""
@@ -88,7 +88,7 @@ async def field_options(client: EspoApi) -> dict[str, Any]:
     return {
         "campaign": campaign,
         "prospect": prospect,
-        "kindsBuilt": list(cfg.PHASE_1_KINDS),
+        "kindsBuilt": list(cfg.kinds_built(calls_on)),
     }
 
 
@@ -175,16 +175,21 @@ async def picker_options(client: EspoApi, entity: str, *, where=None) -> Optiona
     return rows
 
 
-async def create_campaign(client: EspoApi, changes: dict[str, Any], *, user_id: str) -> dict[str, Any]:
+def _not_built(kind: str, built: tuple[str, ...]) -> str:
+    return f"The {kind} kind is not built yet — {', '.join(built)} " + ("are." if len(built) > 1 else "is.")
+
+
+async def create_campaign(client: EspoApi, changes: dict[str, Any], *, user_id: str,
+                          calls_on: bool = False) -> dict[str, Any]:
+    built = cfg.kinds_built(calls_on)
     options = (await field_options(client))["campaign"]
     payload = sanitize_changes(changes, options)
     if not payload.get("name"):
         raise CampaignError("A campaign needs a name.")
     if not payload.get("campaignKind"):
         raise CampaignError("Choose the campaign's kind.")
-    if payload["campaignKind"] not in cfg.PHASE_1_KINDS:
-        raise CampaignError(
-            f"The {payload['campaignKind']} kind is not built yet — Postcard and Social media are.")
+    if payload["campaignKind"] not in built:
+        raise CampaignError(_not_built(payload["campaignKind"], built))
     if payload["campaignKind"] != cfg.KIND_SOCIAL:
         payload["platform"] = None
     payload["campaignStatus"] = cfg.STATUS_DRAFT
@@ -193,15 +198,16 @@ async def create_campaign(client: EspoApi, changes: dict[str, Any], *, user_id: 
     return await client.create(cfg.CAMPAIGN, payload)
 
 
-async def update_campaign(client: EspoApi, campaign: dict[str, Any], changes: dict[str, Any]) -> dict[str, Any]:
+async def update_campaign(client: EspoApi, campaign: dict[str, Any], changes: dict[str, Any],
+                          *, calls_on: bool = False) -> dict[str, Any]:
+    built = cfg.kinds_built(calls_on)
     options = (await field_options(client))["campaign"]
     payload = sanitize_changes(changes, options)
     if "campaignKind" in payload and payload["campaignKind"] != campaign.get("campaignKind"):
         if campaign.get("campaignStatus") not in (cfg.STATUS_DRAFT, None):
             raise CampaignError("A campaign's kind can only change while it is a draft.")
-        if payload["campaignKind"] not in cfg.PHASE_1_KINDS:
-            raise CampaignError(
-                f"The {payload['campaignKind']} kind is not built yet — Postcard and Social media are.")
+        if payload["campaignKind"] not in built:
+            raise CampaignError(_not_built(payload["campaignKind"], built))
     if not payload:
         return campaign
     return await client.update(cfg.CAMPAIGN, campaign["id"], payload)
@@ -221,6 +227,14 @@ _MANUAL_MOVES: dict[str, dict[str, tuple[str, ...]]] = {
         cfg.STATUS_DRAFT: (cfg.STATUS_CANCELLED,),
         cfg.STATUS_AWAITING: (cfg.STATUS_DRAFT, cfg.STATUS_CANCELLED),
         cfg.STATUS_SIGNED_OFF: (cfg.STATUS_CANCELLED,),
+        cfg.STATUS_CANCELLED: (cfg.STATUS_DRAFT,),
+    },
+    # A call list runs from its sign-off (no vendor, no worker): Running until
+    # the last Planned row is recorded, when the application completes it.
+    cfg.KIND_CALL: {
+        cfg.STATUS_DRAFT: (cfg.STATUS_CANCELLED,),
+        cfg.STATUS_AWAITING: (cfg.STATUS_DRAFT, cfg.STATUS_CANCELLED),
+        cfg.STATUS_RUNNING: (cfg.STATUS_COMPLETE, cfg.STATUS_CANCELLED),
         cfg.STATUS_CANCELLED: (cfg.STATUS_DRAFT,),
     },
 }

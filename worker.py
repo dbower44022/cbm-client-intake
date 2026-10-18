@@ -430,6 +430,10 @@ async def main() -> None:
     # Running resumed. Gated per cycle on the switch; inert in dry-run and
     # without the application database that holds the campaign's link.
     next_campaign_run = datetime.now(timezone.utc)
+    # The prospect Stale sweep (build plan § 1.2, § 6): nightly by default, its
+    # first pass an interval after start so a restart never re-runs it at once.
+    next_stale_sweep = datetime.now(timezone.utc) + timedelta(
+        seconds=max(settings.prospect_stale_sweep_seconds, 0))
 
     while not stop.is_set():
         claimed = await run_cycle(store, settings, stop)
@@ -477,6 +481,15 @@ async def main() -> None:
             except Exception as exc:  # noqa: BLE001 — never crashes delivery
                 log.warning("campaign run pass failed: %s", exc)
             next_campaign_run = now_cfg + timedelta(seconds=settings.campaigns_run_seconds)
+        stale_on = (settings.campaigns_enabled and not settings.espo_dry_run
+                    and settings.prospect_stale_sweep_seconds > 0)
+        if stale_on and now_cfg >= next_stale_sweep:
+            try:
+                from campaigns.stale import run_stale_sweep
+                await run_stale_sweep(settings)
+            except Exception as exc:  # noqa: BLE001 — never fatal
+                log.warning("prospect stale sweep failed: %s", exc)
+            next_stale_sweep = now_cfg + timedelta(seconds=settings.prospect_stale_sweep_seconds)
         mailing_on = settings.mailing_sync and not settings.espo_dry_run
         if mailing_on and settings.mailing_push_seconds > 0 and now_cfg >= next_mailing_push:
             try:

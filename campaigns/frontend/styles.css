@@ -98,3 +98,12 @@ body { margin: 0; background: var(--cbm-bg, #f6f7f9); color: var(--cbm-text, #1e
 .cm__plan table { font-size: .85rem; }
 .cm__footer { color: var(--cbm-muted, #4b5a63); font-size: .85rem; padding: 0 1.25rem 1rem; }
 @media (max-width: 900px) { .cm__overview { grid-template-columns: 1fr; } }
+
+/* Phase 3: the Calls link in the section nav, the call screen. */
+a.cm__navbtn { text-decoration: none; color: inherit; display: inline-block; }
+.cm__warning { background: #fff4d6; border: 1px solid #e0b84a; border-radius: 6px; padding: .6rem .9rem; margin: 0 0 1rem; font-weight: 500; }
+.cm__callrow.is-open td { background: var(--cbm-surface-alt, #f3f6f7); }
+.cm__callform { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: .8rem; padding: .8rem 0; }
+.cm__callform textarea { width: 100%; min-height: 5rem; font: inherit; }
+.cm__phone { font-size: 1.15rem; font-weight: 600; white-space: nowrap; }
+.cm__brief { max-height: 14rem; overflow: auto; }

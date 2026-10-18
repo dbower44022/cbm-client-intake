@@ -566,6 +566,16 @@ class Settings(BaseSettings):
     postal_currency: str = "USD"
     # How often the worker looks for a campaign at Signed off to run. 0 disables.
     campaigns_run_seconds: int = 60
+    # Phase 3 (build plan § 7): the call kind and the Calls screen, inside
+    # CAMPAIGNS_ENABLED. Read per request. Who calls is ruling 36: the members
+    # of the teams named on the campaign, each acting as themself.
+    campaigns_calls: bool = False
+    # The Stale side exit (§ 1.2, § 6): an Unverified or Qualified prospect
+    # record with no touch for this many days leaves by Stale. The worker runs
+    # the sweep every PROSPECT_STALE_SWEEP_SECONDS (0 disables); /setup →
+    # Operations runs it as dry-run then apply.
+    prospect_stale_days: int = 180
+    prospect_stale_sweep_seconds: int = 86400
     # --- F5: the portal calendar (prds/events/CBM_Events_Portal_Calendar_Design.md) ---
     # The rail of upcoming events on the portal home page and the member page
     # behind it. Off by default so crm-test can show it to a real member first:

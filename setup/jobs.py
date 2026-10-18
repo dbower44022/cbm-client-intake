@@ -181,7 +181,33 @@ async def _mailing_pull_apply(settings: Settings) -> str:
     return result.text
 
 
+async def _prospect_stale_dry(settings: Settings) -> str:
+    from campaigns.stale import job_dry_run
+
+    return await job_dry_run(settings)
+
+
+async def _prospect_stale_apply(settings: Settings) -> str:
+    from campaigns.stale import job_apply
+
+    return await job_apply(settings)
+
+
 JOBS: tuple[JobSpec, ...] = (
+    JobSpec(
+        key="prospect_stale",
+        name="Prospect Stale sweep",
+        description=(
+            "Lists the prospect records at Unverified or Qualified with no touch "
+            "for 'Prospect stale after' days and no planned touch. Applying moves "
+            "each to the Stale side exit — never deleted, never over another side "
+            "exit. The worker runs the same sweep nightly while Campaign "
+            "Management is on."
+        ),
+        mutating=True,
+        dry_run=_prospect_stale_dry,
+        apply=_prospect_stale_apply,
+    ),
     JobSpec(
         key="mailing_push",
         name="Mailing list push",

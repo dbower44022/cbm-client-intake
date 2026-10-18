@@ -258,6 +258,19 @@ SETTINGS: tuple[SettingSpec, ...] = (
        unit="s", component="worker",
        help="How often the worker looks for a signed-off postcard campaign to run. "
             "0 disables the run."),
+    _s("campaigns_calls", GROUP_FEATURES, "Campaign calls", kind="bool",
+       help="The Call campaign kind and the Calls screen (prospect marketing "
+            "Phase 3). Callers are the members of the teams named on each "
+            "campaign (ruling 36). Read per request: no restart."),
+    _s("prospect_stale_days", GROUP_FEATURES, "Prospect stale after", kind="int",
+       unit="days", component="both",
+       help="An Unverified or Qualified prospect record with no touch for this "
+            "many days leaves by the Stale side exit. 0 makes every untouched "
+            "record stale — for a live check only."),
+    _s("prospect_stale_sweep_seconds", GROUP_FEATURES, "Prospect stale sweep", kind="int",
+       unit="s", component="worker",
+       help="How often the worker runs the Stale sweep (default nightly). 0 "
+            "disables it; /setup → Operations still runs it by hand."),
     _s("gmail_sync", GROUP_FEATURES, "Gmail conversation sync", kind="bool",
        component="both",
        help="The whole Communications pipeline. Needs the Google service account."),
