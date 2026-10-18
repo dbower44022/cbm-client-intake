@@ -366,13 +366,17 @@
       ["Window", (c.startDate || c.endDate) ? fmtDate(c.startDate) + " – " + fmtDate(c.endDate) : null],
       ["Mail vendor template", c.vendorTemplateId], ["Postcard size", c.postcardSize],
       ["Selection", c.selectionSummary],
-      ["Pieces signed off", c.pieceCount], ["Estimated cost", c.estimatedCost != null ? money(c.estimatedCost, c.estimatedCostCurrency) : null],
+      [c.campaignKind === "Call" ? "People on the list" : c.campaignKind === "Postcard" ? "Pieces signed off" : "People signed off", c.pieceCount], ["Estimated cost", c.estimatedCost != null ? money(c.estimatedCost, c.estimatedCostCurrency) : null],
       ["Signed off by", c.signedOffByName], ["Signed off at", c.signedOffAt ? fmtDate(c.signedOffAt) : null],
       ["Run started", c.runStartedAt ? fmtDate(c.runStartedAt) : null], ["Run completed", c.runCompletedAt ? fmtDate(c.runCompletedAt) : null],
       ["Created", fmtDate(c.createdAt)],
     ];
     pairs.forEach(function (p) {
-      if (c.campaignKind !== "Postcard" && ["Mail vendor template", "Postcard size", "Selection", "Pieces signed off", "Estimated cost", "Signed off by", "Signed off at", "Run started", "Run completed"].indexOf(p[0]) >= 0) return;
+      // The sign-off record (ruling 13) and the run belong to every kind that
+      // selects an audience; the mail-vendor facts to the postcard alone.
+      var selecting = ["Postcard", "Call", "SMS", "Email"].indexOf(c.campaignKind) >= 0;
+      if (c.campaignKind !== "Postcard" && ["Mail vendor template", "Postcard size", "Estimated cost"].indexOf(p[0]) >= 0) return;
+      if (!selecting && ["Selection", "Pieces signed off", "People signed off", "People on the list", "Signed off by", "Signed off at", "Run started", "Run completed"].indexOf(p[0]) >= 0) return;
       if (c.campaignKind !== "Social media" && p[0] === "Platform") return;
       facts.appendChild(el("dt", null, p[0])); facts.appendChild(el("dd", null, p[1] == null || p[1] === "" ? "—" : p[1]));
     });
