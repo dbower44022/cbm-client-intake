@@ -106,10 +106,10 @@ built 10-15-26, v0.258.0, dark behind `CAMPAIGNS_ENABLED`**).
      and ruling 35; F's registrations and G–I owed on 10-18-26. Doug opened
      the Phase 3 gate (10-18-26 00:05) to build in parallel — prompt v0.2.
   4c. ~~The Phase 3 build session~~ — **done 10-18-26** (v0.261.0; rulings
-     36 and 37 first; the spent prompt is in `history/prompts/`). **Next:
-     Doug's Phase 3 pass on crm-test** from
-     https://claude.ai/artifact/D8atEqEdRaRBKh4mmxiPsj (push, the role
-     script's Mentor Role grants, *Campaign calls* on, then six steps). The
+     36 and 37 first; the spent prompt is in `history/prompts/`).
+     **Phase 3 pass matched 10-18-26 01:32** after v0.261.1 (call records
+     carry the campaign's teams). Step page
+     https://claude.ai/artifact/D8atEqEdRaRBKh4mmxiPsj. The
      next build kickoff is Phase 4 —
      `prompts/prospect-marketing-phase-4-build-prompt-v0.1.md`.
   4a. ~~The Phase 2 build session~~ — **done 10-17-26** (v0.259.0; the

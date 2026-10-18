@@ -23,9 +23,22 @@ found; move resolved items to the bottom with the resolution date.
 51. **Prospect marketing — Phase 1 BUILT and LIVE-PASSED on crm-test
     (v0.258.0–v0.258.5, 10-15/17-26, dark behind `CAMPAIGNS_ENABLED`);
     Phase 2 BUILT (v0.259.0, 10-17-26), its pass A–E matched, F–I owed;
-    Phase 3 BUILT (v0.261.0, 10-18-26, dark behind `CAMPAIGNS_CALLS`,
-    tests and a stub harness only) — Doug's Phase 3 live pass, production
-    and Boston owed** (10-14-26, updated 10-18-26 00:45). **Phase 3 (10-18-26):**
+    Phase 3 BUILT and LIVE-PASSED on crm-test (v0.261.0–v0.261.1,
+    10-18-26, dark behind `CAMPAIGNS_CALLS`) — production and Boston
+    owed** (10-14-26, updated 10-18-26 01:35). **Phase 3 pass, 10-18-26
+    00:50–01:32 (Doug):** every step matched on crm-test after one fix —
+    **v0.261.1**: the Mentor Role's Assignment Permission is *team*, so
+    EspoCRM refused Joe Mentor's save of a call record carrying no team and
+    no assigned user; call records now carry the campaign's teams. The
+    decisive check (section H) read back as a call **modified by Joe
+    Mentor** and the campaign Complete. The staff steps ran as Admin, not
+    Mark Marketing (the review stamps read "Admin"), so the Marketing Admin
+    Role's own path for review and the call kind is proven by Phase 1's
+    grants, not by this pass. **Found, owed:** every Campaign Management
+    action's `CActionLog` row is refused (HTTP 400, `record` not valid) —
+    `CActionLog.record` does not list `COutreachCampaign`, `CProspect` or
+    `COutreachTouch` (the event gap of item 669 again); the stream notes are
+    written. A CRM entity-list change on all three CRMs. **Phase 3 (10-18-26):**
     rulings 36 (callers are the campaign's teams, each acting as themself)
     and 37 (no rung on a record holding a relationship type — v0.260.2)
     recorded first; the Review tab, the call kind and the Calls page, the
