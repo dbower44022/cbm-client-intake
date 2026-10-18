@@ -1,6 +1,6 @@
 # CRM handoff — prospect marketing and Campaign Management (Phase 1): `CProspect`, `COutreachCampaign`, `COutreachTouch`
 
-Last Updated: 10-18-26 11:20 · Revision 1.7 — see change log at the end.
+Last Updated: 10-18-26 16:45 · Revision 1.8 — see change log at the end.
 
 Three new record types and the links that tie them to what the CRM already
 holds. A **prospect record** (`CProspect`) is a quarantine for a business or
@@ -477,6 +477,9 @@ name is `smsMessage` as typed. No role change: the Marketing Admin Role edits
 the campaign at *all*, and the API role reads it. No field-level rule touches
 the entity.
 
+- **Done on crm-test (10-18-26, the Phase 4 pass) and production (10-18-26
+  ~16:40, Doug, step page https://claude.ai/artifact/B5XjdTXmbx8PcbzSoPq1Ec;
+  read back by Claude from the container: "Nothing to do").** Boston owed.
 - **crm-test:** `scripts/prospect_crm_test.sh smstext` (Doug — the applier's
   `--apply` is refused to Claude by the session classifier).
 - **Production:** `bash scripts/prospect_crm_prod.sh smstext` then
@@ -507,6 +510,11 @@ none of them has ever been stored on any CRM. Doug's ruling 40 (option A):
    eight (dry run: one `WOULD set`). The application writes them under the
    API role, which carries no field rule.
 
+- **Done on crm-test (10-18-26 11:1x) and production (10-18-26 ~16:40, Doug,
+  step page https://claude.ai/artifact/B5XjdTXmbx8PcbzSoPq1Ec; read back by
+  Claude from the container: the eight fields not Read-only, the Marketing
+  Admin Role's rule on all eight, the Mentor Role's two grants of ruling 36
+  held).** Boston owed.
 - **crm-test:** `scripts/prospect_crm_test.sh appfields`, then
   `scripts/prospect_crm_test.sh roles` (Doug).
 - **Production:** `bash scripts/prospect_crm_prod.sh appfields` (+ `apply`)
@@ -520,6 +528,7 @@ none of them has ever been stored on any CRM. Doug's ruling 40 (option A):
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.8 | 10-18-26 16:45 | Claude (Claude Code) | §§ 9–10 and the Mentor Role grants of § 4 done on production (Doug, second slot of 10-18-26), read back from the container; Boston owed. |
 | 1.7 | 10-18-26 11:20 | Claude (Claude Code) | § 10: ruling 40 — the eight app-owned campaign fields stop being Read-only (plan `coutreach-campaign-app-fields.json`, `965d932407f3`) and take a field rule on the Marketing Admin Role. |
 | 1.6 | 10-18-26 02:00 | Claude (Claude Code) | § 9: the text-message field (rulings 38, 39), plan `coutreach-sms-message.json`, fingerprint `7a68865149b4`; one word in each slot script. |
 | 1.5 | 10-18-26 00:30 | Claude (Claude Code) | § 4: the Mentor Role's grants for ruling 36 (call campaigns, Phase 3) — `COutreachTouch` read/edit, `CProspect` read, `Contact` read re-checked; owed on crm-test (re-run `roles`), production and Boston. |

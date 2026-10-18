@@ -32,7 +32,9 @@ found; move resolved items to the bottom with the resolution date.
     Phase 3 BUILT and LIVE-PASSED on crm-test (v0.261.0–v0.261.1,
     10-18-26, dark behind `CAMPAIGNS_CALLS`); Phase 4 BUILT and
     LIVE-PASSED on crm-test (v0.262.0–v0.264.1, 10-18-26, dark behind
-    `CAMPAIGNS_SMS` / `CAMPAIGNS_EMAIL`) — production and Boston owed**
+    `CAMPAIGNS_SMS` / `CAMPAIGNS_EMAIL`); **production's CRM carries every
+    change (Phase 1 slot 10-18-26 morning; rulings 36/39/40 slot 10-18-26
+    ~16:40, read back by Claude), every switch off there** — Boston owed**
     (**Phase 4 pass, 10-18-26 10:40–15:05, Doug as Mark Marketing; read
     back by Claude:** the email list pushed as *Campaign — Phase 4 pass —
     email* with Ann, Ben, Sam and Tess and marked sent; the text sent to Ann

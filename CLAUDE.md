@@ -1154,12 +1154,11 @@ the reason.
   — the Marketing Admin Role reads no engagement). **Opportunity on
   attendance** (`attribution.opportunity_on_attendance`) from the manual
   mark, the check-in and the Zoom pull, org key, best-effort.
-- Owed: Doug's Phase 4 pass (`OPEN-ITEMS.md` #51, step page
-  https://claude.ai/artifact/96dzUAsNAfkbJCx2eDu91g), production's CRM
-  change at a Sunday slot (now also the Mentor Role's two grants and the
-  `smstext` field), Boston with its release, a seeder and sandbox
-  re-baseline, the Twilio account and A2P 10DLC before any real text, and
-  questions 2, 4, 5 before the first real card.
+- Owed: nothing on production's CRM (both slots done 10-18-26; every
+  campaign switch off there — turning one on is Doug's call at `/setup`);
+  Boston with its release; a seeder and sandbox re-baseline; the Twilio
+  account and A2P 10DLC before any real text; questions 2, 4, 5 before the
+  first real card (`OPEN-ITEMS.md` #51).
 
 ### Events & Webinars — `/events`
 
