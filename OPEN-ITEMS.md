@@ -39,7 +39,17 @@ found; move resolved items to the bottom with the resolution date.
     text) and 39 (`COutreachCampaign.smsMessage`, plan
     `coutreach-sms-message.json` fingerprint `7a68865149b4`, owed on
     crm-test — `scripts/prospect_crm_test.sh smstext` — production and
-    Boston). Step page https://claude.ai/artifact/96dzUAsNAfkbJCx2eDu91g. **Phase 3 pass, 10-18-26
+    Boston). Step page https://claude.ai/artifact/96dzUAsNAfkbJCx2eDu91g.
+    **Ruling 40 (10-18-26, found on the Phase 4 pass, v0.264.1):** the eight
+    app-written campaign fields were Read-only, which EspoCRM enforces on
+    every writer, so no campaign ever stored its rule, sign-off or run
+    times. Owed on every CRM: `prospect_crm_test.sh appfields` (plan
+    `coutreach-campaign-app-fields.json`, `965d932407f3`) and `… roles` (the
+    Marketing Admin Role's read-not-edit field rule); the same two words in
+    `prospect_crm_prod.sh`. **Also suspect, not yet checked:**
+    `CNetworkStandard.appliedAt/appliedBy/appliedByTool` are Read-only too
+    (crmConfig reads "unstamped" on crm-test), and
+    `CEventRegistration.confirmationSentAt/postEventFollowUpSentAt`. **Phase 3 pass, 10-18-26
     00:50–01:32 (Doug):** every step matched on crm-test after one fix —
     **v0.261.1**: the Mentor Role's Assignment Permission is *team*, so
     EspoCRM refused Joe Mentor's save of a call record carrying no team and

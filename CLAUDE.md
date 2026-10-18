@@ -1577,6 +1577,12 @@ Conventions. Plan: `prds/action-history-plan.md`;
   Funder Notes field still opened the plain box (v0.252.1). Read the
   enclosing dict (`…fields.description`) and index it; never a `.type` /
   `.entity` / `.foreign` key on its own.
+- **A Read-only field drops EVERY API write** — the Entity Manager Read-only
+  checkbox becomes a global ACL restriction (`Acl/GlobalRestriction`) for
+  every user, administrators and the org-wide API key included; HTTP 200,
+  nothing stored. Never build a field the application writes as Read-only;
+  keep staff off it with a field rule on their roles instead (ruling 40,
+  v0.264.1 — eight campaign fields had never stored since Phase 1).
 - **Field-level ACL silently strips writes** — a 200 OK where one field didn't
   store. Newer fields saving while older ones don't is the tell. Diagnose by
   reading each role's `fieldData` as admin
