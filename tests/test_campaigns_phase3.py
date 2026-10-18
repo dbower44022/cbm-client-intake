@@ -405,3 +405,29 @@ def test_a_call_campaign_names_its_callers_through_its_teams(monkeypatch):
     ok = client.put(f"/campaigns/api/campaigns/{camp['id']}/teams", json={"teamIds": ["t-m", "t-m", ""]})
     assert ok.status_code == 200 and crm.rows[cfg.CAMPAIGN][camp["id"]]["teamsIds"] == ["t-m"]
     assert client.put("/campaigns/api/campaigns/cards/teams", json={"teamIds": ["t-m"]}).status_code == 400
+
+
+def test_a_call_record_carries_its_campaigns_teams_before_the_caller_writes_it():
+    """Assignment Permission *team* (the Mentor Role) refuses a save of a record
+    with neither a team nor an assigned user (found on the Phase 3 pass,
+    10-18-26): the API client stamps the campaign's teams first."""
+    api, user = FakeCrm(), FakeCrm()
+    camp = _running_call_campaign(api, teams={"t-m": "Mentor Team"})
+    api.rows[cfg.CAMPAIGN][camp["id"]]["teamsIds"] = ["t-m"]
+    user.rows = api.rows
+    run(calls.record_outcome(api, user, MENTOR, "t1", outcome="No answer", notes="", call_again=True, settings=_settings()))
+    assert ("COutreachTouch", "t1", {"teamsIds": ["t-m"]}) in api.updated
+    assert api.updated.index(("COutreachTouch", "t1", {"teamsIds": ["t-m"]})) == 0   # before the caller's write
+    fresh = [t for t in api.rows[cfg.TOUCH].values() if t.get("prospectId") == "p1" and t["touchStatus"] == "Planned"]
+    assert fresh[0]["teamsIds"] == ["t-m"]
+    # Already carrying the teams: nothing more is written.
+    assert run(calls.ensure_touch_teams(api, "t1", ["t-m"])) is False
+
+
+def test_build_list_stamps_new_call_records_with_the_campaigns_teams():
+    crm = FakeCrm()
+    crm.add(cfg.PROSPECT, {"id": "p-phone", "businessName": "Phone Shop", "funnelStage": "Qualified", "phone": "1"})
+    camp = crm.add(cfg.CAMPAIGN, {"name": "Calls", "campaignKind": "Call", "campaignStatus": "Draft", "teamsIds": ["t-m"]})
+    run(calls.build_list(crm, crm, camp, None))
+    touch, = [t for t in crm.rows[cfg.TOUCH].values()]
+    assert touch["teamsIds"] == ["t-m"]

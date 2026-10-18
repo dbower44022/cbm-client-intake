@@ -5,6 +5,21 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.261.1] — 2026-10-18
+
+**fix(prospects): a mentor can record a call.** Doug's Phase 3 pass, step H6:
+Joe Mentor's *No answer* was refused — *Assignment failure*. EspoCRM refuses,
+for a role at Assignment Permission *team* (the Mentor Role), any save of a
+record carrying neither a team nor an assigned user, even one that changes no
+assignment (`Acl/AssignmentChecker/Helper::isPermittedTeamsEmpty`, read on
+crm-test). Call records were created with neither. Now every call record the
+call kind creates carries its campaign's teams, and before a caller's write
+the API client gives an existing record its campaign's teams, merge-only
+(`calls.ensure_touch_teams`) — teams already on a record are not re-checked
+on an update, so the caller's own write passes. The caller still writes the
+call as themself (ruling 36); no role change. Verified by tests; the live
+check is step H6 again.
+
 ## [0.261.0] — 2026-10-18
 
 **feat(prospects): Phase 3 — lists, review, calls (dark behind

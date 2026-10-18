@@ -218,6 +218,7 @@ async def build_list(api_client: EspoApi, user_client: EspoApi, campaign: dict[s
         if t.get("touchStatus") == cfg.TOUCH_PLANNED and key:
             planned[key] = t
     wanted = {t["key"]: t for t in targets}
+    team_ids = campaign_team_ids(await api_client.get(cfg.CAMPAIGN, campaign["id"]))
     created = kept = cancelled = 0
     for key, touch in planned.items():
         if key not in wanted:
@@ -227,7 +228,7 @@ async def build_list(api_client: EspoApi, user_client: EspoApi, campaign: dict[s
         if key in planned:
             kept += 1
             continue
-        await api_client.create(cfg.TOUCH, _planned_payload(campaign, target))
+        await api_client.create(cfg.TOUCH, _planned_payload(campaign, target, team_ids))
         created += 1
     stamps: dict[str, Any] = {"selectionRule": json.dumps(rule), "selectionSummary": rule_summary(rule)}
     if status == cfg.STATUS_DRAFT:
@@ -237,7 +238,8 @@ async def build_list(api_client: EspoApi, user_client: EspoApi, campaign: dict[s
             "rule": rule, "summary": stamps["selectionSummary"]}
 
 
-def _planned_payload(campaign: dict[str, Any], target: dict[str, Any]) -> dict[str, Any]:
+def _planned_payload(campaign: dict[str, Any], target: dict[str, Any],
+                     team_ids: Optional[list[str]] = None) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "name": f"{campaign.get('name') or 'Campaign'} — {target['name']}"[:255],
         "channel": cfg.KIND_CALL,
@@ -246,6 +248,8 @@ def _planned_payload(campaign: dict[str, Any], target: dict[str, Any]) -> dict[s
         "outreachCampaignId": campaign["id"],
     }
     payload[f"{target['kind']}Id"] = target["id"]
+    if team_ids:
+        payload["teamsIds"] = list(team_ids)
     return payload
 
 
@@ -269,6 +273,32 @@ async def sign_off(api_client: EspoApi, user_client: EspoApi, campaign: dict[str
 
 
 # --- who may call (ruling 36) -------------------------------------------------------------
+
+def campaign_team_ids(campaign: Optional[dict[str, Any]]) -> list[str]:
+    """The campaign's own team ids (a whole record read carries them)."""
+    return sorted(i for i in ((campaign or {}).get("teamsIds") or []) if i)
+
+
+async def ensure_touch_teams(api_client: EspoApi, touch_id: str, team_ids: list[str]) -> bool:
+    """Give a call record its campaign's teams before the caller writes it.
+
+    A role at Assignment Permission *team* (the Mentor Role) may not save a
+    record that has neither a team nor an assigned user — EspoCRM refuses it
+    as an assignment failure even when the save changes no assignment
+    (``Acl/AssignmentChecker/Helper::isPermittedTeamsEmpty``, read on crm-test
+    10-18-26 after the Phase 3 pass hit it). Teams already on the record are
+    not re-checked on an update, so a record carrying the campaign's teams
+    saves for every caller the campaign admits. Merge-only, under the API
+    client. Returns True when it wrote."""
+    if not team_ids:
+        return False
+    whole = await api_client.get(cfg.TOUCH, touch_id)
+    have = list((whole or {}).get("teamsIds") or [])
+    if (whole or {}).get("assignedUserId") or set(team_ids) <= set(have):
+        return False
+    await api_client.update(cfg.TOUCH, touch_id, {"teamsIds": sorted(set(have) | set(team_ids))})
+    return True
+
 
 def campaign_team_names(campaign: dict[str, Any], default: list[str]) -> list[str]:
     names = campaign.get("teamsNames") or {}
@@ -394,6 +424,8 @@ async def record_outcome(api_client: EspoApi, user_client: EspoApi, user: dict[s
 
     target = await _target_detail(user_client, touch)
     now = _crm_now()
+    team_ids = campaign_team_ids(campaign)
+    await ensure_touch_teams(api_client, touch_id, team_ids)
     await user_client.update(cfg.TOUCH, touch_id, {
         "touchStatus": cfg.TOUCH_DONE, "outcome": outcome, "doneAt": now,
         "callNotes": (notes or "").strip() or None, "calledPhone": (target.get("phone") or "")[:100] or None,
@@ -431,6 +463,8 @@ async def record_outcome(api_client: EspoApi, user_client: EspoApi, user: dict[s
                 fresh[key] = touch[key]
         if touch.get("assignedUserId"):
             fresh["assignedUserId"] = touch["assignedUserId"]
+        if team_ids:
+            fresh["teamsIds"] = team_ids
         await best_effort("planned again", api_client.create(cfg.TOUCH, fresh))
     remaining = sum(1 for t in await service.campaign_touches(api_client, campaign["id"])
                     if t.get("touchStatus") == cfg.TOUCH_PLANNED)
