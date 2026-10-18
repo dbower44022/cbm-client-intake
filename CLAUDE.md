@@ -42,6 +42,11 @@ The **orchestrator module is the source-of-truth mapping** for each form.
 
 Cross-form behaviour worth knowing before changing an orchestrator:
 
+- **A door is any place a record can enter the system** — an import, a
+  public form, the webinar page, a staff quick-add (definition:
+  `prds/prospect-marketing/build-plan.md` § 0). The word means that and
+  nothing else; a staff application is never a door (Doug, 10-18-26).
+
 - **Company type is `cCompanyType`, never `cAccountType`.** The Account entity
   is presented as **Company**; `cAccountType` is gone from both CRMs. Valid
   options are `Client / Sponsor / Partner / Other` — the sponsor value is
@@ -424,7 +429,7 @@ full-height grid with a status multi-select, and assigns each to a mentor.
   `Submitted`. The frontend reloads the grid on any Assign 400.
 - **Assigning the SAME mentor again is a repair run**, not an error — it
   re-executes the idempotent re-homing. Reachable from the row's right-click
-  menu ("Repair assignment…"), which is the only door to it since assigned rows
+  menu ("Repair assignment…"), which is the only way to reach it since assigned rows
   have no Assign control.
 - **Reassign Mentor** swaps `mentorProfile`, re-stamps the date, re-homes
   everything including every CSession (swap-merge: the old mentor is removed
@@ -691,8 +696,9 @@ one shared frontend that derives its domain from the first segment of its URL.
   beside the name, "+ New company…" for the typed path): a chosen company's
   id rides as `companyId` and skips the match and the website rule — the
   way to make a company that is both a partner and a funder. **A picked
-  company with an empty contact block inherits the other door's primary
-  contact** (v0.257.0, Doug 2026-10-14): newest other-door record naming
+  company with an empty contact block inherits the primary contact of its
+  record in the other application** (Partner Management ↔ Funder
+  Management; v0.257.0, Doug 2026-10-14): the newest such record naming
   one wins, read under the org key, contact stamped merge-only. Compared through
   `core/crm_upsert.website_key` (scheme, `www.`, case, trailing slash
   ignored; the path counts). No stored website ⇒ match and null-fill it.
@@ -703,8 +709,8 @@ one shared frontend that derives its domain from the first segment of its URL.
   Assignment Permission is *not-set* ("Assignment failure: assigned user or
   team not allowed" — the Sponsor Manager Role on both CRMs), and a
   team-read role could never see the contact it just made. The Partner
-  Manager Role only passed because it is *all*/*all*; the two doors share
-  the function and must stay identical. **The company too** (v0.249.1):
+  Manager Role only passed because it is *all*/*all*; Partner Management and
+  Funder Management share the function and must stay identical. **The company too** (v0.249.1):
   the match, the null-fill, the type merge, the team lookup and the create
   all run under the intake API client (a team-read user matching as
   themself created a duplicate per attempt; the Sponsor Manager Role has no
@@ -738,7 +744,7 @@ one shared frontend that derives its domain from the first segment of its URL.
   What the link produces shows on the Referred Clients tab. Rule in the
   five-forms section above.
 - **Additional managers on partner and funder records** (v0.251.0, Doug's
-  requirement 2026-10-11, both doors alike): the co-mentor model —
+  requirement 2026-10-11, Partner Management and Funder Management alike): the co-mentor model —
   `CPartnerProfile.additionalManagers` / `CSponsorProfile.additionalManagers`
   (many-to-many to `CMentorProfile`, reverses `comanagedPartners` /
   `comanagedSponsors`), **feature-detected** per request
@@ -1984,8 +1990,8 @@ each block.
   a revert. Verified by tests only — the live pass is `OPEN-ITEMS.md` #53
   (a real non-admin mentor attaching an attendee assigned to someone else).
 
-- **v0.257.0 (2026-10-14) — a quick-add from the other door's company
-  inherits its primary contact.** Pushed with another session's commits
+- **v0.257.0 (2026-10-14) — a quick-add picking a company from the other
+  application inherits its primary contact.** Pushed with another session's commits
   the same evening; both deployments report it and serve the notice by
   22:06. Doug's request the same day; standing rule in the Session
   Management section. No CRM change. Verified by tests only — the live
@@ -2059,7 +2065,7 @@ each block.
   `f2d6a41ea16c`) — **prepared 10-14-26**: both links read absent on
   Boston, the dry run matched, and the apply is one line from this
   computer, `scripts/apply_plan.sh boston <plan> <fingerprint>` (the
-  chapter-aware front door to `scripts/apply_crm_plan.py`; Boston's image
+  chapter-aware wrapper around `scripts/apply_crm_plan.py`; Boston's image
   predates the applier shipping in it), awaiting Doug's go on the step
   page in `OPEN-ITEMS.md` #46 — and **a role ruling**: a Mentor-Role-only user named
   additional manager on a FUNDER sees it in neither Funder Management nor
