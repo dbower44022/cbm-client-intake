@@ -775,7 +775,13 @@ Watch for these when touching this package:
 - **Relate/unrelate checks BOTH sides** — adding a co-mentor needs edit on the
   *other* mentor's profile. `_link_or_escalate` runs as the user first and only
   escalates a `noAccessToForeignRecord` denial to the admin account
-  ([[espo-link-checks-both-sides]]).
+  ([[espo-link-checks-both-sides]]). **Attendee linking goes through the same
+  helper** (v0.258.6): `_sync_attendees` and the create-path relate loop
+  escalate a foreign-contact 403 exactly as co-mentor linking does — a mentor
+  recording an attendee assigned to someone else used to hit the warning
+  "N attendee change(s) could not be applied" (Greg Malkin, prod 2026-10-15).
+  The warning now fires only when no admin is configured or the admin fallback
+  also fails.
 - **Enum drift is handled in two layers**: the frontend sends only changed
   fields, and `_sanitize_enum_payload` drops values outside the live options
   before the CRM call (fails open).
@@ -1903,6 +1909,17 @@ with `main`; **Lakeside took it off the release lane by itself** (its
 unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
+
+- **v0.258.6 (2026-10-15) — attendee linking escalates a foreign-record 403
+  to the admin.** A mentor recording an attendee assigned to someone else
+  saw "1 attendee change(s) could not be applied" (Greg Malkin, prod
+  2026-10-15, the Betsy Nero intake session). `_sync_attendees` and the
+  create-path relate loop now route through `_link_or_escalate`, the same
+  foreign-record escalation co-mentor linking uses; standing rule in the
+  Session Management section. Pushed the same day on origin and carried into
+  current `main` by the later releases. No CRM change, no flag; rollback is
+  a revert. Verified by tests only — the live pass is `OPEN-ITEMS.md` #53
+  (a real non-admin mentor attaching an attendee assigned to someone else).
 
 - **v0.257.0 (2026-10-14) — a quick-add from the other door's company
   inherits its primary contact.** Pushed with another session's commits

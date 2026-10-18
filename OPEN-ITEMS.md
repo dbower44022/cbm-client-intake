@@ -6,6 +6,20 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+53. **Attendee linking escalation — live pass owed** (v0.258.6, 2026-10-15).
+    A mentor whose Mentor Role reads/edits `CSession` at "own" could not
+    attach an attendee assigned to someone else: EspoCRM checks edit on
+    BOTH sides of a relate, the `sessionAttendees` link 403'd with
+    `noAccessToForeignRecord`, and the save reported "1 attendee change(s)
+    could not be applied" (Greg Malkin, production 2026-10-15, the Betsy
+    Nero intake session). `_sync_attendees` and the create-path relate loop
+    now route through `_link_or_escalate`, the same foreign-record
+    escalation co-mentor linking uses. **Verified by tests only.** The live
+    check is a real non-admin mentor (not an admin — admins bypass ACL and
+    prove nothing) attaching an attendee assigned to someone else and
+    confirming the save is clean with no attendee warning. No test and no
+    stub harness exercises the admin fallback against a live CRM.
+
 51. **Prospect marketing — Phase 1 BUILT and LIVE-PASSED on crm-test
     (v0.258.0–v0.258.5, 10-15/17-26, dark behind `CAMPAIGNS_ENABLED`);
     Phase 2 BUILT (v0.259.0, 10-17-26, tests only) — Doug's Phase 2 live

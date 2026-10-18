@@ -117,6 +117,29 @@ a logged note. No CRM change, no switch; rollback is a revert.
   `test_partner_management.py`. Verified by tests only; Doug's six-step live
   pass is `OPEN-ITEMS.md` #51.
 
+## [0.258.6] — 2026-10-15
+
+**fix(sessions): attendee linking escalates a foreign-record 403 to the admin.**
+A mentor whose Mentor Role reads/edits `CSession` at "own" could not attach an
+attendee assigned to someone else. EspoCRM checks edit on BOTH sides of a
+relate, so the `sessionAttendees` link 403'd with `noAccessToForeignRecord`,
+and the save reported "1 attendee change(s) could not be applied" (Greg
+Malkin, production 2026-10-15; the Betsy Nero intake session). This is the
+same wall co-mentor linking hit on 2026-07-26 and was fixed for.
+
+- **`sessions/service.py`** — `_sync_attendees` and the create-path relate
+  loop route through `_link_or_escalate` instead of calling `relate` /
+  `unrelate` directly. Only a `noAccessToForeignRecord` denial is retried
+  under the provisioning admin, after the user's own access to the SESSION
+  has passed; a denial on the session half still raises. `create_session`
+  and `update_session` take an `admin_factory`.
+- **`sessions/router.py`** — both the create and update handlers pass the
+  same `admin_client_factory(get_settings())` the co-mentor endpoints use.
+- The success-with-warning fallback is unchanged and fires only when no admin
+  is configured or the admin fallback also fails. No switch; rollback is a
+  revert. Verified by tests (2 new); the live pass is `OPEN-ITEMS.md` #53 —
+  a real non-admin mentor attaching an attendee assigned to someone else.
+
 ## [0.258.5] — 2026-10-15
 
 **fix(campaigns): a promoted company was selected beside its own prospect
