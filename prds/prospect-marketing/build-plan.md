@@ -1088,7 +1088,19 @@ carry-through; the Responses tab's counts and links). Verified by tests only
 
 ### Phase 3 — lists, review, calls
 
-**CRM change:** none.
+**Built 10-18-26, v0.261.0** (`campaigns/review.py`, `calls.py`,
+`stale.py`, `reporting.py`, `frontend/calls.html`; `analytics/campaigns.py`).
+Question 6 answered first — **ruling 36**: callers are the members of the
+teams named on the campaign, each acting as themself; the Mentor Role gains
+`COutreachTouch` read/edit and `CProspect` read through
+`scripts/migrate_outreach_roles.py` (so "no CRM change" holds for shape,
+not for grants). Ruling 37 (no rung on a record holding a relationship
+type) built first as v0.260.2. The Analytics page is named *Campaigns*, as
+§ 6 says. Verified by tests and a stub harness only — the six steps below
+are Doug's pass, `OPEN-ITEMS.md` #51, step page
+https://claude.ai/artifact/D8atEqEdRaRBKh4mmxiPsj.
+
+**CRM change:** none (the Mentor Role's two grants aside — ruling 36).
 **Flags:** `CAMPAIGNS_CALLS` (the Calls grid and the call kind), inside `CAMPAIGNS_ENABLED`.
 
 **Build:** the list import with `list_source`; the Review tab with *Qualify* and *Unqualified* (note required, reviewer stamped); *Do Not Contact* and *Not the same company*; the call kind: rule, call list, the recording screen with the three outcomes and *Call again*; `Declined`; the nightly Stale sweep with `PROSPECT_STALE_DAYS`; the touches-by-campaign and entry-rung metrics on the new Analytics page.
@@ -1195,7 +1207,8 @@ the Campaign Management requirements.
 6. **Who makes the calls?** Recommended: members of the teams named on the
    campaign, default the Marketing Admin Team; naming the Mentor Team opens
    the list to mentors. Cost: a mentor who calls needs read and edit on
-   `COutreachTouch` and read on `CProspect` in the Mentor Role.
+   `COutreachTouch` and read on `CProspect` in the Mentor Role. **Answered
+   10-18-26: as recommended (ruling 36).**
 7. **Should the information request door create its company typed
    `Prospect`** (recommended) instead of today's `Client` with
    `cClientStatus=Prospect`? **Answered 10-17-26: yes (ruling 34).** A
@@ -1270,8 +1283,8 @@ best-effort mirror.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — build plan |
-| Version | v0.5 — Phases 1 and 2 built (v0.258.0, v0.259.0); questions 1, 3, 7, 8 and 9 answered (rulings 28–32, 34); seven questions open, none shaping the CRM |
-| Last Updated | 10-17-26 02:20 |
+| Version | v0.6 — Phases 1, 2 and 3 built (v0.258.0, v0.259.0, v0.261.0); questions 1, 3, 6, 7, 8 and 9 answered (rulings 28–32, 34, 36); six questions open, none shaping the CRM |
+| Last Updated | 10-18-26 00:50 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
 | Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
@@ -1280,6 +1293,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.6 | 10-18-26 00:50 | Claude (Claude Code) | § 7 Phase 3 marked built (v0.261.0) with what it holds; question 6 answered (ruling 36) and the Mentor Role's two grants named; ruling 37 recorded as built first. |
 | 0.4 | 10-15-26 00:02 | Claude (Claude Code) | Ruling 32: § 1.5's reverse of `CPartnerProfile.outreachCampaign` is `attributedPartnerProfiles` (the row had named `partnerProfiles` twice; found by the handoff session's dry run, drafted there, chosen by Doug); § 1.10 gains the row. The plan files were already written on this name, so the fingerprints stand. |
 | 0.3 | 10-14-26 22:43 | Claude (Claude Code) | Doug's answers to questions 1, 3, 8 and 9 recorded (rulings 28–31). Question 8 against the recommendation: `CEngagement.referringPartners` many-to-many to `CPartnerProfile` (reverse `referredEngagements`) added — seventeen links; step 6a rewritten (the many link holds every referring partner, the single link stays the partner link's own, readers take the union); the per-door table, the coexist paragraph, Phase 1's handoff and grants, Phase 2's build and verification, § 8 and § 9 updated. |
 | 0.2.1 | 10-14-26 22:27 | Claude (Claude Code) | Moved from `prds/prospect-marketing-build-plan.md` into `prds/prospect-marketing/` (Doug's consolidation ruling, 10-14-26); references to the process plan now point at `rulings.md` and `history/`. No section revised. |

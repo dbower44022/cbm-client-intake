@@ -1,5 +1,15 @@
 # Kickoff prompt — prospect marketing Phase 3: lists, review, calls
 
+> **Done — history.** This kickoff was run on 10-18-26 (00:09–00:50):
+> question 6 was put to Doug first and answered "a" (ruling 36 — callers are
+> the campaign's teams, each acting as themself), then the rung question
+> ("a", ruling 37, built as v0.260.2). Phase 3 was built as v0.261.0
+> (`campaigns/review.py`, `calls.py`, `stale.py`, `reporting.py`, the Calls
+> page, `analytics/campaigns.py`, 26 new tests, suite green), committed,
+> not pushed. Doug's six-step pass is `OPEN-ITEMS.md` #51, step page
+> https://claude.ai/artifact/D8atEqEdRaRBKh4mmxiPsj. The next kickoff is
+> `prompts/prospect-marketing-phase-4-build-prompt-v0.1.md`.
+
 **Written 10-17-26 02:22; revised 10-18-26 00:10 for a fresh Claude Code
 session rooted in `cbm-client-intake`, to run tonight in parallel with the
 end of the Phase 2 live pass.** A build session: the list import, the Review tab, the

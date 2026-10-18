@@ -42,7 +42,7 @@ and the code: the `campaigns/` package, `core/postal.py`, `core/qr.py`,
 `forms/prospect_response/` and `frontend/shared/campaign-link.js` (**Phase 1
 built 10-15-26, v0.258.0, dark behind `CAMPAIGNS_ENABLED`**).
 
-## State, as of 10-17-26 02:20
+## State, as of 10-18-26 00:50
 
 - **Settled:** the process end to end (rulings 1–27), the Campaign
   Management application (CM-1 to CM-11), and the build's own rulings 28–34
@@ -63,7 +63,10 @@ built 10-15-26, v0.258.0, dark behind `CAMPAIGNS_ENABLED`**).
   relabel at conversion (`merge_contact_type`), ruling 34 with its relabel
   script, the programme page's carry-through, the Responses tab's
   *Responded* / *Converted* and record links. Dark by nature: no id, no
-  change. Verified by tests only.
+  change. Verified by tests only. **Phase 3 (10-18-26, v0.261.0)** —
+  the Review tab, the call kind and the Calls page (who calls: ruling 36),
+  the Stale sweep, the *Campaigns* Analytics page; ruling 37 built first
+  (v0.260.2). Dark behind `CAMPAIGNS_CALLS`. Tests and a stub harness only.
 - **Written:** the two CRM handoffs, their plan files and the role script
   (10-14-26 23:15, step 2 below); build plan v0.3 — v0.2 (10-14-26 22:09) revised against
   CM-1 to CM-11, then v0.3 (22:43) for Doug's answers to the four
@@ -102,6 +105,13 @@ built 10-15-26, v0.258.0, dark behind `CAMPAIGNS_ENABLED`**).
   4b. **Phase 2 live pass, 10-17-26:** sections A–E matched after v0.259.1
      and ruling 35; F's registrations and G–I owed on 10-18-26. Doug opened
      the Phase 3 gate (10-18-26 00:05) to build in parallel — prompt v0.2.
+  4c. ~~The Phase 3 build session~~ — **done 10-18-26** (v0.261.0; rulings
+     36 and 37 first; the spent prompt is in `history/prompts/`). **Next:
+     Doug's Phase 3 pass on crm-test** from
+     https://claude.ai/artifact/D8atEqEdRaRBKh4mmxiPsj (push, the role
+     script's Mentor Role grants, *Campaign calls* on, then six steps). The
+     next build kickoff is Phase 4 —
+     `prompts/prospect-marketing-phase-4-build-prompt-v0.1.md`.
   4a. ~~The Phase 2 build session~~ — **done 10-17-26** (v0.259.0; the
      spent prompt is in `history/prompts/`). **Next: Doug's Phase 2 live
      pass on crm-test** (the six steps of build plan § 7 Phase 2, the step
@@ -116,7 +126,7 @@ built 10-15-26, v0.258.0, dark behind `CAMPAIGNS_ENABLED`**).
   6. **Production at the Sunday 17:00 UTC slot, Boston with its release**,
      and a seeder plus a sandbox re-baseline, because both handoffs add
      tables the nightly reset truncates.
-- **Open and not blocking:** questions 6, 10, 11 and 12.
+- **Open and not blocking:** questions 10, 11 and 12 (question 6 answered 10-18-26, ruling 36).
 
 ## Rules for working in this directory
 
@@ -161,14 +171,15 @@ import contract starts from).
 | Field | Value |
 |---|---|
 | Document | Prospect marketing — directory README |
-| Version | 1.8 |
-| Last Updated | 10-17-26 02:20 |
+| Version | 1.9 |
+| Last Updated | 10-18-26 00:50 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.9 | 10-18-26 00:50 | Claude (Claude Code) | State: Phase 3 built (v0.261.0), rulings 36 and 37; Doug's Phase 3 pass is next; the next kickoff is Phase 4. |
 | 1.8 | 10-17-26 02:20 | Claude (Claude Code) | State: Phase 2 built (v0.259.0), ruling 34; Doug's Phase 2 live pass is next, then the Sunday slot, then Phase 3; the live kickoff is the Phase 3 prompt. |
 | 1.7 | 10-17-26 01:45 | Claude (Claude Code) | State: Phase 1 live-passed on crm-test; Phase 2 and the production slot are next. |
 | 1.6 | 10-15-26 03:05 | Claude (Claude Code) | State: Phase 1 built (v0.258.0); the live pass is next; the live kickoff is Phase 2. |

@@ -22,9 +22,22 @@ found; move resolved items to the bottom with the resolution date.
 
 51. **Prospect marketing — Phase 1 BUILT and LIVE-PASSED on crm-test
     (v0.258.0–v0.258.5, 10-15/17-26, dark behind `CAMPAIGNS_ENABLED`);
-    Phase 2 BUILT (v0.259.0, 10-17-26, tests only) — Doug's Phase 2 live
-    pass, production and Boston owed** (10-14-26, updated
-    10-17-26 02:20). Three sessions worked the arc on 10-14-26 and left three
+    Phase 2 BUILT (v0.259.0, 10-17-26), its pass A–E matched, F–I owed;
+    Phase 3 BUILT (v0.261.0, 10-18-26, dark behind `CAMPAIGNS_CALLS`,
+    tests and a stub harness only) — Doug's Phase 3 live pass, production
+    and Boston owed** (10-14-26, updated 10-18-26 00:45). **Phase 3 (10-18-26):**
+    rulings 36 (callers are the campaign's teams, each acting as themself)
+    and 37 (no rung on a record holding a relationship type — v0.260.2)
+    recorded first; the Review tab, the call kind and the Calls page, the
+    Stale sweep, the Campaigns Analytics page. **Owed before the pass:**
+    push; `scripts/prospect_crm_test.sh roles` (the Mentor Role's two
+    grants — the dry run reads exactly two); *Campaign calls* on at `/setup`
+    on crm-test. Step page
+    https://claude.ai/artifact/D8atEqEdRaRBKh4mmxiPsj (the list file is
+    `prds/prospect-marketing/live-pass/phase-3-list.csv`). **Production's
+    role script now plans the Mentor Role's two grants as well** — the
+    production slot's step page (written 10-18-26 by another session) says
+    "seven grants"; expect nine. Three sessions worked the arc on 10-14-26 and left three
     documents that disagreed; Doug ruled a directory on the chapter-network
     pattern. Start at its `README.md`. `rulings.md` is the binding record
     (rulings 1–27, CM-1 to CM-11, append only); `build-plan.md` v0.2 is the

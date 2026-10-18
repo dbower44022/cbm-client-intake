@@ -1099,10 +1099,41 @@ the reason.
   `/assignments/?engagement=<id>` opens the popup, `/events/?event=<id>`
   the event (both new deep links), partner / funder record pages,
   Submission Admin for an information request.
-- Owed: Doug's Phase 2 live pass (`OPEN-ITEMS.md` #51), production's CRM
-  change at a Sunday slot (plus the `Prospect Response` receipt option, the
-  entities' layouts and the relabel script), Boston with its release, a
-  seeder and sandbox re-baseline, Phase 3 (lists, review, calls).
+- **Ruling 37 (v0.260.2):** the information request and registration
+  doors never write a rung on a record that already holds a relationship
+  type — `attribution.holds_relationship`, checked inside `advance_rung`, so
+  every caller must SELECT the type field (`cContactType` / `cCompanyType`).
+- **Phase 3 — lists, review, calls** (v0.261.0, 10-18-26; dark behind
+  **`CAMPAIGNS_CALLS`**, read per request). The **Review** tab
+  (`campaigns/review.py`): *Qualify* / *Unqualified* (note required) on an
+  Unverified record, *Do Not Contact*, *Not the same company* (clears
+  *Already known* and `alreadyKnownCompany`, the link under the API
+  client); **no side exit is ever written over another**. **The call kind**
+  (`campaigns/calls.py`): a promoted prospect record IS its Contact; *Sign
+  off* starts the list at once (no worker) and the last recorded row
+  completes it. **Who calls is ruling 36**: the members of the teams named
+  on the campaign (its own `teams`, set by the form's *Who calls* picker;
+  none ⇒ the Marketing Admin Team), gated per campaign in `calls`, NOT by
+  `CAMPAIGNS_ALLOWED_TEAMS` — the Calls page `/campaigns/calls.html` and
+  `/campaigns/api/calls*` admit any signed-in user and the campaign decides.
+  **The touch is written as the caller; the rung, the `Declined` exit, the
+  *Call again* row and the completion under the API client** (the Mentor
+  Role reads `CProspect`, never edits it). The Mentor Role's grants
+  (`COutreachTouch` read/edit, `CProspect` read) are in
+  `migrate_outreach_roles.py`. **The Stale sweep** (`campaigns/stale.py`):
+  Unverified/Qualified, no side exit, no Planned touch, no activity within
+  `PROSPECT_STALE_DAYS`; worker every `PROSPECT_STALE_SWEEP_SECONDS`, and
+  `/setup` → Operations *Prospect Stale sweep* (its plan text carries no
+  clock, so the fingerprint holds). **Every number is
+  `campaigns/reporting.py`** (`summarize_responses` moved there; the
+  router re-exports it): the record page, the Responses tab and the new
+  Analytics page *Campaigns* (`analytics/campaigns.py`, live, org key).
+- Owed: Doug's Phase 2 pass (F–I) and Phase 3 pass (`OPEN-ITEMS.md` #51,
+  step page https://claude.ai/artifact/D8atEqEdRaRBKh4mmxiPsj), production's
+  CRM change at a Sunday slot (plus the receipt option, the layouts, the
+  relabel scripts and now the Mentor Role's two grants), Boston with its
+  release, a seeder and sandbox re-baseline, Phase 4 (email and SMS, the
+  funnel, the campaign dashboard).
 
 ### Events & Webinars — `/events`
 
@@ -2450,8 +2481,16 @@ sentence is a convenience.
   CRM fields both labelled *Campaign*; ours is *Outreach Campaign* in the
   CRM, crm-test relabelled, production and Boston owed, handoff § 3.4).
   Step page https://claude.ai/artifact/JLZyupBD4i6scAogws6sWD. Doug opened
-  the Phase 3 gate to build in parallel (10-18-26 00:05): kickoff
-  `prompts/prospect-marketing-phase-3-build-prompt-v0.1.md` v0.2.
+  the Phase 3 gate to build in parallel (10-18-26 00:05).
+
+- **v0.260.2 / v0.261.0 (2026-10-18) — ruling 37, and prospect marketing
+  Phase 3.** Committed, not pushed. Rulings 36 (callers are the campaign's
+  teams, acting as themselves) and 37 (no rung on a record holding a
+  relationship type) put to Doug first. Standing rules in the Campaign
+  Management section. Verified by tests (26 new, suite green) and a stub
+  harness; never against a live CRM. Doug's six-step pass:
+  https://claude.ai/artifact/D8atEqEdRaRBKh4mmxiPsj (`OPEN-ITEMS.md` #51).
+  Next kickoff: Phase 4.
 
 - **v0.260.0 / v0.260.1 (2026-10-17/18) — the browser reports its own
   failures.** v0.260.0 pushed and live on both deployments 23:14 (served
