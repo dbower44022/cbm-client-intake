@@ -23,7 +23,7 @@ the field simply stays false.
 | CRM | State | Evidence |
 |---|---|---|
 | crm-test | **Done 10-15-26 01:05** — applied by Doug through `scripts/prospect_crm_test.sh sms` (the applier with `--expect 0bc7219ab932`), `Contact.cSmsOptIn` read back as `{"type":"bool","isCustom":true}`; `entityDefs.Contact.fields.smsOptIn` empty; `GET /Contact?maxSize=1&select=cSmsOptIn` as the org-wide key 200 with `cSmsOptIn: false`; the field-level report shows no `fieldData` rule on any role. § 4 step 3, the non-admin tick in the CRM, is folded into Phase 1's step 13 (the public form writes it) — nothing in the CRM's own form exercises the field until a layout shows it, and no role can strip it (§ 3). **crm-test complete; soaking to the Sunday slot.** | This document's § 2 and § 4 output, 10-15-26 01:05–01:18. |
-| Production | **Owed** — Sunday 17:00 UTC slot, from inside the deployed web container, after crm-test has soaked. | *Inferred:* production has no such field; the dry run in § 2 proves it. |
+| Production | **Done 10-18-26** with the outreach change (step page https://claude.ai/artifact/DPDwikp24BWMsg2UZs3naF); `Contact.cSmsOptIn` read back as `bool` by the org-wide key from inside the web container, 10-18-26. | `scripts/prospect_crm_prod.sh verify`. |
 | Boston | **Owed** — with the release that carries Phase 1. | *Inferred:* built from crm-test's files before this change. |
 
 **No role on crm-test carries a field-level rule on Contact** (every role's

@@ -114,10 +114,12 @@ found; move resolved items to the bottom with the resolution date.
     F's carry-through seen in the log, F's registrations and G–I owed on
     10-18-26 (crm-test's 04:00 UTC reset removed the pass's records); Doug
     opened the Phase 3 gate to build in parallel; (e)
-    questions 2, 4 and 5 before the first real card; (f) production at the
-    Sunday slot (both plans, the receipt option, the role script, the notes
-    conversion, the tab list, the three entities' layouts — handoff § 3.3),
-    Boston with its release, a seeder and a sandbox re-baseline (the
+    questions 2, 4 and 5 before the first real card; (f) ~~production at the
+    Sunday slot~~ **done 10-18-26** (Doug, from
+    https://claude.ai/artifact/DPDwikp24BWMsg2UZs3naF; read back from inside
+    the container: every check ok, nothing left but Phase 3's two Mentor
+    Role grants, which ride Phase 3's own production step; the feature is
+    still switched off there), Boston with its release, a seeder and a sandbox re-baseline (the
     outreach handoff adds six tables; the SMS one adds a column, which
     survives the reset); the application's four new tables reset nightly
     too, so a demo campaign's links need the seeder. No CRM change, no vendor account, no
