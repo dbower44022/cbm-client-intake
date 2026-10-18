@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-17-26 01:54 · Revision 1.4 — change log at the end.
+Last Updated: 10-17-26 22:50 · Revision 1.5 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -224,6 +224,23 @@ information request door creates its company typed `Prospect` with
     Sunday slot). Companies the door created before are relabelled by a
     one-time, dry-run-first script that Doug runs. (10-17-26)
 
+### Doug's ruling (10-17-26, on the Phase 2 live pass)
+
+Step B8 found two fields labelled *Campaign* on Contact and Company: the
+native `campaign` link to EspoCRM's own `Campaign` entity, and ours. Doug:
+"It is terrible design practice to have two fields with the same name. We
+either need to rename ours, or remove the existing, but we cannot leave two
+fields with the same name." Removal is impossible (a system link), and a
+custom field never takes a built-in field's name. Doug's reply at 22:48:
+"rename ours".
+
+35. **In the CRM our entity and its links are labelled "Outreach Campaign"**
+    — the entity, its plural, and the link and field on the eight records
+    that carry it. The application's own screens keep the word "Campaign"
+    (CM-11); the application has no native field to collide with. Labels
+    only — no stored name changes. Every CRM, by
+    `scripts/relabel_outreach_campaign.py`. (10-17-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -344,8 +361,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.4 |
-| Last Updated | 10-17-26 01:54 |
+| Version | 1.5 |
+| Last Updated | 10-17-26 22:50 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -353,6 +370,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.5 | 10-17-26 22:50 | Claude (Claude Code) | Ruling 35 appended: "Outreach Campaign" as the CRM label (Doug's "rename ours", Phase 2 live pass B8). |
 | 1.4 | 10-17-26 01:54 | Claude (Claude Code) | Ruling 34 appended: the information request door creates its company typed `Prospect` (Doug's "A" to build plan § 9 question 7, at the start of the Phase 2 build). |
 | 1.3 | 10-15-26 02:16 | Claude (Claude Code) | Ruling 33 appended: the import's Company and Contact writes run under the intake API client (Doug's "a" at the start of the Phase 1 build). |
 | 1.2 | 10-15-26 00:02 | Claude (Claude Code) | Ruling 32 appended: the ruling-27 reverse link on the campaign is `attributedPartnerProfiles` (Doug's "1" to the handoff's item (a)). |

@@ -7,7 +7,7 @@ the first two Analytics reads of the funnel. One flag inside
 `CAMPAIGNS_ENABLED`: `CAMPAIGNS_CALLS`. No CRM change.
 
 **The arc lives in `prds/prospect-marketing/`** — read its `README.md`
-first, then `rulings.md` (binding, 1–34) and `build-plan.md` (v0.5).
+first, then `rulings.md` (binding, 1–35) and `build-plan.md` (v0.5).
 
 Operating mode: DETAIL for the code.
 
@@ -36,7 +36,7 @@ decision (the eight-part template), then stop and wait:
   role change on every CRM, by the role script. The alternative is a fixed
   gate (Marketing Admin Team only), no role change, and mentors never call.
 
-Record the answer as ruling 35 in `rulings.md`, dated, before building.
+Record the answer as ruling 36 in `rulings.md`, dated, before building.
 
 ## The prompt
 
@@ -133,7 +133,7 @@ kickoff (Phase 4 — email and SMS campaigns, the funnel, the campaign
 dashboard). Remind Doug of what the arc still owes outside its code:
 production's CRM change at a Sunday 17:00 UTC slot (both plans, the receipt
 option, the role script, the notes conversion, the tab list, the three
-entities' layouts, the relabel script — `coutreach-entities-crm-handoff.md`
+entities' layouts, the relabel script, the "Outreach Campaign" labels — `coutreach-entities-crm-handoff.md`
 § 7), Boston with its release, the sandbox seeder plus re-baseline, and
 questions 2, 4 and 5 before the first real card.
 

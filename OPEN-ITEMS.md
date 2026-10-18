@@ -79,7 +79,10 @@ found; move resolved items to the bottom with the resolution date.
     build plan § 7 Phase 2, step page https://claude.ai/artifact/JLZyupBD4i6scAogws6sWD, as Mark Marketing for the
     reads and signed out for the forms; and the relabel script's dry run on
     crm-test (`uv run python scripts/relabel_info_request_companies.py`), then
-    `--apply`; (e)
+    `--apply`; the pass's B8 found two fields labelled *Campaign* on Contact
+    and Company — **ruling 35**, ours labelled *Outreach Campaign* in the CRM,
+    crm-test done 10-17-26 22:49 by `scripts/relabel_outreach_campaign.py`,
+    production and Boston owed (handoff § 3.4); (e)
     questions 2, 4 and 5 before the first real card; (f) production at the
     Sunday slot (both plans, the receipt option, the role script, the notes
     conversion, the tab list, the three entities' layouts — handoff § 3.3),

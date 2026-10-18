@@ -9,7 +9,8 @@ the funnel rung, the entry rung, who or what qualified it, the side exit and
 every touch made while it is a prospect; a web domain promotes the business to
 a Company typed Prospect, an email promotes the person to a Contact typed
 Prospect, and the promoted record links back. A **campaign**
-(`COutreachCampaign`, labelled *Campaign* — CM-11) is created by marketing
+(`COutreachCampaign`, labelled *Outreach Campaign* in the CRM since ruling 35 — the
+application's screens keep *Campaign*, CM-11) is created by marketing
 users in one of five kinds (CM-3), names the partners it is for (CM-2) and the
 events it advertises (CM-6), and is what the records a form creates carry
 (rulings 26 and 27). A **touch** (`COutreachTouch`) is one attempt to reach a
@@ -274,6 +275,20 @@ layout API as admin (`GET/PUT {entity}/layout/detail` and `/layout/list`,
 `[[espo-layout-api-readable]]`). Production and Boston need the same, or
 Layout Manager by hand; the application's own screens do not depend on it.
 
+### 3.4 The CRM labels — "Outreach Campaign" (ruling 35, found on the Phase 2 pass)
+
+EspoCRM's own `Campaign` entity and its native `campaign` link on Contact and
+Account are labelled *Campaign*, and the plan labelled ours the same — two
+fields with one name on every Contact and Company, in the detail view, the
+column picker, the filters, export and the report builder. Doug's ruling 35
+(10-17-26): a custom field never takes a built-in field's name. Ours is
+labelled *Outreach Campaign* in the CRM — the entity, its plural, and the
+link and field on the eight records that carry it — by
+`scripts/relabel_outreach_campaign.py` (Label Manager as admin, dry-run
+default, idempotent; undo with `--label Campaign --plural Campaigns`).
+crm-test done 10-17-26 22:49 (17 labels; a re-run reports none). Labels live
+in the CRM's custom files, so the nightly reset keeps them.
+
 ## 4. The role grants — scripted, merge-only
 
 `scripts/migrate_outreach_roles.py`, modelled on
@@ -417,7 +432,9 @@ Also at the same slot: **`scripts/plans/cintake-submission-prospect-response.jso
 fingerprint `cb685b7372b1`) — the landing-page response's receipt vocabulary,
 found while building Phase 1; without it the receipt is written without its
 form, with a warning. And the three entities' **detail and list layouts**
-(§ 3.3), which production's CRM needs exactly as crm-test did.
+(§ 3.3), which production's CRM needs exactly as crm-test did. And **the
+labels** (§ 3.4): `PYTHONPATH=/app .venv/bin/python scripts/relabel_outreach_campaign.py`
+then `--apply`, with the same three exports.
 
 Production's `Held-Company` option (`OPEN-ITEMS.md` #11) and the intake API
 role's Team read plus Assignment Permission (#16) are separate owed changes
@@ -436,6 +453,7 @@ nothing in any name here is chapter-specific.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.4 | 10-17-26 22:50 | Claude (Claude Code) | § 3.4 added: the CRM labels "Outreach Campaign" (ruling 35), crm-test done; production § 7 and Boston carry the step. |
 | 1.3 | 10-15-26 01:50 | Claude (Claude Code) | The non-admin pass matched (Doug, 01:49): crm-test complete, soaking. The partner relate's refusal as a Marketing Admin recorded as the expected both-sides check. |
 | 1.2 | 10-15-26 01:20 | Claude (Claude Code) | crm-test done: §§ 2, 3.1 and 4 run by Doug through `scripts/prospect_crm_test.sh` (the mutating runs are refused to Claude by the session classifier), § 3.2 and the new § 3.3 layouts through the admin API, § 5 steps 1, 2, 4, 5 passed; the address type accepted (item (b) settled); the non-admin pass owed. |
 | 1.1 | 10-15-26 00:02 | Claude (Claude Code) | Item (a) ruled by Doug ("1", ruling 32): `attributedPartnerProfiles` stands. Nothing else changed; the fingerprint `6b29c8928dcf` is unaffected. |
