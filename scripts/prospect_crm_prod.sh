@@ -11,7 +11,8 @@
 #   sms        scripts/plans/contact-sms-opt-in.json                 fingerprint 0bc7219ab932
 #   outreach   scripts/plans/coutreach-entities.json                 fingerprint 6b29c8928dcf
 #   receipt    scripts/plans/cintake-submission-prospect-response.json fingerprint cb685b7372b1
-#   roles      scripts/migrate_outreach_roles.py (seven grants, merge-only)
+#   smstext    scripts/plans/coutreach-sms-message.json              fingerprint 7a68865149b4 (Phase 4, ruling 39)
+#   roles      scripts/migrate_outreach_roles.py (merge-only; Phase 3 added the Mentor Role's two)
 #   labels     scripts/relabel_outreach_campaign.py ("Outreach Campaign", ruling 35)
 #   ui         scripts/apply_outreach_ui.py (tab list, detail and list layouts)
 #   verify     scripts/apply_outreach_ui.py --verify (org-wide key; no apply form)
@@ -43,9 +44,10 @@ case "$step" in
   sms)      plan scripts/plans/contact-sms-opt-in.json 0bc7219ab932 ;;
   outreach) plan scripts/plans/coutreach-entities.json 6b29c8928dcf ;;
   receipt)  plan scripts/plans/cintake-submission-prospect-response.json cb685b7372b1 ;;
+  smstext)  plan scripts/plans/coutreach-sms-message.json 7a68865149b4 ;;
   roles)    exec "$PY" scripts/migrate_outreach_roles.py $flag ;;
   labels)   exec "$PY" scripts/relabel_outreach_campaign.py $flag ;;
   ui)       exec "$PY" scripts/apply_outreach_ui.py $flag ;;
   verify)   exec "$PY" scripts/apply_outreach_ui.py --verify ;;
-  *) echo "usage: bash scripts/prospect_crm_prod.sh <whoami|sms|outreach|receipt|roles|labels|ui|verify> [apply]" >&2; exit 64 ;;
+  *) echo "usage: bash scripts/prospect_crm_prod.sh <whoami|sms|outreach|receipt|smstext|roles|labels|ui|verify> [apply]" >&2; exit 64 ;;
 esac

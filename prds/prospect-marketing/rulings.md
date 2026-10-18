@@ -293,6 +293,24 @@ reply at 01:53: "b" — against the recommendation.
     carrier registration a United States sender needs are prerequisites
     before the first real text. (10-18-26)
 
+### Doug's ruling (10-18-26, on where the text's wording lives)
+
+Ruling 38 needs a place for the message itself; the campaign carried none.
+Put as a consequential decision: option A, a new text field on the campaign
+in the CRM; option B, the application's own database beside the links
+(ruling 31). Doug's reply at 01:58: "a".
+
+39. **A text-message campaign's wording is a field on the campaign in the
+    CRM** (option A): `COutreachCampaign.smsMessage`, plain text, written on
+    the campaign's form in Campaign Management and frozen at sign-off. It is
+    campaign content, and the CRM is the system of record; it travels to
+    every CRM as one field (`scripts/plans/coutreach-sms-message.json`).
+    Decided with it, unless Doug says otherwise: Twilio as the texting
+    service behind a dry-run client that is the default; a STOP reply sets
+    the Contact's `cSmsOptIn` false; sends only between 9:00 and 20:00
+    chapter time; an interrupted send is flagged for review, never resent
+    by itself. (10-18-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -413,8 +431,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.8 |
-| Last Updated | 10-18-26 01:55 |
+| Version | 1.9 |
+| Last Updated | 10-18-26 02:00 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -422,6 +440,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.9 | 10-18-26 02:00 | Claude (Claude Code) | Ruling 39 appended: the text's wording is a campaign field in the CRM (Doug's "a"), with the follow-on details decided. |
 | 1.8 | 10-18-26 01:55 | Claude (Claude Code) | Ruling 38 appended: the application sends text-message campaigns itself (Doug's "b" to build plan § 9 question 11, against the recommendation). |
 | 1.7 | 10-18-26 00:16 | Claude (Claude Code) | Ruling 37 appended: no rung evidence on a record already holding a relationship type (Doug's "a", Phase 2 live pass finding). |
 | 1.6 | 10-18-26 00:14 | Claude (Claude Code) | Ruling 36 appended: callers are the campaign's teams, acting as themselves; the Mentor Role gains COutreachTouch read/edit and CProspect read (Doug's "a" to build plan § 9 question 6, at the start of the Phase 3 build). |

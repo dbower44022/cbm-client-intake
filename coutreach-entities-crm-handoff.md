@@ -1,6 +1,6 @@
 # CRM handoff — prospect marketing and Campaign Management (Phase 1): `CProspect`, `COutreachCampaign`, `COutreachTouch`
 
-Last Updated: 10-18-26 00:30 · Revision 1.5 — see change log at the end.
+Last Updated: 10-18-26 02:00 · Revision 1.6 — see change log at the end.
 
 Three new record types and the links that tie them to what the CRM already
 holds. A **prospect record** (`CProspect`) is a quarantine for a business or
@@ -465,10 +465,33 @@ computer using Boston's settings file
 `scripts/on_crm.sh boston …`). Boston's `CHAPTER_KEY` is already `boston`;
 nothing in any name here is chapter-specific.
 
+
+## 9. Phase 4 addition — the text-message field (ruling 39, 10-18-26)
+
+Doug's rulings 38 and 39 (10-18-26): the application sends a text-message
+campaign itself, and its wording lives on the campaign in the CRM. One field,
+`scripts/plans/coutreach-sms-message.json`, fingerprint `7a68865149b4` (dry
+run on crm-test 10-18-26 02:00: one change, `create field
+COutreachCampaign.smsMessage (text)`). The entity is custom, so the stored
+name is `smsMessage` as typed. No role change: the Marketing Admin Role edits
+the campaign at *all*, and the API role reads it. No field-level rule touches
+the entity.
+
+- **crm-test:** `scripts/prospect_crm_test.sh smstext` (Doug — the applier's
+  `--apply` is refused to Claude by the session classifier).
+- **Production:** `bash scripts/prospect_crm_prod.sh smstext` then
+  `… smstext apply`, inside the web container, at a Sunday slot.
+- **Boston:** with its release, `scripts/apply_plan.sh boston` and the same
+  plan and fingerprint.
+- **Verify:** `GET /Metadata?key=entityDefs.COutreachCampaign.fields.smsMessage`
+  reads `type: text`; the campaign's detail layout gains the field by the
+  layout API (`scripts/apply_outreach_ui.py` once it lists it).
+
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.6 | 10-18-26 02:00 | Claude (Claude Code) | § 9: the text-message field (rulings 38, 39), plan `coutreach-sms-message.json`, fingerprint `7a68865149b4`; one word in each slot script. |
 | 1.5 | 10-18-26 00:30 | Claude (Claude Code) | § 4: the Mentor Role's grants for ruling 36 (call campaigns, Phase 3) — `COutreachTouch` read/edit, `CProspect` read, `Contact` read re-checked; owed on crm-test (re-run `roles`), production and Boston. |
 | 1.4 | 10-17-26 22:50 | Claude (Claude Code) | § 3.4 added: the CRM labels "Outreach Campaign" (ruling 35), crm-test done; production § 7 and Boston carry the step. |
 | 1.3 | 10-15-26 01:50 | Claude (Claude Code) | The non-admin pass matched (Doug, 01:49): crm-test complete, soaking. The partner relate's refusal as a Marketing Admin recorded as the expected both-sides check. |

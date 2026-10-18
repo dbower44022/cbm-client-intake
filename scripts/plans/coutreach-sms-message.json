@@ -1,0 +1,14 @@
+{
+  "name": "coutreach-sms-message",
+  "description": "Prospect marketing Phase 4, ruling 39: the wording of a text-message campaign, on the campaign — coutreach-entities-crm-handoff.md § 8",
+  "entities": [],
+  "fields": [
+    {
+      "entity": "COutreachCampaign",
+      "name": "smsMessage",
+      "type": "text",
+      "label": "Text message",
+      "tooltipText": "The text a text-message campaign sends to each person on its list. Written in Campaign Management; frozen when the campaign is signed off."
+    }
+  ]
+}
