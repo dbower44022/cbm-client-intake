@@ -22,7 +22,13 @@ found; move resolved items to the bottom with the resolution date.
 
 51. **Prospect marketing — Phase 1 BUILT and LIVE-PASSED on crm-test
     (v0.258.0–v0.258.5, 10-15/17-26, dark behind `CAMPAIGNS_ENABLED`);
-    Phase 2 BUILT (v0.259.0, 10-17-26), its pass A–E matched, F–I owed;
+    Phase 2 BUILT (v0.259.0, 10-17-26) and LIVE-PASSED (A–E 10-17-26,
+    F–I 10-18-26 01:50 from the standalone page
+    https://claude.ai/artifact/JwrDqWeg7zwWDoSTMzf6Vj, read back by Claude:
+    Sam carries the campaign and Tess none, both Prospect at Warm Lead; Lakeview
+    Bakery Prospect → Partner, the partner profile carries the campaign and
+    its notes line; the forged id dropped with the worker's warning; the
+    relabel script's dry run on crm-test: nothing carries the old shape);
     Phase 3 BUILT and LIVE-PASSED on crm-test (v0.261.0–v0.261.1,
     10-18-26, dark behind `CAMPAIGNS_CALLS`) — production and Boston
     owed** (10-14-26, updated 10-18-26 01:35). **Phase 3 pass, 10-18-26
