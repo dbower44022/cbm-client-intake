@@ -4,6 +4,20 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.260.2] — 2026-10-18
+
+**fix(prospects): no Warm Lead on a record that already holds a relationship —
+ruling 37.** The Phase 2 live pass (10-17-26) saw the information request door
+write `cFunnelStage = Warm Lead` on Pia Phase, a Contact already typed Client.
+Doug's ruling at 00:13 (option A): the ladder is for prospects only. The
+information request and registration doors now leave the rung alone on a
+matched Contact whose `cContactType` holds Client, Partner, Sponsor or Mentor,
+and on a promoted Company whose `cCompanyType` holds Client, Partner or
+Sponsor (`campaigns/attribution.holds_relationship`, checked inside
+`advance_rung`; both doors now select the type). A record typed only Prospect,
+or untyped, still advances. Rungs already written that way are left alone.
+Verified by tests only.
+
 ## [0.260.1] — 2026-10-18
 
 **fix(logging): a browser error report that writes no line says why.** One

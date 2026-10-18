@@ -243,7 +243,7 @@ async def deliver(
 
     email = str(sub.email)
     existing_contact = await client.find_one(
-        CONTACT, "emailAddress", email, select=f"id,{attrib.FUNNEL_STAGE}"
+        CONTACT, "emailAddress", email, select=f"id,cContactType,{attrib.FUNNEL_STAGE}"
     )
     contact_payload = _contact_payload(sub, is_new=existing_contact is None)
     if existing_contact is None:

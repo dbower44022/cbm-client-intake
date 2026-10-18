@@ -17,7 +17,9 @@ ids"). Shared by the five orchestrators so the rules live once:
   set if empty (step 4) and its stage stops changing.
 * **The rung is evidence, advance-only** (§ 1.8): an information request or a
   registration puts a person on Warm Lead (ruling 17); nothing ever lowers a
-  rung and nothing is written on a record that has no stage field.
+  rung and nothing is written on a record that has no stage field — nor on
+  one that already holds a relationship type (ruling 37: the ladder is for
+  prospects; a client's rung is read from the engagement).
 * **A notes line names the campaign** (step 8), because an application write
   and a hand edit are indistinguishable in the CRM history.
 
@@ -31,6 +33,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
+from core.crm_upsert import COMPANY_TYPE_FIELD, CONTACT_TYPE_FIELD, RELATIONSHIP_TYPES
 from core.espo import EspoApi, EspoError
 
 from . import config as cfg
@@ -213,10 +216,25 @@ def stamp_new(payload: dict[str, Any], attr: Attribution, *, stage: Optional[str
     return payload
 
 
+def holds_relationship(record: dict[str, Any]) -> bool:
+    """True when the record's Contact or Company type already holds Client,
+    Partner, Sponsor or Mentor (ruling 37)."""
+    for type_field in (CONTACT_TYPE_FIELD, COMPANY_TYPE_FIELD):
+        if RELATIONSHIP_TYPES.intersection(record.get(type_field) or []):
+            return True
+    return False
+
+
 async def advance_rung(client: EspoApi, entity: str, record: dict[str, Any], proposed: str) -> Optional[str]:
     """Advance-only: write ``proposed`` to the record's ``cFunnelStage`` when it
     is later on the ladder than the stored value (read with ``cFunnelStage``
-    selected). Best-effort. Returns the rung written, or None."""
+    selected). Best-effort. Returns the rung written, or None.
+
+    Ruling 37: a record whose type field (``cContactType`` / ``cCompanyType``,
+    which the caller must select) already holds a relationship type is left
+    alone — the ladder is for prospects only."""
+    if holds_relationship(record):
+        return None
     new = advance_stage(record.get(FUNNEL_STAGE), proposed)
     if not new or not record.get("id"):
         return None

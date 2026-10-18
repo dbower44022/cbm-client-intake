@@ -208,7 +208,7 @@ async def submit_request(
     # dropped (prospect marketing § 5 step 1) — never a reason to lose the lead.
     attr = await attrib.resolve(client, sub, entity=INFO_REQUEST)
     existing = await client.find_one(
-        CONTACT, "emailAddress", str(sub.email), select=f"id,description,{attrib.FUNNEL_STAGE}"
+        CONTACT, "emailAddress", str(sub.email), select=f"id,description,cContactType,{attrib.FUNNEL_STAGE}"
     )
     if existing:
         contact_id = existing["id"]

@@ -399,18 +399,56 @@ async def test_registration_carries_the_campaign_on_create_and_moves_the_person_
 
 
 @pytest.mark.asyncio
-async def test_registration_existing_contact_keeps_type_gains_rung_and_a_repeat_keeps_the_first_campaign():
+async def test_registration_existing_client_keeps_type_and_rung_and_a_repeat_keeps_the_first_campaign():
     crm = _crm()
     crm.add("CEvent", make_event())
     crm.add("Contact", {"id": "c-cl", "emailAddress": "sam@example.com", "cContactType": ["Client"], "cFunnelStage": None})
     await deliver_registration(_reg_sub(email="sam@example.com", campaign_id="camp-1"), crm, settings=None)
-    assert ("c-cl", {"cFunnelStage": WARM}) in crm.updated("Contact")
+    assert not any("cFunnelStage" in p for _, p in crm.updated("Contact"))   # ruling 37
     assert not any("cContactType" in p for _, p in crm.updated("Contact"))   # D-09
     assert not any("cOutreachCampaignId" in p for _, p in crm.updated("Contact"))
     crm.add("COutreachCampaign", {"id": "camp-2", "name": "Second", "campaignStatus": "Running"})
     await deliver_registration(_reg_sub(email="sam@example.com", campaign_id="camp-2"), crm, settings=None)
     assert len(crm.created("CEventRegistration")) == 1
     assert not any("outreachCampaignId" in p for _, p in crm.updated("CEventRegistration"))
+
+
+@pytest.mark.asyncio
+async def test_registration_moves_an_untyped_or_prospect_contact_to_warm_lead():
+    crm = _crm()
+    crm.add("CEvent", make_event())
+    crm.add("Contact", {"id": "c-pr", "emailAddress": "sam@example.com", "cContactType": ["Prospect"], "cFunnelStage": "Lead"})
+    await deliver_registration(_reg_sub(email="sam@example.com"), crm, settings=None)
+    assert ("c-pr", {"cFunnelStage": WARM}) in crm.updated("Contact")
+
+
+@pytest.mark.parametrize("ctype", ["Client", "Partner", "Sponsor", "Mentor"])
+@pytest.mark.asyncio
+async def test_info_request_leaves_the_rung_of_a_contact_with_a_relationship(ctype):
+    # Ruling 37 — Pia Phase, a client, sent an information request (10-17-26).
+    crm = _crm()
+    crm.add("Contact", {"id": "c-r", "emailAddress": "ada@example.com", "cContactType": ["Presenter", ctype], "cFunnelStage": None})
+    await submit_request(_request(campaign_id="camp-1"), crm)
+    assert not any("cFunnelStage" in p for _, p in crm.updated("Contact"))
+
+
+@pytest.mark.asyncio
+async def test_info_request_leaves_the_rung_of_a_promoted_company_with_a_relationship():
+    crm = _crm()
+    crm.add("Account", {"id": "acc-c", "name": "Ada's Bakery", "cCompanyType": ["Client"], "cFunnelStage": "Lead"})
+    crm.add("CProspect", {"id": "pr-2", "promotedCompanyId": "acc-c", "promotedContactId": None})
+    ids = await submit_request(_request(company="Ada's Bakery", prospect_id="pr-2"), crm)
+    assert ids["accountId"] == "acc-c"
+    assert not any("cFunnelStage" in p for _, p in crm.updated("Account"))
+
+
+def test_holds_relationship():
+    from campaigns.attribution import holds_relationship
+    assert holds_relationship({"cContactType": ["Mentor"]})
+    assert holds_relationship({"cCompanyType": ["Prospect", "Sponsor"]})
+    assert not holds_relationship({"cContactType": ["Prospect", "Presenter"]})
+    assert not holds_relationship({"cContactType": None})
+    assert not holds_relationship({})
 
 
 # --- partner and sponsor -------------------------------------------------------------------

@@ -241,6 +241,42 @@ custom field never takes a built-in field's name. Doug's reply at 22:48:
     only — no stored name changes. Every CRM, by
     `scripts/relabel_outreach_campaign.py`. (10-17-26)
 
+### Doug's ruling (10-18-26, at the start of the Phase 3 build session)
+
+Build plan § 9 question 6, put as a consequential decision: option A, the
+campaign's teams decide and each caller acts as themself; option B, the
+same teams but the application reads and writes under the org-wide API key;
+option C, a fixed Marketing Admin Team gate. Doug's reply at 00:12: "a".
+
+36. **Callers are the members of the teams named on the campaign, and each
+    caller acts as themself** (option A). The campaign's `teams` field is
+    read live on every request; its default is the Marketing Admin Team;
+    naming the Mentor Team opens the call screen to mentors with no second
+    gate; an administrator always passes. When the campaign names callers,
+    each caller sees only their own rows, else the whole list (§ 3.4). The
+    call list reads and the outcome writes run as the signed-in user, so the
+    CRM records the caller. The Mentor Role gains `COutreachTouch` read and
+    edit and `CProspect` read on every CRM, merge-only, by
+    `scripts/migrate_outreach_roles.py` — Doug runs its `--apply`.
+    (10-18-26)
+
+### Doug's ruling (10-18-26, on the Phase 2 live pass's rung finding)
+
+The pass found the information request door writing `cFunnelStage = Warm
+Lead` on Pia Phase, a Contact already typed Client. Put as a consequential
+decision: option A, skip the rung on a record already holding a
+relationship type; option B, leave it and filter in reports. Doug's reply at
+00:13: "a".
+
+37. **A door's rung evidence never lands on a record that already holds a
+    relationship type** (option A). The information request and registration
+    doors leave `cFunnelStage` untouched on a matched Contact whose
+    `cContactType` holds Client, Partner, Sponsor or Mentor, and on a
+    promoted Company whose `cCompanyType` holds Client, Partner or Sponsor.
+    A record typed only Prospect, or untyped, still advances. The ladder is
+    for prospects; a client's rung is read from the engagement (§ 1.8). A
+    rung already written that way is left alone. (10-18-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -361,8 +397,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.5 |
-| Last Updated | 10-17-26 22:50 |
+| Version | 1.7 |
+| Last Updated | 10-18-26 00:16 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -370,6 +406,8 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.7 | 10-18-26 00:16 | Claude (Claude Code) | Ruling 37 appended: no rung evidence on a record already holding a relationship type (Doug's "a", Phase 2 live pass finding). |
+| 1.6 | 10-18-26 00:14 | Claude (Claude Code) | Ruling 36 appended: callers are the campaign's teams, acting as themselves; the Mentor Role gains COutreachTouch read/edit and CProspect read (Doug's "a" to build plan § 9 question 6, at the start of the Phase 3 build). |
 | 1.5 | 10-17-26 22:50 | Claude (Claude Code) | Ruling 35 appended: "Outreach Campaign" as the CRM label (Doug's "rename ours", Phase 2 live pass B8). |
 | 1.4 | 10-17-26 01:54 | Claude (Claude Code) | Ruling 34 appended: the information request door creates its company typed `Prospect` (Doug's "A" to build plan § 9 question 7, at the start of the Phase 2 build). |
 | 1.3 | 10-15-26 02:16 | Claude (Claude Code) | Ruling 33 appended: the import's Company and Contact writes run under the intake API client (Doug's "a" at the start of the Phase 1 build). |
