@@ -1118,7 +1118,11 @@ the reason.
   `/campaigns/api/calls*` admit any signed-in user and the campaign decides.
   **The touch is written as the caller; the rung, the `Declined` exit, the
   *Call again* row and the completion under the API client** (the Mentor
-  Role reads `CProspect`, never edits it). The Mentor Role's grants
+  Role reads `CProspect`, never edits it). **Every call record carries its
+  campaign's teams** (v0.261.1): the Mentor Role's Assignment Permission is
+  *team*, and EspoCRM refuses such a role ANY save of a record with neither
+  a team nor an assigned user (`isPermittedTeamsEmpty`) — so the API client
+  stamps the teams before the caller writes. The Mentor Role's grants
   (`COutreachTouch` read/edit, `CProspect` read) are in
   `migrate_outreach_roles.py`. **The Stale sweep** (`campaigns/stale.py`):
   Unverified/Qualified, no side exit, no Planned touch, no activity within
