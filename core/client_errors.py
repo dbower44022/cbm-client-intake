@@ -157,10 +157,15 @@ async def client_errors(request: Request) -> Response:
         user = _user(request)
         agent = request.headers.get("user-agent", "")
         for report in reports[:20]:
-            if isinstance(report, dict):
-                line = format_line(report, user=user, agent=agent)
-                if line:
-                    log.warning(line)
+            line = format_line(report, user=user, agent=agent) if isinstance(report, dict) else None
+            if line:
+                log.warning(line)
+            else:
+                # Visible, so a report that writes nothing can be explained
+                # (10-17-26: one arrived on the live pass and left no line).
+                log.info("client-error-unread kind=%s keys=%s",
+                         _text(report.get("kind") if isinstance(report, dict) else type(report).__name__, 20) or "-",
+                         _text(",".join(sorted(report)) if isinstance(report, dict) else "-", 120))
     except Exception as exc:  # noqa: BLE001 — a report must never error back
-        log.debug("client-error report unreadable: %s", exc)
+        log.info("client-error-unread body not understood: %s", _text(exc, 200))
     return Response(status_code=204)
