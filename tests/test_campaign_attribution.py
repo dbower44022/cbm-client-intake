@@ -556,3 +556,28 @@ def test_submission_admin_filter_lists_the_two_newer_form_kinds():
     js = (ROOT / "ops" / "frontend" / "app.js").read_text(encoding="utf-8")
     forms_line = js[js.index("var FORMS = ["):js.index("];", js.index("var FORMS = ["))]
     assert '"event-registration"' in forms_line and '"prospect-response"' in forms_line
+
+
+# --- through the worker's delivery wrapper (v0.259.1) ---------------------------------------
+
+@pytest.mark.asyncio
+async def test_the_campaign_survives_the_worker_delivery_wrapper():
+    """The worker delivers through core.resumable.ResumableClient. It must pass
+    the attribution's metadata and list_related reads through, or every check
+    fails closed and the campaign is dropped (found on the Phase 2 live pass)."""
+    from core.resumable import ResumableClient
+
+    crm = _crm()
+    crm.add("CPartnerProfile", {"id": "p-a", "name": "Alpha Partners"})
+    crm.link("COutreachCampaign", "camp-1", "partnerProfiles", "p-a")
+    wrapped = ResumableClient(crm, None, None)
+    ids = await submit_intake(_submission(campaign_id="camp-1"), wrapped)
+    eng, = crm.created(ENGAGEMENT)
+    assert eng["outreachCampaignId"] == "camp-1"
+    assert ids["referringPartnerIds"] == ["p-a"]
+
+
+def test_the_delivery_wrapper_exposes_every_read_the_attribution_uses():
+    from core.resumable import ResumableClient
+    for name in ("metadata", "metadata_enum_options", "list_related", "list", "get", "find_one", "relate", "update", "create"):
+        assert callable(getattr(ResumableClient, name, None)), name

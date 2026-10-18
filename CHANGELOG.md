@@ -4,6 +4,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.259.1] — 2026-10-17
+
+**fix(prospects): the worker dropped every campaign at delivery.** Found on
+Doug's Phase 2 live pass, step B6: the client intake submission carried the
+campaign id, but its engagement had none and no referring partner. The worker
+delivers through `core/resumable.ResumableClient`, which passed through
+neither `metadata` nor `list_related`; the attribution's feature checks fail
+closed, so every worker-delivered door dropped the campaign and the
+campaign's partners. Both reads now pass through, and a test delivers through
+the wrapper. A submission delivered under v0.259.0 cannot be repaired by a
+re-drive (the engagement create is in its progress ledger); the live pass
+re-runs with a fresh person.
+
 ## [0.259.0] — 2026-10-17
 
 **feat(prospects): Phase 2 — the doors honour the ids** (prospect marketing

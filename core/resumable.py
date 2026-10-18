@@ -93,6 +93,17 @@ class ResumableClient:
     async def metadata_enum_options(self, *args: Any, **kwargs: Any):
         return await self._inner.metadata_enum_options(*args, **kwargs)
 
+    # Read-only, so safe to repeat. The campaign attribution (prospect marketing
+    # Phase 2, campaigns/attribution.py) feature-detects its links with
+    # ``metadata`` and reads a campaign's partners with ``list_related``; a
+    # wrapper without them made every check fail CLOSED, so every worker
+    # delivery silently dropped the campaign (v0.259.1, found on the live pass).
+    async def metadata(self, *args: Any, **kwargs: Any):
+        return await self._inner.metadata(*args, **kwargs)
+
+    async def list_related(self, *args: Any, **kwargs: Any):
+        return await self._inner.list_related(*args, **kwargs)
+
 
 async def run_step_once(client: Any, name: str, action: Callable[[], Awaitable[Any]]) -> bool:
     """Run ``action`` at most once per delivery, guarded by a named progress
