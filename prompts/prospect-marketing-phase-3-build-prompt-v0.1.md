@@ -1,7 +1,8 @@
 # Kickoff prompt — prospect marketing Phase 3: lists, review, calls
 
-**Written 10-17-26 02:22 for a fresh Claude Code session rooted in
-`cbm-client-intake`.** A build session: the list import, the Review tab, the
+**Written 10-17-26 02:22; revised 10-18-26 00:10 for a fresh Claude Code
+session rooted in `cbm-client-intake`, to run tonight in parallel with the
+end of the Phase 2 live pass.** A build session: the list import, the Review tab, the
 call kind with its recording screen, the Declined and Stale side exits, and
 the first two Analytics reads of the funnel. One flag inside
 `CAMPAIGNS_ENABLED`: `CAMPAIGNS_CALLS`. No CRM change.
@@ -13,14 +14,33 @@ Operating mode: DETAIL for the code.
 
 ---
 
-## The gate
+## The gate — open, by Doug's decision (10-18-26 00:05)
 
-This session is gated on **Doug's Phase 2 live pass on crm-test**
-(`OPEN-ITEMS.md` #51 (d‴), its step page). If the README's *State* does not
-yet record that pass as run, stop and say so: the pass may find defects that
-change what this phase builds on (the attribution module, the union reads).
-Production's CRM change at its Sunday slot is NOT a gate — Phase 3 is built
-and passed on crm-test like the two before it.
+Doug lifted the gate on the Phase 2 live pass: build Phase 3 now, while the
+pass finishes in another session tomorrow (10-18-26). Where the pass stands:
+
+- **Matched on crm-test 10-17-26:** sections A–E of the step page
+  https://claude.ai/artifact/JLZyupBD4i6scAogws6sWD — a card through to
+  delivery, two partners (ruling 30), a partner link plus a campaign link,
+  ruling 27 — after two fixes the pass found: **v0.259.1** (the worker's
+  `core/resumable.ResumableClient` lacked `metadata` and `list_related`, so
+  every worker delivery dropped the campaign) and **ruling 35** (our entity
+  and links labelled *Outreach Campaign* in the CRM, beside EspoCRM's native
+  *Campaign*; `scripts/relabel_outreach_campaign.py`, crm-test done).
+- **Owed tomorrow:** section F's registrations (the carry-through itself was
+  seen working in the web log), G, H and I. crm-test's nightly reset at
+  04:00 UTC removed every record of the pass.
+- **Also live:** v0.260.0, the browser error reporter (`client-error` lines
+  in the web log). One commit is unpushed: `d33ad50` (an unreadable report
+  writes a `client-error-unread` line). Doug pushes.
+
+**Working beside the pass session.** Parallel sessions share one git index
+(`[[parallel-sessions-share-one-git-index]]`). Stage only your own files by
+name, commit atomically, audit with `git show --stat`, and never `git add -u`
+or `-A`. The pass session may land a fix in `campaigns/attribution.py`,
+`core/resumable.py`, the five orchestrators or the runbook; if you must touch
+one of those, check `git log -3 -- <file>` first and say so. A defect the pass
+finds in Phase 2 code is fixed in the pass session, not here.
 
 ## The first thing in the session: question 6
 
@@ -37,6 +57,20 @@ decision (the eight-part template), then stop and wait:
   gate (Marketing Admin Team only), no role change, and mentors never call.
 
 Record the answer as ruling 36 in `rulings.md`, dated, before building.
+
+**Then the second question, also before any code** — raised on the Phase 2
+pass and not yet ruled: the information request and registration doors
+write `cFunnelStage = Warm Lead` on every matched Contact, including one
+already typed Client, Partner, Sponsor or Mentor (seen on Pia Phase,
+10-17-26). The build plan says a client's rung is never stored — reports
+read it from the engagement. Recommended: those two doors skip the rung on a
+Contact already holding a relationship type (one condition in
+`campaigns/attribution.advance_rung`'s callers). Cost: a person who is both
+a client and a fresh information requester gets no rung movement at all,
+which is the plan's rule anyway. Put it as a consequential decision; record
+the answer as ruling 37; build it first if ruled, with a test — it is Phase 2
+code, so check `git log -3 -- forms/info_request forms/event_registration
+campaigns/attribution.py` before touching it.
 
 ## The prompt
 
@@ -144,12 +178,13 @@ questions 2, 4 and 5 before the first real card.
 | Field | Value |
 |---|---|
 | Document | Kickoff prompt — prospect marketing Phase 3 build |
-| Version | v0.1 |
-| Last Updated | 10-17-26 02:22 |
+| Version | v0.2 |
+| Last Updated | 10-18-26 00:10 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| v0.2 | 10-18-26 00:10 | Claude (Claude Code) | Gate opened by Doug to build in parallel with the end of the Phase 2 pass; the pass's state, the two fixes it found and the parallel-session rules recorded; the rung-on-a-client question added as the second question (ruling 37). |
 | v0.1 | 10-17-26 02:22 | Claude (Claude Code) | Written at the close of the Phase 2 build session; gated on Doug's Phase 2 live pass; question 6 made the session's first step. |

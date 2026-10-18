@@ -99,6 +99,9 @@ built 10-15-26, v0.258.0, dark behind `CAMPAIGNS_ENABLED`**).
      **live-passed on crm-test 10-15/17-26** (Doug, from the step page in
      `OPEN-ITEMS.md` #51; five fixes on the way, v0.258.1–.5, the API
      role's **edit** on the campaign among them).
+  4b. **Phase 2 live pass, 10-17-26:** sections A–E matched after v0.259.1
+     and ruling 35; F's registrations and G–I owed on 10-18-26. Doug opened
+     the Phase 3 gate (10-18-26 00:05) to build in parallel — prompt v0.2.
   4a. ~~The Phase 2 build session~~ — **done 10-17-26** (v0.259.0; the
      spent prompt is in `history/prompts/`). **Next: Doug's Phase 2 live
      pass on crm-test** (the six steps of build plan § 7 Phase 2, the step

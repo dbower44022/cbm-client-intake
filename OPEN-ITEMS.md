@@ -82,7 +82,11 @@ found; move resolved items to the bottom with the resolution date.
     `--apply`; the pass's B8 found two fields labelled *Campaign* on Contact
     and Company — **ruling 35**, ours labelled *Outreach Campaign* in the CRM,
     crm-test done 10-17-26 22:49 by `scripts/relabel_outreach_campaign.py`,
-    production and Boston owed (handoff § 3.4); (e)
+    production and Boston owed (handoff § 3.4); **pass state 10-18-26 00:05**:
+    sections A–E matched (after v0.259.1, the worker dropped every campaign),
+    F's carry-through seen in the log, F's registrations and G–I owed on
+    10-18-26 (crm-test's 04:00 UTC reset removed the pass's records); Doug
+    opened the Phase 3 gate to build in parallel; (e)
     questions 2, 4 and 5 before the first real card; (f) production at the
     Sunday slot (both plans, the receipt option, the role script, the notes
     conversion, the tab list, the three entities' layouts — handoff § 3.3),
