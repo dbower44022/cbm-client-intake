@@ -1116,6 +1116,18 @@ https://claude.ai/artifact/D8atEqEdRaRBKh4mmxiPsj.
 
 ### Phase 4 — email and SMS campaigns, the funnel, the campaign dashboard
 
+**Built 10-18-26, v0.262.0–v0.264.0.** Question 11 answered first, against the
+recommendation — **ruling 38: the application sends the texts** (Twilio behind
+a dry-run default, `core/sms.py`, `campaigns/sms.py`; STOP honoured at once;
+texting hours; an interrupted send never resent by itself) — and **ruling
+39: the wording is `COutreachCampaign.smsMessage` in the CRM** (one field,
+`scripts/plans/coutreach-sms-message.json`), so Phase 4 carries a CRM change
+after all. The email kind pushes each campaign as its own named list
+(`campaigns/email.py`); the funnel is a panel on the *Campaigns* page; the
+`COutreachCampaign` dashboard scope's counts run under the org key after the
+user's read (the Marketing Admin Role reads no engagement). Tests and a stub
+harness only; Doug's pass: https://claude.ai/artifact/96dzUAsNAfkbJCx2eDu91g.
+
 **CRM change:** none.
 **Flags:** `CAMPAIGNS_EMAIL` (the email kind), inside `CAMPAIGNS_ENABLED` and the mailing-list connection; `CAMPAIGNS_SMS` (the SMS kind: rule, list, export, *Mark as sent* — no sending, question 11).
 
@@ -1133,7 +1145,7 @@ https://claude.ai/artifact/D8atEqEdRaRBKh4mmxiPsj.
 
 ### Phase 5 — deferred, named so they are not forgotten
 
-Not planned, no dates: the partner-file import (ruling 23); **sending** texts through a vendor (the SMS kind, its rule, its list and its export ship in Phase 4; the vendor is question 11); a second-card campaign (ruling 14 waits for a measured response rate; the Stale exit is its entry point); a watched Drive folder or a posting endpoint for the outside filter (question 2); a funder Campaigns tab (one `DomainConfig` line if ever asked for — CM-5 named partners); Phase D of the mailing-list plan feeding email touches.
+Not planned, no dates: the partner-file import (ruling 23); ~~sending texts through a vendor~~ (built in Phase 4, ruling 38 — the real Twilio account, number and A2P 10DLC registration are Doug's); a second-card campaign (ruling 14 waits for a measured response rate; the Stale exit is its entry point); a watched Drive folder or a posting endpoint for the outside filter (question 2); a funder Campaigns tab (one `DomainConfig` line if ever asked for — CM-5 named partners); Phase D of the mailing-list plan feeding email touches.
 
 ---
 
@@ -1285,8 +1297,8 @@ best-effort mirror.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — build plan |
-| Version | v0.6 — Phases 1, 2 and 3 built (v0.258.0, v0.259.0, v0.261.0); questions 1, 3, 6, 7, 8 and 9 answered (rulings 28–32, 34, 36); six questions open, none shaping the CRM |
-| Last Updated | 10-18-26 00:50 |
+| Version | v0.7 — Phases 1–4 built (v0.258.0, v0.259.0, v0.261.0, v0.262.0–v0.264.0); questions 1, 3, 6, 7, 8, 9 and 11 answered (rulings 28–32, 34, 36, 38, 39) |
+| Last Updated | 10-18-26 02:40 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
 | Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
@@ -1295,6 +1307,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.7 | 10-18-26 02:40 | Claude (Claude Code) | § 7 Phase 4 marked built (v0.262.0–v0.264.0) with rulings 38 and 39; Phase 5's texting item struck. |
 | 0.6 | 10-18-26 00:50 | Claude (Claude Code) | § 7 Phase 3 marked built (v0.261.0) with what it holds; question 6 answered (ruling 36) and the Mentor Role's two grants named; ruling 37 recorded as built first. |
 | 0.4 | 10-15-26 00:02 | Claude (Claude Code) | Ruling 32: § 1.5's reverse of `CPartnerProfile.outreachCampaign` is `attributedPartnerProfiles` (the row had named `partnerProfiles` twice; found by the handoff session's dry run, drafted there, chosen by Doug); § 1.10 gains the row. The plan files were already written on this name, so the fingerprints stand. |
 | 0.3 | 10-14-26 22:43 | Claude (Claude Code) | Doug's answers to questions 1, 3, 8 and 9 recorded (rulings 28–31). Question 8 against the recommendation: `CEngagement.referringPartners` many-to-many to `CPartnerProfile` (reverse `referredEngagements`) added — seventeen links; step 6a rewritten (the many link holds every referring partner, the single link stays the partner link's own, readers take the union); the per-door table, the coexist paragraph, Phase 1's handoff and grants, Phase 2's build and verification, § 8 and § 9 updated. |

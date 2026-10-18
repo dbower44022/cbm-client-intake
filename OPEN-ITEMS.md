@@ -30,8 +30,16 @@ found; move resolved items to the bottom with the resolution date.
     its notes line; the forged id dropped with the worker's warning; the
     relabel script's dry run on crm-test: nothing carries the old shape);
     Phase 3 BUILT and LIVE-PASSED on crm-test (v0.261.0–v0.261.1,
-    10-18-26, dark behind `CAMPAIGNS_CALLS`) — production and Boston
-    owed** (10-14-26, updated 10-18-26 01:35). **Phase 3 pass, 10-18-26
+    10-18-26, dark behind `CAMPAIGNS_CALLS`); Phase 4 BUILT (v0.262.0–
+    v0.264.0, 10-18-26, dark behind `CAMPAIGNS_SMS` / `CAMPAIGNS_EMAIL`,
+    tests and a stub harness only) — Doug's Phase 4 pass, production and
+    Boston owed** (10-14-26, updated 10-18-26 02:40). **Phase 4:** rulings 38
+    (the application sends texts — Twilio behind a dry run; the account, a
+    sender number and A2P 10DLC registration are Doug's before any real
+    text) and 39 (`COutreachCampaign.smsMessage`, plan
+    `coutreach-sms-message.json` fingerprint `7a68865149b4`, owed on
+    crm-test — `scripts/prospect_crm_test.sh smstext` — production and
+    Boston). Step page https://claude.ai/artifact/96dzUAsNAfkbJCx2eDu91g. **Phase 3 pass, 10-18-26
     00:50–01:32 (Doug):** every step matched on crm-test after one fix —
     **v0.261.1**: the Mentor Role's Assignment Permission is *team*, so
     EspoCRM refused Joe Mentor's save of a call record carrying no team and

@@ -1,5 +1,14 @@
 # Kickoff prompt — prospect marketing Phase 4: email and SMS campaigns, the funnel, the campaign dashboard
 
+> **Done — history.** Run on 10-18-26 (01:52–02:40) in the same session as
+> Phase 3, after Doug's Phase 3 pass and the end of the Phase 2 pass.
+> Question 11 was answered "b" against the recommendation (ruling 38, the
+> application sends texts), then ruling 39 (the wording in a CRM field).
+> Built as v0.262.0 (texts), v0.263.0 (funnel, campaign dashboard,
+> Opportunity) and v0.264.0 (email), 19 new tests, suite green, not pushed.
+> Doug's pass: https://claude.ai/artifact/96dzUAsNAfkbJCx2eDu91g. No
+> further phase kickoff: Phase 5 is the deferred list.
+
 **Written 10-18-26 00:55 at the close of the Phase 3 build session, for a
 fresh Claude Code session rooted in `cbm-client-intake`.** A build session:
 the email kind, the SMS kind, the funnel metric on the *Campaigns* Analytics

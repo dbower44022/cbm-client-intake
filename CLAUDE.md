@@ -1132,12 +1132,34 @@ the reason.
   `campaigns/reporting.py`** (`summarize_responses` moved there; the
   router re-exports it): the record page, the Responses tab and the new
   Analytics page *Campaigns* (`analytics/campaigns.py`, live, org key).
-- Owed: Doug's Phase 2 pass (F–I) and Phase 3 pass (`OPEN-ITEMS.md` #51,
-  step page https://claude.ai/artifact/D8atEqEdRaRBKh4mmxiPsj), production's
-  CRM change at a Sunday slot (plus the receipt option, the layouts, the
-  relabel scripts and now the Mentor Role's two grants), Boston with its
-  release, a seeder and sandbox re-baseline, Phase 4 (email and SMS, the
-  funnel, the campaign dashboard).
+- **Phase 4** (v0.262.0–v0.264.0, 10-18-26). **Texts (rulings 38, 39,
+  `CAMPAIGNS_SMS`):** the application sends — `core/sms.py`, Twilio behind
+  `DryRunSmsClient` (the default, `SMS_PROVIDER`); the wording is the CRM
+  field `COutreachCampaign.smsMessage`, feature-detected
+  (`cfg.CAMPAIGN_OPTIONAL_FIELDS`, dropped from the form and the write
+  when absent) and NOT in `CAMPAIGN_SELECT` (a CRM without it would refuse
+  the select — read it by a whole get). Selection is ruling 9 (a Contact
+  with `cSmsOptIn`). Sign-off refuses wording without STOP. **A touch is
+  marked `vendorStatus=sending` before every send and a touch left so is
+  never resent by itself** (Twilio has no idempotency key). Sends only
+  inside `SMS_SEND_HOURS`. Signed callbacks `/api/campaigns/sms/inbound`
+  (STOP → `cSmsOptIn` false) and `/status`, 404 until Twilio is
+  configured; the body is parsed by hand (no python-multipart).
+  **Email (`CAMPAIGNS_EMAIL`):** `campaigns/email.py` pushes each campaign
+  as its OWN list `Campaign — <name>` and never reads or writes the
+  standing list or its stored id; *Mark as sent* completes it. **The
+  funnel** (`reporting.funnel`, Candidate/Client from the engagement
+  status) and **the campaign dashboard scope** `COutreachCampaign`
+  (`analytics/campaigns.py`, counts under the org key after the user's read
+  — the Marketing Admin Role reads no engagement). **Opportunity on
+  attendance** (`attribution.opportunity_on_attendance`) from the manual
+  mark, the check-in and the Zoom pull, org key, best-effort.
+- Owed: Doug's Phase 4 pass (`OPEN-ITEMS.md` #51, step page
+  https://claude.ai/artifact/96dzUAsNAfkbJCx2eDu91g), production's CRM
+  change at a Sunday slot (now also the Mentor Role's two grants and the
+  `smstext` field), Boston with its release, a seeder and sandbox
+  re-baseline, the Twilio account and A2P 10DLC before any real text, and
+  questions 2, 4, 5 before the first real card.
 
 ### Events & Webinars — `/events`
 
@@ -2494,7 +2516,14 @@ sentence is a convenience.
   Management section. Verified by tests (26 new, suite green) and a stub
   harness; never against a live CRM. Doug's six-step pass:
   https://claude.ai/artifact/D8atEqEdRaRBKh4mmxiPsj (`OPEN-ITEMS.md` #51).
-  Next kickoff: Phase 4.
+  Next kickoff: Phase 4. **Live-passed 10-18-26** (v0.261.1 fixed the
+  Mentor Role's call write).
+
+- **v0.262.0–v0.264.0 (2026-10-18) — prospect marketing Phase 4.**
+  Committed, not pushed. Rulings 38 (texts sent by the application) and 39
+  (the wording in `COutreachCampaign.smsMessage`, a CRM field owed on every
+  CRM). Standing rules in the Campaign Management section. Tests and a stub
+  harness only; Doug's pass https://claude.ai/artifact/96dzUAsNAfkbJCx2eDu91g.
 
 - **v0.260.0 / v0.260.1 (2026-10-17/18) — the browser reports its own
   failures.** v0.260.0 pushed and live on both deployments 23:14 (served
