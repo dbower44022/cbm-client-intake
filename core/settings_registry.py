@@ -268,6 +268,10 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="An Unverified or Qualified prospect record with no touch for this "
             "many days leaves by the Stale side exit. 0 makes every untouched "
             "record stale — for a live check only."),
+    _s("campaigns_email", GROUP_FEATURES, "Campaign emails", kind="bool", component="both",
+       help="The email campaign kind: each campaign's opted-in people pushed as its own "
+            "named list at the mailing service, where staff design and send the notice. "
+            "Needs the mailing connection (Mailing list sync's client ID and secret)."),
     _s("campaigns_sms", GROUP_FEATURES, "Campaign texts", kind="bool", component="both",
        help="The text-message campaign kind (rulings 38, 39). The application sends "
             "the texts through the texting service below — with 'Texting service' at "

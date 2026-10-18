@@ -41,11 +41,13 @@ PHASE_1_KINDS = (KIND_POSTCARD, KIND_SOCIAL)
 CALL_KINDS = (KIND_CALL,)
 #: Phase 4 adds the text-message kind, behind CAMPAIGNS_SMS (rulings 38, 39).
 SMS_KINDS = (KIND_SMS,)
+EMAIL_KINDS = (KIND_EMAIL,)
 
 
-def kinds_built(calls_on: bool, sms_on: bool = False) -> tuple[str, ...]:
+def kinds_built(calls_on: bool, sms_on: bool = False, email_on: bool = False) -> tuple[str, ...]:
     """The kinds a campaign may be created as on this deployment."""
-    return PHASE_1_KINDS + (CALL_KINDS if calls_on else ()) + (SMS_KINDS if sms_on else ())
+    return (PHASE_1_KINDS + (CALL_KINDS if calls_on else ()) + (SMS_KINDS if sms_on else ())
+            + (EMAIL_KINDS if email_on else ()))
 
 STATUS_DRAFT = "Draft"
 STATUS_AWAITING = "Awaiting sign-off"

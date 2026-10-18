@@ -480,6 +480,14 @@ async def main() -> None:
                 await run_campaign_cycle(settings, stop=stop)
             except Exception as exc:  # noqa: BLE001 — never crashes delivery
                 log.warning("campaign run pass failed: %s", exc)
+            if settings.campaigns_email:
+                # Email campaigns: push each signed-off campaign's own list.
+                try:
+                    from campaigns.email import run_email_cycle
+
+                    await run_email_cycle(settings)
+                except Exception as exc:  # noqa: BLE001 — never crashes delivery
+                    log.warning("email campaign pass failed: %s", exc)
             if settings.campaigns_sms:
                 # Text-message campaigns ride the same timer (rulings 38, 39);
                 # the cycle itself keeps to the texting hours.

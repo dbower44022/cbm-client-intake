@@ -408,8 +408,87 @@
     } else hide(pc);
     renderCallCard(rec);
     renderSmsCard(rec);
+    renderEmailCard(rec);
     show($("recordPanel"));
   }
+
+  // --- the email kind (§ 3.3; rulings 19, 25) ---------------------------------------------------
+  var EMAIL_PUSHED = "pushed to the mailing list";
+  function renderEmailCard(rec) {
+    var c = rec.campaign, card = $("emailCard");
+    if (c.campaignKind !== "Email") { hide(card); return; }
+    show(card);
+    var touches = rec.touches || [];
+    var pushed = touches.filter(function (t) { return t.touchStatus === "Planned" && t.vendorStatus === EMAIL_PUSHED; }).length;
+    var withheld = touches.filter(function (t) { return t.touchStatus === "Cancelled" && (t.vendorStatus || "").indexOf("withheld") === 0; }).length;
+    var sum = rec.touchSummary || {};
+    tiles($("emailTiles"), [["To push", (sum.planned || 0) - pushed], ["On the list", pushed], ["Withheld", withheld], ["Sent", sum.sent]]);
+    var rule = rec.rule || {}, chosen = rule.stages || [];
+    var editable = !c.campaignStatus || c.campaignStatus === "Draft" || c.campaignStatus === "Awaiting sign-off";
+    var host = $("emailStages"); host.innerHTML = "";
+    (state.session.emailStages || ["Qualified", "Lead", "Warm Lead", "Opportunity"]).forEach(function (st) {
+      var lab = el("label", "cm__check"); var cb = el("input"); cb.type = "checkbox"; cb.value = st; cb.checked = chosen.indexOf(st) >= 0;
+      cb.disabled = !editable; cb.setAttribute("data-emailstage", st);
+      lab.appendChild(cb); lab.appendChild(document.createTextNode(" Contacts typed Prospect at ")); lab.appendChild(el("strong", null, st)); host.appendChild(lab);
+    });
+    $("emailDormant").checked = rule.dormantDays !== null && rule.dormantDays !== undefined;
+    if ($("emailDormant").checked) $("emailDormantDays").value = rule.dormantDays;
+    $("emailDormant").disabled = !editable; $("emailDormantDays").disabled = !editable;
+    text($("emailRuleSummary"), c.selectionSummary || "The list has not been built yet.");
+    var note = $("emailNote");
+    if (!state.session.emailOn) text(note, "Campaign emails are switched off on this deployment (CAMPAIGNS_EMAIL at /setup).");
+    else if (!state.session.mailingConnected) text(note, "The mailing service is not connected here (System Settings, Mailing).");
+    else if (c.campaignStatus === "Signed off") text(note, "Signed off. The worker pushes the list to the mailing service within a minute, as its own list named for this campaign.");
+    else if (c.campaignStatus === "Running") text(note, "On the mailing service as the list \u201cCampaign \u2014 " + c.name + "\u201d. Design the notice there with this campaign's links (Links tab), send it to that list, then press Mark as sent.");
+    else if (c.campaignStatus === "Complete") text(note, "Complete: the notice was sent.");
+    else text(note, "Build the list, read the count, then sign off. The application never sends email: the mailing service does.");
+  }
+
+  function emailRule() {
+    var stages = Array.prototype.filter.call(document.querySelectorAll("[data-emailstage]"), function (cb) { return cb.checked; }).map(function (cb) { return cb.value; });
+    return { stages: stages, dormantDays: $("emailDormant").checked ? Number($("emailDormantDays").value || 0) : null };
+  }
+
+  $("emailBuildBtn").addEventListener("click", async function () {
+    if (!state.record) return;
+    var c = state.record.campaign;
+    if (["Draft", "Awaiting sign-off", null, undefined, ""].indexOf(c.campaignStatus) < 0) { notice("The list cannot be rebuilt once the campaign is " + c.campaignStatus + ".", "warn"); return; }
+    var rule = emailRule();
+    if (!rule.stages.length && rule.dormantDays === null) { notice("Tick at least one rung, or the dormant clients.", "warn"); return; }
+    try {
+      var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/build", { method: "POST", body: { rule: rule } });
+      notice("List built: " + res.pieces + " people (" + res.created + " new, " + res.cancelled + " dropped).", "ok");
+      loadRecord();
+    } catch (e) { notice(e.message, "error"); }
+  });
+
+  $("emailSignoffBtn").addEventListener("click", function () {
+    if (!state.record) return;
+    var c = state.record.campaign, sum = state.record.touchSummary || {};
+    if (!sum.planned) { notice("Build the list first — there is nobody on it.", "warn"); return; }
+    var body = el("div", "cm__plan");
+    body.appendChild(el("p", null, "This pushes " + sum.planned + " " + (sum.planned === 1 ? "person" : "people") + " to the mailing service as the list \u201cCampaign \u2014 " + c.name + "\u201d. Nobody is emailed until you send a notice there."));
+    body.appendChild(el("p", "cm__hint", "Type the number of people to confirm."));
+    var f = el("div", "cm__field"); var lab = el("label", null, "Number of people"); lab.htmlFor = "emailConfirm"; var inp = el("input"); inp.type = "text"; inp.id = "emailConfirm"; inp.autocomplete = "off";
+    f.appendChild(lab); f.appendChild(inp); body.appendChild(f);
+    openModal("Sign off and push", body, async function () {
+      await api("/campaigns/" + encodeURIComponent(c.id) + "/signoff", { method: "POST", body: { confirm: inp.value } });
+      closeModal(); notice("Signed off. The worker pushes the list within a minute.", "ok"); loadRecord();
+    }, "Sign off and push");
+    setTimeout(function () { inp.focus(); }, 50);
+  });
+
+  $("emailSentBtn").addEventListener("click", function () {
+    if (!state.record) return;
+    var c = state.record.campaign;
+    if (c.campaignStatus !== "Running") { notice("Mark as sent comes after the list is on the mailing service (the campaign reads Running).", "warn"); return; }
+    var body = el("div", "cm__plan");
+    body.appendChild(el("p", null, "Press this only after you sent the notice to \u201cCampaign \u2014 " + c.name + "\u201d at the mailing service. Every person on the list is recorded as sent and the campaign completes."));
+    openModal("Mark as sent", body, async function () {
+      var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/mark-sent", { method: "POST" });
+      closeModal(); notice("Marked sent: " + res.sent + " people.", "ok"); loadRecord();
+    }, "Mark as sent");
+  });
 
   // --- the text-message kind (§ 3.5; rulings 38, 39) -------------------------------------------
   // Mirrors core/sms.segments: GSM-7 is 160 alone / 153 a part, anything else 70 / 67.

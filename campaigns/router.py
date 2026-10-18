@@ -29,7 +29,7 @@ from core.qr import qr_png, qr_svg
 from forms import SPECS_BY_SLUG
 
 from . import config as cfg
-from . import calls, imports, postcard, reporting, review, service, sms
+from . import calls, email as email_kind, imports, postcard, reporting, review, service, sms
 from .reporting import summarize_responses  # noqa: F401 — re-exported
 from .public import destination_path
 from .service import CampaignError
@@ -63,6 +63,11 @@ def _require_user(request: Request) -> dict:
 def _require_calls(settings: Settings) -> None:
     if not settings.campaigns_calls:
         raise HTTPException(status_code=404, detail="Campaign calls are switched off (CAMPAIGNS_CALLS at /setup).")
+
+
+def _require_email(settings: Settings) -> None:
+    if not settings.campaigns_email:
+        raise HTTPException(status_code=404, detail="Campaign emails are switched off (CAMPAIGNS_EMAIL at /setup).")
 
 
 def _require_sms(settings: Settings) -> None:
@@ -160,7 +165,10 @@ async def session(request: Request) -> dict[str, Any]:
         "postal": {"provider": settings.postal_provider, "testMode": settings.postal_test_mode,
                    "unitCost": settings.postal_unit_cost, "currency": settings.postal_currency},
         "baseUrl": _base_url(request, settings),
-        "kindsBuilt": list(cfg.kinds_built(settings.campaigns_calls, settings.campaigns_sms)),
+        "kindsBuilt": list(cfg.kinds_built(settings.campaigns_calls, settings.campaigns_sms, settings.campaigns_email)),
+        "emailOn": settings.campaigns_email,
+        "mailingConnected": bool(settings.mailing_client_id and settings.mailing_client_secret),
+        "emailStages": list(email_kind.EMAILABLE_STAGES),
         "callsOn": settings.campaigns_calls,
         "smsOn": settings.campaigns_sms,
         "sms": {"provider": settings.sms_provider, "hours": settings.sms_send_hours,
@@ -176,7 +184,8 @@ async def fields(request: Request) -> dict[str, Any]:
     user, client = _actor(request)
     try:
         options = await service.field_options(client, calls_on=get_settings().campaigns_calls,
-                                              sms_on=get_settings().campaigns_sms)
+                                              sms_on=get_settings().campaigns_sms,
+                                              email_on=get_settings().campaigns_email)
         partners = await service.picker_options(client, cfg.PARTNER_PROFILE)
         events = await service.picker_options(client, cfg.EVENT)
         # The teams a call campaign may name as its callers (ruling 36). Names
@@ -247,7 +256,8 @@ async def create_campaign(body: CampaignIn, request: Request) -> dict[str, Any]:
     settings = get_settings()
     try:
         created = await service.create_campaign(client, body.changes, user_id=user.get("userId", ""),
-                                                calls_on=settings.campaigns_calls, sms_on=settings.campaigns_sms)
+                                                calls_on=settings.campaigns_calls, sms_on=settings.campaigns_sms,
+                                                email_on=settings.campaigns_email)
         moved = await service.set_relations(
             client, created["id"],
             {k: v for k, v in ((cfg.LINK_PARTNERS, body.partnerIds), (cfg.LINK_EVENTS, body.eventIds)) if v is not None},
@@ -287,6 +297,7 @@ async def get_campaign(campaign_id: str, request: Request) -> dict[str, Any]:
             saved = json.loads(row["selectionRule"])
             rule = (calls.normalise_rule(saved) if row.get("campaignKind") == cfg.KIND_CALL
                     else sms.normalise_rule(saved) if row.get("campaignKind") == cfg.KIND_SMS
+                    else email_kind.normalise_rule(saved) if row.get("campaignKind") == cfg.KIND_EMAIL
                     else postcard.normalise_rule(saved))
         except Exception:  # noqa: BLE001
             rule = None
@@ -320,6 +331,7 @@ async def get_campaign(campaign_id: str, request: Request) -> dict[str, Any]:
         "callBreakdown": reporting.touch_breakdown(touches),
         "rule": rule or (calls.DEFAULT_RULE if row.get("campaignKind") == cfg.KIND_CALL
                          else sms.DEFAULT_RULE if row.get("campaignKind") == cfg.KIND_SMS
+                         else email_kind.DEFAULT_RULE if row.get("campaignKind") == cfg.KIND_EMAIL
                          else postcard.DEFAULT_RULE),
         "manualMoves": service.manual_moves(row),
         "estimatedCost": estimated_cost(settings, service.touch_summary(touches)["planned"]),
@@ -338,7 +350,8 @@ async def update_campaign(campaign_id: str, body: ChangesIn, request: Request) -
     try:
         updated = await service.update_campaign(client, row, body.changes,
                                                 calls_on=get_settings().campaigns_calls,
-                                                sms_on=get_settings().campaigns_sms)
+                                                sms_on=get_settings().campaigns_sms,
+                                              email_on=get_settings().campaigns_email)
     except CampaignError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
@@ -421,6 +434,9 @@ async def build_list(campaign_id: str, body: BuildIn, request: Request) -> dict[
         elif row.get("campaignKind") == cfg.KIND_SMS:
             _require_sms(settings)
             result = await sms.build_list(api_client, client, row, body.rule)
+        elif row.get("campaignKind") == cfg.KIND_EMAIL:
+            _require_email(settings)
+            result = await email_kind.build_list(api_client, client, row, body.rule)
         else:
             result = await postcard.build_list(api_client, client, row, body.rule, settings)
     except CampaignError as exc:
@@ -452,6 +468,11 @@ async def sign_off(campaign_id: str, body: SignOffIn, request: Request) -> dict[
             _require_calls(settings)
             updated = await calls.sign_off(api_client, client, row,
                                            user_name=user.get("name") or user.get("userName") or "")
+        elif row.get("campaignKind") == cfg.KIND_EMAIL:
+            _require_email(settings)
+            updated = await email_kind.sign_off(api_client, client, row, confirm=body.confirm,
+                                                user_name=user.get("name") or user.get("userName") or "",
+                                                settings=settings)
         elif row.get("campaignKind") == cfg.KIND_SMS:
             _require_sms(settings)
             updated = await sms.sign_off(api_client, client, row, confirm=body.confirm,
@@ -471,6 +492,8 @@ async def sign_off(campaign_id: str, body: SignOffIn, request: Request) -> dict[
                  if row.get("campaignKind") == cfg.KIND_CALL else
                  f"Signed off the text message of \"{row.get('name')}\" to {updated.get('pieceCount')} people"
                  if row.get("campaignKind") == cfg.KIND_SMS else
+                 f"Signed off the email list of \"{row.get('name')}\": {updated.get('pieceCount')} people"
+                 if row.get("campaignKind") == cfg.KIND_EMAIL else
                  f"Signed off \"{row.get('name')}\": {updated.get('pieceCount')} pieces, "
                  f"estimated {updated.get('estimatedCost')} {updated.get('estimatedCostCurrency')}"),
         actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
@@ -970,6 +993,28 @@ async def _simulate_text(campaign_id: str, touch_id: str, kind: str, request: Re
         client, app=APP_CAMPAIGNS, category=CAT_STATUS, action="Text Reply Simulated",
         parent_type=cfg.TOUCH, parent_id=touch_id,
         summary=f"Simulated {'a STOP reply' if kind == 'stop' else 'a delivery report'} on a dry-run text",
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+    )
+    return result
+
+
+@api_router.post("/campaigns/{campaign_id}/mark-sent")
+async def mark_sent(campaign_id: str, request: Request) -> dict[str, Any]:
+    """Email kind: staff sent the notice at the mailing service (§ 3.3)."""
+    user, client = _actor(request)
+    settings = get_settings()
+    _require_email(settings)
+    row = await _campaign_or_404(request, client, campaign_id)
+    try:
+        result = await email_kind.mark_as_sent(_api_client(settings, request), row)
+    except CampaignError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not mark the campaign sent")
+    await record_action(
+        client, app=APP_CAMPAIGNS, category=CAT_STATUS, action="Campaign Marked Sent",
+        parent_type=cfg.CAMPAIGN, parent_id=campaign_id,
+        summary=f"Marked \"{row.get('name')}\" sent at the mailing service: {result['sent']} people",
         actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
     )
     return result

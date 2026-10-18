@@ -78,7 +78,8 @@ async def _enum_options(client: EspoApi, entity: str, names: Iterable[str]) -> d
     return out
 
 
-async def field_options(client: EspoApi, *, calls_on: bool = False, sms_on: bool = False) -> dict[str, Any]:
+async def field_options(client: EspoApi, *, calls_on: bool = False, sms_on: bool = False,
+                        email_on: bool = False) -> dict[str, Any]:
     """Enum options for the campaign form and the prospect filters, live from
     the CRM. A kind outside this phase is listed but marked so the screen can
     say which phase brings it."""
@@ -90,7 +91,7 @@ async def field_options(client: EspoApi, *, calls_on: bool = False, sms_on: bool
     return {
         "campaign": campaign,
         "prospect": prospect,
-        "kindsBuilt": list(cfg.kinds_built(calls_on, sms_on)),
+        "kindsBuilt": list(cfg.kinds_built(calls_on, sms_on, email_on)),
         "missingFields": missing,
     }
 
@@ -185,8 +186,8 @@ def _not_built(kind: str, built: tuple[str, ...]) -> str:
 
 
 async def create_campaign(client: EspoApi, changes: dict[str, Any], *, user_id: str,
-                          calls_on: bool = False, sms_on: bool = False) -> dict[str, Any]:
-    built = cfg.kinds_built(calls_on, sms_on)
+                          calls_on: bool = False, sms_on: bool = False, email_on: bool = False) -> dict[str, Any]:
+    built = cfg.kinds_built(calls_on, sms_on, email_on)
     opts = await field_options(client)
     payload = sanitize_changes(changes, opts["campaign"], opts["missingFields"])
     if not payload.get("name"):
@@ -206,8 +207,8 @@ async def create_campaign(client: EspoApi, changes: dict[str, Any], *, user_id: 
 
 
 async def update_campaign(client: EspoApi, campaign: dict[str, Any], changes: dict[str, Any],
-                          *, calls_on: bool = False, sms_on: bool = False) -> dict[str, Any]:
-    built = cfg.kinds_built(calls_on, sms_on)
+                          *, calls_on: bool = False, sms_on: bool = False, email_on: bool = False) -> dict[str, Any]:
+    built = cfg.kinds_built(calls_on, sms_on, email_on)
     opts = await field_options(client)
     payload = sanitize_changes(changes, opts["campaign"], opts["missingFields"])
     if "smsMessage" in payload and campaign.get("campaignStatus") not in (cfg.STATUS_DRAFT, cfg.STATUS_AWAITING, None):
@@ -236,6 +237,14 @@ _MANUAL_MOVES: dict[str, dict[str, tuple[str, ...]]] = {
         cfg.STATUS_DRAFT: (cfg.STATUS_CANCELLED,),
         cfg.STATUS_AWAITING: (cfg.STATUS_DRAFT, cfg.STATUS_CANCELLED),
         cfg.STATUS_SIGNED_OFF: (cfg.STATUS_CANCELLED,),
+        cfg.STATUS_CANCELLED: (cfg.STATUS_DRAFT,),
+    },
+    # An email campaign: the worker pushes its list; staff mark it sent.
+    cfg.KIND_EMAIL: {
+        cfg.STATUS_DRAFT: (cfg.STATUS_CANCELLED,),
+        cfg.STATUS_AWAITING: (cfg.STATUS_DRAFT, cfg.STATUS_CANCELLED),
+        cfg.STATUS_SIGNED_OFF: (cfg.STATUS_CANCELLED,),
+        cfg.STATUS_RUNNING: (cfg.STATUS_CANCELLED,),
         cfg.STATUS_CANCELLED: (cfg.STATUS_DRAFT,),
     },
     # A text-message campaign is sent by the worker, like the postcard run.

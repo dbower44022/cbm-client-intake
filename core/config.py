@@ -581,6 +581,9 @@ class Settings(BaseSettings):
     # dry-run client that is the default — nothing is texted until
     # SMS_PROVIDER=twilio and the account, number and carrier registration exist.
     campaigns_sms: bool = False
+    # Phase 4: the email kind — pushes each campaign's people as its own named
+    # list at the mailing service; staff send the notice there (build plan § 3.3).
+    campaigns_email: bool = False
     sms_provider: Literal["dryrun", "twilio"] = "dryrun"
     sms_account_sid: str = ""
     sms_auth_token: str = ""          # SECRET (worker sends, web verifies replies)

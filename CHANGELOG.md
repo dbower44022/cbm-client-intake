@@ -5,6 +5,37 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.264.0] — 2026-10-18
+
+**feat(prospects): Phase 4, part 3 — the email kind (build plan § 3.3;
+rulings 19, 25; dark behind `CAMPAIGNS_EMAIL`).** The application never sends
+email: an email campaign's people are pushed to the mailing service as the
+campaign's **own** list, and staff send the notice there.
+
+- **Selection** (`campaigns/email.py`): no cold email — Contacts who opted in
+  with a usable address (the standing list's own audience rule), typed
+  Prospect at the chosen rungs and still on the ladder; and, ruling 25's
+  term, clients whose engagements are all closed, the latest more than N
+  days ago (default 365). One address, one person.
+- **Sign off and push**: the typed count; refused without the mailing
+  connection, or if the campaign's list name (`Campaign — <name>`) would be
+  the standing list's. The worker pushes on the campaign-run timer: it finds
+  or creates the campaign's own list, imports the planned people, and
+  **never reads or writes the standing list or its stored id**; an address
+  the vendor holds as unsubscribed or on hold is withheld and its touch
+  cancelled; a person is never pushed twice.
+- **Mark as sent**, after the notice goes out at the vendor: every pushed
+  person reads Sent and the campaign completes (until the mailing plan's
+  Phase D reads the send report). Refused while anyone still waits for the
+  push.
+- The record page's *Email list* card: the rule with the dormant-client
+  term, the counts (to push, on the list, withheld, sent) and the three
+  buttons.
+
+Verified by tests only (3 new); the Constant Contact half has run on
+crm-test's trial account for the standing list (10-09-26), never for a
+campaign list.
+
 ## [0.263.0] — 2026-10-18
 
 **feat(prospects): Phase 4, part 2 — the funnel, the campaign's dashboard,
