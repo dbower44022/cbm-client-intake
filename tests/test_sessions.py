@@ -1195,6 +1195,68 @@ async def test_create_contact_whitelists_stamps_company_and_links():
     assert fake.relates == [("CEngagement", "E1", "engagementContacts", res["id"])]
 
 
+_EMAIL_META = {
+    "firstName": {"type": "varchar"}, "lastName": {"type": "varchar"},
+    "emailAddress": {"type": "email"}, "phoneNumber": {"type": "phone"},
+}
+
+
+@pytest.mark.asyncio
+async def test_create_contact_reuses_a_contact_whose_email_exists():
+    """The Contacts tab is a door (Doug 10-18-26): a known email is linked
+    and null-filled, never created a second time."""
+    user = Fake(meta_fields=_EMAIL_META,
+                records={("CPartnerProfile", "P1"): {"partnerCompanyId": "acct1"}})
+    api = Fake(contacts=[{"id": "c7", "name": "Pat K", "firstName": "Pat",
+                          "lastName": "", "phoneNumber": None, "cContactType": ["Client"]}])
+    res = await details.create_contact(PARTNER, user, "P1", {
+        "firstName": "Patricia", "lastName": "K", "emailAddress": "pat@example.com",
+        "phoneNumber": "+12165550100",
+    }, match_client=api)
+    assert res["id"] == "c7" and res["matched"] is True
+    assert user.created == []
+    # the match ran under the API client, by email
+    entity, kw = api.list_calls[0]
+    assert entity == "Contact" and kw["where"][0]["value"] == "pat@example.com"
+    # only EMPTY fields filled — the stored first name is kept
+    fills = [u for u in user.updates if u[1] == "c7" and "accountId" not in u[2]]
+    assert fills == [("Contact", "c7", {"lastName": "K", "phoneNumber": "+12165550100"})]
+    assert ("CPartnerProfile", "P1", "contacts", "c7") in user.relates
+
+
+@pytest.mark.asyncio
+async def test_create_contact_refuses_a_member_email():
+    user = Fake(meta_fields=_EMAIL_META)
+    api = Fake(contacts=[{"id": "m1", "name": "Joe Mentor", "cContactType": ["Mentor"]}])
+    with pytest.raises(service.SessionError, match="contacts card"):
+        await details.create_contact(PARTNER, user, "P1", {
+            "lastName": "Mentor", "emailAddress": "joe@example.com"}, match_client=api)
+    assert user.created == [] and user.relates == []
+
+
+@pytest.mark.asyncio
+async def test_create_contact_with_an_unknown_email_creates():
+    user = Fake(meta_fields=_EMAIL_META)
+    api = Fake()
+    res = await details.create_contact(PARTNER, user, "P1", {
+        "lastName": "New", "emailAddress": "new@example.com"}, match_client=api)
+    assert "matched" not in res
+    assert user.created[0][1]["emailAddress"] == "new@example.com"
+
+
+@pytest.mark.asyncio
+async def test_create_contact_reuse_survives_a_refused_fill():
+    class NoEdit(Fake):
+        async def update(self, entity, record_id, payload):
+            raise EspoError("update Contact failed: HTTP 403")
+    user = NoEdit(meta_fields=_EMAIL_META)
+    api = Fake(contacts=[{"id": "c7", "name": "Pat", "lastName": ""}])
+    res = await details.create_contact(PARTNER, user, "P1", {
+        "lastName": "K", "emailAddress": "pat@example.com"}, match_client=api)
+    assert res["matched"] is True and res["filled"] == []
+    assert ("CPartnerProfile", "P1", "contacts", "c7") in user.relates
+
+
 @pytest.mark.asyncio
 async def test_create_contact_requires_a_name():
     fake = Fake(meta_fields={"firstName": {"type": "varchar"}, "title": {"type": "varchar"}})

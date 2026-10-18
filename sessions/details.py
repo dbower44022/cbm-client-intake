@@ -659,19 +659,58 @@ async def unlink_contact(cfg: DomainConfig, client: SessionClient, parent_id: st
     await client.unrelate(cfg.parent_entity, parent_id, cfg.parent_contacts_link, contact_id)
 
 
-async def create_contact(cfg: DomainConfig, client: SessionClient, parent_id: str, changes: dict[str, Any]) -> dict[str, Any]:
+#: Never null-filled onto a matched contact: the match key, the company link
+#: (backfilled by :func:`link_contact` instead) and the type discriminator.
+_MATCH_NO_FILL = frozenset({"emailAddress", "accountId", "cContactType"})
+
+
+async def _matched_contact(
+    match_client: Any, email: str, keys: list[str]
+) -> Optional[dict[str, Any]]:
+    """The Contact already holding ``email``, read with ``keys`` for the
+    null-fill, or None."""
+    select = ",".join(dict.fromkeys(["id", "name", "cContactType", *keys]))
+    data = await match_client.list(
+        CONTACT,
+        where=[{"type": "equals", "attribute": "emailAddress", "value": email}],
+        select=select, max_size=1,
+    )
+    rows = data.get("list") or []
+    return rows[0] if rows else None
+
+
+async def create_contact(
+    cfg: DomainConfig, client: SessionClient, parent_id: str, changes: dict[str, Any],
+    *, match_client: Any = None,
+) -> dict[str, Any]:
     """Create a NEW contact and link it to this record in one operation.
 
     The payload is whitelisted against the live Contact field spec (drifted enum
     values dropped — same policy as saves) and the company affiliation
     (``accountId``) is stamped from this record's Account. Create → relate,
     halt-on-failure: a relate failure surfaces as an error (the created id is in
-    the message so nothing is silently lost)."""
+    the message so nothing is silently lost).
+
+    **This screen is a door** (Doug's ruling 10-18-26), so it follows the
+    doors' contact rule: a contact whose email the CRM already holds is
+    REUSED — linked to this record, its empty fields null-filled, nothing
+    overwritten — never created a second time. The match reads through
+    ``match_client`` (the intake API client from the router), because a
+    user whose role reads contacts at *own* or *team* cannot see the
+    existing one and would otherwise create a duplicate (the v0.249.1
+    lesson). A CBM member's contact is refused: members are added on the
+    CBM contacts card, never as a record contact."""
     meta_fields = await client.metadata(f"entityDefs.{CONTACT}.fields")
     spec = {f["name"]: f for f in _field_spec(meta_fields, CONTACT)}
     payload = _clean_changes(spec, changes)
     if not (payload.get("lastName") or payload.get("firstName")):
         raise SessionError("A first or last name is required to create a contact.")
+    email = str(payload.get("emailAddress") or "").strip()
+    if email:
+        fill_keys = [k for k in payload if k not in _MATCH_NO_FILL]
+        existing = await _matched_contact(match_client or client, email, fill_keys)
+        if existing:
+            return await _reuse_contact(cfg, client, parent_id, existing, payload, fill_keys)
     try:
         company_id = await _resolve_company_id(cfg, client, parent_id)
         if company_id:
@@ -688,6 +727,34 @@ async def create_contact(cfg: DomainConfig, client: SessionClient, parent_id: st
         ) from exc
     await _stamp_mentor_team(cfg, client, parent_id, created["id"])
     return {"id": created["id"]}
+
+
+async def _reuse_contact(
+    cfg: DomainConfig, client: SessionClient, parent_id: str,
+    existing: dict[str, Any], payload: dict[str, Any], fill_keys: list[str],
+) -> dict[str, Any]:
+    """Link a matched contact and null-fill its empty fields (see
+    :func:`create_contact`). The null-fill runs as the user and is
+    best-effort: a role that cannot edit the contact still gets it linked."""
+    types = existing.get("cContactType") or []
+    if isinstance(types, str):
+        types = [types]
+    if "Mentor" in types:
+        raise SessionError(
+            f"{existing.get('name') or 'This person'} is a {abbr()} member. "
+            f"Add them on the {abbr()} contacts card instead."
+        )
+    fill = {k: payload[k] for k in fill_keys
+            if payload.get(k) not in (None, "", []) and existing.get(k) in (None, "", [])}
+    if fill:
+        try:
+            await client.update(CONTACT, existing["id"], fill)
+        except EspoError as exc:
+            log.warning("could not null-fill matched contact %s: %s", existing["id"], exc)
+            fill = {}
+    await link_contact(cfg, client, parent_id, existing["id"])
+    return {"id": existing["id"], "matched": True, "name": existing.get("name"),
+            "filled": sorted(fill)}
 
 
 def _clean_changes(spec: dict[str, dict[str, Any]], changes: dict[str, Any]) -> dict[str, Any]:

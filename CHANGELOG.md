@@ -5,6 +5,21 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.264.2] — 2026-10-18
+
+**fix(sessions): the Contacts tab reuses a contact whose email the CRM
+already holds.** Doug's ruling 10-18-26: the staff screens are doors, so the
+doors' contact rule applies to them. *New contact* on a record's Contacts tab
+(Client, Partner and Funder Management alike) used to create a second
+Contact for a person already in the CRM. It now matches by email under the
+intake API client (a role reading contacts at *own* or *team* cannot see the
+existing one), links the match to the record, null-fills its empty fields as
+the user (best-effort; nothing is overwritten) and says so in the success
+message. A CBM member's email is refused with a pointer to the CBM contacts
+card. No CRM change, no flag; rollback is a revert. Verified by tests only.
+Cost: where the user's role cannot edit the matched contact, the link is
+refused with the CRM's 403 message instead of a duplicate being made.
+
 ## [0.264.1] — 2026-10-18
 
 **fix(prospects): a campaign's rule and sign-off are stored at last — ruling

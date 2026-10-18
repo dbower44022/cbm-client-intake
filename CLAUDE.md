@@ -46,6 +46,8 @@ Cross-form behaviour worth knowing before changing an orchestrator:
   public form, the webinar page, a staff quick-add (definition:
   `prds/prospect-marketing/build-plan.md` § 0). The word means that and
   nothing else; a staff application is never a door (Doug, 10-18-26).
+  **The staff screens that create records are doors** (Doug's ruling the
+  same day), so a rule written for "every door" binds them too.
 
 - **Company type is `cCompanyType`, never `cAccountType`.** The Account entity
   is presented as **Company**; `cAccountType` is gone from both CRMs. Valid
@@ -718,6 +720,9 @@ one shared frontend that derives its domain from the first segment of its URL.
   company or contact GAINS them when missing (`_merge_owner_stamps`,
   merge-only, best-effort) — the contact's company link needs the user to
   read the company. Null-fills and creates still run as the user.
+- **A new contact on the Contacts tab reuses a known email** (v0.264.2, the
+  staff screens are doors): matched under the intake API client, linked,
+  null-filled as the user; a CBM member is refused.
 - **Contacts tables are per-domain**: mentor shows Role chips and an Agreements
   badge; partner/funder show neither (every contact has the same relationship to
   CBM, and the consent bools are a client-intake concept) but offer **Make

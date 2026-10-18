@@ -602,8 +602,11 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 )
                 if account_id:
                     changes["accountId"] = account_id
-            created = await details_svc.create_contact(cfg, client, parent_id, changes)
-            return {"status": "ok", "id": created["id"]}
+            created = await details_svc.create_contact(
+                cfg, client, parent_id, changes, match_client=_api_client(get_settings())
+            )
+            return {"status": "ok", "id": created["id"],
+                    "matched": bool(created.get("matched")), "name": created.get("name")}
         except service.SessionError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
         except EspoError as exc:

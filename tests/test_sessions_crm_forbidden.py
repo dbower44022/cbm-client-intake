@@ -36,7 +36,7 @@ def _as(monkeypatch, user):
 def test_crm_403_on_contact_create_returns_readable_403(monkeypatch):
     _as(monkeypatch, _USER)
 
-    async def forbidden_create(cfg, client, parent_id, changes):
+    async def forbidden_create(cfg, client, parent_id, changes, **kwargs):
         raise EspoError("create Contact failed: HTTP 403 ")
 
     monkeypatch.setattr("sessions.details.create_contact", forbidden_create)

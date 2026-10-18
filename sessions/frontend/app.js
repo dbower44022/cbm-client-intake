@@ -5420,12 +5420,16 @@
       }
       save.disabled = true; err.hidden = true;
       try {
-        await api("/records/" + encodeURIComponent(currentDetail.id) + "/contacts",
+        var added = await api("/records/" + encodeURIComponent(currentDetail.id) + "/contacts",
           { method: "POST", body: JSON.stringify({ changes: changes }) });
         detailsAdd = null;
         await loadDetails(currentDetail.id);
         refreshRecordViews();
-        notice("detailsNotice", "Contact created and linked.", "success");
+        // A known email reuses the existing contact (the doors' rule).
+        notice("detailsNotice", added && added.matched
+          ? (added.name || "A contact") + " already had this email, so that contact was linked." +
+            " Only its empty fields were filled in."
+          : "Contact created and linked.", "success");
       } catch (e) {
         if (e.status === 401) { showLogin(); return; }
         save.disabled = false;
