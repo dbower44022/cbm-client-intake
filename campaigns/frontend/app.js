@@ -833,7 +833,10 @@
       var tab = btn.getAttribute("data-tab");
       Array.prototype.forEach.call(document.querySelectorAll("#recordPanel .cm__tabpanel"), function (p) { p.hidden = p.getAttribute("data-panel") !== tab; });
       if (tab === "links") loadLinks();
-      if (tab === "responses") loadResponses();
+      // The Responses tab re-reads the campaign first: a worker run (a text
+      // sent, a list pushed) since the page opened changes the touch rows and
+      // the buttons each row offers (found on the Phase 4 pass, C4).
+      if (tab === "responses") loadRecord().then(loadResponses);
       if (tab === "analytics") loadAnalytics(false);
     });
   });
