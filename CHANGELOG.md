@@ -5,6 +5,44 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.262.0] — 2026-10-18
+
+**feat(prospects): Phase 4, part 1 — the text-message kind, sent by the
+application (rulings 38, 39; dark behind `CAMPAIGNS_SMS`).** Doug answered
+build plan question 11 "b" (against the recommendation): the application sends
+the texts. Ruling 39: the wording is a field on the campaign in the CRM,
+`COutreachCampaign.smsMessage` — `scripts/plans/coutreach-sms-message.json`
+(fingerprint `7a68865149b4`), owed on every CRM (`prospect_crm_test.sh
+smstext`, `prospect_crm_prod.sh smstext`); feature-detected, so a CRM without
+it shows the kind with a notice and writes nothing.
+
+- **`core/sms.py`** — Twilio behind a `DryRunSmsClient` that is the default
+  (`SMS_PROVIDER`); the Twilio adapter is written from the published API and
+  **never run**. Message parts (GSM-7 160/153, UCS-2 70/67), the STOP words,
+  the texting hours (`SMS_SEND_HOURS`, `SMS_TIMEZONE`), Twilio's request
+  signature.
+- **`campaigns/sms.py`** — the selection (ruling 9: a Contact typed Prospect
+  with the text tick, a usable number, not opted out, still on the ladder),
+  *Build the list*, *Sign off and send* (refuses no wording and wording
+  without STOP; the typed recipient count; the wording frozen after), and the
+  worker's send on the campaign-run timer, inside the texting hours only.
+  **A touch is marked *sending* before each call and a touch left in that
+  state is never resent by itself** (Twilio takes no idempotency key); a
+  number refused for good cancels its touch; consent withdrawn before the send
+  cancels it too.
+- **Callbacks** `POST /api/campaigns/sms/inbound` (a STOP reply sets every
+  Contact holding the number to `cSmsOptIn` false at once) and
+  `/api/campaigns/sms/status` (Delivered, or the failure noted) — signed,
+  404 until `SMS_PROVIDER=twilio` and the auth token are set. In the dry run,
+  *Simulate delivered* and *Simulate a STOP reply* on each sent row.
+- The campaign form's *Text message* box counts characters and parts; the
+  record page's *Text message* card shows the list, the wording, its parts
+  and the refusals.
+
+New settings: `CAMPAIGNS_SMS` (off), `SMS_PROVIDER` (dryrun), `SMS_ACCOUNT_SID`,
+`SMS_AUTH_TOKEN` (secret), `SMS_FROM_NUMBER`, `SMS_SEND_HOURS` (9-20),
+`SMS_TIMEZONE`. Verified by tests only (12 new).
+
 ## [0.261.1] — 2026-10-18
 
 **fix(prospects): a mentor can record a call.** Doug's Phase 3 pass, step H6:

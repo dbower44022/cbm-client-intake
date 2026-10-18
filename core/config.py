@@ -576,6 +576,18 @@ class Settings(BaseSettings):
     # Operations runs it as dry-run then apply.
     prospect_stale_days: int = 180
     prospect_stale_sweep_seconds: int = 86400
+    # Phase 4, rulings 38 and 39: the text-message kind, which the application
+    # sends itself. Read per request. The texting service is Twilio behind a
+    # dry-run client that is the default — nothing is texted until
+    # SMS_PROVIDER=twilio and the account, number and carrier registration exist.
+    campaigns_sms: bool = False
+    sms_provider: Literal["dryrun", "twilio"] = "dryrun"
+    sms_account_sid: str = ""
+    sms_auth_token: str = ""          # SECRET (worker sends, web verifies replies)
+    sms_from_number: str = ""         # the sender number, E.164
+    # Texts go out only inside these hours, chapter time ("9-20" = 9:00–19:59).
+    sms_send_hours: str = "9-20"
+    sms_timezone: str = "America/New_York"
     # --- F5: the portal calendar (prds/events/CBM_Events_Portal_Calendar_Design.md) ---
     # The rail of upcoming events on the portal home page and the member page
     # behind it. Off by default so crm-test can show it to a real member first:

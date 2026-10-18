@@ -480,6 +480,15 @@ async def main() -> None:
                 await run_campaign_cycle(settings, stop=stop)
             except Exception as exc:  # noqa: BLE001 — never crashes delivery
                 log.warning("campaign run pass failed: %s", exc)
+            if settings.campaigns_sms:
+                # Text-message campaigns ride the same timer (rulings 38, 39);
+                # the cycle itself keeps to the texting hours.
+                try:
+                    from campaigns.sms import run_sms_cycle
+
+                    await run_sms_cycle(settings, stop=stop)
+                except Exception as exc:  # noqa: BLE001 — never crashes delivery
+                    log.warning("text campaign pass failed: %s", exc)
             next_campaign_run = now_cfg + timedelta(seconds=settings.campaigns_run_seconds)
         stale_on = (settings.campaigns_enabled and not settings.espo_dry_run
                     and settings.prospect_stale_sweep_seconds > 0)

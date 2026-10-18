@@ -710,7 +710,8 @@ def create_app(
             return settings.intake_max_body_mb * _mb
         # Campaign Management's public writes: the landing page's response and
         # the mail vendor's event callback (build plan § 3.2, § 4).
-        if path.startswith("/api/campaigns/landing/") or path == "/api/campaigns/postal/events":
+        if path.startswith("/api/campaigns/landing/") or path in (
+                "/api/campaigns/postal/events", "/api/campaigns/sms/inbound", "/api/campaigns/sms/status"):
             return settings.intake_max_body_mb * _mb
         return None
 

@@ -59,6 +59,7 @@ class FakeCrm:
         self.updated: list[tuple[str, str, dict]] = []
         self.related: dict[tuple[str, str, str], set[str]] = {}
         self.with_entities = with_entities
+        self.with_sms_field = True
         self._n = 0
 
     def add(self, entity: str, row: dict[str, Any]) -> dict[str, Any]:
@@ -80,7 +81,8 @@ class FakeCrm:
             return {"campaignKind": {"options": ["Postcard", "Email", "SMS", "Call", "Social media"]},
                     "platform": {"options": ["", "Meta", "YouTube"]},
                     "campaignStatus": {"options": ["Draft", "Awaiting sign-off", "Signed off", "Running", "Complete", "Cancelled"]},
-                    "postcardSize": {"options": ["", "4x6", "6x9", "6x11"]}}
+                    "postcardSize": {"options": ["", "4x6", "6x9", "6x11"]},
+                    **({"smsMessage": {"type": "text"}} if self.with_sms_field else {})}
         if key == f"entityDefs.{cfg.PROSPECT}.fields":
             return {"funnelStage": {"options": list(cfg.STAGES)}, "entryDoor": {"options": ["State filing", "List"]},
                     "sideExit": {"options": ["", "Already known", "Stale"]}, "addressStatus": {"options": ["Usable", "Dead"]}}

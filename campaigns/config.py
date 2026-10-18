@@ -39,11 +39,13 @@ SELECTING_KINDS = (KIND_POSTCARD, KIND_EMAIL, KIND_SMS, KIND_CALL)
 PHASE_1_KINDS = (KIND_POSTCARD, KIND_SOCIAL)
 #: Phase 3 adds the call kind, behind CAMPAIGNS_CALLS.
 CALL_KINDS = (KIND_CALL,)
+#: Phase 4 adds the text-message kind, behind CAMPAIGNS_SMS (rulings 38, 39).
+SMS_KINDS = (KIND_SMS,)
 
 
-def kinds_built(calls_on: bool) -> tuple[str, ...]:
+def kinds_built(calls_on: bool, sms_on: bool = False) -> tuple[str, ...]:
     """The kinds a campaign may be created as on this deployment."""
-    return PHASE_1_KINDS + (CALL_KINDS if calls_on else ())
+    return PHASE_1_KINDS + (CALL_KINDS if calls_on else ()) + (SMS_KINDS if sms_on else ())
 
 STATUS_DRAFT = "Draft"
 STATUS_AWAITING = "Awaiting sign-off"
@@ -143,11 +145,17 @@ CAMPAIGN_FIELDS: tuple[FieldSpec, ...] = (
     FieldSpec("vendorTemplateId", "Mail vendor template", "text", "Postcard", kinds=(KIND_POSTCARD,),
               help="The vendor's template for the card. Empty uses the dry-run preview."),
     FieldSpec("postcardSize", "Postcard size", "enum", "Postcard", kinds=(KIND_POSTCARD,)),
+    FieldSpec("smsMessage", "Text message", "textarea", "Text message", kinds=(KIND_SMS,),
+              help="What each person on the list receives. Must say how to stop texts (the word STOP). "
+                   "Paste the campaign's short link in from the Links tab. Frozen at sign-off."),
     FieldSpec("description", "Notes", "wysiwyg", "Notes",
               help="The brief, the offer, the creative notes."),
 )
 CAMPAIGN_EDIT_NAMES: frozenset[str] = frozenset(f.name for f in CAMPAIGN_FIELDS)
 CAMPAIGN_ENUM_NAMES: frozenset[str] = frozenset(f.name for f in CAMPAIGN_FIELDS if f.type == "enum")
+#: Fields a CRM may not carry yet (feature-detected, dropped from the form and
+#: the write when absent): ruling 39's text-message wording.
+CAMPAIGN_OPTIONAL_FIELDS: frozenset[str] = frozenset({"smsMessage"})
 
 # --- the campaign's links (§ 3.7): closed destinations ------------------------
 DEST_FORM = "form"

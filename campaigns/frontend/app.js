@@ -173,9 +173,16 @@
         input.value = value || "";
       } else if (spec.type === "date") { input = el("input"); input.type = "date"; input.value = value || "";
       } else if (spec.type === "wysiwyg") { input = el("textarea"); input.rows = 6; input.value = value || "";
+      } else if (spec.type === "textarea") { input = el("textarea"); input.rows = 4; input.value = value || "";
+        (function (ta) {
+          var counter = el("span", "cm__help");
+          function count() { var p = smsParts(ta.value); counter.textContent = p.characters + " characters · " + p.parts + " message part" + (p.parts === 1 ? "" : "s") + " (" + p.encoding + ")" + (/\bstop\b/i.test(ta.value) ? "" : " · must include the word STOP"); }
+          ta.addEventListener("input", count); setTimeout(count, 0); ta._counter = counter;
+        })(input);
       } else { input = el("input"); input.type = "text"; input.value = value || ""; }
       input.id = "f_" + spec.name; input.setAttribute("data-field", spec.name);
       field.appendChild(input);
+      if (input._counter) field.appendChild(input._counter);
       if (spec.help) field.appendChild(el("span", "cm__help", spec.help));
       groups[spec.group].appendChild(field);
     });
@@ -400,8 +407,82 @@
       else text(note, "Build the list, read the count and the cost, then sign off. Nothing is mailed until signed (ruling 13).");
     } else hide(pc);
     renderCallCard(rec);
+    renderSmsCard(rec);
     show($("recordPanel"));
   }
+
+  // --- the text-message kind (§ 3.5; rulings 38, 39) -------------------------------------------
+  // Mirrors core/sms.segments: GSM-7 is 160 alone / 153 a part, anything else 70 / 67.
+  var GSM7 = "@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà";
+  var GSM7_EXT = "^{}\\[~]|€";
+  function smsParts(text) {
+    text = text || ""; var gsm = true, units = 0;
+    for (var i = 0; i < text.length; i++) { var ch = text[i]; if (GSM7_EXT.indexOf(ch) >= 0) units += 2; else if (GSM7.indexOf(ch) >= 0) units += 1; else { gsm = false; break; } }
+    if (!gsm) units = text.length;
+    var single = gsm ? 160 : 70, multi = gsm ? 153 : 67;
+    return { characters: text.length, parts: units === 0 ? 0 : (units <= single ? 1 : Math.ceil(units / multi)), encoding: gsm ? "GSM-7" : "UCS-2" };
+  }
+
+  function renderSmsCard(rec) {
+    var c = rec.campaign, card = $("smsCard");
+    if (c.campaignKind !== "SMS") { hide(card); return; }
+    show(card);
+    var sum = rec.touchSummary || {}, review = (rec.touches || []).filter(function (t) { return (t.vendorStatus || "").indexOf("sending") === 0; }).length;
+    tiles($("smsTiles"), [["To send", sum.planned], ["Sent", sum.sent], ["Delivered", sum.delivered], ["Needs review", review]]);
+    var host = $("smsStages"); host.innerHTML = "";
+    var chosen = (rec.rule && rec.rule.stages) || [];
+    var editable = !c.campaignStatus || c.campaignStatus === "Draft" || c.campaignStatus === "Awaiting sign-off";
+    ((state.session.sms || {}).stages || ["Qualified", "Lead", "Warm Lead", "Opportunity"]).forEach(function (st) {
+      var lab = el("label", "cm__check"); var cb = el("input"); cb.type = "checkbox"; cb.value = st; cb.checked = chosen.indexOf(st) >= 0;
+      cb.disabled = !editable; cb.setAttribute("data-smsstage", st);
+      lab.appendChild(cb); lab.appendChild(document.createTextNode(" Contacts at ")); lab.appendChild(el("strong", null, st)); host.appendChild(lab);
+    });
+    text($("smsRuleSummary"), c.selectionSummary || "The list has not been built yet.");
+    var chk = rec.smsCheck || {};
+    text($("smsText"), c.smsMessage || "(no message written yet)");
+    text($("smsParts"), (chk.characters || 0) + " characters · " + (chk.parts || 0) + " message part" + (chk.parts === 1 ? "" : "s") + (chk.encoding ? " (" + chk.encoding + ")" : ""));
+    var prob = $("smsProblem");
+    if (chk.fieldAvailable === false) { prob.textContent = "This CRM has no Text message field on the campaign yet (ruling 39: coutreach-entities-crm-handoff.md § 9)."; show(prob); }
+    else if ((chk.problems || []).length) { prob.textContent = chk.problems[0]; show(prob); } else hide(prob);
+    var s = state.session.sms || {}, note = $("smsNote");
+    var where = s.provider === "dryrun" ? " The texting service is the dry run: nothing reaches a phone." : "";
+    if (!state.session.smsOn) text(note, "Campaign texts are switched off on this deployment (CAMPAIGNS_SMS at /setup).");
+    else if (c.campaignStatus === "Signed off") text(note, "Signed off. The worker sends within a minute, between " + (s.hours || "9-20") + " h " + (s.timezone || "") + "." + where);
+    else if (c.campaignStatus === "Running") text(note, "Sending. Reload to follow the counts." + (review ? " " + review + " text(s) were interrupted mid-send: check the texting service before resending — they are never resent by themselves." : "") + where);
+    else if (c.campaignStatus === "Complete") text(note, "Complete. Every text was handed to the texting service." + where);
+    else text(note, "Write the message (Edit), build the list, read the count, then sign off. A text cannot be called back." + where);
+  }
+
+  $("smsBuildBtn").addEventListener("click", async function () {
+    if (!state.record) return;
+    var c = state.record.campaign;
+    if (["Draft", "Awaiting sign-off", null, undefined, ""].indexOf(c.campaignStatus) < 0) { notice("The list cannot be rebuilt once the campaign is " + c.campaignStatus + ".", "warn"); return; }
+    var stages = Array.prototype.filter.call(document.querySelectorAll("[data-smsstage]"), function (cb) { return cb.checked; }).map(function (cb) { return cb.value; });
+    if (!stages.length) { notice("Tick at least one rung to text.", "warn"); return; }
+    try {
+      var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/build", { method: "POST", body: { rule: { stages: stages } } });
+      notice("List built: " + res.pieces + " to text (" + res.created + " new, " + res.cancelled + " dropped).", "ok");
+      loadRecord();
+    } catch (e) { notice(e.message, "error"); }
+  });
+
+  $("smsSignoffBtn").addEventListener("click", function () {
+    if (!state.record) return;
+    var c = state.record.campaign, sum = state.record.touchSummary || {}, chk = state.record.smsCheck || {};
+    if ((chk.problems || []).length) { notice(chk.problems[0], "warn"); return; }
+    if (!sum.planned) { notice("Build the list first — there is nobody on it to text.", "warn"); return; }
+    var body = el("div", "cm__plan");
+    body.appendChild(el("p", null, "This texts " + sum.planned + " " + (sum.planned === 1 ? "person" : "people") + " the message below, " + chk.parts + " message part" + (chk.parts === 1 ? "" : "s") + " each." + ((state.session.sms || {}).provider === "dryrun" ? " (Dry run — nothing reaches a phone.)" : "")));
+    body.appendChild(el("p", "cm__smstext", c.smsMessage || ""));
+    body.appendChild(el("p", "cm__hint", "Type the number of people to confirm. A text cannot be called back, and the message is frozen from now on."));
+    var f = el("div", "cm__field"); var lab = el("label", null, "Number of people"); lab.htmlFor = "smsConfirm"; var inp = el("input"); inp.type = "text"; inp.id = "smsConfirm"; inp.autocomplete = "off";
+    f.appendChild(lab); f.appendChild(inp); body.appendChild(f);
+    openModal("Sign off and send", body, async function () {
+      await api("/campaigns/" + encodeURIComponent(c.id) + "/signoff", { method: "POST", body: { confirm: inp.value } });
+      closeModal(); notice("Signed off. The worker sends within a minute, inside the texting hours.", "ok"); loadRecord();
+    }, "Sign off and send");
+    setTimeout(function () { inp.focus(); }, 50);
+  });
 
   // --- the call kind (§ 3.4; ruling 36) ------------------------------------------------------
   function callsPageUrl() { return location.origin + "/campaigns/calls.html"; }
@@ -603,6 +684,7 @@
     var t = [["Responded", r.responded || 0], ["Converted", r.converted || 0]];
     t = t.concat(Object.keys(r.totals || {}).map(function (k) { return [k, r.totals[k]]; }));
     if ((rec.campaign || {}).campaignKind === "Postcard") t = t.concat([["Pieces", sum.pieces], ["Delivered", sum.delivered], ["Returned", sum.returned], ["Scanned", sum.scanned]]);
+    if ((rec.campaign || {}).campaignKind === "SMS") t = t.concat([["Texts sent", (sum.sent || 0) + (sum.delivered || 0)], ["Delivered", sum.delivered]]);
     tiles($("responseTiles"), t);
     var body = $("responseRows"); body.innerHTML = "";
     (r.responses || []).forEach(function (x) {
@@ -638,7 +720,16 @@
       if (t2.vendorPieceId || t2.touchStatus === "Planned") {
         var pv = el("a", "cm__rowbtn", "Preview"); pv.href = API + "/campaigns/" + encodeURIComponent(RECORD_ID) + "/touches/" + encodeURIComponent(t2.id) + "/preview"; pv.target = "_blank"; pv.rel = "noopener"; aTd.appendChild(pv);
       }
-      if (state.session && state.session.postal.provider === "dryrun" && t2.vendorPieceId && t2.touchStatus !== "Returned") {
+      if (t2.channel === "SMS" && state.session && state.session.sms && state.session.sms.provider === "dryrun" && t2.vendorPieceId) {
+        [["text-delivered", "Simulate delivered"], ["stop", "Simulate a STOP reply"]].forEach(function (k) {
+          var b = el("button", "cm__rowbtn", k[1]); b.type = "button";
+          b.addEventListener("click", async function () {
+            try { await api("/campaigns/" + encodeURIComponent(RECORD_ID) + "/touches/" + encodeURIComponent(t2.id) + "/simulate", { method: "POST", body: { status: k[0] } }); notice(k[1].replace("Simulate ", "Simulated ") + ".", "ok"); await loadRecord(); renderResponses(); }
+            catch (e) { notice(e.message, "error"); }
+          });
+          aTd.appendChild(b);
+        });
+      } else if (state.session && state.session.postal.provider === "dryrun" && t2.vendorPieceId && t2.touchStatus !== "Returned") {
         ["delivered", "returned"].forEach(function (k) {
           var b = el("button", "cm__rowbtn", "Simulate " + k); b.type = "button";
           b.addEventListener("click", async function () {

@@ -29,7 +29,7 @@ from core.qr import qr_png, qr_svg
 from forms import SPECS_BY_SLUG
 
 from . import config as cfg
-from . import calls, imports, postcard, reporting, review, service
+from . import calls, imports, postcard, reporting, review, service, sms
 from .reporting import summarize_responses  # noqa: F401 — re-exported
 from .public import destination_path
 from .service import CampaignError
@@ -63,6 +63,11 @@ def _require_user(request: Request) -> dict:
 def _require_calls(settings: Settings) -> None:
     if not settings.campaigns_calls:
         raise HTTPException(status_code=404, detail="Campaign calls are switched off (CAMPAIGNS_CALLS at /setup).")
+
+
+def _require_sms(settings: Settings) -> None:
+    if not settings.campaigns_sms:
+        raise HTTPException(status_code=404, detail="Campaign texts are switched off (CAMPAIGNS_SMS at /setup).")
 
 
 def _require_caller(request: Request) -> dict:
@@ -155,8 +160,11 @@ async def session(request: Request) -> dict[str, Any]:
         "postal": {"provider": settings.postal_provider, "testMode": settings.postal_test_mode,
                    "unitCost": settings.postal_unit_cost, "currency": settings.postal_currency},
         "baseUrl": _base_url(request, settings),
-        "kindsBuilt": list(cfg.kinds_built(settings.campaigns_calls)),
+        "kindsBuilt": list(cfg.kinds_built(settings.campaigns_calls, settings.campaigns_sms)),
         "callsOn": settings.campaigns_calls,
+        "smsOn": settings.campaigns_sms,
+        "sms": {"provider": settings.sms_provider, "hours": settings.sms_send_hours,
+                "timezone": settings.sms_timezone, "stages": list(sms.TEXTABLE_STAGES)},
         "callStages": list(calls.CALLABLE_STAGES),
         "formDestinations": [{"slug": s, "title": SPECS_BY_SLUG[s].title}
                              for s in cfg.FORM_DESTINATIONS if s in SPECS_BY_SLUG],
@@ -167,7 +175,8 @@ async def session(request: Request) -> dict[str, Any]:
 async def fields(request: Request) -> dict[str, Any]:
     user, client = _actor(request)
     try:
-        options = await service.field_options(client, calls_on=get_settings().campaigns_calls)
+        options = await service.field_options(client, calls_on=get_settings().campaigns_calls,
+                                              sms_on=get_settings().campaigns_sms)
         partners = await service.picker_options(client, cfg.PARTNER_PROFILE)
         events = await service.picker_options(client, cfg.EVENT)
         # The teams a call campaign may name as its callers (ruling 36). Names
@@ -177,7 +186,8 @@ async def fields(request: Request) -> dict[str, Any]:
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not load the campaign form")
     return {
-        "fields": [f.__dict__ for f in cfg.CAMPAIGN_FIELDS],
+        "fields": [f.__dict__ for f in cfg.CAMPAIGN_FIELDS if f.name not in options["missingFields"]],
+        "missingFields": options["missingFields"],
         "options": options["campaign"],
         "prospectOptions": options["prospect"],
         "kindsBuilt": options["kindsBuilt"],
@@ -237,7 +247,7 @@ async def create_campaign(body: CampaignIn, request: Request) -> dict[str, Any]:
     settings = get_settings()
     try:
         created = await service.create_campaign(client, body.changes, user_id=user.get("userId", ""),
-                                                calls_on=settings.campaigns_calls)
+                                                calls_on=settings.campaigns_calls, sms_on=settings.campaigns_sms)
         moved = await service.set_relations(
             client, created["id"],
             {k: v for k, v in ((cfg.LINK_PARTNERS, body.partnerIds), (cfg.LINK_EVENTS, body.eventIds)) if v is not None},
@@ -276,6 +286,7 @@ async def get_campaign(campaign_id: str, request: Request) -> dict[str, Any]:
             import json
             saved = json.loads(row["selectionRule"])
             rule = (calls.normalise_rule(saved) if row.get("campaignKind") == cfg.KIND_CALL
+                    else sms.normalise_rule(saved) if row.get("campaignKind") == cfg.KIND_SMS
                     else postcard.normalise_rule(saved))
         except Exception:  # noqa: BLE001
             rule = None
@@ -290,12 +301,26 @@ async def get_campaign(campaign_id: str, request: Request) -> dict[str, Any]:
             caller_team_ids = list(whole.get("teamsIds") or [])
         except EspoError as exc:
             log.warning("teams of %s unreadable: %s", campaign_id, exc)
+    sms_check = None
+    if row.get("campaignKind") == cfg.KIND_SMS:
+        # The wording is not in the field select (a CRM without ruling 39's
+        # field would refuse it); a whole read carries it when it exists.
+        try:
+            whole = await client.get(cfg.CAMPAIGN, campaign_id)
+            row = {**row, "smsMessage": (whole or {}).get("smsMessage") or ""}
+            sms_check = {**sms.check_message(row["smsMessage"]),
+                         "fieldAvailable": await sms.message_field_available(client)}
+        except EspoError as exc:
+            log.warning("text message of %s unreadable: %s", campaign_id, exc)
     return {
         "campaign": row, "partners": partners, "events": events, "callerTeams": caller_teams,
+        "smsCheck": sms_check,
         "callerTeamIds": caller_team_ids,
         "touches": touches, "touchSummary": service.touch_summary(touches),
         "callBreakdown": reporting.touch_breakdown(touches),
-        "rule": rule or (calls.DEFAULT_RULE if row.get("campaignKind") == cfg.KIND_CALL else postcard.DEFAULT_RULE),
+        "rule": rule or (calls.DEFAULT_RULE if row.get("campaignKind") == cfg.KIND_CALL
+                         else sms.DEFAULT_RULE if row.get("campaignKind") == cfg.KIND_SMS
+                         else postcard.DEFAULT_RULE),
         "manualMoves": service.manual_moves(row),
         "estimatedCost": estimated_cost(settings, service.touch_summary(touches)["planned"]),
         "currency": settings.postal_currency,
@@ -312,7 +337,8 @@ async def update_campaign(campaign_id: str, body: ChangesIn, request: Request) -
     row = await _campaign_or_404(request, client, campaign_id)
     try:
         updated = await service.update_campaign(client, row, body.changes,
-                                                calls_on=get_settings().campaigns_calls)
+                                                calls_on=get_settings().campaigns_calls,
+                                                sms_on=get_settings().campaigns_sms)
     except CampaignError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
@@ -392,6 +418,9 @@ async def build_list(campaign_id: str, body: BuildIn, request: Request) -> dict[
         if row.get("campaignKind") == cfg.KIND_CALL:
             _require_calls(settings)
             result = await calls.build_list(api_client, client, row, body.rule)
+        elif row.get("campaignKind") == cfg.KIND_SMS:
+            _require_sms(settings)
+            result = await sms.build_list(api_client, client, row, body.rule)
         else:
             result = await postcard.build_list(api_client, client, row, body.rule, settings)
     except CampaignError as exc:
@@ -423,6 +452,10 @@ async def sign_off(campaign_id: str, body: SignOffIn, request: Request) -> dict[
             _require_calls(settings)
             updated = await calls.sign_off(api_client, client, row,
                                            user_name=user.get("name") or user.get("userName") or "")
+        elif row.get("campaignKind") == cfg.KIND_SMS:
+            _require_sms(settings)
+            updated = await sms.sign_off(api_client, client, row, confirm=body.confirm,
+                                         user_name=user.get("name") or user.get("userName") or "")
         else:
             updated = await postcard.sign_off(api_client, client, row, confirm=body.confirm,
                                               user_name=user.get("name") or user.get("userName") or "",
@@ -436,6 +469,8 @@ async def sign_off(campaign_id: str, body: SignOffIn, request: Request) -> dict[
         parent_type=cfg.CAMPAIGN, parent_id=campaign_id,
         summary=(f"Signed off the call list of \"{row.get('name')}\" — it is running"
                  if row.get("campaignKind") == cfg.KIND_CALL else
+                 f"Signed off the text message of \"{row.get('name')}\" to {updated.get('pieceCount')} people"
+                 if row.get("campaignKind") == cfg.KIND_SMS else
                  f"Signed off \"{row.get('name')}\": {updated.get('pieceCount')} pieces, "
                  f"estimated {updated.get('estimatedCost')} {updated.get('estimatedCostCurrency')}"),
         actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
@@ -485,9 +520,12 @@ async def simulate_event(campaign_id: str, touch_id: str, body: StatusIn, reques
     without a vendor — the live-verification step 9 of build plan § 7."""
     user, client = _actor(request)
     settings = get_settings()
+    api_client = _api_client(settings, request)
+    kind = body.status.lower()
+    if kind in ("stop", "text-delivered"):
+        return await _simulate_text(campaign_id, touch_id, kind, request, user, client, api_client, settings)
     if settings.postal_provider != "dryrun":
         raise HTTPException(status_code=400, detail="Simulated events are a dry-run tool; a real vendor posts its own.")
-    api_client = _api_client(settings, request)
     try:
         touch = await api_client.get(cfg.TOUCH, touch_id, select=cfg.TOUCH_SELECT)
         if not touch or touch.get("outreachCampaignId") != campaign_id or not touch.get("vendorPieceId"):
@@ -908,3 +946,30 @@ async def set_teams(campaign_id: str, body: TeamsIn, request: Request) -> dict[s
         actor_id=user.get("userId", ""), actor_name=user.get("name", ""), details={"teamIds": body.teamIds},
     )
     return {"teamIds": body.teamIds}
+
+
+async def _simulate_text(campaign_id: str, touch_id: str, kind: str, request: Request, user, client,
+                         api_client, settings: Settings) -> dict[str, Any]:
+    """Dry run only: what the texting service would post back for one sent
+    text — its delivery report, or the person replying STOP (ruling 38)."""
+    if settings.sms_provider != "dryrun":
+        raise HTTPException(status_code=400, detail="Simulated replies are a dry-run tool; the real service posts its own.")
+    try:
+        touch = await api_client.get(cfg.TOUCH, touch_id, select=cfg.TOUCH_SELECT)
+        if (not touch or touch.get("outreachCampaignId") != campaign_id or touch.get("channel") != cfg.KIND_SMS
+                or not touch.get("vendorPieceId")):
+            raise HTTPException(status_code=404, detail="No sent text on this row.")
+        if kind == "stop":
+            changed = await sms.apply_stop(api_client, touch.get("calledPhone") or "")
+            result: dict[str, Any] = {"applied": True, "optedOut": changed}
+        else:
+            result = await sms.apply_status(api_client, message_id=touch["vendorPieceId"], status="delivered")
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not apply the simulated reply")
+    await record_action(
+        client, app=APP_CAMPAIGNS, category=CAT_STATUS, action="Text Reply Simulated",
+        parent_type=cfg.TOUCH, parent_id=touch_id,
+        summary=f"Simulated {'a STOP reply' if kind == 'stop' else 'a delivery report'} on a dry-run text",
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+    )
+    return result

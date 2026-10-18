@@ -187,6 +187,7 @@ SECRET_KEYS: frozenset[str] = frozenset({
     "mailing_client_secret",
     "postal_api_key",
     "postal_webhook_secret",
+    "sms_auth_token",
 })
 
 
@@ -267,6 +268,24 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="An Unverified or Qualified prospect record with no touch for this "
             "many days leaves by the Stale side exit. 0 makes every untouched "
             "record stale — for a live check only."),
+    _s("campaigns_sms", GROUP_FEATURES, "Campaign texts", kind="bool", component="both",
+       help="The text-message campaign kind (rulings 38, 39). The application sends "
+            "the texts through the texting service below — with 'Texting service' at "
+            "dryrun nothing is texted. Needs COutreachCampaign.smsMessage in the CRM."),
+    _s("sms_provider", GROUP_INTEGRATIONS, "Texting service", kind="choice",
+       choices=("dryrun", "twilio"), component="both",
+       help="'dryrun' texts nothing. 'twilio' sends for real and needs the account, "
+            "the sender number and the carrier registration (A2P 10DLC) first."),
+    _s("sms_account_sid", GROUP_INTEGRATIONS, "Texting account SID", component="both"),
+    _s("sms_auth_token", GROUP_INTEGRATIONS, "Texting auth token", component="both",
+       help="Sends the texts (worker) and verifies the replies and delivery reports "
+            "the service posts back (web)."),
+    _s("sms_from_number", GROUP_INTEGRATIONS, "Texting sender number", component="worker",
+       help="The number texts come from, in +1… form."),
+    _s("sms_send_hours", GROUP_INTEGRATIONS, "Texting hours", component="worker",
+       help="Hours a text may go out, chapter time, as start-end (9-20 = 9:00 to 19:59)."),
+    _s("sms_timezone", GROUP_INTEGRATIONS, "Texting time zone", component="worker",
+       help="The time zone the texting hours are read in."),
     _s("prospect_stale_sweep_seconds", GROUP_FEATURES, "Prospect stale sweep", kind="int",
        unit="s", component="worker",
        help="How often the worker runs the Stale sweep (default nightly). 0 "

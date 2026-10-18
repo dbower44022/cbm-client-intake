@@ -243,3 +243,75 @@ async def postal_events(request: Request) -> dict[str, Any]:
             log.warning("postal event for piece %s failed: %s", ev.piece_id, exc)
             results.append({"applied": False, "reason": "CRM write failed"})
     return {"received": len(events), "results": results}
+
+
+# --- the texting service's callbacks (rulings 38, 39) ----------------------------------
+
+async def _twilio_form(request: Request, settings) -> dict[str, str]:
+    """The posted form, verified against Twilio's signature over the address
+    Twilio called — the deployment's public address, since the request reaches
+    us through the edge — and every POST parameter. 404 in the usual words
+    until the real service is configured; 401 on a bad signature."""
+    _active(settings)
+    if not settings.campaigns_sms or settings.sms_provider != "twilio" or not settings.sms_auth_token:
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
+    from core.sms import SmsSignatureError, verify_twilio_signature
+
+    # Parsed by hand: python-multipart is not installed, and Twilio posts
+    # application/x-www-form-urlencoded.
+    from urllib.parse import parse_qsl
+    form = dict(parse_qsl((await request.body()).decode("utf-8", "replace"), keep_blank_values=True))
+    base = (settings.app_base_url or str(request.base_url)).rstrip("/")
+    try:
+        verify_twilio_signature(settings.sms_auth_token, base + request.url.path, form,
+                                request.headers.get("X-Twilio-Signature", ""))
+    except SmsSignatureError as exc:
+        log.warning("texting callback refused: %s", exc)
+        raise HTTPException(status_code=401, detail="The request's signature does not verify.")
+    return form
+
+
+def _crm(request: Request):
+    factory = getattr(request.app.state, "events_client_factory", None)
+    if factory is None:
+        raise HTTPException(status_code=503, detail="No CRM client.")
+    return factory()
+
+
+@public_router.post("/api/campaigns/sms/inbound", include_in_schema=False)
+async def sms_inbound(request: Request) -> Response:
+    """A reply to a campaign text. A STOP reply opts the number out at once
+    (ruling 38); anything else is logged and left (no conversation is kept).
+    Answers an empty TwiML document, so the service sends nothing back of ours
+    (its own STOP confirmation is the carrier's)."""
+    settings = get_settings()
+    form = await _twilio_form(request, settings)
+    from core.sms import is_stop_reply
+    from . import sms
+
+    sender, body = form.get("From", ""), form.get("Body", "")
+    if is_stop_reply(body):
+        try:
+            changed = await sms.apply_stop(_crm(request), sender)
+            log.info("texting: STOP from …%s opted out %s contact(s)", sender[-4:], len(changed))
+        except EspoError as exc:
+            log.warning("texting: STOP from …%s could not be written: %s", sender[-4:], exc)
+            raise HTTPException(status_code=502, detail="The opt-out could not be recorded; retry.")
+    else:
+        log.info("texting: a reply from …%s that is not an opt-out (%s characters) — not kept", sender[-4:], len(body))
+    return Response('<?xml version="1.0" encoding="UTF-8"?><Response></Response>', media_type="text/xml")
+
+
+@public_router.post("/api/campaigns/sms/status", include_in_schema=False)
+async def sms_status(request: Request) -> dict[str, Any]:
+    """The service's delivery report for one text."""
+    settings = get_settings()
+    form = await _twilio_form(request, settings)
+    from . import sms
+
+    try:
+        return await sms.apply_status(_crm(request), message_id=form.get("MessageSid", ""),
+                                      status=form.get("MessageStatus", ""), error_code=form.get("ErrorCode", ""))
+    except EspoError as exc:
+        log.warning("texting status for %s failed: %s", form.get("MessageSid"), exc)
+        raise HTTPException(status_code=502, detail="The report could not be recorded; retry.")

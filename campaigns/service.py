@@ -78,27 +78,32 @@ async def _enum_options(client: EspoApi, entity: str, names: Iterable[str]) -> d
     return out
 
 
-async def field_options(client: EspoApi, *, calls_on: bool = False) -> dict[str, Any]:
+async def field_options(client: EspoApi, *, calls_on: bool = False, sms_on: bool = False) -> dict[str, Any]:
     """Enum options for the campaign form and the prospect filters, live from
     the CRM. A kind outside this phase is listed but marked so the screen can
     say which phase brings it."""
     campaign = await _enum_options(client, cfg.CAMPAIGN, cfg.CAMPAIGN_ENUM_NAMES)
+    live = await client.metadata(f"entityDefs.{cfg.CAMPAIGN}.fields") or {}
+    missing = sorted(n for n in cfg.CAMPAIGN_OPTIONAL_FIELDS if not (isinstance(live, dict) and n in live))
     prospect = await _enum_options(
         client, cfg.PROSPECT, ("funnelStage", "entryDoor", "sideExit", "addressStatus"))
     return {
         "campaign": campaign,
         "prospect": prospect,
-        "kindsBuilt": list(cfg.kinds_built(calls_on)),
+        "kindsBuilt": list(cfg.kinds_built(calls_on, sms_on)),
+        "missingFields": missing,
     }
 
 
-def sanitize_changes(changes: dict[str, Any], options: dict[str, list[str]]) -> dict[str, Any]:
+def sanitize_changes(changes: dict[str, Any], options: dict[str, list[str]],
+                     missing: Iterable[str] = ()) -> dict[str, Any]:
     """The whitelist plus the enum guard: an unknown field is dropped, an enum
     value outside the live options is dropped (fails open — a drifted option
     stores nothing rather than 400ing the whole save)."""
     out: dict[str, Any] = {}
+    missing = set(missing)
     for key, value in (changes or {}).items():
-        if key not in cfg.CAMPAIGN_EDIT_NAMES:
+        if key not in cfg.CAMPAIGN_EDIT_NAMES or key in missing:
             continue
         if key in cfg.CAMPAIGN_ENUM_NAMES:
             if value in ("", None):
@@ -110,7 +115,7 @@ def sanitize_changes(changes: dict[str, Any], options: dict[str, list[str]]) -> 
                 continue
         if isinstance(value, str):
             value = value.strip()
-            if key != "description" and value == "":
+            if key not in ("description", "smsMessage") and value == "":
                 value = None
         out[key] = value
     return out
@@ -180,10 +185,10 @@ def _not_built(kind: str, built: tuple[str, ...]) -> str:
 
 
 async def create_campaign(client: EspoApi, changes: dict[str, Any], *, user_id: str,
-                          calls_on: bool = False) -> dict[str, Any]:
-    built = cfg.kinds_built(calls_on)
-    options = (await field_options(client))["campaign"]
-    payload = sanitize_changes(changes, options)
+                          calls_on: bool = False, sms_on: bool = False) -> dict[str, Any]:
+    built = cfg.kinds_built(calls_on, sms_on)
+    opts = await field_options(client)
+    payload = sanitize_changes(changes, opts["campaign"], opts["missingFields"])
     if not payload.get("name"):
         raise CampaignError("A campaign needs a name.")
     if not payload.get("campaignKind"):
@@ -192,6 +197,8 @@ async def create_campaign(client: EspoApi, changes: dict[str, Any], *, user_id: 
         raise CampaignError(_not_built(payload["campaignKind"], built))
     if payload["campaignKind"] != cfg.KIND_SOCIAL:
         payload["platform"] = None
+    if payload["campaignKind"] != cfg.KIND_SMS:
+        payload.pop("smsMessage", None)
     payload["campaignStatus"] = cfg.STATUS_DRAFT
     if user_id:
         payload["assignedUserId"] = user_id
@@ -199,10 +206,12 @@ async def create_campaign(client: EspoApi, changes: dict[str, Any], *, user_id: 
 
 
 async def update_campaign(client: EspoApi, campaign: dict[str, Any], changes: dict[str, Any],
-                          *, calls_on: bool = False) -> dict[str, Any]:
-    built = cfg.kinds_built(calls_on)
-    options = (await field_options(client))["campaign"]
-    payload = sanitize_changes(changes, options)
+                          *, calls_on: bool = False, sms_on: bool = False) -> dict[str, Any]:
+    built = cfg.kinds_built(calls_on, sms_on)
+    opts = await field_options(client)
+    payload = sanitize_changes(changes, opts["campaign"], opts["missingFields"])
+    if "smsMessage" in payload and campaign.get("campaignStatus") not in (cfg.STATUS_DRAFT, cfg.STATUS_AWAITING, None):
+        raise CampaignError("A text message is frozen once the campaign is signed off.")
     if "campaignKind" in payload and payload["campaignKind"] != campaign.get("campaignKind"):
         if campaign.get("campaignStatus") not in (cfg.STATUS_DRAFT, None):
             raise CampaignError("A campaign's kind can only change while it is a draft.")
@@ -227,6 +236,14 @@ _MANUAL_MOVES: dict[str, dict[str, tuple[str, ...]]] = {
         cfg.STATUS_DRAFT: (cfg.STATUS_CANCELLED,),
         cfg.STATUS_AWAITING: (cfg.STATUS_DRAFT, cfg.STATUS_CANCELLED),
         cfg.STATUS_SIGNED_OFF: (cfg.STATUS_CANCELLED,),
+        cfg.STATUS_CANCELLED: (cfg.STATUS_DRAFT,),
+    },
+    # A text-message campaign is sent by the worker, like the postcard run.
+    cfg.KIND_SMS: {
+        cfg.STATUS_DRAFT: (cfg.STATUS_CANCELLED,),
+        cfg.STATUS_AWAITING: (cfg.STATUS_DRAFT, cfg.STATUS_CANCELLED),
+        cfg.STATUS_SIGNED_OFF: (cfg.STATUS_CANCELLED,),
+        cfg.STATUS_RUNNING: (cfg.STATUS_CANCELLED,),
         cfg.STATUS_CANCELLED: (cfg.STATUS_DRAFT,),
     },
     # A call list runs from its sign-off (no vendor, no worker): Running until
