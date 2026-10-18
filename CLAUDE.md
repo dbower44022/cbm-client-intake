@@ -1768,12 +1768,13 @@ reworking a feature. The chapter network is
 at its `README.md`. **Prospect marketing and Campaign Management are a directory
 too** (consolidated 10-14-26 after three sessions in one day left three
 documents that disagreed): **`prds/prospect-marketing/`** — start at its
-`README.md`; `rulings.md` holds rulings 1–31 and CM-1 to CM-11 and is the
-binding record (append only); `build-plan.md` v0.3 is the one plan; its two
+`README.md`; `rulings.md` holds rulings 1–37 and CM-1 to CM-11 and is the
+binding record (append only); `build-plan.md` v0.5 is the one plan; its two
 CRM handoffs (`contact-sms-opt-in-crm-handoff.md`,
 `coutreach-entities-crm-handoff.md`) are complete on crm-test (10-15-26) and
-owed on production and Boston; **Phase 1 is built** (v0.258.0, dark —
-the Campaign Management section above); Doug's live pass is owed.
+owed on production and Boston; **Phases 1 and 2 are built** (v0.258.0,
+v0.259.0, dark — the Campaign Management section above); Phase 1's live
+pass ran 10-15/17-26, Phase 2's is `OPEN-ITEMS.md` #51.
 **One session on that arc at a time.** Eight settled rulings, a phase file each for phases 0–6, a
 decision log, and its own task list. Phase 0 (de-Cleveland) is **built**; **Phase
 1, CRM configuration as a versioned build artifact, is the next one and the only
@@ -2460,16 +2461,22 @@ sentence is a convenience.
   `doctl` when a failure is reported. The browser half has not yet caught a
   real failure.
 
-- **v0.258.0 (2026-10-15) — Campaign Management, prospect marketing Phase 1.**
-  Committed, not pushed. Dark behind `CAMPAIGNS_ENABLED` and
-  `CAMPAIGNS_LANDING_PUBLIC`; the mail vendor is the dry run. Standing rules
-  in the Campaign Management section above; the CRM change it needs is
-  complete on crm-test (10-15-26 01:06–01:49, both handoffs). **Verified by
-  tests only** (36 new); Doug's fourteen-step live pass on crm-test is
-  `OPEN-ITEMS.md` #51, from the step page there. Owed after it: production's
-  CRM change at a Sunday slot (plus the `Prospect Response` receipt option
-  and the three entities' layouts), Boston, a seeder and re-baseline, Phase 2
-  (`prompts/prospect-marketing-phase-2-build-prompt-v0.1.md`).
+- **v0.258.0–v0.258.5 (2026-10-15) — Campaign Management, prospect marketing
+  Phase 1.** Pushed and live on all three apps; dark behind
+  `CAMPAIGNS_ENABLED` and `CAMPAIGNS_LANDING_PUBLIC` (both ON on crm-test
+  since the pass), the mail vendor the dry run. **Live pass run by Doug on
+  crm-test 10-15/17-26** from https://claude.ai/artifact/XSEA7eWTx3yhXkH6Kw9oLD;
+  it found five defects, fixed in .1–.5: `[hidden]` losing to `display:grid`
+  (every panel at once); a prospect create carrying a Company link 403s as a
+  Marketing Admin (links now the API client's second write); a partial import
+  that could not resume; the Imports route shadowed; **the API role needs
+  edit on `COutreachCampaign`** for the worker's run (the role script's
+  seventh grant — re-run it on every CRM); a promoted company selected
+  beside its own prospect record. Owed: production's CRM change at a Sunday
+  slot (`coutreach-entities-crm-handoff.md` § 7: both plans, the
+  `Prospect Response` receipt option, the role script, the notes
+  conversion, the tab list, the three entities' layouts), Boston, a seeder
+  and re-baseline.
 
 *(The v0.198.0 company-link arc — the Company picker, the many-to-one CRM
 change for partners and funders, the client one-to-one ruling — is deployed and
