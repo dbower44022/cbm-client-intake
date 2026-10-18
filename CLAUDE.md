@@ -2422,10 +2422,26 @@ sentence is a convenience.
   answered "A" — **ruling 34**, the information request door's company
   typed Prospect, with `scripts/relabel_info_request_companies.py` for the
   companies created under the old shape (dry-run first; Doug runs it per
-  CRM once the Prospect option is there). **Verified by tests only** (38
-  new, 2,557 green); Doug's six-step live pass on crm-test is
-  `OPEN-ITEMS.md` #51, from its step page. Next kickoff:
-  `prompts/prospect-marketing-phase-3-build-prompt-v0.1.md`.
+  CRM once the Prospect option is there). **Live pass 10-17-26:** sections
+  A–E matched on crm-test (a card through to delivery, two partners, a
+  partner link plus a campaign link, ruling 27); F's registrations and G–I
+  are owed on 10-18-26 — crm-test's 04:00 UTC reset removed the pass's
+  records mid-F. The pass found two defects, both fixed: **v0.259.1** (the
+  worker's `ResumableClient` lacked `metadata` and `list_related`, so every
+  worker delivery dropped the campaign — live 22:35) and **ruling 35** (two
+  CRM fields both labelled *Campaign*; ours is *Outreach Campaign* in the
+  CRM, crm-test relabelled, production and Boston owed, handoff § 3.4).
+  Step page https://claude.ai/artifact/JLZyupBD4i6scAogws6sWD. Doug opened
+  the Phase 3 gate to build in parallel (10-18-26 00:05): kickoff
+  `prompts/prospect-marketing-phase-3-build-prompt-v0.1.md` v0.2.
+
+- **v0.260.0 / v0.260.1 (2026-10-17/18) — the browser reports its own
+  failures.** v0.260.0 pushed and live on both deployments 23:14 (served
+  `busy.js` and the endpoint checked); v0.260.1 committed, not pushed.
+  Standing rule in the Gotchas (*This application*). Doug ruled against a
+  `/setup` screen for now — Claude reads the `client-error` lines with
+  `doctl` when a failure is reported. The browser half has not yet caught a
+  real failure.
 
 - **v0.258.0 (2026-10-15) — Campaign Management, prospect marketing Phase 1.**
   Committed, not pushed. Dark behind `CAMPAIGNS_ENABLED` and

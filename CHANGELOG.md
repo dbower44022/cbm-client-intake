@@ -4,6 +4,14 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.260.1] — 2026-10-18
+
+**fix(logging): a browser error report that writes no line says why.** One
+report on the Phase 2 live pass (10-17-26 23:14) produced no `client-error`
+line, and the reason went to debug, which is not recorded. An unknown kind or
+an unreadable body now writes an INFO `client-error-unread` line naming the
+kind and the keys the report carried.
+
 ## [0.260.0] — 2026-10-17
 
 **feat(logging): the browser reports its own failures to the server log.**
