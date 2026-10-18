@@ -277,6 +277,22 @@ relationship type; option B, leave it and filter in reports. Doug's reply at
     for prospects; a client's rung is read from the engagement (§ 1.8). A
     rung already written that way is left alone. (10-18-26)
 
+### Doug's ruling (10-18-26, at the start of the Phase 4 build session)
+
+Build plan § 9 question 11, put as a consequential decision: option A, the
+SMS kind builds, signs off and exports its list and staff send from their
+own tool; option B, the application sends through a texting service. Doug's
+reply at 01:53: "b" — against the recommendation.
+
+38. **The application sends a text-message campaign itself** (option B),
+    through a texting service, at sign-off, as the postcard run hands its
+    pieces to the mail vendor. The selection stays ruling 9's: a Contact with
+    `cSmsOptIn` true, a phone, not opted out. Sending makes the chapter the
+    sender in law, so an opt-out reply (STOP) is honoured at once and written
+    back to the Contact, and the vendor account, its sender number and the
+    carrier registration a United States sender needs are prerequisites
+    before the first real text. (10-18-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -397,8 +413,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.7 |
-| Last Updated | 10-18-26 00:16 |
+| Version | 1.8 |
+| Last Updated | 10-18-26 01:55 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -406,6 +422,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.8 | 10-18-26 01:55 | Claude (Claude Code) | Ruling 38 appended: the application sends text-message campaigns itself (Doug's "b" to build plan § 9 question 11, against the recommendation). |
 | 1.7 | 10-18-26 00:16 | Claude (Claude Code) | Ruling 37 appended: no rung evidence on a record already holding a relationship type (Doug's "a", Phase 2 live pass finding). |
 | 1.6 | 10-18-26 00:14 | Claude (Claude Code) | Ruling 36 appended: callers are the campaign's teams, acting as themselves; the Mentor Role gains COutreachTouch read/edit and CProspect read (Doug's "a" to build plan § 9 question 6, at the start of the Phase 3 build). |
 | 1.5 | 10-17-26 22:50 | Claude (Claude Code) | Ruling 35 appended: "Outreach Campaign" as the CRM label (Doug's "rename ours", Phase 2 live pass B8). |

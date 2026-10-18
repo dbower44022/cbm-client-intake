@@ -1250,7 +1250,9 @@ the Campaign Management requirements.
     Cost: a kind that does not send; staff send from the vendor's own tool
     with the exported list and press *Mark as sent*. The alternative is to
     rule a vendor now (Twilio is the usual one), which adds a client, a
-    secret, a sender number and the opt-out handling the law requires.
+    secret, a sender number and the opt-out handling the law requires. **Answered
+    10-18-26: B, send from the application (ruling 38), against the
+    recommendation.**
 12. **The prospect screens' home.** Recommended: Prospects, Review and Calls
     as secondary grids under the *Campaign Management* tile — one tile for
     the whole marketing workspace, the same team either way. Cost: a tile
