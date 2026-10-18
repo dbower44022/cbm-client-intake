@@ -395,3 +395,13 @@ def test_the_campaigns_analytics_page_and_its_metrics_are_registered():
     assert result.error is None and result.data["rows"][1]["Unverified"] == 1
     gone = run(get_metric("campaign_touches").compute(MetricContext(settings=_settings(), espo=FakeCrm(with_entities=False))))
     assert gone.error and "CProspect" in gone.error
+
+
+def test_a_call_campaign_names_its_callers_through_its_teams(monkeypatch):
+    crm = FakeCrm()
+    camp = crm.add(cfg.CAMPAIGN, {"name": "Calls", "campaignKind": "Call", "campaignStatus": "Draft"})
+    crm.add(cfg.CAMPAIGN, {"id": "cards", "name": "Cards", "campaignKind": "Postcard", "campaignStatus": "Draft"})
+    client = build(monkeypatch, user=MARKETING, crm=crm, store=FakeStore())
+    ok = client.put(f"/campaigns/api/campaigns/{camp['id']}/teams", json={"teamIds": ["t-m", "t-m", ""]})
+    assert ok.status_code == 200 and crm.rows[cfg.CAMPAIGN][camp["id"]]["teamsIds"] == ["t-m"]
+    assert client.put("/campaigns/api/campaigns/cards/teams", json={"teamIds": ["t-m"]}).status_code == 400

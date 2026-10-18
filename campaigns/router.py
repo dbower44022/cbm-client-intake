@@ -170,6 +170,10 @@ async def fields(request: Request) -> dict[str, Any]:
         options = await service.field_options(client, calls_on=get_settings().campaigns_calls)
         partners = await service.picker_options(client, cfg.PARTNER_PROFILE)
         events = await service.picker_options(client, cfg.EVENT)
+        # The teams a call campaign may name as its callers (ruling 36). Names
+        # only, read under the org-wide key: a marketing role may hold no Team
+        # read, and the list is the choice, not anyone's data.
+        teams = await service.picker_options(_system_client(get_settings()) or client, "Team")
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not load the campaign form")
     return {
@@ -179,6 +183,7 @@ async def fields(request: Request) -> dict[str, Any]:
         "kindsBuilt": options["kindsBuilt"],
         "partnerOptions": partners,       # None: the role may not list partners → read-only
         "eventOptions": events,
+        "teamOptions": teams,
     }
 
 
@@ -223,6 +228,7 @@ class CampaignIn(BaseModel):
     changes: dict[str, Any] = Field(default_factory=dict)
     partnerIds: Optional[list[str]] = None
     eventIds: Optional[list[str]] = None
+    teamIds: Optional[list[str]] = None
 
 
 @api_router.post("/campaigns")
@@ -236,6 +242,8 @@ async def create_campaign(body: CampaignIn, request: Request) -> dict[str, Any]:
             client, created["id"],
             {k: v for k, v in ((cfg.LINK_PARTNERS, body.partnerIds), (cfg.LINK_EVENTS, body.eventIds)) if v is not None},
             admin_factory=admin_client_factory(settings))
+        if body.teamIds is not None and created.get("campaignKind") == cfg.KIND_CALL:
+            await service.set_teams(client, created["id"], body.teamIds)
     except CampaignError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
@@ -272,16 +280,19 @@ async def get_campaign(campaign_id: str, request: Request) -> dict[str, Any]:
         except Exception:  # noqa: BLE001
             rule = None
     caller_teams = None
+    caller_team_ids = None
     if row.get("campaignKind") == cfg.KIND_CALL:
         # The teams named on the campaign decide who calls (ruling 36); a whole
         # read carries them (the field select does not).
         try:
-            caller_teams = calls.campaign_team_names(await client.get(cfg.CAMPAIGN, campaign_id),
-                                                     settings.campaigns_allowed_teams_list)
+            whole = await client.get(cfg.CAMPAIGN, campaign_id)
+            caller_teams = calls.campaign_team_names(whole, settings.campaigns_allowed_teams_list)
+            caller_team_ids = list(whole.get("teamsIds") or [])
         except EspoError as exc:
             log.warning("teams of %s unreadable: %s", campaign_id, exc)
     return {
         "campaign": row, "partners": partners, "events": events, "callerTeams": caller_teams,
+        "callerTeamIds": caller_team_ids,
         "touches": touches, "touchSummary": service.touch_summary(touches),
         "callBreakdown": reporting.touch_breakdown(touches),
         "rule": rule or (calls.DEFAULT_RULE if row.get("campaignKind") == cfg.KIND_CALL else postcard.DEFAULT_RULE),
@@ -872,3 +883,28 @@ async def record_outcome(touch_id: str, body: OutcomeIn, request: Request) -> di
         details={"consequences": result["consequences"], "warnings": result["warnings"]},
     )
     return result
+
+
+class TeamsIn(BaseModel):
+    teamIds: list[str] = Field(default_factory=list)
+
+
+@api_router.put("/campaigns/{campaign_id}/teams")
+async def set_teams(campaign_id: str, body: TeamsIn, request: Request) -> dict[str, Any]:
+    """Who calls for a call campaign (ruling 36): the campaign's own teams,
+    written as the signed-in user. None named means the Marketing Admin Team."""
+    user, client = _actor(request)
+    row = await _campaign_or_404(request, client, campaign_id)
+    if row.get("campaignKind") != cfg.KIND_CALL:
+        raise HTTPException(status_code=400, detail="Only a call campaign names the teams that call.")
+    try:
+        await service.set_teams(client, campaign_id, body.teamIds)
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not change who calls")
+    await record_action(
+        client, app=APP_CAMPAIGNS, category=CAT_RECORD_EDIT, action="Campaign Callers Changed",
+        parent_type=cfg.CAMPAIGN, parent_id=campaign_id,
+        summary=f"Changed the teams that call for \"{row.get('name')}\"",
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""), details={"teamIds": body.teamIds},
+    )
+    return {"teamIds": body.teamIds}

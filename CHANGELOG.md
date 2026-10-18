@@ -36,7 +36,9 @@ two `WOULD set` lines on crm-test; Doug applies with
   the three outcomes — *No answer* (with *Call again*), *Interested* (Lead,
   advance-only), *Declined* (the `Declined` side exit on a prospect record).
   The touch is written as the caller; the rung, the exit, the fresh row and
-  the completion under the API client.
+  the completion under the API client. **Who calls is set on the campaign's
+  form** (*Who calls* — the campaign's own teams, `PUT …/teams`, written as
+  the user; options listed under the org-wide key).
 - **The Stale sweep** (`campaigns/stale.py`) — an Unverified or Qualified
   record with no touch for `PROSPECT_STALE_DAYS` (180) and no planned touch
   leaves by `Stale`; the worker runs it every `PROSPECT_STALE_SWEEP_SECONDS`
@@ -48,7 +50,9 @@ two `WOULD set` lines on crm-test; Doug applies with
   and the Responses tab now read too.
 
 New settings: `CAMPAIGNS_CALLS` (off), `PROSPECT_STALE_DAYS`,
-`PROSPECT_STALE_SWEEP_SECONDS`. Verified by tests only (25 new).
+`PROSPECT_STALE_SWEEP_SECONDS`. Verified by tests (26 new) and in a stub
+harness (the Calls page, the Review tab, the call card, the team picker);
+never against a live CRM.
 
 ## [0.260.3] — 2026-10-18
 

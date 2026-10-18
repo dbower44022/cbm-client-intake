@@ -149,7 +149,7 @@
     return wrap;
   }
 
-  function campaignForm(record, chosenPartners, chosenEvents) {
+  function campaignForm(record, chosenPartners, chosenEvents, chosenTeams) {
     var f = state.fields, s = state.session;
     var root = el("div", "cm__plan");
     var groups = {};
@@ -183,6 +183,12 @@
     var partners = pickList("partners", "Partners (CM-2)", f.partnerOptions, chosenPartners, "The partners this campaign is for. A client who arrives through it is credited to every one.");
     var events = pickList("events", "Events (CM-6)", f.eventOptions, chosenEvents, "The events this campaign advertises.");
     rel.appendChild(partners); rel.appendChild(events); root.appendChild(rel);
+    // Who calls (ruling 36): a call campaign's own teams. None named means the
+    // Marketing Admin Team; naming the Mentor Team opens its calls to mentors.
+    var callers = el("div", "cm__group cm__field--kinds"); callers.setAttribute("data-kinds", "Call");
+    callers.appendChild(el("h4", null, "Who calls"));
+    var teams = pickList("teams", "Teams that call", f.teamOptions, chosenTeams || [], "The members of these teams see this campaign's calls on the Calls page. Name none and it is the Marketing Admin Team's.");
+    callers.appendChild(teams); root.appendChild(callers);
     var kindSel = root.querySelector('[data-field="campaignKind"]');
     function showKinds() {
       var kind = kindSel ? kindSel.value : "";
@@ -214,7 +220,9 @@
         }
         changes[name] = inp.value;
       });
-      return { changes: changes, partnerIds: partners.getChosen ? partners.getChosen() : null, eventIds: events.getChosen ? events.getChosen() : null };
+      var isCall = kindSel && kindSel.value === "Call";
+      return { changes: changes, partnerIds: partners.getChosen ? partners.getChosen() : null, eventIds: events.getChosen ? events.getChosen() : null,
+               teamIds: isCall && teams.getChosen ? teams.getChosen() : null };
     };
     return root;
   }
@@ -297,7 +305,7 @@
   async function openEditCampaign() {
     var rec = state.record; if (!rec) return;
     try { await ensureFields(); } catch (e) { notice(e.message, "error"); return; }
-    var form = campaignForm(rec.campaign, (rec.partners || []).map(function (p) { return p.id; }), (rec.events || []).map(function (p) { return p.id; }));
+    var form = campaignForm(rec.campaign, (rec.partners || []).map(function (p) { return p.id; }), (rec.events || []).map(function (p) { return p.id; }), rec.callerTeamIds || []);
     openModal("Edit campaign", form, async function () {
       var data = form.collect();
       if (!data.changes.name) { modalMsg("A campaign needs a name.", "error"); return; }
@@ -308,6 +316,10 @@
       if (data.partnerIds !== null) rel.partnerIds = data.partnerIds;
       if (data.eventIds !== null) rel.eventIds = data.eventIds;
       if (Object.keys(rel).length) await api("/campaigns/" + encodeURIComponent(rec.campaign.id) + "/relations", { method: "PUT", body: rel });
+      if (data.teamIds !== null && rec.callerTeamIds !== null) {
+        var before = (rec.callerTeamIds || []).slice().sort().join(","), after = data.teamIds.slice().sort().join(",");
+        if (before !== after) await api("/campaigns/" + encodeURIComponent(rec.campaign.id) + "/teams", { method: "PUT", body: { teamIds: data.teamIds } });
+      }
       closeModal(); notice("Saved.", "ok"); loadRecord();
     });
   }
@@ -413,7 +425,7 @@
     if (c.campaignStatus === "Running") text(note, "Running. Callers see each row on the Calls page until it is recorded; the campaign completes itself when the last row is.");
     else if (c.campaignStatus === "Complete") text(note, "Complete. Every row was recorded.");
     else text(note, "Build the list, read who is on it, then sign off. Nobody is called until you do.");
-    text($("callersLine"), rec.callerTeams ? "Who calls: members of " + rec.callerTeams.join(", ") + " (the teams named on this campaign in the CRM — ruling 36)." : "Who calls: the teams named on this campaign could not be read.");
+    text($("callersLine"), rec.callerTeams ? "Who calls: members of " + rec.callerTeams.join(", ") + " (the teams named on this campaign — ruling 36; Edit to change them)." : "Who calls: the teams named on this campaign could not be read.");
     text($("callsUrl"), callsPageUrl());
     if (!state.session.callsOn) text(note, "Campaign calls are switched off on this deployment (CAMPAIGNS_CALLS at /setup), so this list cannot be built or run.");
   }

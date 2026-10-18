@@ -256,6 +256,14 @@ async def set_status(client: EspoApi, campaign: dict[str, Any], status: str) -> 
     return await client.update(cfg.CAMPAIGN, campaign["id"], {"campaignStatus": status})
 
 
+async def set_teams(client: EspoApi, campaign_id: str, team_ids: list[str]) -> dict[str, Any]:
+    """The campaign's own teams — for a call campaign, who calls (ruling 36).
+    ``teams`` is EspoCRM's native link, which an update writes through
+    ``teamsIds`` (unlike a custom linkMultiple)."""
+    ids = sorted({i for i in (team_ids or []) if isinstance(i, str) and i})
+    return await client.update(cfg.CAMPAIGN, campaign_id, {"teamsIds": ids})
+
+
 # --- relationships (partners, events) --------------------------------------------
 
 async def _link_or_escalate(client: EspoApi, admin_factory, op: str, campaign_id: str,
