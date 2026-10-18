@@ -42,7 +42,7 @@ and the code: the `campaigns/` package, `core/postal.py`, `core/qr.py`,
 `forms/prospect_response/` and `frontend/shared/campaign-link.js` (**Phase 1
 built 10-15-26, v0.258.0, dark behind `CAMPAIGNS_ENABLED`**).
 
-## State, as of 10-18-26 02:40
+## State, as of 10-18-26 02:24
 
 - **Settled:** the process end to end (rulings 1–27), the Campaign
   Management application (CM-1 to CM-11), and the build's own rulings 28–34
@@ -184,14 +184,14 @@ import contract starts from).
 |---|---|
 | Document | Prospect marketing — directory README |
 | Version | 1.10 |
-| Last Updated | 10-18-26 02:40 |
+| Last Updated | 10-18-26 02:24 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
-| 1.10 | 10-18-26 02:40 | Claude (Claude Code) | State: Phase 3 live-passed, Phase 2 pass complete, Phase 4 built (rulings 38, 39); Doug's Phase 4 pass next. |
+| 1.10 | 10-18-26 02:24 | Claude (Claude Code) | State: Phase 3 live-passed, Phase 2 pass complete, Phase 4 built (rulings 38, 39); Doug's Phase 4 pass next. |
 | 1.9 | 10-18-26 00:50 | Claude (Claude Code) | State: Phase 3 built (v0.261.0), rulings 36 and 37; Doug's Phase 3 pass is next; the next kickoff is Phase 4. |
 | 1.8 | 10-17-26 02:20 | Claude (Claude Code) | State: Phase 2 built (v0.259.0), ruling 34; Doug's Phase 2 live pass is next, then the Sunday slot, then Phase 3; the live kickoff is the Phase 3 prompt. |
 | 1.7 | 10-17-26 01:45 | Claude (Claude Code) | State: Phase 1 live-passed on crm-test; Phase 2 and the production slot are next. |

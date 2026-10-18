@@ -33,7 +33,7 @@ found; move resolved items to the bottom with the resolution date.
     10-18-26, dark behind `CAMPAIGNS_CALLS`); Phase 4 BUILT (v0.262.0–
     v0.264.0, 10-18-26, dark behind `CAMPAIGNS_SMS` / `CAMPAIGNS_EMAIL`,
     tests and a stub harness only) — Doug's Phase 4 pass, production and
-    Boston owed** (10-14-26, updated 10-18-26 02:40). **Phase 4:** rulings 38
+    Boston owed** (10-14-26, updated 10-18-26 02:24). **Phase 4:** rulings 38
     (the application sends texts — Twilio behind a dry run; the account, a
     sender number and A2P 10DLC registration are Doug's before any real
     text) and 39 (`COutreachCampaign.smsMessage`, plan

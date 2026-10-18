@@ -1298,7 +1298,7 @@ best-effort mirror.
 |---|---|
 | Document | Prospect Marketing — build plan |
 | Version | v0.7 — Phases 1–4 built (v0.258.0, v0.259.0, v0.261.0, v0.262.0–v0.264.0); questions 1, 3, 6, 7, 8, 9 and 11 answered (rulings 28–32, 34, 36, 38, 39) |
-| Last Updated | 10-18-26 02:40 |
+| Last Updated | 10-18-26 02:24 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
 | Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
@@ -1307,7 +1307,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
-| 0.7 | 10-18-26 02:40 | Claude (Claude Code) | § 7 Phase 4 marked built (v0.262.0–v0.264.0) with rulings 38 and 39; Phase 5's texting item struck. |
+| 0.7 | 10-18-26 02:24 | Claude (Claude Code) | § 7 Phase 4 marked built (v0.262.0–v0.264.0) with rulings 38 and 39; Phase 5's texting item struck. |
 | 0.6 | 10-18-26 00:50 | Claude (Claude Code) | § 7 Phase 3 marked built (v0.261.0) with what it holds; question 6 answered (ruling 36) and the Mentor Role's two grants named; ruling 37 recorded as built first. |
 | 0.4 | 10-15-26 00:02 | Claude (Claude Code) | Ruling 32: § 1.5's reverse of `CPartnerProfile.outreachCampaign` is `attributedPartnerProfiles` (the row had named `partnerProfiles` twice; found by the handoff session's dry run, drafted there, chosen by Doug); § 1.10 gains the row. The plan files were already written on this name, so the fingerprints stand. |
 | 0.3 | 10-14-26 22:43 | Claude (Claude Code) | Doug's answers to questions 1, 3, 8 and 9 recorded (rulings 28–31). Question 8 against the recommendation: `CEngagement.referringPartners` many-to-many to `CPartnerProfile` (reverse `referredEngagements`) added — seventeen links; step 6a rewritten (the many link holds every referring partner, the single link stays the partner link's own, readers take the union); the per-door table, the coexist paragraph, Phase 1's handoff and grants, Phase 2's build and verification, § 8 and § 9 updated. |
