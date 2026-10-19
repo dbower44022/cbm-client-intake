@@ -5,6 +5,18 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.264.4] — 2026-10-19
+
+**fix(events): a registered sign-up form locks.** Found by Doug on the
+production events test (10-19-26): after *You're registered!* the calendar's
+Sign Up dialog emptied its fields and left them editable, and the event page's
+own form left everything live, so a second click posted the same registration
+again (into the near-duplicate hold). Both doors now lock their fields, the
+consent boxes and the button (reading *Registered*) once a registration is
+accepted, keeping what was entered on screen under the confirmation; the
+dialog unlocks when it is opened for another event. An error leaves the form
+editable, as before. No CRM change, no flag; rollback is a revert.
+
 ## [0.264.3] — 2026-10-18
 
 **chore(scripts): the CRM plan applier accepts integer enum options; the

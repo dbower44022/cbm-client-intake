@@ -143,6 +143,14 @@
         ? "You are on the waiting list. We will email you if a place opens up."
         : "Thanks \u2014 we have your registration. Check your email for the details.";
       out.className = "pub__result pub__result--ok";
+      // The form is finished: lock the fields and the button so the same
+      // registration cannot be typed over or sent twice (a second click used
+      // to post again and land in the near-duplicate hold).
+      ["firstName", "lastName", "email", "phone", "zip", "consent", "smsConsent"].forEach(function (id) {
+        var elx = $(id); if (elx) elx.disabled = true;
+      });
+      $("registerBtn").disabled = true;
+      $("registerBtn").textContent = "Registered";
     } catch (err) {
       out.textContent = err.message;
       out.className = "pub__result pub__result--error";

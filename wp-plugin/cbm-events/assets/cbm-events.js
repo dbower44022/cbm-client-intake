@@ -351,12 +351,24 @@
       }
     }
 
+    // A registered form is finished: its fields lock so the person cannot
+    // type over what was sent, and the button says so. The lock lifts when
+    // the dialog is opened again for another event (Doug, 10-19-26: after
+    // "You're registered!" the form was still live).
+    function setLocked(locked) {
+      Object.keys(inputs).forEach(function (k) { inputs[k].disabled = locked; });
+      consentBox.disabled = locked;
+      smsBox.disabled = locked;
+    }
+
     function open(item) {
       active = item;
       sub.textContent = (item && item.topic) || "";
       form.reset();
       setStatus("", "");
-      // Buttons are never disabled at rest — only while a submit is in flight.
+      setLocked(false);
+      // Buttons are never disabled at rest — only while a submit is in flight,
+      // and after a registration, when the form is finished.
       submit.disabled = false;
       submit.textContent = "Register";
       overlay.classList.add("open");
@@ -408,8 +420,8 @@
             "You're registered! Check your email for the confirmation.",
             result && result.joinUrl
           );
-          form.reset();
-          consentBox.checked = false;
+          // Keep what was entered on screen, locked, under the confirmation.
+          setLocked(true);
           submit.textContent = "Registered";
         },
         function (err) {
