@@ -1,6 +1,6 @@
 # CBM Events & Webinars — Finalization Plan
 
-Last Updated: 10-18-26 23:22 · Revision 4.34 — see change log at the end.
+Last Updated: 10-18-26 23:43 · Revision 4.35 — see change log at the end.
 
 Companion to `CBM_Events_PRD.md`, `CBM_Events_Implementation_Plan.md` and
 `CBM_Events_Registration_Recognition_Plan.md`. Those three say what the feature
@@ -129,10 +129,10 @@ after Doug's requirements are gathered, and nothing is settled until he rules.
 
 | # | Feature | Raised by | State |
 |---|---|---|---|
-| F1 | Event topic: multiple selections from the curated list (the user-entered value was struck 10-08-26) | User review, 09-2026 | **Built v0.242.0** (10-08-26, dark until a CRM has `topics`); crm-test CRM done and **live pass done 10-09-26**; production and Boston owed (`OPEN-ITEMS.md` #41) |
+| F1 | Event topic: multiple selections from the curated list (the user-entered value was struck 10-08-26) | User review, 09-2026 | **Built v0.242.0**; crm-test live pass done 10-09-26; **production CRM done 10-18-26** (runbook #42 section 2); Boston owed (`OPEN-ITEMS.md` #41) |
 | F2 | Display Date/Time: the moment an event may first appear on the public pages | User review, 09-2026 | Built v0.233.0 (09-29-26); reviewed live on crm-test 09-30; **CRM applied to production 10-07-26**; Boston owed (`OPEN-ITEMS.md` #35) |
 | F3 | Event audience: Internal, a specific chapter, or Public — Internal events form a calendar on the chapter's portal | User review, 09-2026 | Built v0.233.0 (09-29-26); reviewed live on crm-test 09-30; **CRM applied to production 10-07-26**; Boston owed (`OPEN-ITEMS.md` #35) |
-| F4 | Presenters: select or add them per event, with an optional presenter biography on the event page | User review, 09-2026 | Built v0.241.0/.1 (dark); crm-test CRM done and live pass done 10-08-26; production, Boston owed |
+| F4 | Presenters: select or add them per event, with an optional presenter biography on the event page | User review, 09-2026 | Built v0.241.0/.1 (dark); crm-test live pass done 10-08-26; **production CRM and grants done 10-18-26** (runbook #42 section 2; switch + non-admin pass are its sections 3–4); Boston owed |
 | F5 | Portal home page: a left-hand list of upcoming internal events, each opening its details | User review, 09-2026 | **Live on production and crm-test** since 10-07-26 (v0.239.1, switch on at `/setup`); Boston with its next release |
 
 **The catalog is complete at five features** (Doug, 09-27-26). Design proceeds
@@ -704,6 +704,7 @@ attendance recorded → recording link pasted → the engagement rollup shows it
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 4.35 | 10-18-26 23:43 | Claude (Claude Code) | F1 and F4 CRM changes applied on production by Doug (runbook section 2, 10-18-26 23:3x), plus the duration options and the two missing recordings; read back from the container. F1/F4 production CRM: done; switch and non-admin pass next. |
 | 4.34 | 10-18-26 23:22 | Claude (Claude Code) | The production test page rebuilt to the step standard and widened: it now carries the Track F production apply (F1, F4), three new duration choices (a CRM plan, v0.264.3), the two missing recordings and the website's seven sessions. Nothing run yet; `OPEN-ITEMS.md` #42. |
 | 4.33 | 10-09-26 17:10 | Claude (Claude Code) | Doug's ruling 10-09-26: the website redirect waits a few weeks; the events functionality is tested end to end on production first, with the three current sessions entered. A8 split; sequence note in § 5; step page and two findings in `OPEN-ITEMS.md` #42. |
 | 4.32 | 10-09-26 00:05 | Claude (Claude Code) | F1 live pass done on crm-test 10-09-26; production and Boston owed. |

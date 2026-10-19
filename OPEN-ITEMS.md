@@ -388,6 +388,16 @@ found; move resolved items to the bottom with the resolution date.
     the deploy for a larger record count, not an error.
 
 42. **Events: the production end-to-end test, and the redirect deferred.**
+    **Section 2 DONE on production 10-18-26 23:30–23:40 (Doug, from the web
+    container; verified from here 10-18-26 23:43 as the org key):** `CEventPresenter`
+    created with its five fields and two links and readable by the API key
+    (200), the four role grants read back, `CEvent.topics` created and
+    eleven events' single topic copied into it, `CEvent.duration` now offers
+    4500/5400/12600, the two recordings imported unshown (13 events in all).
+    The conformance check's `exit=1` is the five event email templates Track
+    D still owes (`EventReminder` …), pre-existing; nothing else moved (the
+    "before" run, step 2, was skipped, so this is read from the findings,
+    not a diff). Sections 3 to 8 not yet run.
     **State 10-18-26 23:22: the step page was rebuilt to the 10-17-26 step standard
     (rev 2.0, done boxes, every value pre-filled from reads) and now carries
     the whole job**: the Track F production apply (#39, #41 — their Sunday
@@ -990,7 +1000,7 @@ block a deploy.)*
 ## Live verification owed
 
 41. **Topics on events (v0.242.0, Track F F1) — live pass DONE on crm-test 10-09-26; production and Boston owed.**
-    *10-18-26 23:22: production's apply is section 2 of the Events Production Test page (#42); read from the container 10-18-26 23:05, `CEvent.topics` is still absent.*
+    *10-18-26 23:22: production's apply is section 2 of the Events Production Test page (#42); read from the container 10-18-26 23:05, `CEvent.topics` is still absent.* **PRODUCTION CRM DONE 10-18-26 23:3x** (plan `1a404fc9c337` applied and verified; the copy wrote eleven events, read back as the org key). Boston still owed.
     Doug's ruling 10-08-26: no user-entered topic; an event carries several
     curated topics (`CEvent.topics`, multiEnum). Feature-detected, no switch.
     **crm-test's CRM side is done 10-09-26 03:34 UTC**: `scripts/plans/
@@ -1021,7 +1031,7 @@ block a deploy.)*
     on crm-test; production and Boston CRM owed.** *10-18-26 23:22: production's
     apply is now section 2 of the Events Production Test page (#42), which
     supersedes the Track F Production Apply page; read from the container
-    10-18-26 23:05, `CEventPresenter` still answers 404.* The code ships off
+    10-18-26 23:05, `CEventPresenter` still answers 404.* **PRODUCTION CRM DONE 10-18-26 23:3x** (plan `5a78484e6b9c` applied and verified, role script applied and read back, API key lists `CEventPresenter` 200); the switch and the non-admin pass are the runbook's sections 3 and 4. Boston still owed. The code ships off
     (`EVENT_PRESENTERS`) and feature-detected. **crm-test's CRM side is
     complete 2026-10-08** (`scripts/plans/cevent-presenters.json` applied and
     read back; `scripts/migrate_presenter_roles.py` applied — Contact create +
