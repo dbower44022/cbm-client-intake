@@ -424,7 +424,19 @@ found; move resolved items to the bottom with the resolution date.
     Admin's search box matches the form, email, statuses, reference and
     activity but **not the submitter's name** (`ops/frontend/app.js`
     `matchesSearch`), which is why step 6-6's "Registrant" found nothing;
-    the step now searches `event-registration`. Sections 6 to 8 owed.
+    the step now searches `event-registration`. **Sections 6 and 7 DONE 10-19-26 00:39** (read back from the database and
+    the CRM): the two held rows discarded by `doug.bower@cbmentors.org` with
+    the reason, and **the discard reached their receipts** (two
+    `CIntakeSubmission` rows now read Discarded, two Completed); the two
+    registrations stand on Douglas Bower, source Online; no new contact.
+    **Finding (b) for a ruling:** the consent ticked on a public registration
+    is written through the null-fill, so an EXISTING contact whose opt-in and
+    consent booleans are already `false` keeps `false` — Doug's own contact
+    reads opt-in false after a ticked registration. A ticked consent is
+    time-stamped evidence and arguably should set `true` over `false`
+    (never the reverse); `forms/event_registration/orchestrator._contact_payload`
+    plus `core/crm_upsert.find_create_or_fill`. v0.264.4 (the form lock) live
+    on production 10-19-26 00:37. Section 8 (the clean-up) owed.
     **State 10-18-26 23:22: the step page was rebuilt to the 10-17-26 step standard
     (rev 2.0, done boxes, every value pre-filled from reads) and now carries
     the whole job**: the Track F production apply (#39, #41 — their Sunday
