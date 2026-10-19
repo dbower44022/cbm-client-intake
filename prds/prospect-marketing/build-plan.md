@@ -1,6 +1,14 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-15-26 00:02 · Revision 0.4 — change log at the end.
+Last Updated: 10-18-26 23:16 · Revision 0.8 — change log at the end.
+
+**v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
+record from an outside source is a **Lead** (Unqualified, Qualified,
+Disqualified); a Company or Contact typed Prospect is created only at first
+contact; campaigns may select Unqualified leads; "door" is retired. Phases
+1–4 were built on the earlier model, so **§§ 1–6 describe what is built,
+not what is ruled**, until the rework in **§ 7a** is built. Questions 13–16
+in § 9 gate it.
 
 **Where this document lives.** `prds/prospect-marketing/` is the whole arc;
 start at its `README.md`. The binding decisions are in `rulings.md` beside
@@ -1149,6 +1157,108 @@ Not planned, no dates: the partner-file import (ruling 23); ~~sending texts thro
 
 ---
 
+## 7a. Rework to the lead model — rulings 41–44 (v0.8, draft; nothing built)
+
+**Phases 1–4 were built on the earlier model.** Rulings 41–44 (10-18-26)
+rename the raw record, change its ladder and move the moment a Company or
+Contact is created from "a website or email arrived" to "first contact".
+Until this rework is built, §§ 1–6 describe what is built, not what is
+ruled. Every campaign switch is off on production and the arc's data there
+is test data (inferred from the README's State, not checked record by
+record), so the rework can change stored values rather than carry two
+vocabularies.
+
+### 7a.1 The model as ruled
+
+- **Lead** — every record entered from an outside source (ruling 41). The
+  stored entity stays `CProspect`; its label changes (7a.2).
+- **Lead status** (ruling 42): **Unqualified** (every lead starts here; a
+  business lead with no website, or a person lead with no email, can never
+  leave it), **Qualified** (could become a client, partner or funder; not
+  yet contacted and has not responded), **Disqualified** (will never be a
+  client, partner or funder). **Converted** is drafted as the fourth value:
+  first contact happened and the Company or Contact exists (ruling 43).
+- **Prospect** — a Company or Contact typed Prospect, created only at first
+  contact (ruling 43). Its stages continue on `cFunnelStage`.
+- **Campaigns may select Unqualified leads** for postcards and calls; a
+  response bringing a website or email converts the lead straight to a
+  Prospect; silence leaves it Unqualified until the Stale sweep (ruling 44).
+- **Lead Source** replaces "entry door"; "door" is retired from every
+  document and screen (ruling 41). The five public forms are **public
+  forms**.
+
+### 7a.2 Drafts this plan chose — each a draft with its cost, not a ruling
+
+Written into the executive overview on 10-18-26 and open to Doug's change:
+
+- **The prospect stages after contact: Prospect · Engaged · Opportunity**,
+  then Candidate and Client read from the engagement. *Lead* stops being a
+  rung (the record carries the word now) and *Warm Lead* becomes
+  **Engaged**, with ruling 17's wording: asked for something and gave their
+  details to get it. Cost: two option values change on Contact and Account.
+- **Side exits on the lead: Duplicate** (was Already known), **Do Not
+  Contact**, **Declined**, **Stale**. Disqualified is a status, not an
+  exit. Cost: one value renamed, one moved.
+- **A scan alone does not convert.** It is recorded on the lead (as today,
+  `firstScannedAt`, `scanCount`) and moves nothing: there is no website or
+  email to create a real record from. Cost: ruling 16's "a scan alone moves
+  the company to Lead" no longer has a rung to move to.
+- **A call marked Interested converts**, and the caller records the email
+  or website on the call screen (question 15).
+- **The CRM label is "Outreach Lead", the screens say "Lead"** — ruling
+  35's rule that a custom entity never takes a built-in name (EspoCRM ships
+  a hidden `Lead` entity), as with *Outreach Campaign*.
+- **Lead Source is a label on the lead only.** The Contact's existing
+  **Source** (what the person says on a form, ruling 26) is untouched; the
+  two names sit on different records.
+
+### 7a.3 What changes, component by component
+
+| Component | Built today | After rulings 41–44 |
+|---|---|---|
+| `CProspect` in the CRM (handoff) | Label *Prospect*; `funnelStage`/`entryStage` Unverified · Qualified · Lead · Warm Lead · Opportunity; `entryDoor`; `sideExit` Already known · Unqualified · Do Not Contact · Declined · Stale | Label *Outreach Lead*; a status Unqualified · Qualified · Disqualified · Converted; `entryDoor` labelled *Lead Source*; exits Duplicate · Do Not Contact · Declined · Stale (question 13 decides labels or stored values) |
+| `cFunnelStage` / `cEntryStage` on Contact and Account (handoff) | Unverified · Qualified · Lead · Warm Lead · Opportunity | Prospect · Engaged · Opportunity |
+| `campaigns/imports.py` | Filings enter Qualified; a row with a website or email creates a Company or Contact under the API client (ruling 33) | Every row enters Unqualified; no Company or Contact is created; Already known becomes Duplicate |
+| `campaigns/review.py` | Qualify / Unqualified on an Unverified record | Qualify only when the lead has a website or email (refused with the reason otherwise); Disqualify with a note |
+| `campaigns/landing.py`, `forms/prospect_response/` | A scan moves the record to Lead; a website or email promotes | A scan is recorded, no stage; a response with a website or email converts: Company and/or Contact typed Prospect at stage Prospect, the lead Converted and linked |
+| `campaigns/calls.py` | Interested moves to Lead; Declined exits | Interested converts (email or website captured); Declined exits |
+| `campaigns/postcard.py` | Selects Qualified records (a promoted record stands for its company, v0.258.5) | Selects Unqualified and Qualified leads; a Converted lead's company keeps standing in |
+| `campaigns/attribution.py` | Information request and registration write Warm Lead; a prospect id is promoted by link | They write Engaged; a lead named by the prospect id converts (status Converted, links set) |
+| `campaigns/stale.py` | Unverified and Qualified records | Unqualified and Qualified leads |
+| `campaigns/email.py`, `campaigns/sms.py` | Select Contacts typed Prospect at a chosen rung | The same, on the new stage names |
+| `campaigns/reporting.py`, `analytics/campaigns.py` | The funnel over the five rungs; Responses shows *Converted* = a relationship began | The funnel over lead statuses then prospect stages; *Converted* now means a lead became a Prospect (question 14) |
+| Screens, `CLAUDE.md`, this directory's README | "prospect record", "door", "promotion" | "lead", "Lead Source", "public form", "conversion" |
+
+### 7a.4 The words that move
+
+- **door** → **Lead Source** (the field) or **public form** (the five forms).
+- **promotion** (ruling 21) → **conversion**: a lead becomes a Prospect.
+- **conversion** in its old sense (ruling 22, a relationship beginning) needs
+  a new word, because the old and new meanings would sit on the same
+  screen — question 14.
+- **prospect record** → **lead**; **rung** → **stage** in every document
+  meant for staff (the code's `funnelStage` names stay).
+
+### 7a.5 Order, once questions 13–16 are answered
+
+1. **CRM handoff** for `CProspect`, Contact and Account, applied on
+   crm-test first by `prds/chapter-network/crm-update-runbook.md`, with a
+   one-time, dry-run-first script that moves existing values (Unverified →
+   Unqualified, Lead and Warm Lead → Prospect and Engaged, Already known →
+   Duplicate, Unqualified-as-exit → Disqualified, promoted → Converted).
+2. **Code**, in one release behind the existing switches: import, review,
+   landing and response, calls, postcard selection, attribution, stale,
+   email and SMS selection, reporting, then the screens' words.
+3. **Live pass** on crm-test: the Phase 1–4 passes' steps that touch a
+   stage, re-run on the new names; the Phase 4 pass resumes after it.
+4. **Production** at the Sunday 17:00 UTC slot; Boston with its release.
+
+**Cost of the rework:** one CRM handoff on three CRMs, about ten modules
+and their tests, and a second live pass over steps already passed. The
+alternative — labels only, stored values unchanged — is question 13.
+
+---
+
 ## 8. The open list — each item answered or put to Doug
 
 From `history/prospect-marketing-plan.md`, *Open after this session*:
@@ -1287,6 +1397,41 @@ the Campaign Management requirements.
     named for campaigns also holds the import; the alternative is a second
     tile, *Prospects*, on a portal that already shows a staff user twelve.
 
+Questions 13–16 were added in v0.8 for the rework of § 7a (rulings 41–44).
+
+13. **Change the stored values, or the labels only?** Recommended: change
+    the stored option values on `CProspect`, Contact and Account and move
+    the existing ones with a dry-run-first script, while the arc's data is
+    still test data. Cost: a value migration on three CRMs and every
+    module's constants. The alternative relabels the options in the CRM and
+    keeps `Unverified`, `Lead` and `Warm Lead` as stored values — cheaper
+    now, but the code and the CRM then disagree in every read, which is the
+    confusion the rulings set out to remove.
+14. **What does the old "conversion" become?** The Responses tab counts
+    *Converted* = a relationship record carries the campaign. Under ruling
+    43, *converted* means a lead became a Prospect. Recommended: the tab
+    shows **Converted** (leads that became Prospects) and **Became a client,
+    partner or funder** (the old meaning), and documents say "a
+    relationship begins" for ruling 22. Cost: one more column. The
+    alternative keeps *Converted* for the old meaning and calls the lead
+    step something else, which breaks with every CRM the research looked
+    at.
+15. **Must a call marked Interested capture an email or website?**
+    Recommended: yes — the outcome asks for one, and without it the call is
+    recorded as a response on the lead, which stays a lead (ruling 42: no
+    Company without a website, no Contact without an email). Cost: one more
+    field for the caller. The alternative converts on the outcome alone and
+    creates a Company or Contact with neither, which ruling 42 forbids.
+16. **Does a public-form submission also create a lead?** A webinar
+    registrant or information requester today creates a Contact with no
+    prospect record (§ 1.8). Recommended: no — a public-form submission is
+    first contact itself, so it creates the Prospect directly and its Lead
+    Source is the form; only a lead named by the prospect id is converted.
+    Cost: not every Prospect has a lead behind it, so "where did they come
+    from" reads the Contact's campaign and Source, not a lead. The
+    alternative creates a lead already Converted for every submission — a
+    complete history, and a lead record per form submission.
+
 ---
 
 ## 10. Conventions every new screen in this arc follows
@@ -1313,8 +1458,8 @@ best-effort mirror.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — build plan |
-| Version | v0.7 — Phases 1–4 built (v0.258.0, v0.259.0, v0.261.0, v0.262.0–v0.264.0); questions 1, 3, 6, 7, 8, 9 and 11 answered (rulings 28–32, 34, 36, 38, 39) |
-| Last Updated | 10-18-26 02:24 |
+| Version | v0.8 — Phases 1–4 built (v0.258.0, v0.259.0, v0.261.0, v0.262.0–v0.264.0) on the earlier model; rulings 41–44 (the lead model) recorded and their rework planned in § 7a; questions 13–16 open |
+| Last Updated | 10-18-26 23:16 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
 | Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
@@ -1323,6 +1468,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.8 | 10-18-26 23:16 | Claude (Cowork) | Rulings 41–44 (the lead model, from the executive overview session): a revision note at the top; new § 7a — the model as ruled, the drafts chosen (stages Prospect · Engaged · Opportunity, exit Duplicate, a scan does not convert, CRM label *Outreach Lead*), the component-by-component change table, the words that move, the order and its cost; questions 13–16 added to § 9. §§ 1–6 not rewritten: they describe the build until § 7a is built. |
 | 0.7 | 10-18-26 02:24 | Claude (Claude Code) | § 7 Phase 4 marked built (v0.262.0–v0.264.0) with rulings 38 and 39; Phase 5's texting item struck. |
 | 0.6 | 10-18-26 00:50 | Claude (Claude Code) | § 7 Phase 3 marked built (v0.261.0) with what it holds; question 6 answered (ruling 36) and the Mentor Role's two grants named; ruling 37 recorded as built first. |
 | 0.4 | 10-15-26 00:02 | Claude (Claude Code) | Ruling 32: § 1.5's reverse of `CPartnerProfile.outreachCampaign` is `attributedPartnerProfiles` (the row had named `partnerProfiles` twice; found by the handoff session's dry run, drafted there, chosen by Doug); § 1.10 gains the row. The plan files were already written on this name, so the fingerprints stand. |

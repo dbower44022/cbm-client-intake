@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-17-26 22:50 · Revision 1.5 — change log at the end.
+Last Updated: 10-18-26 23:16 · Revision 1.11 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -329,6 +329,63 @@ option C, store them in the application's database. Doug's reply at 11:05:
     them and cannot edit them. Never build a field the application writes as
     Read-only. (10-18-26)
 
+### Doug's rulings (10-18-26, evening — the lead model)
+
+Made in a Cowork session writing an executive overview of the arc for
+the chapter's leadership. Doug found the arc's names unfamiliar ("prospect
+record", "door") and asked for the names other CRMs and common practice
+use. The research (EspoCRM's own Lead, Microsoft Dynamics 365, Salesforce,
+HubSpot's lifecycle stages; sources in the overview) found the raw record
+is called a **Lead** almost everywhere, is **qualified** or
+**disqualified**, and is **converted** into a company and a contact; and
+that common usage puts the lead *before* the prospect, the reverse of this
+arc. Doug then ruled in four replies. Rulings 41 and 42 are his words; 43
+and 44 were put as consequential decisions.
+
+41. **Every record entered from an outside source is a Lead, and "door"
+    is retired.** Doug: "I think we should use Unqualified Lead to define
+    raw information brought in from outside regardless of the 'Lead
+    Source'. I think we need to get rid of the term Door too." And in the
+    next reply: "Any new record entered into the system from an outside
+    source is named a 'Lead'." This renames the prospect record of ruling
+    21 (the stored entity `CProspect` is unchanged by this ruling). Where a
+    lead came from is its **Lead Source**. (10-18-26)
+42. **A lead is Unqualified, Qualified or Disqualified; contact makes it a
+    Prospect.** Doug, word for word: "If we do not have a concrete
+    understanding if the lead is a real company or person that may
+    eventually be interested in our services it has a status of
+    'Unqualified' and it needs further information to become qualified. A
+    company without an website or a contact without a email can never be
+    'Qualified'. A lead that has an email or website is still not
+    qualified if we do not understand if they may some day be a client. If
+    we know that they will NEVER be a client/partner/funder then they
+    become a disqualified lead. If we find out they may be a
+    client/partner/funder but we have not contacted them, or they have not
+    responded to a marketing outreach, they become a qualified lead. Once
+    we have some contact, they can become a prospect." This changes
+    rulings 10 and 11 (a state filing no longer enters Qualified on the
+    outside filter's verdict: without a website or email it is
+    Unqualified), 18 (a list row enters Unqualified, not Unverified) and 29
+    (rung 1 is Unqualified; the fit-failure side exit is Disqualified).
+    (10-18-26)
+43. **A Company or Contact is created only at first contact.** Put as a
+    consequential decision: option 1, the lead holds everything until
+    first contact, when the Company and/or Contact is created typed
+    Prospect and the lead is marked converted; option 2, the Company
+    and/or Contact is created when the lead is qualified and retyped
+    Prospect at first contact. Doug's reply: "1". This changes ruling 21's
+    promotion rule (a web domain or an email no longer creates a Company or
+    Contact by itself) and ruling 33 (the import creates no Company or
+    Contact). (10-18-26)
+44. **A campaign may select Unqualified leads.** Put as a consequential
+    decision: option 1, postcards and calls may select Unqualified leads,
+    a response that brings a website or email converts the lead straight to
+    a Prospect, and a lead that never responds stays Unqualified until the
+    Stale sweep; option 2, only Qualified leads are selectable; option 3,
+    the outside filter's screening counts as qualification. Doug's reply:
+    "1". Ruling 42's rule that a lead without a website or email is never
+    Qualified stands whole. (10-18-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -449,8 +506,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.10 |
-| Last Updated | 10-18-26 11:20 |
+| Version | 1.11 |
+| Last Updated | 10-18-26 23:16 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -458,6 +515,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.11 | 10-18-26 23:16 | Claude (Cowork) | Rulings 41–44 appended: the lead model — Lead for every record from outside, "door" retired (41); Unqualified / Qualified / Disqualified, Prospect at contact (42); Company or Contact created only at first contact (43, Doug's "1"); campaigns may select Unqualified leads (44, Doug's "1"). The ladder table and the walk above are left as recorded; build plan v0.8 § 7a carries the new ladder. |
 | 1.10 | 10-18-26 11:20 | Claude (Claude Code) | Ruling 40 appended: app-written campaign fields are not Read-only; a field rule keeps staff off them (Doug's "a", Phase 4 pass finding). |
 | 1.9 | 10-18-26 02:00 | Claude (Claude Code) | Ruling 39 appended: the text's wording is a campaign field in the CRM (Doug's "a"), with the follow-on details decided. |
 | 1.8 | 10-18-26 01:55 | Claude (Claude Code) | Ruling 38 appended: the application sends text-message campaigns itself (Doug's "b" to build plan § 9 question 11, against the recommendation). |
