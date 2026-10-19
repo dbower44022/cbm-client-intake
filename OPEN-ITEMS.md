@@ -42,7 +42,12 @@ found; move resolved items to the bottom with the resolution date.
     words); then production at a Sunday slot (the lead-model plan, the
     touch-positions plan, labels, layouts, the value move from the
     container — handoff § 1) and Boston with its release; the § 6 removals
-    after that, on Doug's approval. The earlier passes' record follows.
+    after that, on Doug's approval. **Ruling 54 (10-19-26):** the Marketing
+    Admin Role gains Account read all — `scripts/prospect_crm_test.sh roles`
+    on crm-test (dry run: exactly that one change), production and Boston
+    with the role script at their slots, and the roles standard
+    (`prds/chapter-network/roles-standard/`) updated to match.
+    The earlier passes' record follows.
     **Phase 1 BUILT and LIVE-PASSED on crm-test
     (v0.258.0–v0.258.5, 10-15/17-26, dark behind `CAMPAIGNS_ENABLED`);
     Phase 2 BUILT (v0.259.0, 10-17-26) and LIVE-PASSED (A–E 10-17-26,

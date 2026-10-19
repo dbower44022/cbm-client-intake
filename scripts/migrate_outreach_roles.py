@@ -89,6 +89,11 @@ ROLE_SCOPE_GRANTS: list[tuple[str, str, dict[str, str]]] = [
     # Re-checks for the two pickers on a campaign (CM-2 partners, CM-6 events).
     ("Marketing Admin Role", "CEvent", {"read": "all"}),
     ("Marketing Admin Role", "CPartnerProfile", {"read": "all"}),
+    # Ruling 54 (10-19-26, the lead model): marketing staff read every Company,
+    # read only — a converted lead leads them to its Company. Creates and edits
+    # stay the application's, under the API role (ruling 33). An absent scope
+    # gains explicit "no" for the other actions, so the grant stays read-only.
+    ("Marketing Admin Role", "Account", {"read": "all"}),
     # Ruling 36 (10-18-26, Phase 3): callers are the members of the teams named
     # on a call campaign, each acting as themself, so a mentor on a campaign
     # naming the Mentor Team reads the call list and records the outcome on the

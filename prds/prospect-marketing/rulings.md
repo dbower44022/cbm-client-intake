@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-19-26 11:20 · Revision 1.20 — change log at the end.
+Last Updated: 10-19-26 12:23 · Revision 1.21 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -532,6 +532,22 @@ every row enters Unqualified. Doug's reply at 11:20: "a".
     list or partner-file row, enters Unqualified (rulings 18, 42). The
     import creates no Company or Contact (ruling 43). (10-19-26)
 
+### Doug's ruling (10-19-26, on the lead model's live pass)
+
+Doug reported that Mark Marketing had no Companies in the crm-test CRM. The
+Marketing Admin Role holds no Company grant, and production's 08-31 role
+standard has none either. Put as a consequential decision: option A, grant
+the role read-only access to all Companies; option B, leave it. Doug's reply
+at 12:23: "a".
+
+54. **The Marketing Admin Team reads every Company, read only** (option A).
+    The Marketing Admin Role gains Account read *all*, with create, edit,
+    delete and stream left at no; the application keeps making and editing
+    Companies under its own account (ruling 33). Applied through
+    `scripts/migrate_outreach_roles.py` on crm-test first, then production
+    at a Sunday slot and Boston with its release; the role standard is
+    updated to match. (10-19-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -652,8 +668,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.20 |
-| Last Updated | 10-19-26 11:20 |
+| Version | 1.21 |
+| Last Updated | 10-19-26 12:23 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -661,6 +677,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.21 | 10-19-26 12:23 | Claude (Claude Code) | Ruling 54 appended: the Marketing Admin Team reads every Company, read only (Doug's "a"). |
 | 1.20 | 10-19-26 11:20 | Claude (Claude Code) | Ruling 53 appended: a state filing with a website or an email enters Qualified (Doug's "a"). |
 | 1.19 | 10-19-26 11:13 | Claude (Claude Code) | Ruling 52 appended: a business lead converts to a Company and its Contact, even without a website (Doug's "a"). |
 | 1.18 | 10-19-26 11:10 | Claude (Claude Code) | Ruling 51 appended: a scan alone changes no status (Doug's "a" to build plan § 7a.2's last draft, at the start of the lead-model code session). |
