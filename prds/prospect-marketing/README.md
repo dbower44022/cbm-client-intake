@@ -135,7 +135,10 @@ built 10-15-26, v0.258.0, dark behind `CAMPAIGNS_ENABLED`**).
      `prompts/prospect-marketing-phase-3-build-prompt-v0.1.md`.
   5. **Before the first real card:** questions 2 (what the outside filter
      delivers), 4 (the mail vendor — Doug opens the account) and 5 (the card
-     itself).
+     itself) — **all three deferred by Doug 10-18-26 until more information
+     is available** (question 2's analysis is kept in build plan § 9). The
+     arc is parked here: built, live-passed and on production's CRM, dark
+     everywhere but crm-test; nothing is owed in code.
   6. **Production at the Sunday 17:00 UTC slot, Boston with its release**,
      and a seeder plus a sandbox re-baseline, because both handoffs add
      tables the nightly reset truncates.

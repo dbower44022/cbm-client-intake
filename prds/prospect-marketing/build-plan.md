@@ -1227,9 +1227,11 @@ the Campaign Management requirements.
 4. **Which mail vendor: Lob (recommended) or PostGrid?** Price is a wash
    (ruling 2); Lob's test key runs the whole pipeline, callback included,
    without printing. Doug opens the account; the plan never does.
+   **Deferred by Doug 10-18-26 23:02 until more information is available.**
 5. **The card.** Who designs it, which size (`4x6` / `6x9` / `6x11`), and the
    offer text. The template holds the QR code and the business name and
    address merge fields; everything else is creative.
+   **Deferred by Doug 10-18-26 23:02 until more information is available.**
 6. **Who makes the calls?** Recommended: members of the teams named on the
    campaign, default the Marketing Admin Team; naming the Mentor Team opens
    the list to mentors. Cost: a mentor who calls needs read and edit on
