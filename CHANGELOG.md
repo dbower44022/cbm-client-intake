@@ -5,6 +5,18 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.265.2] — 2026-10-19
+
+**fix(campaigns): a marketing user can name who calls.** Found on the lead
+model's live pass (step F1): saving a call campaign with *Who calls* ticked
+was refused for Mark Marketing — linking a Team needs read on the Team, and
+the Marketing Admin Role holds none. The Phase 3 pass had created its call
+campaign as an administrator, who skips the check. `service.set_teams` now
+writes as the user first and retries only that refusal as the admin account
+(the `_link_or_escalate` precedent), on create and on the *Who calls* edit.
+A campaign created before the fix exists without its teams; Edit, tick the
+team, Save. No CRM change; rollback is a revert.
+
 ## [0.265.1] — 2026-10-19
 
 **fix(campaigns): the lead's page shows its notes.** Found on the lead model's

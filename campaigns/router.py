@@ -266,7 +266,8 @@ async def create_campaign(body: CampaignIn, request: Request) -> dict[str, Any]:
             {k: v for k, v in ((cfg.LINK_PARTNERS, body.partnerIds), (cfg.LINK_EVENTS, body.eventIds)) if v is not None},
             admin_factory=admin_client_factory(settings))
         if body.teamIds is not None and created.get("campaignKind") == cfg.KIND_CALL:
-            await service.set_teams(client, created["id"], body.teamIds)
+            await service.set_teams(client, created["id"], body.teamIds,
+                                    admin_factory=admin_client_factory(settings))
     except CampaignError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
@@ -977,7 +978,8 @@ async def set_teams(campaign_id: str, body: TeamsIn, request: Request) -> dict[s
     if row.get("campaignKind") != cfg.KIND_CALL:
         raise HTTPException(status_code=400, detail="Only a call campaign names the teams that call.")
     try:
-        await service.set_teams(client, campaign_id, body.teamIds)
+        await service.set_teams(client, campaign_id, body.teamIds,
+                                admin_factory=admin_client_factory(get_settings()))
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not change who calls")
     await record_action(

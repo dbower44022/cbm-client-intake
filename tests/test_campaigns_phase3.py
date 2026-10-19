@@ -524,3 +524,31 @@ def test_build_list_stamps_new_call_records_with_the_campaigns_teams():
     run(calls.build_list(crm, crm, camp, None))
     touch, = [t for t in crm.rows[cfg.TOUCH].values()]
     assert touch["teamsIds"] == ["t-m"]
+
+
+def test_a_teams_write_refused_for_the_linked_team_is_retried_as_the_admin():
+    """Found on the lead model's live pass (F1, 10-19-26): the Marketing Admin
+    Role cannot read Teams, so linking one to a call campaign is refused; the
+    write is retried as the admin account. Any other refusal is raised."""
+    from core.espo import EspoError
+    user, admin = FakeCrm(), FakeCrm()
+    camp = user.add(cfg.CAMPAIGN, {"name": "Calls", "campaignKind": "Call", "campaignStatus": "Draft"})
+    admin.rows = user.rows
+
+    async def refuse(entity, record_id, payload):
+        raise EspoError('update COutreachCampaign failed: HTTP 403 {"reason":"cannotRelateForbidden",'
+                        '"data":{"foreignEntityType":"Team","action":"read"}}')
+    user.update = refuse
+
+    async def factory():
+        return admin
+    run(service.set_teams(user, camp["id"], ["t-m", "t-m"], admin_factory=factory))
+    assert admin.updated == [(cfg.CAMPAIGN, camp["id"], {"teamsIds": ["t-m"]})]
+    with pytest.raises(EspoError):
+        run(service.set_teams(user, camp["id"], ["t-m"]))                  # no admin: raised
+
+    async def other(entity, record_id, payload):
+        raise EspoError("update COutreachCampaign failed: HTTP 403 Forbidden")
+    user.update = other
+    with pytest.raises(EspoError):
+        run(service.set_teams(user, camp["id"], ["t-m"], admin_factory=factory))

@@ -313,12 +313,35 @@ async def stamp_campaign(user_client: EspoApi, api_client: Optional[EspoApi], ca
     return result
 
 
-async def set_teams(client: EspoApi, campaign_id: str, team_ids: list[str]) -> dict[str, Any]:
+def _foreign_read_refusal(exc: EspoError) -> bool:
+    """EspoCRM's refusal of a write that links a record the user cannot read
+    (the two body shapes ``core.espo.forbidden_hint`` reads)."""
+    text = str(exc)
+    return is_forbidden(exc) and ("cannotRelateForbidden" in text or "No foreign record access" in text
+                                  or "noAccessToForeignRecord" in text)
+
+
+async def set_teams(client: EspoApi, campaign_id: str, team_ids: list[str],
+                    *, admin_factory=None) -> dict[str, Any]:
     """The campaign's own teams — for a call campaign, who calls (ruling 36).
     ``teams`` is EspoCRM's native link, which an update writes through
-    ``teamsIds`` (unlike a custom linkMultiple)."""
+    ``teamsIds`` (unlike a custom linkMultiple).
+
+    Written as the user first. Linking a Team needs READ on the Team, which
+    the Marketing Admin Role does not hold (found on the lead model's live
+    pass, 10-19-26 — the Phase 3 pass created its call campaign as an
+    administrator, who skips the check), so that one refusal is retried as
+    the admin account, the ``_link_or_escalate`` precedent. The user's own
+    edit on the campaign is what admitted the change."""
     ids = sorted({i for i in (team_ids or []) if isinstance(i, str) and i})
-    return await client.update(cfg.CAMPAIGN, campaign_id, {"teamsIds": ids})
+    try:
+        return await client.update(cfg.CAMPAIGN, campaign_id, {"teamsIds": ids})
+    except EspoError as exc:
+        if not _foreign_read_refusal(exc) or admin_factory is None:
+            raise
+        log.info("teams of campaign %s escalated to the admin account (%s)", campaign_id, exc)
+        admin = await admin_factory()
+        return await admin.update(cfg.CAMPAIGN, campaign_id, {"teamsIds": ids})
 
 
 # --- relationships (partners, events) --------------------------------------------
