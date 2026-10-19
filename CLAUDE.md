@@ -42,12 +42,15 @@ The **orchestrator module is the source-of-truth mapping** for each form.
 
 Cross-form behaviour worth knowing before changing an orchestrator:
 
-- **A door is any place a record can enter the system** — an import, a
-  public form, the webinar page, a staff quick-add (definition:
-  `prds/prospect-marketing/build-plan.md` § 0). The word means that and
-  nothing else; a staff application is never a door (Doug, 10-18-26).
-  **The staff screens that create records are doors** (Doug's ruling the
-  same day), so a rule written for "every door" binds them too.
+- **"Door" is retired (ruling 41).** Where a record came from is its
+  **Lead Source** (the three imports, the five public forms, event
+  registration, the info mailbox). The intake forms, the webinar page and
+  the postcard landing page are **public forms**. A record from an outside
+  source is a **lead**. The staff screens that create records are not an
+  outside source and create no lead (ruling 48). Doug's 10-18-26 rule still
+  binds them: a rule meant for every place a record enters is written as
+  "every public form and every staff screen that creates records"
+  (wording approved by Doug 10-19-26).
 
 - **Company type is `cCompanyType`, never `cAccountType`.** The Account entity
   is presented as **Company**; `cAccountType` is gone from both CRMs. Valid
@@ -55,10 +58,11 @@ Cross-form behaviour worth knowing before changing an orchestrator:
   `"Sponsor"`, NOT `"Donor/Sponsor"`, and **EspoCRM rejects an invalid multiEnum
   outright** (the create 400s, nothing written). See
   [[prod-account-caccounttype-missing]].
-- **A company the CRM already knows GAINS the new door's role** (v0.236.0,
-  Doug's ruling 2026-10-07): every door that find-or-creates a Company — the
-  four public forms and the Partner/Funder quick-add — calls
-  `core/crm_upsert.merge_company_type` on a match, appending this door's
+- **A company the CRM already knows GAINS the new role** (v0.236.0,
+  Doug's ruling 2026-10-07): every public form and staff screen that
+  find-or-creates a Company — the four public forms and the Partner/Funder
+  quick-add — calls `core/crm_upsert.merge_company_type` on a match,
+  appending its own
   `cCompanyType` value and never removing one. Best-effort: a refused merge
   is logged, never fatal. A funder's company applying as a partner used to
   stay typed `Sponsor` only. **The Contact's `cContactType` is deliberately
@@ -721,7 +725,7 @@ one shared frontend that derives its domain from the first segment of its URL.
   merge-only, best-effort) — the contact's company link needs the user to
   read the company. Null-fills and creates still run as the user.
 - **A new contact on the Contacts tab reuses a known email** (v0.264.2, the
-  staff screens are doors): matched under the intake API client, linked,
+  staff screens are bound like the public forms): matched under the intake API client, linked,
   null-filled as the user; a CBM member is refused.
 - **Contacts tables are per-domain**: mentor shows Role chips and an Agreements
   badge; partner/funder show neither (every contact has the same relationship to
@@ -1053,7 +1057,7 @@ the reason.
   then opens the standard form with `?prospect=&campaign=&link=`; the typed
   details travel in `sessionStorage` only, and `GET /api/campaigns/prospect/{id}`
   serves the printed facts alone.
-- **Every public door carries `campaign_id`, `campaign_link`, `prospect_id`**
+- **Every public form carries `campaign_id`, `campaign_link`, `prospect_id`**
   (declared on `core/forms.BaseSubmission` — an undeclared key is dropped by
   capture) and the **SMS tick** `sms_consent` → `Contact.cSmsOptIn`, true-only
   (ruling 9). **Honoured at delivery since Phase 2 (v0.259.0)** — the next
@@ -1068,7 +1072,7 @@ the reason.
   known* side exit; a re-upload of the same file is a no-op through the ledger.
 - **The partner's Campaigns tab** (CM-5): `DomainConfig.sponsored_campaigns_link`
   on the partner domain only, the Events-tab shape exactly.
-- **Phase 2 — the doors honour the ids** (v0.259.0, 10-17-26; build plan
+- **Phase 2 — the public forms honour the ids** (v0.259.0, 10-17-26; build plan
   § 5). One module, `campaigns/attribution.py`, serves the five
   orchestrators (client intake, information request, event registration,
   partner, sponsor): a **validate-or-drop** read of the campaign and of the
@@ -1096,9 +1100,9 @@ the reason.
   `core/crm_upsert.merged_types` — appending Client, Partner, Sponsor or
   Mentor removes `Prospect`, nothing else is ever removed; both
   `merge_company_type` and the new `merge_contact_type` apply it, and
-  `merge_contact_type` is the ONE reason a door touches a matched contact's
-  type (the information request and registration doors never do). **Ruling
-  34:** the information request door creates its company typed `Prospect`,
+  `merge_contact_type` is the ONE reason a public form touches a matched
+  contact's type (the information request and registration forms never do).
+  **Ruling 34:** the information request form creates its company typed `Prospect`,
   `cClientStatus` untouched, a matched company left alone (it used to gain
   Client), feature-detected with the old shape as the fallback;
   `scripts/relabel_info_request_companies.py` (dry-run default) relabels
@@ -1111,7 +1115,7 @@ the reason.
   the event (both new deep links), partner / funder record pages,
   Submission Admin for an information request.
 - **Ruling 37 (v0.260.2):** the information request and registration
-  doors never write a rung on a record that already holds a relationship
+  forms never write a stage on a record that already holds a relationship
   type — `attribution.holds_relationship`, checked inside `advance_rung`, so
   every caller must SELECT the type field (`cContactType` / `cCompanyType`).
 - **Phase 3 — lists, review, calls** (v0.261.0, 10-18-26; dark behind
@@ -1165,6 +1169,21 @@ the reason.
   — the Marketing Admin Role reads no engagement). **Opportunity on
   attendance** (`attribution.opportunity_on_attendance`) from the manual
   mark, the check-in and the Zoom pull, org key, best-effort.
+- **The lead model (v0.265.0, rulings 41–53; build plan § 7a)** supersedes
+  the rung words in the Phase 1–4 bullets above. A lead (`CProspect`, CRM
+  label *Outreach Lead*) carries `leadStatus` Unqualified · Qualified ·
+  Disqualified · Converted and `leadSource`; a Company or Contact is made
+  only at first contact and carries `cFunnelStage` Prospect · Engaged ·
+  Opportunity. One conversion rule, `campaigns/conversion.py`: an email or
+  a website converts; a business lead becomes a Company (matched by website,
+  then name and postal code) and the Contact for the email (ruling 52); a
+  scan changes nothing (51). A filing row with a website or email enters
+  Qualified (53). Every new public-form record gets a lead Converted at
+  once (48, `attribution.record_lead`, retry-safe through
+  `ResumableClient.created_ids`). **Stage writes need the NEW options**
+  (`rung_available`): a CRM still on the old ladder gets none rather than a
+  400. Every campaign read requires `CProspect.leadStatus`. Three counts:
+  Responded, Converted, Became a client, partner or funder (46).
 - Owed: nothing on production's CRM (both slots done 10-18-26; every
   campaign switch off there — turning one on is Doug's call at `/setup`);
   Boston with its release; a seeder and sandbox re-baseline; the Twilio
@@ -1983,6 +2002,13 @@ with `main`; **Lakeside took it off the release lane by itself** (its
 unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
+
+- **v0.265.0 (2026-10-19) — the lead model.** Committed, not pushed.
+  Rulings 51–53 put to Doug first. Standing rules in the Campaign
+  Management section. Verified by tests; the three crm-test CRM steps
+  (`scripts/prospect_crm_test.sh touchpos|leadlayouts|leadmove`) and the
+  live pass https://claude.ai/artifact/DPSsyZMYPhvHQRUnL696Rk are owed
+  (`OPEN-ITEMS.md` #51), then production at a Sunday slot.
 
 - **v0.258.6 (2026-10-15) — attendee linking escalates a foreign-record 403
   to the admin.** A mentor recording an attendee assigned to someone else
