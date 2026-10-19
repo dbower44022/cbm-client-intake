@@ -436,7 +436,15 @@ found; move resolved items to the bottom with the resolution date.
     time-stamped evidence and arguably should set `true` over `false`
     (never the reverse); `forms/event_registration/orchestrator._contact_payload`
     plus `core/crm_upsert.find_create_or_fill`. v0.264.4 (the form lock) live
-    on production 10-19-26 00:37. Section 8 (the clean-up) owed.
+    on production 10-19-26 00:37. **Section 8, 10-19-26 00:45:** the four receipts Doug removed in the CRM were
+    **recreated by the receipt sweep at 04:40 UTC** (two Completed, two
+    Discarded) — by design, a receipt follows the application's row, which
+    is never deleted — so step 8-2 is withdrawn (runbook rev 2.2) and the
+    receipts stay as the test's record. **The two registrations dated
+    10-19-26 on Douglas Bower were still present (deleted=false, read as the
+    administrator 10-19-26 00:45)**: step 8-1 is owed again. The contact is intact,
+    no test contact exists, 20 events, 6 presenter entries, the public page
+    7 cards and 12 recordings.
     **State 10-18-26 23:22: the step page was rebuilt to the 10-17-26 step standard
     (rev 2.0, done boxes, every value pre-filled from reads) and now carries
     the whole job**: the Track F production apply (#39, #41 — their Sunday
