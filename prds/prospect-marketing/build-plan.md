@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-19-26 01:20 · Revision 0.10 — change log at the end.
+Last Updated: 10-19-26 01:21 · Revision 0.11 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -1422,7 +1422,9 @@ Questions 13–16 were added in v0.8 for the rework of § 7a (rulings 41–44).
     recorded as a response on the lead, which stays a lead (ruling 42: no
     Company without a website, no Contact without an email). Cost: one more
     field for the caller. The alternative converts on the outcome alone and
-    creates a Company or Contact with neither, which ruling 42 forbids.
+    creates a Company or Contact with neither, which ruling 44's "a response
+    that brings a website or email converts" rules out. **Answered 10-19-26:
+    A, an email or website is required (ruling 47).**
 16. **Does a public-form submission also create a lead?** A webinar
     registrant or information requester today creates a Contact with no
     prospect record (§ 1.8). Recommended: no — a public-form submission is
@@ -1459,8 +1461,8 @@ best-effort mirror.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — build plan |
-| Version | v0.10 — Phases 1–4 built (v0.258.0, v0.259.0, v0.261.0, v0.262.0–v0.264.0) on the earlier model; rulings 41–44 (the lead model) recorded and their rework planned in § 7a; questions 13 and 14 answered (rulings 45, 46), 15 and 16 open |
-| Last Updated | 10-19-26 01:20 |
+| Version | v0.11 — Phases 1–4 built (v0.258.0, v0.259.0, v0.261.0, v0.262.0–v0.264.0) on the earlier model; rulings 41–44 (the lead model) recorded and their rework planned in § 7a; questions 13–15 answered (rulings 45–47), 16 open |
+| Last Updated | 10-19-26 01:21 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
 | Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
@@ -1469,6 +1471,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.11 | 10-19-26 01:21 | Claude (Claude Code) | § 9 question 15 answered: A, an Interested call converts only with an email or website (ruling 47); the question's citation corrected from ruling 42 to ruling 44. |
 | 0.10 | 10-19-26 01:20 | Claude (Claude Code) | § 9 question 14 answered: A, three counts on the Responses tab (ruling 46). |
 | 0.9 | 10-19-26 01:09 | Claude (Claude Code) | § 9 question 13 answered: A, change the stored values (ruling 45). |
 | 0.8 | 10-18-26 23:16 | Claude (Cowork) | Rulings 41–44 (the lead model, from the executive overview session): a revision note at the top; new § 7a — the model as ruled, the drafts chosen (stages Prospect · Engaged · Opportunity, exit Duplicate, a scan does not convert, CRM label *Outreach Lead*), the component-by-component change table, the words that move, the order and its cost; questions 13–16 added to § 9. §§ 1–6 not rewritten: they describe the build until § 7a is built. |

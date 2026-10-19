@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-19-26 01:20 · Revision 1.13 — change log at the end.
+Last Updated: 10-19-26 01:21 · Revision 1.14 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -417,6 +417,23 @@ lead-to-Prospect step takes another word. Doug's reply at 01:20: "a".
     ruling 22's event "a relationship begins"; ruling 22 stands as
     recorded. (10-19-26)
 
+### Doug's ruling (10-19-26, on build plan § 9 question 15)
+
+Put as a consequential decision in the same session: option A, a call
+marked Interested converts the lead only when the caller records an email
+or a website; option B, Interested converts on its own and creates a
+phone-only Company or Contact. Doug's reply at 01:21: "a".
+
+47. **A call marked Interested converts the lead only with an email or a
+    website** (option A). Choosing Interested asks the caller for an email
+    and a website; either one converts the lead (Company and/or Contact
+    typed Prospect, the lead Converted). With neither, Interested is
+    recorded on the call, the lead stays a lead and the screen says why,
+    and *Call again* is offered as for No answer. A typed email is matched
+    as on the public forms, so a known email reuses its Contact. This
+    applies ruling 44's "a response that brings a website or email
+    converts the lead". (10-19-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -537,8 +554,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.13 |
-| Last Updated | 10-19-26 01:20 |
+| Version | 1.14 |
+| Last Updated | 10-19-26 01:21 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -546,6 +563,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.14 | 10-19-26 01:21 | Claude (Claude Code) | Ruling 47 appended: a call marked Interested converts the lead only with an email or a website (Doug's "a" to build plan § 9 question 15). |
 | 1.13 | 10-19-26 01:20 | Claude (Claude Code) | Ruling 46 appended: "converted" means a lead became a Prospect; the win is "became a client, partner or funder" (Doug's "a" to build plan § 9 question 14). |
 | 1.12 | 10-19-26 01:09 | Claude (Claude Code) | Ruling 45 appended: the lead-model rework changes the stored values, not only the labels (Doug's "a" to build plan § 9 question 13). |
 | 1.11 | 10-18-26 23:16 | Claude (Cowork) | Rulings 41–44 appended: the lead model — Lead for every record from outside, "door" retired (41); Unqualified / Qualified / Disqualified, Prospect at contact (42); Company or Contact created only at first contact (43, Doug's "1"); campaigns may select Unqualified leads (44, Doug's "1"). The ladder table and the walk above are left as recorded; build plan v0.8 § 7a carries the new ladder. |
