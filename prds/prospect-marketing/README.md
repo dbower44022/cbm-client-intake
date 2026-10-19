@@ -1,6 +1,6 @@
 # Prospect marketing and Campaign Management
 
-Last Updated: 10-18-26 23:16 · Revision 1.11 — change log at the end.
+Last Updated: 10-19-26 00:57 · Revision 1.12 — change log at the end.
 
 **Read this first if you are working on prospects or campaigns.** This
 directory is the whole arc: the rulings, the build plan, and the record of
@@ -49,8 +49,9 @@ built 10-15-26, v0.258.0, dark behind `CAMPAIGNS_ENABLED`**).
   Qualified, Disqualified); a Company or Contact typed Prospect is created
   only at first contact; campaigns may select Unqualified leads; "door" is
   retired. Phases 1–4 below were built on the earlier model. The rework is
-  planned in build plan v0.8 § 7a and gated by § 9 questions 13–16; **hold
-  the Phase 4 pass** until the rework names the steps to re-run. The
+  planned in build plan v0.8 § 7a and gated by § 9 questions 13–16. The
+  Phase 4 pass already matched (10-18-26 15:05); **the passes' steps that
+  touch a stage are re-run after the rework** (§ 7a.5 step 3). The
   executive overview written for leadership already uses the new words.
 - **Settled:** the process end to end (rulings 1–27), the Campaign
   Management application (CM-1 to CM-11), and the build's own rulings 28–34
@@ -199,14 +200,15 @@ import contract starts from).
 | Field | Value |
 |---|---|
 | Document | Prospect marketing — directory README |
-| Version | 1.11 |
-| Last Updated | 10-18-26 23:16 |
+| Version | 1.12 |
+| Last Updated | 10-19-26 00:57 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.12 | 10-19-26 00:57 | Claude (Claude Code) | State: the Phase 4 pass is recorded as matched, not held; the stage steps of the Phase 1–4 passes are re-run after the rework (§ 7a.5 step 3). Rev 1.11 said "hold", against the pass already recorded below. |
 | 1.11 | 10-18-26 23:16 | Claude (Cowork) | State: rulings 41–44 (the lead model) recorded; rework planned in build plan v0.8 § 7a, gated by questions 13–16; the Phase 4 pass held. Terminology note: door, prospect record and conversion are changing. |
 | 1.10 | 10-18-26 02:24 | Claude (Claude Code) | State: Phase 3 live-passed, Phase 2 pass complete, Phase 4 built (rulings 38, 39); Doug's Phase 4 pass next. |
 | 1.9 | 10-18-26 00:50 | Claude (Claude Code) | State: Phase 3 built (v0.261.0), rulings 36 and 37; Doug's Phase 3 pass is next; the next kickoff is Phase 4. |
