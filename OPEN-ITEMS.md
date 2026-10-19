@@ -20,6 +20,19 @@ found; move resolved items to the bottom with the resolution date.
     confirming the save is clean with no attendee warning. No test and no
     stub harness exercises the admin fallback against a live CRM.
 
+54. **Prospect marketing — the lead model (rulings 41–50), CRM half on
+    crm-test DONE 10-19-26; code rework owed** (found 10-18-26). Handoff
+    `coutreach-lead-model-crm-handoff.md`: the additive plan
+    (`scripts/plans/coutreach-lead-model.json`, fingerprint `6e228dbb7d33`)
+    and the Outreach Lead labels applied by Doug 10-19-26, read back as the
+    admin and the org-wide key, opened as Mark Marketing (non-admin). Owed, in
+    order: the code rework (build plan § 7a.5 step 2, kickoff
+    `prompts/kickoff-lead-model-code-rework.md`) with the value move and the
+    layouts; the stage steps of the Phase 1–4 passes re-run on crm-test;
+    production and Boston at their slots (plan, labels, value move — count
+    production's leads by the move's dry run first, ruling 45); then Doug's
+    ruling on the proposed removals (handoff § 6).
+
 51. **Prospect marketing — Phase 1 BUILT and LIVE-PASSED on crm-test
     (v0.258.0–v0.258.5, 10-15/17-26, dark behind `CAMPAIGNS_ENABLED`);
     Phase 2 BUILT (v0.259.0, 10-17-26) and LIVE-PASSED (A–E 10-17-26,

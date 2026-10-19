@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-19-26 01:22 · Revision 0.12 — change log at the end.
+Last Updated: 10-19-26 11:03 · Revision 0.13 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -1246,6 +1246,9 @@ Written into the executive overview on 10-18-26 and open to Doug's change:
    one-time, dry-run-first script that moves existing values (Unverified →
    Unqualified, Lead and Warm Lead → Prospect and Engaged, Already known →
    Duplicate, Unqualified-as-exit → Disqualified, promoted → Converted).
+   **crm-test done 10-19-26** (`coutreach-lead-model-crm-handoff.md`, rulings
+   49 and 50): fields and labels applied and verified; the value move and
+   the layouts wait for step 2's release, the removals for Doug (handoff § 6).
 2. **Code**, in one release behind the existing switches: import, review,
    landing and response, calls, postcard selection, attribution, stale,
    email and SMS selection, reporting, then the screens' words.
@@ -1464,8 +1467,8 @@ best-effort mirror.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — build plan |
-| Version | v0.12 — Phases 1–4 built (v0.258.0, v0.259.0, v0.261.0, v0.262.0–v0.264.0) on the earlier model; rulings 41–44 (the lead model) recorded and their rework planned in § 7a; questions 13–16 answered (rulings 45–48) |
-| Last Updated | 10-19-26 01:22 |
+| Version | v0.13 — Phases 1–4 built (v0.258.0, v0.259.0, v0.261.0, v0.262.0–v0.264.0) on the earlier model; rulings 41–44 (the lead model) recorded and their rework planned in § 7a; questions 13–16 answered (rulings 45–48); § 7a.5 step 1 done on crm-test (rulings 49, 50) |
+| Last Updated | 10-19-26 11:03 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
 | Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
@@ -1474,6 +1477,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.13 | 10-19-26 11:03 | Claude (Claude Code) | § 7a.5 step 1 done on crm-test: the lead model's CRM handoff written and its additive half applied (rulings 49, 50); step 2, the code, is next. |
 | 0.12 | 10-19-26 01:22 | Claude (Claude Code) | § 9 question 16 answered: B, a lead behind every new public-form record (ruling 48). Questions 13–16 all answered; § 7a.5 step 1, the CRM handoff, is next. |
 | 0.11 | 10-19-26 01:21 | Claude (Claude Code) | § 9 question 15 answered: A, an Interested call converts only with an email or website (ruling 47); the question's citation corrected from ruling 42 to ruling 44. |
 | 0.10 | 10-19-26 01:20 | Claude (Claude Code) | § 9 question 14 answered: A, three counts on the Responses tab (ruling 46). |

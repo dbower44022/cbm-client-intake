@@ -1,6 +1,6 @@
 # Prospect marketing and Campaign Management
 
-Last Updated: 10-19-26 01:22 · Revision 1.13 — change log at the end.
+Last Updated: 10-19-26 11:03 · Revision 1.14 — change log at the end.
 
 **Read this first if you are working on prospects or campaigns.** This
 directory is the whole arc: the rulings, the build plan, and the record of
@@ -50,7 +50,9 @@ built 10-15-26, v0.258.0, dark behind `CAMPAIGNS_ENABLED`**).
   only at first contact; campaigns may select Unqualified leads; "door" is
   retired. Phases 1–4 below were built on the earlier model. The rework is
   planned in build plan § 7a; its four gating questions are answered
-  (rulings 45–48, 10-19-26) and § 7a.5 step 1, the CRM handoff, is next. The
+  (rulings 45–48, 10-19-26). The CRM half is on crm-test (10-19-26,
+  `coutreach-lead-model-crm-handoff.md`, rulings 49 and 50); the code rework,
+  § 7a.5 step 2, is next (`prompts/kickoff-lead-model-code-rework.md`). The
   Phase 4 pass already matched (10-18-26 15:05); **the passes' steps that
   touch a stage are re-run after the rework** (§ 7a.5 step 3). The
   executive overview written for leadership already uses the new words.
@@ -201,14 +203,15 @@ import contract starts from).
 | Field | Value |
 |---|---|
 | Document | Prospect marketing — directory README |
-| Version | 1.13 |
-| Last Updated | 10-19-26 01:22 |
+| Version | 1.14 |
+| Last Updated | 10-19-26 11:03 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.14 | 10-19-26 11:03 | Claude (Claude Code) | State: the lead model's CRM half done on crm-test (rulings 49, 50); the code rework is next. |
 | 1.13 | 10-19-26 01:22 | Claude (Claude Code) | State: questions 13–16 answered (rulings 45–48); the CRM handoff for the lead model is next. |
 | 1.12 | 10-19-26 00:57 | Claude (Claude Code) | State: the Phase 4 pass is recorded as matched, not held; the stage steps of the Phase 1–4 passes are re-run after the rework (§ 7a.5 step 3). Rev 1.11 said "hold", against the pass already recorded below. |
 | 1.11 | 10-18-26 23:16 | Claude (Cowork) | State: rulings 41–44 (the lead model) recorded; rework planned in build plan v0.8 § 7a, gated by questions 13–16; the Phase 4 pass held. Terminology note: door, prospect record and conversion are changing. |

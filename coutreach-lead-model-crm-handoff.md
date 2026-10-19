@@ -1,6 +1,6 @@
 # CRM handoff — the lead model (prospect marketing rulings 41–50)
 
-Last Updated: 10-19-26 10:54 · Revision 1.0 — change log at the end.
+Last Updated: 10-19-26 11:03 · Revision 1.1 — change log at the end.
 
 **What this changes.** Every record from an outside source is now a **lead**
 with a **lead status** (Unqualified · Qualified · Disqualified · Converted) and
@@ -46,6 +46,16 @@ undone by its next write.
 - Links pointing at the lead: `Contact.cProspectRecords`,
   `Account.cProspectRecords`, `Account.cAlreadyKnownProspects`,
   `COutreachTouch.prospect`.
+
+## 2a. Applied on crm-test — 10-19-26
+
+§ 3 and § 4 applied by Doug at 10:55 through `scripts/prospect_crm_test.sh
+leadmodel` and `leadlabels`. Verified: the applier read every change back; the
+relabel's second dry run reads 0 to change; the org-wide API key reads
+`CProspect` with the three new fields (200) and sees the four statuses; the
+value move's dry run finds nothing to move; Mark Marketing (non-admin,
+Marketing Admin Team) opened *Outreach Leads* and *Create Outreach Lead*. § 5
+and § 7 wait for the code release; § 6 for Doug.
 
 ## 3. The plan — `scripts/plans/coutreach-lead-model.json`
 
@@ -138,12 +148,13 @@ yet write.
 | Field | Value |
 |---|---|
 | Document | CRM handoff — the lead model |
-| Version | 1.0 |
-| Last Updated | 10-19-26 10:54 |
+| Version | 1.1 |
+| Last Updated | 10-19-26 11:03 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 10-19-26 11:03 | Claude (Claude Code) | § 2a: §§ 3 and 4 applied on crm-test and verified, including as a non-admin. |
 | 1.0 | 10-19-26 10:54 | Claude (Claude Code) | First version: the state read on crm-test, the additive plan (fingerprint `6e228dbb7d33`), the relabel, the value move, the proposed removals and the layouts, each staged against the code release. |
