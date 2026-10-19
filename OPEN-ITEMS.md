@@ -412,7 +412,19 @@ found; move resolved items to the bottom with the resolution date.
     line copies `CMentorProfile.mentorTitle`, which three mentors use as a
     tagline (Sue Marrone's reads like a workshop blurb, CiCi Caver's is an
     industry list) and Cindie Pacheco's profile has no photo and no
-    biography — edit the card, or the profile. Sections 5 to 8 owed.
+    biography — edit the card, or the profile. **Section 5 DONE 10-19-26 00:19–00:23 (verified from the database and
+    the CRM 10-19-26 00:34):** four event-registration rows captured (two Completed
+    and auto-closed, two Held-Duplicate — the deliberate repeat on the
+    series and a second submission on the marketing webinar), four receipts
+    written, two `CEventRegistration` rows source Online. **The registrant is
+    Douglas Bower, not "Test Registrant"**: the email Doug typed is on his own
+    contact, and a known email never makes a second contact (by design) — so
+    the clean-up removes the two registrations and the four receipts and
+    never the contact (runbook rev 2.1). **Finding for a fix:** Submission
+    Admin's search box matches the form, email, statuses, reference and
+    activity but **not the submitter's name** (`ops/frontend/app.js`
+    `matchesSearch`), which is why step 6-6's "Registrant" found nothing;
+    the step now searches `event-registration`. Sections 6 to 8 owed.
     **State 10-18-26 23:22: the step page was rebuilt to the 10-17-26 step standard
     (rev 2.0, done boxes, every value pre-filled from reads) and now carries
     the whole job**: the Track F production apply (#39, #41 — their Sunday
