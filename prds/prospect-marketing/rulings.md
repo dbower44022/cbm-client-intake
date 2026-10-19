@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-19-26 01:21 · Revision 1.14 — change log at the end.
+Last Updated: 10-19-26 01:22 · Revision 1.15 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -434,6 +434,27 @@ phone-only Company or Contact. Doug's reply at 01:21: "a".
     applies ruling 44's "a response that brings a website or email
     converts the lead". (10-19-26)
 
+### Doug's ruling (10-19-26, on build plan § 9 question 16)
+
+Put as a consequential decision in the same session, with the
+recommendation changed from the build plan's because ruling 41 reads "Any
+new record entered into the system from an outside source is named a
+'Lead'": option A, a public-form arrival creates the Prospect directly and
+no lead; option B, every public form that creates a new Company or Contact
+also creates a lead, marked Converted at once, its Lead Source the form.
+Doug's reply at 01:22: "b".
+
+48. **Every new record from a public form has a lead behind it**
+    (option B). A public form that creates a new Company or Contact also
+    creates a lead, Converted at once, with the form as its Lead Source, so
+    Lead Source answers "where did they come from" for every record. A
+    repeat submitter whose record already exists gets no new lead. The
+    lead is written retry-safe with the rest of the delivery and never
+    loses the submission. A client, partner or funder form converts its
+    lead straight to the relationship. Drafted, not ruled: the staff
+    screens that create records are not an outside source and create no
+    lead. (10-19-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -554,8 +575,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.14 |
-| Last Updated | 10-19-26 01:21 |
+| Version | 1.15 |
+| Last Updated | 10-19-26 01:22 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -563,6 +584,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.15 | 10-19-26 01:22 | Claude (Claude Code) | Ruling 48 appended: every new record from a public form has a lead behind it, Converted at once (Doug's "b" to build plan § 9 question 16, the session's revised recommendation). |
 | 1.14 | 10-19-26 01:21 | Claude (Claude Code) | Ruling 47 appended: a call marked Interested converts the lead only with an email or a website (Doug's "a" to build plan § 9 question 15). |
 | 1.13 | 10-19-26 01:20 | Claude (Claude Code) | Ruling 46 appended: "converted" means a lead became a Prospect; the win is "became a client, partner or funder" (Doug's "a" to build plan § 9 question 14). |
 | 1.12 | 10-19-26 01:09 | Claude (Claude Code) | Ruling 45 appended: the lead-model rework changes the stored values, not only the labels (Doug's "a" to build plan § 9 question 13). |
