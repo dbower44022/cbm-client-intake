@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-19-26 10:49 · Revision 1.17 — change log at the end.
+Last Updated: 10-19-26 11:10 · Revision 1.18 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -487,6 +487,20 @@ more. Doug's reply at 10:49: "a".
     untouched. The draft "a scan alone does not convert" is left for the
     code session. (10-19-26)
 
+### Doug's ruling (10-19-26, at the start of the lead-model code session)
+
+Put as a consequential decision: option A, a postcard scan is recorded on
+the touch and the lead (`firstScannedAt`, `scanCount`, outcome Scanned)
+and changes no status; option B, a scan makes an Unqualified lead
+Qualified. Doug's reply at 11:10: "a".
+
+51. **A scan alone changes no status** (option A). The scan is recorded
+    on the touch and the lead and moves nothing: the lead stays
+    Unqualified or Qualified, and a converted lead's Company stays at
+    Prospect. This changes ruling 16's "a scan of the postcard's code alone
+    moves the company to Lead"; its rule that the landing page shows only
+    what is printed on the card stands. (10-19-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -607,8 +621,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.17 |
-| Last Updated | 10-19-26 10:49 |
+| Version | 1.18 |
+| Last Updated | 10-19-26 11:10 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -616,6 +630,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.18 | 10-19-26 11:10 | Claude (Claude Code) | Ruling 51 appended: a scan alone changes no status (Doug's "a" to build plan § 7a.2's last draft, at the start of the lead-model code session). |
 | 1.17 | 10-19-26 10:49 | Claude (Claude Code) | Ruling 50 appended: build plan § 7a.2's four CRM-facing drafts approved as written (Doug's "a"). |
 | 1.16 | 10-19-26 10:44 | Claude (Claude Code) | Ruling 49 appended: a lead's status is a new field `leadStatus` (Doug's "b", lead-model CRM handoff session). |
 | 1.15 | 10-19-26 01:22 | Claude (Claude Code) | Ruling 48 appended: every new record from a public form has a lead behind it, Converted at once (Doug's "b" to build plan § 9 question 16, the session's revised recommendation). |
