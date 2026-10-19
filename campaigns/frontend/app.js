@@ -936,6 +936,11 @@
        ["Qualified by", p.qualifiedBy], ["Qualified at", p.qualifiedAt ? fmtDate(p.qualifiedAt) : null], ["Batch", p.importBatch], ["Reference", p.externalReference],
        ["Converted to company", p.promotedCompanyName], ["Converted to contact", p.promotedContactName], ["Duplicate of company", p.alreadyKnownCompanyName]
       ].forEach(function (f) { facts.appendChild(el("dt", null, f[0])); facts.appendChild(el("dd", null, f[1] || "—")); });
+      // The lead's notes: where Qualify and Disqualify write who, when and why.
+      facts.appendChild(el("dt", null, "Notes"));
+      var notesDd = el("dd", "cm__notes", p.description || "—");
+      notesDd.style.whiteSpace = "pre-wrap";
+      facts.appendChild(notesDd);
       body.appendChild(facts);
       body.appendChild(el("h4", null, "Touches"));
       if (!(res.touches || []).length) body.appendChild(el("p", "cm__hint", "No touch yet."));

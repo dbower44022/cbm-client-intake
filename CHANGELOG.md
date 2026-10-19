@@ -5,6 +5,15 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.265.1] — 2026-10-19
+
+**fix(campaigns): the lead's page shows its notes.** Found on the lead model's
+live pass (step C5): Disqualify and Qualify write who, when and why to the
+lead's notes (`description`), and the stored text was right, but the lead's
+popup listed no Notes row, so the reason could not be seen in the
+application. The popup now ends its facts with the notes, line breaks kept.
+No CRM change; rollback is a revert.
+
 ## [0.265.0] — 2026-10-19
 
 **feat(campaigns): the lead model** (prospect marketing build plan § 7a.5
