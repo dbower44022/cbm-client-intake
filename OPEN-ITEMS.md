@@ -388,6 +388,35 @@ found; move resolved items to the bottom with the resolution date.
     the deploy for a larger record count, not an error.
 
 42. **Events: the production end-to-end test, and the redirect deferred.**
+    **THE TEST IS COMPLETE — 10-19-26 00:51.** Every section of the runbook
+    (https://claude.ai/artifact/Dkbb1t7MKFb9vnjabpcyMc, rev 2.2) ran on
+    production 10-18/19-26 and matched after the corrections below; the
+    three test registrations are removed (Doug also removed his 09-15-26
+    training-webinar one), the receipts stay by design, the contact is
+    intact, and production's programme page carries the website's seven
+    sessions, twelve recordings and six presenter cards. **What the test
+    settled:** Track F F1 and F4 are on production (CRM, grants, switch, a
+    real non-admin pass); the duration list has its three new lengths; the
+    library matches the playlists; capture, delivery, the near-duplicate
+    hold, discard with its receipt write-through, the portal rail and member
+    page, the Registrants tab and counts all work on production data.
+    **Fixed on the way:** v0.264.3 (the applier takes integer options; the
+    editor reads Duration from the CRM) and v0.264.4 (a registered sign-up
+    form locks). **Owed before the redirect, in order:** (1) **Track D D3,
+    the confirmation email** — both doors say "Check your email" and nothing
+    is sent; (2) a **ruling on consent**: a ticked consent should set `true`
+    over an existing `false` (today the null-fill keeps `false`); (3) the
+    **Zoom question for webinars**: a registration on our page gets no join
+    link while Zoom is off (Track C), so the website keeps taking webinar
+    registrations until that is settled; (4) **Submission Admin search by
+    name** (`matchesSearch` omits the submitter's name); (5) Doug's
+    decisions on the **five-week series** (one event or five — check-in is
+    per event) and whether the **Holiday Social** should be Internal;
+    (6) data: three mentors' `mentorTitle` is a tagline, Cindie Pacheco's
+    profile has no photo or biography, Board Fundraising lacks the
+    Industry-Specific topic and the 10-22 AI webinar has none; (7) Boston
+    takes F1/F4/durations with its release; (8) the redirect itself
+    (Track A, A8), in a few weeks by the 10-09-26 ruling.
     **Section 2 DONE on production 10-18-26 23:30–23:40 (Doug, from the web
     container; verified from here 10-18-26 23:43 as the org key):** `CEventPresenter`
     created with its five fields and two links and readable by the API key
@@ -1047,7 +1076,7 @@ block a deploy.)*
 ## Live verification owed
 
 41. **Topics on events (v0.242.0, Track F F1) — live pass DONE on crm-test 10-09-26; production and Boston owed.**
-    *10-18-26 23:22: production's apply is section 2 of the Events Production Test page (#42); read from the container 10-18-26 23:05, `CEvent.topics` is still absent.* **PRODUCTION CRM DONE 10-18-26 23:3x** (plan `1a404fc9c337` applied and verified; the copy wrote eleven events, read back as the org key). Boston still owed.
+    *10-18-26 23:22: production's apply is section 2 of the Events Production Test page (#42); read from the container 10-18-26 23:05, `CEvent.topics` is still absent.* **PRODUCTION CRM DONE 10-18-26 23:3x** (plan `1a404fc9c337` applied and verified; the copy wrote eleven events, read back as the org key). The non-admin pass done 10-18/19-26 (seven events saved with topics as Doug's regular login). **Production complete.** Boston still owed.
     Doug's ruling 10-08-26: no user-entered topic; an event carries several
     curated topics (`CEvent.topics`, multiEnum). Feature-detected, no switch.
     **crm-test's CRM side is done 10-09-26 03:34 UTC**: `scripts/plans/
@@ -1078,7 +1107,7 @@ block a deploy.)*
     on crm-test; production and Boston CRM owed.** *10-18-26 23:22: production's
     apply is now section 2 of the Events Production Test page (#42), which
     supersedes the Track F Production Apply page; read from the container
-    10-18-26 23:05, `CEventPresenter` still answers 404.* **PRODUCTION CRM DONE 10-18-26 23:3x** (plan `5a78484e6b9c` applied and verified, role script applied and read back, API key lists `CEventPresenter` 200); the switch and the non-admin pass are the runbook's sections 3 and 4. Boston still owed. The code ships off
+    10-18-26 23:05, `CEventPresenter` still answers 404.* **PRODUCTION CRM DONE 10-18-26 23:3x** (plan `5a78484e6b9c` applied and verified, role script applied and read back, API key lists `CEventPresenter` 200); the switch and the non-admin pass DONE 10-18/19-26 (six presenter entries on four production events as Doug's regular login). **Production complete.** Boston still owed. The code ships off
     (`EVENT_PRESENTERS`) and feature-detected. **crm-test's CRM side is
     complete 2026-10-08** (`scripts/plans/cevent-presenters.json` applied and
     read back; `scripts/migrate_presenter_roles.py` applied — Contact create +

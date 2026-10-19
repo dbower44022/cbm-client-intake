@@ -2079,6 +2079,27 @@ each block.
   My Email, because that role reads no `CSponsorProfile` (the mail sync is
   unaffected — its scope runs under the org key).
 
+- **v0.264.3 / v0.264.4 (2026-10-18/19) — the events production test is
+  complete.** Doug's ruling 10-09-26: the website redirect waits a few weeks;
+  events is tested end to end on production first with the website's own
+  sessions as real records. Done 10-18/19-26 from one runbook
+  (`OPEN-ITEMS.md` #42): Track F F1 and F4 applied on production (CRM,
+  grants, switch, a real non-admin pass), three duration choices added
+  (`scripts/plans/cevent-duration-options.json`; v0.264.3 makes the applier
+  take integer options and the editor read Duration from the CRM), the
+  library's two missing recordings imported, the website's seven sessions
+  and six presenter cards entered, three registrations driven through the
+  public door and cleaned up. v0.264.4: a registered sign-up form locks on
+  both doors. **Owed before the redirect:** the confirmation email (Track D
+  D3 — both doors say "Check your email" and nothing is sent), a ruling on
+  writing a ticked consent over an existing `false`, the Zoom question for
+  webinar registrations, Submission Admin search by name, and Doug's
+  decision on the five-week series as one event or five. Standing facts
+  learned: a known email never makes a second contact (a test registrant
+  with Doug's address became Doug); a receipt removed in the CRM is put back
+  by the hourly sweep; the Submission Admin search matches email and status,
+  not a name.
+
 - **v0.248.0 (2026-10-09) — the receipt sweep converges; a timing line per
   API request.** Pushed 10-09-26 22:29. The last two review items; standing
   rules in the Gotchas (*This application*). **The receipt fix is inferred**:
