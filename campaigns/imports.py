@@ -1,22 +1,32 @@
-"""The import doors (build plan § 2): parse → normalise → already-known check →
-plan → apply. Phase 1 builds the state-filing door (§ 2.1); the list door
-(§ 2.3) shares every step and differs only in the rung it enters at.
+"""The imports (build plan § 2, reworked for the lead model § 7a): parse →
+normalise → already-known check → plan → apply. Three Lead Sources share every
+step: the state filing (§ 2.1), the purchased list and the partner file (§ 2.3).
+
+**Every row becomes a lead, and nothing else is created** (rulings 41, 43): the
+Company and the Contact are made at first contact, never at import.
+
+**The status a lead enters at (ruling 53).** A state-filing row that carries a
+website or an email enters **Qualified** on the outside filter's verdict
+(ruling 11), with the filter recorded in ``qualifiedBy`` / ``qualifiedAt``.
+Every other row enters **Unqualified** (rulings 18, 42).
 
 **Plan, then apply.** The upload shows what would be created, matched and
 skipped, with the counts, and nothing is written until the reviewer applies that
 exact plan (the Operations-job pattern). The plan is stored in the ledger with
 the normalised rows, so the apply writes what was reviewed.
 
-**Who acts (ruling 33).** The already-known reads, the Company and Contact
-creates and null-fills run under the intake API client; the prospect records are
-created as the signed-in user. **A re-upload of the same file is a no-op**: the
-ledger knows every row an applied batch created.
+**Who acts (ruling 33).** The already-known reads and the link to a matched
+Company run under the intake API client; the leads are created as the
+signed-in user. **A re-upload of the same file is a no-op**: the ledger knows
+every row an applied batch created.
 
 **The already-known check (ruling 12)** is conservative, close to exact: a
 Company by name AND postal code, a Company by website key, a Contact by email. A
-match leaves by the *Already known* side exit — the prospect record is still
-created (it is the record that the row arrived and was recognised), with the
-company it matched, and no touch is ever planned for it.
+match is a **Duplicate** (ruling 50) — a converted lead's Company or Contact
+included, since the import no longer reuses one at a later conversion — the lead is still created (it is the
+record that the row arrived and was recognised), linked to the Company it
+matched, or naming the Contact it matched in its reason note, and no touch is
+ever planned for it.
 """
 
 from __future__ import annotations
@@ -30,7 +40,7 @@ import re
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from core.crm_upsert import create_dropping_invalid, website_key
+from core.crm_upsert import website_key
 from core.espo import EspoApi, EspoError
 
 from . import config as cfg
@@ -146,8 +156,6 @@ async def already_known(api_client: EspoApi, row: dict[str, Any]) -> Optional[di
                 where=[{"type": "equals", "attribute": "name", "value": name}],
             )
             for c in page.get("list", []):
-                if _is_prospect_typed(c, "cCompanyType"):
-                    continue
                 if ((c.get("billingAddressPostalCode") or "")[:5]) == zip5:
                     return {"kind": "company", "id": c["id"], "name": c.get("name"), "by": "name and postal code"}
         except EspoError as exc:
@@ -155,26 +163,18 @@ async def already_known(api_client: EspoApi, row: dict[str, Any]) -> Optional[di
     if row.get("website"):
         try:
             c = await company_by_website(api_client, row["website"])
-            if c and not _is_prospect_typed(c, "cCompanyType"):
+            if c:
                 return {"kind": "company", "id": c["id"], "name": c.get("name"), "by": "website"}
         except EspoError as exc:
             log.warning("already-known website check failed for %r: %s", row["website"], exc)
     if row.get("email"):
         try:
             found = await api_client.find_one(cfg.CONTACT, "emailAddress", row["email"], select="id,name,cContactType")
-            if found and not _is_prospect_typed(found, "cContactType"):
+            if found:
                 return {"kind": "contact", "id": found["id"], "name": found.get("name"), "by": "email"}
         except EspoError as exc:
             log.warning("already-known email check failed for %r: %s", row["email"], exc)
     return None
-
-
-def _is_prospect_typed(record: dict[str, Any], type_field: str) -> bool:
-    """A Company or Contact typed Prospect is a PROMOTED prospect (ruling 21), not
-    a known client or contact (ruling 12): the import reuses it at promotion
-    rather than counting the row as already known."""
-    types = record.get(type_field) or []
-    return cfg.COMPANY_TYPE_PROSPECT in types and len(types) == 1
 
 
 async def company_by_website(api_client: EspoApi, website: str) -> Optional[dict[str, Any]]:
@@ -200,8 +200,8 @@ async def plan_import(api_client: EspoApi, store, *, text: str, name: str, door:
                       qualified_by: str, list_source: str = "") -> dict[str, Any]:
     """What an import would do. Nothing is written; the plan is stored in the
     ledger as a planned batch and the apply names it."""
-    if door not in (cfg.DOOR_FILING, cfg.DOOR_LIST):
-        raise CampaignError("Unknown import door.")
+    if door not in cfg.IMPORT_SOURCES:
+        raise CampaignError("Unknown Lead Source for an import.")
     sha = file_hash(text)
     prior = await store.find_batch_by_file(sha)
     columns, raw_rows = parse_csv(text)
@@ -211,7 +211,7 @@ async def plan_import(api_client: EspoApi, store, *, text: str, name: str, door:
     seen: set[str] = set()
     planned: list[dict[str, Any]] = []
     counts = {"rows": len(rows), "create": 0, "alreadyKnown": 0, "duplicate": 0,
-              "knownRow": 0, "invalid": 0, "promoteCompany": 0, "promoteContact": 0}
+              "knownRow": 0, "invalid": 0, "qualified": 0, "unqualified": 0}
     for row, h in zip(rows, hashes):
         entry: dict[str, Any] = {"row": row, "hash": h, "name": row.get("business_name") or "",
                                  "postalCode": row.get("mailing_zip") or ""}
@@ -232,11 +232,9 @@ async def plan_import(api_client: EspoApi, store, *, text: str, name: str, door:
                 counts["alreadyKnown"] += 1
             else:
                 entry["outcome"] = OUTCOME_CREATE
-                entry["promoteCompany"] = bool(row.get("website"))
-                entry["promoteContact"] = bool(row.get("email"))
+                entry["status"] = entry_status(door, row)
                 counts["create"] += 1
-                counts["promoteCompany"] += int(entry["promoteCompany"])
-                counts["promoteContact"] += int(entry["promoteContact"])
+                counts["qualified" if entry["status"] == cfg.LEAD_QUALIFIED else "unqualified"] += 1
         seen.add(h)
         planned.append(entry)
     plan = {
@@ -256,10 +254,18 @@ async def plan_import(api_client: EspoApi, store, *, text: str, name: str, door:
 
 # --- apply ---------------------------------------------------------------------------------
 
-def _prospect_payload(row: dict[str, Any], plan: dict[str, Any], batch_name: str,
-                      entry: dict[str, Any]) -> dict[str, Any]:
-    door = plan["door"]
-    stage = cfg.STAGE_QUALIFIED if door == cfg.DOOR_FILING else cfg.STAGE_UNVERIFIED
+def entry_status(source: str, row: dict[str, Any]) -> str:
+    """Ruling 53: a state filing with a website or an email enters Qualified on
+    the outside filter's verdict; every other row enters Unqualified."""
+    if source == cfg.SOURCE_FILING and (row.get("website") or row.get("email")):
+        return cfg.LEAD_QUALIFIED
+    return cfg.LEAD_UNQUALIFIED
+
+
+def _lead_payload(row: dict[str, Any], plan: dict[str, Any], batch_name: str,
+                  entry: dict[str, Any]) -> dict[str, Any]:
+    source = plan["door"]
+    status = entry_status(source, row)
     now = _now_crm()
     payload: dict[str, Any] = {
         "name": (row.get("business_name") or f"{row.get('contact_first_name','')} {row.get('contact_last_name','')}".strip())[:255],
@@ -275,43 +281,37 @@ def _prospect_payload(row: dict[str, Any], plan: dict[str, Any], batch_name: str
         "website": row.get("website") or None,
         "email": row.get("email") or None,
         "phone": row.get("phone") or None,
-        "funnelStage": stage,
-        "entryStage": stage,
-        "stageChangedAt": now,
-        "entryDoor": door,
+        "leadStatus": status,
+        "leadStatusChangedAt": now,
+        "leadSource": source,
         "externalReference": (row.get("external_reference") or "")[:100] or None,
-        "importBatch": (batch_name if door == cfg.DOOR_FILING
+        "importBatch": (batch_name if source == cfg.SOURCE_FILING
                         else f"{plan.get('listSource') or 'list'} — {batch_name}")[:255],
         "importRow": json.dumps(row, ensure_ascii=False)[:60000],
     }
-    if door == cfg.DOOR_FILING:
+    if status == cfg.LEAD_QUALIFIED:
         payload["qualifiedBy"] = (row.get("qualified_by") or plan.get("qualifiedBy") or "")[:255] or None
         payload["qualifiedAt"] = now
     if entry.get("outcome") == OUTCOME_ALREADY_KNOWN:
-        payload["sideExit"] = cfg.EXIT_ALREADY_KNOWN
+        payload["sideExit"] = cfg.EXIT_DUPLICATE
         payload["sideExitAt"] = now
         match = entry.get("match") or {}
-        payload["sideExitNote"] = f"Matched {match.get('name') or match.get('id')} by {match.get('by')} at import."
+        what = "the contact" if match.get("kind") == "contact" else "the company"
+        payload["sideExitNote"] = (f"Duplicate of {what} {match.get('name') or match.get('id')} "
+                                   f"(matched by {match.get('by')} at import).")
     return {k: v for k, v in payload.items() if v is not None}
 
 
 def _match_links(entry: dict[str, Any]) -> dict[str, str]:
+    """A Duplicate's link to the Company it matched. A matched Contact is named
+    in the reason note only — never on ``promotedContact`` (*Converted to
+    contact*), so a duplicate never reads as converted."""
     match = entry.get("match") or {}
     if entry.get("outcome") != OUTCOME_ALREADY_KNOWN or not match.get("id"):
         return {}
     if match.get("kind") == "company":
         return {"alreadyKnownCompanyId": match["id"]}
-    if match.get("kind") == "contact":
-        return {"promotedContactId": match["id"]}
     return {}
-
-
-async def _company_type_has_prospect(api_client: EspoApi) -> bool:
-    try:
-        options = await api_client.metadata_enum_options(cfg.ACCOUNT, "cCompanyType")
-    except Exception:  # noqa: BLE001
-        return False
-    return bool(options) and cfg.COMPANY_TYPE_PROSPECT in options
 
 
 async def apply_import(api_client: EspoApi, user_client: EspoApi, store, batch: dict[str, Any], *,
@@ -323,9 +323,7 @@ async def apply_import(api_client: EspoApi, user_client: EspoApi, store, batch: 
     plan = batch.get("plan") or {}
     rows = plan.get("rows") or []
     done = await store.known_row_hashes([e["hash"] for e in rows])
-    type_ok = await _company_type_has_prospect(api_client)
-    stage = cfg.STAGE_QUALIFIED if plan.get("door") == cfg.DOOR_FILING else cfg.STAGE_UNVERIFIED
-    result = {"created": 0, "alreadyKnown": 0, "companies": 0, "contacts": 0, "skipped": 0, "errors": 0}
+    result = {"created": 0, "duplicates": 0, "qualified": 0, "unqualified": 0, "skipped": 0, "errors": 0}
     ledger: list[dict[str, Any]] = []
     for entry in rows:
         outcome = entry.get("outcome")
@@ -334,59 +332,24 @@ async def apply_import(api_client: EspoApi, user_client: EspoApi, store, batch: 
             continue
         row = entry["row"]
         try:
-            payload = _prospect_payload(row, plan, batch["name"], entry)
-            # The links to a Company or Contact are written AFTER the create,
-            # under the API client (ruling 33): EspoCRM checks read access on the
-            # foreign record when a link rides a create, and the Marketing Admin
-            # Role reads no Company — found live 10-15-26 (two 403s per import).
-            links: dict[str, str] = _match_links(entry)
-            if outcome == OUTCOME_CREATE:
-                if entry.get("promoteCompany"):
-                    existing = await company_by_website(api_client, row["website"])
-                    if existing is not None:
-                        # A promoted company from an earlier (partial) run: reuse it.
-                        links["promotedCompanyId"] = existing["id"]
-                if entry.get("promoteCompany") and "promotedCompanyId" not in links:
-                    company: dict[str, Any] = {
-                        "name": payload["businessName"], "website": row.get("website"),
-                        "cFunnelStage": stage, "cEntryStage": stage,
-                        "billingAddressStreet": payload.get("mailingAddressStreet"),
-                        "billingAddressCity": payload.get("mailingAddressCity"),
-                        "billingAddressState": payload.get("mailingAddressState"),
-                        "billingAddressPostalCode": payload.get("mailingAddressPostalCode"),
-                        "billingAddressCountry": "US",
-                    }
-                    if type_ok:
-                        company["cCompanyType"] = [cfg.COMPANY_TYPE_PROSPECT]
-                    created = await api_client.create(cfg.ACCOUNT, {k: v for k, v in company.items() if v})
-                    links["promotedCompanyId"] = created["id"]
-                    result["companies"] += 1
-                if entry.get("promoteContact"):
-                    found = await api_client.find_one(cfg.CONTACT, "emailAddress", row["email"], select="id,cContactType")
-                    if found is not None:
-                        links["promotedContactId"] = found["id"]
-                if entry.get("promoteContact") and "promotedContactId" not in links:
-                    contact = {
-                        "firstName": payload.get("firstName") or "", "lastName": payload.get("lastName") or payload["businessName"][:100],
-                        "emailAddress": row.get("email"), "phoneNumber": row.get("phone") or None,
-                        "cContactType": [cfg.CONTACT_TYPE_PROSPECT],
-                        "cFunnelStage": stage, "cEntryStage": stage,
-                    }
-                    if links.get("promotedCompanyId"):
-                        contact["accountId"] = links["promotedCompanyId"]
-                    created = await create_dropping_invalid(api_client, cfg.CONTACT, {k: v for k, v in contact.items() if v})
-                    links["promotedContactId"] = created["id"]
-                    result["contacts"] += 1
-            # The prospect record is the signed-in user's (ruling 33); its links
-            # to the Company and the Contact are the API client's second write.
-            prospect = await user_client.create(cfg.PROSPECT, payload)
+            payload = _lead_payload(row, plan, batch["name"], entry)
+            # The lead is the signed-in user's (ruling 33). Its link to a
+            # matched Company is the API client's second write: EspoCRM checks
+            # read access on the foreign record when a link rides a create, and
+            # the Marketing Admin Role reads no Company (found live 10-15-26).
+            lead = await user_client.create(cfg.PROSPECT, payload)
+            links = _match_links(entry)
             if links:
-                await api_client.update(cfg.PROSPECT, prospect["id"], links)
-            result["created" if outcome == OUTCOME_CREATE else "alreadyKnown"] += 1
-            result.setdefault("firstProspectId", prospect.get("id"))
+                await api_client.update(cfg.PROSPECT, lead["id"], links)
+            if outcome == OUTCOME_CREATE:
+                result["created"] += 1
+                result["qualified" if payload["leadStatus"] == cfg.LEAD_QUALIFIED else "unqualified"] += 1
+            else:
+                result["duplicates"] += 1
+            result.setdefault("firstProspectId", lead.get("id"))
             ledger.append({"row_hash": entry["hash"], "external_reference": row.get("external_reference") or None,
                            "business_name": payload.get("businessName"), "postal_code": payload.get("mailingAddressPostalCode"),
-                           "outcome": outcome, "prospect_id": prospect.get("id")})
+                           "outcome": outcome, "prospect_id": lead.get("id")})
             done.add(entry["hash"])
         except EspoError as exc:
             result["errors"] += 1

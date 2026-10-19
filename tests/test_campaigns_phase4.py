@@ -16,32 +16,36 @@ def run(coro):
 
 
 class _Crm(FakeCrm):
-    """FakeCrm plus the rung field on Contact (rung_available)."""
+    """FakeCrm plus the stage field on Contact, with the lead model's options (rung_available)."""
 
     async def metadata(self, key):
         if key == "entityDefs.Contact.fields":
-            return {"cFunnelStage": {"type": "enum"}}
+            return {"cFunnelStage": {"type": "enum", "options": ["Prospect", "Engaged", "Opportunity"]}}
         if key.startswith("entityDefs.Contact.fields.cFunnelStage") or key == "entityDefs.Contact.fields.cFunnelStage":
             return {"type": "enum"}
         return await super().metadata(key)
 
 
-def test_the_funnel_counts_each_rung_once():
+def test_the_funnel_counts_each_position_once():
     crm = FakeCrm()
-    crm.add(cfg.PROSPECT, {"funnelStage": "Qualified"})
-    crm.add(cfg.PROSPECT, {"funnelStage": "Qualified", "sideExit": "Stale"})          # off the ladder
-    crm.add(cfg.PROSPECT, {"funnelStage": "Lead", "promotedCompanyId": "a1"})          # counted as its company
-    crm.add("Account", {"id": "a1", "cCompanyType": ["Prospect"], "cFunnelStage": "Lead"})
-    crm.add("Account", {"id": "a2", "cCompanyType": ["Client"], "cFunnelStage": "Lead"})   # not a prospect
-    crm.add("Contact", {"cContactType": ["Prospect"], "cFunnelStage": "Lead", "accountId": "a1"})   # under its company
-    crm.add("Contact", {"cContactType": ["Prospect"], "cFunnelStage": "Warm Lead"})
+    crm.add(cfg.PROSPECT, {"leadStatus": "Qualified"})
+    crm.add(cfg.PROSPECT, {"leadStatus": "Unqualified"})
+    crm.add(cfg.PROSPECT, {"leadStatus": "Qualified", "sideExit": "Stale"})           # no longer worked
+    crm.add(cfg.PROSPECT, {"leadStatus": "Disqualified"})                               # never counted
+    crm.add(cfg.PROSPECT, {"leadStatus": "Converted", "promotedCompanyId": "a1"})      # counted as its company
+    crm.add("Account", {"id": "a1", "cCompanyType": ["Prospect"], "cFunnelStage": "Prospect"})
+    crm.add("Account", {"id": "a2", "cCompanyType": ["Client"], "cFunnelStage": "Prospect"})   # not a prospect
+    crm.add("Contact", {"cContactType": ["Prospect"], "cFunnelStage": "Prospect", "accountId": "a1"})   # under its company
+    crm.add("Contact", {"cContactType": ["Prospect"], "cFunnelStage": "Engaged"})
     crm.add("CEngagement", {"engagementStatus": "Submitted"})
     crm.add("CEngagement", {"engagementStatus": "Active"})
     crm.add("CEngagement", {"engagementStatus": "Completed"})
     rows = {r["rung"]: r for r in run(reporting.funnel(crm))}
-    assert rows["Qualified"]["count"] == 1 and rows["Lead"]["count"] == 1 and rows["Warm Lead"]["count"] == 1
+    assert [r for r in rows] == ["Unqualified", "Qualified", "Prospect", "Engaged", "Opportunity", "Candidate", "Client"]
+    assert rows["Unqualified"]["count"] == 1 and rows["Qualified"]["count"] == 1
+    assert rows["Prospect"]["count"] == 1 and rows["Engaged"]["count"] == 1 and rows["Opportunity"]["count"] == 0
     assert rows["Candidate"]["count"] == 1 and rows["Client"]["count"] == 1
-    assert rows["Client"]["band"] == "Client Management" and rows["Unverified"]["band"] == "Prospect Marketing"
+    assert rows["Qualified"]["band"] == "Lead" and rows["Engaged"]["band"] == "Prospect" and rows["Client"]["band"] == "Client"
 
 
 def test_campaign_results_count_the_records_carrying_it():
@@ -62,7 +66,9 @@ def test_the_campaign_dashboard_is_registered_and_scoped():
     import analytics  # noqa: F401
     from analytics.registry import MetricContext, RecordRef, get_metric, get_page
     page = get_page("record-campaign")
-    assert page.scope == "COutreachCampaign" and len(page.panels) == 7
+    assert page.scope == "COutreachCampaign" and len(page.panels) == 10
+    # Ruling 46's three counts lead the dashboard.
+    assert [p.metric_key for p in page.panels[:3]] == ["campaign_responded", "campaign_converted", "campaign_became"]
     assert get_page("campaigns").panels[0].metric_key == "prospect_funnel"
     crm = FakeCrm()
     crm.add("CEngagement", {"outreachCampaignId": "camp", "engagementStatus": "Active"})
@@ -75,7 +81,7 @@ def test_the_campaign_dashboard_is_registered_and_scoped():
 
 def test_attendance_moves_a_prospect_to_opportunity_and_never_a_client():
     crm = _Crm()
-    crm.add("Contact", {"id": "c-p", "cContactType": ["Prospect"], "cFunnelStage": "Warm Lead"})
+    crm.add("Contact", {"id": "c-p", "cContactType": ["Prospect"], "cFunnelStage": "Engaged"})
     crm.add("Contact", {"id": "c-c", "cContactType": ["Client"], "cFunnelStage": None})
     crm.add("CEventRegistration", {"id": "r1", "contactId": "c-p", "attendanceStatus": "Attended"})
     crm.add("CEventRegistration", {"id": "r2", "contactId": "c-c", "attendanceStatus": "Attended"})

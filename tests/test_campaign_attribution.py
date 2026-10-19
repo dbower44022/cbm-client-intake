@@ -46,7 +46,7 @@ from tests.test_sponsor import _application as _sponsor_app
 
 ROOT = Path(__file__).resolve().parents[1]
 CAMPAIGN = {"id": "camp-1", "name": "Spring postcards", "campaignStatus": "Running"}
-WARM = cfg.STAGE_WARM_LEAD
+WARM = cfg.STAGE_ENGAGED
 
 
 # --- a CRM with the Phase 1 change ------------------------------------------------------
@@ -64,6 +64,7 @@ class Crm:
         self.relates: list[tuple[str, str, str, str]] = []
         self.gets: list[tuple[str, str]] = []
         self.phase1 = phase1
+        self.lead_stages = True
         self.prospect_option = phase1 if prospect_option is None else prospect_option
         self._n = 0
 
@@ -87,7 +88,13 @@ class Crm:
                 links["referringPartners"] = {"type": "hasMany"}
             return links
         if key.endswith(".fields"):
-            return {"cFunnelStage": {"type": "enum"}, "cEntryStage": {"type": "enum"}}
+            if key == "entityDefs.CProspect.fields":
+                # The lead-model handoff (rulings 48, 49).
+                return {"leadStatus": {"type": "enum"}, "leadSource": {"type": "enum"},
+                        "leadStatusChangedAt": {"type": "datetime"}}
+            options = ["Prospect", "Engaged", "Opportunity"] if self.lead_stages else ["Unverified", "Qualified", "Lead", "Warm Lead", "Opportunity"]
+            return {"cFunnelStage": {"type": "enum", "options": options},
+                    "cEntryStage": {"type": "enum", "options": options}}
         return None
 
     async def metadata_enum_options(self, entity, field):
@@ -273,7 +280,7 @@ async def test_client_intake_uses_the_promoted_company_by_id_and_relabels_both_r
     promoted = crm.add("Account", {"id": "acc-p", "name": "Difference Engine LLC", "cCompanyType": ["Prospect"], "website": None})
     crm.add("Account", {"id": "acc-stranger", "name": "Difference Engine LLC", "cCompanyType": ["Client"], "website": "https://stranger.example"})
     crm.add("Contact", {"id": "c-p", "emailAddress": "ada@example.com", "cContactType": ["Prospect"]})
-    crm.add("CProspect", {"id": "pr-1", "name": "Difference Engine", "promotedCompanyId": "acc-p", "promotedContactId": None, "funnelStage": "Lead"})
+    crm.add("CProspect", {"id": "pr-1", "name": "Difference Engine", "promotedCompanyId": "acc-p", "promotedContactId": None, "leadStatus": "Converted"})
     ids = await submit_intake(_submission(campaign_id="camp-1", prospect_id="pr-1"), crm)
 
     assert ids["accountId"] == "acc-p"                      # by id, never the same-named stranger
@@ -283,7 +290,7 @@ async def test_client_intake_uses_the_promoted_company_by_id_and_relabels_both_r
     assert ("c-p", {"cContactType": ["Client"]}) in crm.updated("Contact")         # Prospect -> Client
     assert crm.created("Contact") == []
     assert ("pr-1", {"promotedContactId": "c-p"}) in crm.updated("CProspect")      # linked, company already set
-    assert ids["prospectLinked"] == ["promotedContactId"]
+    assert ids["leadConverted"] == ["promotedContactId"]                           # already Converted: links only
     # ruling 27: a MATCHED contact and company do not gain the campaign
     assert not any("cOutreachCampaignId" in p for _, p in crm.updated("Contact") + crm.updated("Account"))
 
@@ -379,7 +386,10 @@ async def test_info_request_uses_the_promoted_company_and_links_the_prospect_rec
     assert ids["accountId"] == "acc-p" and crm.created("Account") == []
     assert ("acc-p", {"cFunnelStage": WARM}) in crm.updated("Account")
     assert not any("cCompanyType" in p for _, p in crm.updated("Account"))   # no relationship: stays Prospect
-    assert ("pr-1", {"promotedContactId": ids["contactId"]}) in crm.updated("CProspect")
+    lead = crm.rows["CProspect"]["pr-1"]
+    assert lead["promotedContactId"] == ids["contactId"] and lead["leadStatus"] == "Converted"   # ruling 48
+    assert sorted(ids["leadConverted"]) == ["leadStatus", "leadStatusChangedAt", "promotedContactId"]
+    assert not crm.created("CProspect")                       # the named lead, never a second one
 
 
 # --- event registration --------------------------------------------------------------------
@@ -554,12 +564,14 @@ def test_responses_summary_counts_responded_and_converted():
          "result": {"eventRegistrationId": "R1", "eventId": "EV1"}},
     ]
     out = summarize_responses(rows)
-    assert out["responded"] == 4 and out["converted"] == 1
+    # Ruling 46: Converted is a lead becoming a Prospect; the engagement is
+    # "became a client, partner or funder".
+    assert out["responded"] == 4 and out["converted"] == 0 and out["became"] == 1
     assert out["totals"] == {"client-intake": 1, "info-request": 1, "prospect-response": 1, "event-registration": 1}
     by_id = {r["id"]: r for r in out["responses"]}
-    assert by_id["s1"]["converted"] is True and by_id["s1"]["records"] == {"engagementId": "E1", "campaignId": "camp-1"}
+    assert by_id["s1"]["became"] is True and by_id["s1"]["records"] == {"engagementId": "E1", "campaignId": "camp-1"}
     assert by_id["s5"]["records"] == {"eventRegistrationId": "R1", "eventId": "EV1"}
-    assert by_id["s4"]["converted"] is False
+    assert by_id["s4"]["converted"] is False and by_id["s4"]["became"] is False
 
 
 def test_responses_tab_links_through_to_each_record_and_the_admin_apps_take_the_deep_link():
@@ -567,7 +579,8 @@ def test_responses_tab_links_through_to_each_record_and_the_admin_apps_take_the_
     assert '"/assignments/?engagement=" + encodeURIComponent(ids.engagementId)' in js
     assert '"/events/?event=" + encodeURIComponent(ids.eventId)' in js
     assert '"/partnersessions/record/"' in js and '"/sponsorsessions/record/"' in js
-    assert '"Responded", r.responded' in js and '"Converted", r.converted' in js
+    assert '"Responded", r.responded' in js and '"Converted", (r.converted || 0) + calls' in js
+    assert '"Became a client, partner or funder", r.became' in js
     assignments_js = (ROOT / "assignments" / "frontend" / "app.js").read_text(encoding="utf-8")
     assert 'get("engagement")' in assignments_js and "openDetail(wanted)" in assignments_js
     events_js = (ROOT / "events" / "frontend" / "app.js").read_text(encoding="utf-8")
@@ -619,3 +632,113 @@ def test_the_delivery_wrapper_exposes_every_read_the_attribution_uses():
     from core.resumable import ResumableClient
     for name in ("metadata", "metadata_enum_options", "list_related", "list", "get", "find_one", "relate", "update", "create"):
         assert callable(getattr(ResumableClient, name, None)), name
+
+
+# --- ruling 48: every new record from a public form has a lead behind it ------------------------
+
+def _resumable(crm, progress=None):
+    from core.resumable import ResumableClient
+    saved: dict = {}
+
+    async def save(p):
+        saved.clear()
+        saved.update(p)
+    return ResumableClient(crm, progress, save), saved
+
+
+@pytest.mark.asyncio
+async def test_a_new_client_intake_record_gets_a_lead_converted_at_once():
+    crm = _crm()
+    client, saved = _resumable(crm)
+    ids = await submit_intake(_submission(), client)
+    lead, = crm.created("CProspect")
+    assert lead["leadStatus"] == "Converted" and lead["leadSource"] == "Mentor request"
+    assert lead["promotedCompanyId"] == ids["accountId"] and lead["promotedContactId"] == ids["contactId"]
+    assert lead["email"] and lead["leadStatusChangedAt"]
+    assert ids["leadId"]
+    # A retry of the same delivery decides exactly as the first run did and
+    # never makes a second lead (the create is keyed like every other).
+    again, _ = _resumable(crm, dict(saved))
+    await submit_intake(_submission(), again)
+    assert len(crm.created("CProspect")) == 1
+
+
+@pytest.mark.asyncio
+async def test_a_repeat_submitter_gets_no_new_lead():
+    crm = _crm()
+    first, _ = _resumable(crm)
+    await submit_intake(_submission(), first)
+    second, _ = _resumable(crm)                               # a NEW submission: fresh progress
+    await submit_intake(_submission(), second)
+    assert len(crm.created("CProspect")) == 1
+
+
+@pytest.mark.asyncio
+async def test_each_public_form_names_itself_as_the_lead_source():
+    cases = [
+        (submit_request, _request(), "Information request"),
+        (submit_partner, _partner_app(), "Partner application"),
+        (submit_sponsor, _sponsor_app(), "Funder application"),
+    ]
+    for deliver, sub, source in cases:
+        crm = _crm()
+        client, _ = _resumable(crm)
+        await deliver(sub, client)
+        lead, = crm.created("CProspect")
+        assert lead["leadSource"] == source and lead["leadStatus"] == "Converted"
+
+
+@pytest.mark.asyncio
+async def test_an_approved_info_mailbox_message_is_lead_source_email():
+    crm = _crm()
+    client, _ = _resumable(crm)
+    await submit_request(_request(), client, form_slug="info-email", via="email", channel="email", source="Email")
+    lead, = crm.created("CProspect")
+    assert lead["leadSource"] == "Email"
+
+
+@pytest.mark.asyncio
+async def test_no_lead_on_a_crm_without_the_lead_model():
+    crm = _crm()
+
+    async def no_lead_fields(key, _orig=crm.metadata):
+        if key == "entityDefs.CProspect.fields":
+            return {}
+        return await _orig(key)
+    crm.metadata = no_lead_fields
+    client, _ = _resumable(crm)
+    ids = await submit_intake(_submission(), client)
+    assert crm.created("CProspect") == [] and "leadId" not in ids
+
+
+@pytest.mark.asyncio
+async def test_a_lead_write_failure_never_costs_the_submission():
+    crm = _crm()
+    real = crm.create
+
+    async def refuse_leads(entity, payload):
+        if entity == "CProspect":
+            raise EspoError("create CProspect failed: HTTP 403")
+        return await real(entity, payload)
+    crm.create = refuse_leads
+    client, _ = _resumable(crm)
+    ids = await submit_intake(_submission(), client)
+    assert ids["engagementId"] and "403" in ids["leadWarning"]
+
+
+def test_the_volunteer_form_records_its_lead_too():
+    src = (ROOT / "forms" / "volunteer" / "orchestrator.py").read_text(encoding="utf-8")
+    assert "source=campaign_cfg.SOURCE_VOLUNTEER" in src and "attrib.record_lead(" in src
+
+
+@pytest.mark.asyncio
+async def test_no_stage_is_written_on_a_crm_still_holding_the_old_ladder():
+    """Production until its Sunday slot: cFunnelStage exists with the old
+    options, and EspoCRM refuses an unknown enum value outright — so an
+    information request must write no stage there, never *Engaged*."""
+    crm = _crm()
+    crm.lead_stages = False
+    ids = await submit_request(_request(company="Ada's Bakery"), crm)
+    assert ids["contactId"]
+    assert not any("cFunnelStage" in p or "cEntryStage" in p
+                   for p in crm.created("Contact") + crm.created("Account"))

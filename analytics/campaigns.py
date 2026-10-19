@@ -1,12 +1,13 @@
-"""Prospect marketing's two Analytics reads (build plan § 6 items 2 and 3) and
-the built-in *Campaigns* page that carries them.
+"""Prospect marketing's Analytics reads (build plan § 6, reworked for the lead
+model § 7a) and the built-in *Campaigns* page that carries them.
 
 Every number comes from ``campaigns/reporting.py``, so the campaign record page,
 the Responses tab and this page agree. System metrics, so they compute under the
 org-wide API key (the team gate and the panel visibility are the boundary), and
 they run live — a cached copy would disagree with the grids for the length of
 its life. A CRM without the prospect entities reads as an unavailable panel,
-never a 500.
+never a 500. Ruling 46's three counts — Responded, Converted, Became a client,
+partner or funder — lead the campaign table and the campaign's own dashboard.
 """
 
 from __future__ import annotations
@@ -50,8 +51,9 @@ async def _ready(ctx: MetricContext) -> str:
     default_viz=VIZ_TABLE,
     cache_mode="live",
     description=("Per campaign that selects an audience: planned, sent, delivered, returned, "
-                 "scanned, the call outcomes, responded and converted, and the rung each "
-                 "target was on when its touch went out (build plan § 6 item 2)."),
+                 "scanned, the call outcomes, responded, converted (a lead became a Prospect) and "
+                 "became a client, partner or funder (ruling 46), and the status or stage each "
+                 "target held when its touch went out."),
 )
 async def _campaign_touches(ctx: MetricContext):
     reason = await _ready(ctx)
@@ -80,7 +82,8 @@ async def _campaign_touches(ctx: MetricContext):
         {"key": "declined", "label": "Declined", "align": "right"},
         {"key": "responded", "label": "Responded", "align": "right"},
         {"key": "converted", "label": "Converted", "align": "right"},
-        {"key": "stages", "label": "Rung at touch"},
+        {"key": "became", "label": "Became a client, partner or funder", "align": "right"},
+        {"key": "stages", "label": "Status or stage at touch"},
     ]
     dash = "—"
     out = [{
@@ -90,6 +93,7 @@ async def _campaign_touches(ctx: MetricContext):
         "interested": r["Interested"], "declined": r["Declined"],
         "responded": dash if r["responded"] is None else r["responded"],
         "converted": dash if r["converted"] is None else r["converted"],
+        "became": dash if r["became"] is None else r["became"],
         "stages": reporting.stage_text(r["stageAtTouch"]),
     } for r in data]
     return rows(columns, out)
@@ -97,25 +101,25 @@ async def _campaign_touches(ctx: MetricContext):
 
 @metric(
     key="prospect_entry_rungs",
-    name="Entry rung per door",
+    name="Leads by Lead Source",
     shape=SHAPE_ROWS,
     source=SRC_COMPUTED,
     default_viz=VIZ_TABLE,
     cache_mode="live",
-    description=("How many records each door brought in, by the rung they entered at, so a "
-                 "door entering half-way down is never read as converting better "
-                 "(build plan § 6 item 3)."),
+    description=("Every lead by where it came from (its Lead Source) and its status now: "
+                 "Unqualified, Qualified, Disqualified, Converted (rulings 41, 48)."),
 )
 async def _prospect_entry_rungs(ctx: MetricContext):
+    # The key is kept: a page an administrator built may name it.
     reason = await _ready(ctx)
     if reason:
         return unavailable(SHAPE_ROWS, reason)
     from campaigns import config as cfg
     from campaigns import reporting
 
-    data = await reporting.entry_rung_by_door(ctx.espo)
-    columns = [{"key": "door", "label": "Door"}]
-    columns += [{"key": s, "label": s, "align": "right"} for s in cfg.STAGES]
+    data = await reporting.leads_by_source(ctx.espo)
+    columns = [{"key": "source", "label": "Lead Source"}]
+    columns += [{"key": s, "label": s, "align": "right"} for s in cfg.LEAD_STATUSES]
     columns.append({"key": "total", "label": "Total", "align": "right"})
     out = [{k: ("—" if v is None else v) for k, v in r.items()} for r in data]
     return rows(columns, out)
@@ -123,14 +127,15 @@ async def _prospect_entry_rungs(ctx: MetricContext):
 
 @metric(
     key="prospect_funnel",
-    name="The prospect funnel",
+    name="The funnel",
     shape=SHAPE_ROWS,
     source=SRC_COMPUTED,
     default_viz=VIZ_TABLE,
     cache_mode="live",
-    description=("A count per rung, nothing counted twice: prospect records still on the ladder, "
-                 "Companies typed Prospect, Contacts typed Prospect not counted under their company, "
-                 "and Candidate and Client from the engagements (build plan § 6 item 1)."),
+    description=("A count per position, nothing counted twice: leads still being worked "
+                 "(Unqualified, Qualified), Companies and Contacts typed Prospect at Prospect, "
+                 "Engaged or Opportunity (a person counted under their company), and Candidate "
+                 "and Client from the engagements."),
 )
 async def _prospect_funnel(ctx: MetricContext):
     reason = await _ready(ctx)
@@ -139,7 +144,7 @@ async def _prospect_funnel(ctx: MetricContext):
     from campaigns import reporting
 
     data = await reporting.funnel(ctx.espo)
-    columns = [{"key": "band", "label": "Band"}, {"key": "rung", "label": "Rung"},
+    columns = [{"key": "band", "label": "Band"}, {"key": "rung", "label": "Status or stage"},
                {"key": "count", "label": "Count", "align": "right"}]
     return rows(columns, data)
 
@@ -201,23 +206,61 @@ for _key, _name, _field, _desc in _CAMPAIGN_RESULTS:
     _campaign_metric(_key, _name, _field, _desc)
 
 
+#: Ruling 46's three counts, first on the campaign's dashboard.
+_CAMPAIGN_COUNTS = (
+    ("campaign_responded", "Responded", "responded", "Submissions that carried the campaign."),
+    ("campaign_converted", "Converted", "converted", "Leads that became Prospects through the campaign: "
+                                                     "responses and calls marked Interested that converted."),
+    ("campaign_became", "Became a client, partner or funder", "became",
+     "Responses whose delivery began a relationship: an engagement, a partner or a funder profile."),
+)
+
+
+def _campaign_count_metric(key: str, name: str, field: str, description: str):
+    async def compute(ctx: MetricContext):
+        if not ctx.record or ctx.record.entity != CAMPAIGN:
+            return unavailable(SHAPE_SCALAR, "This metric only works on a campaign's Analytics tab.")
+        from campaigns import reporting
+        from campaigns.store import make_campaign_store
+        store = make_campaign_store(ctx.settings) if ctx.settings is not None else None
+        if store is None:
+            return unavailable(SHAPE_SCALAR, "This count needs the application database.")
+        try:
+            counts = await reporting.campaign_counts(_org_client(ctx) or ctx.espo, store, ctx.record.record_id)
+        except Exception as exc:  # noqa: BLE001 — a panel reads unavailable, never a 500
+            log.warning("campaign metric %s failed: %s", key, exc)
+            return unavailable(SHAPE_SCALAR, "This count could not be read.")
+        finally:
+            await store.dispose()
+        return scalar(counts[field])
+
+    compute.__name__ = f"_{key}"
+    return metric(key=key, name=name, shape=SHAPE_SCALAR, source=SRC_COMPUTED, default_viz=VIZ_STAT,
+                  applies_to=(CAMPAIGN,), cache_mode="live", description=description)(compute)
+
+
+for _key, _name, _field, _desc in _CAMPAIGN_COUNTS:
+    _campaign_count_metric(_key, _name, _field, _desc)
+
+
 register_page(PageSpec(
     key="record-campaign", title="Campaign Analytics", scope=CAMPAIGN,
     subtitle="What this campaign produced, down the funnel.",
     default_range="all",
-    panels=[PanelSpec(k, n, k, VIZ_STAT, width=3) for k, n, _f, _d in _CAMPAIGN_RESULTS],
+    panels=([PanelSpec(k, n, k, VIZ_STAT, width=4) for k, n, _f, _d in _CAMPAIGN_COUNTS]
+            + [PanelSpec(k, n, k, VIZ_STAT, width=3) for k, n, _f, _d in _CAMPAIGN_RESULTS]),
 ))
 
 
 register_page(PageSpec(
     key="campaigns",
     title="Campaigns",
-    subtitle="Prospect marketing: what each campaign reached and where each door's records entered the ladder.",
+    subtitle="Prospect marketing: what each campaign reached, and where every lead came from.",
     scope="system",
     default_range="all",
     panels=[
-        PanelSpec("funnel", "The prospect funnel", "prospect_funnel", VIZ_TABLE, width=12),
+        PanelSpec("funnel", "The funnel", "prospect_funnel", VIZ_TABLE, width=12),
         PanelSpec("touches", "Touches by campaign", "campaign_touches", VIZ_TABLE, width=12),
-        PanelSpec("entry_rungs", "Entry rung per door", "prospect_entry_rungs", VIZ_TABLE, width=12),
+        PanelSpec("entry_rungs", "Leads by Lead Source", "prospect_entry_rungs", VIZ_TABLE, width=12),
     ],
 ))

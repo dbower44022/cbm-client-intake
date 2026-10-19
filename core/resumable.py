@@ -68,6 +68,14 @@ class ResumableClient:
     # AFTER the action) — a kill in between costs one duplicate, the accepted
     # cost documented in the module docstring.
 
+    def created_ids(self, entity: str) -> set[str]:
+        """Every ``entity`` id THIS delivery created, across retries — the
+        recorded creates. A retry finds its Contact or Company by a match and
+        never reaches the create, so this is the only durable way to ask
+        "did this submission create it?" (prospect marketing ruling 48)."""
+        prefix = f"create:{entity}#"
+        return {str(v) for k, v in self._progress.items() if k.startswith(prefix) and v}
+
     def step_done(self, name: str) -> bool:
         return bool(self._progress.get(f"step:{name}"))
 

@@ -1,6 +1,6 @@
 # CRM handoff — the lead model (prospect marketing rulings 41–50)
 
-Last Updated: 10-19-26 11:03 · Revision 1.1 — change log at the end.
+Last Updated: 10-19-26 11:47 · Revision 1.2 — change log at the end.
 
 **What this changes.** Every record from an outside source is now a **lead**
 with a **lead status** (Unqualified · Qualified · Disqualified · Converted) and
@@ -23,6 +23,7 @@ reads the new words is the next session (§ 7a.5 step 2).
 | § 4 | Labels: Outreach Lead and its links | now | with the plan | with the plan |
 | § 5 | The value move | with the code release | with the code release | with its release |
 | § 6 | Removal of the old options and fields | after the code release, on Doug's approval | same | same |
+| § 3a | The touch positions plan | with the code release | with the code release | with its release |
 | § 7 | Layouts | with the code release | same | same |
 
 Steps 3 and 4 are additive and labels only, so the code running today keeps
@@ -83,6 +84,18 @@ scripts/prospect_crm_test.sh leadmodel
 The applier rebuilds and reads every change back. Production's run is from
 inside the web container with its own fingerprint from a dry run there.
 
+## 3a. The touch positions — `scripts/plans/coutreach-touch-positions.json`
+
+Found by the code session (10-19-26): `COutreachTouch.stageAtTouch` records the
+target's position when it is touched, and its options were the old ladder. It
+gains **Unqualified**, **Prospect** and **Engaged** (a lead's status, or a
+Company's or Contact's stage); the old values stay, last, until § 6. Additive.
+Fingerprint on crm-test 10-19-26: **`6c2e1d42af30`**.
+
+```bash
+scripts/prospect_crm_test.sh touchpos
+```
+
 ## 4. Labels — `scripts/relabel_outreach_lead.py`
 
 Sixteen labels through Label Manager: the entity *Prospect* → **Outreach Lead**
@@ -107,8 +120,16 @@ status; Unverified → Unqualified; Already known → Duplicate; `entryDoor` cop
 to `leadSource`; on Contact and Account Unverified, Qualified and Lead →
 Prospect, Warm Lead → Engaged. **A lead at Lead, Warm Lead or Opportunity with
 no converted record is reported, never written** — no ruling gives it a status.
-The status is only ever raised from the default, so a re-run cannot undo what
-the application set.
+A lead at Qualified with neither a website nor an email becomes Unqualified
+(ruling 42). The status is only ever raised from the default, so a re-run
+cannot undo what the application set. **Touches** (added by the code session):
+a touch on a lead moves Unverified → Unqualified and reports Lead, Warm Lead or
+Opportunity for a human; a touch on a Company or Contact moves as their stages
+do. Needs § 3a first.
+
+```bash
+scripts/prospect_crm_test.sh leadmove
+```
 
 ## 6. Proposed removals — Doug decides, after the code release
 
@@ -129,8 +150,14 @@ The lead's list layout today shows `funnelStage`, `entryDoor`, `sideExit`,
 `stageChangedAt`, `entryDoor`. At the code release they become `leadStatus`,
 `leadSource`, `sideExit`, `website` (list) and `leadStatus`,
 `leadStatusChangedAt`, `leadSource` (detail), written through the admin layout
-API by the code session. Earlier, staff would see empty fields the code does not
-yet write.
+API by `scripts/apply_lead_layouts.py` (each retired field replaced where it
+stands; `stageChangedAt` taken off; idempotent; dry run by default — on crm-test
+10-19-26 the dry run listed the six replacements). Earlier, staff would see
+empty fields the code does not yet write.
+
+```bash
+scripts/prospect_crm_test.sh leadlayouts
+```
 
 ## 8. Verification, per CRM
 
@@ -148,13 +175,14 @@ yet write.
 | Field | Value |
 |---|---|
 | Document | CRM handoff — the lead model |
-| Version | 1.1 |
-| Last Updated | 10-19-26 11:03 |
+| Version | 1.2 |
+| Last Updated | 10-19-26 11:47 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 10-19-26 11:47 | Claude (Claude Code) | The code session: § 3a (the touch positions plan, fingerprint `6c2e1d42af30`), § 5 extended to touches and to ruling 42's Qualified rule, § 7 written as `scripts/apply_lead_layouts.py`; the three steps are the `touchpos`, `leadmove` and `leadlayouts` words. |
 | 1.1 | 10-19-26 11:03 | Claude (Claude Code) | § 2a: §§ 3 and 4 applied on crm-test and verified, including as a non-admin. |
 | 1.0 | 10-19-26 10:54 | Claude (Claude Code) | First version: the state read on crm-test, the additive plan (fingerprint `6e228dbb7d33`), the relabel, the value move, the proposed removals and the layouts, each staged against the code release. |

@@ -29,7 +29,7 @@ Rules that are easy to get wrong, so they are stated here and tested:
   validated or dropped, written on the registration when it is CREATED (a
   repeat sign-up keeps the first campaign — ruling 27's rule for the person,
   applied to the record), on a NEW Contact only, and the person moves to
-  Warm Lead, advance-only (§ 1.8). Their type is untouched (D-09 stands).
+  Engaged, advance-only (§ 1.8). Their type is untouched (D-09 stands).
 
 Delivery runs through the durable pipeline (capture → worker → here), so every
 create is guarded by a named resumable step and a retry converges on one clean
@@ -68,8 +68,8 @@ C_PRIVACY_ACCEPTED = "cPrivacyPolicyAccepted"
 C_CODE_OF_CONDUCT = "cCodeOfConductAccepted"
 
 PROSPECT = "Prospect"
-#: A registration is rung evidence (§ 1.8, the per-door table): Warm Lead.
-WARM_LEAD = campaign_cfg.STAGE_WARM_LEAD
+#: A registration is stage evidence (§ 1.8, the per-form table): Engaged.
+ENGAGED = campaign_cfg.STAGE_ENGAGED
 
 #: Fields that may be null-filled on an EXISTING Contact. Deliberately excludes
 #: ``cContactType`` (D-09 — never relabel someone for attending a webinar) and
@@ -247,8 +247,8 @@ async def deliver(
     )
     contact_payload = _contact_payload(sub, is_new=existing_contact is None)
     if existing_contact is None:
-        # A NEW contact carries the campaign (ruling 27) and enters at Warm Lead.
-        attrib.stamp_new(contact_payload, attr, stage=WARM_LEAD if rung else None)
+        # A NEW contact carries the campaign (ruling 27) and enters at Engaged.
+        attrib.stamp_new(contact_payload, attr, stage=ENGAGED if rung else None)
     contact_id, action = await find_create_or_fill(
         client, CONTACT,
         match_attr="emailAddress", match_value=email,
@@ -257,7 +257,7 @@ async def deliver(
     )
     if existing_contact is not None and rung:
         # Advance-only: registering is evidence, never a demotion.
-        await attrib.advance_rung(client, CONTACT, existing_contact, WARM_LEAD)
+        await attrib.advance_rung(client, CONTACT, existing_contact, ENGAGED)
 
     existing = await _existing_registration(client, event["id"], email)
     status = await _seat_status(
@@ -302,6 +302,10 @@ async def deliver(
         registration_id = created["id"]
         outcome = "created"
 
+    # Ruling 48: the lead the form named is Converted, or a new Contact gets a
+    # lead behind it, Converted at once, its Lead Source Event registration.
+    await attrib.record_lead(client, attr, source=campaign_cfg.SOURCE_EVENT_REGISTRATION,
+                             contact_id=contact_id, values=attrib.lead_values(sub))
     ids: dict[str, Any] = {
         "contactId": contact_id,
         "contactAction": action,
@@ -311,8 +315,6 @@ async def deliver(
         "outcome": outcome,
         **attr.result(),
     }
-    # The prospect record points at the person it became (§ 5 step 4).
-    await attrib.link_promotion(client, attr, contact_id=contact_id)
 
     if status == cfg.REG_REGISTERED:
         zoom_result = await _push_to_zoom(

@@ -11,6 +11,7 @@ recorded through ``record_action`` here, at the router, which has the actor.
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, Request, Response
@@ -30,6 +31,7 @@ from forms import SPECS_BY_SLUG
 
 from . import config as cfg
 from . import calls, email as email_kind, imports, postcard, reporting, review, service, sms
+from .conversion import Details
 from .reporting import summarize_responses  # noqa: F401 — re-exported
 from .public import destination_path
 from .service import CampaignError
@@ -173,6 +175,7 @@ async def session(request: Request) -> dict[str, Any]:
         "smsOn": settings.campaigns_sms,
         "sms": {"provider": settings.sms_provider, "hours": settings.sms_send_hours,
                 "timezone": settings.sms_timezone, "stages": list(sms.TEXTABLE_STAGES)},
+        "callStatuses": list(calls.CALLABLE_STATUSES),
         "callStages": list(calls.CALLABLE_STAGES),
         "formDestinations": [{"slug": s, "title": SPECS_BY_SLUG[s].title}
                              for s in cfg.FORM_DESTINATIONS if s in SPECS_BY_SLUG],
@@ -747,13 +750,13 @@ async def responses(campaign_id: str, request: Request) -> dict[str, Any]:
 # --- prospects (§ 3.8) ------------------------------------------------------------------------------
 
 @api_router.get("/prospects")
-async def list_prospects(request: Request, stage: Optional[str] = None, exit: Optional[str] = None,
-                         door: Optional[str] = None, batch: Optional[str] = None) -> dict[str, Any]:
+async def list_prospects(request: Request, status: Optional[str] = None, exit: Optional[str] = None,
+                         source: Optional[str] = None, batch: Optional[str] = None) -> dict[str, Any]:
     user, client = _actor(request)
     try:
-        rows = await service.list_prospects(client, stage=stage, exit_=exit, door=door, batch=batch)
+        rows = await service.list_prospects(client, status=status, exit_=exit, source=source, batch=batch)
     except EspoError as exc:
-        raise _crm_failure(request, exc, "Could not list prospects")
+        raise _crm_failure(request, exc, "Could not list the leads")
     return {"prospects": rows}
 
 
@@ -764,7 +767,7 @@ async def recent_imports(request: Request) -> dict[str, Any]:
     store = _store(request)
     rows = await store.recent_batches()
     return {"batches": [{
-        "id": b["id"], "name": b["name"], "door": b["door"], "rowCount": b["row_count"],
+        "id": b["id"], "name": b["name"], "source": b["door"], "rowCount": b["row_count"],
         "status": b["status"], "createdAt": b["created_at"].isoformat() if b.get("created_at") else None,
         "appliedAt": b["applied_at"].isoformat() if b.get("applied_at") else None,
         "counts": (b.get("plan") or {}).get("counts"), "result": b.get("result"),
@@ -778,15 +781,15 @@ async def get_prospect(prospect_id: str, request: Request) -> dict[str, Any]:
         row = await service.get_prospect(client, prospect_id)
         touches = await service.prospect_touches(client, prospect_id)
     except EspoError as exc:
-        raise _crm_failure(request, exc, "Could not read the prospect record")
+        raise _crm_failure(request, exc, "Could not read the lead")
     if not row or not row.get("id"):
-        raise HTTPException(status_code=404, detail="Prospect record not found.")
+        raise HTTPException(status_code=404, detail="Lead not found.")
     return {"prospect": row, "touches": touches}
 
 
 class ImportPlanIn(BaseModel):
     name: str = Field(min_length=1, max_length=255)
-    door: str = cfg.DOOR_FILING
+    source: str = cfg.SOURCE_FILING
     text: str
     qualifiedBy: str = ""
     listSource: str = ""
@@ -799,7 +802,7 @@ async def import_plan(body: ImportPlanIn, request: Request) -> dict[str, Any]:
     api_client = _api_client(settings, request)
     store = _store(request)
     try:
-        plan = await imports.plan_import(api_client, store, text=body.text, name=body.name.strip(), door=body.door,
+        plan = await imports.plan_import(api_client, store, text=body.text, name=body.name.strip(), door=body.source,
                                          qualified_by=body.qualifiedBy.strip(), list_source=body.listSource.strip())
     except CampaignError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
@@ -829,16 +832,16 @@ async def import_apply(body: ImportApplyIn, request: Request) -> dict[str, Any]:
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not apply the import")
     # The action log needs a record to hang on; an import has many. The first
-    # prospect record it made stands for the batch (an empty id is refused by
+    # lead it made stands for the batch (an empty id is refused by
     # both the stream note and the CActionLog row — seen 10-15-26).
     first_id = result.get("firstProspectId")
     if first_id:
         await record_action(
-            client, app=APP_CAMPAIGNS, category=CAT_RECORD_EDIT, action="Prospects Imported",
+            client, app=APP_CAMPAIGNS, category=CAT_RECORD_EDIT, action="Leads Imported",
             parent_type=cfg.PROSPECT, parent_id=first_id,
-            summary=(f"Imported \"{batch['name']}\" ({batch['door']}): {result['created']} prospect records, "
-                     f"{result['alreadyKnown']} already known, {result['companies']} companies and "
-                     f"{result['contacts']} contacts typed Prospect, {result['errors']} errors"),
+            summary=(f"Imported \"{batch['name']}\" ({batch['door']}): {result['created']} leads "
+                     f"({result['qualified']} Qualified, {result['unqualified']} Unqualified), "
+                     f"{result['duplicates']} duplicates, {result['errors']} errors"),
             actor_id=user.get("userId", ""), actor_name=user.get("name", ""), details=result,
         )
     return {"batchId": batch["id"], "result": result}
@@ -855,7 +858,7 @@ class ReviewIn(BaseModel):
 
 @api_router.post("/prospects/{prospect_id}/review")
 async def review_prospect(prospect_id: str, body: ReviewIn, request: Request) -> dict[str, Any]:
-    """Qualify, Unqualified, Do Not Contact or Not the same company — the record
+    """Qualify, Disqualify, Do Not Contact or Not the same company — the lead
     written as the reviewer, the one link clear under the API client."""
     user, client = _actor(request)
     settings = get_settings()
@@ -864,9 +867,9 @@ async def review_prospect(prospect_id: str, body: ReviewIn, request: Request) ->
     try:
         prospect = await service.get_prospect(client, prospect_id)
     except EspoError as exc:
-        raise _crm_failure(request, exc, "Could not read the prospect record")
+        raise _crm_failure(request, exc, "Could not read the lead")
     if not prospect or not prospect.get("id"):
-        raise HTTPException(status_code=404, detail="Prospect record not found.")
+        raise HTTPException(status_code=404, detail="Lead not found.")
     try:
         result = await review.apply_action(client, _system_client(settings), prospect, body.action,
                                            reviewer=user.get("name") or user.get("userName") or "",
@@ -882,7 +885,7 @@ async def review_prospect(prospect_id: str, body: ReviewIn, request: Request) ->
         summary=(f"{review.ACTION_LABELS[body.action]}: \"{name}\""
                  + (f" — {body.note.strip()}" if body.note.strip() else "")),
         actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
-        details={"written": result["written"], "was": {"funnelStage": prospect.get("funnelStage"),
+        details={"written": result["written"], "was": {"leadStatus": prospect.get("leadStatus"),
                                                        "sideExit": prospect.get("sideExit")}},
     )
     return result
@@ -912,10 +915,19 @@ async def call_list(request: Request) -> dict[str, Any]:
         raise _crm_failure(request, exc, "Could not read the call list")
 
 
+#: A plain shape check for a caller-typed email; the CRM is the real gate.
+_EMAIL_SHAPE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
 class OutcomeIn(BaseModel):
     outcome: str
     notes: str = Field(default="", max_length=8000)
     callAgain: bool = False
+    # Interested on a lead (ruling 47): either an email or a website converts it.
+    email: str = Field(default="", max_length=255)
+    website: str = Field(default="", max_length=255)
+    firstName: str = Field(default="", max_length=100)
+    lastName: str = Field(default="", max_length=100)
 
 
 @api_router.post("/calls/{touch_id}/outcome")
@@ -925,8 +937,14 @@ async def record_outcome(touch_id: str, body: OutcomeIn, request: Request) -> di
     client = client_for(settings, user)
     api_client = _api_client(settings, request)
     try:
+        email = body.email.strip().lower()
+        if email and not _EMAIL_SHAPE.match(email):
+            raise CampaignError(f"\"{body.email.strip()}\" is not an email address.")
+        details = Details(email=email, website=body.website.strip(),
+                          first_name=body.firstName.strip(), last_name=body.lastName.strip())
         result = await calls.record_outcome(api_client, client, user, touch_id, outcome=body.outcome,
-                                            notes=body.notes, call_again=body.callAgain, settings=settings)
+                                            notes=body.notes, call_again=body.callAgain, settings=settings,
+                                            details=details)
     except CampaignError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except LookupError as exc:

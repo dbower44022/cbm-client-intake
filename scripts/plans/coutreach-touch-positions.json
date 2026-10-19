@@ -1,0 +1,22 @@
+{
+  "name": "coutreach-touch-positions",
+  "description": "Prospect marketing, the lead model (rulings 45, 49, 50): COutreachTouch.stageAtTouch records a lead's status or a Company's or Contact's stage, so it gains Unqualified, Prospect and Engaged. Additive only - the old options stay until the removal step (coutreach-lead-model-crm-handoff.md section 6).",
+  "fieldParams": [
+    {
+      "entity": "COutreachTouch",
+      "name": "stageAtTouch",
+      "params": {
+        "options": [
+          "Unqualified",
+          "Qualified",
+          "Prospect",
+          "Engaged",
+          "Opportunity",
+          "Unverified",
+          "Lead",
+          "Warm Lead"
+        ]
+      }
+    }
+  ]
+}

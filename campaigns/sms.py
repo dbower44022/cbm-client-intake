@@ -1,9 +1,9 @@
 """The text-message kind (build plan § 3.5; rulings 9, 38 and 39).
 
 **Select (ruling 9).** A Contact typed Prospect with ``cSmsOptIn`` true, a phone
-number, ``phoneNumberIsOptedOut`` false, a rung in the chosen set, holding no
-relationship type, whose prospect record (if any) has not left the ladder. A
-prospect record is never selected: consent lives on the Contact.
+number, ``phoneNumberIsOptedOut`` false, at a chosen stage (Prospect, Engaged,
+Opportunity — ruling 50), holding no relationship type, whose lead (if any) is
+still being worked. A lead is never selected: consent lives on the Contact.
 
 **Build, sign off.** *Build the list* reconciles the Planned touches as the
 call kind does. *Sign off and send* needs the campaign's wording
@@ -50,8 +50,10 @@ log = logging.getLogger("cbm_intake.campaigns.sms")
 
 _PAGE = 200
 MESSAGE_FIELD = "smsMessage"
-TEXTABLE_STAGES = (cfg.STAGE_QUALIFIED, cfg.STAGE_LEAD, cfg.STAGE_WARM_LEAD, cfg.STAGE_OPPORTUNITY)
-DEFAULT_RULE: dict[str, Any] = {"stages": [cfg.STAGE_QUALIFIED, cfg.STAGE_LEAD, cfg.STAGE_WARM_LEAD]}
+#: The stages after first contact (ruling 50); a text needs a Contact's own
+#: opt-in (ruling 9), so a lead is never texted.
+TEXTABLE_STAGES = cfg.STAGES
+DEFAULT_RULE: dict[str, Any] = {"stages": list(cfg.STAGES)}
 CONTACT_SELECT = (
     f"id,name,phoneNumber,phoneNumberIsOptedOut,cSmsOptIn,{CONTACT_TYPE_FIELD},cFunnelStage"
 )

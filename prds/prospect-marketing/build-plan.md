@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-19-26 11:03 · Revision 0.13 — change log at the end.
+Last Updated: 10-19-26 11:47 · Revision 0.14 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -1252,6 +1252,21 @@ Written into the executive overview on 10-18-26 and open to Doug's change:
 2. **Code**, in one release behind the existing switches: import, review,
    landing and response, calls, postcard selection, attribution, stale,
    email and SMS selection, reporting, then the screens' words.
+   **Built 10-19-26, v0.265.0, committed, not pushed** — with rulings 51
+   (a scan alone changes no status), 52 (a business lead converts to a
+   Company and its Contact, even without a website) and 53 (a state filing
+   with a website or an email enters Qualified), put to Doug at the start of
+   the session. Decided in the build, each following from a ruling: a
+   response converts when the response or the lead holds a website or an
+   email (a response is first contact); a converted Company is matched by
+   website, then by name and postal code (the import's rule); Interested on
+   a Contact changes no stage; postcards select Unqualified and Qualified
+   leads, Companies typed Prospect only when ticked; an import row matching a
+   converted lead's Company or Contact is a Duplicate, a matched Contact named
+   in the reason note only; the touch's recorded position gains Unqualified,
+   Prospect and Engaged (one more CRM plan, handoff § 3a); the funnel's bands
+   are Lead, Prospect, Client. The release's CRM steps on crm-test are
+   `touchpos`, `leadlayouts` and `leadmove` in `scripts/prospect_crm_test.sh`.
 3. **Live pass** on crm-test: the Phase 1–4 passes' steps that touch a
    stage, re-run on the new names; the Phase 4 pass resumes after it.
 4. **Production** at the Sunday 17:00 UTC slot; Boston with its release.
@@ -1477,6 +1492,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.14 | 10-19-26 11:47 | Claude (Claude Code) | § 7a.5 step 2 built (v0.265.0, not pushed): the code rework, with rulings 51–53 and the decisions that follow from them recorded in the step. |
 | 0.13 | 10-19-26 11:03 | Claude (Claude Code) | § 7a.5 step 1 done on crm-test: the lead model's CRM handoff written and its additive half applied (rulings 49, 50); step 2, the code, is next. |
 | 0.12 | 10-19-26 01:22 | Claude (Claude Code) | § 9 question 16 answered: B, a lead behind every new public-form record (ruling 48). Questions 13–16 all answered; § 7a.5 step 1, the CRM handoff, is next. |
 | 0.11 | 10-19-26 01:21 | Claude (Claude Code) | § 9 question 15 answered: A, an Interested call converts only with an email or website (ruling 47); the question's citation corrected from ruling 42 to ruling 44. |

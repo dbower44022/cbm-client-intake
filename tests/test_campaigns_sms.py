@@ -38,20 +38,20 @@ MESSAGE = "Free mentoring for your new business: https://x.example/c/abcd2345 Re
 
 
 def _seed(crm):
-    crm.add("Contact", {"id": "c-ok", "name": "Pat", "cContactType": ["Prospect"], "cFunnelStage": "Qualified",
+    crm.add("Contact", {"id": "c-ok", "name": "Pat", "cContactType": ["Prospect"], "cFunnelStage": "Prospect",
                         "cSmsOptIn": True, "phoneNumber": "(216) 555-0101", "phoneNumberIsOptedOut": False})
-    crm.add("Contact", {"id": "c-nocons", "name": "Noel", "cContactType": ["Prospect"], "cFunnelStage": "Qualified",
+    crm.add("Contact", {"id": "c-nocons", "name": "Noel", "cContactType": ["Prospect"], "cFunnelStage": "Prospect",
                         "cSmsOptIn": False, "phoneNumber": "2165550102"})
-    crm.add("Contact", {"id": "c-out", "name": "Otto", "cContactType": ["Prospect"], "cFunnelStage": "Qualified",
+    crm.add("Contact", {"id": "c-out", "name": "Otto", "cContactType": ["Prospect"], "cFunnelStage": "Prospect",
                         "cSmsOptIn": True, "phoneNumber": "2165550103", "phoneNumberIsOptedOut": True})
-    crm.add("Contact", {"id": "c-client", "name": "Cli", "cContactType": ["Client"], "cFunnelStage": "Qualified",
+    crm.add("Contact", {"id": "c-client", "name": "Cli", "cContactType": ["Client"], "cFunnelStage": "Prospect",
                         "cSmsOptIn": True, "phoneNumber": "2165550104"})
-    crm.add("Contact", {"id": "c-nophone", "name": "Nop", "cContactType": ["Prospect"], "cFunnelStage": "Qualified",
+    crm.add("Contact", {"id": "c-nophone", "name": "Nop", "cContactType": ["Prospect"], "cFunnelStage": "Prospect",
                         "cSmsOptIn": True})
-    crm.add("Contact", {"id": "c-left", "name": "Left", "cContactType": ["Prospect"], "cFunnelStage": "Lead",
+    crm.add("Contact", {"id": "c-left", "name": "Left", "cContactType": ["Prospect"], "cFunnelStage": "Engaged",
                         "cSmsOptIn": True, "phoneNumber": "2165550105"})
     crm.add(cfg.PROSPECT, {"id": "p-left", "sideExit": "Do Not Contact", "promotedContactId": "c-left"})
-    crm.add(cfg.PROSPECT, {"id": "p-phone", "funnelStage": "Qualified", "phone": "2165550106"})   # never texted
+    crm.add(cfg.PROSPECT, {"id": "p-phone", "leadStatus": "Qualified", "phone": "2165550106"})   # never texted
 
 
 def _campaign(crm, status="Draft", message=MESSAGE):
@@ -62,7 +62,7 @@ def _campaign(crm, status="Draft", message=MESSAGE):
 def test_selection_is_ruling_9():
     crm = FakeCrm()
     _seed(crm)
-    targets = run(sms.select_targets(crm, {"stages": ["Qualified", "Lead"]}))
+    targets = run(sms.select_targets(crm, {"stages": ["Prospect", "Engaged"]}))
     assert [(t["id"], t["phone"]) for t in targets] == [("c-ok", "+12165550101")]
 
 
@@ -94,7 +94,7 @@ def test_the_send_keeps_to_the_hours_and_completes():
     assert sender.sent[0]["status_callback"] == "https://apps.example/api/campaigns/sms/status"
     t = crm.rows[cfg.TOUCH]["t1"]
     assert t["touchStatus"] == "Sent" and t["vendorPieceId"] == "dryrun-t1" and t["calledPhone"] == "+12165550101"
-    assert t["stageAtTouch"] == "Qualified"
+    assert t["stageAtTouch"] == "Prospect"
     assert crm.rows[cfg.CAMPAIGN][camp["id"]]["campaignStatus"] == "Complete"
     # The touch was marked sending BEFORE the call.
     marks = [p for e, i, p in crm.updated if i == "t1"]

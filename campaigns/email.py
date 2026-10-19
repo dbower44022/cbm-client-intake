@@ -3,9 +3,10 @@
 **No cold email, ever (ruling 19).** An email campaign selects **Contacts**
 only, with the standing list's own audience rule (``core/mailing_sync``:
 ``cMarketingOptIn`` true and the address neither opted out nor invalid), typed
-Prospect at a chosen rung, still on the ladder — or, the dormant-client term of
-ruling 25, typed Client whose engagements are all closed, the latest more than
-N days ago. A prospect record is never selected.
+Prospect at a chosen stage (Prospect, Engaged, Opportunity — ruling 50), whose
+lead (if any) is still being worked — or, the dormant-client term of ruling 25,
+typed Client whose engagements are all closed, the latest more than N days ago.
+A lead is never selected.
 
 **The application does not send.** Sign-off queues the campaign; the worker
 pushes its people as a **named Constant Contact list** — one list per
@@ -37,9 +38,10 @@ from .service import CampaignError
 
 log = logging.getLogger("cbm_intake.campaigns.email")
 
-EMAILABLE_STAGES = (cfg.STAGE_QUALIFIED, cfg.STAGE_LEAD, cfg.STAGE_WARM_LEAD, cfg.STAGE_OPPORTUNITY)
-DEFAULT_RULE: dict[str, Any] = {"stages": [cfg.STAGE_LEAD, cfg.STAGE_WARM_LEAD, cfg.STAGE_OPPORTUNITY],
-                                "dormantDays": None}
+#: The stages after first contact (ruling 50). A lead is never emailed: it has
+#: no Contact, and no Contact means no opt-in (ruling 19 — no cold email).
+EMAILABLE_STAGES = cfg.STAGES
+DEFAULT_RULE: dict[str, Any] = {"stages": list(cfg.STAGES), "dormantDays": None}
 DEFAULT_DORMANT_DAYS = 365
 CONTACT_SELECT = (
     f"id,name,firstName,lastName,emailAddress,cMarketingOptIn,emailAddressIsOptedOut,"

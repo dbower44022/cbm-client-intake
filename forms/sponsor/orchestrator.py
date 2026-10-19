@@ -30,6 +30,7 @@ import logging
 
 from core.config import get_settings
 from campaigns import attribution as attrib
+from campaigns import config as campaign_cfg
 from campaigns.attribution import Attribution
 from core.crm_upsert import (
     COMPANY_SELECT, CompanyConflict, conflicting_website, fill_company_website,
@@ -90,7 +91,7 @@ async def _find_or_create_account(
     attr = attr or Attribution()
     promoted = await attrib.promoted_company(client, attr, select=COMPANY_SELECT)
     if promoted is not None:
-        log.info("using promoted Account %s from prospect record %s", promoted["id"],
+        log.info("using converted Account %s from lead %s", promoted["id"],
                  (attr.prospect or {}).get("id"))
         await fill_company_website(client, promoted, sub.business_website)
         await merge_company_type(client, promoted, COMPANY_TYPE_SPONSOR)
@@ -237,8 +238,10 @@ async def submit_sponsor(sub: SponsorApplication, client: EspoApi) -> dict[str, 
     # Add the applicant to the profile's Contacts (hasMany), alongside the
     # sponsorContact set on the profile itself.
     await client.relate(SPONSOR_PROFILE, profile_id, SPONSOR_CONTACTS, contact_id)
-    # The prospect record points at what it became (§ 5 step 4).
-    await attrib.link_promotion(client, attr, contact_id=contact_id, company_id=account_id)
+    # Ruling 48: the lead the form named is Converted, or a new record gets a
+    # lead behind it, Converted at once, its Lead Source this form.
+    await attrib.record_lead(client, attr, source=campaign_cfg.SOURCE_FUNDER_APPLICATION,
+                             company_id=account_id, contact_id=contact_id, values=attrib.lead_values(sub))
     return {
         "accountId": account_id,
         "contactId": contact_id,

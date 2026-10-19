@@ -61,7 +61,7 @@ def _active(settings: Settings) -> None:
 
 def destination_path(link: dict[str, Any], *, scan_token: Optional[str] = None) -> Optional[str]:
     """Where a link sends the visitor, with the campaign id and the link token
-    appended (``?campaign=&link=``) so the door it opens can carry them into the
+    appended (``?campaign=&link=``) so the public form it opens can carry them into the
     captured payload. None when there is nowhere sensible to go."""
     kind = link.get("destination_kind")
     params = {"campaign": link["campaign_id"], "link": link["token"]}

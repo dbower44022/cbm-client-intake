@@ -48,6 +48,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from campaigns import attribution as attrib
+from campaigns import config as campaign_cfg
 from campaigns.attribution import Attribution
 from core.crm_upsert import (
     COMPANY_SELECT, CompanyConflict, conflicting_website, fill_company_website,
@@ -112,7 +113,7 @@ async def _find_or_create_account(
 ) -> str:
     """Find-or-create the client Account by name and return its id.
 
-    A prospect record's PROMOTED company is used by id before any name match
+    A lead's CONVERTED company is used by id before any name match
     (prospect marketing § 5 step 3): the landing page already created the
     business the person named, so matching the name again could hand the
     client a same-named stranger's company. The promoted company is typed
@@ -137,7 +138,7 @@ async def _find_or_create_account(
     website = sub.business_website if sub.business_stage != "Pre-Startup" else None
     promoted = await attrib.promoted_company(client, attr, select=COMPANY_SELECT)
     if promoted is not None:
-        log.info("using promoted Account %s from prospect record %s", promoted["id"],
+        log.info("using converted Account %s from lead %s", promoted["id"],
                  (attr.prospect or {}).get("id"))
         await fill_company_website(client, promoted, website)
         await merge_company_type(client, promoted, CLIENT)   # Prospect -> Client
@@ -403,9 +404,10 @@ async def submit_intake(sub: IntakeSubmission, client: EspoApi) -> dict[str, str
     # Also add the applicant to the Engagement Contacts (hasMany) link, alongside
     # the primaryEngagementContact set on the engagement itself.
     await client.relate(ENGAGEMENT, engagement_id, ENGAGEMENT_CONTACTS, contact_id)
-    # The prospect record points at what it became (§ 5 step 4); its stage
-    # stops changing here.
-    await attrib.link_promotion(client, attr, contact_id=contact_id, company_id=account_id)
+    # Ruling 48: the lead the form named is Converted, or a new record gets a
+    # lead behind it, Converted at once, its Lead Source this form.
+    await attrib.record_lead(client, attr, source=campaign_cfg.SOURCE_MENTOR_REQUEST,
+                             company_id=account_id, contact_id=contact_id, values=attrib.lead_values(sub))
     return {
         "accountId": account_id,
         "contactId": contact_id,

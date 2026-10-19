@@ -1,17 +1,22 @@
-"""Every number prospect marketing reports (build plan § 6). One module, so the
-campaign record page, the Responses tab and the Analytics page read the same
-rule and agree — the active-client-count discipline.
+"""Every number prospect marketing reports (build plan § 6, reworked for the
+lead model § 7a). One module, so the campaign record page, the Responses tab and
+the Analytics page read the same rule and agree — the active-client-count
+discipline.
 
-* :func:`summarize_responses` — the Responses tab's *responded* and *converted*
-  (§ 6 item 2), from the durable submission store.
-* :func:`touches_by_campaign` — § 6 item 2 across every campaign: the touch
-  counts the record page shows (``service.touch_summary``), the call outcomes,
-  the ``stageAtTouch`` breakdown, and responded / converted.
-* :func:`entry_rung_by_door` — § 6 item 3: ``entryStage`` × ``entryDoor`` on
-  the prospect records, plus the Contacts the information request and
-  registration doors created (``cEntryStage`` Warm Lead — the only entry those
-  two doors write), so a door entering half-way down is never read as
-  converting better.
+**The three campaign counts (ruling 46).** *Responded*: every delivered or
+pending submission that carried the campaign. *Converted*: a lead became a
+Prospect — a response whose delivery converted the lead it named, or created a
+lead Converted at once (ruling 48), plus every call marked Interested that
+converted its lead (the touch then names the new Contact or Company). *Became a
+client, partner or funder*: a response whose delivery created a relationship
+record (ruling 22's event, "a relationship begins").
+
+* :func:`summarize_responses` — the Responses tab, from the durable store.
+* :func:`touches_by_campaign` — every campaign: the touch counts, the call
+  outcomes, the position each target held when touched, and the three counts.
+* :func:`leads_by_source` — every lead by Lead Source and current status.
+* :func:`funnel` — the lead statuses, then the stages after first contact,
+  then Candidate and Client from the engagements.
 
 The system reads run under the org-wide API key (the Analytics rule for system
 metrics); none of these functions writes anything.
@@ -31,50 +36,68 @@ log = logging.getLogger("cbm_intake.campaigns.reporting")
 
 _PAGE = 200
 
-#: The result keys that mean a RELATIONSHIP record was created (§ 6 item 2:
-#: *converted* = a relationship record carrying the campaign).
+#: The result keys that mean a RELATIONSHIP record was created — *became a
+#: client, partner or funder* (ruling 46).
 RELATIONSHIP_KEYS = ("engagementId", "partnerProfileId", "sponsorProfileId")
 #: Rows that never count: the honeypot and a discard.
 NOT_A_RESPONSE = ("held_honeypot", "discarded")
 
-#: The row label for Contacts the information request and registration doors
-#: created (they enter at Warm Lead, ruling 17).
-DOOR_INFO_OR_REGISTRATION = "Information request or registration"
+#: The result keys that mean a lead was converted (ruling 46): the landing
+#: response and a form naming a lead write ``leadConverted``; a form whose new
+#: record got a lead Converted at once (ruling 48) writes ``leadId``.
+CONVERSION_KEYS = ("leadConverted", "leadId")
+
+
+def _converted(result: dict[str, Any]) -> bool:
+    return any(result.get(k) for k in CONVERSION_KEYS)
 
 
 def summarize_responses(rows: list[dict[str, Any]]) -> dict[str, Any]:
     """The Responses tab's payload: the rows with their record ids, the per-form
-    totals, and the two campaign counts of § 6 item 2 — *responded* (every
-    delivered or pending submission that carried the campaign, the honeypot
-    and discards excluded) and *converted* (those whose delivery created a
-    relationship record: an engagement, a partner or a funder profile)."""
+    totals, and the three counts of ruling 46 — *responded* (every delivered
+    or pending submission that carried the campaign, the honeypot and discards
+    excluded), *converted* (a lead became a Prospect) and *became*
+    (a relationship record was created: an engagement, a partner or a funder
+    profile)."""
     totals: dict[str, int] = {}
-    responded = converted = 0
+    responded = converted = became = 0
     out = []
     for r in rows:
         result = r.get("result") or {}
-        records = ({k: v for k, v in result.items() if isinstance(v, str) and k.endswith("Id")}
-                   if isinstance(result, dict) else {})
+        if not isinstance(result, dict):
+            result = {}
+        records = {k: v for k, v in result.items() if isinstance(v, str) and k.endswith("Id")}
         counted = r["status"] not in NOT_A_RESPONSE
-        is_conversion = counted and any(records.get(k) for k in RELATIONSHIP_KEYS)
+        is_conversion = counted and _converted(result)
+        is_relationship = counted and any(records.get(k) for k in RELATIONSHIP_KEYS)
         if counted:
             totals[r["form_slug"]] = totals.get(r["form_slug"], 0) + 1
             responded += 1
-        if is_conversion:
-            converted += 1
+        converted += int(is_conversion)
+        became += int(is_relationship)
         received = r.get("received_at")
         out.append({
             "id": r["id"], "form": r["form_slug"], "status": r["status"],
             "receivedAt": received.isoformat() if hasattr(received, "isoformat") else received,
             "linkToken": r.get("link_token"), "email": r.get("email"),
-            "records": records, "converted": is_conversion,
+            "records": records, "converted": is_conversion, "became": is_relationship,
         })
-    return {"responses": out, "totals": totals, "responded": responded, "converted": converted}
+    return {"responses": out, "totals": totals, "responded": responded, "converted": converted,
+            "became": became}
+
+
+def call_conversions(touches: Iterable[dict[str, Any]]) -> int:
+    """Calls marked Interested that converted their lead: the touch names the
+    lead AND the Contact or Company the conversion made (``calls``)."""
+    return sum(1 for t in touches
+               if t.get("outcome") == cfg.OUTCOME_INTERESTED and t.get("prospectId")
+               and (t.get("contactId") or t.get("companyId")))
 
 
 def touch_breakdown(touches: Iterable[dict[str, Any]]) -> dict[str, Any]:
     """One campaign's touch counts: the record page's summary plus the call
-    outcomes and the rung each target was on when its touch left Planned."""
+    outcomes and the position each target held when its touch left Planned
+    (a lead's status, a Company's or Contact's stage)."""
     touches = list(touches)
     out: dict[str, Any] = dict(service.touch_summary(touches))
     out["done"] = sum(1 for t in touches if t.get("touchStatus") == cfg.TOUCH_DONE)
@@ -85,7 +108,8 @@ def touch_breakdown(touches: Iterable[dict[str, Any]]) -> dict[str, Any]:
         stage = t.get("stageAtTouch")
         if stage:
             stages[stage] = stages.get(stage, 0) + 1
-    out["stageAtTouch"] = {s: stages[s] for s in cfg.STAGES if s in stages}
+    out["stageAtTouch"] = {s: stages[s] for s in cfg.TOUCH_POSITIONS if s in stages}
+    out["callConversions"] = call_conversions(touches)
     return out
 
 
@@ -104,9 +128,9 @@ async def _all_touches(client: EspoApi) -> list[dict[str, Any]]:
 
 
 async def touches_by_campaign(client: EspoApi, campaign_store=None) -> list[dict[str, Any]]:
-    """§ 6 item 2 for every campaign that selects an audience, newest first.
-    ``responded`` / ``converted`` are None (rendered "—") without the
-    application database."""
+    """Every campaign that selects an audience, newest first, with ruling 46's
+    three counts. ``responded`` / ``converted`` / ``became`` are None (rendered
+    "—") without the application database."""
     campaigns = await service.list_campaigns(client)
     touches = await _all_touches(client)
     by_campaign: dict[str, list[dict[str, Any]]] = {}
@@ -120,16 +144,29 @@ async def touches_by_campaign(client: EspoApi, campaign_store=None) -> list[dict
         row: dict[str, Any] = {
             "id": c["id"], "name": c.get("name") or "(unnamed)", "kind": c.get("campaignKind"),
             "status": c.get("campaignStatus"), **touch_breakdown(by_campaign.get(c["id"], [])),
-            "responded": None, "converted": None,
+            "responded": None, "converted": None, "became": None,
         }
         if campaign_store is not None:
             try:
                 summary = summarize_responses(await campaign_store.recent_submissions(c["id"], limit=10000))
-                row["responded"], row["converted"] = summary["responded"], summary["converted"]
+                row["responded"], row["became"] = summary["responded"], summary["became"]
+                row["converted"] = summary["converted"] + row["callConversions"]
             except Exception as exc:  # noqa: BLE001 — a store failure reads "—", never 0
                 log.warning("responses of campaign %s unreadable: %s", c["id"], exc)
         out.append(row)
     return out
+
+
+async def campaign_counts(client: EspoApi, campaign_store, campaign_id: str) -> dict[str, int]:
+    """Ruling 46's three counts for one campaign — the same rule as the
+    Responses tab and :func:`touches_by_campaign`."""
+    page = await client.list(cfg.TOUCH, select="id,outcome,prospectId,contactId,companyId", max_size=_PAGE,
+                             where=[{"type": "equals", "attribute": "outreachCampaignId", "value": campaign_id},
+                                    {"type": "equals", "attribute": "outcome", "value": cfg.OUTCOME_INTERESTED}])
+    calls = call_conversions(page.get("list", []))
+    summary = summarize_responses(await campaign_store.recent_submissions(campaign_id, limit=10000))
+    return {"responded": summary["responded"], "converted": summary["converted"] + calls,
+            "became": summary["became"]}
 
 
 async def _count(client: EspoApi, entity: str, where: list[dict[str, Any]]) -> int:
@@ -137,37 +174,27 @@ async def _count(client: EspoApi, entity: str, where: list[dict[str, Any]]) -> i
     return int(env.get("total") or 0)
 
 
-async def entry_rung_by_door(client: EspoApi) -> list[dict[str, Any]]:
-    """§ 6 item 3: one row per door, a count per entry rung, and a total. The
-    Contacts row is None per rung when the CRM lacks the field (rendered "—")."""
+async def leads_by_source(client: EspoApi) -> list[dict[str, Any]]:
+    """One row per Lead Source, a count per lead status and a total — where
+    leads came from and what became of them (rulings 41, 48)."""
     out: list[dict[str, Any]] = []
-    for door in (cfg.DOOR_FILING, cfg.DOOR_LIST, cfg.DOOR_PARTNER_FILE):
-        row: dict[str, Any] = {"door": door}
-        for stage in cfg.STAGES:
-            row[stage] = await _count(client, cfg.PROSPECT, [
-                {"type": "equals", "attribute": "entryDoor", "value": door},
-                {"type": "equals", "attribute": "entryStage", "value": stage},
+    sources = (*cfg.IMPORT_SOURCES, cfg.SOURCE_MENTOR_REQUEST, cfg.SOURCE_VOLUNTEER, cfg.SOURCE_INFO_REQUEST,
+               cfg.SOURCE_PARTNER_APPLICATION, cfg.SOURCE_FUNDER_APPLICATION, cfg.SOURCE_EVENT_REGISTRATION,
+               cfg.SOURCE_EMAIL)
+    for source in sources:
+        row: dict[str, Any] = {"source": source}
+        for status in cfg.LEAD_STATUSES:
+            row[status] = await _count(client, cfg.PROSPECT, [
+                {"type": "equals", "attribute": "leadSource", "value": source},
+                {"type": "equals", "attribute": "leadStatus", "value": status},
             ])
-        row["total"] = sum(row[s] for s in cfg.STAGES)
+        row["total"] = sum(row[s] for s in cfg.LEAD_STATUSES)
         out.append(row)
-    contacts: dict[str, Any] = {"door": DOOR_INFO_OR_REGISTRATION}
-    try:
-        n = await _count(client, cfg.CONTACT, [
-            {"type": "equals", "attribute": "cEntryStage", "value": cfg.STAGE_WARM_LEAD}])
-        for stage in cfg.STAGES:
-            contacts[stage] = n if stage == cfg.STAGE_WARM_LEAD else 0
-        contacts["total"] = n
-    except EspoError as exc:
-        log.warning("Contact entry rungs unreadable: %s", exc)
-        for stage in cfg.STAGES:
-            contacts[stage] = None
-        contacts["total"] = None
-    out.append(contacts)
     return out
 
 
 def stage_text(stages: Optional[dict[str, int]]) -> str:
-    """``{"Qualified": 12, "Lead": 3}`` as "Qualified 12 · Lead 3", or "—"."""
+    """``{"Qualified": 12, "Prospect": 3}`` as "Qualified 12 · Prospect 3", or "—"."""
     if not stages:
         return "—"
     return " · ".join(f"{k} {v}" for k, v in stages.items())
@@ -175,11 +202,12 @@ def stage_text(stages: Optional[dict[str, int]]) -> str:
 
 # --- the funnel (§ 6 item 1) --------------------------------------------------------------
 
-#: The ladder's bands (rulings.md, *The ladder as it stands*).
+#: The funnel's bands: a lead before first contact, a Prospect after it
+#: (rulings 42, 43, 50), and Candidate and Client from the engagement.
 BANDS = {
-    cfg.STAGE_UNVERIFIED: "Prospect Marketing", cfg.STAGE_QUALIFIED: "Prospect Marketing",
-    cfg.STAGE_LEAD: "Lead Marketing", cfg.STAGE_WARM_LEAD: "Lead Marketing",
-    cfg.STAGE_OPPORTUNITY: "Lead Marketing", "Candidate": "Lead Marketing", "Client": "Client Management",
+    cfg.LEAD_UNQUALIFIED: "Lead", cfg.LEAD_QUALIFIED: "Lead",
+    cfg.STAGE_PROSPECT: "Prospect", cfg.STAGE_ENGAGED: "Prospect", cfg.STAGE_OPPORTUNITY: "Prospect",
+    "Candidate": "Client", "Client": "Client",
 }
 #: Candidate: asked for mentoring, no session yet. Client: active mentoring.
 #: Read from the engagement's status, which the first completed session moves
@@ -190,24 +218,23 @@ CLIENT_STATUSES = ("Active", "On-Hold")
 
 
 async def funnel(client: EspoApi) -> list[dict[str, Any]]:
-    """A count per rung over the union of § 6 item 1, nothing counted twice:
-    prospect records still on the ladder and never promoted; Companies typed
-    Prospect; Contacts typed Prospect whose Company is not itself a Company
-    typed Prospect (the person is counted under the company, § 1.8); then
-    Candidate and Client from the engagements."""
-    counts = {s: 0 for s in cfg.STAGES}
-    for p in await service._page_all(client, cfg.PROSPECT,
-                                     select="id,funnelStage,sideExit,promotedCompanyId,promotedContactId",
-                                     where=[{"type": "isNull", "attribute": "sideExit"}], limit=50000):
-        if p.get("sideExit") or p.get("promotedCompanyId") or p.get("promotedContactId"):
-            continue
-        if p.get("funnelStage") in counts:
-            counts[p["funnelStage"]] += 1
+    """A count per position, nothing counted twice: leads still being worked
+    (Unqualified, Qualified — no reason, not converted); Companies typed
+    Prospect at a stage; Contacts typed Prospect whose Company is not itself a
+    Company typed Prospect (the person is counted under the company, § 1.8);
+    then Candidate and Client from the engagements."""
+    counts: dict[str, int] = {s: 0 for s in (*cfg.LEAD_OPEN_STATUSES, *cfg.STAGES)}
+    for p in await service._page_all(client, cfg.PROSPECT, select="id,leadStatus,sideExit",
+                                     where=[{"type": "isNull", "attribute": "sideExit"},
+                                            {"type": "in", "attribute": "leadStatus",
+                                             "value": list(cfg.LEAD_OPEN_STATUSES)}], limit=50000):
+        if not p.get("sideExit") and p.get("leadStatus") in cfg.LEAD_OPEN_STATUSES:
+            counts[p["leadStatus"]] += 1
     prospect_companies: set[str] = set()
     for a in await service._page_all(client, cfg.ACCOUNT, select="id,cCompanyType,cFunnelStage",
                                      where=[{"type": "in", "attribute": "cFunnelStage", "value": list(cfg.STAGES)}],
                                      limit=50000):
-        if cfg.COMPANY_TYPE_PROSPECT in (a.get("cCompanyType") or []):
+        if cfg.COMPANY_TYPE_PROSPECT in (a.get("cCompanyType") or []) and a.get("cFunnelStage") in counts:
             prospect_companies.add(a["id"])
             counts[a["cFunnelStage"]] += 1
     for c in await service._page_all(client, cfg.CONTACT, select="id,cContactType,cFunnelStage,accountId",
@@ -217,8 +244,9 @@ async def funnel(client: EspoApi) -> list[dict[str, Any]]:
             continue
         if c.get("accountId") and c["accountId"] in prospect_companies:
             continue
-        counts[c["cFunnelStage"]] += 1
-    out = [{"band": BANDS[s], "rung": s, "count": counts[s]} for s in cfg.STAGES]
+        if c.get("cFunnelStage") in counts:
+            counts[c["cFunnelStage"]] += 1
+    out = [{"band": BANDS[s], "rung": s, "count": counts[s]} for s in counts]
     for rung, statuses in (("Candidate", CANDIDATE_STATUSES), ("Client", CLIENT_STATUSES)):
         out.append({"band": BANDS[rung], "rung": rung,
                     "count": await _count(client, "CEngagement", [

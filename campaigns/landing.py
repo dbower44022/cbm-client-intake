@@ -5,17 +5,18 @@ the route 404s). A route, not a static file, for the same reasons the event
 pages are: the body is filled server-side, and an unknown, cancelled or dead
 token must 404 in the same words as a missing one.
 
-**On load — the scan (ruling 16).** The token resolves to a Sent or Delivered
-touch (a Returned one too: the card reached someone after all). The application
-writes ``firstScannedAt`` (first time only), increments ``scanCount``, sets the
-outcome to Scanned, and moves the prospect record — or the promoted Company — to
-Lead, advance-only. Best-effort: the write never blocks the page. A Planned
+**On load — the scan (rulings 16, 51).** The token resolves to a Sent or
+Delivered touch (a Returned one too: the card reached someone after all). The
+application writes ``firstScannedAt`` (first time only), increments
+``scanCount`` and sets the outcome to Scanned. **A scan alone changes no status**
+(ruling 51): there is no website or email in it to convert the lead with.
+Best-effort: the write never blocks the page. A Planned
 touch (a preview from the campaign screen) renders and writes nothing.
 
 **What it shows (ruling 16).** The business name and the mailing address AS
 MAILED — exactly what the holder is looking at — both editable. Nothing else the
 chapter may hold is echoed: no email, no phone, no person's name, whatever the
-prospect record carries. The harvester rule, kept.
+lead carries. The harvester rule, kept.
 
 **What it asks for.** The person's name, email, phone and website, and two ticks
 worded for what each permits. Three actions, always clickable, validated on
@@ -39,7 +40,7 @@ from core.config import Settings, get_settings
 from core.espo import EspoApi, EspoError
 
 from . import config as cfg
-from .service import advance_stage, parse_address_text
+from .service import parse_address_text
 from .tokens import looks_like_token
 
 log = logging.getLogger("cbm_intake.campaigns.landing")
@@ -86,8 +87,10 @@ async def resolve_touch(client: EspoApi, scan_token: str) -> Optional[dict[str, 
 
 
 async def record_scan(client: EspoApi, touch: dict[str, Any]) -> dict[str, Any]:
-    """Ruling 16: a scan alone moves the business to Lead. Best-effort; a
-    failure is logged and the page still renders."""
+    """Ruling 51: a scan alone changes no status. It is recorded on the touch
+    (``firstScannedAt`` the first time, ``scanCount``, outcome Scanned), which
+    the lead's page lists. Best-effort; a failure is logged and the page still
+    renders."""
     out: dict[str, Any] = {"written": False}
     if touch.get("touchStatus") == cfg.TOUCH_PLANNED:
         out["preview"] = True
@@ -101,18 +104,6 @@ async def record_scan(client: EspoApi, touch: dict[str, Any]) -> dict[str, Any]:
             stamps["firstScannedAt"] = _crm_now()
         await client.update(cfg.TOUCH, touch["id"], stamps)
         out["written"] = True
-        if touch.get("prospectId"):
-            p = await client.get(cfg.PROSPECT, touch["prospectId"], select="id,funnelStage")
-            new = advance_stage((p or {}).get("funnelStage"), cfg.STAGE_LEAD)
-            if new:
-                await client.update(cfg.PROSPECT, p["id"], {"funnelStage": new, "stageChangedAt": _crm_now()})
-                out["stage"] = new
-        elif touch.get("companyId"):
-            c = await client.get(cfg.ACCOUNT, touch["companyId"], select="id,cFunnelStage")
-            new = advance_stage((c or {}).get("cFunnelStage"), cfg.STAGE_LEAD)
-            if new:
-                await client.update(cfg.ACCOUNT, c["id"], {"cFunnelStage": new})
-                out["stage"] = new
     except EspoError as exc:
         log.warning("scan write for touch %s failed: %s", touch.get("id"), exc)
     return out

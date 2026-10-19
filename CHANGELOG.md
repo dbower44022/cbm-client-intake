@@ -5,6 +5,60 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.265.0] — 2026-10-19
+
+**feat(campaigns): the lead model** (prospect marketing build plan § 7a.5
+step 2; rulings 41–53). Every record from an outside source is a **lead** with
+a **lead status** (Unqualified · Qualified · Disqualified · Converted) and a
+**Lead Source**; a Company or Contact is created only at first contact, and
+carries the stages **Prospect · Engaged · Opportunity**. Behind the existing
+campaign switches; every campaign read now also requires `CProspect.leadStatus`,
+so a CRM without the lead-model handoff reads *not available* (production until
+its Sunday slot).
+
+- **Import:** every row becomes a lead and nothing else; a state-filing row with
+  a website or an email enters Qualified on the filter's verdict, every other
+  row Unqualified (ruling 53). *Already known* is now **Duplicate**, and a row
+  matching a converted lead's Company or Contact is a duplicate too. A matched
+  Contact is named in the reason note, never linked as *converted*. The partner
+  file is its own Lead Source.
+- **Review:** Qualify only with a website or an email (ruling 42); Disqualify
+  takes a note and is a status, not a reason (ruling 50).
+- **Conversion** (`campaigns/conversion.py`, new): one rule for the landing
+  response, a call marked Interested and a public form naming a lead. An email
+  or a website converts; a business lead becomes a Company (matched by website,
+  then name and postal code) and the Contact for the email, linked (ruling 52).
+- **Landing page:** a scan is recorded and changes no status (ruling 51); a
+  response converts when it, or the lead, holds a website or an email.
+- **Calls:** select leads at Unqualified/Qualified (ruling 44) and Contacts at a
+  stage; Interested asks for an email and a website and converts only with one
+  (ruling 47), else says why and offers *Call again*.
+- **Postcards:** select Unqualified and Qualified leads; Companies typed
+  Prospect only when ticked. Email and texts select on the new stages.
+- **Public forms (ruling 48):** a lead the form names is Converted and linked;
+  otherwise a new Company or Contact gets a lead, Converted at once, its Lead
+  Source the form (the volunteer form and an approved info@ message included).
+  Retry-safe through the delivery's recorded creates; never costs the
+  submission. Information request and registration write **Engaged** — only
+  on a CRM whose stage field carries the new options. Production and Boston
+  still hold the old ladder until their slot, and EspoCRM refuses an unknown
+  enum value outright, so there they write no stage at all rather than 400
+  the create.
+- **Stale sweep:** Unqualified and Qualified leads, by `leadStatusChangedAt`.
+- **Reporting (ruling 46):** Responded, Converted (a lead became a Prospect —
+  responses and calls) and *Became a client, partner or funder* on the
+  Responses tab, the Analytics *Campaigns* table and the campaign dashboard;
+  *Leads by Lead Source*; the funnel over lead statuses then stages.
+- **Screens:** Leads, Lead status, Lead Source, *Stopped because*, Disqualify.
+- **CRM, with the release:** `scripts/plans/coutreach-touch-positions.json`
+  (touch positions gain Unqualified, Prospect, Engaged — crm-test fingerprint
+  `6c2e1d42af30`), `scripts/apply_lead_layouts.py` (handoff § 7), and the value
+  move now covers touches and drops Qualified without a website or email
+  (ruling 42). Wrapper words: `touchpos`, `leadlayouts`, `leadmove`.
+
+Verified by tests (suite 2,653 passed) and the three scripts' dry runs on
+crm-test; never against a live lead. Rollback is a revert.
+
 ## [0.264.4] — 2026-10-19
 
 **fix(events): a registered sign-up form locks.** Found by Doug on the

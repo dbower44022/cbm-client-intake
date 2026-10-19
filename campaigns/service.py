@@ -55,13 +55,19 @@ async def availability(client: EspoApi) -> dict[str, Any]:
         for link in (cfg.LINK_PARTNERS, cfg.LINK_EVENTS, cfg.LINK_TOUCHES):
             if not isinstance(links, dict) or link not in links:
                 missing.append(f"{cfg.CAMPAIGN}.{link}")
+        # The lead model (rulings 41-52): the code reads and writes leadStatus,
+        # so a CRM without it is "not available" rather than a refused select.
+        lead_fields = await client.metadata(f"entityDefs.{cfg.PROSPECT}.fields") or {}
+        for name in ("leadStatus", "leadSource", "leadStatusChangedAt"):
+            if cfg.PROSPECT not in missing and (not isinstance(lead_fields, dict) or name not in lead_fields):
+                missing.append(f"{cfg.PROSPECT}.{name}")
     except Exception as exc:  # noqa: BLE001 — a metadata failure is "not available", not a 500
         return {"available": False, "reason": f"The CRM's configuration could not be read ({exc})."}
     if missing:
         return {
             "available": False,
             "reason": "This CRM does not carry the campaign entities yet: "
-                      + ", ".join(missing) + " (coutreach-entities-crm-handoff.md).",
+                      + ", ".join(missing) + " (coutreach-entities-crm-handoff.md, coutreach-lead-model-crm-handoff.md).",
         }
     return {"available": True, "reason": ""}
 
@@ -87,7 +93,11 @@ async def field_options(client: EspoApi, *, calls_on: bool = False, sms_on: bool
     live = await client.metadata(f"entityDefs.{cfg.CAMPAIGN}.fields") or {}
     missing = sorted(n for n in cfg.CAMPAIGN_OPTIONAL_FIELDS if not (isinstance(live, dict) and n in live))
     prospect = await _enum_options(
-        client, cfg.PROSPECT, ("funnelStage", "entryDoor", "sideExit", "addressStatus"))
+        client, cfg.PROSPECT, ("leadStatus", "leadSource", "sideExit", "addressStatus"))
+    # The options the lead model retired stay in the CRM until the removal step
+    # (coutreach-lead-model-crm-handoff.md § 6); the screens never offer them.
+    prospect["sideExit"] = [o for o in prospect.get("sideExit", [])
+                            if o in (cfg.EXIT_DUPLICATE, cfg.EXIT_DO_NOT_CONTACT, cfg.EXIT_DECLINED, cfg.EXIT_STALE)]
     return {
         "campaign": campaign,
         "prospect": prospect,
@@ -389,17 +399,18 @@ def touch_summary(touches: Iterable[dict[str, Any]]) -> dict[str, int]:
 
 # --- prospects ---------------------------------------------------------------------
 
-async def list_prospects(client: EspoApi, *, stage: Optional[str] = None, exit_: Optional[str] = None,
-                         door: Optional[str] = None, batch: Optional[str] = None) -> list[dict[str, Any]]:
+async def list_prospects(client: EspoApi, *, status: Optional[str] = None, exit_: Optional[str] = None,
+                         source: Optional[str] = None, batch: Optional[str] = None) -> list[dict[str, Any]]:
+    """The leads, filtered by lead status, reason, Lead Source and import batch."""
     where: list[dict[str, Any]] = []
-    if stage:
-        where.append({"type": "equals", "attribute": "funnelStage", "value": stage})
+    if status:
+        where.append({"type": "equals", "attribute": "leadStatus", "value": status})
     if exit_ == "none":
         where.append({"type": "isNull", "attribute": "sideExit"})
     elif exit_:
         where.append({"type": "equals", "attribute": "sideExit", "value": exit_})
-    if door:
-        where.append({"type": "equals", "attribute": "entryDoor", "value": door})
+    if source:
+        where.append({"type": "equals", "attribute": "leadSource", "value": source})
     if batch:
         where.append({"type": "equals", "attribute": "importBatch", "value": batch})
     return await _page_all(client, cfg.PROSPECT, select=cfg.PROSPECT_SELECT, where=where or None)
@@ -419,7 +430,7 @@ async def prospect_touches(client: EspoApi, prospect_id: str) -> list[dict[str, 
 
 
 def advance_stage(current: Optional[str], proposed: str) -> Optional[str]:
-    """The rung to write, or None when the proposed rung is not an advance
+    """The stage to write, or None when the proposed stage is not an advance
     (advance-only, evidence-only — § 1.8)."""
     if proposed not in cfg.STAGE_RANK:
         return None

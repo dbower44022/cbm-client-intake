@@ -55,13 +55,13 @@ class FakeMail:
 
 def _seed(crm):
     crm.add("Contact", {"id": "c-ok", "name": "Pat", "firstName": "Pat", "emailAddress": "pat@ex.example",
-                        "cMarketingOptIn": True, "cContactType": ["Prospect"], "cFunnelStage": "Warm Lead"})
+                        "cMarketingOptIn": True, "cContactType": ["Prospect"], "cFunnelStage": "Engaged"})
     crm.add("Contact", {"id": "c-cold", "name": "Cold", "emailAddress": "cold@ex.example",
-                        "cMarketingOptIn": False, "cContactType": ["Prospect"], "cFunnelStage": "Warm Lead"})
+                        "cMarketingOptIn": False, "cContactType": ["Prospect"], "cFunnelStage": "Engaged"})
     crm.add("Contact", {"id": "c-bad", "name": "Bad", "emailAddress": "bad@ex.example", "emailAddressIsInvalid": True,
-                        "cMarketingOptIn": True, "cContactType": ["Prospect"], "cFunnelStage": "Warm Lead"})
+                        "cMarketingOptIn": True, "cContactType": ["Prospect"], "cFunnelStage": "Engaged"})
     crm.add("Contact", {"id": "c-unsub", "name": "Uns", "emailAddress": "uns@ex.example",
-                        "cMarketingOptIn": True, "cContactType": ["Prospect"], "cFunnelStage": "Lead"})
+                        "cMarketingOptIn": True, "cContactType": ["Prospect"], "cFunnelStage": "Prospect"})
     crm.add("Contact", {"id": "c-old", "name": "Old Client", "emailAddress": "old@ex.example",
                         "cMarketingOptIn": True, "cContactType": ["Client"]})
     crm.add("Contact", {"id": "c-live", "name": "Live Client", "emailAddress": "live@ex.example",
@@ -77,7 +77,7 @@ NOW = datetime(2026, 10, 18, tzinfo=timezone.utc)
 def test_no_cold_email_and_the_dormant_term():
     crm = FakeCrm()
     _seed(crm)
-    got = {t["id"] for t in run(email.select_targets(crm, {"stages": ["Lead", "Warm Lead"]}, now=NOW))}
+    got = {t["id"] for t in run(email.select_targets(crm, {"stages": ["Prospect", "Engaged"]}, now=NOW))}
     assert got == {"c-ok", "c-unsub"}
     with_dormant = {t["id"] for t in run(email.select_targets(crm, {"stages": [], "dormantDays": 365}, now=NOW))}
     assert with_dormant == {"c-old"}                          # the live client is not dormant
@@ -88,7 +88,7 @@ def test_build_sign_off_push_and_mark_sent():
     crm, mail = FakeCrm(), FakeMail(unsubscribed={"uns@ex.example"})
     _seed(crm)
     camp = crm.add(cfg.CAMPAIGN, {"name": "Autumn notice", "campaignKind": "Email", "campaignStatus": "Draft"})
-    built = run(email.build_list(crm, crm, camp, {"stages": ["Lead", "Warm Lead"]}))
+    built = run(email.build_list(crm, crm, camp, {"stages": ["Prospect", "Engaged"]}))
     assert built["pieces"] == 2
     settings = Settings(_env_file=None, mailing_client_id="id", mailing_client_secret="s")
     camp = crm.rows[cfg.CAMPAIGN][camp["id"]]

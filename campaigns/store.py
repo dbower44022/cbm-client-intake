@@ -360,7 +360,7 @@ class CampaignStore:
     async def known_row_hashes(self, hashes: list[str]) -> set[str]:
         """Which of these rows an earlier apply already created — the across-batch
         duplicate check and what makes a re-upload a no-op. A recorded row is a
-        prospect record that exists, whatever happened to the rest of its batch
+        lead that exists, whatever happened to the rest of its batch
         (a partial apply with two 403s left three real rows on 10-15-26)."""
         if not hashes:
             return set()

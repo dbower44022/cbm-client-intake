@@ -27,6 +27,8 @@ from __future__ import annotations
 
 import logging
 
+from campaigns import attribution as attrib
+from campaigns import config as campaign_cfg
 from core.crm_upsert import find_create_or_fill
 from core.enum_filter import EnumSanitizer
 from core.espo import EspoApi
@@ -214,4 +216,10 @@ async def submit_application(sub: VolunteerApplication, client: EspoApi) -> dict
     san = EnumSanitizer(client)
     contact_id = await _find_or_create_mentor_contact(sub, client, san)
     profile_id = await _create_mentor_profile(sub, client, contact_id, san)
-    return {"contactId": contact_id, "mentorProfileId": profile_id}
+    # Ruling 48: a new Contact has a lead behind it, Converted at once, its Lead
+    # Source this form; a lead the form named is Converted. The volunteer form
+    # honours no campaign (prospect marketing § 5 names five public forms).
+    attr = attrib.Attribution(prospect=await attrib.valid_prospect(client, getattr(sub, "prospect_id", None)))
+    await attrib.record_lead(client, attr, source=campaign_cfg.SOURCE_VOLUNTEER,
+                             contact_id=contact_id, values=attrib.lead_values(sub))
+    return {"contactId": contact_id, "mentorProfileId": profile_id, **attr.result()}

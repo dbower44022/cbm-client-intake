@@ -1,13 +1,16 @@
-"""The call kind (build plan § 3.4, ruling 20; who calls is ruling 36).
+"""The call kind (build plan § 3.4, ruling 20; who calls is ruling 36; reworked
+for the lead model § 7a — rulings 44, 47, 52).
 
-**Select.** A target is a prospect record holding a phone, or a Contact typed
-Prospect holding a phone with ``doNotCall`` and ``phoneNumberIsOptedOut`` false;
-its rung is in the chosen set; it has no side exit; and it has never Declined a
-call from any campaign. A prospect record promoted to a Contact is that Contact
-(one person, one row), so the Contact's flags govern and the record's phone is
-the fallback number. *Build the list* reconciles the campaign's Planned touches
-to the selection, as the postcard kind does; it needs no piece count and no
-vendor — the Planned touches ARE the call list.
+**Select.** A target is a lead holding a phone, at a chosen status (Unqualified
+or Qualified — ruling 44 lets a campaign reach an Unqualified lead), with no
+reason set; or a Contact typed Prospect holding a phone, at a chosen stage
+(Prospect, Engaged, Opportunity), with ``doNotCall`` and
+``phoneNumberIsOptedOut`` false. Nobody who has Declined a call from any
+campaign is selected. A converted lead IS its Contact (one person, one row), so
+the Contact's flags govern and the lead's phone is the fallback number. *Build
+the list* reconciles the campaign's Planned touches to the selection, as the
+postcard kind does; it needs no piece count and no vendor — the Planned
+touches ARE the call list.
 
 **Sign off** stamps the signer and starts the list (Running): no worker runs a
 call campaign, people do. The application completes the campaign when its last
@@ -22,13 +25,18 @@ caller**: the call list and the targets are read, and the outcome written onto
 the touch, as the signed-in user, so the CRM records who called.
 
 **What an outcome does.** *No answer*: the touch is Done (and *Call again*
-plans a fresh row). *Interested*: Done, and the record moves to Lead,
-advance-only. *Declined*: Done, and a prospect record leaves by ``Declined``
-(never over another side exit); a Contact has no side exit, and the touch's
-outcome is what keeps it out of every later list. The touch is the caller's own
-act; the rung, the exit, the fresh row and the campaign's completion are the
-application's consequences and are written under the API client — the Mentor
-Role reads prospect records but does not edit them (ruling 36).
+plans a fresh row). *Interested* on a lead: the caller is asked for an email and
+a website, and either one **converts the lead** (ruling 47) — a business lead to
+a Company typed Prospect and the Contact for the email (ruling 52), through
+``campaigns.conversion``; the touch then names the new Contact or Company too.
+With neither, Interested is recorded on the call, the lead stays a lead, the
+screen says why, and *Call again* is offered as for No answer. *Interested* on
+a Contact changes no stage. *Declined*: Done, and a lead stops being worked by
+``Declined`` (never over another reason); a Contact has no reason field, and the
+touch's outcome is what keeps it out of every later list. The touch is the
+caller's own act; the conversion, the reason, the fresh row and the campaign's
+completion are the application's consequences and are written under the API
+client — the Mentor Role reads leads but does not edit them (ruling 36).
 """
 
 from __future__ import annotations
@@ -45,16 +53,19 @@ from core.espo import EspoApi, EspoError
 from . import config as cfg
 from . import service
 from .attribution import holds_relationship
+from .conversion import ConversionRefused, Details, can_convert, convert_lead
+from core.crm_upsert import CompanyConflict
 from .service import CampaignError
 
 log = logging.getLogger("cbm_intake.campaigns.calls")
 
 _PAGE = 200
 
-#: The rungs a call campaign may select (Unverified is never called: the review
-#: comes first, ruling 18).
-CALLABLE_STAGES = (cfg.STAGE_QUALIFIED, cfg.STAGE_LEAD, cfg.STAGE_WARM_LEAD, cfg.STAGE_OPPORTUNITY)
-DEFAULT_RULE: dict[str, Any] = {"stages": [cfg.STAGE_QUALIFIED]}
+#: What a call campaign may select: leads at an open status (ruling 44) and
+#: Contacts typed Prospect at a stage.
+CALLABLE_STATUSES = cfg.LEAD_OPEN_STATUSES
+CALLABLE_STAGES = cfg.STAGES
+DEFAULT_RULE: dict[str, Any] = {"statuses": list(cfg.LEAD_OPEN_STATUSES), "stages": []}
 
 CONTACT_SELECT = (
     f"id,name,firstName,lastName,phoneNumber,phoneNumberIsOptedOut,doNotCall,{CONTACT_TYPE_FIELD},"
@@ -72,14 +83,23 @@ def _crm_now() -> str:
 # --- the selection rule -------------------------------------------------------------
 
 def normalise_rule(rule: Optional[dict[str, Any]]) -> dict[str, Any]:
-    stages = [s for s in ((rule or {}).get("stages") or []) if s in CALLABLE_STAGES]
-    return {"stages": stages or [cfg.STAGE_QUALIFIED]}
+    rule = rule or {}
+    statuses = [s for s in (rule.get("statuses") or []) if s in CALLABLE_STATUSES]
+    stages = [s for s in (rule.get("stages") or []) if s in CALLABLE_STAGES]
+    if not statuses and not stages:
+        statuses = list(DEFAULT_RULE["statuses"])
+    return {"statuses": statuses, "stages": stages}
 
 
 def rule_summary(rule: dict[str, Any]) -> str:
-    return (f"Prospect records and Contacts typed Prospect at {' or '.join(rule['stages'])} "
-            "holding a phone number — not opted out, not do-not-call, no side exit, "
-            "and never Declined a call (ruling 20).")
+    parts = []
+    if rule["statuses"]:
+        parts.append(f"leads at {' or '.join(rule['statuses'])}")
+    if rule["stages"]:
+        parts.append(f"Contacts typed Prospect at {' or '.join(rule['stages'])}")
+    joined = ' and '.join(parts)
+    return (f"{joined[:1].upper() + joined[1:]} holding a phone number — not opted out, "
+            "not do-not-call, still being worked, and never Declined a call (ruling 20).")
 
 
 def _target_key(t: dict[str, Any]) -> Optional[str]:
@@ -121,25 +141,27 @@ def _callable_contact(c: dict[str, Any]) -> bool:
 
 async def select_targets(client: EspoApi, rule: Optional[dict[str, Any]]) -> list[dict[str, Any]]:
     """The people a call campaign would ring, each as
-    ``{key, kind, id, name, phone, stage}``."""
+    ``{key, kind, id, name, phone, stage}`` (``stage`` is what the touch
+    records: the lead's status, or the Contact's stage)."""
     rule = normalise_rule(rule)
     declined = await declined_targets(client)
     contacts: dict[str, dict[str, Any]] = {}
-    try:
-        for c in await service._page_all(
-            client, cfg.CONTACT, select=CONTACT_SELECT,
-            where=[{"type": "in", "attribute": "cFunnelStage", "value": rule["stages"]}],
-            order_by="createdAt", order="asc", limit=10000,
-        ):
-            contacts[c["id"]] = c
-    except EspoError as exc:
-        # A CRM without the rung on Contact (or a refused list) selects prospect
-        # records only — logged, never fatal.
-        log.warning("call selection: Contacts typed Prospect unreadable: %s", exc)
+    if rule["stages"]:
+        try:
+            for c in await service._page_all(
+                client, cfg.CONTACT, select=CONTACT_SELECT,
+                where=[{"type": "in", "attribute": "cFunnelStage", "value": rule["stages"]}],
+                order_by="createdAt", order="asc", limit=10000,
+            ):
+                contacts[c["id"]] = c
+        except EspoError as exc:
+            # A CRM without the stage on Contact (or a refused list) selects
+            # leads only — logged, never fatal.
+            log.warning("call selection: Contacts typed Prospect unreadable: %s", exc)
     targets: list[dict[str, Any]] = []
     taken: set[str] = set()
-    # A Contact whose prospect record has left the ladder (Do Not Contact,
-    # Declined, Unqualified…) left with it, whatever rung the Contact holds.
+    # A Contact whose lead stopped being worked (Do Not Contact, Declined…)
+    # stopped with it, whatever stage the Contact holds.
     for p in await service._page_all(
         client, cfg.PROSPECT, select="id,sideExit,promotedContactId",
         where=[{"type": "isNotNull", "attribute": "sideExit"}], limit=20000,
@@ -147,44 +169,43 @@ async def select_targets(client: EspoApi, rule: Optional[dict[str, Any]]) -> lis
         if p.get("sideExit") and p.get("promotedContactId"):
             taken.add(f"contact:{p['promotedContactId']}")
 
-    prospects = await service._page_all(
-        client, cfg.PROSPECT, select=cfg.PROSPECT_SELECT,
-        where=[{"type": "in", "attribute": "funnelStage", "value": rule["stages"]}],
-        order_by="createdAt", order="asc", limit=10000,
-    )
-    for p in prospects:
-        if p.get("sideExit"):
+    if rule["statuses"]:
+        leads = await service._page_all(
+            client, cfg.PROSPECT, select=cfg.PROSPECT_SELECT,
+            where=[{"type": "in", "attribute": "leadStatus", "value": rule["statuses"]},
+                   {"type": "isNull", "attribute": "sideExit"}],
+            order_by="createdAt", order="asc", limit=10000,
+        )
+    else:
+        leads = []
+    for p in leads:
+        if p.get("sideExit") or p.get("leadStatus") not in rule["statuses"]:
             continue
         contact_id = p.get("promotedContactId")
         if contact_id:
-            # The person is the promoted Contact: its flags govern, and it is
-            # selected once, below, with this record's phone as the fallback.
-            contact = contacts.get(contact_id)
-            if contact is not None and not contact.get("phoneNumber") and p.get("phone"):
-                contact["_fallbackPhone"] = p["phone"]
-            taken.add(f"prospect:{p['id']}")
-            if contact is None:
-                # The Contact is not at a chosen rung (or unreadable): the
-                # record's own rung was chosen, so read the Contact once.
-                try:
-                    contact = await client.get(cfg.CONTACT, contact_id, select=CONTACT_SELECT)
-                except EspoError:
-                    contact = None
-                if contact and contact.get("id") and _callable_contact(contact):
-                    phone = contact.get("phoneNumber") or p.get("phone")
-                    key = f"contact:{contact['id']}"
-                    if phone and key not in declined and key not in taken and f"prospect:{p['id']}" not in declined:
-                        targets.append({"key": key, "kind": "contact", "id": contact["id"],
-                                        "name": contact.get("name") or p.get("businessName") or "",
-                                        "phone": phone, "stage": p.get("funnelStage")})
-                        taken.add(key)
+            # Converted already (the status was not moved): the person is the
+            # Contact, whose flags govern; the lead's phone is the fallback.
+            key = f"contact:{contact_id}"
+            if key in taken or key in declined or f"prospect:{p['id']}" in declined:
+                continue
+            try:
+                contact = contacts.get(contact_id) or await client.get(cfg.CONTACT, contact_id, select=CONTACT_SELECT)
+            except EspoError:
+                contact = None
+            if contact and contact.get("id") and _callable_contact(contact):
+                phone = contact.get("phoneNumber") or p.get("phone")
+                if phone:
+                    targets.append({"key": key, "kind": "contact", "id": contact["id"],
+                                    "name": contact.get("name") or p.get("businessName") or "",
+                                    "phone": phone, "stage": contact.get("cFunnelStage")})
+                    taken.add(key)
             continue
         key = f"prospect:{p['id']}"
         if not p.get("phone") or key in declined:
             continue
         targets.append({"key": key, "kind": "prospect", "id": p["id"],
                         "name": p.get("businessName") or p.get("name") or "",
-                        "phone": p["phone"], "stage": p.get("funnelStage")})
+                        "phone": p["phone"], "stage": p.get("leadStatus")})
 
     for c in contacts.values():
         key = f"contact:{c['id']}"
@@ -195,6 +216,7 @@ async def select_targets(client: EspoApi, rule: Optional[dict[str, Any]]) -> lis
             continue
         targets.append({"key": key, "kind": "contact", "id": c["id"], "name": c.get("name") or "",
                         "phone": phone, "stage": c.get("cFunnelStage")})
+        taken.add(key)
     return targets
 
 
@@ -343,8 +365,12 @@ async def _target_detail(client: EspoApi, touch: dict[str, Any]) -> dict[str, An
             p = await client.get(cfg.PROSPECT, touch["prospectId"], select=cfg.PROSPECT_SELECT)
             person = " ".join(x for x in (p.get("firstName"), p.get("lastName")) if x)
             return {"kind": "prospect", "name": p.get("businessName") or p.get("name") or "",
-                    "person": person, "phone": p.get("phone") or "", "stage": p.get("funnelStage"),
-                    "city": p.get("mailingAddressCity") or ""}
+                    "person": person, "phone": p.get("phone") or "", "stage": p.get("leadStatus"),
+                    "city": p.get("mailingAddressCity") or "",
+                    # What the Interested form may prefill (ruling 47).
+                    "firstName": p.get("firstName") or "", "lastName": p.get("lastName") or "",
+                    "hasEmail": bool(p.get("email")), "hasWebsite": bool(p.get("website")),
+                    "business": bool((p.get("businessName") or "").strip())}
         if touch.get("contactId"):
             c = await client.get(cfg.CONTACT, touch["contactId"], select=CONTACT_SELECT)
             return {"kind": "contact", "name": c.get("accountName") or c.get("name") or "",
@@ -397,14 +423,17 @@ async def call_list(api_client: EspoApi, user_client: EspoApi, user: dict[str, A
 # --- recording an outcome ------------------------------------------------------------------
 
 async def record_outcome(api_client: EspoApi, user_client: EspoApi, user: dict[str, Any], touch_id: str, *,
-                         outcome: str, notes: str, call_again: bool, settings: Settings) -> dict[str, Any]:
+                         outcome: str, notes: str, call_again: bool, settings: Settings,
+                         details: Optional[Details] = None) -> dict[str, Any]:
     """One call's outcome. The touch is written as the caller first — a refused
     grant changes nothing — then the consequences under the API client, each
-    best-effort and reported."""
+    best-effort and reported. ``details`` is what the caller typed for an
+    Interested lead: email, website, the person's name (ruling 47)."""
+    details = details or Details()
     if outcome not in cfg.CALL_OUTCOMES:
         raise CampaignError("The outcome is No answer, Interested or Declined.")
-    if call_again and outcome != cfg.OUTCOME_NO_ANSWER:
-        raise CampaignError("Call again goes with No answer only.")
+    if call_again and outcome == cfg.OUTCOME_DECLINED:
+        raise CampaignError("Call again goes with No answer, or with Interested when the lead could not be converted.")
     touch = await user_client.get(cfg.TOUCH, touch_id, select=cfg.TOUCH_SELECT)
     if not touch or not touch.get("id"):
         raise LookupError("Call not found.")
@@ -441,15 +470,20 @@ async def record_outcome(api_client: EspoApi, user_client: EspoApi, user: dict[s
             log.warning("call %s: %s failed: %s", touch_id, label, exc)
             result["warnings"].append(f"{label} could not be written ({exc}).")
 
-    if outcome == cfg.OUTCOME_INTERESTED:
-        await _advance_to_lead(api_client, touch, result, best_effort, now)
+    converted = False
+    if outcome == cfg.OUTCOME_INTERESTED and touch.get("prospectId"):
+        converted = await _convert_on_interest(api_client, touch, campaign, details, result)
+        if converted and call_again:
+            call_again = False
+            result["warnings"].append("The lead converted, so no second call was planned.")
     elif outcome == cfg.OUTCOME_DECLINED and touch.get("prospectId"):
         prospect = await api_client.get(cfg.PROSPECT, touch["prospectId"], select="id,sideExit")
         if prospect.get("sideExit"):
             result["warnings"].append(
-                f"The record had already left by {prospect['sideExit']}; Declined is recorded on the call only.")
+                f"The lead had already stopped being worked ({prospect['sideExit']}); "
+                "Declined is recorded on the call only.")
         else:
-            await best_effort("left by Declined", api_client.update(cfg.PROSPECT, touch["prospectId"], {
+            await best_effort("stopped by Declined", api_client.update(cfg.PROSPECT, touch["prospectId"], {
                 "sideExit": cfg.EXIT_DECLINED, "sideExitAt": now,
                 "sideExitNote": f"Declined on a call from the campaign {campaign.get('name') or ''}".strip()}))
     if call_again:
@@ -476,15 +510,48 @@ async def record_outcome(api_client: EspoApi, user_client: EspoApi, user: dict[s
     return result
 
 
-async def _advance_to_lead(api_client: EspoApi, touch: dict[str, Any], result, best_effort, now: str) -> None:
-    """Interested: Lead, advance-only (§ 1.8)."""
-    if touch.get("prospectId"):
-        p = await api_client.get(cfg.PROSPECT, touch["prospectId"], select="id,funnelStage")
-        if service.advance_stage(p.get("funnelStage"), cfg.STAGE_LEAD):
-            await best_effort("moved to Lead", api_client.update(cfg.PROSPECT, touch["prospectId"], {
-                "funnelStage": cfg.STAGE_LEAD, "stageChangedAt": now}))
-    elif touch.get("contactId"):
-        c = await api_client.get(cfg.CONTACT, touch["contactId"], select=f"id,cFunnelStage,{CONTACT_TYPE_FIELD}")
-        if not holds_relationship(c) and service.advance_stage(c.get("cFunnelStage"), cfg.STAGE_LEAD):
-            await best_effort("moved to Lead", api_client.update(cfg.CONTACT, touch["contactId"],
-                                                                 {"cFunnelStage": cfg.STAGE_LEAD}))
+async def _convert_on_interest(api_client: EspoApi, touch: dict[str, Any], campaign: dict[str, Any],
+                               details: Details, result: dict[str, Any]) -> bool:
+    """Interested on a lead (ruling 47): an email or a website converts it —
+    under the API client, best-effort and reported. Returns True when it
+    converted. Without either, the result says why and the lead stays a lead."""
+    try:
+        lead = await api_client.get(cfg.PROSPECT, touch["prospectId"], select=cfg.PROSPECT_SELECT)
+    except EspoError as exc:
+        result["warnings"].append(f"The lead could not be read to convert it ({exc}).")
+        return False
+    if not lead or not lead.get("id"):
+        result["warnings"].append("The lead is gone, so it could not be converted.")
+        return False
+    if lead.get("leadStatus") == cfg.LEAD_CONVERTED:
+        result["consequences"].append("already converted")
+        return True
+    if not can_convert(lead, details):
+        result["notConverted"] = (
+            "Interested is recorded, but the lead stays a lead: it converts only with an email"
+            + (" or a website" if (lead.get("businessName") or "").strip() else "")
+            + " (ruling 47). Call again to ask for one.")
+        return False
+    try:
+        done = await convert_lead(api_client, lead, details,
+                                  campaign_id=touch.get("outreachCampaignId") or campaign.get("id"))
+    except CompanyConflict as exc:
+        result["notConverted"] = (
+            f"Interested is recorded, but the lead was not converted: a company named {exc.name} "
+            f"already exists at a different web address ({exc.existing_website}). Settle which company "
+            "this is in the CRM, then convert the lead there.")
+        return False
+    except (ConversionRefused, EspoError) as exc:
+        result["warnings"].append(f"The lead could not be converted ({exc}).")
+        return False
+    result["consequences"].append("lead converted")
+    result["converted"] = done.result()
+    # The touch names what the call made, so the campaign's Converted count
+    # can read it from the touch (campaigns/reporting.py).
+    links = {k: v for k, v in (("contactId", done.contact_id), ("companyId", done.company_id)) if v}
+    if links:
+        try:
+            await api_client.update(cfg.TOUCH, touch["id"], links)
+        except EspoError as exc:
+            result["warnings"].append(f"The call could not be linked to the new records ({exc}).")
+    return True

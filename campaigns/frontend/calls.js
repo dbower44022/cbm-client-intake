@@ -4,6 +4,10 @@
  * The page asks the server and shows what comes back; the server decides.
  * A row opens in place: the number, a notes box and the three outcomes. Every
  * button stays visible and clickable; validation happens on click.
+ *
+ * On a lead's row the form also asks for an email and a website: Interested
+ * converts the lead only with one of them (ruling 47), and the server says so
+ * when it could not.
  */
 (function () {
   "use strict";
@@ -103,16 +107,39 @@
     form.appendChild(who);
     var nf = el("div", "cm__field cm__field--wide"); var nl = el("label", null, "Call notes"); nl.htmlFor = "cn_" + r.touchId;
     var notes = el("textarea"); notes.id = "cn_" + r.touchId; notes.maxLength = 8000; nf.appendChild(nl); nf.appendChild(notes); form.appendChild(nf);
-    var again = el("label", "cm__check"); var cb = el("input"); cb.type = "checkbox"; again.appendChild(cb); again.appendChild(document.createTextNode(" Call again (with No answer)")); form.appendChild(again);
+    // Interested converts a lead only with an email or a website (ruling 47).
+    var conv = null;
+    if (r.kind === "prospect") {
+      conv = {};
+      var box = el("div", "cm__fields");
+      box.appendChild(el("p", "cm__hint cm__field--wide", "If they are interested: ask for an email" + (r.business ? " or the business's website" : "") +
+        ". Either one turns this lead into a Prospect" + (r.business ? " — a Company with its Contact" : "") + "; without one, Interested is recorded and the lead stays a lead." +
+        (r.hasEmail || r.hasWebsite ? " The lead already holds " + [r.hasEmail ? "an email" : "", r.hasWebsite ? "a website" : ""].filter(Boolean).join(" and ") + ", so Interested converts it." : "")));
+      [["firstName", "First name", r.firstName || ""], ["lastName", "Last name", r.lastName || ""], ["email", "Email", ""], ["website", "Website", ""]].forEach(function (f) {
+        var fd = el("div", "cm__field"); var lb = el("label", null, f[1]); var id = "cv_" + f[0] + "_" + r.touchId; lb.htmlFor = id;
+        var inp = el("input"); inp.type = f[0] === "email" ? "email" : "text"; inp.id = id; inp.value = f[2]; inp.autocomplete = "off"; inp.maxLength = f[0] === "email" || f[0] === "website" ? 255 : 100;
+        fd.appendChild(lb); fd.appendChild(inp); box.appendChild(fd); conv[f[0]] = inp;
+      });
+      form.appendChild(box);
+    }
+    var again = el("label", "cm__check"); var cb = el("input"); cb.type = "checkbox"; again.appendChild(cb); again.appendChild(document.createTextNode(" Call again (with No answer, or with Interested when they gave no email or website)")); form.appendChild(again);
     var acts = el("div", "cm__runactions");
     [["No answer", "cbm-button cbm-button--secondary"], ["Interested", "cbm-button"], ["Declined", "cbm-button cbm-button--secondary"]].forEach(function (o) {
       var b = el("button", o[1], o[0]); b.type = "button";
       b.addEventListener("click", async function () {
-        if (cb.checked && o[0] !== "No answer") { notice("Call again goes with No answer only — untick it, or choose No answer.", "warn"); return; }
+        if (cb.checked && o[0] === "Declined") { notice("Call again does not go with Declined — untick it, or choose another outcome.", "warn"); return; }
+        var body = { outcome: o[0], notes: notes.value, callAgain: cb.checked };
+        if (conv && o[0] === "Interested") {
+          var em = conv.email.value.trim();
+          if (em && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { notice("\u201c" + em + "\u201d is not an email address.", "warn"); conv.email.focus(); return; }
+          body.email = em; body.website = conv.website.value.trim();
+          body.firstName = conv.firstName.value.trim(); body.lastName = conv.lastName.value.trim();
+        }
         try {
-          var res = await api("/calls/" + encodeURIComponent(r.touchId) + "/outcome", { method: "POST", body: { outcome: o[0], notes: notes.value, callAgain: cb.checked } });
+          var res = await api("/calls/" + encodeURIComponent(r.touchId) + "/outcome", { method: "POST", body: body });
           var extra = (res.consequences || []).length ? " (" + res.consequences.join(", ") + ")" : "";
-          notice("Recorded " + o[0] + " for " + (r.person || r.name) + extra + "." + ((res.warnings || []).length ? " " + res.warnings.join(" ") : ""), (res.warnings || []).length ? "warn" : "ok");
+          var warn = (res.warnings || []).slice(); if (res.notConverted) warn.unshift(res.notConverted);
+          notice("Recorded " + o[0] + " for " + (r.person || r.name) + extra + "." + (warn.length ? " " + warn.join(" ") : ""), warn.length ? "warn" : "ok");
           state.open = null; load();
         } catch (e) { notice(e.message, "error"); }
       });

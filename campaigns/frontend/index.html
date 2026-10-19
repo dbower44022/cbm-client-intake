@@ -20,11 +20,11 @@
     <header class="cm__topbar">
       <div class="cm__title">
         <h1 id="pageTitle">Campaign Management</h1>
-        <p class="cm__sub" id="pageSub">Campaigns, their links, the prospects they reach, and what came back.</p>
+        <p class="cm__sub" id="pageSub">Campaigns, their links, the leads and prospects they reach, and what came back.</p>
       </div>
       <nav class="cm__nav" id="sectionNav">
         <button type="button" class="cm__navbtn is-active" data-section="campaigns">Campaigns</button>
-        <button type="button" class="cm__navbtn" data-section="prospects">Prospects</button>
+        <button type="button" class="cm__navbtn" data-section="prospects">Leads</button>
         <button type="button" class="cm__navbtn" data-section="review">Review</button>
         <a class="cm__navbtn" id="callsNavLink" href="/campaigns/calls.html" target="cbm-campaign-calls">Calls</a>
         <button type="button" class="cm__navbtn" data-section="imports">Imports</button>
@@ -85,15 +85,15 @@
       </div>
     </section>
 
-    <!-- ========================== PROSPECTS ========================== -->
+    <!-- ============================ LEADS ============================= -->
     <section class="cm__panel" id="prospectsPanel" hidden>
       <div class="cm__controls">
-        <label class="cm__filter">Rung <select id="stageFilter"><option value="">All</option></select></label>
-        <label class="cm__filter">Side exit
-          <select id="exitFilter"><option value="">All</option><option value="none">On the ladder</option></select>
+        <label class="cm__filter">Lead status <select id="stageFilter"><option value="">All</option></select></label>
+        <label class="cm__filter">Stopped because
+          <select id="exitFilter"><option value="">All</option><option value="none">Still being worked</option></select>
         </label>
-        <label class="cm__filter">Door <select id="doorFilter"><option value="">All</option></select></label>
-        <input type="search" id="prospectSearch" placeholder="Search prospects…" aria-label="Search prospects" autocomplete="off" />
+        <label class="cm__filter">Lead Source <select id="doorFilter"><option value="">All</option></select></label>
+        <input type="search" id="prospectSearch" placeholder="Search leads…" aria-label="Search leads" autocomplete="off" />
         <span class="cm__count" id="prospectCount"></span>
         <div class="cm__actions">
           <button type="button" class="cbm-button" id="importBtn">Import…</button>
@@ -104,9 +104,9 @@
         <table class="cm__grid" id="prospectGrid">
           <thead><tr>
             <th data-sort="name">Business</th>
-            <th data-sort="funnelStage">Rung</th>
-            <th data-sort="sideExit">Side exit</th>
-            <th data-sort="entryDoor">Door</th>
+            <th data-sort="leadStatus">Lead status</th>
+            <th data-sort="sideExit">Stopped because</th>
+            <th data-sort="leadSource">Lead Source</th>
             <th data-sort="mailingAddressCity">City</th>
             <th data-sort="addressStatus">Address</th>
             <th data-sort="importBatch">Batch</th>
@@ -114,14 +114,14 @@
           </tr></thead>
           <tbody id="prospectRows"></tbody>
         </table>
-        <p class="cm__empty" id="prospectsEmpty" hidden>No prospect records match.</p>
+        <p class="cm__empty" id="prospectsEmpty" hidden>No leads match.</p>
       </div>
     </section>
 
     <!-- ============================ REVIEW ============================ -->
     <section class="cm__panel" id="reviewPanel" hidden>
       <div class="cm__controls">
-        <p class="cm__hint cm__grow">Records a purchased or partner list brought in wait here at Unverified until a person reviews them (ruling 18). <strong>Qualify</strong> puts a record on the ladder at Qualified with your name on it; <strong>Unqualified</strong> takes it off, with your reason.</p>
+        <p class="cm__hint cm__grow">Leads wait here at Unqualified until a person reviews them (rulings 18, 42). <strong>Qualify</strong> marks a lead that could become a client, partner or funder, with your name on it — only a lead with a website or an email can be Qualified. <strong>Disqualify</strong> marks one that never will, with your reason. Campaigns may reach a lead at either status (ruling 44).</p>
         <input type="search" id="reviewSearch" placeholder="Search…" aria-label="Search the review queue" autocomplete="off" />
         <span class="cm__count" id="reviewCount"></span>
         <div class="cm__actions"><button type="button" class="cbm-button cbm-button--secondary" id="reviewRefreshBtn">Refresh</button></div>
@@ -146,7 +146,7 @@
         </div>
       </div>
       <table class="cm__grid" id="importsGrid">
-        <thead><tr><th>Batch</th><th>Door</th><th>Rows</th><th>Status</th><th>Planned</th><th>Applied</th><th>Result</th></tr></thead>
+        <thead><tr><th>Batch</th><th>Lead Source</th><th>Rows</th><th>Status</th><th>Planned</th><th>Applied</th><th>Result</th></tr></thead>
         <tbody id="importRows"></tbody>
       </table>
       <p class="cm__empty" id="importsEmpty" hidden>No imports yet.</p>
@@ -191,9 +191,9 @@
             <div class="cm__tiles" id="touchTiles"></div>
             <div class="cm__rule" id="ruleBox">
               <p class="cm__hint">Who gets a card. One card per business, ever (ruling 14); a dead address is skipped until a better one arrives (ruling 15).</p>
-              <label class="cm__check"><input type="checkbox" id="ruleQualified" checked disabled /> Prospect records at <strong>Qualified</strong></label>
-              <label class="cm__check"><input type="checkbox" id="ruleLead" /> …and at <strong>Lead</strong> (re-reach a scanner)</label>
-              <label class="cm__check"><input type="checkbox" id="ruleCompanies" checked /> Include promoted companies typed Prospect</label>
+              <label class="cm__check"><input type="checkbox" id="ruleUnqualified" checked /> Leads at <strong>Unqualified</strong></label>
+              <label class="cm__check"><input type="checkbox" id="ruleQualified" checked /> Leads at <strong>Qualified</strong></label>
+              <label class="cm__check"><input type="checkbox" id="ruleCompanies" /> …and Companies typed Prospect (already contacted)</label>
               <p class="cm__summary" id="ruleSummary"></p>
             </div>
             <div class="cm__runactions">
@@ -206,7 +206,7 @@
             <h3>Email list</h3>
             <div class="cm__tiles" id="emailTiles"></div>
             <div class="cm__rule">
-              <p class="cm__hint">Who is on the list: Contacts who opted in to marketing email with a usable address (ruling 19 — no cold email), typed Prospect at the rungs ticked, or clients dormant for the days set (ruling 25).</p>
+              <p class="cm__hint">Who is on the list: Contacts who opted in to marketing email with a usable address (ruling 19 — no cold email), typed Prospect at the stages ticked, or clients dormant for the days set (ruling 25).</p>
               <div id="emailStages"></div>
               <label class="cm__check"><input type="checkbox" id="emailDormant" /> …and clients whose last engagement closed more than <input type="number" id="emailDormantDays" min="0" value="365" style="width:5em" /> days ago</label>
               <p class="cm__summary" id="emailRuleSummary"></p>
@@ -222,7 +222,7 @@
             <h3>Text message</h3>
             <div class="cm__tiles" id="smsTiles"></div>
             <div class="cm__rule">
-              <p class="cm__hint">Who gets the text: Contacts typed Prospect who ticked the text consent (ruling 9), with a phone number that is not opted out, still on the ladder. The application sends it (ruling 38).</p>
+              <p class="cm__hint">Who gets the text: Contacts typed Prospect who ticked the text consent (ruling 9), with a phone number that is not opted out, whose lead (if any) is still being worked. The application sends it (ruling 38).</p>
               <div id="smsStages"></div>
               <p class="cm__summary" id="smsRuleSummary"></p>
             </div>
@@ -242,7 +242,7 @@
             <h3>Call list</h3>
             <div class="cm__tiles" id="callTiles"></div>
             <div class="cm__rule">
-              <p class="cm__hint">Who gets a call: a prospect record or a Contact typed Prospect holding a phone number, not opted out and not do-not-call, with no side exit, who has never Declined a call (ruling 20).</p>
+              <p class="cm__hint">Who gets a call: a lead or a Contact typed Prospect holding a phone number, not opted out and not do-not-call, still being worked, who has never Declined a call (ruling 20). A lead marked Interested converts only with an email or a website (ruling 47).</p>
               <div id="callStages"></div>
               <p class="cm__summary" id="callRuleSummary"></p>
             </div>

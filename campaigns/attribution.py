@@ -1,6 +1,6 @@
-"""What a public door does with a campaign id and a prospect id at delivery
-(prds/prospect-marketing/build-plan.md § 5 — Phase 2, "the doors honour the
-ids"). Shared by the five orchestrators so the rules live once:
+"""What a public form does with a campaign id and a lead id at delivery
+(prds/prospect-marketing/build-plan.md § 5 — Phase 2, "the public forms honour
+the ids"). Shared by the five orchestrators so the rules live once:
 
 * **Validate-or-drop** (§ 5 step 1, the ``_valid_referring_partner`` precedent
   in ``forms/client_intake/orchestrator.py``): the ids arrive from a public
@@ -11,15 +11,18 @@ ids"). Shared by the five orchestrators so the rules live once:
   Contact and the Company only when THIS submission created them**
   (ruling 27). The relationship records' link is ``outreachCampaign``; on the
   two native entities the stored name is ``cOutreachCampaign``.
-* **The prospect record's promoted Company is used by id before any name
-  match** (§ 5 step 3), so the business the landing page promoted is not
-  matched a second time into a same-named stranger; its promotion links are
-  set if empty (step 4) and its stage stops changing.
-* **The rung is evidence, advance-only** (§ 1.8): an information request or a
-  registration puts a person on Warm Lead (ruling 17); nothing ever lowers a
-  rung and nothing is written on a record that has no stage field — nor on
-  one that already holds a relationship type (ruling 37: the ladder is for
-  prospects; a client's rung is read from the engagement).
+* **The lead's converted Company is used by id before any name match**
+  (§ 5 step 3), so the business a landing page converted is not matched a
+  second time into a same-named stranger.
+* **Every new record from a public form has a lead behind it** (ruling 48,
+  :func:`record_lead`): a lead the form named is Converted and linked; else,
+  when this submission created the Company or the Contact, a lead is created
+  Converted at once, its Lead Source the form. A repeat submitter gets none.
+* **The stage is evidence, advance-only** (§ 1.8): an information request or
+  a registration puts a person on Engaged (rulings 17, 50); nothing ever lowers
+  a stage and nothing is written on a record that has no stage field — nor on
+  one that already holds a relationship type (ruling 37: the stages are for
+  prospects; a client's position is read from the engagement).
 * **A notes line names the campaign** (step 8), because an application write
   and a hand edit are indistinguishable in the CRM history.
 
@@ -49,15 +52,15 @@ CAMPAIGN_FK = "outreachCampaignId"
 #: carries the ``c`` prefix ([[espo-custom-prefix-rules]]).
 NATIVE_CAMPAIGN_LINK = "cOutreachCampaign"
 NATIVE_CAMPAIGN_FK = "cOutreachCampaignId"
-#: The rung fields on Contact and Account (§ 1.6, § 1.8).
+#: The stage fields on Contact and Account (§ 1.6, § 1.8; ruling 50).
 FUNNEL_STAGE = "cFunnelStage"
 ENTRY_STAGE = "cEntryStage"
 #: The engagement's many-to-many to every referring partner (ruling 30).
 REFERRING_PARTNERS_LINK = "referringPartners"
 
-#: What a door reads of the prospect record it was handed.
+#: What a public form reads of the lead it was handed.
 PROSPECT_SELECT = (
-    "id,name,businessName,funnelStage,entryStage,promotedCompanyId,promotedContactId,website"
+    "id,name,businessName,leadStatus,promotedCompanyId,promotedContactId,website"
 )
 
 ARRIVAL_NOTE = "Arrived through the campaign {name}."
@@ -70,7 +73,7 @@ class Attribution:
 
     campaign: Optional[dict[str, Any]] = None   # {"id", "name"}
     prospect: Optional[dict[str, Any]] = None   # a PROSPECT_SELECT read
-    #: What the door did with them, for the delivery result.
+    #: What the form did with them, for the delivery result.
     written: dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -117,7 +120,7 @@ async def link_available(client: EspoApi, entity: str, link: str) -> bool:
 async def prospect_type_available(client: EspoApi) -> bool:
     """Whether ``Prospect`` is a live option of ``Account.cCompanyType``
     (added by the Phase 1 handoff). EspoCRM refuses an unknown multiEnum value
-    outright, so a door writes it only when the option exists."""
+    outright, so a form writes it only when the option exists."""
     try:
         options = await client.metadata_enum_options(cfg.ACCOUNT, "cCompanyType")
     except Exception as exc:  # noqa: BLE001
@@ -127,14 +130,23 @@ async def prospect_type_available(client: EspoApi) -> bool:
 
 
 async def rung_available(client: EspoApi, entity: str) -> bool:
-    """Whether ``entity`` (Contact or Account) carries the funnel-stage field.
-    Fails closed, so a CRM without the Phase 1 change gets no rung writes."""
+    """Whether ``entity`` (Contact or Account) carries the stage field WITH
+    the lead model's stages (ruling 50). Fails closed: a CRM without the field,
+    or one whose options are still the old ladder (production until its
+    Sunday slot), gets no stage write — EspoCRM refuses an unknown enum value
+    outright, so writing *Engaged* there would 400 the whole create."""
     try:
         fields = await client.metadata(f"entityDefs.{entity}.fields")
     except Exception as exc:  # noqa: BLE001
-        log.warning("could not read %s fields (%s) — no rung written", entity, exc)
+        log.warning("could not read %s fields (%s) — no stage written", entity, exc)
         return False
-    return isinstance(fields, dict) and FUNNEL_STAGE in fields
+    if not isinstance(fields, dict) or not isinstance(fields.get(FUNNEL_STAGE), dict):
+        return False
+    options = fields[FUNNEL_STAGE].get("options") or []
+    if not all(s in options for s in cfg.STAGES):
+        log.info("%s.%s lacks the lead model's stages — no stage written", entity, FUNNEL_STAGE)
+        return False
+    return True
 
 
 # --- validate-or-drop ----------------------------------------------------------------
@@ -162,21 +174,21 @@ async def valid_campaign(client: EspoApi, campaign_id: Optional[str], *, entity:
 
 
 async def valid_prospect(client: EspoApi, prospect_id: Optional[str]) -> Optional[dict[str, Any]]:
-    """The prospect record when ``prospect_id`` names a real ``CProspect``,
+    """The lead when ``prospect_id`` names a real ``CProspect``,
     else None. Never raises."""
     if not prospect_id:
         return None
     try:
         row = await client.get(cfg.PROSPECT, prospect_id, select=PROSPECT_SELECT)
     except Exception as exc:  # noqa: BLE001
-        log.warning("prospect record %r not usable (%s) — dropped", prospect_id, exc)
+        log.warning("lead %r not usable (%s) — dropped", prospect_id, exc)
         return None
     return row if row and row.get("id") else None
 
 
 async def resolve(client: EspoApi, sub: Any, *, entity: str) -> Attribution:
     """Validate what the submission carried. ``entity`` is the relationship
-    record this door creates — the one whose ``outreachCampaign`` link must
+    record this form creates — the one whose ``outreachCampaign`` link must
     exist for the campaign to be honoured."""
     campaign = await valid_campaign(client, getattr(sub, "campaign_id", None), entity=entity)
     prospect = await valid_prospect(client, getattr(sub, "prospect_id", None))
@@ -186,9 +198,9 @@ async def resolve(client: EspoApi, sub: Any, *, entity: str) -> Attribution:
 # --- the promoted company ---------------------------------------------------------------
 
 async def promoted_company(client: EspoApi, attr: Attribution, *, select: str) -> Optional[dict[str, Any]]:
-    """The Company the prospect record was promoted to, read as the door's
+    """The Company the lead was converted to, read as the form's
     company match would read it, or None (no prospect, no promotion, or the
-    record is gone — then the door falls back to its name match)."""
+    record is gone — then the form falls back to its name match)."""
     company_id = attr.promoted_company_id
     if not company_id:
         return None
@@ -205,8 +217,8 @@ async def promoted_company(client: EspoApi, attr: Attribution, *, select: str) -
 
 def stamp_new(payload: dict[str, Any], attr: Attribution, *, stage: Optional[str] = None) -> dict[str, Any]:
     """Add to a Contact or Company CREATE payload what a record this
-    submission creates carries: the campaign (ruling 27) and, when the door
-    has rung evidence, the funnel and entry stage (§ 1.8 — the entry stage is
+    submission creates carries: the campaign (ruling 27) and, when the form
+    has stage evidence, the funnel and entry stage (§ 1.8 — the entry stage is
     written once, here). Returns the payload for chaining."""
     if attr.campaign:
         payload[NATIVE_CAMPAIGN_FK] = attr.campaign["id"]
@@ -228,7 +240,7 @@ def holds_relationship(record: dict[str, Any]) -> bool:
 async def advance_rung(client: EspoApi, entity: str, record: dict[str, Any], proposed: str) -> Optional[str]:
     """Advance-only: write ``proposed`` to the record's ``cFunnelStage`` when it
     is later on the ladder than the stored value (read with ``cFunnelStage``
-    selected). Best-effort. Returns the rung written, or None.
+    selected). Best-effort. Returns the stage written, or None.
 
     Ruling 37: a record whose type field (``cContactType`` / ``cCompanyType``,
     which the caller must select) already holds a relationship type is left
@@ -246,26 +258,95 @@ async def advance_rung(client: EspoApi, entity: str, record: dict[str, Any], pro
     return new
 
 
-async def link_promotion(client: EspoApi, attr: Attribution, *, contact_id: Optional[str] = None,
-                         company_id: Optional[str] = None) -> None:
-    """Set the prospect record's ``promotedContact`` / ``promotedCompany`` when
-    empty (§ 5 step 4). Nothing else on the record changes — its stage stops at
-    promotion. Best-effort."""
-    prospect = attr.prospect
-    if not prospect:
-        return
-    fill: dict[str, Any] = {}
-    if contact_id and not prospect.get("promotedContactId"):
-        fill["promotedContactId"] = contact_id
-    if company_id and not prospect.get("promotedCompanyId"):
-        fill["promotedCompanyId"] = company_id
-    if not fill:
-        return
+async def lead_model_available(client: EspoApi) -> bool:
+    """Whether this CRM carries ``CProspect.leadStatus`` (the lead-model
+    handoff). Fails closed: no lead is written on a CRM without it."""
     try:
-        await client.update(cfg.PROSPECT, prospect["id"], fill)
-        attr.written["prospectLinked"] = sorted(fill)
+        fields = await client.metadata(f"entityDefs.{cfg.PROSPECT}.fields")
+    except Exception as exc:  # noqa: BLE001
+        log.warning("could not read %s fields (%s) — no lead written", cfg.PROSPECT, exc)
+        return False
+    return isinstance(fields, dict) and "leadStatus" in fields and "leadSource" in fields
+
+
+def _created_here(client: EspoApi, entity: str, record_id: Optional[str]) -> bool:
+    if not record_id:
+        return False
+    created = getattr(client, "created_ids", None)
+    return bool(created) and record_id in created(entity)
+
+
+async def record_lead(client: EspoApi, attr: Attribution, *, source: str,
+                      company_id: Optional[str] = None, contact_id: Optional[str] = None,
+                      values: Optional[dict[str, Any]] = None) -> None:
+    """Ruling 48, at the end of every public form's delivery.
+
+    * The form named a lead (``prospect_id``): it is **Converted** and its
+      *Converted to company / contact* links are set when empty.
+    * Otherwise, when THIS submission created the Company or the Contact, a lead
+      is created **Converted at once**, its Lead Source ``source``, linked to
+      what was created. A repeat submitter whose records already existed gets
+      no lead. "Created here" is read from the delivery's recorded creates, so
+      a retry decides exactly as the first run did, and the lead's own create
+      is keyed like every other — retry-safe.
+
+    Best-effort: a failure is logged and reported, never raised, so a lead can
+    never cost the submission. Feature-detected (:func:`lead_model_available`)."""
+    try:
+        if not await lead_model_available(client):
+            return
+        from .conversion import mark_converted
+        if attr.prospect:
+            lead = attr.prospect
+            fill = await mark_converted(client, lead, company_id=company_id, contact_id=contact_id)
+            if fill:
+                attr.written["leadConverted"] = sorted(fill)
+            return
+        company_new = _created_here(client, cfg.ACCOUNT, company_id)
+        contact_new = _created_here(client, cfg.CONTACT, contact_id)
+        if not (company_new or contact_new):
+            return
+        v = values or {}
+        business = (v.get("businessName") or "").strip()
+        person = " ".join(x for x in ((v.get("firstName") or "").strip(), (v.get("lastName") or "").strip()) if x)
+        payload: dict[str, Any] = {
+            "name": (business or person or v.get("email") or source)[:255],
+            "businessName": business[:255] or None,
+            "firstName": (v.get("firstName") or "")[:100] or None,
+            "lastName": (v.get("lastName") or "")[:100] or None,
+            "email": (v.get("email") or "") or None,
+            "website": (v.get("website") or "") or None,
+            "phone": (v.get("phone") or "") or None,
+            "leadStatus": cfg.LEAD_CONVERTED,
+            "leadStatusChangedAt": _now_crm(),
+            "leadSource": source,
+            "promotedCompanyId": company_id if company_new else None,
+            "promotedContactId": contact_id if contact_new else None,
+        }
+        created = await client.create(cfg.PROSPECT, {k: val for k, val in payload.items() if val})
+        attr.written["leadId"] = created.get("id")
     except EspoError as exc:
-        log.warning("could not link prospect record %s to its promoted records (%s)", prospect["id"], exc)
+        log.warning("the lead behind this %s submission was not written: %s", source, exc)
+        attr.written["leadWarning"] = f"The lead was not recorded ({exc})."
+
+
+def lead_values(sub: Any) -> dict[str, Any]:
+    """What a public form's submission says about the business and the person,
+    in the lead's words, whatever the form calls its fields."""
+    def g(*names: str) -> str:
+        for n in names:
+            v = getattr(sub, n, None)
+            if v:
+                return str(v).strip()
+        return ""
+    return {"businessName": g("business_name", "company"), "website": g("business_website", "website"),
+            "firstName": g("first_name"), "lastName": g("last_name"), "email": g("email"),
+            "phone": g("phone")}
+
+
+def _now_crm() -> str:
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
 
 async def campaign_partners(client: EspoApi, attr: Attribution) -> list[dict[str, Any]]:
@@ -318,7 +399,7 @@ async def opportunity_on_attendance(api_client: EspoApi, registration_id: str) -
     record holding a relationship type (ruling 37), whatever the attendance
     source (a manual mark, a door check-in or the Zoom pull). Under the
     org-wide API client: the Marketing Admin Role does not edit Contacts.
-    Best-effort; returns the rung written, or None."""
+    Best-effort; returns the stage written, or None."""
     try:
         reg = await api_client.get("CEventRegistration", registration_id, select="id,contactId,attendanceStatus")
         if not reg or reg.get("attendanceStatus") != "Attended" or not reg.get("contactId"):

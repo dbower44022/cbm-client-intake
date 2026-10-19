@@ -10,9 +10,12 @@ queue: ``Signed off`` is picked up, ``Running`` is resumed, ``Complete`` is left
 
 Rulings kept here: one card per company, ever (14) — a target with any Sent,
 Delivered or Returned postcard touch from any campaign is never selected again;
-a returned piece marks the ADDRESS dead and leaves the rung alone (15); a touch
+a returned piece marks the ADDRESS dead and leaves the status alone (15); a touch
 is created at selection as ``Planned``, which is what "Active Prospect" means in
-storage (10).
+storage (10). The lead model (§ 7a, ruling 44): a postcard selects Unqualified
+and Qualified leads; a converted lead's Company stands in for it, never carded
+twice; Companies typed Prospect (already contacted) are an opt-in, off by
+default.
 """
 
 from __future__ import annotations
@@ -50,25 +53,30 @@ def _crm_now() -> str:
 
 # --- the selection rule -------------------------------------------------------------
 
-DEFAULT_RULE: dict[str, Any] = {"stages": [cfg.STAGE_QUALIFIED], "includeCompanies": True}
+DEFAULT_RULE: dict[str, Any] = {"statuses": list(cfg.LEAD_OPEN_STATUSES), "stages": []}
 
 
 def normalise_rule(rule: Optional[dict[str, Any]]) -> dict[str, Any]:
-    """The screen's choices, kept to what the postcard kind allows: Qualified,
-    optionally Lead (re-reaching a scanner — default off), and whether promoted
-    Companies typed Prospect are included."""
+    """The screen's choices, kept to what the postcard kind allows: leads at
+    Unqualified and/or Qualified (ruling 44), and optionally Companies typed
+    Prospect at a stage — already contacted, so off by default."""
     rule = rule or {}
-    stages = [s for s in (rule.get("stages") or []) if s in (cfg.STAGE_QUALIFIED, cfg.STAGE_LEAD)]
-    if not stages:
-        stages = [cfg.STAGE_QUALIFIED]
-    return {"stages": stages, "includeCompanies": bool(rule.get("includeCompanies", True))}
+    statuses = [s for s in (rule.get("statuses") or []) if s in cfg.LEAD_OPEN_STATUSES]
+    stages = [s for s in (rule.get("stages") or []) if s in cfg.STAGES]
+    if not statuses and not stages:
+        statuses = list(DEFAULT_RULE["statuses"])
+    return {"statuses": statuses, "stages": stages}
 
 
 def rule_summary(rule: dict[str, Any]) -> str:
-    stages = " or ".join(rule["stages"])
-    companies = " and promoted companies typed Prospect" if rule.get("includeCompanies") else ""
-    return (f"Prospect records at {stages}{companies}, with a usable mailing address, "
-            f"no side exit, and no postcard ever sent (ruling 14).")
+    parts = []
+    if rule["statuses"]:
+        parts.append(f"leads at {' or '.join(rule['statuses'])}")
+    if rule["stages"]:
+        parts.append(f"Companies typed Prospect at {' or '.join(rule['stages'])}")
+    joined = ' and '.join(parts)
+    return (f"{joined[:1].upper() + joined[1:]}, with a usable mailing address, still being worked, "
+            f"and no postcard ever sent to the business (ruling 14).")
 
 
 async def _carded_targets(client: EspoApi) -> set[str]:
@@ -97,27 +105,35 @@ async def _carded_targets(client: EspoApi) -> set[str]:
 
 async def select_targets(client: EspoApi, rule: dict[str, Any]) -> list[dict[str, Any]]:
     """The records a postcard campaign would mail to, each as
-    ``{key, kind, id, name, address, stage}``."""
+    ``{key, kind, id, name, address, stage}`` (``stage`` is what the touch
+    records: the lead's status, or the Company's stage)."""
     rule = normalise_rule(rule)
     carded = await _carded_targets(client)
     targets: list[dict[str, Any]] = []
-    # A business is ONE target: a prospect record stands for the company it was
-    # promoted to, so that company is never selected a second time (two cards to
-    # Lakeview Bakery on 10-15-26), and a card to either side counts for both.
-    promoted: set[str] = set()
-
-    prospects = await service._page_all(
-        client, cfg.PROSPECT, select=cfg.PROSPECT_SELECT,
-        where=[
-            {"type": "in", "attribute": "funnelStage", "value": rule["stages"]},
-            {"type": "equals", "attribute": "addressStatus", "value": cfg.ADDRESS_USABLE},
-        ],
-        order_by="createdAt", order="asc", limit=10000,
-    )
-    for p in prospects:
+    # A business is ONE target: a lead stands for the Company it converted to,
+    # so that Company is never selected a second time (two cards to Lakeview
+    # Bakery on 10-15-26), and a card to either side counts for both.
+    for p in await service._page_all(client, cfg.PROSPECT, select="id,promotedCompanyId",
+                                     where=[{"type": "isNotNull", "attribute": "promotedCompanyId"}],
+                                     limit=50000):
         if p.get("promotedCompanyId"):
-            promoted.add(p["promotedCompanyId"])
-        if p.get("sideExit"):
+            if f"prospect:{p['id']}" in carded:
+                carded.add(f"company:{p['promotedCompanyId']}")
+
+    if rule["statuses"]:
+        leads = await service._page_all(
+            client, cfg.PROSPECT, select=cfg.PROSPECT_SELECT,
+            where=[
+                {"type": "in", "attribute": "leadStatus", "value": rule["statuses"]},
+                {"type": "equals", "attribute": "addressStatus", "value": cfg.ADDRESS_USABLE},
+                {"type": "isNull", "attribute": "sideExit"},
+            ],
+            order_by="createdAt", order="asc", limit=10000,
+        )
+    else:
+        leads = []
+    for p in leads:
+        if p.get("sideExit") or p.get("leadStatus") not in rule["statuses"]:
             continue
         key = f"prospect:{p['id']}"
         if key in carded or (p.get("promotedCompanyId") and f"company:{p['promotedCompanyId']}" in carded):
@@ -127,9 +143,9 @@ async def select_targets(client: EspoApi, rule: dict[str, Any]) -> list[dict[str
             continue
         targets.append({"key": key, "kind": "prospect", "id": p["id"],
                         "name": p.get("businessName") or p.get("name") or "",
-                        "address": address, "stage": p.get("funnelStage")})
+                        "address": address, "stage": p.get("leadStatus")})
 
-    if rule.get("includeCompanies"):
+    if rule["stages"]:
         companies = await service._page_all(
             client, cfg.ACCOUNT,
             select="id,name,cCompanyType,cFunnelStage,billingAddressStreet,billingAddressCity,"
@@ -142,7 +158,7 @@ async def select_targets(client: EspoApi, rule: dict[str, Any]) -> list[dict[str
             if cfg.COMPANY_TYPE_PROSPECT not in types:
                 continue
             key = f"company:{c['id']}"
-            if key in carded or c["id"] in promoted:
+            if key in carded:
                 continue
             address = Address(
                 name=c.get("name") or "", line1=c.get("billingAddressStreet") or "",
@@ -264,7 +280,7 @@ async def _target_for(client: EspoApi, touch: dict[str, Any]) -> Optional[dict[s
     if touch.get("prospectId"):
         p = await client.get(cfg.PROSPECT, touch["prospectId"], select=cfg.PROSPECT_SELECT)
         return {"kind": "prospect", "record": p, "address": _prospect_address(p),
-                "stage": p.get("funnelStage"), "name": p.get("businessName") or p.get("name") or ""}
+                "stage": p.get("leadStatus"), "name": p.get("businessName") or p.get("name") or ""}
     if touch.get("companyId"):
         c = await client.get(cfg.ACCOUNT, touch["companyId"],
                              select="id,name,cFunnelStage,billingAddressStreet,billingAddressCity,"
@@ -408,7 +424,7 @@ async def apply_event(client: EspoApi, *, piece_id: str, kind: str, vendor_statu
         await client.update(cfg.TOUCH, touch["id"],
                             {"touchStatus": cfg.TOUCH_RETURNED, "returnedAt": now, "vendorStatus": vendor_status})
         if touch.get("prospectId"):
-            # The address died; the rung is untouched (ruling 15).
+            # The address died; the status is untouched (ruling 15).
             await client.update(cfg.PROSPECT, touch["prospectId"],
                                 {"addressStatus": cfg.ADDRESS_DEAD, "addressDeadAt": now})
         return {"applied": True, "touchId": touch["id"], "status": cfg.TOUCH_RETURNED}

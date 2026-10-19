@@ -399,11 +399,13 @@
       tiles($("touchTiles"), [["Planned", sum.planned], ["Sent", sum.sent], ["Delivered", sum.delivered], ["Returned", sum.returned], ["Scanned", sum.scanned],
         ["Est. cost", money(rec.estimatedCost, rec.currency)]]);
       var rule = rec.rule || {};
-      $("ruleLead").checked = (rule.stages || []).indexOf("Lead") >= 0;
-      $("ruleCompanies").checked = rule.includeCompanies !== false;
+      var statuses = rule.statuses || ["Unqualified", "Qualified"];
+      $("ruleUnqualified").checked = statuses.indexOf("Unqualified") >= 0;
+      $("ruleQualified").checked = statuses.indexOf("Qualified") >= 0;
+      $("ruleCompanies").checked = (rule.stages || []).length > 0;
       text($("ruleSummary"), c.selectionSummary || "The list has not been built yet.");
       var editable = !c.campaignStatus || c.campaignStatus === "Draft" || c.campaignStatus === "Awaiting sign-off";
-      $("ruleLead").disabled = !editable; $("ruleCompanies").disabled = !editable;
+      $("ruleUnqualified").disabled = !editable; $("ruleQualified").disabled = !editable; $("ruleCompanies").disabled = !editable;
       var note = $("runNote");
       if (c.campaignStatus === "Signed off") text(note, "Signed off. The worker picks the run up within a minute and mails each planned piece" + (state.session.postal.provider === "dryrun" ? " (dry run: nothing is printed)." : "."));
       else if (c.campaignStatus === "Running") text(note, "Running — the worker is mailing. Reload to follow the counts.");
@@ -430,7 +432,7 @@
     var rule = rec.rule || {}, chosen = rule.stages || [];
     var editable = !c.campaignStatus || c.campaignStatus === "Draft" || c.campaignStatus === "Awaiting sign-off";
     var host = $("emailStages"); host.innerHTML = "";
-    (state.session.emailStages || ["Qualified", "Lead", "Warm Lead", "Opportunity"]).forEach(function (st) {
+    (state.session.emailStages || ["Prospect", "Engaged", "Opportunity"]).forEach(function (st) {
       var lab = el("label", "cm__check"); var cb = el("input"); cb.type = "checkbox"; cb.value = st; cb.checked = chosen.indexOf(st) >= 0;
       cb.disabled = !editable; cb.setAttribute("data-emailstage", st);
       lab.appendChild(cb); lab.appendChild(document.createTextNode(" Contacts typed Prospect at ")); lab.appendChild(el("strong", null, st)); host.appendChild(lab);
@@ -458,7 +460,7 @@
     var c = state.record.campaign;
     if (["Draft", "Awaiting sign-off", null, undefined, ""].indexOf(c.campaignStatus) < 0) { notice("The list cannot be rebuilt once the campaign is " + c.campaignStatus + ".", "warn"); return; }
     var rule = emailRule();
-    if (!rule.stages.length && rule.dormantDays === null) { notice("Tick at least one rung, or the dormant clients.", "warn"); return; }
+    if (!rule.stages.length && rule.dormantDays === null) { notice("Tick at least one stage, or the dormant clients.", "warn"); return; }
     try {
       var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/build", { method: "POST", body: { rule: rule } });
       notice("List built: " + res.pieces + " people (" + res.created + " new, " + res.cancelled + " dropped).", "ok");
@@ -515,10 +517,10 @@
     var host = $("smsStages"); host.innerHTML = "";
     var chosen = (rec.rule && rec.rule.stages) || [];
     var editable = !c.campaignStatus || c.campaignStatus === "Draft" || c.campaignStatus === "Awaiting sign-off";
-    ((state.session.sms || {}).stages || ["Qualified", "Lead", "Warm Lead", "Opportunity"]).forEach(function (st) {
+    ((state.session.sms || {}).stages || ["Prospect", "Engaged", "Opportunity"]).forEach(function (st) {
       var lab = el("label", "cm__check"); var cb = el("input"); cb.type = "checkbox"; cb.value = st; cb.checked = chosen.indexOf(st) >= 0;
       cb.disabled = !editable; cb.setAttribute("data-smsstage", st);
-      lab.appendChild(cb); lab.appendChild(document.createTextNode(" Contacts at ")); lab.appendChild(el("strong", null, st)); host.appendChild(lab);
+      lab.appendChild(cb); lab.appendChild(document.createTextNode(" Contacts typed Prospect at ")); lab.appendChild(el("strong", null, st)); host.appendChild(lab);
     });
     text($("smsRuleSummary"), c.selectionSummary || "The list has not been built yet.");
     var chk = rec.smsCheck || {};
@@ -541,7 +543,7 @@
     var c = state.record.campaign;
     if (["Draft", "Awaiting sign-off", null, undefined, ""].indexOf(c.campaignStatus) < 0) { notice("The list cannot be rebuilt once the campaign is " + c.campaignStatus + ".", "warn"); return; }
     var stages = Array.prototype.filter.call(document.querySelectorAll("[data-smsstage]"), function (cb) { return cb.checked; }).map(function (cb) { return cb.value; });
-    if (!stages.length) { notice("Tick at least one rung to text.", "warn"); return; }
+    if (!stages.length) { notice("Tick at least one stage to text.", "warn"); return; }
     try {
       var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/build", { method: "POST", body: { rule: { stages: stages } } });
       notice("List built: " + res.pieces + " to text (" + res.created + " new, " + res.cancelled + " dropped).", "ok");
@@ -577,12 +579,20 @@
     var sum = rec.touchSummary || {}, b = rec.callBreakdown || {};
     tiles($("callTiles"), [["To call", sum.planned], ["Called", b.done], ["No answer", b["No answer"]], ["Interested", b.Interested], ["Declined", b.Declined]]);
     var host = $("callStages"); host.innerHTML = "";
-    var chosen = (rec.rule && rec.rule.stages) || ["Qualified"];
+    var rule = rec.rule || {};
+    var chosenStatuses = rule.statuses || (rule.stages ? [] : ["Unqualified", "Qualified"]);
+    var chosenStages = rule.stages || [];
     var editable = !c.campaignStatus || c.campaignStatus === "Draft" || c.campaignStatus === "Awaiting sign-off";
-    (state.session.callStages || ["Qualified", "Lead", "Warm Lead", "Opportunity"]).forEach(function (st) {
-      var lab = el("label", "cm__check"); var cb = el("input"); cb.type = "checkbox"; cb.value = st; cb.checked = chosen.indexOf(st) >= 0;
+    // Ruling 44: leads at Unqualified or Qualified; Contacts typed Prospect at a stage.
+    (state.session.callStatuses || ["Unqualified", "Qualified"]).forEach(function (st) {
+      var lab = el("label", "cm__check"); var cb = el("input"); cb.type = "checkbox"; cb.value = st; cb.checked = chosenStatuses.indexOf(st) >= 0;
+      cb.disabled = !editable; cb.setAttribute("data-callstatus", st);
+      lab.appendChild(cb); lab.appendChild(document.createTextNode(" Leads at ")); lab.appendChild(el("strong", null, st)); host.appendChild(lab);
+    });
+    (state.session.callStages || ["Prospect", "Engaged", "Opportunity"]).forEach(function (st) {
+      var lab = el("label", "cm__check"); var cb = el("input"); cb.type = "checkbox"; cb.value = st; cb.checked = chosenStages.indexOf(st) >= 0;
       cb.disabled = !editable; cb.setAttribute("data-callstage", st);
-      lab.appendChild(cb); lab.appendChild(document.createTextNode(" Records at ")); lab.appendChild(el("strong", null, st)); host.appendChild(lab);
+      lab.appendChild(cb); lab.appendChild(document.createTextNode(" Contacts typed Prospect at ")); lab.appendChild(el("strong", null, st)); host.appendChild(lab);
     });
     text($("callRuleSummary"), c.selectionSummary || "The list has not been built yet.");
     var note = $("callNote");
@@ -594,18 +604,21 @@
     if (!state.session.callsOn) text(note, "Campaign calls are switched off on this deployment (CAMPAIGNS_CALLS at /setup), so this list cannot be built or run.");
   }
 
-  function chosenCallStages() {
-    return Array.prototype.filter.call(document.querySelectorAll("[data-callstage]"), function (cb) { return cb.checked; }).map(function (cb) { return cb.value; });
+  function chosenCallRule() {
+    function ticked(attr) {
+      return Array.prototype.filter.call(document.querySelectorAll("[" + attr + "]"), function (cb) { return cb.checked; }).map(function (cb) { return cb.value; });
+    }
+    return { statuses: ticked("data-callstatus"), stages: ticked("data-callstage") };
   }
 
   $("callBuildBtn").addEventListener("click", async function () {
     if (!state.record) return;
     var c = state.record.campaign;
     if (["Draft", "Awaiting sign-off", null, undefined, ""].indexOf(c.campaignStatus) < 0) { notice("The list cannot be rebuilt once the campaign is " + c.campaignStatus + ".", "warn"); return; }
-    var stages = chosenCallStages();
-    if (!stages.length) { notice("Tick at least one rung to call.", "warn"); return; }
+    var callRule = chosenCallRule();
+    if (!callRule.statuses.length && !callRule.stages.length) { notice("Tick at least one lead status or stage to call.", "warn"); return; }
     try {
-      var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/build", { method: "POST", body: { rule: { stages: stages } } });
+      var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/build", { method: "POST", body: { rule: callRule } });
       notice("List built: " + res.pieces + " to call (" + res.created + " new, " + res.cancelled + " dropped).", "ok");
       loadRecord();
     } catch (e) { notice(e.message, "error"); }
@@ -627,8 +640,12 @@
   $("callsUrlCopy").addEventListener("click", function () { copyText(callsPageUrl(), $("callsUrlCopy")); });
 
   function currentRule() {
-    var stages = ["Qualified"]; if ($("ruleLead").checked) stages.push("Lead");
-    return { stages: stages, includeCompanies: $("ruleCompanies").checked };
+    // Ruling 44: Unqualified and Qualified leads; Companies typed Prospect
+    // (already contacted) only when ticked.
+    var statuses = [];
+    if ($("ruleUnqualified").checked) statuses.push("Unqualified");
+    if ($("ruleQualified").checked) statuses.push("Qualified");
+    return { statuses: statuses, stages: $("ruleCompanies").checked ? ["Prospect", "Engaged", "Opportunity"] : [] };
   }
 
   $("buildBtn").addEventListener("click", async function () {
@@ -636,8 +653,10 @@
     var c = state.record.campaign;
     if (c.campaignKind !== "Postcard") { notice("Only a postcard campaign builds a list.", "warn"); return; }
     if (["Draft", "Awaiting sign-off", null, undefined, ""].indexOf(c.campaignStatus) < 0) { notice("The list cannot be rebuilt once the campaign is " + c.campaignStatus + ".", "warn"); return; }
+    var postcardRule = currentRule();
+    if (!postcardRule.statuses.length && !postcardRule.stages.length) { notice("Tick at least one: Unqualified leads, Qualified leads, or Companies typed Prospect.", "warn"); return; }
     try {
-      var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/build", { method: "POST", body: { rule: currentRule() } });
+      var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/build", { method: "POST", body: { rule: postcardRule } });
       notice("List built: " + res.pieces + " planned (" + res.created + " new, " + res.cancelled + " dropped). Estimated cost " + money(res.estimatedCost, res.currency) + ".", "ok");
       loadRecord();
     } catch (e) { notice(e.message, "error"); }
@@ -762,9 +781,12 @@
   function renderResponses() {
     var r = state.responses || { responses: [], totals: {} }, rec = state.record || {};
     var sum = rec.touchSummary || {};
-    // Responded and converted lead (build plan § 6 item 2), then the per-form
-    // totals, then a postcard campaign's piece counts.
-    var t = [["Responded", r.responded || 0], ["Converted", r.converted || 0]];
+    // Ruling 46's three counts, then the per-form totals, then a postcard
+    // campaign's piece counts. Converted counts calls too (the record payload's
+    // callConversions), so it agrees with the Analytics page.
+    var calls = (rec.callBreakdown || {}).callConversions || 0;
+    var t = [["Responded", r.responded || 0], ["Converted", (r.converted || 0) + calls],
+             ["Became a client, partner or funder", r.became || 0]];
     t = t.concat(Object.keys(r.totals || {}).map(function (k) { return [k, r.totals[k]]; }));
     if ((rec.campaign || {}).campaignKind === "Postcard") t = t.concat([["Pieces", sum.pieces], ["Delivered", sum.delivered], ["Returned", sum.returned], ["Scanned", sum.scanned]]);
     if ((rec.campaign || {}).campaignKind === "SMS") t = t.concat([["Texts sent", (sum.sent || 0) + (sum.delivered || 0)], ["Delivered", sum.delivered]]);
@@ -869,13 +891,13 @@
   }
   $("anaRefreshBtn").addEventListener("click", function () { loadAnalytics(true); });
 
-  // --- prospects -----------------------------------------------------------------------------------
+  // --- leads (rulings 41-53) ---------------------------------------------------------------------
   async function loadProspects() {
     try {
       var q = [];
-      if ($("stageFilter").value) q.push("stage=" + encodeURIComponent($("stageFilter").value));
+      if ($("stageFilter").value) q.push("status=" + encodeURIComponent($("stageFilter").value));
       if ($("exitFilter").value) q.push("exit=" + encodeURIComponent($("exitFilter").value));
-      if ($("doorFilter").value) q.push("door=" + encodeURIComponent($("doorFilter").value));
+      if ($("doorFilter").value) q.push("source=" + encodeURIComponent($("doorFilter").value));
       state.prospects = (await api("/prospects" + (q.length ? "?" + q.join("&") : ""))).prospects || [];
       renderProspects();
     } catch (e) { notice(e.message, "error"); }
@@ -893,7 +915,7 @@
     rows.forEach(function (p) {
       var tr = el("tr");
       var nTd = el("td"); var a = el("a", "cm__link", p.businessName || p.name || "(unnamed)"); a.href = "#"; a.addEventListener("click", function (ev) { ev.preventDefault(); openProspect(p.id); }); nTd.appendChild(a); tr.appendChild(nTd);
-      tr.appendChild(el("td", null, p.funnelStage || "—")); tr.appendChild(el("td", null, p.sideExit || "—")); tr.appendChild(el("td", null, p.entryDoor || "—"));
+      tr.appendChild(el("td", null, p.leadStatus || "—")); tr.appendChild(el("td", null, p.sideExit || "—")); tr.appendChild(el("td", null, p.leadSource || "—"));
       tr.appendChild(el("td", null, p.mailingAddressCity || "—")); tr.appendChild(el("td", null, p.addressStatus || "—"));
       tr.appendChild(el("td", null, p.importBatch || "—")); tr.appendChild(el("td", null, fmtDate(p.createdAt)));
       body.appendChild(tr);
@@ -910,9 +932,9 @@
       var facts = el("dl", "cm__facts");
       [["Business", p.businessName], ["Person", [p.firstName, p.lastName].filter(Boolean).join(" ")], ["Address", [p.mailingAddressStreet, p.mailingAddressCity, p.mailingAddressState, p.mailingAddressPostalCode].filter(Boolean).join(", ")],
        ["Address status", p.addressStatus], ["Website", p.website], ["Email", p.email], ["Phone", p.phone],
-       ["Rung", p.funnelStage], ["Entry rung", p.entryStage], ["Door", p.entryDoor], ["Side exit", p.sideExit], ["Side exit note", p.sideExitNote],
+       ["Lead status", p.leadStatus], ["Status changed", p.leadStatusChangedAt ? fmtDate(p.leadStatusChangedAt) : null], ["Lead Source", p.leadSource], ["Stopped because", p.sideExit], ["Reason note", p.sideExitNote],
        ["Qualified by", p.qualifiedBy], ["Qualified at", p.qualifiedAt ? fmtDate(p.qualifiedAt) : null], ["Batch", p.importBatch], ["Reference", p.externalReference],
-       ["Promoted company", p.promotedCompanyName], ["Promoted contact", p.promotedContactName], ["Already known as", p.alreadyKnownCompanyName]
+       ["Converted to company", p.promotedCompanyName], ["Converted to contact", p.promotedContactName], ["Duplicate of company", p.alreadyKnownCompanyName]
       ].forEach(function (f) { facts.appendChild(el("dt", null, f[0])); facts.appendChild(el("dd", null, f[1] || "—")); });
       body.appendChild(facts);
       body.appendChild(el("h4", null, "Touches"));
@@ -933,15 +955,19 @@
   // itself on click (buttons are never hidden or disabled).
   var REVIEW_ACTIONS = [
     ["qualify", "Qualify", "Note (optional)", false],
-    ["unqualify", "Unqualified…", "Why is it unqualified? (required)", true],
+    ["disqualify", "Disqualify…", "Why will it never be a client, partner or funder? (required)", true],
     ["do-not-contact", "Do Not Contact…", "Note (optional)", false],
     ["not-same-company", "Not the same company…", "Note (optional)", false],
   ];
 
   function reviewWhyNot(p, action) {
-    if (action === "not-same-company") return p.sideExit === "Already known" ? "" : "Only a record that left as Already known can be told it is not the same company.";
-    if (p.sideExit) return "This record has already left the ladder by " + p.sideExit + "; a side exit is never written over another.";
-    if ((action === "qualify" || action === "unqualify") && p.funnelStage !== "Unverified") return "Only an Unverified record is reviewed; this one is at " + (p.funnelStage || "no rung") + ".";
+    var status = p.leadStatus || "Unqualified";
+    if (action === "not-same-company") return p.sideExit === "Duplicate" ? "" : "Only a lead marked Duplicate can be told it is not the same company.";
+    if (p.sideExit) return "This lead has already stopped being worked (" + p.sideExit + "); a reason is never written over another.";
+    if (action === "qualify" && status !== "Unqualified") return "Only an Unqualified lead is qualified by review; this one is " + status + ".";
+    if (action === "qualify" && !p.website && !p.email) return "A lead without a website or an email can never be Qualified (ruling 42). Add one to the lead in the CRM first, or leave it Unqualified — campaigns may still reach it.";
+    if (action === "disqualify" && status !== "Unqualified" && status !== "Qualified") return "Only an Unqualified or Qualified lead can be disqualified; this one is " + status + ".";
+    if (action === "do-not-contact" && status === "Converted") return "This lead is Converted; its Company or Contact is the record now.";
     return "";
   }
 
@@ -971,10 +997,10 @@
     setTimeout(function () { ta.focus(); }, 50);
   }
 
-  // --- the Review tab: the Prospects grid pre-filtered to Unverified ------------------------------
+  // --- the Review tab: the leads waiting at Unqualified ----------------------------------------
   async function loadReview() {
     try {
-      state.review = (await api("/prospects?stage=Unverified&exit=none")).prospects || [];
+      state.review = (await api("/prospects?status=Unqualified&exit=none")).prospects || [];
       renderReview();
     } catch (e) { notice(e.message, "error"); }
   }
@@ -1009,7 +1035,7 @@
       var body = $("importRows"); body.innerHTML = "";
       (res.batches || []).forEach(function (b) {
         var tr = el("tr");
-        tr.appendChild(el("td", null, b.name)); tr.appendChild(el("td", null, b.door)); tr.appendChild(el("td", "num", b.rowCount)); tr.appendChild(el("td", null, b.status));
+        tr.appendChild(el("td", null, b.name)); tr.appendChild(el("td", null, b.source)); tr.appendChild(el("td", "num", b.rowCount)); tr.appendChild(el("td", null, b.status));
         tr.appendChild(el("td", null, fmtDate(b.createdAt))); tr.appendChild(el("td", null, b.appliedAt ? fmtDate(b.appliedAt) : "—"));
         var c = b.result || b.counts || {};
         tr.appendChild(el("td", null, Object.keys(c).filter(function (k) { return typeof c[k] === "number"; }).map(function (k) { return k + " " + c[k]; }).join(", ") || "—"));
@@ -1025,27 +1051,27 @@
     var fields = el("div", "cm__fields");
     function field(label, input, wide) { var f = el("div", "cm__field" + (wide ? " cm__field--wide" : "")); var l = el("label", null, label); l.htmlFor = input.id; f.appendChild(l); f.appendChild(input); fields.appendChild(f); return input; }
     var name = el("input"); name.type = "text"; name.id = "im_name"; name.maxLength = 255; name.placeholder = "e.g. State filings, October 2026"; field("Batch name", name, true);
-    var door = el("select"); door.id = "im_door"; [["State filing", "State filing (enters Qualified — ruling 11)"], ["List", "Purchased or partner list (enters Unverified — ruling 18)"]].forEach(function (o) { var opt = el("option", null, o[1]); opt.value = o[0]; door.appendChild(opt); }); field("Door", door);
+    var door = el("select"); door.id = "im_door"; [["State filing", "State filing (a row with a website or email enters Qualified — ruling 53)"], ["List", "Purchased list (enters Unqualified — ruling 18)"], ["Partner file", "Partner file (enters Unqualified — ruling 18)"]].forEach(function (o) { var opt = el("option", null, o[1]); opt.value = o[0]; door.appendChild(opt); }); field("Lead Source", door);
     var qb = el("input"); qb.type = "text"; qb.id = "im_qb"; qb.placeholder = "The filter's name and version"; field("Qualified by (filings)", qb);
     var ls = el("input"); ls.type = "text"; ls.id = "im_ls"; ls.placeholder = "Vendor or partner"; field("List source (lists)", ls);
     var file = el("input"); file.type = "file"; file.id = "im_file"; file.accept = ".csv,text/csv"; field("CSV file", file, true);
     body.appendChild(fields);
-    body.appendChild(el("p", "cm__hint", "Columns: business_name (required), mailing_street, mailing_city, mailing_state, mailing_zip (required as a set), and optionally external_reference, website, email, phone, contact_first_name, contact_last_name, qualified_by. A list (the Unverified door) names its vendor or partner in List source; its rows wait in the Review tab. Unknown columns ride along into the record."));
+    body.appendChild(el("p", "cm__hint", "Columns: business_name (required), mailing_street, mailing_city, mailing_state, mailing_zip (required as a set), and optionally external_reference, website, email, phone, contact_first_name, contact_last_name, qualified_by. Every row becomes a lead; no Company or Contact is created until first contact (ruling 43). A list or partner file names its vendor or partner in List source; its rows wait in the Review tab at Unqualified. Unknown columns ride along into the lead."));
     var planBox = el("div", "cm__plan"); body.appendChild(planBox);
     var planned = null;
     function readFile() { return new Promise(function (resolve, reject) { var f = file.files && file.files[0]; if (!f) { reject(new Error("Choose a CSV file.")); return; } var r = new FileReader(); r.onload = function () { resolve(String(r.result || "")); }; r.onerror = function () { reject(new Error("The file could not be read.")); }; r.readAsText(f); }); }
-    openModal("Import prospects", body, async function () {
+    openModal("Import leads", body, async function () {
       if (!planned) {
         if (!name.value.trim()) { modalMsg("Name the batch.", "error"); return; }
         var textContent = await readFile();
-        planned = await api("/prospects/import/plan", { method: "POST", body: { name: name.value.trim(), door: door.value, text: textContent, qualifiedBy: qb.value, listSource: ls.value } });
+        planned = await api("/prospects/import/plan", { method: "POST", body: { name: name.value.trim(), source: door.value, text: textContent, qualifiedBy: qb.value, listSource: ls.value } });
         planBox.innerHTML = "";
         var c = planned.counts;
-        tiles(planBox.appendChild(el("div", "cm__tiles")), [["Rows", c.rows], ["To create", c.create], ["Already known", c.alreadyKnown], ["Companies to create", c.promoteCompany], ["Contacts to create", c.promoteContact], ["Repeat rows", c.knownRow + c.duplicate], ["Invalid", c.invalid]]);
+        tiles(planBox.appendChild(el("div", "cm__tiles")), [["Rows", c.rows], ["Leads to create", c.create], ["Enter Qualified", c.qualified], ["Enter Unqualified", c.unqualified], ["Duplicates", c.alreadyKnown], ["Repeat rows", c.knownRow + c.duplicate], ["Invalid", c.invalid]]);
         if (planned.priorBatch) planBox.appendChild(el("p", "cm__hint", "This exact file was applied before (" + fmtDate(planned.priorBatch.appliedAt) + ")."));
         if (planned.nothingToDo) planBox.appendChild(el("p", "cm__hint", "Nothing to do — every row is known or invalid."));
         var tbl = el("table", "cm__grid"); var tb = el("tbody");
-        (planned.rows || []).forEach(function (r) { var tr = el("tr"); [r.name, r.postalCode, r.outcome.replace("_", " "), r.note || (r.promoteCompany ? "creates a company" : "") + (r.promoteContact ? " creates a contact" : "")].forEach(function (v) { tr.appendChild(el("td", null, v || "")); }); tb.appendChild(tr); });
+        (planned.rows || []).forEach(function (r) { var tr = el("tr"); [r.name, r.postalCode, r.outcome === "already_known" ? "duplicate" : r.outcome.replace("_", " "), r.note || (r.status ? "enters " + r.status : "")].forEach(function (v) { tr.appendChild(el("td", null, v || "")); }); tb.appendChild(tr); });
         tbl.appendChild(tb); planBox.appendChild(tbl);
         modalMsg("Read the plan. Apply writes exactly this.", "ok");
         text($("modalSave"), planned.nothingToDo ? "Nothing to apply" : "Apply this plan");
@@ -1055,7 +1081,7 @@
       var res = await api("/prospects/import/apply", { method: "POST", body: { batchId: planned.batchId } });
       var r = res.result;
       closeModal();
-      notice("Imported: " + r.created + " prospect records, " + r.alreadyKnown + " already known, " + r.companies + " companies and " + r.contacts + " contacts typed Prospect" + (r.errors ? ", " + r.errors + " errors (see the log)" : "") + ".", r.errors ? "warn" : "ok");
+      notice("Imported: " + r.created + " leads (" + r.qualified + " Qualified, " + r.unqualified + " Unqualified), " + r.duplicates + " duplicates" + (r.errors ? ", " + r.errors + " errors (see the log)" : "") + ".", r.errors ? "warn" : "ok");
       loadProspects(); loadImports();
     }, "Plan");
   }
@@ -1124,7 +1150,7 @@
     try {
       await ensureFields();
       fillSelect($("statusFilter"), state.fields.options.campaignStatus, 1); fillSelect($("kindFilter"), state.fields.options.campaignKind, 1);
-      fillSelect($("stageFilter"), state.fields.prospectOptions.funnelStage, 1); fillSelect($("exitFilter"), state.fields.prospectOptions.sideExit, 2); fillSelect($("doorFilter"), state.fields.prospectOptions.entryDoor, 1);
+      fillSelect($("stageFilter"), state.fields.prospectOptions.leadStatus, 1); fillSelect($("exitFilter"), state.fields.prospectOptions.sideExit, 2); fillSelect($("doorFilter"), state.fields.prospectOptions.leadSource, 1);
     } catch (e) { notice(e.message, "error"); }
     if (RECORD_ID) {
       $("sectionNav").hidden = true;

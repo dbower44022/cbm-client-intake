@@ -9,7 +9,10 @@ what is stored today onto the words of rulings 41-50:
 * ``leadStatus`` — *Converted* when the lead has a converted Company or
   Contact (``promotedCompany`` / ``promotedContact``); *Disqualified* when it
   left by the old *Unqualified* reason; else from ``funnelStage``:
-  Unverified → *Unqualified*, Qualified → *Qualified*. A lead at Lead, Warm
+  Unverified → *Unqualified*, Qualified → *Qualified* **only when the lead
+  holds a website or an email** (ruling 42: without one it can never be
+  Qualified; ruling 53 lets a filing with one enter Qualified), else
+  *Unqualified*. A lead at Lead, Warm
   Lead or Opportunity with no converted record has no rule (ruling 42: contact
   without a website or email converts nothing), so it is **reported, never
   written** — a human decides. The status is only ever raised from the default
@@ -26,6 +29,13 @@ what is stored today onto the words of rulings 41-50:
   Opportunity stays. A Company or Contact carries a stage only because a lead
   was converted into it or a public form created it, so every old early stage
   means first contact happened (ruling 43).
+
+**On each touch** (``COutreachTouch.stageAtTouch``, the position the target
+held when touched — needs ``scripts/plans/coutreach-touch-positions.json``)
+
+* A touch on a lead: Unverified → *Unqualified*; Qualified stays. Lead, Warm
+  Lead or Opportunity on a lead has no rule and is **reported, never written**.
+* A touch on a Company or Contact: the same moves as their stages above.
 
 **Idempotent, dry-run by default, never removes an option or a field.** Runs as
 the org-wide API key (its role edits ``CProspect``, Contact and Account) and
@@ -62,6 +72,10 @@ LEAD = "CProspect"
 PAGE = 200
 
 STATUS_FROM_STAGE = {"Unverified": "Unqualified", "Qualified": "Qualified"}
+TOUCH = "COutreachTouch"
+LEAD_TOUCH_MOVES = {"Unverified": "Unqualified"}
+#: Old values a touch on a lead may hold that no rule maps (reported only).
+LEAD_TOUCH_UNMAPPED = ("Lead", "Warm Lead", "Opportunity")
 EXIT_MOVES = {"Already known": "Duplicate", "Unqualified": ""}
 STAGE_MOVES = {"Unverified": "Prospect", "Qualified": "Prospect", "Lead": "Prospect",
                "Warm Lead": "Engaged"}
@@ -96,6 +110,8 @@ def lead_changes(row: dict[str, Any]) -> tuple[dict[str, Any], str | None]:
         target = "Disqualified"
     else:
         target = STATUS_FROM_STAGE.get(row.get("funnelStage") or "")
+        if target == "Qualified" and not (row.get("website") or row.get("email")):
+            target = "Unqualified"   # ruling 42: no website or email, never Qualified
         if target is None and row.get("funnelStage"):
             note = (f"stage {row.get('funnelStage')!r} with no converted record — "
                     "no rule (ruling 42); decide its status by hand")
@@ -118,7 +134,7 @@ async def run(client: Any, *, apply: bool) -> int:
     failed: list[str] = []
 
     leads = await read_all(client, LEAD, "id,name,funnelStage,sideExit,entryDoor,leadStatus,"
-                                         "leadSource,promotedCompanyId,promotedContactId")
+                                         "leadSource,promotedCompanyId,promotedContactId,website,email")
     print(f"{LEAD}: {len(leads)} record(s)")
     for row in leads:
         changes, note = lead_changes(row)
@@ -136,6 +152,8 @@ async def run(client: Any, *, apply: bool) -> int:
             await write(client, entity, row["id"], {field: STAGE_MOVES[row[field]]},
                         f"{entity} {row.get('name')!r}", apply, done, failed)
 
+    await move_touches(client, apply=apply, done=done, decide=decide, failed=failed)
+
     print()
     for title, rows in (("CHANGES", done), ("NEEDS A DECISION (not written)", decide), ("FAILED", failed)):
         if rows:
@@ -148,6 +166,41 @@ async def run(client: Any, *, apply: bool) -> int:
     if not apply:
         print(f"Dry run only. {len(done)} record(s) would change. Re-run with --apply to make these changes.")
     return 1 if (failed or decide) else 0
+
+
+def touch_change(row: dict[str, Any]) -> tuple[str | None, str | None]:
+    """The new ``stageAtTouch`` for one touch, and a note when no rule maps it."""
+    value = row.get("stageAtTouch") or ""
+    if row.get("prospectId"):
+        if value in LEAD_TOUCH_MOVES:
+            return LEAD_TOUCH_MOVES[value], None
+        if value in LEAD_TOUCH_UNMAPPED:
+            return None, f"a touch on a lead recorded {value!r} — no rule maps it; decide by hand"
+        return None, None
+    return STAGE_MOVES.get(value), None
+
+
+async def move_touches(client: Any, *, apply: bool, done: list[str], decide: list[str],
+                       failed: list[str]) -> None:
+    old = sorted(set(STAGE_MOVES) | set(LEAD_TOUCH_MOVES) | set(LEAD_TOUCH_UNMAPPED))
+    rows = await read_all(client, TOUCH, "id,name,stageAtTouch,prospectId",
+                          [{"type": "in", "attribute": "stageAtTouch", "value": old}])
+    print(f"{TOUCH}.stageAtTouch: {len(rows)} record(s) on an old value")
+    if not rows:
+        return
+    options = await client.metadata_enum_options(TOUCH, "stageAtTouch") or []
+    missing = [o for o in ("Unqualified", "Prospect", "Engaged") if o not in options]
+    if missing:
+        decide.append(f"{TOUCH}.stageAtTouch lacks {', '.join(missing)} - apply "
+                      "scripts/plans/coutreach-touch-positions.json first; no touch written")
+        return
+    for row in rows:
+        new, note = touch_change(row)
+        label = f"{TOUCH} {row.get('name')!r}"
+        if note:
+            decide.append(f"{label}: {note}")
+        if new and new != row.get("stageAtTouch"):
+            await write(client, TOUCH, row["id"], {"stageAtTouch": new}, label, apply, done, failed)
 
 
 async def write(client: Any, entity: str, rid: str, changes: dict[str, Any], label: str,

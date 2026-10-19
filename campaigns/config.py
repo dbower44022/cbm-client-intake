@@ -70,30 +70,58 @@ OUTCOME_INTERESTED = "Interested"
 OUTCOME_DECLINED = "Declined"
 CALL_OUTCOMES = (OUTCOME_NO_ANSWER, OUTCOME_INTERESTED, OUTCOME_DECLINED)
 
-# --- prospect records (§ 1.2) --------------------------------------------------
-STAGE_UNVERIFIED = "Unverified"
-STAGE_QUALIFIED = "Qualified"
-STAGE_LEAD = "Lead"
-STAGE_WARM_LEAD = "Warm Lead"
+# --- leads (rulings 41-52; build plan § 7a) -------------------------------------
+#: A lead's status (``CProspect.leadStatus``, ruling 49). Every lead starts
+#: Unqualified; a business lead with no website, or a person lead with no
+#: email, can never be Qualified (ruling 42). Converted: first contact created
+#: its Company and/or Contact (ruling 43).
+LEAD_UNQUALIFIED = "Unqualified"
+LEAD_QUALIFIED = "Qualified"
+LEAD_DISQUALIFIED = "Disqualified"
+LEAD_CONVERTED = "Converted"
+LEAD_STATUSES = (LEAD_UNQUALIFIED, LEAD_QUALIFIED, LEAD_DISQUALIFIED, LEAD_CONVERTED)
+#: The statuses a lead is still worked at — selectable by a postcard or a call
+#: campaign (ruling 44) and swept by the Stale sweep.
+LEAD_OPEN_STATUSES = (LEAD_UNQUALIFIED, LEAD_QUALIFIED)
+
+# --- a Company's or Contact's stages after first contact (ruling 50) -----------
+#: ``cFunnelStage`` / ``cEntryStage`` on Contact and Account. Candidate and
+#: Client are read from the engagement, never stored here.
+STAGE_PROSPECT = "Prospect"
+STAGE_ENGAGED = "Engaged"
 STAGE_OPPORTUNITY = "Opportunity"
-STAGES = (STAGE_UNVERIFIED, STAGE_QUALIFIED, STAGE_LEAD, STAGE_WARM_LEAD, STAGE_OPPORTUNITY)
-#: Advance-only: a rung is written only when it is later on the ladder.
+STAGES = (STAGE_PROSPECT, STAGE_ENGAGED, STAGE_OPPORTUNITY)
+#: Advance-only: a stage is written only when it is later than the stored one.
 STAGE_RANK = {s: i for i, s in enumerate(STAGES)}
+#: What a touch records as the target's position when it leaves Planned: the
+#: lead's status for a lead, the stage for a Company or Contact.
+TOUCH_POSITIONS = LEAD_OPEN_STATUSES + STAGES
 
 ADDRESS_USABLE = "Usable"
 ADDRESS_DEAD = "Dead"
 
-DOOR_FILING = "State filing"
-DOOR_LIST = "List"
-DOOR_PARTNER_FILE = "Partner file"
+#: ``CProspect.leadSource`` (rulings 41, 48): the three imports, then the
+#: public forms, event registration and the info mailbox.
+SOURCE_FILING = "State filing"
+SOURCE_LIST = "List"
+SOURCE_PARTNER_FILE = "Partner file"
+IMPORT_SOURCES = (SOURCE_FILING, SOURCE_LIST, SOURCE_PARTNER_FILE)
+SOURCE_MENTOR_REQUEST = "Mentor request"
+SOURCE_VOLUNTEER = "Volunteer application"
+SOURCE_INFO_REQUEST = "Information request"
+SOURCE_PARTNER_APPLICATION = "Partner application"
+SOURCE_FUNDER_APPLICATION = "Funder application"
+SOURCE_EVENT_REGISTRATION = "Event registration"
+SOURCE_EMAIL = "Email"
 
-EXIT_ALREADY_KNOWN = "Already known"
-EXIT_UNQUALIFIED = "Unqualified"
+#: The reasons a lead stops being worked (``sideExit``, ruling 50).
+#: Disqualified is a status, not a reason.
+EXIT_DUPLICATE = "Duplicate"
 EXIT_DO_NOT_CONTACT = "Do Not Contact"
 EXIT_DECLINED = "Declined"
 EXIT_STALE = "Stale"
 
-#: The Company type a promoted business carries (ruling 21).
+#: The type a converted Company or Contact carries (ruling 43).
 COMPANY_TYPE_PROSPECT = "Prospect"
 CONTACT_TYPE_PROSPECT = "Prospect"
 
@@ -107,7 +135,7 @@ CAMPAIGN_SELECT = (
 PROSPECT_SELECT = (
     "id,name,businessName,firstName,lastName,mailingAddressStreet,mailingAddressCity,"
     "mailingAddressState,mailingAddressPostalCode,mailingAddressCountry,addressStatus,"
-    "addressDeadAt,website,email,phone,funnelStage,entryStage,stageChangedAt,entryDoor,"
+    "addressDeadAt,website,email,phone,leadStatus,leadStatusChangedAt,leadSource,"
     "externalReference,importBatch,qualifiedBy,qualifiedAt,sideExit,sideExitAt,"
     "sideExitNote,promotedCompanyId,promotedCompanyName,promotedContactId,"
     "promotedContactName,alreadyKnownCompanyId,alreadyKnownCompanyName,description,createdAt"
@@ -179,7 +207,7 @@ FORM_DESTINATIONS = ("client-intake", "info-request", "volunteer", "partner", "s
 LINK_ACTIVE = "active"
 LINK_RETIRED = "retired"
 
-#: The hidden fields every public door carries (§ 3.7, § 5).
+#: The hidden fields every public form carries (§ 3.7, § 5).
 PAYLOAD_CAMPAIGN_ID = "campaign_id"
 PAYLOAD_CAMPAIGN_LINK = "campaign_link"
 PAYLOAD_PROSPECT_ID = "prospect_id"

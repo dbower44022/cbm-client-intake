@@ -84,8 +84,10 @@ class FakeCrm:
                     "postcardSize": {"options": ["", "4x6", "6x9", "6x11"]},
                     **({"smsMessage": {"type": "text"}} if self.with_sms_field else {})}
         if key == f"entityDefs.{cfg.PROSPECT}.fields":
-            return {"funnelStage": {"options": list(cfg.STAGES)}, "entryDoor": {"options": ["State filing", "List"]},
-                    "sideExit": {"options": ["", "Already known", "Stale"]}, "addressStatus": {"options": ["Usable", "Dead"]}}
+            return {"leadStatus": {"options": list(cfg.LEAD_STATUSES)}, "leadStatusChangedAt": {"type": "datetime"},
+                    "leadSource": {"options": ["", "State filing", "List", "Partner file"]},
+                    "sideExit": {"options": ["", "Duplicate", "Stale", "Already known"]},
+                    "addressStatus": {"options": ["Usable", "Dead"]}}
         return None
 
     async def metadata_enum_options(self, entity, field):
@@ -101,6 +103,8 @@ class FakeCrm:
             return row.get(attr) in (val or [])
         if t == "isNull":
             return row.get(attr) in (None, "")
+        if t == "isNotNull":
+            return row.get(attr) not in (None, "")
         if t == "contains":
             return str(val).lower() in str(row.get(attr) or "").lower()
         return True
@@ -377,11 +381,13 @@ def test_manual_status_moves_per_kind():
 
 
 def test_advance_stage_is_advance_only():
-    assert service.advance_stage("Qualified", "Lead") == "Lead"
-    assert service.advance_stage("Lead", "Qualified") is None
-    assert service.advance_stage("Warm Lead", "Lead") is None
-    assert service.advance_stage(None, "Lead") == "Lead"
-    assert service.advance_stage("Qualified", "Client") is None   # never stored
+    # The stages after first contact (ruling 50): Prospect · Engaged · Opportunity.
+    assert service.advance_stage("Prospect", "Engaged") == "Engaged"
+    assert service.advance_stage("Engaged", "Prospect") is None
+    assert service.advance_stage("Opportunity", "Engaged") is None
+    assert service.advance_stage(None, "Prospect") == "Prospect"
+    assert service.advance_stage("Prospect", "Client") is None    # never stored
+    assert service.advance_stage("Prospect", "Qualified") is None # a lead status, not a stage
 
 
 def test_address_text_round_trip():
@@ -396,41 +402,49 @@ def test_address_text_round_trip():
 # --- the postcard kind (§ 3.2) ------------------------------------------------------------------------
 
 def _prospect(crm, name, *, stage="Qualified", exit_=None, address=True, status="Usable"):
-    row = {"name": name, "businessName": name, "funnelStage": stage, "addressStatus": status, "sideExit": exit_}
+    """A lead; ``stage`` is its lead status (the helper's old name kept)."""
+    row = {"name": name, "businessName": name, "leadStatus": stage, "addressStatus": status, "sideExit": exit_}
     if address:
         row.update(mailingAddressStreet="1 Main St", mailingAddressCity="Cleveland", mailingAddressState="OH", mailingAddressPostalCode="44113")
     return crm.add(cfg.PROSPECT, row)
 
 
-def test_selection_applies_rulings_10_14_15():
+def test_selection_applies_rulings_10_14_15_and_44():
     crm = FakeCrm()
     a = _prospect(crm, "Acme")
+    _prospect(crm, "Unqualified one", stage="Unqualified")
     _prospect(crm, "Dead address", status="Dead")
-    _prospect(crm, "Already known", exit_="Already known")
+    _prospect(crm, "Duplicate", exit_="Duplicate")
     _prospect(crm, "No address", address=False)
-    _prospect(crm, "Lead only", stage="Lead")
+    _prospect(crm, "Disqualified", stage="Disqualified")
+    _prospect(crm, "Converted", stage="Converted")
     carded = _prospect(crm, "Carded")
     crm.add(cfg.TOUCH, {"channel": "Postcard", "touchStatus": "Sent", "prospectId": carded["id"]})
-    crm.add("Account", {"name": "Promoted Co", "cCompanyType": ["Prospect"], "cFunnelStage": "Qualified",
+    crm.add("Account", {"name": "Prospect Co", "cCompanyType": ["Prospect"], "cFunnelStage": "Prospect",
                         "billingAddressStreet": "2 Main", "billingAddressCity": "Akron", "billingAddressState": "OH", "billingAddressPostalCode": "44308"})
-    crm.add("Account", {"name": "Plain Client", "cCompanyType": ["Client"], "cFunnelStage": "Qualified",
+    crm.add("Account", {"name": "Plain Client", "cCompanyType": ["Client"], "cFunnelStage": "Prospect",
                         "billingAddressStreet": "3 Main", "billingAddressCity": "Akron", "billingAddressState": "OH", "billingAddressPostalCode": "44308"})
-    targets = asyncio.run(postcard.select_targets(crm, {"stages": ["Qualified"], "includeCompanies": True}))
-    names = sorted(t["name"] for t in targets)
-    assert names == ["Acme", "Promoted Co"]
-    # A prospect record stands for the company it was promoted to: one card per
-    # business (two went to Lakeview Bakery on 10-15-26).
-    linked = crm.add("Account", {"name": "Linked Co", "cCompanyType": ["Prospect"], "cFunnelStage": "Qualified",
+    # Ruling 44: the default reaches Unqualified and Qualified leads, and no Company.
+    targets = asyncio.run(postcard.select_targets(crm, None))
+    assert sorted(t["name"] for t in targets) == ["Acme", "Unqualified one"]
+    assert {t["stage"] for t in targets} == {"Qualified", "Unqualified"}
+    # Companies typed Prospect (already contacted) only when asked for.
+    with_co = asyncio.run(postcard.select_targets(crm, {"statuses": ["Qualified"], "stages": ["Prospect"]}))
+    assert sorted(t["name"] for t in with_co) == ["Acme", "Prospect Co"]
+    # A card already sent to a converted lead's Company counts for the lead too.
+    linked = crm.add("Account", {"name": "Linked Co", "cCompanyType": ["Prospect"], "cFunnelStage": "Prospect",
                                  "billingAddressStreet": "9 Main", "billingAddressCity": "Akron", "billingAddressState": "OH", "billingAddressPostalCode": "44308"})
     crm.rows[cfg.PROSPECT][a["id"]]["promotedCompanyId"] = linked["id"]
-    again = asyncio.run(postcard.select_targets(crm, {"stages": ["Qualified"], "includeCompanies": True}))
-    assert sorted(t["name"] for t in again) == ["Acme", "Promoted Co"]
-    # ...and a card already sent to that company counts for the record too.
     crm.add(cfg.TOUCH, {"channel": "Postcard", "touchStatus": "Sent", "companyId": linked["id"]})
-    third = asyncio.run(postcard.select_targets(crm, {"stages": ["Qualified"], "includeCompanies": True}))
-    assert sorted(t["name"] for t in third) == ["Promoted Co"]
-    with_lead = asyncio.run(postcard.select_targets(crm, {"stages": ["Qualified", "Lead"], "includeCompanies": False}))
-    assert sorted(t["name"] for t in with_lead) == ["Lead only"]   # Acme is carded through its company now
+    third = asyncio.run(postcard.select_targets(crm, {"statuses": ["Qualified"]}))
+    assert sorted(t["name"] for t in third) == []
+    # ...and a card to the lead counts for its Company (one card per business, ever).
+    crm.add(cfg.TOUCH, {"channel": "Postcard", "touchStatus": "Sent", "prospectId": carded["id"]})
+    other = crm.add("Account", {"name": "Carded Co", "cCompanyType": ["Prospect"], "cFunnelStage": "Prospect",
+                                "billingAddressStreet": "8 Main", "billingAddressCity": "Akron", "billingAddressState": "OH", "billingAddressPostalCode": "44308"})
+    crm.rows[cfg.PROSPECT][carded["id"]]["promotedCompanyId"] = other["id"]
+    cos = asyncio.run(postcard.select_targets(crm, {"statuses": [], "stages": ["Prospect"]}))
+    assert sorted(t["name"] for t in cos) == ["Prospect Co"]
 
 
 def test_build_list_reconciles_planned_touches_and_moves_draft_to_awaiting():
@@ -478,7 +492,7 @@ def test_run_mails_each_planned_touch_once_and_completes():
     sent = crm.rows[cfg.TOUCH][t1["id"]]
     assert sent["touchStatus"] == "Sent" and sent["vendorPieceId"] == f"dryrun-{t1['id']}"
     assert looks_like_token(sent["scanToken"]) and "Cleveland, OH 44113" in sent["mailedAddress"]
-    assert sent["stageAtTouch"] == "Qualified"
+    assert sent["stageAtTouch"] == "Qualified"     # the lead's status when mailed
     assert crm.rows[cfg.TOUCH][t2["id"]]["touchStatus"] == "Cancelled"
     assert crm.rows[cfg.CAMPAIGN][camp["id"]]["campaignStatus"] == "Complete"
     link = asyncio.run(store.landing_link(camp["id"]))
@@ -486,15 +500,15 @@ def test_run_mails_each_planned_touch_once_and_completes():
     assert vendor.created[0]["key"] == t1["id"]                      # the idempotency key is the touch id
 
 
-def test_returned_event_kills_the_address_and_leaves_the_rung():
+def test_returned_event_kills_the_address_and_leaves_the_status():
     crm = FakeCrm()
-    p = _prospect(crm, "Acme", stage="Lead")
+    p = _prospect(crm, "Acme", stage="Unqualified")
     t = crm.add(cfg.TOUCH, {"touchStatus": "Sent", "vendorPieceId": "psc_1", "prospectId": p["id"]})
     result = asyncio.run(postcard.apply_event(crm, piece_id="psc_1", kind="returned", vendor_status="returned_to_sender"))
     assert result["applied"] is True
     assert crm.rows[cfg.TOUCH][t["id"]]["touchStatus"] == "Returned"
     assert crm.rows[cfg.PROSPECT][p["id"]]["addressStatus"] == "Dead"
-    assert crm.rows[cfg.PROSPECT][p["id"]]["funnelStage"] == "Lead"
+    assert crm.rows[cfg.PROSPECT][p["id"]]["leadStatus"] == "Unqualified"
     unknown = asyncio.run(postcard.apply_event(crm, piece_id="psc_nope", kind="delivered", vendor_status="x"))
     assert unknown["applied"] is False
 
@@ -547,66 +561,79 @@ CSV = (
 def test_plan_classifies_every_row_and_apply_writes_exactly_that():
     crm = FakeCrm(); store = FakeStore()
     crm.add("Account", {"name": "Known Client", "billingAddressPostalCode": "44115", "website": ""})
-    plan = asyncio.run(imports.plan_import(crm, store, text=CSV, name="Filings Oct", door=cfg.DOOR_FILING, qualified_by="Filter v1"))
+    plan = asyncio.run(imports.plan_import(crm, store, text=CSV, name="Filings Oct", door=cfg.SOURCE_FILING, qualified_by="Filter v1"))
     c = plan["counts"]
     assert (c["rows"], c["create"], c["alreadyKnown"], c["duplicate"], c["invalid"]) == (5, 2, 1, 1, 1)
-    assert c["promoteCompany"] == 1 and c["promoteContact"] == 1
+    # Ruling 53: a filing row with a website or an email enters Qualified.
+    assert c["qualified"] == 2 and c["unqualified"] == 0
     outcomes = {r["name"]: r["outcome"] for r in plan["rows"]}
     assert outcomes["Known Client"] == "already_known" and outcomes["No Address"] == "invalid"
     batch = asyncio.run(store.get_batch(plan["batchId"]))
     result = asyncio.run(imports.apply_import(crm, crm, store, batch, user_name="Mark"))
-    assert (result["created"], result["alreadyKnown"], result["companies"], result["contacts"], result["errors"]) == (2, 1, 1, 1, 0)
-    prospects = list(crm.rows[cfg.PROSPECT].values())
-    assert len(prospects) == 3
-    # The prospect record is created as the user WITHOUT its company links; the
-    # links are the API client's second write (a user without Account read 403s
-    # on a create that carries one — found live 10-15-26).
-    prospect_creates = [p for e, p in crm.created if e == cfg.PROSPECT]
-    assert all("promotedCompanyId" not in p and "alreadyKnownCompanyId" not in p for p in prospect_creates)
-    acme = next(p for p in prospects if p["businessName"] == "Acme Widgets")
-    assert acme["funnelStage"] == "Qualified" and acme["entryDoor"] == "State filing" and acme["qualifiedBy"] == "Filter v1"
-    assert acme["mailingAddressState"] == "OH" and acme["promotedCompanyId"]
-    company = crm.rows["Account"][acme["promotedCompanyId"]]
-    assert company["cCompanyType"] == ["Prospect"] and company["cFunnelStage"] == "Qualified"
-    known = next(p for p in prospects if p["businessName"] == "Known Client")
-    assert known["sideExit"] == "Already known" and known["alreadyKnownCompanyId"]
-    shop = next(p for p in prospects if p["businessName"] == "Person Shop")
-    contact = crm.rows["Contact"][shop["promotedContactId"]]
-    assert contact["cContactType"] == ["Prospect"] and contact["emailAddress"] == "owner@shop-example.com"
+    assert (result["created"], result["duplicates"], result["qualified"], result["errors"]) == (2, 1, 2, 0)
+    leads = list(crm.rows[cfg.PROSPECT].values())
+    assert len(leads) == 3
+    # Ruling 43: the import creates no Company and no Contact.
+    assert [e for e, _p in crm.created if e in ("Account", "Contact")] == []
+    # The lead is created as the user WITHOUT its company link; the link is
+    # the API client's second write (found live 10-15-26).
+    lead_creates = [p for e, p in crm.created if e == cfg.PROSPECT]
+    assert all("alreadyKnownCompanyId" not in p for p in lead_creates)
+    acme = next(p for p in leads if p["businessName"] == "Acme Widgets")
+    assert acme["leadStatus"] == "Qualified" and acme["leadSource"] == "State filing" and acme["qualifiedBy"] == "Filter v1"
+    assert acme["mailingAddressState"] == "OH" and not acme.get("promotedCompanyId")
+    known = next(p for p in leads if p["businessName"] == "Known Client")
+    assert known["sideExit"] == "Duplicate" and known["alreadyKnownCompanyId"]
+    assert known["leadStatus"] == "Unqualified" and "qualifiedBy" not in known      # no website or email
     # The same file again is a no-op.
-    again = asyncio.run(imports.plan_import(crm, store, text=CSV, name="Filings Oct again", door=cfg.DOOR_FILING, qualified_by="Filter v1"))
+    again = asyncio.run(imports.plan_import(crm, store, text=CSV, name="Filings Oct again", door=cfg.SOURCE_FILING, qualified_by="Filter v1"))
     assert again["nothingToDo"] is True and again["counts"]["knownRow"] == 3
 
 
-def test_plan_names_a_missing_column_and_the_list_door_enters_unverified():
+def test_a_matched_contact_makes_a_duplicate_never_a_converted_lead():
+    crm = FakeCrm(); store = FakeStore()
+    crm.add("Contact", {"name": "Owner", "emailAddress": "owner@shop-example.com", "cContactType": ["Prospect"]})
+    plan = asyncio.run(imports.plan_import(crm, store, text=CSV, name="Filings", door=cfg.SOURCE_FILING, qualified_by="F"))
+    batch = asyncio.run(store.get_batch(plan["batchId"]))
+    asyncio.run(imports.apply_import(crm, crm, store, batch, user_name="Mark"))
+    shop = next(p for p in crm.rows[cfg.PROSPECT].values() if p["businessName"] == "Person Shop")
+    assert shop["sideExit"] == "Duplicate" and "Owner" in shop["sideExitNote"]
+    assert not shop.get("promotedContactId")
+
+
+def test_plan_names_a_missing_column_and_a_list_row_enters_unqualified():
     crm = FakeCrm(); store = FakeStore()
     with pytest.raises(service.CampaignError) as exc:
-        asyncio.run(imports.plan_import(crm, store, text="name,zip\nA,1\n", name="x", door=cfg.DOOR_FILING, qualified_by=""))
+        asyncio.run(imports.plan_import(crm, store, text="name,zip\nA,1\n", name="x", door=cfg.SOURCE_FILING, qualified_by=""))
     assert "business_name" in str(exc.value)
     plan = asyncio.run(imports.plan_import(crm, store, text=CSV.splitlines()[0] + "\n" + CSV.splitlines()[1] + "\n",
-                                           name="Vendor list", door=cfg.DOOR_LIST, qualified_by="", list_source="Dun"))
+                                           name="Vendor list", door=cfg.SOURCE_LIST, qualified_by="", list_source="Dun"))
     batch = asyncio.run(store.get_batch(plan["batchId"]))
     asyncio.run(imports.apply_import(crm, crm, store, batch, user_name="Mark"))
     p = next(iter(crm.rows[cfg.PROSPECT].values()))
-    assert p["funnelStage"] == "Unverified" and p["entryDoor"] == "List" and p["importBatch"].startswith("Dun — ")
+    # Rulings 18, 53: a list row enters Unqualified even with a website.
+    assert p["leadStatus"] == "Unqualified" and p["leadSource"] == "List" and p["importBatch"].startswith("Dun — ")
     assert "qualifiedBy" not in p
 
 
 # --- the landing page and the response (§ 4) -------------------------------------------------------
 
-def test_landing_scan_moves_to_lead_once_and_counts():
+def test_landing_scan_counts_and_changes_no_status():
+    """Ruling 51: a scan alone changes no status."""
     from campaigns.landing import record_scan
     crm = FakeCrm()
-    p = _prospect(crm, "Acme")
+    p = _prospect(crm, "Acme", stage="Unqualified")
     t = crm.add(cfg.TOUCH, {"touchStatus": "Sent", "prospectId": p["id"], "scanToken": "abcdefghjkmn", "scanCount": 0})
     out = asyncio.run(record_scan(crm, crm.rows[cfg.TOUCH][t["id"]]))
-    assert out["written"] is True and out["stage"] == "Lead"
+    assert out == {"written": True}
     touch = crm.rows[cfg.TOUCH][t["id"]]
     assert touch["scanCount"] == 1 and touch["outcome"] == "Scanned" and touch["firstScannedAt"]
     first = touch["firstScannedAt"]
-    out2 = asyncio.run(record_scan(crm, dict(touch)))
-    assert "stage" not in out2 and crm.rows[cfg.TOUCH][t["id"]]["scanCount"] == 2
+    asyncio.run(record_scan(crm, dict(touch)))
+    assert crm.rows[cfg.TOUCH][t["id"]]["scanCount"] == 2
     assert crm.rows[cfg.TOUCH][t["id"]]["firstScannedAt"] == first
+    assert crm.rows[cfg.PROSPECT][p["id"]]["leadStatus"] == "Unqualified"
+    assert not [u for u in crm.updated if u[0] == cfg.PROSPECT]
     planned = crm.add(cfg.TOUCH, {"touchStatus": "Planned", "prospectId": p["id"], "scanToken": "planned12345"})
     assert asyncio.run(record_scan(crm, planned)) == {"written": False, "preview": True}
 
@@ -640,24 +667,62 @@ def test_landing_page_is_404_until_switched_on_and_404s_unknown_tokens(monkeypat
     assert posted.status_code == 200
 
 
-def test_response_orchestrator_promotes_by_email_and_website_and_is_true_only():
+def test_response_converts_the_lead_to_a_company_and_its_contact_true_only():
     crm = FakeCrm()
-    p = _prospect(crm, "Acme")
+    p = _prospect(crm, "Acme", stage="Unqualified")
     crm.add(cfg.TOUCH, {"touchStatus": "Sent", "prospectId": p["id"], "scanToken": "abcdefghjkmn", "outreachCampaignId": "camp1"})
     sub = ProspectResponse(submission_token="tok-12345678", scan_token="abcdefghjkmn", action="mentor",
                            business_name="Acme Widgets", mailing_street="2 New St", mailing_city="Cleveland", mailing_state="OH", mailing_zip="44113",
                            first_name="Ann", last_name="Lee", email="ann@acme-example.com", phone="2165550143", website="https://www.acme.com/",
                            marketing_consent=False, sms_consent=True)
     result = asyncio.run(respond(sub, crm))
-    prospect = crm.rows[cfg.PROSPECT][p["id"]]
-    assert prospect["businessName"] == "Acme Widgets" and prospect["mailingAddressStreet"] == "2 New St"
-    assert prospect["funnelStage"] == "Lead" and prospect["promotedCompanyId"] and prospect["promotedContactId"]
+    lead = crm.rows[cfg.PROSPECT][p["id"]]
+    assert lead["businessName"] == "Acme Widgets" and lead["mailingAddressStreet"] == "2 New St"
+    assert lead["leadStatus"] == "Converted" and lead["leadStatusChangedAt"]
+    assert lead["promotedCompanyId"] == result["companyId"] and lead["promotedContactId"] == result["contactId"]
+    assert result["leadConverted"] is True
     company = crm.rows["Account"][result["companyId"]]
     assert company["cCompanyType"] == ["Prospect"] and company["cOutreachCampaignId"] == "camp1"
+    assert company["cFunnelStage"] == "Prospect" and company["billingAddressStreet"] == "2 New St"
     contact = crm.rows["Contact"][result["contactId"]]
     assert contact["cSmsOptIn"] is True and "cMarketingOptIn" not in contact   # true-only
     assert contact["cContactType"] == ["Prospect"] and contact["accountId"] == company["id"]
+    assert contact["cFunnelStage"] == "Prospect"
     assert result["action"] == "mentor"
+
+
+def test_an_email_alone_converts_a_business_lead_to_its_company_and_contact():
+    """Ruling 52: the Company is made from the lead even without a website."""
+    crm = FakeCrm()
+    p = _prospect(crm, "Lakeview Bakery", stage="Unqualified")
+    crm.add(cfg.TOUCH, {"touchStatus": "Sent", "prospectId": p["id"], "scanToken": "abcdefghjkmn"})
+    sub = ProspectResponse(submission_token="tok-12345678", scan_token="abcdefghjkmn", email="jo@gmail.com", first_name="Jo")
+    result = asyncio.run(respond(sub, crm))
+    company = crm.rows["Account"][result["companyId"]]
+    assert company["name"] == "Lakeview Bakery" and not company.get("website")
+    assert company["billingAddressPostalCode"] == "44113"
+    assert crm.rows["Contact"][result["contactId"]]["accountId"] == company["id"]
+    # A same-named Company in another ZIP is another business; in the same ZIP it is this one.
+    crm2 = FakeCrm()
+    crm2.add("Account", {"name": "Lakeview Bakery", "billingAddressPostalCode": "44308"})
+    same = crm2.add("Account", {"name": "Lakeview Bakery", "billingAddressPostalCode": "44113"})
+    p2 = _prospect(crm2, "Lakeview Bakery", stage="Qualified")
+    crm2.add(cfg.TOUCH, {"touchStatus": "Sent", "prospectId": p2["id"], "scanToken": "abcdefghjkmn"})
+    r2 = asyncio.run(respond(sub, crm2))
+    assert r2["companyId"] == same["id"] and r2["companyCreated"] is False
+
+
+def test_a_response_converts_on_the_leads_own_website():
+    """A response is first contact: a lead that already holds a website converts
+    on a name alone (rulings 42-44)."""
+    crm = FakeCrm()
+    p = crm.add(cfg.PROSPECT, {"name": "Acme", "businessName": "Acme", "leadStatus": "Qualified", "website": "acme.com",
+                                "mailingAddressPostalCode": "44113"})
+    crm.add(cfg.TOUCH, {"touchStatus": "Sent", "prospectId": p["id"], "scanToken": "abcdefghjkmn"})
+    sub = ProspectResponse(submission_token="tok-12345678", scan_token="abcdefghjkmn", first_name="Ann")
+    result = asyncio.run(respond(sub, crm))
+    assert result["leadConverted"] is True and result["companyId"] and "contactId" not in result
+    assert crm.rows[cfg.PROSPECT][p["id"]]["leadStatus"] == "Converted"
 
 
 def test_response_orchestrator_holds_a_same_named_company_at_another_website():
@@ -671,15 +736,15 @@ def test_response_orchestrator_holds_a_same_named_company_at_another_website():
         asyncio.run(respond(sub, crm))
 
 
-def test_response_without_email_or_website_promotes_nothing():
+def test_response_without_email_or_website_converts_nothing():
     crm = FakeCrm()
-    p = _prospect(crm, "Acme")
+    p = _prospect(crm, "Acme", stage="Unqualified")
     crm.add(cfg.TOUCH, {"touchStatus": "Sent", "prospectId": p["id"], "scanToken": "abcdefghjkmn"})
     sub = ProspectResponse(submission_token="tok-12345678", scan_token="abcdefghjkmn", first_name="Ann")
     result = asyncio.run(respond(sub, crm))
     assert "contactId" not in result and "companyId" not in result
     assert not crm.rows.get("Contact") and not crm.rows.get("Account")
-    assert crm.rows[cfg.PROSPECT][p["id"]]["funnelStage"] == "Lead"
+    assert crm.rows[cfg.PROSPECT][p["id"]]["leadStatus"] == "Unqualified"
 
 
 # --- the hidden fields and the SMS tick on every door ------------------------------------------------
@@ -718,15 +783,15 @@ def test_hidden_attribute_beats_every_display_rule(sheet):
 
 
 def test_a_partial_apply_resumes_without_doubling_records():
-    """Two rows 403 on the first apply (the live case): the three that landed are
-    recorded, so a re-plan knows them; the promoted company and contact of the
-    failed rows are reused, never created twice; a re-apply finishes the batch."""
+    """One row 403s on the first apply (the live case): the rows that landed are
+    recorded, so a re-plan knows them; a re-apply finishes the batch without a
+    second lead for any row."""
     crm = FakeCrm(); store = FakeStore()
-    plan = asyncio.run(imports.plan_import(crm, store, text=CSV, name="Filings Oct", door=cfg.DOOR_FILING, qualified_by="Filter v1"))
+    plan = asyncio.run(imports.plan_import(crm, store, text=CSV, name="Filings Oct", door=cfg.SOURCE_FILING, qualified_by="Filter v1"))
     batch = asyncio.run(store.get_batch(plan["batchId"]))
-    # Make the FIRST prospect create fail once (Acme, the row with a website).
     real_create = crm.create
     state = {"failed": False}
+
     async def flaky_create(entity, payload):
         if entity == cfg.PROSPECT and payload.get("businessName") == "Acme Widgets" and not state["failed"]:
             state["failed"] = True
@@ -735,19 +800,15 @@ def test_a_partial_apply_resumes_without_doubling_records():
         return await real_create(entity, payload)
     crm.create = flaky_create
     first = asyncio.run(imports.apply_import(crm, crm, store, batch, user_name="Mark"))
-    assert first["errors"] == 1 and first["created"] == 2 and first["companies"] == 1   # Known Client is a create here: no such Account in this CRM
+    assert first["errors"] == 1 and first["created"] == 2      # Known Client is a create here: no such Account
     assert asyncio.run(store.get_batch(batch["id"]))["status"] == "planned"
-    # A re-plan of the same file: the landed rows are known; Acme is NOT "already
-    # known" through its own promoted company, it is still to create.
-    again = asyncio.run(imports.plan_import(crm, store, text=CSV, name="Filings Oct 2", door=cfg.DOOR_FILING, qualified_by="Filter v1"))
+    again = asyncio.run(imports.plan_import(crm, store, text=CSV, name="Filings Oct 2", door=cfg.SOURCE_FILING, qualified_by="Filter v1"))
     assert again["counts"]["knownRow"] == 2 and again["counts"]["create"] == 1 and again["nothingToDo"] is False
     batch2 = asyncio.run(store.get_batch(again["batchId"]))
     second = asyncio.run(imports.apply_import(crm, crm, store, batch2, user_name="Mark"))
-    assert second["created"] == 1 and second["companies"] == 0            # the company was reused
-    companies = [c for c in crm.rows["Account"].values() if c.get("name") == "Acme Widgets"]
-    assert len(companies) == 1
-    acme = next(p for p in crm.rows[cfg.PROSPECT].values() if p["businessName"] == "Acme Widgets")
-    assert acme["promotedCompanyId"] == companies[0]["id"]
+    assert second["created"] == 1
+    names = sorted(p["businessName"] for p in crm.rows[cfg.PROSPECT].values())
+    assert names == ["Acme Widgets", "Known Client", "Person Shop"]
 
 
 def test_imports_list_route_is_not_shadowed_by_the_record_route(monkeypatch):
