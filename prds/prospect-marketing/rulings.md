@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-18-26 23:16 · Revision 1.11 — change log at the end.
+Last Updated: 10-19-26 01:09 · Revision 1.12 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -386,6 +386,21 @@ and 44 were put as consequential decisions.
     "1". Ruling 42's rule that a lead without a website or email is never
     Qualified stands whole. (10-18-26)
 
+### Doug's ruling (10-19-26, on build plan § 9 question 13)
+
+Put as a consequential decision in a Claude Code session: option A, change
+the stored option values on `CProspect`, Contact and Account and move the
+existing records with a dry-run-first script; option B, relabel the options
+in the CRM and keep `Unverified`, `Lead`, `Warm Lead` and `Already known` as
+stored values. Doug's reply at 01:09: "a".
+
+45. **The rework changes the stored values, not only the labels**
+    (option A). The CRM, the code, the screens and the documents carry one
+    word per stage. Existing records are moved by a one-time script that
+    reports before it writes, applied on crm-test first, then production
+    at a Sunday slot, then Boston with its release; each CRM's records are
+    counted before the script runs. (10-19-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -506,8 +521,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.11 |
-| Last Updated | 10-18-26 23:16 |
+| Version | 1.12 |
+| Last Updated | 10-19-26 01:09 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -515,6 +530,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.12 | 10-19-26 01:09 | Claude (Claude Code) | Ruling 45 appended: the lead-model rework changes the stored values, not only the labels (Doug's "a" to build plan § 9 question 13). |
 | 1.11 | 10-18-26 23:16 | Claude (Cowork) | Rulings 41–44 appended: the lead model — Lead for every record from outside, "door" retired (41); Unqualified / Qualified / Disqualified, Prospect at contact (42); Company or Contact created only at first contact (43, Doug's "1"); campaigns may select Unqualified leads (44, Doug's "1"). The ladder table and the walk above are left as recorded; build plan v0.8 § 7a carries the new ladder. |
 | 1.10 | 10-18-26 11:20 | Claude (Claude Code) | Ruling 40 appended: app-written campaign fields are not Read-only; a field rule keeps staff off them (Doug's "a", Phase 4 pass finding). |
 | 1.9 | 10-18-26 02:00 | Claude (Claude Code) | Ruling 39 appended: the text's wording is a campaign field in the CRM (Doug's "a"), with the follow-on details decided. |

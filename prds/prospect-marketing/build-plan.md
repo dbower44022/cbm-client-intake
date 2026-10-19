@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-18-26 23:16 · Revision 0.8 — change log at the end.
+Last Updated: 10-19-26 01:09 · Revision 0.9 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -1406,7 +1406,8 @@ Questions 13–16 were added in v0.8 for the rework of § 7a (rulings 41–44).
     module's constants. The alternative relabels the options in the CRM and
     keeps `Unverified`, `Lead` and `Warm Lead` as stored values — cheaper
     now, but the code and the CRM then disagree in every read, which is the
-    confusion the rulings set out to remove.
+    confusion the rulings set out to remove. **Answered 10-19-26: A, change
+    the stored values (ruling 45).**
 14. **What does the old "conversion" become?** The Responses tab counts
     *Converted* = a relationship record carries the campaign. Under ruling
     43, *converted* means a lead became a Prospect. Recommended: the tab
@@ -1458,8 +1459,8 @@ best-effort mirror.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — build plan |
-| Version | v0.8 — Phases 1–4 built (v0.258.0, v0.259.0, v0.261.0, v0.262.0–v0.264.0) on the earlier model; rulings 41–44 (the lead model) recorded and their rework planned in § 7a; questions 13–16 open |
-| Last Updated | 10-18-26 23:16 |
+| Version | v0.9 — Phases 1–4 built (v0.258.0, v0.259.0, v0.261.0, v0.262.0–v0.264.0) on the earlier model; rulings 41–44 (the lead model) recorded and their rework planned in § 7a; question 13 answered (ruling 45), 14–16 open |
+| Last Updated | 10-19-26 01:09 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
 | Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
@@ -1468,6 +1469,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.9 | 10-19-26 01:09 | Claude (Claude Code) | § 9 question 13 answered: A, change the stored values (ruling 45). |
 | 0.8 | 10-18-26 23:16 | Claude (Cowork) | Rulings 41–44 (the lead model, from the executive overview session): a revision note at the top; new § 7a — the model as ruled, the drafts chosen (stages Prospect · Engaged · Opportunity, exit Duplicate, a scan does not convert, CRM label *Outreach Lead*), the component-by-component change table, the words that move, the order and its cost; questions 13–16 added to § 9. §§ 1–6 not rewritten: they describe the build until § 7a is built. |
 | 0.7 | 10-18-26 02:24 | Claude (Claude Code) | § 7 Phase 4 marked built (v0.262.0–v0.264.0) with rulings 38 and 39; Phase 5's texting item struck. |
 | 0.6 | 10-18-26 00:50 | Claude (Claude Code) | § 7 Phase 3 marked built (v0.261.0) with what it holds; question 6 answered (ruling 36) and the Mentor Role's two grants named; ruling 37 recorded as built first. |
