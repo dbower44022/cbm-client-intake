@@ -397,7 +397,22 @@ found; move resolved items to the bottom with the resolution date.
     The conformance check's `exit=1` is the five event email templates Track
     D still owes (`EventReminder` …), pre-existing; nothing else moved (the
     "before" run, step 2, was skipped, so this is read from the findings,
-    not a diff). Sections 3 to 8 not yet run.
+    not a diff). **Sections 3 and 4 DONE 10-18/19-26 (Doug as his regular login; read
+    back from here 10-19-26 00:16 as the org key):** the seven sessions saved with
+    the right Cleveland times (stored UTC: 23:00 for 7:00 PM, 16:00 for
+    12:00 PM), the three new lengths used (1h 15m ×2, 1h 30m, 3h 30m), all
+    Public / This chapter with slugs; the public calendar answers seven
+    cards and the library twelve, both imports shown with their topics; six
+    presenter entries over four events, one Contact per person (Andrew
+    Ciszczon on two events, no duplicate), photo routes 200 as a visitor,
+    the series page 200 with three cards. Two entry misses, not defects:
+    *Get Your Board Fundraising* carries only Finance & Accounting
+    (Industry-Specific not ticked) and the 10-22 *AI for Small Business*
+    webinar carries no topic. One data point for Doug: the card's title
+    line copies `CMentorProfile.mentorTitle`, which three mentors use as a
+    tagline (Sue Marrone's reads like a workshop blurb, CiCi Caver's is an
+    industry list) and Cindie Pacheco's profile has no photo and no
+    biography — edit the card, or the profile. Sections 5 to 8 owed.
     **State 10-18-26 23:22: the step page was rebuilt to the 10-17-26 step standard
     (rev 2.0, done boxes, every value pre-filled from reads) and now carries
     the whole job**: the Track F production apply (#39, #41 — their Sunday
