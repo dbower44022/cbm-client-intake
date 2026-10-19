@@ -190,10 +190,18 @@ who should persist, or a CRM change you want in the pristine state — and
 **always after a CRM change that adds a table**. A record table newer than the
 baseline is not in the dump, so the reset truncates it every night (the log
 names them: `N table(s) newer than the baseline will be truncated: …`). From
-10-08-26 to 10-11-26 that was `c_event_presenter` and
-`c_partner_profile_event`: every presenter and every partner-event link made
-on crm-test vanished at 04:00 UTC until the seeders learned to make them and
-the baseline was recaptured.
+10-08-26 that was `c_event_presenter` and `c_partner_profile_event`: every
+presenter and every partner-event link made on crm-test vanished at 04:00 UTC.
+v0.250.0 (10-11-26) taught the seeders to make them; by 10-18-26 the list had
+grown to ten tables (the prospect and outreach entities among them) and the
+recapture was still owed (`OPEN-ITEMS.md` #45). **The step page for the whole
+run, one command per copy button:**
+https://claude.ai/artifact/VSrvvKB49MkmzA2dgHRsfS.
+
+**When to run it: the morning after a reset.** The CRM half fires at 04:00
+UTC — midnight Eastern on daylight time, 23:00 the evening before once clocks
+go back (11-01-26) — and the app half at 01:00 Eastern, so anything after
+01:05 Eastern is after both. Never on a day with a release test running.
 
 ```bash
 ssh root@104.131.45.208 'python3 /usr/local/sbin/reset_crm_sandbox.py baseline --apply'

@@ -191,14 +191,29 @@ found; move resolved items to the bottom with the resolution date.
     `--apply` runs, the audit and containment checks, then on the droplet
     `purge-deleted --apply` and `baseline --apply`, then `reset --apply` by
     hand and the event, partner and funder opened as Mark Marketing, Partner
-    Manager and Sally Sponsor (`SANDBOX-RESET.md` § *Re-baseline*). Two
+    Manager and Sally Sponsor (`SANDBOX-RESET.md` § *Re-baseline*).
+    **Step page, every command with a copy button:**
+    https://claude.ai/artifact/VSrvvKB49MkmzA2dgHRsfS (Doug's private page,
+    written 10-11-26). **When:** the morning after a nightly reset — the CRM
+    half runs at 04:00 UTC, which is midnight Eastern on daylight time (23:00
+    the evening before once clocks go back on 11-01-26) and the app half an
+    hour later, so any time after 01:05 Eastern — on a day with no release
+    test running, because the capture freezes whatever is on crm-test. Two
     things the dry run could not prove: (a) whether the intake API key's role
-    may CREATE `CEventPresenter` — the org key reads it (handoff § 2); if the
-    apply 403s, run the enrichment under `scripts/run_with_admin.py`; (b) the
-    capture freezes whatever is on crm-test — today that includes the "Acme
-    Bank and Loan" partner and funder from the #43/#44 live checks (created
-    15:26 and 15:29 UTC), which must be gone (tonight's reset) or deleted
-    before the baseline is taken.
+    may CREATE `CEventPresenter` — the org key reads it (handoff § 2); a 403
+    on the enrichment apply is the stop-and-report case (the
+    `run_with_admin.py` launcher supplies only the `ESPO_ADMIN_*` variables,
+    which this script does not read); (b) a tester's half-made record left
+    on crm-test at capture time becomes pristine. **Still owed 10-18-26**,
+    and the gap has grown: the droplet's baseline is still 09-07-26 and the
+    reset of 10-18 truncated **ten** tables newer than it —
+    `c_engagement_partner_profile`, `c_event_presenter`,
+    `c_outreach_campaign`, `c_outreach_campaign_event`,
+    `c_outreach_campaign_partner_profile`, `c_outreach_touch`,
+    `c_partner_profile_event`, `c_partner_profile_mentor_profile`,
+    `c_prospect`, `c_sponsor_profile_mentor_profile` — so the prospect and
+    outreach arc's seeder stage (#51) should land before the same recapture,
+    or the recapture is done twice.
 
 50. **A partner's own client intake link (v0.255.0) — live on crm-test
     and production 10-12-26 17:42, live pass owed.** Doug's requirement 10-12-26, link form ruled the CRM id;
