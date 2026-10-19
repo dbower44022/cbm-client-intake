@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-19-26 01:22 · Revision 1.15 — change log at the end.
+Last Updated: 10-19-26 10:44 · Revision 1.16 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -455,6 +455,21 @@ Doug's reply at 01:22: "b".
     screens that create records are not an outside source and create no
     lead. (10-19-26)
 
+### Doug's ruling (10-19-26, at the start of the lead-model CRM handoff session)
+
+Put as a consequential decision: option A, a lead's status lives in the
+existing `CProspect.funnelStage` field with new options and the label
+"Lead status"; option B, a new field `leadStatus` holds it and
+`funnelStage` / `entryStage` on the lead stop being used, their removal
+proposed in the handoff for Doug to approve. crm-test held no `CProspect`
+records when this was put. Doug's reply at 10:44: "b".
+
+49. **A lead's status is a new field, `leadStatus`** (option B): an enum of
+    Unqualified · Qualified · Disqualified · Converted, default Unqualified,
+    with a `leadStatusChangedAt` stamp, not Read-only (ruling 40). The
+    lead's `funnelStage` and `entryStage` stop being used; their removal is
+    proposed in the handoff, never done without Doug's approval. (10-19-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -575,8 +590,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.15 |
-| Last Updated | 10-19-26 01:22 |
+| Version | 1.16 |
+| Last Updated | 10-19-26 10:44 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -584,6 +599,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.16 | 10-19-26 10:44 | Claude (Claude Code) | Ruling 49 appended: a lead's status is a new field `leadStatus` (Doug's "b", lead-model CRM handoff session). |
 | 1.15 | 10-19-26 01:22 | Claude (Claude Code) | Ruling 48 appended: every new record from a public form has a lead behind it, Converted at once (Doug's "b" to build plan § 9 question 16, the session's revised recommendation). |
 | 1.14 | 10-19-26 01:21 | Claude (Claude Code) | Ruling 47 appended: a call marked Interested converts the lead only with an email or a website (Doug's "a" to build plan § 9 question 15). |
 | 1.13 | 10-19-26 01:20 | Claude (Claude Code) | Ruling 46 appended: "converted" means a lead became a Prospect; the win is "became a client, partner or funder" (Doug's "a" to build plan § 9 question 14). |
