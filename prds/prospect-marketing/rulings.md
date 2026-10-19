@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-19-26 11:13 · Revision 1.19 — change log at the end.
+Last Updated: 10-19-26 11:20 · Revision 1.20 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -518,6 +518,20 @@ Doug's reply at 11:13: "a".
     a Contact only. This changes ruling 21's rule that only a web domain
     creates a Company. (10-19-26)
 
+### Doug's ruling (10-19-26, on how a state filing enters)
+
+Put as a consequential decision in the same session, because ruling 42's
+note and build plan § 7a.3 read differently: option A, a state-filing row
+carrying a website or an email enters Qualified on the outside filter's
+verdict (ruling 11), and every other row enters Unqualified; option B,
+every row enters Unqualified. Doug's reply at 11:20: "a".
+
+53. **A state filing with a website or an email enters Qualified**
+    (option A), with the outside filter recorded as Qualified by and the
+    time as Qualified at (ruling 11). A filing row with neither, and every
+    list or partner-file row, enters Unqualified (rulings 18, 42). The
+    import creates no Company or Contact (ruling 43). (10-19-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -638,8 +652,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.19 |
-| Last Updated | 10-19-26 11:13 |
+| Version | 1.20 |
+| Last Updated | 10-19-26 11:20 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -647,6 +661,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.20 | 10-19-26 11:20 | Claude (Claude Code) | Ruling 53 appended: a state filing with a website or an email enters Qualified (Doug's "a"). |
 | 1.19 | 10-19-26 11:13 | Claude (Claude Code) | Ruling 52 appended: a business lead converts to a Company and its Contact, even without a website (Doug's "a"). |
 | 1.18 | 10-19-26 11:10 | Claude (Claude Code) | Ruling 51 appended: a scan alone changes no status (Doug's "a" to build plan § 7a.2's last draft, at the start of the lead-model code session). |
 | 1.17 | 10-19-26 10:49 | Claude (Claude Code) | Ruling 50 appended: build plan § 7a.2's four CRM-facing drafts approved as written (Doug's "a"). |
