@@ -1,6 +1,6 @@
 # CBM Events & Webinars — Finalization Plan
 
-Last Updated: 10-09-26 17:10 · Revision 4.33 — see change log at the end.
+Last Updated: 10-18-26 23:22 · Revision 4.34 — see change log at the end.
 
 Companion to `CBM_Events_PRD.md`, `CBM_Events_Implementation_Plan.md` and
 `CBM_Events_Registration_Recognition_Plan.md`. Those three say what the feature
@@ -704,6 +704,7 @@ attendance recorded → recording link pasted → the engagement rollup shows it
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 4.34 | 10-18-26 23:22 | Claude (Claude Code) | The production test page rebuilt to the step standard and widened: it now carries the Track F production apply (F1, F4), three new duration choices (a CRM plan, v0.264.3), the two missing recordings and the website's seven sessions. Nothing run yet; `OPEN-ITEMS.md` #42. |
 | 4.33 | 10-09-26 17:10 | Claude (Claude Code) | Doug's ruling 10-09-26: the website redirect waits a few weeks; the events functionality is tested end to end on production first, with the three current sessions entered. A8 split; sequence note in § 5; step page and two findings in `OPEN-ITEMS.md` #42. |
 | 4.32 | 10-09-26 00:05 | Claude (Claude Code) | F1 live pass done on crm-test 10-09-26; production and Boston owed. |
 | 4.31 | 10-08-26 23:50 | Claude (Claude Code) | F1 approved by Doug and built as v0.242.0; crm-test field applied and the copy run. F1 state moved to Built. |

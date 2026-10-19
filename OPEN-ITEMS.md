@@ -387,8 +387,28 @@ found; move resolved items to the bottom with the resolution date.
     it never did — watch production's first "scopes rebuilt" line after
     the deploy for a larger record count, not an error.
 
-42. **Events: the production end-to-end test, and the redirect deferred**
-    (Doug's ruling 10-09-26: *"We are not planning on modifying the production
+42. **Events: the production end-to-end test, and the redirect deferred.**
+    **State 10-18-26 23:22: the step page was rebuilt to the 10-17-26 step standard
+    (rev 2.0, done boxes, every value pre-filled from reads) and now carries
+    the whole job**: the Track F production apply (#39, #41 — their Sunday
+    page is superseded by section 2 here), the new duration choices
+    (`scripts/plans/cevent-duration-options.json`, fingerprint `47e42699f2d3`,
+    applied on crm-test 10-18-26 23:25; the editor reads the list from the
+    CRM since v0.264.3), the two recordings the playlists hold and the CRM
+    does not (import dry run from the production container 10-18-26 23:05:
+    15 items, 13 in the CRM, 2 to import), the website's **seven** sessions
+    (its feed 10-18-26 23:01 — four more than on 10-09-26: Take the Guesswork
+    Out of Marketing 10-20, AI for Small Business 10-22 virtual and 11-18 in
+    person, the 2026 Holiday Social 12-09) with their presenters (all five
+    named on the website are production Mentor contacts with profiles), the
+    side-by-side, three registrations, the staff views, Claude's CRM
+    read-back and the clean-up. Read from the container the same night:
+    **the Track F apply has NOT run on production** (`topics` absent,
+    `CEventPresenter` 404), the public calendar holds 0 upcoming events, the
+    non-admin account is Doug's own regular login. **Prerequisite: v0.264.3
+    pushed** (committed `61075cb`, the applier's integer-option fix). Nothing
+    on the page has run.
+    Original entry (Doug's ruling 10-09-26: *"We are not planning on modifying the production
     web site for a few weeks. We want to test the events functionality to be
     sure it works and has all current data before we proceed."*). The redirect
     (Track A, A8) waits; the test runs on **production**, approved 10-09-26,
@@ -970,6 +990,7 @@ block a deploy.)*
 ## Live verification owed
 
 41. **Topics on events (v0.242.0, Track F F1) — live pass DONE on crm-test 10-09-26; production and Boston owed.**
+    *10-18-26 23:22: production's apply is section 2 of the Events Production Test page (#42); read from the container 10-18-26 23:05, `CEvent.topics` is still absent.*
     Doug's ruling 10-08-26: no user-entered topic; an event carries several
     curated topics (`CEvent.topics`, multiEnum). Feature-detected, no switch.
     **crm-test's CRM side is done 10-09-26 03:34 UTC**: `scripts/plans/
@@ -997,7 +1018,10 @@ block a deploy.)*
     `cevent-topics-crm-handoff.md`.
 
 39. **Presenters on events (v0.241.0 / v0.241.1, Track F F4) — live pass DONE
-    on crm-test; production and Boston CRM owed.** The code ships off
+    on crm-test; production and Boston CRM owed.** *10-18-26 23:22: production's
+    apply is now section 2 of the Events Production Test page (#42), which
+    supersedes the Track F Production Apply page; read from the container
+    10-18-26 23:05, `CEventPresenter` still answers 404.* The code ships off
     (`EVENT_PRESENTERS`) and feature-detected. **crm-test's CRM side is
     complete 2026-10-08** (`scripts/plans/cevent-presenters.json` applied and
     read back; `scripts/migrate_presenter_roles.py` applied — Contact create +
