@@ -305,8 +305,9 @@ found; move resolved items to the bottom with the resolution date.
     beside the file; this item had not recorded the run. What remains of
     (e) is the release and the Overview half of the pass (sections 3 and
     5 of https://claude.ai/artifact/Covmt3vPbZnvWpr8WdQBY6, private, *Boston Release
-    Changes*, 10-14-26 22:10 — one page for both of this arc's Boston
-    changes, with #46). **Boston's applications run v0.232.0**
+    Changes*, rev 2.0 10-18-26 — one page for both of this arc's Boston
+    changes, with #46; not yet run as of 10-18-26 22:50, Boston still at
+    v0.232.0). **Boston's applications run v0.232.0**
     (the last release-lane cut), which predates the Overview following the
     live type (v0.252.0) and the line-break fix (v0.252.2). Doug's ruling
     10-11-26 20:5x: **convert the CRM tonight, release next Sunday** — the
@@ -372,7 +373,16 @@ found; move resolved items to the bottom with the resolution date.
     https://claude.ai/artifact/Covmt3vPbZnvWpr8WdQBY6 (private, *Boston Release
     Changes*, 10-14-26 22:10): sections 1–2 today (apply, Entity Manager),
     3–6 on Sunday (the release cut and push, Boston's chapter label at
-    `/setup`, the pass on a test funder, its removal);
+    `/setup`, the pass on a test funder, its removal). **State 10-18-26
+    22:50 (session closed without the go):** nothing on the page has run —
+    Boston still reports v0.232.0, the release lane still points at
+    v0.232.0 (main is at v0.264.2), and the re-probe found both links
+    still absent with the dry run still printing `f2d6a41ea16c`. The page
+    was rebuilt to the 10-17-26 step standard (rev 2.0: done boxes with
+    progress and reset, a Before-you-start block, every changing step
+    warned with its undo, checkpoints) and its versions refreshed to
+    0.264.2. Kickoff for the next session:
+    `prompts/boston-release-session-2026-10-18.md`;
     (d) the Gmail sync scope now also covers co-mentored engagements, which
     it never did — watch production's first "scopes rebuilt" line after
     the deploy for a larger record count, not an error.

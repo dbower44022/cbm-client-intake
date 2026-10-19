@@ -2072,7 +2072,9 @@ each block.
   computer, `scripts/apply_plan.sh boston <plan> <fingerprint>` (the
   chapter-aware wrapper around `scripts/apply_crm_plan.py`; Boston's image
   predates the applier shipping in it), awaiting Doug's go on the step
-  page in `OPEN-ITEMS.md` #46 — and **a role ruling**: a Mentor-Role-only user named
+  page in `OPEN-ITEMS.md` #46 (still awaiting it 10-18-26 22:50; page
+  rev 2.0, kickoff `prompts/boston-release-session-2026-10-18.md`) — and
+  **a role ruling**: a Mentor-Role-only user named
   additional manager on a FUNDER sees it in neither Funder Management nor
   My Email, because that role reads no `CSponsorProfile` (the mail sync is
   unaffected — its scope runs under the org key).
