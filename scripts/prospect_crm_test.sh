@@ -8,6 +8,8 @@
 #   scripts/prospect_crm_test.sh receipt    apply scripts/plans/cintake-submission-prospect-response.json (fingerprint cb685b7372b1)
 #   scripts/prospect_crm_test.sh appfields  apply scripts/plans/coutreach-campaign-app-fields.json (fingerprint 965d932407f3; ruling 40)
 #   scripts/prospect_crm_test.sh smstext    apply scripts/plans/coutreach-sms-message.json (fingerprint 7a68865149b4; Phase 4, ruling 39)
+#   scripts/prospect_crm_test.sh leadmodel  apply scripts/plans/coutreach-lead-model.json (fingerprint 6e228dbb7d33; rulings 41-50)
+#   scripts/prospect_crm_test.sh leadlabels scripts/relabel_outreach_lead.py --apply (ruling 50)
 #
 # Exists for the same reason as scripts/on_crm.sh and scripts/apply_plan.sh: each
 # full invocation is far past the one-line limit a pasted command survives, and
@@ -26,5 +28,7 @@ case "${1:-}" in
   receipt)  exec scripts/apply_plan.sh test scripts/plans/cintake-submission-prospect-response.json cb685b7372b1 ;;
   appfields) exec scripts/apply_plan.sh test scripts/plans/coutreach-campaign-app-fields.json 965d932407f3 ;;
   smstext)  exec scripts/apply_plan.sh test scripts/plans/coutreach-sms-message.json 7a68865149b4 ;;
-  *) echo "usage: scripts/prospect_crm_test.sh <sms|outreach|roles|notes|receipt|smstext|appfields>" >&2; exit 64 ;;
+  leadmodel) exec scripts/apply_plan.sh test scripts/plans/coutreach-lead-model.json 6e228dbb7d33 ;;
+  leadlabels) exec uv run python scripts/run_with_admin.py scripts/relabel_outreach_lead.py --apply ;;
+  *) echo "usage: scripts/prospect_crm_test.sh <sms|outreach|roles|notes|receipt|smstext|appfields|leadmodel|leadlabels>" >&2; exit 64 ;;
 esac

@@ -1,0 +1,28 @@
+{
+  "name": "coutreach-lead-model",
+  "description": "Prospect marketing, the lead model (rulings 41-50): CProspect gains leadStatus, leadStatusChangedAt and leadSource; its side exits gain Duplicate; Contact and Account stages gain Prospect and Engaged. Additive only - the old options and fields stay until the removal step (coutreach-lead-model-crm-handoff.md section 6).",
+  "fields": [
+    {"entity": "CProspect", "name": "leadStatus", "type": "enum", "label": "Lead status",
+     "default": "Unqualified",
+     "options": ["Unqualified", "Qualified", "Disqualified", "Converted"],
+     "tooltipText": "Unqualified until a website or email shows it could become a client, partner or funder; Disqualified if it never will; Converted once first contact created its Company or Contact (rulings 42, 43)."},
+    {"entity": "CProspect", "name": "leadStatusChangedAt", "type": "datetime", "label": "Lead status changed"},
+    {"entity": "CProspect", "name": "leadSource", "type": "enum", "label": "Lead Source",
+     "options": ["", "State filing", "List", "Partner file", "Mentor request", "Volunteer application",
+                 "Information request", "Partner application", "Funder application",
+                 "Event registration", "Email"],
+     "tooltipText": "Where the lead came from (ruling 41). The five public forms, event registration and the info mailbox are listed so a public-form arrival records its form (ruling 48)."}
+  ],
+  "fieldParams": [
+    {"entity": "CProspect", "name": "sideExit", "params": {"options":
+      ["", "Duplicate", "Do Not Contact", "Declined", "Stale", "Already known", "Unqualified"]}},
+    {"entity": "Contact", "name": "funnelStage", "params": {"options":
+      ["Prospect", "Engaged", "Opportunity", "Unverified", "Qualified", "Lead", "Warm Lead"]}},
+    {"entity": "Contact", "name": "entryStage", "params": {"options":
+      ["Prospect", "Engaged", "Opportunity", "Unverified", "Qualified", "Lead", "Warm Lead"]}},
+    {"entity": "Account", "name": "funnelStage", "params": {"options":
+      ["Prospect", "Engaged", "Opportunity", "Unverified", "Qualified", "Lead", "Warm Lead"]}},
+    {"entity": "Account", "name": "entryStage", "params": {"options":
+      ["Prospect", "Engaged", "Opportunity", "Unverified", "Qualified", "Lead", "Warm Lead"]}}
+  ]
+}
