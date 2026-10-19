@@ -55,8 +55,12 @@ _ENUM_FIELD_NAMES = frozenset(f.name for f in cfg.EVENT_FIELDS if f.type == "enu
 #: Multiple-choice fields (F2/F3: the reach's chapters, the team limit).
 _MULTI_FIELD_NAMES = frozenset(f.name for f in cfg.EVENT_FIELDS if f.type == "multiEnum")
 #: Every field whose options the editor reads live.
+# ``duration`` rides along: EspoCRM's duration field carries its own option
+# list (seconds), and the shared Duration control offers the CRM's list when it
+# is given one — without it the control falls back to its built-in presets, and
+# a choice added in the CRM (75 minutes, 10-18-26) never reaches the editor.
 _OPTION_FIELD_NAMES = ("status", *(
-    f.name for f in cfg.EVENT_FIELDS if f.type in ("enum", "multiEnum")
+    f.name for f in cfg.EVENT_FIELDS if f.type in ("enum", "multiEnum", "duration")
 ))
 
 

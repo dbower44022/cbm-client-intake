@@ -5,6 +5,24 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.264.3] — 2026-10-18
+
+**chore(scripts): the CRM plan applier accepts integer enum options; the
+event duration plan.** `scripts/apply_crm_plan.py` raised `TypeError` on an
+`enumOptions` entry whose values are integers, which is what EspoCRM's
+`duration` field holds, so no plan could add a duration choice. The two
+report lines now stringify. New plan `scripts/plans/cevent-duration-options.json`
+adds 75 minutes, 90 minutes and 3.5 hours to `CEvent.duration` (the Zoom
+webinars, the in-person workshops and the holiday social on the website's
+programme all run one of those; the list stopped at 1 hour, 2 hours, 3 hours).
+Dry run on crm-test prints fingerprint `47e42699f2d3`. Found writing the
+production events test (`OPEN-ITEMS.md` #42). **The Event Administration
+editor now reads the Duration choices from the CRM field** (`duration` joins
+the option-field list in `events/service.py`): the shared control already
+preferred a list it was given, but the editor never gave it one, so the CRM
+change alone would have shown nothing. A CRM without the new options behaves
+exactly as before. No flag; rollback is a revert.
+
 ## [0.264.2] — 2026-10-18
 
 **fix(sessions): the Contacts tab reuses a contact whose email the CRM

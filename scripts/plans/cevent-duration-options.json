@@ -1,0 +1,14 @@
+{
+  "name": "cevent-duration-options",
+  "description": "Event durations the programme actually runs: 75 minutes (the Zoom webinars), 90 minutes (the in-person workshops) and 3.5 hours (the holiday social). Found writing the production events test, 10-09-26 and 10-18-26 (OPEN-ITEMS #42).",
+  "entities": [],
+  "fields": [],
+  "links": [],
+  "enumOptions": [
+    {
+      "entity": "CEvent",
+      "field": "duration",
+      "add": [4500, 5400, 12600]
+    }
+  ]
+}

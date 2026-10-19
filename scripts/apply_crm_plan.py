@@ -295,7 +295,7 @@ class Applier:
             if not wanted:
                 self.skipped.append(
                     f"enum {entity}.{stored} already offers "
-                    f"{', '.join(spec.get('add', [])) or '(nothing)'}")
+                    f"{', '.join(str(o) for o in spec.get('add', [])) or '(nothing)'}")
                 continue
             # The fieldManager PUT needs the COMPLETE definition: an options-only
             # body is a 500 (found adding CEventRegistration.registrationSource
@@ -307,7 +307,7 @@ class Applier:
                 body["translatedOptions"] = translated
             await self._write(
                 "PUT", f"Admin/fieldManager/{entity}/{stored}", body,
-                f"add enum options to {entity}.{stored}: {', '.join(wanted)}",
+                f"add enum options to {entity}.{stored}: {', '.join(str(o) for o in wanted)}",
             )
 
     async def rebuild(self) -> None:
