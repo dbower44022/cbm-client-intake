@@ -33,7 +33,17 @@ found; move resolved items to the bottom with the resolution date.
     production's leads by the move's dry run first, ruling 45); then Doug's
     ruling on the proposed removals (handoff § 6).
 
-51. **Prospect marketing — Phase 1 BUILT and LIVE-PASSED on crm-test
+51. **Prospect marketing — the lead model's code BUILT (v0.265.0, 10-19-26,
+    committed, not pushed; rulings 41–53).** Owed, in order: Doug pushes;
+    the release's three CRM steps on crm-test (`scripts/prospect_crm_test.sh
+    touchpos`, `leadlayouts`, `leadmove`); the live pass from the step page
+    https://claude.ai/artifact/DPSsyZMYPhvHQRUnL696Rk (47 steps, sections
+    A–H, re-running the Phase 1–4 steps that touch a stage on the new
+    words); then production at a Sunday slot (the lead-model plan, the
+    touch-positions plan, labels, layouts, the value move from the
+    container — handoff § 1) and Boston with its release; the § 6 removals
+    after that, on Doug's approval. The earlier passes' record follows.
+    **Phase 1 BUILT and LIVE-PASSED on crm-test
     (v0.258.0–v0.258.5, 10-15/17-26, dark behind `CAMPAIGNS_ENABLED`);
     Phase 2 BUILT (v0.259.0, 10-17-26) and LIVE-PASSED (A–E 10-17-26,
     F–I 10-18-26 01:50 from the standalone page

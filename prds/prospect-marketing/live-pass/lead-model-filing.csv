@@ -1,0 +1,5 @@
+business_name,mailing_street,mailing_city,mailing_state,mailing_zip,external_reference,website,email,phone,contact_first_name,contact_last_name
+Lorain Ave Tailor,3810 Lorain Ave,Cleveland,OH,44113,LM-1,lorain-tailor-sandbox.example,,216-555-0151,Lou,Tailor
+Clark Ave Diner,4620 Clark Ave,Cleveland,OH,44102,LM-2,,owner@clark-diner-sandbox.example,216-555-0152,Cara,Clark
+Fulton Rd Hardware,3300 Fulton Rd,Cleveland,OH,44109,LM-3,,,216-555-0153,Fred,Fulton
+Storer Ave Laundromat,5400 Storer Ave,Cleveland,OH,44102,LM-4,,,216-555-0154,Stu,Storer
