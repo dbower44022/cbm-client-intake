@@ -114,8 +114,8 @@
       var box = el("div", "cm__fields");
       box.appendChild(el("p", "cm__hint cm__field--wide", "If they are interested: ask for an email" + (r.business ? " or the business's website" : "") +
         ". Either one turns this lead into a Prospect" + (r.business ? " — a Company with its Contact" : "") + "; without one, Interested is recorded and the lead stays a lead." +
-        (r.hasEmail || r.hasWebsite ? " The lead already holds " + [r.hasEmail ? "an email" : "", r.hasWebsite ? "a website" : ""].filter(Boolean).join(" and ") + ", so Interested converts it." : "")));
-      [["firstName", "First name", r.firstName || ""], ["lastName", "Last name", r.lastName || ""], ["email", "Email", ""], ["website", "Website", ""]].forEach(function (f) {
+        (r.email || r.website ? " What the lead already holds is filled in below; check it with them." : "")));
+      [["firstName", "First name", r.firstName || ""], ["lastName", "Last name", r.lastName || ""], ["email", "Email", r.email || ""], ["website", "Website", r.website || ""]].forEach(function (f) {
         var fd = el("div", "cm__field"); var lb = el("label", null, f[1]); var id = "cv_" + f[0] + "_" + r.touchId; lb.htmlFor = id;
         var inp = el("input"); inp.type = f[0] === "email" ? "email" : "text"; inp.id = id; inp.value = f[2]; inp.autocomplete = "off"; inp.maxLength = f[0] === "email" || f[0] === "website" ? 255 : 100;
         fd.appendChild(lb); fd.appendChild(inp); box.appendChild(fd); conv[f[0]] = inp;
@@ -145,6 +145,10 @@
       });
       acts.appendChild(b);
     });
+    // An accidental "Record the call" closes again with nothing written.
+    var cancel = el("button", "cbm-button cbm-button--secondary", "Cancel"); cancel.type = "button";
+    cancel.addEventListener("click", function () { state.open = null; notice(""); render(); });
+    acts.appendChild(cancel);
     form.appendChild(acts);
     td.appendChild(form); tr.appendChild(td);
     return tr;

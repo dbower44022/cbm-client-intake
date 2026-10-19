@@ -225,6 +225,7 @@ def test_calls_screen_follows_the_campaigns_teams():
     as_mentor = run(calls.call_list(crm, crm, MENTOR, settings))
     assert len(as_mentor["rows"]) == 3 and as_mentor["rows"][0]["phone"].startswith("216-555")
     assert as_mentor["rows"][0]["business"] is True and as_mentor["rows"][0]["hasEmail"] is False
+    assert as_mentor["rows"][0]["email"] == "" and as_mentor["rows"][0]["website"] == ""
     assert "never contacted" in as_mentor["warning"]
     outsider = run(calls.call_list(crm, crm, OUTSIDER, settings))
     assert outsider["rows"] == [] and "Mentor Team" in outsider["message"]
@@ -552,3 +553,14 @@ def test_a_teams_write_refused_for_the_linked_team_is_retried_as_the_admin():
     user.update = other
     with pytest.raises(EspoError):
         run(service.set_teams(user, camp["id"], ["t-m"], admin_factory=factory))
+
+
+def test_the_call_screen_offers_the_leads_own_email_and_a_cancel():
+    crm = FakeCrm()
+    _running_call_campaign(crm, teams={"t-m": "Mentor Team"})
+    crm.rows[cfg.PROSPECT]["p1"]["email"] = "owner@phone.example"
+    row = next(r for r in run(calls.call_list(crm, crm, MENTOR, _settings()))["rows"] if r["touchId"] == "t1")
+    assert row["email"] == "owner@phone.example" and row["hasEmail"] is True
+    from pathlib import Path
+    js = (Path(__file__).resolve().parents[1] / "campaigns" / "frontend" / "calls.js").read_text()
+    assert '["email", "Email", r.email || ""]' in js and '"Cancel"' in js

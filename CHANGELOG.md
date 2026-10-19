@@ -5,6 +5,17 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.265.3] — 2026-10-19
+
+**fix(campaigns): the call screen fills in what the lead holds, and an
+opened call can be cancelled.** Found on the lead model's live pass (F6):
+a lead that already held an email showed an empty Email box, with the email
+mentioned only in a long hint, so the caller could not see it; the Email and
+Website boxes now start with the lead's own values (the caller reads the lead
+anyway). And an accidental *Record the call* could only be closed by the
+row's own button, which read *Close* and was missed; the opened call now has
+a **Cancel** button that writes nothing. No CRM change; rollback is a revert.
+
 ## [0.265.2] — 2026-10-19
 
 **fix(campaigns): a marketing user can name who calls.** Found on the lead

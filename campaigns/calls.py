@@ -370,6 +370,10 @@ async def _target_detail(client: EspoApi, touch: dict[str, Any]) -> dict[str, An
                     # What the Interested form may prefill (ruling 47).
                     "firstName": p.get("firstName") or "", "lastName": p.get("lastName") or "",
                     "hasEmail": bool(p.get("email")), "hasWebsite": bool(p.get("website")),
+                    # The caller reads the lead, so its own email and website
+                    # prefill the Interested boxes (found on the lead model's
+                    # live pass: a hint alone was missed).
+                    "email": p.get("email") or "", "website": p.get("website") or "",
                     "business": bool((p.get("businessName") or "").strip())}
         if touch.get("contactId"):
             c = await client.get(cfg.CONTACT, touch["contactId"], select=CONTACT_SELECT)
