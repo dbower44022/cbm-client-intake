@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-19-26 10:44 · Revision 1.16 — change log at the end.
+Last Updated: 10-19-26 10:49 · Revision 1.17 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -470,6 +470,23 @@ records when this was put. Doug's reply at 10:44: "b".
     lead's `funnelStage` and `entryStage` stop being used; their removal is
     proposed in the handoff, never done without Doug's approval. (10-19-26)
 
+### Doug's ruling (10-19-26, on build plan § 7a.2's drafts)
+
+Put as a consequential decision in the same session: option A, approve the
+four drafts the CRM handoff builds on as written; option B, change one or
+more. Doug's reply at 10:49: "a".
+
+50. **The four § 7a.2 drafts are approved as written** (option A):
+    a Company's or Contact's stages after first contact are **Prospect ·
+    Engaged · Opportunity** (Engaged replaces Warm Lead, ruling 17's
+    meaning); the reasons a lead stops being worked are **Duplicate · Do
+    Not Contact · Declined · Stale** (Duplicate replaces Already known;
+    Disqualified is a status, not a reason); the lead entity's CRM label is
+    **Outreach Lead** and the screens say **Lead**; **Lead Source** is a
+    field on the lead only, and the Contact's Source (ruling 26) is
+    untouched. The draft "a scan alone does not convert" is left for the
+    code session. (10-19-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -590,8 +607,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.16 |
-| Last Updated | 10-19-26 10:44 |
+| Version | 1.17 |
+| Last Updated | 10-19-26 10:49 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -599,6 +616,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.17 | 10-19-26 10:49 | Claude (Claude Code) | Ruling 50 appended: build plan § 7a.2's four CRM-facing drafts approved as written (Doug's "a"). |
 | 1.16 | 10-19-26 10:44 | Claude (Claude Code) | Ruling 49 appended: a lead's status is a new field `leadStatus` (Doug's "b", lead-model CRM handoff session). |
 | 1.15 | 10-19-26 01:22 | Claude (Claude Code) | Ruling 48 appended: every new record from a public form has a lead behind it, Converted at once (Doug's "b" to build plan § 9 question 16, the session's revised recommendation). |
 | 1.14 | 10-19-26 01:21 | Claude (Claude Code) | Ruling 47 appended: a call marked Interested converts the lead only with an email or a website (Doug's "a" to build plan § 9 question 15). |
