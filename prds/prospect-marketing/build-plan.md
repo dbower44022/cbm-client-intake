@@ -1207,6 +1207,20 @@ the Campaign Management requirements.
    CSV upload on the Prospects screen with the § 2.1 columns and mails the
    business's own address. Nothing is built for the delivery path until this
    is answered; the upload works for any answer.
+   **Deferred by Doug 10-18-26 23:01, "till later with more information".**
+   The analysis put to him, kept so it is not redone: (a) the raw Ohio
+   filing does not arrive in the import's shape — it carries a document
+   number, the name, the effective date, associates and **two addresses**
+   (the filing address and the registered agent's) — so either the filter
+   renames its columns or the import accepts the filing's own names as
+   aliases (the latter recommended, a small change); (b) where it lands:
+   the upload (built), a watched Drive folder, or an endpoint — the upload
+   recommended at 100–500 rows a month; (c) monthly, harmless to repeat;
+   (d) **which address** is the decision: A filing address always; B filing
+   address, else the agent's, skipping commercial agent services; C the
+   filter chooses one per row and the import keeps both on the record
+   (recommended — the filter already judges fit under ruling 11). The
+   research sample's evidence: `research/registry-enrichment/enrichment-findings.md`.
 3. **Rung 1's stored name: `Unverified` (recommended) or `Unqualified`?**
    **Answered: `Unverified` (ruling 29).** `Unqualified` is a terminal reject in every surveyed CRM and is also the
    fit-failure side exit here, so one word would mean two things.
