@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-20-26 15:33 · Revision 1.29 — change log at the end.
+Last Updated: 10-20-26 15:48 · Revision 1.30 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -672,6 +672,27 @@ Doug's reply at 15:32: "c".
     of the list and is flagged on the recipe, never silently ignored.
     (10-20-26)
 
+### Doug's ruling (10-20-26, on whether a list belongs to one campaign)
+
+Put as a consequential decision: option A, a list lives inside its
+campaign and is reused only by copying; option B, named lists on their own
+screen that several campaigns use. Doug's reply at 15:47: "b".
+
+64. **Lists are named records on their own *Lists* tab in Campaign
+    Management, and a campaign picks the list it sends to** (option B). An
+    edit to a list reaches every campaign using it at that campaign's next
+    send. Approved with it, as presented: a change never reaches a send
+    already under way (a static list stays as frozen; a dynamic list runs
+    its recipe again only at the start of each send; ruling 13's typed
+    piece count still guards a postcard); a list in use is retired, never
+    deleted, and stays readable on the campaigns that used it; a recipe
+    step may add or remove the members of another list, which is how a
+    standing exclusion list works; each campaign records the list and
+    version it sent to; the recipe, frozen membership and history live in
+    the application database, like campaign links (ruling 31), and touches
+    stay in the CRM — no CRM change; lists are edited by the Marketing
+    Admin Team, the campaigns gate. (10-20-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -792,8 +813,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.29 |
-| Last Updated | 10-20-26 15:33 |
+| Version | 1.30 |
+| Last Updated | 10-20-26 15:48 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -801,6 +822,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.30 | 10-20-26 15:48 | Claude (Claude Code) | Ruling 64 appended: named reusable lists on a Lists tab; a campaign picks its list (Doug's "b"). |
 | 1.29 | 10-20-26 15:33 | Claude (Claude Code) | Ruling 63 appended: list-step fields come from a per-type curated list editable at `/setup` (Doug's "c"). |
 | 1.28 | 10-20-26 15:29 | Claude (Claude Code) | Rulings 61 and 62 appended: static and dynamic lists both supported; a list is an ordered recipe of steps (Doug's "yes to both"). |
 | 1.27 | 10-20-26 15:13 | Claude (Claude Code) | Ruling 60 appended: a campaign targeting contacts names the contact types it reaches (Doug's "b"). |
