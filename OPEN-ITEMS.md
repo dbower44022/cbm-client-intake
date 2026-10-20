@@ -69,7 +69,8 @@ found; move resolved items to the bottom with the resolution date.
     funders`), the seeder re-run, the check as Mark Marketing and Sally
     Sponsor (`coutreach-funders-crm-handoff.md` § Proof), then production
     with the lead-model slot, Boston with its release, and a sandbox
-    recapture (one more new table).
+    recapture (one more new table). Step page:
+    https://claude.ai/artifact/6BTc4r1XqKpWq8Zjnf1qNd (rev 1.0).
     The earlier passes' record follows.
     **Phase 1 BUILT and LIVE-PASSED on crm-test
     (v0.258.0–v0.258.5, 10-15/17-26, dark behind `CAMPAIGNS_ENABLED`);
