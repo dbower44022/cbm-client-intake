@@ -37,7 +37,12 @@ found; move resolved items to the bottom with the resolution date.
     LIVE-PASSED on crm-test (v0.265.0–3, 10-19-26; rulings 41–54).** The
     pass ran 23:44 from https://claude.ai/artifact/DPSsyZMYPhvHQRUnL696Rk
     (rev 1.5), every section matched, and the three defects it found are
-    fixed. Owed: production at a Sunday slot (the lead-model plan, the
+    fixed. **Production waits until lead and campaign development is
+    finished** (Doug, 10-20-26 14:36, "B" — one slot for everything). Known cost
+    meanwhile, by design: production's CRM still holds the old options, so
+    an information request or registration there writes no stage, and no
+    new public-form record gets a lead behind it (no backfill is built).
+    Owed: production at a Sunday slot (the lead-model plan, the
     touch-positions plan, labels, layouts, the value move from the
     container — handoff § 1) and Boston with its release; the § 6 removals
     after that, on Doug's approval. **Ruling 54 (10-19-26):** the Marketing
