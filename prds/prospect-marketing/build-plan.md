@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-19-26 23:44 · Revision 0.15 — change log at the end.
+Last Updated: 10-20-26 01:16 · Revision 0.17 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -1283,6 +1283,30 @@ alternative — labels only, stored values unchanged — is question 13.
 
 ---
 
+## 7b. The Leads and Review grids at volume — being gathered (10-20-26)
+
+Doug's requirement, with ruling 56: "we need to dramatically improve the
+'Leads' and 'Review' grids to handle a large number of records, and provide
+better searching and qualifying." His requirements are being gathered one
+question at a time; nothing below is a decision.
+
+**How the two grids work today** (read from the code, 10-20-26):
+
+- Both load every matching lead in one request. The application pages
+  through the CRM 200 at a time, one call after another, and **stops
+  silently at 2,000** (`campaigns/service._MAX_ROWS`). At the plan's
+  100–500 filings a month the Leads grid starts dropping rows within a
+  year, and nothing on the screen says so: the count reads "2000 of 2000".
+- Search is in the browser, over the rows already loaded, by substring.
+  Filters (status, reason, Lead Source) are server-side and reload.
+- Review lists every Unqualified lead with no reason, and acts on one lead
+  at a time: *Qualify* or *Disqualify* (a reason required) on the row,
+  *Do Not Contact* and *Not the same company* in the lead's window. There is no
+  bulk action and nothing to help decide (no website check, no
+  duplicate hint beyond the import's own).
+
+---
+
 ## 8. The open list — each item answered or put to Doug
 
 From `history/prospect-marketing-plan.md`, *Open after this session*:
@@ -1311,13 +1335,13 @@ session*, 10-14-26), each answered here or put to Doug:
 | Item | Status | Where |
 |---|---|---|
 | Several partners on one engagement (CM-4) | **Ruled (30, 10-14-26): multiple referring partners** — a many-to-many `referringPartners` beside the single link; the recommendation was declined | § 1.5, § 5 step 6a, question 8 |
-| Social media: one kind with a platform, or a kind per platform | **Put to Doug** — written on: one kind, a `platform` field | § 3.6, question 10 |
+| Social media: one kind with a platform, or a kind per platform | **Ruled (55, 10-20-26): one kind, a `platform` field** | § 3.6, question 10 |
 | SMS has no sending path | **Put to Doug** — written on: the kind ships with its rule, list and export; sending waits for a vendor | § 3.5, question 11 |
 | One event or many per campaign | **Answered as a draft:** many (a many-to-many), from Doug's plural and the programme-page link | § 1.5 |
 | The status vocabulary | **Answered as a draft:** the six states of § 1.3, which the application moves; Doug's four-word strawman maps onto them | § 1.3 |
 | Who may correct or retire a link | **Answered as a draft:** the campaign's team, action-logged with old and new | § 3.7 |
 | The programme-page carry-through | **Answered:** query-string carry by the page's own script, with its honest limit named | § 3.7 |
-| Where the prospect screens live | **Put to Doug** — written on: under the Campaign Management tile as secondary grids | § 3.8, question 12 |
+| Where the prospect screens live | **Ruled (56, 10-20-26): under the Campaign Management tile** | § 3.8, question 12 |
 | A per-campaign Analytics dashboard | **Answered:** a new dashboard scope, starter dashboard, Phase 4 | § 6 |
 | Where links live (new in this revision) | **Ruled (31, 10-14-26): the application's database** | § 3.7, question 9 |
 
@@ -1406,7 +1430,8 @@ the Campaign Management requirements.
     runs*) **or one kind per platform** (Meta, YouTube, … each its own enum
     value). Cost of the recommendation: a second field to fill in; of the
     alternative: the kind list grows with every platform and a filter by
-    "social" becomes a list of values.
+    "social" becomes a list of values. **Answered 10-20-26: A, as built
+    (ruling 55).**
 11. **SMS sending.** Recommended: ship the kind with its selection rule, its
     signed-off list and an export, and no sending, until you name a vendor.
     Cost: a kind that does not send; staff send from the vendor's own tool
@@ -1419,7 +1444,8 @@ the Campaign Management requirements.
     as secondary grids under the *Campaign Management* tile — one tile for
     the whole marketing workspace, the same team either way. Cost: a tile
     named for campaigns also holds the import; the alternative is a second
-    tile, *Prospects*, on a portal that already shows a staff user twelve.
+    tile, *Prospects*, on a portal that already shows a staff user twelve. **Answered 10-20-26: A, as built
+    (ruling 56)**, with a new requirement for the two grids (§ 7b).
 
 Questions 13–16 were added in v0.8 for the rework of § 7a (rulings 41–44).
 
@@ -1498,6 +1524,8 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.17 | 10-20-26 01:16 | Claude (Claude Code) | § 9 question 12 answered: A (ruling 56). Doug's new requirement for the Leads and Review grids opens § 7b, being gathered. |
+| 0.16 | 10-20-26 01:08 | Claude (Claude Code) | § 9 question 10 answered: A, one social media kind with a Platform field (ruling 55). |
 | 0.15 | 10-19-26 23:44 | Claude (Claude Code) | § 7a.5 step 3 passed: the lead model's live pass on crm-test, with v0.265.1–3 and ruling 54. Step 4, production, is next. |
 | 0.14 | 10-19-26 11:47 | Claude (Claude Code) | § 7a.5 step 2 built (v0.265.0, not pushed): the code rework, with rulings 51–53 and the decisions that follow from them recorded in the step. |
 | 0.13 | 10-19-26 11:03 | Claude (Claude Code) | § 7a.5 step 1 done on crm-test: the lead model's CRM handoff written and its additive half applied (rulings 49, 50); step 2, the code, is next. |

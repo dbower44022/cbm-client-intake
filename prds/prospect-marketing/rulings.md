@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-19-26 12:23 · Revision 1.21 — change log at the end.
+Last Updated: 10-20-26 01:16 · Revision 1.23 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -547,6 +547,17 @@ at 12:23: "a".
     `scripts/migrate_outreach_roles.py` on crm-test first, then production
     at a Sunday slot and Boston with its release; the role standard is
     updated to match. (10-19-26)
+55. **Social media is one campaign kind with a Platform field** (option A,
+    build plan § 9 question 10). Kind says how a campaign runs; the platform
+    (Meta, YouTube, LinkedIn, Instagram, X, Other) is its own field, shown
+    only for a Social media campaign. A new platform is one new option on
+    that field. Confirms what Phase 1 built; nothing changes. (10-20-26)
+56. **The lead screens stay inside the Campaign Management tile** (option A,
+    build plan § 9 question 12): Campaigns, Leads, Review, Calls and Imports
+    on one page's top bar, one tile, one team. Doug added in the same
+    answer: "we need to dramatically improve the 'Leads' and 'Review' grids
+    to handle a large number of records, and provide better searching and
+    qualifying" — a requirement being gathered, build plan § 7b. (10-20-26)
 
 ---
 
@@ -669,7 +680,7 @@ other source consumes a service before mentoring.
 |---|---|
 | Document | Prospect Marketing — rulings |
 | Version | 1.21 |
-| Last Updated | 10-19-26 12:23 |
+| Last Updated | 10-20-26 01:16 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -677,6 +688,8 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.23 | 10-20-26 01:16 | Claude (Claude Code) | Ruling 56 appended: the lead screens stay inside the Campaign Management tile (Doug's "a" to build plan § 9 question 12), with his new requirement for the Leads and Review grids quoted. |
+| 1.22 | 10-20-26 01:08 | Claude (Claude Code) | Ruling 55 appended: social media is one campaign kind with a Platform field (Doug's "a" to build plan § 9 question 10). |
 | 1.21 | 10-19-26 12:23 | Claude (Claude Code) | Ruling 54 appended: the Marketing Admin Team reads every Company, read only (Doug's "a"). |
 | 1.20 | 10-19-26 11:20 | Claude (Claude Code) | Ruling 53 appended: a state filing with a website or an email enters Qualified (Doug's "a"). |
 | 1.19 | 10-19-26 11:13 | Claude (Claude Code) | Ruling 52 appended: a business lead converts to a Company and its Contact, even without a website (Doug's "a"). |
