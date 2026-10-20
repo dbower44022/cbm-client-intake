@@ -14,6 +14,12 @@ size or it costs every future session. The rule that keeps it small:
   prerequisites, live verification owed, cleanups, pending decisions.
 - **This file holds only what stays true**: what each app is, the constraints
   and rulings that govern future work, the traps, the conventions.
+- **Detail about one application belongs in that application's folder**, in
+  its own `CLAUDE.md` (`assignments/`, `mentoradmin/`, `sessions/`, `setup/`,
+  `campaigns/`, `events/` so far). Claude Code loads it only when a session
+  works in that folder, so a rule another package depends on stays here, with
+  a pointer. This file was moved under that rule on 10-20-26, when it reached
+  182,447 characters against Claude Code's 150,000 limit; keep it under 80,000.
 - The "Current status" section at the bottom is a **rolling window of the last
   few releases**. When a release is deployed and verified, delete its block —
   the changelog owns it. Do not prepend a new block and keep the old ones.
@@ -335,30 +341,10 @@ enforces their ACL and records them as modifier. The dev app (no
 - "Forgot your password?" proxies EspoCRM's own unauthenticated
   `User/passwordChangeRequest` — the CRM matches, throttles and emails its
   standard recovery link; the app never sees or sets a password.
-- **The events rail and the member page (F5, v0.235.0)** — behind
-  `PORTAL_CALENDAR` (off by default, `/setup` → Features; needs Events on). The
-  home view is a 22rem rail of upcoming events beside the tiles; **the portal
-  has no width cap any more.** What the rail SELECTS is F3's and lives in
-  `events/service.portal_calendar` + `events/visibility.py` — never re-filter
-  in the portal. The rail shows `PORTAL_EVENTS_WINDOW_DAYS` (30) in full and
-  folds the rest; two saved switches (Internal / Public) in the F3 preference
-  store; Register/Cancel in the row and on the page behind a one-line
-  confirmation; a phone strip at ≤767px. Every event opens
-  **`/portal/events/{id}`** (the id, not the slug — Internal events often have
-  none), a route registered ahead of the `/portal` static mount, whose body is
-  the shared `frontend/shared/event-body.js` the public event page also uses.
-  **Its reads are the member endpoints in `events/member.py`**, all through
-  `is_shown(..., "portal")`, and **an event the member may not see answers 404
-  in the same words as an unknown id** — keep it that way. The graphic comes
-  from `/api/portal/events/{id}/image` because the public image route is keyed
-  on the slug and gated on the public surface. Join link rule (D2): everyone
-  when the event takes no registrations, registered members only when it does,
-  decided server-side. **Where the link comes from (D3, v0.240.0):** the Join
-  URL is **editable in Event Administration for Internal events only** — the
-  spec's `editable_when` rule offers an app-managed field under a condition
-  and `_writable` admits it only when the record *as saved* meets it; for a
-  Public event Zoom owns the field and a posted-back value is dropped.
-  Design: `prds/events/CBM_Events_Portal_Calendar_Design.md`.
+- **The events rail and the member page** (`PORTAL_CALENDAR`, off by
+  default): what the rail selects is `events/service.portal_calendar` +
+  `events/visibility.py` — never re-filter in the portal. Detail in
+  `events/CLAUDE.md`.
 
 **Team gates** (each an env var, listed with its default):
 `ASSIGN_ALLOWED_TEAMS` = Client Administration Team · `MENTOR_ADMIN_ALLOWED_TEAMS`
@@ -381,163 +367,37 @@ stays the source of truth.
 
 ### Client Administration — `/assignments`
 
-Staff-only. Page title is "Client Administration"; the package and route stay
-`assignments`. Lists `CEngagement` records in a sortable, searchable,
-full-height grid with a status multi-select, and assigns each to a mentor.
+Staff-only (page title "Client Administration"; the package and route stay
+`assignments`). Lists `CEngagement` records and assigns each to a mentor.
+**Detail: `assignments/CLAUDE.md`.** Rules other packages rely on:
 
-- **Mentor dropdown** = `CMentorProfile` where `acceptingNewClients=true` AND
-  `mentorStatus="Active"` AND `assignedUser` set. An empty dropdown means no
-  mentor passes all three.
 - **Client counts are app-computed from `CEngagement`, never the CRM's own
-  `currentActiveClients`/`availableCapacity`** (crm-test's formula is
-  known-buggy). `ACTIVE_CLIENT_STATUSES` = Active, Assigned, Pending Acceptance
-  **and On-Hold** (Doug's ruling 2026-09-29 — the same set Analytics uses, so
-  every screen agrees). Available = Max Clients − Active Clients.
-  **CoMentors** (v0.234.0) counts the active engagements where the mentor is a
-  *non-primary* mentor, read per mentor through the `engagements` reverse link
-  of `CEngagement.additionalMentors` (a relationship — `additionalMentorsIds`
-  on a list read is always empty). It does **not** reduce Available, and only
-  the Client Administration roster asks for it
-  (`list_all_mentors(include_comentors=True)`) — Mentor Administration shares
-  the function and makes no extra reads. A failed per-mentor read renders "—",
-  never 0.
-- **A mentor's name in the Available Mentors list opens a read-only detail
-  popup** (v0.220.0): the CRM's own `CMentorProfile` detail layout rendered by
-  the shared `/shared/detail-render.js`, plus a Contact panel and an "Other
-  fields" sweep (`directory.service.detail(..., include_unplaced=True)` via
-  `service.mentor_detail`), read as the signed-in user. Its footer
-  Assign/Reassign button completes the assignment when the roster was opened
-  from an engagement's Assign/Reassign card ("Browse the full mentor list…");
-  unscoped it explains itself on click. View-only by ruling — editing stays in
-  Mentor Administration.
-- **Assign** (`service.assign_engagement`) sets `mentorProfile` +
-  `engagementStatus="Pending Acceptance"`, stamps `engagementAssignedDate`, and
-  re-homes assigned users across every related Contact, the CClientProfile and
-  the Account. **Merge, never overwrite** (`_merged_assignment_payload`) — an
-  overwrite silently revokes co-mentor access.
-- **The mentor gets a stamp too** — `CMentorProfile.lastClientAssignedDate`, the
-  last date that mentor was given a NEW client. Written by Assign and by
-  Reassign (the **new** mentor only; the field records gaining a client, not
-  losing one), never by a repair. Advance-only, feature-detected, and
-  best-effort — a role without `CMentorProfile` edit logs a warning rather than
-  losing an assignment already written. It is a sortable **Last Assigned**
-  column in the Available Mentors picker (ascending = who is most overdue), and
-  the roster query asks for the field only when the CRM has it. Spec:
-  `cmentorprofile-last-client-assigned-field.md`.
-- **Assign needs `User: read` on the acting role.** The assignedUsers stamp is
-  a link write, and EspoCRM refuses it (403 `cannotRelateForbidden`, identical
-  in 9.3.4 and 10.0.6) unless the user can read every User being linked. The
-  Client Assignment Role carried no User grant until 2026-09-07; Cleveland's
-  client admins only ever passed through a second team seat (Mentor Team).
-  Ruling: `User: read all, edit own` on the role itself —
-  `scripts/migrate_client_assignment_role.py`, Lakeside done, crm-test and
-  prod owed (`OPEN-ITEMS.md` #28).
-- **Stale-write guard**: the engagement is re-read before any write and the call
-  is rejected (400, nothing written) if it already has a mentor or is no longer
-  `Submitted`. The frontend reloads the grid on any Assign 400.
-- **Assigning the SAME mentor again is a repair run**, not an error — it
-  re-executes the idempotent re-homing. Reachable from the row's right-click
-  menu ("Repair assignment…"), which is the only way to reach it since assigned rows
-  have no Assign control.
-- **Reassign Mentor** swaps `mentorProfile`, re-stamps the date, re-homes
-  everything including every CSession (swap-merge: the old mentor is removed
-  unless a co-mentor shares the user or they personally own the session),
-  and deliberately **leaves `engagementStatus` untouched**.
-- A successful Assign/Reassign opens the quick-compose with the mentor's
-  `cbmEmail` and the EspoCRM `MentorAssignmentNotice` template pre-applied.
-- Every row function is also on the **right-click context menu**. The Notes
-  column edits `CEngagement.description` inline — staff-internal by design, and
-  excluded from the session tools' Details tab for that reason. **Whether it
-  is a rich editor or a plain textarea is feature-detected per load** from the
-  field's live CRM type (`service.live_wysiwyg_fields`): wysiwyg ⇒ the shared
-  editor with images, text ⇒ the textarea, because only a wysiwyg field binds
-  its inline attachments (an unbound one is collected by EspoCRM's cleanup).
-  crm-test and production are converted (production 10-11-26,
-  `scripts/convert_notes_wysiwyg.sh`); Boston is owed
-  (`cengagement-description-wysiwyg-crm-handoff.md`). The popup's
-  Engagement-notes and Mentoring-needs fields are wysiwyg on both CRMs and take
-  images now.
-- **The View-details popup is editable** (v0.210.0). It opens at 90% of the
-  window, resizable, with the title bar and the Save/Cancel bar pinned around a
-  scrolling body. `service.ENGAGEMENT_EDIT_FIELDS` is **one spec serving as both
-  the form layout and the update whitelist**; enum options come from live CRM
-  metadata, link-picker options are **paged at 200** (an oversized page is a 403,
-  not a truncation), a forbidden list degrades the field to read-only, a stored
-  value outside the option list keeps its place, and Save sends only what
-  changed. **The referring partner is named in the popup's HEAD** (v0.256.0,
-  Doug's request 2026-10-12): a "Referred by <partner>" band under the
-  title, visible in view and edit mode alike because the head is outside
-  the swapped body; no partner, no band. **The assigned mentor is deliberately not an editable field** —
-  swapping `mentorProfile` re-homes contacts, client profile, company and
-  sessions, so the row hands off to Assign/Reassign instead.
+  `currentActiveClients`/`availableCapacity`.** `ACTIVE_CLIENT_STATUSES` =
+  Active, Assigned, Pending Acceptance and On-Hold (Doug's ruling
+  2026-09-29), the same set Analytics uses.
+- **Assign merges `assignedUsers`, never overwrites** — an overwrite silently
+  revokes co-mentor access. Assign needs `User: read` on the acting role.
+- **An engagement's mentor changes only through Assign / Reassign**, which
+  re-home contacts, client profile, company and sessions. Never a plain
+  `mentorProfileId` write from another screen.
 
 ### Mentor Administration — `/mentoradmin`
 
-Staff-only, page title "Mentor Administration". The full mentor roster plus a
-detail screen that edits any whitelisted field on `CMentorProfile`.
+Staff-only. The mentor roster plus a detail screen editing any whitelisted
+`CMentorProfile` field. Staff reference: `mentor-administration.md`.
+**Detail: `mentoradmin/CLAUDE.md`.** Rules other packages rely on:
 
-- **`EDITABLE_FIELDS` in `mentoradmin/service.py`** is the single source for the
-  tabbed layout and the update whitelist. Fields marked `entity: "Contact"`
-  route to the mentor's **linked Contact** (no linked Contact ⇒ a readable 400
-  *before any write*).
-- **Save sends only changed fields** (diffed against a render-time snapshot).
-  Re-sending an unchanged value that has since drifted out of its CRM enum would
-  400 the whole update.
-- **Completeness badge** — a mentor is Complete when a Contact is linked and
-  ethics/training/terms are all true (**background check is optional**); plus,
-  if Active, a CBM email and a User assigned to *both* the member and its
-  Contact. `publicProfile` is deliberately not part of completeness. The
-  computed value persists to `recordStatus` on save **and on view** when it
-  changed, so the grid self-heals; a manual `Duplicate` is never overwritten.
-- **`reconcile_user_links` runs on every save** (best-effort), assigning the
-  mentor's User to both the member and its Contact — this is what self-heals
-  one-sided assignments.
-- **Provisioning happens in TWO stages, keyed on `mentorStatus`** (Doug's ruling
-  2026-08-17). `Accepted-Provisional` is a **signal** status, not a resting one:
-  it means *accepted, still needs a Google account*.
-  - **`Accepted-Provisional` → the Google Workspace account** (+ the All Members
-    group), then the app **advances the record to `Provisional`** — so CBM can
-    reach them during the provisional period. No EspoCRM login.
-    `provision_mentor_email_steps`.
-  - **`Approved` / `Active` → the EspoCRM login**, unchanged, on top of the same
-    mailbox stage — so a mentor who jumps straight here still gets everything.
-    It **never writes the status**: that would demote them.
-  - The status advance requires a **confirmed** account (created and live, or
-    already there). An UNKNOWN Directory check fails open for the *login* but must
-    never advance the status — we don't record "has an account" on a guess. A
-    stuck `Accepted-Provisional` is therefore the "account still owed" signal, and
-    the sweep flags it.
-  - Which stage runs is decided **server-side in the router** from the mentor's
-    status; the frontend only asks. Both run in the SSE status window and never in
-    `update_mentor`, because a mailbox create yields a **temp password a human
-    must relay** (also why the sweep reports but never creates).
-  - The group add is **non-fatal** (a distribution list is not the account), and
-    an empty `GOOGLE_MEMBERS_GROUP` / Email-Setup address skips it — the address is
-    its own switch. It needs a **third** DWD scope, `admin.directory.group`.
-  - `_reserve_cbm_email` is what keeps the login-reuse guard sound now that every
-    mentor reaches approval carrying a `cbmEmail`: an address is only stored if no
-    User holds it as a userName and no *other* mentor profile holds it. A merely
-    *existing* mailbox is not "taken" — a pre-created mailbox is the normal case.
-  - The login half creates an EspoCRM User (`firstname.lastname@` the
-    `MENTOR_EMAIL_DOMAIN` setting, default `cbmentors.org` — v0.217.0,
-    welcome email via `sendAccessInfo`), places it in `MENTOR_TEAM_NAME`, links it
-    as `assignedUser`, back-fills `cbmEmail`, and stamps the User onto the linked
-    Contact. **Privilege split — EspoCRM makes User creation admin-only; API keys
-    and `api`-type users cannot do it and a *regular* user with roles 403s.** So
-    this runs as a **dedicated admin service account** (`ESPO_PROVISION_*`,
-    Type=Admin) via `core/admin_client.py` — Mentor Admin staff stay non-admin.
-  - Best-effort: a failure returns `provision:{ok:false,error}` and never rolls
-    back the saved status. Every run is action-logged (it changes a status on the
-    app's own initiative), with the temp password stripped.
-- **Permission teams** on the Status tab write the linked **User's** `teamsIds`
-  (teams live on the User, not the profile), also under the admin account.
-  Always clickable; a login-less mentor gets an explanatory message.
-- **"Update Mentor Status"** sweeps the roster: verifies each login User, checks
-  the mailbox and its members-group membership, flags anyone stranded at
-  `Accepted-Provisional`, runs `reconcile_user_links`, and bulk re-syncs
-  `recordStatus`. This is the staff-facing repair button for stamp drift. It
-  **reports, never creates** — see the temp-password reason above.
-- Functional reference for staff: `mentor-administration.md`.
+- **`EDITABLE_FIELDS` is both the layout and the update whitelist**, and Save
+  sends only changed fields.
+- **Provisioning runs in two stages keyed on `mentorStatus`** (Doug's ruling
+  2026-08-17): `Accepted-Provisional` creates the Google Workspace account and
+  then advances the record to `Provisional`; `Approved` / `Active` creates the
+  EspoCRM login and never writes the status.
+- **EspoCRM makes User creation admin-only**, so the login half runs as the
+  dedicated admin service account (`ESPO_PROVISION_*`, via
+  `core/admin_client.py`); staff stay non-admin.
+- **A mailbox create yields a temporary password a human must relay**, so no
+  sweep or background job ever creates one — sweeps report only.
 
 ### My Mentor Profile — `/mentorprofile`
 
@@ -569,244 +429,30 @@ deliberately omitted.
 ### Session Management — `/mentorsessions`, `/partnersessions`, `/sponsorsessions`
 
 User-facing titles: **Client Management**, **Partner Management**, **Funder
-Management**. Packages, routes, slugs and team gates are unchanged. "Funder" is
-display wording only — the CRM entities stay `CSponsorProfile` etc.
+Management** ("Funder" is display wording only; the CRM entities stay
+`CSponsorProfile` etc.). One engine (`sessions/service.py`), one router factory
+(`sessions/router.make_router`) and one shared frontend; the three domains
+differ only by `sessions/config.py:DomainConfig`. Managers record meetings as
+`CSession` records. **Detail: `sessions/CLAUDE.md`.** Rules other packages
+rely on:
 
-**One configurable engine, three team-gated routes.** Managers review the
-records they own and record meetings as **`CSession`** records — one entity with
-the parent link swapped. The domains differ only by a per-domain
-`sessions/config.py:DomainConfig`; the whole feature is one engine
-(`sessions/service.py`), one router factory (`sessions/router.make_router`), and
-one shared frontend that derives its domain from the first segment of its URL.
-
-| slug | parent | owned-records link on the user's `CMentorProfile` | co-mentors |
-|---|---|---|---|
-| `mentorsessions` | `CEngagement` | `engagements1` (+ `engagements` for co-mentored) | yes |
-| `partnersessions` | `CPartnerProfile` | `managedPartners` | no |
-| `sponsorsessions` | `CSponsorProfile` | `managedSponsors` | no |
-
-- **Managers are `CMentorProfile` records** — the one whose `assignedUser` is
-  their login. `resolve_manager_profile` matches `assignedUser` **in Python,
-  never a `where` on `assignedUserId`** (prod's field ACL forbids it). A record
-  assigned to a *duplicate unlinked* profile is invisible here — a recurring
-  data trap ([[crm-test-duplicate-mentor-profiles]],
-  [[sessions-manager-profile-must-be-assigned]]).
-- **Partner and Funder grids list ALL records** (`DomainConfig.list_all`), not
-  just owned ones — the user's CRM ACL is the gate. This also means those
-  domains never read `CMentorProfile` for the list, which is what fixed the
-  sponsor-team 403.
-- **Detail tabs**: Overview · Details · Sessions · Communications · Documents,
-  plus Contributions (funder only), Referred Clients (partner only), and
-  Analytics (when enabled). Each optional tab is gated by a `DomainConfig` field
-  that controls **both the tab and the endpoint registration** — a router that
-  doesn't own the feature never registers its routes.
-- **The Overview notes editor follows the field's LIVE CRM type** (v0.252.0,
-  `service.live_notes_type`): wysiwyg ⇒ the rich editor, text ⇒ the plain
-  box. Funder Notes (`CSponsorProfile.description`) is wysiwyg on crm-test
-  and production since 10-11-26 (one command per instance,
-  `scripts/convert_notes_wysiwyg.sh`; Boston owed) —
-  `csponsorprofile-description-wysiwyg-crm-handoff.md` (Doug 2026-10-11:
-  "the funder notes should be wysiwyg").
-- **Overview** is a facts rail + notes feed with drag splitters, an aggregated
-  Company peek, a Next-session callout with a Start/Open button, and (partner +
-  funder) a **Discussion pane** — an app-only, append-only, attributed comment
-  stream in the `record_comment` Postgres table, **never written to the CRM or
-  shown to the partner/funder**. Record notes edit in place from the Overview.
-  Every scalar rail fact renders "—" when empty rather than vanishing (an empty
-  slot that disappears reads as a missing feature).
-- **Details** renders from live CRM metadata (editable scalars, humanized
-  labels) in curated, packed, full-width group panels. Curated lists control
-  what appears: `DETAILS_LAYOUTS`, `DETAILS_REMOVED_FIELDS`, and
-  `_ENTITY_LINK_FIELDS` (belongsTo links render **only** if curated there — the
-  metadata sweep covers scalars only). Permission-aware down to per-record
-  ownership. The PUT is entity-allowlisted (`cfg.details_entities` + Contact,
-  else 404).
-- **Re-assigning a record's manager happens on the Details tab**, through those
-  curated link pickers — `CPartnerProfile.partnerManager` on the Partnership
-  panel and `CSponsorProfile.cBMSponsorManager` on the Funding panel (v0.197.x).
-  Each is the belongsTo behind the `manager_owned_link` reverse
-  (`managedPartners` / `managedSponsors`), so it decides **whose** record this
-  is — which is why it went unnoticed for so long that the grid displayed it and
-  nothing could change it. Options are the mentor profiles the signed-in user
-  can read; a forbidden list degrades the picker to read-only rather than
-  breaking the tab, and a stored manager outside the list stays selected so a
-  save can never silently drop them. **Mentor has no equivalent** — an
-  engagement's mentor is re-assigned in Client Administration, deliberately
-  (`DETAILS_LAYOUTS` keeps `mentorProfileName` read-only there).
-- **The record's COMPANY is set on the Details tab too** (v0.198.0), the same
-  way: `partnerCompany` / `sponsorCompany` as curated link pickers leading the
-  Partnership and Funding panels, gated per domain by
-  `DomainConfig.company_link_editable` (mentor has none — an engagement's
-  company resolves through the client profile via `company_fallback`). These
-  pickers also **create** the company, because a partner/funder the CRM holds no
-  Account for cannot be repaired by picking: "+ New company" find-or-creates it
-  (`details.create_company` → `service._find_or_create_company`, so a same-named
-  company is reused and `cCompanyType` merged in), and the panel's **Save**
-  writes the link — creating and linking stay separate so there is exactly one
-  write path to the link. `POST /records/{id}/company` is **not** gated by
-  `RECORD_QUICK_ADD`: it repairs records that already exist.
-- **A company can carry MANY partner profiles.**
-  `Account.cCompanyPartnerProfile` was `hasOne` until 2026-08-14, so linking a
-  company to a second partner profile silently *moved* it off the first — that
-  is how a live partner record lost its company to a duplicate entered nine
-  hours later. Doug's ruling: a partnership is with a programme inside an
-  organisation as often as with the organisation itself, so one company, many
-  partner records. Recreated as many-to-one on prod 2026-08-14 and crm-test
-  2026-08-15, verified in both; no application code was involved.
-  **Funders followed on 2026-08-16** — `sponsorCompany` ↔
-  `Account.cSponsorProfiles`, both environments, all links intact, proven by a
-  two-funders-one-company test on crm-test.
-- **Clients are the exception, and it is deliberate.** Doug's ruling
-  (2026-08-16): **a client never has two client business profiles**, so
-  `CClientProfile.linkedCompany` staying `hasOne` is *correct* — do not "fix" it
-  to match partners and funders. The guard that makes the model safe lives in
-  the app: `forms/client_intake/orchestrator._find_or_create_client_profile`
-  find-or-creates the profile **matched on `linkedCompanyId`**, because an
-  unconditional create silently moved the Account and contact off the existing
-  hub (twice in production, 2026-07-17 and 2026-07-27). Verified clean
-  2026-08-16: all 73 prod client profiles have a company and none share one.
-- **Events (partner and funder, `sponsored_events_link`)** — the Events tab
-  just before Communications (v0.239.0): every event linked to the record,
-  with registered / attended / became-a-client counts and totals, all from
-  `events/reporting.sponsor_rollup` so every screen agrees. "Became a
-  client" is the programme's conversion rule scoped to one event, and never
-  a separate "requested a mentor" count (Doug's ruling 2026-10-07). The
-  endpoint feature-detects the reverse link and answers `available: false`
-  with a reason on a CRM without it; an unreadable count renders "—", never 0.
-  **The counts compute under the org-wide API key** after the user's own read
-  of the parent record gates the tab — the Partner Manager and Sponsor Manager
-  roles hold no event, registration or engagement access, and the numbers are
-  aggregates (the directory-availability precedent).
-- **Grants (funder only, `grants_link`)** — the Grants tab: awards, their
-  deliverables, and later their funder reports. The **grant is the hub**:
-  `CContribution` rows become its payments and deliverables its obligations, and
-  the two are **siblings under it, never a chain**. Client attribution lives on
-  the grant (`fundedEngagements`), so a renewal starts clean. Deliverable
-  progress math lives in ONE place (`service.deliverable_progress`) — a stored
-  status always beats the arithmetic, and a Narrative deliverable has no
-  percentage at all. Gated by `GRANTS_ENABLED` **and** CRM feature detection,
-  which fails closed. Plan + rulings: `prds/grant-management-plan.md`.
-- **Partner and Funder can be CREATED here** (`RECORD_QUICK_ADD`, off by
-  default): the grid's "+ Add partner" / "+ Add funder" runs the same
-  Account → Contact → profile sequence the public intake forms do, as the
-  signed-in user. `DomainConfig.create_spec` gates both the button and the
-  routes (mentor has none — engagements arrive through intake), and the spec is
-  BOTH the form layout and the write whitelist. Same dedupe policy as intake:
-  a same-named company / same-email contact is reused and null-filled, never
-  duplicated; a reused company gains the type value merge-only. **A website,
-  when entered, must agree with the match** (v0.237.0, Doug's ruling
-  2026-10-07): a same-named company at a *different* web address is a
-  different company, and the save is **refused with the existing company
-  named** — never a second same-named Account, which would make every
-  name-based match in the CRM ambiguous. Same rule on the Details tab's
-  "+ New company" picker (shared function). **Since v0.254.0 the quick-add's
-  Company is a picker** (every company under the org-wide key, website
-  beside the name, "+ New company…" for the typed path): a chosen company's
-  id rides as `companyId` and skips the match and the website rule — the
-  way to make a company that is both a partner and a funder. **A picked
-  company with an empty contact block inherits the primary contact of its
-  record in the other application** (Partner Management ↔ Funder
-  Management; v0.257.0, Doug 2026-10-14): the newest such record naming
-  one wins, read under the org key, contact stamped merge-only. Compared through
-  `core/crm_upsert.website_key` (scheme, `www.`, case, trailing slash
-  ignored; the path counts). No stored website ⇒ match and null-fill it.
-  **The new contact is owned by its creator and the domain team** (v0.249.0,
-  Doug's ruling 2026-10-09): `_create_quick_contact` stamps a NEW contact with
-  `assignedUserId` + `assignedUsersIds` and `teamsIds`, exactly as the
-  profile is. Without it EspoCRM refuses the create for a role whose
-  Assignment Permission is *not-set* ("Assignment failure: assigned user or
-  team not allowed" — the Sponsor Manager Role on both CRMs), and a
-  team-read role could never see the contact it just made. The Partner
-  Manager Role only passed because it is *all*/*all*; Partner Management and
-  Funder Management share the function and must stay identical. **The company too** (v0.249.1):
-  the match, the null-fill, the type merge, the team lookup and the create
-  all run under the intake API client (a team-read user matching as
-  themself created a duplicate per attempt; the Sponsor Manager Role has no
-  Team read), a NEW company carries the creator and the team, and a REUSED
-  company or contact GAINS them when missing (`_merge_owner_stamps`,
-  merge-only, best-effort) — the contact's company link needs the user to
-  read the company. Null-fills and creates still run as the user.
-- **A new contact on the Contacts tab reuses a known email** (v0.264.2, the
-  staff screens are bound like the public forms): matched under the intake API client, linked,
-  null-filled as the user; a CBM member is refused.
-- **Contacts tables are per-domain**: mentor shows Role chips and an Agreements
-  badge; partner/funder show neither (every contact has the same relationship to
-  CBM, and the consent bools are a client-intake concept) but offer **Make
-  primary**.
-- **First completed session activates the engagement** — a session saved
-  Completed on an `Assigned`/`Assignment Dormant` engagement moves it to
-  `Active`. The status guard *is* the "first session" rule. Best-effort.
-- **Closing a session with a future "Next session" date books the follow-up**
-  automatically (Scheduled, 1h, contacts invited). The grid's Next Session
-  column derives **only from real sessions** — the stored
-  `CEngagement.nextSessionDateTime` is deliberately discarded because staff can
-  hand-edit it in the CRM and a stale value showed as a ghost session.
-- **`touch_last_contact`** advances `CEngagement.lastContactDate` /
-  `lastContacted` (advance-only, never backward or future) on a recorded session
-  and an outbound email from the record.
-- **Editor**: `SESSION_FIELDS` is layout + whitelist. `duration` is EspoCRM's
-  *virtual* type — the frontend translates the Duration select into a recomputed
-  `dateEnd`. The time picker **shades slots that conflict** with the user's own
-  Google calendar (advisory only — a shaded slot stays selectable).
-- **The partner's Details tab carries its client intake link** (v0.255.0):
-  a card under the summary strip with the `?partner=<id>` address and a
-  Copy button, gated by `DomainConfig.intake_link_form` (partner only) and
-  derived in the router from `APP_BASE_URL`, else the request's origin.
-  What the link produces shows on the Referred Clients tab. Rule in the
-  five-forms section above.
-- **Additional managers on partner and funder records** (v0.251.0, Doug's
-  requirement 2026-10-11, Partner Management and Funder Management alike): the co-mentor model —
-  `CPartnerProfile.additionalManagers` / `CSponsorProfile.additionalManagers`
-  (many-to-many to `CMentorProfile`, reverses `comanagedPartners` /
-  `comanagedSponsors`), **feature-detected** per request
-  (`service.comanager_link_available`) so a CRM without the build shows
-  nothing. Same routes, same CBM-contacts card, same picker; off the
-  engagement the add is the link plus a history note — no stamps, no
-  session backfill. The email scope reads every domain's second reverse
-  link (a 404 is skipped at debug); Drive grants entitle them; My Email
-  already did. Plan `scripts/plans/additional-managers.json`; handoff
-  `cpartner-csponsor-additional-managers-crm-handoff.md`. The links exist
-  on crm-test and production (10-11/12-26, both passed as non-admins);
-  Boston owed with its next release. **"Make primary" on a CBM row**
-  (v0.253.0, Doug's ruling 2026-10-12): `service.promote_comanager` writes
-  the manager link first as the user, moves the new manager out of
-  `additionalManagers`, and **keeps the former manager as an additional
-  manager** (non-destructive, one click undoes it); partner and funder
-  only — the engagement's mentor is Client Administration's.
-- **Co-mentor visibility** requires two things, both in the app: reading the
-  `engagements` reverse link *and* stamping the co-mentor's User into the
-  engagement's `assignedUsers` (Mentor Role reads CEngagement at "own", which
-  with `assignedUser` disabled means `assignedUsers` membership). `add_comentor`
-  also stamps the client records and backfills existing sessions;
-  `remove_comentor` un-stamps symmetrically unless the user is shared.
-- **New sessions are owner-stamped** so a read-own role can see its own create —
-  without this the create itself 403s, because EspoCRM ACL-checks the read-back.
-
-Watch for these when touching this package:
-
-- **`sessionAttendees` and `additionalMentors` are RELATIONSHIPS, not fields** —
-  read via `list_related`, write via relate/unrelate. Reading `<field>Ids` always
-  returns empty and setting it on an update is silently ignored
-  ([[espo-custom-linkmultiple-is-a-relationship]]). `unrelate` sends the id in
-  the DELETE **body**; the path-suffix form 404s.
-- **Relate/unrelate checks BOTH sides** — adding a co-mentor needs edit on the
-  *other* mentor's profile. `_link_or_escalate` runs as the user first and only
-  escalates a `noAccessToForeignRecord` denial to the admin account
-  ([[espo-link-checks-both-sides]]). **Attendee linking goes through the same
-  helper** (v0.258.6): `_sync_attendees` and the create-path relate loop
-  escalate a foreign-contact 403 exactly as co-mentor linking does — a mentor
-  recording an attendee assigned to someone else used to hit the warning
-  "N attendee change(s) could not be applied" (Greg Malkin, prod 2026-10-15).
-  The warning now fires only when no admin is configured or the admin fallback
-  also fails.
-- **Enum drift is handled in two layers**: the frontend sends only changed
-  fields, and `_sanitize_enum_payload` drops values outside the live options
-  before the CRM call (fails open).
-- Required fields come from CRM metadata, not hard-coding.
-- The `CSession` **name formula must be keep-if-present**
-  (`ifThen(name == null || name == '', …)`) or it clobbers the supplied title.
-- **One record, one tab** — records open in a stable per-record window and a
-  `BroadcastChannel` elects one owner tab ([[single-tab-record-guard]]).
+- **Partner and Funder Management never differ** (Doug 2026-10-11): build
+  every capability for both at once, one code path keyed by `DomainConfig`.
+- **Managers are `CMentorProfile` records** whose `assignedUser` is their
+  login, matched in Python — never a `where` on `assignedUserId` (prod's field
+  ACL forbids it).
+- **A company can carry many partner profiles and many funder profiles; a
+  client never has two client profiles** (Doug's ruling 2026-08-16).
+  `CClientProfile.linkedCompany` stays `hasOne` on purpose — do not "fix" it.
+  The guard is `forms/client_intake/orchestrator._find_or_create_client_profile`.
+- **Staff screens that create a company or contact follow the public forms'
+  rules**: a same-named company is reused and gains its `cCompanyType` value
+  merge-only; a same-named company at a different website is refused here
+  (held on a public form); a known email is reused, never duplicated; a new
+  contact or company is stamped with its creator and the domain team.
+- **Co-mentor visibility needs both** the `engagements` reverse link and the
+  co-mentor's User in the engagement's `assignedUsers`.
+- **An engagement's mentor is changed only in Client Administration.**
 
 ### Submission Admin — `/ops`
 
@@ -911,549 +557,81 @@ Live on both environments. User guide: `analytics-guide.md`; activation runbook:
 
 ### System Settings — `/setup`
 
-**EspoCRM admins only** (not a team gate — this page can reconfigure the
-platform). Changes this deployment's runtime settings from the browser instead
-of an overlay edit plus `doctl`, which is what makes the flag-based promotion
-gate practical. Gated by `SETUP_ENABLED` + a database. **Live on both
-environments** — prod since 2026-08-12; before that the flag was only ever in
-the crm-test overlay, so every prod flag change needed `doctl`. Runbook:
-`SYSTEM-SETTINGS-SETUP.md`; rulings: `prds/system-settings-plan.md`.
+**EspoCRM admins only** (not a team gate). Changes this deployment's runtime
+settings from the browser; gated by `SETUP_ENABLED` + a database; live on both
+environments. Runbook: `SYSTEM-SETTINGS-SETUP.md`; rulings:
+`prds/system-settings-plan.md`. **Detail: `setup/CLAUDE.md`.** Rules other
+packages rely on:
 
-- **Env is the default, the DB row is the override, and both are shown when they
-  disagree** — `app_setting` holds only overridden keys and
-  `core/settings_store.py` merges them over the env baseline behind the same
-  `get_settings()` every package already calls. An empty table is exactly the
-  old behaviour.
-- **Degrade to the overlay, never to the code default.** If the override lookup
-  fails (no DB, Postgres down, a bad value) the accessor returns the env value
-  and logs. A database incident must not silently reconfigure the app — which is
-  also why the overlays keep their flags permanently.
+- **Env is the default, the DB row is the override**, merged by
+  `core/settings_store.py` behind the same `get_settings()` every package
+  calls. **Degrade to the overlay, never to the code default** — a database
+  incident must not silently reconfigure the app.
 - **Every setting is editable unless a change is genuinely impossible** (Doug's
-  ruling, 2026-08-28: *"All settings should be editable, unless a change would
-  make the system unusable. Then there must be a verification that the system is
-  still functional."*). The denylist is down to **three** keys — `DATABASE_URL`
-  (the override table lives inside the database it names, so a move would be
-  left behind in the database being abandoned), `APP_ENCRYPTION_KEY` (rotating
-  it makes every stored secret permanently unreadable — data loss, not lockout)
-  and `RELEASE_TAG` (the release stamp travels in the image's own
-  `release-tag.txt`; a stored override would survive a restart and make the
-  deployment misreport which promotion it is). All three are **visible and read-only**,
-  each refusal naming its reason. Everything else that used to be hidden — the
-  CRM address and key, dry-run, the provisioning account, every integration
-  credential, the session secret, `SETUP_ENABLED`, `SETTINGS_OVERRIDES` — is
-  editable through the **verified path** (`setup/verify.py`):
-  - **Pre-flight**: the value is tried before it is stored. A CRM key the CRM
-    rejects, or an address that answers but holds none of this app's entities,
-    is refused with the CRM's own error. A probe that cannot *reach* its target
-    returns `unknown`, never `ok`, and `unknown` does **not** block the save —
-    an admin fixing configuration during an outage must not be blocked by it.
-  - **Post-apply**: a `VERIFIED_KEYS` change that leaves the system non-functional
-    is **reverted automatically**.
-  - **Confirm-or-revert**: `LOCKOUT_KEYS` (the two switches guarding this page,
-    the session secret, the cookie flag, allowed origins) apply with a
-    **10-minute countdown** and undo themselves unless an admin confirms. No
-    probe can detect a lockout — the app is working perfectly and simply will not
-    let anyone back in — so this is the only mechanism that survives it. The
-    sweep runs in **both** processes on the settings timer, and works directly
-    against the database so it still fires when the change under test was
-    `settings_overrides=false`.
-  - **Secrets are editable but never readable** — set a new one, never read the
-    old one back. Stored **encrypted** with `APP_ENCRYPTION_KEY`; without a
-    cipher a secret is **refused**, never written in plain text. `DATABASE_URL`
-    counts as a secret because the password is inside the URL. History stores
-    `(secret set)`, never the value.
-  `SETTINGS_OVERRIDES=false` is still the env-only break-glass.
-- **Every setting is on the page — including the ones that need a restart**
-  (Doug's ruling, 2026-08-28: a setting hidden where it cannot be viewed or
-  edited is unacceptable). `BOOT_READ_KEYS` are curated into a **Restart
-  required** group that explains itself, and each row shows the value **in
-  force** beside the stored one, badged *Waiting for restart* when they differ.
-  Two things make that honest rather than a repeat of v0.190.1, when these were
-  offered with a "takes effect on next deploy" badge and toggling
-  `events_enabled` produced a portal tile whose routes did not exist:
-  - **`core/boot_overrides.load_at_boot` installs the override layer at the very
-    top of `create_app`**, before routers are mounted, middleware built or
-    logging configured. Previously the layer loaded afterwards, so such an
-    override never applied *at all* — a redeploy re-ran the mounting first. It
-    never raises, and on a database failure it degrades to the **deployment's**
-    values, never the code defaults.
-  - **The live `Settings` object is not the truth for these keys.** The periodic
-    refresh installs a newer value into it while the already-built routers keep
-    the old one, so reading it back would report a change as taken effect when it
-    had not. `boot_overrides.state().snapshot` is the only honest source and is
-    what the page reports as `inForce`.
-  `DENYLIST` now holds only secrets, infrastructure and the break-glass pair —
-  plus **`release_tag`**, which is curated **read-only**: it is stamped into the
-  image, so a stored override would survive a restart and make the deployment
-  misreport which image it is running. **The denylist is still filtered on READ
-  as well as write**, so a row that outlives its rule goes inert with no cleanup.
-- **Web and worker refresh independently** (`SETUP_REFRESH_SECONDS`, default 45).
-  `/healthz` reports `settingsVersion` per component so you can see the worker
-  catch up.
-- **Overrides never auto-revert**; a change can be marked temporary with a review
-  date, and overdue ones are flagged on the page and logged hourly by the worker.
-- **Scoped rollout is web-only** — a per-team/per-user scope needs a signed-in
-  user to evaluate, so worker-side settings refuse it. A scoped override is
-  deliberately excluded from the process-wide config.
-- Also on the page: a **feature-readiness** panel (flag · required secrets · CRM
-  fields detected · which component · worker heartbeat), an **environment diff**
-  against the peer deployment (token-authorised snapshot, no secret values ever
-  crossing the wire), and an **operations** tab whose mutating jobs are
-  **dry-run → apply that exact plan**, refusing if the plan moved.
+  ruling 2026-08-28). The denylist is three keys — `DATABASE_URL`,
+  `APP_ENCRYPTION_KEY`, `RELEASE_TAG` — visible and read-only. Everything else
+  goes through the verified path (`setup/verify.py`). Secrets are editable but
+  never readable, stored encrypted, and refused without a cipher.
+- **Every setting is on the page, including restart-required ones** (Doug's
+  ruling 2026-08-28). `core/boot_overrides.load_at_boot` runs at the very top
+  of `create_app`, and `boot_overrides.state().snapshot` — not the live
+  `Settings` object — is what is in force for those keys.
+- A new setting read per request needs no restart; read it per request when
+  you can. `SETTINGS_OVERRIDES=false` is the env-only break-glass.
 
 ### Campaign Management — `/campaigns`
 
-Marketing Admin Team (`CAMPAIGNS_ALLOWED_TEAMS`), behind **`CAMPAIGNS_ENABLED`**
-(off; read **per request**, so a `/setup` flip needs no restart — the routers
-mount with the staff stack and answer 404 while off). Prospect marketing
-Phase 1 (v0.258.0, 10-15-26); the arc is `prds/prospect-marketing/` (its
-`README.md` first; `rulings.md` 1–33 binding; `build-plan.md` v0.4). Package
-`campaigns/` in the house shape. **Needs the Phase 1 CRM change**
-(`coutreach-entities-crm-handoff.md`, `contact-sms-opt-in-crm-handoff.md`):
-every read feature-detects `CProspect` / `COutreachCampaign` / `COutreachTouch`
-and the campaign's links, and a CRM without them answers *not available* with
-the reason.
+Marketing Admin Team (`CAMPAIGNS_ALLOWED_TEAMS`), behind `CAMPAIGNS_ENABLED`
+(read per request). The arc is `prds/prospect-marketing/` — its `README.md`
+first; `rulings.md` is binding and append-only. **One session on that arc at a
+time.** **Detail: `campaigns/CLAUDE.md`.** Rules other packages rely on,
+chiefly the public form orchestrators in `forms/`:
 
-- **Who acts:** campaign reads and writes run as the signed-in user (the
-  Marketing Admin Role creates/reads/edits the three entities). Aggregates and
-  machine writes — the postcard selection and its Planned touches, the import's
-  already-known reads and its Company/Contact creates (**ruling 33**), the
-  counts on the partner's Campaigns tab — run under the **org-wide API key**.
-  Relating a campaign to a partner needs edit on the partner, which that role
-  lacks by ruling, so `service._link_or_escalate` retries only a
-  `noAccessToForeignRecord` denial as the admin account.
-- **Links live in the application database** (ruling 31; `campaigns/store.py`,
-  migration 0031: `campaign_link`, `campaign_link_visit`, the import ledger).
-  `GET /c/{token}` **never calls the CRM**: it counts the visit and 302s to the
-  destination with `?campaign=&link=`. A token that resolves to nothing is a 404
-  in the same words whatever the reason; a **retired link still opens** and its
-  visit is flagged late; an event link's slug is cached and refreshed whenever
-  staff open the Links tab. A postcard's per-card code is `/c/{link}/{scan}`,
-  its QR PNG `…/qr.png` (`core/qr.py`, `segno`).
-- **The postcard kind** (`campaigns/postcard.py`): *Build the list* selects
-  under rulings 10, 14 (one card per business, ever — any Sent/Delivered/
-  Returned postcard touch from any campaign excludes the target) and 15 (a dead
-  address is skipped), reconciles this campaign's Planned touches (kept /
-  created / Cancelled) and moves Draft → Awaiting sign-off. *Sign off and run*
-  needs the **typed piece count** (ruling 13), stamps the campaign and sets
-  **Signed off, which is the worker's queue** (`run_campaign_cycle`, every
-  `CAMPAIGNS_RUN_SECONDS`): each Planned touch becomes a vendor piece with the
-  **touch id as the idempotency key**, then Sent with `scanToken`,
-  `mailedAddress` (the snapshot) and `stageAtTouch`; Complete when none is left.
-  The vendor is `core/postal.py` — `DryRunPostalClient` by default (nothing
-  printed, `dryrun-<touch id>`), `LobPostalClient` written from the published
-  API and **never run**. Delivery events arrive signed at
-  `POST /api/campaigns/postal/events` (404 until `POSTAL_WEBHOOK_SECRET` is
-  set); a returned piece marks the **address** dead and leaves the rung
-  (ruling 15). In dry run a staff *Simulate* button posts the same event.
-- **The landing page `/p/{token}`** (`campaigns/landing.py`, behind
-  `CAMPAIGNS_LANDING_PUBLIC`): the scan writes `firstScannedAt` once,
-  `scanCount`, outcome Scanned and moves the record to **Lead, advance-only**
-  (ruling 16); a Planned touch is a preview and writes nothing. The page shows
-  **only what the card printed** — the business name and the address as mailed
-  — never an email, phone or person's name the chapter holds. Its response is
-  the sixth form kind, `forms/prospect_response/` (delivery-only, scoped
-  duplicate hold by `scan_token`, `company_keys` for the `held_company` hold):
-  email promotes the person, website the business (ruling 21), consent
-  **true-only**, never a relationship record. A mentor or information request
-  then opens the standard form with `?prospect=&campaign=&link=`; the typed
-  details travel in `sessionStorage` only, and `GET /api/campaigns/prospect/{id}`
-  serves the printed facts alone.
 - **Every public form carries `campaign_id`, `campaign_link`, `prospect_id`**
   (declared on `core/forms.BaseSubmission` — an undeclared key is dropped by
-  capture) and the **SMS tick** `sms_consent` → `Contact.cSmsOptIn`, true-only
-  (ruling 9). **Honoured at delivery since Phase 2 (v0.259.0)** — the next
-  bullet. The shared
-  `frontend/shared/campaign-link.js` fills the hidden fields, shows the banner
-  from the name-only lookup `GET /api/campaigns/public/{id}` and prefills the
-  printed facts. The GET rate limit covers `/c/` and `/api/campaigns/public/`.
-- **The import** (`campaigns/imports.py`): plan, then apply; the file is read
-  in the browser and posted as text (no multipart); the already-known check is
-  Company by name **and** postal code, Company by website key, Contact by email
-  (ruling 12) — a match still creates the prospect record, with the *Already
-  known* side exit; a re-upload of the same file is a no-op through the ledger.
-- **Funders on a campaign** (v0.268.0, ruling 57): `cfg.LINK_FUNDERS`
-  (`funderProfiles` ↔ `CSponsorProfile.sponsoredCampaigns`), a picker
-  beside Partners, and Funder Management's Campaigns tab
-  (`DomainConfig.sponsored_campaigns_link` on both domains now).
-  Feature-detected (`service.funders_available`). **Not**
-  `COutreachCampaign.sponsorProfiles` — that is ruling 27's attribution
-  reverse. Funders get no CM-4 credit.
-- **The import at volume** (v0.267.2): the already-known check reads the
-  whole file in batches (`imports.KnownIndex`, ~30 reads for 800 rows), and
-  the page applies 100 rows per request until `remaining` is 0 — never put
-  a per-row CRM call back into the plan, and never one request for a whole
-  apply (61.6 s and a timed-out page, 10-20-26).
-- **The Leads and Review grids at volume** (v0.267.0, build plan § 7b,
-  Doug's five answers 10-20-26): `campaigns/leads.py` — the CRM searches,
-  sorts and counts a page at a time (never load every lead; the old list
-  stopped silently at 2,000); bulk Disqualify / Do Not Contact over ticked
-  rows or all matching (cap 2,000, batches of 50, each lead re-read and
-  skipped if changed since seen); a CSV export; Review as a queue whose row
-  takes the website or email and qualifies in one step. **Every decision
-  carries what the reviewer saw (`seenStatus` / `seenExit`) and a change
-  since answers 409 naming who** — keep that on any new review action.
-- **The partner's Campaigns tab** (CM-5): `DomainConfig.sponsored_campaigns_link`
-  on the partner domain only, the Events-tab shape exactly.
-- **Phase 2 — the public forms honour the ids** (v0.259.0, 10-17-26; build plan
-  § 5). One module, `campaigns/attribution.py`, serves the five
-  orchestrators (client intake, information request, event registration,
-  partner, sponsor): a **validate-or-drop** read of the campaign and of the
-  prospect record (unknown, stale, cancelled, forged, or a CRM without the
-  link ⇒ the attribution is dropped with a logged note, never the
-  submission — every write feature-detects its link or field, so
-  production until its Sunday slot behaves exactly as before); the campaign
-  on the **relationship record every time** (`outreachCampaignId`) and on
-  the Contact and Company (`cOutreachCampaignId`) **only when that
-  orchestrator created them** (ruling 27 — on a registration, the create
-  only, so a repeat sign-up keeps the first); a prospect record's
-  **promoted company used by id before any name match**, its promotion
-  links set if empty; the rung as evidence, advance-only (information
-  request and registration ⇒ Warm Lead on the Contact, the entry stage
-  written once on a new record; a client has no stored rung — Candidate is
-  read from the engagement); the notes line *"Arrived through the campaign
-  <name>."*. **Step 6a (ruling 30):** the engagement's `referringPartners`
-  holds EVERY referring partner — the partner link's partner plus every
-  partner the campaign names — related after the create; the single
-  `referringPartner` is the partner link's own and is never written by a
-  campaign; the three readers (the popup's *Referred by* band, the
-  Referred Clients tab via `engagements` + `referredEngagements`, the
-  Partner Analytics metrics) take the **union**, deduplicated by
-  engagement. **The relabel at conversion is one rule** (§ 1.9):
-  `core/crm_upsert.merged_types` — appending Client, Partner, Sponsor or
-  Mentor removes `Prospect`, nothing else is ever removed; both
-  `merge_company_type` and the new `merge_contact_type` apply it, and
-  `merge_contact_type` is the ONE reason a public form touches a matched
-  contact's type (the information request and registration forms never do).
-  **Ruling 34:** the information request form creates its company typed `Prospect`,
-  `cClientStatus` untouched, a matched company left alone (it used to gain
-  Client), feature-detected with the old shape as the fallback;
-  `scripts/relabel_info_request_companies.py` (dry-run default) relabels
-  the old-shape companies once per CRM — Doug runs it. **The carry-through:**
-  the programme page appends `?campaign=&link=` to every event address it
-  renders (`CBMEvents.config.eventUrlQuery`); a freshly typed address has
-  left the campaign. **The Responses tab** leads with *Responded* /
-  *Converted* (`campaigns/router.summarize_responses`) and links through:
-  `/assignments/?engagement=<id>` opens the popup, `/events/?event=<id>`
-  the event (both new deep links), partner / funder record pages,
-  Submission Admin for an information request.
-- **Ruling 37 (v0.260.2):** the information request and registration
-  forms never write a stage on a record that already holds a relationship
-  type — `attribution.holds_relationship`, checked inside `advance_rung`, so
-  every caller must SELECT the type field (`cContactType` / `cCompanyType`).
-- **Phase 3 — lists, review, calls** (v0.261.0, 10-18-26; dark behind
-  **`CAMPAIGNS_CALLS`**, read per request). The **Review** tab
-  (`campaigns/review.py`): *Qualify* / *Unqualified* (note required) on an
-  Unverified record, *Do Not Contact*, *Not the same company* (clears
-  *Already known* and `alreadyKnownCompany`, the link under the API
-  client); **no side exit is ever written over another**. **The call kind**
-  (`campaigns/calls.py`): a promoted prospect record IS its Contact; *Sign
-  off* starts the list at once (no worker) and the last recorded row
-  completes it. **Who calls is ruling 36**: the members of the teams named
-  on the campaign (its own `teams`, set by the form's *Who calls* picker;
-  none ⇒ the Marketing Admin Team), gated per campaign in `calls`, NOT by
-  `CAMPAIGNS_ALLOWED_TEAMS` — the Calls page `/campaigns/calls.html` and
-  `/campaigns/api/calls*` admit any signed-in user and the campaign decides.
-  **The touch is written as the caller; the rung, the `Declined` exit, the
-  *Call again* row and the completion under the API client** (the Mentor
-  Role reads `CProspect`, never edits it). **Every call record carries its
-  campaign's teams** (v0.261.1): the Mentor Role's Assignment Permission is
-  *team*, and EspoCRM refuses such a role ANY save of a record with neither
-  a team nor an assigned user (`isPermittedTeamsEmpty`) — so the API client
-  stamps the teams before the caller writes. The Mentor Role's grants
-  (`COutreachTouch` read/edit, `CProspect` read) are in
-  `migrate_outreach_roles.py`. **The Stale sweep** (`campaigns/stale.py`):
-  Unverified/Qualified, no side exit, no Planned touch, no activity within
-  `PROSPECT_STALE_DAYS`; worker every `PROSPECT_STALE_SWEEP_SECONDS`, and
-  `/setup` → Operations *Prospect Stale sweep* (its plan text carries no
-  clock, so the fingerprint holds). **Every number is
-  `campaigns/reporting.py`** (`summarize_responses` moved there; the
-  router re-exports it): the record page, the Responses tab and the new
-  Analytics page *Campaigns* (`analytics/campaigns.py`, live, org key).
-- **Phase 4** (v0.262.0–v0.264.0, 10-18-26). **Texts (rulings 38, 39,
-  `CAMPAIGNS_SMS`):** the application sends — `core/sms.py`, Twilio behind
-  `DryRunSmsClient` (the default, `SMS_PROVIDER`); the wording is the CRM
-  field `COutreachCampaign.smsMessage`, feature-detected
-  (`cfg.CAMPAIGN_OPTIONAL_FIELDS`, dropped from the form and the write
-  when absent) and NOT in `CAMPAIGN_SELECT` (a CRM without it would refuse
-  the select — read it by a whole get). Selection is ruling 9 (a Contact
-  with `cSmsOptIn`). Sign-off refuses wording without STOP. **A touch is
-  marked `vendorStatus=sending` before every send and a touch left so is
-  never resent by itself** (Twilio has no idempotency key). Sends only
-  inside `SMS_SEND_HOURS`. Signed callbacks `/api/campaigns/sms/inbound`
-  (STOP → `cSmsOptIn` false) and `/status`, 404 until Twilio is
-  configured; the body is parsed by hand (no python-multipart).
-  **Email (`CAMPAIGNS_EMAIL`):** `campaigns/email.py` pushes each campaign
-  as its OWN list `Campaign — <name>` and never reads or writes the
-  standing list or its stored id; *Mark as sent* completes it. **The
-  funnel** (`reporting.funnel`, Candidate/Client from the engagement
-  status) and **the campaign dashboard scope** `COutreachCampaign`
-  (`analytics/campaigns.py`, counts under the org key after the user's read
-  — the Marketing Admin Role reads no engagement). **Opportunity on
-  attendance** (`attribution.opportunity_on_attendance`) from the manual
-  mark, the check-in and the Zoom pull, org key, best-effort.
-- **The lead model (v0.265.0, rulings 41–53; build plan § 7a)** supersedes
-  the rung words in the Phase 1–4 bullets above. A lead (`CProspect`, CRM
-  label *Outreach Lead*) carries `leadStatus` Unqualified · Qualified ·
-  Disqualified · Converted and `leadSource`; a Company or Contact is made
-  only at first contact and carries `cFunnelStage` Prospect · Engaged ·
-  Opportunity. One conversion rule, `campaigns/conversion.py`: an email or
-  a website converts; a business lead becomes a Company (matched by website,
-  then name and postal code) and the Contact for the email (ruling 52); a
-  scan changes nothing (51). A filing row with a website or email enters
-  Qualified (53). Every new public-form record gets a lead Converted at
-  once (48, `attribution.record_lead`, retry-safe through
-  `ResumableClient.created_ids`). **Stage writes need the NEW options**
-  (`rung_available`): a CRM still on the old ladder gets none rather than a
-  400. Every campaign read requires `CProspect.leadStatus`. Three counts:
-  Responded, Converted, Became a client, partner or funder (46).
-- Owed: nothing on production's CRM (both slots done 10-18-26; every
-  campaign switch off there — turning one on is Doug's call at `/setup`);
-  Boston with its release; a seeder and sandbox re-baseline; the Twilio
-  account and A2P 10DLC before any real text; questions 2, 4, 5 before the
-  first real card (`OPEN-ITEMS.md` #51).
+  capture) and `sms_consent` → `Contact.cSmsOptIn`, true-only.
+- **`campaigns/attribution.py` is the one module the orchestrators call**:
+  validate-or-drop — an unknown, stale or forged id drops the attribution with
+  a logged note, never the submission — and every write feature-detects its
+  link or field. The campaign goes on the relationship record every time, and
+  on the Contact and Company only when that orchestrator created them
+  (ruling 27).
+- **The relabel at conversion is one rule**, `core/crm_upsert.merged_types`:
+  appending Client, Partner, Sponsor or Mentor removes `Prospect`, and nothing
+  else is ever removed. `merge_contact_type` is the one reason a public form
+  touches a matched contact's type.
+- **Ruling 37**: the information request and registration forms never write a
+  stage on a record that already holds a relationship type.
+- **Every new public-form record gets a lead Converted at once** (ruling 48,
+  `attribution.record_lead`).
+- **`GET /c/{token}` never calls the CRM**; links live in the application
+  database (ruling 31).
 
-### Events & Webinars — `/events`
+### Events & Webinars — `/events` and the public pages `/webinars/`
 
-Replaces the data layer behind `clevelandbusinessmentors.org/webinars/`, which
-today runs on a Google Apps Script plus a browser-side YouTube API call with
-**EspoCRM involved at no point** — so every registrant is an invisible lead.
-Staff guide: `event-administration.md`; activation + test script:
-`EVENTS-SETUP.md`; schema: `cevent-entities-crm-handoff.md`.
+Event Administration plus the public workshops-and-webinars programme this app
+serves at `/webinars/`. Live on both deployments; **the marketing site still
+runs its Apps Script until a redirect to `/webinars/` is added** (the WordPress
+plugin was struck 2026-09-11; removing the redirect is the rollback). Staff
+guide `event-administration.md`; activation `EVENTS-SETUP.md`. **Detail:
+`events/CLAUDE.md`.** Rules other packages rely on:
 
-**Live on BOTH deployments since 2026-09-14; the website still runs on the Apps
-Script.** `EVENTS_ENABLED` + `EVENTS_PUBLIC_API` are on for crm-test and
-production; `ZOOM_EVENTS`, `EVENTS_REMINDERS` and the attendance pull are off
-everywhere. Production's overlay also carries `YOUTUBE_API_KEY` and
-`YOUTUBE_PLAYLIST_ID` (five playlists, comma separated) on the **web** component
-only — the worker needs neither until attendance is switched on.
-
-**Production holds a real programme now**: 10 recorded webinars imported from the
-playlists on 2026-09-14 and published with topics, plus one internal
-`CRM Training Webinar` that is **published** and dated in the future, so it is
-currently the only thing on the public calendar — check whether that is intended
-before the redirect. Zero registrations so far; the end-to-end test registration
-is still owed.
-
-**The only thing between here and the lead leak stopping is the redirect
-itself** — one rule on the marketing site, and removing it is the rollback. Phases 1, 2, 3, 5
-and **6** are built. **Phase 4 — the WordPress plugin — was STRUCK on
-2026-09-11**: Doug ruled that the marketing site should **redirect** to a page
-this app serves rather than embed or reimplement one. What stops the lead leak
-now is one redirect, plus two things owed before it (`OPEN-ITEMS.md` 19d
-consent, 19f the per-event duplicate hold).
-
-### The PUBLIC pages — `/webinars/` and `/webinars/{slug}` (v0.222.0)
-
-`events/pages.py` + `events/public_frontend/`. Gated on `events_public_active`,
-so an unconfigured deploy serves nothing. Assets ride `/webinars-assets` — a
-separate top-level path, because `/webinars/{slug}` is a route and "assets"
-would be indistinguishable from a slug.
-
-- **They are ROUTES, not static files, for two reasons.** A social crawler runs
-  no JavaScript, so each event's `<head>` is filled **server-side** or a shared
-  link renders as a blank card. And an unpublished event must **404** — `CEvent`
-  doubles as the internal calendar, so a page that merely rendered empty would
-  still confirm the record exists.
-- **The body is the SAME renderer the staff preview drives**
-  (`/events-plugin/cbm-events.js`) under the site's own stylesheet, so the
-  preview and the live page are one code path rather than two kept in step.
-- **The site's stylesheet has TWO wrapper scopes, and they are not
-  interchangeable**: `.cbm-wb` for the calendar, `.cbm-yt` for the recorded
-  library, each carrying its own CSS variables, every rule written as
-  `.cbm-wb .panel …`. The wrapper must be an **ancestor** of `.panel`, never the
-  same element. Getting this wrong unstyles a whole panel and raises no error —
-  it shipped that way for an hour on 2026-09-11 and is now in the class contract
-  (`HOST_CLASSES` in `tests/test_events_graphic.py`).
-- **Branding renders first, page values second**, every value HTML-escaped, so
-  CRM-authored content is never rescanned for a `{{token}}`.
-- **Both public doors send `consent: false`** — the calendar modal and the event
-  page's own form — so a registration records **no opt-in at all**. That is
-  deliberate and blocking: see `OPEN-ITEMS.md` 19d.
-- **`EVENTS_PUBLIC_BASE_URL` empty means "this app"** (derived from
-  `APP_BASE_URL` + `/webinars`). It used to default to the marketing site's
-  `/webinars`, which **404s**, so every shared event link pointed at nothing.
-- **The marketing page's whole opening came across, not just its panels** — the
-  navy hero, the gold strapline band and the organisation's own top-level menu.
-  All of it is content on a page that redirects away, and the first side-by-side
-  (2026-09-12) is what found it missing, exactly as it found the presenting
-  invitation. Settings: `EVENTS_HERO_TAGLINE`, `EVENTS_HERO_PILLARS`,
-  `EVENTS_HERO_BAND` (each emptiable) and `ORGANIZATION_SITE_NAV`
-  (`Label|path` pairs; a leading `/` resolves against
-  `ORGANIZATION_WEBSITE_URL`, so a chapter changes one setting, not seven).
-  The menu is built **server-side** for the same reason the name is substituted
-  there: a menu that appears a moment late is worse than none, and it is the
-  visitor's only way on to the rest of the site.
-- **The recorded library has a TOPIC filter** (v0.230.x). It offers only
-  subjects that actually have a recording — a filter listing an empty one is a
-  dead end — computed from the whole library rather than the current results so
-  the options do not shift as a visitor searches, and hidden below two topics.
-  The selector sits **above** the search box because the search runs *inside*
-  the chosen topic, and the placeholder names it. Clearing the search box
-  reloads on its own (`input`, not the `search` event, which Firefox does not
-  raise). One CRM read serves the results, the topic list and the count:
-  `published_recordings` plus the pure `filter_recordings` / `recording_topics`.
-  Order follows the live field's option order (`service.live_topic_order`),
-  `cfg.TOPIC_ORDER` as the fallback; a value that has drifted out of the enum
-  still appears.
-- **An event carries SEVERAL curated topics, and nobody types one** (v0.242.0,
-  Track F F1, Doug's ruling 2026-10-08: *"They must pick from the list, or
-  update the list if they do not like the choices."*). `CEvent.topics` is a
-  multiEnum with the same ten values as the single `topic` it supersedes.
-  **Feature-detected, no switch**: a CRM without `topics` behaves exactly as
-  before; on a CRM with it the single `topic` is **retired** from the editor,
-  the write whitelist and every read — `service.event_topics(row)` decides by
-  whether the row carries the `topics` key (a CRM that lacks the attribute
-  omits it), and never falls back to `topic` when `topics` is merely empty.
-  A chosen filter topic matches a recording carrying it among others; the
-  eyebrow, the grid chips and the Events tabs name all of them; public
-  payloads keep `category` (the first topic) and gain `categories`.
-  `scripts/migrate_event_topics.py` copies the old value once per CRM, after
-  `scripts/plans/cevent-topics.json`. The retired column stays until a removal
-  handoff. Design: `prds/events/CBM_Events_Topics_Design.md`.
-- **Panel wording is the SITE's, not ours** — "Calendar of Upcoming Webinars"
-  and "Find a Recorded Webinar". Inventing better names put our page out of step
-  with the one it replaces; don't re-invent them.
-- **⚠️ The recorded library is empty and that blocks the redirect**
-  (`OPEN-ITEMS.md` 19i). The live page's library comes straight from the YouTube
-  playlist; ours comes from `CEvent` rows with a `recordingUrl`, and there are
-  none on either CRM. `scripts/import_youtube_events.py` fixes it and has never
-  been run — it needs `YOUTUBE_API_KEY` and `YOUTUBE_PLAYLIST_ID`, neither of
-  which is configured anywhere, and the playlist id is not in the live page's
-  source.
-- New settings: `ORGANIZATION_WEBSITE_URL` (the back-link and the menu's base,
-  per-chapter like `DOCS_SITE_URL`) and `EVENTS_CONTACT_EMAIL` (the
-  presenting invitation's address; empty falls back to `OPS_MAILBOX`).
-- The portal's bottom section is **"Public pages"** and leads with Workshops and
-  Webinars, beside the five intake forms.
-- Redirect runbook: `EVENTS-SETUP.md` § 6b. **The rollback is removing the
-  redirect** — under a minute, no deploy.
-
-- **The staff Overview tab is the whole record, read-only** (v0.231.0, Doug's
-  rule): facts left, driven by `EVENT_FIELDS` so a new spec field shows without
-  a second edit; graphic + Summary + Full description + Syllabus right, rich
-  text through the shared sanitizer. Every slot renders even when empty.
-- **An event's partners and funders are RELATIONSHIPS, set in the editor's
-  Sponsorship group** (v0.239.0, plan `prds/mailing-list-and-event-sponsorship-plan.md`).
-  `events/config.SPONSOR_LINKS` names the two links (`partnerProfiles` →
-  `CPartnerProfile`, `sponsorProfiles` → `CSponsorProfile`, both reversed as
-  `sponsoredEvents`); they are feature-detected per load from
-  `entityDefs.CEvent.links`, ride their own `PUT …/sponsors` with the exact
-  set per link (never the record PUT — a `*Ids` write is ignored), and only a
-  `noAccessToForeignRecord` denial escalates to the admin account. The
-  Marketing Admin Role reads partner and funder profiles, it does not edit
-  them (Doug's ruling 2026-10-07). Production and Boston lack the partner
-  link until the Phase A handoff is applied there, so they show Funders only.
-- **Presenters are RECORDS, one per presenter per event** (v0.241.0, Track F
-  F4, `prds/events/CBM_Events_Presenters_Design.md`). `CEventPresenter` holds
-  the biography, title, company, photo and order as **copies made when the
-  presenter is added and never refreshed** from the Contact or the mentor
-  profile (Doug's rulings 10-07/08-26) — a past event's page is the record of
-  what was presented. Added from the editor's Presenters group: a Contact
-  search, or a new person whose unknown email **creates a `Presenter`-typed
-  Contact** (an existing Contact is reused untouched — no null-fill, no type
-  merge). One switch per event, `showPresenterBios`. Every staff read and
-  write runs **as the signed-in user** (D1: the Marketing Admin Role carries
-  Contact create + read, mentor-profile read **and Assignment Permission
-  `all`** — `scripts/migrate_presenter_roles.py`. **A role that creates a
-  record the app leaves unassigned needs Assignment Permission `all`**: at
-  *not set* or *team* EspoCRM's checker inspects the new record's teams and
-  assigned users, and at *team* a record with neither is refused outright
-  ("Assignment failure: assigned user or team not allowed") — read from
-  `Acl/AssignmentChecker/Helper.php` on crm-test 10-08-26 after the live
-  pass found Contact create 403ing on a role that had the create grant); the page reads run
-  under the org key, whose role reads the entity. Photos ride routes **keyed on the event and the entry** (public by
-  slug, portal by id, staff authenticated), never on an attachment id. Dark
-  behind `EVENT_PRESENTERS` AND feature detection (fails closed). The bare
-  `CEvent.presenters` link is unused and left in place. crm-test CRM done;
-  production and Boston owed (`cevent-presenters-crm-handoff.md`).
-- **Phase 6a attendance** (`events/attendance.py`, worker): pulls each finished
-  online event's Zoom participant report and matches by email. An empty report
-  means "not published yet", never "nobody came"; a `Manual`/`Check-in` source
-  is never overwritten; an attendee matching no registration is recorded flagged
-  rather than dropped. **Never run against real Zoom.**
-- **Phase 6b follow-ups** (`events/notify.py`): five sends as the shared info@
-  identity, from EspoCRM templates. Once per registrant/event/kind, ledgered on
-  `followUpsSent` **after** a successful send and enum-checked first. Preview is
-  the default. **Needs five templates** — `EventReminder`,
-  `EventRecordingAvailable`, `EventNoShow`, `EventMentorCTA`, `EventSurvey` —
-  and has no frontend yet.
-- **Phase 6c reporting** (`events/reporting.py`): the engagement **Events tab**
-  (attendance rolled up across all of a client's contacts, deduplicated by
-  event), the contact **Events tab** in the directory, and programme + conversion
-  reports in `/events`. Conversion counts an attendee only when their engagement
-  postdates their first attended event. **Both record tabs read the
-  registrations under the org-wide key after the user's own read gates the
-  tab** (v0.249.2, Doug's ruling 2026-10-11, option B): no team role reads
-  `CEventRegistration`, so as the user they 403'd for every non-administrator
-  since they shipped. Same rule as the partner / funder Events tab.
-- **Registration recognition is designed, not built** —
-  `prds/events/CBM_Events_Registration_Recognition_Plan.md` (Doug's rulings
-  2026-08-17): recognise a returning registrant by a signed device token, else
-  by an email-first lookup that **registers them and echoes nothing** (a public
-  page that returns what we know is a harvester), else the normal form; a
-  signed-in member is recognised through a **redirect handoff**, never by
-  loosening the staff session cookie. CBM sends its own confirmation email.
-  Prerequisite and live defect: the near-duplicate hold holds a person's *second
-  webinar of the day* (`OPEN-ITEMS.md` 19f).
-- **Phase 6d** `scripts/import_youtube_events.py` — playlist backfill, dry-run by
-  default, importing **unpublished** because an upload date is not an event date.
-  Never run against the real playlist.
-
-- **⚠️ `CEvent` doubles as CBM's org calendar** — most rows are internal team
-  meetings and mentoring-session mirrors. That is true **on crm-test (94 rows)**;
-  **prod's `CEvent` is empty** because it was never connected to Google
-  (verified 2026-08-08), so the first published event there will be a real one.
-  Workshops share the entity. **Since v0.233.0 visibility is ONE rule in
-  `events/visibility.py`** (F2 + F3, Doug's rulings 09-27/29-26): the tick
-  (`publishToWebsite`, labelled **"Show this event"**, default false) decides
-  *whether* — unticked is on no page; **`audience`** (Internal / Public)
-  decides *where* — Internal is the portal calendar only; **`eventReleaseDate`**
-  (reused as the display time) decides *when*, on every page. **An empty
-  audience carries over from the tick** (ticked → Public), which is how old rows
-  and a CRM without the field behave exactly as before. Every public read goes
-  through `_public_where` AND re-checks each row with `visibility.is_shown`; the
-  registration form uses the same rule; a guard test fails on any other read of
-  the tick. A failed metadata read **fails closed** (502) — guessing "no audience
-  field" would publish Internal events. The team limit (`internalTeams`) is a
-  **display filter, not confidentiality** — every role reads all events in the
-  CRM (ruling D4). Never hand-roll a public CEvent query
-  ([[events-publish-gate]]). Design:
-  `prds/events/CBM_Events_Audience_and_Display_Design.md`.
-- **Zoom here is the explicit exception** to the mentor-sessions "user-supplied
-  links only" ruling: the public webinar programme uses the CBM Zoom account via
-  Server-to-Server OAuth (host `zweb@cbmentors.org`). Ask which world you're in
-  before applying either ruling ([[zoom-user-supplied-only]]).
-- **Vocabulary trap**: in the public payload `topic` means the event **TITLE**
-  (Zoom/Apps-Script vocabulary); the category rides as `category`. Aligning the
-  names would blank every title on the live site.
-- **The live page restricts images** — it sends `content-security-policy:
-  img-src 'self' data: https://drive.google.com https://*.googleusercontent.com`
-  (measured 2026-09-11). Anything rendered INSIDE that page would have needed
-  every event graphic and YouTube thumbnail proxied through the WordPress
-  domain; hotlinked `i.ytimg.com` thumbnails also returned 503 there. Serving
-  our own page sidesteps both, because our document carries no such policy —
-  one of the reasons the plugin was struck.
-- **`wp-plugin/cbm-events/` holds the two files the public pages run**: the
-  renderer (`cbm-events.js`) and the site's **own stylesheet** (`cbm-events.css`,
-  copied verbatim from the live page's Elementor widgets — keep it in sync, do
-  not restyle it). The directory name is now historical; the plugin was struck,
-  but these two files are how our pages look like the website, so they stay
-  where they are. `/webinars/` and `/events/preview.html` both load them from
-  this shipping location, which is what makes either a real check. **Neither
-  `events/frontend/preview.css` nor `events/public_frontend/public.css` may
-  style a contract class** — an approximation in one hid a live class-name drift
-  for three weeks. Guard tests assert every class the renderer emits has a rule
-  in the stylesheet, and that neither of our own sheets styles one. Both guards
-  strip CSS comments first, since a comment naming a class is the opposite of
-  styling it.
-- **A per-event link comes from `CBMEvents.config.eventUrlBase`**, which the
-  public programme page sets to `/webinars/`. The payload's `url` is now this
-  app's own address for the event (derived from `APP_BASE_URL`), so it is
-  usable rather than a 404 — but the renderer still takes the base from config,
-  because a host serving these panels somewhere else needs its own. **Sign-up
-  stays a modal on the calendar** (Doug, 2026-08-16); the event page is for
-  reading, and carries its own form rather than the modal.
+- **`CEvent` doubles as CBM's org calendar.** Visibility is ONE rule in
+  `events/visibility.py`: the tick (`publishToWebsite`) decides whether,
+  `audience` where, `eventReleaseDate` when. Never hand-roll a public `CEvent`
+  query; a failed metadata read fails closed.
+- **An event the viewer may not see answers 404 in the same words as an
+  unknown id**, on every surface.
+- **Zoom: public webinars use the CBM account** (Server-to-Server OAuth) — the
+  explicit exception to the mentor-sessions "user-supplied links only" ruling.
+  Ask which world you are in before applying either.
+- **Vocabulary trap**: in the public payload `topic` means the event TITLE; the
+  category rides as `category`. Aligning the names would blank every title.
+- **`wp-plugin/cbm-events/` holds the renderer and the site's own stylesheet,
+  copied verbatim** — keep it in sync, never restyle it, and never style a
+  contract class from our own sheets.
+- **Event counts on record tabs read under the org-wide key after the user's
+  own read gates the tab** — no team role reads `CEventRegistration`.
 
 ## Cross-cutting subsystems
 
@@ -1643,8 +821,23 @@ Conventions. Plan: `prds/action-history-plan.md`;
   Effective ACL is the union of **team-attached** roles; verify via Users →
   Access ([[espo-403-diagnosis-merged-team-roles]]). Admin accounts bypass ACL
   entirely, which is how several mentor-only bugs stayed invisible.
-- **Custom linkMultiple fields are relationships** — see the Session Management
-  notes ([[espo-custom-linkmultiple-is-a-relationship]]).
+- **Custom linkMultiple fields are relationships** (`sessionAttendees`,
+  `additionalMentors`, `additionalManagers`) — read via `list_related`, write
+  via relate/unrelate. Reading `<field>Ids` always returns empty and setting it
+  on an update is silently ignored. `unrelate` sends the id in the DELETE
+  **body**; the path-suffix form 404s
+  ([[espo-custom-linkmultiple-is-a-relationship]]).
+- **Relate/unrelate checks BOTH sides** — linking needs edit on the foreign
+  record too (`noAccessToForeignRecord`). The pattern is `_link_or_escalate`:
+  run as the user, escalate only that denial to the admin account
+  ([[espo-link-checks-both-sides]]).
+- **A role that creates a record the app leaves unassigned needs Assignment
+  Permission `all`.** At *not set* or *team* EspoCRM inspects the new record's
+  teams and assigned users, and at *team* a record with neither is refused
+  ("Assignment failure: assigned user or team not allowed";
+  `isPermittedTeamsEmpty`). Either stamp a team or assigned user on the
+  create, or grant `all`. Read from `Acl/AssignmentChecker/Helper.php` on
+  crm-test 10-08-26.
 - **EspoCRM renames what you type, by three DIFFERENT rules** (all read from
   source on crm-test 2026-08-23; `customPrefixDisabled` is `false`). An
   **entity** name is *always* given a leading `C` — type `Grant`, get `CGrant`;
@@ -1888,7 +1081,7 @@ binding record (append only); `build-plan.md` v0.5 is the one plan; its two
 CRM handoffs (`contact-sms-opt-in-crm-handoff.md`,
 `coutreach-entities-crm-handoff.md`) are complete on crm-test (10-15-26) and
 owed on production and Boston; **Phases 1 and 2 are built** (v0.258.0,
-v0.259.0, dark — the Campaign Management section above); Phase 1's live
+v0.259.0, dark — `campaigns/CLAUDE.md`); Phase 1's live
 pass ran 10-15/17-26, Phase 2's is `OPEN-ITEMS.md` #51.
 **One session on that arc at a time.** Eight settled rulings, a phase file each for phases 0–6, a
 decision log, and its own task list. Phase 0 (de-Cleveland) is **built**; **Phase
