@@ -33,7 +33,7 @@ a push, and a push builds crm-test **and** production.
 5. `coutreach-lead-model-crm-handoff.md` rev 1.2 (§ 1 table, § 3a, § 5, § 7).
 6. `OPEN-ITEMS.md` item #51 (its first paragraph is the lead model's owed list).
 7. The live-pass page: https://claude.ai/artifact/DPSsyZMYPhvHQRUnL696Rk
-   (revision 1.4, 58 steps). Its generator is
+   (revision 1.5, 62 steps). Its generator is
    `make_runbook.py` in the previous session's scratchpad and is gone; read the
    page with the Artifact tool (`action: "read"`) and edit the saved HTML.
 
