@@ -52,7 +52,8 @@ found; move resolved items to the bottom with the resolution date.
     pass also times an 800-row import
     (`prds/prospect-marketing/live-pass/grids-month-filing.csv`, a month at
     10,000 a year): the import plans every row's already-known check inside
-    one request, and has never been tried at that size.
+    one request, and has never been tried at that size. **Step page:**
+    https://claude.ai/artifact/4FLXfPqnXLJ4Hhytded3uS (31 steps, rev 1.0).
     The earlier passes' record follows.
     **Phase 1 BUILT and LIVE-PASSED on crm-test
     (v0.258.0–v0.258.5, 10-15/17-26, dark behind `CAMPAIGNS_ENABLED`);
