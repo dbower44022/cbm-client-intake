@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-20-26 15:29 · Revision 1.28 — change log at the end.
+Last Updated: 10-20-26 15:33 · Revision 1.29 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -648,6 +648,30 @@ questions: "yes to both".
     may use, and whether a list belongs to one campaign or is reusable.
     (10-20-26)
 
+### Doug's ruling (10-20-26, on which conditions a list step may use)
+
+Put as a consequential decision: option A, a curated field list per record
+type fixed in code; option B, any field through a general builder; option
+C, a curated field list per type that administrators edit at `/setup`.
+Doug's reply at 15:32: "c".
+
+63. **A list step's fields come from a curated list per record type that
+    administrators edit at `/setup`** (option C). Staff see only the
+    reviewed fields, with plain labels and option values read live from
+    the CRM; an administrator adds or removes a field without a deploy,
+    validated against live CRM metadata and recorded in the settings
+    history. Approved with it, as presented: a step may hold several
+    conditions, all of which must match (either-or is two Add steps);
+    operators follow the field's type (is one of / is not one of; contains
+    / starts with; before / after / within the last N days; at least / at
+    most; is empty / is not empty); the shipped default list is
+    leads — status, source, industry, postal code; clients — engagement
+    status, close date, industry; partners and funders — status, manager;
+    contacts — type — with the full table brought to Doug in
+    `build-plan.md` for approval; a field that leaves the CRM drops out
+    of the list and is flagged on the recipe, never silently ignored.
+    (10-20-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -768,8 +792,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.28 |
-| Last Updated | 10-20-26 15:29 |
+| Version | 1.29 |
+| Last Updated | 10-20-26 15:33 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -777,6 +801,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.29 | 10-20-26 15:33 | Claude (Claude Code) | Ruling 63 appended: list-step fields come from a per-type curated list editable at `/setup` (Doug's "c"). |
 | 1.28 | 10-20-26 15:29 | Claude (Claude Code) | Rulings 61 and 62 appended: static and dynamic lists both supported; a list is an ordered recipe of steps (Doug's "yes to both"). |
 | 1.27 | 10-20-26 15:13 | Claude (Claude Code) | Ruling 60 appended: a campaign targeting contacts names the contact types it reaches (Doug's "b"). |
 | 1.26 | 10-20-26 15:08 | Claude (Claude Code) | Ruling 59 appended: a campaign reaches the primary contact unless staff tick "Include every contact on the record" (Doug's "c"). |
