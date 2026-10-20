@@ -18,7 +18,7 @@ a link names a campaign the seeder does not make. A demo campaign the CRM does
 not hold (before the seeder has run, or a trainee renamed it) is skipped and
 reported, never an error.
 
-Refuses to run anywhere but crm-test, by the same guard as the reset itself.
+Refuses to run anywhere but crm-test, by the same CRM-address check as the reset.
 """
 
 from __future__ import annotations
@@ -150,9 +150,15 @@ async def restore_demo_links(store, client) -> dict[str, int]:
 
 
 def _parts(settings: Settings):
-    from core.sandbox_reset import guard
+    # Only the CRM check, not the reset's switch: ``sandbox_nightly_reset`` is a
+    # worker setting, and the /setup job runs in the web process. Creating six
+    # links is not the destructive half — the address alone keeps it off any
+    # CRM but the sandbox, read straight from the URL as the reset reads it.
+    from core.sandbox_reset import SANDBOX_URL_MARKER, SandboxResetRefused
 
-    guard(settings)
+    if SANDBOX_URL_MARKER not in (settings.espo_base_url or "").lower():
+        raise SandboxResetRefused(
+            f"CRM base URL is not the sandbox ({settings.espo_base_url!r}) — refusing")
     if settings.espo_dry_run or not settings.espo_api_key:
         raise RuntimeError("This deployment has no CRM credential (dry-run mode or no API key).")
     from core.espo import EspoClient
