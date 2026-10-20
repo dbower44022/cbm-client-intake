@@ -49,11 +49,19 @@
   async function api(path, opts) {
     opts = opts || {};
     var ctrl = new AbortController();
-    var timer = setTimeout(function () { ctrl.abort(); }, 60000);
+    var waitMs = opts.timeoutMs || 60000;
+    var timer = setTimeout(function () { ctrl.abort(); }, waitMs);
     var init = { method: opts.method || "GET", headers: { Accept: "application/json" }, signal: ctrl.signal, credentials: "same-origin" };
     if (opts.body !== undefined) { init.headers["Content-Type"] = "application/json"; init.body = JSON.stringify(opts.body); }
     var res;
-    try { res = await fetch(API + path, init); } finally { clearTimeout(timer); }
+    try { res = await fetch(API + path, init); }
+    catch (e) {
+      // The browser's own words ("signal is aborted without reason", "Failed
+      // to fetch") say nothing a person can act on (Doug, 10-20-26).
+      if (e && e.name === "AbortError") throw Object.assign(new Error("The server did not answer within " + Math.round(waitMs / 1000) + " seconds. It may still be working: wait a minute, then press Refresh to see whether it finished before trying again."), { status: 0 });
+      throw Object.assign(new Error("The server could not be reached — check the connection, then try again."), { status: 0 });
+    }
+    finally { clearTimeout(timer); }
     if (res.status === 401) { location.assign("/?next=" + encodeURIComponent("/campaigns/")); throw Object.assign(new Error("Signed out"), { status: 401 }); }
     var data = null;
     try { data = await res.json(); } catch (_) { data = null; }
@@ -1318,7 +1326,8 @@
       if (!planned) {
         if (!name.value.trim()) { modalMsg("Name the batch.", "error"); return; }
         var textContent = await readFile();
-        planned = await api("/prospects/import/plan", { method: "POST", body: { name: name.value.trim(), source: door.value, text: textContent, qualifiedBy: qb.value, listSource: ls.value } });
+        modalMsg("Planning — checking every row against the companies and contacts the CRM already holds…", "ok");
+        planned = await api("/prospects/import/plan", { method: "POST", timeoutMs: 300000, body: { name: name.value.trim(), source: door.value, text: textContent, qualifiedBy: qb.value, listSource: ls.value } });
         planBox.innerHTML = "";
         var c = planned.counts;
         tiles(planBox.appendChild(el("div", "cm__tiles")), [["Rows", c.rows], ["Leads to create", c.create], ["Enter Qualified", c.qualified], ["Enter Unqualified", c.unqualified], ["Duplicates", c.alreadyKnown], ["Repeat rows", c.knownRow + c.duplicate], ["Invalid", c.invalid]]);
@@ -1332,8 +1341,18 @@
         return;
       }
       if (planned.nothingToDo) { modalMsg("Nothing to apply.", "warn"); return; }
-      var res = await api("/prospects/import/apply", { method: "POST", body: { batchId: planned.batchId } });
-      var r = res.result;
+      // In parts of 100 rows, so no single request outlasts a timeout; the
+      // ledger makes every part resumable (10-20-26).
+      var r = { created: 0, qualified: 0, unqualified: 0, duplicates: 0, errors: 0 };
+      var toWrite = (planned.counts.create || 0) + (planned.counts.alreadyKnown || 0);
+      while (true) {
+        modalMsg("Applying — " + (r.created + r.duplicates).toLocaleString() + " of " + toWrite.toLocaleString() + " written…", "ok");
+        var part = (await api("/prospects/import/apply", { method: "POST", timeoutMs: 180000, body: { batchId: planned.batchId, maxRows: 100 } })).result;
+        ["created", "qualified", "unqualified", "duplicates", "errors"].forEach(function (k) { r[k] += part[k] || 0; });
+        if (part.errors) break;
+        if (!part.remaining) break;
+      }
+      if (r.errors) { modalMsg(r.errors + " row(s) could not be written; the rest are saved. Press Apply this plan again to retry them — nothing is written twice.", "error"); loadImports(); return; }
       closeModal();
       notice("Imported: " + r.created + " leads (" + r.qualified + " Qualified, " + r.unqualified + " Unqualified), " + r.duplicates + " duplicates" + (r.errors ? ", " + r.errors + " errors (see the log)" : "") + ".", r.errors ? "warn" : "ok");
       loadProspects(); loadImports();

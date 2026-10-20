@@ -194,6 +194,83 @@ async def company_by_website(api_client: EspoApi, website: str) -> Optional[dict
     return None
 
 
+_CHUNK = 40
+
+
+class KnownIndex:
+    """The already-known check (ruling 12) for a whole file in a few CRM
+    reads instead of one to three per row — a month's filing is about 800
+    rows (build plan § 7b), and row by row the plan took 61 seconds and timed
+    the browser out (10-20-26). Same three matches, same order, same
+    best-effort: a failed read is logged and that check simply finds nothing."""
+
+    def __init__(self) -> None:
+        self.by_name: dict[str, list[dict[str, Any]]] = {}
+        self.by_website: dict[str, dict[str, Any]] = {}
+        self.by_email: dict[str, dict[str, Any]] = {}
+
+    @classmethod
+    async def build(cls, api_client: EspoApi, rows: list[dict[str, Any]]) -> "KnownIndex":
+        idx = cls()
+        names = sorted({r["business_name"] for r in rows if r.get("business_name")})
+        for i in range(0, len(names), _CHUNK):
+            chunk = names[i:i + _CHUNK]
+            try:
+                page = await api_client.list(
+                    cfg.ACCOUNT, select="id,name,billingAddressPostalCode,website,cCompanyType", max_size=200,
+                    where=[{"type": "in", "attribute": "name", "value": chunk}])
+                for c in page.get("list", []):
+                    idx.by_name.setdefault((c.get("name") or "").lower(), []).append(c)
+            except EspoError as exc:
+                log.warning("already-known name check failed for %s names: %s", len(chunk), exc)
+        keys = sorted({k for k in (website_key(r.get("website")) for r in rows) if k})
+        for i in range(0, len(keys), 20):
+            chunk = keys[i:i + 20]
+            try:
+                page = await api_client.list(
+                    cfg.ACCOUNT, select="id,name,website,cCompanyType", max_size=200,
+                    where=[{"type": "or", "value": [{"type": "contains", "attribute": "website",
+                                                     "value": k.split("/")[0]} for k in chunk]}])
+                for c in page.get("list", []):
+                    k = website_key(c.get("website"))
+                    if k and k not in idx.by_website:
+                        idx.by_website[k] = c
+            except EspoError as exc:
+                log.warning("already-known website check failed for %s addresses: %s", len(chunk), exc)
+        emails = sorted({r["email"] for r in rows if r.get("email")})
+        for i in range(0, len(emails), 20):
+            chunk = emails[i:i + 20]
+            try:
+                page = await api_client.list(
+                    cfg.CONTACT, select="id,name,emailAddress,cContactType", max_size=200,
+                    where=[{"type": "or", "value": [{"type": "equals", "attribute": "emailAddress",
+                                                     "value": e} for e in chunk]}])
+                for c in page.get("list", []):
+                    e = (c.get("emailAddress") or "").lower()
+                    if e and e not in idx.by_email:
+                        idx.by_email[e] = c
+            except EspoError as exc:
+                log.warning("already-known email check failed for %s addresses: %s", len(chunk), exc)
+        return idx
+
+    def match(self, row: dict[str, Any]) -> Optional[dict[str, Any]]:
+        name = (row.get("business_name") or "").lower()
+        zip5 = (row.get("mailing_zip") or "")[:5]
+        if name and zip5:
+            for c in self.by_name.get(name, []):
+                if ((c.get("billingAddressPostalCode") or "")[:5]) == zip5:
+                    return {"kind": "company", "id": c["id"], "name": c.get("name"), "by": "name and postal code"}
+        k = website_key(row.get("website"))
+        if k and k in self.by_website:
+            c = self.by_website[k]
+            return {"kind": "company", "id": c["id"], "name": c.get("name"), "by": "website"}
+        e = (row.get("email") or "").lower()
+        if e and e in self.by_email:
+            c = self.by_email[e]
+            return {"kind": "contact", "id": c["id"], "name": c.get("name"), "by": "email"}
+        return None
+
+
 # --- plan ----------------------------------------------------------------------------------
 
 async def plan_import(api_client: EspoApi, store, *, text: str, name: str, door: str,
@@ -210,6 +287,8 @@ async def plan_import(api_client: EspoApi, store, *, text: str, name: str, door:
     known = await store.known_row_hashes(list(set(hashes)))
     seen: set[str] = set()
     planned: list[dict[str, Any]] = []
+    index = await KnownIndex.build(api_client, [r for r, h in zip(rows, hashes)
+                                                if h not in known and not _invalid_reason(r)])
     counts = {"rows": len(rows), "create": 0, "alreadyKnown": 0, "duplicate": 0,
               "knownRow": 0, "invalid": 0, "qualified": 0, "unqualified": 0}
     for row, h in zip(rows, hashes):
@@ -225,7 +304,7 @@ async def plan_import(api_client: EspoApi, store, *, text: str, name: str, door:
             entry.update(outcome=OUTCOME_KNOWN_ROW, note="an earlier import already created this row")
             counts["knownRow"] += 1
         else:
-            match = await already_known(api_client, row)
+            match = index.match(row)
             if match:
                 entry.update(outcome=OUTCOME_ALREADY_KNOWN, match=match,
                              note=f"matches {match['name'] or match['id']} by {match['by']}")
@@ -315,9 +394,13 @@ def _match_links(entry: dict[str, Any]) -> dict[str, str]:
 
 
 async def apply_import(api_client: EspoApi, user_client: EspoApi, store, batch: dict[str, Any], *,
-                       user_name: str) -> dict[str, Any]:
+                       user_name: str, max_rows: Optional[int] = None) -> dict[str, Any]:
     """Write exactly the planned batch. Resumable: a row the ledger already
-    holds is skipped, so a failed apply is re-run, never doubled."""
+    holds is skipped, so a failed apply is re-run, never doubled.
+
+    ``max_rows`` writes at most that many rows and returns with ``remaining``
+    (the browser calls again until it is 0): 800 creates in one request
+    outlast every timeout between the browser and the CRM (10-20-26)."""
     if batch.get("status") == "applied":
         raise CampaignError("This batch has already been applied.")
     plan = batch.get("plan") or {}
@@ -325,11 +408,17 @@ async def apply_import(api_client: EspoApi, user_client: EspoApi, store, batch: 
     done = await store.known_row_hashes([e["hash"] for e in rows])
     result = {"created": 0, "duplicates": 0, "qualified": 0, "unqualified": 0, "skipped": 0, "errors": 0}
     ledger: list[dict[str, Any]] = []
+    writes = 0
+    remaining = 0
     for entry in rows:
         outcome = entry.get("outcome")
         if outcome not in (OUTCOME_CREATE, OUTCOME_ALREADY_KNOWN) or entry["hash"] in done:
             result["skipped"] += 1
             continue
+        if max_rows is not None and writes >= max_rows:
+            remaining += 1
+            continue
+        writes += 1
         row = entry["row"]
         try:
             payload = _lead_payload(row, plan, batch["name"], entry)
@@ -360,6 +449,7 @@ async def apply_import(api_client: EspoApi, user_client: EspoApi, store, batch: 
     if ledger:
         await store.record_rows(batch["id"], ledger)
     result["appliedBy"] = user_name
-    if result["errors"] == 0:
+    result["remaining"] = remaining
+    if result["errors"] == 0 and remaining == 0:
         await store.mark_applied(batch["id"], result)
     return result

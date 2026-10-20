@@ -389,6 +389,17 @@ class CampaignStore:
         async with self._engine.begin() as conn:
             await conn.execute(prospect_import_row.insert(), values)
 
+    async def first_prospect_id(self, batch_id: str) -> Optional[str]:
+        """The first lead an import made — the record its history row hangs on."""
+        async with self._engine.begin() as conn:
+            row = (await conn.execute(
+                select(prospect_import_row.c.prospect_id)
+                .where(and_(prospect_import_row.c.batch_id == batch_id,
+                            prospect_import_row.c.prospect_id.isnot(None)))
+                .order_by(prospect_import_row.c.created_at).limit(1)
+            )).first()
+        return row[0] if row else None
+
     async def recent_batches(self, limit: int = 25) -> list[dict[str, Any]]:
         async with self._engine.begin() as conn:
             rows = (await conn.execute(

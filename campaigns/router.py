@@ -892,6 +892,9 @@ async def import_plan(body: ImportPlanIn, request: Request) -> dict[str, Any]:
 
 class ImportApplyIn(BaseModel):
     batchId: str
+    #: Write at most this many rows, then answer with ``remaining``; the page
+    #: calls again until it is 0 (10-20-26: 800 creates outlast one request).
+    maxRows: Optional[int] = Field(default=None, ge=1, le=500)
 
 
 @api_router.post("/prospects/import/apply")
@@ -905,7 +908,8 @@ async def import_apply(body: ImportApplyIn, request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail="That import plan was not found — plan it again.")
     try:
         result = await imports.apply_import(api_client, client, store, batch,
-                                            user_name=user.get("name") or user.get("userName") or "")
+                                            user_name=user.get("name") or user.get("userName") or "",
+                                            max_rows=body.maxRows)
     except CampaignError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
@@ -914,6 +918,26 @@ async def import_apply(body: ImportApplyIn, request: Request) -> dict[str, Any]:
     # lead it made stands for the batch (an empty id is refused by
     # both the stream note and the CActionLog row — seen 10-15-26).
     first_id = result.get("firstProspectId")
+    if body.maxRows is not None:
+        # Applied in parts: one history row, when the last part finishes,
+        # counted from the plan (the parts' own counts are the page's).
+        if result.get("remaining") or result.get("errors"):
+            return {"batchId": batch["id"], "result": result}
+        counts = (batch.get("plan") or {}).get("counts") or {}
+        first_id = first_id or await store.first_prospect_id(batch["id"])
+        result_summary = {"created": counts.get("create", 0), "qualified": counts.get("qualified", 0),
+                          "unqualified": counts.get("unqualified", 0), "duplicates": counts.get("alreadyKnown", 0),
+                          "errors": 0}
+        if first_id:
+            await record_action(
+                client, app=APP_CAMPAIGNS, category=CAT_RECORD_EDIT, action="Leads Imported",
+                parent_type=cfg.PROSPECT, parent_id=first_id,
+                summary=(f"Imported \"{batch['name']}\" ({batch['door']}) in parts: {result_summary['created']} leads "
+                         f"({result_summary['qualified']} Qualified, {result_summary['unqualified']} Unqualified), "
+                         f"{result_summary['duplicates']} duplicates"),
+                actor_id=user.get("userId", ""), actor_name=user.get("name", ""), details=result_summary,
+            )
+        return {"batchId": batch["id"], "result": result}
     if first_id:
         await record_action(
             client, app=APP_CAMPAIGNS, category=CAT_RECORD_EDIT, action="Leads Imported",

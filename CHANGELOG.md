@@ -5,6 +5,25 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.267.2] — 2026-10-20
+
+**fix(campaigns): a month-sized import plans in seconds, applies in parts,
+and a timeout says so in words.** Found on the grids' live pass (step 5.5):
+planning the 800-row sample filing made 1,001 CRM calls one after another
+(61.6 s in the crm-test log), the page gave up at 60 s, and the person saw
+the browser's own "signal is aborted without reason".
+
+- The already-known check (ruling 12) reads the whole file's names,
+  websites and emails in batches (`imports.KnownIndex`): the same file now
+  plans in 2.9 s with 30 reads, the same counts.
+- The apply writes 100 rows per request and the page repeats until done,
+  showing progress; the ledger keeps every part resumable, and the batch is
+  marked applied, with one history row, only when the last part lands.
+- Every request on the Campaign Management page that times out or cannot
+  reach the server now says what happened and what to do.
+
+No CRM change. Rollback is a revert.
+
 ## [0.267.1] — 2026-10-20
 
 **fix(campaigns): a typed filter applies on Enter and on Tab.** Found on the

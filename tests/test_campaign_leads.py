@@ -28,9 +28,9 @@ def _match(row: dict, clause: dict) -> bool:
     if t == "or":
         return any(_match(row, c) for c in v)
     if t == "equals":
-        return x == v
+        return str(x).lower() == str(v).lower() if isinstance(x, str) and isinstance(v, str) else x == v
     if t == "in":
-        return x in v
+        return str(x or "").lower() in {str(i).lower() for i in v}
     if t == "isNull":
         return x in (None, "")
     if t == "isNotNull":
@@ -52,7 +52,7 @@ def _match(row: dict, clause: dict) -> bool:
 
 class FakeCrm:
     def __init__(self):
-        self.rows: dict[str, dict[str, dict]] = {cfg.PROSPECT: {}, cfg.TOUCH: {}}
+        self.rows: dict[str, dict[str, dict]] = {cfg.PROSPECT: {}, cfg.TOUCH: {}, cfg.ACCOUNT: {}, cfg.CONTACT: {}}
         self.lists: list[tuple[str, int, int]] = []
         self.updates: list[tuple[str, str, dict]] = []
         self._n = 0
@@ -280,3 +280,51 @@ def test_routes_list_review_guard_bulk_and_export(monkeypatch):
     csv_resp = client.get("/campaigns/api/prospects/export?place=44113")
     assert csv_resp.status_code == 200 and csv_resp.headers["content-type"].startswith("text/csv")
     assert "attachment" in csv_resp.headers["content-disposition"]
+
+
+# --- the import at a month's size (10-20-26: the plan took 61 s row by row) --------------------
+
+def test_already_known_is_a_few_reads_for_a_whole_file():
+    from campaigns import imports
+    crm = FakeCrm()
+    crm.rows[cfg.ACCOUNT] = {"a1": {"id": "a1", "name": "Known Bakery", "billingAddressPostalCode": "44113",
+                                    "website": "https://knownsite.example.com/"}}
+    crm.rows[cfg.CONTACT] = {"c1": {"id": "c1", "name": "Pat Known", "emailAddress": "pat@known.example"}}
+    rows = [{"business_name": f"New Shop {i}", "mailing_zip": "44102", "website": "", "email": ""} for i in range(800)]
+    rows += [{"business_name": "known bakery", "mailing_zip": "44113", "website": "", "email": ""},
+             {"business_name": "Other", "mailing_zip": "44102", "website": "http://www.knownsite.example.com", "email": ""},
+             {"business_name": "Third", "mailing_zip": "44102", "website": "", "email": "PAT@known.example"}]
+    idx = run(imports.KnownIndex.build(crm, rows))
+    assert len(crm.lists) <= 25
+    assert [idx.match(r)["by"] for r in rows[-3:]] == ["name and postal code", "website", "email"]
+    assert idx.match(rows[0]) is None
+
+
+class _Ledger:
+    def __init__(self):
+        self.rows, self.applied = [], None
+    async def known_row_hashes(self, hashes): return {r["row_hash"] for r in self.rows}
+    async def record_rows(self, batch_id, rows): self.rows.extend(rows)
+    async def mark_applied(self, batch_id, result): self.applied = result
+
+
+def test_apply_in_parts_resumes_and_marks_applied_only_at_the_end():
+    from campaigns import imports
+
+    class Crm(FakeCrm):
+        async def create(self, entity, payload):
+            row = self.lead(**{k: v for k, v in payload.items() if k != "id"})
+            return row
+    crm, store = Crm(), _Ledger()
+    plan_rows = [{"outcome": imports.OUTCOME_CREATE, "hash": f"h{i}", "name": f"Shop {i}",
+                  "row": {"business_name": f"Shop {i}", "mailing_street": "1 Main St", "mailing_city": "Cleveland",
+                          "mailing_state": "OH", "mailing_zip": "44102"}} for i in range(250)]
+    batch = {"id": "b1", "name": "Test", "status": "planned", "plan": {"door": cfg.SOURCE_FILING, "rows": plan_rows}}
+    parts = []
+    while True:
+        r = run(imports.apply_import(crm, crm, store, batch, user_name="Mark", max_rows=100))
+        parts.append((r["created"], r["remaining"]))
+        if not r["remaining"]:
+            break
+    assert parts == [(100, 150), (100, 50), (50, 0)]
+    assert store.applied is not None and len(store.rows) == 250
