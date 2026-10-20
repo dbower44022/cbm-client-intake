@@ -880,8 +880,10 @@ Conventions. Plan: `prds/action-history-plan.md`;
   (v0.202.2 pages at 200). Page at 200 or below unless the CRM setting is raised
   on BOTH environments; no other call site in the repo exceeds it. Note that
   neither the unit tests (fakes) nor the preview harness (canned JSON) issue a
-  real list request, so **a page-size change has to be tried against a live CRM**
-  ([[espo-list-maxsize-limit]]).
+  real list request, so **a page-size change has to be tried against a live CRM**.
+  The CRM's own words: *"Max size should not exceed 200. Use offset and
+  limit."* Page with `offset` ([[espo-list-maxsize-limit]],
+  [[espo-list-maxsize-403]]).
 - **Removing a relationship is metadata-only — the column and its data stay.**
   Entity Manager cannot change a relationship's *type*, so a type change is
   delete-then-recreate; that is safe, because `LinkManager::delete()` only
@@ -904,13 +906,6 @@ Conventions. Plan: `prds/action-history-plan.md`;
   `assignedUser`**: reads return null (hiding previously-stored values) and
   writes are silently ignored. All five assigned entities are now collaborators;
   the service dual-writes ([[crm-test-assignment-acl-fields]]).
-- **A list `maxSize` over 200 is a 403, not a truncation** — EspoCRM's
-  `recordListMaxSizeLimit` (default 200) makes an oversized page fail outright:
-  *"Max size should not exceed 200. Use offset and limit."* Page with `offset`
-  instead of asking for one big page. This is nastiest inside a **best-effort
-  `except EspoError`**, where the 403 reads as "no records" — a hard-coded 500
-  left every curated link picker showing only "(none)", for every user including
-  admins, and looked like a permissions problem ([[espo-list-maxsize-403]]).
 - **Soft deletes**: an admin's GET still returns a deleted row with
   `deleted: true` (ordinary users get 404). A cleanup script must treat that as
   gone or it re-plans the delete forever.
@@ -1061,36 +1056,28 @@ publishing refused.
 | `email-executive-summary.md` | Published to the docs site as the Email Guide — **keep the two in sync** |
 
 The formal PRDs cover the **client-intake** form and process only; every other
-form, tool and platform arc is documented in this file plus its own guide.
-`prds/` also holds **one plan document per feature arc** (analytics, events,
-funder contributions, Gmail communications, email quality, the info@ mailbox
-rollout, the intake-receipt redesign, Meet and Fathom transcripts, submission-admin
-collaboration, workspace directories, transcription-vendor options, **grant
-management**, **the rating engine** and **the mailing list and event
-sponsorship arc** — Constant Contact as a mirror of the CRM, partner
-many-to-many, the deferred in-app designer) — each records
-the decisions and Doug's rulings behind that arc, so read the relevant one before
-reworking a feature. The chapter network is
-**not** one of those plans any more — it is its own project directory,
-**`prds/chapter-network/`**, worked separately from the app's feature arcs; start
-at its `README.md`. **Prospect marketing and Campaign Management are a directory
-too** (consolidated 10-14-26 after three sessions in one day left three
-documents that disagreed): **`prds/prospect-marketing/`** — start at its
-`README.md`; `rulings.md` holds rulings 1–37 and CM-1 to CM-11 and is the
-binding record (append only); `build-plan.md` v0.5 is the one plan; its two
-CRM handoffs (`contact-sms-opt-in-crm-handoff.md`,
-`coutreach-entities-crm-handoff.md`) are complete on crm-test (10-15-26) and
-owed on production and Boston; **Phases 1 and 2 are built** (v0.258.0,
-v0.259.0, dark — `campaigns/CLAUDE.md`); Phase 1's live
-pass ran 10-15/17-26, Phase 2's is `OPEN-ITEMS.md` #51.
-**One session on that arc at a time.** Eight settled rulings, a phase file each for phases 0–6, a
-decision log, and its own task list. Phase 0 (de-Cleveland) is **built**; **Phase
-1, CRM configuration as a versioned build artifact, is the next one and the only
-genuinely new engineering in the plan** — its conformance check is built, its
-applier is not. `prompts/` holds the kickoff prompts, design mockups and
-review documents those arcs were built from (including
-`reliability-review-2026-07-17.md` at the repo root, whose six hardening phases
-are all implemented).
+form, tool and platform arc is documented in this file, the application folders'
+`CLAUDE.md` files and its own guide. `prds/` also holds **one plan document per
+feature arc** (analytics, events, funder contributions, Gmail communications,
+email quality, the info@ mailbox rollout, the intake-receipt redesign, Meet and
+Fathom transcripts, submission-admin collaboration, workspace directories,
+transcription-vendor options, grant management, the rating engine, and the
+mailing list and event sponsorship arc). Each records the decisions and Doug's
+rulings behind that arc, so read the relevant one before reworking a feature.
+
+Two arcs are directories of their own, each worked separately; start at its
+`README.md`:
+
+- **`prds/chapter-network/`** — the chapter network: settled rulings, a phase
+  file for each of phases 0–6, a decision log and its own task list.
+- **`prds/prospect-marketing/`** — prospect marketing and Campaign Management
+  (consolidated 10-14-26 after three sessions in one day left three documents
+  that disagreed). `rulings.md` is the binding record, append only;
+  `build-plan.md` is the one plan. **One session on that arc at a time.**
+
+`prompts/` holds the kickoff prompts, design mockups and review documents those
+arcs were built from (`reliability-review-2026-07-17.md` at the repository root
+is the reliability review; all six of its hardening phases are implemented).
 
 **How to apply any of them**, step by step — author the handoff, crm-test first,
 rebuild, verify the shape AND the grants (twice: as the org-wide API key and as a
@@ -1098,25 +1085,13 @@ real non-admin), soak, then production at the Sunday 17:00 UTC slot:
 `prds/chapter-network/crm-update-runbook.md`. Its § 7 is the twelve traps this
 project has actually been bitten by.
 
-**CRM build handoffs** (one file per pending or completed CRM change, written in
-Entity Manager vocabulary — [[crm-specs-use-entity-manager-terms]]):
-**`GRANT-CRM-FIX-RUNBOOK.md`** (the ordered do-this-next list for the grant
-build on crm-test), `cengagement-description-wysiwyg-crm-handoff.md` (converts
-the Notes column's field to wysiwyg — the switch that turns rich notes on),
-`cgrant-entities-crm-handoff.md`,
-`crating-entity-crm-handoff.md`,
-`cevent-audience-display-crm-handoff.md` (event audience + display time —
-crm-test done, production and Boston owed),
-`cevent-partner-sponsorship-crm-handoff.md` (many partners per event +
-the notice-campaign id — written, nothing applied), `cnetworkstandard-entity-crm-handoff.md` (the chapter network's config-version
-stamp — pending on both CRMs), `contact-sms-opt-in-crm-handoff.md` and
-`coutreach-entities-crm-handoff.md` (prospect marketing Phase 1 — written
-10-14-26, dry-run on crm-test, nothing applied), `cintake-submission-*.md` (incl. `cintake-submission-company-status.md`, the
-`Held-Company` option — pending on both CRMs), `cinformation-request-entity.md`,
-`cconversation-entity.md`, `cevent-entities-crm-handoff.md`,
-`csession-*.md`, `cmentorprofile-*.md`, `clastcontactdate-field.md`,
-`documentsfolderurl-crm-field.md`, `emailtemplate-et-crm-prereqs.md`,
-`crm-field-handoff.md`.
+**CRM build handoffs** are one file per CRM change at the repository root,
+named `<entity>-…-crm-handoff.md` (older ones `-entity.md` / `-field.md`), and
+written in Entity Manager vocabulary ([[crm-specs-use-entity-manager-terms]]).
+`ls *handoff*.md` lists them. Whether each is applied on crm-test, production
+and Boston is tracked in `OPEN-ITEMS.md`, never here — the list that used to
+sit here carried statuses weeks out of date. `GRANT-CRM-FIX-RUNBOOK.md` is the
+ordered do-this-next list for the grant build on crm-test.
 
 ## Conventions
 
