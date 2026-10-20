@@ -5,6 +5,14 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.267.1] — 2026-10-20
+
+**fix(campaigns): a typed filter applies on Enter and on Tab.** Found on the
+grids' live pass (step 3.4): the search, Batch and ZIP or city boxes applied
+only half a second after the last key, so pressing Enter or Tab after a ZIP
+looked like nothing happened. They now apply at once on Enter or on leaving
+the box, and the same search is never sent twice. No CRM change.
+
 ## [0.267.0] — 2026-10-20
 
 **feat(campaigns): the Leads and Review grids handle tens of thousands of

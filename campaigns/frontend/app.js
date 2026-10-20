@@ -933,6 +933,7 @@
 
   async function loadGrid(px) {
     var g = grids[px];
+    g.lastKey = qs(gridQuery(px));
     var q = gridQuery(px); q.offset = g.offset; q.limit = g.limit; if (g.review) q.review = 1;
     writeHash(px);
     try {
@@ -1138,11 +1139,21 @@
 
   function wireGrid(px) {
     var g = grids[px], timer = null;
+    // A typed filter applies half a second after the last key, and at once on
+    // Enter or on leaving the box (Tab). The same query is never asked twice.
+    var go = function () {
+      clearTimeout(timer);
+      var key = qs(gridQuery(px));
+      if (key === g.lastKey) return;
+      g.offset = 0; clearSelection(px); loadGrid(px);
+    };
     GRID_FILTERS.forEach(function (f) {
       var e = $(px + "_" + f); if (!e) return;
-      var go = function () { g.offset = 0; clearSelection(px); loadGrid(px); };
-      if (f === "q" || f === "place" || f === "batch") e.addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(go, 500); });
-      else e.addEventListener("change", go);
+      if (f === "q" || f === "place" || f === "batch") {
+        e.addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(go, 500); });
+        e.addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); go(); } });
+      }
+      e.addEventListener("change", go);
     });
     $(px + "_clear").addEventListener("click", function () {
       GRID_FILTERS.forEach(function (f) { var e = $(px + "_" + f); if (e) e.value = ""; });
