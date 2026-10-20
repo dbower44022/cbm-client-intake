@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-20-26 15:13 · Revision 1.27 — change log at the end.
+Last Updated: 10-20-26 15:29 · Revision 1.28 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -619,6 +619,35 @@ of the other four targets. Doug's reply at 15:13: "b".
     without one; consent still applies person by person (rulings 9 and
     19). (10-20-26)
 
+### Doug's rulings (10-20-26, on static and dynamic lists)
+
+Doug set the order: "The first question we need to ask is if the list is
+dynamic or static. I think that we want to support both." Research found
+two ways products build a static list: filters frozen once at creation
+(HubSpot's snapshot list) and accumulating search results with "Add to"
+(Salesforce campaign members, EspoCRM target lists). Doug added that
+accumulating means several queries ("All records in the area code" then
+"add all records with industry type = ..."); each Add widens the list, so
+narrowing needs a "Keep only matching" step. Doug's reply at 15:28 to both
+questions: "yes to both".
+
+61. **A campaign's audience may be a static list or a dynamic list.** Both
+    are supported. (10-20-26)
+62. **A list is an ordered recipe of steps:** Add matching (widens), Keep
+    only matching (narrows), Remove matching (excludes), records ticked in
+    or out by hand, and a file import. Each step shows how many records it
+    added or dropped. A **static** list runs the recipe once, is frozen,
+    and is then edited by hand; a **dynamic** list runs the same recipe
+    again before every send. One editor serves both, and the kind is one
+    setting. Presented with it at 15:18 and not contested: membership of
+    a list never overrides the checks made at send time — consent
+    (rulings 9 and 19), a Do Not Contact or Disqualified exit, a dead
+    address (ruling 15), one card per business (ruling 14) — and the
+    sign-off count shows who was skipped and why. Still to be ruled: how
+    hand edits survive a dynamic list's next run, which conditions a step
+    may use, and whether a list belongs to one campaign or is reusable.
+    (10-20-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -739,8 +768,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.27 |
-| Last Updated | 10-20-26 15:13 |
+| Version | 1.28 |
+| Last Updated | 10-20-26 15:29 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -748,6 +777,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.28 | 10-20-26 15:29 | Claude (Claude Code) | Rulings 61 and 62 appended: static and dynamic lists both supported; a list is an ordered recipe of steps (Doug's "yes to both"). |
 | 1.27 | 10-20-26 15:13 | Claude (Claude Code) | Ruling 60 appended: a campaign targeting contacts names the contact types it reaches (Doug's "b"). |
 | 1.26 | 10-20-26 15:08 | Claude (Claude Code) | Ruling 59 appended: a campaign reaches the primary contact unless staff tick "Include every contact on the record" (Doug's "c"). |
 | 1.25 | 10-20-26 15:02 | Claude (Claude Code) | Ruling 58 appended: a campaign may target leads, clients, partners, funders, contacts, or any combination (Doug's first decision on campaign audiences). Revision table's Version and Last Updated brought up to date (they read 1.21). |
