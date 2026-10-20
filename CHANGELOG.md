@@ -1577,7 +1577,7 @@ about to be downgraded or dropped is not in a list older than
 state costs nothing; an unreadable re-read keeps the last good list. Four
 tests.
 
-
+## [0.238.0] — 2026-10-07
 
 **feat(intake): a public submission naming a company that exists at a
 DIFFERENT web address is HELD for staff, not delivered.** The public-form
@@ -1619,7 +1619,7 @@ for a client, on another business's client profile and engagement). Plan:
   orchestrators, the worker hold and both override merges, the receipt word
   and gate, and the resolution endpoint's six cases.
 
-
+## [0.237.0] — 2026-10-07
 
 **feat(sessions): "+ Add partner" / "+ Add funder" refuse a same-named company
 at a different web address.** Doug's request on 2026-10-07, following the
