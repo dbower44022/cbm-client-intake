@@ -192,6 +192,8 @@ async def fields(request: Request) -> dict[str, Any]:
                                               sms_on=get_settings().campaigns_sms,
                                               email_on=get_settings().campaigns_email)
         partners = await service.picker_options(client, cfg.PARTNER_PROFILE)
+        funders_on = await service.funders_available(client)
+        funders = await service.picker_options(client, cfg.SPONSOR_PROFILE) if funders_on else None
         events = await service.picker_options(client, cfg.EVENT)
         # The teams a call campaign may name as its callers (ruling 36). Names
         # only, read under the org-wide key: a marketing role may hold no Team
@@ -206,6 +208,8 @@ async def fields(request: Request) -> dict[str, Any]:
         "prospectOptions": options["prospect"],
         "kindsBuilt": options["kindsBuilt"],
         "partnerOptions": partners,       # None: the role may not list partners → read-only
+        "fundersAvailable": funders_on,   # ruling 57: no picker until the CRM has the link
+        "funderOptions": funders,
         "eventOptions": events,
         "teamOptions": teams,
     }
@@ -251,6 +255,7 @@ async def list_campaigns(request: Request) -> dict[str, Any]:
 class CampaignIn(BaseModel):
     changes: dict[str, Any] = Field(default_factory=dict)
     partnerIds: Optional[list[str]] = None
+    funderIds: Optional[list[str]] = None
     eventIds: Optional[list[str]] = None
     teamIds: Optional[list[str]] = None
 
@@ -264,8 +269,7 @@ async def create_campaign(body: CampaignIn, request: Request) -> dict[str, Any]:
                                                 calls_on=settings.campaigns_calls, sms_on=settings.campaigns_sms,
                                                 email_on=settings.campaigns_email)
         moved = await service.set_relations(
-            client, created["id"],
-            {k: v for k, v in ((cfg.LINK_PARTNERS, body.partnerIds), (cfg.LINK_EVENTS, body.eventIds)) if v is not None},
+            client, created["id"], await _wanted(client, body.partnerIds, body.funderIds, body.eventIds),
             admin_factory=admin_client_factory(settings))
         if body.teamIds is not None and created.get("campaignKind") == cfg.KIND_CALL:
             await service.set_teams(client, created["id"], body.teamIds,
@@ -289,6 +293,8 @@ async def get_campaign(campaign_id: str, request: Request) -> dict[str, Any]:
     settings = get_settings()
     row = await _campaign_or_404(request, client, campaign_id)
     partners = await service.related_names(client, campaign_id, cfg.LINK_PARTNERS)
+    funders = (await service.related_names(client, campaign_id, cfg.LINK_FUNDERS)
+               if await service.funders_available(client) else None)
     events = await service.related_names(client, campaign_id, cfg.LINK_EVENTS)
     touches: list[dict[str, Any]] = []
     reader = _system_client(settings) or client
@@ -330,7 +336,7 @@ async def get_campaign(campaign_id: str, request: Request) -> dict[str, Any]:
         except EspoError as exc:
             log.warning("text message of %s unreadable: %s", campaign_id, exc)
     return {
-        "campaign": row, "partners": partners, "events": events, "callerTeams": caller_teams,
+        "campaign": row, "partners": partners, "funders": funders, "events": events, "callerTeams": caller_teams,
         "smsCheck": sms_check,
         "callerTeamIds": caller_team_ids,
         "touches": touches, "touchSummary": service.touch_summary(touches),
@@ -373,7 +379,17 @@ async def update_campaign(campaign_id: str, body: ChangesIn, request: Request) -
 
 class RelationsIn(BaseModel):
     partnerIds: Optional[list[str]] = None
+    funderIds: Optional[list[str]] = None
     eventIds: Optional[list[str]] = None
+
+
+async def _wanted(client, partner_ids, funder_ids, event_ids) -> dict[str, list[str]]:
+    """The relationships a save sets. Funders only when the CRM carries the
+    link (ruling 57); a page that sent them to a CRM without it loses nothing."""
+    wanted = {k: v for k, v in ((cfg.LINK_PARTNERS, partner_ids), (cfg.LINK_EVENTS, event_ids)) if v is not None}
+    if funder_ids is not None and await service.funders_available(client):
+        wanted[cfg.LINK_FUNDERS] = funder_ids
+    return wanted
 
 
 @api_router.put("/campaigns/{campaign_id}/relations")
@@ -381,18 +397,18 @@ async def set_relations(campaign_id: str, body: RelationsIn, request: Request) -
     user, client = _actor(request)
     settings = get_settings()
     row = await _campaign_or_404(request, client, campaign_id)
-    wanted = {k: v for k, v in ((cfg.LINK_PARTNERS, body.partnerIds), (cfg.LINK_EVENTS, body.eventIds)) if v is not None}
+    wanted = await _wanted(client, body.partnerIds, body.funderIds, body.eventIds)
     try:
         moved = await service.set_relations(client, campaign_id, wanted, admin_factory=admin_client_factory(settings))
     except CampaignError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
-        raise _crm_failure(request, exc, "Could not change the campaign's partners or events")
+        raise _crm_failure(request, exc, "Could not change the campaign's partners, funders or events")
     if any(m["added"] or m["removed"] for m in moved.values()):
         await record_action(
             client, app=APP_CAMPAIGNS, category=CAT_RECORD_EDIT, action="Campaign Relations Changed",
             parent_type=cfg.CAMPAIGN, parent_id=campaign_id,
-            summary=f"Changed the partners or events of \"{row.get('name')}\"",
+            summary=f"Changed the partners, funders or events of \"{row.get('name')}\"",
             actor_id=user.get("userId", ""), actor_name=user.get("name", ""), details=moved,
         )
     return {"relations": moved}

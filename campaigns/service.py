@@ -165,6 +165,15 @@ async def get_campaign(client: EspoApi, campaign_id: str) -> dict[str, Any]:
     return await client.get(cfg.CAMPAIGN, campaign_id, select=cfg.CAMPAIGN_SELECT)
 
 
+async def funders_available(client: EspoApi) -> bool:
+    """Ruling 57's link, read live; a failed read counts as absent."""
+    try:
+        links = await client.metadata(f"entityDefs.{cfg.CAMPAIGN}.links") or {}
+    except Exception:  # noqa: BLE001 — a probe never raises
+        return False
+    return isinstance(links, dict) and cfg.LINK_FUNDERS in links
+
+
 async def related_names(client: EspoApi, campaign_id: str, link: str) -> Optional[list[dict[str, Any]]]:
     """The records on one relationship of a campaign — id and name. None when
     unreadable (rendered "—", never an empty list that would read as none)."""
@@ -373,7 +382,7 @@ async def set_relations(client: EspoApi, campaign_id: str, wanted: dict[str, lis
                         *, admin_factory=None) -> dict[str, dict[str, list[str]]]:
     """Reconcile the exact set on each relationship; returns what moved."""
     out: dict[str, dict[str, list[str]]] = {}
-    for link in (cfg.LINK_PARTNERS, cfg.LINK_EVENTS):
+    for link in (cfg.LINK_PARTNERS, cfg.LINK_FUNDERS, cfg.LINK_EVENTS):
         if link not in wanted:
             continue
         target = {i for i in wanted[link] if isinstance(i, str) and i}

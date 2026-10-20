@@ -13,6 +13,7 @@
 #   scripts/prospect_crm_test.sh touchpos   apply scripts/plans/coutreach-touch-positions.json (fingerprint 6c2e1d42af30; lead-model code release)
 #   scripts/prospect_crm_test.sh leadlayouts scripts/apply_lead_layouts.py --apply (handoff § 7, with the code release)
 #   scripts/prospect_crm_test.sh leadmove   scripts/migrate_lead_model_values.py --apply (handoff § 5, with the code release)
+#   scripts/prospect_crm_test.sh funders    apply scripts/plans/coutreach-funders.json (fingerprint 4658d1450804; ruling 57)
 #
 # Exists for the same reason as scripts/on_crm.sh and scripts/apply_plan.sh: each
 # full invocation is far past the one-line limit a pasted command survives, and
@@ -36,5 +37,6 @@ case "${1:-}" in
   touchpos) exec scripts/apply_plan.sh test scripts/plans/coutreach-touch-positions.json 6c2e1d42af30 ;;
   leadlayouts) exec uv run python scripts/run_with_admin.py scripts/apply_lead_layouts.py --apply ;;
   leadmove) exec uv run python scripts/migrate_lead_model_values.py --apply ;;
-  *) echo "usage: scripts/prospect_crm_test.sh <sms|outreach|roles|notes|receipt|smstext|appfields|leadmodel|leadlabels|touchpos|leadlayouts|leadmove>" >&2; exit 64 ;;
+  funders)  exec scripts/apply_plan.sh test scripts/plans/coutreach-funders.json 4658d1450804 ;;
+  *) echo "usage: scripts/prospect_crm_test.sh <sms|outreach|roles|notes|receipt|smstext|appfields|leadmodel|leadlabels|touchpos|leadlayouts|leadmove|funders>" >&2; exit 64 ;;
 esac

@@ -341,8 +341,8 @@ class DomainConfig:
     #: ``COutreachCampaign.partnerProfiles``, ``sponsoredCampaigns``). Gates BOTH
     #: the Campaigns tab and ``/records/{id}/sponsoredcampaigns``; the endpoint
     #: feature-detects the link on the live CRM and answers ``available: false``
-    #: with a reason until the build lands there. Partner only (CM-5 named
-    #: partners; a funder tab is one line here if ever asked for).
+    #: with a reason until the build lands there. Partner (CM-5) and, since
+    #: ruling 57 (10-20-26), funder: COutreachCampaign.funderProfiles' reverse.
     sponsored_campaigns_link: Optional[str] = None
 
     # --- Last contact date (Doug's request 2026-07-25). The record field that is
@@ -1008,6 +1008,8 @@ SPONSOR = DomainConfig(
     grants_parent_fk="sponsorProfileId",
     # Events this funder sponsors (reverse of CEvent.sponsorProfiles).
     sponsored_events_link="sponsoredEvents",
+    # Campaigns naming this funder (reverse of COutreachCampaign.funderProfiles) — ruling 57.
+    sponsored_campaigns_link="sponsoredCampaigns",
     # Reuse the existing date field — advanced on outbound email / recorded session.
     last_contact_attr="lastContacted",
     last_contact_type="date",

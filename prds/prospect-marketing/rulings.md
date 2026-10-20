@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-20-26 01:16 · Revision 1.23 — change log at the end.
+Last Updated: 10-20-26 14:36 · Revision 1.24 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -558,6 +558,14 @@ at 12:23: "a".
     answer: "we need to dramatically improve the 'Leads' and 'Review' grids
     to handle a large number of records, and provide better searching and
     qualifying" — a requirement being gathered, build plan § 7b. (10-20-26)
+57. **A campaign names its funders, like its partners** (option A). A
+    many-to-many link from the campaign to the funder profile, a *Funders*
+    picker beside *Partners* on the campaign form, and a Campaigns tab on
+    every funder record with the partner tab's counts (CM-5's twin, under
+    Doug's rule that Partner and Funder Management never differ). Funders
+    get no credit on the records a campaign brings in — CM-4 stays
+    partner-only. A CRM link on every CRM: crm-test first, production at
+    the Sunday slot, Boston with its release. (10-20-26)
 
 ---
 
@@ -680,7 +688,7 @@ other source consumes a service before mentoring.
 |---|---|
 | Document | Prospect Marketing — rulings |
 | Version | 1.21 |
-| Last Updated | 10-20-26 01:16 |
+| Last Updated | 10-20-26 14:36 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -688,6 +696,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.24 | 10-20-26 14:36 | Claude (Claude Code) | Ruling 57 appended: a campaign names its funders, like its partners (Doug's "a"). |
 | 1.23 | 10-20-26 01:16 | Claude (Claude Code) | Ruling 56 appended: the lead screens stay inside the Campaign Management tile (Doug's "a" to build plan § 9 question 12), with his new requirement for the Leads and Review grids quoted. |
 | 1.22 | 10-20-26 01:08 | Claude (Claude Code) | Ruling 55 appended: social media is one campaign kind with a Platform field (Doug's "a" to build plan § 9 question 10). |
 | 1.21 | 10-19-26 12:23 | Claude (Claude Code) | Ruling 54 appended: the Marketing Admin Team reads every Company, read only (Doug's "a"). |

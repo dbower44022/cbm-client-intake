@@ -1070,6 +1070,13 @@ the reason.
   Company by name **and** postal code, Company by website key, Contact by email
   (ruling 12) — a match still creates the prospect record, with the *Already
   known* side exit; a re-upload of the same file is a no-op through the ledger.
+- **Funders on a campaign** (v0.268.0, ruling 57): `cfg.LINK_FUNDERS`
+  (`funderProfiles` ↔ `CSponsorProfile.sponsoredCampaigns`), a picker
+  beside Partners, and Funder Management's Campaigns tab
+  (`DomainConfig.sponsored_campaigns_link` on both domains now).
+  Feature-detected (`service.funders_available`). **Not**
+  `COutreachCampaign.sponsorProfiles` — that is ruling 27's attribution
+  reverse. Funders get no CM-4 credit.
 - **The import at volume** (v0.267.2): the already-known check reads the
   whole file in batches (`imports.KnownIndex`, ~30 reads for 800 rows), and
   the page applies 100 rows per request until `remaining` is 0 — never put
@@ -2016,6 +2023,13 @@ with `main`; **Lakeside took it off the release lane by itself** (its
 unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
+
+- **v0.268.0 (2026-10-20) — funders on a campaign (ruling 57).**
+  Committed, not pushed. Needs the CRM link: crm-test by
+  `scripts/prospect_crm_test.sh funders` (dry run clean, one change,
+  `4658d1450804`), production at the Sunday slot, Boston with its release
+  (`coutreach-funders-crm-handoff.md`). Tests only so far; the live check
+  is in the handoff's last section.
 
 - **v0.267.0–v0.267.2 (2026-10-20) — the Leads and Review grids at
   volume.** Live on crm-test and production (dark there). Rulings 55 and 56

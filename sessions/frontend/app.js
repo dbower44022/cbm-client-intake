@@ -5974,8 +5974,8 @@
   );
   if ($("speTable")) makeColumnsResizable($("speTable"));
 
-  // --- Campaigns tab (partner domain only — CM-5) -----------------------------
-  // The campaigns this partner is named on. Counts come from the application's
+  // --- Campaigns tab (partner, CM-5; funder, ruling 57) -----------------------
+  // The campaigns this partner or funder is named on. Counts come from the application's
   // own records (links, visits, submissions); a count the server could not
   // supply arrives as null and renders "—". A row opens the campaign for a user
   // the Campaign Management tile admits, else it is plain text.

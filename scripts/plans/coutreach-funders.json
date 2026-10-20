@@ -1,0 +1,16 @@
+{
+  "name": "coutreach-funders",
+  "description": "Ruling 57 (Doug, 10-20-26): a campaign names its funders, like its partners (CM-2's twin). One many-to-many link from COutreachCampaign to CSponsorProfile; its reverse feeds the funder record's Campaigns tab (CM-5's twin). COutreachCampaign.sponsorProfiles is taken (the ruling-27 attribution reverse), so the campaign side is funderProfiles.",
+  "links": [
+    {
+      "entity": "COutreachCampaign",
+      "link": "funderProfiles",
+      "linkType": "manyToMany",
+      "entityForeign": "CSponsorProfile",
+      "linkForeign": "sponsoredCampaigns",
+      "relationName": "cOutreachCampaignSponsorProfile",
+      "label": "Funders",
+      "labelForeign": "Sponsored Campaigns"
+    }
+  ]
+}

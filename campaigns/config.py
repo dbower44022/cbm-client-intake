@@ -16,6 +16,7 @@ CAMPAIGN = "COutreachCampaign"
 PROSPECT = "CProspect"
 TOUCH = "COutreachTouch"
 PARTNER_PROFILE = "CPartnerProfile"
+SPONSOR_PROFILE = "CSponsorProfile"
 EVENT = "CEvent"
 ACCOUNT = "Account"
 CONTACT = "Contact"
@@ -24,6 +25,11 @@ CONTACT = "Contact"
 # relate / unrelate, never through a *Ids attribute) ---------------------------
 LINK_PARTNERS = "partnerProfiles"       # CM-2, reverse CPartnerProfile.sponsoredCampaigns
 LINK_EVENTS = "events"                  # CM-6, reverse CEvent.outreachCampaigns
+#: Ruling 57: the funders a campaign names (CM-2's twin), reverse
+#: CSponsorProfile.sponsoredCampaigns. Feature-detected: a CRM without the
+#: link (scripts/plans/coutreach-funders.json) shows no Funders picker.
+#: (COutreachCampaign.sponsorProfiles is the ruling-27 attribution reverse.)
+LINK_FUNDERS = "funderProfiles"
 LINK_TOUCHES = "touches"
 
 # --- campaign kinds and statuses (build plan § 1.3; the CRM enum is the truth,

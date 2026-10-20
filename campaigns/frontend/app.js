@@ -156,7 +156,7 @@
     return wrap;
   }
 
-  function campaignForm(record, chosenPartners, chosenEvents, chosenTeams) {
+  function campaignForm(record, chosenPartners, chosenEvents, chosenTeams, chosenFunders) {
     var f = state.fields, s = state.session;
     var root = el("div", "cm__plan");
     var groups = {};
@@ -193,10 +193,12 @@
       if (spec.help) field.appendChild(el("span", "cm__help", spec.help));
       groups[spec.group].appendChild(field);
     });
-    var rel = el("div", "cm__group"); rel.appendChild(el("h4", null, "Partners and events"));
+    var rel = el("div", "cm__group"); rel.appendChild(el("h4", null, f.fundersAvailable ? "Partners, funders and events" : "Partners and events"));
     var partners = pickList("partners", "Partners (CM-2)", f.partnerOptions, chosenPartners, "The partners this campaign is for. A client who arrives through it is credited to every one.");
+    // Ruling 57: funders a campaign names, shown once the CRM carries the link.
+    var funders = f.fundersAvailable ? pickList("funders", "Funders", f.funderOptions, chosenFunders || [], "The funders paying for or sponsoring this campaign. It shows on each one's Campaigns tab; funders are not credited with the clients it brings in.") : null;
     var events = pickList("events", "Events (CM-6)", f.eventOptions, chosenEvents, "The events this campaign advertises.");
-    rel.appendChild(partners); rel.appendChild(events); root.appendChild(rel);
+    rel.appendChild(partners); if (funders) rel.appendChild(funders); rel.appendChild(events); root.appendChild(rel);
     // Who calls (ruling 36): a call campaign's own teams. None named means the
     // Marketing Admin Team; naming the Mentor Team opens its calls to mentors.
     var callers = el("div", "cm__group cm__field--kinds"); callers.setAttribute("data-kinds", "Call");
@@ -236,6 +238,7 @@
       });
       var isCall = kindSel && kindSel.value === "Call";
       return { changes: changes, partnerIds: partners.getChosen ? partners.getChosen() : null, eventIds: events.getChosen ? events.getChosen() : null,
+               funderIds: funders && funders.getChosen ? funders.getChosen() : null,
                teamIds: isCall && teams.getChosen ? teams.getChosen() : null };
     };
     return root;
@@ -319,7 +322,7 @@
   async function openEditCampaign() {
     var rec = state.record; if (!rec) return;
     try { await ensureFields(); } catch (e) { notice(e.message, "error"); return; }
-    var form = campaignForm(rec.campaign, (rec.partners || []).map(function (p) { return p.id; }), (rec.events || []).map(function (p) { return p.id; }), rec.callerTeamIds || []);
+    var form = campaignForm(rec.campaign, (rec.partners || []).map(function (p) { return p.id; }), (rec.events || []).map(function (p) { return p.id; }), rec.callerTeamIds || [], (rec.funders || []).map(function (p) { return p.id; }));
     openModal("Edit campaign", form, async function () {
       var data = form.collect();
       if (!data.changes.name) { modalMsg("A campaign needs a name.", "error"); return; }
@@ -328,6 +331,7 @@
       if (Object.keys(changes).length) await api("/campaigns/" + encodeURIComponent(rec.campaign.id), { method: "PUT", body: { changes: changes } });
       var rel = {};
       if (data.partnerIds !== null) rel.partnerIds = data.partnerIds;
+      if (data.funderIds !== null && rec.funders !== null) rel.funderIds = data.funderIds;
       if (data.eventIds !== null) rel.eventIds = data.eventIds;
       if (Object.keys(rel).length) await api("/campaigns/" + encodeURIComponent(rec.campaign.id) + "/relations", { method: "PUT", body: rel });
       if (data.teamIds !== null && rec.callerTeamIds !== null) {
@@ -388,6 +392,8 @@
       facts.appendChild(el("dt", null, p[0])); facts.appendChild(el("dd", null, p[1] == null || p[1] === "" ? "—" : p[1]));
     });
     chips($("recPartners"), rec.partners, "No partner named."); chips($("recEvents"), rec.events, "No event linked.");
+    $("recFundersCard").hidden = rec.funders === null || rec.funders === undefined;
+    if (!$("recFundersCard").hidden) chips($("recFunders"), rec.funders, "No funder named.");
     var notes = $("recNotes");
     notes.innerHTML = window.CBMRichText && CBMRichText.sanitizeHtml ? CBMRichText.sanitizeHtml(c.description || "") : esc(c.description || "");
     var acts = $("statusActions"); acts.innerHTML = "";

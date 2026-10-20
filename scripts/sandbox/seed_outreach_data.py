@@ -174,6 +174,7 @@ CAMPAIGNS: tuple[dict[str, Any], ...] = (
      "signedOffByName": "Mark Marketing", "signedOff": -30, "runStarted": -29, "runCompleted": -29,
      "startDate": -30, "endDate": 30, "teams": (MARKETING_TEAM,),
      "partners": ("Cuyahoga Small Business Alliance",), "events": (),
+     "funders": ("Harrowgate Family Trust",),
      "description": "<p>First card to September's new filings. Offer: a free first meeting with a mentor.</p>"},
     {"name": demo.POSTCARD_DRAFT, "campaignKind": cfg.KIND_POSTCARD, "campaignStatus": cfg.STATUS_DRAFT,
      "postcardSize": "6x9", "startDate": 10, "teams": (MARKETING_TEAM,), "partners": (), "events": (),
@@ -358,7 +359,7 @@ async def team_ids(s: OutreachSeeder, names: tuple[str, ...]) -> list[str]:
 async def seed_campaigns(s: OutreachSeeder) -> None:
     for c in CAMPAIGNS:
         payload: dict[str, Any] = {k: v for k, v in c.items()
-                                   if k not in ("teams", "partners", "events", "signedOff", "runStarted",
+                                   if k not in ("teams", "partners", "events", "funders", "signedOff", "runStarted",
                                                 "runCompleted", "startDate", "endDate")}
         for field, key in (("signedOffAt", "signedOff"), ("runStartedAt", "runStarted"),
                            ("runCompletedAt", "runCompleted")):
@@ -375,6 +376,16 @@ async def seed_campaigns(s: OutreachSeeder) -> None:
                 await s.relate(cfg.CAMPAIGN, cid, cfg.LINK_PARTNERS, row["id"], f"{c['name']} -> {partner}")
             else:
                 await s.note(f"! no partner {partner!r} — skipped")
+        funders = c.get("funders") or ()
+        if funders and cfg.LINK_FUNDERS not in (await s.client.metadata(f"entityDefs.{cfg.CAMPAIGN}.links") or {}):
+            await s.note(f"! this CRM has no {cfg.CAMPAIGN}.{cfg.LINK_FUNDERS} (ruling 57) — funders skipped")
+            funders = ()
+        for funder in funders:
+            row = await s.by_name(cfg.SPONSOR_PROFILE, funder)
+            if row:
+                await s.relate(cfg.CAMPAIGN, cid, cfg.LINK_FUNDERS, row["id"], f"{c['name']} -> {funder} (funder)")
+            else:
+                await s.note(f"! no funder {funder!r} — skipped")
         for event in c["events"]:
             row = await s.by_name(cfg.EVENT, event)
             if row:

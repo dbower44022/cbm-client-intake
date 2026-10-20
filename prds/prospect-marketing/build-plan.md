@@ -1153,7 +1153,7 @@ harness only; Doug's pass: https://claude.ai/artifact/96dzUAsNAfkbJCx2eDu91g.
 
 ### Phase 5 — deferred, named so they are not forgotten
 
-Not planned, no dates: the partner-file import (ruling 23); ~~sending texts through a vendor~~ (built in Phase 4, ruling 38 — the real Twilio account, number and A2P 10DLC registration are Doug's); a second-card campaign (ruling 14 waits for a measured response rate; the Stale exit is its entry point); a watched Drive folder or a posting endpoint for the outside filter (question 2); a funder Campaigns tab (one `DomainConfig` line if ever asked for — CM-5 named partners); Phase D of the mailing-list plan feeding email touches.
+Not planned, no dates: the partner-file import (ruling 23); ~~sending texts through a vendor~~ (built in Phase 4, ruling 38 — the real Twilio account, number and A2P 10DLC registration are Doug's); a second-card campaign (ruling 14 waits for a measured response rate; the Stale exit is its entry point); a watched Drive folder or a posting endpoint for the outside filter (question 2); ~~a funder Campaigns tab~~ (built 10-20-26, ruling 57); Phase D of the mailing-list plan feeding email touches.
 
 ---
 

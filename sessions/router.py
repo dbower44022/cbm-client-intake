@@ -946,8 +946,8 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 raise _crm_failure(request, exc, "Could not load this record's events")
 
     if cfg.sponsored_campaigns_link:
-        # CM-5 (prds/prospect-marketing/build-plan.md § 3.8): the campaigns this
-        # partner is named on, with their link, visit and submission counts.
+        # CM-5 (prds/prospect-marketing/build-plan.md § 3.8) and ruling 57: the
+        # campaigns this partner or funder is named on, with their link, visit and submission counts.
         # Registered only on the partner domain. Read-only. The user's own read
         # of the partner record gates the tab; the campaigns and their counts are
         # read under the org-wide key (the Partner Manager Role holds no campaign
@@ -975,7 +975,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             if not isinstance(defs, dict) or not defs:
                 return {
                     "available": False, "campaigns": [],
-                    "reason": (f"This CRM does not link campaigns to partners yet "
+                    "reason": (f"This CRM does not link campaigns to this record type yet "
                                f"({cfg.parent_entity}.{link} is missing). Once the CRM build "
                                "lands, this tab fills in by itself."),
                 }
@@ -986,7 +986,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                     max_size=200,
                 )
             except EspoError as exc:
-                raise _crm_failure(request, exc, "Could not load this partner's campaigns")
+                raise _crm_failure(request, exc, "Could not load this record's campaigns")
             rows = [r for r in page.get("list", []) if r.get("id")]
             store = getattr(request.app.state, "campaign_store", None)
             counts: dict[str, dict] = {}

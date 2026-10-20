@@ -5,6 +5,23 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.268.0] — 2026-10-20
+
+**feat(campaigns): a campaign names its funders, and every funder record has
+a Campaigns tab** (ruling 57, Doug 10-20-26 — CM-2 and CM-5's twins, under
+his rule that Partner and Funder Management never differ). A **Funders**
+picker beside Partners on the campaign form, a *Funders* card on the
+campaign's Overview, and Funder Management's **Campaigns** tab with the
+partner tab's links, visits and submissions. Funders get no credit on the
+records a campaign brings in (CM-4 stays partner-only).
+
+Needs one CRM link, `COutreachCampaign.funderProfiles` ↔
+`CSponsorProfile.sponsoredCampaigns` (`scripts/plans/coutreach-funders.json`,
+`coutreach-funders-crm-handoff.md`); feature-detected, so a CRM without it
+shows no picker and a tab that says why. The outreach seeder relates
+Harrowgate Family Trust to the September postcard once the link exists.
+Rollback is a revert.
+
 ## [0.267.2] — 2026-10-20
 
 **fix(campaigns): a month-sized import plans in seconds, applies in parts,

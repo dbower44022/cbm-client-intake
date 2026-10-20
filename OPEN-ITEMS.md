@@ -64,6 +64,12 @@ found; move resolved items to the bottom with the resolution date.
     *Purchased list* because the page buried Lead Source in a half-sentence
     (fixed in rev 1.4); ruling 53's Qualified path was not re-run at volume —
     its code is unchanged and passed on 10-19-26.
+    **Funders on a campaign (v0.268.0, ruling 57, 10-20-26): built, not
+    pushed.** Owed: the CRM link on crm-test (`scripts/prospect_crm_test.sh
+    funders`), the seeder re-run, the check as Mark Marketing and Sally
+    Sponsor (`coutreach-funders-crm-handoff.md` § Proof), then production
+    with the lead-model slot, Boston with its release, and a sandbox
+    recapture (one more new table).
     The earlier passes' record follows.
     **Phase 1 BUILT and LIVE-PASSED on crm-test
     (v0.258.0–v0.258.5, 10-15/17-26, dark behind `CAMPAIGNS_ENABLED`);

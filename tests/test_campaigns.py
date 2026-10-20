@@ -815,3 +815,52 @@ def test_imports_list_route_is_not_shadowed_by_the_record_route(monkeypatch):
     client = build(monkeypatch, user=MARKETING, crm=FakeCrm(), store=FakeStore())
     resp = client.get("/campaigns/api/prospects/imports")
     assert resp.status_code == 200 and resp.json() == {"batches": []}
+
+
+# --- ruling 57: a campaign names its funders, like its partners -------------------------------
+
+class FunderCrm(FakeCrm):
+    def __init__(self, *, with_link: bool = True):
+        super().__init__()
+        self.with_link = with_link
+
+    async def metadata(self, key: str):
+        out = await super().metadata(key)
+        if key == f"entityDefs.{cfg.CAMPAIGN}.links" and self.with_link:
+            out = {**out, cfg.LINK_FUNDERS: {"type": "hasMany"}}
+        return out
+
+
+def test_funders_picker_and_relate_when_the_crm_has_the_link(monkeypatch):
+    crm = FunderCrm()
+    crm.add(cfg.SPONSOR_PROFILE, {"id": "f1", "name": "Harrowgate Family Trust"})
+    client = build(monkeypatch, user=MARKETING, crm=crm)
+    f = client.get("/campaigns/api/fields").json()
+    assert f["fundersAvailable"] is True and [o["name"] for o in f["funderOptions"]] == ["Harrowgate Family Trust"]
+    res = client.post("/campaigns/api/campaigns", json={"changes": {"name": "Funded card", "campaignKind": "Postcard"},
+                                                       "funderIds": ["f1"]})
+    assert res.status_code == 200, res.text
+    cid = res.json()["campaign"]["id"]
+    assert crm.related.get((cfg.CAMPAIGN, cid, cfg.LINK_FUNDERS)) == {"f1"}
+    rec = client.get(f"/campaigns/api/campaigns/{cid}").json()
+    assert [x["id"] for x in rec["funders"]] == ["f1"]
+
+
+def test_without_the_link_there_is_no_picker_and_funders_are_ignored(monkeypatch):
+    crm = FunderCrm(with_link=False)
+    client = build(monkeypatch, user=MARKETING, crm=crm)
+    f = client.get("/campaigns/api/fields").json()
+    assert f["fundersAvailable"] is False and f["funderOptions"] is None
+    res = client.post("/campaigns/api/campaigns", json={"changes": {"name": "Plain card", "campaignKind": "Postcard"},
+                                                       "funderIds": ["f1"]})
+    assert res.status_code == 200
+    cid = res.json()["campaign"]["id"]
+    assert (cfg.CAMPAIGN, cid, cfg.LINK_FUNDERS) not in crm.related
+    assert client.get(f"/campaigns/api/campaigns/{cid}").json()["funders"] is None
+
+
+def test_the_funder_record_has_a_campaigns_tab():
+    from sessions.config import DOMAINS
+    sponsor = next(d for d in DOMAINS.values() if d.parent_entity == "CSponsorProfile")
+    partner = next(d for d in DOMAINS.values() if d.parent_entity == "CPartnerProfile")
+    assert sponsor.sponsored_campaigns_link == partner.sponsored_campaigns_link == "sponsoredCampaigns"
