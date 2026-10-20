@@ -36,6 +36,7 @@ from core.config import Settings
 from core.store import make_async_engine, metadata, submission
 
 from . import config as cfg
+from .audience_store import AudienceStoreMixin
 from .tokens import new_link_token
 
 campaign_link = Table(
@@ -129,7 +130,7 @@ def agent_class(user_agent: str) -> str:
     return "desktop"
 
 
-class CampaignStore:
+class CampaignStore(AudienceStoreMixin):
     """Links, visits and the import ledger. One engine per store, like the
     other ``_engine.begin()`` stores in this application."""
 

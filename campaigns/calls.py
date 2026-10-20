@@ -51,6 +51,7 @@ from core.crm_upsert import CONTACT_TYPE_FIELD, PROSPECT_TYPE
 from core.espo import EspoApi, EspoError
 
 from . import config as cfg
+from .audience import audience_result as _audience_result
 from . import service
 from .attribution import holds_relationship
 from .conversion import ConversionRefused, Details, can_convert, convert_lead
@@ -223,7 +224,7 @@ async def select_targets(client: EspoApi, rule: Optional[dict[str, Any]]) -> lis
 # --- build the list and sign off ---------------------------------------------------------
 
 async def build_list(api_client: EspoApi, user_client: EspoApi, campaign: dict[str, Any],
-                     rule: Optional[dict[str, Any]]) -> dict[str, Any]:
+                     rule: Optional[dict[str, Any]], audience: Optional[dict[str, Any]] = None) -> dict[str, Any]:
     """Reconcile this campaign's Planned touches to the selection: a new target
     gains a Planned row, a dropped target's Planned row is Cancelled, a row
     already recorded is never touched. Draft moves to Awaiting sign-off."""
@@ -233,7 +234,8 @@ async def build_list(api_client: EspoApi, user_client: EspoApi, campaign: dict[s
     if status not in (cfg.STATUS_DRAFT, cfg.STATUS_AWAITING):
         raise CampaignError(f"The list cannot be rebuilt once the campaign is {status}.")
     rule = normalise_rule(rule)
-    targets = await select_targets(api_client, rule)
+    # A campaign that names a list sends to it (build plan § 7c); else its rule.
+    targets = audience["targets"] if audience else await select_targets(api_client, rule)
     planned: dict[str, dict[str, Any]] = {}
     for t in await service.campaign_touches(api_client, campaign["id"]):
         key = _target_key(t)
@@ -252,12 +254,16 @@ async def build_list(api_client: EspoApi, user_client: EspoApi, campaign: dict[s
             continue
         await api_client.create(cfg.TOUCH, _planned_payload(campaign, target, team_ids))
         created += 1
-    stamps: dict[str, Any] = {"selectionRule": json.dumps(rule), "selectionSummary": rule_summary(rule)}
+    stamps: dict[str, Any] = {
+        "selectionRule": json.dumps({"list": audience["list"]} if audience else rule),
+        "selectionSummary": audience["summary"] if audience else rule_summary(rule),
+    }
     if status == cfg.STATUS_DRAFT:
         stamps["campaignStatus"] = cfg.STATUS_AWAITING
     await service.stamp_campaign(user_client, api_client, campaign["id"], stamps)
     return {"pieces": kept + created, "created": created, "kept": kept, "cancelled": cancelled,
-            "rule": rule, "summary": stamps["selectionSummary"]}
+            "rule": rule, "summary": stamps["selectionSummary"],
+            **({"audience": _audience_result(audience)} if audience else {})}
 
 
 def _planned_payload(campaign: dict[str, Any], target: dict[str, Any],

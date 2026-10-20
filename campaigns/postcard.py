@@ -32,6 +32,7 @@ from core.postal import (
 )
 
 from . import config as cfg
+from .audience import audience_result as _audience_result
 from . import service
 from .service import CampaignError
 from .tokens import new_scan_token
@@ -190,7 +191,8 @@ def address_text(a: Address) -> str:
 # --- build the list ------------------------------------------------------------------
 
 async def build_list(api_client: EspoApi, user_client: EspoApi, campaign: dict[str, Any],
-                     rule: Optional[dict[str, Any]], settings: Settings) -> dict[str, Any]:
+                     rule: Optional[dict[str, Any]], settings: Settings,
+                     audience: Optional[dict[str, Any]] = None) -> dict[str, Any]:
     """Step 2 of § 3.1: evaluate the rule, reconcile this campaign's Planned
     touches to the selection (new targets gain a Planned row, dropped targets'
     Planned rows are Cancelled, Sent rows are never touched), and write the rule
@@ -201,7 +203,8 @@ async def build_list(api_client: EspoApi, user_client: EspoApi, campaign: dict[s
     if status not in (cfg.STATUS_DRAFT, cfg.STATUS_AWAITING):
         raise CampaignError(f"The list cannot be rebuilt once the campaign is {status}.")
     rule = normalise_rule(rule)
-    targets = await select_targets(api_client, rule)
+    # A campaign that names a list sends to it (build plan § 7c); else its rule.
+    targets = audience["targets"] if audience else await select_targets(api_client, rule)
     existing = await service.campaign_touches(api_client, campaign["id"])
     planned_by_key: dict[str, dict[str, Any]] = {}
     for t in existing:
@@ -232,15 +235,16 @@ async def build_list(api_client: EspoApi, user_client: EspoApi, campaign: dict[s
         created += 1
     pieces = kept + created
     stamps: dict[str, Any] = {
-        "selectionRule": json.dumps(rule),
-        "selectionSummary": rule_summary(rule),
+        "selectionRule": json.dumps({"list": audience["list"]} if audience else rule),
+        "selectionSummary": audience["summary"] if audience else rule_summary(rule),
     }
     if status == cfg.STATUS_DRAFT:
         stamps["campaignStatus"] = cfg.STATUS_AWAITING
     await service.stamp_campaign(user_client, api_client, campaign["id"], stamps)
     return {"pieces": pieces, "created": created, "kept": kept, "cancelled": cancelled,
             "estimatedCost": estimated_cost(settings, pieces), "currency": settings.postal_currency,
-            "rule": rule, "summary": stamps["selectionSummary"]}
+            "rule": rule, "summary": stamps["selectionSummary"],
+            **({"audience": _audience_result(audience)} if audience else {})}
 
 
 # --- sign off --------------------------------------------------------------------------
@@ -290,6 +294,15 @@ async def _target_for(client: EspoApi, touch: dict[str, Any]) -> Optional[dict[s
                                    city=c.get("billingAddressCity") or "", state=c.get("billingAddressState") or "",
                                    postal_code=c.get("billingAddressPostalCode") or "",
                                    country=c.get("billingAddressCountry") or "US")}
+    if touch.get("contactId"):
+        # A list's contact with no Company: the card goes to the person's own
+        # address (build plan § 7c.2).
+        from .audience import contact_address
+        c = await client.get(cfg.CONTACT, touch["contactId"],
+                             select="id,name,cFunnelStage,addressStreet,addressCity,addressState,"
+                                    "addressPostalCode,addressCountry")
+        return {"kind": "contact", "record": c, "stage": c.get("cFunnelStage"), "name": c.get("name") or "",
+                "address": contact_address(c)}
     return None
 
 

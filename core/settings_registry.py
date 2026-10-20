@@ -272,6 +272,15 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="The email campaign kind: each campaign's opted-in people pushed as its own "
             "named list at the mailing service, where staff design and send the notice. "
             "Needs the mailing connection (Mailing list sync's client ID and secret)."),
+    _s("campaign_lists", GROUP_FEATURES, "Campaign lists", kind="bool", component="web",
+       help="Named lists a campaign sends to (build plan § 7c): the Lists page in "
+            "Campaign Management and the List picker on a campaign. Off, every campaign "
+            "selects by its kind's own rule, as before. Read per request: no restart."),
+    _s("campaign_list_fields", GROUP_FEATURES, "Campaign list fields", component="web",
+       help="The fields a list step may filter on, per record type (ruling 63), written "
+            "as 'lead: leadStatus, leadSource; contact: cContactType, cFunnelStage'. Use "
+            "the CRM's field names. Empty uses the defaults. Each field is checked against "
+            "the CRM when saved; a field the CRM lacks is refused."),
     _s("campaigns_sms", GROUP_FEATURES, "Campaign texts", kind="bool", component="both",
        help="The text-message campaign kind (rulings 38, 39). The application sends "
             "the texts through the texting service below — with 'Texting service' at "

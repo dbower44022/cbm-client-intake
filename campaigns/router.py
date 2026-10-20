@@ -32,7 +32,7 @@ from core.qr import qr_png, qr_svg
 from forms import SPECS_BY_SLUG
 
 from . import config as cfg
-from . import calls, email as email_kind, imports, leads, postcard, reporting, review, service, sms
+from . import audience, calls, email as email_kind, imports, leads, postcard, reporting, review, service, sms
 from .conversion import Details
 from .reporting import summarize_responses  # noqa: F401 — re-exported
 from .public import destination_path
@@ -175,6 +175,7 @@ async def session(request: Request) -> dict[str, Any]:
         "emailStages": list(email_kind.EMAILABLE_STAGES),
         "callsOn": settings.campaigns_calls,
         "smsOn": settings.campaigns_sms,
+        "listsOn": settings.campaign_lists,
         "sms": {"provider": settings.sms_provider, "hours": settings.sms_send_hours,
                 "timezone": settings.sms_timezone, "stages": list(sms.TEXTABLE_STAGES)},
         "callStatuses": list(calls.CALLABLE_STATUSES),
@@ -449,19 +450,26 @@ async def build_list(campaign_id: str, body: BuildIn, request: Request) -> dict[
     settings = get_settings()
     row = await _campaign_or_404(request, client, campaign_id)
     api_client = _api_client(settings, request)
+    store = getattr(request.app.state, "campaign_store", None)
     try:
+        # A campaign that names a list sends to it (build plan § 7c); None
+        # when it names none or the lists are switched off.
+        chosen = await audience.audience_for_build(api_client, store, settings, row)
         if row.get("campaignKind") == cfg.KIND_CALL:
             _require_calls(settings)
-            result = await calls.build_list(api_client, client, row, body.rule)
+            result = await calls.build_list(api_client, client, row, body.rule, audience=chosen)
         elif row.get("campaignKind") == cfg.KIND_SMS:
             _require_sms(settings)
-            result = await sms.build_list(api_client, client, row, body.rule)
+            result = await sms.build_list(api_client, client, row, body.rule, audience=chosen)
         elif row.get("campaignKind") == cfg.KIND_EMAIL:
             _require_email(settings)
-            result = await email_kind.build_list(api_client, client, row, body.rule)
+            result = await email_kind.build_list(api_client, client, row, body.rule, audience=chosen)
         else:
-            result = await postcard.build_list(api_client, client, row, body.rule, settings)
-    except CampaignError as exc:
+            result = await postcard.build_list(api_client, client, row, body.rule, settings, audience=chosen)
+        if chosen:
+            await store.record_campaign_build(campaign_id, version=chosen["list"]["version"],
+                                              build=result["audience"])
+    except (CampaignError, audience.AudienceError) as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not build the list")
@@ -470,7 +478,8 @@ async def build_list(campaign_id: str, body: BuildIn, request: Request) -> dict[
         parent_type=cfg.CAMPAIGN, parent_id=campaign_id,
         summary=(f"Built the list of \"{row.get('name')}\": {result['pieces']} planned "
                  f"({result['created']} new, {result['cancelled']} dropped)"),
-        actor_id=user.get("userId", ""), actor_name=user.get("name", ""), details={"rule": result["rule"]},
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+        details={"rule": result["rule"], **({"audience": result["audience"]} if result.get("audience") else {})},
     )
     return result
 

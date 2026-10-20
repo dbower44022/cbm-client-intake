@@ -123,3 +123,6 @@ a.cm__navbtn { text-decoration: none; color: inherit; display: inline-block; }
 .cm__grid th.cm__tick, .cm__grid td.cm__tick { width: 2rem; }
 .cm__grid input.cm__rvweb, .cm__grid input.cm__rvmail { font: inherit; font-size: .88rem; width: 100%; min-width: 11rem; padding: .25rem .4rem; border: 1px solid var(--cbm-border, #c9d1d8); border-radius: 4px; }
 .cm__linkbtn { font: inherit; background: none; border: 0; padding: 0; color: var(--cbm-primary, #1d5c63); text-decoration: underline; cursor: pointer; }
+/* A kind's own rule while a list is chosen (build plan § 7c): shown, but not in use. */
+.cm__rule--off { opacity: .55; }
+.cm__plain { list-style: none; margin: 0; padding: 0; }

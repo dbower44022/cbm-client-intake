@@ -26,6 +26,7 @@
         <button type="button" class="cm__navbtn is-active" data-section="campaigns">Campaigns</button>
         <button type="button" class="cm__navbtn" data-section="prospects">Leads</button>
         <button type="button" class="cm__navbtn" data-section="review">Review</button>
+        <a class="cm__navbtn" id="listsNavLink" href="/campaigns/lists.html" target="cbm-campaign-lists">Lists</a>
         <a class="cm__navbtn" id="callsNavLink" href="/campaigns/calls.html" target="cbm-campaign-calls">Calls</a>
         <button type="button" class="cm__navbtn" data-section="imports">Imports</button>
       </nav>
@@ -248,6 +249,17 @@
           </section>
         </div>
         <div class="cm__ovright">
+          <section class="cm__card" id="audienceCard" hidden>
+            <h3>Who this campaign reaches</h3>
+            <p class="cm__hint">Choose a named list, or leave it to this kind's own rule. Consent, exits, dead addresses and one card per business still apply to everyone on a list.</p>
+            <div class="cm__controls">
+              <select id="audList"></select>
+              <button type="button" class="cbm-button cbm-button--secondary" id="audSave">Use this list</button>
+              <a class="cm__link" id="audOpen" href="/campaigns/lists.html" target="cbm-campaign-lists">Open the lists</a>
+            </div>
+            <p class="cm__summary" id="audState"></p>
+            <ul class="cm__plain" id="audSkips"></ul>
+          </section>
           <section class="cm__card" id="postcardCard" hidden>
             <h3>Postcard run</h3>
             <div class="cm__tiles" id="touchTiles"></div>

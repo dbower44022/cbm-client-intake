@@ -1192,6 +1192,11 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
+- **v0.270.0 (2026-10-20) — campaign lists, L1 (leads and contacts).**
+  Committed, not pushed; dark (`CAMPAIGN_LISTS` off). Build plan § 7c,
+  rulings 58–68; standing rules in `campaigns/CLAUDE.md`. Migration 0032,
+  no CRM change. Owed: the lead-industry handoff on crm-test, the live
+  pass (`OPEN-ITEMS.md` #51), then L2.
 - **v0.269.0 (2026-10-20) — lead enrichment phase 1, the fit score.**
   Committed, not pushed; dark (`ENRICHMENT_FREE_PASS`, `ENRICHMENT_WEB_CHECKS`
   off). New package `enrichment/`, arc `prds/lead-enrichment/` (design rulings

@@ -42,6 +42,7 @@ from core.phone import e164_or_none
 from core.sms import SmsClient, SmsError, make_client, segments, tells_how_to_opt_out, within_send_hours
 
 from . import config as cfg
+from .audience import audience_result as _audience_result
 from . import service
 from .attribution import holds_relationship
 from .service import CampaignError
@@ -114,14 +115,15 @@ async def select_targets(client: EspoApi, rule: Optional[dict[str, Any]]) -> lis
 
 
 async def build_list(api_client: EspoApi, user_client: EspoApi, campaign: dict[str, Any],
-                     rule: Optional[dict[str, Any]]) -> dict[str, Any]:
+                     rule: Optional[dict[str, Any]], audience: Optional[dict[str, Any]] = None) -> dict[str, Any]:
     if campaign.get("campaignKind") != cfg.KIND_SMS:
         raise CampaignError("This is not a text-message campaign.")
     status = campaign.get("campaignStatus") or cfg.STATUS_DRAFT
     if status not in (cfg.STATUS_DRAFT, cfg.STATUS_AWAITING):
         raise CampaignError(f"The list cannot be rebuilt once the campaign is {status}.")
     rule = normalise_rule(rule)
-    targets = await select_targets(api_client, rule)
+    # A campaign that names a list sends to it (build plan § 7c); else its rule.
+    targets = audience["targets"] if audience else await select_targets(api_client, rule)
     planned = {}
     for t in await service.campaign_touches(api_client, campaign["id"]):
         if t.get("touchStatus") == cfg.TOUCH_PLANNED and t.get("contactId"):
@@ -142,12 +144,16 @@ async def build_list(api_client: EspoApi, user_client: EspoApi, campaign: dict[s
             "outreachCampaignId": campaign["id"], "contactId": target["id"],
         })
         created += 1
-    stamps: dict[str, Any] = {"selectionRule": json.dumps(rule), "selectionSummary": rule_summary(rule)}
+    stamps: dict[str, Any] = {
+        "selectionRule": json.dumps({"list": audience["list"]} if audience else rule),
+        "selectionSummary": audience["summary"] if audience else rule_summary(rule),
+    }
     if status == cfg.STATUS_DRAFT:
         stamps["campaignStatus"] = cfg.STATUS_AWAITING
     await service.stamp_campaign(user_client, api_client, campaign["id"], stamps)
     return {"pieces": kept + created, "created": created, "kept": kept, "cancelled": cancelled,
-            "rule": rule, "summary": stamps["selectionSummary"]}
+            "rule": rule, "summary": stamps["selectionSummary"],
+            **({"audience": _audience_result(audience)} if audience else {})}
 
 
 def check_message(text: Optional[str]) -> dict[str, Any]:

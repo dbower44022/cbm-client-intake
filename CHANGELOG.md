@@ -5,6 +5,47 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.270.0] — 2026-10-20
+
+**feat(campaigns): campaign audiences as named lists — L1, leads and
+contacts** (build plan § 7c, approved 10-20-26; rulings 58–68). A campaign
+can now send to a **named list** instead of its kind's fixed rule. A list is
+an ordered recipe of steps — *Add matching* (widens), *Keep only matching*
+(narrows the members of its own type), *Remove matching* — each step showing
+how many it added or dropped (ruling 62). A **static** list runs once and is
+frozen; hand ticks then change it and *Run again* keeps them. A **dynamic**
+list runs again at every campaign build; a hand edit on it is a standing
+*always include* / *always exclude* entry with who, when and a note (ruling
+65). The fields a step may use are a curated list per record type, the new
+setting **`CAMPAIGN_LIST_FIELDS`**, checked against the CRM when saved at
+`/setup` (ruling 63); a contacts *Add* must name the contact types it reaches,
+with "No type" for an untyped Contact (ruling 60). Lists are named records on
+the new **Lists page** (`/campaigns/lists.html`, linked from the top bar), a
+list in use is retired, never deleted (ruling 64), and each campaign records
+the list and version it last built from.
+
+**On the campaign:** a *Who this campaign reaches* card picks the list; *Build
+the list* then resolves each member to its recipient by channel (§ 7c.2) and
+applies every send-time check — consent (rulings 9, 19), a lead's exit or
+Disqualified status, a dead address (ruling 15), one card per business for a
+lead (rulings 14, 68) — and names each skip reason with its count. A postcard
+to a contact goes to its Company's address, else its own; **a Mentor, Member
+or Administrator is emailed at their `cbmEmail` only** (ruling 60) — the push
+now applies that to every email campaign. A campaign that names no list
+builds exactly as before.
+
+Lists live in the application database — migration **0032** (five tables:
+`audience_list`, `audience_list_version`, `audience_list_member`,
+`audience_list_entry`, `campaign_audience`), reset nightly on the sandbox.
+**No CRM change.** Ruling 66's lead `industry` is offered once its handoff is
+applied (`cprospect-industry-crm-handoff.md`; until then it is listed as
+missing and never used). Ships dark behind **`CAMPAIGN_LISTS`** (off; read
+per request). Steps reorder with up/down buttons rather than drag (a
+simplification of § 7c.6); the field list is a text setting at `/setup`
+rather than a panel per type. L2 — clients, partners and funders, *Include
+every contact*, lists of lists and the import step — is next. Verified by 20
+new tests and the full suite; never against a live CRM.
+
 ## [0.269.0] — 2026-10-20
 
 **feat(enrichment): the free pass — every open lead gets a fit score** (lead

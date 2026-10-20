@@ -1,6 +1,6 @@
 # campaigns/ — Campaign Management
 
-Last Updated: 10-20-26 17:30 · Revision 1.0
+Last Updated: 10-20-26 18:20 · Revision 1.1
 
 Detail for Campaign Management (`/campaigns`, prospect marketing Phases 1 to 4 and the lead model): links, postcards, the landing page, imports, the Leads and Review grids, calls, texts, email, attribution and reporting.
 
@@ -215,6 +215,30 @@ the reason.
   (`rung_available`): a CRM still on the old ladder gets none rather than a
   400. Every campaign read requires `CProspect.leadStatus`. Three counts:
   Responded, Converted, Became a client, partner or funder (46).
+- **Campaign lists** (v0.270.0, build plan § 7c, rulings 58–68; dark
+  behind **`CAMPAIGN_LISTS`**, read per request). `campaigns/audience.py`
+  is the engine, `audience_store.py` the five tables (migration 0032,
+  mixed into `CampaignStore`, reset nightly), `lists_router.py` the API,
+  `frontend/lists.html` the page. A list is an ordered recipe — *add*
+  widens, *keep* narrows **only its own type**, *remove* excludes; keep and
+  remove test only the current members in id batches, add refuses above
+  `STEP_CAP` (20,000). Static = frozen membership plus hand rows that
+  survive *Run again*; dynamic = re-run at every build plus standing
+  entries (ruling 65). **Step fields come only from the curated list**
+  (`CAMPAIGN_LIST_FIELDS`, defaults in `audience.DEFAULT_FIELDS`, checked
+  at /setup by `setup/verify._probe_campaign_list_fields`) — never offer
+  a field outside it: the member grid shows only the name and the fields
+  the recipe used, which is the Marketing Admin Role's read boundary
+  (ruling 63). A contacts *Add* must name `cContactType` (ruling 60).
+  **Members are records; recipients resolve at build time per channel**
+  (`audience.resolve_targets`, the same target shapes each kind's
+  `select_targets` produces) and every send-time check applies there. A
+  campaign naming a list builds from it (`audience_for_build`, passed as
+  `audience=` to each kind's `build_list`); one naming none builds exactly
+  as before. **A Mentor, Member or Administrator contact is emailed at
+  their `cbmEmail` only** — `audience.address_for_email`, used by the push
+  for every email campaign. L2 (clients, partners, funders, *Include every
+  contact*, list-of-list and import steps) is not built.
 - Owed: nothing on production's CRM (both slots done 10-18-26; every
   campaign switch off there — turning one on is Doug's call at `/setup`);
   Boston with its release; a seeder and sandbox re-baseline; the Twilio
@@ -225,4 +249,5 @@ the reason.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 10-20-26 18:20 | Claude (Claude Code) | Campaign lists L1 (v0.270.0) bullet added. |
 | 1.0 | 10-20-26 17:30 | Claude (Claude Code) | Created from the root `CLAUDE.md` section, word for word (Doug's approval 10-20-26). |

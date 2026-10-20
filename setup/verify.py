@@ -210,6 +210,48 @@ async def _probe_session_secret(_key: str, value: str) -> Result:
     )
 
 
+async def _probe_campaign_list_fields(_key: str, value: str) -> Result:
+    """Ruling 63: every field named must exist on its record type in the CRM
+    and be of a type a list step can filter on. Read-only."""
+    from campaigns import audience
+
+    if not value.strip():
+        return Result(OK, "Cleared — list steps use the default fields.")
+    parsed = audience.parse_field_setting(value)
+    if not parsed:
+        return Result(FAILED, "Write it as 'lead: field, field; contact: field' — nothing could be read.")
+    unknown = [t for t in parsed if t not in audience.TYPES]
+    if unknown:
+        return Result(FAILED, f"Unknown record type {', '.join(unknown)} — use "
+                              f"{' or '.join(audience.TYPES)}.")
+    from core.config import get_settings
+
+    settings = get_settings()
+    if settings.espo_dry_run or not settings.espo_api_key:
+        return Result(UNKNOWN, "No CRM to check the field names against (dry run).")
+    from core.espo import EspoClient, EspoTransportError
+
+    client = EspoClient(settings.espo_base_url, settings.espo_api_key, 10)
+    problems = []
+    try:
+        for t, names in parsed.items():
+            defs = await client.metadata(f"entityDefs.{audience.TYPES[t]['entity']}.fields") or {}
+            for n in names:
+                d = defs.get(n) if isinstance(defs, dict) else None
+                if not isinstance(d, dict):
+                    problems.append(f"{t}: {n} is not a field in the CRM")
+                elif d.get("type") not in audience.FAMILY_OF_TYPE:
+                    problems.append(f"{t}: {n} is a {d.get('type')} field, which a list cannot filter on")
+    except EspoTransportError as exc:
+        return Result(UNKNOWN, f"Could not reach the CRM to check: {exc}")
+    except Exception as exc:  # noqa: BLE001
+        return Result(UNKNOWN, f"Could not check the fields: {exc}")
+    if problems:
+        return Result(FAILED, "; ".join(problems) + ".")
+    return Result(OK, "Every field exists in the CRM: " +
+                  "; ".join(f"{t} {len(n)}" for t, n in parsed.items()) + ".")
+
+
 # key -> probe. A setting with no entry here is not verified, which is the
 # ordinary case; the tier is what decides whether a probe is REQUIRED.
 PROBES: dict[str, Callable[[str, str], Awaitable[Result]]] = {
@@ -218,6 +260,7 @@ PROBES: dict[str, Callable[[str, str], Awaitable[Result]]] = {
     "espo_dry_run": _probe_crm_setting,
     "google_service_account_json": _probe_google_service_account,
     "session_secret": _probe_session_secret,
+    "campaign_list_fields": _probe_campaign_list_fields,
     "espo_provision_password": _probe_nonempty("A password", 8),
     "espo_provision_username": _probe_nonempty("A username", 3),
 }

@@ -32,6 +32,8 @@ from core.crm_upsert import CONTACT_TYPE_FIELD, PROSPECT_TYPE
 from core.espo import EspoApi, EspoError
 
 from . import config as cfg
+from .audience import address_for_email, email_consented
+from .audience import audience_result as _audience_result
 from . import service
 from .attribution import holds_relationship
 from .service import CampaignError
@@ -170,14 +172,15 @@ async def select_targets(client: EspoApi, rule: Optional[dict[str, Any]],
 
 
 async def build_list(api_client: EspoApi, user_client: EspoApi, campaign: dict[str, Any],
-                     rule: Optional[dict[str, Any]]) -> dict[str, Any]:
+                     rule: Optional[dict[str, Any]], audience: Optional[dict[str, Any]] = None) -> dict[str, Any]:
     if campaign.get("campaignKind") != cfg.KIND_EMAIL:
         raise CampaignError("This is not an email campaign.")
     status = campaign.get("campaignStatus") or cfg.STATUS_DRAFT
     if status not in (cfg.STATUS_DRAFT, cfg.STATUS_AWAITING):
         raise CampaignError(f"The list cannot be rebuilt once the campaign is {status}.")
     rule = normalise_rule(rule)
-    targets = await select_targets(api_client, rule)
+    # A campaign that names a list sends to it (build plan § 7c); else its rule.
+    targets = audience["targets"] if audience else await select_targets(api_client, rule)
     planned = {}
     for t in await service.campaign_touches(api_client, campaign["id"]):
         if t.get("touchStatus") == cfg.TOUCH_PLANNED and t.get("contactId"):
@@ -198,12 +201,16 @@ async def build_list(api_client: EspoApi, user_client: EspoApi, campaign: dict[s
             "outreachCampaignId": campaign["id"], "contactId": target["id"],
         })
         created += 1
-    stamps: dict[str, Any] = {"selectionRule": json.dumps(rule), "selectionSummary": rule_summary(rule)}
+    stamps: dict[str, Any] = {
+        "selectionRule": json.dumps({"list": audience["list"]} if audience else rule),
+        "selectionSummary": audience["summary"] if audience else rule_summary(rule),
+    }
     if status == cfg.STATUS_DRAFT:
         stamps["campaignStatus"] = cfg.STATUS_AWAITING
     await service.stamp_campaign(user_client, api_client, campaign["id"], stamps)
     return {"pieces": kept + created, "created": created, "kept": kept, "cancelled": cancelled,
-            "rule": rule, "summary": stamps["selectionSummary"]}
+            "rule": rule, "summary": stamps["selectionSummary"],
+            **({"audience": _audience_result(audience)} if audience else {})}
 
 
 def list_name(campaign: dict[str, Any]) -> str:
@@ -261,12 +268,14 @@ async def push_campaign(client: EspoApi, mail, campaign: dict[str, Any]) -> dict
     rows, touched = [], []
     for t in planned:
         c = await client.get(cfg.CONTACT, t.get("contactId") or "", select=CONTACT_SELECT)
-        if not c or not _usable(c):
+        # Consent is the person's own; a chapter member is reached at their
+        # cbmEmail only (ruling 60), everyone else at their own address.
+        email = await address_for_email(client, c) if c and email_consented(c) else None
+        if not c or not email:
             await client.update(cfg.TOUCH, t["id"], {"touchStatus": cfg.TOUCH_CANCELLED,
                                                      "vendorStatus": "no consent or no usable address at push time"})
             totals["skipped"] += 1
             continue
-        email = c["emailAddress"].strip()
         if email.lower() in gone:
             await client.update(cfg.TOUCH, t["id"], {"touchStatus": cfg.TOUCH_CANCELLED, "vendorStatus": WITHHELD})
             totals["withheld"] += 1

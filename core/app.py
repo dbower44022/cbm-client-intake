@@ -1017,8 +1017,11 @@ def create_app(
         # staff stack and gated PER REQUEST on CAMPAIGNS_ENABLED (404 while
         # off), so the switch needs no restart.
         from campaigns.router import api_router as campaigns_router
+        from campaigns.lists_router import lists_router as campaign_lists_router
 
         app.include_router(campaigns_router)
+        # Campaign audiences (build plan § 7c), gated per request on CAMPAIGN_LISTS.
+        app.include_router(campaign_lists_router)
         # Event Administration — the staff app; team-gated like the others.
         if settings.events_active:
             from events.member import member_router as events_member_router

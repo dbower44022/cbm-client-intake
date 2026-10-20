@@ -604,6 +604,14 @@ class Settings(BaseSettings):
     # Phase 4: the email kind — pushes each campaign's people as its own named
     # list at the mailing service; staff send the notice there (build plan § 3.3).
     campaigns_email: bool = False
+    # Campaign audiences as named lists (build plan § 7c, rulings 58-68): the
+    # Lists page and a campaign's List picker. Read per request. Off, every
+    # campaign selects by its kind's own rule exactly as before.
+    campaign_lists: bool = False
+    # The fields a list step may use, per target type (ruling 63), as
+    # "lead: leadStatus, leadSource; contact: cContactType". Empty: the
+    # defaults in campaigns/audience.py. Checked against the CRM at /setup.
+    campaign_list_fields: str = ""
     sms_provider: Literal["dryrun", "twilio"] = "dryrun"
     sms_account_sid: str = ""
     sms_auth_token: str = ""          # SECRET (worker sends, web verifies replies)

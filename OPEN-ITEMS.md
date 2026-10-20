@@ -34,6 +34,15 @@ found; move resolved items to the bottom with the resolution date.
     ruling on the proposed removals (handoff § 6).
 
 51. **Prospect marketing — the lead model BUILT, LIVE (dark) and
+    **Campaign lists L1 (v0.270.0, 10-20-26 18:20, build plan § 7c, rulings
+    58–68): committed, not pushed; dark behind `CAMPAIGN_LISTS`.** Owed:
+    migration 0032 runs on deploy; the lead-industry field on crm-test
+    (`scripts/prospect_crm_test.sh industry`, fingerprint `82ec87c36dce`,
+    Doug runs it); then the live pass as Mark Marketing on crm-test — a
+    static and a dynamic list, a hand tick surviving Run again, a standing
+    entry, a postcard and an email campaign built from a list with the skip
+    reasons named, a mentor reached at their cbmEmail. Then L2 (clients,
+    partners, funders; the funder-status handoff, ruling 67).
     LIVE-PASSED on crm-test (v0.265.0–3, 10-19-26; rulings 41–54).**
     **Production DEFERRED by Doug 10-20-26 15:06: "defer production until
     we finish testing new campaign functionality"** — no Sunday slot is

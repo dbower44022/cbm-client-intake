@@ -428,8 +428,58 @@
     renderCallCard(rec);
     renderSmsCard(rec);
     renderEmailCard(rec);
+    renderAudience(rec);
     show($("recordPanel"));
   }
+
+  // --- the campaign's list (build plan § 7c) ----------------------------------------------------
+  state.audience = null;
+  function listChosen() { return !!(state.audience && state.audience.listId); }
+  function audienceNote(res) {
+    var a = res && res.audience;
+    if (!a) return "";
+    var skipped = (a.skipped || []).map(function (x) { return x.count + " " + x.reason; }).join("; ");
+    return "From the list \u201c" + a.list.name + "\u201d (version " + a.list.version + "): " + a.members + " members, " +
+      a.reached + " reached" + (skipped ? " — skipped: " + skipped : "") + ". ";
+  }
+  async function renderAudience(rec) {
+    var c = rec.campaign, card = $("audienceCard");
+    var selecting = ["Postcard", "Call", "SMS", "Email"].indexOf(c.campaignKind) >= 0;
+    if (!selecting || !state.session || !state.session.listsOn) { hide(card); state.audience = null; return; }
+    show(card);
+    var sel = $("audList");
+    try {
+      var both = await Promise.all([api("/campaigns/" + encodeURIComponent(c.id) + "/audience"), api("/lists")]);
+      state.audience = both[0].audience;
+      sel.innerHTML = "";
+      var none = el("option", null, "No list — use this kind's own rule below"); none.value = ""; sel.appendChild(none);
+      (both[1].lists || []).forEach(function (l) {
+        if (l.status === "retired" && !(state.audience && state.audience.listId === l.id)) return;
+        var o = el("option", null, l.name + " (" + l.kind + (l.status === "retired" ? ", retired" : "") + ")"); o.value = l.id; sel.appendChild(o);
+      });
+      sel.value = state.audience ? state.audience.listId : "";
+    } catch (e) { notice(e.message, "error"); return; }
+    var a = state.audience, open = $("audOpen");
+    open.href = "/campaigns/lists.html" + (a ? "?list=" + encodeURIComponent(a.listId) : "");
+    text($("audState"), a
+      ? "Sends to the " + a.listKind + " list \u201c" + a.listName + "\u201d, now at version " + a.listVersion + "." +
+        (a.builtVersion ? " Last built from version " + a.builtVersion + " on " + fmtDate(a.builtAt) + "." : " Not built yet.") +
+        " The rule ticks below are not used while a list is chosen."
+      : "No list chosen: Build the list uses this kind's own rule below.");
+    var skips = $("audSkips"); skips.innerHTML = "";
+    ((a && a.build && a.build.skipped) || []).forEach(function (x) { skips.appendChild(el("li", null, x.count + " skipped — " + x.reason)); });
+    Array.prototype.forEach.call(document.querySelectorAll(".cm__rule"), function (box) { box.classList.toggle("cm__rule--off", !!a); });
+  }
+  $("audSave").addEventListener("click", async function () {
+    if (!state.record) return;
+    var c = state.record.campaign;
+    if (["Draft", "Awaiting sign-off", null, undefined, ""].indexOf(c.campaignStatus) < 0) { notice("The list cannot be changed once the campaign is " + c.campaignStatus + ".", "warn"); return; }
+    try {
+      await api("/campaigns/" + encodeURIComponent(c.id) + "/audience", { method: "PUT", body: { listId: $("audList").value || null, includeEveryContact: false } });
+      notice($("audList").value ? "List chosen. Build the list to see who it reaches." : "List cleared — the kind's own rule applies.", "ok");
+      loadRecord();
+    } catch (e) { notice(e.message, "error"); }
+  });
 
   // --- the email kind (§ 3.3; rulings 19, 25) ---------------------------------------------------
   var EMAIL_PUSHED = "pushed to the mailing list";
@@ -473,10 +523,10 @@
     var c = state.record.campaign;
     if (["Draft", "Awaiting sign-off", null, undefined, ""].indexOf(c.campaignStatus) < 0) { notice("The list cannot be rebuilt once the campaign is " + c.campaignStatus + ".", "warn"); return; }
     var rule = emailRule();
-    if (!rule.stages.length && rule.dormantDays === null) { notice("Tick at least one stage, or the dormant clients.", "warn"); return; }
+    if (!listChosen() && !rule.stages.length && rule.dormantDays === null) { notice("Tick at least one stage, or the dormant clients.", "warn"); return; }
     try {
       var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/build", { method: "POST", body: { rule: rule } });
-      notice("List built: " + res.pieces + " people (" + res.created + " new, " + res.cancelled + " dropped).", "ok");
+      notice(audienceNote(res) + "List built: " + res.pieces + " people (" + res.created + " new, " + res.cancelled + " dropped).", res.audience && res.audience.skipped.length ? "warn" : "ok");
       loadRecord();
     } catch (e) { notice(e.message, "error"); }
   });
@@ -556,10 +606,10 @@
     var c = state.record.campaign;
     if (["Draft", "Awaiting sign-off", null, undefined, ""].indexOf(c.campaignStatus) < 0) { notice("The list cannot be rebuilt once the campaign is " + c.campaignStatus + ".", "warn"); return; }
     var stages = Array.prototype.filter.call(document.querySelectorAll("[data-smsstage]"), function (cb) { return cb.checked; }).map(function (cb) { return cb.value; });
-    if (!stages.length) { notice("Tick at least one stage to text.", "warn"); return; }
+    if (!listChosen() && !stages.length) { notice("Tick at least one stage to text.", "warn"); return; }
     try {
       var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/build", { method: "POST", body: { rule: { stages: stages } } });
-      notice("List built: " + res.pieces + " to text (" + res.created + " new, " + res.cancelled + " dropped).", "ok");
+      notice(audienceNote(res) + "List built: " + res.pieces + " to text (" + res.created + " new, " + res.cancelled + " dropped).", res.audience && res.audience.skipped.length ? "warn" : "ok");
       loadRecord();
     } catch (e) { notice(e.message, "error"); }
   });
@@ -629,10 +679,10 @@
     var c = state.record.campaign;
     if (["Draft", "Awaiting sign-off", null, undefined, ""].indexOf(c.campaignStatus) < 0) { notice("The list cannot be rebuilt once the campaign is " + c.campaignStatus + ".", "warn"); return; }
     var callRule = chosenCallRule();
-    if (!callRule.statuses.length && !callRule.stages.length) { notice("Tick at least one lead status or stage to call.", "warn"); return; }
+    if (!listChosen() && !callRule.statuses.length && !callRule.stages.length) { notice("Tick at least one lead status or stage to call.", "warn"); return; }
     try {
       var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/build", { method: "POST", body: { rule: callRule } });
-      notice("List built: " + res.pieces + " to call (" + res.created + " new, " + res.cancelled + " dropped).", "ok");
+      notice(audienceNote(res) + "List built: " + res.pieces + " to call (" + res.created + " new, " + res.cancelled + " dropped).", res.audience && res.audience.skipped.length ? "warn" : "ok");
       loadRecord();
     } catch (e) { notice(e.message, "error"); }
   });
@@ -667,10 +717,10 @@
     if (c.campaignKind !== "Postcard") { notice("Only a postcard campaign builds a list.", "warn"); return; }
     if (["Draft", "Awaiting sign-off", null, undefined, ""].indexOf(c.campaignStatus) < 0) { notice("The list cannot be rebuilt once the campaign is " + c.campaignStatus + ".", "warn"); return; }
     var postcardRule = currentRule();
-    if (!postcardRule.statuses.length && !postcardRule.stages.length) { notice("Tick at least one: Unqualified leads, Qualified leads, or Companies typed Prospect.", "warn"); return; }
+    if (!listChosen() && !postcardRule.statuses.length && !postcardRule.stages.length) { notice("Tick at least one: Unqualified leads, Qualified leads, or Companies typed Prospect.", "warn"); return; }
     try {
       var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/build", { method: "POST", body: { rule: postcardRule } });
-      notice("List built: " + res.pieces + " planned (" + res.created + " new, " + res.cancelled + " dropped). Estimated cost " + money(res.estimatedCost, res.currency) + ".", "ok");
+      notice(audienceNote(res) + "List built: " + res.pieces + " planned (" + res.created + " new, " + res.cancelled + " dropped). Estimated cost " + money(res.estimatedCost, res.currency) + ".", res.audience && res.audience.skipped.length ? "warn" : "ok");
       loadRecord();
     } catch (e) { notice(e.message, "error"); }
   });
@@ -1398,6 +1448,9 @@
     if (name === "imports") loadImports();
   }
   Array.prototype.forEach.call(document.querySelectorAll("#sectionNav button.cm__navbtn"), function (b) { b.addEventListener("click", function () { showSection(b.getAttribute("data-section")); }); });
+  $("listsNavLink").addEventListener("click", function (ev) {
+    if (state.session && !state.session.listsOn) { ev.preventDefault(); notice("Campaign lists are switched off on this deployment (Campaign lists at /setup).", "warn"); }
+  });
   $("callsNavLink").addEventListener("click", function (ev) {
     if (state.session && !state.session.callsOn) { ev.preventDefault(); notice("Campaign calls are switched off on this deployment (CAMPAIGNS_CALLS at /setup).", "warn"); }
   });
