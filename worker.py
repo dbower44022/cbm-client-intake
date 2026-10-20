@@ -434,6 +434,9 @@ async def main() -> None:
     # first pass an interval after start so a restart never re-runs it at once.
     next_stale_sweep = datetime.now(timezone.utc) + timedelta(
         seconds=max(settings.prospect_stale_sweep_seconds, 0))
+    # Lead enrichment's free pass (prds/lead-enrichment/build-plan-phase-1.md):
+    # a batch of leads scored every ENRICHMENT_SWEEP_SECONDS.
+    next_fit_sweep = datetime.now(timezone.utc)
 
     while not stop.is_set():
         claimed = await run_cycle(store, settings, stop)
@@ -507,6 +510,15 @@ async def main() -> None:
             except Exception as exc:  # noqa: BLE001 — never fatal
                 log.warning("prospect stale sweep failed: %s", exc)
             next_stale_sweep = now_cfg + timedelta(seconds=settings.prospect_stale_sweep_seconds)
+        fit_on = (settings.enrichment_free_pass and not settings.espo_dry_run
+                  and settings.enrichment_sweep_seconds > 0)
+        if fit_on and now_cfg >= next_fit_sweep:
+            try:
+                from enrichment.sweep import run_fit_sweep
+                await run_fit_sweep(settings)
+            except Exception as exc:  # noqa: BLE001 — never fatal
+                log.warning("lead fit sweep failed: %s", exc)
+            next_fit_sweep = now_cfg + timedelta(seconds=settings.enrichment_sweep_seconds)
         mailing_on = settings.mailing_sync and not settings.espo_dry_run
         if mailing_on and settings.mailing_push_seconds > 0 and now_cfg >= next_mailing_push:
             try:

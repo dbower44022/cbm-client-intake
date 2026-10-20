@@ -290,6 +290,36 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="Hours a text may go out, chapter time, as start-end (9-20 = 9:00 to 19:59)."),
     _s("sms_timezone", GROUP_INTEGRATIONS, "Texting time zone", component="worker",
        help="The time zone the texting hours are read in."),
+    _s("enrichment_free_pass", GROUP_FEATURES, "Lead fit scores", kind="bool",
+       component="worker",
+       help="The free pass: the worker scores every open lead 0 to 100 for fit "
+            "(prds/lead-enrichment/). Needs the nine fit fields on CProspect "
+            "(lead-fit-score-crm-handoff.md). Writes nothing but the score fields, and "
+            "a verified website into an empty website field."),
+    _s("enrichment_web_checks", GROUP_FEATURES, "Lead web checks", kind="bool",
+       component="worker",
+       help="Lets the free pass fetch web addresses guessed from a lead's name and keep "
+            "one only when the page shows the name and the address or an associate "
+            "(ruling E12). Off, no outside request is made."),
+    _s("enrichment_sweep_seconds", GROUP_FEATURES, "Lead fit sweep", kind="int",
+       unit="s", component="worker",
+       help="How often the worker scores a batch of leads. 0 stops the sweep; "
+            "/setup → Operations → Lead fit scores still runs it by hand."),
+    _s("enrichment_batch", GROUP_FEATURES, "Lead fit batch", kind="int", component="worker",
+       help="Leads scored per pass, at most 200 (the CRM's page limit)."),
+    _s("chapter_counties", GROUP_FEATURES, "Service area counties", component="both",
+       help="The chapter's counties as State:County pairs separated by |, for example "
+            "OH:Cuyahoga|OH:Lake. A lead confirmed outside them scores 0 and is flagged "
+            "Out of area. Empty: the location is not checked. Changing it rescores every lead."),
+    _s("fit_weights", GROUP_FEATURES, "Fit score weights", component="worker",
+       help="Three numbers: operating business, segment, findability. 1,1,1 weighs them "
+            "equally. Changing it rescores every lead."),
+    _s("chapter_segments_url", GROUP_FEATURES, "Segment list address", component="worker",
+       help="The address of the chapter's segment list, a JSON file with \"favoured\" and "
+            "\"excluded\" lists of industries or words. Empty: every lead scores 50 for segment."),
+    _s("enrichment_terms_url", GROUP_FEATURES, "Name rules address", component="worker",
+       help="The address of a chapter's own version of the name-reading rules "
+            "(enrichment/data/name_terms.json). Empty: the shipped rules."),
     _s("prospect_stale_sweep_seconds", GROUP_FEATURES, "Prospect stale sweep", kind="int",
        unit="s", component="worker",
        help="How often the worker runs the Stale sweep (default nightly). 0 "

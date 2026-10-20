@@ -5,6 +5,34 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.269.0] — 2026-10-20
+
+**feat(enrichment): the free pass — every open lead gets a fit score** (lead
+enrichment build phase 1, `prds/lead-enrichment/build-plan-phase-1.md`,
+design rulings E1–E17). A new package, `enrichment/`: the worker scores a
+batch of open leads every `ENRICHMENT_SWEEP_SECONDS` — the service-area gate
+first (E13: a lead confirmed outside `CHAPTER_COUNTIES` scores 0 and reads
+*Out of area*; a registered agent's address reads *Location unknown*), then
+three signals averaged by `FIT_WEIGHTS`: operating business (trade or holding
+words, a recent filing, a serial filer), segment (50 until the chapter's list
+exists) and findability. Postal code to county comes from a shipped table
+built from the Census Bureau's 2020 relationship file; a code that crosses
+into a chapter county passes. The optional web check (`ENRICHMENT_WEB_CHECKS`)
+guesses a few web addresses from the name and keeps one only when the page
+shows the name and the street address, postal code or an associate (E12),
+writing it into an EMPTY website field only (E14). The rule version carries a
+hash of every chapter setting, so changing the counties, weights or lists
+rescores every lead. `/setup` → Operations → *Lead fit scores* is the dry run
+and the run-it-now. A lead's status is never changed.
+
+Needs nine fields on `CProspect` (`lead-fit-score-crm-handoff.md`,
+`scripts/plans/cprospect-fit-score.json`) — **applied and verified on
+crm-test 10-20-26**; feature-detected, failing closed. Ships dark:
+`ENRICHMENT_FREE_PASS` and `ENRICHMENT_WEB_CHECKS` default off. **Not yet
+built:** the Leads grid's score columns and the Review grid's *Out of area*
+filter (they touch `campaigns/`, which another session holds today). Verified
+by 30 new tests and a read-only dry run against crm-test's 3,409 open leads.
+
 ## [0.268.0] — 2026-10-20
 
 **feat(campaigns): a campaign names its funders, and every funder record has

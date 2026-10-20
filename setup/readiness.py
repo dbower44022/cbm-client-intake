@@ -124,6 +124,17 @@ FEATURES: tuple[Feature, ...] = (
              "the application database; the mail vendor defaults to the dry run.",
     ),
     Feature(
+        key="lead_fit", name="Lead fit scores", flag="enrichment_free_pass",
+        component="worker", requires=("chapter_counties",),
+        crm_entities=("CProspect",),
+        crm_fields=tuple(("CProspect", f) for f in (
+            "fitScore", "fitGate", "fitCounty", "fitOperating", "fitSegment",
+            "fitFindability", "fitReasons", "fitScoredAt", "fitRuleVersion")),
+        note="Lead enrichment phase 1 (prds/lead-enrichment/). Without the service "
+             "area counties every lead passes the gate. The web check has its own "
+             "switch, Lead web checks.",
+    ),
+    Feature(
         key="mailing", name="Mailing list sync", flag="mailing_sync",
         component="worker",
         requires=("mailing_client_id", "mailing_client_secret"), needs_database=True,

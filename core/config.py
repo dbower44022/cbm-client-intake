@@ -576,6 +576,26 @@ class Settings(BaseSettings):
     # Operations runs it as dry-run then apply.
     prospect_stale_days: int = 180
     prospect_stale_sweep_seconds: int = 86400
+    # --- Lead enrichment, phase 1: the free pass (prds/lead-enrichment/) ---
+    # The worker scores every open lead (design § 4, rulings E2, E12-E14):
+    # the service-area gate, then three signals. Off by default; nothing is
+    # written until the switch is on and the CRM has the nine fit fields.
+    enrichment_free_pass: bool = False
+    # Lets the free pass fetch guessed web addresses (build plan § 2). Off, the
+    # score runs on what the lead holds and no outside request is made.
+    enrichment_web_checks: bool = False
+    enrichment_sweep_seconds: int = 900   # 0 stops the sweep
+    enrichment_batch: int = 200           # leads per pass, never above 200
+    # The service area as State:County pairs, e.g. OH:Cuyahoga|OH:Lake (E17).
+    # Empty: the gate is skipped and every lead reads Passed.
+    chapter_counties: str = ""
+    # Weights for operating business, segment, findability.
+    fit_weights: str = "1,1,1"
+    # The chapter's segment list (design E2), a published JSON file with
+    # "favoured" and "excluded" lists. Empty: the segment signal is 50.
+    chapter_segments_url: str = ""
+    # A chapter's override of enrichment/data/name_terms.json.
+    enrichment_terms_url: str = ""
     # Phase 4, rulings 38 and 39: the text-message kind, which the application
     # sends itself. Read per request. The texting service is Twilio behind a
     # dry-run client that is the default — nothing is texted until

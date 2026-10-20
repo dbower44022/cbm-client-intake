@@ -193,6 +193,18 @@ async def _prospect_stale_apply(settings: Settings) -> str:
     return await job_apply(settings)
 
 
+async def _lead_fit_dry(settings: Settings) -> str:
+    from enrichment.sweep import job_dry_run
+
+    return await job_dry_run(settings)
+
+
+async def _lead_fit_apply(settings: Settings) -> str:
+    from enrichment.sweep import job_apply
+
+    return await job_apply(settings)
+
+
 async def _sandbox_links_dry(settings: Settings) -> str:
     from campaigns.sandbox_demo import job_dry_run
 
@@ -234,6 +246,21 @@ JOBS: tuple[JobSpec, ...] = (
         mutating=True,
         dry_run=_prospect_stale_dry,
         apply=_prospect_stale_apply,
+    ),
+    JobSpec(
+        key="lead_fit",
+        name="Lead fit scores",
+        description=(
+            "Counts the open leads that have no fit score under the current rules "
+            "and shows how the first 50 would score (without the web check). "
+            "Applying scores every one of them now, with the web check if 'Lead web "
+            "checks' is on. Writes only the fit fields, and a verified website into "
+            "an empty website field; a lead's status is never changed. The worker "
+            "does the same a batch at a time while 'Lead fit scores' is on."
+        ),
+        mutating=True,
+        dry_run=_lead_fit_dry,
+        apply=_lead_fit_apply,
     ),
     JobSpec(
         key="mailing_push",

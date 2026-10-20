@@ -1192,6 +1192,12 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
+- **v0.269.0 (2026-10-20) — lead enrichment phase 1, the fit score.**
+  Committed, not pushed; dark (`ENRICHMENT_FREE_PASS`, `ENRICHMENT_WEB_CHECKS`
+  off). New package `enrichment/`, arc `prds/lead-enrichment/` (design rulings
+  E1–E17). crm-test's nine `CProspect` fit fields applied and verified. Owed:
+  the Leads and Review grid columns (in `campaigns/`, held by another session
+  that day), the live pass, production at a Sunday slot, Boston.
 - **v0.268.0 (2026-10-20) — funders on a campaign (ruling 57).** Live;
   checked on crm-test 10-20-26 as Mark Marketing and Sally Sponsor. Owed:
   production at the Sunday slot (deferred by Doug until campaign testing is
