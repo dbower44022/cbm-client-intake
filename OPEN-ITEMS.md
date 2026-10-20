@@ -251,8 +251,10 @@ found; move resolved items to the bottom with the resolution date.
     on crm-test 10-20-26 04:17 UTC** (52 changes, a second dry run 0, read
     back under the org key; the November postcard's list selects exactly the
     three leads `demo-records.md` names), so it survives only until 04:00 UTC
-    on 10-21-26 unless the recapture runs today. The step page is owed a
-    fourth seeder line and the Operations step.
+    on 10-21-26 unless the recapture runs today. **The step page is rewritten
+    for it** (revision 2.0, 10-20-26 01:05, same address): push, the four
+    seeders with today's dry-run counts, the Operations job, the recapture,
+    the check as Mark Marketing.
 
 50. **A partner's own client intake link (v0.255.0) — live on crm-test
     and production 10-12-26 17:42, live pass owed.** Doug's requirement 10-12-26, link form ruled the CRM id;
