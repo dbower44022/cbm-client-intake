@@ -1,0 +1,39 @@
+{
+  "name": "cprospect-industry",
+  "description": "Ruling 66 of prds/prospect-marketing/rulings.md (10-20-26): a lead carries an industry, so a campaign list can select leads by industry (build plan \u00a7 7c.3). One enum on CProspect, stored as typed (custom entity, no prefix), whose options are kept identical to the Company's sector list (Account.cIndustrySector, read from crm-test 10-20-26). Optional; filled by imports, the Review queue and the lead's window; carried to the converted Company by null-fill. Handoff: cprospect-industry-crm-handoff.md.",
+  "entities": [],
+  "fields": [
+    {
+      "entity": "CProspect",
+      "name": "industry",
+      "type": "enum",
+      "label": "Industry",
+      "options": [
+        "",
+        "Agriculture, Forestry, Fishing and Hunting",
+        "Mining, Quarrying, and Oil and Gas Extraction",
+        "Utilities",
+        "Construction",
+        "Manufacturing",
+        "Wholesale Trade",
+        "Retail Trade",
+        "Transportation and Warehousing",
+        "Information",
+        "Finance and Insurance",
+        "Real Estate and Rental and Leasing",
+        "Professional, Scientific, and Technical Services",
+        "Management of Companies and Enterprises",
+        "Administrative and Support and Waste Management",
+        "Educational Services",
+        "Health Care and Social Assistance",
+        "Arts, Entertainment, and Recreation",
+        "Accommodation and Food Services",
+        "Other Services (except Public Administration)",
+        "Public Administration"
+      ],
+      "tooltipText": "The business's industry, from the same list as a Company's Industry Sector. Optional. Filled by an import whose file has an industry column, by the reviewer in the Review queue, or here. Copied to the Company when the lead converts, if the Company has none."
+    }
+  ],
+  "links": [],
+  "enumOptions": []
+}
