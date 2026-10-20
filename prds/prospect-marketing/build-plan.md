@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-20-26 17:49 · Revision 0.23 — change log at the end.
+Last Updated: 10-20-26 17:47 · Revision 0.23 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -1920,7 +1920,7 @@ best-effort mirror.
 |---|---|
 | Document | Prospect Marketing — build plan |
 | Version | v0.22 — Phases 1–4 and the lead model built; § 7b built and live-passed; § 7c (campaign audiences, rulings 58–65) drafted for approval |
-| Last Updated | 10-20-26 17:49 |
+| Last Updated | 10-20-26 17:47 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
 | Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
@@ -1929,7 +1929,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
-| 0.23 | 10-20-26 17:49 | Claude (Claude Code) | § 9 question 17 answered: A, a lead carries an industry (ruling 66); § 7c.3 and § 7c.7 updated. |
+| 0.23 | 10-20-26 17:47 | Claude (Claude Code) | § 9 question 17 answered: A, a lead carries an industry (ruling 66); § 7c.3 and § 7c.7 updated. |
 | 0.22 | 10-20-26 17:37 | Claude (Claude Code) | New § 7c, campaign audiences as named lists (rulings 58–65), a draft for approval: what a list member is per target type, the recipient per channel, the default step-field table verified against crm-test metadata, the engine, six application tables (migration 0032), the screens, two build steps (L1, L2) and their cost. § 9 questions 17 (no industry on leads), 18 (no status on funders) and 19 (ruling 14's scope) added. The revision table's Version and Last Updated brought up to date. |
 | 0.21 | 10-20-26 14:36 | Claude (Claude Code) | § 7a.5 step 4 deferred by Doug until development is finished, with its cost named. |
 | 0.20 | 10-20-26 14:28 | Claude (Claude Code) | § 7b live-passed on crm-test (v0.267.0–2); the pass's two fixes recorded in `CHANGELOG.md`. |

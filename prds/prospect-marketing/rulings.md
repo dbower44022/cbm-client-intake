@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-20-26 17:49 · Revision 1.32 — change log at the end.
+Last Updated: 10-20-26 17:47 · Revision 1.32 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -717,7 +717,7 @@ Put as a consequential decision: the lead record holds no industry, and the
 Ohio filing carries none. Option A, add an industry field to the lead,
 filled by imports, in the Review queue and in the lead's window; option B,
 filter by the converted Company's industry only; option C, no industry on
-leads. Doug's reply at 17:48: "a".
+leads. Doug's reply at 17:47: "a".
 
 66. **A lead carries an industry** (option A). `CProspect.industry`,
     labelled *Industry*, a choice field whose options are kept identical
@@ -850,7 +850,7 @@ other source consumes a service before mentoring.
 |---|---|
 | Document | Prospect Marketing — rulings |
 | Version | 1.32 |
-| Last Updated | 10-20-26 17:49 |
+| Last Updated | 10-20-26 17:47 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -858,7 +858,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
-| 1.32 | 10-20-26 17:49 | Claude (Claude Code) | Ruling 66 appended: a lead carries an industry (Doug's "a" to build plan § 9 question 17). |
+| 1.32 | 10-20-26 17:47 | Claude (Claude Code) | Ruling 66 appended: a lead carries an industry (Doug's "a" to build plan § 9 question 17). |
 | 1.31 | 10-20-26 15:50 | Claude (Claude Code) | Ruling 65 appended: a hand edit on a dynamic list becomes a standing include/exclude entry (Doug's "a"). Campaign-audience rulings 58–65 complete. |
 | 1.30 | 10-20-26 15:48 | Claude (Claude Code) | Ruling 64 appended: named reusable lists on a Lists tab; a campaign picks its list (Doug's "b"). |
 | 1.29 | 10-20-26 15:33 | Claude (Claude Code) | Ruling 63 appended: list-step fields come from a per-type curated list editable at `/setup` (Doug's "c"). |
