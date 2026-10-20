@@ -2003,12 +2003,14 @@ unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
 
-- **v0.265.0 (2026-10-19) — the lead model.** Committed, not pushed.
-  Rulings 51–53 put to Doug first. Standing rules in the Campaign
-  Management section. Verified by tests; the three crm-test CRM steps
-  (`scripts/prospect_crm_test.sh touchpos|leadlayouts|leadmove`) and the
-  live pass https://claude.ai/artifact/DPSsyZMYPhvHQRUnL696Rk are owed
-  (`OPEN-ITEMS.md` #51), then production at a Sunday slot.
+- **v0.265.0–v0.265.3 (2026-10-19) — the lead model.** Live on crm-test
+  and production, dark on production (its CRM lacks the lead fields until
+  its Sunday slot). Rulings 51–54. **Live-passed on crm-test 10-19-26
+  23:44**; the pass found the lead's missing notes, a marketing user unable to
+  name *Who calls* (Team read — the teams write now escalates that one
+  refusal to the admin), and the call screen hiding the lead's email (now
+  prefilled, with Cancel). Owed: production's slot and Boston
+  (`OPEN-ITEMS.md` #51).
 
 - **v0.258.6 (2026-10-15) — attendee linking escalates a foreign-record 403
   to the admin.** A mentor recording an attendee assigned to someone else

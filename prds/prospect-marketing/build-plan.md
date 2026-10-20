@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-19-26 11:47 · Revision 0.14 — change log at the end.
+Last Updated: 10-19-26 23:44 · Revision 0.15 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -1269,6 +1269,12 @@ Written into the executive overview on 10-18-26 and open to Doug's change:
    `touchpos`, `leadlayouts` and `leadmove` in `scripts/prospect_crm_test.sh`.
 3. **Live pass** on crm-test: the Phase 1–4 passes' steps that touch a
    stage, re-run on the new names; the Phase 4 pass resumes after it.
+   **Passed 10-19-26 23:44** (Doug as Mark Marketing, Joe Mentor and signed
+   out; page https://claude.ai/artifact/DPSsyZMYPhvHQRUnL696Rk rev 1.5;
+   B–G read back from the CRM by Claude, H's three tables matched every
+   expected number). It found three defects, fixed and live as v0.265.1–3
+   (the lead's notes, *Who calls* for a marketing user, the call screen's
+   own email and Cancel), and ruling 54 (marketing reads every Company).
 4. **Production** at the Sunday 17:00 UTC slot; Boston with its release.
 
 **Cost of the rework:** one CRM handoff on three CRMs, about ten modules
@@ -1492,6 +1498,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.15 | 10-19-26 23:44 | Claude (Claude Code) | § 7a.5 step 3 passed: the lead model's live pass on crm-test, with v0.265.1–3 and ruling 54. Step 4, production, is next. |
 | 0.14 | 10-19-26 11:47 | Claude (Claude Code) | § 7a.5 step 2 built (v0.265.0, not pushed): the code rework, with rulings 51–53 and the decisions that follow from them recorded in the step. |
 | 0.13 | 10-19-26 11:03 | Claude (Claude Code) | § 7a.5 step 1 done on crm-test: the lead model's CRM handoff written and its additive half applied (rulings 49, 50); step 2, the code, is next. |
 | 0.12 | 10-19-26 01:22 | Claude (Claude Code) | § 9 question 16 answered: B, a lead behind every new public-form record (ruling 48). Questions 13–16 all answered; § 7a.5 step 1, the CRM handoff, is next. |

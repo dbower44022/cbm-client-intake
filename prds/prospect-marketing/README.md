@@ -1,6 +1,6 @@
 # Prospect marketing and Campaign Management
 
-Last Updated: 10-19-26 11:47 · Revision 1.15 — change log at the end.
+Last Updated: 10-19-26 23:44 · Revision 1.16 — change log at the end.
 
 **Read this first if you are working on prospects or campaigns.** This
 directory is the whole arc: the rulings, the build plan, and the record of
@@ -42,7 +42,7 @@ and the code: the `campaigns/` package, `core/postal.py`, `core/qr.py`,
 `forms/prospect_response/` and `frontend/shared/campaign-link.js` (**Phase 1
 built 10-15-26, v0.258.0, dark behind `CAMPAIGNS_ENABLED`**).
 
-## State, as of 10-19-26 11:47
+## State, as of 10-19-26 23:44
 
 - **The lead model (rulings 41–44, 10-18-26 evening) changes what is
   built.** Every record from an outside source is a **Lead** (Unqualified,
@@ -53,8 +53,10 @@ built 10-15-26, v0.258.0, dark behind `CAMPAIGNS_ENABLED`**).
   (rulings 45–48, 10-19-26). The CRM half is on crm-test (10-19-26,
   `coutreach-lead-model-crm-handoff.md`, rulings 49 and 50); **the code
   rework, § 7a.5 step 2, is built** (10-19-26, v0.265.0, committed, not
-  pushed; rulings 51–53 settled in that session). Next: the release's three
-  CRM steps on crm-test and the live pass, § 7a.5 step 3. The
+  pushed; rulings 51–53 settled in that session), **live on crm-test and
+  production (dark), and LIVE-PASSED on crm-test 10-19-26 23:44** (v0.265.1–3
+  fixed what the pass found; ruling 54 lets marketing read every Company).
+  Next: production at a Sunday slot, § 7a.5 step 4. The
   Phase 4 pass already matched (10-18-26 15:05); **the passes' steps that
   touch a stage are re-run after the rework** (§ 7a.5 step 3). The
   executive overview written for leadership already uses the new words.
@@ -205,14 +207,15 @@ import contract starts from).
 | Field | Value |
 |---|---|
 | Document | Prospect marketing — directory README |
-| Version | 1.15 |
-| Last Updated | 10-19-26 11:47 |
+| Version | 1.16 |
+| Last Updated | 10-19-26 23:44 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.16 | 10-19-26 23:44 | Claude (Claude Code) | State: the lead model live-passed on crm-test; production's slot is next. |
 | 1.15 | 10-19-26 11:47 | Claude (Claude Code) | State: the lead model's code rework built (v0.265.0, not pushed; rulings 51–53); the release's CRM steps and the live pass are next. |
 | 1.14 | 10-19-26 11:03 | Claude (Claude Code) | State: the lead model's CRM half done on crm-test (rulings 49, 50); the code rework is next. |
 | 1.13 | 10-19-26 01:22 | Claude (Claude Code) | State: questions 13–16 answered (rulings 45–48); the CRM handoff for the lead model is next. |
