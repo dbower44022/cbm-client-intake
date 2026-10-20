@@ -45,15 +45,20 @@ found; move resolved items to the bottom with the resolution date.
     on crm-test (dry run: exactly that one change), production and Boston
     with the role script at their slots, and the roles standard
     (`prds/chapter-network/roles-standard/`) updated to match.
-    **The Leads and Review grids at volume (v0.267.0, 10-20-26, build plan
-    § 7b): built, committed, not pushed; live pass owed on crm-test** with
-    the 3,000 throwaway leads `scripts/sandbox/make_volume_leads.py` made
-    (gone after the next nightly reset — re-run it the day of the pass). The
-    pass also times an 800-row import
-    (`prds/prospect-marketing/live-pass/grids-month-filing.csv`, a month at
-    10,000 a year): the import plans every row's already-known check inside
-    one request, and has never been tried at that size. **Step page:**
-    https://claude.ai/artifact/4FLXfPqnXLJ4Hhytded3uS (31 steps, rev 1.0).
+    **The Leads and Review grids at volume (v0.267.0–v0.267.2, build plan
+    § 7b): LIVE-PASSED on crm-test 10-20-26 14:28** by Doug as Mark
+    Marketing with 3,017 leads, from
+    https://claude.ai/artifact/4FLXfPqnXLJ4Hhytded3uS (rev 1.4). Every count
+    matched (searches 90–180 ms); the bulk Do Not Contact wrote 400; the
+    second-reviewer guard refused and wrote nothing. The pass found two
+    defects, both fixed and live: a typed filter ignored Enter and Tab
+    (v0.267.1), and an 800-row import plan made 1,001 sequential CRM calls
+    (61.6 s), timed the page out and showed "signal is aborted without
+    reason" (v0.267.2: 30 reads, 2.3 s; the apply in parts of 100, about
+    80 s for 800; a timeout now says so in words). The import ran as
+    *Purchased list* because the page buried Lead Source in a half-sentence
+    (fixed in rev 1.4); ruling 53's Qualified path was not re-run at volume —
+    its code is unchanged and passed on 10-19-26.
     The earlier passes' record follows.
     **Phase 1 BUILT and LIVE-PASSED on crm-test
     (v0.258.0–v0.258.5, 10-15/17-26, dark behind `CAMPAIGNS_ENABLED`);

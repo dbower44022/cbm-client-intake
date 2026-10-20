@@ -1070,6 +1070,11 @@ the reason.
   Company by name **and** postal code, Company by website key, Contact by email
   (ruling 12) — a match still creates the prospect record, with the *Already
   known* side exit; a re-upload of the same file is a no-op through the ledger.
+- **The import at volume** (v0.267.2): the already-known check reads the
+  whole file in batches (`imports.KnownIndex`, ~30 reads for 800 rows), and
+  the page applies 100 rows per request until `remaining` is 0 — never put
+  a per-row CRM call back into the plan, and never one request for a whole
+  apply (61.6 s and a timed-out page, 10-20-26).
 - **The Leads and Review grids at volume** (v0.267.0, build plan § 7b,
   Doug's five answers 10-20-26): `campaigns/leads.py` — the CRM searches,
   sorts and counts a page at a time (never load every lead; the old list
@@ -2012,11 +2017,12 @@ unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
 
-- **v0.267.0 (2026-10-20) — the Leads and Review grids at volume.**
-  Committed, not pushed. Rulings 55 and 56 recorded first (social media one
-  kind; the lead screens stay in the tile). Verified by tests (17 new) and
-  a stubbed browser preview; the live pass on crm-test with 3,000
-  throwaway leads is owed (`OPEN-ITEMS.md` #51).
+- **v0.267.0–v0.267.2 (2026-10-20) — the Leads and Review grids at
+  volume.** Live on crm-test and production (dark there). Rulings 55 and 56
+  first. **Live-passed on crm-test 10-20-26 14:28** with 3,017 leads; the
+  pass found two defects, fixed in .1 (Enter/Tab on a typed filter) and .2
+  (an 800-row import plan timed out — the already-known check now reads in
+  batches, the apply runs in parts of 100). `OPEN-ITEMS.md` #51.
 
 - **v0.266.0 (2026-10-20) — Campaign Management demo data on the
   sandbox.** `scripts/sandbox/seed_outreach_data.py` (the fourth seeder,
