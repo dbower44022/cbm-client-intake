@@ -11,10 +11,12 @@ recorded through ``record_action`` here, at the router, which has the actor.
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 import re
 from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from assignments import auth
@@ -30,7 +32,7 @@ from core.qr import qr_png, qr_svg
 from forms import SPECS_BY_SLUG
 
 from . import config as cfg
-from . import calls, email as email_kind, imports, postcard, reporting, review, service, sms
+from . import calls, email as email_kind, imports, leads, postcard, reporting, review, service, sms
 from .conversion import Details
 from .reporting import summarize_responses  # noqa: F401 — re-exported
 from .public import destination_path
@@ -751,14 +753,90 @@ async def responses(campaign_id: str, request: Request) -> dict[str, Any]:
 # --- prospects (§ 3.8) ------------------------------------------------------------------------------
 
 @api_router.get("/prospects")
-async def list_prospects(request: Request, status: Optional[str] = None, exit: Optional[str] = None,
-                         source: Optional[str] = None, batch: Optional[str] = None) -> dict[str, Any]:
+async def list_prospects(request: Request) -> dict[str, Any]:
+    """One page of leads and the total the filter matches (build plan § 7b):
+    the search box ``q``, the filters, ``sort``/``dir``, ``offset``/``limit``.
+    ``review=1`` is the Review queue — Unqualified, no reason, oldest first."""
     user, client = _actor(request)
+    params = dict(request.query_params)
+    lq = leads.LeadQuery.from_params(params, review_queue=params.get("review") in ("1", "true"))
     try:
-        rows = await service.list_prospects(client, status=status, exit_=exit, source=source, batch=batch)
+        return await leads.search(client, lq)
+    except CampaignError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not list the leads")
-    return {"prospects": rows}
+
+
+class BulkResolveIn(BaseModel):
+    query: dict[str, Any] = Field(default_factory=dict)
+    review: bool = False
+
+
+class BulkIn(BaseModel):
+    action: str
+    note: str = Field(default="", max_length=4000)
+    items: list[dict[str, Any]] = Field(default_factory=list)
+
+
+# The three /prospects/<word> routes are declared BEFORE /prospects/{prospect_id},
+# or the word is read as an id (a 502 on 10-15-26).
+@api_router.post("/prospects/bulk/resolve")
+async def bulk_resolve(body: BulkResolveIn, request: Request) -> dict[str, Any]:
+    """*Select all n matching*: every lead the filter matches, with the status
+    and reason the guard compares, refused above the cap."""
+    user, client = _actor(request)
+    lq = leads.LeadQuery.from_params(body.query, review_queue=body.review)
+    try:
+        items = await leads.resolve(client, lq)
+    except CampaignError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not read the matching leads")
+    return {"items": items, "count": len(items), "batch": leads.BULK_BATCH}
+
+
+@api_router.post("/prospects/bulk")
+async def bulk_apply(body: BulkIn, request: Request) -> dict[str, Any]:
+    """Disqualify or Do Not Contact on one batch of leads; one action-history
+    row for the batch, naming every lead it changed."""
+    user, client = _actor(request)
+    settings = get_settings()
+    try:
+        result = await leads.apply_bulk(client, _system_client(settings), body.items, body.action,
+                                        reviewer=user.get("name") or user.get("userName") or "",
+                                        note=body.note)
+    except CampaignError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    if result["done"]:
+        label = review.ACTION_LABELS[body.action]
+        names = ", ".join(f'"{d["name"]}"' for d in result["done"][:20])
+        more = len(result["done"]) - 20
+        await record_action(
+            client, app=APP_CAMPAIGNS, category=CAT_STATUS, action=f"{label} (bulk)",
+            parent_type=cfg.PROSPECT, parent_id=result["done"][0]["id"],
+            summary=(f"{label}: {len(result['done'])} leads — {names}" + (f" and {more} more" if more > 0 else "")
+                     + (f" — {body.note.strip()}" if body.note.strip() else "")),
+            actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+            details={"done": result["done"], "skipped": result["skipped"], "failed": result["failed"]},
+        )
+    return result
+
+
+@api_router.get("/prospects/export")
+async def export_prospects(request: Request) -> StreamingResponse:
+    """The matching leads as a CSV file, the filters the grid holds."""
+    user, client = _actor(request)
+    lq = leads.LeadQuery.from_params(dict(request.query_params))
+    try:
+        rows = await leads.export_rows(client, lq)
+    except CampaignError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not export the leads")
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    return StreamingResponse(rows, media_type="text/csv; charset=utf-8",
+                             headers={"Content-Disposition": f'attachment; filename="leads-{stamp}.csv"'})
 
 
 # Declared BEFORE /prospects/{prospect_id}, or "imports" is read as an id (a 502 on 10-15-26).
@@ -855,6 +933,13 @@ async def import_apply(body: ImportApplyIn, request: Request) -> dict[str, Any]:
 class ReviewIn(BaseModel):
     action: str
     note: str = Field(default="", max_length=4000)
+    #: Typed into the Review row (§ 7b answer 2); written with the action.
+    website: str = Field(default="", max_length=255)
+    email: str = Field(default="", max_length=255)
+    #: What the reviewer saw (§ 7b answer 5): refused, naming who, if the
+    #: lead has changed since. Absent from an older page, which skips it.
+    seenStatus: Optional[str] = None
+    seenExit: Optional[str] = None
 
 
 @api_router.post("/prospects/{prospect_id}/review")
@@ -866,15 +951,23 @@ async def review_prospect(prospect_id: str, body: ReviewIn, request: Request) ->
     if body.action not in review.ACTIONS:
         raise HTTPException(status_code=400, detail="Unknown review action.")
     try:
-        prospect = await service.get_prospect(client, prospect_id)
+        prospect = await client.get(cfg.PROSPECT, prospect_id, select=leads.GUARD_SELECT)
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not read the lead")
     if not prospect or not prospect.get("id"):
         raise HTTPException(status_code=404, detail="Lead not found.")
+    seen: dict[str, Any] = {}
+    if body.seenStatus is not None:
+        seen["leadStatus"] = body.seenStatus
+    if body.seenExit is not None:
+        seen["sideExit"] = body.seenExit
+    moved = leads.changed_since(prospect, seen) if seen else None
+    if moved:
+        raise HTTPException(status_code=409, detail=moved)
     try:
         result = await review.apply_action(client, _system_client(settings), prospect, body.action,
                                            reviewer=user.get("name") or user.get("userName") or "",
-                                           note=body.note)
+                                           note=body.note, website=body.website, email=body.email)
     except CampaignError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:

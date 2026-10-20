@@ -29,7 +29,11 @@ from . import config as cfg
 log = logging.getLogger("cbm_intake.campaigns")
 
 _PAGE = 200
-_MAX_ROWS = 2000
+#: A whole-population read (a postcard selection, the reporting counts) stops
+#: here and says so in the log. It was 2,000 until 10-20-26, which at about
+#: 10,000 leads a year (build plan § 7b) would have cut a selection short
+#: silently within months.
+_MAX_ROWS = 50000
 
 
 class CampaignError(Exception):
@@ -144,7 +148,10 @@ async def _page_all(client: EspoApi, entity: str, *, select: str, where=None,
                                  offset=offset, order_by=order_by, order=order)
         batch = page.get("list", [])
         rows.extend(batch)
-        if len(batch) < _PAGE or len(rows) >= limit:
+        if len(batch) < _PAGE:
+            break
+        if len(rows) >= limit:
+            log.warning("%s read stopped at %s rows (the cap); later rows were not read", entity, len(rows))
             break
         offset += _PAGE
     return rows

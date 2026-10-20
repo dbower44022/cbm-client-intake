@@ -112,3 +112,14 @@ a.cm__navbtn { text-decoration: none; color: inherit; display: inline-block; }
 .cm__smsbox { border: 1px dashed var(--cbm-border, #d9dee3); border-radius: 6px; padding: .6rem .8rem; margin: .6rem 0; }
 .cm__smstext { white-space: pre-wrap; font-family: ui-monospace, Menlo, Consolas, monospace; margin: .2rem 0 .4rem; }
 .cm__field textarea[data-field="smsMessage"] { width: 100%; box-sizing: border-box; min-height: 6rem; font: inherit; }
+
+/* The Leads and Review grids at volume (build plan § 7b). */
+.cm__filters { margin-top: .5rem; }
+.cm__filters input[type="text"], .cm__filters input[type="date"] { font: inherit; padding: .3rem .45rem; border: 1px solid var(--cbm-border, #c9d1d8); border-radius: 4px; }
+.cm__controls input.cm__bigsearch { flex: 1 1 28rem; min-width: 16rem; }
+.cm__bulkbar { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-top: .5rem; padding: .5rem .75rem; border-radius: 6px; background: var(--cbm-hover, #f2f5f7); border: 1px solid var(--cbm-border, #e3e7eb); }
+.cm__pager { display: flex; gap: .5rem; align-items: center; justify-content: flex-end; margin: .5rem 0; }
+.cm__pager .cm__count { margin-right: auto; font-variant-numeric: tabular-nums; }
+.cm__grid th.cm__tick, .cm__grid td.cm__tick { width: 2rem; }
+.cm__grid input.cm__rvweb, .cm__grid input.cm__rvmail { font: inherit; font-size: .88rem; width: 100%; min-width: 11rem; padding: .25rem .4rem; border: 1px solid var(--cbm-border, #c9d1d8); border-radius: 4px; }
+.cm__linkbtn { font: inherit; background: none; border: 0; padding: 0; color: var(--cbm-primary, #1d5c63); text-decoration: underline; cursor: pointer; }

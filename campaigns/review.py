@@ -26,6 +26,7 @@ ruling 33).
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 from typing import Any, Optional
 
@@ -71,11 +72,41 @@ def _append_note(description: Optional[str], line: str) -> str:
     return f"{current}\n{line}" if current else line
 
 
+_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def contact_changes(lead: dict[str, Any], website: Optional[str], email: Optional[str]) -> dict[str, Any]:
+    """The website and email the reviewer typed into the Review row (§ 7b
+    answer 2), as the fields to write: only a value that is new, an email
+    that looks like one, a website given its ``https://`` when it has none.
+    Raises :class:`CampaignError` naming what is wrong."""
+    out: dict[str, Any] = {}
+    website = (website or "").strip()
+    email = (email or "").strip()
+    if website:
+        if " " in website or "." not in website:
+            raise CampaignError(f"\"{website}\" is not a web address.")
+        if not re.match(r"^https?://", website, re.I):
+            website = "https://" + website
+        if website != (lead.get("website") or ""):
+            out["website"] = website[:255]
+    if email:
+        if not _EMAIL.match(email):
+            raise CampaignError(f"\"{email}\" is not an email address.")
+        if email.lower() != (lead.get("email") or "").lower():
+            out["email"] = email[:255]
+    return out
+
+
 def plan_action(lead: dict[str, Any], action: str, *, reviewer: str,
-                note: str = "") -> tuple[dict[str, Any], dict[str, Any]]:
+                note: str = "", website: Optional[str] = None,
+                email: Optional[str] = None) -> tuple[dict[str, Any], dict[str, Any]]:
     """The two writes an action makes: ``(user_payload, api_payload)``. Pure, so
     the rules are tested without a CRM. Raises :class:`CampaignError` when the
-    action does not apply to this lead."""
+    action does not apply to this lead. A website or email typed into the
+    Review row rides with *Qualify* (and is kept with any other action)."""
+    typed = contact_changes(lead, website, email)
+    lead = {**lead, **typed}
     note = (note or "").strip()
     reviewer = (reviewer or "").strip() or "a reviewer"
     now = _now_crm()
@@ -87,7 +118,8 @@ def plan_action(lead: dict[str, Any], action: str, *, reviewer: str,
         if not (lead.get("website") or lead.get("email")):
             raise CampaignError(
                 "A lead without a website or an email can never be Qualified (ruling 42). "
-                "Add one to the lead in the CRM first, or leave it Unqualified — campaigns may still reach it.")
+                "Type the one you found into the row's Website or Email box, or leave it Unqualified — "
+                "campaigns may still reach it.")
         payload: dict[str, Any] = {
             "leadStatus": cfg.LEAD_QUALIFIED, "leadStatusChangedAt": now,
             "qualifiedBy": reviewer[:255], "qualifiedAt": now,
@@ -123,11 +155,19 @@ def plan_action(lead: dict[str, Any], action: str, *, reviewer: str,
     raise CampaignError("Unknown review action.")
 
 
+def _with_typed(plan: tuple[dict[str, Any], dict[str, Any]], typed: dict[str, Any]):
+    user_payload, api_payload = plan
+    return {**typed, **user_payload}, api_payload
+
+
 async def apply_action(user_client: EspoApi, api_client: Optional[EspoApi], lead: dict[str, Any],
-                       action: str, *, reviewer: str, note: str = "") -> dict[str, Any]:
+                       action: str, *, reviewer: str, note: str = "", website: Optional[str] = None,
+                       email: Optional[str] = None) -> dict[str, Any]:
     """Write one review action. The user's write goes first, so a refused grant
     changes nothing; the link clear follows under the API client."""
-    user_payload, api_payload = plan_action(lead, action, reviewer=reviewer, note=note)
+    user_payload, api_payload = _with_typed(
+        plan_action(lead, action, reviewer=reviewer, note=note, website=website, email=email),
+        contact_changes(lead, website, email))
     updated = await user_client.update(cfg.PROSPECT, lead["id"], user_payload)
     if api_payload and api_client is not None:
         updated = await api_client.update(cfg.PROSPECT, lead["id"], api_payload)

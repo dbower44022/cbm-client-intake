@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-20-26 01:44 · Revision 0.18 — change log at the end.
+Last Updated: 10-20-26 02:00 · Revision 0.19 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -1289,7 +1289,7 @@ Doug's requirement, with ruling 56: "we need to dramatically improve the
 'Leads' and 'Review' grids to handle a large number of records, and provide
 better searching and qualifying." His requirements are being gathered one
 question at a time (answers 1–5 below); § 7b.1 is the design drawn from them,
-a draft until Doug approves it.
+approved by Doug as written (10-20-26) and built as v0.267.0 the same night.
 
 **How the two grids work today** (read from the code, 10-20-26):
 
@@ -1342,7 +1342,7 @@ a draft until Doug approves it.
    guide says the filters split the work (by import batch or ZIP).
    Claiming is built only if duplicated lookups prove a problem.
 
-### 7b.1 The design — draft for approval
+### 7b.1 The design — approved 10-20-26 01:47, built as v0.267.0
 
 **Shared: the CRM does the work.** One server-side list call for both
 grids: `GET /campaigns/api/prospects` gains `q`, the new filters, `sort`,
@@ -1621,6 +1621,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.19 | 10-20-26 02:00 | Claude (Claude Code) | § 7b.1 approved as written and built (v0.267.0). |
 | 0.18 | 10-20-26 01:44 | Claude (Claude Code) | § 7b: Doug's five answers on the Leads and Review grids, and § 7b.1, the design drawn from them, a draft for approval. |
 | 0.17 | 10-20-26 01:16 | Claude (Claude Code) | § 9 question 12 answered: A (ruling 56). Doug's new requirement for the Leads and Review grids opens § 7b, being gathered. |
 | 0.16 | 10-20-26 01:08 | Claude (Claude Code) | § 9 question 10 answered: A, one social media kind with a Platform field (ruling 55). |

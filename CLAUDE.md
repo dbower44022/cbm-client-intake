@@ -1070,6 +1070,15 @@ the reason.
   Company by name **and** postal code, Company by website key, Contact by email
   (ruling 12) — a match still creates the prospect record, with the *Already
   known* side exit; a re-upload of the same file is a no-op through the ledger.
+- **The Leads and Review grids at volume** (v0.267.0, build plan § 7b,
+  Doug's five answers 10-20-26): `campaigns/leads.py` — the CRM searches,
+  sorts and counts a page at a time (never load every lead; the old list
+  stopped silently at 2,000); bulk Disqualify / Do Not Contact over ticked
+  rows or all matching (cap 2,000, batches of 50, each lead re-read and
+  skipped if changed since seen); a CSV export; Review as a queue whose row
+  takes the website or email and qualifies in one step. **Every decision
+  carries what the reviewer saw (`seenStatus` / `seenExit`) and a change
+  since answers 409 naming who** — keep that on any new review action.
 - **The partner's Campaigns tab** (CM-5): `DomainConfig.sponsored_campaigns_link`
   on the partner domain only, the Events-tab shape exactly.
 - **Phase 2 — the public forms honour the ids** (v0.259.0, 10-17-26; build plan
@@ -2002,6 +2011,12 @@ with `main`; **Lakeside took it off the release lane by itself** (its
 unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
+
+- **v0.267.0 (2026-10-20) — the Leads and Review grids at volume.**
+  Committed, not pushed. Rulings 55 and 56 recorded first (social media one
+  kind; the lead screens stay in the tile). Verified by tests (17 new) and
+  a stubbed browser preview; the live pass on crm-test with 3,000
+  throwaway leads is owed (`OPEN-ITEMS.md` #51).
 
 - **v0.266.0 (2026-10-20) — Campaign Management demo data on the
   sandbox.** `scripts/sandbox/seed_outreach_data.py` (the fourth seeder,

@@ -88,29 +88,55 @@
     <!-- ============================ LEADS ============================= -->
     <section class="cm__panel" id="prospectsPanel" hidden>
       <div class="cm__controls">
-        <label class="cm__filter">Lead status <select id="stageFilter"><option value="">All</option></select></label>
-        <label class="cm__filter">Stopped because
-          <select id="exitFilter"><option value="">All</option><option value="none">Still being worked</option></select>
-        </label>
-        <label class="cm__filter">Lead Source <select id="doorFilter"><option value="">All</option></select></label>
-        <input type="search" id="prospectSearch" placeholder="Search leads…" aria-label="Search leads" autocomplete="off" />
-        <span class="cm__count" id="prospectCount"></span>
+        <p class="cm__hint cm__grow">Every lead, searched and counted by the CRM a page at a time. Tick rows, or select everything the filters match, to Disqualify or mark Do Not Contact many at once. <strong>Export</strong> downloads what the filters match as a CSV file.</p>
         <div class="cm__actions">
           <button type="button" class="cbm-button" id="importBtn">Import…</button>
+          <button type="button" class="cbm-button cbm-button--secondary" id="pf_export">Export</button>
           <button type="button" class="cbm-button cbm-button--secondary" id="prospectRefreshBtn">Refresh</button>
         </div>
+      </div>
+      <div class="cm__controls cm__filters" id="pf_filters">
+        <input type="search" id="pf_q" placeholder="Search name, person, email, phone, website, street, city, ZIP, filing number…" aria-label="Search leads" autocomplete="off" class="cm__bigsearch" />
+        <label class="cm__filter">Lead status <select id="pf_status"><option value="">All</option></select></label>
+        <label class="cm__filter">Stopped because
+          <select id="pf_exit"><option value="">All</option><option value="none">Still being worked</option></select>
+        </label>
+        <label class="cm__filter">Lead Source <select id="pf_source"><option value="">All</option></select></label>
+        <label class="cm__filter">Batch <input type="text" id="pf_batch" list="pf_batches" placeholder="Any" autocomplete="off" /></label>
+        <datalist id="pf_batches"></datalist>
+        <label class="cm__filter">ZIP or city <input type="text" id="pf_place" placeholder="44102 or Lakewood" autocomplete="off" size="12" /></label>
+        <label class="cm__filter">Arrived from <input type="date" id="pf_from" /></label>
+        <label class="cm__filter">to <input type="date" id="pf_to" /></label>
+        <label class="cm__filter">In a campaign
+          <select id="pf_camp"><option value="">Any</option><option value="yes">Yes, any campaign</option><option value="no">No campaign yet</option></select>
+        </label>
+        <button type="button" class="cm__rowbtn" id="pf_clear">Clear filters</button>
+      </div>
+      <div class="cm__bulkbar" id="pf_bulk" hidden>
+        <span id="pf_bulkcount"></span>
+        <button type="button" class="cm__linkbtn" id="pf_all"></button>
+        <button type="button" class="cbm-button cbm-button--secondary" id="pf_bulkdq">Disqualify…</button>
+        <button type="button" class="cbm-button cbm-button--secondary" id="pf_bulkdnc">Do Not Contact…</button>
+        <button type="button" class="cm__linkbtn" id="pf_bulkclear">Clear selection</button>
+      </div>
+      <div class="cm__pager" id="pf_pager">
+        <span class="cm__count" id="pf_count"></span>
+        <button type="button" class="cm__rowbtn" id="pf_prev">‹ Previous</button>
+        <button type="button" class="cm__rowbtn" id="pf_next">Next ›</button>
       </div>
       <div class="cm__gridwrap">
         <table class="cm__grid" id="prospectGrid">
           <thead><tr>
+            <th class="cm__tick"><input type="checkbox" id="pf_page" aria-label="Select this page" /></th>
             <th data-sort="name">Business</th>
             <th data-sort="leadStatus">Lead status</th>
             <th data-sort="sideExit">Stopped because</th>
             <th data-sort="leadSource">Lead Source</th>
             <th data-sort="mailingAddressCity">City</th>
+            <th data-sort="mailingAddressPostalCode">ZIP</th>
             <th data-sort="addressStatus">Address</th>
             <th data-sort="importBatch">Batch</th>
-            <th data-sort="createdAt">Imported</th>
+            <th data-sort="createdAt">Arrived</th>
           </tr></thead>
           <tbody id="prospectRows"></tbody>
         </table>
@@ -121,15 +147,39 @@
     <!-- ============================ REVIEW ============================ -->
     <section class="cm__panel" id="reviewPanel" hidden>
       <div class="cm__controls">
-        <p class="cm__hint cm__grow">Leads wait here at Unqualified until a person reviews them (rulings 18, 42). <strong>Qualify</strong> marks a lead that could become a client, partner or funder, with your name on it — only a lead with a website or an email can be Qualified. <strong>Disqualify</strong> marks one that never will, with your reason. Campaigns may reach a lead at either status (ruling 44).</p>
-        <input type="search" id="reviewSearch" placeholder="Search…" aria-label="Search the review queue" autocomplete="off" />
-        <span class="cm__count" id="reviewCount"></span>
+        <p class="cm__hint cm__grow">Leads waiting at Unqualified, oldest first. A lead needs a website or an email before it can be Qualified (ruling 42): <strong>Search the web</strong>, type what you find into the row and press <strong>Enter</strong> to Qualify — the cursor moves to the next lead. Disqualify the obvious no's many at once by ticking them. Two reviewers can split the queue with the filters (one batch or ZIP each); a lead someone else has already decided is refused, naming who.</p>
         <div class="cm__actions"><button type="button" class="cbm-button cbm-button--secondary" id="reviewRefreshBtn">Refresh</button></div>
+      </div>
+      <div class="cm__controls cm__filters" id="rf_filters">
+        <input type="search" id="rf_q" placeholder="Search name, person, email, phone, website, street, city, ZIP, filing number…" aria-label="Search leads" autocomplete="off" class="cm__bigsearch" />
+        <label class="cm__filter">Lead Source <select id="rf_source"><option value="">All</option></select></label>
+        <label class="cm__filter">Batch <input type="text" id="rf_batch" list="rf_batches" placeholder="Any" autocomplete="off" /></label>
+        <datalist id="rf_batches"></datalist>
+        <label class="cm__filter">ZIP or city <input type="text" id="rf_place" placeholder="44102 or Lakewood" autocomplete="off" size="12" /></label>
+        <label class="cm__filter">Arrived from <input type="date" id="rf_from" /></label>
+        <label class="cm__filter">to <input type="date" id="rf_to" /></label>
+        <label class="cm__filter">In a campaign
+          <select id="rf_camp"><option value="">Any</option><option value="yes">Yes, any campaign</option><option value="no">No campaign yet</option></select>
+        </label>
+        <button type="button" class="cm__rowbtn" id="rf_clear">Clear filters</button>
+      </div>
+      <div class="cm__bulkbar" id="rf_bulk" hidden>
+        <span id="rf_bulkcount"></span>
+        <button type="button" class="cm__linkbtn" id="rf_all"></button>
+        <button type="button" class="cbm-button cbm-button--secondary" id="rf_bulkdq">Disqualify…</button>
+        <button type="button" class="cbm-button cbm-button--secondary" id="rf_bulkdnc">Do Not Contact…</button>
+        <button type="button" class="cm__linkbtn" id="rf_bulkclear">Clear selection</button>
+      </div>
+      <div class="cm__pager" id="rf_pager">
+        <span class="cm__count" id="rf_count"></span>
+        <button type="button" class="cm__rowbtn" id="rf_prev">‹ Previous</button>
+        <button type="button" class="cm__rowbtn" id="rf_next">Next ›</button>
       </div>
       <div class="cm__gridwrap">
         <table class="cm__grid" id="reviewGrid">
           <thead><tr>
-            <th>Business</th><th>Person</th><th>Phone</th><th>Email</th><th>Website</th><th>City</th><th>Batch</th><th>Actions</th>
+            <th class="cm__tick"><input type="checkbox" id="rf_page" aria-label="Select this page" /></th>
+            <th>Business</th><th>Person</th><th>City</th><th>Phone</th><th>Look it up</th><th>Website</th><th>Email</th><th>Decide</th><th>Batch</th>
           </tr></thead>
           <tbody id="reviewRows"></tbody>
         </table>

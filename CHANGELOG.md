@@ -5,6 +5,37 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.267.0] — 2026-10-20
+
+**feat(campaigns): the Leads and Review grids handle tens of thousands of
+leads** (build plan § 7b, Doug's requirement and five answers 10-20-26). The
+two grids loaded every lead in one go and stopped silently at 2,000; at
+about 10,000 leads a year that would have hidden leads within months.
+
+- **The CRM searches, sorts and counts**, 50 to a page, with the true total
+  (`campaigns/leads.py`). One search box over the business name, the
+  person, email, phone (dashes ignored), website, street, city, ZIP and
+  filing number; combinable filters for status, reason, Lead Source, import
+  batch, ZIP or city, the arrival date range and *in a campaign* (yes, no,
+  or a named campaign). The search rides the page address, so it can be
+  bookmarked.
+- **Bulk Disqualify and Do Not Contact** on ticked rows or on everything the
+  filters match (at most 2,000 per action), the count named first, applied
+  50 at a time; each lead re-read and skipped, never overwritten, when it
+  changed since it was seen. One action-history row per batch.
+- **Export** downloads the matching leads as a CSV file.
+- **Review is a work queue:** oldest first, a *Search the web* link per row,
+  Website and Email boxes, and *Qualify* saving what was typed and
+  qualifying in one step (ruling 42 still holds); Enter qualifies and the
+  cursor moves to the next lead. A decision someone else made first is
+  refused, naming who (HTTP 409).
+- Every whole-population read (a postcard selection, the reporting counts)
+  now reads up to 50,000 rows, not 2,000, and logs when it stops at the cap.
+
+No CRM change, no switch (dark behind `CAMPAIGNS_ENABLED` like the rest).
+`scripts/sandbox/make_volume_leads.py` fills crm-test with throwaway leads
+for the live pass. Rollback is a revert.
+
 ## [0.266.0] — 2026-10-20
 
 **feat(sandbox): Campaign Management has demo data that survives the night.**

@@ -15,7 +15,6 @@
   var state = {
     session: null, fields: null,
     campaigns: [], sort: { key: "createdAt", dir: -1 },
-    prospects: [], psort: { key: "createdAt", dir: -1 },
     record: null, links: null, responses: null,
     section: "campaigns",
   };
@@ -892,36 +891,306 @@
   $("anaRefreshBtn").addEventListener("click", function () { loadAnalytics(true); });
 
   // --- leads (rulings 41-53) ---------------------------------------------------------------------
-  async function loadProspects() {
+  // --- the Leads and Review grids at volume (build plan § 7b) ---------------------------------
+  // The CRM searches, sorts and counts; the grid asks for one page at a time.
+  // The whole search rides the address (#prospects?q=… / #review?…), so it can
+  // be bookmarked. Selection holds what the reviewer saw of each lead
+  // (status and reason), which the server's guard compares before any write.
+  var GRID_FILTERS = ["q", "status", "exit", "source", "batch", "place", "from", "to", "camp"];
+  var GRID_PARAM = { q: "q", status: "status", exit: "exit", source: "source", batch: "batch", place: "place", from: "arrivedFrom", to: "arrivedTo", camp: "inCampaign" };
+  var grids = {
+    pf: { section: "prospects", review: false, offset: 0, limit: 50, total: 0, rows: [], sort: "createdAt", dir: "desc", selected: {}, all: null },
+    rf: { section: "review", review: true, offset: 0, limit: 50, total: 0, rows: [], sort: "createdAt", dir: "asc", selected: {}, all: null },
+  };
+
+  function gridQuery(px) {
+    var g = grids[px], out = {};
+    GRID_FILTERS.forEach(function (f) { var e = $(px + "_" + f); if (e && e.value.trim()) out[GRID_PARAM[f]] = e.value.trim(); });
+    out.sort = g.sort; out.dir = g.dir;
+    return out;
+  }
+  function qs(obj) { return Object.keys(obj).filter(function (k) { return obj[k] !== "" && obj[k] != null; }).map(function (k) { return encodeURIComponent(k) + "=" + encodeURIComponent(obj[k]); }).join("&"); }
+
+  function writeHash(px) {
+    var g = grids[px], q = gridQuery(px);
+    if (g.offset) q.offset = g.offset;
+    var s = qs(q);
+    try { history.replaceState(null, "", "#" + g.section + (s ? "?" + s : "")); } catch (_) {}
+  }
+  function readHash(px, params) {
+    var g = grids[px];
+    GRID_FILTERS.forEach(function (f) { var e = $(px + "_" + f); if (e && params[GRID_PARAM[f]] != null) e.value = params[GRID_PARAM[f]]; });
+    if (params.sort) g.sort = params.sort;
+    if (params.dir) g.dir = params.dir;
+    g.offset = Math.max(0, parseInt(params.offset || "0", 10) || 0);
+  }
+  function hashParams() {
+    var h = (location.hash || "").replace(/^#/, ""), i = h.indexOf("?"), out = {};
+    if (i < 0) return { section: h, params: out };
+    h.slice(i + 1).split("&").forEach(function (kv) { if (!kv) return; var p = kv.split("="); out[decodeURIComponent(p[0])] = decodeURIComponent((p[1] || "").replace(/\+/g, " ")); });
+    return { section: h.slice(0, i), params: out };
+  }
+
+  async function loadGrid(px) {
+    var g = grids[px];
+    var q = gridQuery(px); q.offset = g.offset; q.limit = g.limit; if (g.review) q.review = 1;
+    writeHash(px);
     try {
-      var q = [];
-      if ($("stageFilter").value) q.push("status=" + encodeURIComponent($("stageFilter").value));
-      if ($("exitFilter").value) q.push("exit=" + encodeURIComponent($("exitFilter").value));
-      if ($("doorFilter").value) q.push("source=" + encodeURIComponent($("doorFilter").value));
-      state.prospects = (await api("/prospects" + (q.length ? "?" + q.join("&") : ""))).prospects || [];
-      renderProspects();
+      var res = await api("/prospects?" + qs(q));
+      g.rows = res.prospects || []; g.total = res.total || 0;
+      if (g.offset && !g.rows.length && g.total) { g.offset = Math.max(0, Math.floor((g.total - 1) / g.limit) * g.limit); return loadGrid(px); }
+      (g.review ? renderReview : renderProspects)();
+      renderPager(px); renderBulk(px);
     } catch (e) { notice(e.message, "error"); }
+  }
+  // The names the rest of the page already calls.
+  function loadProspects() { return loadGrid("pf"); }
+  function loadReview() { return loadGrid("rf"); }
+
+  function renderPager(px) {
+    var g = grids[px];
+    var from = g.total ? g.offset + 1 : 0, to = Math.min(g.offset + g.rows.length, g.total);
+    text($(px + "_count"), g.total ? (from.toLocaleString() + "–" + to.toLocaleString() + " of " + g.total.toLocaleString() + (g.review ? " waiting" : " leads")) : (g.review ? "0 waiting" : "0 leads"));
+    $(px === "pf" ? "prospectsEmpty" : "reviewEmpty").hidden = g.total > 0;
+  }
+  function page(px, step) {
+    var g = grids[px];
+    var next = g.offset + step * g.limit;
+    if (next < 0 || next >= g.total) { notice(step < 0 ? "This is the first page." : "This is the last page.", "warn"); return; }
+    g.offset = next; loadGrid(px);
+  }
+
+  function tickCell(px, p) {
+    var g = grids[px], td = el("td", "cm__tick"), box = el("input"); box.type = "checkbox";
+    box.setAttribute("aria-label", "Select " + (p.businessName || p.name || "lead"));
+    box.checked = !!g.all || !!g.selected[p.id];
+    box.addEventListener("change", function () {
+      if (g.all) { g.all = null; }
+      if (box.checked) g.selected[p.id] = { id: p.id, leadStatus: p.leadStatus || "", sideExit: p.sideExit || "" };
+      else delete g.selected[p.id];
+      renderBulk(px);
+    });
+    td.appendChild(box); return td;
+  }
+  function selectedCount(px) { var g = grids[px]; return g.all ? g.all.length : Object.keys(g.selected).length; }
+  function renderBulk(px) {
+    var g = grids[px], n = selectedCount(px), bar = $(px + "_bulk");
+    bar.hidden = n === 0;
+    $(px + "_page").checked = g.rows.length > 0 && g.rows.every(function (p) { return g.all || g.selected[p.id]; });
+    if (!n) return;
+    text($(px + "_bulkcount"), g.all ? ("All " + n.toLocaleString() + " matching leads selected.") : (n.toLocaleString() + " selected."));
+    var allBtn = $(px + "_all");
+    allBtn.hidden = !!g.all || g.total <= n;
+    text(allBtn, "Select all " + g.total.toLocaleString() + " matching");
+  }
+  function selectPage(px, on) {
+    var g = grids[px]; g.all = null;
+    g.rows.forEach(function (p) { if (on) g.selected[p.id] = { id: p.id, leadStatus: p.leadStatus || "", sideExit: p.sideExit || "" }; else delete g.selected[p.id]; });
+    (g.review ? renderReview : renderProspects)(); renderBulk(px);
+  }
+  async function selectAllMatching(px) {
+    var g = grids[px];
+    try {
+      var res = await api("/prospects/bulk/resolve", { method: "POST", body: { query: gridQuery(px), review: g.review } });
+      g.all = res.items || []; g.selected = {};
+      (g.review ? renderReview : renderProspects)(); renderBulk(px);
+    } catch (e) { notice(e.message, "error"); }
+  }
+  function clearSelection(px) { var g = grids[px]; g.all = null; g.selected = {}; (g.review ? renderReview : renderProspects)(); renderBulk(px); }
+
+  var BULK = {
+    disqualify: ["Disqualify", "Why will these leads never be a client, partner or funder? (required)", true],
+    "do-not-contact": ["Do Not Contact", "Note (optional)", false],
+  };
+  function openBulk(px, action) {
+    var g = grids[px], items = g.all ? g.all.slice() : Object.keys(g.selected).map(function (k) { return g.selected[k]; });
+    var b = BULK[action];
+    if (!items.length) { notice("Tick at least one lead first.", "warn"); return; }
+    var n = items.length;
+    var body = el("div", "cm__plan");
+    body.appendChild(el("p", null, b[0] + " " + n.toLocaleString() + " lead" + (n === 1 ? "" : "s") + "? Each lead is checked again first; one someone else has changed since you saw it is skipped, never overwritten."));
+    var f = el("div", "cm__field cm__field--wide"); var lab = el("label", null, b[1]); lab.htmlFor = "bk_note";
+    var ta = el("textarea"); ta.id = "bk_note"; ta.rows = 3; ta.maxLength = 4000; f.appendChild(lab); f.appendChild(ta); body.appendChild(f);
+    var prog = el("p", "cm__hint"); body.appendChild(prog);
+    var running = false;
+    openModal(b[0] + " " + n.toLocaleString() + " lead" + (n === 1 ? "" : "s"), body, async function () {
+      if (running) return;
+      if (b[2] && !ta.value.trim()) { modalMsg("Say why — the reason is required.", "error"); return; }
+      running = true;
+      var done = 0, skipped = [], failed = [];
+      try {
+        for (var i = 0; i < items.length; i += 50) {
+          text(prog, "Working… " + Math.min(i, n).toLocaleString() + " of " + n.toLocaleString() + ".");
+          var res = await api("/prospects/bulk", { method: "POST", body: { action: action, note: ta.value, items: items.slice(i, i + 50) } });
+          done += (res.done || []).length; skipped = skipped.concat(res.skipped || []); failed = failed.concat(res.failed || []);
+        }
+      } catch (e) {
+        failed.push({ name: "the remaining leads", why: e.message });
+      }
+      running = false;
+      var summary = b[0] + ": " + done.toLocaleString() + " done, " + skipped.length + " skipped (changed meanwhile or not applicable), " + failed.length + " failed.";
+      var detail = skipped.concat(failed).slice(0, 12).map(function (s) { return (s.name || s.id) + " — " + s.why; });
+      text(prog, summary + (detail.length ? " " + detail.join(" · ") : ""));
+      $("modalSave").hidden = true;
+      notice(summary, failed.length ? "warn" : "ok");
+      clearSelection(px); loadGrid(px);
+    }, b[0]);
+    setTimeout(function () { ta.focus(); }, 50);
   }
 
   function renderProspects() {
-    var q = ($("prospectSearch").value || "").toLowerCase();
-    var rows = state.prospects.filter(function (p) {
-      if (!q) return true;
-      return [p.name, p.businessName, p.mailingAddressCity, p.mailingAddressPostalCode, p.importBatch, p.externalReference, p.email].join(" ").toLowerCase().indexOf(q) >= 0;
-    });
-    var k = state.psort.key, dir = state.psort.dir;
-    rows.sort(function (a, b) { var x = a[k] || "", y = b[k] || ""; if (x === "") return 1; if (y === "") return -1; return String(x).localeCompare(String(y), undefined, { numeric: true }) * dir; });
-    var body = $("prospectRows"); body.innerHTML = "";
-    rows.forEach(function (p) {
+    var g = grids.pf, body = $("prospectRows"); body.innerHTML = "";
+    g.rows.forEach(function (p) {
       var tr = el("tr");
+      tr.appendChild(tickCell("pf", p));
       var nTd = el("td"); var a = el("a", "cm__link", p.businessName || p.name || "(unnamed)"); a.href = "#"; a.addEventListener("click", function (ev) { ev.preventDefault(); openProspect(p.id); }); nTd.appendChild(a); tr.appendChild(nTd);
       tr.appendChild(el("td", null, p.leadStatus || "—")); tr.appendChild(el("td", null, p.sideExit || "—")); tr.appendChild(el("td", null, p.leadSource || "—"));
-      tr.appendChild(el("td", null, p.mailingAddressCity || "—")); tr.appendChild(el("td", null, p.addressStatus || "—"));
+      tr.appendChild(el("td", null, p.mailingAddressCity || "—")); tr.appendChild(el("td", null, p.mailingAddressPostalCode || "—")); tr.appendChild(el("td", null, p.addressStatus || "—"));
       tr.appendChild(el("td", null, p.importBatch || "—")); tr.appendChild(el("td", null, fmtDate(p.createdAt)));
       body.appendChild(tr);
     });
-    text($("prospectCount"), rows.length + " of " + state.prospects.length);
-    $("prospectsEmpty").hidden = rows.length > 0;
+    markSort("prospectGrid", g);
+  }
+
+  // --- the Review queue ----------------------------------------------------------------------------
+  function webSearchUrl(p) {
+    var who = p.businessName || [p.firstName, p.lastName].filter(Boolean).join(" ") || p.name || "";
+    var where = [p.mailingAddressCity, p.mailingAddressState].filter(Boolean).join(" ");
+    return "https://www.google.com/search?q=" + encodeURIComponent((who + " " + where).trim());
+  }
+  function focusRow(i) {
+    var rows = document.querySelectorAll("#reviewRows tr");
+    var tr = rows[Math.min(i, rows.length - 1)];
+    if (tr) { var inp = tr.querySelector("input.cm__rvweb"); if (inp) { inp.focus(); inp.select(); } }
+  }
+  function dropReviewRow(p, i) {
+    var g = grids.rf;
+    g.rows = g.rows.filter(function (r) { return r.id !== p.id; });
+    delete g.selected[p.id];
+    g.total = Math.max(0, g.total - 1);
+    renderReview(); renderPager("rf"); renderBulk("rf");
+    if (!g.rows.length && g.total) loadGrid("rf"); else focusRow(i);
+  }
+  async function qualifyRow(p, web, mail, i, btn) {
+    if (!web.value.trim() && !mail.value.trim()) {
+      notice("Type the website or email you found first. A lead without either can never be Qualified (ruling 42).", "warn");
+      web.focus(); return;
+    }
+    var done = window.CBMBusy ? CBMBusy.start(btn) : function () {};
+    try {
+      await api("/prospects/" + encodeURIComponent(p.id) + "/review", { method: "POST", body: {
+        action: "qualify", note: "", website: web.value.trim(), email: mail.value.trim(),
+        seenStatus: p.leadStatus || "Unqualified", seenExit: p.sideExit || "" } });
+      notice("Qualified: " + (p.businessName || p.name) + ".", "ok");
+      dropReviewRow(p, i);
+    } catch (e) {
+      notice(e.message, e.status === 409 ? "warn" : "error");
+      if (e.status === 409) dropReviewRow(p, i);
+    } finally { done(); }
+  }
+  function disqualifyRow(p, i) {
+    var body = el("div", "cm__plan");
+    body.appendChild(el("p", null, (p.businessName || p.name) + " — Disqualify"));
+    var f = el("div", "cm__field cm__field--wide"); var lab = el("label", null, "Why will it never be a client, partner or funder? (required)"); lab.htmlFor = "rv_note";
+    var ta = el("textarea"); ta.id = "rv_note"; ta.rows = 3; ta.maxLength = 4000; f.appendChild(lab); f.appendChild(ta); body.appendChild(f);
+    openModal("Disqualify", body, async function () {
+      if (!ta.value.trim()) { modalMsg("Say why — the note is required.", "error"); return; }
+      try {
+        await api("/prospects/" + encodeURIComponent(p.id) + "/review", { method: "POST", body: {
+          action: "disqualify", note: ta.value, seenStatus: p.leadStatus || "Unqualified", seenExit: p.sideExit || "" } });
+        closeModal(); notice("Disqualified: " + (p.businessName || p.name) + ".", "ok");
+        dropReviewRow(p, i);
+      } catch (e) {
+        if (e.status === 409) { closeModal(); notice(e.message, "warn"); dropReviewRow(p, i); return; }
+        throw e;
+      }
+    }, "Disqualify");
+    setTimeout(function () { ta.focus(); }, 50);
+  }
+
+  function renderReview() {
+    var g = grids.rf, body = $("reviewRows"); body.innerHTML = "";
+    g.rows.forEach(function (p, i) {
+      var tr = el("tr");
+      tr.appendChild(tickCell("rf", p));
+      var nTd = el("td"); var a = el("a", "cm__link", p.businessName || p.name || "(unnamed)"); a.href = "#"; a.addEventListener("click", function (ev) { ev.preventDefault(); openProspect(p.id); }); nTd.appendChild(a); tr.appendChild(nTd);
+      tr.appendChild(el("td", null, [p.firstName, p.lastName].filter(Boolean).join(" ") || "—"));
+      tr.appendChild(el("td", null, [p.mailingAddressCity, p.mailingAddressPostalCode].filter(Boolean).join(" ") || "—"));
+      tr.appendChild(el("td", null, p.phone || "—"));
+      var sTd = el("td"); var s = el("a", "cm__link", "Search the web"); s.href = webSearchUrl(p); s.target = "cbm-lead-lookup"; s.rel = "noopener"; sTd.appendChild(s); tr.appendChild(sTd);
+      var wTd = el("td"); var web = el("input", "cm__rvweb"); web.type = "url"; web.id = "rv_web_" + p.id; web.placeholder = "https://…"; web.value = p.website || ""; web.setAttribute("aria-label", "Website for " + (p.businessName || p.name)); wTd.appendChild(web); tr.appendChild(wTd);
+      var eTd = el("td"); var mail = el("input", "cm__rvmail"); mail.type = "email"; mail.id = "rv_mail_" + p.id; mail.placeholder = "name@…"; mail.value = p.email || ""; mail.setAttribute("aria-label", "Email for " + (p.businessName || p.name)); eTd.appendChild(mail); tr.appendChild(eTd);
+      var dTd = el("td");
+      var qb = el("button", "cm__rowbtn", "Qualify"); qb.type = "button"; qb.addEventListener("click", function () { qualifyRow(p, web, mail, i, qb); }); dTd.appendChild(qb);
+      var db = el("button", "cm__rowbtn", "Disqualify…"); db.type = "button"; db.addEventListener("click", function () { disqualifyRow(p, i); }); dTd.appendChild(db);
+      tr.appendChild(dTd);
+      [web, mail].forEach(function (inp) { inp.addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); qualifyRow(p, web, mail, i, qb); } }); });
+      tr.appendChild(el("td", null, p.importBatch || "—"));
+      body.appendChild(tr);
+    });
+  }
+
+  function markSort(tableId, g) {
+    Array.prototype.forEach.call(document.querySelectorAll("#" + tableId + " .cm__sortind"), function (s) { s.remove(); });
+    var th = document.querySelector("#" + tableId + ' th[data-sort="' + g.sort + '"]');
+    if (th) th.appendChild(el("span", "cm__sortind", g.dir === "asc" ? "▲" : "▼"));
+  }
+
+  function wireGrid(px) {
+    var g = grids[px], timer = null;
+    GRID_FILTERS.forEach(function (f) {
+      var e = $(px + "_" + f); if (!e) return;
+      var go = function () { g.offset = 0; clearSelection(px); loadGrid(px); };
+      if (f === "q" || f === "place" || f === "batch") e.addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(go, 500); });
+      else e.addEventListener("change", go);
+    });
+    $(px + "_clear").addEventListener("click", function () {
+      GRID_FILTERS.forEach(function (f) { var e = $(px + "_" + f); if (e) e.value = ""; });
+      g.offset = 0; clearSelection(px); loadGrid(px);
+    });
+    $(px + "_prev").addEventListener("click", function () { page(px, -1); });
+    $(px + "_next").addEventListener("click", function () { page(px, 1); });
+    $(px + "_page").addEventListener("change", function () { selectPage(px, $(px + "_page").checked); });
+    $(px + "_all").addEventListener("click", function () { selectAllMatching(px); });
+    $(px + "_bulkclear").addEventListener("click", function () { clearSelection(px); });
+    $(px + "_bulkdq").addEventListener("click", function () { openBulk(px, "disqualify"); });
+    $(px + "_bulkdnc").addEventListener("click", function () { openBulk(px, "do-not-contact"); });
+  }
+  wireGrid("pf"); wireGrid("rf");
+  Array.prototype.forEach.call(document.querySelectorAll("#prospectGrid th[data-sort]"), function (th) {
+    th.addEventListener("click", function () {
+      var g = grids.pf, key = th.getAttribute("data-sort");
+      if (g.sort === key) g.dir = g.dir === "asc" ? "desc" : "asc"; else { g.sort = key; g.dir = "asc"; }
+      g.offset = 0; loadGrid("pf");
+    });
+  });
+  $("pf_export").addEventListener("click", function () {
+    var s = qs(gridQuery("pf"));
+    var a = document.createElement("a"); a.href = API + "/prospects/export" + (s ? "?" + s : ""); a.rel = "noopener";
+    document.body.appendChild(a); a.click(); a.remove();
+    notice("Exporting the " + grids.pf.total.toLocaleString() + " matching leads as a CSV file — your browser saves it.", "ok");
+  });
+
+  function fillGridOptions() {
+    ["pf", "rf"].forEach(function (px) {
+      if ($(px + "_status")) fillSelect($(px + "_status"), state.fields.prospectOptions.leadStatus, 1);
+      if ($(px + "_exit")) fillSelect($(px + "_exit"), state.fields.prospectOptions.sideExit, 2);
+      fillSelect($(px + "_source"), state.fields.prospectOptions.leadSource, 1);
+    });
+  }
+  function fillCampaignOptions() {
+    ["pf", "rf"].forEach(function (px) {
+      var sel = $(px + "_camp"), keep = sel.value;
+      Array.prototype.slice.call(sel.options, 3).forEach(function (o) { o.remove(); });
+      (state.campaigns || []).forEach(function (c) { var o = el("option", null, "In " + c.name); o.value = c.id; sel.appendChild(o); });
+      sel.value = keep;
+    });
+  }
+  function fillBatchOptions(batches) {
+    ["pf", "rf"].forEach(function (px) {
+      var dl = $(px + "_batches"); dl.innerHTML = "";
+      (batches || []).forEach(function (b) { var o = el("option"); o.value = b.name; dl.appendChild(o); });
+    });
   }
 
   async function openProspect(id) {
@@ -970,7 +1239,7 @@
     if (action === "not-same-company") return p.sideExit === "Duplicate" ? "" : "Only a lead marked Duplicate can be told it is not the same company.";
     if (p.sideExit) return "This lead has already stopped being worked (" + p.sideExit + "); a reason is never written over another.";
     if (action === "qualify" && status !== "Unqualified") return "Only an Unqualified lead is qualified by review; this one is " + status + ".";
-    if (action === "qualify" && !p.website && !p.email) return "A lead without a website or an email can never be Qualified (ruling 42). Add one to the lead in the CRM first, or leave it Unqualified — campaigns may still reach it.";
+    if (action === "qualify" && !p.website && !p.email) return "A lead without a website or an email can never be Qualified (ruling 42). Type the one you found into its row on the Review tab, or leave it Unqualified — campaigns may still reach it.";
     if (action === "disqualify" && status !== "Unqualified" && status !== "Qualified") return "Only an Unqualified or Qualified lead can be disqualified; this one is " + status + ".";
     if (action === "do-not-contact" && status === "Converted") return "This lead is Converted; its Company or Contact is the record now.";
     return "";
@@ -1002,38 +1271,6 @@
     setTimeout(function () { ta.focus(); }, 50);
   }
 
-  // --- the Review tab: the leads waiting at Unqualified ----------------------------------------
-  async function loadReview() {
-    try {
-      state.review = (await api("/prospects?status=Unqualified&exit=none")).prospects || [];
-      renderReview();
-    } catch (e) { notice(e.message, "error"); }
-  }
-
-  function renderReview() {
-    var q = ($("reviewSearch").value || "").toLowerCase();
-    var rows = (state.review || []).filter(function (p) {
-      return !q || [p.businessName, p.name, p.firstName, p.lastName, p.email, p.phone, p.website, p.mailingAddressCity, p.importBatch].join(" ").toLowerCase().indexOf(q) >= 0;
-    });
-    var body = $("reviewRows"); body.innerHTML = "";
-    rows.forEach(function (p) {
-      var tr = el("tr");
-      var nTd = el("td"); var a = el("a", "cm__link", p.businessName || p.name || "(unnamed)"); a.href = "#"; a.addEventListener("click", function (ev) { ev.preventDefault(); openProspect(p.id); }); nTd.appendChild(a); tr.appendChild(nTd);
-      tr.appendChild(el("td", null, [p.firstName, p.lastName].filter(Boolean).join(" ") || "—"));
-      tr.appendChild(el("td", null, p.phone || "—")); tr.appendChild(el("td", null, p.email || "—")); tr.appendChild(el("td", null, p.website || "—"));
-      tr.appendChild(el("td", null, p.mailingAddressCity || "—")); tr.appendChild(el("td", null, p.importBatch || "—"));
-      var aTd = el("td");
-      [REVIEW_ACTIONS[0], REVIEW_ACTIONS[1]].forEach(function (act) {
-        var b = el("button", "cm__rowbtn", act[1]); b.type = "button";
-        b.addEventListener("click", function () { runReview(p, act, loadReview); }); aTd.appendChild(b);
-      });
-      tr.appendChild(aTd); body.appendChild(tr);
-    });
-    text($("reviewCount"), rows.length + " waiting");
-    $("reviewEmpty").hidden = rows.length > 0;
-  }
-
-  // --- imports ---------------------------------------------------------------------------------------
   async function loadImports() {
     try {
       var res = await api("/prospects/imports");
@@ -1047,6 +1284,7 @@
         body.appendChild(tr);
       });
       text($("importsCount"), (res.batches || []).length + " recent");
+      fillBatchOptions(res.batches);
       $("importsEmpty").hidden = (res.batches || []).length > 0;
     } catch (e) { notice(e.message, "error"); }
   }
@@ -1123,11 +1361,8 @@
   $("campaignSearch").addEventListener("input", renderCampaigns);
   $("statusFilter").addEventListener("change", renderCampaigns);
   $("kindFilter").addEventListener("change", renderCampaigns);
-  $("prospectSearch").addEventListener("input", renderProspects);
-  ["stageFilter", "exitFilter", "doorFilter"].forEach(function (id) { $(id).addEventListener("change", loadProspects); });
   $("prospectRefreshBtn").addEventListener("click", loadProspects);
   $("reviewRefreshBtn").addEventListener("click", loadReview);
-  $("reviewSearch").addEventListener("input", renderReview);
   $("importBtn").addEventListener("click", openImport); $("importBtn2").addEventListener("click", openImport);
   $("blockedReloadBtn").addEventListener("click", function () { location.reload(); });
   // The lock guards against editing one record in two tabs. When the other tab
@@ -1138,7 +1373,6 @@
     await loadRecord();
   });
   wireSort("campaignGrid", state.sort, renderCampaigns);
-  wireSort("prospectGrid", state.psort, renderProspects);
 
   (async function init() {
     try {
@@ -1155,7 +1389,7 @@
     try {
       await ensureFields();
       fillSelect($("statusFilter"), state.fields.options.campaignStatus, 1); fillSelect($("kindFilter"), state.fields.options.campaignKind, 1);
-      fillSelect($("stageFilter"), state.fields.prospectOptions.leadStatus, 1); fillSelect($("exitFilter"), state.fields.prospectOptions.sideExit, 2); fillSelect($("doorFilter"), state.fields.prospectOptions.leadSource, 1);
+      fillGridOptions();
     } catch (e) { notice(e.message, "error"); }
     if (RECORD_ID) {
       $("sectionNav").hidden = true;
@@ -1165,8 +1399,12 @@
     } else {
       show($("campaignsPanel"));
       await loadCampaigns();
-      var hash = (location.hash || "").replace("#", "");
-      if (hash === "prospects" || hash === "imports" || hash === "review") showSection(hash);
+      fillCampaignOptions();
+      var h = hashParams();
+      if (h.section === "prospects") readHash("pf", h.params);
+      if (h.section === "review") readHash("rf", h.params);
+      if (h.section === "prospects" || h.section === "imports" || h.section === "review") showSection(h.section);
+      if (h.section !== "imports") loadImports();
     }
   })();
 })();

@@ -45,6 +45,14 @@ found; move resolved items to the bottom with the resolution date.
     on crm-test (dry run: exactly that one change), production and Boston
     with the role script at their slots, and the roles standard
     (`prds/chapter-network/roles-standard/`) updated to match.
+    **The Leads and Review grids at volume (v0.267.0, 10-20-26, build plan
+    § 7b): built, committed, not pushed; live pass owed on crm-test** with
+    the 3,000 throwaway leads `scripts/sandbox/make_volume_leads.py` made
+    (gone after the next nightly reset — re-run it the day of the pass). The
+    pass also times an 800-row import
+    (`prds/prospect-marketing/live-pass/grids-month-filing.csv`, a month at
+    10,000 a year): the import plans every row's already-known check inside
+    one request, and has never been tried at that size.
     The earlier passes' record follows.
     **Phase 1 BUILT and LIVE-PASSED on crm-test
     (v0.258.0–v0.258.5, 10-15/17-26, dark behind `CAMPAIGNS_ENABLED`);
