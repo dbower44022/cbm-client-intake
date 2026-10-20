@@ -3,6 +3,8 @@
 Guidance for Claude Code working in the **cbm-client-intake** repository.
 Read automatically at session start — the orientation anchor if a session is lost.
 
+**Operating mode:** DETAIL is this repository's project default (Doug's decision, 10-20-26). The modes are defined in `~/.claude/CLAUDE.md`.
+
 **Keeping this file useful.** It is loaded into *every* session, so it earns its
 size or it costs every future session. The rule that keeps it small:
 
