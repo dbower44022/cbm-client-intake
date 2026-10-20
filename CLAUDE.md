@@ -2008,8 +2008,10 @@ each block.
   run as the CRM administrator) and `campaigns/sandbox_demo.py`, which puts
   the six fixed demo links back after every nightly reset (Doug's ruling
   10-20-26) — `/setup` → Operations → *Sandbox demo campaign links* does it
-  on demand. Applied on crm-test 10-20-26; survives the night only after
-  the recapture, `OPEN-ITEMS.md` #45. Record list: `demo-records.md`.
+  on demand. **Deployed and baselined on crm-test 10-20-26** (Doug ran the
+  re-baseline); the worker's first nightly restore ran 05:00 UTC the same
+  night, `sandbox demo links: 6 created`, and the codes answer 302. Done. Record list:
+  `demo-records.md`.
 
 - **v0.265.0–v0.265.3 (2026-10-19) — the lead model.** Live on crm-test
   and production, dark on production (its CRM lacks the lead fields until

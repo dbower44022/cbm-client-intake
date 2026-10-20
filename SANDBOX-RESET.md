@@ -1,6 +1,6 @@
 # The training sandbox — nightly reset runbook
 
-Last Updated: 10-20-26 00:21 · Revision 1.1 — change log at the end.
+Last Updated: 10-20-26 01:05 · Revision 1.2 — change log at the end.
 
 crm-test does three jobs now: it is the **pre-production review gate**, the
 **training sandbox**, and the **release-test environment**. This document is
@@ -195,8 +195,9 @@ names them: `N table(s) newer than the baseline will be truncated: …`). From
 10-08-26 that was `c_event_presenter` and `c_partner_profile_event`: every
 presenter and every partner-event link made on crm-test vanished at 04:00 UTC.
 v0.250.0 (10-11-26) taught the seeders to make them; by 10-18-26 the list had
-grown to ten tables (the prospect and outreach entities among them) and the
-recapture was still owed (`OPEN-ITEMS.md` #45). **The step page for the whole
+grown to ten tables (the prospect and outreach entities among them). v0.266.0
+added the fourth seeder, and the baseline was recaptured on 10-20-26
+(`OPEN-ITEMS.md` #45, resolved). **The step page for the whole
 run, one command per copy button:**
 https://claude.ai/artifact/VSrvvKB49MkmzA2dgHRsfS.
 
@@ -353,5 +354,6 @@ than by default.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 10-20-26 01:05 | Claude (Claude Code) | The baseline recaptured on 10-20-26. |
 | 1.1 | 10-20-26 00:21 | Claude (Claude Code) | The fourth seeder (`seed_outreach_data.py`) in the re-baseline sitting, and the demo campaign links the worker restores after every reset. Revision control added. |
 | 1.0 | — | — | The runbook before revision control. |

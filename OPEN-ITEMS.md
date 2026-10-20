@@ -198,64 +198,6 @@ found; move resolved items to the bottom with the resolution date.
     too, so a demo campaign's links need the seeder. No CRM change, no vendor account, no
     code. **One session on this arc at a time.**
 
-45. **The training sandbox loses every presenter and partner-event link at
-    04:00 UTC, and the demo events had none to lose** (10-11-26, Doug's
-    request: demo events with presenters that are also related to a partner
-    and a funder). The golden baseline dates from 09-07-26; `c_event_presenter`
-    and `c_partner_profile_event` were built after it, and the reset's own log
-    names them as the two tables it truncates nightly. **Built (v0.250.0):**
-    `enrich_training_data.py` gained `add_event_showcase` — presenters through
-    the application's own `add_presenter` (a mentor's biography, title and
-    photo copied; a guest `Presenter`-typed Contact created), the partner and
-    funder links, `showPresenterBios`, and `topics` (also emptied nightly);
-    `seed_training_data.py` gained `stamp_management_teams` (#40a);
-    `deepen_showcase_records.py`'s partner relate named the host link removed
-    on 10-07 and now names `sponsoredEvents`. All feature-detected, idempotent,
-    merge-only; dry runs clean against crm-test 10-11-26 (27 enrichment
-    changes, 8 partners + 6 funders missing their team). **Owed — Doug's
-    morning after a reset, with no release test running:** the three
-    `--apply` runs, the audit and containment checks, then on the droplet
-    `purge-deleted --apply` and `baseline --apply`, then `reset --apply` by
-    hand and the event, partner and funder opened as Mark Marketing, Partner
-    Manager and Sally Sponsor (`SANDBOX-RESET.md` § *Re-baseline*).
-    **Step page, every command with a copy button:**
-    https://claude.ai/artifact/VSrvvKB49MkmzA2dgHRsfS (Doug's private page,
-    written 10-11-26). **When:** the morning after a nightly reset — the CRM
-    half runs at 04:00 UTC, which is midnight Eastern on daylight time (23:00
-    the evening before once clocks go back on 11-01-26) and the app half an
-    hour later, so any time after 01:05 Eastern — on a day with no release
-    test running, because the capture freezes whatever is on crm-test. Two
-    things the dry run could not prove: (a) whether the intake API key's role
-    may CREATE `CEventPresenter` — the org key reads it (handoff § 2); a 403
-    on the enrichment apply is the stop-and-report case (the
-    `run_with_admin.py` launcher supplies only the `ESPO_ADMIN_*` variables,
-    which this script does not read); (b) a tester's half-made record left
-    on crm-test at capture time becomes pristine. **Still owed 10-18-26**,
-    and the gap has grown: the droplet's baseline is still 09-07-26 and the
-    reset of 10-18 truncated **ten** tables newer than it —
-    `c_engagement_partner_profile`, `c_event_presenter`,
-    `c_outreach_campaign`, `c_outreach_campaign_event`,
-    `c_outreach_campaign_partner_profile`, `c_outreach_touch`,
-    `c_partner_profile_event`, `c_partner_profile_mentor_profile`,
-    `c_prospect`, `c_sponsor_profile_mentor_profile` — so the prospect and
-    outreach arc's seeder stage (#51) should land before the same recapture,
-    or the recapture is done twice. **That stage is built (v0.266.0,
-    10-20-26):** `scripts/sandbox/seed_outreach_data.py` (seventeen leads,
-    six campaigns, ten touches, two converted companies and three contacts,
-    an engagement's two referring partners, the two additional managers —
-    which covers four more of the ten tables), run as the CRM administrator;
-    and the demo campaign links, which live in the application's database,
-    are put back by the worker after every reset with fixed codes
-    (`campaigns/sandbox_demo.py`, Doug's ruling 10-20-26, option 1) or on
-    demand at `/setup` → Operations → *Sandbox demo campaign links*. **Applied
-    on crm-test 10-20-26 04:17 UTC** (52 changes, a second dry run 0, read
-    back under the org key; the November postcard's list selects exactly the
-    three leads `demo-records.md` names), so it survives only until 04:00 UTC
-    on 10-21-26 unless the recapture runs today. **The step page is rewritten
-    for it** (revision 2.0, 10-20-26 00:25, same address): push, the four
-    seeders with today's dry-run counts, the Operations job, the recapture,
-    the check as Mark Marketing.
-
 50. **A partner's own client intake link (v0.255.0) — live on crm-test
     and production 10-12-26 17:42, live pass owed.** Doug's requirement 10-12-26, link form ruled the CRM id;
     no CRM change. **Owed, on crm-test:** as partner.manager open a
@@ -1849,6 +1791,78 @@ toggle.
     over the fix on 2026-10-07, so the fix is still owed.
 
 ## Resolved
+
+**RESOLVED 2026-10-20 — #45, the sandbox re-baseline.** Doug ran the
+step page (https://claude.ai/artifact/VSrvvKB49MkmzA2dgHRsfS, revision
+2.0) on 10-20-26: v0.266.0 pushed, the four seeders applied, the six demo
+links restored from `/setup` → Operations, the baseline recaptured and a
+reset proved by hand, the result seen as Mark Marketing. Checked
+afterwards (01:00 Eastern): crm-test reports 0.266.0; the outreach
+seeder's dry run finds 0 changes after the restore; all six demo link
+codes answer 302 to their destinations and the September postcard's first
+card opens its landing page (200). The worker's own restore ran at 05:00
+UTC the same night after the app-table reset (`sandbox demo links: 6
+created, 0 present, 0 skipped` in the worker log), and the codes answered
+302 again afterwards. The original item follows.
+
+45. **The training sandbox loses every presenter and partner-event link at
+    04:00 UTC, and the demo events had none to lose** (10-11-26, Doug's
+    request: demo events with presenters that are also related to a partner
+    and a funder). The golden baseline dates from 09-07-26; `c_event_presenter`
+    and `c_partner_profile_event` were built after it, and the reset's own log
+    names them as the two tables it truncates nightly. **Built (v0.250.0):**
+    `enrich_training_data.py` gained `add_event_showcase` — presenters through
+    the application's own `add_presenter` (a mentor's biography, title and
+    photo copied; a guest `Presenter`-typed Contact created), the partner and
+    funder links, `showPresenterBios`, and `topics` (also emptied nightly);
+    `seed_training_data.py` gained `stamp_management_teams` (#40a);
+    `deepen_showcase_records.py`'s partner relate named the host link removed
+    on 10-07 and now names `sponsoredEvents`. All feature-detected, idempotent,
+    merge-only; dry runs clean against crm-test 10-11-26 (27 enrichment
+    changes, 8 partners + 6 funders missing their team). **Owed — Doug's
+    morning after a reset, with no release test running:** the three
+    `--apply` runs, the audit and containment checks, then on the droplet
+    `purge-deleted --apply` and `baseline --apply`, then `reset --apply` by
+    hand and the event, partner and funder opened as Mark Marketing, Partner
+    Manager and Sally Sponsor (`SANDBOX-RESET.md` § *Re-baseline*).
+    **Step page, every command with a copy button:**
+    https://claude.ai/artifact/VSrvvKB49MkmzA2dgHRsfS (Doug's private page,
+    written 10-11-26). **When:** the morning after a nightly reset — the CRM
+    half runs at 04:00 UTC, which is midnight Eastern on daylight time (23:00
+    the evening before once clocks go back on 11-01-26) and the app half an
+    hour later, so any time after 01:05 Eastern — on a day with no release
+    test running, because the capture freezes whatever is on crm-test. Two
+    things the dry run could not prove: (a) whether the intake API key's role
+    may CREATE `CEventPresenter` — the org key reads it (handoff § 2); a 403
+    on the enrichment apply is the stop-and-report case (the
+    `run_with_admin.py` launcher supplies only the `ESPO_ADMIN_*` variables,
+    which this script does not read); (b) a tester's half-made record left
+    on crm-test at capture time becomes pristine. **Still owed 10-18-26**,
+    and the gap has grown: the droplet's baseline is still 09-07-26 and the
+    reset of 10-18 truncated **ten** tables newer than it —
+    `c_engagement_partner_profile`, `c_event_presenter`,
+    `c_outreach_campaign`, `c_outreach_campaign_event`,
+    `c_outreach_campaign_partner_profile`, `c_outreach_touch`,
+    `c_partner_profile_event`, `c_partner_profile_mentor_profile`,
+    `c_prospect`, `c_sponsor_profile_mentor_profile` — so the prospect and
+    outreach arc's seeder stage (#51) should land before the same recapture,
+    or the recapture is done twice. **That stage is built (v0.266.0,
+    10-20-26):** `scripts/sandbox/seed_outreach_data.py` (seventeen leads,
+    six campaigns, ten touches, two converted companies and three contacts,
+    an engagement's two referring partners, the two additional managers —
+    which covers four more of the ten tables), run as the CRM administrator;
+    and the demo campaign links, which live in the application's database,
+    are put back by the worker after every reset with fixed codes
+    (`campaigns/sandbox_demo.py`, Doug's ruling 10-20-26, option 1) or on
+    demand at `/setup` → Operations → *Sandbox demo campaign links*. **Applied
+    on crm-test 10-20-26 04:17 UTC** (52 changes, a second dry run 0, read
+    back under the org key; the November postcard's list selects exactly the
+    three leads `demo-records.md` names), so it survives only until 04:00 UTC
+    on 10-21-26 unless the recapture runs today. **The step page is rewritten
+    for it** (revision 2.0, 10-20-26 00:25, same address): push, the four
+    seeders with today's dry-run counts, the Operations job, the recapture,
+    the check as Mark Marketing.
+
 
 **RESOLVED 2026-10-12 — an info@ submission "that created a partner" never
 did, and nothing was lost.** Doug asked why the partner from reference
