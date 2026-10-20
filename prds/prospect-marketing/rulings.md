@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-20-26 15:48 · Revision 1.30 — change log at the end.
+Last Updated: 10-20-26 15:50 · Revision 1.31 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -693,6 +693,24 @@ screen that several campaigns use. Doug's reply at 15:47: "b".
     stay in the CRM — no CRM change; lists are edited by the Marketing
     Admin Team, the campaigns gate. (10-20-26)
 
+### Doug's ruling (10-20-26, on hand edits to a dynamic list)
+
+Put as a consequential decision: option A, hand edits become standing
+"always include" / "always exclude" entries applied after the recipe on
+every run; option B, a dynamic list takes no hand edits; option C, hand
+edits last until the next run. Doug's reply at 15:49: "a".
+
+65. **A hand edit on a dynamic list becomes a standing entry** (option A):
+    "always include" or "always exclude", applied after the recipe on
+    every run, shown in its own panel on the list with who made it and
+    when, and removable. The send-time checks still apply to an "always
+    include". Approved with it, as presented: on a static list a hand tick
+    simply changes the frozen membership; a standing entry whose record no
+    longer exists in the CRM is flagged, never silently dropped; each
+    entry carries who, when and an optional note; a standing entry is not
+    a Do Not Contact exit — a person no campaign may contact still takes
+    the lead's Do Not Contact action. (10-20-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -813,8 +831,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.30 |
-| Last Updated | 10-20-26 15:48 |
+| Version | 1.31 |
+| Last Updated | 10-20-26 15:50 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -822,6 +840,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.31 | 10-20-26 15:50 | Claude (Claude Code) | Ruling 65 appended: a hand edit on a dynamic list becomes a standing include/exclude entry (Doug's "a"). Campaign-audience rulings 58–65 complete. |
 | 1.30 | 10-20-26 15:48 | Claude (Claude Code) | Ruling 64 appended: named reusable lists on a Lists tab; a campaign picks its list (Doug's "b"). |
 | 1.29 | 10-20-26 15:33 | Claude (Claude Code) | Ruling 63 appended: list-step fields come from a per-type curated list editable at `/setup` (Doug's "c"). |
 | 1.28 | 10-20-26 15:29 | Claude (Claude Code) | Rulings 61 and 62 appended: static and dynamic lists both supported; a list is an ordered recipe of steps (Doug's "yes to both"). |
