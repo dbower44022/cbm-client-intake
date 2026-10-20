@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-20-26 01:16 · Revision 0.17 — change log at the end.
+Last Updated: 10-20-26 01:44 · Revision 0.18 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -1283,12 +1283,13 @@ alternative — labels only, stored values unchanged — is question 13.
 
 ---
 
-## 7b. The Leads and Review grids at volume — being gathered (10-20-26)
+## 7b. The Leads and Review grids at volume (10-20-26)
 
 Doug's requirement, with ruling 56: "we need to dramatically improve the
 'Leads' and 'Review' grids to handle a large number of records, and provide
 better searching and qualifying." His requirements are being gathered one
-question at a time; nothing below is a decision.
+question at a time (answers 1–5 below); § 7b.1 is the design drawn from them,
+a draft until Doug approves it.
 
 **How the two grids work today** (read from the code, 10-20-26):
 
@@ -1304,6 +1305,102 @@ question at a time; nothing below is a decision.
   *Do Not Contact* and *Not the same company* in the lead's window. There is no
   bulk action and nothing to help decide (no website check, no
   duplicate hint beyond the import's own).
+- To qualify, a lead needs a website or an email (ruling 42), and the
+  Review screen cannot add either: its refusal says "Add one to the lead
+  in the CRM first". Most leads reach Review precisely because they have
+  neither (ruling 53 sends a filing row with one straight to Qualified).
+
+**Doug's answers so far:**
+
+1. **Volume: about 10,000 leads a year** (10-20-26). So the grids are built
+   for tens of thousands over time: the CRM searches, sorts and counts, and
+   the grid shows a page at a time.
+2. **Qualifying: both bulk and a fast single lookup** (option C,
+   10-20-26). Bulk *Disqualify* and *Do Not Contact* over ticked rows or a
+   filter, one shared reason, for the obvious no's; then one lead at a
+   time with a web search for the name and city, the website or email
+   typed into the row, and *Qualify* / *Disqualify* moving to the next lead
+   from the keyboard. No bulk *Qualify* (each lead needs its own website or
+   email, ruling 42).
+3. **Leads grid search: one box plus more filters** (option B, 10-20-26).
+   The box matches the business name, the person's name, email, phone,
+   website, street, city, ZIP and filing number. Filters, combinable:
+   status, reason, Lead Source, import batch, ZIP or city, the date the
+   lead arrived (from–to), and reached by a campaign (yes / no / this
+   campaign). The count shows the total matching; the grid's search and
+   filters ride the address so a search can be bookmarked. No saved
+   searches.
+4. **The Leads grid acts too: bulk actions and an export** (option B,
+   10-20-26). Ticked rows, or everything the filter matches: *Disqualify*
+   and *Do Not Contact* with one shared reason, the count named before it
+   runs, every change in the action history. *Export* downloads the
+   matching leads as a CSV file. No editing in the grid (Review is where a
+   website or email is typed).
+5. **Two reviewers at once: a guard, no claiming** (the recommendation,
+   10-20-26). Every decision re-reads the lead and is refused if someone
+   else decided it first, naming who; the queue skips decided leads. The
+   guide says the filters split the work (by import batch or ZIP).
+   Claiming is built only if duplicated lookups prove a problem.
+
+### 7b.1 The design — draft for approval
+
+**Shared: the CRM does the work.** One server-side list call for both
+grids: `GET /campaigns/api/prospects` gains `q`, the new filters, `sort`,
+`dir`, `offset` and `limit` (page of 50, at most 200 — the CRM's own
+limit), and answers `{prospects, total}`. The search box becomes one `or`
+clause of `contains` over `businessName`, `name`, `firstName`, `lastName`,
+`email`, `phone`, `website`, `mailingAddressStreet`, `mailingAddressCity`,
+`mailingAddressPostalCode`, `externalReference` — no CRM change.
+"Reached by a campaign" yes / no is the `touches` link's `isLinked` /
+`isNotLinked` (checked live before it is relied on); "this campaign"
+reads that campaign's touches and filters by their lead ids. The silent
+2,000 cap goes; nothing loads every lead any more. No CRM change and no
+switch: the grids are already dark behind `CAMPAIGNS_ENABLED`.
+
+**The Leads grid.** The search box (typing waits half a second, then
+asks), a filter bar (status, reason, Lead Source, import batch, ZIP or
+city, arrived from–to, reached by a campaign), sortable columns, *n of
+total* and Previous / Next pages. The whole state rides the address
+(`#prospects?q=…&status=…`), so a search can be bookmarked and the back
+button works. A tick column with *select this page* and *select all n
+matching*; with any ticked, a bar offers **Disqualify…** and **Do Not
+Contact…** (one shared reason; Disqualify requires it, as today).
+**Export** downloads the matching leads as CSV (UTF-8, one row per lead,
+the grid's columns plus address, website, email, phone, filing number),
+streamed by the server page by page.
+
+**Bulk actions — plan, then apply, the house pattern.** *Select all n
+matching* sends the filter, not the ids: the server resolves it, refuses
+above 2,000 ("narrow the filter"), and returns the count and ids. The
+confirmation names the count and the reason ("Disqualify 12 leads?"). The
+browser then applies in batches of 50 to `POST
+/campaigns/api/prospects/bulk`, showing progress; each lead is re-read
+and skipped, never overwritten, if it changed since (a status other than
+the one the action expects, or a reason already set — the existing review
+rules, ruling 50). One action-history row per batch, naming every lead.
+The result says *done*, *skipped (changed meanwhile)* and *failed*.
+
+**The Review queue.** The same server-side list, fixed to Unqualified
+with no reason, oldest first, with the same search box and filters (so
+two reviewers can split by batch or ZIP). Each row carries:
+- **Search the web** — opens a search for the business name and city
+  (or the person's name and city) in one reused browser tab;
+- a **Website** box and an **Email** box, filled with what the lead holds;
+- **Qualify** (saves the typed website or email, then qualifies — one
+  request, refused with the ruling-42 message when both are empty),
+  **Disqualify…** (reason required) and the lead's window for the rest.
+Keyboard: in a row's Website or Email box, Enter is Qualify; after any
+decision the row leaves the queue and the cursor lands in the next row's
+Website box. The same tick column and bulk bar as the Leads grid. The
+guard of answer 5 on every decision.
+
+**Cost, named.** About two to three days: a list endpoint, a bulk
+endpoint, an export route, the review action taking a website and email,
+the two grids rewritten in the existing page, tests against a fake CRM,
+and a live pass on crm-test with the seeded leads. The live check owed is
+the `isLinked` filter and the `contains` search speed at real volume —
+crm-test holds seventeen leads, so a test import of a few thousand rows
+is part of the pass.
 
 ---
 
@@ -1524,6 +1621,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.18 | 10-20-26 01:44 | Claude (Claude Code) | § 7b: Doug's five answers on the Leads and Review grids, and § 7b.1, the design drawn from them, a draft for approval. |
 | 0.17 | 10-20-26 01:16 | Claude (Claude Code) | § 9 question 12 answered: A (ruling 56). Doug's new requirement for the Leads and Review grids opens § 7b, being gathered. |
 | 0.16 | 10-20-26 01:08 | Claude (Claude Code) | § 9 question 10 answered: A, one social media kind with a Platform field (ruling 55). |
 | 0.15 | 10-19-26 23:44 | Claude (Claude Code) | § 7a.5 step 3 passed: the lead model's live pass on crm-test, with v0.265.1–3 and ruling 54. Step 4, production, is next. |
