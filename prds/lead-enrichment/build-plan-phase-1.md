@@ -1,6 +1,6 @@
 # Build plan — lead enrichment phase 1: the free pass and the fit score
 
-Last Updated: 10-20-26 17:38 · Revision 0.1 (draft, not approved)
+Last Updated: 10-20-26 17:47 · Revision 0.2 (draft, not approved)
 
 **What it delivers.** Every open lead gets a fit score from 0 to 100,
 computed by the free pass at no cost per record. The service-area gate comes
@@ -162,10 +162,13 @@ and stop changing. Nothing else reads them.
 
 ## 7. Owed by Doug before the live pass
 
-- The chapter's counties for `CHAPTER_COUNTIES`.
+- ~~The chapter's counties~~ — **answered (design E17):** Cuyahoga and
+  Lake. `CHAPTER_COUNTIES` = `OH:Cuyahoga|OH:Lake`, set at `/setup` in
+  rollout step 2.
 
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.2 | 10-20-26 17:47 | Claude (Claude Code) | § 7: the counties answered (E17). |
 | 0.1 | 10-20-26 17:38 | Claude (Claude Code) | Created from design § 4 and § 8 phase 1. |

@@ -1,6 +1,6 @@
 # Lead and client enrichment — design
 
-Last Updated: 10-20-26 17:38 · Revision 1.1 (approved 10-20-26; § 9 questions 2 and 6 open)
+Last Updated: 10-20-26 17:47 · Revision 1.2 (approved 10-20-26; § 9 questions 2 and 6 open)
 
 **Status.** Approved by Doug on 10-20-26, section by section. Section 1
 records his rulings and is binding (append only). Section 9 lists the two
@@ -118,6 +118,10 @@ questions still open: the segment list and the survey fields.
   give an accuracy figure. It then switches on for new clients, then for
   leads. The client figure is an upper bound, so the sample of 50 lead runs
   checked by a person is still required before it switches on for leads.
+- **E17. Cleveland Business Mentors' service area is Cuyahoga and Lake
+  counties** (option 1, build plan phase 1 § 7). `CHAPTER_COUNTIES` is set to
+  `OH:Cuyahoga|OH:Lake` at `/setup`. The cost, accepted: a business in a
+  neighbouring county is flagged out of area until the list is widened.
 
 ## 2. What the system does, in one paragraph
 
@@ -323,6 +327,7 @@ slows in the thousands (E6).
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 10-20-26 17:47 | Claude (Claude Code) | Ruling E17: the service area is Cuyahoga and Lake counties. |
 | 1.1 | 10-20-26 17:38 | Claude (Claude Code) | § 7: the answers field is a `text` field, verified on crm-test. Phase 1 build plan written (`build-plan-phase-1.md`). |
 | 1.0 | 10-20-26 17:27 | Claude (Claude Code) | Ruling E16 (the AI research pass proven on known clients first); § 8 reordered; design approved section by section, § 9 questions 2 and 6 open. |
 | 0.8 | 10-20-26 17:25 | Claude (Claude Code) | Ruling E15 (a survey answer replaces the value in a field it owns); § 7 gains the sender, the 30-day link and resubmission; §§ 6 and 7 approved. |

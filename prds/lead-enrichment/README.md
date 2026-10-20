@@ -1,6 +1,6 @@
 # Lead and client enrichment
 
-Last Updated: 10-20-26 17:38 · Revision 1.1
+Last Updated: 10-20-26 17:47 · Revision 1.2
 
 This directory holds the design of the enrichment system: finding out what
 kind of business a lead or a client is, its website, its email, and its key
@@ -8,7 +8,7 @@ contacts, and ranking leads by how likely they are to be a fit for the
 chapter's services.
 
 Start with `design.md`. It records Doug's rulings from the 10-20-26 session
-(E1 to E16) and the design built on them, approved section by section the
+(E1 to E17) and the design built on them, approved section by section the
 same day. Two questions remain open in its § 9.
 
 Then `build-plan-phase-1.md` (draft): the free pass and the fit score, with
@@ -28,6 +28,7 @@ its CRM handoff `lead-fit-score-crm-handoff.md` at the repository root.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 10-20-26 17:47 | Claude (Claude Code) | Ruling count updated to E17. |
 | 1.1 | 10-20-26 17:38 | Claude (Claude Code) | Points to the phase 1 build plan and its handoff. |
 | 1.0 | 10-20-26 17:27 | Claude (Claude Code) | Design approved; ruling count E16. |
 | 0.8 | 10-20-26 17:25 | Claude (Claude Code) | Ruling count updated to E15. |
