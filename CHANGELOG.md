@@ -5,6 +5,33 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.266.0] — 2026-10-20
+
+**feat(sandbox): Campaign Management has demo data that survives the night.**
+The nightly reset truncates every CRM table newer than the 09-07-26
+baseline, the lead and campaign tables among them, and empties the
+application's campaign-links table whatever the baseline holds — so every
+morning Campaign Management on crm-test was empty, and a seeded postcard's
+card address would have answered 404. Two parts:
+
+- `scripts/sandbox/seed_outreach_data.py`, the fourth seeder: seventeen
+  leads at every status and side exit, the converted ones' Company and
+  Contact typed Prospect at each funnel stage, one campaign of each kind
+  with its partners, events and ten touches, an engagement with two
+  referring partners, and an additional manager on the partner and funder
+  showcase records. Runs as the CRM administrator (the org-wide key may not
+  create a campaign); every field checked against live metadata, idempotent
+  by name, never overwrites.
+- `campaigns/sandbox_demo.py`: the worker puts six fixed demo links back
+  straight after it empties the links table (Doug's ruling 10-20-26), with
+  fixed codes so the card addresses in `demo-records.md` never change; also
+  `/setup` → Operations → *Sandbox demo campaign links*. Refused on any CRM
+  but crm-test. `CampaignStore.create_link` takes an optional fixed token
+  for it.
+
+No CRM change, no flag. The seeder was applied on crm-test 10-20-26; the
+recapture that keeps it is `OPEN-ITEMS.md` #45. Rollback is a revert.
+
 ## [0.265.3] — 2026-10-19
 
 **fix(campaigns): the call screen fills in what the lead holds, and an

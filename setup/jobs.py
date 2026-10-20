@@ -193,7 +193,34 @@ async def _prospect_stale_apply(settings: Settings) -> str:
     return await job_apply(settings)
 
 
+async def _sandbox_links_dry(settings: Settings) -> str:
+    from campaigns.sandbox_demo import job_dry_run
+
+    return await job_dry_run(settings)
+
+
+async def _sandbox_links_apply(settings: Settings) -> str:
+    from campaigns.sandbox_demo import job_apply
+
+    return await job_apply(settings)
+
+
 JOBS: tuple[JobSpec, ...] = (
+    JobSpec(
+        key="sandbox_demo_links",
+        name="Sandbox demo campaign links",
+        description=(
+            "Training sandbox only. Lists the fixed demo links (the September "
+            "postcard's landing page, the social and email campaigns' links) the "
+            "application database is missing. Applying creates them with their "
+            "fixed codes. The nightly reset does the same straight after it "
+            "empties the links table; run this after seeding, so you need not "
+            "wait for the night. Refused on any CRM but crm-test."
+        ),
+        mutating=True,
+        dry_run=_sandbox_links_dry,
+        apply=_sandbox_links_apply,
+    ),
     JobSpec(
         key="prospect_stale",
         name="Prospect Stale sweep",

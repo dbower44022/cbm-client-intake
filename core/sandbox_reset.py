@@ -70,7 +70,8 @@ RESET_TABLES: tuple[str, ...] = (
     "app_job",
     # Campaign Management (prospect marketing Phase 1): the campaign links,
     # their visits and the import ledger. Training data, like the CRM rows they
-    # point at — the seeder recreates the demo campaign's links.
+    # point at — the worker puts the fixed demo links back straight after this
+    # reset (campaigns/sandbox_demo.py).
     "campaign_link_visit",
     "campaign_link",
     "prospect_import_row",

@@ -2003,6 +2003,14 @@ unattended update of a chapter deployment. `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
 
+- **v0.266.0 (2026-10-20) — Campaign Management demo data on the
+  sandbox.** `scripts/sandbox/seed_outreach_data.py` (the fourth seeder,
+  run as the CRM administrator) and `campaigns/sandbox_demo.py`, which puts
+  the six fixed demo links back after every nightly reset (Doug's ruling
+  10-20-26) — `/setup` → Operations → *Sandbox demo campaign links* does it
+  on demand. Applied on crm-test 10-20-26; survives the night only after
+  the recapture, `OPEN-ITEMS.md` #45. Record list: `demo-records.md`.
+
 - **v0.265.0–v0.265.3 (2026-10-19) — the lead model.** Live on crm-test
   and production, dark on production (its CRM lacks the lead fields until
   its Sunday slot). Rulings 51–54. **Live-passed on crm-test 10-19-26

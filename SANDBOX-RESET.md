@@ -1,5 +1,7 @@
 # The training sandbox — nightly reset runbook
 
+Last Updated: 10-20-26 00:45 · Revision 1.1 — change log at the end.
+
 crm-test does three jobs now: it is the **pre-production review gate**, the
 **training sandbox**, and the **release-test environment**. This document is
 how the nightly restore keeps those three from ruining each other.
@@ -217,14 +219,28 @@ someone typed this.
 uv run python scripts/sandbox/seed_training_data.py --apply
 uv run python scripts/sandbox/enrich_training_data.py --apply
 uv run python scripts/sandbox/deepen_showcase_records.py --apply
+uv run python scripts/sandbox/seed_outreach_data.py --apply
 uv run python scripts/sandbox/audit_showcase_records.py
 uv run python scripts/sandbox/check_containment.py
 ```
 
-All three seeders are idempotent, so the full set is the habit: each one owns
+All four seeders are idempotent, so the full set is the habit: each one owns
 data the others do not (the seed owns the records and their management teams,
 the enrichment owns threads, gifts, events, presenters, sponsorship links and
-topics, the deepening owns the showcase records' every field). Pick a morning
+topics, the deepening owns the showcase records' every field, and the
+outreach seeder owns the leads, the six demo campaigns and their touches, an
+engagement's referring partners and the additional managers). The outreach
+seeder alone runs as the CRM administrator (`ESPO_ADMIN_*` in `.env`, read
+with a parser): the org-wide API key may not create a campaign.
+
+**The demo campaigns' links are not in the CRM.** They live in the
+application's database, which the app half empties every night whatever the
+baseline holds. So the worker puts a fixed list of demo links back straight
+after it empties the table (`campaigns/sandbox_demo.py`, Doug's ruling
+10-20-26), with fixed codes — the card addresses in `demo-records.md` never
+change. After seeding, run `/setup` → Operations → **Sandbox demo campaign
+links** (dry run, then apply) rather than wait for the night. A demo campaign
+the CRM does not hold is skipped and reported, never an error. Pick a morning
 straight after the 04:00 UTC reset with no release test running — whatever is
 on crm-test at capture time is pristine from then on, including a tester's
 half-finished partner.
@@ -332,3 +348,10 @@ silently no-ops looks exactly like one that passed. A **separate test Google
 Workspace** is the real fix, and until it exists, release testing either leaves
 real residue or leaves those surfaces uncovered. Decide which per test rather
 than by default.
+
+## Change log
+
+| Rev | Date (MM-DD-YY HH:MM) | Author | Change |
+|---|---|---|---|
+| 1.1 | 10-20-26 00:45 | Claude (Claude Code) | The fourth seeder (`seed_outreach_data.py`) in the re-baseline sitting, and the demo campaign links the worker restores after every reset. Revision control added. |
+| 1.0 | — | — | The runbook before revision control. |

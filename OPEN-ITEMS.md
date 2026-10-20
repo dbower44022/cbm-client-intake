@@ -239,7 +239,20 @@ found; move resolved items to the bottom with the resolution date.
     `c_partner_profile_event`, `c_partner_profile_mentor_profile`,
     `c_prospect`, `c_sponsor_profile_mentor_profile` — so the prospect and
     outreach arc's seeder stage (#51) should land before the same recapture,
-    or the recapture is done twice.
+    or the recapture is done twice. **That stage is built (v0.266.0,
+    10-20-26):** `scripts/sandbox/seed_outreach_data.py` (seventeen leads,
+    six campaigns, ten touches, two converted companies and three contacts,
+    an engagement's two referring partners, the two additional managers —
+    which covers four more of the ten tables), run as the CRM administrator;
+    and the demo campaign links, which live in the application's database,
+    are put back by the worker after every reset with fixed codes
+    (`campaigns/sandbox_demo.py`, Doug's ruling 10-20-26, option 1) or on
+    demand at `/setup` → Operations → *Sandbox demo campaign links*. **Applied
+    on crm-test 10-20-26 04:17 UTC** (52 changes, a second dry run 0, read
+    back under the org key; the November postcard's list selects exactly the
+    three leads `demo-records.md` names), so it survives only until 04:00 UTC
+    on 10-21-26 unless the recapture runs today. The step page is owed a
+    fourth seeder line and the Operations step.
 
 50. **A partner's own client intake link (v0.255.0) — live on crm-test
     and production 10-12-26 17:42, live pass owed.** Doug's requirement 10-12-26, link form ruled the CRM id;

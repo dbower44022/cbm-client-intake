@@ -144,12 +144,14 @@ class CampaignStore:
     async def create_link(
         self, *, campaign_id: str, name: str, destination_kind: str,
         destination_target: Optional[str], destination_slug: Optional[str],
-        created_by: str,
+        created_by: str, token: Optional[str] = None,
     ) -> dict[str, Any]:
+        # ``token`` is for the sandbox's fixed demo links only
+        # (campaigns/sandbox_demo.py); every real link gets a random one.
         row = {
             "id": str(uuid.uuid4()),
             "campaign_id": campaign_id,
-            "token": new_link_token(),
+            "token": token or new_link_token(),
             "name": name,
             "destination_kind": destination_kind,
             "destination_target": destination_target,

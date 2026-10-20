@@ -636,6 +636,11 @@ async def main() -> None:
 
                 result = await reset_app_tables(store._engine, settings, apply=True)
                 log.info("training-sandbox reset cleared %s rows", result["total_rows"])
+                # The demo campaigns come back from the CRM baseline; their
+                # links live here and were just emptied — put the fixed ones back.
+                from campaigns.sandbox_demo import run_after_reset
+
+                await run_after_reset(settings)
             except Exception as exc:  # noqa: BLE001 — never crashes delivery
                 log.warning("training-sandbox reset failed: %s", exc)
             next_sandbox = _next_sandbox_reset(settings, datetime.now(timezone.utc))

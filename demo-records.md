@@ -1,5 +1,7 @@
 # Demo records — what to open, for each kind of user
 
+Last Updated: 10-20-26 00:40 · Revision 1.1 — change log at the end.
+
 The training sandbox is **crm-test**: the app at
 `https://cbm-client-intake-svxs3.ondigitalocean.app` over the CRM at
 `https://crm-test.clevelandbusinessmentors.org`. Every record in it is
@@ -211,6 +213,55 @@ as a preview rather than something staff will use on Monday.
 
 ---
 
+## Campaign Management — **Mark Marketing**
+
+Sign in as `mark.marketing@cbmentors.org`. Six campaigns, one of each kind,
+and seventeen leads, seeded by `scripts/sandbox/seed_outreach_data.py`
+(since 10-20-26). The campaigns' links are put back by the nightly reset
+with fixed codes (`campaigns/sandbox_demo.py`), so every address below works
+every morning.
+
+**Open: `September 2026 filings — Postcard`** — a finished postcard run,
+partner Cuyahoga Small Business Alliance. Its five cards show every state a
+card reaches:
+
+| Card | Lead | What happened | Card address |
+|---|---|---|---|
+| 1 | Lakeshore Tile & Stone | Delivered, scanned twice, then converted: Company **Lakeshore Tile & Stone** and Contact **Rosa Medina**, both at Engaged | `/c/sbxcard2/sbxscan23456` |
+| 2 | Marigold Pet Grooming | Delivered, never scanned | `/c/sbxcard2/sbxscan23457` |
+| 3 | Northcoast Drone Services | Returned — the lead's address is Dead | `/c/sbxcard2/sbxscan23458` |
+| 4 | Tremont Coffee Roasters | Delivered, scanned once, still a lead | `/c/sbxcard2/sbxscan23459` |
+| 5 | Ohio City Bike Works | Sent, no delivery report yet | `/c/sbxcard2/sbxscan2345a` |
+
+A card address opens the landing page for that card, signed out. Scanning
+adds to the card's count until the night.
+
+The other five campaigns:
+
+| Campaign | Kind and status | What to do with it |
+|---|---|---|
+| `November 2026 filings — Postcard` | Postcard, Draft | Press **Build the list**: it finds Gordon Square Florist, Detroit Shoreway Signs and Collinwood Records, and leaves out September's five (one card per business, ever), then sign off. The dry-run vendor prints nothing |
+| `Fall follow-up calls` | Call, Running, called by the Marketing Admin Team and the Mentor Team | The Calls page lists Marigold Pet Grooming and Gordon Square Florist to call. Three calls are already recorded: no answer (Ohio City Bike Works), interested (Slavic Village Bakery, converted to a Company and Contact Pavel Novak) and declined (Kamm's Corners Hardware) |
+| `Marketing on a Shoestring — Email` | Email, Complete | Event Marketing on a Shoestring; link `/c/sbxevnt7` opens the webinar |
+| `Webinar reminder — Text` | Text, Draft | The wording carries STOP and the link `/c/sbxtext8`; sign-off works, and the dry-run text client sends nothing |
+| `LinkedIn — Spring workshops` | Social media, Running, LinkedIn | Partner Northgate Chamber of Commerce, event Hiring Your First Employee, three links: `/c/sbxweb23` (programme), `/c/sbxmntr4` (request a mentor), `/c/sbxask56` (ask a question). Engagement Riverbend Cycles — Mentoring came through it; contact Dana Okoro (an information request, at Opportunity) too |
+
+**The leads**, on the Leads grid and the Review tab: four Unqualified
+(Detroit Shoreway Signs and Collinwood Records have no website; Hannah
+Kowalski, from a list, has no email; Brightline Bakehouse is a Duplicate of
+the company of that name), nine Qualified, one Disqualified (Quick Cash
+Title Loans, with its reason), three Converted. Each way a lead stops is
+there once: Duplicate, Do Not Contact (Euclid Avenue Pawn), Declined (Kamm's
+Corners Hardware) and Stale (Clark-Fulton Auto Glass).
+
+The same seeder adds two links the reset was also emptying: engagement
+`Salt & Sable Catering — Mentoring` has **two referring partners**
+(Northgate Chamber of Commerce and Cuyahoga Small Business Alliance), and
+**Joe Mentor is an additional manager** on the partner and funder showcase
+records.
+
+---
+
 ## How complete the showcase records are
 
 `scripts/sandbox/audit_showcase_records.py` measures this against the CRM's own
@@ -244,3 +295,12 @@ they will look broken rather than "not covered".
 
 None of these is hard to add. If a training session needs one, say so and it
 can be seeded before the next baseline is captured.
+
+---
+
+## Change log
+
+| Rev | Date (MM-DD-YY HH:MM) | Author | Change |
+|---|---|---|---|
+| 1.1 | 10-20-26 00:40 | Claude (Claude Code) | Campaign Management section: the six demo campaigns, the five postcard card addresses, the leads, two referring partners and the additional managers. Revision control added. |
+| 1.0 | — | — | The page before revision control. |
