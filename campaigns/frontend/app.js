@@ -910,8 +910,8 @@
   // The whole search rides the address (#prospects?q=… / #review?…), so it can
   // be bookmarked. Selection holds what the reviewer saw of each lead
   // (status and reason), which the server's guard compares before any write.
-  var GRID_FILTERS = ["q", "status", "exit", "source", "batch", "place", "from", "to", "camp"];
-  var GRID_PARAM = { q: "q", status: "status", exit: "exit", source: "source", batch: "batch", place: "place", from: "arrivedFrom", to: "arrivedTo", camp: "inCampaign" };
+  var GRID_FILTERS = ["q", "status", "exit", "source", "batch", "place", "from", "to", "camp", "gate", "fit"];
+  var GRID_PARAM = { q: "q", status: "status", exit: "exit", source: "source", batch: "batch", place: "place", from: "arrivedFrom", to: "arrivedTo", camp: "inCampaign", gate: "gate", fit: "minFit" };
   var grids = {
     pf: { section: "prospects", review: false, offset: 0, limit: 50, total: 0, rows: [], sort: "createdAt", dir: "desc", selected: {}, all: null },
     rf: { section: "review", review: true, offset: 0, limit: 50, total: 0, rows: [], sort: "createdAt", dir: "asc", selected: {}, all: null },
@@ -953,6 +953,10 @@
     try {
       var res = await api("/prospects?" + qs(q));
       g.rows = res.prospects || []; g.total = res.total || 0;
+      // Lead enrichment's fit columns and filters: shown only when this CRM
+      // carries the fit fields (the server says so on every page).
+      g.fit = !!res.fit;
+      Array.prototype.forEach.call(document.querySelectorAll("#" + (g.review ? "reviewPanel" : "prospectsPanel") + " .cm__fitonly"), function (e) { e.hidden = !g.fit; });
       if (g.offset && !g.rows.length && g.total) { g.offset = Math.max(0, Math.floor((g.total - 1) / g.limit) * g.limit); return loadGrid(px); }
       (g.review ? renderReview : renderProspects)();
       renderPager(px); renderBulk(px);
@@ -1053,12 +1057,29 @@
     setTimeout(function () { ta.focus(); }, 50);
   }
 
+  // The fit score as a link that opens its reasons (prds/lead-enrichment/).
+  function fitCell(p, withGate) {
+    var td = el("td", "cm__fit");
+    if (p.fitScore == null || p.fitScore === "") { td.textContent = "—"; td.title = "Not scored yet."; return td; }
+    var a = el("a", "cm__link", String(p.fitScore) + (withGate && p.fitGate && p.fitGate !== "Passed" ? " · " + p.fitGate : ""));
+    a.href = "#"; a.title = "Why this score";
+    a.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      var body = el("div");
+      body.appendChild(el("p", null, "Fit score " + p.fitScore + " of 100 — service area: " + (p.fitGate || "—") + (p.fitCounty ? " (" + p.fitCounty + " County)" : "") + "."));
+      var pre = el("p", "cm__fitreasons", p.fitReasons || "No reasons recorded."); pre.style.whiteSpace = "pre-line";
+      body.appendChild(pre);
+      openModal("Fit — " + (p.businessName || p.name || "lead"), body, null);
+    });
+    td.appendChild(a); return td;
+  }
   function renderProspects() {
     var g = grids.pf, body = $("prospectRows"); body.innerHTML = "";
     g.rows.forEach(function (p) {
       var tr = el("tr");
       tr.appendChild(tickCell("pf", p));
       var nTd = el("td"); var a = el("a", "cm__link", p.businessName || p.name || "(unnamed)"); a.href = "#"; a.addEventListener("click", function (ev) { ev.preventDefault(); openProspect(p.id); }); nTd.appendChild(a); tr.appendChild(nTd);
+      if (g.fit) { tr.appendChild(fitCell(p, false)); tr.appendChild(el("td", null, p.fitGate || "—")); tr.appendChild(el("td", null, p.fitCounty || "—")); }
       tr.appendChild(el("td", null, p.leadStatus || "—")); tr.appendChild(el("td", null, p.sideExit || "—")); tr.appendChild(el("td", null, p.leadSource || "—"));
       tr.appendChild(el("td", null, p.mailingAddressCity || "—")); tr.appendChild(el("td", null, p.mailingAddressPostalCode || "—")); tr.appendChild(el("td", null, p.addressStatus || "—"));
       tr.appendChild(el("td", null, p.importBatch || "—")); tr.appendChild(el("td", null, fmtDate(p.createdAt)));
@@ -1129,6 +1150,7 @@
       var tr = el("tr");
       tr.appendChild(tickCell("rf", p));
       var nTd = el("td"); var a = el("a", "cm__link", p.businessName || p.name || "(unnamed)"); a.href = "#"; a.addEventListener("click", function (ev) { ev.preventDefault(); openProspect(p.id); }); nTd.appendChild(a); tr.appendChild(nTd);
+      if (g.fit) tr.appendChild(fitCell(p, true));
       tr.appendChild(el("td", null, [p.firstName, p.lastName].filter(Boolean).join(" ") || "—"));
       tr.appendChild(el("td", null, [p.mailingAddressCity, p.mailingAddressPostalCode].filter(Boolean).join(" ") || "—"));
       tr.appendChild(el("td", null, p.phone || "—"));
@@ -1163,7 +1185,7 @@
     };
     GRID_FILTERS.forEach(function (f) {
       var e = $(px + "_" + f); if (!e) return;
-      if (f === "q" || f === "place" || f === "batch") {
+      if (f === "q" || f === "place" || f === "batch" || f === "fit") {
         e.addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(go, 500); });
         e.addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); go(); } });
       }

@@ -1,14 +1,10 @@
 # Build plan — lead enrichment phase 1: the free pass and the fit score
 
-Last Updated: 10-20-26 17:54 · Revision 0.3 (approved 10-20-26; built as v0.269.0 except the grid columns)
+Last Updated: 10-20-26 18:08 · Revision 0.4 (approved 10-20-26; built as v0.269.0)
 
-**Status (10-20-26 17:54).** Approved by Doug as written. Built as v0.269.0,
-committed, not pushed: § 2's `enrichment/` package, the worker job, the
-settings, the readiness entry and the Operations job, with 30 tests. **Not
-built yet: the Leads grid's columns and the Review grid's *Out of area*
-filter** — they live in `campaigns/`, and another session held the prospect
-marketing arc on 10-20-26 (that arc allows one session at a time). The CRM
-change is applied and verified on crm-test.
+**Status (10-20-26 18:08).** Approved by Doug as written. Built in full as v0.269.0,
+committed, not pushed, with 35 tests. The CRM change is applied and verified
+on crm-test. Next: the live pass (§ 6 step 3).
 
 **What it delivers.** Every open lead gets a fit score from 0 to 100,
 computed by the free pass at no cost per record. The service-area gate comes
@@ -178,6 +174,7 @@ and stop changing. Nothing else reads them.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.4 | 10-20-26 18:08 | Claude (Claude Code) | The grid columns built; phase 1 complete in code. |
 | 0.3 | 10-20-26 17:54 | Claude (Claude Code) | Approved; status line added for the v0.269.0 build. |
 | 0.2 | 10-20-26 17:47 | Claude (Claude Code) | § 7: the counties answered (E17). |
 | 0.1 | 10-20-26 17:38 | Claude (Claude Code) | Created from design § 4 and § 8 phase 1. |

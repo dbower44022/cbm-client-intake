@@ -28,10 +28,14 @@ and the run-it-now. A lead's status is never changed.
 Needs nine fields on `CProspect` (`lead-fit-score-crm-handoff.md`,
 `scripts/plans/cprospect-fit-score.json`) — **applied and verified on
 crm-test 10-20-26**; feature-detected, failing closed. Ships dark:
-`ENRICHMENT_FREE_PASS` and `ENRICHMENT_WEB_CHECKS` default off. **Not yet
-built:** the Leads grid's score columns and the Review grid's *Out of area*
-filter (they touch `campaigns/`, which another session holds today). Verified
-by 30 new tests and a read-only dry run against crm-test's 3,409 open leads.
+`ENRICHMENT_FREE_PASS` and `ENRICHMENT_WEB_CHECKS` default off. **The Leads
+grid** gains Fit, Service area and County columns (sortable by fit; a score
+opens its reasons), the *Service area* and *Fit at least* filters and three
+export columns; **the Review grid** gains a Fit column and the same filters,
+so *Out of area* plus the existing bulk Disqualify is E13's one step. All of
+it appears only when the CRM has the fields (`campaigns/leads.fit_available`;
+a CRM without them is never asked for them). Verified by 35 new tests and a
+read-only dry run against crm-test's 3,409 open leads.
 
 ## [0.268.0] — 2026-10-20
 

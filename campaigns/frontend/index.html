@@ -110,6 +110,8 @@
         <label class="cm__filter">In a campaign
           <select id="pf_camp"><option value="">Any</option><option value="yes">Yes, any campaign</option><option value="no">No campaign yet</option></select>
         </label>
+        <label class="cm__filter cm__fitonly" hidden>Service area <select id="pf_gate"><option value="">All</option><option value="Passed">Passed</option><option value="Location unknown">Location unknown</option><option value="Out of area">Out of area</option></select></label>
+        <label class="cm__filter cm__fitonly" hidden>Fit at least <input type="number" id="pf_fit" min="0" max="100" step="1" placeholder="0–100" size="5" /></label>
         <button type="button" class="cm__rowbtn" id="pf_clear">Clear filters</button>
       </div>
       <div class="cm__bulkbar" id="pf_bulk" hidden>
@@ -129,6 +131,9 @@
           <thead><tr>
             <th class="cm__tick"><input type="checkbox" id="pf_page" aria-label="Select this page" /></th>
             <th data-sort="name">Business</th>
+            <th data-sort="fitScore" class="cm__fitonly" hidden title="The free pass's fit score, 0 to 100. Click a score for its reasons.">Fit</th>
+            <th class="cm__fitonly" hidden>Service area</th>
+            <th class="cm__fitonly" hidden>County</th>
             <th data-sort="leadStatus">Lead status</th>
             <th data-sort="sideExit">Stopped because</th>
             <th data-sort="leadSource">Lead Source</th>
@@ -161,6 +166,8 @@
         <label class="cm__filter">In a campaign
           <select id="rf_camp"><option value="">Any</option><option value="yes">Yes, any campaign</option><option value="no">No campaign yet</option></select>
         </label>
+        <label class="cm__filter cm__fitonly" hidden>Service area <select id="rf_gate"><option value="">All</option><option value="Passed">Passed</option><option value="Location unknown">Location unknown</option><option value="Out of area">Out of area</option></select></label>
+        <label class="cm__filter cm__fitonly" hidden>Fit at least <input type="number" id="rf_fit" min="0" max="100" step="1" placeholder="0–100" size="5" /></label>
         <button type="button" class="cm__rowbtn" id="rf_clear">Clear filters</button>
       </div>
       <div class="cm__bulkbar" id="rf_bulk" hidden>
@@ -179,7 +186,7 @@
         <table class="cm__grid" id="reviewGrid">
           <thead><tr>
             <th class="cm__tick"><input type="checkbox" id="rf_page" aria-label="Select this page" /></th>
-            <th>Business</th><th>Person</th><th>City</th><th>Phone</th><th>Look it up</th><th>Website</th><th>Email</th><th>Decide</th><th>Batch</th>
+            <th>Business</th><th class="cm__fitonly" hidden>Fit</th><th>Person</th><th>City</th><th>Phone</th><th>Look it up</th><th>Website</th><th>Email</th><th>Decide</th><th>Batch</th>
           </tr></thead>
           <tbody id="reviewRows"></tbody>
         </table>

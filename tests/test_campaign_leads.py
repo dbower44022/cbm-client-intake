@@ -328,3 +328,77 @@ def test_apply_in_parts_resumes_and_marks_applied_only_at_the_end():
             break
     assert parts == [(100, 150), (100, 50), (50, 0)]
     assert store.applied is not None and len(store.rows) == 250
+
+
+# --- the fit score columns (lead enrichment phase 1, build plan § 2) -------------------------------
+
+class FitCrm(FakeCrm):
+    """A CRM carrying the lead fit fields; numeric comparisons on the score."""
+
+    def __init__(self, fit: bool = True):
+        super().__init__()
+        self.fit = fit
+        self.selects: list[str] = []
+
+    async def metadata(self, key):
+        base = {"name": {}, "website": {}}
+        if self.fit:
+            base.update({f: {} for f in leads.FIT_SELECT.split(",")})
+        return base
+
+    async def list(self, entity, select="", where=None, **kw):
+        self.selects.append(select or "")
+        numeric = [c for c in (where or []) if c.get("attribute") == "fitScore"]
+        rest = [c for c in (where or []) if c.get("attribute") != "fitScore"]
+        page = await super().list(entity, select=select, where=rest, **kw)
+        if numeric:
+            floor = numeric[0]["value"]
+            keep = [r for r in page["list"] if (r.get("fitScore") or 0) >= floor]
+            page = {"list": keep, "total": len(keep)}
+        return page
+
+
+def _fit_crm(fit: bool = True) -> FitCrm:
+    crm = FitCrm(fit)
+    crm.lead(name="A", fitScore=80, fitGate="Passed")
+    crm.lead(name="B", fitScore=20, fitGate="Out of area")
+    crm.lead(name="C", fitScore=55, fitGate="Location unknown")
+    return crm
+
+
+def test_fit_filters_sort_and_columns_when_the_crm_has_them():
+    crm = _fit_crm()
+    out = run(leads.search(crm, leads.LeadQuery.from_params({"gate": "Out of area"})))
+    assert out["fit"] is True and [r["name"] for r in out["prospects"]] == ["B"]
+    assert "fitScore" in crm.selects[-1]
+    out = run(leads.search(crm, leads.LeadQuery.from_params({"minFit": "50", "sort": "fitScore", "dir": "desc"})))
+    assert sorted(r["name"] for r in out["prospects"]) == ["A", "C"]
+    assert leads.LeadQuery.from_params({"sort": "fitScore"}).sort == "fitScore"
+
+
+def test_fit_filters_are_validated():
+    assert leads.LeadQuery.from_params({"gate": "Mars"}).errors
+    assert leads.LeadQuery.from_params({"minFit": "101"}).errors
+    assert leads.LeadQuery.from_params({"minFit": "x"}).errors
+    assert not leads.LeadQuery.from_params({"minFit": "0", "gate": "Passed"}).errors
+
+
+def test_a_crm_without_the_fit_fields_never_asks_for_them():
+    crm = _fit_crm(fit=False)
+    out = run(leads.search(crm, leads.LeadQuery.from_params({"gate": "Out of area", "sort": "fitScore"})))
+    assert out["fit"] is False and len(out["prospects"]) == 3   # the filter was dropped
+    assert all("fitScore" not in s for s in crm.selects)
+
+
+def test_export_carries_the_fit_columns_only_when_present():
+    async def header(crm):
+        gen = await leads.export_rows(crm, leads.LeadQuery.from_params({}))
+        return next(csv.reader(io.StringIO("".join([line async for line in gen]).lstrip("﻿"))))
+    assert run(header(_fit_crm()))[-3:] == ["Fit score", "Service area", "County"]
+    assert "Fit score" not in run(header(_fit_crm(fit=False)))
+
+
+def test_review_queue_takes_the_out_of_area_filter():
+    crm = _fit_crm()
+    out = run(leads.search(crm, leads.LeadQuery.from_params({"gate": "Out of area"}, review_queue=True)))
+    assert [r["name"] for r in out["prospects"]] == ["B"]

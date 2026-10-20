@@ -49,7 +49,14 @@ SEARCH_FIELDS = (
 SORT_FIELDS = frozenset({
     "name", "businessName", "leadStatus", "sideExit", "leadSource", "mailingAddressCity",
     "mailingAddressPostalCode", "addressStatus", "importBatch", "createdAt",
+    "fitScore",
 })
+#: Lead enrichment's fit fields (prds/lead-enrichment/build-plan-phase-1.md),
+#: read and filtered only when the CRM has them — a select naming a missing
+#: attribute is refused by the CRM.
+FIT_SELECT = "fitScore,fitGate,fitCounty,fitReasons"
+FIT_GATES = ("Passed", "Location unknown", "Out of area")
+FIT_EXPORT_COLUMNS = (("Fit score", "fitScore"), ("Service area", "fitGate"), ("County", "fitCounty"))
 IN_CAMPAIGN_YES = "yes"
 IN_CAMPAIGN_NO = "no"
 
@@ -83,6 +90,8 @@ class LeadQuery:
     arrived_from: str = ""     # YYYY-MM-DD, inclusive
     arrived_to: str = ""       # YYYY-MM-DD, inclusive
     in_campaign: str = ""      # "", "yes", "no" or a campaign id
+    gate: str = ""             # "" any, or one of FIT_GATES (design E13)
+    min_fit: Optional[int] = None   # 0-100, the fit score at least
     sort: str = "createdAt"
     dir: str = "desc"
     offset: int = 0
@@ -94,7 +103,7 @@ class LeadQuery:
         g = lambda k: str(params.get(k) or "").strip()  # noqa: E731
         lq = cls(q=g("q")[:200], status=g("status"), exit=g("exit"), source=g("source"),
                  batch=g("batch")[:255], place=g("place")[:100], arrived_from=g("arrivedFrom"),
-                 arrived_to=g("arrivedTo"), in_campaign=g("inCampaign"),
+                 arrived_to=g("arrivedTo"), in_campaign=g("inCampaign"), gate=g("gate"),
                  sort=g("sort") or ("createdAt"), dir=(g("dir") or ("asc" if review_queue else "desc")).lower())
         try:
             lq.offset = max(0, int(params.get("offset") or 0))
@@ -116,13 +125,31 @@ class LeadQuery:
                 lq.errors.append(f"{label} date must be a date (YYYY-MM-DD).")
         if lq.in_campaign not in ("", IN_CAMPAIGN_YES, IN_CAMPAIGN_NO) and not _CRM_ID.match(lq.in_campaign):
             lq.errors.append("Unknown campaign.")
+        if lq.gate and lq.gate not in FIT_GATES:
+            lq.errors.append("Unknown service-area value.")
+        raw_fit = g("minFit")
+        if raw_fit:
+            try:
+                lq.min_fit = int(raw_fit)
+                if not 0 <= lq.min_fit <= 100:
+                    raise ValueError
+            except ValueError:
+                lq.min_fit = None
+                lq.errors.append("Fit at least must be a whole number from 0 to 100.")
         return lq
+
+    def without_fit(self) -> None:
+        """Drop the fit filters and sort, for a CRM without the fit fields."""
+        self.gate, self.min_fit = "", None
+        if self.sort == "fitScore":
+            self.sort = "createdAt"
 
     def params(self) -> dict[str, str]:
         """The query as request parameters (for a bulk resolve sent back)."""
         out = {"q": self.q, "status": self.status, "exit": self.exit, "source": self.source,
                "batch": self.batch, "place": self.place, "arrivedFrom": self.arrived_from,
                "arrivedTo": self.arrived_to, "inCampaign": self.in_campaign,
+               "gate": self.gate, "minFit": "" if self.min_fit is None else str(self.min_fit),
                "sort": self.sort, "dir": self.dir}
         return {k: v for k, v in out.items() if v}
 
@@ -170,7 +197,23 @@ def build_where(lq: LeadQuery) -> list[dict[str, Any]]:
         where.append({"type": "isLinked", "attribute": "touches"})
     elif lq.in_campaign == IN_CAMPAIGN_NO:
         where.append({"type": "isNotLinked", "attribute": "touches"})
+    if lq.gate:
+        where.append({"type": "equals", "attribute": "fitGate", "value": lq.gate})
+    if lq.min_fit is not None:
+        where.append({"type": "greaterThanOrEquals", "attribute": "fitScore", "value": lq.min_fit})
     return where
+
+
+async def fit_available(client: EspoApi) -> bool:
+    """Whether this CRM carries the lead fit fields. Fails closed."""
+    reader = getattr(client, "metadata", None)
+    if reader is None:          # a client that cannot read metadata has no fit fields
+        return False
+    try:
+        fields = await reader(f"entityDefs.{cfg.PROSPECT}.fields")
+    except EspoError:
+        return False
+    return isinstance(fields, dict) and all(f in fields for f in FIT_SELECT.split(","))
 
 
 def _is_campaign(lq: LeadQuery) -> bool:
@@ -222,17 +265,21 @@ async def search(client: EspoApi, lq: LeadQuery) -> dict[str, Any]:
     """One page of leads and the total the filter matches."""
     if lq.errors:
         raise CampaignError(" ".join(lq.errors))
+    fit = await fit_available(client)
+    if not fit:
+        lq.without_fit()
+    select = cfg.PROSPECT_SELECT + ("," + FIT_SELECT if fit else "")
     if _is_campaign(lq):
-        rows = await _campaign_rows(client, lq, select=cfg.PROSPECT_SELECT)
+        rows = await _campaign_rows(client, lq, select=select)
         return {"prospects": rows[lq.offset:lq.offset + lq.limit], "total": len(rows),
-                "offset": lq.offset, "limit": lq.limit}
-    page = await client.list(cfg.PROSPECT, select=cfg.PROSPECT_SELECT, where=build_where(lq) or None,
+                "offset": lq.offset, "limit": lq.limit, "fit": fit}
+    page = await client.list(cfg.PROSPECT, select=select, where=build_where(lq) or None,
                              max_size=lq.limit, offset=lq.offset, order_by=lq.sort, order=lq.dir)
     rows = page.get("list", [])
     total = page.get("total")
     if not isinstance(total, int) or total < 0:
         total = lq.offset + len(rows)
-    return {"prospects": rows, "total": total, "offset": lq.offset, "limit": lq.limit}
+    return {"prospects": rows, "total": total, "offset": lq.offset, "limit": lq.limit, "fit": fit}
 
 
 async def _all(client: EspoApi, lq: LeadQuery, *, select: str, cap: int) -> list[dict[str, Any]]:
@@ -267,6 +314,8 @@ async def resolve(client: EspoApi, lq: LeadQuery) -> list[dict[str, str]]:
     the bulk guard compares against."""
     if lq.errors:
         raise CampaignError(" ".join(lq.errors))
+    if not await fit_available(client):
+        lq.without_fit()
     rows = await _all(client, lq, select="id,leadStatus,sideExit", cap=BULK_CAP)
     return [{"id": r["id"], "leadStatus": r.get("leadStatus") or "", "sideExit": r.get("sideExit") or ""}
             for r in rows if r.get("id")]
@@ -344,11 +393,16 @@ async def export_rows(client: EspoApi, lq: LeadQuery) -> AsyncIterator[str]:
     :data:`EXPORT_CAP`; a refusal is raised before the first line."""
     if lq.errors:
         raise CampaignError(" ".join(lq.errors))
-    select = ",".join(sorted({f for _, f in EXPORT_COLUMNS}))
+    columns = EXPORT_COLUMNS
+    if await fit_available(client):
+        columns = EXPORT_COLUMNS + FIT_EXPORT_COLUMNS
+    else:
+        lq.without_fit()
+    select = ",".join(sorted({f for _, f in columns}))
     rows = await _all(client, lq, select=select, cap=EXPORT_CAP)
 
     async def gen() -> AsyncIterator[str]:
-        yield "﻿" + _csv_line([label for label, _ in EXPORT_COLUMNS])
+        yield "﻿" + _csv_line([label for label, _ in columns])
         for r in rows:
-            yield _csv_line([r.get(f) for _, f in EXPORT_COLUMNS])
+            yield _csv_line([r.get(f) for _, f in columns])
     return gen()
