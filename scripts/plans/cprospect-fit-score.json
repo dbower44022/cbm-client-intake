@@ -1,0 +1,33 @@
+{
+  "name": "cprospect-fit-score",
+  "description": "Lead enrichment build phase 1 (prds/lead-enrichment/design.md § 4, rulings E2, E13): the free pass writes a fit score, its gate result and its three signals on the lead. Additive only. None of these fields may be Read-only: the application writes them (CLAUDE.md Gotchas, ruling 40). Handoff: lead-fit-score-crm-handoff.md.",
+  "fields": [
+    {"entity": "CProspect", "name": "fitScore", "type": "int", "min": 0, "max": 100,
+     "label": "Fit score",
+     "tooltipText": "0 to 100, written by the free pass: how likely this lead is to be a fit under ruling 10. 0 when the lead is out of area. Never edit by hand; the next pass overwrites it."},
+    {"entity": "CProspect", "name": "fitGate", "type": "enum",
+     "options": ["", "Passed", "Location unknown", "Out of area"],
+     "label": "Service area",
+     "tooltipText": "The free pass's service-area gate (ruling E13). Out of area means the location is confirmed outside the chapter's counties; Location unknown means the only address is a registered agent's."},
+    {"entity": "CProspect", "name": "fitCounty", "type": "varchar", "maxLength": 100,
+     "label": "County",
+     "tooltipText": "The county the free pass placed this lead in, from its postal code. Empty when the location is unknown."},
+    {"entity": "CProspect", "name": "fitOperating", "type": "int", "min": 0, "max": 100,
+     "label": "Fit: operating business",
+     "tooltipText": "0 to 100: how strongly the lead reads as a business being started to run, rather than a holding company, a property company or a serial filer's entity."},
+    {"entity": "CProspect", "name": "fitSegment", "type": "int", "min": 0, "max": 100,
+     "label": "Fit: segment",
+     "tooltipText": "0 to 100: how well the industry the lead suggests matches the chapter's segment list. 50 for every lead until the list exists."},
+    {"entity": "CProspect", "name": "fitFindability", "type": "int", "min": 0, "max": 100,
+     "label": "Fit: findability",
+     "tooltipText": "0 to 100: whether a website or email was found and verified for this lead (ruling E12)."},
+    {"entity": "CProspect", "name": "fitReasons", "type": "text",
+     "label": "Fit reasons",
+     "tooltipText": "Why the free pass scored this lead as it did, one line per reason, written by the free pass."},
+    {"entity": "CProspect", "name": "fitScoredAt", "type": "datetime",
+     "label": "Fit scored"},
+    {"entity": "CProspect", "name": "fitRuleVersion", "type": "varchar", "maxLength": 20,
+     "label": "Fit rule version",
+     "tooltipText": "The version of the scoring rules that produced this score. A newer version rescores the lead."}
+  ]
+}

@@ -1,6 +1,6 @@
 # Lead and client enrichment — design
 
-Last Updated: 10-20-26 17:27 · Revision 1.0 (approved 10-20-26; § 9 questions 2 and 6 open)
+Last Updated: 10-20-26 17:38 · Revision 1.1 (approved 10-20-26; § 9 questions 2 and 6 open)
 
 **Status.** Approved by Doug on 10-20-26, section by section. Section 1
 records his rulings and is binding (append only). Section 9 lists the two
@@ -267,6 +267,11 @@ client profile and records which survey, when it was sent and when it was
 answered. A sent survey that is never answered stays as a record, so the
 mentor sees that it is outstanding.
 
+**The answers field is a `text` field** (verified on crm-test 10-20-26):
+the CRM's JSON field types are `notCreatable` and not filterable, while a
+`text` field is filterable and full-text searchable. The JSON is stored in
+it as text.
+
 Search: the engagement shows its own responses. A mentor's search across
 their own clients ("no online payments") is answered by the application
 reading those clients' responses. That is quick at hundreds of clients and
@@ -318,6 +323,7 @@ slows in the thousands (E6).
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 10-20-26 17:38 | Claude (Claude Code) | § 7: the answers field is a `text` field, verified on crm-test. Phase 1 build plan written (`build-plan-phase-1.md`). |
 | 1.0 | 10-20-26 17:27 | Claude (Claude Code) | Ruling E16 (the AI research pass proven on known clients first); § 8 reordered; design approved section by section, § 9 questions 2 and 6 open. |
 | 0.8 | 10-20-26 17:25 | Claude (Claude Code) | Ruling E15 (a survey answer replaces the value in a field it owns); § 7 gains the sender, the 30-day link and resubmission; §§ 6 and 7 approved. |
 | 0.7 | 10-20-26 15:54 | Claude (Claude Code) | Ruling E14 (direct write on a lead, empty fields only); § 5 approved; § 6 lead paragraph rewritten. |
