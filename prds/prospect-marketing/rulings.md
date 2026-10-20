@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-20-26 14:36 · Revision 1.24 — change log at the end.
+Last Updated: 10-20-26 15:02 · Revision 1.25 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -567,6 +567,21 @@ at 12:23: "a".
     partner-only. A CRM link on every CRM: crm-test first, production at
     the Sunday slot, Boston with its release. (10-20-26)
 
+### Doug's ruling (10-20-26, on who a campaign may target)
+
+Doug asked whether comparable products send a campaign to their whole
+database or to a defined list. Research (HubSpot, Salesforce, EspoCRM,
+Mailchimp) found every one targets a defined audience — a static list, a
+saved filter, or both. Doug's reply at 15:00: "The first decision is that
+campaigns may be targeted as leads, clients, partners, funders, contacts or
+any combination of all them."
+
+58. **A campaign may target leads, clients, partners, funders, contacts, or
+    any combination of them.** A campaign's audience is no longer leads
+    alone. Extends ruling 25 (re-marketing over client records) to every
+    record type named; how the audience is narrowed within each type, and
+    how it is fixed at sign-off, are decisions still to come. (10-20-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -687,8 +702,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.21 |
-| Last Updated | 10-20-26 14:36 |
+| Version | 1.25 |
+| Last Updated | 10-20-26 15:02 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -696,6 +711,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.25 | 10-20-26 15:02 | Claude (Claude Code) | Ruling 58 appended: a campaign may target leads, clients, partners, funders, contacts, or any combination (Doug's first decision on campaign audiences). Revision table's Version and Last Updated brought up to date (they read 1.21). |
 | 1.24 | 10-20-26 14:36 | Claude (Claude Code) | Ruling 57 appended: a campaign names its funders, like its partners (Doug's "a"). |
 | 1.23 | 10-20-26 01:16 | Claude (Claude Code) | Ruling 56 appended: the lead screens stay inside the Campaign Management tile (Doug's "a" to build plan § 9 question 12), with his new requirement for the Leads and Review grids quoted. |
 | 1.22 | 10-20-26 01:08 | Claude (Claude Code) | Ruling 55 appended: social media is one campaign kind with a Platform field (Doug's "a" to build plan § 9 question 10). |
