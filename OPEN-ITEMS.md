@@ -252,7 +252,7 @@ found; move resolved items to the bottom with the resolution date.
     back under the org key; the November postcard's list selects exactly the
     three leads `demo-records.md` names), so it survives only until 04:00 UTC
     on 10-21-26 unless the recapture runs today. **The step page is rewritten
-    for it** (revision 2.0, 10-20-26 01:05, same address): push, the four
+    for it** (revision 2.0, 10-20-26 00:25, same address): push, the four
     seeders with today's dry-run counts, the Operations job, the recapture,
     the check as Mark Marketing.
 

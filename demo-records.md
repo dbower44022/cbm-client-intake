@@ -1,6 +1,6 @@
 # Demo records — what to open, for each kind of user
 
-Last Updated: 10-20-26 00:40 · Revision 1.1 — change log at the end.
+Last Updated: 10-20-26 00:20 · Revision 1.1 — change log at the end.
 
 The training sandbox is **crm-test**: the app at
 `https://cbm-client-intake-svxs3.ondigitalocean.app` over the CRM at
@@ -302,5 +302,5 @@ can be seeded before the next baseline is captured.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
-| 1.1 | 10-20-26 00:40 | Claude (Claude Code) | Campaign Management section: the six demo campaigns, the five postcard card addresses, the leads, two referring partners and the additional managers. Revision control added. |
+| 1.1 | 10-20-26 00:20 | Claude (Claude Code) | Campaign Management section: the six demo campaigns, the five postcard card addresses, the leads, two referring partners and the additional managers. Revision control added. |
 | 1.0 | — | — | The page before revision control. |

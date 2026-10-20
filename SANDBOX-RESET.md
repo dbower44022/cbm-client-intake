@@ -1,6 +1,6 @@
 # The training sandbox — nightly reset runbook
 
-Last Updated: 10-20-26 00:45 · Revision 1.1 — change log at the end.
+Last Updated: 10-20-26 00:21 · Revision 1.1 — change log at the end.
 
 crm-test does three jobs now: it is the **pre-production review gate**, the
 **training sandbox**, and the **release-test environment**. This document is
@@ -353,5 +353,5 @@ than by default.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
-| 1.1 | 10-20-26 00:45 | Claude (Claude Code) | The fourth seeder (`seed_outreach_data.py`) in the re-baseline sitting, and the demo campaign links the worker restores after every reset. Revision control added. |
+| 1.1 | 10-20-26 00:21 | Claude (Claude Code) | The fourth seeder (`seed_outreach_data.py`) in the re-baseline sitting, and the demo campaign links the worker restores after every reset. Revision control added. |
 | 1.0 | — | — | The runbook before revision control. |
