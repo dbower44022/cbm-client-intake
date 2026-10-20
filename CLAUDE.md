@@ -2025,11 +2025,10 @@ Cleveland by design. What is *verified* is narrower than what is deployed — se
 each block.
 
 - **v0.268.0 (2026-10-20) — funders on a campaign (ruling 57).**
-  Committed, not pushed. Needs the CRM link: crm-test by
-  `scripts/prospect_crm_test.sh funders` (dry run clean, one change,
-  `4658d1450804`), production at the Sunday slot, Boston with its release
-  (`coutreach-funders-crm-handoff.md`). Tests only so far; the live check
-  is in the handoff's last section.
+  Live; **checked on crm-test 10-20-26** as Mark Marketing and Sally
+  Sponsor after Doug applied the link (`4658d1450804`). Owed: production
+  at the Sunday slot, Boston with its release
+  (`coutreach-funders-crm-handoff.md`), a sandbox recapture.
 
 - **v0.267.0–v0.267.2 (2026-10-20) — the Leads and Review grids at
   volume.** Live on crm-test and production (dark there). Rulings 55 and 56
