@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-20-26 15:02 · Revision 1.25 — change log at the end.
+Last Updated: 10-20-26 15:08 · Revision 1.26 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -582,6 +582,25 @@ any combination of all them."
     record type named; how the audience is narrowed within each type, and
     how it is fixed at sign-off, are decisions still to come. (10-20-26)
 
+### Doug's ruling (10-20-26, on which people on a record a campaign reaches)
+
+Put as a consequential decision: when a campaign targets a client, partner
+or funder, option A, the primary contact only; option B, every contact on
+the record; option C, the primary contact by default, with a per-campaign
+switch for every contact. Doug's reply at 15:08: "c".
+
+59. **A campaign reaches the record's primary contact, unless staff tick
+    "Include every contact on the record"** (option C). The switch is per
+    campaign, and the audience count before sign-off reflects it. Approved
+    with it, as presented: consent still applies person by person (ruling
+    19 for email, ruling 9 for texts); a postcard goes to the
+    organisation's mailing address and is outside this ruling; one address
+    reaches one person, the first contact holding it; "primary" is the link
+    the record already holds (the engagement's primary contact, the
+    partner's or funder's "Make primary" contact); a record with no primary
+    contact is skipped and counted on the sign-off screen, never guessed.
+    (10-20-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -702,8 +721,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.25 |
-| Last Updated | 10-20-26 15:02 |
+| Version | 1.26 |
+| Last Updated | 10-20-26 15:08 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -711,6 +730,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.26 | 10-20-26 15:08 | Claude (Claude Code) | Ruling 59 appended: a campaign reaches the primary contact unless staff tick "Include every contact on the record" (Doug's "c"). |
 | 1.25 | 10-20-26 15:02 | Claude (Claude Code) | Ruling 58 appended: a campaign may target leads, clients, partners, funders, contacts, or any combination (Doug's first decision on campaign audiences). Revision table's Version and Last Updated brought up to date (they read 1.21). |
 | 1.24 | 10-20-26 14:36 | Claude (Claude Code) | Ruling 57 appended: a campaign names its funders, like its partners (Doug's "a"). |
 | 1.23 | 10-20-26 01:16 | Claude (Claude Code) | Ruling 56 appended: the lead screens stay inside the Campaign Management tile (Doug's "a" to build plan § 9 question 12), with his new requirement for the Leads and Review grids quoted. |
