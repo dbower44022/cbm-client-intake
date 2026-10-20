@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-20-26 17:47 · Revision 1.32 — change log at the end.
+Last Updated: 10-20-26 17:49 · Revision 1.33 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -729,6 +729,26 @@ leads. Doug's reply at 17:47: "a".
     crm-test first, production at its slot, Boston with its release. It
     joins the lead's step fields (ruling 63). (10-20-26)
 
+### Doug's ruling (10-20-26, on build plan § 9 question 18)
+
+Put as a consequential decision: a funder record has no status, and on
+crm-test only one of six funders carries a contribution or contact date.
+Option A, filter on the date and amount fields that exist; option B, add a
+funder status. Recommended: A. Doug's reply at 17:49: "b".
+
+67. **A funder carries a status** (option B, against the recommendation).
+    A choice field on `CSponsorProfile`, set by staff in Funder
+    Management, and a step field for funders (ruling 63) in place of the
+    inferred "lapsed by date". Decided with it, as follow-on detail: the
+    options are drafted as Prospective · Active · Lapsed · Ended and
+    confirmed in the CRM handoff; existing funders start empty — no
+    status is guessed from dates — and a list treats empty as "not set";
+    the field sits on the Details tab's Funding panel and as a Funder
+    Management grid column; partners already carry `partnershipStatus`,
+    so Partner and Funder Management stay alike with no partner change.
+    Its own CRM handoff and plan file; crm-test first, production at its
+    slot, Boston with its release. (10-20-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -849,8 +869,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.32 |
-| Last Updated | 10-20-26 17:47 |
+| Version | 1.33 |
+| Last Updated | 10-20-26 17:49 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -858,6 +878,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.33 | 10-20-26 17:49 | Claude (Claude Code) | Ruling 67 appended: a funder carries a status (Doug's "b" to build plan § 9 question 18, against the recommendation). |
 | 1.32 | 10-20-26 17:47 | Claude (Claude Code) | Ruling 66 appended: a lead carries an industry (Doug's "a" to build plan § 9 question 17). |
 | 1.31 | 10-20-26 15:50 | Claude (Claude Code) | Ruling 65 appended: a hand edit on a dynamic list becomes a standing include/exclude entry (Doug's "a"). Campaign-audience rulings 58–65 complete. |
 | 1.30 | 10-20-26 15:48 | Claude (Claude Code) | Ruling 64 appended: named reusable lists on a Lists tab; a campaign picks its list (Doug's "b"). |
