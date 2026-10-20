@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-20-26 15:08 · Revision 1.26 — change log at the end.
+Last Updated: 10-20-26 15:13 · Revision 1.27 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -601,6 +601,24 @@ switch for every contact. Doug's reply at 15:08: "c".
     contact is skipped and counted on the sign-off screen, never guessed.
     (10-20-26)
 
+### Doug's ruling (10-20-26, on what "contacts" means as a campaign target)
+
+Put as a consequential decision, with the crm-test CRM's Contact type list
+read live (Client, Mentor, Partner, Administrator, Presenter, Donor,
+Member, Prospect, Sponsor, or none): option A, every Contact in the CRM;
+option B, a contact-type picker; option C, every Contact belonging to none
+of the other four targets. Doug's reply at 15:13: "b".
+
+60. **A campaign targeting contacts names the contact types it reaches**
+    (option B). Staff tick types from the CRM's live type list, plus "No
+    type" for an untyped Contact; nothing is ticked by default. Approved
+    with it, as presented: a Contact chosen as itself is its own recipient
+    (ruling 59's primary-contact rule does not apply); a person reached
+    through two targets receives one message; a ticked Mentor, Member or
+    Administrator is addressed at their `cbmEmail` only, or skipped
+    without one; consent still applies person by person (rulings 9 and
+    19). (10-20-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -721,8 +739,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.26 |
-| Last Updated | 10-20-26 15:08 |
+| Version | 1.27 |
+| Last Updated | 10-20-26 15:13 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -730,6 +748,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.27 | 10-20-26 15:13 | Claude (Claude Code) | Ruling 60 appended: a campaign targeting contacts names the contact types it reaches (Doug's "b"). |
 | 1.26 | 10-20-26 15:08 | Claude (Claude Code) | Ruling 59 appended: a campaign reaches the primary contact unless staff tick "Include every contact on the record" (Doug's "c"). |
 | 1.25 | 10-20-26 15:02 | Claude (Claude Code) | Ruling 58 appended: a campaign may target leads, clients, partners, funders, contacts, or any combination (Doug's first decision on campaign audiences). Revision table's Version and Last Updated brought up to date (they read 1.21). |
 | 1.24 | 10-20-26 14:36 | Claude (Claude Code) | Ruling 57 appended: a campaign names its funders, like its partners (Doug's "a"). |
