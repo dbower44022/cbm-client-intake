@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-20-26 17:56 · Revision 0.25 — change log at the end.
+Last Updated: 10-20-26 18:02 · Revision 0.26 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -1406,9 +1406,10 @@ the `isLinked` filter and the `contains` search speed at real volume —
 crm-test holds seventeen leads, so a test import of a few thousand rows
 is part of the pass.
 
-## 7c. Campaign audiences — named lists (rulings 58–65; draft for approval, 10-20-26)
+## 7c. Campaign audiences — named lists (rulings 58–68; approved 10-20-26)
 
-**Status: a draft for Doug's approval. Nothing here is built.** Rulings 58
+**Status: approved by Doug as written (10-20-26 18:02, "approved"). Being built:
+the lead-industry handoff first, then L1.** Rulings 58
 to 65 decide who a campaign reaches and how its list is made. This section
 turns them into the record model, the screens, the engine and the order of
 work. Where this section had to choose, the choice is stated as a draft with
@@ -1926,7 +1927,7 @@ best-effort mirror.
 |---|---|
 | Document | Prospect Marketing — build plan |
 | Version | v0.22 — Phases 1–4 and the lead model built; § 7b built and live-passed; § 7c (campaign audiences, rulings 58–65) drafted for approval |
-| Last Updated | 10-20-26 17:56 |
+| Last Updated | 10-20-26 18:02 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
 | Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
@@ -1935,6 +1936,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.26 | 10-20-26 18:02 | Claude (Claude Code) | § 7c approved by Doug as written. |
 | 0.25 | 10-20-26 17:56 | Claude (Claude Code) | § 9 question 19 answered: A, ruling 14 applies to leads only (ruling 68); § 7c.1 and the section's opening updated. § 7c awaits approval. |
 | 0.24 | 10-20-26 17:49 | Claude (Claude Code) | § 9 question 18 answered: B, a funder status (ruling 67); § 7c.3 and § 7c.7 updated. |
 | 0.23 | 10-20-26 17:47 | Claude (Claude Code) | § 9 question 17 answered: A, a lead carries an industry (ruling 66); § 7c.3 and § 7c.7 updated. |
