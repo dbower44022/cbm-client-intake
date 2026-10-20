@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-20-26 14:28 · Revision 0.20 — change log at the end.
+Last Updated: 10-20-26 14:36 · Revision 0.21 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -1276,6 +1276,10 @@ Written into the executive overview on 10-18-26 and open to Doug's change:
    (the lead's notes, *Who calls* for a marketing user, the call screen's
    own email and Cancel), and ruling 54 (marketing reads every Company).
 4. **Production** at the Sunday 17:00 UTC slot; Boston with its release.
+   **Deferred by Doug 10-20-26 ("B")** until lead and campaign development is
+   finished, so one slot carries every CRM change. Until then production
+   writes no stage and no lead behind a public-form record (`OPEN-ITEMS.md`
+   #51).
 
 **Cost of the rework:** one CRM handoff on three CRMs, about ten modules
 and their tests, and a second live pass over steps already passed. The
@@ -1621,6 +1625,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.21 | 10-20-26 14:36 | Claude (Claude Code) | § 7a.5 step 4 deferred by Doug until development is finished, with its cost named. |
 | 0.20 | 10-20-26 14:28 | Claude (Claude Code) | § 7b live-passed on crm-test (v0.267.0–2); the pass's two fixes recorded in `CHANGELOG.md`. |
 | 0.19 | 10-20-26 02:00 | Claude (Claude Code) | § 7b.1 approved as written and built (v0.267.0). |
 | 0.18 | 10-20-26 01:44 | Claude (Claude Code) | § 7b: Doug's five answers on the Leads and Review grids, and § 7b.1, the design drawn from them, a draft for approval. |
