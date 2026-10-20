@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-20-26 17:49 · Revision 1.33 — change log at the end.
+Last Updated: 10-20-26 17:56 · Revision 1.34 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -749,6 +749,20 @@ funder status. Recommended: A. Doug's reply at 17:49: "b".
     Its own CRM handoff and plan file; crm-test first, production at its
     slot, Boston with its release. (10-20-26)
 
+### Doug's ruling (10-20-26, on build plan § 9 question 19)
+
+Put as a consequential decision: ruling 14 (one postcard per business,
+ever) was written for cold prospects, and the postcard code checks every
+card ever sent to a Company. Option A, ruling 14 applies to leads only;
+option B, to every target. Doug's reply at 17:56: "a".
+
+68. **"One postcard per business, ever" (ruling 14) applies to leads
+    only** (option A). A card to a lead, or to the Company a lead converted
+    to, follows ruling 14. A card reached through a client, partner or
+    funder record is limited instead by "not already carded by this
+    campaign". The sign-off screen names the skip reason either way.
+    (10-20-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -869,8 +883,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.33 |
-| Last Updated | 10-20-26 17:49 |
+| Version | 1.34 |
+| Last Updated | 10-20-26 17:56 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -878,6 +892,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.34 | 10-20-26 17:56 | Claude (Claude Code) | Ruling 68 appended: ruling 14 applies to leads only (Doug's "a" to build plan § 9 question 19). |
 | 1.33 | 10-20-26 17:49 | Claude (Claude Code) | Ruling 67 appended: a funder carries a status (Doug's "b" to build plan § 9 question 18, against the recommendation). |
 | 1.32 | 10-20-26 17:47 | Claude (Claude Code) | Ruling 66 appended: a lead carries an industry (Doug's "a" to build plan § 9 question 17). |
 | 1.31 | 10-20-26 15:50 | Claude (Claude Code) | Ruling 65 appended: a hand edit on a dynamic list becomes a standing include/exclude entry (Doug's "a"). Campaign-audience rulings 58–65 complete. |

@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-20-26 17:49 · Revision 0.24 — change log at the end.
+Last Updated: 10-20-26 17:56 · Revision 0.25 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -1412,8 +1412,9 @@ is part of the pass.
 to 65 decide who a campaign reaches and how its list is made. This section
 turns them into the record model, the screens, the engine and the order of
 work. Where this section had to choose, the choice is stated as a draft with
-its cost. Three choices pass the two-part test and are § 9 questions 17 to
-19; the section is written on the recommended answer to each.
+its cost. Three choices passed the two-part test and were § 9 questions 17 to
+19; all three are answered (rulings 66, 67 and 68) and the section is
+written on those answers.
 
 **How a campaign selects its audience today** (read from the code,
 10-20-26). Each kind holds one fixed rule, saved as JSON in
@@ -1459,7 +1460,8 @@ set of contact types.
   *always include* or *always exclude*, applied after the recipe.
 - **Send-time checks always apply** (ruling 62): consent (rulings 9 and
   19), a Do Not Contact or Disqualified exit, a dead address (ruling 15),
-  one card per business (ruling 14, as question 19 scopes it).
+  one card per business for a lead (ruling 14), and "not already carded
+  by this campaign" for a client, partner or funder (ruling 68).
 
 ### 7c.2 What a list member is, per target type
 
@@ -1895,6 +1897,7 @@ Questions 13–16 were added in v0.8 for the rework of § 7a (rulings 41–44).
     campaign". **B:** ruling 14 applies to every target. Cost of A: a
     business can receive a prospect card and later a client card; a
     partner or funder could be carded by every campaign that names them.
+    **Answered 10-20-26: A (ruling 68).**
 
 ---
 
@@ -1923,7 +1926,7 @@ best-effort mirror.
 |---|---|
 | Document | Prospect Marketing — build plan |
 | Version | v0.22 — Phases 1–4 and the lead model built; § 7b built and live-passed; § 7c (campaign audiences, rulings 58–65) drafted for approval |
-| Last Updated | 10-20-26 17:49 |
+| Last Updated | 10-20-26 17:56 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
 | Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
@@ -1932,6 +1935,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.25 | 10-20-26 17:56 | Claude (Claude Code) | § 9 question 19 answered: A, ruling 14 applies to leads only (ruling 68); § 7c.1 and the section's opening updated. § 7c awaits approval. |
 | 0.24 | 10-20-26 17:49 | Claude (Claude Code) | § 9 question 18 answered: B, a funder status (ruling 67); § 7c.3 and § 7c.7 updated. |
 | 0.23 | 10-20-26 17:47 | Claude (Claude Code) | § 9 question 17 answered: A, a lead carries an industry (ruling 66); § 7c.3 and § 7c.7 updated. |
 | 0.22 | 10-20-26 17:37 | Claude (Claude Code) | New § 7c, campaign audiences as named lists (rulings 58–65), a draft for approval: what a list member is per target type, the recipient per channel, the default step-field table verified against crm-test metadata, the engine, six application tables (migration 0032), the screens, two build steps (L1, L2) and their cost. § 9 questions 17 (no industry on leads), 18 (no status on funders) and 19 (ruling 14's scope) added. The revision table's Version and Last Updated brought up to date. |
