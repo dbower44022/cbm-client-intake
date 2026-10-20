@@ -1090,6 +1090,27 @@ block a deploy.)*
 
 ## Live verification owed
 
+55. **Company website rules — live cases owed** (v0.236.0, v0.237.0,
+    2026-10-07; moved here from `CLAUDE.md` "Current status" 10-20-26).
+    Both verified by tests only. (a) v0.237.0: "+ Add partner" on crm-test
+    for a company whose name exists with another website — expect the
+    refusal message naming the existing company. (b) v0.236.0: a funder's
+    company submits the partner form on crm-test — expect `cCompanyType`
+    to read `Sponsor, Partner` afterwards.
+
+56. **Performance review fixes — live checks owed** (v0.245.0–v0.248.0,
+    2026-10-09; moved here from `CLAUDE.md` "Current status" 10-20-26).
+    Verified by tests and local timings only. (a) v0.248.0 receipt sweep:
+    the first production sweep's summary line after deploy — `updated`
+    near 0, and `differing keys:` names whatever still differs (the fix is
+    inferred until then). (b) v0.247.0 Gmail scopes: the production worker
+    log shows "scopes reused" at debug, one "scopes rebuilt (…)" an hour,
+    and the CRM calls per pass falling from about 400 to single figures.
+    (c) v0.246.0 metadata cache: a record page's CRM-call count drops on a
+    second open within a minute. (d) v0.245.0 connection pool: the same
+    pages on crm-test feel faster and the worker log still reaches its
+    Gmail passes.
+
 41. **Topics on events (v0.242.0, Track F F1) — live pass DONE on crm-test 10-09-26; production and Boston owed.**
     *10-18-26 23:22: production's apply is section 2 of the Events Production Test page (#42); read from the container 10-18-26 23:05, `CEvent.topics` is still absent.* **PRODUCTION CRM DONE 10-18-26 23:3x** (plan `1a404fc9c337` applied and verified; the copy wrote eleven events, read back as the org key). The non-admin pass done 10-18/19-26 (seven events saved with topics as Doug's regular login). **Production complete.** Boston still owed.
     Doug's ruling 10-08-26: no user-entered topic; an event carries several
