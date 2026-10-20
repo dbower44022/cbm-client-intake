@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-20-26 14:36 · Revision 0.21 — change log at the end.
+Last Updated: 10-20-26 17:37 · Revision 0.22 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -1406,6 +1406,275 @@ the `isLinked` filter and the `contains` search speed at real volume —
 crm-test holds seventeen leads, so a test import of a few thousand rows
 is part of the pass.
 
+## 7c. Campaign audiences — named lists (rulings 58–65; draft for approval, 10-20-26)
+
+**Status: a draft for Doug's approval. Nothing here is built.** Rulings 58
+to 65 decide who a campaign reaches and how its list is made. This section
+turns them into the record model, the screens, the engine and the order of
+work. Where this section had to choose, the choice is stated as a draft with
+its cost. Three choices pass the two-part test and are § 9 questions 17 to
+19; the section is written on the recommended answer to each.
+
+**How a campaign selects its audience today** (read from the code,
+10-20-26). Each kind holds one fixed rule, saved as JSON in
+`COutreachCampaign.selectionRule`:
+
+- The postcard kind (`campaigns/postcard.py`) selects leads at chosen
+  statuses, or Companies typed Prospect at chosen stages, with a usable
+  address, no exit, and no postcard ever sent to the business (ruling 14).
+- The email kind (`campaigns/email.py`) selects Contacts typed Prospect at
+  chosen stages with the marketing opt-in, plus clients whose last
+  engagement closed more than N days ago (ruling 25).
+- The call kind (`campaigns/calls.py`) selects leads at chosen statuses and
+  Contacts typed Prospect at chosen stages, with a phone number.
+- The text-message kind (`campaigns/sms.py`) selects Contacts with the
+  text-message consent (ruling 9).
+
+*Build the list* runs the rule under the organisation-wide API key and
+writes one Planned `COutreachTouch` per target. No user can narrow the
+audience further, and no campaign can reach partners, funders or a chosen
+set of contact types.
+
+### 7c.1 The model as ruled
+
+- **Targets** (ruling 58): leads, clients, partners, funders and contacts,
+  in any combination on one list.
+- **Recipients** (rulings 59 and 60): a client, partner or funder reaches
+  its primary contact, or every contact on the record when the campaign
+  ticks *Include every contact on the record*. A contact target is its own
+  recipient. A person reached twice receives one message. A Mentor, Member
+  or Administrator is addressed at their `cbmEmail` only.
+- **A list is static or dynamic** (ruling 61) and is **an ordered recipe**
+  (ruling 62): *Add matching*, *Keep only matching*, *Remove matching*,
+  hand ticks and a file import, each step showing what it added or
+  dropped. A static list runs once and is frozen; a dynamic list runs
+  again at the start of each send.
+- **Step fields** (ruling 63) come from a curated list per target type,
+  which administrators edit at `/setup`.
+- **Lists are named records** on a *Lists* tab (ruling 64). A campaign
+  picks one. A list in use is retired, never deleted. A step may add or
+  remove the members of another list. Each campaign records the list and
+  version it sent to.
+- **A hand edit on a dynamic list is a standing entry** (ruling 65):
+  *always include* or *always exclude*, applied after the recipe.
+- **Send-time checks always apply** (ruling 62): consent (rulings 9 and
+  19), a Do Not Contact or Disqualified exit, a dead address (ruling 15),
+  one card per business (ruling 14, as question 19 scopes it).
+
+### 7c.2 What a list member is, per target type
+
+A list holds **records**, not people. The person or address a campaign
+reaches is resolved from the record at send time, by channel. Drafts,
+each with its cost:
+
+- **A lead** is a `CProspect` record.
+- **A client is a `CEngagement` record**, not the client profile or the
+  Company. The engagement holds the status and close date that every client
+  filter needs. Cost: a business with two engagements can be on a list
+  twice; it still receives one card and one message per person, because
+  recipients are de-duplicated after resolution.
+- **A partner** is a `CPartnerProfile` record; **a funder** a
+  `CSponsorProfile` record; **a contact** a `Contact` record.
+
+**Who or what each channel reaches** (a page to consult, so a table):
+
+| Target | Postcard | Email, text message, call |
+|---|---|---|
+| Lead | The lead's mailing address, when usable | Call: the lead's phone. Email and text: only the Contact it converted to, with consent — a lead is never emailed cold (ruling 19) |
+| Client | The engagement's Company billing address, through its client profile | The engagement's primary contact (`primaryEngagementContact`), or every contact on the engagement (`engagementContacts`) when ticked |
+| Partner | The partner company's billing address (`partnerCompany`) | The primary partner contact (`primaryPartnercontact`), or every contact on the partner profile (`contacts`) when ticked |
+| Funder | The funder company's billing address (`sponsorCompany`) | The funder contact (`sponsorContact`), or every contact on the funder profile (`sponsorContacts`) when ticked |
+| Contact | The Contact's Company billing address, else the Contact's own address (draft) | The Contact itself |
+
+A record whose recipient cannot be resolved (no primary contact, no usable
+address) is skipped and counted on the sign-off screen with its reason,
+never guessed (ruling 59).
+
+**Touches stay as they are.** A touch already carries `prospectId`,
+`companyId` or `contactId`; a client, partner or funder target's touch
+names the resolved Contact or Company. Which list record it came from is
+kept in the application database (§ 7c.5). **No CRM change.**
+
+### 7c.3 The step fields — the default list, verified against crm-test
+
+Read from the crm-test CRM's live metadata on 10-20-26. Option values are
+always read live. A field on a linked record (marked *via*) costs a second
+CRM query per step that uses it.
+
+**Leads (`CProspect`):** Lead status (`leadStatus`) · Lead Source
+(`leadSource`) · Postal code (`mailingAddressPostalCode`) · City
+(`mailingAddressCity`) · Import batch (`importBatch`) · Arrived
+(`createdAt`) · Qualified on (`qualifiedAt`) · Exit (`sideExit`).
+**Industry is not on the lead** — `CProspect` has no industry field.
+Question 17.
+
+**Clients (`CEngagement`):** Engagement status (`engagementStatus`) · Close
+date (`closeDate`) · Close reason (`closeReason`) · Start date
+(`engagementStartDate`) · Mentoring focus areas (`mentoringFocusAreas`) ·
+Referring partner (`referringPartner`) · Outreach campaign
+(`outreachCampaign`) · *via the client profile:* Industry sector
+(`industrySector`), Annual revenue range (`annualRevenueRange`), Number of
+employees (`numberOfEmployees`), Home-based (`isHomeBased`) · *via the
+Company:* Postal code (`billingAddressPostalCode`) · *computed:* days since
+the client's last engagement closed (ruling 25's existing rule, kept
+because "all engagements closed" cannot be written as one field condition).
+
+**Partners (`CPartnerProfile`):** Partnership status (`partnershipStatus`)
+· Partnership type (`partnershipType`) · Partner manager
+(`partnerManager`) · Partnership start date (`partnershipStartDate`) · Last
+contacted (`lastContacted`) · *via the Company:* Industry sector
+(`cIndustrySector`), Postal code (`billingAddressPostalCode`).
+
+**Funders (`CSponsorProfile`):** Funder manager (`cBMSponsorManager`) · Last
+contribution (`lastContribution`) · Total contribution
+(`totalContribution`) · Last contacted (`lastContacted`) · *via the
+Company:* Sponsorship level (`cSponsorshipLevel`), Sponsorship renewal date
+(`cSponsorshipRenewalDate`), Postal code (`billingAddressPostalCode`).
+**A funder has no status field** — ruling 63's default named one. Question
+18.
+
+**Contacts (`Contact`):** Contact type (`cContactType`) · Funnel stage
+(`cFunnelStage`) · Marketing opt-in (`cMarketingOptIn`) · Text-message
+opt-in (`cSmsOptIn`) · How did you hear (`cHowDidYouHear`) · Postal code
+(`addressPostalCode`) · Created (`createdAt`). **An *Add matching* step on
+contacts must name at least one contact type** (ruling 60: nothing ticked
+by default); "No type" is `cContactType` empty.
+
+**The `/setup` setting.** `CAMPAIGN_LIST_FIELDS`, one entry per target type
+listing its fields (and the *via* hop for a linked one). Editing it is
+validated against live CRM metadata — a field the CRM lacks, or of a type
+no operator serves, is refused with the reason — and recorded in the
+settings history. Not boot-read: a change applies within the settings
+refresh. A field removed from the CRM or the setting stays on any recipe
+that used it, flagged, and the step refuses to run until it is edited
+(ruling 63).
+
+### 7c.4 The engine
+
+**Running a recipe.** Under the organisation-wide API key, like every
+selection today. Each step is one CRM `where` per target type (plus one per
+*via* hop), paged at 200. A working set of keys (`lead:<id>`,
+`client:<id>`, `partner:<id>`, `funder:<id>`, `contact:<id>`) is carried
+through the steps in order:
+
+- *Add matching* — the union.
+- *Keep only matching* — the intersection, for the step's target type;
+  members of other types pass through untouched (draft: the screen says
+  so on the step).
+- *Remove matching* — the difference.
+- *Add* / *Remove members of list…* — the same three, reading the other
+  list's current membership. A list may not reach itself through another
+  list; the save refuses a cycle.
+- *Import* — a file of CRM ids or email addresses, matched to existing
+  records; an unmatched row is reported, **never created** (creating leads
+  is the Imports tab's job).
+- Standing entries (dynamic) or hand ticks (static) apply last.
+
+Each step records its before-and-after count; the screen shows them beside
+the step. **A step whose result exceeds 20,000 records is refused** with
+"narrow the step" (draft; the Leads grid's bulk cap is 2,000, and ruling
+56's volume is about 10,000 leads a year).
+
+**When a list runs.** A static list runs when staff press *Run* and is
+then frozen; *Run again* replaces the frozen membership, keeps hand ticks
+made since as standing differences, and asks for confirmation first. A
+dynamic list runs at the start of each send: in this application, a
+campaign's *Build the list* (postcard, email push, call list, text
+campaign each send once). So "dynamic" matters when one list feeds a
+sequence of campaigns — the March postcard and the April call read the
+same recipe a month apart and see the list as it is that day.
+
+**The campaign's send** (§ 3.1 step 2, changed). *Build the list* reads the
+campaign's list (frozen membership, or the recipe run now), resolves each
+member to its recipient by channel (§ 7c.2), applies the send-time checks,
+de-duplicates recipients, and writes the Planned touches as today. The
+sign-off screen shows: members on the list, recipients resolved, and each
+skip reason with its count. The kinds' fixed rules become the kinds'
+send-time checks, which they already partly are (consent, usable address,
+phone held, one card per business).
+
+**Existing campaigns.** A campaign with a `selectionRule` and no list keeps
+working exactly as now. With `CAMPAIGN_LISTS` on, a new campaign picks a
+list; the kind's rule screen is no longer offered. Draft, chosen because
+every existing campaign is crm-test test data or already sent.
+
+**Who sees what.** The Lists tab is behind the campaigns gate
+(`CAMPAIGNS_ALLOWED_TEAMS`, the Marketing Admin Team) and
+`CAMPAIGN_LISTS`. The member preview shows each record's name, its target
+type, and the values of the curated fields the recipe used — nothing else
+— so the Marketing Admin Role sees no engagement field beyond the reviewed
+list (the boundary ruling 63 was chosen to keep). Every list create, edit,
+run, freeze, retire and standing-entry change goes through `record_action`.
+
+### 7c.5 Storage — the application database (migration 0032)
+
+Ruling 64 puts lists in the application database, like campaign links
+(ruling 31). Six tables:
+
+- `audience_list` — id, name, notes, kind (static / dynamic), status
+  (active / retired), current version, created and changed by and when.
+- `audience_list_step` — list id, position, action, target type,
+  conditions (JSON), source list id (for a list step), import reference.
+- `audience_list_member` — a static list's frozen membership: list id,
+  target key, the step that added it, added by and when for a hand tick.
+- `audience_list_entry` — a dynamic list's standing entries: list id,
+  target key, include / exclude, note, made by and when (ruling 65).
+- `audience_list_version` — the recipe as JSON and the member count at each
+  saved change, so a campaign's "version it sent to" can be shown later.
+- `campaign_audience` — campaign id, list id, list version, the *Include
+  every contact* tick, and per member the resolved recipient or the skip
+  reason, written at *Build the list*.
+
+**The training sandbox empties these tables every night** (the app's own
+Postgres is restored at 05:00 UTC), so lists made on crm-test during a
+pass are gone by morning, and demo lists need a seeder stage and a
+re-baseline, as the campaign links did (`campaigns/sandbox_demo.py`).
+
+### 7c.6 The screens
+
+- **Campaign Management → Lists tab** (ruling 56's top bar gains *Lists*):
+  a grid of lists — name, kind, members, used by N campaigns, last run,
+  status — with *+ New list*, search and *Show retired*.
+- **A list's page:** the header (name, kind switch static / dynamic, *Run*
+  or *Run again*, *Retire*); the **Recipe** panel, one row per step with
+  its counts, drag to reorder, *+ Add step*; the **Standing entries**
+  panel (dynamic) with who, when and the note, each removable; the
+  **Members** grid, paged at 50 from the application database, with the
+  tick column for hand edits and the used-fields columns; *Used by* naming
+  each campaign and the version it sent to.
+- **A step's editor:** action, target type, then conditions — field (from
+  the curated list), operator (by field type, ruling 63), value (options
+  read live; dates through `CBMDateTime`). *Preview* shows the step's
+  count before it is saved.
+- **The campaign form:** a *List* picker in place of the rule screen, and
+  the *Include every contact on the record* tick (ruling 59), shown when
+  the list holds clients, partners or funders.
+- **`/setup` → Campaigns:** the `CAMPAIGN_LIST_FIELDS` editor, one panel
+  per target type.
+
+Every convention in § 10 applies.
+
+### 7c.7 Order and cost
+
+Two steps, each behind `CAMPAIGN_LISTS` (off; read per request), each with
+a live pass on crm-test as a real non-admin Marketing Admin user.
+
+1. **L1 — lists of leads and contacts.** The tables, the engine with *Add*,
+   *Keep only*, *Remove*, static and dynamic, hand ticks and standing
+   entries, the Lists tab and list page, the campaign's *List* picker for
+   all four sending kinds, the `/setup` field list for those two types,
+   and the sign-off screen's skip counts. About four days.
+2. **L2 — clients, partners and funders, and lists of lists.** The three
+   target types with their *via* fields, recipient resolution and *Include
+   every contact*, the list-member steps with the cycle check, and the
+   import step. About three days.
+
+**Cost, named.** About a week and a half, the largest piece of this arc
+since Phase 1. The live pass is harder than usual because the sandbox
+empties the lists nightly and crm-test holds few partners, funders and
+closed engagements, so the pass needs seeded records first. No CRM change
+unless question 17 is answered A.
+
 ---
 
 ## 8. The open list — each item answered or put to Doug
@@ -1588,6 +1857,37 @@ Questions 13–16 were added in v0.8 for the rework of § 7a (rulings 41–44).
     **Answered 10-19-26: B, a lead behind every new public-form record
     (ruling 48)** — against this question's recommendation, which the
     session withdrew because ruling 41 names every new outside record a lead.
+17. **Leads have no industry field — add one?** Ruling 63's default list
+    names industry for leads, but `CProspect` holds none (crm-test
+    metadata, 10-20-26), so "Qualified leads in manufacturing" cannot be
+    written. **A (recommended):** add `industry` to the lead as an enum
+    with the Company's own sector options (`Account.cIndustrySector`), filled
+    by the imports when a file carries it and editable in Review. **B:**
+    filter a lead by the industry of the Company it converted to — useless
+    for the unconverted leads that most campaigns target. **C:** no industry
+    on leads. Cost of A: a CRM change on three CRMs (crm-test, then
+    production at its slot, Boston with its release) and an import mapping;
+    and it fills only as fast as the source files carry an industry, which
+    question 2 (what the outside filter delivers) has not settled.
+18. **Funders have no status field — is that enough?** Ruling 63's default
+    names a status for funders; `CSponsorProfile` has none. **A
+    (recommended):** use what exists — manager, last contribution, total
+    contribution, last contacted, and the Company's sponsorship level and
+    renewal date; "lapsed funders" is "last contribution before a date".
+    **B:** add a funder status enum (for example Prospective, Active,
+    Lapsed) to the funder record. Cost of A: no field says a funder has
+    ended, so a funder who stopped stays selectable until staff exclude
+    them. Cost of B: a CRM change on three CRMs and a status nobody yet
+    keeps current.
+19. **Does "one card per business, ever" (ruling 14) apply to clients,
+    partners and funders?** It was ruled for prospects, and the postcard
+    code checks every card ever sent to the Company. A client who received
+    a prospect card in 2026 could never be mailed a re-marketing card.
+    **A (recommended):** ruling 14 applies to lead targets only; a client,
+    partner or funder card is limited instead by "not carded by this
+    campaign". **B:** ruling 14 applies to every target. Cost of A: a
+    business can receive a prospect card and later a client card; a
+    partner or funder could be carded by every campaign that names them.
 
 ---
 
@@ -1615,8 +1915,8 @@ best-effort mirror.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — build plan |
-| Version | v0.13 — Phases 1–4 built (v0.258.0, v0.259.0, v0.261.0, v0.262.0–v0.264.0) on the earlier model; rulings 41–44 (the lead model) recorded and their rework planned in § 7a; questions 13–16 answered (rulings 45–48); § 7a.5 step 1 done on crm-test (rulings 49, 50) |
-| Last Updated | 10-19-26 11:03 |
+| Version | v0.22 — Phases 1–4 and the lead model built; § 7b built and live-passed; § 7c (campaign audiences, rulings 58–65) drafted for approval |
+| Last Updated | 10-20-26 17:37 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
 | Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
@@ -1625,6 +1925,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.22 | 10-20-26 17:37 | Claude (Claude Code) | New § 7c, campaign audiences as named lists (rulings 58–65), a draft for approval: what a list member is per target type, the recipient per channel, the default step-field table verified against crm-test metadata, the engine, six application tables (migration 0032), the screens, two build steps (L1, L2) and their cost. § 9 questions 17 (no industry on leads), 18 (no status on funders) and 19 (ruling 14's scope) added. The revision table's Version and Last Updated brought up to date. |
 | 0.21 | 10-20-26 14:36 | Claude (Claude Code) | § 7a.5 step 4 deferred by Doug until development is finished, with its cost named. |
 | 0.20 | 10-20-26 14:28 | Claude (Claude Code) | § 7b live-passed on crm-test (v0.267.0–2); the pass's two fixes recorded in `CHANGELOG.md`. |
 | 0.19 | 10-20-26 02:00 | Claude (Claude Code) | § 7b.1 approved as written and built (v0.267.0). |
