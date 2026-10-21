@@ -1,0 +1,17 @@
+{
+  "name": "csponsor-funder-status",
+  "description": "Ruling 67 of prds/prospect-marketing/rulings.md (10-20-26): a funder carries a status, set by staff in Funder Management and offered as a campaign-list step field (build plan § 7c.3). One enum on CSponsorProfile, stored as typed (custom entity, no prefix). Existing funders start empty; nothing is guessed from dates. Partners already carry partnershipStatus. Handoff: csponsor-funder-status-crm-handoff.md.",
+  "entities": [],
+  "fields": [
+    {
+      "entity": "CSponsorProfile",
+      "name": "funderStatus",
+      "type": "enum",
+      "label": "Funder status",
+      "options": ["", "Prospective", "Active", "Lapsed", "Ended"],
+      "tooltipText": "Where the funding relationship stands: Prospective (being approached), Active (giving now), Lapsed (stopped giving, may return), Ended (the relationship is over). Set by staff; empty means not set. A campaign list can select funders by it."
+    }
+  ],
+  "links": [],
+  "enumOptions": []
+}
