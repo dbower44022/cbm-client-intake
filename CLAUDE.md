@@ -1201,8 +1201,10 @@ the strength of it.
   Committed, not pushed; dark (`ENRICHMENT_FREE_PASS`, `ENRICHMENT_WEB_CHECKS`
   off). New package `enrichment/`, arc `prds/lead-enrichment/` (design rulings
   E1–E17). crm-test's nine `CProspect` fit fields applied and verified; the
-  Leads and Review grids show the score when the CRM has the fields. Owed:
-  the live pass, production at a Sunday slot, Boston.
+  Leads and Review grids show the score when the CRM has the fields.
+  v0.270.1 keeps the Operations plan still while the worker scores.
+  **Live-passed on crm-test 10-21-26** (Doug as Mark Marketing; the web check
+  verified a real business's site). Owed: production at a Sunday slot, Boston.
 - **v0.268.0 (2026-10-20) — funders on a campaign (ruling 57).** Live;
   checked on crm-test 10-20-26 as Mark Marketing and Sally Sponsor. Owed:
   production at the Sunday slot (deferred by Doug until campaign testing is

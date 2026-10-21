@@ -1,6 +1,6 @@
 # CRM handoff — lead enrichment build phase 1: the fit score on `CProspect`
 
-Last Updated: 10-20-26 17:54 · Revision 0.2 — see change log at the end.
+Last Updated: 10-21-26 13:54 · Revision 0.3 — see change log at the end.
 
 Nine fields on the lead (`CProspect`), written by the free pass: the fit
 score, the service-area gate, the county, the three signals, the reasons, the
@@ -16,7 +16,7 @@ writes nothing until they exist and the switch is on.
 
 | CRM | State | Evidence |
 |---|---|---|
-| crm-test | **Done 10-20-26 17:48.** Applied by Claude (`scripts/enrichment_crm_test.sh fitscore`): nine fields created and read back by the applier. § 3 steps 1 and 2 passed the same minute: all nine present, none Read-only; the org-wide key lists `CProspect` with `fitScore,fitGate` (200, total 3,817). The non-admin check rides the build phase's live pass. | The applier's output; a metadata and list read as the org-wide key. |
+| crm-test | **Done 10-20-26 17:48.** Applied by Claude (`scripts/enrichment_crm_test.sh fitscore`): nine fields created and read back by the applier. § 3 steps 1 and 2 passed the same minute: all nine present, none Read-only; the org-wide key lists `CProspect` with `fitScore,fitGate` (200, total 3,817). The non-admin check passed 10-21-26 in the build phase's live pass (Mark Marketing, Leads and Review grids). | The applier's output; a metadata and list read as the org-wide key. |
 | Production | **Not applied.** At a Sunday 17:00 UTC slot, after the crm-test pass. | — |
 | Boston | **Owed** with the release that carries build phase 1. | — |
 
@@ -117,5 +117,6 @@ writes the step page for that slot when it is booked. Boston:
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.3 | 10-21-26 13:54 | Claude (Claude Code) | crm-test's non-admin check passed. |
 | 0.2 | 10-20-26 17:54 | Claude (Claude Code) | crm-test applied and verified (§ 0). |
 | 0.1 | 10-20-26 17:38 | Claude (Claude Code) | Created. Plan file `scripts/plans/cprospect-fit-score.json`, dry run on crm-test clean, fingerprint `8e57af53eef5`. JSON field types read as not creatable. |

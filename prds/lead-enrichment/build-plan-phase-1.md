@@ -1,10 +1,19 @@
 # Build plan — lead enrichment phase 1: the free pass and the fit score
 
-Last Updated: 10-20-26 18:08 · Revision 0.4 (approved 10-20-26; built as v0.269.0)
+Last Updated: 10-21-26 13:54 · Revision 0.5 (approved; built; live-passed on crm-test 10-21-26)
 
-**Status (10-20-26 18:08).** Approved by Doug as written. Built in full as v0.269.0,
-committed, not pushed, with 35 tests. The CRM change is applied and verified
-on crm-test. Next: the live pass (§ 6 step 3).
+**Status (10-21-26 13:54).** Approved by Doug as written. Built as v0.269.0, with
+v0.270.1 fixing a plan that moved while the worker ran. **Live-passed on
+crm-test 10-21-26** by Doug from the step page
+https://claude.ai/artifact/9kfsFpHL13WEQxT4yo8Wmh: the Operations job with
+its reason, the Leads grid as Mark Marketing (columns, sort, reasons, both
+filters), the Review grid's *Out of area* filter and one-step Disqualify
+(the Dayton test lead read back Fit 0, Out of area, Montgomery, Disqualified),
+and the web check on a real business (Great Lakes Brewing Company read back
+`https://greatlakesbrewing.com`, verified by its name and street address,
+written into the empty field, status left Unqualified). The first attempt
+on 10-20-26 found the two faults v0.270.1 and the page fixed. Owed:
+production's CRM change at a Sunday slot, Boston with its release.
 
 **What it delivers.** Every open lead gets a fit score from 0 to 100,
 computed by the free pass at no cost per record. The service-area gate comes
@@ -174,6 +183,7 @@ and stop changing. Nothing else reads them.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.5 | 10-21-26 13:54 | Claude (Claude Code) | Live pass on crm-test recorded. |
 | 0.4 | 10-20-26 18:08 | Claude (Claude Code) | The grid columns built; phase 1 complete in code. |
 | 0.3 | 10-20-26 17:54 | Claude (Claude Code) | Approved; status line added for the v0.269.0 build. |
 | 0.2 | 10-20-26 17:47 | Claude (Claude Code) | § 7: the counties answered (E17). |

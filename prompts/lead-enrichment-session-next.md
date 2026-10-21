@@ -1,6 +1,6 @@
 # Kickoff prompt — lead and client enrichment, next session
 
-Last Updated: 10-21-26 09:56 · Revision 0.7
+Last Updated: 10-21-26 13:54 · Revision 0.8
 
 Operating mode: DETAIL (this repository's project default).
 
@@ -9,16 +9,9 @@ Read `README.md`, then `design.md`. The design was approved by Doug on
 10-20-26, section by section. Rulings E1 to E17 in § 1 are binding and
 append only; record any new answer as E18 onward.
 
-Phase 1 is built (v0.269.0, with the plan fix v0.270.1). The first live
-pass on 10-20-26 stopped at the Leads grid (the reset came first); the step
-page https://claude.ai/artifact/9kfsFpHL13WEQxT4yo8Wmh is reworked for the
-second attempt (sections A to E; the /setup settings survived the reset).
-When Doug sends "pushed": check crm-test's /healthz reads 0.270.1, then
-create the crm-test lead Fit Test Dayton Bakery LLC (1 S Main St, Dayton,
-OH 45402, Unqualified, Lead Source List, batch "Fit score live pass
-10-21-26") under the org key. When he sends "web checks on": create Great
-Lakes Brewing Company (2516 Market Ave, Cleveland, OH 44113, Unqualified,
-Lead Source List). After E8, read that lead's website and fit fields back.
+Phase 1 is built (v0.269.0, v0.270.1) and live-passed on crm-test
+10-21-26. Owed for phase 1: production's CRM change at a Sunday slot
+(`lead-fit-score-crm-handoff.md` § 4) and Boston with its release.
 
 Then, one question per turn: build phase 2 (design § 8, the AI research pass
 measured on known clients), and § 9 question 6 (which Business Status survey
@@ -32,6 +25,7 @@ provider's terms.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.8 | 10-21-26 13:54 | Claude (Claude Code) | Phase 1 live-passed; next is phase 2. |
 | 0.7 | 10-21-26 09:56 | Claude (Claude Code) | Second live-pass attempt: what Claude does at each report-back. |
 | 0.6 | 10-20-26 18:12 | Claude (Claude Code) | Grid columns built; the live-pass step page and what Claude does at each report-back. |
 | 0.5 | 10-20-26 17:57 | Claude (Claude Code) | Phase 1 built as v0.269.0; next is the grid columns, then the live pass. |
