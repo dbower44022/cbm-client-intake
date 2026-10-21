@@ -49,7 +49,7 @@ found; move resolved items to the bottom with the resolution date.
     every contact, funder status in Funder Management). Owed: push; the
     funder-status field on crm-test (`scripts/prospect_crm_test.sh
     funderstatus`, fingerprint `84636d15191f`, Doug runs it); the L2 live
-    pass; production and Boston with the arc's eventual slot.
+    pass (https://claude.ai/artifact/BcETZsL5hFi3h9Bpm3wNUd, rev 1.0); production and Boston with the arc's eventual slot.
     LIVE-PASSED on crm-test (v0.265.0–3, 10-19-26; rulings 41–54).**
     **Production DEFERRED by Doug 10-20-26 15:06: "defer production until
     we finish testing new campaign functionality"** — no Sunday slot is
