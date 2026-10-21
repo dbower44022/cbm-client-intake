@@ -34,16 +34,19 @@ found; move resolved items to the bottom with the resolution date.
     ruling on the proposed removals (handoff § 6).
 
 51. **Prospect marketing — the lead model BUILT, LIVE (dark) and
-    **Campaign lists L1 (v0.270.0, 10-20-26 18:20, build plan § 7c, rulings
-    58–68): committed, not pushed; dark behind `CAMPAIGN_LISTS`.** Owed:
-    migration 0032 runs on deploy; the lead-industry field on crm-test
-    (`scripts/prospect_crm_test.sh industry`, fingerprint `82ec87c36dce`,
-    Doug runs it); then the live pass as Mark Marketing on crm-test — a
-    static and a dynamic list, a hand tick surviving Run again, a standing
-    entry, a postcard and an email campaign built from a list with the skip
-    reasons named, a mentor reached at their cbmEmail — step page
-    https://claude.ai/artifact/2jDCeJN96LR2cHvA2Mddro (rev 1.0). Then L2 (clients,
-    partners, funders; the funder-status handoff, ruling 67).
+    **Campaign lists L1 (v0.270.0, build plan § 7c, rulings 58–68):
+    LIVE-PASSED on crm-test 10-21-26 15:36** by Doug as Mark Marketing from
+    https://claude.ai/artifact/2jDCeJN96LR2cHvA2Mddro (rev 1.1): static list
+    14 → 9 → 8, a hand take-out kept through Run again, the postcard build
+    reaching Gordon Square Florist and Detroit Shoreway Signs (4 carded, 1
+    exit skipped); the dynamic list 29, Pavel Novak always excluded → 28,
+    the email build reaching Dana Okoro and Walter Kemp — Walter at his
+    chapter address, read back by Claude. Lead `industry` applied on
+    crm-test. One finding, fixed locally and unpushed: the saved recipe's
+    problems box stayed up while a new list was edited. `CAMPAIGN_LISTS` is
+    ON on crm-test (override). Owed: push that fix; L2 (clients, partners,
+    funders; the funder-status handoff, ruling 67); production and Boston
+    with the arc's eventual slot.
     LIVE-PASSED on crm-test (v0.265.0–3, 10-19-26; rulings 41–54).**
     **Production DEFERRED by Doug 10-20-26 15:06: "defer production until
     we finish testing new campaign functionality"** — no Sunday slot is
