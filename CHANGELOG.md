@@ -5,6 +5,39 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.271.0] — 2026-10-21
+
+**feat(campaigns): campaign lists L2 — clients, partners and funders**
+(build plan § 7c.7, rulings 58–68). A list step can now select **clients**
+(an engagement), **partners** and **funders** as well as leads and contacts,
+with § 7c.3's default fields, all read from crm-test's live metadata. **A
+field can follow links**: `engagementClient.industrySector` is the client
+profile's sector, and `engagementClient.linkedCompany.billingAddressPostalCode`
+walks on to the Company — a one-to-one hop whose key sits on the Company is
+walked backwards. Link fields (a partner's manager, a client's referring
+partner) offer the linked records by name. A date can be **more than N days
+ago** (how "clients closed over a year ago" is written). Three new step kinds:
+**add / remove the members of another list** (a standing exclusion list; a
+list that would include itself is refused at Save) and **add from a file** —
+CRM ids, or email addresses for leads and contacts, pasted or read in the
+browser; a row matching nothing is counted, never created.
+
+**Recipients (ruling 59):** a client, partner or funder reaches its primary
+contact, or every contact on the record when the campaign ticks the new
+**Include every contact on the record**; a record with neither is skipped and
+counted. Its postcard goes to its Company's address (a client's through its
+client profile when the engagement names none), limited only by this
+campaign (ruling 68). The Lists page searches all five types for hand edits.
+
+**Funder status (ruling 67):** Funder Management shows it on the Details
+tab's Funding panel and as a grid column, read only when the CRM has the
+field (`DomainConfig.list_optional_select`); the CRM change is
+`csponsor-funder-status-crm-handoff.md`, dry-run clean on crm-test
+(`scripts/prospect_crm_test.sh funderstatus`, fingerprint `84636d15191f`).
+No other CRM change; no migration. Still dark behind `CAMPAIGN_LISTS` (on
+for crm-test only). Verified by 9 new tests, the full suite, and every
+default field and recipient path run read-only against crm-test.
+
 ## [0.270.1] — 2026-10-20
 
 **fix(enrichment): the *Lead fit scores* plan no longer moves while the worker

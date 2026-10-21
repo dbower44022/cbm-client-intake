@@ -504,3 +504,164 @@ def test_saving_a_changed_recipe_is_a_new_version(monkeypatch):
         "name": "L renamed", "kind": "dynamic",
         "recipe": {"steps": [step("add", "lead", ("leadStatus", "in", ["Qualified"]))]}}).json()["list"]
     assert changed["version"] == 2
+
+
+# --- L2: clients, partners and funders; links; lists of lists; imports --------------------
+
+class OrgCrm(ListCrm):
+    """ListCrm plus the three organisation types and the links § 7c.3 walks."""
+
+    LINKS = {
+        "CEngagement": {"engagementClient": {"type": "belongsTo", "entity": "CClientProfile"},
+                        "referringPartner": {"type": "belongsTo", "entity": "CPartnerProfile"},
+                        "outreachCampaign": {"type": "belongsTo", "entity": cfg.CAMPAIGN}},
+        "CClientProfile": {"linkedCompany": {"type": "hasOne", "entity": "Account", "foreign": "cClientProfile"}},
+        "CPartnerProfile": {"partnerCompany": {"type": "belongsTo", "entity": "Account"},
+                            "partnerManager": {"type": "belongsTo", "entity": "CMentorProfile"}},
+        "CSponsorProfile": {"sponsorCompany": {"type": "belongsTo", "entity": "Account"},
+                            "cBMSponsorManager": {"type": "belongsTo", "entity": "CMentorProfile"}},
+    }
+    FIELDS = {
+        "CEngagement": {"engagementStatus": {"type": "enum", "options": ["Active", "Completed", "Inactive"]},
+                        "closeDate": {"type": "date"}, "referringPartner": {"type": "link"},
+                        "engagementClient": {"type": "link"}},
+        "CClientProfile": {"industrySector": {"type": "enum", "options": ["", "Manufacturing", "Retail Trade"]}},
+        "Account": {"billingAddressPostalCode": {"type": "varchar"},
+                    "cIndustrySector": {"type": "enum", "options": ["", "Manufacturing"]}},
+        "CPartnerProfile": {"partnershipStatus": {"type": "enum", "options": ["", "Candidate", "MOU/Contract Signed"]},
+                            "partnerManager": {"type": "link"}, "partnerCompany": {"type": "link"}},
+        "CSponsorProfile": {"funderStatus": {"type": "enum", "options": ["", "Active", "Ended"]},
+                            "sponsorCompany": {"type": "link"}},
+    }
+
+    async def metadata(self, key: str):
+        parts = key.split(".")
+        if len(parts) == 3 and parts[0] == "entityDefs":
+            if parts[2] == "links" and parts[1] in self.LINKS:
+                return dict(self.LINKS[parts[1]])
+            if parts[2] == "fields" and parts[1] in self.FIELDS:
+                return dict(self.FIELDS[parts[1]])
+        return await super().metadata(key)
+
+    async def list_related(self, entity, record_id, link, *, select=None, max_size=200):
+        ids = self.related.get((entity, record_id, link), set())
+        return {"total": len(ids), "list": [{"id": i} for i in sorted(ids)]}
+
+
+def _org_world():
+    crm = OrgCrm()
+    acme = crm.add(cfg.ACCOUNT, {"name": "Acme Tool", "billingAddressStreet": "1 Elm", "billingAddressCity": "Euclid",
+                                 "billingAddressState": "OH", "billingAddressPostalCode": "44117"})
+    shop = crm.add(cfg.ACCOUNT, {"name": "Corner Shop", "billingAddressStreet": "2 Oak", "billingAddressCity": "Parma",
+                                 "billingAddressState": "OH", "billingAddressPostalCode": "44129"})
+    p_acme = crm.add("CClientProfile", {"name": "Acme profile", "industrySector": "Manufacturing"})
+    p_shop = crm.add("CClientProfile", {"name": "Shop profile", "industrySector": "Retail Trade"})
+    acme["cClientProfileId"] = p_acme["id"]
+    shop["cClientProfileId"] = p_shop["id"]
+    boss = _contact(crm, "Ann Boss", cContactType=["Client"])
+    clerk = _contact(crm, "Carl Clerk", cContactType=["Client"])
+    e_acme = crm.add("CEngagement", {"name": "Acme — 2025", "engagementStatus": "Completed", "closeDate": "2025-01-10",
+                                     "engagementClientId": p_acme["id"], "primaryEngagementContactId": boss["id"]})
+    e_shop = crm.add("CEngagement", {"name": "Shop — 2026", "engagementStatus": "Active",
+                                     "engagementClientId": p_shop["id"]})
+    crm.related[("CEngagement", e_acme["id"], "engagementContacts")] = {boss["id"], clerk["id"]}
+    return crm, {"acme": acme, "shop": shop, "e_acme": e_acme, "e_shop": e_shop, "boss": boss, "clerk": clerk}
+
+
+def test_a_field_through_two_links_selects_the_client():
+    crm, w = _org_world()
+    cat = cat_for(crm)
+    assert "engagementClient.industrySector" in [f["field"] for f in cat["client"]["fields"]]
+    by_sector = recipe(step("add", "client", ("engagementClient.industrySector", "in", ["Manufacturing"])))
+    assert set(run(audience.run_recipe(crm, by_sector, cat))["keys"]) == {f"client:{w['e_acme']['id']}"}
+    # the hasOne hop: the key sits on the Company (cClientProfileId)
+    by_zip = recipe(step("add", "client", ("engagementClient.linkedCompany.billingAddressPostalCode", "in", "44129")))
+    assert set(run(audience.run_recipe(crm, by_zip, cat))["keys"]) == {f"client:{w['e_shop']['id']}"}
+
+
+def test_closed_more_than_n_days_ago():
+    crm, w = _org_world()
+    cat = cat_for(crm)
+    r = recipe(step("add", "client", ("engagementStatus", "in", ["Completed"]), ("closeDate", "olderDays", 365)))
+    assert set(run(audience.run_recipe(crm, r, cat))["keys"]) == {f"client:{w['e_acme']['id']}"}
+
+
+def test_a_client_reaches_its_primary_contact_or_every_contact():
+    crm, w = _org_world()
+    keys = [f"client:{w['e_acme']['id']}", f"client:{w['e_shop']['id']}"]
+    primary = run(audience.resolve_targets(crm, cfg.KIND_EMAIL, keys))
+    assert [t["id"] for t in primary["targets"]] == [w["boss"]["id"]]
+    assert {s["code"]: s["count"] for s in primary["skipped"]} == {"no_primary": 1}
+    every = run(audience.resolve_targets(crm, cfg.KIND_EMAIL, keys, every_contact=True))
+    assert {t["id"] for t in every["targets"]} == {w["boss"]["id"], w["clerk"]["id"]}
+    assert {s["code"]: s["count"] for s in every["skipped"]} == {"no_contacts": 1}
+
+
+def test_a_client_postcard_goes_to_its_company_through_the_profile():
+    crm, w = _org_world()
+    out = run(audience.resolve_targets(crm, cfg.KIND_POSTCARD, [f"client:{w['e_shop']['id']}"]))
+    assert [(t["kind"], t["id"]) for t in out["targets"]] == [("company", w["shop"]["id"])]
+
+
+def test_a_partner_link_field_offers_names_and_filters_by_id():
+    crm = OrgCrm()
+    mgr = crm.add("CMentorProfile", {"name": "Mia Manager"})
+    other = crm.add("CMentorProfile", {"name": "Otto Other"})
+    mine = crm.add("CPartnerProfile", {"name": "Library", "partnerManagerId": mgr["id"]})
+    crm.add("CPartnerProfile", {"name": "Chamber", "partnerManagerId": other["id"]})
+    cat = cat_for(crm)
+    f = next(x for x in cat["partner"]["fields"] if x["field"] == "partnerManager")
+    assert {"value": mgr["id"], "label": "Mia Manager"} in f["options"]
+    r = recipe(step("add", "partner", ("partnerManager", "in", [mgr["id"]])))
+    assert set(run(audience.run_recipe(crm, r, cat))["keys"]) == {f"partner:{mine['id']}"}
+
+
+def test_import_matches_ids_and_emails_and_counts_the_rest():
+    crm = ListCrm()
+    a = _lead(crm, "Acme", email="hi@acme.example")
+    b = _lead(crm, "Bakery")
+    r = recipe({"action": "import", "type": "lead", "values": f"{b['id']}\nHI@acme.example\nnobody@x.example"})
+    out = run(audience.run_recipe(crm, r, cat_for(crm)))
+    assert set(out["keys"]) == {f"lead:{a['id']}", f"lead:{b['id']}"}
+    assert out["steps"][0]["unmatched"] == 1
+
+
+def test_org_import_takes_ids_only():
+    r = recipe({"action": "import", "type": "funder", "values": "someone@x.example"})
+    assert "CRM id only" in audience.check_recipe(r, cat_for(OrgCrm()))[0]["message"]
+
+
+def test_lists_of_lists_and_the_cycle_guard():
+    crm = ListCrm()
+    store = FakeListStore()
+    a = _lead(crm, "Acme")
+    b = _lead(crm, "Bakery", leadStatus=cfg.LEAD_UNQUALIFIED)
+    cat = cat_for(crm)
+    everyone = run(store.create_list(name="Everyone", notes="", kind="dynamic", actor="M",
+                                     recipe=recipe(step("add", "lead", ("leadStatus", "in", ["Qualified", "Unqualified"])))))
+    never = run(store.create_list(name="Never", notes="", kind="dynamic", actor="M",
+                                  recipe=recipe(step("add", "lead", ("leadStatus", "in", ["Unqualified"])))))
+    r = recipe({"action": "addList", "listId": everyone["id"]}, {"action": "removeList", "listId": never["id"]})
+    out = run(audience.run_recipe(crm, r, cat, store=store))
+    assert set(out["keys"]) == {f"lead:{a['id']}"} and b["id"]
+    assert "Everyone" in out["steps"][0]["summary"]
+    # a list naming a list that names it back
+    run(store.save_list(never["id"], name="Never", notes="", kind="dynamic", actor="M",
+                        recipe=recipe({"action": "addList", "listId": everyone["id"]})))
+    assert run(audience.reaches(store, [never["id"]], everyone["id"]))
+    loop = recipe({"action": "addList", "listId": never["id"]})
+    run(store.save_list(everyone["id"], name="Everyone", notes="", kind="dynamic", actor="M", recipe=loop))
+    with pytest.raises(audience.AudienceError, match="cannot include itself"):
+        run(audience.run_recipe(crm, loop, cat, store=store, _seen=(everyone["id"],)))
+
+
+def test_saving_a_cycle_is_refused(monkeypatch):
+    crm = ListCrm()
+    store = Both()
+    client = _client(monkeypatch, crm, store)
+    a = client.post("/campaigns/api/lists", json={"name": "A", "kind": "dynamic"}).json()["list"]["id"]
+    b = client.post("/campaigns/api/lists", json={"name": "B", "kind": "dynamic",
+                                                  "recipe": {"steps": [{"action": "addList", "listId": a}]}}).json()["list"]["id"]
+    resp = client.put(f"/campaigns/api/lists/{a}", json={"name": "A", "kind": "dynamic",
+                                                         "recipe": {"steps": [{"action": "addList", "listId": b}]}})
+    assert resp.status_code == 400 and "cannot include itself" in resp.json()["detail"]

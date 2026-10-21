@@ -1,12 +1,18 @@
 """Campaign audiences — named lists and the engine that runs them (build plan
-§ 7c; rulings 58–68). L1: leads and contacts.
+§ 7c; rulings 58–68). L1: leads and contacts. L2: clients (an engagement),
+partners and funders; fields reached through a link; lists of lists; imports.
 
 A **list** is an ordered **recipe** of steps (ruling 62):
 
-- ``add``    — every record of the step's type matching its conditions joins;
-- ``keep``   — of the members of the step's type, only those matching stay
-               (members of other types pass through untouched);
-- ``remove`` — the members of the step's type matching leave.
+- ``add``        — every record of the step's type matching its conditions joins;
+- ``keep``       — of the members of the step's type, only those matching stay
+                   (members of other types pass through untouched);
+- ``remove``     — the members of the step's type matching leave;
+- ``addList``    — every member of another list joins;
+- ``removeList`` — every member of another list leaves (a standing exclusion list);
+- ``import``     — the records named in a pasted file (CRM ids, or email
+                   addresses for leads and contacts) join; a row matching
+                   nothing is counted, never created.
 
 Conditions within one step must all match (ruling 63). A **static** list runs
 once and is frozen; hand ticks then change it, and "Run again" keeps them. A
@@ -16,15 +22,19 @@ standing entry, always include / always exclude, applied after the recipe
 
 The fields a step may use are a curated list per type (ruling 63) — the
 setting ``CAMPAIGN_LIST_FIELDS``, editable at /setup, the defaults below when
-empty. Every run is under the organisation-wide API key, like every campaign
-selection; a marketing user sees a record's name and the curated fields only.
+empty. A name with dots follows links: ``engagementClient.industrySector`` is
+the client profile's sector; ``engagementClient.linkedCompany.billingAddressPostalCode``
+goes on to its Company. Every run is under the organisation-wide API key, like
+every campaign selection; a marketing user sees a record's name and the curated
+fields only.
 
 **Members are records; recipients are resolved at build time, per channel**
 (§ 7c.2) and the send-time checks always apply (ruling 62): consent (rulings 9
 and 19), a lead's exit or Disqualified status, a dead address (ruling 15),
-one card per business for a lead (ruling 14 as scoped by ruling 68). A
-Mentor, Member or Administrator contact is emailed at their ``cbmEmail`` only
-(ruling 60).
+one card per business for a lead (ruling 14 as scoped by ruling 68). A client,
+partner or funder reaches its primary contact, or every contact on the record
+when the campaign ticks *Include every contact* (ruling 59). A Mentor, Member
+or Administrator contact is emailed at their ``cbmEmail`` only (ruling 60).
 """
 
 from __future__ import annotations
@@ -42,7 +52,7 @@ from core.phone import e164_or_none
 from core.postal import Address
 
 from . import config as cfg
-from .audience_store import KIND_DYNAMIC, KIND_STATIC, MODE_EXCLUDE, MODE_INCLUDE, STATE_IN, STATE_OUT
+from .audience_store import KIND_STATIC, MODE_EXCLUDE, MODE_INCLUDE, STATE_IN, STATE_OUT
 
 log = logging.getLogger("cbm_intake.campaigns.audience")
 
@@ -50,25 +60,50 @@ _PAGE = 200
 _ID_BATCH = 100
 #: A step whose result exceeds this is refused — "narrow the step" (§ 7c.4).
 STEP_CAP = 20000
+#: A condition reached through a link resolves to the linked records' ids
+#: first; above this many the step is refused rather than sent as one huge
+#: filter.
+VIA_CAP = 2000
+#: Rows a pasted import may hold.
+IMPORT_CAP = 2000
+#: How deep "members of another list" may nest.
+LIST_DEPTH = 5
 
-ACTIONS = ("add", "keep", "remove")
-ACTION_LABELS = {"add": "Add matching", "keep": "Keep only matching", "remove": "Remove matching"}
+ACTIONS = ("add", "keep", "remove", "addList", "removeList", "import")
+ACTION_LABELS = {"add": "Add matching", "keep": "Keep only matching", "remove": "Remove matching",
+                 "addList": "Add the members of list", "removeList": "Remove the members of list",
+                 "import": "Add from a file"}
+CONDITION_ACTIONS = ("add", "keep", "remove")
+LIST_ACTIONS = ("addList", "removeList")
 
-#: Target types. L1 builds leads and contacts; clients, partners and funders
-#: arrive with L2 (§ 7c.7).
 TYPES: dict[str, dict[str, str]] = {
-    "lead": {"entity": cfg.PROSPECT, "label": "Leads", "one": "lead"},
-    "contact": {"entity": cfg.CONTACT, "label": "Contacts", "one": "contact"},
+    "lead": {"entity": cfg.PROSPECT, "label": "Leads", "one": "Lead"},
+    "contact": {"entity": cfg.CONTACT, "label": "Contacts", "one": "Contact"},
+    "client": {"entity": "CEngagement", "label": "Clients", "one": "Client"},
+    "partner": {"entity": "CPartnerProfile", "label": "Partners", "one": "Partner"},
+    "funder": {"entity": "CSponsorProfile", "label": "Funders", "one": "Funder"},
 }
-TYPES_BUILT = ("lead", "contact")
+TYPES_BUILT = ("lead", "contact", "client", "partner", "funder")
+#: The record types whose people are reached through the record (ruling 59).
+ORG_TYPES = ("client", "partner", "funder")
 
 #: § 7c.3, verified against crm-test's metadata on 10-20-26. ``industry`` on a
-#: lead is ruling 66's new field: offered only where the CRM has it.
+#: lead (ruling 66) and ``funderStatus`` (ruling 67) are offered only where the
+#: CRM has them.
 DEFAULT_FIELDS: dict[str, list[str]] = {
     "lead": ["leadStatus", "leadSource", "industry", "mailingAddressPostalCode", "mailingAddressCity",
              "importBatch", "createdAt", "qualifiedAt", "sideExit"],
     "contact": [CONTACT_TYPE_FIELD, "cFunnelStage", "cMarketingOptIn", "cSmsOptIn", "cHowDidYouHear",
                 "addressPostalCode", "createdAt"],
+    "client": ["engagementStatus", "closeDate", "closeReason", "engagementStartDate", "mentoringFocusAreas",
+               "referringPartner", "outreachCampaign", "engagementClient.industrySector",
+               "engagementClient.annualRevenueRange", "engagementClient.numberOfEmployees",
+               "engagementClient.isHomeBased", "engagementClient.linkedCompany.billingAddressPostalCode"],
+    "partner": ["partnershipStatus", "partnershipType", "partnerManager", "partnershipStartDate", "lastContacted",
+                "partnerCompany.cIndustrySector", "partnerCompany.billingAddressPostalCode"],
+    "funder": ["funderStatus", "cBMSponsorManager", "lastContribution", "totalContribution", "lastContacted",
+               "sponsorCompany.cSponsorshipLevel", "sponsorCompany.cSponsorshipRenewalDate",
+               "sponsorCompany.billingAddressPostalCode"],
 }
 DEFAULT_LABELS: dict[str, dict[str, str]] = {
     "lead": {"leadStatus": "Lead status", "leadSource": "Lead Source", "industry": "Industry",
@@ -79,9 +114,26 @@ DEFAULT_LABELS: dict[str, dict[str, str]] = {
                 "cMarketingOptIn": "Marketing opt-in", "cSmsOptIn": "Text-message opt-in",
                 "cHowDidYouHear": "How did you hear", "addressPostalCode": "Postal code",
                 "createdAt": "Created"},
+    "client": {"engagementStatus": "Engagement status", "closeDate": "Close date", "closeReason": "Close reason",
+               "engagementStartDate": "Start date", "mentoringFocusAreas": "Mentoring focus areas",
+               "referringPartner": "Referring partner", "outreachCampaign": "Outreach campaign",
+               "engagementClient.industrySector": "Industry sector",
+               "engagementClient.annualRevenueRange": "Annual revenue range",
+               "engagementClient.numberOfEmployees": "Number of employees",
+               "engagementClient.isHomeBased": "Home-based",
+               "engagementClient.linkedCompany.billingAddressPostalCode": "Company postal code"},
+    "partner": {"partnershipStatus": "Partnership status", "partnershipType": "Partnership type",
+                "partnerManager": "Partner manager", "partnershipStartDate": "Partnership start date",
+                "lastContacted": "Last contacted", "partnerCompany.cIndustrySector": "Industry sector",
+                "partnerCompany.billingAddressPostalCode": "Company postal code"},
+    "funder": {"funderStatus": "Funder status", "cBMSponsorManager": "Funder manager",
+               "lastContribution": "Last contribution", "totalContribution": "Total contribution",
+               "lastContacted": "Last contacted", "sponsorCompany.cSponsorshipLevel": "Sponsorship level",
+               "sponsorCompany.cSponsorshipRenewalDate": "Sponsorship renewal date",
+               "sponsorCompany.billingAddressPostalCode": "Company postal code"},
 }
 #: The record's display name, per type.
-NAME_FIELDS = {"lead": "name,businessName", "contact": "name"}
+NAME_FIELDS = {"lead": "name,businessName", "contact": "name", "client": "name", "partner": "name", "funder": "name"}
 
 #: Contact types that are the chapter's own people: emailed at their cbmEmail
 #: only (ruling 60, the standing cbm-members rule).
@@ -96,15 +148,17 @@ FAMILY_OF_TYPE = {
     "varchar": "text", "text": "text", "email": "text", "phone": "text", "url": "text",
     "date": "date", "datetime": "date", "datetimeOptional": "date",
     "int": "number", "float": "number", "currency": "number",
-    "bool": "bool",
+    "bool": "bool", "link": "link",
 }
 OPERATORS: dict[str, list[tuple[str, str]]] = {
     "choice": [("in", "is one of"), ("notIn", "is not one of"), ("isEmpty", "is empty"), ("isNotEmpty", "is not empty")],
     "multi": [("anyOf", "includes any of"), ("noneOf", "includes none of"), ("isEmpty", "is empty"), ("isNotEmpty", "is not empty")],
     "text": [("in", "is one of (separate with commas)"), ("contains", "contains"), ("startsWith", "starts with"), ("equals", "is exactly"), ("isEmpty", "is empty"), ("isNotEmpty", "is not empty")],
-    "date": [("after", "after"), ("before", "before"), ("lastDays", "within the last N days"), ("isEmpty", "is empty"), ("isNotEmpty", "is not empty")],
+    "date": [("after", "after"), ("before", "before"), ("lastDays", "within the last N days"),
+             ("olderDays", "more than N days ago"), ("isEmpty", "is empty"), ("isNotEmpty", "is not empty")],
     "number": [("atLeast", "at least"), ("atMost", "at most"), ("isEmpty", "is empty"), ("isNotEmpty", "is not empty")],
     "bool": [("isTrue", "is ticked"), ("isFalse", "is not ticked")],
+    "link": [("in", "is one of"), ("notIn", "is not one of"), ("isEmpty", "is empty"), ("isNotEmpty", "is not empty")],
 }
 
 
@@ -134,9 +188,9 @@ def configured_fields(settings: Optional[Settings]) -> dict[str, list[str]]:
     return {t: list(custom.get(t) or DEFAULT_FIELDS.get(t, [])) for t in TYPES}
 
 
-async def _entity_fields(client, entity: str) -> dict[str, Any]:
+async def _meta(client, key: str) -> dict[str, Any]:
     try:
-        defs = await client.metadata(f"entityDefs.{entity}.fields")
+        defs = await client.metadata(key)
     except Exception:  # noqa: BLE001
         return {}
     return defs if isinstance(defs, dict) else {}
@@ -155,9 +209,53 @@ async def _labels(client, entity: str) -> dict[str, str]:
 
 
 def _humanize(name: str) -> str:
-    n = re.sub(r"^c(?=[A-Z])", "", name)
+    n = re.sub(r"^c(?=[A-Z])", "", name.split(".")[-1])
     n = re.sub(r"([a-z])([A-Z])", r"\1 \2", n)
     return n[:1].upper() + n[1:].lower()
+
+
+async def resolve_path(client, entity: str, name: str) -> Optional[dict[str, Any]]:
+    """A field name, possibly through links (``a.b.field``), as the hops to
+    walk and the leaf field's definition — or None when the CRM lacks any part.
+    A hop is a belongsTo (the key is on this side, ``<link>Id``) or a hasOne
+    (the key is on the other side, the foreign link's ``<foreign>Id``)."""
+    parts = name.split(".")
+    hops = []
+    current = entity
+    for link in parts[:-1]:
+        links = await _meta(client, f"entityDefs.{current}.links")
+        ld = links.get(link)
+        if not isinstance(ld, dict) or not ld.get("entity"):
+            return None
+        if ld.get("type") == "belongsTo":
+            hops.append({"link": link, "from": current, "to": ld["entity"], "kind": "belongsTo"})
+        elif ld.get("type") == "hasOne" and ld.get("foreign"):
+            hops.append({"link": link, "from": current, "to": ld["entity"], "kind": "hasOne",
+                         "foreign": ld["foreign"]})
+        else:
+            return None
+        current = ld["entity"]
+    defs = await _meta(client, f"entityDefs.{current}.fields")
+    leaf = defs.get(parts[-1])
+    if not isinstance(leaf, dict) or leaf.get("disabled"):
+        return None
+    out: dict[str, Any] = {"hops": hops, "entity": current, "leaf": parts[-1], "def": leaf}
+    if leaf.get("type") == "link":
+        links = await _meta(client, f"entityDefs.{current}.links")
+        target = (links.get(parts[-1]) or {}).get("entity")
+        if not target or (links.get(parts[-1]) or {}).get("type") != "belongsTo":
+            return None
+        out["target"] = target
+    return out
+
+
+async def _link_options(client, entity: str) -> list[dict[str, str]]:
+    try:
+        page = await client.list(entity, select="id,name", max_size=_PAGE, order_by="name", order="asc")
+    except EspoError as exc:
+        log.warning("audience: %s options unreadable: %s", entity, exc)
+        return []
+    return [{"value": r["id"], "label": r.get("name") or r["id"]} for r in page.get("list", []) if r.get("id")]
 
 
 async def catalogue(client, settings: Optional[Settings], *, types: Iterable[str] = TYPES_BUILT) -> dict[str, Any]:
@@ -168,30 +266,34 @@ async def catalogue(client, settings: Optional[Settings], *, types: Iterable[str
     out: dict[str, Any] = {}
     for t in types:
         entity = TYPES[t]["entity"]
-        defs = await _entity_fields(client, entity)
         labels = await _labels(client, entity)
         fields, missing = [], []
         for name in wanted.get(t, []):
-            d = defs.get(name)
-            if not isinstance(d, dict) or d.get("disabled"):
+            path = await resolve_path(client, entity, name)
+            if not path:
                 missing.append(name)
                 continue
+            d = path["def"]
             family = FAMILY_OF_TYPE.get(d.get("type") or "varchar", "")
             if not family:
                 missing.append(name)
                 continue
+            label = DEFAULT_LABELS.get(t, {}).get(name) or (labels.get(name) if not path["hops"] else None) \
+                or _humanize(name)
+            if path["hops"] and name not in DEFAULT_LABELS.get(t, {}):
+                label += " (" + " → ".join(_humanize(h["link"]).lower() for h in path["hops"]) + ")"
             entry: dict[str, Any] = {
-                "field": name,
-                "label": DEFAULT_LABELS.get(t, {}).get(name) or labels.get(name) or _humanize(name),
-                "family": family,
-                "operators": [{"op": o, "label": l} for o, l in OPERATORS[family]],
+                "field": name, "label": label, "family": family,
+                "operators": [{"op": o, "label": lab} for o, lab in OPERATORS[family]],
+                "hops": path["hops"], "leaf": path["leaf"], "leafEntity": path["entity"],
             }
             if family in ("choice", "multi"):
-                opts = [o for o in (d.get("options") or []) if o not in (None,)]
-                entry["options"] = [o for o in opts if o != ""]
+                entry["options"] = [o for o in (d.get("options") or []) if o not in (None, "")]
                 if family == "multi" and name == CONTACT_TYPE_FIELD:
                     entry["options"].append(NO_TYPE)
                     entry["noTypeLabel"] = "No type"
+            if family == "link":
+                entry["options"] = await _link_options(client, path["target"])
             fields.append(entry)
         out[t] = {"label": TYPES[t]["label"], "entity": entity, "fields": fields, "missing": missing}
     return out
@@ -203,19 +305,33 @@ def field_map(cat: dict[str, Any]) -> dict[str, dict[str, dict[str, Any]]]:
 
 # --- recipes -----------------------------------------------------------------------------------
 
+def _import_values(v: Any) -> list[str]:
+    if isinstance(v, str):
+        v = re.split(r"[\s,;]+", v)
+    return [str(x).strip().strip('"') for x in (v or []) if str(x).strip().strip('"')]
+
+
 def normalise_recipe(recipe: Any) -> dict[str, Any]:
     """Shape only — the catalogue check is ``check_recipe``."""
     steps = []
     for s in (recipe or {}).get("steps") or []:
         if not isinstance(s, dict):
             continue
-        conds = []
+        action = str(s.get("action") or "")
+        step: dict[str, Any] = {"action": action, "type": str(s.get("type") or ""), "conditions": []}
         for c in s.get("conditions") or []:
             if isinstance(c, dict) and c.get("field") and c.get("op"):
-                conds.append({"field": str(c["field"]), "op": str(c["op"]), "value": c.get("value")})
-        steps.append({"action": str(s.get("action") or ""), "type": str(s.get("type") or ""),
-                      "conditions": conds})
+                step["conditions"].append({"field": str(c["field"]), "op": str(c["op"]), "value": c.get("value")})
+        if action in LIST_ACTIONS:
+            step["listId"] = str(s.get("listId") or "")
+        if action == "import":
+            step["values"] = _import_values(s.get("values"))
+        steps.append(step)
     return {"steps": steps}
+
+
+def referenced_lists(recipe: dict[str, Any]) -> list[str]:
+    return [s["listId"] for s in recipe.get("steps") or [] if s.get("action") in LIST_ACTIONS and s.get("listId")]
 
 
 def check_recipe(recipe: dict[str, Any], cat: dict[str, Any]) -> list[dict[str, Any]]:
@@ -232,9 +348,24 @@ def check_recipe(recipe: dict[str, Any], cat: dict[str, Any]) -> list[dict[str, 
     for i, s in enumerate(recipe["steps"]):
         n = i + 1
         if s["action"] not in ACTIONS:
-            bad(n, f"Step {n}: choose Add, Keep only or Remove.")
+            bad(n, f"Step {n}: choose what the step does.")
+            continue
+        if s["action"] in LIST_ACTIONS:
+            if not s.get("listId"):
+                bad(n, f"Step {n}: choose the list whose members it adds or removes.")
+            continue
         if s["type"] not in TYPES_BUILT:
-            bad(n, f"Step {n}: choose what the step selects (leads or contacts).")
+            bad(n, f"Step {n}: choose what the step selects (leads, contacts, clients, partners or funders).")
+            continue
+        if s["action"] == "import":
+            vals = s.get("values") or []
+            if not vals:
+                bad(n, f"Step {n}: paste the CRM ids or email addresses to add, or choose a file.")
+            elif len(vals) > IMPORT_CAP:
+                bad(n, f"Step {n}: a file may hold at most {IMPORT_CAP:,} rows — split it into two steps.")
+            elif s["type"] in ORG_TYPES and any("@" in v for v in vals):
+                bad(n, f"Step {n}: {TYPES[s['type']]['label'].lower()} are matched by CRM id only — "
+                       "email addresses match leads and contacts.")
             continue
         if not s["conditions"]:
             bad(n, f"Step {n} has no conditions — add at least one.")
@@ -254,7 +385,7 @@ def check_recipe(recipe: dict[str, Any], cat: dict[str, Any]) -> list[dict[str, 
                 bad(n, f"Step {n}: {f['label']} — type the text to match.")
             if c["op"] in ("after", "before") and not _date(c["value"]):
                 bad(n, f"Step {n}: {f['label']} — give a date.")
-            if c["op"] in ("lastDays", "atLeast", "atMost") and _number(c["value"]) is None:
+            if c["op"] in ("lastDays", "olderDays", "atLeast", "atMost") and _number(c["value"]) is None:
                 bad(n, f"Step {n}: {f['label']} — give a number.")
         # Ruling 60: a contacts Add names the contact types it reaches.
         if s["type"] == "contact" and s["action"] == "add" and not any(
@@ -293,9 +424,17 @@ def _empty(attr: str) -> dict[str, Any]:
 
 
 def condition_where(cond: dict[str, Any], field: dict[str, Any], *, now: Optional[datetime] = None) -> dict[str, Any]:
-    """One condition as an EspoCRM ``where`` clause."""
-    a, op, v = cond["field"], cond["op"], cond.get("value")
+    """One condition as an EspoCRM ``where`` clause on the field's own entity
+    (the leaf of a link path; ``step_where`` walks the hops)."""
+    a, op, v = field.get("leaf") or cond["field"], cond["op"], cond.get("value")
     fam = field["family"]
+    if fam == "link":
+        a = a + "Id"
+        if op == "isEmpty":
+            return {"type": "isNull", "attribute": a}
+        if op == "isNotEmpty":
+            return {"type": "isNotNull", "attribute": a}
+        return {"type": op, "attribute": a, "value": _as_list(v)}
     if op == "isEmpty":
         return {"type": "arrayIsEmpty", "attribute": a} if fam == "multi" else _empty(a)
     if op == "isNotEmpty":
@@ -330,10 +469,11 @@ def condition_where(cond: dict[str, Any], field: dict[str, Any], *, now: Optiona
         return {"type": op, "attribute": a, "value": str(v or "").strip()}
     if op in ("after", "before"):
         return {"type": op, "attribute": a, "value": _date(v)}
-    if op == "lastDays":
+    if op in ("lastDays", "olderDays"):
         n = int(_number(v) or 0)
         cutoff = (now or datetime.now(timezone.utc)) - timedelta(days=max(n, 0))
-        return {"type": "after", "attribute": a, "value": cutoff.strftime("%Y-%m-%d %H:%M:%S")}
+        return {"type": "after" if op == "lastDays" else "before", "attribute": a,
+                "value": cutoff.strftime("%Y-%m-%d %H:%M:%S")}
     if op == "atLeast":
         return {"type": "greaterThanOrEquals", "attribute": a, "value": _number(v)}
     if op == "atMost":
@@ -345,13 +485,58 @@ def condition_where(cond: dict[str, Any], field: dict[str, Any], *, now: Optiona
     raise AudienceError(f"Unknown comparison {op!r}.")
 
 
-def step_where(step: dict[str, Any], cat: dict[str, Any], *, now: Optional[datetime] = None) -> list[dict[str, Any]]:
+_NOTHING = {"type": "in", "attribute": "id", "value": ["__none__"]}
+
+
+async def _via_where(client, field: dict[str, Any], clause: dict[str, Any]) -> dict[str, Any]:
+    """Walk a link path backwards: the leaf entity's matching ids become a
+    filter on the entity before it, and so on to the step's own entity."""
+    for hop in reversed(field.get("hops") or []):
+        if hop["kind"] == "belongsTo":
+            ids = await _ids_matching(client, hop["to"], [clause], cap=VIA_CAP,
+                                      too_many=f"{field['label']} matches more than {VIA_CAP:,} linked records "
+                                               "— narrow the condition.")
+            clause = {"type": "in", "attribute": hop["link"] + "Id", "value": ids} if ids else _NOTHING
+        else:  # hasOne: the key sits on the linked record
+            key = hop["foreign"] + "Id"
+            owners: list[str] = []
+            offset = 0
+            while True:
+                page = await client.list(hop["to"], select=f"id,{key}", where=[clause], max_size=_PAGE,
+                                         offset=offset)
+                batch = page.get("list", [])
+                owners.extend(r[key] for r in batch if r.get(key))
+                if len(owners) > VIA_CAP:
+                    raise AudienceError(f"{field['label']} matches more than {VIA_CAP:,} linked records "
+                                        "— narrow the condition.")
+                if len(batch) < _PAGE:
+                    break
+                offset += _PAGE
+            owners = list(dict.fromkeys(owners))
+            clause = {"type": "in", "attribute": "id", "value": owners} if owners else _NOTHING
+    return clause
+
+
+async def step_where(client, step: dict[str, Any], cat: dict[str, Any], *, now: Optional[datetime] = None) -> list[dict[str, Any]]:
     fields = field_map(cat).get(step["type"], {})
-    return [condition_where(c, fields[c["field"]], now=now) for c in step["conditions"]]
+    out = []
+    for c in step["conditions"]:
+        f = fields[c["field"]]
+        clause = condition_where(c, f, now=now)
+        if f.get("hops"):
+            clause = await _via_where(client, f, clause)
+        out.append(clause)
+    return out
 
 
-def describe_step(step: dict[str, Any], cat: dict[str, Any]) -> str:
+def describe_step(step: dict[str, Any], cat: dict[str, Any], list_names: Optional[dict[str, str]] = None) -> str:
     """The step in a sentence — the history line and the build summary."""
+    if step["action"] in LIST_ACTIONS:
+        name = (list_names or {}).get(step.get("listId") or "", "another list")
+        return f"{ACTION_LABELS[step['action']]} “{name}”"
+    noun = TYPES.get(step["type"], {}).get("label", step["type"]).lower()
+    if step["action"] == "import":
+        return f"{ACTION_LABELS['import']}: {len(step.get('values') or [])} {noun} rows"
     fields = field_map(cat).get(step["type"], {})
     parts = []
     for c in step["conditions"]:
@@ -359,15 +544,16 @@ def describe_step(step: dict[str, Any], cat: dict[str, Any]) -> str:
         op_label = dict(OPERATORS.get(f["family"], [])).get(c["op"], c["op"])
         val = c.get("value")
         if isinstance(val, list):
-            val = ", ".join("No type" if x == NO_TYPE else str(x) for x in val)
+            names = {o["value"]: o["label"] for o in f.get("options") or [] if isinstance(o, dict)}
+            val = ", ".join("No type" if x == NO_TYPE else names.get(x, str(x)) for x in val)
         parts.append(f"{f['label']} {op_label}" + (f" {val}" if val not in (None, "") else ""))
-    noun = TYPES.get(step["type"], {}).get("label", step["type"]).lower()
     return f"{ACTION_LABELS.get(step['action'], step['action'])}: {noun} where " + " and ".join(parts)
 
 
 # --- running ------------------------------------------------------------------------------------
 
-async def _ids_matching(client, entity: str, where: list[dict[str, Any]], *, cap: int = STEP_CAP) -> list[str]:
+async def _ids_matching(client, entity: str, where: list[dict[str, Any]], *, cap: int = STEP_CAP,
+                        too_many: str = "") -> list[str]:
     out: list[str] = []
     offset = 0
     while True:
@@ -376,7 +562,7 @@ async def _ids_matching(client, entity: str, where: list[dict[str, Any]], *, cap
         batch = page.get("list", [])
         out.extend(r["id"] for r in batch if r.get("id"))
         if len(out) > cap:
-            raise AudienceError(f"This step matches more than {cap:,} records — narrow the step.")
+            raise AudienceError(too_many or f"This step matches more than {cap:,} records — narrow the step.")
         if len(batch) < _PAGE:
             return out
         offset += _PAGE
@@ -394,13 +580,43 @@ async def _ids_matching_within(client, entity: str, where: list[dict[str, Any]],
     return out
 
 
+async def _import_ids(client, type_: str, values: list[str]) -> tuple[list[str], int]:
+    """The records a pasted file names: CRM ids for every type, email addresses
+    for leads and contacts. Returns the ids found and how many rows matched
+    nothing."""
+    entity = TYPES[type_]["entity"]
+    emails = [v.lower() for v in values if "@" in v]
+    ids = [v for v in values if "@" not in v]
+    found: list[str] = []
+    matched_rows = 0
+    for i in range(0, len(ids), _ID_BATCH):
+        chunk = ids[i:i + _ID_BATCH]
+        page = await client.list(entity, select="id", max_size=_PAGE,
+                                 where=[{"type": "in", "attribute": "id", "value": chunk}])
+        hit = {r["id"] for r in page.get("list", []) if r.get("id")}
+        matched_rows += sum(1 for x in chunk if x in hit)
+        found.extend(x for x in chunk if x in hit)
+    if emails and type_ in ("lead", "contact"):
+        attr = "email" if type_ == "lead" else "emailAddress"
+        for i in range(0, len(emails), _ID_BATCH):
+            chunk = emails[i:i + _ID_BATCH]
+            page = await client.list(entity, select=f"id,{attr}", max_size=_PAGE,
+                                     where=[{"type": "in", "attribute": attr, "value": chunk}])
+            seen = set()
+            for r in page.get("list", []):
+                found.append(r["id"])
+                seen.add(str(r.get(attr) or "").lower())
+            matched_rows += sum(1 for x in chunk if x in seen)
+    return list(dict.fromkeys(found)), len(values) - matched_rows
+
+
 def split_key(key: str) -> tuple[str, str]:
     t, _, rid = key.partition(":")
     return t, rid
 
 
-async def run_recipe(client, recipe: dict[str, Any], cat: dict[str, Any], *,
-                     now: Optional[datetime] = None) -> dict[str, Any]:
+async def run_recipe(client, recipe: dict[str, Any], cat: dict[str, Any], *, store=None,
+                     now: Optional[datetime] = None, _seen: tuple[str, ...] = ()) -> dict[str, Any]:
     """Run the steps in order. Returns ``keys`` (key → the step that added it,
     in order), and per step its before / after counts."""
     problems = check_recipe(recipe, cat)
@@ -408,25 +624,70 @@ async def run_recipe(client, recipe: dict[str, Any], cat: dict[str, Any], *,
         raise AudienceError(problems[0]["message"])
     working: dict[str, int] = {}
     report = []
+    names: dict[str, str] = {}
     for i, step in enumerate(recipe["steps"], start=1):
         before = len(working)
-        entity = TYPES[step["type"]]["entity"]
-        where = step_where(step, cat, now=now)
-        prefix = step["type"] + ":"
-        if step["action"] == "add":
-            for rid in await _ids_matching(client, entity, where):
-                working.setdefault(prefix + rid, i)
+        extra: dict[str, Any] = {}
+        if step["action"] in LIST_ACTIONS:
+            other = await _other_list(store, step["listId"], _seen)
+            names[other["id"]] = other["name"]
+            members = await current_members(client, store, other, cat, _seen=_seen)
+            if step["action"] == "addList":
+                for k in members["keys"]:
+                    working.setdefault(k, i)
+            else:
+                for k in members["keys"]:
+                    working.pop(k, None)
+        elif step["action"] == "import":
+            ids, unmatched = await _import_ids(client, step["type"], step.get("values") or [])
+            for rid in ids:
+                working.setdefault(f"{step['type']}:{rid}", i)
+            extra["unmatched"] = unmatched
         else:
-            of_type = [split_key(k)[1] for k in working if k.startswith(prefix)]
-            matched = await _ids_matching_within(client, entity, where, of_type)
-            for rid in of_type:
-                hit = rid in matched
-                if (step["action"] == "keep" and not hit) or (step["action"] == "remove" and hit):
-                    working.pop(prefix + rid, None)
+            entity = TYPES[step["type"]]["entity"]
+            where = await step_where(client, step, cat, now=now)
+            prefix = step["type"] + ":"
+            if step["action"] == "add":
+                for rid in await _ids_matching(client, entity, where):
+                    working.setdefault(prefix + rid, i)
+            else:
+                of_type = [split_key(k)[1] for k in working if k.startswith(prefix)]
+                matched = await _ids_matching_within(client, entity, where, of_type)
+                for rid in of_type:
+                    hit = rid in matched
+                    if (step["action"] == "keep" and not hit) or (step["action"] == "remove" and hit):
+                        working.pop(prefix + rid, None)
         after = len(working)
-        report.append({"step": i, "summary": describe_step(step, cat), "before": before, "after": after,
-                       "added": max(after - before, 0), "dropped": max(before - after, 0)})
+        report.append({"step": i, "summary": describe_step(step, cat, names), "before": before, "after": after,
+                       "added": max(after - before, 0), "dropped": max(before - after, 0), **extra})
     return {"keys": working, "steps": report, "total": len(working)}
+
+
+async def _other_list(store, list_id: str, seen: tuple[str, ...]) -> dict[str, Any]:
+    if store is None:
+        raise AudienceError("Lists of lists need the application database.")
+    if list_id in seen:
+        raise AudienceError("A list cannot include itself, directly or through another list.")
+    if len(seen) >= LIST_DEPTH:
+        raise AudienceError(f"Lists may nest at most {LIST_DEPTH} deep.")
+    other = await store.get_list(list_id)
+    if not other:
+        raise AudienceError("A step names a list that no longer exists — choose another.")
+    return other
+
+
+async def reaches(store, start_ids: list[str], target: str, depth: int = 0) -> bool:
+    """Does following "members of list" steps from these lists reach ``target``?
+    The save refuses a cycle."""
+    if depth > LIST_DEPTH:
+        return False
+    for lid in start_ids:
+        if lid == target:
+            return True
+        row = await store.get_list(lid)
+        if row and await reaches(store, referenced_lists(normalise_recipe(row["recipe"])), target, depth + 1):
+            return True
+    return False
 
 
 def apply_hand(keys: dict[str, int], hand_rows: list[dict[str, Any]]) -> dict[str, int]:
@@ -453,7 +714,8 @@ def apply_entries(keys: dict[str, int], entries: list[dict[str, Any]]) -> dict[s
     return out
 
 
-async def current_members(client, store, row: dict[str, Any], cat: dict[str, Any]) -> dict[str, Any]:
+async def current_members(client, store, row: dict[str, Any], cat: dict[str, Any], *,
+                          _seen: tuple[str, ...] = ()) -> dict[str, Any]:
     """The list as a campaign would send to it now: a static list's frozen
     membership; a dynamic list's recipe run now, with its standing entries."""
     if row["kind"] == KIND_STATIC:
@@ -463,7 +725,8 @@ async def current_members(client, store, row: dict[str, Any], cat: dict[str, Any
         keys = {r["target_key"]: (r.get("step") or 0) for r in rows if r.get("state") == STATE_IN}
         return {"keys": keys, "steps": (row.get("last_run") or {}).get("steps", []), "total": len(keys),
                 "frozen": True}
-    result = await run_recipe(client, normalise_recipe(row["recipe"]), cat)
+    result = await run_recipe(client, normalise_recipe(row["recipe"]), cat, store=store,
+                              _seen=(*_seen, row["id"]))
     keys = apply_entries(result["keys"], await store.entries(row["id"]))
     return {**result, "keys": keys, "total": len(keys), "frozen": False}
 
@@ -482,8 +745,10 @@ def used_fields(recipe: dict[str, Any]) -> dict[str, list[str]]:
 
 async def describe_members(client, keys: list[str], recipe: dict[str, Any], cat: dict[str, Any]) -> list[dict[str, Any]]:
     """One row per key: its type, name and the values of the curated fields
-    the recipe used — nothing else (§ 7c.4, who sees what). A record the CRM
-    no longer holds is flagged, never dropped."""
+    the recipe used — nothing else (§ 7c.4, who sees what). A field reached
+    through a link shows its value only on the step's own record type when it
+    is a direct field. A record the CRM no longer holds is flagged, never
+    dropped."""
     used = used_fields(recipe)
     fmap = field_map(cat)
     by_type: dict[str, list[str]] = {}
@@ -494,7 +759,11 @@ async def describe_members(client, keys: list[str], recipe: dict[str, Any], cat:
     for t, ids in by_type.items():
         if t not in TYPES:
             continue
-        cols = [f for f in used.get(t, []) if f in fmap.get(t, {})]
+        cols = []
+        for f in used.get(t, []):
+            info = fmap.get(t, {}).get(f)
+            if info and not info.get("hops"):
+                cols.append(f + "Name" if info["family"] == "link" else f)
         select = ",".join(dict.fromkeys(["id", *NAME_FIELDS[t].split(","), *cols]))
         for i in range(0, len(ids), _ID_BATCH):
             page = await client.list(TYPES[t]["entity"], select=select, max_size=_PAGE,
@@ -512,9 +781,10 @@ async def describe_members(client, keys: list[str], recipe: dict[str, Any], cat:
         name = (r.get("businessName") or r.get("name") or "") if t == "lead" else (r.get("name") or "")
         values = {}
         for f in used.get(t, []):
-            if f in fmap.get(t, {}):
-                v = r.get(f)
-                values[fmap[t][f]["label"]] = ", ".join(map(str, v)) if isinstance(v, list) else v
+            info = fmap.get(t, {}).get(f)
+            if info and not info.get("hops"):
+                v = r.get(f + "Name") if info["family"] == "link" else r.get(f)
+                values[info["label"]] = ", ".join(map(str, v)) if isinstance(v, list) else v
         out.append({"key": k, "type": t, "id": rid, "name": name, "missing": False, "values": values})
     return out
 
@@ -526,6 +796,18 @@ CONTACT_SELECT = (
     f"cMarketingOptIn,phoneNumber,phoneNumberIsOptedOut,doNotCall,cSmsOptIn,{CONTACT_TYPE_FIELD},"
     f"cFunnelStage,accountId,addressStreet,addressCity,addressState,addressPostalCode,addressCountry"
 )
+ACCOUNT_SELECT = ("id,name,cFunnelStage,billingAddressStreet,billingAddressCity,billingAddressState,"
+                  "billingAddressPostalCode,billingAddressCountry")
+#: Per organisation type: its primary contact's id attribute, its contacts
+#: relationship, and where its company is (ruling 59, § 7c.2).
+ORG_SHAPE = {
+    "client": {"primary": "primaryEngagementContactId", "contacts": "engagementContacts",
+               "select": "id,name,primaryEngagementContactId,clientOrganizationId,engagementClientId"},
+    "partner": {"primary": "primaryPartnercontactId", "contacts": "contacts",
+                "select": "id,name,primaryPartnercontactId,partnerCompanyId"},
+    "funder": {"primary": "sponsorContactId", "contacts": "sponsorContacts",
+               "select": "id,name,sponsorContactId,sponsorCompanyId"},
+}
 SKIP = {
     "missing": "no longer in the CRM",
     "exit": "the lead has left (an exit is set)",
@@ -533,6 +815,8 @@ SKIP = {
     "no_address": "no usable mailing address",
     "carded": "already sent a postcard (one per business, ruling 14)",
     "no_contact": "a lead with no Contact yet — only a Contact can be emailed or texted",
+    "no_primary": "no primary contact on the record (ruling 59)",
+    "no_contacts": "no contacts on the record",
     "no_consent": "no consent for this channel",
     "no_email": "no usable email address",
     "member_no_cbm_email": "a chapter member with no chapter email address",
@@ -603,7 +887,52 @@ def contact_address(c: dict[str, Any]) -> Address:
                    postal_code=c.get("addressPostalCode") or "", country=c.get("addressCountry") or "US")
 
 
-async def resolve_targets(client, kind: str, keys: Iterable[str]) -> dict[str, Any]:
+async def _org_records(client, keys: list[str]) -> dict[str, dict[str, Any]]:
+    """Client / partner / funder records by key, with their company id
+    resolved (a client's through its client profile when the engagement has
+    no company of its own)."""
+    out: dict[str, dict[str, Any]] = {}
+    for t in ORG_TYPES:
+        ids = [split_key(k)[1] for k in keys if k.startswith(t + ":")]
+        if not ids:
+            continue
+        rows = await _by_ids(client, TYPES[t]["entity"], ids, ORG_SHAPE[t]["select"])
+        if t == "client":
+            need = [r["engagementClientId"] for r in rows.values()
+                    if not r.get("clientOrganizationId") and r.get("engagementClientId")]
+            via: dict[str, str] = {}
+            for i in range(0, len(need), _ID_BATCH):
+                page = await client.list(cfg.ACCOUNT, select="id,cClientProfileId", max_size=_PAGE,
+                                         where=[{"type": "in", "attribute": "cClientProfileId",
+                                                 "value": need[i:i + _ID_BATCH]}])
+                for a in page.get("list", []):
+                    if a.get("cClientProfileId"):
+                        via[a["cClientProfileId"]] = a["id"]
+            for r in rows.values():
+                r["_companyId"] = r.get("clientOrganizationId") or via.get(r.get("engagementClientId") or "")
+        else:
+            attr = "partnerCompanyId" if t == "partner" else "sponsorCompanyId"
+            for r in rows.values():
+                r["_companyId"] = r.get(attr)
+        for rid, r in rows.items():
+            out[f"{t}:{rid}"] = r
+    return out
+
+
+async def _org_people(client, key: str, rec: dict[str, Any], every: bool) -> list[str]:
+    t, rid = split_key(key)
+    shape = ORG_SHAPE[t]
+    ids = [rec[shape["primary"]]] if rec.get(shape["primary"]) else []
+    if every:
+        try:
+            page = await client.list_related(TYPES[t]["entity"], rid, shape["contacts"], select="id", max_size=_PAGE)
+            ids += [r["id"] for r in page.get("list", []) if r.get("id")]
+        except EspoError as exc:
+            log.warning("audience: contacts of %s unreadable: %s", key, exc)
+    return list(dict.fromkeys(ids))
+
+
+async def resolve_targets(client, kind: str, keys: Iterable[str], *, every_contact: bool = False) -> dict[str, Any]:
     """The list's members as the targets ``kind``'s ``build_list`` writes as
     Planned touches, with every send-time check applied and each skip counted
     by reason. The target dicts are the shapes each kind's own selection
@@ -612,17 +941,8 @@ async def resolve_targets(client, kind: str, keys: Iterable[str]) -> dict[str, A
 
     keys = list(keys)
     lead_ids = [split_key(k)[1] for k in keys if k.startswith("lead:")]
-    contact_ids = [split_key(k)[1] for k in keys if k.startswith("contact:")]
     leads = await _by_ids(client, cfg.PROSPECT, lead_ids, cfg.PROSPECT_SELECT)
-    promoted = [p.get("promotedContactId") for p in leads.values() if p.get("promotedContactId")]
-    contacts = await _by_ids(client, cfg.CONTACT, contact_ids + promoted, CONTACT_SELECT)
-    # A Contact whose lead has left stopped with it (the existing call / text rule).
-    left: set[str] = set()
-    for i in range(0, len(contact_ids), _ID_BATCH):
-        page = await client.list(cfg.PROSPECT, select="id,sideExit,promotedContactId", max_size=_PAGE, where=[
-            {"type": "in", "attribute": "promotedContactId", "value": contact_ids[i:i + _ID_BATCH]},
-            {"type": "isNotNull", "attribute": "sideExit"}])
-        left.update(p["promotedContactId"] for p in page.get("list", []) if p.get("promotedContactId"))
+    orgs = await _org_records(client, [k for k in keys if split_key(k)[0] in ORG_TYPES])
 
     skipped: Counter = Counter()
     targets: list[dict[str, Any]] = []
@@ -644,43 +964,23 @@ async def resolve_targets(client, kind: str, keys: Iterable[str]) -> dict[str, A
             return False
         return True
 
-    # The person each member stands for, for the person channels.
-    def people() -> list[tuple[str, dict[str, Any]]]:
-        out = []
-        for k in keys:
-            t, rid = split_key(k)
-            if t == "lead":
-                p = leads.get(rid)
-                if not p:
-                    skipped["missing"] += 1
-                    continue
-                if not lead_ok(p):
-                    continue
-                c = contacts.get(p.get("promotedContactId") or "")
-                if not c:
-                    if kind == cfg.KIND_CALL and p.get("phone"):
-                        out.append((k, {"_lead": p}))
-                    else:
-                        skipped["no_contact" if kind != cfg.KIND_CALL else "no_phone"] += 1
-                    continue
-                out.append((k, c))
-            elif t == "contact":
-                c = contacts.get(rid)
-                if not c:
-                    skipped["missing"] += 1
-                    continue
-                if rid in left:
-                    skipped["exit"] += 1
-                    continue
-                out.append((k, c))
-        return out
-
     if kind == cfg.KIND_POSTCARD:
         carded = await postcard._carded_targets(client)
-        account_ids = [c.get("accountId") for c in contacts.values() if c.get("accountId")]
-        accounts = await _by_ids(client, cfg.ACCOUNT, account_ids,
-                                 "id,name,cFunnelStage,billingAddressStreet,billingAddressCity,"
-                                 "billingAddressState,billingAddressPostalCode,billingAddressCountry")
+        contact_ids = [split_key(k)[1] for k in keys if k.startswith("contact:")]
+        contacts = await _by_ids(client, cfg.CONTACT, contact_ids, CONTACT_SELECT)
+        left = await _left(client, contact_ids)
+        account_ids = [c.get("accountId") for c in contacts.values()] + [o.get("_companyId") for o in orgs.values()]
+        accounts = await _by_ids(client, cfg.ACCOUNT, [a for a in account_ids if a], ACCOUNT_SELECT)
+
+        def card_to_company(acct: Optional[dict[str, Any]]) -> bool:
+            if not acct or not _company_address(acct).is_complete():
+                return False
+            address = _company_address(acct)
+            take({"key": f"company:{acct['id']}", "kind": "company", "id": acct["id"],
+                  "name": acct.get("name") or "", "address": address, "stage": acct.get("cFunnelStage")},
+                 _card_key(address))
+            return True
+
         for k in keys:
             t, rid = split_key(k)
             if t == "lead":
@@ -709,27 +1009,74 @@ async def resolve_targets(client, kind: str, keys: Iterable[str]) -> dict[str, A
                 if rid in left:
                     skipped["exit"] += 1
                     continue
-                acct = accounts.get(c.get("accountId") or "")
-                if acct and _company_address(acct).is_complete():
-                    address = _company_address(acct)
-                    take({"key": f"company:{acct['id']}", "kind": "company", "id": acct["id"],
-                          "name": acct.get("name") or "", "address": address, "stage": acct.get("cFunnelStage")},
-                         _card_key(address))
+                if card_to_company(accounts.get(c.get("accountId") or "")):
                     continue
                 address = contact_address(c)
                 if not address.is_complete():
                     skipped["no_address"] += 1
                     continue
                 take({"key": f"contact:{rid}", "kind": "contact", "id": rid, "name": c.get("name") or "",
-                      "address": address, "stage": c.get("cFunnelStage")},
-                     _card_key(address))
+                      "address": address, "stage": c.get("cFunnelStage")}, _card_key(address))
+            elif t in ORG_TYPES:
+                # Ruling 68: a card reached through a client, partner or funder
+                # is limited by this campaign alone (the de-duplication here).
+                o = orgs.get(k)
+                if not o:
+                    skipped["missing"] += 1
+                    continue
+                if not card_to_company(accounts.get(o.get("_companyId") or "")):
+                    skipped["no_address"] += 1
         return {"targets": targets, "skipped": _skips(skipped)}
 
-    persons = people()
+    # The person channels: every member as the people it stands for.
+    persons: list[tuple[str, Any]] = []   # (member key, contact id | {"_lead": lead})
+    for k in keys:
+        t, rid = split_key(k)
+        if t == "lead":
+            p = leads.get(rid)
+            if not p:
+                skipped["missing"] += 1
+                continue
+            if not lead_ok(p):
+                continue
+            if p.get("promotedContactId"):
+                persons.append((k, p["promotedContactId"]))
+            elif kind == cfg.KIND_CALL and p.get("phone"):
+                persons.append((k, {"_lead": p}))
+            else:
+                skipped["no_contact" if kind != cfg.KIND_CALL else "no_phone"] += 1
+        elif t == "contact":
+            persons.append((k, rid))
+        elif t in ORG_TYPES:
+            o = orgs.get(k)
+            if not o:
+                skipped["missing"] += 1
+                continue
+            people = await _org_people(client, k, o, every_contact)
+            if not people:
+                skipped["no_contacts" if every_contact else "no_primary"] += 1
+                continue
+            persons.extend((k, cid) for cid in people)
+    contact_ids = [p for _, p in persons if isinstance(p, str)]
+    contacts = await _by_ids(client, cfg.CONTACT, contact_ids, CONTACT_SELECT)
+    left = await _left(client, contact_ids)
+    resolved: list[tuple[str, dict[str, Any]]] = []
+    for k, p in persons:
+        if isinstance(p, dict):
+            resolved.append((k, p))
+            continue
+        c = contacts.get(p)
+        if not c:
+            skipped["missing"] += 1
+            continue
+        if p in left:
+            skipped["exit"] += 1
+            continue
+        resolved.append((k, c))
+
     if kind == cfg.KIND_EMAIL:
-        members = [c["id"] for _, c in persons if c.get("id") and is_member(c)]
-        cbm = await cbm_emails(client, members)
-        for _k, c in persons:
+        cbm = await cbm_emails(client, [c["id"] for _, c in resolved if c.get("id") and is_member(c)])
+        for _k, c in resolved:
             if not email_consented(c):
                 skipped["no_consent"] += 1
                 continue
@@ -747,7 +1094,10 @@ async def resolve_targets(client, kind: str, keys: Iterable[str]) -> dict[str, A
                   "email": email, "first": c.get("firstName") or "", "last": c.get("lastName") or "",
                   "stage": c.get("cFunnelStage")}, "email:" + email.lower())
     elif kind == cfg.KIND_SMS:
-        for _k, c in persons:
+        for _k, c in resolved:
+            if c.get("_lead"):
+                skipped["no_contact"] += 1
+                continue
             if not c.get("cSmsOptIn"):
                 skipped["no_consent"] += 1
                 continue
@@ -759,7 +1109,7 @@ async def resolve_targets(client, kind: str, keys: Iterable[str]) -> dict[str, A
                   "phone": phone, "stage": c.get("cFunnelStage")}, "phone:" + phone)
     elif kind == cfg.KIND_CALL:
         declined = await calls.declined_targets(client)
-        for k, c in persons:
+        for k, c in resolved:
             lead = c.get("_lead")
             if lead:
                 key = f"prospect:{lead['id']}"
@@ -790,6 +1140,19 @@ async def resolve_targets(client, kind: str, keys: Iterable[str]) -> dict[str, A
     return {"targets": targets, "skipped": _skips(skipped)}
 
 
+async def _left(client, contact_ids: list[str]) -> set[str]:
+    """Contacts whose lead has left: they stopped with it (the existing call /
+    text rule)."""
+    left: set[str] = set()
+    ids = list(dict.fromkeys(contact_ids))
+    for i in range(0, len(ids), _ID_BATCH):
+        page = await client.list(cfg.PROSPECT, select="id,sideExit,promotedContactId", max_size=_PAGE, where=[
+            {"type": "in", "attribute": "promotedContactId", "value": ids[i:i + _ID_BATCH]},
+            {"type": "isNotNull", "attribute": "sideExit"}])
+        left.update(p["promotedContactId"] for p in page.get("list", []) if p.get("promotedContactId"))
+    return left
+
+
 def _card_key(address: Address) -> str:
     """One card per name at an address: two businesses in one building are two
     cards; the same business twice is one."""
@@ -805,7 +1168,8 @@ def audience_result(audience: dict[str, Any]) -> dict[str, Any]:
     """What a build reports about the list it sent to — the sign-off screen's
     members, reached and skip reasons (§ 7c.4)."""
     return {"list": audience["list"], "members": audience["members"],
-            "reached": len(audience["targets"]), "skipped": audience["skipped"]}
+            "reached": len(audience["targets"]), "skipped": audience["skipped"],
+            "everyContact": audience.get("everyContact", False)}
 
 
 async def audience_for_build(client, store, settings: Settings, campaign: dict[str, Any]) -> Optional[dict[str, Any]]:
@@ -820,12 +1184,15 @@ async def audience_for_build(client, store, settings: Settings, campaign: dict[s
     row = await store.get_list(chosen["list_id"])
     if not row:
         raise AudienceError("The campaign's list no longer exists — choose another.")
+    every = bool(chosen.get("include_every_contact"))
     cat = await catalogue(client, settings)
     members = await current_members(client, store, row, cat)
-    resolved = await resolve_targets(client, campaign.get("campaignKind") or cfg.KIND_POSTCARD, members["keys"])
+    resolved = await resolve_targets(client, campaign.get("campaignKind") or cfg.KIND_POSTCARD, members["keys"],
+                                     every_contact=every)
     skipped_total = sum(s["count"] for s in resolved["skipped"])
     summary = (f"The {row['kind']} list \"{row['name']}\" (version {row['version']}): "
-               f"{members['total']} members, {len(resolved['targets'])} reached, {skipped_total} skipped.")
+               f"{members['total']} members, {len(resolved['targets'])} reached, {skipped_total} skipped"
+               + (", every contact on each client, partner or funder." if every else "."))
     return {"list": {"id": row["id"], "name": row["name"], "kind": row["kind"], "version": row["version"]},
             "members": members["total"], "targets": resolved["targets"], "skipped": resolved["skipped"],
-            "summary": summary}
+            "summary": summary, "everyContact": every}

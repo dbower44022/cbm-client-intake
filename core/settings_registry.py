@@ -279,8 +279,10 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("campaign_list_fields", GROUP_FEATURES, "Campaign list fields", component="web",
        help="The fields a list step may filter on, per record type (ruling 63), written "
             "as 'lead: leadStatus, leadSource; contact: cContactType, cFunnelStage'. Use "
-            "the CRM's field names. Empty uses the defaults. Each field is checked against "
-            "the CRM when saved; a field the CRM lacks is refused."),
+            "the CRM's field names; a dotted name follows links (client: "
+            "engagementClient.industrySector). Record types: lead, contact, client, partner, "
+            "funder. Empty uses the defaults. Each field is checked against the CRM when "
+            "saved; a field the CRM lacks is refused."),
     _s("campaigns_sms", GROUP_FEATURES, "Campaign texts", kind="bool", component="both",
        help="The text-message campaign kind (rulings 38, 39). The application sends "
             "the texts through the texting service below — with 'Texting service' at "

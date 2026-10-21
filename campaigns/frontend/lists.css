@@ -27,3 +27,5 @@
 .ls__results li span { flex: 1; }
 .ls__h4 { margin: .8rem 0 .3rem; font-size: .95rem; }
 .ls__missing { color: var(--cbm-error, #8f1d1d); }
+.ls__import textarea { font: inherit; font-family: var(--cbm-mono, monospace); min-width: min(36rem, 100%); padding: .4rem .5rem;
+  border: 1px solid var(--cbm-border, #c9d1d8); border-radius: 6px; }

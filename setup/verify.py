@@ -235,11 +235,11 @@ async def _probe_campaign_list_fields(_key: str, value: str) -> Result:
     problems = []
     try:
         for t, names in parsed.items():
-            defs = await client.metadata(f"entityDefs.{audience.TYPES[t]['entity']}.fields") or {}
             for n in names:
-                d = defs.get(n) if isinstance(defs, dict) else None
+                path = await audience.resolve_path(client, audience.TYPES[t]["entity"], n)
+                d = (path or {}).get("def")
                 if not isinstance(d, dict):
-                    problems.append(f"{t}: {n} is not a field in the CRM")
+                    problems.append(f"{t}: {n} is not a field in the CRM (or a link on its path is not one a list can follow)")
                 elif d.get("type") not in audience.FAMILY_OF_TYPE:
                     problems.append(f"{t}: {n} is a {d.get('type')} field, which a list cannot filter on")
     except EspoTransportError as exc:

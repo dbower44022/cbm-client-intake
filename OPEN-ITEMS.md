@@ -44,9 +44,12 @@ found; move resolved items to the bottom with the resolution date.
     chapter address, read back by Claude. Lead `industry` applied on
     crm-test. One finding, fixed locally and unpushed: the saved recipe's
     problems box stayed up while a new list was edited. `CAMPAIGN_LISTS` is
-    ON on crm-test (override). Owed: push that fix; L2 (clients, partners,
-    funders; the funder-status handoff, ruling 67); production and Boston
-    with the arc's eventual slot.
+    ON on crm-test (override). **L2 built as v0.271.0 (10-21-26 16:01), not pushed**
+    (clients, partners, funders, links, lists of lists, imports, Include
+    every contact, funder status in Funder Management). Owed: push; the
+    funder-status field on crm-test (`scripts/prospect_crm_test.sh
+    funderstatus`, fingerprint `84636d15191f`, Doug runs it); the L2 live
+    pass; production and Boston with the arc's eventual slot.
     LIVE-PASSED on crm-test (v0.265.0–3, 10-19-26; rulings 41–54).**
     **Production DEFERRED by Doug 10-20-26 15:06: "defer production until
     we finish testing new campaign functionality"** — no Sunday slot is

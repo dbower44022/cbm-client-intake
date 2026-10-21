@@ -19,7 +19,7 @@
     <header class="cm__topbar">
       <div class="cm__title">
         <h1>Campaign lists</h1>
-        <p class="cm__sub">Named lists a campaign sends to: leads and contacts chosen step by step, kept frozen or run again before each send.</p>
+        <p class="cm__sub">Named lists a campaign sends to: leads, contacts, clients, partners and funders chosen step by step, kept frozen or run again before each send.</p>
       </div>
       <nav class="cm__nav">
         <a class="cm__navbtn" href="/campaigns/" target="cbm-campaigns">Campaigns</a>
@@ -79,7 +79,7 @@
         <div class="ls__cols">
           <section class="cm__card ls__recipe">
             <h3>Recipe</h3>
-            <p class="cm__hint">Steps run in order. <strong>Add matching</strong> widens the list; <strong>Keep only matching</strong> narrows the members of its own type; <strong>Remove matching</strong> takes them out. Conditions in one step must all match — for "either … or", use two Add steps.</p>
+            <p class="cm__hint">Steps run in order. <strong>Add matching</strong> widens the list; <strong>Keep only matching</strong> narrows the members of its own type; <strong>Remove matching</strong> takes them out. Conditions in one step must all match — for "either … or", use two Add steps. A step can also add or remove the members of another list (a standing exclusion list), or add the records a file names.</p>
             <div id="steps"></div>
             <div class="cm__runactions">
               <button type="button" class="cbm-button cbm-button--secondary" id="addStepBtn">+ Add step</button>
@@ -94,7 +94,7 @@
             <p class="cm__empty" id="handEmpty" hidden>Nothing changed by hand.</p>
             <h4 class="ls__h4">Add or exclude a record by hand</h4>
             <div class="ls__search">
-              <select id="searchType"><option value="lead">Leads</option><option value="contact">Contacts</option></select>
+              <select id="searchType"><option value="lead">Leads</option><option value="contact">Contacts</option><option value="client">Clients</option><option value="partner">Partners</option><option value="funder">Funders</option></select>
               <input type="search" id="searchBox" placeholder="Type two letters of a name or email…" />
             </div>
             <ul class="ls__results" id="searchResults"></ul>

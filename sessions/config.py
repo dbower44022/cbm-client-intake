@@ -344,6 +344,10 @@ class DomainConfig:
     #: with a reason until the build lands there. Partner (CM-5) and, since
     #: ruling 57 (10-20-26), funder: COutreachCampaign.funderProfiles' reverse.
     sponsored_campaigns_link: Optional[str] = None
+    #: Grid attributes asked of the CRM only when its live metadata has them —
+    #: a field a CRM build adds later (the funder status, ruling 67). Until
+    #: then the column renders "—" and the read never names the field.
+    list_optional_select: tuple[str, ...] = ()
 
     # --- Last contact date (Doug's request 2026-07-25). The record field that is
     # advanced to the contact date whenever an outbound email is sent from the
@@ -939,6 +943,9 @@ SPONSOR = DomainConfig(
         # Last contact date sits just before the company column (Doug's request
         # 2026-07-25 — the funder grid has no status column, so this mirrors the
         # partner grid's status→lastContact→company position).
+        # Ruling 67 (10-20-26): the funder status, the partner grid's status
+        # column's twin; "—" until the CRM has the field.
+        Column("status", "Funder status", "funderStatus"),
         Column("lastContact", "Last Contacted", "lastContacted", type="date"),
         Column("company", "Company", "sponsorCompanyName"),
         Column("contact", "Primary contact", "sponsorContactName"),
@@ -946,6 +953,7 @@ SPONSOR = DomainConfig(
         # compose links there — the quick-email path); "—" when unmanaged.
         Column("mentor", "Funder Manager", "cBMSponsorManagerName"),
     ),
+    list_optional_select=("funderStatus",),
     list_contact_key="contact",
     list_contact_id_attr="sponsorContactId",
     list_manager_id_attr="cBMSponsorManagerId",

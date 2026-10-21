@@ -4087,6 +4087,8 @@
         // same reason it does on the partner form: it decides who owns the record.
         [{ name: "cBMSponsorManagerId", span: 4, label: "Funder manager" },
          { name: "lastContribution", span: 4 }, { name: "lastContacted", span: 4 }],
+        // Ruling 67: the funder status; absent until the CRM has the field.
+        [{ name: "funderStatus", span: 4, label: "Funder status" }],
       ] },
       { label: "Funder notes", grow: 3, basis: 52, rows: [
         [{ name: "description", span: 12, label: "Funder notes" }],

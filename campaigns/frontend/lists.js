@@ -65,6 +65,36 @@
     for (var i = 0; i < f.length; i++) if (f[i].field === name) return f[i];
     return null;
   }
+  var CONDITION_ACTIONS = ["add", "keep", "remove"], LIST_ACTIONS = ["addList", "removeList"];
+  var TYPE_ONE = { lead: "Lead", contact: "Contact", client: "Client", partner: "Partner", funder: "Funder" };
+
+  // The import step (§ 7c.4): CRM ids, or email addresses for leads and
+  // contacts, pasted or read from a file in the browser; nothing is created.
+  function importBox(s) {
+    var wrap = el("div", "ls__cond ls__import");
+    var ta = document.createElement("textarea");
+    ta.rows = 4; ta.placeholder = "One CRM id or email address per line";
+    ta.value = (s.values || []).join("\n");
+    ta.addEventListener("input", function () { s.values = ta.value.split(/[\s,;]+/).filter(Boolean); markDirty(); });
+    var file = document.createElement("input"); file.type = "file"; file.accept = ".csv,.txt,text/csv,text/plain";
+    file.addEventListener("change", function () {
+      var f = file.files && file.files[0];
+      if (!f) return;
+      var reader = new FileReader();
+      reader.onload = function () {
+        var vals = String(reader.result || "").split(/[\s,;]+/).map(function (v) { return v.replace(/^"|"$/g, ""); })
+          .filter(function (v) { return v && (v.indexOf("@") >= 0 || /^[0-9a-f]{12,24}$/i.test(v)); });
+        s.values = vals; ta.value = vals.join("\n"); markDirty();
+        notice("Read " + vals.length + " ids or email addresses from " + f.name + ". Count to see how many match.", "ok");
+      };
+      reader.readAsText(f);
+    });
+    wrap.appendChild(ta);
+    wrap.appendChild(file);
+    wrap.appendChild(el("p", "cm__hint", "Leads and contacts match by CRM id or email address; clients, partners and funders by CRM id. A row matching nothing is counted, never created — new leads come in through Imports."));
+    return wrap;
+  }
+
   function typeLabel(t) { return ((state.cat && state.cat.types[t]) || {}).label || t; }
   function noTypeLabel(f, opt) { return opt === "__none__" ? (f.noTypeLabel || "No type") : opt; }
 
@@ -265,14 +295,29 @@
     var head = el("div", "ls__stephead");
     head.appendChild(el("span", "ls__stepno", "Step " + (i + 1)));
     head.appendChild(select((state.cat.actions || []).map(function (a) { return [a.action, a.label]; }), s.action,
-      function (v) { s.action = v; markDirty(); }));
-    var types = Object.keys(state.cat.types).map(function (t) { return [t, state.cat.types[t].label.toLowerCase()]; });
-    head.appendChild(select(types, s.type, function (v) {
-      s.type = v; s.conditions = [{ field: "", op: "", value: null }]; markDirty(); renderSteps();
-    }));
-    head.appendChild(el("span", null, "where"));
+      function (v) {
+        var wasCond = CONDITION_ACTIONS.indexOf(s.action) >= 0, isCond = CONDITION_ACTIONS.indexOf(v) >= 0;
+        s.action = v;
+        if (LIST_ACTIONS.indexOf(v) >= 0) { s.listId = s.listId || ""; s.conditions = []; }
+        else if (v === "import") { s.values = s.values || []; s.conditions = []; s.type = s.type || "lead"; }
+        else if (!wasCond && isCond) { s.type = s.type || "lead"; s.conditions = [{ field: "", op: "", value: null }]; }
+        markDirty(); renderSteps();
+      }));
+    var isList = LIST_ACTIONS.indexOf(s.action) >= 0;
+    if (isList) {
+      var lists = [["", "— choose a list —"]].concat(state.lists.filter(function (l) {
+        return l.id !== state.open && (l.status !== "retired" || l.id === s.listId);
+      }).map(function (l) { return [l.id, l.name + " (" + l.kind + ")"]; }));
+      head.appendChild(select(lists, s.listId || "", function (v) { s.listId = v; markDirty(); }));
+    } else {
+      var types = Object.keys(state.cat.types).map(function (t) { return [t, state.cat.types[t].label.toLowerCase()]; });
+      head.appendChild(select(types, s.type, function (v) {
+        s.type = v; if (s.action !== "import") s.conditions = [{ field: "", op: "", value: null }]; markDirty(); renderSteps();
+      }));
+      if (s.action !== "import") head.appendChild(el("span", null, "where"));
+    }
     var c = state.counts[i + 1];
-    head.appendChild(el("span", "ls__stepcount", c ? (c.after + " after this step (" + (c.added ? "+" + c.added : "") + (c.dropped ? "−" + c.dropped : "") + (c.added || c.dropped ? "" : "no change") + ")") : ""));
+    head.appendChild(el("span", "ls__stepcount", c ? (c.after + " after this step (" + (c.added ? "+" + c.added : "") + (c.dropped ? "−" + c.dropped : "") + (c.added || c.dropped ? "" : "no change") + ")" + (c.unmatched ? " — " + c.unmatched + " rows matched nothing" : "")) : ""));
     var up = el("button", "cm__rowbtn", "↑"); up.type = "button"; up.title = "Move this step up";
     up.addEventListener("click", function () {
       if (i === 0) { notice("This is already the first step.", "warn"); return; }
@@ -289,6 +334,8 @@
     del.addEventListener("click", function () { state.recipe.steps.splice(i, 1); state.counts = {}; markDirty(); renderSteps(); });
     [up, down, count, del].forEach(function (b) { head.appendChild(b); });
     card.appendChild(head);
+    if (isList) return card;
+    if (s.action === "import") { card.appendChild(importBox(s)); return card; }
     s.conditions.forEach(function (cond, j) { card.appendChild(condRow(s, cond, j)); });
     var add = el("button", "cm__rowbtn", "+ Condition (and)"); add.type = "button";
     add.addEventListener("click", function () { s.conditions.push({ field: "", op: "", value: null }); markDirty(); renderSteps(); });
@@ -334,22 +381,24 @@
       var box = el("div", "ls__ticks");
       var chosen = Array.isArray(cond.value) ? cond.value.slice() : [];
       f.options.forEach(function (o) {
+        var val = typeof o === "object" ? o.value : o, name = typeof o === "object" ? o.label : noTypeLabel(f, o);
         var lab = el("label");
-        var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = chosen.indexOf(o) >= 0;
+        var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = chosen.indexOf(val) >= 0;
         cb.addEventListener("change", function () {
-          var at = chosen.indexOf(o);
-          if (cb.checked && at < 0) chosen.push(o);
+          var at = chosen.indexOf(val);
+          if (cb.checked && at < 0) chosen.push(val);
           if (!cb.checked && at >= 0) chosen.splice(at, 1);
           cond.value = chosen.slice(); markDirty();
         });
-        lab.appendChild(cb); lab.appendChild(document.createTextNode(noTypeLabel(f, o)));
+        lab.appendChild(cb); lab.appendChild(document.createTextNode(name));
         box.appendChild(lab);
       });
+      if (!f.options.length) box.appendChild(el("span", "cm__hint", "The CRM offers no values to choose from."));
       return box;
     }
     var input = document.createElement("input");
     if (op === "after" || op === "before") input.type = "date";
-    else if (["lastDays", "atLeast", "atMost"].indexOf(op) >= 0) { input.type = "number"; input.min = "0"; input.style.width = "7em"; }
+    else if (["lastDays", "olderDays", "atLeast", "atMost"].indexOf(op) >= 0) { input.type = "number"; input.min = "0"; input.style.width = "7em"; }
     else { input.type = "text"; input.placeholder = op === "in" ? "e.g. 44113, 44114" : ""; }
     input.value = cond.value == null ? "" : String(cond.value);
     input.addEventListener("input", function () { cond.value = input.value; markDirty(); });
@@ -359,7 +408,7 @@
   async function preview(upTo) {
     if (!state.recipe.steps.length) { notice("Add a step first.", "warn"); return; }
     try {
-      var res = await api("/lists/preview", { method: "POST", body: { recipe: state.recipe, upTo: upTo || null } });
+      var res = await api("/lists/preview", { method: "POST", body: { recipe: state.recipe, upTo: upTo || null, listId: state.open } });
       state.counts = {};
       (res.steps || []).forEach(function (s) { state.counts[s.step] = s; });
       renderSteps();
@@ -518,7 +567,7 @@
     tb.textContent = "";
     (res.members || []).forEach(function (m) {
       var r = el("tr");
-      r.appendChild(el("td", null, m.type === "lead" ? "Lead" : "Contact"));
+      r.appendChild(el("td", null, TYPE_ONE[m.type] || m.type));
       var name = el("td", m.missing ? "ls__missing" : null, m.name + (m.entry === "include" ? " (always included)" : m.hand ? " (added by hand)" : ""));
       r.appendChild(name);
       cols.forEach(function (c) { var v = (m.values || {})[c]; r.appendChild(el("td", null, v == null || v === "" ? "—" : String(v))); });

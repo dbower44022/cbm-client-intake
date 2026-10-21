@@ -1,6 +1,6 @@
 # campaigns/ — Campaign Management
 
-Last Updated: 10-20-26 18:20 · Revision 1.1
+Last Updated: 10-21-26 16:01 · Revision 1.2
 
 Detail for Campaign Management (`/campaigns`, prospect marketing Phases 1 to 4 and the lead model): links, postcards, the landing page, imports, the Leads and Review grids, calls, texts, email, attribution and reporting.
 
@@ -237,8 +237,18 @@ the reason.
   `audience=` to each kind's `build_list`); one naming none builds exactly
   as before. **A Mentor, Member or Administrator contact is emailed at
   their `cbmEmail` only** — `audience.address_for_email`, used by the push
-  for every email campaign. L2 (clients, partners, funders, *Include every
-  contact*, list-of-list and import steps) is not built.
+  for every email campaign. **L2 (v0.271.0)**: clients (an *engagement*),
+  partners and funders; **dotted field names follow links**
+  (`audience.resolve_path` — belongsTo walks `<link>Id`, hasOne walks
+  backwards through the foreign key, so `CClientProfile.linkedCompany`
+  resolves via `Account.cClientProfileId`); link fields filter by id with
+  names as options; `olderDays`; `addList` / `removeList` steps (cycle
+  refused at Save by `audience.reaches`, at run by `_seen`, depth
+  `LIST_DEPTH`) and `import` (ids, emails for leads and contacts, never
+  creates). A client / partner / funder reaches its primary contact, or
+  every contact (`ORG_SHAPE` names the links) when the campaign ticks
+  *Include every contact* (ruling 59); its card goes to its company
+  (ruling 68, no ruling-14 check).
 - Owed: nothing on production's CRM (both slots done 10-18-26; every
   campaign switch off there — turning one on is Doug's call at `/setup`);
   Boston with its release; a seeder and sandbox re-baseline; the Twilio
@@ -249,5 +259,6 @@ the reason.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 10-21-26 16:01 | Claude (Claude Code) | Campaign lists L2 (v0.271.0). |
 | 1.1 | 10-20-26 18:20 | Claude (Claude Code) | Campaign lists L1 (v0.270.0) bullet added. |
 | 1.0 | 10-20-26 17:30 | Claude (Claude Code) | Created from the root `CLAUDE.md` section, word for word (Doug's approval 10-20-26). |

@@ -609,7 +609,8 @@ class Settings(BaseSettings):
     # campaign selects by its kind's own rule exactly as before.
     campaign_lists: bool = False
     # The fields a list step may use, per target type (ruling 63), as
-    # "lead: leadStatus, leadSource; contact: cContactType". Empty: the
+    # "lead: leadStatus, leadSource; contact: cContactType" (a dotted name
+    # follows links: client: engagementClient.industrySector). Empty: the
     # defaults in campaigns/audience.py. Checked against the CRM at /setup.
     campaign_list_fields: str = ""
     sms_provider: Literal["dryrun", "twilio"] = "dryrun"

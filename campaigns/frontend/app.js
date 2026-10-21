@@ -458,11 +458,13 @@
         var o = el("option", null, l.name + " (" + l.kind + (l.status === "retired" ? ", retired" : "") + ")"); o.value = l.id; sel.appendChild(o);
       });
       sel.value = state.audience ? state.audience.listId : "";
+      $("audEvery").checked = !!(state.audience && state.audience.includeEveryContact);
     } catch (e) { notice(e.message, "error"); return; }
     var a = state.audience, open = $("audOpen");
     open.href = "/campaigns/lists.html" + (a ? "?list=" + encodeURIComponent(a.listId) : "");
     text($("audState"), a
-      ? "Sends to the " + a.listKind + " list \u201c" + a.listName + "\u201d, now at version " + a.listVersion + "." +
+      ? "Sends to the " + a.listKind + " list \u201c" + a.listName + "\u201d, now at version " + a.listVersion + "," +
+        (a.includeEveryContact ? " every contact on each client, partner or funder." : " the primary contact of each client, partner or funder.") +
         (a.builtVersion ? " Last built from version " + a.builtVersion + " on " + fmtDate(a.builtAt) + "." : " Not built yet.") +
         " The rule ticks below are not used while a list is chosen."
       : "No list chosen: Build the list uses this kind's own rule below.");
@@ -475,7 +477,7 @@
     var c = state.record.campaign;
     if (["Draft", "Awaiting sign-off", null, undefined, ""].indexOf(c.campaignStatus) < 0) { notice("The list cannot be changed once the campaign is " + c.campaignStatus + ".", "warn"); return; }
     try {
-      await api("/campaigns/" + encodeURIComponent(c.id) + "/audience", { method: "PUT", body: { listId: $("audList").value || null, includeEveryContact: false } });
+      await api("/campaigns/" + encodeURIComponent(c.id) + "/audience", { method: "PUT", body: { listId: $("audList").value || null, includeEveryContact: $("audEvery").checked } });
       notice($("audList").value ? "List chosen. Build the list to see who it reaches." : "List cleared — the kind's own rule applies.", "ok");
       loadRecord();
     } catch (e) { notice(e.message, "error"); }

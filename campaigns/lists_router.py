@@ -146,13 +146,14 @@ async def get_list(list_id: str, request: Request) -> dict[str, Any]:
     hand = [m for m in await store.member_rows(list_id) if m.get("source") == "hand"] \
         if row["kind"] == KIND_STATIC else []
     client = _api_client(settings, request)
+    names_by_id = {r["id"]: r["name"] for r in await store.all_lists()}
     named = await audience.describe_members(client, [e["target_key"] for e in entries] +
                                             [h["target_key"] for h in hand], recipe, cat)
     names = {n["key"]: n["name"] for n in named}
     return {
         "list": _public(row, len(using)),
         "problems": audience.check_recipe(recipe, cat),
-        "steps": [audience.describe_step(s, cat) for s in recipe["steps"] if s["type"] in audience.TYPES],
+        "steps": [audience.describe_step(s, cat, names_by_id) for s in recipe["steps"]],
         "versions": [{"version": v["version"], "kind": v["kind"], "savedBy": v.get("saved_by") or "",
                       "savedAt": v["saved_at"].isoformat()} for v in await store.list_versions(list_id)],
         "usedBy": [{"campaignId": u["campaign_id"], "builtVersion": u.get("built_version"),
@@ -174,6 +175,10 @@ async def save_list(list_id: str, body: ListIn, request: Request) -> dict[str, A
     if row["status"] == STATUS_RETIRED:
         raise HTTPException(status_code=400, detail="A retired list cannot be changed — reactivate it first.")
     name, notes, kind, recipe = _validated(body)
+    if await audience.reaches(store, audience.referenced_lists(recipe), list_id):
+        raise HTTPException(status_code=400,
+                            detail="A list cannot include itself, directly or through another list — "
+                                   "choose a different list in that step.")
     saved = await store.save_list(list_id, name=name, notes=notes, kind=kind, recipe=recipe, actor=_who(user))
     if saved["version"] != row["version"]:
         await _log(client, user, "Campaign List Changed",
@@ -185,6 +190,7 @@ async def save_list(list_id: str, body: ListIn, request: Request) -> dict[str, A
 class PreviewIn(BaseModel):
     recipe: dict[str, Any] = Field(default_factory=lambda: {"steps": []})
     upTo: Optional[int] = None
+    listId: Optional[str] = None
 
 
 @lists_router.post("/lists/preview")
@@ -198,8 +204,10 @@ async def preview(body: PreviewIn, request: Request) -> dict[str, Any]:
     recipe = audience.normalise_recipe(body.recipe)
     if body.upTo:
         recipe = {"steps": recipe["steps"][: max(body.upTo, 1)]}
+    store = getattr(request.app.state, "campaign_store", None)
     try:
-        result = await audience.run_recipe(_api_client(settings, request), recipe, cat)
+        result = await audience.run_recipe(_api_client(settings, request), recipe, cat, store=store,
+                                           _seen=(body.listId,) if body.listId else ())
     except AudienceError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
@@ -220,7 +228,8 @@ async def run_list(list_id: str, request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail="A retired list does not run — reactivate it first.")
     cat = await _catalogue(request, settings)
     try:
-        result = await audience.run_recipe(_api_client(settings, request), audience.normalise_recipe(row["recipe"]), cat)
+        result = await audience.run_recipe(_api_client(settings, request), audience.normalise_recipe(row["recipe"]),
+                                           cat, store=store, _seen=(list_id,))
     except AudienceError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
@@ -279,7 +288,7 @@ class MarkIn(BaseModel):
 def _valid_key(key: str) -> str:
     t, _, rid = key.partition(":")
     if t not in audience.TYPES_BUILT or not rid or len(rid) > 40:
-        raise HTTPException(status_code=400, detail="That is not a lead or a contact.")
+        raise HTTPException(status_code=400, detail="That is not a lead, contact, client, partner or funder.")
     return key
 
 
@@ -337,12 +346,12 @@ async def search_records(request: Request, type: str = "lead", q: str = "") -> d
     settings = get_settings()
     _require_lists(settings)
     if type not in audience.TYPES_BUILT:
-        raise HTTPException(status_code=400, detail="Search leads or contacts.")
+        raise HTTPException(status_code=400, detail="Search leads, contacts, clients, partners or funders.")
     q = q.strip()
     if len(q) < 2:
         return {"records": []}
     client = _api_client(settings, request)
-    attrs = ["businessName", "name", "email"] if type == "lead" else ["name", "emailAddress"]
+    attrs = {"lead": ["businessName", "name", "email"], "contact": ["name", "emailAddress"]}.get(type, ["name"])
     try:
         page = await client.list(audience.TYPES[type]["entity"], select="id," + audience.NAME_FIELDS[type],
                                  max_size=20, where=[{"type": "or", "value": [

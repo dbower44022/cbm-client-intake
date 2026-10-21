@@ -310,6 +310,20 @@ async def default_meeting_link(client: SessionClient, user_id: str) -> Optional[
         return None
 
 
+async def _list_select(cfg: DomainConfig, client: SessionClient) -> str:
+    """The grid's select, plus each optional attribute the live CRM has
+    (``DomainConfig.list_optional_select``). A failed metadata read leaves the
+    optional ones out — the column shows "—", the grid still loads."""
+    if not cfg.list_optional_select:
+        return cfg.list_select
+    try:
+        defs = await client.metadata(f"entityDefs.{cfg.parent_entity}.fields") or {}
+    except Exception:  # noqa: BLE001
+        defs = {}
+    extra = [a for a in cfg.list_optional_select if isinstance(defs, dict) and a in defs]
+    return ",".join([cfg.list_select, *extra]) if extra else cfg.list_select
+
+
 def _grid_row(cfg: DomainConfig, r: dict[str, Any]) -> dict[str, Any]:
     row = {"id": r["id"], "createdAt": r.get("createdAt")}
     for col in cfg.list_columns:
@@ -426,12 +440,13 @@ async def list_records(
     team whose role has no CMentorProfile grant can still load the grid.
     """
     rows: list[dict[str, Any]] = []
+    select = await _list_select(cfg, client)
     if cfg.list_all:
         offset = 0
         while True:
             data = await client.list(
                 cfg.parent_entity,
-                select=cfg.list_select,
+                select=select,
                 max_size=_PAGE,
                 offset=offset,
             )
@@ -453,7 +468,7 @@ async def list_records(
                 MENTOR_PROFILE,
                 profile_id,
                 link,
-                select=cfg.list_select,
+                select=select,
                 max_size=_PAGE,
             )
             for r in data.get("list", []):
