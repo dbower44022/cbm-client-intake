@@ -308,18 +308,23 @@ def condition_where(cond: dict[str, Any], field: dict[str, Any], *, now: Optiona
     if op in ("anyOf", "noneOf"):
         values = _as_list(v)
         real = [x for x in values if x != NO_TYPE]
+        # "No type" is an empty list OR a list holding one blank value: on
+        # crm-test 14 of 61 untyped Contacts are stored as [""], which
+        # arrayIsEmpty does not match (read 10-21-26).
         if op == "anyOf":
             parts = []
             if real:
                 parts.append({"type": "arrayAnyOf", "attribute": a, "value": real})
             if NO_TYPE in values:
-                parts.append({"type": "arrayIsEmpty", "attribute": a})
+                parts += [{"type": "arrayIsEmpty", "attribute": a},
+                          {"type": "arrayAnyOf", "attribute": a, "value": [""]}]
             return parts[0] if len(parts) == 1 else {"type": "or", "value": parts}
         parts = []
         if real:
             parts.append({"type": "arrayNoneOf", "attribute": a, "value": real})
         if NO_TYPE in values:
-            parts.append({"type": "arrayIsNotEmpty", "attribute": a})
+            parts += [{"type": "arrayIsNotEmpty", "attribute": a},
+                      {"type": "arrayNoneOf", "attribute": a, "value": [""]}]
         return parts[0] if len(parts) == 1 else {"type": "and", "value": parts}
     if op in ("contains", "startsWith", "equals"):
         return {"type": op, "attribute": a, "value": str(v or "").strip()}

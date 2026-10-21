@@ -296,9 +296,10 @@ def test_contacts_add_must_name_types_and_no_type_works():
     assert any("ruling 60" in p["message"] for p in audience.check_recipe(bad, cat))
     with pytest.raises(audience.AudienceError):
         run(audience.run_recipe(crm, bad, cat))
+    blank = _contact(crm, "Bea Blank", cContactType=[""])        # how crm-test stores 14 of them
     only_untyped = recipe(step("add", "contact", ("cContactType", "anyOf", [audience.NO_TYPE])))
     keys = run(audience.run_recipe(crm, only_untyped, cat))["keys"]
-    assert set(keys) == {f"contact:{untyped['id']}"} and typed["id"]
+    assert set(keys) == {f"contact:{untyped['id']}", f"contact:{blank['id']}"} and typed["id"]
 
 
 def test_a_step_over_the_cap_is_refused(monkeypatch):

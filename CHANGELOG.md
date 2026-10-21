@@ -59,6 +59,10 @@ rather than a panel per type. L2 — clients, partners and funders, *Include
 every contact*, lists of lists and the import step — is next. Verified by 20
 new tests and the full suite; never against a live CRM.
 
+*Fix before push (10-21-26):* "No type" also matches a Contact whose type
+is stored as one blank value — 14 of crm-test's 61 untyped Contacts are
+`[""]`, which `arrayIsEmpty` misses (read live).
+
 ## [0.269.0] — 2026-10-20
 
 **feat(enrichment): the free pass — every open lead gets a fit score** (lead
