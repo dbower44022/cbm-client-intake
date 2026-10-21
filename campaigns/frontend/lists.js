@@ -192,7 +192,7 @@
     var p = $("problems");
     if ((d.problems || []).length) {
       p.textContent = "";
-      p.appendChild(el("strong", null, "This recipe cannot run yet:"));
+      p.appendChild(el("strong", null, "The saved recipe cannot run yet:"));
       var ul = el("ul");
       d.problems.forEach(function (x) { ul.appendChild(el("li", null, x.message)); });
       p.appendChild(ul);
@@ -229,7 +229,10 @@
 
   // --- the recipe -------------------------------------------------------------------------
 
-  function markDirty() { state.dirty = true; }
+  // The amber box describes the SAVED recipe; once the recipe is being edited it
+  // is out of date, so it goes until the next Save re-checks (live pass 10-21-26:
+  // a new list's "needs at least one step" stayed up while its steps were built).
+  function markDirty() { state.dirty = true; hide($("problems")); }
 
   function addStep() {
     var first = !state.recipe.steps.length;
