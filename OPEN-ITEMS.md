@@ -138,8 +138,14 @@ found; move resolved items to the bottom with the resolution date.
     grants, not by this pass. **Found, owed:** every Campaign Management
     action's `CActionLog` row is refused (HTTP 400, `record` not valid) —
     `CActionLog.record` does not list `COutreachCampaign`, `CProspect` or
-    `COutreachTouch` (the event gap of item 669 again); the stream notes are
-    written. A CRM entity-list change on all three CRMs. **Phase 3 (10-18-26):**
+    `COutreachTouch` (the event gap of item 669 again). **Corrected
+    10-20-26:** the stream notes were written only because the pass ran as
+    Admin; for every non-admin they were refused (HTTP 403, no stream access).
+    **Ruling 69** grants the Marketing Admin Role stream all on
+    `COutreachCampaign` and `CProspect` — owed: `scripts/prospect_crm_test.sh
+    roles` on crm-test (dry run 10-20-26: exactly those two changes),
+    production and Boston with the role script at their slots, and the roles
+    standard updated to match. A CRM entity-list change on all three CRMs. **Phase 3 (10-18-26):**
     rulings 36 (callers are the campaign's teams, each acting as themself)
     and 37 (no rung on a record holding a relationship type — v0.260.2)
     recorded first; the Review tab, the call kind and the Calls page, the

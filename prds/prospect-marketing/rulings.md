@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-20-26 17:56 · Revision 1.34 — change log at the end.
+Last Updated: 10-20-26 23:01 · Revision 1.35 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -763,6 +763,25 @@ option B, to every target. Doug's reply at 17:56: "a".
     campaign". The sign-off screen names the skip reason either way.
     (10-20-26)
 
+### Doug's ruling (10-20-26, on the campaign history notes)
+
+Creating a campaign on crm-test logged "stream note … failed: HTTP 403 [No
+create access.]" for every Campaign Management action. EspoCRM lets a user
+post a note on a record only with stream access to that record
+(`Classes/Acl/Note/AccessChecker.php`, read on crm-test), and the Marketing
+Admin Role held stream *no* on both entities — so no non-admin's action left
+a history note, against build plan § 1.2. Option A, grant stream *all*;
+option B, leave it at no and rely on the action-history row. Doug's reply
+at 23:00: "a".
+
+69. **The Marketing Admin Role streams campaigns and leads** (option A).
+    The role gains stream *all* on `COutreachCampaign` and `CProspect`, so
+    every Campaign Management action posts its history note on the record.
+    Applied through `scripts/migrate_outreach_roles.py` on crm-test first,
+    then production at a Sunday slot and Boston with its release; the role
+    standard is updated to match. `COutreachTouch` has no stream and needs
+    nothing. (10-20-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -892,6 +911,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.35 | 10-20-26 23:01 | Claude (Claude Code) | Ruling 69 appended: the Marketing Admin Role gains stream all on campaigns and leads (Doug's "a", found on the 521 investigation). |
 | 1.34 | 10-20-26 17:56 | Claude (Claude Code) | Ruling 68 appended: ruling 14 applies to leads only (Doug's "a" to build plan § 9 question 19). |
 | 1.33 | 10-20-26 17:49 | Claude (Claude Code) | Ruling 67 appended: a funder carries a status (Doug's "b" to build plan § 9 question 18, against the recommendation). |
 | 1.32 | 10-20-26 17:47 | Claude (Claude Code) | Ruling 66 appended: a lead carries an industry (Doug's "a" to build plan § 9 question 17). |

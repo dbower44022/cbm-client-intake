@@ -83,8 +83,12 @@ ROLE_SCOPE_GRANTS: list[tuple[str, str, dict[str, str]]] = [
     ("CustomAppAPIRole", "CPartnerProfile", {"edit": "all"}),
     ("CustomAppAPIRole", "Contact", {"edit": "all"}),
     ("CustomAppAPIRole", "Account", {"edit": "all"}),
-    ("Marketing Admin Role", "CProspect", {"create": "yes", "read": "all", "edit": "all"}),
-    ("Marketing Admin Role", "COutreachCampaign", {"create": "yes", "read": "all", "edit": "all"}),
+    # Ruling 69 (10-20-26): stream all on the two stream-enabled entities.
+    # EspoCRM lets a user post a Note on a record only with stream access to
+    # it, so at "no" every Campaign Management history note was refused
+    # (HTTP 403 "No create access") for every non-admin user.
+    ("Marketing Admin Role", "CProspect", {"create": "yes", "read": "all", "edit": "all", "stream": "all"}),
+    ("Marketing Admin Role", "COutreachCampaign", {"create": "yes", "read": "all", "edit": "all", "stream": "all"}),
     ("Marketing Admin Role", "COutreachTouch", {"create": "yes", "read": "all", "edit": "all"}),
     # Re-checks for the two pickers on a campaign (CM-2 partners, CM-6 events).
     ("Marketing Admin Role", "CEvent", {"read": "all"}),
