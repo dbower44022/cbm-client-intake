@@ -41,7 +41,8 @@ found; move resolved items to the bottom with the resolution date.
     Doug runs it); then the live pass as Mark Marketing on crm-test — a
     static and a dynamic list, a hand tick surviving Run again, a standing
     entry, a postcard and an email campaign built from a list with the skip
-    reasons named, a mentor reached at their cbmEmail. Then L2 (clients,
+    reasons named, a mentor reached at their cbmEmail — step page
+    https://claude.ai/artifact/2jDCeJN96LR2cHvA2Mddro (rev 1.0). Then L2 (clients,
     partners, funders; the funder-status handoff, ruling 67).
     LIVE-PASSED on crm-test (v0.265.0–3, 10-19-26; rulings 41–54).**
     **Production DEFERRED by Doug 10-20-26 15:06: "defer production until
