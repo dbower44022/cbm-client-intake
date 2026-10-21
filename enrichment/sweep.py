@@ -219,16 +219,28 @@ def _need(settings: Settings) -> EspoApi:
 
 
 async def plan_text(settings: Settings, client: EspoApi) -> str:
-    """What the apply would do, with no clock and no web request in it, so the
-    fingerprint holds unless the CRM or the settings moved."""
+    """What the apply would do, fingerprinted by the Operations page.
+
+    It names the rule version, the settings and how ten fixed leads would
+    score, and deliberately NOT how many leads are still unscored: the worker
+    scores a batch every few minutes, so that count moves while the reviewer
+    reads, and the apply would be refused as "the plan changed" (found on
+    crm-test 10-20-26). The sample is the ten oldest open leads, scored without
+    the web check, so it moves only when the rules, the settings or those leads
+    change. The apply's own result line says how many it scored.
+    """
     fields = await lead_fields(client)
     if fields is None:
         raise RuntimeError("This CRM lacks the lead fit fields (lead-fit-score-crm-handoff.md).")
     ctx = await build_context(settings, client)
-    page = await due_leads(client, fields, ctx.version, 50)
-    due = int(page.get("total") or 0)
-    head = [f"Rule version {ctx.version}. {due} open leads have no score under it and would be scored.",
+    page = await client.list(PROSPECT, select=_select(fields), max_size=10,
+                             where=due_where(ctx.version)[:2],
+                             order_by="createdAt", order="asc")
+    head = [f"Rule version {ctx.version}. Applying scores every open lead (Unqualified or "
+            "Qualified, no side exit) that has no score under this version; the result "
+            "says how many.",
             f"Service area: {settings.chapter_counties or '(not set — the gate is skipped)'}.",
+            f"Weights: {settings.fit_weights}.",
             "Web checks: " + ("on — guessed web addresses are fetched" if settings.enrichment_web_checks
                               else "off") + ". The sample below never fetches."]
     lines = []
@@ -236,7 +248,7 @@ async def plan_text(settings: Settings, client: EspoApi) -> str:
         r = fit.score_lead(lead, ctx)
         lines.append(f"  {lead['id']}  {r.score:>3}  {r.gate:<16}  {lead.get('businessName') or lead.get('name') or ''}")
     if lines:
-        head.append(f"The first {len(lines)}, as they would score without the web check:")
+        head.append(f"How the {len(lines)} oldest open leads score:")
     return "\n".join(head + lines)
 
 

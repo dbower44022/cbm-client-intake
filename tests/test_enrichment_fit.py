@@ -332,10 +332,14 @@ async def test_operations_plan_text_is_stable_and_clockless(monkeypatch):
     monkeypatch.setattr(sweep, "_client", lambda s: crm)
     a = await sweep.job_dry_run(settings())
     b = await sweep.job_dry_run(settings())
-    assert a == b and "2 open leads" in a and "Out of area" in a
+    assert a == b and "Out of area" in a and "Rule version" in a
     assert crm.updates == []
+    # Scoring a batch in between (the worker) must not move the plan.
+    await sweep.run_pass(settings(), crm, limit=1)
+    assert await sweep.job_dry_run(settings()) == a
+    crm.updates.clear()
     done = await sweep.job_apply(settings())
-    assert done.startswith("2 leads scored: 1 out of area")
+    assert done.startswith("1 leads scored: 1 out of area")
 
 
 def test_segments_empty_by_default():

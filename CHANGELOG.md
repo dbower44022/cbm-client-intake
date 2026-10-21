@@ -5,6 +5,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.270.1] — 2026-10-20
+
+**fix(enrichment): the *Lead fit scores* plan no longer moves while the worker
+runs.** Found on crm-test's live pass: the dry run showed how many leads were
+still unscored, and the worker scores 200 every 15 minutes, so the count — and
+with it the plan's fingerprint — changed under the reviewer, and *Apply the
+plan* would be refused as "the plan changed". The plan now names the rule
+version, the settings and how the ten oldest open leads score; the apply's
+result line says how many it scored. A test proves a worker batch in between
+leaves the plan unchanged. (The pass's first refusal was a different thing:
+the card's reason box is required to apply, and the step page did not say
+so.)
+
 ## [0.270.0] — 2026-10-20
 
 **feat(campaigns): campaign audiences as named lists — L1, leads and
