@@ -5,6 +5,51 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.277.0] — 2026-10-22
+
+**feat(events): the registration confirmation — CBM's own, the only email a
+registrant gets (Track D, D3).** Doug's rulings 10-22-26: the confirmation is
+the ticket and a public online event is never offered without its Zoom
+webinar (D3-1); one email, ours, with the personal join link, Zoom's
+confirmations off (D3-2). Built dark behind `EVENTS_CONFIRMATIONS`
+(`/setup` → Features → *Registration confirmation emails*). Design:
+`prds/events/CBM_Events_Confirmation_Email_Design.md`.
+
+- `events/confirm.py`: three single-recipient sends from EspoCRM templates
+  — **Confirmation** (`EventConfirmation`, at delivery, with when, where, the
+  registrant's personal Zoom join link or the venue, a calendar file and the
+  cancel link), **Waitlisted** (`EventWaitlisted`, no link, no file) and
+  **Seat Offered** (`EventSeatOffered`, when a cancellation promotes the
+  longest-waiting person, who is now pushed to Zoom first). Ledgered on
+  `confirmationSentAt` and, for Seat Offered, on `followUpsSent` (new option,
+  `scripts/plans/cevent-confirmation.json`, applied on crm-test). Once per
+  registration; cancelled gets nothing; no template, no email. **A public
+  online registrant without a personal join link is not confirmed** — the
+  send waits for the next delivery (a redrive), because a ticket without a
+  way in is worse than a late one.
+- **App tokens** `{{firstName}} {{eventName}} {{when}} {{where}} {{joinUrl}}
+  {{joinBlock}} {{cancelUrl}} {{eventUrl}} {{recordingUrl}} {{orgName}}
+  {{orgAbbr}}`, substituted after EspoCRM's render, in the three new sends
+  AND the five follow-ups — so the reminder carries this person's join link.
+- `events/ics.py`: the one-event calendar file (UTC, RFC 5545 escaping and
+  folding), attached as `event.ics`.
+- **The gate (D3-1)** in `events/visibility.py`: a Public event in an online
+  format with no Join URL is on no page, takes no registrations, shows
+  **Awaiting join link** in Event Administration and warns on save. No
+  switch. The two link-less webinars on production's calendar fall under it.
+- **Zoom's registrant emails are off** on every webinar the application
+  creates (`core/zoom.webinar_settings`).
+- `scripts/seed_event_templates.py`: creates the eight event templates (the
+  three above and the five follow-ups) once with default wording, never
+  touching one that exists — Track D D1 becomes "edit", not "write". Run on
+  crm-test 10-22-26 (eight created).
+- Both registration doors (the public form at delivery, the portal member
+  registration at save) call the same sender; the result rides the delivery
+  record as `confirmation`.
+
+Verified by tests only (2,851 green); nothing has reached a mailbox. The live
+pass is design § 10; the online half waits for Track C.
+
 ## [0.276.0] — 2026-10-22
 
 **feat(campaigns): the lead code in every link — D1, the code and the

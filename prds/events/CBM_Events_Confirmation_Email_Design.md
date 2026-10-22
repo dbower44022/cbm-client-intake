@@ -1,8 +1,8 @@
 # CBM Events — The Registration Confirmation: Design (Track D, D3)
 
-Last Updated: 10-22-26 13:40 · Revision 0.1 — see change log at the end.
+Last Updated: 10-22-26 13:32 · Revision 0.1 — see change log at the end.
 
-**Status: BUILT on Doug's instruction to move forward (10-22-26), dark behind
+**Status: BUILT as v0.277.0 on Doug's instruction to move forward (10-22-26), dark behind
 `EVENTS_CONFIRMATIONS` (off). The two rulings that shape it are recorded in
 `CBM_Events_Finalization_Plan.md` revisions 4.37 and 4.38 and cited here as
 D3-1 and D3-2. The 08-17-26 ruling that CBM sends its own confirmation is in
@@ -174,4 +174,4 @@ not received, ours received with the personal link.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
-| 0.1 | 10-22-26 13:40 | Claude (Claude Code) | First version, written with the build: rulings R-1, D3-1, D3-2; the three kinds, the app tokens, the calendar file, the gate, Zoom's emails off, the switch, the CRM change, the live pass. |
+| 0.1 | 10-22-26 13:32 | Claude (Claude Code) | First version, written with the build: rulings R-1, D3-1, D3-2; the three kinds, the app tokens, the calendar file, the gate, Zoom's emails off, the switch, the CRM change, the live pass. |

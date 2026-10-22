@@ -493,9 +493,13 @@ found; move resolved items to the bottom with the resolution date.
     page, the Registrants tab and counts all work on production data.
     **Fixed on the way:** v0.264.3 (the applier takes integer options; the
     editor reads Duration from the CRM) and v0.264.4 (a registered sign-up
-    form locks). **Owed before the redirect, in order:** (1) **Track D D3,
-    the confirmation email** — both doors say "Check your email" and nothing
-    is sent; (2) a **ruling on consent**: a ticked consent should set `true`
+    form locks). **Owed before the redirect, in order:** (1) ~~**Track D D3,
+    the confirmation email**~~ **BUILT 10-22-26 13:32 as v0.277.0, dark behind
+    `EVENTS_CONFIRMATIONS`** (rulings D3-1/D3-2; design
+    `prds/events/CBM_Events_Confirmation_Email_Design.md`; the eight templates
+    seeded on crm-test, `Seat Offered` applied on crm-test; owed: the live
+    pass of design § 10 on crm-test, production's plan + seed + switch, and
+    the online half with Track C); (2) a **ruling on consent**: a ticked consent should set `true`
     over an existing `false` (today the null-fill keeps `false`); (3) ~~the
     **Zoom question for webinars**~~ **RULED 10-22-26 12:55 (D3-1):** an online Public
     event is not shown or open for registration until its Join URL exists,

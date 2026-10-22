@@ -384,16 +384,30 @@ never drift out of step with the records they count.
 
 ## Follow-up emails — what's needed before they work
 
-The five sends (reminder, recording available, no-show nudge, mentor
-call-to-action, feedback survey) are built and go out as the shared
-**info@** identity. Before any of them can send, someone has to create five
-**email templates in EspoCRM**, named exactly:
+Every event email goes out as the shared **info@** identity from an **email
+template in EspoCRM**, so the wording is yours to change in the CRM at any
+time. There are eight, named exactly:
 
-`EventReminder` · `EventRecordingAvailable` · `EventNoShow` ·
-`EventMentorCTA` · `EventSurvey`
+- **The registrant's confirmation** (switch: *Registration confirmation emails*
+  in System Settings): `EventConfirmation` — the ticket, sent when a
+  registration lands, with the date and time, the place or the person's own
+  Zoom join link, a calendar file and a cancel link; `EventWaitlisted` — when
+  the session is full; `EventSeatOffered` — when a cancellation gives a
+  waiting person the seat. Zoom's own confirmation emails are switched off,
+  so this is the only email a registrant receives. **An online public event
+  is not shown and takes no registrations until it has its Zoom webinar**;
+  Event Administration lists it as *Awaiting join link* until then.
+- **The five follow-ups:** `EventReminder` · `EventRecordingAvailable` ·
+  `EventNoShow` · `EventMentorCTA` · `EventSurvey`.
 
-Until a template exists, that send refuses and names the missing template —
-it will never improvise an email in CBM's name.
+An engineer seeds all eight with plain default wording once
+(`scripts/seed_event_templates.py`); after that, edit them in the CRM. In the
+wording, EspoCRM's own placeholders work as usual, and these are filled by the
+application: `{{firstName}}`, `{{eventName}}`, `{{when}}`, `{{where}}`,
+`{{joinBlock}}` (a ready "Join online" line, empty when there is no link),
+`{{joinUrl}}`, `{{cancelUrl}}`, `{{eventUrl}}`, `{{recordingUrl}}`,
+`{{orgName}}`. Until a template exists, that send refuses and names the
+missing template — it will never improvise an email in CBM's name.
 
 Two rules worth knowing when they do go live:
 

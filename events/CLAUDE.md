@@ -174,6 +174,28 @@ would be indistinguishable from a slug.
   the default. **Needs five templates** — `EventReminder`,
   `EventRecordingAvailable`, `EventNoShow`, `EventMentorCTA`, `EventSurvey` —
   and has no frontend yet.
+- **The registration confirmation is CBM's own and the ONLY email a
+  registrant gets** (v0.277.0, Track D D3, `events/confirm.py`; design
+  `prds/events/CBM_Events_Confirmation_Email_Design.md`; Doug's rulings
+  10-22-26). D3-1: *the confirmation is the ticket* — a Public event in an
+  online format with no Join URL is on no page and takes no registrations
+  (`visibility.needs_join_link`, both surfaces, no switch; Event
+  Administration shows **Awaiting join link**); nothing is pasted by hand on
+  a Public event, Zoom fills it at publish. D3-2: *one email, ours* — it
+  carries the registrant's personal `zoomJoinUrl`, and `core/zoom.webinar_settings`
+  turns Zoom's registrant emails OFF; the website is not redirected until
+  Track C is tested and active. Three single-recipient kinds (Confirmation /
+  Waitlisted / Seat Offered, templates `EventConfirmation` /
+  `EventWaitlisted` / `EventSeatOffered`), ledgered on `confirmationSentAt`
+  and `followUpsSent` (`Seat Offered`, plan `cevent-confirmation.json`), sent
+  from both doors (orchestrator at delivery, `member.register_member`) and
+  from the waitlist promotion, which now pushes the person to Zoom first.
+  **A public online registrant with no personal link is NOT confirmed** —
+  skipped with a reason; a redrive retries. App tokens (`{{joinUrl}}`,
+  `{{cancelUrl}}`, `{{when}}` …, `confirm.TOKEN_NAMES`) are substituted after
+  EspoCRM's render in the three sends AND the five follow-ups. Calendar file:
+  `events/ics.py`. Templates: `scripts/seed_event_templates.py` seeds all
+  eight once (crm-test done 10-22-26 13:32). Dark behind `EVENTS_CONFIRMATIONS`.
 - **Phase 6c reporting** (`events/reporting.py`): the engagement **Events tab**
   (attendance rolled up across all of a client's contacts, deduplicated by
   event), the contact **Events tab** in the directory, and programme + conversion
