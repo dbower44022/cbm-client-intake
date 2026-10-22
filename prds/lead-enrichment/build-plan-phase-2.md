@@ -1,6 +1,6 @@
 # Build plan — lead enrichment phase 2: the AI research pass, started by staff
 
-Last Updated: 10-22-26 10:51 · Revision 0.1 (draft, not approved)
+Last Updated: 10-22-26 11:01 · Revision 0.2 (draft, not approved)
 
 **What it delivers.** A person starts an AI research run on one lead, on a
 set of leads, or on one client's company. An AI model searches the web for
@@ -73,7 +73,7 @@ value. Its own handoff and plan file, crm-test first.
 Links: `prospect` → `CProspect` (many to one, reverse `enrichmentFindings`);
 `company` → `Account` (many to one, reverse `cEnrichmentFindings`). Grants:
 the API role creates, reads and edits; the Marketing Admin Role and the
-Client Assignment Role read and edit. None of the fields Read-only.
+Client Assignment Role read and edit (E19); the Mentor Role nothing. None of the fields Read-only.
 
 ## 3. The application database
 
@@ -163,8 +163,10 @@ person accepted as a Contact with the marketing exclusion.
 
 ## 7. Open questions, for Doug in this order
 
-1. Who may accept a finding on a client: Client Administration only, or the
-   assigned mentor too.
+1. ~~Who may accept a finding on a client~~ — **answered (E19): the Client
+   Administration Team only.** The *Business picture* panel's Accept and
+   Reject are gated to that team; the Client Assignment Role gets the edit
+   grant on `CEnrichmentFinding`, the Mentor Role none.
 
 (Where findings live is not open: design § 6, approved 10-20-26, puts them
 in the CRM, one record per proposed value.)
@@ -173,4 +175,5 @@ in the CRM, one record per proposed value.)
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.2 | 10-22-26 11:01 | Claude (Claude Code) | § 7 answered (E19). |
 | 0.1 | 10-22-26 10:51 | Claude (Claude Code) | Created from design § 5, § 6 and ruling E18. |

@@ -1,6 +1,6 @@
 # Lead and client enrichment — design
 
-Last Updated: 10-22-26 10:50 · Revision 1.3 (approved 10-20-26; § 9 questions 2 and 6 open)
+Last Updated: 10-22-26 11:01 · Revision 1.4 (approved 10-20-26; § 9 questions 2 and 6 open)
 
 **Status.** Approved by Doug on 10-20-26, section by section. Section 1
 records his rulings and is binding (append only). Section 9 lists the two
@@ -134,6 +134,9 @@ questions still open: the segment list and the survey fields.
   feature is behind its own switch; the first runs are on companies staff
   know, reviewed by hand. This replaces E16's automated measurement on
   known clients; E16's order of switching on (clients, then leads) stands.
+- **E19. Only the Client Administration Team accepts or rejects a finding on
+  a client** (option 1, phase 2 build plan § 7). Mentors see nothing new in
+  phase 2; their enrichment is the deeper pass of phase 5 (E11).
 
 ## 2. What the system does, in one paragraph
 
@@ -339,6 +342,7 @@ slows in the thousands (E6).
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.4 | 10-22-26 11:01 | Claude (Claude Code) | Ruling E19: Client Administration alone accepts client findings. |
 | 1.3 | 10-22-26 10:50 | Claude (Claude Code) | Ruling E18: staff start the AI research pass and prove it on companies they know; it also runs on a lead list. |
 | 1.2 | 10-20-26 17:47 | Claude (Claude Code) | Ruling E17: the service area is Cuyahoga and Lake counties. |
 | 1.1 | 10-20-26 17:38 | Claude (Claude Code) | § 7: the answers field is a `text` field, verified on crm-test. Phase 1 build plan written (`build-plan-phase-1.md`). |
