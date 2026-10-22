@@ -42,7 +42,8 @@ case "${1:-}" in
   leadmove) exec uv run python scripts/migrate_lead_model_values.py --apply ;;
   funders)  exec scripts/apply_plan.sh test scripts/plans/coutreach-funders.json 4658d1450804 ;;
   industry) exec scripts/apply_plan.sh test scripts/plans/cprospect-industry.json 82ec87c36dce ;;
+  actionlog) exec uv run python scripts/run_with_admin.py scripts/migrate_actionlog_record_entities.py --apply ;;
   funderstatus) exec scripts/apply_plan.sh test scripts/plans/csponsor-funder-status.json 84636d15191f ;;
   closedate) exec scripts/apply_plan.sh test scripts/plans/cengagement-close-date-writable.json c80d9070da1d ;;
-  *) echo "usage: scripts/prospect_crm_test.sh <sms|outreach|roles|notes|receipt|smstext|appfields|leadmodel|leadlabels|touchpos|leadlayouts|leadmove|funders|industry|funderstatus|closedate>" >&2; exit 64 ;;
+  *) echo "usage: scripts/prospect_crm_test.sh <sms|outreach|roles|notes|receipt|smstext|appfields|leadmodel|leadlabels|touchpos|leadlayouts|leadmove|funders|industry|funderstatus|closedate|actionlog>" >&2; exit 64 ;;
 esac

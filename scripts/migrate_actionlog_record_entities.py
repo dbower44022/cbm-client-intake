@@ -8,7 +8,9 @@ failure, field: record* and logged as a warning — found in the crm-test web
 log on 2026-10-07 during the Phase B live pass. The stream-note half always
 posted, so the record's history is intact; only the reporting table missed it.
 
-This adds ``CEvent`` and ``CEventRegistration`` to that list. **Idempotent**: a
+This adds ``CEvent`` and ``CEventRegistration`` to that list, and since
+10-22-26 the three Campaign Management types (``COutreachCampaign``,
+``CProspect``, ``COutreachTouch``), whose rows were refused the same way. **Idempotent**: a
 value already present is not re-added; nothing is ever removed. Dry run by
 default. Runbook: ``OPEN-ITEMS.md`` → CRM prerequisites.
 
@@ -36,7 +38,9 @@ from core.espo import EspoClient
 
 ENTITY = "CActionLog"
 FIELD = "record"
-ADD = ("CEvent", "CEventRegistration")
+#: Events (2026-10-07), then the three Campaign Management types (10-22-26:
+#: every campaign, lead and call-record action's row was refused the same way).
+ADD = ("CEvent", "CEventRegistration", "COutreachCampaign", "CProspect", "COutreachTouch")
 
 
 async def main() -> int:
@@ -76,7 +80,7 @@ async def main() -> int:
     missing = [e for e in ADD if e not in current]
     print(f"entityList now: {', '.join(current)}")
     if not missing:
-        print("SKIPPED: already lists every event entity.")
+        print("SKIPPED: already lists every entity this script adds.")
         return 0
     print(f"{'WOULD add' if not apply else 'adding'}: {', '.join(missing)}")
     if not apply:

@@ -166,7 +166,11 @@ found; move resolved items to the bottom with the resolution date.
     grants, not by this pass. **Found, owed:** every Campaign Management
     action's `CActionLog` row is refused (HTTP 400, `record` not valid) —
     `CActionLog.record` does not list `COutreachCampaign`, `CProspect` or
-    `COutreachTouch` (the event gap of item 669 again). **Corrected
+    `COutreachTouch` (the event gap of item 669 again) — fix 10-22-26:
+    `scripts/migrate_actionlog_record_entities.py` now adds all three (dry
+    run on crm-test: exactly those three); crm-test via
+    `scripts/prospect_crm_test.sh actionlog`, production from inside its web
+    container, Boston with its release. **Corrected
     10-20-26:** the stream notes were written only because the pass ran as
     Admin; for every non-admin they were refused (HTTP 403, no stream access).
     **Ruling 69** grants the Marketing Admin Role stream all on
