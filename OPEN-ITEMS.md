@@ -170,9 +170,9 @@ found; move resolved items to the bottom with the resolution date.
     10-20-26:** the stream notes were written only because the pass ran as
     Admin; for every non-admin they were refused (HTTP 403, no stream access).
     **Ruling 69** grants the Marketing Admin Role stream all on
-    `COutreachCampaign` and `CProspect` — owed: `scripts/prospect_crm_test.sh
-    roles` on crm-test (dry run 10-20-26: exactly those two changes),
-    production and Boston with the role script at their slots, and the roles
+    `COutreachCampaign` and `CProspect` — APPLIED on crm-test 10-22-26 00:40
+    (both read back OK, rebuild 200); a live note as a non-admin still to be
+    seen. Owed: production and Boston with the role script at their slots, and the roles
     standard updated to match. A CRM entity-list change on all three CRMs. **Phase 3 (10-18-26):**
     rulings 36 (callers are the campaign's teams, each acting as themself)
     and 37 (no rung on a record holding a relationship type — v0.260.2)
