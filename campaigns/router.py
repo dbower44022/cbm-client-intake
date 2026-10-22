@@ -103,7 +103,9 @@ def _crm_failure(request: Request, exc: EspoError, message: str) -> HTTPExceptio
     if is_forbidden(exc):
         return HTTPException(
             status_code=403,
-            detail=forbidden_hint(exc) or f"Your CRM role does not allow that — ask {abbr()} staff to grant it.",
+            detail=(f"{message}: your CRM role is missing {hint} — ask {abbr()} staff to grant it."
+                    if (hint := forbidden_hint(exc)) else
+                    f"{message}: your CRM role does not allow that — ask {abbr()} staff to grant it."),
         )
     invalid = validation_failure(exc)
     if invalid:

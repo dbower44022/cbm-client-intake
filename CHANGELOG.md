@@ -5,6 +5,18 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.275.1] — 2026-10-22
+
+**fix(campaigns): handing a campaign to a colleague** (ruling 78). The live
+check of v0.275.0 on crm-test, as Mark Marketing, found the CRM refusing
+every owner change except to oneself: the Marketing Admin Role could not
+read the User the campaign would point at. `scripts/migrate_outreach_roles.py`
+now grants that role `User` read all, edit own (the Client Assignment Role's
+shape); it is a CRM change, owed on crm-test, production and Boston. Campaign
+Management's permission messages now read as a sentence that names the step
+("Could not change the campaign's owner: your CRM role is missing …") instead
+of starting mid-phrase.
+
 ## [0.275.0] — 2026-10-22
 
 **feat(campaigns): a campaign's owner can be changed** (ruling 76). The

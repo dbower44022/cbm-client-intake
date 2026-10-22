@@ -941,6 +941,7 @@ def test_a_crm_refusal_names_the_denial(monkeypatch):
     client = build(monkeypatch, user=MARKETING, crm=crm)
     res = client.put(f"/campaigns/api/campaigns/{row['id']}/owner", json={"userId": "u-3"})
     assert res.status_code == 403
+    assert res.json()["detail"].startswith("Could not change the campaign's owner: your CRM role")
 
 
 def test_the_general_save_cannot_change_the_owner(monkeypatch):

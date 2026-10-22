@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-22-26 12:40 · Revision 1.41 — change log at the end.
+Last Updated: 10-22-26 12:48 · Revision 1.42 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -913,6 +913,24 @@ the rule to all five roles. Doug's reply at 12:40: "a".
     any role that edits the record; a hand edit breaks that person's
     links until *New code*. (10-22-26)
 
+### Doug's ruling (10-22-26, on the owner handoff refused by the CRM)
+
+The live check of ruling 76 on crm-test, as Mark Marketing: making himself
+the owner saved; handing the campaign to Sharon Rose was refused by the CRM
+(*read access to the User record this COutreachCampaign links to*). The
+Marketing Admin Role held no User grant beyond the default, so it could
+assign a campaign to itself alone. Put as: option A, grant the role User
+read; option B, write the owner under the org-wide API key. Doug's reply at
+12:44: "a".
+
+78. **The Marketing Admin Role reads every User** (option A): `User` read
+    all, edit own — the shape the Client Assignment Role was given on
+    09-07-26 — applied by `scripts/migrate_outreach_roles.py` on every CRM.
+    The owner save keeps running as the signed-in user, so the CRM's own
+    check stands and its history names the person. Standing cost, weighed by
+    Doug: marketing staff can read every user record, names and email
+    addresses included. (10-22-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -1033,8 +1051,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.40 |
-| Last Updated | 10-22-26 12:07 |
+| Version | 1.42 |
+| Last Updated | 10-22-26 12:48 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -1042,6 +1060,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.42 | 10-22-26 12:48 | Claude (Claude Code) | Ruling 78 appended: the Marketing Admin Role reads every User, so a campaign can be handed to a colleague (Doug's "a"). Revision-control table's Version and Last Updated brought up to this revision. |
 | 1.41 | 10-22-26 12:40 | Claude (Claude Code) | Ruling 77 appended: the lead code's field rules stay on the Marketing Admin Role only; the fields stay off every layout (Doug's "a"). |
 | 1.40 | 10-22-26 12:07 | Claude (Claude Code) | Ruling 76 appended: any Marketing Admin Team member may change a campaign's owner through an Owner picker on the Overview (Doug's "a"). Header revision line corrected from 1.36 to match the table. |
 | 1.39 | 10-22-26 01:35 | Claude (Claude Code) | Ruling 75 appended: the per-form prefill table (build plan § 7d.4) approved as written (Doug: "confirm the six as written"). |

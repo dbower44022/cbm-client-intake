@@ -24,7 +24,9 @@ three entities ``scripts/plans/coutreach-entities.json`` creates (``CProspect``,
   ``Acl/AssignmentChecker/Helper.php``: at *not set* or *team* a record with
   neither a team nor an assigned user is refused outright). Re-checked:
   ``CEvent`` read all (the events picker, CM-6) and ``CPartnerProfile`` read all
-  (the partners picker, CM-2) — both held on crm-test 10-14-26.
+  (the partners picker, CM-2) — both held on crm-test 10-14-26. ``User``
+  read all, edit own (ruling 78: changing a campaign's owner links a User
+  the role must be able to read).
 * **Mentor Role** (ruling 36, Phase 3: a mentor on a campaign naming the Mentor
   Team makes calls as themself) — ``COutreachTouch`` read all and edit all,
   ``CProspect`` read all. Re-checked: ``Contact`` read all.
@@ -98,6 +100,12 @@ ROLE_SCOPE_GRANTS: list[tuple[str, str, dict[str, str]]] = [
     # stay the application's, under the API role (ruling 33). An absent scope
     # gains explicit "no" for the other actions, so the grant stays read-only.
     ("Marketing Admin Role", "Account", {"read": "all"}),
+    # Ruling 78 (10-22-26): handing a campaign to a colleague writes its
+    # Assigned User, and EspoCRM refuses a link to a User the acting role
+    # cannot read ("No foreign record access"; the role held only the
+    # default read own, so a marketer could assign a campaign to themself
+    # alone). The shape the Client Assignment Role got on 09-07-26.
+    ("Marketing Admin Role", "User", {"read": "all", "edit": "own"}),
     # Ruling 36 (10-18-26, Phase 3): callers are the members of the teams named
     # on a call campaign, each acting as themself, so a mentor on a campaign
     # naming the Mentor Team reads the call list and records the outcome on the
