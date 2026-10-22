@@ -847,6 +847,21 @@ reply at 01:22: "Option 1".
     that prefills everything shows the original recipient's details to
     whoever holds the forward. (10-22-26)
 
+### Doug's ruling (10-22-26, on build plan § 9 question 20)
+
+Put as question 20: option A, the code lives in two CRM fields
+(`CProspect.leadCode`, `Contact.cLeadCode`, copied at promotion); option B,
+an application table the sandbox reset empties nightly. Doug's reply at
+01:33: "a".
+
+74. **The lead code lives in the CRM** (option A): `CProspect.leadCode` and
+    `Contact.cLeadCode`, varchar 16, indexed, app-written and never
+    Read-only (ruling 40's rule), one value copied from the lead to the
+    contact at promotion and kept equal. The code survives the sandbox
+    reset and is visible on the record; any role that reads the record can
+    copy a link that opens as that person, which *New code* remedies.
+    (10-22-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -967,8 +982,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.37 |
-| Last Updated | 10-22-26 01:30 |
+| Version | 1.38 |
+| Last Updated | 10-22-26 01:34 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -976,6 +991,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.38 | 10-22-26 01:34 | Claude (Claude Code) | Ruling 74 appended: the lead code lives in two CRM fields (Doug's "a" to build plan § 9 question 20). |
 | 1.37 | 10-22-26 01:30 | Claude (Claude Code) | Rulings 71–73 appended: every link to a known person carries the lead identifier after the campaign link; the identifier belongs to the person (Doug's "Option 1"); each form decides its prefill and every form attributes to the lead. |
 | 1.36 | 10-21-26 22:44 | Claude (Claude Code) | Ruling 70 appended: an engagement's close date is stamped when it closes (Doug's "a"). |
 | 1.35 | 10-20-26 23:01 | Claude (Claude Code) | Ruling 69 appended: the Marketing Admin Role gains stream all on campaigns and leads (Doug's "a", found on the 521 investigation). |

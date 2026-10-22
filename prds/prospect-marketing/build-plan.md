@@ -1689,7 +1689,7 @@ industry column are part of L1.
 
 ## 7d. The lead identifier in every link (rulings 71–73; drafted 10-22-26 for approval)
 
-**Status: DRAFT for Doug's approval. Nothing built.** Rulings 71 to 73
+**Status: DRAFT for Doug's approval; question 20 answered A (ruling 74), so the storage in § 7d.1 is settled. The prefill table in § 7d.4 awaits his reading. Nothing built.** Rulings 71 to 73
 (10-22-26) say that every link delivered to a known person carries that
 person's lead identifier after the campaign link, that the identifier
 belongs to the person for life, and that each form decides for itself what
@@ -1723,7 +1723,7 @@ campaign needs it or when staff press *New code*. Never a CRM id: a link
 carries no record id in the clear, which is the rule the card already
 keeps.
 
-**Where it lives — a field on the lead and on the contact (draft).**
+**Where it lives — a field on the lead and on the contact (ruling 74).**
 `CProspect.leadCode` (varchar 16, indexed) and `Contact.cLeadCode` (varchar
 16, indexed), both app-written and never Read-only in the CRM (ruling 40's
 rule: a field rule keeps staff off them). A person is one of three things,
@@ -2132,6 +2132,7 @@ Questions 13–16 were added in v0.8 for the rework of § 7a (rulings 41–44).
     CRM change, but the sandbox reset empties it nightly so every demo
     link dies by morning, and the code is invisible in the CRM and the
     Analytics builder.
+    **Answered 10-22-26: A (ruling 74).**
 
 ---
 
@@ -2159,8 +2160,8 @@ best-effort mirror.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — build plan |
-| Version | v0.23 — Phases 1–4 and the lead model built; §§ 7b and 7c built and live-passed on crm-test; § 7d (the lead identifier in every link, rulings 71–73) drafted for approval |
-| Last Updated | 10-22-26 01:31 |
+| Version | v0.23 — Phases 1–4 and the lead model built; §§ 7b and 7c built and live-passed on crm-test; § 7d (the lead identifier in every link, rulings 71–74) drafted for approval |
+| Last Updated | 10-22-26 01:34 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
 | Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
@@ -2169,6 +2170,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.32 | 10-22-26 01:34 | Claude (Claude Code) | Question 20 answered A (ruling 74): the code lives in two CRM fields; § 7d.1's storage marked settled. |
 | 0.31 | 10-22-26 01:31 | Claude (Claude Code) | § 7d added: the lead identifier in every link (rulings 71–73) — the per-person code on the lead and the contact, delivery per kind (the vendor custom field and merge tag, the text's `{link}`, the caller's link), the one resolver `/c/{link}/{code}` recording the click, the per-form lookup with a server-side allowlist, the per-form prefill table with Doug's registration example, the handoff, three steps. Question 20 added (where the code lives). |
 | 0.30 | 10-21-26 22:30 | Claude (Claude Code) | § 7c.7 L2 live-passed on crm-test; § 7c complete on crm-test. |
 | 0.29 | 10-21-26 16:01 | Claude (Claude Code) | § 7c.7 L2 built (v0.271.0). |
