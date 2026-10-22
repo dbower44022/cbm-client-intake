@@ -1193,8 +1193,9 @@ push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
 - **v0.272.0 (2026-10-21) — the status picker on the partner and funder
-  Overview.** Committed, not pushed. Rule in `sessions/CLAUDE.md`. No CRM
-  change. Owed: the live check as a real Partner Manager and Sponsor Manager.
+  Overview.** Pushed; live on crm-test and production 22:33. Rule in
+  `sessions/CLAUDE.md`. Checked live on crm-test 10-21-26 22:36 as Sally Sponsor
+  (funder); the partner badge rides the same code.
 - **v0.271.0 (2026-10-21) — campaign lists, L2 (clients, partners,
   funders).** Committed, not pushed; dark. Build plan § 7c.7; standing rules
   in `campaigns/CLAUDE.md`. **Live-passed on crm-test 10-21-26 22:30**; funder status

@@ -60,7 +60,9 @@ found; move resolved items to the bottom with the resolution date.
     date — "closed more than N days ago" can never match, nor can the email
     kind's ruling-25 dormant-client rule. Production not yet checked; the
     fix (clear Read-only, a field rule for staff instead, ruling 40) is a
-    question for Doug. Owed also: v0.272.0's status-picker check; production and Boston with the arc's eventual slot.
+    question for Doug. v0.272.0 (the status picker on the partner and
+    funder Overview) pushed and checked live on crm-test 10-21-26 22:36 by Doug as
+    Sally Sponsor (Harrowgate Family Trust → Lapsed, read back). Owed also: production and Boston with the arc's eventual slot.
     LIVE-PASSED on crm-test (v0.265.0–3, 10-19-26; rulings 41–54).**
     **Production DEFERRED by Doug 10-20-26 15:06: "defer production until
     we finish testing new campaign functionality"** — no Sunday slot is
