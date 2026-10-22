@@ -1,6 +1,6 @@
 # CRM handoff — the lead code in every link (rulings 71–75)
 
-Last Updated: 10-22-26 12:47 · Revision 1.2 — change log at the end.
+Last Updated: 10-22-26 12:50 · Revision 1.3 — change log at the end.
 
 **What changes:** two text fields that hold a person's lead code, two
 fields that count clicks on a touch, and two field rules on the Marketing
@@ -15,7 +15,7 @@ life. It lives in the CRM, on the lead and on the contact.
 
 | CRM | State |
 |---|---|
-| crm-test | **Fields applied 10-22-26 12:45** by Doug (`leadcode`: 4 created, 4 verified, `Clicked` already present). **§ 4 steps 1, 2 and 4 passed 12:47** as the org-wide key: shape as § 1, no stray `Contact.leadCode` or `cCLeadCode`; three reads 200; a write and read-back on one lead (Banter Beer and Wine) and one contact (Simone Achebe), both cleared after; conformance identical to the baseline. **Field rules (§ 3 step 2) not yet applied.** |
+| crm-test | **Fields applied 10-22-26 12:45** by Doug (`leadcode`: 4 created, 4 verified, `Clicked` already present). **§ 4 steps 1, 2 and 4 passed 12:47** as the org-wide key: shape as § 1, no stray `Contact.leadCode` or `cCLeadCode`; three reads 200; a write and read-back on one lead (Banter Beer and Wine) and one contact (Simone Achebe), both cleared after; conformance identical to the baseline. **Field rules applied 12:48** by Doug (`roles`; the same run also applied ruling 78's Marketing Admin Role User grant, read all / edit own, from a parallel session's uncommitted script edit, on Doug's choice). **§ 4 step 3 passed 12:50**: both rules read back as the configuration administrator `{read: yes, edit: no}`; an org-wide-key write to `leadCode` still stores. **crm-test complete. D1 may start.** |
 | Production | Not started. Rides the arc's deferred production slot (Doug, 10-20-26: no slot until campaign testing is finished). |
 | Boston | Not started. With its release. |
 
@@ -182,6 +182,7 @@ behave as today.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 10-22-26 12:50 | Claude (Claude Code) | crm-test: field rules applied and read back; crm-test complete. |
 | 1.2 | 10-22-26 12:47 | Claude (Claude Code) | crm-test: fields applied by Doug and read back as the org-wide key. |
 | 1.1 | 10-22-26 12:40 | Claude (Claude Code) | § 2: ruling 77 recorded — rules on the Marketing Admin Role only, fields off every layout. |
 | 1.0 | 10-22-26 01:42 | Claude (Claude Code) | Written for build plan § 7d.5, rulings 71–75. Plan dry-run on crm-test, 4 changes, fingerprint `bec909277859`; `Clicked` found already present. Two field rules added to `scripts/migrate_outreach_roles.py`, dry run shows exactly those two. No index (not a Field Manager parameter). Conformance baseline taken. |

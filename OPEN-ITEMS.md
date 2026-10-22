@@ -92,10 +92,9 @@ found; move resolved items to the bottom with the resolution date.
     (`prds/chapter-network/roles-standard/`) updated to match.
     **The lead code (build plan § 7d.5, rulings 71–75): CRM handoff
     written 10-22-26 01:42** (`lead-code-crm-handoff.md`, plan fingerprint
-    `bec909277859`, two field rules in the role script). Owed: Doug applies
-    on crm-test (`scripts/prospect_crm_test.sh leadcode`, then `roles`),
-    Claude reads it back as the org-wide key, then D1; production and
-    Boston with the arc's slot.
+    `bec909277859`, two field rules in the role script). **Applied on
+    crm-test 10-22-26 12:45–12:48 by Doug and read back by Claude 12:50.**
+    Owed: D1; production and Boston with the arc's slot.
     **At the production slot, also do these two (added 10-22-26; both
     live-passed on crm-test 10-22-26 as Mark Marketing). Without them, no
     campaign action records any history on production:**
