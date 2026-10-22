@@ -168,8 +168,9 @@ found; move resolved items to the bottom with the resolution date.
     `CActionLog.record` does not list `COutreachCampaign`, `CProspect` or
     `COutreachTouch` (the event gap of item 669 again) — fix 10-22-26:
     `scripts/migrate_actionlog_record_entities.py` now adds all three (dry
-    run on crm-test: exactly those three); crm-test via
-    `scripts/prospect_crm_test.sh actionlog`, production from inside its web
+    run on crm-test: exactly those three); APPLIED on crm-test 10-22-26
+    00:56 and live-passed 01:04 (Mark Marketing's edit of "Fall follow-up
+    calls" wrote its `CActionLog` row, HTTP 200). Owed: production from inside its web
     container, Boston with its release. **Corrected
     10-20-26:** the stream notes were written only because the pass ran as
     Admin; for every non-admin they were refused (HTTP 403, no stream access).
