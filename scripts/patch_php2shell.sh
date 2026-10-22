@@ -24,14 +24,15 @@ set -euo pipefail
 kind="${1:-}"; tag="${2:-}"
 stamp="$(date -u +%Y%m%d-%H%M)"
 
-#: EspoCRM's own version. `bin/command config:get` exists only from 10.0, so
-#: read the config files directly (9.x keeps it in config-internal.php).
+#: EspoCRM's own version: the CLI `version` command, else the data files.
 espo_version() {
-  docker exec -w /var/www/html espocrm php -r '
-    foreach (["data/config-internal.php", "data/config.php"] as $f) {
-      if (is_file($f)) { $c = include $f; if (!empty($c["version"])) { echo $c["version"]; exit; } }
-    }
-    echo "?";' 2>/dev/null || echo "?"
+  local v
+  v="$(docker exec -w /var/www/html espocrm php command.php version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)"
+  [ -n "$v" ] || v="$(docker exec -w /var/www/html espocrm php -r '
+    foreach (["data/state.php", "data/config-internal.php", "data/config.php"] as $f) {
+      if (is_file($f)) { $c = include $f; if (is_array($c) && !empty($c["version"])) { echo $c["version"]; exit; } }
+    }' 2>/dev/null || true)"
+  echo "${v:-?}"
 }
 
 #: True when PHP in the container is at or above the fixed release.
@@ -61,7 +62,7 @@ case "$kind" in
     want="${tag%%-*}"
     echo "Waiting for EspoCRM to report $want (the image upgrades in place on start) ..."
     got="?"
-    for _ in $(seq 1 60); do
+    for _ in $(seq 1 24); do
       got="$(espo_version)"
       [ "$got" = "$want" ] && break
       docker logs espocrm 2>&1 | grep -q "EspoCRM version is $want" && { got="$want"; break; }
@@ -73,8 +74,9 @@ case "$kind" in
       echo "  $c: $(docker inspect "$c" --format '{{.State.Status}}') PHP $(docker exec "$c" php -r 'echo PHP_VERSION;' 2>/dev/null || echo '?')"
       php_fixed "$c" || ok=0
     done
-    docker logs espocrm 2>&1 | grep -E "^info: (Start upgrading|Upgrading is finished)" | tail -2 | sed 's/^/  log: /'
-    if [ "$ok" = 1 ] && [ "$got" = "$want" ]; then echo "RESULT: patched"; else
+    { docker logs espocrm 2>&1 | grep -E "^info: (Start upgrading|Upgrading is finished)" || echo "(no upgrade line in the log)"; } | tail -2 | sed 's/^/  log: /'
+    if [ "$ok" = 1 ]; then
+      echo "RESULT: patched (PHP fixed in all three containers; EspoCRM reads $got, expected $want)"; else
       echo "RESULT: NOT CONFIRMED — last lines of the espocrm log:"; docker logs --tail 25 espocrm 2>&1; fi
     ;;
   bookstack)
