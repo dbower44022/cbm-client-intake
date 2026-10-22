@@ -1,6 +1,6 @@
 # Lead and client enrichment — design
 
-Last Updated: 10-20-26 17:47 · Revision 1.2 (approved 10-20-26; § 9 questions 2 and 6 open)
+Last Updated: 10-22-26 10:50 · Revision 1.3 (approved 10-20-26; § 9 questions 2 and 6 open)
 
 **Status.** Approved by Doug on 10-20-26, section by section. Section 1
 records his rulings and is binding (append only). Section 9 lists the two
@@ -122,6 +122,18 @@ questions still open: the segment list and the survey fields.
   counties** (option 1, build plan phase 1 § 7). `CHAPTER_COUNTIES` is set to
   `OH:Cuyahoga|OH:Lake` at `/setup`. The cost, accepted: a business in a
   neighbouring county is flagged out of area until the list is widened.
+- **E18. The AI research pass is proven by staff, not by a separate
+  measurement run** (Doug, 10-22-26, on the question of measuring before the
+  privacy review). Doug's words: "The system should allow a user to initiate
+  the AI enhancement on a client, or lead. This combined with the fact that
+  we will have a system setting to enable the feature should allow us to
+  test the results by selecting companies that we know and running the
+  test, then review the results should be adequate protection. The system
+  should also allow the AI enrichment to be run on a Lead List." So: a
+  person starts a run on one client, one lead, or a list of leads; the
+  feature is behind its own switch; the first runs are on companies staff
+  know, reviewed by hand. This replaces E16's automated measurement on
+  known clients; E16's order of switching on (clients, then leads) stands.
 
 ## 2. What the system does, in one paragraph
 
@@ -327,6 +339,7 @@ slows in the thousands (E6).
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 10-22-26 10:50 | Claude (Claude Code) | Ruling E18: staff start the AI research pass and prove it on companies they know; it also runs on a lead list. |
 | 1.2 | 10-20-26 17:47 | Claude (Claude Code) | Ruling E17: the service area is Cuyahoga and Lake counties. |
 | 1.1 | 10-20-26 17:38 | Claude (Claude Code) | § 7: the answers field is a `text` field, verified on crm-test. Phase 1 build plan written (`build-plan-phase-1.md`). |
 | 1.0 | 10-20-26 17:27 | Claude (Claude Code) | Ruling E16 (the AI research pass proven on known clients first); § 8 reordered; design approved section by section, § 9 questions 2 and 6 open. |
