@@ -1687,6 +1687,225 @@ applied before L1's live pass, and the funder status (ruling 67), applied
 before L2's, with its Details-tab field and grid column part of L2; the Review queue's industry picker and the import's
 industry column are part of L1.
 
+## 7d. The lead identifier in every link (rulings 71–73; drafted 10-22-26 for approval)
+
+**Status: DRAFT for Doug's approval. Nothing built.** Rulings 71 to 73
+(10-22-26) say that every link delivered to a known person carries that
+person's lead identifier after the campaign link, that the identifier
+belongs to the person for life, and that each form decides for itself what
+to do with the lead it was opened for while every form attributes to it.
+This section turns the three rulings into the storage, the vendor step, the
+resolver, the per-form prefill table and the order of work. Where it had to
+choose, the choice is a draft with its cost. One choice passed the two-part
+test and is § 9 question 20.
+
+**How a person is identified in a link today** (read from the code,
+10-22-26). A campaign link is `/c/{link}` and names the campaign only.
+The postcard alone identifies a person: its card carries
+`/c/{link}/{scanToken}`, a twelve-character code minted per **touch** at
+send time (`campaigns/tokens.py`), resolved by the landing page to the
+touch, the lead and the campaign. The five public forms and the event
+registration carry `campaign_id`, `campaign_link` and `prospect_id` as
+hidden fields; `prospect_id` is the lead's **CRM id**, handed over by the
+landing page, and the forms' prefill after that handoff is the name-only
+`GET /api/campaigns/public/prospect/{id}` lookup, which returns the business
+name and mailing address and nothing else (ruling 16). An email notice's
+links are the campaign links pasted by staff; a text's wording is sent as
+typed, so any link in it is the same for every recipient; a call script
+shows no link. Nothing identifies the recipient of an email or a text.
+
+### 7d.1 The code
+
+**One code per person, for life (ruling 72).** Twelve characters from the
+same alphabet as the scan token (no 0/O, 1/l/I, so a person can read it
+back from a card or a text), minted from `secrets` the first time a
+campaign needs it or when staff press *New code*. Never a CRM id: a link
+carries no record id in the clear, which is the rule the card already
+keeps.
+
+**Where it lives — a field on the lead and on the contact (draft).**
+`CProspect.leadCode` (varchar 16, indexed) and `Contact.cLeadCode` (varchar
+16, indexed), both app-written and never Read-only in the CRM (ruling 40's
+rule: a field rule keeps staff off them). A person is one of three things,
+and the code follows them:
+
+- **An unpromoted lead** holds the code on the lead record.
+- **A lead promoted to a Contact** keeps one code: promotion copies
+  `leadCode` to the contact's `cLeadCode` (never mints a second), and the
+  two stay equal.
+- **A Contact with no lead** (every contact imported or created before the
+  lead model, and any contact a campaign reaches without a lead behind it)
+  holds the code on the contact alone.
+
+The resolver looks the code up on Contact first, then on the lead. The
+alternative is an application table `lead_code` (code, lead id, contact id,
+company id), which needs no CRM change but is emptied by the sandbox reset
+every night and would make every demo link on crm-test dead by morning
+until the seeder re-minted it; the code must survive, so it lives in the
+CRM. **Cost:** two fields in one handoff on every CRM, with the two
+conformance cells.
+
+**The postcard's scan token becomes the lead code.** The card's address
+keeps its shape, `/c/{link}/{code}`, but the second part is the lead's
+code, not a per-touch token: at send time the postcard run mints the lead's
+code if it has none and writes it to the touch's `scanToken` as well, so
+the landing page and the scan counters (`firstScannedAt`, `scanCount`,
+ruling 51) work unchanged. One card per business (ruling 14) means one
+touch per lead anyway, so nothing is lost. The twelve-character
+`new_scan_token` stays as the minting function, renamed.
+
+**New code.** A button on the lead's record in Campaign Management and on
+the contact's record page in the directory (`/directory/contacts/record/{id}`),
+Marketing Admin Team, action-logged with the old code's last four
+characters. Minting a new code invalidates the old one at once: a link
+holding it resolves to the campaign only, exactly as an unknown code does,
+and the form opens empty. The vendor's custom field is rewritten by the
+next push that includes the person; until then a notice sent in between
+carries the old code, so the button's confirmation says so.
+
+### 7d.2 Delivering the code, per kind
+
+- **Email.** One custom field in the vendor account, **`cbm_lead_code`**,
+  created once by the application through the vendor's custom-fields
+  endpoint when the mailing connection is made (and checked on every push;
+  the Readiness line says *custom field missing* if an administrator
+  deleted it). Both pushes — the nightly standing push in
+  `core/mailing_sync.py` and the campaign push in `campaigns/email.py` —
+  write it as the `cf:cbm_lead_code` column of the JSON import, minting the
+  code for any contact that has none. The campaign's Links tab shows each
+  link twice: the plain address, and the address **to paste into a
+  notice**, `{APP_BASE_URL}/c/{link}/[[custom.cbm_lead_code]]`, with a Copy
+  button, because the merge tag is the vendor's and nobody should type it.
+  *Inferred, to verify on the first live run:* the import column key must
+  match the custom field's stored `name` (lowercase, underscores), not its
+  label — a vendor forum answer, not a documented rule; and the merge tag's
+  exact spelling in a link. The vendor does not merge the tag in a preview
+  or a test send: the check is a real send to one address.
+- **Text.** The campaign's wording gains one placeholder, **`{link}`**, that
+  the send replaces per recipient with the campaign's first link followed
+  by the recipient's code (minted at send time). `check_message` refuses
+  wording with no `{link}` the way it refuses wording with no STOP, so a
+  text never goes out with the same address for everyone. Wording that
+  carries a pasted campaign address as well is left alone.
+- **Call.** The caller's page shows the person's link, campaign link plus
+  code, with a Copy button, so a caller can read it out or send it in a
+  follow-up email. Minted when the call list is built.
+- **Postcard.** As § 7d.1: the card's code is the lead's.
+- **Social media.** The campaign link only (ruling 71): there is no
+  recipient.
+
+### 7d.3 Resolving the code
+
+`GET /c/{link}/{code}` already exists for cards and today always opens the
+landing page. It becomes the one resolver for every kind:
+
+1. Shape-check both parts before any lookup (`looks_like_token`), count the
+   visit on the link as today.
+2. Look the code up on Contact, then on the lead, under the organisation-wide
+   API key. Not found: redirect to the link's destination with the campaign
+   and link only — the visitor sees the page they were promised, with no
+   lead on it, in the same words whatever the reason.
+3. Found: find the person's touch on this campaign (campaign + contact, or
+   campaign + lead) and record the click on it: outcome **Clicked** (a new
+   `outcome` value beside Scanned), `firstClickedAt` once, `clickCount`
+   every time. A scan or a click alone changes no status (ruling 51). No
+   touch — the person forwarded the link, or clicked after staff rebuilt the
+   list — records nothing on a touch and still carries the lead to the
+   form.
+4. Redirect (302, `no-store`) to the link's destination with
+   `?campaign=<id>&link=<token>&lead=<code>`. The landing page destination
+   keeps `/p/{code}` as today. **The code rides, never the lead's CRM id**:
+   `prospect_id` in the forms' hidden fields becomes `lead_code` (the schema
+   field stays optional and bounded; capture keeps both names for one
+   release so a held submission from before the change still delivers).
+
+### 7d.4 What each form does with the lead — ruling 73
+
+**One public lookup, per form.** `GET /api/campaigns/public/lead/{code}?form=<slug>`
+replaces the prospect lookup. It answers that form's prefill set and
+nothing else, from a **server-side allowlist per form** (`PREFILL_FIELDS`
+in `campaigns/config.py`): whatever one form may show, no caller with the
+code can read more than the widest form's set, and the allowlist is the
+place that widening is reviewed. A code that resolves to nothing is a 404
+in the same words as a malformed one. The values come from the contact
+when the person has one, else from the lead; the company's from the
+promoted company, else the lead's business half.
+
+**The per-form table (draft — each row is Doug's to confirm; the
+registration row is his example):**
+
+| Form | Prefills | The person sees | At delivery |
+|---|---|---|---|
+| **Event registration** (event page form and the calendar's sign-up window) | Everything the form asks: first and last name, email, phone, company, the business-stage question | The form filled in, a line *"Not you? Clear the form"*, and the **Register** button — one press | Matches the contact by email as today; writes the campaign and the lead; a new contact is Converted from the lead (ruling 48) |
+| **Information request** | Name, email, phone, company | Filled in, same *Not you?* line | As today plus the lead |
+| **Request a mentor** (client intake) | Name, email, phone; company name, website and address from the promoted company or the lead | Step 1 and the company step filled in; the rest of the wizard is theirs | As today (§ 5) plus the lead; the promoted company is used by id before any name match |
+| **Volunteer application** | Name, email, phone | Filled in | As today plus the lead |
+| **Partner application** | Name, email, phone; company name and website | Filled in | As today plus the lead |
+| **Funder application** | Name, email, phone; company name and website | Filled in | As today plus the lead |
+| **Postcard landing page** | Business name and mailing address only (ruling 16 still governs this page) | As today | As today |
+
+Every form keeps the courtesy banner it has (*"You arrived through
+<campaign>"*) and shows the person's first name in it when the lead
+resolved. **Nothing prefilled is trusted at delivery**: the submission is
+validated exactly as a typed one, the contact is matched by the email
+submitted, and the lead code is validated-or-dropped like the campaign id.
+A person who clears the form and types someone else's details creates that
+someone as today, attributed to the campaign and to the lead that opened
+the form — the attribution is to the link's holder, which is what ruling
+73 asks.
+
+**Attribution at delivery.** `attribution.resolve` reads `lead_code`,
+resolves it to the lead (and contact) under the API key, and the existing
+steps run: `record_lead` links the lead to what was created, the campaign
+id is written by ruling 27, the touch moves to **Responded** with the
+created record linked (postcard's existing path, now for every kind). A
+submission with a code and no campaign (a link retired and re-minted, or a
+code typed by hand) still attributes to the lead.
+
+### 7d.5 Storage and CRM changes
+
+- **CRM handoff** (one plan file, `scripts/plans/lead-code.json`):
+  `CProspect.leadCode` varchar 16 indexed; `Contact.cLeadCode` varchar 16
+  indexed; `COutreachTouch.outcome` gains `Clicked`; `COutreachTouch`
+  gains `firstClickedAt` (datetime) and `clickCount` (int). Field ACL: the
+  Marketing Admin Role already edits leads and touches; the intake API
+  client needs Contact edit for `cLeadCode` (it has Contact edit). Two
+  conformance cells.
+- **Application database:** none. The vendor custom field's id is read by
+  name on each push, not stored.
+- **Settings:** none new. The vendor field name is a constant; a chapter
+  that must rename it edits the constant (named in § 8).
+
+### 7d.6 Order and cost
+
+Behind no new switch: the resolver and the lookups are inert until a code
+exists, and a code exists only when a campaign mints one or staff press
+*New code*. Each step has a live pass on crm-test as a real non-admin.
+
+1. **D1 — the code and the resolver.** The CRM handoff applied on crm-test;
+   minting; the postcard's code becomes the lead's; `/c/{link}/{code}` for
+   every kind with the click recorded; the forms' hidden field renamed;
+   the per-form lookup with the allowlist; attribution reads the code.
+   About two days.
+2. **D2 — the forms prefill.** The seven rows of the table, each form's
+   own screen; the *Not you?* line; the registration's one-press path on
+   the event page and in the calendar window. About two days.
+3. **D3 — delivery per kind.** The vendor custom field created and written
+   by both pushes; the paste-into-a-notice address on the Links tab; the
+   text's `{link}` placeholder; the caller's link; *New code* on the lead
+   and the contact. The live pass includes one real send from the trial
+   account to Doug's own address, because the vendor merges the tag only
+   in a real send. About two days.
+
+**Cost, named.** About a week. One CRM handoff on every CRM before D1's
+pass; production's and Boston's apply ride the deferred production slot
+(the lead model is not there yet, and the code field joins it). The
+vendor half rests on two inferred facts (§ 7d.2) that only the first live
+send can confirm. And the standing cost ruling 73 accepted: a forwarded
+notice carries the recipient's code, and a form that prefills everything
+shows that recipient's details to whoever holds the forward; *New code* is
+the remedy after the fact, not a prevention.
+
 ---
 
 ## 8. The open list — each item answered or put to Doug
@@ -1904,6 +2123,16 @@ Questions 13–16 were added in v0.8 for the rework of § 7a (rulings 41–44).
     partner or funder could be carded by every campaign that names them.
     **Answered 10-20-26: A (ruling 68).**
 
+20. **Where the lead code lives.** § 7d.1 drafts two CRM fields,
+    `CProspect.leadCode` and `Contact.cLeadCode`, copied at promotion.
+    **A (recommended):** the two fields. Cost: a CRM handoff on every CRM,
+    and the code is visible to any role that reads the record (a staff
+    member can copy a link that opens as that person). **B:** an
+    application table mapping code to lead, contact and company. Cost: no
+    CRM change, but the sandbox reset empties it nightly so every demo
+    link dies by morning, and the code is invisible in the CRM and the
+    Analytics builder.
+
 ---
 
 ## 10. Conventions every new screen in this arc follows
@@ -1930,8 +2159,8 @@ best-effort mirror.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — build plan |
-| Version | v0.22 — Phases 1–4 and the lead model built; § 7b built and live-passed; § 7c (campaign audiences, rulings 58–65) drafted for approval |
-| Last Updated | 10-21-26 22:30 |
+| Version | v0.23 — Phases 1–4 and the lead model built; §§ 7b and 7c built and live-passed on crm-test; § 7d (the lead identifier in every link, rulings 71–73) drafted for approval |
+| Last Updated | 10-22-26 01:31 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
 | Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
@@ -1940,6 +2169,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.31 | 10-22-26 01:31 | Claude (Claude Code) | § 7d added: the lead identifier in every link (rulings 71–73) — the per-person code on the lead and the contact, delivery per kind (the vendor custom field and merge tag, the text's `{link}`, the caller's link), the one resolver `/c/{link}/{code}` recording the click, the per-form lookup with a server-side allowlist, the per-form prefill table with Doug's registration example, the handoff, three steps. Question 20 added (where the code lives). |
 | 0.30 | 10-21-26 22:30 | Claude (Claude Code) | § 7c.7 L2 live-passed on crm-test; § 7c complete on crm-test. |
 | 0.29 | 10-21-26 16:01 | Claude (Claude Code) | § 7c.7 L2 built (v0.271.0). |
 | 0.28 | 10-21-26 15:36 | Claude (Claude Code) | § 7c.7 L1 live-passed on crm-test. |
