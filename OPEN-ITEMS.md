@@ -492,10 +492,13 @@ found; move resolved items to the bottom with the resolution date.
     form locks). **Owed before the redirect, in order:** (1) **Track D D3,
     the confirmation email** — both doors say "Check your email" and nothing
     is sent; (2) a **ruling on consent**: a ticked consent should set `true`
-    over an existing `false` (today the null-fill keeps `false`); (3) the
-    **Zoom question for webinars**: a registration on our page gets no join
-    link while Zoom is off (Track C), so the website keeps taking webinar
-    registrations until that is settled; (4) **Submission Admin search by
+    over an existing `false` (today the null-fill keeps `false`); (3) ~~the
+    **Zoom question for webinars**~~ **RULED 10-22-26 12:55 (D3-1):** an online Public
+    event is not shown or open for registration until its Join URL exists,
+    which Zoom fills once Track C is on; no hand-pasted link on Public events.
+    Until Track C, our page offers in-person events only and the website keeps
+    the webinars; the two webinars shown on production today fall under the
+    rule when it ships; (4) **Submission Admin search by
     name** (`matchesSearch` omits the submitter's name); (5) Doug's
     decisions on the **five-week series** (one event or five — check-in is
     per event) and whether the **Holiday Social** should be Internal;

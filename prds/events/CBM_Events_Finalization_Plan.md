@@ -1,6 +1,6 @@
 # CBM Events & Webinars — Finalization Plan
 
-Last Updated: 10-19-26 00:51 · Revision 4.36 — see change log at the end.
+Last Updated: 10-22-26 12:55 · Revision 4.37 — see change log at the end.
 
 Companion to `CBM_Events_PRD.md`, `CBM_Events_Implementation_Plan.md` and
 `CBM_Events_Registration_Recognition_Plan.md`. Those three say what the feature
@@ -602,7 +602,7 @@ link-existing path, EV-23). The cutover does not wait for Zoom.
 |---|---|---|---|
 | D1 | Author the **five EspoCRM templates** on both CRMs, named exactly: `EventReminder`, `EventRecordingAvailable`, `EventNoShow`, `EventMentorCTA`, `EventSurvey`. Templates survive the crm-test reset. | Doug (wording), build (names, placeholders) | — |
 | D2 | **Build the Follow-up tab frontend.** The endpoints exist; the tab does not call them. Preview by default, send on confirmation, ledger shown per registrant. | build | — |
-| D3 | **Build the CBM confirmation email** (recognition plan step 2): a single-recipient send from a sixth template, `EventConfirmation`, ledgered on `followUpsSent`. This is what makes "check your email" true for in-person events, and it is where the re-arm and correction links will live. | build | D1 |
+| D3 | **Build the CBM confirmation email** (recognition plan step 2): a single-recipient send from a sixth template, `EventConfirmation`, ledgered on `followUpsSent`. This is what makes "check your email" true for in-person events, and it is where the re-arm and correction links will live. **Design started 10-22-26 12:55. Ruling D3-1 (Doug, 10-22-26): the confirmation is the ticket — it goes out only when the event can be joined, and an online event is never offered to the public without its Zoom meeting or webinar already set up.** Concretely: an in-person event confirms at delivery; a Virtual or Hybrid Public event is not shown and takes no registrations until its Join URL is filled (by Zoom once Track C is on; nothing is pasted by hand on Public events — the hand-supplied link option was declined). Doug: "We should not be inviting people to an event that does not already have a zoom meeting/webinar setup." | build | D1 |
 | D4 | Switch `EVENTS_REMINDERS` on for the **worker** in production; confirm one reminder goes out 24 hours ahead and Zoom's does not. | Doug + verify | D1, C3 |
 
 ### Track E — After the cutover. Not part of finalization.
@@ -704,6 +704,7 @@ attendance recorded → recording link pasted → the engagement rollup shows it
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 4.37 | 10-22-26 12:55 | Claude (Claude Code) | D3 design started. Ruling D3-1: the confirmation is the ticket; an online Public event is not shown or open for registration until its Join URL exists (Zoom-filled); no hand-pasted link on Public events. Resolves the Zoom question for registrations: our page offers no webinar until Track C is on. |
 | 4.36 | 10-19-26 00:51 | Claude (Claude Code) | The production end-to-end test is complete (runbook rev 2.2, `OPEN-ITEMS.md` #42): the website's seven sessions, twelve recordings and six presenter cards are production's programme; F1 and F4 production done including the non-admin pass. A8's first half (create the events) done; the redirect waits. Owed before it: D3, the consent ruling, the Zoom question, search by name, the series decision. |
 | 4.35 | 10-18-26 23:43 | Claude (Claude Code) | F1 and F4 CRM changes applied on production by Doug (runbook section 2, 10-18-26 23:3x), plus the duration options and the two missing recordings; read back from the container. F1/F4 production CRM: done; switch and non-admin pass next. |
 | 4.34 | 10-18-26 23:22 | Claude (Claude Code) | The production test page rebuilt to the step standard and widened: it now carries the Track F production apply (F1, F4), three new duration choices (a CRM plan, v0.264.3), the two missing recordings and the website's seven sessions. Nothing run yet; `OPEN-ITEMS.md` #42. |
