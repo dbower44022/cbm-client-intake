@@ -862,6 +862,23 @@ an application table the sandbox reset empties nightly. Doug's reply at
     copy a link that opens as that person, which *New code* remedies.
     (10-22-26)
 
+### Doug's ruling (10-22-26, on build plan § 7d.4's prefill table)
+
+The seven-row table was put to Doug with the webinar sign-up row as his own
+example and the other six as drafts. Doug's reply at 01:35: "confirm the
+six as written".
+
+75. **The per-form prefill table in build plan § 7d.4 is approved as
+    written.** Event registration prefills everything the form asks and
+    offers one Register button; information request prefills name, email,
+    phone and company; request a mentor prefills name, email and phone plus
+    company name, website and address; volunteer, partner and funder
+    applications prefill name, email and phone, the two company forms also
+    company name and website; the postcard landing page keeps ruling 16's
+    business name and mailing address only. The server-side allowlist per
+    form is the record of this table, and widening a row is a new ruling.
+    (10-22-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -982,8 +999,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.38 |
-| Last Updated | 10-22-26 01:34 |
+| Version | 1.39 |
+| Last Updated | 10-22-26 01:35 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -991,6 +1008,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.39 | 10-22-26 01:35 | Claude (Claude Code) | Ruling 75 appended: the per-form prefill table (build plan § 7d.4) approved as written (Doug: "confirm the six as written"). |
 | 1.38 | 10-22-26 01:34 | Claude (Claude Code) | Ruling 74 appended: the lead code lives in two CRM fields (Doug's "a" to build plan § 9 question 20). |
 | 1.37 | 10-22-26 01:30 | Claude (Claude Code) | Rulings 71–73 appended: every link to a known person carries the lead identifier after the campaign link; the identifier belongs to the person (Doug's "Option 1"); each form decides its prefill and every form attributes to the lead. |
 | 1.36 | 10-21-26 22:44 | Claude (Claude Code) | Ruling 70 appended: an engagement's close date is stamped when it closes (Doug's "a"). |
