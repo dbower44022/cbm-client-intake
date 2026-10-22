@@ -13,7 +13,8 @@
 #   receipt    scripts/plans/cintake-submission-prospect-response.json fingerprint cb685b7372b1
 #   appfields  scripts/plans/coutreach-campaign-app-fields.json      fingerprint 965d932407f3 (ruling 40)
 #   smstext    scripts/plans/coutreach-sms-message.json              fingerprint 7a68865149b4 (Phase 4, ruling 39)
-#   roles      scripts/migrate_outreach_roles.py (merge-only; Phase 3 added the Mentor Role's two)
+#   roles      scripts/migrate_outreach_roles.py (merge-only; Phase 3 added the Mentor Role's two; ruling 69 the stream grant)
+#   actionlog  scripts/migrate_actionlog_record_entities.py (CActionLog.record may point at campaigns, leads, call records)
 #   labels     scripts/relabel_outreach_campaign.py ("Outreach Campaign", ruling 35)
 #   ui         scripts/apply_outreach_ui.py (tab list, detail and list layouts)
 #   verify     scripts/apply_outreach_ui.py --verify (org-wide key; no apply form)
@@ -48,8 +49,9 @@ case "$step" in
   appfields) plan scripts/plans/coutreach-campaign-app-fields.json 965d932407f3 ;;
   smstext)  plan scripts/plans/coutreach-sms-message.json 7a68865149b4 ;;
   roles)    exec "$PY" scripts/migrate_outreach_roles.py $flag ;;
+  actionlog) exec "$PY" scripts/migrate_actionlog_record_entities.py $flag ;;
   labels)   exec "$PY" scripts/relabel_outreach_campaign.py $flag ;;
   ui)       exec "$PY" scripts/apply_outreach_ui.py $flag ;;
   verify)   exec "$PY" scripts/apply_outreach_ui.py --verify ;;
-  *) echo "usage: bash scripts/prospect_crm_prod.sh <whoami|sms|outreach|receipt|smstext|appfields|roles|labels|ui|verify> [apply]" >&2; exit 64 ;;
+  *) echo "usage: bash scripts/prospect_crm_prod.sh <whoami|sms|outreach|receipt|smstext|appfields|roles|actionlog|labels|ui|verify> [apply]" >&2; exit 64 ;;
 esac

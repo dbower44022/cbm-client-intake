@@ -90,6 +90,24 @@ found; move resolved items to the bottom with the resolution date.
     on crm-test (dry run: exactly that one change), production and Boston
     with the role script at their slots, and the roles standard
     (`prds/chapter-network/roles-standard/`) updated to match.
+    **At the production slot, also do these two (added 10-22-26; both
+    live-passed on crm-test 10-22-26 as Mark Marketing). Without them, no
+    campaign action records any history on production:**
+    (1) **Ruling 69, the stream grant.** The Marketing Admin Role gains
+    stream *all* on `COutreachCampaign` and `CProspect`, so history notes
+    post for non-admins. It rides the existing `roles` step: in the
+    production web console, `bash scripts/prospect_crm_prod.sh roles`
+    (dry run), then `… roles apply`.
+    (2) **The action-history record types.** `CActionLog.record` gains
+    `COutreachCampaign`, `CProspect` and `COutreachTouch`, so action-history
+    rows stop being refused. `bash scripts/prospect_crm_prod.sh actionlog`
+    (dry run: expect "WOULD add" with those three, and also `CEvent` and
+    `CEventRegistration` if production still lacks the 10-07-26 events fix),
+    then `… actionlog apply`.
+    Check afterwards: one campaign save by a non-admin Marketing Admin Team
+    member, then no `stream note … failed` or `action-log write failed` line
+    for it in the production web log. Boston needs the same two at its
+    release, and the roles standard needs updating for ruling 69.
     **The Leads and Review grids at volume (v0.267.0–v0.267.2, build plan
     § 7b): LIVE-PASSED on crm-test 10-20-26 14:28** by Doug as Mark
     Marketing with 3,017 leads, from
