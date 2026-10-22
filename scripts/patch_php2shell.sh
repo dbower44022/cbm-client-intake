@@ -24,11 +24,26 @@ set -euo pipefail
 kind="${1:-}"; tag="${2:-}"
 stamp="$(date -u +%Y%m%d-%H%M)"
 
+#: EspoCRM's own version. `bin/command config:get` exists only from 10.0, so
+#: read the config files directly (9.x keeps it in config-internal.php).
+espo_version() {
+  docker exec -w /var/www/html espocrm php -r '
+    foreach (["data/config-internal.php", "data/config.php"] as $f) {
+      if (is_file($f)) { $c = include $f; if (!empty($c["version"])) { echo $c["version"]; exit; } }
+    }
+    echo "?";' 2>/dev/null || echo "?"
+}
+
+#: True when PHP in the container is at or above the fixed release.
+php_fixed() {
+  docker exec "$1" php -r 'exit(version_compare(PHP_VERSION, PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION === "8.5" ? "8.5.12" : "8.4.27", ">=") ? 0 : 1);' 2>/dev/null
+}
+
 case "$kind" in
   espocrm)
     [ -n "$tag" ] || { echo "usage: espocrm <image tag, e.g. 9.3.10-fpm>" >&2; exit 64; }
     cd /var/www/espocrm
-    echo "BEFORE: PHP $(docker exec espocrm php -r 'echo PHP_VERSION;'), EspoCRM $(docker exec -w /var/www/html espocrm bin/command config:get version 2>/dev/null || echo '?')"
+    echo "BEFORE: PHP $(docker exec espocrm php -r 'echo PHP_VERSION;'), EspoCRM $(espo_version)"
 
     dump="/root/pre-php2shell-$stamp.sql.gz"
     echo "Dumping the database to $dump ..."
@@ -45,16 +60,21 @@ case "$kind" in
 
     want="${tag%%-*}"
     echo "Waiting for EspoCRM to report $want (the image upgrades in place on start) ..."
+    got="?"
     for _ in $(seq 1 60); do
-      got="$(docker exec -w /var/www/html espocrm bin/command config:get version 2>/dev/null || true)"
+      got="$(espo_version)"
       [ "$got" = "$want" ] && break
+      docker logs espocrm 2>&1 | grep -q "EspoCRM version is $want" && { got="$want"; break; }
       sleep 5
     done
-    echo "AFTER:  PHP $(docker exec espocrm php -r 'echo PHP_VERSION;'), EspoCRM ${got:-?}"
+    echo "AFTER:  PHP $(docker exec espocrm php -r 'echo PHP_VERSION;'), EspoCRM $got"
+    ok=1
     for c in espocrm espocrm-daemon espocrm-websocket; do
       echo "  $c: $(docker inspect "$c" --format '{{.State.Status}}') PHP $(docker exec "$c" php -r 'echo PHP_VERSION;' 2>/dev/null || echo '?')"
+      php_fixed "$c" || ok=0
     done
-    if [ "${got:-}" = "$want" ]; then echo "RESULT: patched"; else
+    docker logs espocrm 2>&1 | grep -E "^info: (Start upgrading|Upgrading is finished)" | tail -2 | sed 's/^/  log: /'
+    if [ "$ok" = 1 ] && [ "$got" = "$want" ]; then echo "RESULT: patched"; else
       echo "RESULT: NOT CONFIRMED — last lines of the espocrm log:"; docker logs --tail 25 espocrm 2>&1; fi
     ;;
   bookstack)
