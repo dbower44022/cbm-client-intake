@@ -378,6 +378,54 @@ async def update_campaign(campaign_id: str, body: ChangesIn, request: Request) -
     return {"campaign": updated}
 
 
+# --- the owner (ruling 76) ------------------------------------------------------------
+
+def _owner_reader(request: Request, client):
+    """The org-wide client for the team list, else the user's own (dry run)."""
+    return _system_client(get_settings()) or client
+
+
+@api_router.get("/owner-options")
+async def owner_options(request: Request) -> dict[str, Any]:
+    user, client = _actor(request)
+    try:
+        options = await service.owner_options(_owner_reader(request, client),
+                                              get_settings().campaigns_allowed_teams_list)
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not list the people who may own a campaign")
+    return {"options": options}
+
+
+class OwnerIn(BaseModel):
+    userId: str = ""
+
+
+@api_router.put("/campaigns/{campaign_id}/owner")
+async def change_owner(campaign_id: str, body: OwnerIn, request: Request) -> dict[str, Any]:
+    """Any member of the Campaign Management team may hand a campaign to
+    another active member (ruling 76); the write runs as the signed-in user."""
+    user, client = _actor(request)
+    row = await _campaign_or_404(request, client, campaign_id)
+    try:
+        options = await service.owner_options(_owner_reader(request, client),
+                                              get_settings().campaigns_allowed_teams_list)
+        updated, new_name = await service.change_owner(client, row, body.userId, options)
+    except CampaignError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not change the campaign's owner")
+    if new_name is None:
+        return {"campaign": row, "changed": False}
+    old_name = row.get("assignedUserName") or "nobody"
+    await record_action(
+        client, app=APP_CAMPAIGNS, category=CAT_RECORD_EDIT, action="Campaign Owner Changed",
+        parent_type=cfg.CAMPAIGN, parent_id=campaign_id,
+        summary=f"Changed the owner of the campaign \"{row.get('name')}\" from {old_name} to {new_name}",
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+    )
+    return {"campaign": updated, "changed": True}
+
+
 class RelationsIn(BaseModel):
     partnerIds: Optional[list[str]] = None
     funderIds: Optional[list[str]] = None

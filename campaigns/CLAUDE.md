@@ -1,6 +1,6 @@
 # campaigns/ — Campaign Management
 
-Last Updated: 10-21-26 16:01 · Revision 1.2
+Last Updated: 10-22-26 12:25 · Revision 1.3
 
 Detail for Campaign Management (`/campaigns`, prospect marketing Phases 1 to 4 and the lead model): links, postcards, the landing page, imports, the Leads and Review grids, calls, texts, email, attribution and reporting.
 
@@ -30,6 +30,12 @@ the reason.
   Relating a campaign to a partner needs edit on the partner, which that role
   lacks by ruling, so `service._link_or_escalate` retries only a
   `noAccessToForeignRecord` denial as the admin account.
+- **The owner is the campaign's Assigned User** (ruling 76, v0.275.0): set
+  to the creator at create, changed only through
+  `PUT …/campaigns/{id}/owner`, which accepts an active member of the
+  `CAMPAIGNS_ALLOWED_TEAMS` teams (`service.owner_options`, org-wide key) and
+  writes as the user. `assignedUserId` stays off `CAMPAIGN_FIELDS`, so the
+  general save can never move it.
 - **Links live in the application database** (ruling 31; `campaigns/store.py`,
   migration 0031: `campaign_link`, `campaign_link_visit`, the import ledger).
   `GET /c/{token}` **never calls the CRM**: it counts the visit and 302s to the
@@ -259,6 +265,7 @@ the reason.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 10-22-26 12:25 | Claude (Claude Code) | The campaign owner bullet (ruling 76, v0.275.0). |
 | 1.2 | 10-21-26 16:01 | Claude (Claude Code) | Campaign lists L2 (v0.271.0). |
 | 1.1 | 10-20-26 18:20 | Claude (Claude Code) | Campaign lists L1 (v0.270.0) bullet added. |
 | 1.0 | 10-20-26 17:30 | Claude (Claude Code) | Created from the root `CLAUDE.md` section, word for word (Doug's approval 10-20-26). |

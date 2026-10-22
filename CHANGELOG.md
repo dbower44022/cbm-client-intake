@@ -5,6 +5,23 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.275.0] — 2026-10-22
+
+**feat(campaigns): a campaign's owner can be changed** (ruling 76). The
+Owner line on a campaign's Overview is now a dropdown with its own *Save
+owner* button. It lists the active people in the Campaign Management team
+(`CAMPAIGNS_ALLOWED_TEAMS`, the Marketing Admin Team by default), read under
+the org-wide API key; API and portal users and inactive users are left out.
+Any member of the team may hand a campaign to any other. The save writes the
+campaign's Assigned User as the signed-in user, so the CRM's own assignment
+check applies, and is action-logged as *Campaign Owner Changed* with the old
+and new owner. New endpoints: `GET /campaigns/api/owner-options` and
+`PUT /campaigns/api/campaigns/{id}/owner`. The general campaign save still
+drops `assignedUserId`, so no other save changes the owner. Saving the same
+owner writes nothing. An owner who is not on the team is shown as
+"(not on the team)" and can be replaced. No CRM change; behind
+`CAMPAIGNS_ENABLED` like the rest of Campaign Management.
+
 ## [0.274.0] — 2026-10-22
 
 **feat(enrichment): the AI research pass, started by staff** (lead enrichment

@@ -864,3 +864,96 @@ def test_the_funder_record_has_a_campaigns_tab():
     sponsor = next(d for d in DOMAINS.values() if d.parent_entity == "CSponsorProfile")
     partner = next(d for d in DOMAINS.values() if d.parent_entity == "CPartnerProfile")
     assert sponsor.sponsored_campaigns_link == partner.sponsored_campaigns_link == "sponsoredCampaigns"
+
+
+# --- the owner (ruling 76) ---------------------------------------------------------------
+
+class TeamCrm(FakeCrm):
+    """FakeCrm plus a Team with its users link."""
+
+    def __init__(self):
+        super().__init__()
+        self.add("Team", {"id": "team-m", "name": "Marketing Admin Team"})
+        self.team_users = [
+            {"id": "u-1", "name": "Mark Marketing", "isActive": True, "type": "regular"},
+            {"id": "u-3", "name": "Alice Admin", "isActive": True, "type": "admin"},
+            {"id": "u-4", "name": "Gone Person", "isActive": False, "type": "regular"},
+            {"id": "u-5", "name": "API Robot", "isActive": True, "type": "api"},
+        ]
+
+    async def list_related(self, entity, record_id, link, *, select=None, max_size=200):
+        if entity == "Team" and link == "users":
+            rows = self.team_users if record_id == "team-m" else []
+            return {"total": len(rows), "list": rows}
+        return await super().list_related(entity, record_id, link, select=select, max_size=max_size)
+
+
+def _owned_campaign(crm):
+    return crm.add(cfg.CAMPAIGN, {"name": "Nov card", "campaignKind": "Postcard", "campaignStatus": "Draft",
+                                  "assignedUserId": "u-1", "assignedUserName": "Mark Marketing"})
+
+
+def test_owner_options_are_the_teams_active_people(monkeypatch):
+    client = build(monkeypatch, user=MARKETING, crm=TeamCrm())
+    res = client.get("/campaigns/api/owner-options")
+    assert res.status_code == 200, res.text
+    assert [o["name"] for o in res.json()["options"]] == ["Alice Admin", "Mark Marketing"]
+
+
+def test_a_team_member_hands_the_campaign_to_another(monkeypatch):
+    crm = TeamCrm()
+    row = _owned_campaign(crm)
+    client = build(monkeypatch, user=MARKETING, crm=crm)
+    res = client.put(f"/campaigns/api/campaigns/{row['id']}/owner", json={"userId": "u-3"})
+    assert res.status_code == 200, res.text
+    assert res.json()["changed"] is True
+    assert crm.updated[-1] == (cfg.CAMPAIGN, row["id"], {"assignedUserId": "u-3"})
+
+
+def test_the_same_owner_writes_nothing(monkeypatch):
+    crm = TeamCrm()
+    row = _owned_campaign(crm)
+    client = build(monkeypatch, user=MARKETING, crm=crm)
+    res = client.put(f"/campaigns/api/campaigns/{row['id']}/owner", json={"userId": "u-1"})
+    assert res.status_code == 200 and res.json()["changed"] is False
+    assert crm.updated == []
+
+
+@pytest.mark.parametrize("user_id", ["u-4", "u-5", "u-99", ""])
+def test_an_inactive_outside_or_missing_owner_is_refused(monkeypatch, user_id):
+    crm = TeamCrm()
+    row = _owned_campaign(crm)
+    client = build(monkeypatch, user=MARKETING, crm=crm)
+    res = client.put(f"/campaigns/api/campaigns/{row['id']}/owner", json={"userId": user_id})
+    assert res.status_code == 400
+    assert crm.updated == []
+
+
+def test_a_crm_refusal_names_the_denial(monkeypatch):
+    from core.espo import EspoError
+
+    class Refusing(TeamCrm):
+        async def update(self, entity, record_id, payload):
+            raise EspoError("update OutreachCampaign failed: HTTP 403 Forbidden")
+
+    crm = Refusing()
+    row = _owned_campaign(crm)
+    client = build(monkeypatch, user=MARKETING, crm=crm)
+    res = client.put(f"/campaigns/api/campaigns/{row['id']}/owner", json={"userId": "u-3"})
+    assert res.status_code == 403
+
+
+def test_the_general_save_cannot_change_the_owner(monkeypatch):
+    crm = TeamCrm()
+    row = _owned_campaign(crm)
+    client = build(monkeypatch, user=MARKETING, crm=crm)
+    res = client.put(f"/campaigns/api/campaigns/{row['id']}", json={"changes": {"assignedUserId": "u-3"}})
+    assert res.status_code == 200
+    assert all("assignedUserId" not in p for _, _, p in crm.updated)
+
+
+def test_an_outsider_cannot_change_the_owner(monkeypatch):
+    crm = TeamCrm()
+    row = _owned_campaign(crm)
+    client = build(monkeypatch, user=OUTSIDER, crm=crm)
+    assert client.put(f"/campaigns/api/campaigns/{row['id']}/owner", json={"userId": "u-3"}).status_code == 403

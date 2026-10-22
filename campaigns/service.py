@@ -232,6 +232,51 @@ async def create_campaign(client: EspoApi, changes: dict[str, Any], *, user_id: 
     return await client.create(cfg.CAMPAIGN, payload)
 
 
+#: The User types that can own a campaign: a person, never the API user or a
+#: portal login.
+_OWNER_USER_TYPES = ("regular", "admin")
+
+
+async def owner_options(reader: EspoApi, team_names: Iterable[str]) -> list[dict[str, str]]:
+    """Ruling 76: the people a campaign may be handed to — the active members
+    of the Campaign Management teams, by name. ``reader`` is the org-wide
+    client where there is one: a marketing role may hold no Team or User read,
+    and the list is the choice, not anyone's data."""
+    seen: dict[str, str] = {}
+    for team_name in team_names:
+        team = await reader.find_one("Team", "name", team_name, select="id,name")
+        if not team or not team.get("id"):
+            log.info("owner options: no team named %r", team_name)
+            continue
+        page = await reader.list_related("Team", team["id"], "users",
+                                         select="id,name,isActive,type", max_size=_PAGE)
+        for u in page.get("list", []):
+            if not u.get("id") or u.get("isActive") is False:
+                continue
+            if (u.get("type") or "regular") not in _OWNER_USER_TYPES:
+                continue
+            seen[u["id"]] = u.get("name") or "(unnamed)"
+    return sorted(({"id": i, "name": n} for i, n in seen.items()), key=lambda o: o["name"].lower())
+
+
+async def change_owner(client: EspoApi, campaign: dict[str, Any], user_id: str,
+                       options: list[dict[str, str]]) -> tuple[dict[str, Any], Optional[str]]:
+    """Write the campaign's Assigned User (ruling 76), as the signed-in user so
+    the CRM's own assignment check applies. Returns the campaign and the new
+    owner's name, or None for the name when nothing changed."""
+    user_id = (user_id or "").strip()
+    if not user_id:
+        raise CampaignError("Choose the person who should own this campaign.")
+    chosen = next((o for o in options if o["id"] == user_id), None)
+    if chosen is None:
+        raise CampaignError("That person is not an active member of the Campaign Management team, "
+                            "so they cannot own a campaign.")
+    if campaign.get("assignedUserId") == user_id:
+        return campaign, None
+    updated = await client.update(cfg.CAMPAIGN, campaign["id"], {"assignedUserId": user_id})
+    return updated, chosen["name"]
+
+
 async def update_campaign(client: EspoApi, campaign: dict[str, Any], changes: dict[str, Any],
                           *, calls_on: bool = False, sms_on: bool = False, email_on: bool = False) -> dict[str, Any]:
     built = cfg.kinds_built(calls_on, sms_on, email_on)

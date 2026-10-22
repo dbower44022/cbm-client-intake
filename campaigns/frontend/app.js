@@ -366,6 +366,43 @@
     });
   }
 
+  // --- the owner picker (ruling 76): any team member may hand a campaign on ---
+  var ownerOptions = null;
+  async function loadOwnerOptions() {
+    if (ownerOptions) return ownerOptions;
+    var data = await api("/owner-options");
+    ownerOptions = (data && data.options) || [];
+    return ownerOptions;
+  }
+
+  function ownerCell(c) {
+    var dd = el("dd", "cm__owner");
+    var sel = el("select", "cm__owner-select"); sel.setAttribute("aria-label", "Owner");
+    var cur = el("option", null, c.assignedUserName || "— nobody —"); cur.value = c.assignedUserId || ""; sel.appendChild(cur);
+    var btn = el("button", "cbm-button cbm-button--secondary cm__owner-save", "Save owner"); btn.type = "button";
+    dd.appendChild(sel); dd.appendChild(btn);
+    loadOwnerOptions().then(function (opts) {
+      sel.innerHTML = "";
+      var listed = opts.some(function (o) { return o.id === c.assignedUserId; });
+      if (!listed) {
+        var o0 = el("option", null, c.assignedUserId ? (c.assignedUserName || "Current owner") + " (not on the team)" : "— nobody —");
+        o0.value = c.assignedUserId || ""; sel.appendChild(o0);
+      }
+      opts.forEach(function (o) { var op = el("option", null, o.name); op.value = o.id; sel.appendChild(op); });
+      sel.value = c.assignedUserId || "";
+    }).catch(function (e) { notice("Could not list the people who may own a campaign: " + e.message, "error"); });
+    btn.addEventListener("click", async function () {
+      if (!sel.value) { notice("Choose the person who should own this campaign.", "error"); return; }
+      if (sel.value === (c.assignedUserId || "")) { notice("The owner is unchanged — nothing to save.", "ok"); return; }
+      try {
+        var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/owner", { method: "PUT", body: { userId: sel.value } });
+        notice(res && res.changed ? "Owner changed to " + sel.options[sel.selectedIndex].text + "." : "The owner is unchanged — nothing to save.", "ok");
+        loadRecord();
+      } catch (e) { notice(e.message, "error"); }
+    });
+    return dd;
+  }
+
   function renderRecord() {
     var rec = state.record, c = rec.campaign;
     document.title = HOST + " — " + (c.name || "Campaign");
@@ -389,6 +426,7 @@
       if (c.campaignKind !== "Postcard" && ["Mail vendor template", "Postcard size", "Estimated cost"].indexOf(p[0]) >= 0) return;
       if (!selecting && ["Selection", "Pieces signed off", "People signed off", "People on the list", "Signed off by", "Signed off at", "Run started", "Run completed"].indexOf(p[0]) >= 0) return;
       if (c.campaignKind !== "Social media" && p[0] === "Platform") return;
+      if (p[0] === "Owner") { facts.appendChild(el("dt", null, p[0])); facts.appendChild(ownerCell(c)); return; }
       facts.appendChild(el("dt", null, p[0])); facts.appendChild(el("dd", null, p[1] == null || p[1] === "" ? "—" : p[1]));
     });
     chips($("recPartners"), rec.partners, "No partner named."); chips($("recEvents"), rec.events, "No event linked.");
