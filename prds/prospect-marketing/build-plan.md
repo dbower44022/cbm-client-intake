@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-22-26 01:42 · Revision 0.34 — change log at the end.
+Last Updated: 10-22-26 12:40 · Revision 0.35 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -1874,7 +1874,8 @@ code typed by hand) still attributes to the lead.
   droplet metadata edit, made only if a production click proves slow. The
   two conformance cells are field rules on the Marketing Admin Role (read
   yes, edit no), so every write of either code field goes under the
-  org-wide key. Handoff: `lead-code-crm-handoff.md`. Field ACL: the
+  org-wide key; ruling 77 keeps them on that role only and both fields off
+  every layout. Handoff: `lead-code-crm-handoff.md`. Field ACL: the
   Marketing Admin Role already edits leads and touches; the intake API
   client needs Contact edit for `cLeadCode` (it has Contact edit). Two
   conformance cells.
@@ -2177,6 +2178,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.35 | 10-22-26 12:40 | Claude (Claude Code) | § 7d.5: ruling 77 noted (field rules on the Marketing Admin Role only, code fields off every layout). |
 | 0.34 | 10-22-26 01:42 | Claude (Claude Code) | § 7d.5's CRM handoff written (`lead-code-crm-handoff.md`, `scripts/plans/lead-code.json`, fingerprint `bec909277859`; two field rules in `scripts/migrate_outreach_roles.py`). Ruling 74's "indexed" not buildable through the API — recorded in § 7d.5; `Clicked` found already present. Header revision corrected from 0.30. |
 | 0.33 | 10-22-26 01:35 | Claude (Claude Code) | § 7d approved: the prefill table confirmed as written (ruling 75); status line and table heading updated. |
 | 0.32 | 10-22-26 01:34 | Claude (Claude Code) | Question 20 answered A (ruling 74): the code lives in two CRM fields; § 7d.1's storage marked settled. |

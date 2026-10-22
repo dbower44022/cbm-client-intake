@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-22-26 12:07 · Revision 1.40 — change log at the end.
+Last Updated: 10-22-26 12:40 · Revision 1.41 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -895,6 +895,24 @@ at 12:05: "a".
     can take a campaign over without asking; the action log is the record,
     nothing prevents it. (10-22-26)
 
+### Doug's ruling (10-22-26, on the lead code's field rules)
+
+The CRM handoff's dry run (`lead-code-crm-handoff.md` § 2) found that the
+Marketing Admin Role cannot edit a Contact on crm-test, so its rule on
+`Contact.cLeadCode` blocks nothing today, while five staff roles (Client
+Assignment, Mentor Administration, Partner Manager, Sponsor Manager,
+Mentor) can edit a Contact. Put as: option A, keep the two rules on the
+Marketing Admin Role and keep the field off every layout; option B, add
+the rule to all five roles. Doug's reply at 12:40: "a".
+
+77. **The lead code's field rules stay on the Marketing Admin Role
+    only** (option A): `CProspect.leadCode` and `Contact.cLeadCode`, read
+    yes, edit no. The two code fields are kept off every layout, which is
+    what keeps the other staff roles off them. Standing cost, weighed by
+    Doug: adding either field to a layout exposes it to hand editing by
+    any role that edits the record; a hand edit breaks that person's
+    links until *New code*. (10-22-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -1024,6 +1042,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.41 | 10-22-26 12:40 | Claude (Claude Code) | Ruling 77 appended: the lead code's field rules stay on the Marketing Admin Role only; the fields stay off every layout (Doug's "a"). |
 | 1.40 | 10-22-26 12:07 | Claude (Claude Code) | Ruling 76 appended: any Marketing Admin Team member may change a campaign's owner through an Owner picker on the Overview (Doug's "a"). Header revision line corrected from 1.36 to match the table. |
 | 1.39 | 10-22-26 01:35 | Claude (Claude Code) | Ruling 75 appended: the per-form prefill table (build plan § 7d.4) approved as written (Doug: "confirm the six as written"). |
 | 1.38 | 10-22-26 01:34 | Claude (Claude Code) | Ruling 74 appended: the lead code lives in two CRM fields (Doug's "a" to build plan § 9 question 20). |

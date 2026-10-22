@@ -1,6 +1,6 @@
 # CRM handoff — the lead code in every link (rulings 71–75)
 
-Last Updated: 10-22-26 01:42 · Revision 1.0 — change log at the end.
+Last Updated: 10-22-26 12:40 · Revision 1.1 — change log at the end.
 
 **What changes:** two text fields that hold a person's lead code, two
 fields that count clicks on a touch, and two field rules on the Marketing
@@ -77,7 +77,10 @@ can edit a Contact and carry no rule:
 
 The sixth, `ClientMentorIntakeRole`, is the intake API client. It must keep
 edit, because public forms may write the code at promotion. What keeps the
-five staff roles off the field is its absence from every layout.
+five staff roles off the field is its absence from every layout. **Ruled
+10-22-26 (ruling 77, option A): the rules stay on the Marketing Admin Role
+only, and both code fields stay off every layout.** Adding either field to
+a layout is a change to this ruling, not a layout tweak.
 
 No role carries any `fieldData` rule on Contact or Account today, so
 nothing an existing rule could strip.
@@ -179,4 +182,5 @@ behave as today.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 10-22-26 12:40 | Claude (Claude Code) | § 2: ruling 77 recorded — rules on the Marketing Admin Role only, fields off every layout. |
 | 1.0 | 10-22-26 01:42 | Claude (Claude Code) | Written for build plan § 7d.5, rulings 71–75. Plan dry-run on crm-test, 4 changes, fingerprint `bec909277859`; `Clicked` found already present. Two field rules added to `scripts/migrate_outreach_roles.py`, dry run shows exactly those two. No index (not a Field Manager parameter). Conformance baseline taken. |
