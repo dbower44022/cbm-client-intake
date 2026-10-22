@@ -1,6 +1,6 @@
 # sessions/ — Client, Partner and Funder Management
 
-Last Updated: 10-20-26 17:30 · Revision 1.0
+Last Updated: 10-21-26 21:56 · Revision 1.1
 
 Detail for the session engine behind Client Management (`/mentorsessions`), Partner Management (`/partnersessions`) and Funder Management (`/sponsorsessions`): the grids, every record tab, quick add, managers and co-mentors, and the traps of this package.
 
@@ -216,6 +216,14 @@ one shared frontend that derives its domain from the first segment of its URL.
   `additionalManagers`, and **keeps the former manager as an additional
   manager** (non-destructive, one click undoes it); partner and funder
   only — the engagement's mentor is Client Administration's.
+- **The Overview status picker is on every domain** (v0.272.0, Doug
+  10-21-26: "in exactly the same manner as the client engagement page"):
+  `status_edit_attr` is `engagementStatus` / `partnershipStatus` /
+  `funderStatus`; the badge's ▾ menu lists the CRM's live options and the
+  pick is written as the user with a stream note (`service.set_status`).
+  The funder status (ruling 67) is a field a CRM may not have yet:
+  `detail_optional_select` and `list_optional_select` ask for it only when
+  live metadata has it, and its Overview fact is left out until then.
 - **Co-mentor visibility** requires two things, both in the app: reading the
   `engagements` reverse link *and* stamping the co-mentor's User into the
   engagement's `assignedUsers` (Mentor Role reads CEngagement at "own", which
@@ -255,4 +263,5 @@ Watch for these when touching this package:
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 10-21-26 21:56 | Claude (Claude Code) | The status picker on every domain (v0.272.0). |
 | 1.0 | 10-20-26 17:30 | Claude (Claude Code) | Created from the root `CLAUDE.md` section, word for word (Doug's approval 10-20-26). |

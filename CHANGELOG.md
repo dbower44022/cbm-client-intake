@@ -5,6 +5,23 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.272.0] — 2026-10-21
+
+**feat(sessions): the status picker on the partner and funder Overview** —
+Doug's request the same evening: partners and funders "in exactly the same
+manner as the client engagement page". The Overview's status fact is the
+coloured badge with a ▾ that opens a menu of the CRM's own options and
+writes the pick as the signed-in user, with a history note — the
+engagement's mechanism (`DomainConfig.status_edit_attr`), now set on every
+domain: `partnershipStatus` for partners, `funderStatus` for funders
+(ruling 67). The funder's fact is read and shown only once the CRM has the
+field (`DomainConfig.detail_optional_select`, the detail read's twin of the
+grid's `list_optional_select`), so production shows nothing new until its
+CRM change. Badge colours added for Meetings held, Prospective and Lapsed
+(amber) and Ended (red). No CRM change, no switch; rollback is a revert.
+Verified by tests only; the live check is a real Partner Manager and Sponsor
+Manager changing a status from the Overview on crm-test.
+
 ## [0.271.0] — 2026-10-21
 
 **feat(campaigns): campaign lists L2 — clients, partners and funders**

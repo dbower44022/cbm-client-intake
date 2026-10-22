@@ -310,17 +310,23 @@ async def default_meeting_link(client: SessionClient, user_id: str) -> Optional[
         return None
 
 
-async def _list_select(cfg: DomainConfig, client: SessionClient) -> str:
-    """The grid's select, plus each optional attribute the live CRM has
-    (``DomainConfig.list_optional_select``). A failed metadata read leaves the
-    optional ones out — the column shows "—", the grid still loads."""
-    if not cfg.list_optional_select:
-        return cfg.list_select
+async def _optional_present(cfg: DomainConfig, client: SessionClient,
+                           attrs: tuple[str, ...]) -> list[str]:
+    """Which of these optional attributes the live CRM has. A failed metadata
+    read answers none — the slot shows "—" or is left out, the page loads."""
+    if not attrs:
+        return []
     try:
         defs = await client.metadata(f"entityDefs.{cfg.parent_entity}.fields") or {}
     except Exception:  # noqa: BLE001
         defs = {}
-    extra = [a for a in cfg.list_optional_select if isinstance(defs, dict) and a in defs]
+    return [a for a in attrs if isinstance(defs, dict) and a in defs]
+
+
+async def _list_select(cfg: DomainConfig, client: SessionClient) -> str:
+    """The grid's select, plus each optional attribute the live CRM has
+    (``DomainConfig.list_optional_select``)."""
+    extra = await _optional_present(cfg, client, cfg.list_optional_select)
     return ",".join([cfg.list_select, *extra]) if extra else cfg.list_select
 
 
@@ -725,13 +731,16 @@ def _company_item(it: Any, parent: dict[str, Any]) -> Optional[dict[str, Any]]:
     }
 
 
-def _overview_items(cfg: DomainConfig, parent: dict[str, Any]) -> list[dict[str, Any]]:
+def _overview_items(cfg: DomainConfig, parent: dict[str, Any], *,
+                    absent: frozenset[str] | set[str] = frozenset()) -> list[dict[str, Any]]:
     """The curated Overview facts, in config order, dropping empties. A linkable
     value carries a ``link`` so the UI opens its pop-up detail panel — either a
     single {entity,id} or an {aggregate:[…]} of 1:1 org records; currency carries
     its ``currency`` code for formatting."""
     items: list[dict[str, Any]] = []
     for it in cfg.overview_items:
+        if it.attr in absent:  # a field the CRM does not have yet
+            continue
         if it.aggregate:
             entry = _company_item(it, parent)
             if entry:
@@ -763,10 +772,13 @@ async def get_detail(
     """The parent detail view: curated Overview facts + an aggregated feed of
     every session's notes, plus related contacts and the sessions list (+
     co-mentors, mentor domain). All reads are as the user."""
-    parent = await client.get(cfg.parent_entity, parent_id, select=cfg.detail_select)
+    present = await _optional_present(cfg, client, cfg.detail_optional_select)
+    select = ",".join([cfg.detail_select, *present]) if present else cfg.detail_select
+    parent = await client.get(cfg.parent_entity, parent_id, select=select)
     await fill_company_fallback(cfg, client, [parent])
     await _fill_company_industry(cfg, client, parent)
-    overview = _overview_items(cfg, parent)
+    absent = set(cfg.detail_optional_select) - set(present)
+    overview = _overview_items(cfg, parent, absent=absent)
 
     contacts_data = await client.list_related(
         cfg.parent_entity, parent_id, cfg.parent_contacts_link,

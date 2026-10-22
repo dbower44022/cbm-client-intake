@@ -1192,6 +1192,9 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
+- **v0.272.0 (2026-10-21) — the status picker on the partner and funder
+  Overview.** Committed, not pushed. Rule in `sessions/CLAUDE.md`. No CRM
+  change. Owed: the live check as a real Partner Manager and Sponsor Manager.
 - **v0.271.0 (2026-10-21) — campaign lists, L2 (clients, partners,
   funders).** Committed, not pushed; dark. Build plan § 7c.7; standing rules
   in `campaigns/CLAUDE.md`. No migration; the funder-status CRM change

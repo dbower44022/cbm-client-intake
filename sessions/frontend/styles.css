@@ -470,8 +470,9 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
   font-size: 0.78rem; font-weight: 600; background: #eef1f6; color: #3a4a5e; border: 1px solid #dbe2ec;
 }
 .sx__badge--active, .sx__badge--mou-contract-signed { background: #e9f7ef; color: #1e6b3f; border-color: #bfe3cd; }
-.sx__badge--on-hold, .sx__badge--pending-acceptance, .sx__badge--proposal-sent, .sx__badge--mou-contract-sent { background: #fff6e5; color: #8a5a00; border-color: #f3dfab; }
-.sx__badge--declined, .sx__badge--assignment-declined, .sx__badge--inactive { background: #fdecea; color: #a12; border-color: #f5c6c2; }
+.sx__badge--on-hold, .sx__badge--pending-acceptance, .sx__badge--proposal-sent, .sx__badge--mou-contract-sent,
+.sx__badge--meetings-held, .sx__badge--prospective, .sx__badge--lapsed { background: #fff6e5; color: #8a5a00; border-color: #f3dfab; }
+.sx__badge--declined, .sx__badge--assignment-declined, .sx__badge--inactive, .sx__badge--ended { background: #fdecea; color: #a12; border-color: #f5c6c2; }
 /* Editable status badge — click to open the picker. */
 .sx__badge--editable { cursor: pointer; }
 .sx__badge--editable:hover { filter: brightness(0.97); box-shadow: 0 0 0 2px rgba(4, 107, 210, 0.18); }

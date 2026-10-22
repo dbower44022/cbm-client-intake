@@ -184,8 +184,10 @@ class DomainConfig:
     # Overview status picker: when set, the Overview "Status" fact becomes a
     # clickable picker that writes ``status_edit_attr`` (the parent's status enum)
     # to any live option, as the signed-in user (ACL enforced). The option list is
-    # read live from CRM metadata; the write is validated against it. Mentor domain
-    # only today (engagementStatus). None => the status badge stays read-only.
+    # read live from CRM metadata; the write is validated against it. Every domain
+    # since 10-21-26 (Doug: partners and funders "in exactly the same manner as
+    # the client engagement page"): engagementStatus, partnershipStatus,
+    # funderStatus. None => the status badge stays read-only.
     status_edit_attr: Optional[str] = None
     # Grid column key that is the COMPANY — rendered as a link opening the
     # standard aggregated company/client pop-up (same peek the Overview uses).
@@ -348,6 +350,10 @@ class DomainConfig:
     #: a field a CRM build adds later (the funder status, ruling 67). Until
     #: then the column renders "—" and the read never names the field.
     list_optional_select: tuple[str, ...] = ()
+    #: The detail read's twin of ``list_optional_select``: attributes asked of
+    #: the CRM only when its live metadata has them. An Overview fact on such
+    #: an attribute is left out until the field exists.
+    detail_optional_select: tuple[str, ...] = ()
 
     # --- Last contact date (Doug's request 2026-07-25). The record field that is
     # advanced to the contact date whenever an outbound email is sent from the
@@ -829,6 +835,7 @@ PARTNER = DomainConfig(
     # date and last-contacted slots were configured but empty on nearly every
     # partner, so they vanished and read as missing features). The rail is now a
     # stable shape — an empty fact renders "—".
+    status_edit_attr="partnershipStatus",
     overview_items=(
         OverviewItem("Partnership status", "partnershipStatus", "badge", section="key", always=True),
         OverviewItem("Partnership type", "partnershipType", section="key", always=True),
@@ -973,7 +980,12 @@ SPONSOR = DomainConfig(
     ),
     # Persistent facts, same ruling as the partner rail (an empty slot renders
     # "—" rather than vanishing).
+    # Ruling 67: the funder status, a picker on the Overview like the
+    # engagement's and the partner's; read and shown only once the CRM has it.
+    status_edit_attr="funderStatus",
+    detail_optional_select=("funderStatus",),
     overview_items=(
+        OverviewItem("Funder status", "funderStatus", "badge", section="key", always=True),
         # single "Company" link — the funder profile + the company Account are
         # one org; the pop-up aggregates both.
         OverviewItem("Company", "sponsorCompanyName", "text", section="key",

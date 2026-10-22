@@ -491,8 +491,9 @@ async def test_get_detail_assembles_partner():
     # curated Overview facts (in config order), grouped into sections, with the
     # company linkable to a peek
     status = next(i for i in d["overview"] if i["label"] == "Partnership status")
+    # The Overview status picker on every domain (Doug, 10-21-26).
     assert status == {"label": "Partnership status", "value": "Active",
-                      "type": "badge", "block": False, "section": "key"}
+                      "type": "badge", "block": False, "section": "key", "statusEdit": True}
     # single "Company" link aggregates the Account + the partner profile (parent)
     company = next(i for i in d["overview"] if i["label"] == "Company")
     assert company["value"] == "Acme Co"
@@ -1620,18 +1621,22 @@ async def test_set_status_noop_when_unchanged():
 
 
 @pytest.mark.asyncio
-async def test_set_status_only_on_domains_that_declare_it():
-    fake = Fake(records={("CPartnerProfile", "P1"): {"partnershipStatus": "Active"}})
+async def test_set_status_on_a_partner_too():
+    """Every domain has the picker since 10-21-26; an invalid pick still writes nothing."""
+    meta = {"partnershipStatus": {"options": ["", "Candidate", "Active"]}}
+    fake = Fake(records={("CPartnerProfile", "P1"): {"partnershipStatus": "Active"}}, meta_fields=meta)
     with pytest.raises(service.SessionError):
-        await service.set_status(PARTNER, fake, "P1", "Candidate")
+        await service.set_status(PARTNER, fake, "P1", "Nonsense")
     assert fake.updates == []
+    result = await service.set_status(PARTNER, fake, "P1", "Candidate")
+    assert result["changed"] and fake.updates[-1][2] == {"partnershipStatus": "Candidate"}
 
 
 @pytest.mark.asyncio
 async def test_status_edit_options_reads_live_metadata():
     fake = Fake(meta_fields=_STATUS_META)
     assert await service.status_edit_options(MENTOR, fake) == ["Assigned", "Active", "On-Hold", "Completed"]
-    assert await service.status_edit_options(PARTNER, fake) == []  # not enabled
+    assert await service.status_edit_options(PARTNER, fake) == []  # no partnershipStatus in this metadata
 
 
 # --- first completed session activates the engagement -----------------------
