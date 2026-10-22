@@ -46,10 +46,21 @@ found; move resolved items to the bottom with the resolution date.
     problems box stayed up while a new list was edited. `CAMPAIGN_LISTS` is
     ON on crm-test (override). **L2 built as v0.271.0 (10-21-26 16:01), not pushed**
     (clients, partners, funders, links, lists of lists, imports, Include
-    every contact, funder status in Funder Management). Owed: push; the
-    funder-status field on crm-test (`scripts/prospect_crm_test.sh
-    funderstatus`, fingerprint `84636d15191f`, Doug runs it); the L2 live
-    pass (https://claude.ai/artifact/BcETZsL5hFi3h9Bpm3wNUd, rev 1.0); production and Boston with the arc's eventual slot.
+    every contact, funder status in Funder Management). **L2 LIVE-PASSED on
+    crm-test 10-21-26 22:30** by Doug (Sally Sponsor, then Mark Marketing) from
+    https://claude.ai/artifact/BcETZsL5hFi3h9Bpm3wNUd (rev 1.3): funder
+    status set on the Details tab and shown in the grid; "Do not market"
+    removed from "Partners and funders" (1 → 3 → 2); a list including
+    itself refused; Completed clients started over a year ago plus a file
+    (1 matched, 1 counted unmatched); the email build reaching 2, then 3 with
+    Include every contact, then 1 from the clients list (Rosa Medina skipped,
+    no consent), read back from the CRM. `funderStatus` applied on crm-test.
+    **Finding: `CEngagement.closeDate` is Read-only in crm-test's CRM**, so
+    every API write to it is dropped and no engagement there has a close
+    date — "closed more than N days ago" can never match, nor can the email
+    kind's ruling-25 dormant-client rule. Production not yet checked; the
+    fix (clear Read-only, a field rule for staff instead, ruling 40) is a
+    question for Doug. Owed also: v0.272.0's status-picker check; production and Boston with the arc's eventual slot.
     LIVE-PASSED on crm-test (v0.265.0–3, 10-19-26; rulings 41–54).**
     **Production DEFERRED by Doug 10-20-26 15:06: "defer production until
     we finish testing new campaign functionality"** — no Sunday slot is

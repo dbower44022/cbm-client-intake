@@ -1197,9 +1197,9 @@ the strength of it.
   change. Owed: the live check as a real Partner Manager and Sponsor Manager.
 - **v0.271.0 (2026-10-21) — campaign lists, L2 (clients, partners,
   funders).** Committed, not pushed; dark. Build plan § 7c.7; standing rules
-  in `campaigns/CLAUDE.md`. No migration; the funder-status CRM change
-  (ruling 67) is owed on crm-test. Owed: push, that field, the L2 live pass
-  (`OPEN-ITEMS.md` #51).
+  in `campaigns/CLAUDE.md`. **Live-passed on crm-test 10-21-26 22:30**; funder status
+  applied there. Owed: production and Boston with the arc's slot; the
+  close-date Read-only finding (`OPEN-ITEMS.md` #51).
 - **v0.270.0 (2026-10-20) — campaign lists, L1 (leads and contacts).**
   Committed, not pushed; dark (`CAMPAIGN_LISTS` off). Build plan § 7c,
   rulings 58–68; standing rules in `campaigns/CLAUDE.md`. Migration 0032,

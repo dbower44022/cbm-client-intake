@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-21-26 16:01 · Revision 0.29 — change log at the end.
+Last Updated: 10-21-26 22:30 · Revision 0.30 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -1673,7 +1673,7 @@ a live pass on crm-test as a real non-admin Marketing Admin user.
    all four sending kinds, the `/setup` field list for those two types,
    and the sign-off screen's skip counts. About four days.
 2. **L2 — clients, partners and funders, and lists of lists. Built as
-   v0.271.0 (10-21-26 16:01), not pushed; live pass owed (`OPEN-ITEMS.md` #51).** The three
+   v0.271.0 (10-21-26 16:01); live-passed on crm-test 10-21-26 22:30 (`OPEN-ITEMS.md` #51).** The three
    target types with their *via* fields, recipient resolution and *Include
    every contact*, the list-member steps with the cycle check, and the
    import step. About three days.
@@ -1931,7 +1931,7 @@ best-effort mirror.
 |---|---|
 | Document | Prospect Marketing — build plan |
 | Version | v0.22 — Phases 1–4 and the lead model built; § 7b built and live-passed; § 7c (campaign audiences, rulings 58–65) drafted for approval |
-| Last Updated | 10-21-26 16:01 |
+| Last Updated | 10-21-26 22:30 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
 | Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
@@ -1940,6 +1940,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.30 | 10-21-26 22:30 | Claude (Claude Code) | § 7c.7 L2 live-passed on crm-test; § 7c complete on crm-test. |
 | 0.29 | 10-21-26 16:01 | Claude (Claude Code) | § 7c.7 L2 built (v0.271.0). |
 | 0.28 | 10-21-26 15:36 | Claude (Claude Code) | § 7c.7 L1 live-passed on crm-test. |
 | 0.27 | 10-20-26 18:20 | Claude (Claude Code) | § 7c.7 L1 built (v0.270.0). |
