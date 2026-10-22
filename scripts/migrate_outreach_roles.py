@@ -130,11 +130,17 @@ APP_OWNED_CAMPAIGN_FIELDS: tuple[str, ...] = (
 )
 FIELD_RULES: list[tuple[str, str, tuple[str, ...], dict[str, str]]] = [
     ("Marketing Admin Role", "COutreachCampaign", APP_OWNED_CAMPAIGN_FIELDS, {"read": "yes", "edit": "no"}),
+    # Build plan § 7d.5, rulings 74 and 40 (10-22-26): the lead code is the
+    # application's to mint and copy. The team that runs campaigns reads it and
+    # cannot hand-edit it; New code and promotion write it under the API role.
+    # Applied after scripts/plans/lead-code.json (lead-code-crm-handoff.md § 3).
+    ("Marketing Admin Role", "CProspect", ("leadCode",), {"read": "yes", "edit": "no"}),
+    ("Marketing Admin Role", "Contact", ("cLeadCode",), {"read": "yes", "edit": "no"}),
 ]
 
 #: The fields the two plan files add to native entities, as STORED.
 NEW_NATIVE_FIELDS: dict[str, tuple[str, ...]] = {
-    "Contact": ("cSmsOptIn", "cFunnelStage", "cEntryStage", "cOutreachCampaign"),
+    "Contact": ("cSmsOptIn", "cFunnelStage", "cEntryStage", "cOutreachCampaign", "cLeadCode"),
     "Account": ("cFunnelStage", "cEntryStage", "cOutreachCampaign"),
 }
 

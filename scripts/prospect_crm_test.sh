@@ -17,6 +17,7 @@
 #   scripts/prospect_crm_test.sh industry   apply scripts/plans/cprospect-industry.json (fingerprint 82ec87c36dce; ruling 66)
 #   scripts/prospect_crm_test.sh funderstatus apply scripts/plans/csponsor-funder-status.json (fingerprint 84636d15191f; ruling 67)
 #   scripts/prospect_crm_test.sh closedate  apply scripts/plans/cengagement-close-date-writable.json (fingerprint c80d9070da1d; ruling 70)
+#   scripts/prospect_crm_test.sh leadcode   apply scripts/plans/lead-code.json (fingerprint bec909277859; rulings 71-75, then 'roles' for the two field rules)
 #
 # Exists for the same reason as scripts/on_crm.sh and scripts/apply_plan.sh: each
 # full invocation is far past the one-line limit a pasted command survives, and
@@ -45,5 +46,6 @@ case "${1:-}" in
   actionlog) exec uv run python scripts/run_with_admin.py scripts/migrate_actionlog_record_entities.py --apply ;;
   funderstatus) exec scripts/apply_plan.sh test scripts/plans/csponsor-funder-status.json 84636d15191f ;;
   closedate) exec scripts/apply_plan.sh test scripts/plans/cengagement-close-date-writable.json c80d9070da1d ;;
-  *) echo "usage: scripts/prospect_crm_test.sh <sms|outreach|roles|notes|receipt|smstext|appfields|leadmodel|leadlabels|touchpos|leadlayouts|leadmove|funders|industry|funderstatus|closedate|actionlog>" >&2; exit 64 ;;
+  leadcode) exec scripts/apply_plan.sh test scripts/plans/lead-code.json bec909277859 ;;
+  *) echo "usage: scripts/prospect_crm_test.sh <sms|outreach|roles|notes|receipt|smstext|appfields|leadmodel|leadlabels|touchpos|leadlayouts|leadmove|funders|industry|funderstatus|closedate|leadcode|actionlog>" >&2; exit 64 ;;
 esac

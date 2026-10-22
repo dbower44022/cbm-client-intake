@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-21-26 22:30 · Revision 0.30 — change log at the end.
+Last Updated: 10-22-26 01:42 · Revision 0.34 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -1689,7 +1689,7 @@ industry column are part of L1.
 
 ## 7d. The lead identifier in every link (rulings 71–73; drafted 10-22-26 for approval)
 
-**Status: APPROVED (10-22-26 01:35) — question 20 answered A (ruling 74), the prefill table in § 7d.4 confirmed as written (ruling 75). Next: the CRM handoff of § 7d.5, crm-test first, then D1. Nothing built.** Rulings 71 to 73
+**Status: APPROVED (10-22-26 01:35) — question 20 answered A (ruling 74), the prefill table in § 7d.4 confirmed as written (ruling 75). The CRM handoff of § 7d.5 is written (10-22-26 01:42, `lead-code-crm-handoff.md`, plan fingerprint `bec909277859`, dry run clean on crm-test). Next: Doug applies it on crm-test (`scripts/prospect_crm_test.sh leadcode`, then `roles`); D1 starts once the fields read back as the org-wide key. Nothing built.** Rulings 71 to 73
 (10-22-26) say that every link delivered to a known person carries that
 person's lead identifier after the campaign link, that the identifier
 belongs to the person for life, and that each form decides for itself what
@@ -1865,9 +1865,15 @@ code typed by hand) still attributes to the lead.
 ### 7d.5 Storage and CRM changes
 
 - **CRM handoff** (one plan file, `scripts/plans/lead-code.json`):
-  `CProspect.leadCode` varchar 16 indexed; `Contact.cLeadCode` varchar 16
-  indexed; `COutreachTouch.outcome` gains `Clicked`; `COutreachTouch`
-  gains `firstClickedAt` (datetime) and `clickCount` (int). Field ACL: the
+  `CProspect.leadCode` varchar 16; `Contact.cLeadCode` varchar 16;
+  `COutreachTouch.outcome` offers `Clicked` (already present, built with
+  the entity); `COutreachTouch` gains `firstClickedAt` (datetime) and
+  `clickCount` (int). **No index** (written 10-22-26): *index* is not a
+  Field Manager parameter for a varchar, the scan token's finding; it is a
+  droplet metadata edit, made only if a production click proves slow. The
+  two conformance cells are field rules on the Marketing Admin Role (read
+  yes, edit no), so every write of either code field goes under the
+  org-wide key. Handoff: `lead-code-crm-handoff.md`. Field ACL: the
   Marketing Admin Role already edits leads and touches; the intake API
   client needs Contact edit for `cLeadCode` (it has Contact edit). Two
   conformance cells.
@@ -2170,6 +2176,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.34 | 10-22-26 01:42 | Claude (Claude Code) | § 7d.5's CRM handoff written (`lead-code-crm-handoff.md`, `scripts/plans/lead-code.json`, fingerprint `bec909277859`; two field rules in `scripts/migrate_outreach_roles.py`). Ruling 74's "indexed" not buildable through the API — recorded in § 7d.5; `Clicked` found already present. Header revision corrected from 0.30. |
 | 0.33 | 10-22-26 01:35 | Claude (Claude Code) | § 7d approved: the prefill table confirmed as written (ruling 75); status line and table heading updated. |
 | 0.32 | 10-22-26 01:34 | Claude (Claude Code) | Question 20 answered A (ruling 74): the code lives in two CRM fields; § 7d.1's storage marked settled. |
 | 0.31 | 10-22-26 01:31 | Claude (Claude Code) | § 7d added: the lead identifier in every link (rulings 71–73) — the per-person code on the lead and the contact, delivery per kind (the vendor custom field and merge tag, the text's `{link}`, the caller's link), the one resolver `/c/{link}/{code}` recording the click, the per-form lookup with a server-side allowlist, the per-form prefill table with Doug's registration example, the handoff, three steps. Question 20 added (where the code lives). |

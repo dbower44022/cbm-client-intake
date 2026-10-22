@@ -1,0 +1,21 @@
+{
+  "name": "lead-code",
+  "description": "Prospect marketing, build plan § 7d.5 (rulings 71-75, 10-22-26): the lead identifier in every link. One code per person for life, held on the lead (CProspect.leadCode, stored as typed - custom entity) and on the contact (Contact.cLeadCode - typed leadCode, prefixed because Contact is not custom), copied from the lead to the contact at promotion. The touch records a click beside a scan. Additive only. None of these fields may be Read-only: the application writes them under the org-wide API key (ruling 40); staff are kept off the two code fields by field rule (scripts/migrate_outreach_roles.py). No index: 'index' is not a Field Manager parameter for varchar (coutreach-entities-crm-handoff.md item (e)). Handoff: lead-code-crm-handoff.md.",
+  "fields": [
+    {"entity": "CProspect", "name": "leadCode", "type": "varchar", "maxLength": 16,
+     "label": "Lead code",
+     "tooltipText": "The code at the end of this lead's personal links (/c/<link>/<code>). Written by the application, the same on every campaign. Never edit by hand: use New code in Campaign Management. Copied to the contact when the lead is promoted."},
+    {"entity": "Contact", "name": "leadCode", "type": "varchar", "maxLength": 16,
+     "label": "Lead code",
+     "tooltipText": "The code at the end of this person's personal links (/c/<link>/<code>). Written by the application; equal to the lead's code when the contact came from a lead. Never edit by hand: use New code on the contact's record page."},
+    {"entity": "COutreachTouch", "name": "firstClickedAt", "type": "datetime",
+     "label": "First clicked at",
+     "tooltipText": "When the person first opened their personal link from an email, a text or a call follow-up. Written once by the application. A click alone changes no status (ruling 51)."},
+    {"entity": "COutreachTouch", "name": "clickCount", "type": "int", "min": 0, "default": 0,
+     "label": "Click count",
+     "tooltipText": "How many times the person's personal link was opened for this campaign. Written by the application."}
+  ],
+  "enumOptions": [
+    {"entity": "COutreachTouch", "field": "outcome", "add": ["Clicked"]}
+  ]
+}
