@@ -803,6 +803,50 @@ only; option C, leave it and stop using Close date. Doug's reply at 22:44: "a".
     later question, once the CRM's history is checked for status changes.
     (10-21-26)
 
+### Doug's ruling (10-22-26, on the lead identifier in every link)
+
+Doug's requirement, 10-22-26 01:17: *"Every link we create, should contain
+a cbm lead identifier. We will modify all of our forms to decide what should
+be done with the information. For example if the form is a user registration
+form, we could fill out all of the information so they could just confirm and
+press a 'Register' button. So each form would decide what was appropriate,
+but all of them could register the lead that initiated the form."* Verified
+first: Constant Contact's standard editor merges a contact variable into a
+link's address (`?p=[[custom.my_custom_field_name]]`), so no custom-code
+email is needed; the merged link does not show in previews or test sends,
+and the vendor's own click report tracks the base address only. Put as one
+decision: option 1, the identifier belongs to the person (one code for
+life); option 2, it belongs to the campaign (a fresh code per send). Doug's
+reply at 01:22: "Option 1".
+
+71. **Every link delivered to a known person carries that person's lead
+    identifier**, after the campaign link: `/c/{link}/{code}`, the shape the
+    postcard already uses. Postcard, email, text and call script carry it;
+    a social media post reaches nobody in particular and carries the
+    campaign link only. For email the mailing push writes the code into one
+    vendor custom field, and the notice's links end in that field's merge
+    tag. (10-22-26)
+
+72. **The lead identifier belongs to the person, not to a campaign**
+    (option 1). One unguessable code per lead, minted once and written to
+    the vendor once; every later campaign reuses it, and the campaign link
+    in front of it says which campaign was clicked. A leaked code stays
+    valid until replaced, so the lead record gets a **New code** action,
+    action-logged. Two campaigns in flight cannot overwrite each other's
+    value. (10-22-26)
+
+73. **Each form decides what to do with the lead it is opened for; every
+    form attributes to it.** A form opened through a link resolves the
+    code to the lead (and its contact and company, when promoted), chooses
+    its own prefill — an event registration may fill everything and offer
+    one Register button; another form may show less — and at delivery
+    writes the lead onto whatever it creates, as the campaign id is written
+    today (ruling 27). Ruling 16's echo rule now governs the postcard
+    landing page only; a form's prefill is that form's decision. Standing
+    cost, weighed by Doug: a forwarded email carries the code, so a form
+    that prefills everything shows the original recipient's details to
+    whoever holds the forward. (10-22-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -923,8 +967,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.36 |
-| Last Updated | 10-21-26 22:44 |
+| Version | 1.37 |
+| Last Updated | 10-22-26 01:30 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -932,6 +976,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.37 | 10-22-26 01:30 | Claude (Claude Code) | Rulings 71–73 appended: every link to a known person carries the lead identifier after the campaign link; the identifier belongs to the person (Doug's "Option 1"); each form decides its prefill and every form attributes to the lead. |
 | 1.36 | 10-21-26 22:44 | Claude (Claude Code) | Ruling 70 appended: an engagement's close date is stamped when it closes (Doug's "a"). |
 | 1.35 | 10-20-26 23:01 | Claude (Claude Code) | Ruling 69 appended: the Marketing Admin Role gains stream all on campaigns and leads (Doug's "a", found on the 521 investigation). |
 | 1.34 | 10-20-26 17:56 | Claude (Claude Code) | Ruling 68 appended: ruling 14 applies to leads only (Doug's "a" to build plan § 9 question 19). |
