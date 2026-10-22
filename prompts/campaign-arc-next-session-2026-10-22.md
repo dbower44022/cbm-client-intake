@@ -3,8 +3,9 @@
 Last Updated: 10-22-26 12:12 · Revision 1.0 — change log at the end.
 
 Operating mode: ARCHITECTURE (the global default). Read
-`prds/prospect-marketing/README.md` first, then `rulings.md` (rulings 1–70
-are binding) and build plan § 7c.
+`prds/prospect-marketing/README.md` first, then `rulings.md` (every ruling is
+binding; 71–76, the lead identifier in every link, came from a parallel
+session on 10-22-26) and build plan § 7c.
 
 ## Where things stand (10-22-26)
 
