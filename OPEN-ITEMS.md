@@ -923,6 +923,32 @@ empty company on a partner/funder now renders as "—" and is fixable in the app
 
 ## Other follow-ups
 
+52. **PHP2Shell aftermath (CVE-2026-109618/9, patched 10-22-26).** All five
+   PHP servers on DigitalOcean patched by Doug with
+   `scripts/patch_php2shell.sh` (runbook
+   https://claude.ai/artifact/Jo5zAXQF7HrEHfv3a2RMX4): crm-test and
+   production to PHP 8.4.27 / EspoCRM 9.3.10; Boston and Lakeside to PHP
+   8.4.27 / EspoCRM 10.0.10; cbm-docs to PHP 8.5.12 / BookStack v26.09.2
+   (verified from the site's own header, 12:36). Production's CRM was
+   unreachable 39 seconds (16:01:08–16:01:47 UTC); every app recovered
+   with no errors in its logs. Follow-ups:
+   - **The CRM compose files are now pinned** to `espocrm/espocrm:9.3.10-fpm`
+     (Cleveland) and `10.0.10-fpm` (Boston, Lakeside). The bare `fpm` tag is
+     EspoCRM 10 — never re-pin Cleveland to it without an EspoCRM 10 ruling.
+     A later EspoCRM security release means re-running the script with the
+     new tag.
+   - **Database dumps left on each CRM server** at
+     `/root/pre-php2shell-20261022-*.sql.gz` (production 226 MB, Lakeside
+     49 MB, Boston 34 MB, crm-test 1.9 MB), plus
+     `docker-compose.yml.pre-php2shell` in `/var/www/espocrm`. They hold
+     personal data: delete them once the patched CRMs have run a week.
+   - **EspoCRM versions after the upgrade are inferred, not read** on
+     production, Boston and Lakeside (the script's version read failed; the
+     containers serve normally, which the image allows only after its
+     upgrade step). Confirm at Administration → About on each.
+   - **Lakeside decision:** it is kept but costs patching like this; tear
+     it down if the rehearsal (TASKS R11) is not coming.
+
 6. **Re-save the session whose notes were lost to the pasted-image failure**
    (found 2026-07-24, fixed in v0.148.0). Prod CSession `6a604b7b26efd8e3f`:
    the 04:37 UTC save 500'd in the CRM ("Data too long for column
