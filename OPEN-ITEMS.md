@@ -959,6 +959,18 @@ empty company on a partner/funder now renders as "—" and is fixable in the app
 
 ## CRM prerequisites outstanding
 
+**Marketing Admin Role: `User` read all, edit own — crm-test DONE 10-22-26,
+production and Boston owed** (ruling 78). Without it a marketer can make
+only themself a campaign's owner; handing it to a colleague is refused
+("read access to the User record this COutreachCampaign links to").
+`scripts/migrate_outreach_roles.py` carries the grant (`scripts/outreach_roles.sh`
+wraps it). On crm-test the grant was already held when Doug's dry run read
+it at 12:50 — inferred, not checked: a parallel session's `--apply` picked up
+the uncommitted line from the shared working tree. Live-passed there 12:51
+as Mark Marketing (handed to Sharon Rose, unchanged save writes nothing).
+Production at the Sunday slot from inside the web container; Boston with its
+release. Campaign Management is dark on both, so nothing breaks meanwhile.
+
 **`CActionLog.record` cannot point at an event — crm-test DONE 2026-10-07,
 production and Boston owed** (found 2026-10-07 in the crm-test web log during
 the Phase B pass). Applied on crm-test by `scripts/migrate_actionlog_record_entities.py`

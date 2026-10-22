@@ -1193,9 +1193,9 @@ push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
 - **v0.275.0 (2026-10-22) — a campaign's owner can be changed** (ruling 76).
-  Committed, not pushed. Owner dropdown on the campaign Overview; rule in
-  `campaigns/CLAUDE.md`. No CRM change. Owed: a live check on crm-test as
-  Mark Marketing.
+  v0.275.0 live; v0.275.1 (ruling 78, the Marketing Admin Role reads User)
+  committed, not pushed. Live-passed on crm-test 10-22-26 12:51 as Mark
+  Marketing. Owed: the role grant on production and Boston (`OPEN-ITEMS.md`).
 - **v0.273.0 (2026-10-21) — an engagement's close date is stamped when it
   closes** (ruling 70). Live on both deployments; Read-only cleared on
   crm-test and live-checked there 10-22-26 00:37 (as Joe Mentor). Inert on production
