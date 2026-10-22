@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-21-26 22:44 · Revision 1.36 — change log at the end.
+Last Updated: 10-22-26 12:07 · Revision 1.40 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -879,6 +879,22 @@ six as written".
     form is the record of this table, and widening a row is a new ruling.
     (10-22-26)
 
+### Doug's ruling (10-22-26, on who may change a campaign's owner)
+
+A campaign's owner is the built-in Assigned User, set to the creator at
+create (build plan § 2); Campaign Management showed it but offered no way
+to change it. Doug chose to add an Owner picker to the campaign Overview,
+then was asked who may use it: option A, any member of the Marketing Admin
+Team; option B, the current owner only, plus administrators. Doug's reply
+at 12:05: "a".
+
+76. **Any member of the Marketing Admin Team may change a campaign's
+    owner** (option A). The Overview carries an Owner picker listing the
+    team's active members; the save writes the campaign's Assigned User and
+    is action-logged. Standing cost, weighed by Doug: anyone on the team
+    can take a campaign over without asking; the action log is the record,
+    nothing prevents it. (10-22-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -999,8 +1015,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.39 |
-| Last Updated | 10-22-26 01:35 |
+| Version | 1.40 |
+| Last Updated | 10-22-26 12:07 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -1008,6 +1024,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.40 | 10-22-26 12:07 | Claude (Claude Code) | Ruling 76 appended: any Marketing Admin Team member may change a campaign's owner through an Owner picker on the Overview (Doug's "a"). Header revision line corrected from 1.36 to match the table. |
 | 1.39 | 10-22-26 01:35 | Claude (Claude Code) | Ruling 75 appended: the per-form prefill table (build plan § 7d.4) approved as written (Doug: "confirm the six as written"). |
 | 1.38 | 10-22-26 01:34 | Claude (Claude Code) | Ruling 74 appended: the lead code lives in two CRM fields (Doug's "a" to build plan § 9 question 20). |
 | 1.37 | 10-22-26 01:30 | Claude (Claude Code) | Rulings 71–73 appended: every link to a known person carries the lead identifier after the campaign link; the identifier belongs to the person (Doug's "Option 1"); each form decides its prefill and every form attributes to the lead. |
