@@ -73,6 +73,9 @@ class Attribution:
 
     campaign: Optional[dict[str, Any]] = None   # {"id", "name"}
     prospect: Optional[dict[str, Any]] = None   # a PROSPECT_SELECT read
+    #: The Contact a lead code named when no lead stands behind it (§ 7d.1:
+    #: a Contact with no lead holds the code alone).
+    contact_id: Optional[str] = None
     #: What the form did with them, for the delivery result.
     written: dict[str, Any] = field(default_factory=dict)
 
@@ -99,6 +102,8 @@ class Attribution:
             out["campaignId"] = self.campaign["id"]
         if self.prospect:
             out["prospectId"] = self.prospect["id"]
+        if self.contact_id and not self.prospect:
+            out["leadContactId"] = self.contact_id
         out.update(self.written)
         return out
 
@@ -186,13 +191,34 @@ async def valid_prospect(client: EspoApi, prospect_id: Optional[str]) -> Optiona
     return row if row and row.get("id") else None
 
 
+async def valid_lead(client: EspoApi, sub: Any) -> tuple[Optional[dict[str, Any]], Optional[str]]:
+    """The lead a submission names, and the Contact when a code names a
+    Contact with no lead behind it. The lead code (§ 7d.3) first; the CRM id
+    ``prospect_id`` only when no code came (a submission captured before
+    D1, kept for one release). Validate-or-drop: an unknown code is dropped
+    with a logged note, never the submission. Never raises."""
+    from . import leadcode
+
+    code = getattr(sub, cfg.PAYLOAD_LEAD_CODE, None)
+    if code:
+        person = await leadcode.resolve(client, code)
+        if person is None:
+            log.warning("lead code dropped: it names nobody on this CRM")
+            return None, None
+        lead = await valid_prospect(client, person.lead_id) if person.lead_id else None
+        return lead, (None if lead else person.contact_id)
+    return await valid_prospect(client, getattr(sub, "prospect_id", None)), None
+
+
 async def resolve(client: EspoApi, sub: Any, *, entity: str) -> Attribution:
     """Validate what the submission carried. ``entity`` is the relationship
     record this form creates — the one whose ``outreachCampaign`` link must
-    exist for the campaign to be honoured."""
+    exist for the campaign to be honoured. A lead code with no campaign (a
+    retired link re-minted, a code typed by hand) still attributes to the
+    lead (§ 7d.4)."""
     campaign = await valid_campaign(client, getattr(sub, "campaign_id", None), entity=entity)
-    prospect = await valid_prospect(client, getattr(sub, "prospect_id", None))
-    return Attribution(campaign=campaign, prospect=prospect)
+    prospect, contact_id = await valid_lead(client, sub)
+    return Attribution(campaign=campaign, prospect=prospect, contact_id=contact_id)
 
 
 # --- the promoted company ---------------------------------------------------------------

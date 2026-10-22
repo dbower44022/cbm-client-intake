@@ -587,9 +587,11 @@ first; `rulings.md` is binding and append-only. **One session on that arc at a
 time.** **Detail: `campaigns/CLAUDE.md`.** Rules other packages rely on,
 chiefly the public form orchestrators in `forms/`:
 
-- **Every public form carries `campaign_id`, `campaign_link`, `prospect_id`**
-  (declared on `core/forms.BaseSubmission` — an undeclared key is dropped by
-  capture) and `sms_consent` → `Contact.cSmsOptIn`, true-only.
+- **Every public form carries `campaign_id`, `campaign_link`, `lead_code`**
+  (`prospect_id` for one more release; declared on
+  `core/forms.BaseSubmission` — an undeclared key is dropped by capture) and
+  `sms_consent` → `Contact.cSmsOptIn`, true-only. A link names a person by
+  **lead code, never a CRM id** (`campaigns/leadcode.py`).
 - **`campaigns/attribution.py` is the one module the orchestrators call**:
   validate-or-drop — an unknown, stale or forged id drops the attribution with
   a logged note, never the submission — and every write feature-detects its
@@ -1196,6 +1198,8 @@ the strength of it.
   v0.275.0 live; v0.275.1 (ruling 78, the Marketing Admin Role reads User)
   committed, not pushed. Live-passed on crm-test 10-22-26 12:51 as Mark
   Marketing. Owed: the role grant on production and Boston (`OPEN-ITEMS.md`).
+- **v0.276.0 (2026-10-22) — lead code D1** (§ 7d). Not pushed; inert
+  without the CRM fields. Owed: live pass, D2 (`OPEN-ITEMS.md` #51).
 - **v0.273.0 (2026-10-21) — an engagement's close date is stamped when it
   closes** (ruling 70). Live on both deployments; Read-only cleared on
   crm-test and live-checked there 10-22-26 00:37 (as Joe Mentor). Inert on production
@@ -1203,10 +1207,6 @@ the strength of it.
   **Standing fact: that field was Read-only on crm-test AND production** — every
   write dropped, no engagement dated. Owed: production, Boston, the backfill
   question (`OPEN-ITEMS.md` #51).
-- **v0.272.0 (2026-10-21) — the status picker on the partner and funder
-  Overview.** Pushed; live on crm-test and production 22:33. Rule in
-  `sessions/CLAUDE.md`. Checked live on crm-test 10-21-26 22:36 as Sally Sponsor
-  (funder); the partner badge rides the same code.
 - **v0.271.0 (2026-10-21) — campaign lists, L2 (clients, partners,
   funders).** Committed, not pushed; dark. Build plan § 7c.7; standing rules
   in `campaigns/CLAUDE.md`. **Live-passed on crm-test 10-21-26 22:30**; funder status

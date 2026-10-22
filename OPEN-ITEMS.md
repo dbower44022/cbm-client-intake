@@ -94,7 +94,11 @@ found; move resolved items to the bottom with the resolution date.
     written 10-22-26 01:42** (`lead-code-crm-handoff.md`, plan fingerprint
     `bec909277859`, two field rules in the role script). **Applied on
     crm-test 10-22-26 12:45–12:48 by Doug and read back by Claude 12:50.**
-    Owed: D1; production and Boston with the arc's slot.
+    **D1 built 10-22-26 13:00 (v0.276.0, committed, not pushed)**; its code
+    paths tried against crm-test as the org-wide key (mint, copy to the
+    contact, resolve, per-form prefill, cleared after). Owed: push, the D1
+    live pass as Mark Marketing on crm-test, D2, D3; production and Boston
+    with the arc's slot.
     **At the production slot, also do these two (added 10-22-26; both
     live-passed on crm-test 10-22-26 as Mark Marketing). Without them, no
     campaign action records any history on production:**

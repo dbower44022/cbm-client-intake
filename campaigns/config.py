@@ -70,6 +70,8 @@ TOUCH_RETURNED = "Returned"
 TOUCH_DONE = "Done"
 TOUCH_CANCELLED = "Cancelled"
 OUTCOME_SCANNED = "Scanned"
+#: A personal link opened from an email, a text or a call follow-up (§ 7d.3).
+OUTCOME_CLICKED = "Clicked"
 #: Ruling 20's three call outcomes (§ 3.4).
 OUTCOME_NO_ANSWER = "No answer"
 OUTCOME_INTERESTED = "Interested"
@@ -217,3 +219,28 @@ LINK_RETIRED = "retired"
 PAYLOAD_CAMPAIGN_ID = "campaign_id"
 PAYLOAD_CAMPAIGN_LINK = "campaign_link"
 PAYLOAD_PROSPECT_ID = "prospect_id"
+#: The person's lead code (§ 7d.3, rulings 71-74). Replaces ``prospect_id`` on
+#: the forms; capture keeps both for one release so a held submission from
+#: before the change still delivers.
+PAYLOAD_LEAD_CODE = "lead_code"
+
+# --- the per-form prefill allowlist (ruling 75, build plan § 7d.4) --------------
+#: What ``GET /api/campaigns/public/lead/{code}?form=<key>`` may answer for each
+#: form, and nothing more. THIS TABLE IS RULING 75: widening a row is a new
+#: ruling, never an edit. Keys are the public response's names; ``company*`` come
+#: from the person's Company when they have one, else from the lead's business
+#: half. ``businessName`` and ``mailing*`` on the landing row are what the card
+#: printed (ruling 16).
+PREFILL_FIELDS: dict[str, tuple[str, ...]] = {
+    # "Everything the form asks" (ruling 75). The registration form asks name,
+    # email, phone and ZIP; § 7d.4's row also named a company and a business-
+    # stage question, which the form does not ask (read 10-22-26).
+    "event-registration": ("firstName", "lastName", "email", "phone", "zip"),
+    "info-request": ("firstName", "lastName", "email", "phone", "companyName"),
+    "client-intake": ("firstName", "lastName", "email", "phone", "companyName", "companyWebsite",
+                      "companyStreet", "companyCity", "companyState", "companyZip"),
+    "volunteer": ("firstName", "lastName", "email", "phone"),
+    "partner": ("firstName", "lastName", "email", "phone", "companyName", "companyWebsite"),
+    "sponsor": ("firstName", "lastName", "email", "phone", "companyName", "companyWebsite"),
+    "landing": ("businessName", "mailingStreet", "mailingCity", "mailingState", "mailingZip"),
+}

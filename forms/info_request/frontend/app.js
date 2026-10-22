@@ -50,6 +50,7 @@
       campaign_id: strOrNull("campaign_id"),
       campaign_link: strOrNull("campaign_link"),
       prospect_id: strOrNull("prospect_id"),
+      lead_code: strOrNull("lead_code"),
     };
   }
 

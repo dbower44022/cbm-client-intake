@@ -306,6 +306,29 @@ async def _target_for(client: EspoApi, touch: dict[str, Any]) -> Optional[dict[s
     return None
 
 
+async def card_code(client: EspoApi, target: dict[str, Any]) -> str:
+    """The code printed on the card (§ 7d.1): the person's lead code — the
+    lead's, or a Contact's — minted now if they have none, so the card, the
+    landing page and every later email or text name the same person the same
+    way. A card to a Company has no person behind it and keeps a per-card
+    token, as does every card on a CRM without the code fields. A retry gets
+    the same code back, so the vendor's piece (keyed on the touch) and the
+    touch agree."""
+    from . import leadcode
+
+    record = target.get("record") or {}
+    if record.get("id"):
+        if target.get("kind") == "prospect":
+            code = await leadcode.ensure_for_lead(client, record["id"])
+        elif target.get("kind") == "contact":
+            code = await leadcode.ensure_for_contact(client, record["id"])
+        else:
+            code = None
+        if code:
+            return code
+    return new_scan_token()
+
+
 async def run_campaign(client: EspoApi, campaign: dict[str, Any], *, vendor: PostalClient,
                        store, settings: Settings, stop=None) -> dict[str, int]:
     """Execute one signed-off postcard campaign: each Planned touch becomes a
@@ -343,7 +366,7 @@ async def run_campaign(client: EspoApi, campaign: dict[str, Any], *, vendor: Pos
                     "touchStatus": cfg.TOUCH_CANCELLED, "vendorStatus": "no mailable address"})
                 totals["skipped"] += 1
                 continue
-            scan = new_scan_token()
+            scan = await card_code(client, target)
             card_url = f"{base}/c/{link['token']}/{scan}"
             piece = await vendor.create_postcard(
                 idempotency_key=touch["id"], to=target["address"],

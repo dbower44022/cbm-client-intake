@@ -5,6 +5,55 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.276.0] — 2026-10-22
+
+**feat(campaigns): the lead code in every link — D1, the code and the
+resolver** (build plan § 7d, rulings 71–75 and 77). Needs the CRM change in
+`lead-code-crm-handoff.md` (applied on crm-test 10-22-26); on a CRM without
+the two code fields nothing below happens and every page behaves as before.
+
+- **One code per person, for life** (`campaigns/leadcode.py`): twelve
+  characters, held on the lead (`CProspect.leadCode`) and on the contact
+  (`Contact.cLeadCode`), minted the first time a campaign needs it. A
+  conversion copies the lead's code to its contact and never mints a second
+  (`conversion.mark_converted`). Every write runs under the org-wide or intake
+  API key, because the Marketing Admin Role may only read the two fields.
+- **A postcard prints the person's code.** The card's address keeps its
+  shape, `/c/{link}/{code}`, but the code is now the lead's (or the list
+  contact's) instead of a per-card token, so the card, the landing page and
+  every later link name the same person the same way. A card to a company,
+  and every card on a CRM without the fields, keeps a per-card token. Cards
+  already printed still open.
+- **`/c/{link}/{code}` serves every kind.** A form, event or programme link
+  302s on with `&lead=<code>`; a landing link still opens `/p/{code}`. The
+  redirect still never waits on the CRM (ruling 31): the click is written on
+  the person's touch for that campaign by a background task after the answer
+  has gone — `clickCount` every time, `firstClickedAt` once, outcome
+  *Clicked* only when the touch has none (a call's outcome or a scan is never
+  overwritten). A forwarded link, or one whose person has no touch on the
+  campaign, records nothing and still carries the code to the form.
+- **The forms carry `lead_code`**: a new hidden field on the five public
+  forms, carried by the event page, the webinar list and the programme page's
+  event links. `prospect_id` stays for one release so a submission captured
+  before this still delivers. At delivery `attribution.valid_lead` reads the
+  code first; an unknown code drops the attribution, never the submission. A
+  code naming a contact with no lead behind it is reported as
+  `leadContactId`.
+- **The per-form lookup** `GET /api/campaigns/public/lead/{code}?form=<form>`
+  answers only what ruling 75 allows that form (`cfg.PREFILL_FIELDS`), from
+  the contact and its company when there are any, else from the lead. Every
+  failure is the same 404. In this release the forms fill only the company
+  half from it; the person's own details wait for D2 and its "Not you?" line.
+  The old `/api/campaigns/prospect/{id}` stays for one release.
+- **The landing page hands the forms the code**, not the CRM id, minting it
+  for a lead on an older card. When one code sits on two cards (a contact on
+  two list campaigns), the campaign of the link the card was opened through
+  picks the card.
+- **The sandbox**: the nightly demo-link restore also gives the five demo
+  cards' leads their card token as their lead code
+  (`sandbox_demo.restore_demo_codes`), so demo links stay fixed with no
+  baseline recapture.
+
 ## [0.275.1] — 2026-10-22
 
 **fix(campaigns): handing a campaign to a colleague** (ruling 78). The live

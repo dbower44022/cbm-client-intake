@@ -133,6 +133,37 @@ def plan_text(plan: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+async def restore_demo_codes(client) -> dict[str, int]:
+    """Build plan § 7d.1 on the sandbox: each demo card's lead holds the card's
+    own token as its lead code, so the training guide's card addresses and
+    every personal link built from those leads stay fixed. The codes live in
+    the CRM, which the nightly restore puts back to its baseline — a baseline
+    captured before the code fields existed holds none — so they are written
+    here every night, like the links. Idempotent; a lead already holding its
+    code is left. Skipped entirely on a CRM without the code fields."""
+    from . import leadcode
+
+    totals = {"set": 0, "present": 0, "skipped": 0}
+    if not await leadcode.available(client):
+        totals["skipped"] = len(DEMO_SCAN_TOKENS)
+        return totals
+    for code in DEMO_SCAN_TOKENS:
+        touch = await client.find_one(cfg.TOUCH, "scanToken", code, select="id,prospectId,contactId")
+        lead_id = (touch or {}).get("prospectId")
+        if not lead_id:
+            totals["skipped"] += 1
+            continue
+        lead = await client.get(cfg.PROSPECT, lead_id, select=leadcode.LEAD_SELECT)
+        if lead.get(leadcode.LEAD_FIELD) == code:
+            totals["present"] += 1
+        else:
+            await client.update(cfg.PROSPECT, lead_id, {leadcode.LEAD_FIELD: code})
+            totals["set"] += 1
+        if lead.get("promotedContactId"):
+            await leadcode.sync_on_conversion(client, lead_id, lead["promotedContactId"])
+    return totals
+
+
 async def restore_demo_links(store, client) -> dict[str, int]:
     """Create every demo link the store lacks. Idempotent by code: a link that
     is already there is left exactly as it is."""
@@ -183,6 +214,12 @@ async def run_after_reset(settings: Settings) -> dict[str, int]:
         totals = await restore_demo_links(store, client)
         log.info("sandbox demo links: %s created, %s present, %s skipped",
                  totals["created"], totals["present"], totals["skipped"])
+        try:
+            codes = await restore_demo_codes(client)
+            log.info("sandbox demo lead codes: %s set, %s present, %s skipped",
+                     codes["set"], codes["present"], codes["skipped"])
+        except Exception as exc:  # noqa: BLE001 — the links still count
+            log.warning("sandbox demo lead codes not restored: %s", exc)
         return totals
     except (EspoError, Exception) as exc:  # noqa: BLE001
         log.warning("sandbox demo links not restored: %s", exc)
@@ -203,6 +240,8 @@ async def job_apply(settings: Settings) -> str:
     store, client = _parts(settings)
     try:
         t = await restore_demo_links(store, client)
-        return f"{t['created']} demo links created, {t['present']} already present, {t['skipped']} skipped."
+        c = await restore_demo_codes(client)
+        return (f"{t['created']} demo links created, {t['present']} already present, {t['skipped']} skipped. "
+                f"Lead codes: {c['set']} set, {c['present']} present, {c['skipped']} skipped.")
     finally:
         await store.dispose()

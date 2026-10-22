@@ -76,14 +76,62 @@ def _client(request: Request) -> EspoApi:
     return factory()
 
 
-async def resolve_touch(client: EspoApi, scan_token: str) -> Optional[dict[str, Any]]:
-    """The touch a card token names, or None. A Cancelled touch is None too."""
+async def resolve_touch(client: EspoApi, scan_token: str,
+                        campaign_id: Optional[str] = None) -> Optional[dict[str, Any]]:
+    """The touch a card token names, or None. A Cancelled touch is None too.
+
+    Since § 7d.1 a card's token is the person's lead code, so a Contact sent
+    cards by two list campaigns (ruling 68 does not apply ruling 14 to them)
+    has two touches with one token: the campaign of the link the card was
+    opened through decides, else the most recently sent card."""
     if not looks_like_token(scan_token):
         return None
-    touch = await client.find_one(cfg.TOUCH, "scanToken", scan_token, select=cfg.TOUCH_SELECT)
-    if not touch or touch.get("touchStatus") == cfg.TOUCH_CANCELLED:
+    page = await client.list(cfg.TOUCH, select=cfg.TOUCH_SELECT, max_size=20,
+                             where=[{"type": "equals", "attribute": "scanToken", "value": scan_token}])
+    rows = [t for t in page.get("list", []) if t.get("touchStatus") != cfg.TOUCH_CANCELLED]
+    if not rows:
         return None
-    return touch
+    if campaign_id:
+        mine = [t for t in rows if t.get("outreachCampaignId") == campaign_id]
+        if mine:
+            rows = mine
+    rows.sort(key=lambda t: t.get("sentAt") or "", reverse=True)
+    return rows[0]
+
+
+async def _link_campaign(request: Request, link: str) -> Optional[str]:
+    """The campaign of the link token the card was opened through, from the
+    application's own database; None when unknown."""
+    store = getattr(request.app.state, "campaign_store", None)
+    if store is None or not looks_like_token(link or ""):
+        return None
+    try:
+        row = await store.get_link_by_token(link.lower())
+    except Exception as exc:  # noqa: BLE001
+        log.info("landing: link %s not read (%s)", link, exc)
+        return None
+    return (row or {}).get("campaign_id") or None
+
+
+async def lead_code_for(client: EspoApi, touch: dict[str, Any]) -> str:
+    """The code the forms after this page carry (§ 7d.3): the card's own token
+    when it is the person's lead code, else the lead's code (an older card),
+    minted if the lead has none. "" on a CRM without the code fields or for a
+    card to a Company. Best-effort."""
+    from . import leadcode
+
+    try:
+        if not await leadcode.available(client):
+            return ""
+        if touch.get("prospectId"):
+            return await leadcode.ensure_for_lead(client, touch["prospectId"]) or ""
+        if touch.get("contactId"):
+            return await leadcode.ensure_for_contact(client, touch["contactId"]) or ""
+    except EspoError as exc:
+        log.warning("landing: no lead code for touch %s: %s", touch.get("id"), exc)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("landing: lead code for touch %s errored: %s", touch.get("id"), exc)
+    return ""
 
 
 async def record_scan(client: EspoApi, touch: dict[str, Any]) -> dict[str, Any]:
@@ -133,7 +181,7 @@ async def landing_page(scan_token: str, request: Request, link: str = "") -> HTM
     scan_token = scan_token.lower()
     client = _client(request)
     try:
-        touch = await resolve_touch(client, scan_token)
+        touch = await resolve_touch(client, scan_token, await _link_campaign(request, link))
     except EspoError as exc:
         log.warning("landing resolve failed: %s", exc)
         raise HTTPException(status_code=503, detail="The page is temporarily unavailable.")
@@ -141,12 +189,15 @@ async def landing_page(scan_token: str, request: Request, link: str = "") -> HTM
         raise HTTPException(status_code=404, detail=NOT_FOUND)
     scan = await record_scan(client, touch)
     printed = _printed(touch)
+    # A preview writes nothing — no code is minted for an unsent card.
+    code = "" if scan.get("preview") else await lead_code_for(client, touch)
     values = {
         "scanToken": scan_token,
         "campaignId": touch.get("outreachCampaignId") or "",
         "campaignName": touch.get("outreachCampaignName") or "",
         "linkToken": link.lower() if looks_like_token(link) else "",
         "prospectId": touch.get("prospectId") or "",
+        "leadCode": code,
         "preview": "1" if scan.get("preview") else "",
         **printed,
     }
@@ -176,7 +227,7 @@ def make_landing_routes(process: Callable[[Any], Awaitable[Any]]) -> APIRouter:
         body["scan_token"] = scan_token
         client = _client(request)
         try:
-            touch = await resolve_touch(client, scan_token)
+            touch = await resolve_touch(client, scan_token, body.get("campaign_id") or None)
         except EspoError as exc:
             log.warning("landing respond resolve failed: %s", exc)
             raise HTTPException(status_code=503, detail="Please try again in a moment.")

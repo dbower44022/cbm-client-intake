@@ -1,6 +1,6 @@
 # campaigns/ — Campaign Management
 
-Last Updated: 10-22-26 12:25 · Revision 1.3
+Last Updated: 10-22-26 13:00 · Revision 1.4
 
 Detail for Campaign Management (`/campaigns`, prospect marketing Phases 1 to 4 and the lead model): links, postcards, the landing page, imports, the Leads and Review grids, calls, texts, email, attribution and reporting.
 
@@ -255,6 +255,22 @@ the reason.
   every contact (`ORG_SHAPE` names the links) when the campaign ticks
   *Include every contact* (ruling 59); its card goes to its company
   (ruling 68, no ruling-14 check).
+- **The lead code** (v0.276.0, build plan § 7d D1, rulings 71–75 and 77;
+  `campaigns/leadcode.py`). One twelve-character code per person, for life:
+  `CProspect.leadCode`, copied to `Contact.cLeadCode` at conversion
+  (`mark_converted` → `sync_on_conversion`), never a second. **Write it only
+  under an API key** — the Marketing Admin Role holds a read-only field rule
+  on both, so a marketer's own write is dropped with HTTP 200. Feature-
+  detected (`leadcode.available`); never put either field in a static
+  select. `/c/{link}/{code}` carries it on as `&lead=` (landing: `/p/{code}`)
+  and **still never waits on the CRM** — the click is a `BackgroundTasks`
+  write after the 302. The postcard prints the person's code as its
+  `scanToken`, so one token may sit on several touches: resolve a card with
+  `landing.resolve_touch(client, token, campaign_id)`, never `find_one`.
+  The public lookup `/api/campaigns/public/lead/{code}?form=` answers
+  `cfg.PREFILL_FIELDS[form]` and nothing more — **that table is ruling 75;
+  widening a row is a new ruling**. The sandbox's demo cards get their card
+  token as their lead code every night (`sandbox_demo.restore_demo_codes`).
 - Owed: nothing on production's CRM (both slots done 10-18-26; every
   campaign switch off there — turning one on is Doug's call at `/setup`);
   Boston with its release; a seeder and sandbox re-baseline; the Twilio
@@ -265,6 +281,7 @@ the reason.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.4 | 10-22-26 13:00 | Claude (Claude Code) | The lead code bullet (v0.276.0, § 7d D1). |
 | 1.3 | 10-22-26 12:25 | Claude (Claude Code) | The campaign owner bullet (ruling 76, v0.275.0). |
 | 1.2 | 10-21-26 16:01 | Claude (Claude Code) | Campaign lists L2 (v0.271.0). |
 | 1.1 | 10-20-26 18:20 | Claude (Claude Code) | Campaign lists L1 (v0.270.0) bullet added. |

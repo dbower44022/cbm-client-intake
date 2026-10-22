@@ -49,6 +49,7 @@
       campaign_id: document.getElementById("campaign_id").value || null,
       campaign_link: document.getElementById("campaign_link").value || null,
       prospect_id: document.getElementById("prospect_id").value || null,
+      lead_code: (document.getElementById("lead_code") || {}).value || null,
     };
   }
 

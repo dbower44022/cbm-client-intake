@@ -56,7 +56,9 @@
   function campaignQuery() {
     var c = campaignParam("campaign"), l = campaignParam("link");
     if (!c) return "";
-    return "campaign=" + encodeURIComponent(c) + (l ? "&link=" + encodeURIComponent(l) : "");
+    var d = campaignParam("lead");
+    return "campaign=" + encodeURIComponent(c) + (l ? "&link=" + encodeURIComponent(l) : "")
+      + (d ? "&lead=" + encodeURIComponent(d) : "");
   }
 
   async function register(item, fields) {
@@ -74,6 +76,7 @@
       sms_consent: !!fields.smsConsent,
       campaign_id: campaignParam("campaign"),
       campaign_link: campaignParam("link"),
+      lead_code: campaignParam("lead"),   // the person's lead code (build plan § 7d.3)
     };
     var resp = await fetch(
       "/api/events/" + encodeURIComponent(item.slug || "") + "/register",

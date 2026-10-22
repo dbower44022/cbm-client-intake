@@ -1,14 +1,21 @@
 """The public, unauthenticated half of Campaign Management (build plan § 3.7).
 
     GET /c/{token}                        resolve a campaign link: count the visit, 302 on
-    GET /c/{token}/{scan}                 a card's code: count the visit, 302 to /p/{scan}
+    GET /c/{token}/{code}                 a person's link (§ 7d.3): count the visit, 302 on with
+                                          ?lead=<code>; a landing link 302s to /p/{code}. The
+                                          click is recorded on the touch AFTER the answer
     GET /c/{token}/{scan}/qr.png          the card's QR image, for the vendor's template
     GET /api/campaigns/public/{id}        the campaign's NAME and nothing else (the banner)
+    GET /api/campaigns/public/lead/{code} one form's prefill for a lead code (ruling 75's allowlist)
 
 Rules kept here:
 
 * **The resolve never calls the CRM** (ruling 31). A link's destination, state
-  and an event link's cached slug all live in the application database.
+  and an event link's cached slug all live in the application database. A
+  person's code rides to the destination unchecked; the click is written on
+  the touch by a background task after the 302 has gone (§ 7d.3 step 3), and
+  the form's own lookup is what finds out whether the code names anyone — an
+  unknown code there opens the form empty, exactly as § 7d.3 step 2 asks.
 * **A token that resolves to nothing is a 404 in the same words whatever the
   reason** — malformed, unknown, or a landing link opened without a card token —
   so the route cannot be used to probe which tokens exist.
@@ -27,7 +34,7 @@ import re
 from typing import Any, Optional
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 
 from core.config import Settings, get_settings
@@ -62,9 +69,16 @@ def _active(settings: Settings) -> None:
 def destination_path(link: dict[str, Any], *, scan_token: Optional[str] = None) -> Optional[str]:
     """Where a link sends the visitor, with the campaign id and the link token
     appended (``?campaign=&link=``) so the public form it opens can carry them into the
-    captured payload. None when there is nowhere sensible to go."""
+    captured payload. None when there is nowhere sensible to go.
+
+    ``scan_token`` is the second part of ``/c/{link}/{code}``: a person's lead
+    code (§ 7d.3), or an older card's per-touch token. A landing link sends it
+    to ``/p/{code}``; every other destination carries it as ``&lead=<code>`` —
+    the code rides, never a CRM id."""
     kind = link.get("destination_kind")
     params = {"campaign": link["campaign_id"], "link": link["token"]}
+    if scan_token and kind != cfg.DEST_LANDING:
+        params["lead"] = scan_token
     if kind == cfg.DEST_FORM:
         slug = link.get("destination_target") or ""
         if slug not in cfg.FORM_DESTINATIONS:
@@ -92,7 +106,19 @@ def _client_address(request: Request) -> str:
     return request.client.host if request.client else "?"
 
 
-async def _resolve(request: Request, token: str, scan_token: Optional[str]) -> RedirectResponse:
+async def _click_later(factory, campaign_id: str, code: str) -> None:
+    """The click, written after the visitor has their redirect (§ 7d.3 step 3)."""
+    from datetime import datetime, timezone
+    from . import leadcode
+
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    out = await leadcode.record_click(factory(), campaign_id, code, now)
+    if not out.get("recorded"):
+        log.info("click on campaign %s not written on a touch: %s", campaign_id, out.get("reason"))
+
+
+async def _resolve(request: Request, token: str, scan_token: Optional[str],
+                   background: Optional[BackgroundTasks] = None) -> RedirectResponse:
     settings = get_settings()
     _active(settings)
     if not looks_like_token(token) or (scan_token is not None and not looks_like_token(scan_token)):
@@ -113,6 +139,11 @@ async def _resolve(request: Request, token: str, scan_token: Optional[str]) -> R
         )
     except Exception as exc:  # noqa: BLE001 — the visitor still gets through
         log.warning("campaign link visit not recorded for %s: %s", token, exc)
+    # A personal link's click (§ 7d.3). The landing page records its own scan.
+    factory = getattr(request.app.state, "events_client_factory", None)
+    if (scan_token and background is not None and factory is not None
+            and link.get("destination_kind") != cfg.DEST_LANDING):
+        background.add_task(_click_later, factory, link["campaign_id"], scan_token)
     # 302, not 307/308: the destination can be corrected after the card is
     # printed, so nothing may cache it as permanent.
     return RedirectResponse(url=target, status_code=302, headers={"Cache-Control": "no-store"})
@@ -124,8 +155,8 @@ async def resolve_link(token: str, request: Request):
 
 
 @public_router.get("/c/{token}/{scan_token}", include_in_schema=False)
-async def resolve_card(token: str, scan_token: str, request: Request):
-    return await _resolve(request, token.lower(), scan_token.lower())
+async def resolve_card(token: str, scan_token: str, request: Request, background: BackgroundTasks):
+    return await _resolve(request, token.lower(), scan_token.lower(), background)
 
 
 @public_router.get("/c/{token}/{scan_token}/qr.png", include_in_schema=False)
@@ -172,6 +203,89 @@ async def campaign_name(campaign_id: str, request: Request) -> dict[str, Any]:
     return {"campaign": found}
 
 
+def _company_fields(company: Optional[dict[str, Any]], lead: Optional[dict[str, Any]]) -> dict[str, str]:
+    """The company half of a prefill: the person's Company when they have one,
+    else the lead's business half (§ 7d.4)."""
+    if company:
+        return {"companyName": company.get("name") or "", "companyWebsite": company.get("website") or "",
+                "companyStreet": company.get("billingAddressStreet") or "",
+                "companyCity": company.get("billingAddressCity") or "",
+                "companyState": company.get("billingAddressState") or "",
+                "companyZip": company.get("billingAddressPostalCode") or ""}
+    lead = lead or {}
+    return {"companyName": lead.get("businessName") or "", "companyWebsite": lead.get("website") or "",
+            "companyStreet": lead.get("mailingAddressStreet") or "", "companyCity": lead.get("mailingAddressCity") or "",
+            "companyState": lead.get("mailingAddressState") or "", "companyZip": lead.get("mailingAddressPostalCode") or ""}
+
+
+async def lead_prefill(client, code: str, form: str) -> Optional[dict[str, str]]:
+    """One form's prefill for ``code`` — exactly the keys ``cfg.PREFILL_FIELDS``
+    allows that form, from the Contact when the person has one, else from the
+    lead. None when the code names nobody or the form is not on the list."""
+    from . import leadcode
+
+    allowed = cfg.PREFILL_FIELDS.get(form)
+    if not allowed:
+        return None
+    person = await leadcode.resolve(client, code)
+    if person is None:
+        return None
+    lead = contact = company = None
+    if person.lead_id:
+        lead = await client.get(cfg.PROSPECT, person.lead_id, select=cfg.PROSPECT_SELECT)
+    if person.contact_id:
+        contact = await client.get(cfg.CONTACT, person.contact_id,
+                                   select="id,firstName,lastName,emailAddress,phoneNumber,addressPostalCode,accountId")
+    company_id = (contact or {}).get("accountId") or (lead or {}).get("promotedCompanyId")
+    if company_id:
+        try:
+            company = await client.get(cfg.ACCOUNT, company_id,
+                                       select="id,name,website,billingAddressStreet,billingAddressCity,"
+                                              "billingAddressState,billingAddressPostalCode")
+        except EspoError:
+            company = None
+    src = contact or {}
+    ld = lead or {}
+    values: dict[str, str] = {
+        "firstName": src.get("firstName") or ld.get("firstName") or "",
+        "lastName": src.get("lastName") or ld.get("lastName") or "",
+        "email": src.get("emailAddress") or ld.get("email") or "",
+        "phone": src.get("phoneNumber") or ld.get("phone") or "",
+        "zip": src.get("addressPostalCode") or ld.get("mailingAddressPostalCode") or "",
+        "businessName": ld.get("businessName") or ld.get("name") or "",
+        "mailingStreet": ld.get("mailingAddressStreet") or "", "mailingCity": ld.get("mailingAddressCity") or "",
+        "mailingState": ld.get("mailingAddressState") or "", "mailingZip": ld.get("mailingAddressPostalCode") or "",
+        **_company_fields(company, lead),
+    }
+    return {k: values.get(k, "") for k in allowed}
+
+
+@public_router.get("/api/campaigns/public/lead/{code}", include_in_schema=False)
+async def lead_lookup(code: str, request: Request, form: str = "") -> dict[str, Any]:
+    """The per-form prefill (§ 7d.4, ruling 75): ``{"lead": {...}}`` holding only
+    the named form's allowlisted keys, or 404. A code that names nobody, a
+    malformed code, an unknown form and a CRM outage are all the same 404 —
+    the route cannot be used to learn which codes exist."""
+    settings = get_settings()
+    _active(settings)
+    code = (code or "").lower()
+    if not looks_like_token(code) or form not in cfg.PREFILL_FIELDS:
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
+    factory = getattr(request.app.state, "events_client_factory", None)
+    if factory is None:
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
+    try:
+        values = await lead_prefill(factory(), code, form)
+    except Exception as exc:  # noqa: BLE001 — degrade, never 500
+        log.info("lead lookup failed: %s", exc)
+        values = None
+    if not values:
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
+    return {"lead": values}
+
+
+# Kept for one release (D1, 10-22-26): a browser that loaded the old
+# campaign-link.js still asks here. Remove with the prospect_id hidden field.
 @public_router.get("/api/campaigns/prospect/{prospect_id}", include_in_schema=False)
 async def prospect_printed(prospect_id: str, request: Request) -> dict[str, Any]:
     """The standard forms' prefill after a landing-page handoff: ONLY the

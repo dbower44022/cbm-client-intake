@@ -34,6 +34,10 @@ class BaseSubmission(BaseModel):
     campaign_id: Optional[str] = Field(default=None, max_length=32)
     campaign_link: Optional[str] = Field(default=None, max_length=16)
     prospect_id: Optional[str] = Field(default=None, max_length=32)
+    # The person's lead code (build plan § 7d.3, rulings 71-74): what a personal
+    # link carries instead of a CRM id. ``prospect_id`` stays for one release so
+    # a submission captured before the change still delivers.
+    lead_code: Optional[str] = Field(default=None, max_length=16)
 
 
 # An orchestrator turns a validated submission into created EspoCRM record ids.

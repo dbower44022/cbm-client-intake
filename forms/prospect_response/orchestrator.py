@@ -62,7 +62,10 @@ def _details(sub: ProspectResponse) -> Details:
 
 
 async def orchestrate(sub: ProspectResponse, client: EspoApi) -> dict[str, Any]:
-    touch = await client.find_one(cfg.TOUCH, "scanToken", sub.scan_token, select=cfg.TOUCH_SELECT)
+    # One token can sit on two cards since § 7d.1 (a Contact on two list
+    # campaigns); the campaign the response came through decides.
+    from campaigns.landing import resolve_touch
+    touch = await resolve_touch(client, sub.scan_token, sub.campaign_id or None)
     if not touch:
         raise ValueError(f"No postcard carries the token {sub.scan_token!r}; the response cannot be filed.")
     campaign_id = touch.get("outreachCampaignId") or sub.campaign_id or None

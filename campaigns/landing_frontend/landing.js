@@ -14,6 +14,9 @@
   var campaignId = body.getAttribute("data-campaign-id") || "";
   var linkToken = body.getAttribute("data-link-token") || "";
   var prospectId = body.getAttribute("data-prospect-id") || "";
+  // The person's lead code (build plan § 7d.3): the forms after this page
+  // carry it instead of the CRM id. Empty on a CRM without the code fields.
+  var leadCode = body.getAttribute("data-lead-code") || "";
   var preview = body.getAttribute("data-preview") === "1";
   var HANDOFF_KEY = "cbm-prospect-handoff";
 
@@ -76,7 +79,8 @@
   function nextUrl(action) {
     var slug = action === "mentor" ? "client-intake" : "info-request";
     var q = [];
-    if (prospectId) q.push("prospect=" + encodeURIComponent(prospectId));
+    if (leadCode) q.push("lead=" + encodeURIComponent(leadCode));
+    else if (prospectId) q.push("prospect=" + encodeURIComponent(prospectId));
     if (campaignId) q.push("campaign=" + encodeURIComponent(campaignId));
     if (linkToken) q.push("link=" + encodeURIComponent(linkToken));
     return "/" + slug + "/" + (q.length ? "?" + q.join("&") : "");

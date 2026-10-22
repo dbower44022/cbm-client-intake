@@ -219,7 +219,8 @@ async def submit_application(sub: VolunteerApplication, client: EspoApi) -> dict
     # Ruling 48: a new Contact has a lead behind it, Converted at once, its Lead
     # Source this form; a lead the form named is Converted. The volunteer form
     # honours no campaign (prospect marketing § 5 names five public forms).
-    attr = attrib.Attribution(prospect=await attrib.valid_prospect(client, getattr(sub, "prospect_id", None)))
+    lead, lead_contact = await attrib.valid_lead(client, sub)
+    attr = attrib.Attribution(prospect=lead, contact_id=lead_contact)
     await attrib.record_lead(client, attr, source=campaign_cfg.SOURCE_VOLUNTEER,
                              contact_id=contact_id, values=attrib.lead_values(sub))
     return {"contactId": contact_id, "mentorProfileId": profile_id, **attr.result()}

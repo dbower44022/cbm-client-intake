@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-22-26 12:40 · Revision 0.35 — change log at the end.
+Last Updated: 10-22-26 13:00 · Revision 0.36 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -1690,7 +1690,7 @@ industry column are part of L1.
 
 ## 7d. The lead identifier in every link (rulings 71–73; drafted 10-22-26 for approval)
 
-**Status: APPROVED (10-22-26 01:35) — question 20 answered A (ruling 74), the prefill table in § 7d.4 confirmed as written (ruling 75). The CRM handoff of § 7d.5 is written (10-22-26 01:42, `lead-code-crm-handoff.md`, plan fingerprint `bec909277859`, dry run clean on crm-test). Next: Doug applies it on crm-test (`scripts/prospect_crm_test.sh leadcode`, then `roles`); D1 starts once the fields read back as the org-wide key. Nothing built.** Rulings 71 to 73
+**Status: APPROVED (10-22-26 01:35) — question 20 answered A (ruling 74), the prefill table in § 7d.4 confirmed as written (ruling 75). The CRM handoff of § 7d.5 is written (10-22-26 01:42, `lead-code-crm-handoff.md`, plan fingerprint `bec909277859`, dry run clean on crm-test). Applied on crm-test 10-22-26 12:45–12:48 and read back. **D1 built 10-22-26 13:00 (v0.276.0, committed, not pushed)**; its live pass on crm-test is owed, then D2.** Rulings 71 to 73
 (10-22-26) say that every link delivered to a known person carries that
 person's lead identifier after the campaign link, that the identifier
 belongs to the person for life, and that each form decides for itself what
@@ -1890,7 +1890,21 @@ Behind no new switch: the resolver and the lookups are inert until a code
 exists, and a code exists only when a campaign mints one or staff press
 *New code*. Each step has a live pass on crm-test as a real non-admin.
 
-1. **D1 — the code and the resolver.** The CRM handoff applied on crm-test;
+1. **D1 — the code and the resolver.** *Built 10-22-26, v0.276.0.* Four
+   choices made in the build, each within the rulings: (a) **ruling 31 is
+   kept** — the resolve does not look the code up before redirecting; it
+   carries the code on, the click is written after the 302, and the form's
+   lookup is what finds an unknown code (the visitor sees the empty form
+   step 2 asks for); (b) **there is no touch status "Responded"** — § 7d.4's
+   "the touch moves to Responded" names nothing that exists; Responded is
+   ruling 46's count of submissions carrying the campaign, unchanged, and
+   delivery writes nothing on a touch; (c) the registration row of
+   `PREFILL_FIELDS` is what the form asks (name, email, phone, ZIP) — the
+   table's company and business-stage question are not on that form; (d)
+   the sandbox's demo codes are written nightly by the worker's demo-link
+   restore (the card token is the lead's code), so no baseline recapture is
+   needed. The forms fill only the company half from the lookup until D2
+   brings each form's *Not you?* line. The CRM handoff applied on crm-test;
    minting; the postcard's code becomes the lead's; `/c/{link}/{code}` for
    every kind with the click recorded; the forms' hidden field renamed;
    the per-form lookup with the allowlist; attribution reads the code.
@@ -2178,6 +2192,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.36 | 10-22-26 13:00 | Claude (Claude Code) | § 7d: D1 built (v0.276.0); the four build choices recorded under § 7d.6 step 1. |
 | 0.35 | 10-22-26 12:40 | Claude (Claude Code) | § 7d.5: ruling 77 noted (field rules on the Marketing Admin Role only, code fields off every layout). |
 | 0.34 | 10-22-26 01:42 | Claude (Claude Code) | § 7d.5's CRM handoff written (`lead-code-crm-handoff.md`, `scripts/plans/lead-code.json`, fingerprint `bec909277859`; two field rules in `scripts/migrate_outreach_roles.py`). Ruling 74's "indexed" not buildable through the API — recorded in § 7d.5; `Clicked` found already present. Header revision corrected from 0.30. |
 | 0.33 | 10-22-26 01:35 | Claude (Claude Code) | § 7d approved: the prefill table confirmed as written (ruling 75); status line and table heading updated. |

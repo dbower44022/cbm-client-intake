@@ -107,6 +107,7 @@
       sms_consent: !!($("smsConsent") && $("smsConsent").checked),
       campaign_id: campaignParam("campaign"),
       campaign_link: campaignParam("link"),
+      lead_code: campaignParam("lead"),   // the person's lead code (build plan § 7d.3)
     };
     // Never disable the button — validate on click and name what is missing.
     if (!body.first_name || !body.email) {
