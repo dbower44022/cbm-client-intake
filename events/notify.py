@@ -251,11 +251,18 @@ async def send_follow_up(
                     parent_type=cfg.EVENT, parent_id=event["id"],
                     email_address=reg.get("email"),
                 )
+                # The {{token}} placeholders of events/confirm.py, per
+                # registrant — so the reminder carries THIS person's join link.
+                from . import confirm
+                tokens = confirm.app_tokens(settings, event, reg, kind=follow_up.kind)
                 await comms_service.send_quick_message(
                     gmail=gmail,
                     to=[reg["email"]],
-                    subject=rendered.get("subject") or (event.get("name") or f"{abbr()} event"),
-                    body_html=rendered.get("bodyHtml") or "",
+                    subject=confirm.apply_app_tokens(
+                        rendered.get("subject") or (event.get("name") or f"{abbr()} event"),
+                        tokens, as_html=False),
+                    body_html=confirm.apply_app_tokens(
+                        rendered.get("bodyHtml") or "", tokens, as_html=True),
                     sender_name=settings.sender_display_name,
                 )
             except Exception as exc:  # noqa: BLE001 — one recipient never stops the rest

@@ -72,6 +72,19 @@ def display_time_passed(event: dict[str, Any], now: Optional[datetime] = None) -
     return when is None or when <= (now or datetime.now(timezone.utc))
 
 
+def needs_join_link(event: dict[str, Any]) -> bool:
+    """D3-1 (Doug, 10-22-26): a Public ONLINE event is never offered to the
+    public without its webinar. True while such an event has no Join URL —
+    Zoom fills it at publish once Track C is on; nothing is pasted by hand on
+    a Public event. Internal events are exempt (their link is typed by staff,
+    and a meeting without one is an ordinary calendar entry)."""
+    return (
+        effective_audience(event) == cfg.AUDIENCE_PUBLIC
+        and (event.get("format") or "") in cfg.ONLINE_FORMATS
+        and not (event.get("virtualMeetingUrl") or "").strip()
+    )
+
+
 def team_limit(event: dict[str, Any]) -> list[str]:
     teams = event.get(cfg.INTERNAL_TEAMS_FIELD) or []
     return [t for t in teams if isinstance(t, str) and t.strip()]
@@ -98,6 +111,10 @@ def is_shown(
     if event.get("status") == cfg.STATUS_CANCELLED and not ignore_cancelled:
         return False
     if not display_time_passed(event, now):
+        return False
+    if needs_join_link(event):
+        # D3-1: on every surface — the portal rail hands a Public event to the
+        # public page, which would refuse it.
         return False
     audience = effective_audience(event)
     if surface == SURFACE_PUBLIC:
@@ -141,6 +158,14 @@ def public_where_clauses(
             {"type": "isNull", "attribute": cfg.AUDIENCE_FIELD},
             {"type": "equals", "attribute": cfg.AUDIENCE_FIELD, "value": ""},
         ]})
+    # D3-1, for the public surface only (an Internal event is exempt, and the
+    # portal lists both audiences); the predicate above is the rule, this only
+    # spares the read. Only when the CRM has the attribute, like every clause.
+    if surface == SURFACE_PUBLIC and "virtualMeetingUrl" in present:
+        where.append({"type": "or", "value": [
+            {"type": "notIn", "attribute": "format", "value": list(cfg.ONLINE_FORMATS)},
+            {"type": "isNotNull", "attribute": "virtualMeetingUrl"},
+        ]})
     if cfg.DISPLAY_FROM_FIELD in present:
         moment = now or datetime.now(timezone.utc)
         where.append({"type": "or", "value": [
@@ -164,6 +189,8 @@ def staff_state(event: dict[str, Any], now: Optional[datetime] = None) -> dict[s
         when = display_time(event)
         return {"key": "scheduled",
                 "label": "Appears " + (when.strftime("%Y-%m-%d") if when else "")}
+    if needs_join_link(event):
+        return {"key": "awaiting_link", "label": "Awaiting join link"}
     if effective_audience(event) == cfg.AUDIENCE_PUBLIC:
         return {"key": "public", "label": "Public"}
     if team_limit(event):
@@ -188,5 +215,10 @@ def save_warnings(event: dict[str, Any], now: Optional[datetime] = None) -> list
         warnings.append(
             "The display time is after the event starts, so nobody will see it "
             "or be able to register before it begins."
+        )
+    if is_ticked(event) and needs_join_link(event):
+        warnings.append(
+            "This is an online public event with no join link yet, so it is not "
+            "shown and takes no registrations until its Zoom webinar exists."
         )
     return warnings

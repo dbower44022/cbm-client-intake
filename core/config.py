@@ -647,6 +647,11 @@ class Settings(BaseSettings):
     # dark anyway until the CRM has CEventPresenter — the switch is the review
     # gate, the detection is the safety.
     event_presenters: bool = False
+    # D3: CBM's own registration confirmation (and waiting-list / seat-offered
+    # notes), the only email a registrant gets. Needs the follow-ups' send stack
+    # (Gmail sync + the shared mailbox) and the EspoCRM templates; dark until
+    # switched on here.
+    events_confirmations: bool = False
     # In-process cache for the public read endpoints. The WordPress plugin
     # caches too, so a normal page load makes no live call to us at all.
     events_cache_seconds: int = 60

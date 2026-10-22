@@ -406,7 +406,7 @@ async def _member_identity(client: EspoApi, user: dict[str, Any]) -> dict[str, A
 
 async def register_member(
     client: EspoApi, user: dict[str, Any], event_id: str,
-    *, now: Optional[datetime] = None,
+    *, now: Optional[datetime] = None, settings: Any = None,
 ) -> dict[str, Any]:
     """Register the signed-in member for an Internal event (F3-7).
 
@@ -475,12 +475,19 @@ async def register_member(
         payload["registrationDate"] = moment.strftime("%Y-%m-%d %H:%M:%S")
         created = await client.create(cfg.REGISTRATION, payload)
         registration_id, outcome = created["id"], "created"
+    # D3: the member's confirmation, with the event's Join URL (D2: a registered
+    # member sees it). Best-effort by construction.
+    from . import confirm
+    confirmation = await confirm.after_registration(
+        settings, client, event, registration_id, status, now=moment
+    )
     return {
         "registrationId": registration_id,
         "status": status,
         "outcome": outcome,
         "contactLinked": bool(who["contactId"]),
         "event": {"id": event["id"], "name": event.get("name")},
+        "confirmation": confirmation,
     }
 
 
@@ -544,7 +551,7 @@ async def register(event_id: str, request: Request) -> dict[str, Any]:
     user = _user(request)
     client = _client(request)
     try:
-        result = await register_member(client, user, event_id)
+        result = await register_member(client, user, event_id, settings=get_settings())
     except MemberRegistrationRefused as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except EspoError as exc:

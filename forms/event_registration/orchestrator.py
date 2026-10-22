@@ -324,6 +324,17 @@ async def deliver(
     else:
         # A waitlisted person must NOT get a Zoom join link — they have no seat.
         ids["zoom"] = {"ok": False, "reason": "waitlisted"}
+    # D3: the confirmation (or the waiting-list note) — CBM's own, the only
+    # email the person gets. Best-effort by construction; a public online
+    # registration whose Zoom push failed is skipped, not sent without a link.
+    try:
+        from events import confirm
+        ids["confirmation"] = await confirm.after_registration(
+            settings, client, event, registration_id, status
+        )
+    except Exception as exc:  # noqa: BLE001 — never lose a registration to an email
+        log.warning("registration %s: confirmation failed: %s", registration_id, exc)
+        ids["confirmation"] = {"ok": False, "error": str(exc)}
 
     log.info(
         "event registration %s for event %s (%s, %s)",

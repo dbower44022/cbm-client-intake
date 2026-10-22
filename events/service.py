@@ -766,6 +766,42 @@ async def _remove_from_zoom(
                     registration.get("id"), exc)
 
 
+async def push_registration_to_zoom(
+    settings: Any, client: EspoApi, event: dict[str, Any], registration: dict[str, Any],
+) -> dict[str, Any]:
+    """Register one existing CRM registration with the event's Zoom webinar and
+    store the person's own join link on the row. Best-effort: a failure leaves
+    the registration as it was and is reported, never raised. The public
+    door's orchestrator does the same at delivery from the submission; this
+    is for a row that already exists (a waitlist promotion)."""
+    webinar_id = (event.get("zoomWebinarId") or "").strip()
+    if not webinar_id:
+        return {"ok": False, "reason": "the event has no Zoom webinar"}
+    if (registration.get("zoomJoinUrl") or "").strip():
+        return {"ok": True, "reason": "already registered with Zoom"}
+    try:
+        from core.zoom import make_client
+        api = make_client(settings)
+        if api is None:
+            return {"ok": False, "reason": "Zoom is not enabled"}
+        result = await api.add_registrant(
+            webinar_id,
+            email=registration.get("email") or "",
+            first_name=registration.get("firstName") or "",
+            last_name=registration.get("lastName") or "",
+        )
+        updates = {
+            "zoomRegistrantId": str(result.get("registrant_id") or ""),
+            "zoomJoinUrl": result.get("join_url") or "",
+        }
+        await client.update(cfg.REGISTRATION, registration["id"], updates)
+        registration.update(updates)
+        return {"ok": True, **updates}
+    except Exception as exc:  # noqa: BLE001
+        log.warning("registration %s: Zoom push failed: %s", registration.get("id"), exc)
+        return {"ok": False, "error": str(exc)}
+
+
 async def _promote_from_waitlist(
     client: EspoApi, event_id: str, settings: Any
 ) -> Optional[dict[str, Any]]:
@@ -793,8 +829,16 @@ async def _promote_from_waitlist(
         winner = waiting[0]
         await client.update(cfg.REGISTRATION, winner["id"],
                             {"attendanceStatus": cfg.REG_REGISTERED})
+        winner["attendanceStatus"] = cfg.REG_REGISTERED
         log.info("event %s: promoted registration %s off the waitlist",
                  event_id, winner["id"])
+        # D3: the seat is theirs now — give them their own join link, then the
+        # Seat Offered email (which waits for the link on a public online event).
+        if settings is not None:
+            await push_registration_to_zoom(settings, client, event, winner)
+            from . import confirm
+            winner["seatOfferedEmail"] = await confirm.after_promotion(
+                settings, client, event, winner)
         return winner
     except Exception as exc:  # noqa: BLE001
         log.warning("event %s: waitlist promotion failed: %s", event_id, exc)

@@ -39,6 +39,9 @@ def make_event(**over):
         "registrationCloses": None,
         "recordingUrl": "",
         "zoomWebinarId": "89002896927",
+        # D3-1: a Public online event is offered only once it can be joined, so
+        # the baseline webinar carries the link its webinar id implies.
+        "virtualMeetingUrl": "https://zoom.us/j/89002896927",
     }
     event.update(over)
     return event

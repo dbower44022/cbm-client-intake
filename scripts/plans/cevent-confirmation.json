@@ -1,0 +1,14 @@
+{
+  "name": "cevent-confirmation",
+  "description": "D3 registration confirmation: the Seat Offered ledger value on CEventRegistration.followUpsSent, written after a waitlisted person is promoted and emailed their seat (CBM_Events_Confirmation_Email_Design.md). The confirmation and waitlist sends ledger on the existing confirmationSentAt field.",
+  "entities": [],
+  "fields": [],
+  "links": [],
+  "enumOptions": [
+    {
+      "entity": "CEventRegistration",
+      "field": "followUpsSent",
+      "add": ["Seat Offered"]
+    }
+  ]
+}

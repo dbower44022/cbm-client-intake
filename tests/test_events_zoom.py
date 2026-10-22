@@ -197,7 +197,9 @@ def test_zoom_reminders_are_off_but_confirmation_stays_on():
     """EV-24/D-13: Zoom's confirmation carries the unique join link so it must
     stay; its reminders would duplicate ours so they must not."""
     settings = webinar_settings(cbm_sends_reminders=True)
-    assert settings["registrants_confirmation_email"] is True
+    # D3-2: one email, ours. Zoom never writes to a registrant.
+    assert settings["registrants_confirmation_email"] is False
+    assert settings["registrants_email_notification"] is False
     assert settings["attendees_and_panelists_reminder_email_notification"]["enable"] is False
     assert settings["follow_up_attendees_email_notification"]["enable"] is False
     assert settings["follow_up_absentees_email_notification"]["enable"] is False

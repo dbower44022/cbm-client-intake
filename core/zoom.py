@@ -101,15 +101,16 @@ def parse_zoom_time(value: Optional[str]) -> Optional[datetime]:
 def webinar_settings(*, cbm_sends_reminders: bool = True) -> dict[str, Any]:
     """The settings block for a CBM webinar.
 
-    Registration on and auto-approved (so the registrants API works), Zoom's
-    confirmation email ON (it carries the unique join link), Zoom's reminders
-    and follow-ups OFF when CBM is sending its own (EV-24).
+    Registration on and auto-approved (so the registrants API works). Zoom's
+    own registrant emails are OFF — the confirmation with the personal join
+    link is CBM's (`events/confirm.py`, ruling D3-2, 10-22-26: one email, ours),
+    and so is every reminder and follow-up when CBM is sending them (EV-24).
     """
     off = {"enable": False}
     settings: dict[str, Any] = {
         "approval_type": APPROVAL_AUTOMATIC,
-        "registrants_confirmation_email": True,
-        "registrants_email_notification": True,
+        "registrants_confirmation_email": False,
+        "registrants_email_notification": False,
         "practice_session": False,
         "hd_video": True,
     }

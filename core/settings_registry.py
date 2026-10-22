@@ -386,6 +386,12 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="The Presenters group in the event editor and the presenter cards on "
             "the public and portal event pages. Stays hidden until the CRM has "
             "CEventPresenter, so it is safe to switch on early."),
+    _s("events_confirmations", GROUP_FEATURES, "Registration confirmation emails", kind="bool",
+       component="both",
+       help="CBM's own confirmation to each event registrant, from the EspoCRM "
+            "templates EventConfirmation, EventWaitlisted and EventSeatOffered, "
+            "as the shared mailbox. Zoom's own confirmations are off, so this is "
+            "the registrant's only email. Needs Gmail sync and the shared mailbox."),
     _s("grants_enabled", GROUP_FEATURES, "Grants on funder records", kind="bool",
        help="The Grants tab in Funder Management — awards, deliverables and (later) "
             "funder reporting. Stays hidden until the CRM has CGrant and "
