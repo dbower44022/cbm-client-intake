@@ -5,6 +5,23 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.273.0] — 2026-10-21
+
+**feat: an engagement's close date is stamped when it closes** (ruling 70).
+The campaign lists L2 live pass found `CEngagement.closeDate` Read-only on
+crm-test and production with no formula, so every write was dropped and no
+engagement on either CRM holds a close date. Now, when an engagement moves
+into **Completed, Inactive or Abandoned** — from the Overview status badge,
+the Details tab or Client Administration's popup — the application writes
+today's date into Close date if it is empty (`core/engagement_close.py`);
+a date typed in the same save wins, a held date is never overwritten, and a
+failure never fails the save. **Inert until each CRM clears Read-only**
+(`cengagement-close-date-crm-handoff.md`, plan fingerprint `c80d9070da1d`,
+`scripts/prospect_crm_test.sh closedate`): the stamp reads the flag first.
+Until a date exists, ruling 25's dormant-client rule keeps its created-date
+fallback. A backfill of engagements already closed is a later question.
+Verified by 5 new tests and the full suite.
+
 ## [0.272.0] — 2026-10-21
 
 **feat(sessions): the status picker on the partner and funder Overview** —

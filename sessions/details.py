@@ -10,6 +10,8 @@ runs as the logged-in user, so EspoCRM enforces their ACL.
 
 from __future__ import annotations
 
+from core import engagement_close
+
 from core.branding import abbr
 
 import logging
@@ -790,7 +792,15 @@ async def save_details(
     payload = _clean_changes(spec, changes)
     if payload:
         await client.update(entity, record_id, payload)
-    return {"entity": entity, "id": record_id, "saved": list(payload.keys())}
+    result: dict[str, Any] = {"entity": entity, "id": record_id, "saved": list(payload.keys())}
+    if entity == engagement_close.ENGAGEMENT and "engagementStatus" in payload:
+        # Ruling 70: a closing engagement gains its close date (a date typed
+        # in the same save wins).
+        closed_on = await engagement_close.stamp_close_date(
+            client, record_id, payload.get("engagementStatus"), payload=payload)
+        if closed_on:
+            result["closeDate"] = closed_on
+    return result
 
 
 async def is_editable_wysiwyg(client: SessionClient, entity: str, field: str) -> bool:

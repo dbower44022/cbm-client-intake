@@ -59,8 +59,13 @@ found; move resolved items to the bottom with the resolution date.
     every API write to it is dropped and no engagement there has a close
     date — "closed more than N days ago" can never match, nor can the email
     kind's ruling-25 dormant-client rule. Production not yet checked; the
-    fix (clear Read-only, a field rule for staff instead, ruling 40) is a
-    question for Doug. v0.272.0 (the status picker on the partner and
+    fix — **ruling 70 (option A), built as v0.273.0 (10-21-26 22:48)**: clear
+    Read-only (`cengagement-close-date-crm-handoff.md`, crm-test by
+    `scripts/prospect_crm_test.sh closedate`, Doug runs it; production at the
+    slot; Boston) and stamp the date on Completed / Inactive / Abandoned.
+    Production read 10-21-26: Read-only too, no formula, 0 of 7 Completed
+    dated. Owed: push, the crm-test apply, a live check; the backfill
+    question. v0.272.0 (the status picker on the partner and
     funder Overview) pushed and checked live on crm-test 10-21-26 22:36 by Doug as
     Sally Sponsor (Harrowgate Family Trust → Lapsed, read back). Owed also: production and Boston with the arc's eventual slot.
     LIVE-PASSED on crm-test (v0.265.0–3, 10-19-26; rulings 41–54).**

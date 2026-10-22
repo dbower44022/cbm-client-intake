@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-20-26 23:01 · Revision 1.35 — change log at the end.
+Last Updated: 10-21-26 22:44 · Revision 1.36 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -782,6 +782,27 @@ at 23:00: "a".
     standard is updated to match. `COutreachTouch` has no stream and needs
     nothing. (10-20-26)
 
+### Doug's ruling (10-21-26, on the engagement's close date)
+
+Found by the campaign lists L2 live pass: `CEngagement.closeDate` is
+Read-only on crm-test and production, no formula sets it, and no engagement
+on either CRM holds one (production has 7 Completed). A list step on Close
+date never matches, and the email kind's ruling-25 rule falls back to the
+date the engagement was created. Put as a consequential decision: option A,
+clear Read-only and stamp the date automatically; option B, clear Read-only
+only; option C, leave it and stop using Close date. Doug's reply at 22:44: "a".
+
+70. **An engagement's close date is stamped when it closes** (option A).
+    Read-only is cleared on `CEngagement.closeDate` (a plan file, every
+    CRM). When an engagement moves into a closed status — Completed,
+    Inactive or Abandoned — the application writes today's date into Close
+    date if it is empty, from the Overview status picker, the Details tab
+    and Client Administration; staff may correct it on the Details tab.
+    Never overwrites a date. Until a date exists, ruling 25's rule keeps its
+    created-date fallback. A backfill of the engagements already closed is a
+    later question, once the CRM's history is checked for status changes.
+    (10-21-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -902,8 +923,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.34 |
-| Last Updated | 10-20-26 17:56 |
+| Version | 1.36 |
+| Last Updated | 10-21-26 22:44 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -911,6 +932,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.36 | 10-21-26 22:44 | Claude (Claude Code) | Ruling 70 appended: an engagement's close date is stamped when it closes (Doug's "a"). |
 | 1.35 | 10-20-26 23:01 | Claude (Claude Code) | Ruling 69 appended: the Marketing Admin Role gains stream all on campaigns and leads (Doug's "a", found on the 521 investigation). |
 | 1.34 | 10-20-26 17:56 | Claude (Claude Code) | Ruling 68 appended: ruling 14 applies to leads only (Doug's "a" to build plan § 9 question 19). |
 | 1.33 | 10-20-26 17:49 | Claude (Claude Code) | Ruling 67 appended: a funder carries a status (Doug's "b" to build plan § 9 question 18, against the recommendation). |

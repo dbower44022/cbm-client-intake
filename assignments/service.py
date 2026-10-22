@@ -21,6 +21,8 @@ Field/link names and enum values reconciled live against crm-test (2026-06-19):
 
 from __future__ import annotations
 
+from core import engagement_close
+
 import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
@@ -657,6 +659,10 @@ async def update_engagement(
         raise AssignError("Nothing to save — no editable field was changed.")
 
     await client.update(ENGAGEMENT, engagement_id, payload)
+    if "engagementStatus" in payload:
+        # Ruling 70: a closing engagement gains its close date.
+        await engagement_close.stamp_close_date(client, engagement_id, payload.get("engagementStatus"),
+                                                payload=payload)
     return {
         "engagementId": engagement_id,
         "changedFields": changed_labels,

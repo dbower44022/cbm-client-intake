@@ -13,6 +13,8 @@ forbids (see the assignedUserId lesson in assignments.service).
 """
 
 from __future__ import annotations
+
+from core import engagement_close as ENGAGEMENT_CLOSE
 from core.branding import abbr, render_text
 
 import asyncio
@@ -1672,12 +1674,17 @@ async def set_status(
         return {"status": "ok", "from": current, "to": new_status, "changed": False}
     await client.update(cfg.parent_entity, parent_id, {cfg.status_edit_attr: new_status})
     log.info("%s %s status %s -> %s", cfg.parent_entity, parent_id, current, new_status)
+    closed_on = None
+    if cfg.parent_entity == ENGAGEMENT_CLOSE.ENGAGEMENT:
+        # Ruling 70: a closing engagement gains its close date.
+        closed_on = await ENGAGEMENT_CLOSE.stamp_close_date(client, parent_id, new_status)
     await post_stream_note(
         client, cfg.parent_entity, parent_id,
         f"Status changed from {current or '—'} to {new_status} "
         f"via the session tools{_by(actor)}.",
     )
-    return {"status": "ok", "from": current, "to": new_status, "changed": True}
+    return {"status": "ok", "from": current, "to": new_status, "changed": True,
+            **({"closeDate": closed_on} if closed_on else {})}
 
 
 async def set_primary_contact(

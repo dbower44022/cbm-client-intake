@@ -1,0 +1,11 @@
+{
+  "name": "cengagement-close-date-writable",
+  "description": "Ruling 70 of prds/prospect-marketing/rulings.md (10-21-26): CEngagement.closeDate was Read-only on crm-test and production with no formula, so every API write was silently dropped (Acl/GlobalRestriction) and no engagement held a close date. Clearing Read-only lets the application stamp the date when an engagement closes and lets staff correct it. Handoff: cengagement-close-date-crm-handoff.md.",
+  "entities": [],
+  "fields": [],
+  "links": [],
+  "enumOptions": [],
+  "fieldParams": [
+    {"entity": "CEngagement", "name": "closeDate", "params": {"readOnly": false}}
+  ]
+}

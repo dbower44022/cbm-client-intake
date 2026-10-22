@@ -1192,6 +1192,12 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
+- **v0.273.0 (2026-10-21) — an engagement's close date is stamped when it
+  closes** (ruling 70). Committed, not pushed. Inert until each CRM clears
+  Read-only on `CEngagement.closeDate` (`cengagement-close-date-crm-handoff.md`).
+  **Standing fact: that field was Read-only on crm-test AND production** — every
+  write dropped, no engagement dated. Owed: push, the CRM apply, the live check
+  (`OPEN-ITEMS.md` #51).
 - **v0.272.0 (2026-10-21) — the status picker on the partner and funder
   Overview.** Pushed; live on crm-test and production 22:33. Rule in
   `sessions/CLAUDE.md`. Checked live on crm-test 10-21-26 22:36 as Sally Sponsor
