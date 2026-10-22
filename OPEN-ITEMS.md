@@ -64,8 +64,9 @@ found; move resolved items to the bottom with the resolution date.
     `scripts/prospect_crm_test.sh closedate`, Doug runs it; production at the
     slot; Boston) and stamp the date on Completed / Inactive / Abandoned.
     Production read 10-21-26: Read-only too, no formula, 0 of 7 Completed
-    dated. Owed: push, the crm-test apply, a live check; the backfill
-    question. v0.272.0 (the status picker on the partner and
+    dated. Pushed (live on both 00:29); **crm-test's Read-only cleared 10-22-26 00:30**
+    by Doug (verified). Owed: the live check as a real Client Management
+    user; production and Boston at their slots; the backfill question. v0.272.0 (the status picker on the partner and
     funder Overview) pushed and checked live on crm-test 10-21-26 22:36 by Doug as
     Sally Sponsor (Harrowgate Family Trust → Lapsed, read back). Owed also: production and Boston with the arc's eventual slot.
     LIVE-PASSED on crm-test (v0.265.0–3, 10-19-26; rulings 41–54).**
