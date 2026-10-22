@@ -1,6 +1,6 @@
 # sessions/ — Client, Partner and Funder Management
 
-Last Updated: 10-21-26 21:56 · Revision 1.1
+Last Updated: 10-22-26 12:10 · Revision 1.2
 
 Detail for the session engine behind Client Management (`/mentorsessions`), Partner Management (`/partnersessions`) and Funder Management (`/sponsorsessions`): the grids, every record tab, quick add, managers and co-mentors, and the traps of this package.
 
@@ -224,6 +224,14 @@ one shared frontend that derives its domain from the first segment of its URL.
   The funder status (ruling 67) is a field a CRM may not have yet:
   `detail_optional_select` and `list_optional_select` ask for it only when
   live metadata has it, and its Overview fact is left out until then.
+- **A closing engagement gains its close date** (ruling 70, v0.273.0):
+  `core/engagement_close.stamp_close_date` writes today into an EMPTY
+  `CEngagement.closeDate` when the status moves into Completed, Inactive or
+  Abandoned — from `service.set_status`, `details.save_details` and
+  Client Administration's `update_engagement`; a date typed in the same save
+  wins. It reads the field's Read-only flag first: the field WAS Read-only on
+  crm-test and production (every write dropped), cleared on crm-test 10-22-26,
+  production and Boston owed (`cengagement-close-date-crm-handoff.md`).
 - **Co-mentor visibility** requires two things, both in the app: reading the
   `engagements` reverse link *and* stamping the co-mentor's User into the
   engagement's `assignedUsers` (Mentor Role reads CEngagement at "own", which
@@ -263,5 +271,6 @@ Watch for these when touching this package:
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 10-22-26 12:10 | Claude (Claude Code) | The close-date stamp (ruling 70). |
 | 1.1 | 10-21-26 21:56 | Claude (Claude Code) | The status picker on every domain (v0.272.0). |
 | 1.0 | 10-20-26 17:30 | Claude (Claude Code) | Created from the root `CLAUDE.md` section, word for word (Doug's approval 10-20-26). |

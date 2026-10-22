@@ -1408,8 +1408,9 @@ is part of the pass.
 
 ## 7c. Campaign audiences — named lists (rulings 58–68; approved 10-20-26)
 
-**Status: approved by Doug as written (10-20-26 18:02, "approved"). Being built:
-the lead-industry handoff first, then L1.** Rulings 58
+**Status: approved by Doug as written (10-20-26 18:02). Built and live-passed
+on crm-test: L1 10-21-26 15:36, L2 10-21-26 22:30. Production and Boston wait
+for the arc's slot.** Rulings 58
 to 65 decide who a campaign reaches and how its list is made. This section
 turns them into the record model, the screens, the engine and the order of
 work. Where this section had to choose, the choice is stated as a draft with
@@ -2167,7 +2168,7 @@ best-effort mirror.
 |---|---|
 | Document | Prospect Marketing — build plan |
 | Version | v0.23 — Phases 1–4 and the lead model built; §§ 7b and 7c built and live-passed on crm-test; § 7d (the lead identifier in every link, rulings 71–75) approved, not built |
-| Last Updated | 10-22-26 01:35 |
+| Last Updated | 10-22-26 12:10 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
 | Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
@@ -2180,6 +2181,7 @@ best-effort mirror.
 | 0.33 | 10-22-26 01:35 | Claude (Claude Code) | § 7d approved: the prefill table confirmed as written (ruling 75); status line and table heading updated. |
 | 0.32 | 10-22-26 01:34 | Claude (Claude Code) | Question 20 answered A (ruling 74): the code lives in two CRM fields; § 7d.1's storage marked settled. |
 | 0.31 | 10-22-26 01:31 | Claude (Claude Code) | § 7d added: the lead identifier in every link (rulings 71–73) — the per-person code on the lead and the contact, delivery per kind (the vendor custom field and merge tag, the text's `{link}`, the caller's link), the one resolver `/c/{link}/{code}` recording the click, the per-form lookup with a server-side allowlist, the per-form prefill table with Doug's registration example, the handoff, three steps. Question 20 added (where the code lives). |
+| 0.31 | 10-22-26 12:10 | Claude (Claude Code) | § 7c status line: built and live-passed on crm-test. |
 | 0.30 | 10-21-26 22:30 | Claude (Claude Code) | § 7c.7 L2 live-passed on crm-test; § 7c complete on crm-test. |
 | 0.29 | 10-21-26 16:01 | Claude (Claude Code) | § 7c.7 L2 built (v0.271.0). |
 | 0.28 | 10-21-26 15:36 | Claude (Claude Code) | § 7c.7 L1 live-passed on crm-test. |

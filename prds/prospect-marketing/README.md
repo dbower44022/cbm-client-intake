@@ -1,6 +1,6 @@
 # Prospect marketing and Campaign Management
 
-Last Updated: 10-19-26 23:44 · Revision 1.16 — change log at the end.
+Last Updated: 10-22-26 12:10 · Revision 1.17 — change log at the end.
 
 **Read this first if you are working on prospects or campaigns.** This
 directory is the whole arc: the rulings, the build plan, and the record of
@@ -60,6 +60,16 @@ built 10-15-26, v0.258.0, dark behind `CAMPAIGNS_ENABLED`**).
   Phase 4 pass already matched (10-18-26 15:05); **the passes' steps that
   touch a stage are re-run after the rework** (§ 7a.5 step 3). The
   executive overview written for leadership already uses the new words.
+- **Campaign audiences as named lists (build plan § 7c, rulings 58–68) —
+  BUILT and LIVE-PASSED on crm-test.** L1 (leads and contacts, v0.270.0)
+  passed 10-21-26 15:36; L2 (clients, partners, funders, link fields, lists
+  of lists, imports, Include every contact; v0.271.0) passed 10-21-26 22:30.
+  Dark behind `CAMPAIGN_LISTS` (on for crm-test only). Rulings 66 (lead
+  industry) and 67 (funder status) are applied on crm-test; ruling 70 (an
+  engagement's close date stamped when it closes, v0.273.0) is applied and
+  live-checked on crm-test. **Next: production and Boston at one slot,
+  deferred by Doug until campaign testing is finished** — the slot's CRM
+  list is in `prompts/campaign-arc-next-session-2026-10-22.md`.
 - **Settled:** the process end to end (rulings 1–27), the Campaign
   Management application (CM-1 to CM-11), and the build's own rulings 28–34
   (custom entities; `Unverified`; multiple referring partners; links in the
@@ -215,6 +225,7 @@ import contract starts from).
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.17 | 10-22-26 12:10 | Claude (Claude Code) | State: campaign lists L1 and L2 built and live-passed on crm-test; rulings 58–70; production and Boston wait for one slot. |
 | 1.16 | 10-19-26 23:44 | Claude (Claude Code) | State: the lead model live-passed on crm-test; production's slot is next. |
 | 1.15 | 10-19-26 11:47 | Claude (Claude Code) | State: the lead model's code rework built (v0.265.0, not pushed; rulings 51–53); the release's CRM steps and the live pass are next. |
 | 1.14 | 10-19-26 11:03 | Claude (Claude Code) | State: the lead model's CRM half done on crm-test (rulings 49, 50); the code rework is next. |
