@@ -1,6 +1,6 @@
 # CRM handoff — the lead code in every link (rulings 71–75)
 
-Last Updated: 10-22-26 12:40 · Revision 1.1 — change log at the end.
+Last Updated: 10-22-26 12:47 · Revision 1.2 — change log at the end.
 
 **What changes:** two text fields that hold a person's lead code, two
 fields that count clicks on a touch, and two field rules on the Marketing
@@ -15,7 +15,7 @@ life. It lives in the CRM, on the lead and on the contact.
 
 | CRM | State |
 |---|---|
-| crm-test | **Dry run clean 10-22-26 01:40.** Plan: 4 changes, fingerprint `bec909277859`. Role script: exactly the 2 new field rules. Not applied. |
+| crm-test | **Fields applied 10-22-26 12:45** by Doug (`leadcode`: 4 created, 4 verified, `Clicked` already present). **§ 4 steps 1, 2 and 4 passed 12:47** as the org-wide key: shape as § 1, no stray `Contact.leadCode` or `cCLeadCode`; three reads 200; a write and read-back on one lead (Banter Beer and Wine) and one contact (Simone Achebe), both cleared after; conformance identical to the baseline. **Field rules (§ 3 step 2) not yet applied.** |
 | Production | Not started. Rides the arc's deferred production slot (Doug, 10-20-26: no slot until campaign testing is finished). |
 | Boston | Not started. With its release. |
 
@@ -182,5 +182,6 @@ behave as today.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 10-22-26 12:47 | Claude (Claude Code) | crm-test: fields applied by Doug and read back as the org-wide key. |
 | 1.1 | 10-22-26 12:40 | Claude (Claude Code) | § 2: ruling 77 recorded — rules on the Marketing Admin Role only, fields off every layout. |
 | 1.0 | 10-22-26 01:42 | Claude (Claude Code) | Written for build plan § 7d.5, rulings 71–75. Plan dry-run on crm-test, 4 changes, fingerprint `bec909277859`; `Clicked` found already present. Two field rules added to `scripts/migrate_outreach_roles.py`, dry run shows exactly those two. No index (not a Field Manager parameter). Conformance baseline taken. |
