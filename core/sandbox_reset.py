@@ -98,6 +98,10 @@ KEEP_TABLES: frozenset[str] = frozenset(
         # A member's own settings (the portal calendar filter) — configuration
         # like the roles and teams it sits beside, not training data.
         "user_preference",
+        # Lead enrichment's AI research runs: real money spent, which the
+        # monthly budget reads, so they outlive the nightly reset.
+        "enrichment_run",
+        "enrichment_run_item",
         # The mailing service's OAuth2 connection (Phase C). A connection lost
         # every night would be no connection; the tokens are ciphertext.
         "mailing_connection",

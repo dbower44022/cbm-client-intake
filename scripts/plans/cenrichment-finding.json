@@ -1,0 +1,44 @@
+{
+  "name": "cenrichment-finding",
+  "description": "Lead enrichment phase 2 (prds/lead-enrichment/build-plan-phase-2.md § 2, design § 6): one record per value an enrichment tier proposes, linked to the lead or the client's Company. Additive only. No field Read-only (the application writes them all). Handoff: enrichment-finding-crm-handoff.md.",
+  "entities": [
+    {"name": "EnrichmentFinding", "type": "Base",
+     "labelSingular": "Enrichment Finding", "labelPlural": "Enrichment Findings", "stream": false}
+  ],
+  "fields": [
+    {"entity": "CEnrichmentFinding", "name": "kind", "type": "enum", "label": "Kind",
+     "options": ["Field value", "Person", "Summary"], "default": "Field value",
+     "tooltipText": "A value for one field, a person who runs the business, or a summary of the business."},
+    {"entity": "CEnrichmentFinding", "name": "targetField", "type": "varchar", "maxLength": 100,
+     "label": "Field", "tooltipText": "For a field value: the field it would fill (website, emailAddress, phoneNumber, industry)."},
+    {"entity": "CEnrichmentFinding", "name": "proposedValue", "type": "text", "label": "Proposed value"},
+    {"entity": "CEnrichmentFinding", "name": "currentValue", "type": "text", "label": "Value when found",
+     "tooltipText": "What the record held when the finding was made. A finding never replaces a value already there."},
+    {"entity": "CEnrichmentFinding", "name": "personName", "type": "varchar", "maxLength": 150, "label": "Person"},
+    {"entity": "CEnrichmentFinding", "name": "personTitle", "type": "varchar", "maxLength": 150, "label": "Person's title"},
+    {"entity": "CEnrichmentFinding", "name": "personEmail", "type": "varchar", "maxLength": 150, "label": "Person's email"},
+    {"entity": "CEnrichmentFinding", "name": "summary", "type": "text", "label": "Summary"},
+    {"entity": "CEnrichmentFinding", "name": "confidence", "type": "enum", "label": "Confidence",
+     "options": ["Verified", "Likely", "Unverified"], "default": "Unverified",
+     "tooltipText": "Counted by the application (ruling E12): Verified means two independent facts agreed on the source page."},
+    {"entity": "CEnrichmentFinding", "name": "factsMatched", "type": "text", "label": "Facts that agreed"},
+    {"entity": "CEnrichmentFinding", "name": "sourceUrl", "type": "url", "label": "Source"},
+    {"entity": "CEnrichmentFinding", "name": "tier", "type": "enum", "label": "Found by",
+     "options": ["Free pass", "AI research", "Paid service", "Staff research"], "default": "AI research"},
+    {"entity": "CEnrichmentFinding", "name": "findingStatus", "type": "enum", "label": "Status",
+     "options": ["Proposed", "Accepted", "Rejected", "Applied"], "default": "Proposed",
+     "tooltipText": "Applied: written without a person (a verified website or email into an empty field on a lead, ruling E14)."},
+    {"entity": "CEnrichmentFinding", "name": "decidedBy", "type": "varchar", "maxLength": 150, "label": "Decided by"},
+    {"entity": "CEnrichmentFinding", "name": "decidedAt", "type": "datetime", "label": "Decided at"},
+    {"entity": "CEnrichmentFinding", "name": "runRef", "type": "varchar", "maxLength": 64, "label": "Run",
+     "tooltipText": "The application's run that made this finding."}
+  ],
+  "links": [
+    {"entity": "CEnrichmentFinding", "link": "prospect", "linkType": "manyToOne",
+     "entityForeign": "CProspect", "linkForeign": "enrichmentFindings",
+     "label": "Lead", "labelForeign": "Enrichment findings"},
+    {"entity": "CEnrichmentFinding", "link": "company", "linkType": "manyToOne",
+     "entityForeign": "Account", "linkForeign": "enrichmentFindings",
+     "label": "Company", "labelForeign": "Enrichment findings"}
+  ]
+}

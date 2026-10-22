@@ -596,6 +596,19 @@ class Settings(BaseSettings):
     chapter_segments_url: str = ""
     # A chapter's override of enrichment/data/name_terms.json.
     enrichment_terms_url: str = ""
+    # --- Lead enrichment, phase 2: the AI research pass (build-plan-phase-2.md) ---
+    # A person starts every run (ruling E18); the worker researches the queue.
+    # Needs ANTHROPIC_API_KEY and the CEnrichmentFinding entity. Off by default.
+    enrichment_ai: bool = False
+    enrichment_ai_model: str = "claude-opus-5-5"
+    # Rulings E8, E9: a run that would pass the month's budget is refused.
+    enrichment_monthly_budget: float = 50.0
+    enrichment_ai_max_searches: int = 5        # web searches per business
+    enrichment_ai_record_cap: float = 1.0      # dollars per business, then stop
+    enrichment_ai_max_records: int = 500       # records per run
+    # Re-run a declined request on the next model (the API's own fallback).
+    enrichment_ai_fallback: bool = True
+    enrichment_ai_poll_seconds: int = 15       # how often the worker takes the queue; 0 stops it
     # Phase 4, rulings 38 and 39: the text-message kind, which the application
     # sends itself. Read per request. The texting service is Twilio behind a
     # dry-run client that is the default — nothing is texted until

@@ -904,9 +904,15 @@
     $("modalNeeds").textContent = "";
     $("modalNotes").textContent = "";
     $("modalInternalNotes").textContent = "";
+    $("modalEnrichment").innerHTML = "";
     show($("engModal"));
     try {
       fillDetail(await api("/engagements/" + encodeURIComponent(id)));
+      // The business picture: the client's company researched by the AI model,
+      // findings accepted or rejected here only (ruling E19). Hidden while dark.
+      if (window.CBMEnrichment && currentDetailId === id) {
+        window.CBMEnrichment.panel($("modalEnrichment"), { targetType: "company", recordId: id });
+      }
     } catch (e) {
       closeModal();
       if (e.status === 401) { showLogin(); return; }

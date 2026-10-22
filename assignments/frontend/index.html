@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/shared/tokens.css" />
   <link rel="stylesheet" href="/shared/vendor/jodit/jodit.min.css" />
+  <link rel="stylesheet" href="/shared/enrichment.css" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -180,6 +181,8 @@
               <h3 class="modal__h">Internal Notes</h3>
               <div class="modal__plain" id="modalInternalNotes"></div>
             </section>
+            <!-- Lead enrichment phase 2: the business picture (frontend/shared/enrichment.js) -->
+            <div id="modalEnrichment"></div>
           </div>
 
           <!-- Edit view (built by app.js from the server's field spec) -->
@@ -212,6 +215,7 @@
   <script src="/shared/richtext.js"></script>
   <script src="/shared/quickmail.js"></script>
   <script src="/shared/detail-render.js"></script>
+  <script src="/shared/enrichment.js"></script>
   <script src="app.js"></script>
   <script src="/shared/footer.js"></script>
 </body>

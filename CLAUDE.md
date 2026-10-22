@@ -1213,6 +1213,12 @@ the strength of it.
   rulings 58–68; standing rules in `campaigns/CLAUDE.md`. Migration 0032,
   no CRM change. **Live-passed on crm-test 10-21-26 15:36**; lead `industry` applied
   there. Owed: L2 (`OPEN-ITEMS.md` #51).
+- **v0.274.0 (2026-10-22) — lead enrichment phase 2, the AI research pass.**
+  Committed, not pushed; dark behind `ENRICHMENT_AI`. Staff start runs on a
+  lead, ticked leads or a client's company (rulings E18, E19); findings are
+  `CEnrichmentFinding` records (crm-test applied and verified 10-22-26).
+  Never run against the real model yet. Owed: the staff test on crm-test,
+  production at a Sunday slot, Boston, the list button (when lists go on).
 - **v0.269.0 (2026-10-20) — lead enrichment phase 1, the fit score.**
   Committed, not pushed; dark (`ENRICHMENT_FREE_PASS`, `ENRICHMENT_WEB_CHECKS`
   off). New package `enrichment/`, arc `prds/lead-enrichment/` (design rulings

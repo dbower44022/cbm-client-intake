@@ -437,6 +437,10 @@ async def main() -> None:
     # Lead enrichment's free pass (prds/lead-enrichment/build-plan-phase-1.md):
     # a batch of leads scored every ENRICHMENT_SWEEP_SECONDS.
     next_fit_sweep = datetime.now(timezone.utc)
+    # Lead enrichment phase 2: the AI research queue (people start runs; the
+    # worker researches two records at a time).
+    next_research = datetime.now(timezone.utc)
+    research_store = None
 
     while not stop.is_set():
         claimed = await run_cycle(store, settings, stop)
@@ -519,6 +523,19 @@ async def main() -> None:
             except Exception as exc:  # noqa: BLE001 — never fatal
                 log.warning("lead fit sweep failed: %s", exc)
             next_fit_sweep = now_cfg + timedelta(seconds=settings.enrichment_sweep_seconds)
+        research_on = (settings.enrichment_ai and not settings.espo_dry_run
+                       and settings.store_enabled and settings.enrichment_ai_poll_seconds > 0)
+        if research_on and now_cfg >= next_research:
+            try:
+                from enrichment.runs import run_research_cycle
+                if research_store is None:
+                    from enrichment.store import make_enrichment_store
+                    research_store = make_enrichment_store(settings)
+                if research_store is not None:
+                    await run_research_cycle(settings, research_store)
+            except Exception as exc:  # noqa: BLE001 — never fatal
+                log.warning("ai research cycle failed: %s", exc)
+            next_research = now_cfg + timedelta(seconds=settings.enrichment_ai_poll_seconds)
         mailing_on = settings.mailing_sync and not settings.espo_dry_run
         if mailing_on and settings.mailing_push_seconds > 0 and now_cfg >= next_mailing_push:
             try:

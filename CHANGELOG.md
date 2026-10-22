@@ -5,6 +5,34 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.274.0] — 2026-10-22
+
+**feat(enrichment): the AI research pass, started by staff** (lead enrichment
+build phase 2, `prds/lead-enrichment/build-plan-phase-2.md`, rulings E7–E19).
+A person starts a run on one lead (the lead's window in Campaign
+Management), on ticked or matching leads (*AI research…* on the Leads grid's
+bulk bar) or on a client's company (a new *Business picture* panel in the
+Client Administration popup). The worker researches two businesses at a time
+with Claude Opus 5.5, web search and web fetch, and the server-side refusal
+fallback. The model reports which facts it saw on each page; the application
+counts them under E12 (name plus street, postal code or an associate is
+Verified; name plus city is Likely; anything less is dropped). Each value
+becomes a `CEnrichmentFinding` record; a Verified website or email fills an
+EMPTY field on a lead at once (E14); everything on a client waits for the
+Client Administration Team to Accept or Reject it (E19), and an accepted
+person becomes a Contact carrying the company's owners and never opted in to
+marketing (E10). Every run shows its estimate against the monthly budget and
+is refused past it (E8, E9); real cost comes from the API's own usage, kept
+in `enrichment_run` / `enrichment_run_item` (migration 0033, kept through the
+sandbox reset). A run sends only E7's business facts.
+
+Needs `CEnrichmentFinding` (`enrichment-finding-crm-handoff.md`,
+`scripts/plans/cenrichment-finding.json`, `scripts/migrate_enrichment_roles.py`)
+— **applied and verified on crm-test 10-22-26** — and `ANTHROPIC_API_KEY`.
+Ships dark behind `ENRICHMENT_AI`. Verified by 21 new tests (two against a
+real Postgres) and the migration applied to a fresh database; **never run
+against the real model** — the first runs are the staff test (E18).
+
 ## [0.273.0] — 2026-10-21
 
 **feat: an engagement's close date is stamped when it closes** (ruling 70).

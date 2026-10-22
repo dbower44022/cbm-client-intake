@@ -331,6 +331,28 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("enrichment_terms_url", GROUP_FEATURES, "Name rules address", component="worker",
        help="The address of a chapter's own version of the name-reading rules "
             "(enrichment/data/name_terms.json). Empty: the shipped rules."),
+    _s("enrichment_ai", GROUP_FEATURES, "AI research", kind="bool", component="both",
+       help="Lets staff start an AI research run on a lead, a set of leads or a client's company "
+            "(prds/lead-enrichment/, ruling E18). Needs the Anthropic API key and the "
+            "CEnrichmentFinding entity (enrichment-finding-crm-handoff.md). Read per request."),
+    _s("enrichment_ai_model", GROUP_FEATURES, "AI research model", component="worker",
+       help="The Claude model the research runs on. claude-opus-5-5 by default."),
+    _s("enrichment_monthly_budget", GROUP_FEATURES, "Enrichment monthly budget", kind="float",
+       unit="$", component="both",
+       help="What paid enrichment may spend in a calendar month (rulings E8, E9). A run that would "
+            "pass it is refused, with the amounts named."),
+    _s("enrichment_ai_max_searches", GROUP_FEATURES, "AI research searches per business", kind="int",
+       component="worker", help="Web searches the model may make for one business ($0.01 each)."),
+    _s("enrichment_ai_record_cap", GROUP_FEATURES, "AI research cap per business", kind="float",
+       unit="$", component="worker",
+       help="A business whose research passes this cost is stopped and marked failed."),
+    _s("enrichment_ai_max_records", GROUP_FEATURES, "AI research records per run", kind="int",
+       component="web", help="The most records one run may take."),
+    _s("enrichment_ai_fallback", GROUP_FEATURES, "AI research fallback", kind="bool", component="worker",
+       help="When the model declines a request, re-run it on the next model automatically. Off: "
+            "a declined business is marked failed."),
+    _s("enrichment_ai_poll_seconds", GROUP_FEATURES, "AI research queue poll", kind="int", unit="s",
+       component="worker", help="How often the worker takes the next records from the queue. 0 stops it."),
     _s("prospect_stale_sweep_seconds", GROUP_FEATURES, "Prospect stale sweep", kind="int",
        unit="s", component="worker",
        help="How often the worker runs the Stale sweep (default nightly). 0 "

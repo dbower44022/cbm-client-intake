@@ -1,6 +1,10 @@
 # Build plan — lead enrichment phase 2: the AI research pass, started by staff
 
-Last Updated: 10-22-26 11:01 · Revision 0.2 (draft, not approved)
+Last Updated: 10-22-26 11:17 · Revision 0.3 (approved 10-22-26; built as v0.274.0)
+
+**Status (10-22-26 11:17).** Approved by Doug as written (10-22-26). Built as
+v0.274.0, committed, not pushed, dark. crm-test carries the entity and the
+grants. Next: the staff test on crm-test (§ 6 step 2).
 
 **What it delivers.** A person starts an AI research run on one lead, on a
 set of leads, or on one client's company. An AI model searches the web for
@@ -175,5 +179,6 @@ in the CRM, one record per proposed value.)
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.3 | 10-22-26 11:17 | Claude (Claude Code) | Approved; built as v0.274.0. |
 | 0.2 | 10-22-26 11:01 | Claude (Claude Code) | § 7 answered (E19). |
 | 0.1 | 10-22-26 10:51 | Claude (Claude Code) | Created from design § 5, § 6 and ruling E18. |

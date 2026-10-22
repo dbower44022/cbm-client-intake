@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="/shared/tokens.css" />
   <link rel="stylesheet" href="/shared/vendor/jodit/jodit.min.css" />
   <link rel="stylesheet" href="/shared/charts.css" />
+  <link rel="stylesheet" href="/shared/enrichment.css" />
   <link rel="stylesheet" href="styles.css" />
   <!-- busy.js must load FIRST: it wraps fetch/XHR to give every button press
        immediate feedback (product-wide convention). -->
@@ -120,6 +121,7 @@
         <button type="button" class="cm__linkbtn" id="pf_all"></button>
         <button type="button" class="cbm-button cbm-button--secondary" id="pf_bulkdq">Disqualify…</button>
         <button type="button" class="cbm-button cbm-button--secondary" id="pf_bulkdnc">Do Not Contact…</button>
+        <button type="button" class="cbm-button cbm-button--secondary" id="pf_bulkai" hidden>AI research…</button>
         <button type="button" class="cm__linkbtn" id="pf_bulkclear">Clear selection</button>
       </div>
       <div class="cm__pager" id="pf_pager">
@@ -403,6 +405,7 @@
   <script src="/shared/vendor/jodit/jodit.min.js"></script>
   <script src="/shared/richtext.js"></script>
   <script src="/shared/charts.js"></script>
+  <script src="/shared/enrichment.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -637,6 +637,10 @@ def create_app(
     from campaigns.store import make_campaign_store
 
     app.state.campaign_store = make_campaign_store(settings)
+    # Lead enrichment phase 2: the AI research runs and the month's spend.
+    from enrichment.store import make_enrichment_store
+
+    app.state.enrichment_store = make_enrichment_store(settings)
     # Exposed to the public Events API — the API-key CRM client (no session).
     # A factory rather than a client so tests can substitute a fake, and so the
     # client is built per request like the intake handlers do.
@@ -1022,6 +1026,12 @@ def create_app(
         app.include_router(campaigns_router)
         # Campaign audiences (build plan § 7c), gated per request on CAMPAIGN_LISTS.
         app.include_router(campaign_lists_router)
+        # Lead enrichment (prds/lead-enrichment/): gated per request by the
+        # screen it serves — Campaign Management for a lead, Client
+        # Administration for a client (ruling E19).
+        from enrichment.router import router as enrichment_router
+
+        app.include_router(enrichment_router)
         # Event Administration — the staff app; team-gated like the others.
         if settings.events_active:
             from events.member import member_router as events_member_router

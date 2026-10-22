@@ -124,6 +124,13 @@ FEATURES: tuple[Feature, ...] = (
              "the application database; the mail vendor defaults to the dry run.",
     ),
     Feature(
+        key="ai_research", name="AI research", flag="enrichment_ai", component="both",
+        requires=("anthropic_api_key",), needs_database=True,
+        crm_entities=("CEnrichmentFinding",),
+        note="Lead enrichment phase 2. Staff start every run; the worker researches the "
+             "queue. Spending stops at the monthly budget.",
+    ),
+    Feature(
         key="lead_fit", name="Lead fit scores", flag="enrichment_free_pass",
         component="worker", requires=("chapter_counties",),
         crm_entities=("CProspect",),

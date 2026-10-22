@@ -1254,6 +1254,20 @@
     $(px + "_bulkclear").addEventListener("click", function () { clearSelection(px); });
     $(px + "_bulkdq").addEventListener("click", function () { openBulk(px, "disqualify"); });
     $(px + "_bulkdnc").addEventListener("click", function () { openBulk(px, "do-not-contact"); });
+    // Lead enrichment phase 2 (ruling E18): AI research over the ticked leads
+    // or all matching. Offered only when the feature is live on this CRM.
+    if ($(px + "_bulkai") && window.CBMEnrichment) {
+      $(px + "_bulkai").addEventListener("click", function () {
+        var g2 = grids[px], items = g2.all ? g2.all.slice() : Object.keys(g2.selected).map(function (k) { return g2.selected[k]; });
+        if (!items.length) { notice("Tick at least one lead first.", "warn"); return; }
+        window.CBMEnrichment.startRun({ targetType: "lead", ids: items.map(function (i) { return i.id; }),
+          onStarted: function (r) { notice("AI research started on " + r.records.toLocaleString() + " lead" + (r.records === 1 ? "" : "s") + " (estimated $" + Number(r.estimate).toFixed(2) + "). Findings appear on each lead as they finish.", "ok"); clearSelection(px); } });
+      });
+      fetch("/enrichment/api/status?targetType=lead", { credentials: "same-origin" })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (s) { if (s && s.available && s.ready) $(px + "_bulkai").hidden = false; })
+        .catch(function () {});
+    }
   }
   wireGrid("pf"); wireGrid("rf");
   Array.prototype.forEach.call(document.querySelectorAll("#prospectGrid th[data-sort]"), function (th) {
@@ -1319,6 +1333,9 @@
       }
       body.appendChild(el("h4", null, "Review"));
       body.appendChild(reviewActions(p, function () { closeModal(); loadProspects(); }));
+      // Lead enrichment phase 2: the lead's AI research findings (hidden while
+      // the feature is dark — frontend/shared/enrichment.js).
+      if (window.CBMEnrichment) window.CBMEnrichment.panel(body, { targetType: "lead", recordId: p.id, onChange: function () { loadProspects(); } });
       openModal(p.businessName || p.name, body, null);
     } catch (e) { notice(e.message, "error"); }
   }
