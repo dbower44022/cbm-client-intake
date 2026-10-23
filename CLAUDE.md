@@ -170,6 +170,13 @@ runbook: `DEPLOYMENT.md`; plain-language console companion:
 - To run a script inside a deployed container (the only way to reach prod
   secrets), see [[do-app-console-scripting]]. Admin CRM creds are on **web**
   only.
+- **The CRM droplets pin their EspoCRM image to an exact tag** (since
+  10-22-26): Cleveland `espocrm/espocrm:9.3.10-fpm`, Boston and Lakeside
+  `10.0.10-fpm`. The bare `fpm` tag is EspoCRM 10, and the image upgrades
+  EspoCRM in place on start — pulling it would major-upgrade Cleveland.
+  PHP or EspoCRM security patches go through
+  `scripts/patch_php2shell.sh` via `scripts/on_crm.sh`, crm-test first
+  (`OPEN-ITEMS.md` #52).
 
 **⚠️ crm-test reverts to a fixed snapshot every night.** It doubles as the
 training sandbox, and since 2026-08-22 a nightly reset runs in two halves — the
