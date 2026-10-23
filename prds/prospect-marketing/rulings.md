@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-22-26 22:50 · Revision 1.43 — change log at the end.
+Last Updated: 10-23-26 00:05 · Revision 1.44 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -1003,6 +1003,98 @@ Doug's answer is quoted. Recorded at his instruction ("Record those").
     button.** The Imports tab holds the templates, the history, the undo and
     the import itself. Doug: "remove it". (10-22-26)
 
+### Doug's rulings (10-22-26 and 10-23-26, on lists, Constant Contact and event promotion)
+
+The same redesign session moved to the Lists tab at 22:53. Each point was
+put one question at a time, with a recommendation; Doug's answer is quoted.
+Along the way Doug corrected his own use of "lead" ("My mistake, I used the
+term lead too broadly"): an event registrant is a Contact typed Prospect
+with the marketing opt-in, never a lead, so rulings 19 and 41–43 stand and
+registrants are emailable. Recorded at his earlier instruction to record
+each tab's answers when the tab is done.
+
+89. **Marketing Management is one page with six tabs.** Lists and Calls
+    become tabs on the main page beside Leads, Campaigns, Review and
+    Imports; no tab opens a browser tab. Their code may stay in separate
+    files the page loads. Build plan § 7c.6 had asked for a Lists tab; the
+    v0.270.0 build made a separate page with no recorded reason. Doug:
+    "both, one page six tabs". Standing cost: the rehousing work, and an
+    unsaved list must warn before a tab switch. (10-22-26)
+90. **A list's members are described by Include and Leave out, not by
+    steps.** *Include* holds one or more groups — a record type with
+    conditions, everyone on another list, or the records a file names — and
+    a record in any group is on the list. *Leave out* holds the same kinds
+    of group, and Leave out always wins. Step order, and Add / Keep only /
+    Remove, are gone. Staff building lists are "several staff who are not
+    technical, and will use the same lists repeatedly and only make changes
+    when necessary". Doug: "replace the steps". Changes ruling 62. Standing
+    cost: a list relying on step order is rebuilt by hand (only crm-test
+    test lists exist). (10-22-26)
+91. **Static and dynamic mean what the words say.** Doug, word for word:
+    "The static list should be a list where the user performs searches of
+    any contact, and clicks on the contacts to add to the list. It is truly
+    static, and manually created. They could do a search, select all and
+    add to list if they wanted, but there is never a search or query
+    associated with the list. The dynamic has a search or query that is
+    associated with the list. Whenever the list is used, it executes the
+    search and uses those contacts." Ruling 90's Include / Leave out is the
+    dynamic list's search. (10-22-26)
+92. **A dynamic list stays a pure search; exceptions live in static
+    lists** (option 2). A person kept off a dynamic list is added to a
+    static exclusion list (for example *Do not invite*) that the dynamic
+    list leaves out. The dynamic list's member grid carries an **Exclude**
+    button that asks which exclusion list and adds the person to it; a new
+    dynamic list offers to leave out an exclusion list when it is created.
+    Doug: "2". Replaces ruling 65's standing entries. Standing cost: a new
+    dynamic list has no exclusions until one is added. (10-22-26)
+93. **A list's kind is fixed when it is created.** A dynamic list offers
+    *Copy current members to a new static list* for a frozen snapshot; the
+    Static / Dynamic switch goes. Decided by Claude and announced; Doug did
+    not push back. (10-23-26)
+94. **A static list is filled inside the list.** *Add people* opens the
+    same search panel the dynamic builder uses, plus a name or email box;
+    staff tick people or select all and add them, copied once, no search
+    saved. No *Add to list* on the other grids for now. Doug: "inside the
+    list". (10-22-26)
+95. **A list can keep a copy in Constant Contact, one Constant Contact list
+    per list, kept current** (option A). A tick on the list; the worker
+    keeps the copy in step every night, and *Sync now* runs it on demand,
+    by the standing mailing list's rules: the email consent filter, add the
+    difference, remove the difference (never deleted from the account),
+    never re-add an unsubscribe, unsubscribes written back to the CRM.
+    Renaming the list renames the copy; retiring it stops the sync and
+    never deletes the copy. Replaces the campaign push's one new
+    Constant Contact list per campaign. Doug: "yes, both". Standing cost: a
+    scheduled email's recipients still change with the nightly sync until
+    it is sent. (10-23-26)
+96. **The Constant Contact send report is part of this redesign.** Each
+    night the app reads what Constant Contact sent and records one entry
+    per recipient on the campaign — delivered, bounced, opened, clicked —
+    so "who was emailed" is exact. Staff tell the app which Constant
+    Contact email belongs to the campaign by picking it from recent sends;
+    *Mark as sent* becomes a confirmation, not the record. The campaign
+    gains a **Recipients** view with search and export. Doug: "yes, both".
+    (10-23-26)
+97. **An event is promoted by one campaign per channel, grouped under the
+    event** (option B). A **Promote this event** button on the event
+    creates the email, text and postcard campaigns together, each
+    pre-filled with the event, its links and the chosen list. The event
+    shows a roll-up per campaign — reached, registered, attended — plus a
+    *No campaign* line. One registration is credited to one campaign, the
+    first that brought it. Doug: "yes". Standing cost: staff see several
+    campaigns, and a promotion not tied to an event has no grouping.
+    (10-23-26)
+98. **The list page layout is approved as drafted.** Top line: name, kind,
+    member count broken down by channel ("Email 1,190 · Text 310 ·
+    Postcard 12"), and the Constant Contact copy's status with *Sync now*.
+    A dynamic list states who is on it in plain sentences, with *Edit*
+    opening the builder; a static list shows *Add people* and *Remove*. The
+    member grid has search, sort and export, and on a dynamic list says
+    which Include group brought each person in. *Used by* lists each
+    campaign with its date and reach. The Lists index shows name, kind,
+    members, the Constant Contact tick and when last used. Doug: "looks
+    good". (10-23-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -1123,8 +1215,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.43 |
-| Last Updated | 10-22-26 22:50 |
+| Version | 1.44 |
+| Last Updated | 10-23-26 00:05 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -1132,6 +1224,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.44 | 10-23-26 00:05 | Claude (Claude Code) | Rulings 89–98 appended: one page with six tabs; Include / Leave out replaces steps (changes ruling 62); static and dynamic in Doug's words; exceptions via static exclusion lists (replaces ruling 65); kind fixed at creation; static lists filled inside the list; one kept-current Constant Contact list per list; the send report in this redesign; event promotion by one campaign per channel with an event roll-up; the list page layout (Doug, 10-22-26 22:53 to 10-23-26 00:00). |
 | 1.43 | 10-22-26 22:50 | Claude (Claude Code) | Rulings 79–88 appended: the import tool — shared templates, Excel, closest-template recognition, mapping with four fixes, a preview that is also the rehearsal, fill-empty on repeat leads, Company and Contact left alone, *Show these leads*, undo for untouched new leads, import on the Imports tab only (Doug, 22:13–22:46). |
 | 1.42 | 10-22-26 12:48 | Claude (Claude Code) | Ruling 78 appended: the Marketing Admin Role reads every User, so a campaign can be handed to a colleague (Doug's "a"). Revision-control table's Version and Last Updated brought up to this revision. |
 | 1.41 | 10-22-26 12:40 | Claude (Claude Code) | Ruling 77 appended: the lead code's field rules stay on the Marketing Admin Role only; the fields stay off every layout (Doug's "a"). |
