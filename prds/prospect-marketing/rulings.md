@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-23-26 01:08 · Revision 1.46 — change log at the end.
+Last Updated: 10-23-26 01:20 · Revision 1.47 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -1230,6 +1230,35 @@ recommendation; Doug's answer is quoted.
      Person, Fit with empty fields shown as gaps; *Where it came from*; one
      Activity timeline. Doug: "looks like a big improvement". (10-23-26)
 
+### Doug's rulings (10-23-26, on Calls)
+
+The last tab of the session, from 01:15. Recorded at Doug's instruction
+("record them and draft the build plan").
+
+114. **Callers from other teams open Marketing Management and see only the
+     Calls tab,** listing only the calls they make. Ruling 36 stands: a
+     call campaign names its calling teams, and the server checks each
+     campaign's callers, so the protection never rests on hidden tabs. For a
+     caller outside the Marketing Admin Team the portal tile reads
+     *Campaign calls*. Keeps ruling 89's one page. Doug: "approved".
+     (10-23-26)
+115. **Calls holds campaign call lists only.** Personal outreach to a lead
+     assigned to you (ruling 108) is worked from the Leads tab's *Mine*
+     filter. Both record the same kind of call with the same outcomes, and
+     both appear on the lead's Activity timeline. Decided by Claude and
+     announced; Doug did not push back. (10-23-26)
+116. **The Calls tab layout as drafted.** Top: campaign picker, a count
+     ("38 left to call · 12 called today") and the campaign's brief,
+     collapsible. The call list: Business, Person, Number (click to dial),
+     Level, Last attempt, Attempts; call-again rows sink with their time. A
+     row opens a side panel without leaving the list: *What we know*, the
+     personal link with Copy, and the outcomes No answer, Call again (with a
+     time), Interested (asks for an email or website, then converts), Not
+     interested; recording one moves to the next row. Finished calls
+     collapse into *Done today*. Doug moved straight to recording without
+     changes; Claude records the draft as accepted, open to his correction
+     at the build plan's review. (10-23-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -1350,8 +1379,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.46 |
-| Last Updated | 10-23-26 01:08 |
+| Version | 1.47 |
+| Last Updated | 10-23-26 01:20 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -1359,6 +1388,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.47 | 10-23-26 01:20 | Claude (Claude Code) | Rulings 114–116 appended: Calls — callers from other teams see only the Calls tab; Calls holds campaign call lists only; the Calls layout (Doug, 10-23-26). |
 | 1.46 | 10-23-26 01:08 | Claude (Claude Code) | Rulings 103–113 appended: Leads and Review — Review its own tab; a lead stays a lead until the owner responds; the five-level qualification ladder (refines 42); system placement, manual override, forward only; personal email to Contactable and Referred leads (amends 19); outreach by an assigned Marketing Admin Team member; the sync recognises lead addresses; Review as a two-mode research queue; import templates carry the qualifying judgement (replaces 18, generalises 53); no ruling numbers on screens; the Leads layout (Doug, 10-23-26). |
 | 1.45 | 10-23-26 00:12 | Claude (Claude Code) | Rulings 99–102 appended: the Campaigns tab — lists only, the progress strip and six tabs, the flat grid with Event, Partners and Funders, the short + New campaign (Doug, 10-23-26). |
 | 1.44 | 10-23-26 00:05 | Claude (Claude Code) | Rulings 89–98 appended: one page with six tabs; Include / Leave out replaces steps (changes ruling 62); static and dynamic in Doug's words; exceptions via static exclusion lists (replaces ruling 65); kind fixed at creation; static lists filled inside the list; one kept-current Constant Contact list per list; the send report in this redesign; event promotion by one campaign per channel with an event roll-up; the list page layout (Doug, 10-22-26 22:53 to 10-23-26 00:00). |
