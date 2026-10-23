@@ -1202,8 +1202,8 @@ push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
 - **v0.275.0 (2026-10-22) — a campaign's owner can be changed** (ruling 76).
-  v0.275.0 live; v0.275.1 (ruling 78, the Marketing Admin Role reads User)
-  committed, not pushed. Live-passed on crm-test 10-22-26 12:51 as Mark
+  v0.275.0 and v0.275.1 (ruling 78, the Marketing Admin Role reads User)
+  pushed and live. Live-passed on crm-test 10-22-26 12:51 as Mark
   Marketing. Owed: the role grant on production and Boston (`OPEN-ITEMS.md`).
 - **v0.276.0 (2026-10-22) — lead code D1** (§ 7d). Not pushed; inert
   without the CRM fields. Owed: live pass, D2 (`OPEN-ITEMS.md` #51).
