@@ -5,6 +5,12 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.278.2] — 2026-10-22
+
+**fix(campaigns): the Lists page is headed "Lists".** Doug, 10-22-26: the
+heading and the browser-tab title now match the tab's name (they read
+"Campaign lists"). `campaigns/frontend/lists.html` only.
+
 ## [0.278.1] — 2026-10-22
 
 **fix(campaigns): the Lists page shows the same six tabs as Marketing
