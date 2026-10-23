@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-23-26 00:05 · Revision 1.44 — change log at the end.
+Last Updated: 10-23-26 00:12 · Revision 1.45 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -1095,6 +1095,46 @@ each tab's answers when the tab is done.
     members, the Constant Contact tick and when last used. Doug: "looks
     good". (10-23-26)
 
+### Doug's rulings (10-23-26, on the Campaigns tab)
+
+The same session, after the Lists tab. Each point was put with a
+recommendation; Doug's answer is quoted. Recorded at his instruction
+("record them and move to leads and review").
+
+99. **A campaign always sends to a list.** Each channel's built-in rule
+    (the postcard, email, text and call rule tick boxes) becomes a
+    ready-made dynamic list supplied with the system, picked like any other
+    list. Each channel's consent and legal rules still apply on top
+    automatically — no email without the marketing opt-in, no text without
+    the SMS consent, one postcard per business (ruling 14), exits and dead
+    addresses — so a list can never cause an unlawful send. Doug: "lists
+    only". Standing cost: a one-off campaign needs a list picked or made
+    first. (10-23-26)
+100. **The campaign page has a progress strip and six single-purpose
+     tabs.** The strip shows Draft, Ready, Signed off, Sent and Results,
+     highlights the current stage and names the one next action. *Sent*
+     means, per channel: postcard handed to the mail vendor at sign-off;
+     text sent through the texting service at sign-off; call list opened to
+     callers at sign-off; email sent by staff in Constant Contact and that
+     email picked in the app (ruling 96). The tabs: Overview (facts,
+     partners, funders, event, notes); Audience and content (the list and
+     its reach, the channel's content); Links (the personal link form made
+     the obvious one to copy); Recipients (ruling 96, replacing the Touches
+     table); Responses; Results (today's Analytics). Doug: "looks good".
+     (10-23-26)
+101. **The Campaigns grid is flat, with Event, Partners and Funders
+     columns.** Columns: Campaign, Channel, Stage, Event, Partners,
+     Funders, Owner, Dates, Reached, Responses; Event, Partner, Funder,
+     Channel and Stage are also filters, and the Event cell links to the
+     event's roll-up (ruling 97). Doug: "flat with an event column and with
+     partner, funder columns". (10-23-26)
+102. **+ New campaign asks only for the essentials** — channel, name,
+     owner (the creator by default), and optionally event, partners and
+     funders — and opens the campaign in Draft. *Promote this event* fills
+     the same fields from the event for each channel. Content, list and
+     dates are set on the campaign's page. Decided by Claude and announced;
+     Doug did not push back. (10-23-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -1215,8 +1255,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.44 |
-| Last Updated | 10-23-26 00:05 |
+| Version | 1.45 |
+| Last Updated | 10-23-26 00:12 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -1224,6 +1264,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.45 | 10-23-26 00:12 | Claude (Claude Code) | Rulings 99–102 appended: the Campaigns tab — lists only, the progress strip and six tabs, the flat grid with Event, Partners and Funders, the short + New campaign (Doug, 10-23-26). |
 | 1.44 | 10-23-26 00:05 | Claude (Claude Code) | Rulings 89–98 appended: one page with six tabs; Include / Leave out replaces steps (changes ruling 62); static and dynamic in Doug's words; exceptions via static exclusion lists (replaces ruling 65); kind fixed at creation; static lists filled inside the list; one kept-current Constant Contact list per list; the send report in this redesign; event promotion by one campaign per channel with an event roll-up; the list page layout (Doug, 10-22-26 22:53 to 10-23-26 00:00). |
 | 1.43 | 10-22-26 22:50 | Claude (Claude Code) | Rulings 79–88 appended: the import tool — shared templates, Excel, closest-template recognition, mapping with four fixes, a preview that is also the rehearsal, fill-empty on repeat leads, Company and Contact left alone, *Show these leads*, undo for untouched new leads, import on the Imports tab only (Doug, 22:13–22:46). |
 | 1.42 | 10-22-26 12:48 | Claude (Claude Code) | Ruling 78 appended: the Marketing Admin Role reads every User, so a campaign can be handed to a colleague (Doug's "a"). Revision-control table's Version and Last Updated brought up to this revision. |
