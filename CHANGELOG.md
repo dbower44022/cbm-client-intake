@@ -5,6 +5,20 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.278.4] — 2026-10-22
+
+**fix(forms): a ticked consent sets true over a stored false, never the
+reverse.** Doug's ruling 10-22-26 (approved on the recommendation). Found by
+the production events test: Doug's own contact held opt-in `false`, he ticked
+the consent box on a registration, and the null-fill — which treats a stored
+`false` as a real value — left it `false`, so the tick left no trace. Now
+`core/crm_upsert.find_create_or_fill` takes `true_wins`, the boolean keys
+where a desired `True` is written over `False`; every public door passes its
+consent and opt-in keys (events: marketing, texts, the three documents;
+client intake the same; volunteer, partner and sponsor: texts and the three
+documents). An unticked box still writes nothing, and nothing ever writes
+`False` over `True`. No CRM change, no flag.
+
 ## [0.278.3] — 2026-10-22
 
 **fix(campaigns): a campaign link's company prefill reaches the information

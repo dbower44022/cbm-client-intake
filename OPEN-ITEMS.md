@@ -502,8 +502,9 @@ found; move resolved items to the bottom with the resolution date.
     `prds/events/CBM_Events_Confirmation_Email_Design.md`; the eight templates
     seeded on crm-test, `Seat Offered` applied on crm-test; owed: the live
     pass of design § 10 on crm-test, production's plan + seed + switch, and
-    the online half with Track C); (2) a **ruling on consent**: a ticked consent should set `true`
-    over an existing `false` (today the null-fill keeps `false`); (3) ~~the
+    the online half with Track C); (2) ~~a **ruling on consent**~~ **RULED and BUILT 10-22-26 22:46 (v0.278.4):**
+    a ticked consent or opt-in box sets `true` over a stored `false`, never
+    the reverse, on every public door (`find_create_or_fill(true_wins=…)`); (3) ~~the
     **Zoom question for webinars**~~ **RULED 10-22-26 12:55 (D3-1):** an online Public
     event is not shown or open for registration until its Join URL exists,
     which Zoom fills once Track C is on; no hand-pasted link on Public events.

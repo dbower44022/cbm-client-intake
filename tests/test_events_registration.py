@@ -407,3 +407,18 @@ async def test_no_promotion_when_the_event_is_still_full():
     result = await service.cancel_registration(crm, "r1", settings=NoZoom())
     assert result["promoted"] is False
     assert crm.registrations[3]["attendanceStatus"] == cfg.REG_WAITLISTED
+
+
+@pytest.mark.asyncio
+async def test_a_returning_contacts_tick_overrides_their_earlier_opt_out():
+    """Doug's ruling 10-22-26: consent ticked on a registration sets True over a
+    stored False, never the reverse. Before this, the null-fill kept False and
+    the tick left no trace."""
+    crm = FakeCrm(contacts=[{"id": "c1", "emailAddress": "ada@example.com",
+                             "cContactType": ["Mentor"], "cMarketingOptIn": False,
+                             "cTermsOfUseAccepted": False}])
+    await deliver(submission(consent=True), crm, settings=NoZoom())
+    writes = [p for (entity, rid, p) in crm.updated if entity == "Contact"]
+    assert writes, "the existing contact was not updated"
+    merged = {k: v for p in writes for k, v in p.items()}
+    assert merged["cMarketingOptIn"] is True and merged["cTermsOfUseAccepted"] is True

@@ -85,7 +85,10 @@ Cross-form behaviour worth knowing before changing an orchestrator:
   company* (a qualified name) — through **`delivery_overrides`**, merged
   over the captured payload at delivery; the payload itself is never
   rewritten. Plan: `prds/company-website-hold-plan.md`.
-- **Repeat submitters null-fill, never overwrite** —
+- **Repeat submitters null-fill, never overwrite** (one exception, v0.278.4,
+  Doug's ruling 10-22-26: a **ticked consent or opt-in box sets `true` over a
+  stored `false`**, never the reverse — `find_create_or_fill(true_wins=…)`,
+  passed by every public door) —
   `core/crm_upsert.find_create_or_fill` reuses an existing Contact and backfills
   only empty fields. `CClientProfile` is find-or-create too (matched on
   `linkedCompanyId`): it used to be an unconditional create, and because

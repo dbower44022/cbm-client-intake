@@ -79,6 +79,10 @@ _CONTACT_FILL_KEYS = (
     C_MARKETING_OPT_IN, C_TERMS_ACCEPTED, C_PRIVACY_ACCEPTED, C_CODE_OF_CONDUCT,
     C_SMS_OPT_IN,
 )
+#: Consent and opt-in boxes: a tick sets True over a stored False, never the
+#: reverse (Doug's ruling 10-22-26); an unticked box is simply not sent.
+_TRUE_WINS = (C_MARKETING_OPT_IN, C_TERMS_ACCEPTED, C_PRIVACY_ACCEPTED,
+              C_CODE_OF_CONDUCT, C_SMS_OPT_IN)
 
 
 class RegistrationRefused(Exception):
@@ -253,7 +257,7 @@ async def deliver(
         client, CONTACT,
         match_attr="emailAddress", match_value=email,
         create_payload=contact_payload,
-        fill_keys=_CONTACT_FILL_KEYS,
+        fill_keys=_CONTACT_FILL_KEYS, true_wins=_TRUE_WINS,
     )
     if existing_contact is not None and rung:
         # Advance-only: registering is evidence, never a demotion.

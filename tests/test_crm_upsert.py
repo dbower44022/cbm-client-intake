@@ -244,3 +244,29 @@ def test_website_key_keeps_real_differences(a, b):
 
 def test_website_key_of_nothing_is_empty():
     assert website_key(None) == "" and website_key("  ") == ""
+
+
+@pytest.mark.asyncio
+async def test_true_wins_sets_a_tick_over_a_stored_false_never_the_reverse():
+    """Doug's ruling 10-22-26: a person's own later tick overrides their
+    earlier opt-out; nothing ever writes False over True; keys not named keep
+    the plain null-fill."""
+    c = FakeClient(existing={
+        "id": "c-9", "firstName": "Ada", "phoneNumber": "+1999",
+        "cHowDidYouHear": "Other", "cMarketingOptIn": False,
+    })
+    _, action = await find_create_or_fill(
+        c, "Contact", match_attr="emailAddress", match_value="ada@example.com",
+        create_payload=PAYLOAD, fill_keys=FILL, true_wins=("cMarketingOptIn",),
+    )
+    assert action == "updated"
+    assert c.updates[-1][2] == {"cMarketingOptIn": True}
+
+    c = FakeClient(existing={"id": "c-9", "firstName": "Ada", "phoneNumber": "+1999",
+                             "cHowDidYouHear": "Other", "cMarketingOptIn": True})
+    _, action = await find_create_or_fill(
+        c, "Contact", match_attr="emailAddress", match_value="ada@example.com",
+        create_payload={**PAYLOAD, "cMarketingOptIn": False}, fill_keys=FILL,
+        true_wins=("cMarketingOptIn",),
+    )
+    assert action == "matched" and not c.updates

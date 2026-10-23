@@ -266,8 +266,15 @@ async def find_create_or_fill(
     droppable: Iterable[str] = DROPPABLE_CONTACT_FIELDS,
     select_extra: Iterable[str] = (),
     on_match: Optional[Callable[[dict[str, Any]], Awaitable[Any]]] = None,
+    true_wins: Iterable[str] = (),
 ) -> tuple[str, str]:
     """Find ``entity`` by ``match_attr == match_value``; create or null-fill.
+
+    ``true_wins`` names boolean keys where a desired ``True`` is written over a
+    stored ``False`` as well as over an empty value — never the reverse. It is
+    for consent and opt-in boxes (Doug's ruling 10-22-26): a person's own
+    later tick is dated evidence and overrides their earlier opt-out, whereas
+    an unticked box writes nothing at all (the caller omits the key).
 
     ``fill_keys`` limits which fields participate in the null-fill on a match
     (defaults to every key in ``create_payload``). Pass it to exclude the match
@@ -301,6 +308,9 @@ async def find_create_or_fill(
         and not _is_empty(create_payload[k])
         and _is_empty(existing.get(k))
     }
+    for k in true_wins:
+        if create_payload.get(k) is True and existing.get(k) is False:
+            fill[k] = True
     if fill:
         await client.update(entity, existing["id"], fill)
         return existing["id"], "updated"

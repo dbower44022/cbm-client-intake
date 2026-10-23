@@ -66,6 +66,9 @@ _CONTACT_FILL_KEYS = (
     "firstName", "lastName", "phoneNumber", C_HOW_HEARD,
     C_TERMS_ACCEPTED, C_PRIVACY_ACCEPTED, C_CODE_OF_CONDUCT,
 )
+#: Consent and opt-in boxes: a tick sets True over a stored False, never the
+#: reverse (Doug's ruling 10-22-26); an unticked box is simply not sent.
+_TRUE_WINS = (C_SMS_OPT_IN, C_TERMS_ACCEPTED, C_PRIVACY_ACCEPTED, C_CODE_OF_CONDUCT)
 
 # --- CSponsorProfile attributes / links ---
 S_COMPANY_LINK = "sponsorCompanyId"   # belongsTo Account (FK)
@@ -163,7 +166,7 @@ async def _find_or_create_contact(
     contact_id, action = await find_create_or_fill(
         client, CONTACT,
         match_attr="emailAddress", match_value=str(sub.email),
-        create_payload=payload, fill_keys=_CONTACT_FILL_KEYS,
+        create_payload=payload, fill_keys=_CONTACT_FILL_KEYS, true_wins=_TRUE_WINS,
         select_extra=(C_CONTACT_TYPE,), on_match=_relabel,
     )
     log.info("Contact %s (%s) for %s", contact_id, action, sub.email)
