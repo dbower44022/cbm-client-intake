@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-23-26 00:12 · Revision 1.45 — change log at the end.
+Last Updated: 10-23-26 01:08 · Revision 1.46 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -1135,6 +1135,101 @@ recommendation; Doug's answer is quoted. Recorded at his instruction
      dates are set on the campaign's page. Decided by Claude and announced;
      Doug did not push back. (10-23-26)
 
+### Doug's rulings (10-23-26, on Leads and Review)
+
+The same session moved to Leads and Review at 00:20. Midway Doug rejected
+Claude's account of how a Qualified lead holding only a website and an
+address is reached ("That is not an acceptable explanation"), and stated
+the goal of lead management, word for word: "the goal of lead management is
+to progress companies from knowing very little, to having a great deal of
+information that identifies them as a likely candidate for mentoring. The
+lead UI is designed to provide information about all leads in a way that
+allows users to understand and further qualify and find ways to contact."
+The rulings below follow from that goal. Each was put with a
+recommendation; Doug's answer is quoted.
+
+103. **Review stays a tab of its own.** Its search, filters and bulk
+     actions are the Leads tab's, built once and shared. Doug: "keep review
+     as its own tab". (10-23-26)
+104. **A lead stays a lead, however much is known, until the owner
+     responds.** The Leads tab is the home of everything not yet contacted,
+     and the ladder (ruling 105) shows how far along each lead is; no
+     separate Pipeline view. Settled by Doug's model of lead management;
+     announced, not contested. (10-23-26)
+105. **Qualification is one ladder of five levels:** Unqualified;
+     Qualified – Identified (real and a possible candidate, no named person
+     or direct line — typically a postcard); Qualified – Contactable (a
+     named person and a phone or an email — a call or a personal email);
+     Qualified – Referred (introduced by a partner or someone trusted, with
+     a phone or an email — personal outreach naming the referrer);
+     Disqualified. A referred lead with no phone or email is Identified,
+     its referrer shown in its details. Doug: "The terms unqualified, and
+     disqualified still hold. But then we need different levels of
+     qualification", then "one ladder". Refines ruling 42. (10-23-26)
+106. **The system places the level, staff may set it, and it only moves
+     forward.** Doug, word for word: "The system will place the level
+     whenever something changes on a record. But a User can set it manually
+     at any time, and the system will not move it backwards." Unqualified,
+     Qualified and Disqualified remain staff judgements (except ruling
+     111). After a manual setting, the system moves a lead forward only
+     when the change itself adds what the higher level needs — a new phone,
+     email, contact name or referrer; an unrelated edit leaves the level
+     alone. Doug: "only new facts move it forward". (10-23-26)
+107. **A Contactable or Referred lead may be emailed personally.** One
+     email to one person, written and sent by a named person from their own
+     CBM mailbox through the application's compose; never in bulk, never
+     through Constant Contact; a one-line way to say no in every message, a
+     "no" marking the lead Do Not Contact; every message logged on the
+     lead. Doug: "Allow personal email." Amends ruling 19, whose "no cold
+     email" now means no bulk email without consent. Standing cost: CBM
+     writes individually to people who never opted in; Claude's
+     understanding, not legal advice, is that United States law permits it
+     with an opt-out and the postal address. (10-23-26)
+108. **Personal outreach stays in Marketing Management, by a Marketing
+     Admin Team member assigned to the lead.** Doug, word for word: "leave
+     it in the marketing admin, and we assign a marketing team member to
+     make contact personally." Mentors are not involved before the owner
+     responds. The lead gains *Assigned to* (team members only); the Leads
+     grid an Assigned to column and a *Mine* filter; the lead *Email* (ruling
+     107) and *Log a call*; outcomes *Interested* (converts, as ruling 47),
+     *Not interested* (ends outreach with a reason) and *No reply yet*.
+     The routine parts decided by Claude and announced. (10-23-26)
+109. **The email sync recognises leads' email addresses.** A reply is
+     attached to the lead as a conversation, the lead is flagged
+     *Replied* with a prompt to convert, and the Leads grid gains a
+     *Replied, not yet converted* filter. Doug: "sync". Standing cost:
+     every mailbox is matched against thousands of lead addresses, and the
+     matching must stay exact. (10-23-26)
+110. **Review is the research queue, in two modes:** *Judge Unqualified
+     leads* (website and email inline, qualify or disqualify) and *Find
+     contacts for Identified leads* (contact name, phone and email inline).
+     Both keep the type-and-Enter flow; AI research is a button that fills
+     suggestions for the reviewer to accept. Doug: "research queue with two
+     modes". (10-23-26)
+111. **An import template carries the qualifying judgement.** The template
+     names the level its rows enter at (for example a chamber's member
+     list enters Qualified); the system then places each row — Referred
+     with a phone or email and the partner as referrer, else Identified.
+     The preview (ruling 83) shows every row's level before anything is
+     written. Doug: "your recommendation". Replaces ruling 18's
+     every-list-row-enters-Unqualified and generalises ruling 53. Standing
+     cost: one template setting qualifies every future row from that source
+     unseen but for the preview. (10-23-26)
+112. **No screen cites a ruling number;** every hint is plain words. The
+     rulings stay in the documents. Decided by Claude and announced; Doug
+     did not push back. (10-23-26)
+113. **The Leads tab and the lead's details are approved as drafted.** The
+     tab: counts per level (and *Replied, not yet converted*) across the
+     top, each a filter; a short filter row (search, Assigned to with
+     *Mine*, Lead Source and batch, place, *More filters*); columns
+     Business, Level, Contact person, Reach (postcard, phone, email lit or
+     dim), Fit, Assigned to, Lead Source, Last activity; bulk Assign to,
+     Disqualify, Do Not Contact, AI research. The details: a header with
+     level, assignee, *How we can reach them* and the actions (Email, Log a
+     call, Set level, Assign, Convert); *What we know* grouped Business,
+     Person, Fit with empty fields shown as gaps; *Where it came from*; one
+     Activity timeline. Doug: "looks like a big improvement". (10-23-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -1255,8 +1350,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.45 |
-| Last Updated | 10-23-26 00:12 |
+| Version | 1.46 |
+| Last Updated | 10-23-26 01:08 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -1264,6 +1359,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.46 | 10-23-26 01:08 | Claude (Claude Code) | Rulings 103–113 appended: Leads and Review — Review its own tab; a lead stays a lead until the owner responds; the five-level qualification ladder (refines 42); system placement, manual override, forward only; personal email to Contactable and Referred leads (amends 19); outreach by an assigned Marketing Admin Team member; the sync recognises lead addresses; Review as a two-mode research queue; import templates carry the qualifying judgement (replaces 18, generalises 53); no ruling numbers on screens; the Leads layout (Doug, 10-23-26). |
 | 1.45 | 10-23-26 00:12 | Claude (Claude Code) | Rulings 99–102 appended: the Campaigns tab — lists only, the progress strip and six tabs, the flat grid with Event, Partners and Funders, the short + New campaign (Doug, 10-23-26). |
 | 1.44 | 10-23-26 00:05 | Claude (Claude Code) | Rulings 89–98 appended: one page with six tabs; Include / Leave out replaces steps (changes ruling 62); static and dynamic in Doug's words; exceptions via static exclusion lists (replaces ruling 65); kind fixed at creation; static lists filled inside the list; one kept-current Constant Contact list per list; the send report in this redesign; event promotion by one campaign per channel with an event roll-up; the list page layout (Doug, 10-22-26 22:53 to 10-23-26 00:00). |
 | 1.43 | 10-22-26 22:50 | Claude (Claude Code) | Rulings 79–88 appended: the import tool — shared templates, Excel, closest-template recognition, mapping with four fixes, a preview that is also the rehearsal, fill-empty on repeat leads, Company and Contact left alone, *Show these leads*, undo for untouched new leads, import on the Imports tab only (Doug, 22:13–22:46). |
