@@ -96,9 +96,12 @@ found; move resolved items to the bottom with the resolution date.
     crm-test 10-22-26 12:45–12:48 by Doug and read back by Claude 12:50.**
     **D1 built 10-22-26 13:00 (v0.276.0, committed, not pushed)**; its code
     paths tried against crm-test as the org-wide key (mint, copy to the
-    contact, resolve, per-form prefill, cleared after). Owed: push, the D1
-    live pass as Mark Marketing on crm-test, D2, D3; production and Boston
-    with the arc's slot.
+    contact, resolve, per-form prefill, cleared after). Pushed and live on
+    crm-test 10-22-26. The live pass found, before it ran, that the company
+    box on the information request, partner and funder forms was never
+    filled (v0.278.3, committed, not pushed). Owed: the D1 live pass on
+    10-23-26 from https://claude.ai/artifact/1GY9zFFjfP16SiBXQJyHKz (rev
+    1.0), D2, D3; production and Boston with the arc's slot.
     **At the production slot, also do these two (added 10-22-26; both
     live-passed on crm-test 10-22-26 as Mark Marketing). Without them, no
     campaign action records any history on production:**
