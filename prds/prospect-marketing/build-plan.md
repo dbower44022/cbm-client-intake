@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-22-26 13:00 · Revision 0.36 — change log at the end.
+Last Updated: 10-23-26 01:25 · Revision 0.37 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -1928,6 +1928,596 @@ notice carries the recipient's code, and a form that prefills everything
 shows that recipient's details to whoever holds the forward; *New code* is
 the remedy after the fact, not a prevention.
 
+## 7e. The Marketing Management redesign (rulings 79–116; drafted 10-23-26 for approval)
+
+Doug opened the redesign on 10-22-26 at 22:13: "We need to dramatically
+improve the entire Marketing Management UI." Over the next three hours he
+ruled on every tab, one question at a time: imports (79–88), lists,
+Constant Contact and event promotion (89–98), campaigns (99–102), leads and
+review (103–113), and calls (114–116). This section is the build that
+follows from those rulings. **Nothing in it is built.** Where the rulings
+left a mechanism open, the plan chooses one and marks it **Draft**, with its
+cost, in § 7e.12. A Draft is not a ruling until Doug approves it.
+
+The facts below were read from the code on 10-23-26, after commit
+`ea15328` plus the ruling commits.
+
+### 7e.1 What the redesign touches
+
+Nearly every part of the campaigns package changes:
+
+- `campaigns/frontend/`: all three pages become one.
+- `campaigns/audience.py` and `lists_router.py`: the list engine.
+- `campaigns/email.py` and `core/mailing_sync.py`: the Constant Contact
+  push.
+- `campaigns/imports.py`: templates, Excel and undo.
+- `campaigns/review.py`, `leads.py` and `calls.py`: the ladder and personal
+  outreach.
+- `comms/`: the email sync recognises leads.
+- `enrichment/`: people found by research land on the lead.
+- `events/`: Promote this event and the roll-up.
+
+The CRM gains fields on `CProspect` and one link on `CConversation`
+(§ 7e.11). The application database gains three tables and changes one
+(§ 7e.11). About 150 existing tests pin behaviour that the rulings change;
+each step below names its files.
+
+### 7e.2 One page, six tabs — rulings 89, 112, 114
+
+**Today.** `index.html` and `app.js` (one 1,593-line IIFE) hold Leads,
+Campaigns, Review and Imports. `lists.html` / `lists.js` (641 lines) and
+`calls.html` / `calls.js` (174 lines) are separate pages, opened in named
+browser tabs from the top bar. No script sets a `window.*` global, so the
+three scripts cannot collide by name. **They collide by DOM id**: index and
+lists share eleven ids (`modal*`, `notice`, `offPanel`, `offReason`,
+`runNote`, `userCorner`, `whoName`), and calls shares five of them.
+
+**The build.**
+
+- `index.html` gains a Lists panel and a Calls panel, and the top bar
+  becomes six section buttons.
+- `lists.js` and `calls.js` stay separate files, loaded by `index.html`
+  after `app.js`. Each panel's ids are prefixed (`ls_`, `cl_`), so the
+  modal, notice and user corner exist once, owned by `app.js`.
+- A small shared object, `window.CBMMarketing`, carries what the three
+  scripts share: `api`, `notice`, the open modal, the session. Each script
+  registers `onShow` / `onLeave` with `showSection`. Lists' `onLeave` is
+  the unsaved-changes warning that `beforeunload` gives today.
+- `lists.html` and `calls.html` become redirects to `/campaigns/#lists` and
+  `/campaigns/#calls`, so old bookmarks and the record page's links keep
+  working. Their copies of the top bar go away.
+
+**Callers from other teams (ruling 114).** Today `/session` answers 403 to
+anyone outside `CAMPAIGNS_ALLOWED_TEAMS`, and a test asserts it. The build
+changes that answer. `/session` returns `callerOnly: true` (plus `callsOn`)
+to a signed-in user who is not on the team, and the page then shows only
+the Calls tab. **Every other endpoint keeps its team gate unchanged**, so a
+caller who forges a tab switch gets the same 403s as today. The calls
+endpoints keep their per-campaign check (`calls.may_call`). The portal adds
+a **Campaign calls** tile (`portal/router.py`) for a user who may call on
+at least one running call campaign and is not on the team. The tile
+re-uses `calls.call_list`'s split, read under the API client.
+
+**Ruling 112.** Every hint that cites a ruling is rewritten in plain words.
+A guard test fails on `ruling \d` in any served campaigns file.
+
+**Tests that change.** `test_campaigns_phase3.py:346-355` (the 403 becomes
+`callerOnly`) and `:565-566` (reads `calls.js` strings). Also
+`test_campaigns.py:248-258` (the tile), `test_campaign_attribution.py:577-586`
+(record-page strings) and `test_shared_branding.py` (each page still served).
+
+### 7e.3 The qualification ladder — rulings 104–106, 111
+
+**The field.** `CProspect.leadStatus` keeps its four stored values
+(Unqualified, Qualified, Disqualified, Converted): every filter in
+`calls.py`, `postcard.py`, `stale.py`, `audience.py`, `reporting.py` and
+`leads.py` reads them, and they stay true. A new enum field,
+**`qualificationLevel`** (*Level*), holds the level inside Qualified:
+Identified, Contactable, Referred. It is empty unless `leadStatus` is
+Qualified. The grid's *Level* column shows Unqualified or Disqualified from
+`leadStatus`, and the level otherwise. The staff see one ladder (ruling 105);
+the CRM stores two fields, because the second one is only meaningful inside
+the first.
+
+**The rule** (one function, `campaigns/ladder.py`):
+
+- `facts(lead)`: named person (`firstName` or `lastName`), phone, email,
+  referrer.
+- `placed(facts)`: Referred when there is a referrer and a phone or an
+  email; else Contactable when there is a named person and a phone or an
+  email; else Identified.
+- `next_level(current, manual, facts, facts_at_manual)` applies ruling 106:
+  - The level never moves backwards.
+  - With no manual setting, it is `max(current, placed(facts))`.
+  - With a manual setting, it moves forward only when a fact absent from
+    `facts_at_manual` is now present, and only as far as `placed` allows.
+
+**Where it runs.** There is no single place a lead is saved: staff also edit
+leads in the CRM's own screens. So placement runs in two places.
+
+- **Inline, after every application write to a lead:** review, enrichment
+  `land` and `decide`, the prospect-response orchestrator, call outcomes,
+  the import and the lead editor (§ 7e.6).
+- **A sweep in the worker** over leads modified since its last pass. This
+  catches edits made in the CRM's screens, every
+  `LEAD_LEVEL_SWEEP_SECONDS` (default 900).
+
+`facts_at_manual` lives in a new application table, `lead_level_manual`
+(lead id, level, facts snapshot, set by, set at). The CRM records only the
+level and two fields saying who set it by hand and when. **Draft 1** (§ 7e.12).
+
+**The referrer.** A new link, `CProspect.referredByPartner` → `CPartnerProfile`
+(many-to-one), plus a text field `referredByName` for a referrer who is not
+a partner. Either one counts as a referrer.
+
+**Imports (ruling 111).** A template's *Enters at* setting (Unqualified or
+Qualified) replaces `entry_status`'s fixed rule. A Qualified row is then
+placed by `placed()`, with the template's partner as referrer. Ruling 53's
+state-filing rule becomes the default template setting for the State filing
+source: Qualified when the row has a website or an email.
+
+**Tests that change.** `test_campaigns_phase3.py:54,87,101`,
+`test_campaign_leads.py:98,204,217,227`, `test_campaigns.py:604`,
+`test_sandbox_demo.py:219`. The sandbox seeder gains levels on its demo
+leads.
+
+### 7e.4 The Leads tab and the lead's page — rulings 104, 108, 113
+
+The grid keeps § 7b's server-side paging, search and count.
+
+- **Counts across the top**, one CRM `total` request each, run in
+  parallel: Unqualified, Identified, Contactable, Referred, *Replied, not
+  yet converted* and Disqualified. Each count is a filter.
+- **The filter row** shrinks to search, Assigned to (with *Mine*), Lead
+  Source and batch, and place. *More filters* opens the rest.
+- **The Reach column** is computed from the row: postcard lights with a
+  live address, phone with a phone number, email with an email address.
+  Email is dim unless the level is Contactable or Referred, because only
+  those levels may be emailed personally (ruling 107).
+- **Bulk actions** gain *Assign to…*.
+- **The Import button leaves** (ruling 88).
+
+The lead's window becomes a page, `/campaigns/lead/{id}`, served like
+`/campaigns/record/{id}`, with the single-tab record guard.
+
+- **Header:** name, level, assignee, *How we can reach them*, and the
+  actions Email, Log a call, Set level, Assign and Convert.
+- ***What we know*:** Business, Person and Fit, with empty fields shown as
+  gaps. Each gap is an inline input written as the user, and every write
+  runs placement.
+- ***Where it came from*:** Lead Source, batch and referrer.
+- ***Activity*:** one timeline built from touches (postcards, calls, texts),
+  personal emails and replies (`CConversation`, § 7e.5), level and status
+  changes (the action log) and enrichment findings.
+
+**`CProspect.assignedUser`.** The entity is checked for the field and
+whether it is customizable before the handoff is written (the
+`espo-crm-changes` skill). The picker lists active members of
+`CAMPAIGNS_ALLOWED_TEAMS`. Assignment is written as the user, so the
+Marketing Admin Role needs Assignment Permission that allows it. The
+handoff checks this.
+
+### 7e.5 Personal outreach — rulings 107–109
+
+**Sending (ruling 107).** The record compose already exists:
+`POST /records/{id}/messages` in `sessions/router.py` calls
+`comms.service.send_message`, which can take a pre-built `RecordRef`. The
+lead page builds `RecordRef(entity="CProspect", addresses={lead.email})`
+and opens the shared compose. The guardrails are enforced on the server,
+not in the screen:
+
+- one recipient;
+- the lead is Contactable or Referred, with no `sideExit` and no Do Not
+  Contact;
+- the body carries the opt-out line, which the server appends when it is
+  missing: "If you'd rather not hear from us, reply and say so and we won't
+  write again." The wording is a Draft (Draft 6).
+- the message is logged.
+
+The sender is the user's own `cbmEmail`. **Today that is read from the
+user's `CMentorProfile`, and a marketing staff member may have none.** The
+compose refuses with a message naming what is missing (Draft 4).
+
+**Log a call.** Today a call is a `COutreachTouch` on a running call
+campaign. Personal outreach has no campaign. **Draft 3**: the touch's
+campaign link becomes optional, and the touch carries channel *Personal
+call* or *Personal email*. Calls and personal touches then share one record
+and one outcome vocabulary (ruling 115). The outcomes are:
+
+- **Interested** runs `conversion.convert_lead`, unchanged, under the API
+  client as `calls._convert_on_interest` does.
+- **Not interested** sets `sideExit` Declined, with a reason.
+- **No reply yet** writes the touch only.
+
+**Replies (ruling 109).** The sync matches mail to records through scopes
+built from mentor profiles' linked Contacts (`comms/crm.build_scopes`), and
+attaches conversations through `PARENT_LINKS` (CEngagement, CPartnerProfile,
+CSponsorProfile). The build:
+
+- adds a `CConversation` ↔ `CProspect` link in the CRM (the handoff) and
+  `CProspect` to `PARENT_LINKS`;
+- adds a scope source of **assigned leads**: for each lead with an
+  `assignedUser` and an email, the scope belongs to that user's mailbox;
+- adds `CProspect` to `scopes.WATCHED_ENTITIES`, so a new assignment
+  rebuilds the scopes;
+- updates every loop over `PARENT_LINKS` (`comms/service.py:643`,
+  `comms/attachments.py:143`, `myemail/service.py:147`);
+- grants the Marketing Admin Role `CConversation` read on its own records.
+
+A reply sets a new boolean on the lead, `CProspect.replied` (*Replied*),
+which conversion clears. The *Replied, not yet converted* count reads it.
+**Only assigned leads are matched**: matching every lead's address against
+every mailbox would attach a stranger's reply to whichever lead shared the
+address (Draft 2).
+
+**Tests.** `test_comms_scopes.py` and `test_comms_sync.py` gain the lead
+source. A new `test_campaign_outreach.py` covers the guardrails, the opt-out
+line, the refusal without a `cbmEmail`, and the three outcomes.
+
+### 7e.6 Review as the research queue — ruling 110
+
+`LeadQuery.review_queue` gains a mode:
+
+- ***Judge Unqualified leads***: today's queue, unchanged.
+- ***Find contacts for Identified leads***: Qualified leads at Identified,
+  with no exit, oldest first. Each row has inline contact name, phone and
+  email. Enter writes them, runs placement, and moves to the next lead. A
+  lead that moved to Contactable leaves the queue.
+
+**The AI research button** fills the row with the latest Proposed findings,
+for the reviewer to accept with Enter. `enrichment.runs.decide` today
+refuses to accept a *Person* finding on a lead ("ruling 43"). Ruling 43
+forbids creating a **Contact** before first contact. It does not forbid
+writing a person's name into the lead's own `firstName` / `lastName` /
+`email` / `phone`. **Draft 5**: accepting a Person finding fills those lead
+fields where they are empty, and creates no Contact.
+
+**Tests.** `test_enrichment_research.py` (decide), `test_campaign_leads.py`
+(the queue).
+
+### 7e.7 The import tool — rulings 79–88
+
+**Today.** `campaigns/imports.py` reads CSV only, with fixed column names.
+It plans (stored as a batch in the ledger) and applies in parts of 100,
+resumable. A repeat row is matched by `row_hash` (the Lead Source plus the
+external reference, else the business name and ZIP) and skipped. A row
+matching a Company or Contact creates a lead closed as Duplicate.
+
+**The build.**
+
+- **Templates.** A new table, `import_template`: id, name, Lead Source,
+  list source, *Qualified by*, *Enters at* (ruling 111), the referrer
+  partner id, `mapping` JSONB and `header_signature`, plus the audit
+  columns. Mapping entries are column → field, or one of four fixes:
+  `split_name`, `join`, `fixed`, `ignore` (ruling 82). Shared by the team
+  (ruling 79). Every change is action-logged.
+- **Excel.** `openpyxl` (a new dependency) reads `.xlsx`. A workbook with
+  several sheets asks for the sheet (ruling 80). `.xls` is refused with
+  "save it as .xlsx". The file size limit stays 5 MB and 5,000 rows.
+- **Recognition (ruling 81).** Each template is scored by header overlap.
+  Likely renames come from a normalised-name similarity and are shown as
+  suggestions, never applied silently. The screen lists new, missing and
+  renamed columns. A required field (business name, the four address parts)
+  left unmapped stops the import. *Save as an update to the template*
+  writes a new `header_signature`.
+- **Preview = rehearsal (ruling 83).** `plan_import` already checks every
+  row against the CRM. It gains:
+  - the fourth outcome, *fills an existing lead* (ruling 84), carrying the
+    fields it would fill;
+  - the level each new row lands at;
+  - per-row *exclude*, stored on the planned batch.
+
+  The screen is the counts-as-filters strip plus the walk-through (the
+  spreadsheet values beside the lead fields). The plan step already takes
+  minutes for large files, so it gets a progress line. Today the modal
+  waits on one request; the plan request becomes a background job the page
+  polls (Draft 7).
+- **Repeat rows fill empty fields (ruling 84).** `known_row` stops meaning
+  *skip*. The ledger maps `row_hash` → lead id, and apply writes only the
+  lead's empty fields, as the user, then runs placement. A row matching a
+  Company or Contact keeps today's Duplicate lead (ruling 85).
+- **After writing.** *Show these leads* opens the Leads tab filtered to the
+  batch (ruling 86).
+- **Undo (ruling 87).** *Undo this import* on the history reads the
+  batch's created lead ids from the ledger. A lead is *touched* when it has:
+  - any touch;
+  - membership of any list or campaign;
+  - a status or level change after the batch;
+  - a `sideExit`;
+  - a conversation.
+
+  An untouched lead is deleted, as the user, with `record_action`. Touched
+  leads are listed and left. Fills on existing leads stay. The batch is
+  stamped *Undone* with a count.
+- **The tab (ruling 88).** Templates and history share the Imports tab, and
+  *Import…* is its one entry point.
+
+**Tests.** `test_campaigns_phase3.py` (import), `test_campaigns.py:604`,
+plus a new `test_campaign_import_templates.py` covering recognition,
+renames, the four fixes, Excel, fills, undo and the touched rule.
+
+### 7e.8 Lists — rulings 90–95, 98
+
+**The model.**
+
+- `audience_list.recipe` becomes `{"include": [group], "exclude": [group]}`.
+- A group is one of:
+  - `{type, conditions}` (today's step conditions, with the same curated
+    fields and operators);
+  - `{listId}`;
+  - `{values}` (the file import).
+- `run_recipe` becomes the union of the includes minus the union of the
+  excludes.
+- *Keep only*, step order, the per-step counts and the `step` column go.
+  The run report gains one count per group.
+- **A static list has no recipe** (ruling 91). Its members are hand rows
+  only, so `run_list`, `last_run_at` and the "never run" guard
+  (`audience.py:723`) no longer apply to it.
+- **A dynamic list has no hand edits** (ruling 92). `audience_list_entry`,
+  `apply_entries` and the dynamic half of `mark` / `unmark` are removed.
+- `kind` cannot change after creation (ruling 93). *Copy current members
+  to a new static list* is a new route.
+
+**The data.** Lists exist only on crm-test, as test data, and the sandbox
+truncates the tables nightly. Migration 0034 converts what it can: Add
+steps become includes, Remove steps become excludes, and a list with *Keep
+only* or with step order that matters is marked *needs rebuilding* and
+shown so. Standing entries become a static list per dynamic list, named
+"<list> — exceptions" and left out by it. No production data exists.
+
+**The screens (ruling 98).**
+
+- The index shows name, kind, members, the Constant Contact tick and last
+  used.
+- The list page has a top line with per-channel counts. Each count is
+  `resolve_targets` run per kind, as the counts only.
+- A dynamic list states *who is on it* in sentences, one per group,
+  generated from the group. *Edit* opens the builder: Include and Leave out
+  panels, each with + group.
+- A static list has *Add people*: the same condition panel plus a name or
+  email box over the five target types, with tick, select all and Add
+  (ruling 94).
+- The member grid has search, sort and export. On a dynamic list it adds a
+  *Brought in by* column (the group) and **Exclude**, which asks which
+  static list to add the person to (ruling 92).
+- Creating a dynamic list offers to leave out an exclusion list.
+
+**Tests.** `test_campaign_lists.py` is largely rewritten. These go:
+
+- `test_add_widens_keep_narrows_remove_excludes`
+- `test_keep_only_touches_its_own_type`
+- `test_hand_ticks_and_standing_entries`
+- `test_a_static_list_never_run_cannot_be_sent_to`
+- `test_static_list_run_freeze_and_hand_tick_survives_run_again`
+
+The import, lists-of-lists and cycle tests stay, adapted.
+
+### 7e.9 Constant Contact, campaigns and events — rulings 95–97, 99–102
+
+**A kept-current copy per list (ruling 95).** `core/mailing_sync.py` works
+for one list, named by `MAILING_LIST_NAME`, with its id and last-push
+summary on the singleton `mailing_connection` row.
+
+- `audience()`, `build_plan()` and `apply_plan()` gain a parameter: the
+  people to hold, already consent-filtered, and the list name. The
+  consent and address rule is shared with `audience.resolve_targets`'s
+  email branch, so a member of the chapter is held at `cbmEmail` there as
+  everywhere.
+- `audience_list` gains `cc_sync` (bool), `cc_list_id`, `cc_last_sync_at`
+  and `cc_last_sync` (JSONB summary).
+- The worker's push loop runs the standing list and then every
+  `cc_sync` list. `vendor_unsubscribed` is fetched once per pass. Alert
+  keys are per list (`mailing_list_<id>_failed`).
+- *Sync now* is a route that runs one list's pass, records the action, and
+  reports the counts.
+- A rename renames the Constant Contact list (`PUT /contact_lists/{id}`, a
+  new `MailingClient` method). Retiring stops the sync and never deletes
+  the copy.
+
+**The email campaign (rulings 95, 96, 100).**
+
+- Sign-off no longer pushes a per-campaign list (`push_campaign` and its
+  `Campaign — <name>` list go). Sign-off now requires the campaign's list
+  to have `cc_sync` on, runs *Sync now*, and moves the campaign to Signed
+  off.
+- The strip then reads "Next: send it in Constant Contact to <list>, then
+  pick that email here". *Pick the email* lists the account's email
+  campaigns sent in the last 30 days to that list, through new
+  `MailingClient` methods over the email-campaign endpoints. The
+  `campaign_data` scope is already granted, so no reconnection is needed.
+- Picking one stores its id on the campaign (new field
+  `COutreachCampaign.vendorEmailId`) and moves it to Sent.
+- **The send report (ruling 96).** A worker pass reads, for each Sent
+  email campaign in its first 30 days, the per-recipient tracking reports
+  (sends, bounces, opens, clicks). It writes one `COutreachTouch` per
+  recipient, matched to the Contact by address: Sent / Delivered /
+  Returned, with opened and clicked, upserted so a re-read never doubles.
+- *Mark as sent* goes. The pick is the confirmation.
+- The exact endpoint shapes are **inferred from the vendor's V3 reference,
+  not yet called**. The first live run is the check (Draft 8).
+
+**Lists only (ruling 99).** The four per-kind rule cards
+(`app.js:556-786`) and their `rule` payloads go. Each kind's
+`select_targets` becomes the recipe of a **ready-made dynamic list**
+created by migration 0034: *All leads for postcards*, *Opted-in prospects
+(Engaged and later)*, *Prospects with text consent*, *Leads and prospects
+with a phone*, plus *Dormant clients (a year)*. They are marked `system`:
+they cannot be deleted and can be copied (Draft 9). Build always reads the
+campaign's list. `resolve_targets` keeps every per-channel check, which is
+what makes ruling 99's "never an unlawful send" true.
+
+**The campaign page (ruling 100).** The strip maps today's
+`campaignStatus` with no CRM change:
+
+- Draft is Draft when the list or content is missing.
+- *Ready* is Awaiting sign-off.
+- Signed off is Signed off.
+- *Sent* is Running for a postcard or text, Running for a call once calls
+  begin, and the email pick for an email.
+- *Results* is Complete.
+
+`_MANUAL_MOVES` stays for Cancel. The tabs:
+
+- Overview.
+- *Audience and content*: the list picker, the per-channel counts and the
+  kind's content (text wording, postcard template, the picked email).
+- Links: the personal form first, with Copy.
+- *Recipients*: touches, paged, searchable and exportable, with delivery
+  columns. This replaces the Touches table under Responses.
+- Responses.
+- *Results*: today's Analytics, renamed.
+
+**The grid (ruling 101).** It gains Event, Funders, Stage (the strip's
+word), Reached and Responses. Partners are always filled: the present
+60-row cutoff goes, read in one batched related-list pass. The filters move
+to the server when the grid passes 200 rows.
+
+**+ New campaign (ruling 102).** A short form (channel, name, owner, and
+optionally event, partners and funders) creates the Draft and opens it.
+
+**Promote this event (ruling 97).**
+
+- *Promote this event* on the event's detail view (`events/frontend`)
+  opens a form: tick the channels, pick the list, confirm the names. It
+  creates one campaign per channel through the same create path, linked to
+  the event (`COutreachCampaign.events`).
+- The event gains a **Campaigns** tab. It shows one row per linked
+  campaign (reached, registered and attended) plus *No campaign*, using the
+  existing, unused `reporting.campaign_results`
+  (`campaigns/reporting.py:257`). It reads `CEventRegistration.outreachCampaignId`
+  and `attendanceStatus`.
+- Each number opens the people behind it.
+
+**Tests.** `test_campaigns_email.py` (the push and its list name go),
+`test_mailing_sync.py` (parameterised), `test_campaigns_phase4.py`,
+`test_events_*` (the tab), and a new `test_campaign_send_report.py`.
+
+### 7e.10 The Calls tab — rulings 115, 116
+
+`calls.js` moves into the page as the Calls panel:
+
+- the brief moves to the top, collapsible;
+- the counts are computed from `call_list`;
+- rows open a side panel with *What we know* (the lead page's component),
+  the personal link and the outcomes;
+- *Call again* takes a time through `CBMDateTime`;
+- recording an outcome moves to the next row.
+
+`record_outcome` is unchanged, apart from Draft 3's shared outcome code.
+
+### 7e.11 Storage and CRM changes
+
+**Application database (migration 0034):**
+
+- `import_template` (new);
+- `lead_level_manual` (new);
+- `import_batch` gains `excluded_rows` JSONB, `undone_at`, `undone_by`
+  and `undo_result`;
+- `audience_list` gains `cc_sync`, `cc_list_id`, `cc_last_sync_at`,
+  `cc_last_sync` and `system`;
+- `audience_list_entry` is dropped after its conversion;
+- the recipe conversion and the ready-made lists are created.
+
+The sandbox recapture adds seeders for templates and the ready-made lists
+(`SANDBOX-RESET.md`).
+
+**CRM, one handoff** (`marketing-redesign-crm-handoff.md`, written with the
+`espo-crm-changes` skill, verified against `GET /Metadata`):
+
+- `CProspect.qualificationLevel`: enum Identified / Contactable /
+  Referred, never Read-only.
+- `CProspect.levelSetByHand` (user link) and `levelSetAt` (datetime).
+- `CProspect.referredByPartner`: many-to-one to `CPartnerProfile`.
+- `CProspect.referredByName`: varchar.
+- `CProspect.replied`: bool.
+- `CProspect.assignedUser`: enabled, if absent.
+- `CConversation` ↔ `CProspect`: many-to-many, matching the existing
+  `PARENT_LINKS` shape.
+- `COutreachTouch.outreachCampaign` no longer required, and its channel
+  gains *Personal call* and *Personal email* (Draft 3).
+- `COutreachCampaign.vendorEmailId`: varchar.
+- Roles:
+  - Marketing Admin Role: `CConversation` read; edit on `CProspect` for the
+    new fields; Assignment Permission allowing a lead's assignee.
+  - Mentor Role: unchanged.
+
+All of it is feature-detected, so each piece stays dark until its field
+exists. Production's apply rides the arc's deferred Sunday slot.
+
+### 7e.12 Drafts for Doug's approval
+
+1. **Placement runs inline and in a 15-minute sweep, with the manual
+   snapshot in the application database.**
+   - Cost: a lead edited in the CRM's own screens can take up to 15 minutes
+     to change level.
+   - Cost: the "who set it by hand" history is split. The CRM has who and
+     when; the application has the facts snapshot.
+2. **Only assigned leads are matched by the email sync.** A reply to a
+   personal email always comes from an assigned lead, because ruling 108
+   sends personal outreach only through an assignee.
+   - Cost: a lead who writes in unprompted, with no assignee, is not
+     captured on the lead. It reaches info@ as today.
+3. **A touch without a campaign** carries personal calls and emails.
+   - Cost: every report that counts touches per campaign must ignore
+     campaign-less touches. The handoff changes a required flag on a live
+     entity.
+4. **A sender needs a `cbmEmail` on a mentor profile.** Marketing staff
+   without one are refused, with the reason named.
+   - Cost: some staff need a profile, or a later change reads the address
+     from the user record instead.
+5. **A Person found by research fills the lead's own person fields.**
+   - Cost: it narrows how `enrichment` reads ruling 43. Contacts are still
+     created only at first contact.
+6. **The opt-out line wording** appended to every personal email, as in
+   § 7e.5.
+7. **The import plan runs as a background job the page polls.**
+   - Cost: a new job table or the existing enrichment-run pattern reused.
+     The build reuses the enrichment pattern.
+8. **The send report's vendor endpoints are inferred, not yet called.**
+   - Cost: the first live run may reshape § 7e.9's report step.
+9. **The ready-made lists are system lists**, undeletable but copyable,
+   with the five names in § 7e.9.
+
+### 7e.13 Order and cost
+
+Each step is dark behind its own switch, read per request, and gets a live
+pass on crm-test as a real non-admin Marketing Admin user (plus a Mentor
+Team caller for M1 and M10).
+
+1. **M1: one page, six tabs** (§ 7e.2), behind no switch, because the
+   tabs are the same features. About two days.
+2. **M2: the ladder and the Leads tab** (§§ 7e.3, 7e.4), behind
+   `LEAD_LADDER`, after the handoff's lead fields on crm-test. About four
+   days.
+3. **M3: Review as the research queue** (§ 7e.6). About a day and a half.
+4. **M4: the import tool** (§ 7e.7), behind `IMPORT_TEMPLATES`. About
+   five days.
+5. **M5: personal outreach** (§ 7e.5), behind `LEAD_OUTREACH`, after the
+   handoff's link and touch changes. About four days.
+6. **M6: lists** (§ 7e.8). About four days.
+7. **M7: Constant Contact per list and the email campaign** (§ 7e.9
+   first half), behind `CAMPAIGN_LIST_SYNC`. About three days, plus the
+   live send.
+8. **M8: lists only and the campaign page** (§ 7e.9 second half). About
+   four days.
+9. **M9: the send report and Recipients** (§ 7e.9). About three days.
+10. **M10: Promote this event and the roll-up, and the Calls tab**
+    (§§ 7e.9, 7e.10). About three days.
+
+**Cost, named.**
+
+- **About seven weeks of build, the largest piece of this arc.** Each step
+  can ship and be used on its own, in this order.
+- **One CRM handoff** on every CRM, with production on the deferred slot.
+- **One new dependency** (`openpyxl`).
+- **About 150 existing tests rewritten**, mostly in lists and campaigns.
+- **A larger email sync.** Assigned leads join the scopes, and they are
+  matched exactly.
+- **Two parts rest on facts a live run must confirm:** the vendor's report
+  endpoints, and the send-report volume on a real list.
+- **The standing cost the rulings accepted:** CBM writes personally to
+  people who never opted in (ruling 107).
+
 ---
 
 ## 8. The open list — each item answered or put to Doug
@@ -2182,8 +2772,8 @@ best-effort mirror.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — build plan |
-| Version | v0.23 — Phases 1–4 and the lead model built; §§ 7b and 7c built and live-passed on crm-test; § 7d (the lead identifier in every link, rulings 71–75) approved, not built |
-| Last Updated | 10-22-26 12:10 |
+| Version | v0.24 — Phases 1–4 and the lead model built; §§ 7b and 7c built and live-passed on crm-test; § 7d (the lead identifier in every link, rulings 71–75) approved, not built; § 7e (the Marketing Management redesign, rulings 79–116) drafted for approval |
+| Last Updated | 10-23-26 01:25 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
 | Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
@@ -2192,6 +2782,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.37 | 10-23-26 01:25 | Claude (Claude Code) | § 7e added: the Marketing Management redesign from rulings 79–116 — one page, the qualification ladder, personal outreach, Review as a research queue, the import tool, lists, Constant Contact per list with the send report, lists-only campaigns, Promote this event, the Calls tab; storage and one CRM handoff; nine Drafts for approval (§ 7e.12); ten steps, about seven weeks (§ 7e.13). Header Version and Last Updated brought up to date. |
 | 0.36 | 10-22-26 13:00 | Claude (Claude Code) | § 7d: D1 built (v0.276.0); the four build choices recorded under § 7d.6 step 1. |
 | 0.35 | 10-22-26 12:40 | Claude (Claude Code) | § 7d.5: ruling 77 noted (field rules on the Marketing Admin Role only, code fields off every layout). |
 | 0.34 | 10-22-26 01:42 | Claude (Claude Code) | § 7d.5's CRM handoff written (`lead-code-crm-handoff.md`, `scripts/plans/lead-code.json`, fingerprint `bec909277859`; two field rules in `scripts/migrate_outreach_roles.py`). Ruling 74's "indexed" not buildable through the API — recorded in § 7d.5; `Clicked` found already present. Header revision corrected from 0.30. |
