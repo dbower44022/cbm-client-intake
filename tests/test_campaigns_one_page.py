@@ -94,6 +94,8 @@ def test_an_unsaved_list_is_asked_about_before_the_tab_switches():
     assert "sections[leaving].onLeave" in app and 'if (ok === false) { markNav(leaving); return false; }' in app
     lists = _text(FRONTEND / "lists.js")
     assert 'await ask("Unsaved changes"' in lists
+    # Leaving discards: the list is re-read, so the tab never shows the abandoned edit later.
+    assert "if (leave) { state.dirty = false; if (state.open) await openList(state.open, true); }" in lists
 
 
 def test_the_lists_and_calls_links_point_at_the_tabs():

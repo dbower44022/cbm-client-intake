@@ -5,6 +5,14 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.279.1] — 2026-10-23
+
+**fix(campaigns): leaving an unsaved list discards the edit.** Found writing
+the M1 live-pass runbook: after *Leave them* on the unsaved-changes dialog,
+coming back to the Lists tab still showed the abandoned edit, unsaved. The
+list is now re-read from the server when the person chooses to leave, so the
+tab shows what is saved. `campaigns/frontend/lists.js` only.
+
 ## [0.279.0] — 2026-10-23
 
 **feat(campaigns): Marketing Management is one page with six tabs** — step M1

@@ -1210,7 +1210,8 @@ the strength of it.
   tabs** (build plan § 7e.2, step M1 of the redesign; rulings 89, 112, 114).
   Lists and Calls are tabs; a caller from another team sees the Calls tab
   alone and gets a *Campaign calls* portal tile; no screen cites a ruling
-  number. No CRM change, no switch. Committed, not pushed. Owed: the live
+  number. No CRM change, no switch. Pushed 10-23-26 04:04; v0.279.1 (leaving
+  an unsaved list discards the edit) committed after it. Owed: the live
   pass on crm-test as Mark Marketing and as a Mentor Team caller. The nine
   Drafts in § 7e.12 are ruled (117–125, 10-23-26); M2 may start.
 - **v0.278.0 (2026-10-22) — Campaign Management renamed Marketing

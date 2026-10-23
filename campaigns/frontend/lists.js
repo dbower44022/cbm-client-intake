@@ -63,9 +63,13 @@
 
   // --- leaving an unsaved list: the page's dialog, never the browser's -----------------
 
+  // Leaving discards: the list is re-read from the server, so coming back to
+  // the tab shows what is saved, never the abandoned edit.
   async function leaveUnsaved() {
     if (!state.dirty) return true;
-    return !!(await ask("Unsaved changes", "The open list has changes that are not saved. Leave them?", { ok: "Leave them" }));
+    var leave = !!(await ask("Unsaved changes", "The open list has changes that are not saved. Leave them?", { ok: "Leave them" }));
+    if (leave) { state.dirty = false; if (state.open) await openList(state.open, true); }
+    return leave;
   }
 
   // --- the lists ---------------------------------------------------------------------
