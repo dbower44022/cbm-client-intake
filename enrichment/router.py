@@ -47,8 +47,8 @@ def _gate(request: Request, target_type: str) -> dict:
     settings = get_settings()
     if target_type == runs.TARGET_LEAD:
         if not settings.campaigns_enabled:
-            raise HTTPException(status_code=404, detail="Campaign Management is switched off.")
-        teams, app = settings.campaigns_allowed_teams_list, "Campaign Management"
+            raise HTTPException(status_code=404, detail="Marketing Management is switched off.")
+        teams, app = settings.campaigns_allowed_teams_list, "Marketing Management"
         ok = auth.is_member(user, teams)
     elif target_type == runs.TARGET_COMPANY:
         teams, app = settings.assign_allowed_teams_list, "Client Administration"

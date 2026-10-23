@@ -16,7 +16,7 @@
     session: null, fields: null,
     campaigns: [], sort: { key: "createdAt", dir: -1 },
     record: null, links: null, responses: null,
-    section: "campaigns",
+    section: "prospects",
   };
 
   function $(id) { return document.getElementById(id); }
@@ -1503,6 +1503,9 @@
     if (name === "prospects") loadProspects();
     if (name === "review") loadReview();
     if (name === "imports") loadImports();
+    // Leads and Review write their own hash (filters ride it); the other two
+    // record theirs here, so a reload stays on the tab that was open.
+    if (name === "campaigns" || name === "imports") { try { history.replaceState(null, "", "#" + name); } catch (_) {} }
   }
   Array.prototype.forEach.call(document.querySelectorAll("#sectionNav button.cm__navbtn"), function (b) { b.addEventListener("click", function () { showSection(b.getAttribute("data-section")); }); });
   $("listsNavLink").addEventListener("click", function (ev) {
@@ -1546,7 +1549,7 @@
     try {
       state.session = await api("/session");
     } catch (e) {
-      if (e.status === 404) { text($("offReason"), "Campaign Management is switched off on this deployment (CAMPAIGNS_ENABLED at /setup)."); show($("offPanel")); }
+      if (e.status === 404) { text($("offReason"), "Marketing Management is switched off on this deployment (CAMPAIGNS_ENABLED at /setup)."); show($("offPanel")); }
       else if (e.status === 403) { text($("offReason"), e.message); show($("offPanel")); }
       else notice(e.message, "error");
       return;
@@ -1565,14 +1568,16 @@
       if (!owner) { show($("blockedView")); return; }
       await loadRecord();
     } else {
-      show($("campaignsPanel"));
+      // Leads is the opening tab; a hash naming another tab wins. The
+      // campaigns load first either way — the lead filters list them.
       await loadCampaigns();
       fillCampaignOptions();
       var h = hashParams();
-      if (h.section === "prospects") readHash("pf", h.params);
-      if (h.section === "review") readHash("rf", h.params);
-      if (h.section === "prospects" || h.section === "imports" || h.section === "review") showSection(h.section);
-      if (h.section !== "imports") loadImports();
+      var start = (h.section === "campaigns" || h.section === "imports" || h.section === "review") ? h.section : "prospects";
+      if (start === "prospects") readHash("pf", h.params);
+      if (start === "review") readHash("rf", h.params);
+      showSection(start);
+      if (start !== "imports") loadImports();
     }
   })();
 })();

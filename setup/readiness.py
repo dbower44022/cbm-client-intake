@@ -115,7 +115,7 @@ FEATURES: tuple[Feature, ...] = (
              "it shows mentors a transcription failure on every Scheduled save.",
     ),
     Feature(
-        key="campaigns", name="Campaign Management", flag="campaigns_enabled",
+        key="campaigns", name="Marketing Management", flag="campaigns_enabled",
         component="both", needs_database=True,
         crm_entities=("CProspect", "COutreachCampaign", "COutreachTouch"),
         crm_fields=(("Contact", "cSmsOptIn"), ("Contact", "cFunnelStage"),

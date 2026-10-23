@@ -1,6 +1,6 @@
-# campaigns/ — Campaign Management
+# campaigns/ — Marketing Management (was Campaign Management)
 
-Last Updated: 10-22-26 13:00 · Revision 1.4
+Last Updated: 10-22-26 21:18 · Revision 1.5
 
 Detail for Campaign Management (`/campaigns`, prospect marketing Phases 1 to 4 and the lead model): links, postcards, the landing page, imports, the Leads and Review grids, calls, texts, email, attribution and reporting.
 
@@ -9,7 +9,13 @@ folder. The rules other packages depend on stay in the root `CLAUDE.md`, which
 also points here. Moved word for word from the root file on 10-20-26, when it
 outgrew Claude Code's size limit; edit it here from now on.
 
-## Campaign Management — `/campaigns`
+## Marketing Management — `/campaigns`
+
+**Renamed from Campaign Management in v0.278.0** (Doug, 10-22-26). The
+bullets below keep the old name where they record history. The page opens
+on the Leads tab; the tab order is Leads, Lists, Campaigns, Review, Calls,
+Imports. The `/campaigns` address, the package and the `CAMPAIGNS_*`
+settings keep their names — they are identifiers.
 
 Marketing Admin Team (`CAMPAIGNS_ALLOWED_TEAMS`), behind **`CAMPAIGNS_ENABLED`**
 (off; read **per request**, so a `/setup` flip needs no restart — the routers
@@ -281,6 +287,7 @@ the reason.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.5 | 10-22-26 21:18 | Claude (Claude Code) | Renamed Marketing Management; Leads first (v0.278.0). |
 | 1.4 | 10-22-26 13:00 | Claude (Claude Code) | The lead code bullet (v0.276.0, § 7d D1). |
 | 1.3 | 10-22-26 12:25 | Claude (Claude Code) | The campaign owner bullet (ruling 76, v0.275.0). |
 | 1.2 | 10-21-26 16:01 | Claude (Claude Code) | Campaign lists L2 (v0.271.0). |

@@ -5,6 +5,24 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.278.0] — 2026-10-22
+
+**feat(campaigns): Campaign Management is now Marketing Management, and it
+opens on Leads.** Doug's request 10-22-26.
+
+- The new name shows on the portal tile, the page title and heading, the
+  Calls page's link back, the `/setup` labels (the feature switch, the team
+  gate, the readiness check) and every message that named the app. The
+  action history records new actions under *Marketing Management*; rows
+  already written keep the old name.
+- The tabs run Leads, Lists, Campaigns, Review, Calls, Imports. Leads is the
+  tab the app opens on; a link or reload naming another tab still opens that
+  tab, and the Campaigns and Imports tabs now record themselves in the
+  address so a reload stays put.
+- Unchanged by design: the address `/campaigns/`, the setting names
+  (`CAMPAIGNS_*`), the Marketing Admin Team gate, and the word *campaign* for
+  the records themselves.
+
 ## [0.277.1] — 2026-10-22
 
 **fix(enrichment): a finding no longer proposes a value the record already

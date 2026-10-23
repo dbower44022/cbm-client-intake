@@ -226,9 +226,9 @@ SETTINGS: tuple[SettingSpec, ...] = (
        component="worker",
        help="The only time-driven follow-up. Needs the EventReminder template in "
             "the CRM; every send refuses by name until it exists."),
-    _s("campaigns_enabled", GROUP_FEATURES, "Campaign Management", kind="bool",
+    _s("campaigns_enabled", GROUP_FEATURES, "Marketing Management", kind="bool",
        component="both",
-       help="The Campaign Management tile, the Prospects grid and import, the "
+       help="The Marketing Management tile, the Prospects grid and import, the "
             "postcard kind and the campaign links at /c/. Read per request: no "
             "restart. Needs the CProspect, COutreachCampaign and COutreachTouch "
             "entities in the CRM (coutreach-entities-crm-handoff.md)."),
@@ -274,7 +274,7 @@ SETTINGS: tuple[SettingSpec, ...] = (
             "Needs the mailing connection (Mailing list sync's client ID and secret)."),
     _s("campaign_lists", GROUP_FEATURES, "Campaign lists", kind="bool", component="web",
        help="Named lists a campaign sends to (build plan § 7c): the Lists page in "
-            "Campaign Management and the List picker on a campaign. Off, every campaign "
+            "Marketing Management and the List picker on a campaign. Off, every campaign "
             "selects by its kind's own rule, as before. Read per request: no restart."),
     _s("campaign_list_fields", GROUP_FEATURES, "Campaign list fields", component="web",
        help="The fields a list step may filter on, per record type (ruling 63), written "
@@ -574,7 +574,7 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("session_sponsor_allowed_teams", GROUP_GATES, "Funder Management", kind="csv"),
     _s("workspace_allowed_teams", GROUP_GATES, "Workspace Directories", kind="csv"),
     _s("events_allowed_teams", GROUP_GATES, "Event Administration", kind="csv"),
-    _s("campaigns_allowed_teams", GROUP_GATES, "Campaign Management", kind="csv"),
+    _s("campaigns_allowed_teams", GROUP_GATES, "Marketing Management", kind="csv"),
     _s("analytics_view_allowed_teams", GROUP_GATES, "Analytics — view", kind="csv"),
     _s("analytics_admin_allowed_teams", GROUP_GATES, "Analytics — author", kind="csv"),
     _s("mentor_team_name", GROUP_GATES, "Mentor team (provisioning)"),

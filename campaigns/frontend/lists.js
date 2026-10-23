@@ -592,7 +592,7 @@
     try {
       state.session = await api("/session");
     } catch (e) {
-      text($("offReason"), e.status === 404 ? "Campaign Management is switched off on this deployment." : e.message);
+      text($("offReason"), e.status === 404 ? "Marketing Management is switched off on this deployment." : e.message);
       show($("offPanel"));
       return;
     }

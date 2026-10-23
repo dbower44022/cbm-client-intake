@@ -586,7 +586,7 @@ packages rely on:
 - A new setting read per request needs no restart; read it per request when
   you can. `SETTINGS_OVERRIDES=false` is the env-only break-glass.
 
-### Campaign Management — `/campaigns`
+### Marketing Management (was Campaign Management) — `/campaigns`
 
 Marketing Admin Team (`CAMPAIGNS_ALLOWED_TEAMS`), behind `CAMPAIGNS_ENABLED`
 (read per request). The arc is `prds/prospect-marketing/` — its `README.md`
@@ -1201,6 +1201,9 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
+- **v0.278.0 (2026-10-22) — Campaign Management renamed Marketing
+  Management; it opens on Leads.** Display name only — the `/campaigns`
+  address, `CAMPAIGNS_*` settings and package name stay. Not pushed.
 - **v0.275.0 (2026-10-22) — a campaign's owner can be changed** (ruling 76).
   v0.275.0 and v0.275.1 (ruling 78, the Marketing Admin Role reads User)
   pushed and live. Live-passed on crm-test 10-22-26 12:51 as Mark

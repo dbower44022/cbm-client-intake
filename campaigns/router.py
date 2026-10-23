@@ -42,7 +42,7 @@ log = logging.getLogger("cbm_intake.campaigns")
 
 api_router = APIRouter(prefix="/campaigns/api", tags=["campaigns"])
 
-APP_CAMPAIGNS = "Campaign Management"
+APP_CAMPAIGNS = "Marketing Management"
 
 
 # --- the gate ------------------------------------------------------------------------
@@ -50,7 +50,7 @@ APP_CAMPAIGNS = "Campaign Management"
 def _require_user(request: Request) -> dict:
     settings = get_settings()
     if not settings.campaigns_enabled:
-        raise HTTPException(status_code=404, detail="Campaign Management is switched off.")
+        raise HTTPException(status_code=404, detail="Marketing Management is switched off.")
     user = current_user(request)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated.")
@@ -58,7 +58,7 @@ def _require_user(request: Request) -> dict:
     if not is_member(user, teams):
         raise HTTPException(
             status_code=403,
-            detail=(f"Your account is not authorized to use Campaign Management "
+            detail=(f"Your account is not authorized to use Marketing Management "
                     f"(requires the {', '.join(teams) or 'admin'} team)."),
         )
     return user
@@ -85,7 +85,7 @@ def _require_caller(request: Request) -> dict:
     teams it names — so it happens in ``calls``, not here."""
     settings = get_settings()
     if not settings.campaigns_enabled:
-        raise HTTPException(status_code=404, detail="Campaign Management is switched off.")
+        raise HTTPException(status_code=404, detail="Marketing Management is switched off.")
     _require_calls(settings)
     user = current_user(request)
     if not user:

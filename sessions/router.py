@@ -960,7 +960,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             client = client_for(settings, user)
             link = cfg.sponsored_campaigns_link
             if not settings.campaigns_enabled:
-                return {"available": False, "campaigns": [], "reason": "Campaign Management is switched off on this deployment."}
+                return {"available": False, "campaigns": [], "reason": "Marketing Management is switched off on this deployment."}
             try:
                 if not await client.get(cfg.parent_entity, parent_id, select="id"):
                     raise HTTPException(status_code=404, detail="Record not found.")

@@ -269,7 +269,7 @@ async def change_owner(client: EspoApi, campaign: dict[str, Any], user_id: str,
         raise CampaignError("Choose the person who should own this campaign.")
     chosen = next((o for o in options if o["id"] == user_id), None)
     if chosen is None:
-        raise CampaignError("That person is not an active member of the Campaign Management team, "
+        raise CampaignError("That person is not an active member of the Marketing Management team, "
                             "so they cannot own a campaign.")
     if campaign.get("assignedUserId") == user_id:
         return campaign, None

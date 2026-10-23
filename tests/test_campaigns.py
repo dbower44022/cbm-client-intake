@@ -1,4 +1,4 @@
-"""Campaign Management, Phase 1 (prds/prospect-marketing/build-plan.md).
+"""Marketing Management, Phase 1 (prds/prospect-marketing/build-plan.md).
 
 The boundaries: who may reach the staff API and when the switch is off; what a
 link resolve does and never does (no CRM call, same 404 for every reason, a
@@ -251,11 +251,11 @@ def test_portal_tile_follows_the_switch(monkeypatch):
     monkeypatch.setenv("CAMPAIGNS_ENABLED", "true")
     get_settings.cache_clear()
     titles = [a["title"] for a in _apps_for(MARKETING, get_settings())]
-    assert "Campaign Management" in titles
-    assert "Campaign Management" not in [a["title"] for a in _apps_for(OUTSIDER, get_settings())]
+    assert "Marketing Management" in titles
+    assert "Marketing Management" not in [a["title"] for a in _apps_for(OUTSIDER, get_settings())]
     monkeypatch.setenv("CAMPAIGNS_ENABLED", "false")
     get_settings.cache_clear()
-    assert "Campaign Management" not in [a["title"] for a in _apps_for(MARKETING, get_settings())]
+    assert "Marketing Management" not in [a["title"] for a in _apps_for(MARKETING, get_settings())]
 
 
 # --- links and the resolve (§ 3.7) ----------------------------------------------------------------
