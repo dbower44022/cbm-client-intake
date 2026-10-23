@@ -337,7 +337,12 @@ found; move resolved items to the bottom with the resolution date.
     partner on the engagement. Then production as a real non-admin.
 
     **Redesign step M1 — one page, six tabs — BUILT as v0.279.0 (10-23-26
-    01:33), not pushed** (build plan § 7e.2; rulings 89, 112, 114). Owed:
+    01:33), pushed 04:04 and live on crm-test; v0.279.1 (leaving an unsaved
+    list discards the edit) committed 7d116f5, push owed** (build plan
+    § 7e.2; rulings 89, 112, 114). Runbook for the live pass, 36 steps:
+    https://claude.ai/artifact/PMdnPnnpKG4tVsUvj9W8SU (written 10-23-26
+    04:09 against crm-test's running call campaign "Fall follow-up calls",
+    which names the Mentor Team, and its two planned touches). Owed:
     the live pass on crm-test — as Mark Marketing (all six tabs, an unsaved
     list asked about on a tab switch, `lists.html?list=` and `calls.html`
     redirecting) and as Joe Mentor (the portal's *Campaign calls* tile, the
