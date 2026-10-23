@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-22-26 12:48 · Revision 1.42 — change log at the end.
+Last Updated: 10-22-26 22:50 · Revision 1.43 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -931,6 +931,78 @@ read; option B, write the owner under the org-wide API key. Doug's reply at
     Doug: marketing staff can read every user record, names and email
     addresses included. (10-22-26)
 
+### Doug's rulings (10-22-26, on the import tool)
+
+Doug opened the Marketing Management redesign at 22:13 by asking why the
+Leads tab carries an Import button beside a separate Imports tab (both open
+the same dialog; no ruling chose two). He then described the import he
+wants: templates for the monthly spreadsheets that arrive from the same
+source in the same shape, recognition of the matching template, a mapping
+screen when none matches, a preview that walks through the rows, and a
+rehearsal with a summary before confirmation. Each point below was put one
+question at a time, with a recommendation, between 22:29 and 22:46;
+Doug's answer is quoted. Recorded at his instruction ("Record those").
+
+79. **Import templates are shared by the Marketing Admin Team.** Anyone
+    on the team uses, edits or deletes any template. A template holds the
+    column mapping, the fixes (ruling 82), the Lead Source, the list source
+    and *Qualified by*. Decided by Claude and announced; Doug did not push
+    back. (10-22-26)
+80. **The import reads Excel as well as CSV.** For a workbook with several
+    sheets, the user picks the sheet. Decided by Claude and announced; Doug
+    did not push back. (10-22-26)
+81. **Recognition suggests the closest template and shows every
+    difference** — new columns, missing columns, likely renames. The user
+    resolves each and may save the result as an update to the template. A
+    required column with no match (business name, or any part of the
+    mailing address) stops the import until it is mapped. Doug: "closest
+    match with differences shown". Standing cost: the system will sometimes
+    suggest the wrong template, so the differences must be shown plainly
+    enough to be noticed. (10-22-26)
+82. **With no matching template, the user maps the columns, with four
+    fixes saved in the template**: split a full name into first and last;
+    join two columns into one; set a fixed value for a field the file
+    lacks; ignore a column. Each fix is picked from a list beside the
+    column, never written as a formula. Phone and ZIP normalisation stay
+    automatic. Doug: "mapping plus fixes". Standing cost: a more complex
+    mapping screen, and a split name is sometimes wrong — the preview's
+    walk-through is where that is caught. (10-22-26)
+83. **The preview processes every row and is also the rehearsal.** It shows
+    the outcome counts (new lead, fills an existing lead, duplicate of a
+    company, invalid), each a filter on a row-by-row walk-through that sets
+    the spreadsheet values beside the lead fields they become, with each
+    problem row's reason and a way to exclude the row. Nothing is written
+    until the user confirms the summary; confirming writes exactly what the
+    preview showed. The flow is: choose or confirm the template, preview,
+    confirm, write. Doug: "yes, rehearsal", "walkthrough plus prob list",
+    "merge them". Standing cost: the preview opens only after every row has
+    been checked against the CRM — a few minutes for a large file.
+    (10-22-26)
+84. **A row matching a lead an earlier import created fills that lead's
+    empty fields and never overwrites.** Today such a row (same Lead Source,
+    same external reference, else same business name and ZIP) is skipped
+    outright. The template should name the source's reference column, the
+    reliable month-to-month key. Doug: "fill only empty fields". (10-22-26)
+85. **A row matching an existing Company or Contact leaves that record
+    alone** — today's behaviour stands: the import creates a lead, closes it
+    at once as a Duplicate and links it to the matched company. Doug: "leave
+    record alone". Standing cost: a gap on a client's record that the list
+    could have filled stays empty. (10-22-26)
+86. **The summary after writing offers *Show these leads*** — the Leads
+    tab filtered to this batch. No *Add to a campaign list* there: campaign
+    lists already select by batch. Decided by Claude and announced; Doug did
+    not push back. (10-22-26)
+87. **An import can be undone for its new leads only.** *Undo this import*
+    on the import history deletes every lead the batch created that nobody
+    has touched since (no status change, no campaign membership, no call or
+    note); touched leads are listed and left for a person to decide. Fields
+    the batch filled on existing leads stay filled. Doug: "new leads only".
+    Standing cost: a wrong fill cannot be reversed — though a fill only ever
+    wrote into an empty field. (10-22-26)
+88. **Import lives only on the Imports tab; the Leads tab loses its Import
+    button.** The Imports tab holds the templates, the history, the undo and
+    the import itself. Doug: "remove it". (10-22-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -1051,8 +1123,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.42 |
-| Last Updated | 10-22-26 12:48 |
+| Version | 1.43 |
+| Last Updated | 10-22-26 22:50 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -1060,6 +1132,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.43 | 10-22-26 22:50 | Claude (Claude Code) | Rulings 79–88 appended: the import tool — shared templates, Excel, closest-template recognition, mapping with four fixes, a preview that is also the rehearsal, fill-empty on repeat leads, Company and Contact left alone, *Show these leads*, undo for untouched new leads, import on the Imports tab only (Doug, 22:13–22:46). |
 | 1.42 | 10-22-26 12:48 | Claude (Claude Code) | Ruling 78 appended: the Marketing Admin Role reads every User, so a campaign can be handed to a colleague (Doug's "a"). Revision-control table's Version and Last Updated brought up to this revision. |
 | 1.41 | 10-22-26 12:40 | Claude (Claude Code) | Ruling 77 appended: the lead code's field rules stay on the Marketing Admin Role only; the fields stay off every layout (Doug's "a"). |
 | 1.40 | 10-22-26 12:07 | Claude (Claude Code) | Ruling 76 appended: any Marketing Admin Team member may change a campaign's owner through an Owner picker on the Overview (Doug's "a"). Header revision line corrected from 1.36 to match the table. |
