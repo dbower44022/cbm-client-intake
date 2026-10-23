@@ -341,8 +341,10 @@ found; move resolved items to the bottom with the resolution date.
     the live pass on crm-test — as Mark Marketing (all six tabs, an unsaved
     list asked about on a tab switch, `lists.html?list=` and `calls.html`
     redirecting) and as Joe Mentor (the portal's *Campaign calls* tile, the
-    Calls tab alone, a recorded outcome); then Doug's ruling on the nine
-    Drafts in build plan § 7e.12 before M2 starts.
+    Calls tab alone, a recorded outcome). The nine Drafts in build plan
+    § 7e.12 are ruled (117–125, 10-23-26 03:53); M2 (the ladder and the
+    Leads tab, behind `LEAD_LADDER`) waits only on the handoff's lead
+    fields on crm-test.
 52. **A quick-add from the other door's company inherits its primary
     contact (v0.257.0) — live on crm-test and production by 10-14-26
     22:06, live pass owed** (another session had taken #50 and #51). Doug's

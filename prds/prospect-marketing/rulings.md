@@ -1259,6 +1259,67 @@ The last tab of the session, from 01:15. Recorded at Doug's instruction
      changes; Claude records the draft as accepted, open to his correction
      at the build plan's review. (10-23-26)
 
+### Doug's rulings (10-23-26, on build plan § 7e.12's nine Drafts)
+
+Claude reviewed the nine Drafts against the code after building step M1
+(v0.279.0) and put each with a recommendation, on a runbook page and in
+full in chat, at 03:42. Doug at 03:53: "approve as recommended". Six Drafts
+stand as written; Drafts 4, 6 and 7 stand as Claude's recommended change,
+not as the plan drafted them.
+
+117. **Placement runs inline and in a 15-minute sweep, with the "set by
+     hand" snapshot in the application database** (Draft 1 as written),
+     plus one rule: a manual level with no snapshot — the sandbox empties
+     that table nightly — is never moved by the sweep. Standing cost: a
+     lead edited in the CRM's own screens can take up to 15 minutes to
+     change level, and the by-hand history is split between the CRM (who,
+     when) and the application (the facts). (10-23-26)
+118. **Only assigned leads are matched by the email sync** (Draft 2 as
+     written). A reply to personal outreach always comes from an assigned
+     lead (ruling 108). Narrows ruling 109's wording. Standing cost: a
+     lead who writes in unprompted, with no assignee, reaches info@ as
+     today and is not captured on the lead. (10-23-26)
+119. **A touch without a campaign carries personal calls and emails**
+     (Draft 3 as written): the touch's campaign link becomes optional and
+     its channel gains *Personal call* and *Personal email*. Standing cost:
+     the CRM handoff clears a required flag on a live entity; every
+     per-campaign count must ignore campaign-less touches (the reporting
+     code already does). (10-23-26)
+120. **A sender's mailbox is their mentor profile's chapter address, else
+     their own user address when it is on the chapter's mail domain**
+     (Draft 4 as recommended, NOT as drafted). The compose read only the
+     linked mentor profile, and a Marketing Admin Team member usually has
+     none, so the draft would have refused ruling 108's ordinary case. The
+     same resolution feeds the sync scopes of ruling 118. Standing cost: a
+     second lookup in the comms resolver; the address must still be a real
+     licensed mailbox for the Gmail delegation. (10-23-26)
+121. **A Person found by research fills the lead's own person fields**
+     (Draft 5 as written) where they are empty, and creates no Contact.
+     Ruling 43 stands: a Contact is made only at first contact. (10-23-26)
+122. **Every personal email ends with the opt-out sentence AND the
+     chapter's postal address** (Draft 6 as recommended, NOT as drafted).
+     The sentence: "If you'd rather not hear from us, reply and say so and
+     we won't write again." The address comes from a new setting, filled
+     in at /setup on each deployment; the server appends both when the
+     message lacks them. Ruling 107's own cost line names the postal
+     address as part of what makes the email lawful. Standing cost: one
+     new setting. (10-23-26)
+123. **The import's preview runs in the delivery worker, with the import
+     batch row carrying its status and the page polling that row** (Draft
+     7 as recommended, NOT as drafted). The web process's requests are cut
+     off after about a minute (campaigns/CLAUDE.md, 10-20-26), and the
+     enrichment run table was built for research runs. Standing cost: one
+     worker loop and two columns on `import_batch`. (10-23-26)
+124. **The send report's vendor endpoints are built from the published
+     reference and checked by the first live run** (Draft 8 as written),
+     on crm-test's own Constant Contact account. Standing cost: that run
+     may reshape build plan § 7e.9's report step. (10-23-26)
+125. **The ready-made lists are system lists** (Draft 9 as written):
+     undeletable, copyable, named *All leads for postcards*, *Opted-in
+     prospects (Engaged and later)*, *Prospects with text consent*, *Leads
+     and prospects with a phone* and *Dormant clients (a year)*; the
+     sandbox seeders recreate them after each reset. (10-23-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -1379,8 +1440,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.47 |
-| Last Updated | 10-23-26 01:20 |
+| Version | 1.48 |
+| Last Updated | 10-23-26 03:53 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -1388,6 +1449,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.48 | 10-23-26 03:53 | Claude (Claude Code) | Rulings 117–125 appended: build plan § 7e.12's nine Drafts, approved as recommended — six as drafted, Drafts 4, 6 and 7 as Claude's recommended change (Doug, 10-23-26). |
 | 1.47 | 10-23-26 01:20 | Claude (Claude Code) | Rulings 114–116 appended: Calls — callers from other teams see only the Calls tab; Calls holds campaign call lists only; the Calls layout (Doug, 10-23-26). |
 | 1.46 | 10-23-26 01:08 | Claude (Claude Code) | Rulings 103–113 appended: Leads and Review — Review its own tab; a lead stays a lead until the owner responds; the five-level qualification ladder (refines 42); system placement, manual override, forward only; personal email to Contactable and Referred leads (amends 19); outreach by an assigned Marketing Admin Team member; the sync recognises lead addresses; Review as a two-mode research queue; import templates carry the qualifying judgement (replaces 18, generalises 53); no ruling numbers on screens; the Leads layout (Doug, 10-23-26). |
 | 1.45 | 10-23-26 00:12 | Claude (Claude Code) | Rulings 99–102 appended: the Campaigns tab — lists only, the progress strip and six tabs, the flat grid with Event, Partners and Funders, the short + New campaign (Doug, 10-23-26). |

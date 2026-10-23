@@ -2444,10 +2444,15 @@ The sandbox recapture adds seeders for templates and the ready-made lists
 All of it is feature-detected, so each piece stays dark until its field
 exists. Production's apply rides the arc's deferred Sunday slot.
 
-### 7e.12 Drafts for Doug's approval
+### 7e.12 Drafts for Doug's approval — RULED 10-23-26 03:53 (rulings 117–125)
+
+Doug: "approve as recommended". Drafts 1, 2, 3, 5, 8 and 9 stand as
+written (rulings 117, 118, 119, 121, 124, 125). Drafts 4, 6 and 7 stand
+as Claude's recommended change, noted under each (rulings 120, 122, 123).
 
 1. **Placement runs inline and in a 15-minute sweep, with the manual
-   snapshot in the application database.**
+   snapshot in the application database.** Ruled 117, plus: a manual level
+   with no snapshot is never moved by the sweep.
    - Cost: a lead edited in the CRM's own screens can take up to 15 minutes
      to change level.
    - Cost: the "who set it by hand" history is split. The CRM has who and
@@ -2465,14 +2470,23 @@ exists. Production's apply rides the arc's deferred Sunday slot.
    without one are refused, with the reason named.
    - Cost: some staff need a profile, or a later change reads the address
      from the user record instead.
+   - **Ruled otherwise (120):** the mentor profile's address first, else
+     the user's own address when it is on the chapter's mail domain. The
+     same resolution feeds § 7e.5's sync scopes.
 5. **A Person found by research fills the lead's own person fields.**
    - Cost: it narrows how `enrichment` reads ruling 43. Contacts are still
      created only at first contact.
 6. **The opt-out line wording** appended to every personal email, as in
    § 7e.5.
+   - **Ruled otherwise (122):** the sentence AND the chapter's postal
+     address, from a new setting filled in at /setup; the server appends
+     both when the message lacks them.
 7. **The import plan runs as a background job the page polls.**
    - Cost: a new job table or the existing enrichment-run pattern reused.
      The build reuses the enrichment pattern.
+   - **Ruled otherwise (123):** the delivery worker runs the plan; the
+     `import_batch` row carries its status (two new columns) and the page
+     polls that row. Not the enrichment run table.
 8. **The send report's vendor endpoints are inferred, not yet called.**
    - Cost: the first live run may reshape § 7e.9's report step.
 9. **The ready-made lists are system lists**, undeletable but copyable,
@@ -2780,8 +2794,8 @@ best-effort mirror.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — build plan |
-| Version | v0.25 — Phases 1–4 and the lead model built; §§ 7b and 7c built and live-passed on crm-test; § 7d (the lead identifier in every link, rulings 71–75) approved, D1 built; § 7e (the Marketing Management redesign, rulings 79–116) drafted for approval, step M1 built as v0.279.0 |
-| Last Updated | 10-23-26 01:33 |
+| Version | v0.26 — Phases 1–4 and the lead model built; §§ 7b and 7c built and live-passed on crm-test; § 7d (the lead identifier in every link, rulings 71–75) approved, D1 built; § 7e (the Marketing Management redesign, rulings 79–125) approved, step M1 built as v0.279.0 |
+| Last Updated | 10-23-26 03:53 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
 | Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
@@ -2790,6 +2804,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.39 | 10-23-26 03:53 | Claude (Claude Code) | § 7e.12 ruled (rulings 117–125, Doug "approve as recommended"): six Drafts as written, Drafts 4, 6 and 7 as recommended; each change noted under its Draft. § 7e is approved. |
 | 0.38 | 10-23-26 01:33 | Claude (Claude Code) | § 7e.13 step M1 built (v0.279.0): one page, six tabs; the three build choices recorded under the step; § 7e.2 heading marked built. The Drafts in § 7e.12 still await Doug. |
 | 0.37 | 10-23-26 01:25 | Claude (Claude Code) | § 7e added: the Marketing Management redesign from rulings 79–116 — one page, the qualification ladder, personal outreach, Review as a research queue, the import tool, lists, Constant Contact per list with the send report, lists-only campaigns, Promote this event, the Calls tab; storage and one CRM handoff; nine Drafts for approval (§ 7e.12); ten steps, about seven weeks (§ 7e.13). Header Version and Last Updated brought up to date. |
 | 0.36 | 10-22-26 13:00 | Claude (Claude Code) | § 7d: D1 built (v0.276.0); the four build choices recorded under § 7d.6 step 1. |
