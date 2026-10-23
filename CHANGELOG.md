@@ -5,6 +5,21 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.278.1] — 2026-10-22
+
+**fix(campaigns): the Lists page shows the same six tabs as Marketing
+Management.** Doug, 10-22-26: the Lists page showed only Campaigns, Lists
+and Calls, which read as a different app.
+
+- `campaigns/frontend/lists.html`: the tabs are now Leads, Lists, Campaigns,
+  Review, Calls, Imports. Leads, Campaigns, Review and Imports open the
+  Marketing Management page on that tab, in its own browser tab as before.
+- `campaigns/frontend/app.js`: when that page is already open, it now
+  switches tab on the address change instead of staying where it was.
+- The Calls page keeps its short header (a Marketing Management button and
+  Portal): callers come from any team named on a campaign (ruling 36), so
+  most of them cannot open the other tabs.
+
 ## [0.278.0] — 2026-10-22
 
 **feat(campaigns): Campaign Management is now Marketing Management, and it

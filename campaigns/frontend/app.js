@@ -1508,6 +1508,16 @@
     if (name === "campaigns" || name === "imports") { try { history.replaceState(null, "", "#" + name); } catch (_) {} }
   }
   Array.prototype.forEach.call(document.querySelectorAll("#sectionNav button.cm__navbtn"), function (b) { b.addEventListener("click", function () { showSection(b.getAttribute("data-section")); }); });
+  // The Lists page's tabs open this page by its tab name. When this page is
+  // already open in that browser tab only the hash changes, so switch here.
+  window.addEventListener("hashchange", function () {
+    if (RECORD_ID || !state.session || !state.session.available) return;
+    var h = hashParams();
+    if (["prospects", "campaigns", "review", "imports"].indexOf(h.section) < 0) return;
+    if (h.section === "prospects") readHash("pf", h.params);
+    if (h.section === "review") readHash("rf", h.params);
+    showSection(h.section);
+  });
   $("listsNavLink").addEventListener("click", function (ev) {
     if (state.session && !state.session.listsOn) { ev.preventDefault(); notice("Campaign lists are switched off on this deployment (Campaign lists at /setup).", "warn"); }
   });
