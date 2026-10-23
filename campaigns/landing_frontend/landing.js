@@ -5,7 +5,7 @@
  * form with the campaign, the link and the prospect id in the address and the
  * typed name, email and phone handed over IN THE BROWSER ONLY (sessionStorage,
  * read once by the form and cleared) — the server never serves a person's
- * details back to a public page (ruling 16).
+ * details back to a public page.
  */
 (function () {
   "use strict";

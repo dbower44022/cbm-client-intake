@@ -112,7 +112,40 @@
     $("modalSave").hidden = !onSave;
     show($("modal"));
   }
-  function closeModal() { hide($("modal")); modal.onSave = null; }
+  function closeModal() {
+    hide($("modal"));
+    var cancelled = modal.onCancel;
+    modal.onSave = null; modal.onCancel = null;
+    if (cancelled) cancelled();
+  }
+  // A yes-or-no, or a one-line answer, as a promise — the page's own dialog,
+  // never the browser's. Resolves true / the typed text, or null on Cancel.
+  function ask(title, message, opts) {
+    opts = opts || {};
+    var body = el("div");
+    if (message) body.appendChild(el("p", null, message));
+    var input = null;
+    if (opts.input) {
+      var lab = el("label", "cm__field cm__field--wide"); lab.appendChild(el("span", null, opts.input));
+      input = el("input"); input.type = "text"; input.maxLength = 500; input.value = opts.value || "";
+      lab.appendChild(input); body.appendChild(lab);
+    }
+    return new Promise(function (resolve) {
+      var settled = false;
+      function settle(v) { if (settled) return; settled = true; modal.onCancel = null; resolve(v); }
+      modal.onCancel = function () { settle(null); };
+      openModal(title, body, function () {
+        if (!input) { settle(true); closeModal(); return; }
+        var v = input.value.trim();
+        if (opts.required && !v) { modalMsg("This cannot be empty.", "error"); return; }
+        settle(v); closeModal();
+      }, opts.ok || "OK");
+      if (input) {
+        input.addEventListener("keydown", function (e) { if (e.key === "Enter") $("modalSave").click(); });
+        setTimeout(function () { input.focus(); }, 0);
+      }
+    });
+  }
   function modalMsg(msg, kind) { var m = $("modalMsg"); m.textContent = msg || ""; m.className = "cm__modal-msg" + (kind ? " cm__modal-msg--" + kind : ""); }
   $("modalClose").addEventListener("click", closeModal);
   $("modalCancel").addEventListener("click", closeModal);
@@ -194,12 +227,12 @@
       groups[spec.group].appendChild(field);
     });
     var rel = el("div", "cm__group"); rel.appendChild(el("h4", null, f.fundersAvailable ? "Partners, funders and events" : "Partners and events"));
-    var partners = pickList("partners", "Partners (CM-2)", f.partnerOptions, chosenPartners, "The partners this campaign is for. A client who arrives through it is credited to every one.");
+    var partners = pickList("partners", "Partners", f.partnerOptions, chosenPartners, "The partners this campaign is for. A client who arrives through it is credited to every one.");
     // Ruling 57: funders a campaign names, shown once the CRM carries the link.
     var funders = f.fundersAvailable ? pickList("funders", "Funders", f.funderOptions, chosenFunders || [], "The funders paying for or sponsoring this campaign. It shows on each one's Campaigns tab; funders are not credited with the clients it brings in.") : null;
-    var events = pickList("events", "Events (CM-6)", f.eventOptions, chosenEvents, "The events this campaign advertises.");
+    var events = pickList("events", "Events", f.eventOptions, chosenEvents, "The events this campaign advertises.");
     rel.appendChild(partners); if (funders) rel.appendChild(funders); rel.appendChild(events); root.appendChild(rel);
-    // Who calls (ruling 36): a call campaign's own teams. None named means the
+    // Who calls: a call campaign's own teams. None named means the
     // Marketing Admin Team; naming the Mentor Team opens its calls to mentors.
     var callers = el("div", "cm__group cm__field--kinds"); callers.setAttribute("data-kinds", "Call");
     callers.appendChild(el("h4", null, "Who calls"));
@@ -366,7 +399,7 @@
     });
   }
 
-  // --- the owner picker (ruling 76): any team member may hand a campaign on ---
+  // --- the owner picker: any team member may hand a campaign on ---
   var ownerOptions = null;
   async function loadOwnerOptions() {
     if (ownerOptions) return ownerOptions;
@@ -420,7 +453,7 @@
       ["Created", fmtDate(c.createdAt)],
     ];
     pairs.forEach(function (p) {
-      // The sign-off record (ruling 13) and the run belong to every kind that
+      // The sign-off record and the run belong to every kind that
       // selects an audience; the mail-vendor facts to the postcard alone.
       var selecting = ["Postcard", "Call", "SMS", "Email"].indexOf(c.campaignKind) >= 0;
       if (c.campaignKind !== "Postcard" && ["Mail vendor template", "Postcard size", "Estimated cost"].indexOf(p[0]) >= 0) return;
@@ -461,7 +494,7 @@
       if (c.campaignStatus === "Signed off") text(note, "Signed off. The worker picks the run up within a minute and mails each planned piece" + (state.session.postal.provider === "dryrun" ? " (dry run: nothing is printed)." : "."));
       else if (c.campaignStatus === "Running") text(note, "Running — the worker is mailing. Reload to follow the counts.");
       else if (c.campaignStatus === "Complete") text(note, "Complete. Every planned piece was handed to the vendor.");
-      else text(note, "Build the list, read the count and the cost, then sign off. Nothing is mailed until signed (ruling 13).");
+      else text(note, "Build the list, read the count and the cost, then sign off. Nothing is mailed until signed.");
     } else hide(pc);
     renderCallCard(rec);
     renderSmsCard(rec);
@@ -499,7 +532,7 @@
       $("audEvery").checked = !!(state.audience && state.audience.includeEveryContact);
     } catch (e) { notice(e.message, "error"); return; }
     var a = state.audience, open = $("audOpen");
-    open.href = "/campaigns/lists.html" + (a ? "?list=" + encodeURIComponent(a.listId) : "");
+    open.href = "/campaigns/#lists" + (a ? "?list=" + encodeURIComponent(a.listId) : "");
     text($("audState"), a
       ? "Sends to the " + a.listKind + " list \u201c" + a.listName + "\u201d, now at version " + a.listVersion + "," +
         (a.includeEveryContact ? " every contact on each client, partner or funder." : " the primary contact of each client, partner or funder.") +
@@ -630,7 +663,7 @@
     text($("smsText"), c.smsMessage || "(no message written yet)");
     text($("smsParts"), (chk.characters || 0) + " characters · " + (chk.parts || 0) + " message part" + (chk.parts === 1 ? "" : "s") + (chk.encoding ? " (" + chk.encoding + ")" : ""));
     var prob = $("smsProblem");
-    if (chk.fieldAvailable === false) { prob.textContent = "This CRM has no Text message field on the campaign yet (ruling 39: coutreach-entities-crm-handoff.md § 9)."; show(prob); }
+    if (chk.fieldAvailable === false) { prob.textContent = "This CRM has no Text message field on the campaign yet (the CRM change coutreach-entities-crm-handoff.md § 9 adds it)."; show(prob); }
     else if ((chk.problems || []).length) { prob.textContent = chk.problems[0]; show(prob); } else hide(prob);
     var s = state.session.sms || {}, note = $("smsNote");
     var where = s.provider === "dryrun" ? " The texting service is the dry run: nothing reaches a phone." : "";
@@ -672,8 +705,8 @@
     setTimeout(function () { inp.focus(); }, 50);
   });
 
-  // --- the call kind (§ 3.4; ruling 36) ------------------------------------------------------
-  function callsPageUrl() { return location.origin + "/campaigns/calls.html"; }
+  // --- the call kind (§ 3.4) ------------------------------------------------------
+  function callsPageUrl() { return location.origin + "/campaigns/#calls"; }
 
   function renderCallCard(rec) {
     var c = rec.campaign, card = $("callCard");
@@ -702,7 +735,7 @@
     if (c.campaignStatus === "Running") text(note, "Running. Callers see each row on the Calls page until it is recorded; the campaign completes itself when the last row is.");
     else if (c.campaignStatus === "Complete") text(note, "Complete. Every row was recorded.");
     else text(note, "Build the list, read who is on it, then sign off. Nobody is called until you do.");
-    text($("callersLine"), rec.callerTeams ? "Who calls: members of " + rec.callerTeams.join(", ") + " (the teams named on this campaign — ruling 36; Edit to change them)." : "Who calls: the teams named on this campaign could not be read.");
+    text($("callersLine"), rec.callerTeams ? "Who calls: members of " + rec.callerTeams.join(", ") + " (the teams named on this campaign; Edit to change them)." : "Who calls: the teams named on this campaign could not be read.");
     text($("callsUrl"), callsPageUrl());
     if (!state.session.callsOn) text(note, "Campaign calls are switched off on this deployment (CAMPAIGNS_CALLS at /setup), so this list cannot be built or run.");
   }
@@ -772,7 +805,7 @@
     if (!sum.planned) { notice("Build the list first — there is nothing planned to sign off.", "warn"); return; }
     var body = el("div", "cm__plan");
     body.appendChild(el("p", null, "This mails " + sum.planned + " piece" + (sum.planned === 1 ? "" : "s") + " at an estimated " + money(state.record.estimatedCost, state.record.currency) + (state.session.postal.provider === "dryrun" ? " (dry run — nothing is printed)." : ".")));
-    body.appendChild(el("p", "cm__hint", "Type the piece count to confirm. Nothing is mailed until you do (ruling 13)."));
+    body.appendChild(el("p", "cm__hint", "Type the piece count to confirm. Nothing is mailed until you do."));
     var f = el("div", "cm__field"); var lab = el("label", null, "Piece count"); lab.htmlFor = "confirmCount"; var inp = el("input"); inp.type = "text"; inp.id = "confirmCount"; inp.autocomplete = "off";
     f.appendChild(lab); f.appendChild(inp); body.appendChild(f);
     openModal("Sign off and run", body, async function () {
@@ -966,7 +999,7 @@
     });
   });
 
-  // --- analytics tab: the campaign's dashboard (CM-9, § 6) -------------------------------------
+  // --- analytics tab: the campaign's dashboard (§ 6) -------------------------------------
   var anaLoaded = false;
   async function loadAnalytics(force) {
     if (anaLoaded && !force) return;
@@ -1199,7 +1232,7 @@
   }
   async function qualifyRow(p, web, mail, i, btn) {
     if (!web.value.trim() && !mail.value.trim()) {
-      notice("Type the website or email you found first. A lead without either can never be Qualified (ruling 42).", "warn");
+      notice("Type the website or email you found first. A lead without either can never be Qualified.", "warn");
       web.focus(); return;
     }
     var done = window.CBMBusy ? CBMBusy.start(btn) : function () {};
@@ -1393,7 +1426,7 @@
     if (action === "not-same-company") return p.sideExit === "Duplicate" ? "" : "Only a lead marked Duplicate can be told it is not the same company.";
     if (p.sideExit) return "This lead has already stopped being worked (" + p.sideExit + "); a reason is never written over another.";
     if (action === "qualify" && status !== "Unqualified") return "Only an Unqualified lead is qualified by review; this one is " + status + ".";
-    if (action === "qualify" && !p.website && !p.email) return "A lead without a website or an email can never be Qualified (ruling 42). Type the one you found into its row on the Review tab, or leave it Unqualified — campaigns may still reach it.";
+    if (action === "qualify" && !p.website && !p.email) return "A lead without a website or an email can never be Qualified. Type the one you found into its row on the Review tab, or leave it Unqualified — campaigns may still reach it.";
     if (action === "disqualify" && status !== "Unqualified" && status !== "Qualified") return "Only an Unqualified or Qualified lead can be disqualified; this one is " + status + ".";
     if (action === "do-not-contact" && status === "Converted") return "This lead is Converted; its Company or Contact is the record now.";
     return "";
@@ -1448,12 +1481,12 @@
     var fields = el("div", "cm__fields");
     function field(label, input, wide) { var f = el("div", "cm__field" + (wide ? " cm__field--wide" : "")); var l = el("label", null, label); l.htmlFor = input.id; f.appendChild(l); f.appendChild(input); fields.appendChild(f); return input; }
     var name = el("input"); name.type = "text"; name.id = "im_name"; name.maxLength = 255; name.placeholder = "e.g. State filings, October 2026"; field("Batch name", name, true);
-    var door = el("select"); door.id = "im_door"; [["State filing", "State filing (a row with a website or email enters Qualified — ruling 53)"], ["List", "Purchased list (enters Unqualified — ruling 18)"], ["Partner file", "Partner file (enters Unqualified — ruling 18)"]].forEach(function (o) { var opt = el("option", null, o[1]); opt.value = o[0]; door.appendChild(opt); }); field("Lead Source", door);
+    var door = el("select"); door.id = "im_door"; [["State filing", "State filing (a row with a website or email enters Qualified)"], ["List", "Purchased list (enters Unqualified)"], ["Partner file", "Partner file (enters Unqualified)"]].forEach(function (o) { var opt = el("option", null, o[1]); opt.value = o[0]; door.appendChild(opt); }); field("Lead Source", door);
     var qb = el("input"); qb.type = "text"; qb.id = "im_qb"; qb.placeholder = "The filter's name and version"; field("Qualified by (filings)", qb);
     var ls = el("input"); ls.type = "text"; ls.id = "im_ls"; ls.placeholder = "Vendor or partner"; field("List source (lists)", ls);
     var file = el("input"); file.type = "file"; file.id = "im_file"; file.accept = ".csv,text/csv"; field("CSV file", file, true);
     body.appendChild(fields);
-    body.appendChild(el("p", "cm__hint", "Columns: business_name (required), mailing_street, mailing_city, mailing_state, mailing_zip (required as a set), and optionally external_reference, website, email, phone, contact_first_name, contact_last_name, qualified_by. Every row becomes a lead; no Company or Contact is created until first contact (ruling 43). A list or partner file names its vendor or partner in List source; its rows wait in the Review tab at Unqualified. Unknown columns ride along into the lead."));
+    body.appendChild(el("p", "cm__hint", "Columns: business_name (required), mailing_street, mailing_city, mailing_state, mailing_zip (required as a set), and optionally external_reference, website, email, phone, contact_first_name, contact_last_name, qualified_by. Every row becomes a lead; no Company or Contact is created until first contact. A list or partner file names its vendor or partner in List source; its rows wait in the Review tab at Unqualified. Unknown columns ride along into the lead."));
     var planBox = el("div", "cm__plan"); body.appendChild(planBox);
     var planned = null;
     function readFile() { return new Promise(function (resolve, reject) { var f = file.files && file.files[0]; if (!f) { reject(new Error("Choose a CSV file.")); return; } var r = new FileReader(); r.onload = function () { resolve(String(r.result || "")); }; r.onerror = function () { reject(new Error("The file could not be read.")); }; r.readAsText(f); }); }
@@ -1495,35 +1528,58 @@
   }
 
   // --- sections / boot ---------------------------------------------------------------------------------
-  function showSection(name) {
-    state.section = name;
+  // One page, six tabs. Lists and Calls are drawn by lists.js and calls.js,
+  // which register here; a tab's onLeave may refuse the switch (an unsaved
+  // list), and its onShow gets the hash's parameters (#lists?list=<id>).
+  var SECTIONS = ["prospects", "lists", "campaigns", "review", "calls", "imports"];
+  var PANELS = { prospects: "prospectsPanel", lists: "listsPanel", campaigns: "campaignsPanel", review: "reviewPanel", calls: "callsPanel", imports: "importsPanel" };
+  var sections = {};
+  function markNav(name) {
     Array.prototype.forEach.call(document.querySelectorAll("#sectionNav .cm__navbtn"), function (b) { b.classList.toggle("is-active", b.getAttribute("data-section") === name); });
-    $("campaignsPanel").hidden = name !== "campaigns"; $("prospectsPanel").hidden = name !== "prospects"; $("importsPanel").hidden = name !== "imports";
-    $("reviewPanel").hidden = name !== "review";
+  }
+  async function showSection(name, params) {
+    if (SECTIONS.indexOf(name) < 0) return false;
+    var leaving = state.section;
+    if (leaving && leaving !== name && sections[leaving] && sections[leaving].onLeave) {
+      var ok = await sections[leaving].onLeave();
+      if (ok === false) { markNav(leaving); return false; }
+    }
+    if (name === "lists" && state.session && !state.session.listsOn) { notice("Campaign lists are switched off on this deployment (Campaign lists at /setup).", "warn"); markNav(leaving); return false; }
+    if (name === "calls" && state.session && !state.session.callsOn) { notice("Campaign calls are switched off on this deployment (CAMPAIGNS_CALLS at /setup).", "warn"); markNav(leaving); return false; }
+    state.section = name;
+    markNav(name);
+    Object.keys(PANELS).forEach(function (k) { $(PANELS[k]).hidden = k !== name; });
     if (name === "prospects") loadProspects();
     if (name === "review") loadReview();
     if (name === "imports") loadImports();
-    // Leads and Review write their own hash (filters ride it); the other two
-    // record theirs here, so a reload stays on the tab that was open.
-    if (name === "campaigns" || name === "imports") { try { history.replaceState(null, "", "#" + name); } catch (_) {} }
+    // Leads and Review write their own hash (filters ride it), Lists writes
+    // its own (the open list rides it); the other three record theirs here,
+    // so a reload stays on the tab that was open.
+    if (name === "campaigns" || name === "imports" || name === "calls") { try { history.replaceState(null, "", "#" + name); } catch (_) {} }
+    if (sections[name] && sections[name].onShow) await sections[name].onShow(params || {});
+    return true;
   }
   Array.prototype.forEach.call(document.querySelectorAll("#sectionNav button.cm__navbtn"), function (b) { b.addEventListener("click", function () { showSection(b.getAttribute("data-section")); }); });
-  // The Lists page's tabs open this page by its tab name. When this page is
+  // A record page's links open this page by its tab name. When this page is
   // already open in that browser tab only the hash changes, so switch here.
   window.addEventListener("hashchange", function () {
-    if (RECORD_ID || !state.session || !state.session.available) return;
+    if (RECORD_ID || !state.session || state.session.callerOnly || !state.session.available) return;
     var h = hashParams();
-    if (["prospects", "campaigns", "review", "imports"].indexOf(h.section) < 0) return;
+    if (SECTIONS.indexOf(h.section) < 0) return;
     if (h.section === "prospects") readHash("pf", h.params);
     if (h.section === "review") readHash("rf", h.params);
-    showSection(h.section);
+    showSection(h.section, h.params);
   });
-  $("listsNavLink").addEventListener("click", function (ev) {
-    if (state.session && !state.session.listsOn) { ev.preventDefault(); notice("Campaign lists are switched off on this deployment (Campaign lists at /setup).", "warn"); }
-  });
-  $("callsNavLink").addEventListener("click", function (ev) {
-    if (state.session && !state.session.callsOn) { ev.preventDefault(); notice("Campaign calls are switched off on this deployment (CAMPAIGNS_CALLS at /setup).", "warn"); }
-  });
+  // What the Lists and Calls scripts share with this one (build plan § 7e.2):
+  // one api, one notice, one modal, one session, and the tab registry.
+  window.CBMMarketing = {
+    api: api, notice: notice, el: el, text: text, show: show, hide: hide, esc: esc, fmtDate: fmtDate,
+    openModal: openModal, closeModal: closeModal, modalMsg: modalMsg, ask: ask,
+    register: function (name, hooks) { sections[name] = hooks || {}; },
+    showSection: showSection,
+    session: function () { return state.session; },
+    recordId: RECORD_ID
+  };
 
   function wireSort(tableId, sortState, render) {
     Array.prototype.forEach.call(document.querySelectorAll("#" + tableId + " th[data-sort]"), function (th) {
@@ -1565,6 +1621,16 @@
       return;
     }
     text($("whoName"), state.session.name || state.session.userName); show($("userCorner"));
+    if (state.session.callerOnly) {
+      // A caller from another team: only the Calls tab, listing only the calls
+      // they make. The server keeps every other door shut regardless.
+      Array.prototype.forEach.call(document.querySelectorAll("#sectionNav .cm__navbtn"), function (b) { b.hidden = b.getAttribute("data-section") !== "calls"; });
+      text($("pageSub"), "The calls you make for the call campaigns that name your team.");
+      if (RECORD_ID) { text($("offReason"), "Your account is not authorized to open campaigns here. Campaign calls are on the Calls tab."); show($("offPanel")); return; }
+      if (!state.session.callsOn) { text($("offReason"), "Campaign calls are switched off on this deployment (CAMPAIGNS_CALLS at /setup)."); show($("offPanel")); return; }
+      await showSection("calls");
+      return;
+    }
     if (!state.session.available) { text($("offReason"), state.session.reason); show($("offPanel")); return; }
     if (!state.session.storeAvailable) notice("The application database is not configured here, so links and imports are unavailable; campaigns themselves still work.", "warn");
     try {
@@ -1583,10 +1649,10 @@
       await loadCampaigns();
       fillCampaignOptions();
       var h = hashParams();
-      var start = (h.section === "campaigns" || h.section === "imports" || h.section === "review") ? h.section : "prospects";
+      var start = SECTIONS.indexOf(h.section) >= 0 ? h.section : "prospects";
       if (start === "prospects") readHash("pf", h.params);
       if (start === "review") readHash("rf", h.params);
-      showSection(start);
+      if (!(await showSection(start, h.params))) await showSection("prospects");
       if (start !== "imports") loadImports();
     }
   })();

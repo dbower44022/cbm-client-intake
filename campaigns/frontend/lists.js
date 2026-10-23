@@ -1,61 +1,24 @@
-/* Campaign lists (build plan § 7c.6; rulings 58–68). One page: the lists on
-   the left, the open list on the right — its recipe, its hand edits or
-   standing entries, its members. Vanilla JS, no build step. Buttons are never
-   disabled: each one checks on click and says what is missing. */
+/* Campaign lists (build plan § 7c.6) — the Lists tab of Marketing Management
+   (build plan § 7e.2). The lists on the left, the open list on the right — its
+   recipe, its hand edits or standing entries, its members. Vanilla JS, no build
+   step. Buttons are never disabled: each one checks on click and says what is
+   missing.
+
+   This script is loaded by index.html after app.js and reaches the page through
+   window.CBMMarketing: one api, one notice, one modal, one session. Its own
+   element ids are prefixed ls_ so nothing collides with the other tabs. */
 (function () {
   "use strict";
-  var API = "/campaigns/api";
-  var state = { session: null, cat: null, lists: [], open: null, detail: null,
-                recipe: { steps: [] }, counts: {}, offset: 0, limit: 50, total: 0, dirty: false };
+  var M = window.CBMMarketing;
+  if (!M) return;
+  var state = { cat: null, lists: [], open: null, detail: null,
+                recipe: { steps: [] }, counts: {}, offset: 0, limit: 50, total: 0, dirty: false, loaded: false };
 
   function $(id) { return document.getElementById(id); }
-  function show(el) { if (el) el.hidden = false; }
-  function hide(el) { if (el) el.hidden = true; }
-  function text(el, v) { if (el) el.textContent = v == null ? "" : String(v); }
-  function el(tag, cls, content) {
-    var e = document.createElement(tag);
-    if (cls) e.className = cls;
-    if (content != null) e.textContent = content;
-    return e;
-  }
-  function fmtDate(v) {
-    if (!v) return "—";
-    var d = new Date(v);
-    return isNaN(d) ? String(v) : d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
-  }
-  function notice(msg, kind) {
-    var n = $("notice");
-    if (!msg) { hide(n); return; }
-    n.textContent = msg;
-    n.className = "cm__notice" + (kind ? " cm__notice--" + kind : "");
-    show(n);
-    if (kind === "ok") setTimeout(function () { if (n.textContent === msg) hide(n); }, 6000);
-  }
-
-  async function api(path, opts) {
-    opts = opts || {};
-    var ctrl = new AbortController();
-    var waitMs = opts.timeoutMs || 120000;
-    var timer = setTimeout(function () { ctrl.abort(); }, waitMs);
-    var init = { method: opts.method || "GET", headers: { Accept: "application/json" }, signal: ctrl.signal, credentials: "same-origin" };
-    if (opts.body !== undefined) { init.headers["Content-Type"] = "application/json"; init.body = JSON.stringify(opts.body); }
-    var res;
-    try { res = await fetch(API + path, init); }
-    catch (e) {
-      if (e && e.name === "AbortError") throw Object.assign(new Error("The server did not answer within " + Math.round(waitMs / 1000) + " seconds. It may still be working: wait a minute, then reload to see whether it finished."), { status: 0 });
-      throw Object.assign(new Error("The server could not be reached — check the connection, then try again."), { status: 0 });
-    }
-    finally { clearTimeout(timer); }
-    if (res.status === 401) { location.assign("/?next=" + encodeURIComponent("/campaigns/lists.html")); throw Object.assign(new Error("Signed out"), { status: 401 }); }
-    var data = null;
-    try { data = await res.json(); } catch (_) { data = null; }
-    if (!res.ok) {
-      var err = new Error((data && data.detail) || ("Request failed (" + res.status + ")"));
-      err.status = res.status;
-      throw err;
-    }
-    return data;
-  }
+  var show = M.show, hide = M.hide, text = M.text, el = M.el, fmtDate = M.fmtDate, notice = M.notice, ask = M.ask;
+  // The lists' reads are the slow ones (a run can take minutes): a longer wait
+  // than the page's default before the "did not answer" message.
+  function api(path, opts) { opts = opts || {}; if (!opts.timeoutMs) opts.timeoutMs = 120000; return M.api(path, opts); }
 
   // --- the field catalogue -------------------------------------------------------------
 
@@ -98,40 +61,7 @@
   function typeLabel(t) { return ((state.cat && state.cat.types[t]) || {}).label || t; }
   function noTypeLabel(f, opt) { return opt === "__none__" ? (f.noTypeLabel || "No type") : opt; }
 
-  // --- the page's own dialog (never the browser's) ----------------------------------------
-
-  var dialog = { resolve: null, required: false };
-  function ask(title, message, opts) {
-    opts = opts || {};
-    text($("modalTitle"), title);
-    text($("modalText"), message || "");
-    text($("modalMsg"), "");
-    var wrap = $("modalInputWrap");
-    if (opts.input) {
-      text($("modalInputLabel"), opts.input);
-      $("modalInput").value = opts.value || "";
-      show(wrap);
-    } else hide(wrap);
-    dialog.required = !!opts.required;
-    text($("modalOk"), opts.ok || "OK");
-    show($("modal"));
-    if (opts.input) setTimeout(function () { $("modalInput").focus(); }, 0);
-    return new Promise(function (resolve) { dialog.resolve = resolve; });
-  }
-  function closeDialog(value) {
-    hide($("modal"));
-    var r = dialog.resolve; dialog.resolve = null;
-    if (r) r(value);
-  }
-  $("modalOk").addEventListener("click", function () {
-    if ($("modalInputWrap").hidden) { closeDialog(true); return; }
-    var v = $("modalInput").value.trim();
-    if (dialog.required && !v) { text($("modalMsg"), "This cannot be empty."); return; }
-    closeDialog(v);
-  });
-  $("modalCancel").addEventListener("click", function () { closeDialog(null); });
-  $("modalClose").addEventListener("click", function () { closeDialog(null); });
-  $("modalInput").addEventListener("keydown", function (e) { if (e.key === "Enter") $("modalOk").click(); });
+  // --- leaving an unsaved list: the page's dialog, never the browser's -----------------
 
   async function leaveUnsaved() {
     if (!state.dirty) return true;
@@ -147,9 +77,9 @@
   }
 
   function renderLists() {
-    var showRetired = $("showRetired").checked;
+    var showRetired = $("ls_showRetired").checked;
     var rows = state.lists.filter(function (l) { return showRetired || l.status !== "retired"; });
-    var tb = $("listRows");
+    var tb = $("ls_listRows");
     tb.textContent = "";
     rows.forEach(function (l) {
       var tr = el("tr");
@@ -165,8 +95,8 @@
       tr.addEventListener("click", function () { openList(l.id); });
       tb.appendChild(tr);
     });
-    text($("listCount"), rows.length + " list" + (rows.length === 1 ? "" : "s"));
-    $("listsEmpty").hidden = rows.length > 0;
+    text($("ls_listCount"), rows.length + " list" + (rows.length === 1 ? "" : "s"));
+    $("ls_listsEmpty").hidden = rows.length > 0;
   }
 
   async function newList() {
@@ -190,6 +120,7 @@
     try {
       var res = await api("/lists/" + encodeURIComponent(id));
       state.open = id;
+      writeHash();
       state.detail = res;
       state.recipe = JSON.parse(JSON.stringify(res.list.recipe || { steps: [] }));
       state.counts = {};
@@ -204,22 +135,22 @@
 
   function renderDetail() {
     var d = state.detail, l = d.list;
-    show($("detail"));
-    $("lName").value = l.name;
-    $("lKind").value = l.kind;
-    $("lNotes").value = l.notes || "";
-    var badge = $("lStatus");
+    show($("ls_detail"));
+    $("ls_lName").value = l.name;
+    $("ls_lKind").value = l.kind;
+    $("ls_lNotes").value = l.notes || "";
+    var badge = $("ls_lStatus");
     badge.textContent = (l.status === "retired" ? "Retired" : "Active") + " · version " + l.version;
     badge.className = "cm__badge" + (l.status === "retired" ? " cm__badge--cancelled" : "");
-    text($("retireBtn"), l.status === "retired" ? "Reactivate" : "Retire");
+    text($("ls_retireBtn"), l.status === "retired" ? "Reactivate" : "Retire");
     renderKindHint();
     var run = l.lastRun || {};
-    text($("runNote"), l.lastRunAt
+    text($("ls_runNote"), l.lastRunAt
       ? "Last run " + fmtDate(l.lastRunAt) + " by " + (l.lastRunBy || "—") + ": " + run.total + " members" +
         (l.kind === "static" ? " (frozen)." : " as of then — a campaign build runs it again.") +
         (run.version && run.version !== l.version ? " The recipe has changed since: run it again." : "")
       : "Never run.");
-    var p = $("problems");
+    var p = $("ls_problems");
     if ((d.problems || []).length) {
       p.textContent = "";
       p.appendChild(el("strong", null, "The saved recipe cannot run yet:"));
@@ -230,7 +161,7 @@
     } else hide(p);
     renderSteps();
     renderHand();
-    var used = $("usedBy");
+    var used = $("ls_usedBy");
     used.textContent = "";
     if (!(d.usedBy || []).length) used.appendChild(el("li", "cm__hint", "No campaign uses this list yet."));
     (d.usedBy || []).forEach(function (u) {
@@ -242,7 +173,7 @@
       li.appendChild(document.createTextNode(u.builtVersion ? " — last built from version " + u.builtVersion + ", " + fmtDate(u.builtAt) : " — not built yet"));
       used.appendChild(li);
     });
-    var vs = $("versions");
+    var vs = $("ls_versions");
     vs.textContent = "";
     (d.versions || []).forEach(function (v) {
       vs.appendChild(el("li", null, "Version " + v.version + " (" + v.kind + ") — " + (v.savedBy || "—") + ", " + fmtDate(v.savedAt)));
@@ -250,11 +181,11 @@
   }
 
   function renderKindHint() {
-    var k = $("lKind").value;
-    text($("kindHint"), k === "static"
+    var k = $("ls_lKind").value;
+    text($("ls_kindHint"), k === "static"
       ? "Static: Run builds the list once and freezes it. Ticking a member out, or adding one by hand, changes the frozen list; Run again keeps those changes."
       : "Dynamic: the recipe runs again at the start of every campaign build, so the list is always as of that day. A hand change is a standing entry — always include or always exclude — applied after the recipe.");
-    text($("runBtn"), k === "static" ? (state.detail && state.detail.list.lastRunAt ? "Run again" : "Run and freeze") : "Run now");
+    text($("ls_runBtn"), k === "static" ? (state.detail && state.detail.list.lastRunAt ? "Run again" : "Run and freeze") : "Run now");
   }
 
   // --- the recipe -------------------------------------------------------------------------
@@ -262,7 +193,7 @@
   // The amber box describes the SAVED recipe; once the recipe is being edited it
   // is out of date, so it goes until the next Save re-checks (live pass 10-21-26:
   // a new list's "needs at least one step" stayed up while its steps were built).
-  function markDirty() { state.dirty = true; hide($("problems")); }
+  function markDirty() { state.dirty = true; hide($("ls_problems")); }
 
   function addStep() {
     var first = !state.recipe.steps.length;
@@ -272,7 +203,7 @@
   }
 
   function renderSteps() {
-    var host = $("steps");
+    var host = $("ls_steps");
     host.textContent = "";
     if (!state.recipe.steps.length) host.appendChild(el("p", "cm__hint", "No steps yet — start with + Add step."));
     state.recipe.steps.forEach(function (s, i) { host.appendChild(stepCard(s, i)); });
@@ -342,7 +273,7 @@
     var wrap = el("div", "ls__cond"); wrap.appendChild(add);
     card.appendChild(wrap);
     if (s.type === "contact" && s.action === "add") {
-      card.appendChild(el("p", "cm__hint ls__cond", "Adding contacts must name the contact types it reaches: add a condition \"Contact type includes any of …\" (ruling 60)."));
+      card.appendChild(el("p", "cm__hint ls__cond", "Adding contacts must name the contact types it reaches: add a condition \"Contact type includes any of …\"."));
     }
     return card;
   }
@@ -418,11 +349,11 @@
 
   async function save() {
     if (!state.open) return;
-    var name = $("lName").value.trim();
+    var name = $("ls_lName").value.trim();
     if (!name) { notice("Give the list a name.", "error"); return; }
     try {
       var res = await api("/lists/" + encodeURIComponent(state.open), { method: "PUT",
-        body: { name: name, notes: $("lNotes").value, kind: $("lKind").value, recipe: state.recipe } });
+        body: { name: name, notes: $("ls_lNotes").value, kind: $("ls_lKind").value, recipe: state.recipe } });
       state.dirty = false;
       notice("Saved — version " + res.list.version + ".", "ok");
       await loadLists();
@@ -462,7 +393,7 @@
     if (!(await ask("Delete the list", "No campaign has used this list. Deleting it cannot be undone.", { ok: "Delete" }))) return;
     try {
       await api("/lists/" + encodeURIComponent(state.open), { method: "DELETE" });
-      state.open = null; state.dirty = false; hide($("detail"));
+      state.open = null; state.dirty = false; hide($("ls_detail")); writeHash();
       await loadLists();
       notice("List deleted.", "ok");
     } catch (e) { notice(e.message, "error"); }
@@ -472,13 +403,13 @@
 
   function renderHand() {
     var d = state.detail, dynamic = d.list.kind === "dynamic";
-    text($("handTitle"), dynamic ? "Standing entries" : "Changed by hand");
-    text($("handHint"), dynamic
-      ? "Always include or always exclude, applied after the recipe on every run (ruling 65). Not a Do Not Contact — for a person no campaign may contact, use the lead's Do Not Contact."
+    text($("ls_handTitle"), dynamic ? "Standing entries" : "Changed by hand");
+    text($("ls_handHint"), dynamic
+      ? "Always include or always exclude, applied after the recipe on every run. Not a Do Not Contact — for a person no campaign may contact, use the lead's Do Not Contact."
       : "Records added or taken out by hand. Run again keeps them.");
-    text($("handModeHead"), dynamic ? "Entry" : "Change");
+    text($("ls_handModeHead"), dynamic ? "Entry" : "Change");
     var rows = dynamic ? d.entries : d.hand;
-    var tb = $("handRows");
+    var tb = $("ls_handRows");
     tb.textContent = "";
     (rows || []).forEach(function (r) {
       var tr = el("tr");
@@ -492,7 +423,7 @@
       td.appendChild(b); tr.appendChild(td);
       tb.appendChild(tr);
     });
-    $("handEmpty").hidden = (rows || []).length > 0;
+    $("ls_handEmpty").hidden = (rows || []).length > 0;
   }
 
   async function mark(key, stateIn) {
@@ -521,12 +452,12 @@
   function onSearch() {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(async function () {
-      var q = $("searchBox").value.trim();
-      var ul = $("searchResults");
+      var q = $("ls_searchBox").value.trim();
+      var ul = $("ls_searchResults");
       ul.textContent = "";
       if (q.length < 2) return;
       try {
-        var res = await api("/lists/search/records?type=" + encodeURIComponent($("searchType").value) + "&q=" + encodeURIComponent(q));
+        var res = await api("/lists/search/records?type=" + encodeURIComponent($("ls_searchType").value) + "&q=" + encodeURIComponent(q));
         if (!(res.records || []).length) ul.appendChild(el("li", "cm__hint", "Nothing matches."));
         (res.records || []).forEach(function (r) {
           var li = el("li");
@@ -555,15 +486,15 @@
 
   function renderMembers(res) {
     var dynamic = state.detail.list.kind === "dynamic";
-    text($("membersTitle"), dynamic ? "Members as of the last run" : "Members (frozen)");
+    text($("ls_membersTitle"), dynamic ? "Members as of the last run" : "Members (frozen)");
     var cols = [];
     (res.members || []).forEach(function (m) { Object.keys(m.values || {}).forEach(function (k) { if (cols.indexOf(k) < 0) cols.push(k); }); });
-    var head = $("memberHead");
+    var head = $("ls_memberHead");
     head.textContent = "";
     var tr = el("tr");
     ["Type", "Name"].concat(cols).concat([""]).forEach(function (h) { tr.appendChild(el("th", null, h)); });
     head.appendChild(tr);
-    var tb = $("memberRows");
+    var tb = $("ls_memberRows");
     tb.textContent = "";
     (res.members || []).forEach(function (m) {
       var r = el("tr");
@@ -578,64 +509,58 @@
       tb.appendChild(r);
     });
     var end = Math.min(state.offset + state.limit, res.total);
-    text($("memberCount"), res.total ? (state.offset + 1) + "–" + end + " of " + res.total : "");
-    var empty = $("membersEmpty");
+    text($("ls_memberCount"), res.total ? (state.offset + 1) + "–" + end + " of " + res.total : "");
+    var empty = $("ls_membersEmpty");
     if (!res.total) {
-      empty.textContent = res.neverRun ? "Never run — save the recipe, then press " + $("runBtn").textContent + "." : "Nobody is on this list.";
+      empty.textContent = res.neverRun ? "Never run — save the recipe, then press " + $("ls_runBtn").textContent + "." : "Nobody is on this list.";
       show(empty);
     } else hide(empty);
   }
 
-  // --- start ------------------------------------------------------------------------
+  // --- the tab ----------------------------------------------------------------------
 
-  async function start() {
-    try {
-      state.session = await api("/session");
-    } catch (e) {
-      text($("offReason"), e.status === 404 ? "Marketing Management is switched off on this deployment." : e.message);
-      show($("offPanel"));
-      return;
-    }
-    if (state.session.user) { text($("whoName"), state.session.user.name || state.session.user.userName); show($("userCorner")); }
-    if (!state.session.listsOn) {
-      text($("offReason"), "Campaign lists are switched off on this deployment (System Settings → Features → Campaign lists).");
-      show($("offPanel"));
-      return;
-    }
-    try {
-      state.cat = await api("/lists/catalogue");
-    } catch (e) {
-      text($("offReason"), e.message);
-      show($("offPanel"));
-      return;
-    }
-    show($("listsView"));
-    await loadLists();
-    var want = new URLSearchParams(location.search).get("list");
-    if (want) openList(want, true);
+  function writeHash() {
+    if (M.recordId) return;
+    try { history.replaceState(null, "", "#lists" + (state.open ? "?list=" + encodeURIComponent(state.open) : "")); } catch (_) {}
   }
 
-  $("newListBtn").addEventListener("click", newList);
-  $("showRetired").addEventListener("change", renderLists);
-  $("saveBtn").addEventListener("click", save);
-  $("runBtn").addEventListener("click", runList);
-  $("retireBtn").addEventListener("click", retireOrReactivate);
-  $("deleteBtn").addEventListener("click", deleteList);
-  $("addStepBtn").addEventListener("click", addStep);
-  $("previewBtn").addEventListener("click", function () { preview(null); });
-  $("lKind").addEventListener("change", function () { markDirty(); renderKindHint(); });
-  $("lName").addEventListener("input", markDirty);
-  $("lNotes").addEventListener("input", markDirty);
-  $("searchBox").addEventListener("input", onSearch);
-  $("searchType").addEventListener("change", onSearch);
-  $("prevBtn").addEventListener("click", function () {
+  // Shown by app.js when the Lists tab opens (the switch itself already asked
+  // about unsaved changes, and refused the tab when lists are switched off).
+  async function onShow(params) {
+    if (!state.loaded) {
+      try {
+        state.cat = await api("/lists/catalogue");
+      } catch (e) { notice(e.message, "error"); return; }
+      state.loaded = true;
+      show($("ls_listsView"));
+      await loadLists();
+    }
+    var want = params && params.list;
+    if (want && want !== state.open) await openList(want);
+    else writeHash();
+  }
+  M.register("lists", { onShow: onShow, onLeave: leaveUnsaved });
+
+  $("ls_newListBtn").addEventListener("click", newList);
+  $("ls_showRetired").addEventListener("change", renderLists);
+  $("ls_saveBtn").addEventListener("click", save);
+  $("ls_runBtn").addEventListener("click", runList);
+  $("ls_retireBtn").addEventListener("click", retireOrReactivate);
+  $("ls_deleteBtn").addEventListener("click", deleteList);
+  $("ls_addStepBtn").addEventListener("click", addStep);
+  $("ls_previewBtn").addEventListener("click", function () { preview(null); });
+  $("ls_lKind").addEventListener("change", function () { markDirty(); renderKindHint(); });
+  $("ls_lName").addEventListener("input", markDirty);
+  $("ls_lNotes").addEventListener("input", markDirty);
+  $("ls_searchBox").addEventListener("input", onSearch);
+  $("ls_searchType").addEventListener("change", onSearch);
+  $("ls_prevBtn").addEventListener("click", function () {
     if (state.offset === 0) { notice("This is the first page.", "warn"); return; }
     state.offset = Math.max(0, state.offset - state.limit); loadMembers();
   });
-  $("nextBtn").addEventListener("click", function () {
+  $("ls_nextBtn").addEventListener("click", function () {
     if (state.offset + state.limit >= state.total) { notice("This is the last page.", "warn"); return; }
     state.offset += state.limit; loadMembers();
   });
   window.addEventListener("beforeunload", function (e) { if (state.dirty) { e.preventDefault(); e.returnValue = ""; } });
-  start();
 })();

@@ -4,153 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="cbm-org" content="{{org}}" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{org}} — Lists</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/shared/tokens.css" />
-  <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="lists.css" />
-  <!-- busy.js must load FIRST: it wraps fetch/XHR to give every button press
-       immediate feedback (product-wide convention). -->
-  <script src="/shared/busy.js"></script>
+  <title>{{org}} — Marketing Management</title>
+  <!-- Lists is a tab of Marketing Management now (build plan § 7e.2). This
+       address stays for old bookmarks and links: it opens that tab, carrying
+       an opened list (?list=<id>) with it. -->
+  <meta http-equiv="refresh" content="0; url=/campaigns/#lists" />
+  <script>
+    (function () {
+      var want = new URLSearchParams(location.search).get("list");
+      location.replace("/campaigns/#lists" + (want ? "?list=" + encodeURIComponent(want) : ""));
+    })();
+  </script>
 </head>
 <body>
-  <main class="cm">
-    <header class="cm__topbar">
-      <div class="cm__title">
-        <h1>Lists</h1>
-        <p class="cm__sub">Named lists a campaign sends to: leads, contacts, clients, partners and funders chosen step by step, kept frozen or run again before each send.</p>
-      </div>
-      <nav class="cm__nav">
-        <!-- The same six tabs, in the same order, as Marketing Management's own
-             page (/campaigns/). The four that live there open it on that tab. -->
-        <a class="cm__navbtn" href="/campaigns/#prospects" target="cbm-campaigns">Leads</a>
-        <a class="cm__navbtn is-active" href="/campaigns/lists.html">Lists</a>
-        <a class="cm__navbtn" href="/campaigns/#campaigns" target="cbm-campaigns">Campaigns</a>
-        <a class="cm__navbtn" href="/campaigns/#review" target="cbm-campaigns">Review</a>
-        <a class="cm__navbtn" href="/campaigns/calls.html" target="cbm-campaign-calls">Calls</a>
-        <a class="cm__navbtn" href="/campaigns/#imports" target="cbm-campaigns">Imports</a>
-      </nav>
-      <div class="cm__usercorner" id="userCorner" hidden>
-        <span class="cm__who">Signed in as <strong id="whoName"></strong></span>
-        <a class="cbm-button cbm-button--secondary" href="/">Portal</a>
-      </div>
-    </header>
-
-    <div class="cm__notice" id="notice" hidden></div>
-    <section class="cm__panel" id="offPanel" hidden>
-      <h2>Campaign lists are not available here</h2>
-      <p id="offReason"></p>
-    </section>
-
-    <div class="ls" id="listsView" hidden>
-      <!-- ======================== THE LISTS ======================== -->
-      <section class="cm__panel ls__index">
-        <div class="cm__controls">
-          <span class="cm__count" id="listCount"></span>
-          <label class="cm__check"><input type="checkbox" id="showRetired" /> Show retired</label>
-          <div class="cm__actions"><button type="button" class="cbm-button" id="newListBtn">+ New list</button></div>
-        </div>
-        <table class="cm__grid" id="listGrid">
-          <thead><tr><th>List</th><th>Kind</th><th>Members</th><th>Used by</th><th>Last run</th></tr></thead>
-          <tbody id="listRows"></tbody>
-        </table>
-        <p class="cm__empty" id="listsEmpty" hidden>No lists yet. A list is a set of leads and contacts a campaign sends to — start with + New list.</p>
-      </section>
-
-      <!-- ======================== ONE LIST ======================== -->
-      <section class="cm__panel ls__detail" id="detail" hidden>
-        <div class="ls__head">
-          <label class="cm__field ls__name">Name <input type="text" id="lName" maxlength="200" /></label>
-          <label class="cm__field">Kind
-            <select id="lKind">
-              <option value="static">Static — run once, then frozen and edited by hand</option>
-              <option value="dynamic">Dynamic — run again before every send</option>
-            </select>
-          </label>
-          <span class="cm__badge" id="lStatus"></span>
-          <div class="cm__runactions">
-            <button type="button" class="cbm-button" id="saveBtn">Save</button>
-            <button type="button" class="cbm-button cbm-button--secondary" id="runBtn">Run</button>
-            <button type="button" class="cbm-button cbm-button--secondary" id="retireBtn">Retire</button>
-            <button type="button" class="cbm-button cbm-button--secondary" id="deleteBtn">Delete</button>
-          </div>
-        </div>
-        <label class="cm__field cm__field--wide">Notes <textarea id="lNotes" rows="2" maxlength="4000"></textarea></label>
-        <p class="cm__hint" id="kindHint"></p>
-        <p class="cm__runnote" id="runNote"></p>
-        <div class="cm__notice cm__notice--warn" id="problems" hidden></div>
-
-        <div class="ls__cols">
-          <section class="cm__card ls__recipe">
-            <h3>Recipe</h3>
-            <p class="cm__hint">Steps run in order. <strong>Add matching</strong> widens the list; <strong>Keep only matching</strong> narrows the members of its own type; <strong>Remove matching</strong> takes them out. Conditions in one step must all match — for "either … or", use two Add steps. A step can also add or remove the members of another list (a standing exclusion list), or add the records a file names.</p>
-            <div id="steps"></div>
-            <div class="cm__runactions">
-              <button type="button" class="cbm-button cbm-button--secondary" id="addStepBtn">+ Add step</button>
-              <button type="button" class="cbm-button cbm-button--secondary" id="previewBtn">Count every step</button>
-            </div>
-          </section>
-
-          <section class="cm__card ls__side">
-            <h3 id="handTitle">Changed by hand</h3>
-            <p class="cm__hint" id="handHint"></p>
-            <table class="cm__grid"><thead><tr><th>Record</th><th id="handModeHead">Change</th><th>By</th><th></th></tr></thead><tbody id="handRows"></tbody></table>
-            <p class="cm__empty" id="handEmpty" hidden>Nothing changed by hand.</p>
-            <h4 class="ls__h4">Add or exclude a record by hand</h4>
-            <div class="ls__search">
-              <select id="searchType"><option value="lead">Leads</option><option value="contact">Contacts</option><option value="client">Clients</option><option value="partner">Partners</option><option value="funder">Funders</option></select>
-              <input type="search" id="searchBox" placeholder="Type two letters of a name or email…" />
-            </div>
-            <ul class="ls__results" id="searchResults"></ul>
-            <h4 class="ls__h4">Used by</h4>
-            <ul class="ls__plain" id="usedBy"></ul>
-            <h4 class="ls__h4">Versions</h4>
-            <ul class="ls__plain" id="versions"></ul>
-          </section>
-        </div>
-
-        <section class="cm__card">
-          <div class="cm__controls">
-            <h3 class="cm__grow" id="membersTitle">Members</h3>
-            <span class="cm__count" id="memberCount"></span>
-            <div class="cm__pager">
-              <button type="button" class="cm__rowbtn" id="prevBtn">Previous</button>
-              <button type="button" class="cm__rowbtn" id="nextBtn">Next</button>
-            </div>
-          </div>
-          <table class="cm__grid" id="memberGrid">
-            <thead id="memberHead"></thead>
-            <tbody id="memberRows"></tbody>
-          </table>
-          <p class="cm__empty" id="membersEmpty" hidden></p>
-        </section>
-      </section>
-    </div>
-  </main>
-
-  <!-- ============================ MODAL ============================ -->
-  <div class="cm__modal-overlay" id="modal" hidden>
-    <div class="cm__modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-      <button type="button" class="cm__modal-close" id="modalClose" aria-label="Close">×</button>
-      <h3 id="modalTitle"></h3>
-      <div class="cm__modal-body">
-        <p id="modalText"></p>
-        <label class="cm__field cm__field--wide" id="modalInputWrap" hidden><span id="modalInputLabel"></span>
-          <input type="text" id="modalInput" maxlength="500" /></label>
-      </div>
-      <div class="cm__modal-foot">
-        <span class="cm__modal-msg" id="modalMsg"></span>
-        <button type="button" class="cbm-button cbm-button--secondary" id="modalCancel">Cancel</button>
-        <button type="button" class="cbm-button" id="modalOk">OK</button>
-      </div>
-    </div>
-  </div>
-
-  <footer class="cm__footer">
-    <p>&copy; <span data-cbm-year></span> {{org}}. All rights reserved. <span data-cbm-version></span></p>
-  </footer>
-  <script src="/shared/footer.js"></script>
-  <script src="lists.js"></script>
+  <p>Lists is now a tab of Marketing Management. <a href="/campaigns/#lists">Open it</a>.</p>
 </body>
 </html>

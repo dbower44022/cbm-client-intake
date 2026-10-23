@@ -1,50 +1,31 @@
-/* Campaign Calls — the call screen (prds/prospect-marketing/build-plan.md § 3.4).
+/* Campaign Calls — the Calls tab of Marketing Management (build plan § 3.4 and
+ * § 7e.2).
  *
- * Who sees a row is ruling 36: the members of the teams named on its campaign.
- * The page asks the server and shows what comes back; the server decides.
- * A row opens in place: the number, a notes box and the three outcomes. Every
- * button stays visible and clickable; validation happens on click.
+ * Who sees a row is decided per campaign: the members of the teams named on
+ * it. The page asks the server and shows what comes back; the server decides.
+ * A caller from another team opens Marketing Management and sees this tab
+ * alone. A row opens in place: the number, a notes box and the three outcomes.
+ * Every button stays visible and clickable; validation happens on click.
  *
  * On a lead's row the form also asks for an email and a website: Interested
- * converts the lead only with one of them (ruling 47), and the server says so
- * when it could not.
+ * converts the lead only with one of them, and the server says so when it
+ * could not.
+ *
+ * Loaded by index.html after app.js; reaches the page through
+ * window.CBMMarketing. Its own element ids are prefixed cl_.
  */
 (function () {
   "use strict";
-  var API = "/campaigns/api";
+  var M = window.CBMMarketing;
+  if (!M) return;
   var state = { data: null, open: null };
 
   function $(id) { return document.getElementById(id); }
-  function show(el) { if (el) el.hidden = false; }
-  function hide(el) { if (el) el.hidden = true; }
-  function text(el, v) { if (el) el.textContent = v == null ? "" : String(v); }
-  function el(tag, cls, content) {
-    var e = document.createElement(tag);
-    if (cls) e.className = cls;
-    if (content != null) e.textContent = content;
-    return e;
-  }
+  var show = M.show, hide = M.hide, text = M.text, el = M.el, notice = M.notice, api = M.api;
   function fmtDate(v) {
     if (!v) return "—";
     var d = new Date(v.replace(" ", "T") + (v.length === 19 ? "Z" : ""));
     return isNaN(d.getTime()) ? v : d.toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
-  }
-  function notice(msg, kind) {
-    var n = $("notice");
-    if (!msg) { hide(n); return; }
-    n.textContent = msg; n.className = "cm__notice" + (kind ? " cm__notice--" + kind : ""); show(n);
-  }
-
-  async function api(path, opts) {
-    opts = opts || {};
-    var init = { method: opts.method || "GET", headers: { Accept: "application/json" }, credentials: "same-origin" };
-    if (opts.body !== undefined) { init.headers["Content-Type"] = "application/json"; init.body = JSON.stringify(opts.body); }
-    var res = await fetch(API + path, init);
-    if (res.status === 401) { location.assign("/?next=" + encodeURIComponent("/campaigns/calls.html")); throw Object.assign(new Error("Signed out"), { status: 401 }); }
-    var data = null;
-    try { data = await res.json(); } catch (_) { data = null; }
-    if (!res.ok) { var err = new Error((data && data.detail) || ("Request failed (" + res.status + ")")); err.status = res.status; throw err; }
-    return data;
   }
 
   async function load() {
@@ -52,14 +33,14 @@
       state.data = await api("/calls");
     } catch (e) { notice(e.message, "error"); return; }
     var d = state.data;
-    text($("callWarning"), d.warning);
-    var msg = $("callMessage");
+    text($("cl_callWarning"), d.warning);
+    var msg = $("cl_callMessage");
     if (d.message) { msg.textContent = d.message; show(msg); } else hide(msg);
-    var sel = $("campaignFilter"), keep = sel.value;
+    var sel = $("cl_campaignFilter"), keep = sel.value;
     sel.innerHTML = "<option value=\"\">All</option>";
     (d.campaigns || []).forEach(function (c) { var o = el("option", null, c.name); o.value = c.id; sel.appendChild(o); });
     sel.value = keep;
-    var briefs = $("briefList"); briefs.innerHTML = "";
+    var briefs = $("cl_briefList"); briefs.innerHTML = "";
     (d.campaigns || []).forEach(function (c) {
       if (!c.brief) return;
       briefs.appendChild(el("h4", null, c.name));
@@ -68,18 +49,18 @@
       if (!div.innerHTML) div.textContent = c.brief.replace(/<[^>]+>/g, " ");
       briefs.appendChild(div);
     });
-    $("briefs").hidden = !briefs.childNodes.length;
+    $("cl_briefs").hidden = !briefs.childNodes.length;
     render();
   }
 
   function render() {
     var d = state.data || { rows: [] };
-    var q = ($("callSearch").value || "").toLowerCase(), camp = $("campaignFilter").value;
+    var q = ($("cl_callSearch").value || "").toLowerCase(), camp = $("cl_campaignFilter").value;
     var rows = (d.rows || []).filter(function (r) {
       if (camp && r.campaignId !== camp) return false;
       return !q || [r.name, r.person, r.phone, r.campaignName, r.city].join(" ").toLowerCase().indexOf(q) >= 0;
     });
-    var body = $("callRows"); body.innerHTML = "";
+    var body = $("cl_callRows"); body.innerHTML = "";
     rows.forEach(function (r) {
       var tr = el("tr", "cm__callrow" + (state.open === r.touchId ? " is-open" : ""));
       tr.appendChild(el("td", null, r.name || "—"));
@@ -93,8 +74,8 @@
       body.appendChild(tr);
       if (state.open === r.touchId) body.appendChild(recordRow(r));
     });
-    text($("callCount"), rows.length + " to call");
-    $("callsEmpty").hidden = rows.length > 0;
+    text($("cl_callCount"), rows.length + " to call");
+    $("cl_callsEmpty").hidden = rows.length > 0;
   }
 
   function recordRow(r) {
@@ -107,7 +88,7 @@
     form.appendChild(who);
     var nf = el("div", "cm__field cm__field--wide"); var nl = el("label", null, "Call notes"); nl.htmlFor = "cn_" + r.touchId;
     var notes = el("textarea"); notes.id = "cn_" + r.touchId; notes.maxLength = 8000; nf.appendChild(nl); nf.appendChild(notes); form.appendChild(nf);
-    // Interested converts a lead only with an email or a website (ruling 47).
+    // Interested converts a lead only with an email or a website.
     var conv = null;
     if (r.kind === "prospect") {
       conv = {};
@@ -154,21 +135,12 @@
     return tr;
   }
 
-  $("callRefreshBtn").addEventListener("click", load);
-  $("callSearch").addEventListener("input", render);
-  $("campaignFilter").addEventListener("change", render);
+  $("cl_callRefreshBtn").addEventListener("click", load);
+  $("cl_callSearch").addEventListener("input", render);
+  $("cl_campaignFilter").addEventListener("change", render);
 
-  (async function init() {
-    var s;
-    try { s = await api("/calls/session"); }
-    catch (e) {
-      if (e.status === 404) { text($("offReason"), e.message); show($("offPanel")); }
-      else notice(e.message, "error");
-      return;
-    }
-    text($("whoName"), s.name || s.userName); show($("userCorner"));
-    if (s.campaignsTeam) show($("campaignsLink"));
-    show($("callsPanel"));
-    await load();
-  })();
+  // Shown by app.js when the Calls tab opens (it refused the tab when calls
+  // are switched off). The list is re-read each time: another caller may have
+  // taken a row since.
+  M.register("calls", { onShow: function () { return load(); } });
 })();

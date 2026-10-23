@@ -143,6 +143,38 @@ def _apps_for(user: dict[str, Any], settings: Settings) -> list[dict[str, str]]:
     return apps
 
 
+async def _campaign_calls_tile(user: dict[str, Any], settings: Settings) -> dict[str, str] | None:
+    """*Campaign calls* for a caller outside the Marketing Admin Team (ruling
+    114): shown when a Running call campaign names a team the user is in, which
+    is the same split the Calls tab applies (``calls.may_call``). Read under the
+    org-wide key — the campaigns are the chapter's data, not the caller's — and
+    best-effort: no key, or a failing read, means no tile."""
+    if not (settings.campaigns_active and settings.campaigns_calls):
+        return None
+    if is_member(user, settings.campaigns_allowed_teams_list):
+        return None  # the Marketing Management tile already opens every tab
+    if settings.espo_dry_run or not settings.espo_api_key:
+        return None
+    from campaigns import calls
+    from core.espo import EspoClient
+
+    client = EspoClient(settings.espo_base_url, settings.espo_api_key, settings.request_timeout_seconds)
+    try:
+        if await calls.may_call_any(client, user, settings):
+            return {"title": "Campaign calls", "url": "/campaigns/#calls", "target": "cbm-campaigns"}
+    except Exception as exc:  # noqa: BLE001 — a tile is never worth a failed sign-in
+        log.warning("campaign calls tile skipped for %s: %s", user.get("userName"), exc)
+    return None
+
+
+async def _extra_tiles(payload: dict, user: dict[str, Any], settings: Settings) -> dict:
+    """The tiles that need a CRM read; appended after the entitlement tiles."""
+    tile = await _campaign_calls_tile(user, settings)
+    if tile:
+        payload["apps"].append(tile)
+    return payload
+
+
 def _home_payload(user: dict[str, Any], request: Request, settings: Settings) -> dict:
     mentor = is_member(user, [settings.mentor_team_name])
     return {
@@ -197,7 +229,7 @@ async def login(body: LoginIn, request: Request) -> dict:
         raise HTTPException(status_code=401, detail=str(exc))
     set_session(request, user)
     log.info("portal login ok: %s (admin=%s)", user["userName"], user.get("isAdmin"))
-    payload = _home_payload(user, request, settings)
+    payload = await _extra_tiles(_home_payload(user, request, settings), user, settings)
     payload["birthdays"] = await _birthdays(user, settings)
     return payload
 
@@ -244,7 +276,7 @@ async def session(request: Request) -> dict:
         clear_session(request)
         raise HTTPException(status_code=401, detail=str(exc))
     set_session(request, user)
-    payload = _home_payload(user, request, settings)
+    payload = await _extra_tiles(_home_payload(user, request, settings), user, settings)
     payload["birthdays"] = await _birthdays(user, settings)
     return payload
 

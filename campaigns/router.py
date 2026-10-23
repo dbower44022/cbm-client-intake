@@ -159,12 +159,26 @@ async def _campaign_or_404(request: Request, client, campaign_id: str) -> dict[s
 
 @api_router.get("/session")
 async def session(request: Request) -> dict[str, Any]:
-    user, client = _actor(request)
     settings = get_settings()
+    if not settings.campaigns_enabled:
+        raise HTTPException(status_code=404, detail="Marketing Management is switched off.")
+    user = current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    if not is_member(user, settings.campaigns_allowed_teams_list):
+        # A caller from another team (ruling 114): the page shows the Calls tab
+        # alone. This answer unlocks nothing — every other endpoint keeps its
+        # team gate, and the call list is checked per campaign (ruling 36).
+        return {
+            "name": user.get("name"), "userName": user.get("userName"), "userId": user.get("userId"),
+            "isAdmin": bool(user.get("isAdmin")),
+            "callerOnly": True, "callsOn": settings.campaigns_calls,
+        }
+    client = client_for(settings, user)
     avail = await service.availability(client)
     return {
         "name": user.get("name"), "userName": user.get("userName"), "userId": user.get("userId"),
-        "isAdmin": bool(user.get("isAdmin")),
+        "isAdmin": bool(user.get("isAdmin")), "callerOnly": False,
         "available": avail["available"], "reason": avail["reason"],
         "storeAvailable": getattr(request.app.state, "campaign_store", None) is not None,
         "landingPublic": settings.campaigns_landing_active,

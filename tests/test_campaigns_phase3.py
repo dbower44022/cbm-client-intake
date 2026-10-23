@@ -352,7 +352,9 @@ def test_calls_routes_are_dark_until_switched_on_and_need_no_campaigns_team(monk
     monkeypatch.setenv("CAMPAIGNS_CALLS", "true")
     client = build(monkeypatch, user=MENTOR, crm=crm, store=FakeStore())
     assert client.get("/campaigns/api/calls/session").json()["campaignsTeam"] is False
-    assert client.get("/campaigns/api/session").status_code == 403      # the tile stays the Marketing Admin Team's
+    # Ruling 114: the page opens for the caller, on the Calls tab alone.
+    body = client.get("/campaigns/api/session").json()
+    assert body["callerOnly"] is True and body["callsOn"] is True
     import campaigns.router as router_mod
     monkeypatch.setattr(router_mod, "_api_client", lambda settings, request: crm)
     rows = client.get("/campaigns/api/calls").json()["rows"]

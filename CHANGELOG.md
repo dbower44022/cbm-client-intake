@@ -5,6 +5,36 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.279.0] — 2026-10-23
+
+**feat(campaigns): Marketing Management is one page with six tabs** — step M1
+of the redesign (build plan § 7e.2; rulings 89, 112, 114). Lists and Calls,
+until now pages of their own opened in named browser tabs, are panels of
+`campaigns/frontend/index.html`, drawn by `lists.js` and `calls.js`, which
+load after `app.js` and reach the page through one shared object,
+`window.CBMMarketing` (one api, one notice, one modal, one session, the tab
+registry). Their element ids are prefixed `ls_` / `cl_`, so the modal, notice
+and user corner exist once (the three pages shared eleven ids). Switching away
+from a list with unsaved changes asks first, in the page's own dialog; the
+open list rides the hash (`#lists?list=<id>`). `lists.html` and `calls.html`
+redirect to their tabs, so old bookmarks and the campaign page's copied
+address keep working.
+
+- **A caller from another team opens Marketing Management and sees only the
+  Calls tab** (ruling 114). `GET /campaigns/api/session` answers
+  `callerOnly: true` (plus `callsOn`) to a signed-in user outside
+  `CAMPAIGNS_ALLOWED_TEAMS` instead of 403; **every other endpoint keeps its
+  team gate**, and the call list is still checked per campaign. The portal
+  gains a **Campaign calls** tile for such a caller when a running call
+  campaign names a team they are in (`calls.may_call_any`, read under the
+  org-wide key, best-effort — a failing read means no tile, never a failed
+  sign-in).
+- **No screen cites a ruling number** (ruling 112): every hint in the served
+  campaigns files is rewritten in plain words, and a guard test fails on
+  `ruling \d` or `CM-\d` in `campaigns/frontend/` or `landing_frontend/`.
+- No CRM change, no new setting. Tests: `tests/test_campaigns_one_page.py`;
+  the two tests that pinned the old 403 now pin `callerOnly`.
+
 ## [0.278.4] — 2026-10-22
 
 **fix(forms): a ticked consent sets true over a stored false, never the

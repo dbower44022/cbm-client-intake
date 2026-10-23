@@ -216,10 +216,24 @@ def test_signed_out_is_401(monkeypatch):
     assert build(monkeypatch, user=None).get("/campaigns/api/session").status_code == 401
 
 
-def test_wrong_team_is_403_naming_the_team(monkeypatch):
-    resp = build(monkeypatch, user=OUTSIDER).get("/campaigns/api/session")
-    assert resp.status_code == 403
-    assert "Marketing Admin Team" in resp.json()["detail"]
+def test_wrong_team_gets_a_caller_only_session_and_every_other_door_stays_shut(monkeypatch):
+    """Ruling 114: a caller from another team opens Marketing Management and
+    sees the Calls tab alone. /session says so; nothing else opens."""
+    client = build(monkeypatch, user=OUTSIDER)
+    resp = client.get("/campaigns/api/session")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["callerOnly"] is True and body["callsOn"] is False
+    assert body["name"] == "Sally Sponsor" and "available" not in body
+    for path in ("/campaigns/api/campaigns", "/campaigns/api/fields", "/campaigns/api/prospects", "/campaigns/api/prospects/imports"):
+        resp = client.get(path)
+        assert resp.status_code == 403, path
+        assert "Marketing Admin Team" in resp.json()["detail"]
+
+
+def test_a_team_member_is_not_caller_only(monkeypatch):
+    body = build(monkeypatch, user=MARKETING).get("/campaigns/api/session").json()
+    assert body["callerOnly"] is False and "available" in body
 
 
 def test_switch_off_is_404_per_request(monkeypatch):

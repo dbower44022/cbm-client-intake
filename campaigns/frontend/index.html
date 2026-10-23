@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="/shared/charts.css" />
   <link rel="stylesheet" href="/shared/enrichment.css" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="lists.css" />
   <!-- busy.js must load FIRST: it wraps fetch/XHR to give every button press
        immediate feedback (product-wide convention). -->
   <script src="/shared/busy.js"></script>
@@ -25,10 +26,10 @@
       </div>
       <nav class="cm__nav" id="sectionNav">
         <button type="button" class="cm__navbtn is-active" data-section="prospects">Leads</button>
-        <a class="cm__navbtn" id="listsNavLink" href="/campaigns/lists.html" target="cbm-campaign-lists">Lists</a>
+        <button type="button" class="cm__navbtn" data-section="lists">Lists</button>
         <button type="button" class="cm__navbtn" data-section="campaigns">Campaigns</button>
         <button type="button" class="cm__navbtn" data-section="review">Review</button>
-        <a class="cm__navbtn" id="callsNavLink" href="/campaigns/calls.html" target="cbm-campaign-calls">Calls</a>
+        <button type="button" class="cm__navbtn" data-section="calls">Calls</button>
         <button type="button" class="cm__navbtn" data-section="imports">Imports</button>
       </nav>
       <div class="cm__usercorner" id="userCorner" hidden>
@@ -50,6 +51,117 @@
         <button type="button" class="cbm-button cbm-button--secondary" id="blockedReloadBtn">Reload</button>
         <button type="button" class="cbm-button" id="blockedOpenBtn">Open here anyway</button>
       </div>
+    </section>
+
+    <!-- ============================ LISTS ============================= -->
+    <section class="cm__panel" id="listsPanel" hidden>
+      <p class="cm__hint">Named lists a campaign sends to: leads, contacts, clients, partners and funders chosen step by step, kept frozen or run again before each send.</p>
+      <div class="ls" id="ls_listsView" hidden>
+        <section class="cm__panel ls__index">
+          <div class="cm__controls">
+            <span class="cm__count" id="ls_listCount"></span>
+            <label class="cm__check"><input type="checkbox" id="ls_showRetired" /> Show retired</label>
+            <div class="cm__actions"><button type="button" class="cbm-button" id="ls_newListBtn">+ New list</button></div>
+          </div>
+          <table class="cm__grid" id="ls_listGrid">
+            <thead><tr><th>List</th><th>Kind</th><th>Members</th><th>Used by</th><th>Last run</th></tr></thead>
+            <tbody id="ls_listRows"></tbody>
+          </table>
+          <p class="cm__empty" id="ls_listsEmpty" hidden>No lists yet. A list is a set of leads and contacts a campaign sends to — start with + New list.</p>
+        </section>
+
+        <section class="cm__panel ls__detail" id="ls_detail" hidden>
+          <div class="ls__head">
+            <label class="cm__field ls__name">Name <input type="text" id="ls_lName" maxlength="200" /></label>
+            <label class="cm__field">Kind
+              <select id="ls_lKind">
+                <option value="static">Static — run once, then frozen and edited by hand</option>
+                <option value="dynamic">Dynamic — run again before every send</option>
+              </select>
+            </label>
+            <span class="cm__badge" id="ls_lStatus"></span>
+            <div class="cm__runactions">
+              <button type="button" class="cbm-button" id="ls_saveBtn">Save</button>
+              <button type="button" class="cbm-button cbm-button--secondary" id="ls_runBtn">Run</button>
+              <button type="button" class="cbm-button cbm-button--secondary" id="ls_retireBtn">Retire</button>
+              <button type="button" class="cbm-button cbm-button--secondary" id="ls_deleteBtn">Delete</button>
+            </div>
+          </div>
+          <label class="cm__field cm__field--wide">Notes <textarea id="ls_lNotes" rows="2" maxlength="4000"></textarea></label>
+          <p class="cm__hint" id="ls_kindHint"></p>
+          <p class="cm__runnote" id="ls_runNote"></p>
+          <div class="cm__notice cm__notice--warn" id="ls_problems" hidden></div>
+
+          <div class="ls__cols">
+            <section class="cm__card ls__recipe">
+              <h3>Recipe</h3>
+              <p class="cm__hint">Steps run in order. <strong>Add matching</strong> widens the list; <strong>Keep only matching</strong> narrows the members of its own type; <strong>Remove matching</strong> takes them out. Conditions in one step must all match — for "either … or", use two Add steps. A step can also add or remove the members of another list (a standing exclusion list), or add the records a file names.</p>
+              <div id="ls_steps"></div>
+              <div class="cm__runactions">
+                <button type="button" class="cbm-button cbm-button--secondary" id="ls_addStepBtn">+ Add step</button>
+                <button type="button" class="cbm-button cbm-button--secondary" id="ls_previewBtn">Count every step</button>
+              </div>
+            </section>
+
+            <section class="cm__card ls__side">
+              <h3 id="ls_handTitle">Changed by hand</h3>
+              <p class="cm__hint" id="ls_handHint"></p>
+              <table class="cm__grid"><thead><tr><th>Record</th><th id="ls_handModeHead">Change</th><th>By</th><th></th></tr></thead><tbody id="ls_handRows"></tbody></table>
+              <p class="cm__empty" id="ls_handEmpty" hidden>Nothing changed by hand.</p>
+              <h4 class="ls__h4">Add or exclude a record by hand</h4>
+              <div class="ls__search">
+                <select id="ls_searchType"><option value="lead">Leads</option><option value="contact">Contacts</option><option value="client">Clients</option><option value="partner">Partners</option><option value="funder">Funders</option></select>
+                <input type="search" id="ls_searchBox" placeholder="Type two letters of a name or email…" />
+              </div>
+              <ul class="ls__results" id="ls_searchResults"></ul>
+              <h4 class="ls__h4">Used by</h4>
+              <ul class="ls__plain" id="ls_usedBy"></ul>
+              <h4 class="ls__h4">Versions</h4>
+              <ul class="ls__plain" id="ls_versions"></ul>
+            </section>
+          </div>
+
+          <section class="cm__card">
+            <div class="cm__controls">
+              <h3 class="cm__grow" id="ls_membersTitle">Members</h3>
+              <span class="cm__count" id="ls_memberCount"></span>
+              <div class="cm__pager">
+                <button type="button" class="cm__rowbtn" id="ls_prevBtn">Previous</button>
+                <button type="button" class="cm__rowbtn" id="ls_nextBtn">Next</button>
+              </div>
+            </div>
+            <table class="cm__grid" id="ls_memberGrid">
+              <thead id="ls_memberHead"></thead>
+              <tbody id="ls_memberRows"></tbody>
+            </table>
+            <p class="cm__empty" id="ls_membersEmpty" hidden></p>
+          </section>
+        </section>
+      </div>
+    </section>
+
+    <!-- ============================ CALLS ============================= -->
+    <section class="cm__panel" id="callsPanel" hidden>
+      <p class="cm__hint">Every call on the running call campaigns you call for. Ring the number, then record what happened.</p>
+      <p class="cm__warning" id="cl_callWarning"></p>
+      <p class="cm__notice" id="cl_callMessage" hidden></p>
+      <div class="cm__controls">
+        <label class="cm__filter">Campaign <select id="cl_campaignFilter"><option value="">All</option></select></label>
+        <input type="search" id="cl_callSearch" placeholder="Search…" aria-label="Search the call list" autocomplete="off" />
+        <span class="cm__count" id="cl_callCount"></span>
+        <div class="cm__actions"><button type="button" class="cbm-button cbm-button--secondary" id="cl_callRefreshBtn">Refresh</button></div>
+      </div>
+      <div class="cm__gridwrap">
+        <table class="cm__grid" id="cl_callGrid">
+          <thead><tr><th>Business</th><th>Person</th><th>Number</th><th>Status or stage</th><th>Campaign</th><th>Planned</th><th>Actions</th></tr></thead>
+          <tbody id="cl_callRows"></tbody>
+        </table>
+        <p class="cm__empty" id="cl_callsEmpty" hidden>Nobody left to call.</p>
+      </div>
+      <section class="cm__card" id="cl_briefs" hidden>
+        <h3>The brief</h3>
+        <div id="cl_briefList"></div>
+      </section>
     </section>
 
     <!-- ========================== CAMPAIGNS ========================== -->
@@ -155,7 +267,7 @@
     <!-- ============================ REVIEW ============================ -->
     <section class="cm__panel" id="reviewPanel" hidden>
       <div class="cm__controls">
-        <p class="cm__hint cm__grow">Leads waiting at Unqualified, oldest first. A lead needs a website or an email before it can be Qualified (ruling 42): <strong>Search the web</strong>, type what you find into the row and press <strong>Enter</strong> to Qualify — the cursor moves to the next lead. Disqualify the obvious no's many at once by ticking them. Two reviewers can split the queue with the filters (one batch or ZIP each); a lead someone else has already decided is refused, naming who.</p>
+        <p class="cm__hint cm__grow">Leads waiting at Unqualified, oldest first. A lead needs a website or an email before it can be Qualified: <strong>Search the web</strong>, type what you find into the row and press <strong>Enter</strong> to Qualify — the cursor moves to the next lead. Disqualify the obvious no's many at once by ticking them. Two reviewers can split the queue with the filters (one batch or ZIP each); a lead someone else has already decided is refused, naming who.</p>
         <div class="cm__actions"><button type="button" class="cbm-button cbm-button--secondary" id="reviewRefreshBtn">Refresh</button></div>
       </div>
       <div class="cm__controls cm__filters" id="rf_filters">
@@ -236,29 +348,29 @@
           <div class="cm__facts" id="recFacts"></div>
           <section class="cm__card">
             <h3>Partners</h3>
-            <p class="cm__hint">The partners this campaign is for (CM-2). A client who arrives through it is credited to every one of them.</p>
+            <p class="cm__hint">The partners this campaign is for. A client who arrives through it is credited to every one of them.</p>
             <ul class="cm__chips" id="recPartners"></ul>
           </section>
           <section class="cm__card" id="recFundersCard" hidden>
             <h3>Funders</h3>
-            <p class="cm__hint">The funders paying for or sponsoring this campaign (ruling 57). It shows on each one's Campaigns tab.</p>
+            <p class="cm__hint">The funders paying for or sponsoring this campaign. It shows on each one's Campaigns tab.</p>
             <ul class="cm__chips" id="recFunders"></ul>
           </section>
           <section class="cm__card">
             <h3>Events</h3>
-            <p class="cm__hint">The events this campaign advertises (CM-6).</p>
+            <p class="cm__hint">The events this campaign advertises.</p>
             <ul class="cm__chips" id="recEvents"></ul>
           </section>
         </div>
         <div class="cm__ovright">
           <section class="cm__card" id="audienceCard" hidden>
             <h3>Who this campaign reaches</h3>
-            <p class="cm__hint">Choose a named list, or leave it to this kind's own rule. A client, partner or funder on the list reaches its primary contact, or every contact on the record when the box is ticked (ruling 59). Consent, exits, dead addresses and one card per business still apply to everyone on a list.</p>
+            <p class="cm__hint">Choose a named list, or leave it to this kind's own rule. A client, partner or funder on the list reaches its primary contact, or every contact on the record when the box is ticked. Consent, exits, dead addresses and one card per business still apply to everyone on a list.</p>
             <div class="cm__controls">
               <select id="audList"></select>
               <label class="cm__check"><input type="checkbox" id="audEvery" /> Include every contact on the record</label>
               <button type="button" class="cbm-button cbm-button--secondary" id="audSave">Use this list</button>
-              <a class="cm__link" id="audOpen" href="/campaigns/lists.html" target="cbm-campaign-lists">Open the lists</a>
+              <a class="cm__link" id="audOpen" href="/campaigns/#lists" target="cbm-campaigns">Open the lists</a>
             </div>
             <p class="cm__summary" id="audState"></p>
             <ul class="cm__plain" id="audSkips"></ul>
@@ -267,7 +379,7 @@
             <h3>Postcard run</h3>
             <div class="cm__tiles" id="touchTiles"></div>
             <div class="cm__rule" id="ruleBox">
-              <p class="cm__hint">Who gets a card. One card per business, ever (ruling 14); a dead address is skipped until a better one arrives (ruling 15).</p>
+              <p class="cm__hint">Who gets a card. One card per business, ever; a dead address is skipped until a better one arrives.</p>
               <label class="cm__check"><input type="checkbox" id="ruleUnqualified" checked /> Leads at <strong>Unqualified</strong></label>
               <label class="cm__check"><input type="checkbox" id="ruleQualified" checked /> Leads at <strong>Qualified</strong></label>
               <label class="cm__check"><input type="checkbox" id="ruleCompanies" /> …and Companies typed Prospect (already contacted)</label>
@@ -283,7 +395,7 @@
             <h3>Email list</h3>
             <div class="cm__tiles" id="emailTiles"></div>
             <div class="cm__rule">
-              <p class="cm__hint">Who is on the list: Contacts who opted in to marketing email with a usable address (ruling 19 — no cold email), typed Prospect at the stages ticked, or clients dormant for the days set (ruling 25).</p>
+              <p class="cm__hint">Who is on the list: Contacts who opted in to marketing email with a usable address (no cold email), typed Prospect at the stages ticked, or clients dormant for the days set.</p>
               <div id="emailStages"></div>
               <label class="cm__check"><input type="checkbox" id="emailDormant" /> …and clients whose last engagement closed more than <input type="number" id="emailDormantDays" min="0" value="365" style="width:5em" /> days ago</label>
               <p class="cm__summary" id="emailRuleSummary"></p>
@@ -299,7 +411,7 @@
             <h3>Text message</h3>
             <div class="cm__tiles" id="smsTiles"></div>
             <div class="cm__rule">
-              <p class="cm__hint">Who gets the text: Contacts typed Prospect who ticked the text consent (ruling 9), with a phone number that is not opted out, whose lead (if any) is still being worked. The application sends it (ruling 38).</p>
+              <p class="cm__hint">Who gets the text: Contacts typed Prospect who ticked the text consent, with a phone number that is not opted out, whose lead (if any) is still being worked. The application sends it.</p>
               <div id="smsStages"></div>
               <p class="cm__summary" id="smsRuleSummary"></p>
             </div>
@@ -319,7 +431,7 @@
             <h3>Call list</h3>
             <div class="cm__tiles" id="callTiles"></div>
             <div class="cm__rule">
-              <p class="cm__hint">Who gets a call: a lead or a Contact typed Prospect holding a phone number, not opted out and not do-not-call, still being worked, who has never Declined a call (ruling 20). A lead marked Interested converts only with an email or a website (ruling 47).</p>
+              <p class="cm__hint">Who gets a call: a lead or a Contact typed Prospect holding a phone number, not opted out and not do-not-call, still being worked, who has never Declined a call. A lead marked Interested converts only with an email or a website.</p>
               <div id="callStages"></div>
               <p class="cm__summary" id="callRuleSummary"></p>
             </div>
@@ -329,7 +441,7 @@
             </div>
             <p class="cm__runnote" id="callNote"></p>
             <p class="cm__hint" id="callersLine"></p>
-            <p class="cm__hint">Callers record each call on the Calls page: <span class="cm__short" id="callsUrl"></span> <button type="button" class="cm__rowbtn" id="callsUrlCopy">Copy</button></p>
+            <p class="cm__hint">Callers record each call on the Calls tab of Marketing Management: <span class="cm__short" id="callsUrl"></span> <button type="button" class="cm__rowbtn" id="callsUrlCopy">Copy</button></p>
           </section>
           <section class="cm__card">
             <h3>Notes</h3>
@@ -356,7 +468,7 @@
 
       <div class="cm__tabpanel" data-panel="analytics" hidden>
         <div class="cm__controls">
-          <p class="cm__hint cm__grow">What this campaign produced, down the funnel (CM-9): the records carrying it. The counts are read across the whole CRM, after your own read of this campaign.</p>
+          <p class="cm__hint cm__grow">What this campaign produced, down the funnel: the records carrying it. The counts are read across the whole CRM, after your own read of this campaign.</p>
           <div class="cm__actions"><button type="button" class="cbm-button cbm-button--secondary" id="anaRefreshBtn">Refresh</button></div>
         </div>
         <p class="cm__hint" id="anaMsg" hidden></p>
@@ -407,5 +519,9 @@
   <script src="/shared/charts.js"></script>
   <script src="/shared/enrichment.js"></script>
   <script src="app.js"></script>
+  <!-- The Lists and Calls tabs keep their own scripts; both load after app.js
+       and reach the page through window.CBMMarketing. -->
+  <script src="lists.js"></script>
+  <script src="calls.js"></script>
 </body>
 </html>

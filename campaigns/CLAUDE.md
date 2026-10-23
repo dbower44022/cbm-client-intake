@@ -1,6 +1,6 @@
 # campaigns/ — Marketing Management (was Campaign Management)
 
-Last Updated: 10-22-26 21:18 · Revision 1.5
+Last Updated: 10-23-26 01:33 · Revision 1.6
 
 Detail for Campaign Management (`/campaigns`, prospect marketing Phases 1 to 4 and the lead model): links, postcards, the landing page, imports, the Leads and Review grids, calls, texts, email, attribution and reporting.
 
@@ -172,8 +172,9 @@ the reason.
   completes it. **Who calls is ruling 36**: the members of the teams named
   on the campaign (its own `teams`, set by the form's *Who calls* picker;
   none ⇒ the Marketing Admin Team), gated per campaign in `calls`, NOT by
-  `CAMPAIGNS_ALLOWED_TEAMS` — the Calls page `/campaigns/calls.html` and
-  `/campaigns/api/calls*` admit any signed-in user and the campaign decides.
+  `CAMPAIGNS_ALLOWED_TEAMS` — the Calls tab (`/campaigns/#calls`; the old
+  `calls.html` redirects there) and `/campaigns/api/calls*` admit any
+  signed-in user and the campaign decides.
   **The touch is written as the caller; the rung, the `Declined` exit, the
   *Call again* row and the completion under the API client** (the Mentor
   Role reads `CProspect`, never edits it). **Every call record carries its
@@ -231,7 +232,8 @@ the reason.
   behind **`CAMPAIGN_LISTS`**, read per request). `campaigns/audience.py`
   is the engine, `audience_store.py` the five tables (migration 0032,
   mixed into `CampaignStore`, reset nightly), `lists_router.py` the API,
-  `frontend/lists.html` the page. A list is an ordered recipe — *add*
+  the Lists tab (`/campaigns/#lists?list=<id>`; `lists.js`) the screen. A
+  list is an ordered recipe — *add*
   widens, *keep* narrows **only its own type**, *remove* excludes; keep and
   remove test only the current members in id batches, add refuses above
   `STEP_CAP` (20,000). Static = frozen membership plus hand rows that
@@ -277,6 +279,25 @@ the reason.
   `cfg.PREFILL_FIELDS[form]` and nothing more — **that table is ruling 75;
   widening a row is a new ruling**. The sandbox's demo cards get their card
   token as their lead code every night (`sandbox_demo.restore_demo_codes`).
+- **One page, six tabs** (v0.279.0, build plan § 7e.2 — step M1 of the
+  redesign, rulings 89, 112, 114). `index.html` holds every tab; `lists.js`
+  and `calls.js` load after `app.js` and reach the page ONLY through
+  `window.CBMMarketing` (`api`, `notice`, `ask`/`openModal`, `session()`,
+  `register(name, {onShow, onLeave})`, `showSection`). **Their ids are
+  prefixed `ls_` / `cl_`; the modal, notice, user corner and off panel exist
+  once, owned by `app.js`** — a new tab script follows the same shape and
+  never declares a bare id (`tests/test_campaigns_one_page.py` checks for
+  duplicates). `showSection` is async: a tab's `onLeave` may refuse the
+  switch (Lists asks about unsaved changes through the page's dialog, never
+  `confirm()`), and `onShow(params)` gets the hash's parameters. **A
+  signed-in user outside the team gets `callerOnly: true` from `/session`**
+  and the page shows the Calls tab alone; nothing else is unlocked — every
+  other endpoint keeps `_require_user`, and `calls.may_call` still decides
+  per campaign. The portal's *Campaign calls* tile (`portal/router.
+  _campaign_calls_tile`) uses `calls.may_call_any` under the org-wide key.
+  **No served campaigns file may cite a ruling number** (ruling 112) — the
+  guard test fails on `ruling \d` and `CM-\d`; write the hint in plain words
+  and leave the number in the documents.
 - Owed: nothing on production's CRM (both slots done 10-18-26; every
   campaign switch off there — turning one on is Doug's call at `/setup`);
   Boston with its release; a seeder and sandbox re-baseline; the Twilio
@@ -287,6 +308,7 @@ the reason.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.6 | 10-23-26 01:33 | Claude (Claude Code) | One page, six tabs (v0.279.0, § 7e.2 M1): the shared object, the id prefixes, `callerOnly`, the ruling-number guard; the two old page addresses now redirects. |
 | 1.5 | 10-22-26 21:18 | Claude (Claude Code) | Renamed Marketing Management; Leads first (v0.278.0). |
 | 1.4 | 10-22-26 13:00 | Claude (Claude Code) | The lead code bullet (v0.276.0, § 7d D1). |
 | 1.3 | 10-22-26 12:25 | Claude (Claude Code) | The campaign owner bullet (ruling 76, v0.275.0). |

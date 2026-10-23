@@ -1206,13 +1206,16 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
+- **v0.279.0 (2026-10-23) — Marketing Management is one page with six
+  tabs** (build plan § 7e.2, step M1 of the redesign; rulings 89, 112, 114).
+  Lists and Calls are tabs; a caller from another team sees the Calls tab
+  alone and gets a *Campaign calls* portal tile; no screen cites a ruling
+  number. No CRM change, no switch. Committed, not pushed. Owed: the live
+  pass on crm-test as Mark Marketing and as a Mentor Team caller; Doug's
+  approval of the nine Drafts in § 7e.12 before M2.
 - **v0.278.0 (2026-10-22) — Campaign Management renamed Marketing
   Management; it opens on Leads.** Display name only — the `/campaigns`
   address, `CAMPAIGNS_*` settings and package name stay. Not pushed.
-- **v0.275.0 (2026-10-22) — a campaign's owner can be changed** (ruling 76).
-  v0.275.0 and v0.275.1 (ruling 78, the Marketing Admin Role reads User)
-  pushed and live. Live-passed on crm-test 10-22-26 12:51 as Mark
-  Marketing. Owed: the role grant on production and Boston (`OPEN-ITEMS.md`).
 - **v0.276.0 (2026-10-22) — lead code D1** (§ 7d). Not pushed; inert
   without the CRM fields. Owed: live pass, D2 (`OPEN-ITEMS.md` #51).
 - **v0.273.0 (2026-10-21) — an engagement's close date is stamped when it
@@ -1227,11 +1230,6 @@ the strength of it.
   in `campaigns/CLAUDE.md`. **Live-passed on crm-test 10-21-26 22:30**; funder status
   applied there. Owed: production and Boston with the arc's slot; the
   close-date Read-only finding (`OPEN-ITEMS.md` #51).
-- **v0.270.0 (2026-10-20) — campaign lists, L1 (leads and contacts).**
-  Committed, not pushed; dark (`CAMPAIGN_LISTS` off). Build plan § 7c,
-  rulings 58–68; standing rules in `campaigns/CLAUDE.md`. Migration 0032,
-  no CRM change. **Live-passed on crm-test 10-21-26 15:36**; lead `industry` applied
-  there. Owed: L2 (`OPEN-ITEMS.md` #51).
 - **v0.274.0 (2026-10-22) — lead enrichment phase 2, the AI research pass.**
   Committed, not pushed; dark behind `ENRICHMENT_AI`. Staff start runs on a
   lead, ticked leads or a client's company (rulings E18, E19); findings are
@@ -1246,14 +1244,5 @@ the strength of it.
   v0.270.1 keeps the Operations plan still while the worker scores.
   **Live-passed on crm-test 10-21-26** (Doug as Mark Marketing; the web check
   verified a real business's site). Owed: production at a Sunday slot, Boston.
-- **v0.268.0 (2026-10-20) — funders on a campaign (ruling 57).** Live;
-  checked on crm-test 10-20-26 as Mark Marketing and Sally Sponsor. Owed:
-  production at the Sunday slot (deferred by Doug until campaign testing is
-  finished), Boston with its release (`coutreach-funders-crm-handoff.md`), a
-  sandbox recapture (`OPEN-ITEMS.md` #51).
-- **v0.267.0–v0.267.2 (2026-10-20) — the Leads and Review grids at
-  volume.** Live on crm-test and production (dark there). Live-passed on
-  crm-test 10-20-26 with 3,017 leads. Production waits on the same deferral
-  (`OPEN-ITEMS.md` #51).
 
 Everything else still owed is in `OPEN-ITEMS.md`.

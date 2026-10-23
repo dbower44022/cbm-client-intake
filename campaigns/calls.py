@@ -343,6 +343,20 @@ def may_call(user: dict[str, Any], teams: list[str]) -> bool:
     return bool(set(user.get("teams") or []) & set(teams))
 
 
+async def may_call_any(api_client: EspoApi, user: dict[str, Any], settings: Settings) -> bool:
+    """Whether a Running call campaign names a team the user is in (ruling 36)
+    — what decides the portal's *Campaign calls* tile for a caller outside the
+    Marketing Admin Team (ruling 114). Best-effort: a CRM failure answers False,
+    so a portal load never fails on it."""
+    try:
+        campaigns = await running_call_campaigns(api_client)
+    except EspoError as exc:
+        log.warning("campaign calls tile: could not read the running call campaigns: %s", exc)
+        return False
+    default = settings.campaigns_allowed_teams_list
+    return any(may_call(user, campaign_team_names(c, default)) for c in campaigns)
+
+
 async def running_call_campaigns(api_client: EspoApi) -> list[dict[str, Any]]:
     """Every Running call campaign, each read whole (its teams come with a
     record read)."""

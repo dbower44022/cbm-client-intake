@@ -336,6 +336,13 @@ found; move resolved items to the bottom with the resolution date.
     the same link with the id altered: no banner, the form works, no
     partner on the engagement. Then production as a real non-admin.
 
+    **Redesign step M1 — one page, six tabs — BUILT as v0.279.0 (10-23-26
+    01:33), not pushed** (build plan § 7e.2; rulings 89, 112, 114). Owed:
+    the live pass on crm-test — as Mark Marketing (all six tabs, an unsaved
+    list asked about on a tab switch, `lists.html?list=` and `calls.html`
+    redirecting) and as Joe Mentor (the portal's *Campaign calls* tile, the
+    Calls tab alone, a recorded outcome); then Doug's ruling on the nine
+    Drafts in build plan § 7e.12 before M2 starts.
 52. **A quick-add from the other door's company inherits its primary
     contact (v0.257.0) — live on crm-test and production by 10-14-26
     22:06, live pass owed** (another session had taken #50 and #51). Doug's
