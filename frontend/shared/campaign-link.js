@@ -59,7 +59,9 @@
 
   function fillBusiness(p) {
     // Each form names its own inputs; fill whichever of the usual ids exist.
+    // "company" is the information request's, the partner's and the funder's box.
     fill("business_name", p.businessName); fill("company_name", p.businessName); fill("organization", p.businessName);
+    fill("company", p.businessName);
     fill("business_website", p.website); fill("website", p.website);
     fill("business_street", p.street); fill("street", p.street); fill("address_street", p.street);
     fill("business_city", p.city); fill("city", p.city); fill("address_city", p.city);

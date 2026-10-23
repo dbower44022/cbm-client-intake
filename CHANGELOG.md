@@ -5,6 +5,14 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.278.3] — 2026-10-22
+
+**fix(campaigns): a campaign link's company prefill reaches the information
+request, partner and funder forms.** Their company box is `company`, which
+the shared `campaign-link.js` never filled, so a lead code (v0.276.0) — and
+before it a landing-page handoff — left the company empty on those three
+forms. Found writing the D1 live pass.
+
 ## [0.278.2] — 2026-10-22
 
 **fix(campaigns): the Lists page is headed "Lists".** Doug, 10-22-26: the

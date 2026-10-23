@@ -348,3 +348,15 @@ def test_the_sandbox_gives_each_demo_cards_lead_its_card_code():
     assert first["set"] == len(leads) and again == {"set": 0, "present": len(leads), "skipped": 0}
     for lead_id, code in leads:
         assert crm.rows[cfg.PROSPECT][lead_id][leadcode.LEAD_FIELD] == code
+
+
+@pytest.mark.parametrize("form", ["client_intake", "info_request", "partner", "sponsor"])
+def test_the_shared_prefill_fills_each_forms_company_box(form):
+    import re
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    html = (root / "forms" / form / "frontend" / "index.html").read_text()
+    script = (root / "frontend" / "shared" / "campaign-link.js").read_text()
+    filled = set(re.findall(r'fill\("([a-z_]+)", p\.businessName\)', script))
+    boxes = {i for i in ("business_name", "company_name", "organization", "company") if f'id="{i}"' in html}
+    assert boxes and boxes <= filled, (form, boxes - filled)
