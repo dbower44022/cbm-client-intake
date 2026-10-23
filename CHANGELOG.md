@@ -5,6 +5,22 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.277.1] — 2026-10-22
+
+**fix(enrichment): a finding no longer proposes a value the record already
+holds.** Found by Doug on crm-test: the Great Lakes Brewing Company lead
+holds `https://greatlakesbrewing.com`, AI research proposed
+`https://www.greatlakesbrewing.com`, and Accept refused it ("The record
+already holds … a finding never replaces a value"). Landing compared values
+ignoring only capitals and a trailing slash. The new `runs.same_value`
+compares a website under `core/crm_upsert.website_key` (scheme, `www.` and a
+trailing slash ignored, the path kept), an email address whatever its
+capitals, a phone number by its digits, anything else as before; a value the
+record already holds is skipped, never filed. A finding filed before this
+release closes with Accept: it is marked Accepted with the note "the record
+already holds this", and nothing is written to the record. A different value
+is still refused.
+
 ## [0.277.0] — 2026-10-22
 
 **feat(events): the registration confirmation — CBM's own, the only email a

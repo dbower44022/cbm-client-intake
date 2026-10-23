@@ -23,7 +23,9 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from core.config import Settings
+from core.crm_upsert import website_key
 from core.espo import EspoApi, EspoError
+from core.phone import e164_or_none
 
 from . import fit, research
 from .store import EnrichmentStore
@@ -198,6 +200,28 @@ async def existing_findings(client: EspoApi, *, prospect_id: str = "", company_i
     return out
 
 
+def _phone_key(v: Any) -> str:
+    raw = str(v or "")
+    return e164_or_none(raw) or re.sub(r"\D", "", raw)
+
+
+def same_value(field: str, current: Any, proposed: Any) -> bool:
+    """True when the record's value and a finding's value are one value to a
+    person: a website under ``website_key`` (scheme, ``www.`` and a trailing
+    slash ignored), an email address whatever its capitals, a phone number by
+    its digits; anything else under ``_norm``. An empty value never matches."""
+    f = (field or "").lower()
+    if "website" in f:
+        a, b = website_key(str(current or "")), website_key(str(proposed or ""))
+    elif "email" in f:
+        a, b = str(current or "").strip().lower(), str(proposed or "").strip().lower()
+    elif "phone" in f:
+        a, b = _phone_key(current), _phone_key(proposed)
+    else:
+        a, b = _norm(current), _norm(proposed)
+    return bool(a) and a == b
+
+
 def _finding_key(kind: str, target: str, value: str) -> tuple[str, str, str]:
     return (kind, target, _norm(value))
 
@@ -222,7 +246,7 @@ async def land(client: EspoApi, result: research.Result, *, target_type: str, re
             counts["skipped"] += 1
             continue
         current = record.get(target) or ""
-        if _norm(current) == _norm(c.value) or _finding_key(KIND_FIELD, target, c.value) in keys:
+        if same_value(target, current, c.value) or _finding_key(KIND_FIELD, target, c.value) in keys:
             counts["skipped"] += 1
             continue
         status = ST_PROPOSED
@@ -356,11 +380,17 @@ async def decide(client: EspoApi, finding_id: str, decision: str, *, actor: str,
             entity = PROSPECT if target_type == TARGET_LEAD else ACCOUNT
             field = f.get("targetField") or ""
             record = await client.get(entity, target_id, select=f"id,{field}")
-            if str(record.get(field) or "").strip():
+            held = record.get(field)
+            if same_value(field, held, f.get("proposedValue")):
+                # Found before the comparison knew www. from no www. (10-22-26):
+                # nothing to write, so accepting simply closes the finding.
+                note = "the record already holds this"
+            elif str(held or "").strip():
                 raise EnrichmentError(f"The record already holds {record.get(field)!s} there; a finding never "
                                       "replaces a value. Change it by hand if the finding is right.")
-            await client.update(entity, target_id, {field: f.get("proposedValue")})
-            note = f"{field} set to {f.get('proposedValue')}"
+            else:
+                await client.update(entity, target_id, {field: f.get("proposedValue")})
+                note = f"{field} set to {f.get('proposedValue')}"
         elif kind == KIND_PERSON:
             note = await _create_person(client, f, target_id, actor)
     await client.update(FINDING, finding_id, {"findingStatus": decision, **stamp})

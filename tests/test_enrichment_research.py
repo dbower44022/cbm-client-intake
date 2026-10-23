@@ -263,6 +263,43 @@ async def test_a_verified_website_fills_an_empty_lead_field_and_nothing_else_is_
     assert again["created"] == 0                                    # never the same finding twice
 
 
+@pytest.mark.parametrize("field,held,proposed,same", [
+    ("website", "https://greatlakesbrewing.com", "https://www.greatlakesbrewing.com", True),
+    ("website", "greatlakesbrewing.com", "HTTP://GreatLakesBrewing.com/", True),
+    ("website", "https://acme.com/a", "https://acme.com/b", False),
+    ("emailAddress", "Info@Acme.com", "info@acme.com", True),
+    ("phone", "(216) 555-0199", "216.555.0199", True),
+    ("phoneNumber", "+1 216 555 0199", "2165550199", True),
+    ("phone", "2165550199", "2165550100", False),
+    ("industry", "Food & Beverage", "food & beverage", True),
+    ("website", "", "", False),
+])
+def test_same_value_is_what_a_person_would_call_the_same(field, held, proposed, same):
+    assert runs.same_value(field, held, proposed) is same
+
+
+async def test_a_held_website_with_www_makes_no_finding():
+    crm = FakeCrm()
+    lid = _put(crm, "CProspect", {"businessName": "Great Lakes Brewing Company",
+                                  "website": "https://greatlakesbrewing.com", "email": "", "phone": "(216) 771-4404"})
+    counts = await runs.land(crm, _result(("website", "https://www.greatlakesbrewing.com", "Verified"),
+                                          ("phone", "216-771-4404", "Verified")),
+                             target_type="lead", record=await crm.get("CProspect", lid), run_id="r1")
+    assert counts == {"created": 0, "applied": 0, "skipped": 2}
+    assert crm.rows["CEnrichmentFinding"] == {}
+
+
+async def test_accepting_a_value_the_record_already_holds_closes_it_and_writes_nothing():
+    crm = FakeCrm()
+    cid, fid = await _client_finding(crm, kind="Field value", targetField="website",
+                                     proposedValue="https://www.smithbakery.com")
+    crm.rows["Account"][cid]["website"] = "https://smithbakery.com"
+    out = await runs.decide(crm, fid, "Accepted", actor="Cara Client", target_type="company", target_id=cid)
+    assert out["status"] == "Accepted" and out["note"] == "the record already holds this"
+    assert crm.rows["Account"][cid]["website"] == "https://smithbakery.com"
+    assert crm.rows["CEnrichmentFinding"][fid]["findingStatus"] == "Accepted"
+
+
 async def test_nothing_on_a_client_is_written_without_a_person():
     crm = FakeCrm()
     cid = _put(crm, "Account", {"name": "Smith Bakery LLC", "website": ""})
