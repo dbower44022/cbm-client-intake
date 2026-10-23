@@ -594,7 +594,9 @@ packages rely on:
 Marketing Admin Team (`CAMPAIGNS_ALLOWED_TEAMS`), behind `CAMPAIGNS_ENABLED`
 (read per request). The arc is `prds/prospect-marketing/` — its `README.md`
 first; `rulings.md` is binding and append-only. **One session on that arc at a
-time.** **Detail: `campaigns/CLAUDE.md`.** Rules other packages rely on,
+time.** **Detail: `campaigns/CLAUDE.md`.** **A full redesign is ruled
+(rulings 79–116) and planned (build plan § 7e), not built** — read those
+before changing any Marketing Management screen; `OPEN-ITEMS.md` #57. Rules other packages rely on,
 chiefly the public form orchestrators in `forms/`:
 
 - **Every public form carries `campaign_id`, `campaign_link`, `lead_code`**

@@ -6,6 +6,18 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+57. **Marketing Management redesign — nine Drafts owed, then the build**
+    (2026-10-23). Doug ruled the whole redesign 10-22/23-26 (rulings
+    79–116, `prds/prospect-marketing/rulings.md` v1.47). The build is
+    `prds/prospect-marketing/build-plan.md` § 7e: ten steps (M1 one page
+    with six tabs; M2 the qualification ladder and Leads tab; M3 Review as
+    a research queue; M4 the import tool; M5 personal outreach; M6 lists;
+    M7 Constant Contact per list; M8 lists-only campaigns and the campaign
+    page; M9 the send report and Recipients; M10 Promote this event and
+    Calls). Owed first: Doug's answers on the nine Drafts in § 7e.12
+    (2, 3 and 4 change what staff see). Then M1, which needs no CRM change;
+    M2 needs the one handoff in § 7e.11 on crm-test first. Nothing built.
+
 53. **Attendee linking escalation — live pass owed** (v0.258.6, 2026-10-15).
     A mentor whose Mentor Role reads/edits `CSession` at "own" could not
     attach an attendee assigned to someone else: EspoCRM checks edit on

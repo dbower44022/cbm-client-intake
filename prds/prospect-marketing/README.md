@@ -1,6 +1,6 @@
 # Prospect marketing and Campaign Management
 
-Last Updated: 10-22-26 12:10 · Revision 1.17 — change log at the end.
+Last Updated: 10-23-26 01:15 · Revision 1.18 — change log at the end.
 
 **Read this first if you are working on prospects or campaigns.** This
 directory is the whole arc: the rulings, the build plan, and the record of
@@ -42,7 +42,18 @@ and the code: the `campaigns/` package, `core/postal.py`, `core/qr.py`,
 `forms/prospect_response/` and `frontend/shared/campaign-link.js` (**Phase 1
 built 10-15-26, v0.258.0, dark behind `CAMPAIGNS_ENABLED`**).
 
-## State, as of 10-19-26 23:44
+## State, as of 10-23-26 01:15
+
+- **The Marketing Management redesign is ruled and planned, not built**
+  (10-22-26 22:13 to 10-23-26 01:10, DETAIL mode). Rulings 79–116 cover
+  every tab: the import tool (79–88), lists, Constant Contact per list and
+  event promotion (89–98), campaigns (99–102), the qualification ladder,
+  personal outreach and Review as a research queue (103–113), and calls
+  (114–116). Several change earlier rulings (90→62, 92→65, 107→19,
+  111→18 and 53); each says so. The build is **build plan § 7e** (v0.37):
+  ten steps M1–M10, about seven weeks. **Next: Doug's answers on the nine
+  Drafts in § 7e.12, then step M1** (one page, six tabs). One CRM handoff
+  (§ 7e.11) is owed before M2.
 
 - **The lead model (rulings 41–44, 10-18-26 evening) changes what is
   built.** Every record from an outside source is a **Lead** (Unqualified,
@@ -217,14 +228,15 @@ import contract starts from).
 | Field | Value |
 |---|---|
 | Document | Prospect marketing — directory README |
-| Version | 1.16 |
-| Last Updated | 10-19-26 23:44 |
+| Version | 1.18 |
+| Last Updated | 10-23-26 01:15 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.18 | 10-23-26 01:15 | Claude (Claude Code) | State: the Marketing Management redesign ruled (79–116) and planned (build plan § 7e), not built; next is the § 7e.12 Drafts, then M1. Revision table brought up to date (read 1.16). |
 | 1.17 | 10-22-26 12:10 | Claude (Claude Code) | State: campaign lists L1 and L2 built and live-passed on crm-test; rulings 58–70; production and Boston wait for one slot. |
 | 1.16 | 10-19-26 23:44 | Claude (Claude Code) | State: the lead model live-passed on crm-test; production's slot is next. |
 | 1.15 | 10-19-26 11:47 | Claude (Claude Code) | State: the lead model's code rework built (v0.265.0, not pushed; rulings 51–53); the release's CRM steps and the live pass are next. |
