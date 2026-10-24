@@ -1,0 +1,40 @@
+{
+  "name": "marketing-redesign",
+  "description": "Prospect marketing, build plan § 7e.11 (rulings 104-111 and 117-125, 10-23-26): the Marketing Management redesign's one CRM change. The qualification ladder inside Qualified (CProspect.qualificationLevel, who set it by hand and when), the referrer (a partner link and a free-text name), the reply flag, the lead's conversations (CConversation <-> CProspect, the PARENT_LINKS shape), personal outreach without a campaign (the touch's campaign link optional, two channel options), and the Constant Contact email id on a campaign. Additive only; nothing Read-only (ruling 40: the application writes every one of these under the org-wide API key). CProspect.assignedUser is already enabled on crm-test (read 10-24-26) so the plan does not touch it. Handoff: marketing-redesign-crm-handoff.md.",
+  "fields": [
+    {"entity": "CProspect", "name": "qualificationLevel", "type": "enum",
+     "options": ["", "Identified", "Contactable", "Referred"],
+     "label": "Level",
+     "tooltipText": "How far along a Qualified lead is: Identified (a real business, no named person or direct line), Contactable (a named person and a phone or an email), Referred (introduced by a partner or someone trusted, with a phone or an email). Empty unless Lead Status is Qualified. The system places it whenever a fact changes; you may set it by hand; it never moves backwards."},
+    {"entity": "CProspect", "name": "levelSetAt", "type": "datetime",
+     "label": "Level set by hand at",
+     "tooltipText": "When a person last set the level by hand. Written by the application with Level set by hand; after this the system moves the level forward only when a new fact (a phone, an email, a named person, a referrer) allows a higher level."},
+    {"entity": "CProspect", "name": "referredByName", "type": "varchar", "maxLength": 150,
+     "label": "Referred by (name)",
+     "tooltipText": "Who introduced this lead, when the referrer is not a partner on file. A referrer and a phone or an email make the lead Referred. Use Referred by (partner) for a partner."},
+    {"entity": "CProspect", "name": "replied", "type": "bool", "default": false,
+     "label": "Replied",
+     "tooltipText": "The lead has written back to a personal email and has not yet been converted. Set by the email sync, cleared by conversion."},
+    {"entity": "COutreachCampaign", "name": "vendorEmailId", "type": "varchar", "maxLength": 64,
+     "label": "Constant Contact email id",
+     "tooltipText": "The id of the email staff sent in Constant Contact for this campaign, picked in Marketing Management. The send report reads its results by this id. Written by the application."}
+  ],
+  "fieldParams": [
+    {"entity": "COutreachTouch", "name": "outreachCampaign", "params": {"required": false}}
+  ],
+  "links": [
+    {"entity": "CProspect", "link": "levelSetByHand", "linkType": "manyToOne",
+     "entityForeign": "User", "linkForeign": "levelSetLeads",
+     "label": "Level set by hand", "labelForeign": "Leads whose level they set"},
+    {"entity": "CProspect", "link": "referredByPartner", "linkType": "manyToOne",
+     "entityForeign": "CPartnerProfile", "linkForeign": "referredLeads",
+     "label": "Referred by (partner)", "labelForeign": "Referred leads"},
+    {"entity": "CConversation", "link": "prospects", "linkType": "manyToMany",
+     "entityForeign": "CProspect", "linkForeign": "conversations",
+     "relationName": "cConversationProspect",
+     "label": "Leads", "labelForeign": "Conversations"}
+  ],
+  "enumOptions": [
+    {"entity": "COutreachTouch", "field": "channel", "add": ["Personal call", "Personal email"]}
+  ]
+}

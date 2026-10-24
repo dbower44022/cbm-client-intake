@@ -14,9 +14,12 @@ found; move resolved items to the bottom with the resolution date.
     a research queue; M4 the import tool; M5 personal outreach; M6 lists;
     M7 Constant Contact per list; M8 lists-only campaigns and the campaign
     page; M9 the send report and Recipients; M10 Promote this event and
-    Calls). Owed first: Doug's answers on the nine Drafts in § 7e.12
-    (2, 3 and 4 change what staff see). Then M1, which needs no CRM change;
-    M2 needs the one handoff in § 7e.11 on crm-test first. Nothing built.
+    Calls). The nine Drafts in § 7e.12 ruled 10-23-26 (rulings 117–125).
+    M1 built (v0.279.0/.1) and live-passed on crm-test 10-24-26 14:46. The
+    one CRM handoff (`marketing-redesign-crm-handoff.md`, plan fingerprint
+    `6bb03652454a`) written 10-24-26, verified against crm-test, **not
+    applied**. Owed: Doug runs `scripts/prospect_crm_test.sh redesign` then
+    `roles`; Claude's § 5 reads; then M2.
 
 53. **Attendee linking escalation — live pass owed** (v0.258.6, 2026-10-15).
     A mentor whose Mentor Role reads/edits `CSession` at "own" could not

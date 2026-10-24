@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-23-26 01:25 · Revision 0.37 — change log at the end.
+Last Updated: 10-24-26 15:20 · Revision 0.41 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -2444,6 +2444,14 @@ The sandbox recapture adds seeders for templates and the ready-made lists
 All of it is feature-detected, so each piece stays dark until its field
 exists. Production's apply rides the arc's deferred Sunday slot.
 
+**Handoff written 10-24-26** (`marketing-redesign-crm-handoff.md`; plan
+`scripts/plans/marketing-redesign.json`, fingerprint `6bb03652454a`; not
+applied). Verified against crm-test: `assignedUser` is already enabled and
+the touch's campaign link is already not required, so the plan adds five
+fields, three links and two options; the role script gains `CConversation`
+read own AND `CCommunication` read all (the thread is read as the user).
+Layouts are left alone; the handoff's § 7 holds that question.
+
 ### 7e.12 Drafts for Doug's approval — RULED 10-23-26 03:53 (rulings 117–125)
 
 Doug: "approve as recommended". Drafts 1, 2, 3, 5, 8 and 9 stand as
@@ -2796,7 +2804,7 @@ best-effort mirror.
 |---|---|
 | Document | Prospect Marketing — build plan |
 | Version | v0.26 — Phases 1–4 and the lead model built; §§ 7b and 7c built and live-passed on crm-test; § 7d (the lead identifier in every link, rulings 71–75) approved, D1 built; § 7e (the Marketing Management redesign, rulings 79–125) approved, step M1 built as v0.279.0 |
-| Last Updated | 10-24-26 14:46 |
+| Last Updated | 10-24-26 15:20 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
 | Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
@@ -2805,6 +2813,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.41 | 10-24-26 15:20 | Claude (Claude Code) | § 7e.11: the CRM handoff written (`marketing-redesign-crm-handoff.md`, plan fingerprint `6bb03652454a`), verified against crm-test, not applied; two findings noted (`assignedUser` enabled, campaign link not required) and the `CCommunication` read added to the role grants. |
 | 0.40 | 10-24-26 14:46 | Claude (Claude Code) | § 7e.13 step M1 live-passed on crm-test (Doug, 36 steps; the D9 touch read back). Next: the CRM handoff, then M2. |
 | 0.39 | 10-23-26 03:53 | Claude (Claude Code) | § 7e.12 ruled (rulings 117–125, Doug "approve as recommended"): six Drafts as written, Drafts 4, 6 and 7 as recommended; each change noted under its Draft. § 7e is approved. |
 | 0.38 | 10-23-26 01:33 | Claude (Claude Code) | § 7e.13 step M1 built (v0.279.0): one page, six tabs; the three build choices recorded under the step; § 7e.2 heading marked built. The Drafts in § 7e.12 still await Doug. |

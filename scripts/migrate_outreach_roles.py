@@ -106,6 +106,17 @@ ROLE_SCOPE_GRANTS: list[tuple[str, str, dict[str, str]]] = [
     # default read own, so a marketer could assign a campaign to themself
     # alone). The shape the Client Assignment Role got on 09-07-26.
     ("Marketing Admin Role", "User", {"read": "all", "edit": "own"}),
+    # Build plan § 7e.5 and § 7e.11 (rulings 109, 118; marketing-redesign-crm-
+    # handoff.md § 4): a reply to a personal email is attached to the lead as a
+    # CConversation, and the lead's page reads the thread AS THE USER
+    # (comms/service.py list_conversations / conversation_thread). The sync
+    # stamps the mailbox owner into assignedUsers (comms/crm.stamp_owners), so
+    # read "own" is enough for the assignee — the Mentor Role's shape. The
+    # messages are read all, as the Mentor Role has them: a CCommunication is
+    # reached only through a conversation the user can read. Creates and the
+    # record link stay the application's, under the API role.
+    ("Marketing Admin Role", "CConversation", {"read": "own"}),
+    ("Marketing Admin Role", "CCommunication", {"read": "all"}),
     # Ruling 36 (10-18-26, Phase 3): callers are the members of the teams named
     # on a call campaign, each acting as themself, so a mentor on a campaign
     # naming the Mentor Team reads the call list and records the outcome on the
