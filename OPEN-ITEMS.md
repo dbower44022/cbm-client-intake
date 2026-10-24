@@ -350,7 +350,9 @@ found; move resolved items to the bottom with the resolution date.
     all 36 steps, as Mark Marketing and as Joe Mentor. Read back by Claude:
     the Gordon Square Florist touch is Done / No answer, modified by Joe
     Mentor at 18:45:06 UTC, and a new Planned call-again touch was created
-    by the API user the same second. One runbook correction during the
+    by the API user the same second; Doug confirmed both in the CRM's own
+    Touches list 10-24-26 18:14 (runbook
+    https://claude.ai/artifact/5kWmwK5CHcnaeM9hH1H7rb). One runbook correction during the
     pass: Enter in the New-list dialog's Name box creates the list, and
     "the index" was renamed "the table of lists" (page version 2). The nine
     Drafts in build plan
