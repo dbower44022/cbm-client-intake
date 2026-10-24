@@ -6,18 +6,6 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
-58. **Several-profiles guard — live pass owed** (v0.280.0, 2026-10-24).
-    One login on several `CMentorProfile` records now resolves to the Active
-    profile and Client Management names every candidate above the grid.
-    Verified by tests only. The live check is a real non-admin mentor whose
-    login is on two profiles (put it there on crm-test, it resets overnight):
-    the grid lists the Active profile's clients and the yellow notice names
-    both profiles; remove the extra link and the notice goes. Lakeside's own
-    data was repaired by hand 10-24-26 (Jordan Mentor's login removed from
-    Charles Farris and LMentor Mentor1), so Lakeside shows no notice now.
-    Step page (10-24-26, uses Simone Achebe as the second profile):
-    https://claude.ai/artifact/MjdGx2s9392e5TkzrDvS2p
-
 57. **Marketing Management redesign — nine Drafts owed, then the build**
     (2026-10-23). Doug ruled the whole redesign 10-22/23-26 (rulings
     79–116, `prds/prospect-marketing/rulings.md` v1.47). The build is
@@ -2007,6 +1995,16 @@ toggle.
     over the fix on 2026-10-07, so the fix is still owed.
 
 ## Resolved
+
+**RESOLVED 2026-10-24 — #58, the several-profiles guard live pass.** Doug
+ran the step page (https://claude.ai/artifact/MjdGx2s9392e5TkzrDvS2p,
+revision 1.0) on crm-test 10-24-26 as a non-admin (Joe Mentor): with the
+login on Simone Achebe (Paused, no clients, listed first) and on Joe
+Mentor (Active, seven clients), Client Management showed Joe's seven rows
+and the yellow notice naming both profiles; after the extra link was
+removed and the grid refreshed, the notice was gone and the seven rows
+stayed. v0.280.0 is live on production and crm-test; Lakeside picks it up
+at its next promotion.
 
 **RESOLVED 2026-10-20 — #45, the sandbox re-baseline.** Doug ran the
 step page (https://claude.ai/artifact/VSrvvKB49MkmzA2dgHRsfS, revision

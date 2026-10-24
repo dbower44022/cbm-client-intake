@@ -1211,8 +1211,9 @@ the strength of it.
   10-23-26: three profiles carried the login after a mass Assigned Users
   edit, the resolver took the first (empty), the grid showed no clients.
   Data repaired by hand; the guard is `sessions/service.choose_manager_profile`
-  + `profileChoice` on the list response. Committed, not pushed. Owed: the
-  live pass as a non-admin mentor (`OPEN-ITEMS.md` #58).
+  + `profileChoice` on the list response. Pushed 10-24-26 10:58, live on
+  production and crm-test; live-passed on crm-test 10-24-26 as Joe Mentor
+  (`OPEN-ITEMS.md` #58 resolved). Lakeside picks it up at its next promotion.
 - **v0.279.0 (2026-10-23) — Marketing Management is one page with six
   tabs** (build plan § 7e.2, step M1 of the redesign; rulings 89, 112, 114).
   Lists and Calls are tabs; a caller from another team sees the Calls tab
