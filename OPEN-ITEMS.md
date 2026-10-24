@@ -342,11 +342,15 @@ found; move resolved items to the bottom with the resolution date.
     § 7e.2; rulings 89, 112, 114). Runbook for the live pass, 36 steps:
     https://claude.ai/artifact/PMdnPnnpKG4tVsUvj9W8SU (written 10-23-26
     04:09 against crm-test's running call campaign "Fall follow-up calls",
-    which names the Mentor Team, and its two planned touches). Owed:
-    the live pass on crm-test — as Mark Marketing (all six tabs, an unsaved
-    list asked about on a tab switch, `lists.html?list=` and `calls.html`
-    redirecting) and as Joe Mentor (the portal's *Campaign calls* tile, the
-    Calls tab alone, a recorded outcome). The nine Drafts in build plan
+    which names the Mentor Team, and its two planned touches). **LIVE-PASSED
+    on crm-test 10-24-26 14:46** by Doug ("the m1 live pass is completed"):
+    all 36 steps, as Mark Marketing and as Joe Mentor. Read back by Claude:
+    the Gordon Square Florist touch is Done / No answer, modified by Joe
+    Mentor at 18:45:06 UTC, and a new Planned call-again touch was created
+    by the API user the same second. One runbook correction during the
+    pass: Enter in the New-list dialog's Name box creates the list, and
+    "the index" was renamed "the table of lists" (page version 2). The nine
+    Drafts in build plan
     § 7e.12 are ruled (117–125, 10-23-26 03:53); M2 (the ladder and the
     Leads tab, behind `LEAD_LADDER`) waits only on the handoff's lead
     fields on crm-test.

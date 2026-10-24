@@ -1217,10 +1217,10 @@ the strength of it.
   tabs** (build plan § 7e.2, step M1 of the redesign; rulings 89, 112, 114).
   Lists and Calls are tabs; a caller from another team sees the Calls tab
   alone and gets a *Campaign calls* portal tile; no screen cites a ruling
-  number. No CRM change, no switch. Pushed 10-23-26 04:04; v0.279.1 (leaving
-  an unsaved list discards the edit) committed after it. Owed: the live
-  pass on crm-test as Mark Marketing and as a Mentor Team caller. The nine
-  Drafts in § 7e.12 are ruled (117–125, 10-23-26); M2 may start.
+  number. No CRM change, no switch. v0.279.0 and v0.279.1 live on both
+  deployments; **live-passed on crm-test 10-24-26 14:46** by Doug. The nine
+  Drafts in § 7e.12 are ruled (117–125, 10-23-26). Next: the redesign's CRM
+  handoff (`marketing-redesign-crm-handoff.md`, § 7e.11), then M2.
 - **v0.276.0 (2026-10-22) — lead code D1** (§ 7d). Not pushed; inert
   without the CRM fields. Owed: live pass, D2 (`OPEN-ITEMS.md` #51).
 - **v0.271.0 (2026-10-21) — campaign lists, L2 (clients, partners,

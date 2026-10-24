@@ -1962,7 +1962,7 @@ The CRM gains fields on `CProspect` and one link on `CConversation`
 (§ 7e.11). About 150 existing tests pin behaviour that the rulings change;
 each step below names its files.
 
-### 7e.2 One page, six tabs — rulings 89, 112, 114 (built as v0.279.0, 10-23-26; live pass owed)
+### 7e.2 One page, six tabs — rulings 89, 112, 114 (built as v0.279.0 and v0.279.1, 10-23-26; live-passed on crm-test 10-24-26 14:46)
 
 **Today.** `index.html` and `app.js` (one 1,593-line IIFE) hold Leads,
 Campaigns, Review and Imports. `lists.html` / `lists.js` (641 lines) and
@@ -2499,8 +2499,9 @@ pass on crm-test as a real non-admin Marketing Admin user (plus a Mentor
 Team caller for M1 and M10).
 
 1. **M1: one page, six tabs** (§ 7e.2), behind no switch, because the
-   tabs are the same features. About two days. **Built as v0.279.0
-   (10-23-26 01:33), not pushed; live pass owed.** Three build choices,
+   tabs are the same features. About two days. **Built as v0.279.0 and
+   v0.279.1 (10-23-26), live on both deployments; live-passed on crm-test
+   10-24-26 14:46 by Doug, 36 steps as Mark Marketing and Joe Mentor.** Three build choices,
    each a routine one under the section as written: the unsaved-list
    warning on a tab switch is the page's own dialog (*Unsaved changes* →
    *Leave them*), never the browser's; the open list rides the hash
@@ -2795,7 +2796,7 @@ best-effort mirror.
 |---|---|
 | Document | Prospect Marketing — build plan |
 | Version | v0.26 — Phases 1–4 and the lead model built; §§ 7b and 7c built and live-passed on crm-test; § 7d (the lead identifier in every link, rulings 71–75) approved, D1 built; § 7e (the Marketing Management redesign, rulings 79–125) approved, step M1 built as v0.279.0 |
-| Last Updated | 10-23-26 03:53 |
+| Last Updated | 10-24-26 14:46 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
 | Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
@@ -2804,6 +2805,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.40 | 10-24-26 14:46 | Claude (Claude Code) | § 7e.13 step M1 live-passed on crm-test (Doug, 36 steps; the D9 touch read back). Next: the CRM handoff, then M2. |
 | 0.39 | 10-23-26 03:53 | Claude (Claude Code) | § 7e.12 ruled (rulings 117–125, Doug "approve as recommended"): six Drafts as written, Drafts 4, 6 and 7 as recommended; each change noted under its Draft. § 7e is approved. |
 | 0.38 | 10-23-26 01:33 | Claude (Claude Code) | § 7e.13 step M1 built (v0.279.0): one page, six tabs; the three build choices recorded under the step; § 7e.2 heading marked built. The Drafts in § 7e.12 still await Doug. |
 | 0.37 | 10-23-26 01:25 | Claude (Claude Code) | § 7e added: the Marketing Management redesign from rulings 79–116 — one page, the qualification ladder, personal outreach, Review as a research queue, the import tool, lists, Constant Contact per list with the send report, lists-only campaigns, Promote this event, the Calls tab; storage and one CRM handoff; nine Drafts for approval (§ 7e.12); ten steps, about seven weeks (§ 7e.13). Header Version and Last Updated brought up to date. |
