@@ -163,6 +163,13 @@ runbook: `DEPLOYMENT.md`; plain-language console companion:
   sweeps; the web process runs everything user-facing plus worker-liveness
   watching. Getting this wrong is a common cause of "the feature is on but
   nothing happens."
+- **The chapter apps (Boston, Lakeside) track the `release` branch with
+  `deploy_on_push: true`** (read from their live specs 10-24-26). Updating
+  a chapter is `./scripts/cut_release.sh` on a clean `main`, then
+  `git push origin <tag> release` — and **that one push deploys every
+  chapter at once**, Boston's production included. The train is Sunday
+  17:00 UTC (ruled 2026-08-26); `scripts/promote.py <app-id> --status`
+  shows what each app runs and tracks.
 - **There is no branch-level review gate** — all three apps track `main` with
   `deploy_on_push: true`, so one push builds dev, crm-test AND prod. The gate is
   the **feature flag**: build it dark (default off), enable it on crm-test's
@@ -1206,14 +1213,6 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
-- **v0.280.0 (2026-10-24) — a login on several mentor profiles resolves to
-  the Active one; the grid names the others.** Lakeside, Jordan Mentor,
-  10-23-26: three profiles carried the login after a mass Assigned Users
-  edit, the resolver took the first (empty), the grid showed no clients.
-  Data repaired by hand; the guard is `sessions/service.choose_manager_profile`
-  + `profileChoice` on the list response. Pushed 10-24-26 10:58, live on
-  production and crm-test; live-passed on crm-test 10-24-26 as Joe Mentor
-  (`OPEN-ITEMS.md` #58 resolved). Lakeside picks it up at its next promotion.
 - **v0.279.0 (2026-10-23) — Marketing Management is one page with six
   tabs** (build plan § 7e.2, step M1 of the redesign; rulings 89, 112, 114).
   Lists and Calls are tabs; a caller from another team sees the Calls tab
@@ -1222,18 +1221,8 @@ the strength of it.
   an unsaved list discards the edit) committed after it. Owed: the live
   pass on crm-test as Mark Marketing and as a Mentor Team caller. The nine
   Drafts in § 7e.12 are ruled (117–125, 10-23-26); M2 may start.
-- **v0.278.0 (2026-10-22) — Campaign Management renamed Marketing
-  Management; it opens on Leads.** Display name only — the `/campaigns`
-  address, `CAMPAIGNS_*` settings and package name stay. Not pushed.
 - **v0.276.0 (2026-10-22) — lead code D1** (§ 7d). Not pushed; inert
   without the CRM fields. Owed: live pass, D2 (`OPEN-ITEMS.md` #51).
-- **v0.273.0 (2026-10-21) — an engagement's close date is stamped when it
-  closes** (ruling 70). Live on both deployments; Read-only cleared on
-  crm-test and live-checked there 10-22-26 00:37 (as Joe Mentor). Inert on production
-  until its CRM clears Read-only (`cengagement-close-date-crm-handoff.md`).
-  **Standing fact: that field was Read-only on crm-test AND production** — every
-  write dropped, no engagement dated. Owed: production, Boston, the backfill
-  question (`OPEN-ITEMS.md` #51).
 - **v0.271.0 (2026-10-21) — campaign lists, L2 (clients, partners,
   funders).** Committed, not pushed; dark. Build plan § 7c.7; standing rules
   in `campaigns/CLAUDE.md`. **Live-passed on crm-test 10-21-26 22:30**; funder status

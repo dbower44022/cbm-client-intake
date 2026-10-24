@@ -912,6 +912,16 @@ empty company on a partner/funder now renders as "—" and is fixable in the app
 
 ## Data cleanup
 
+- **Lakeside: two engagements on a mentor profile with no login**
+  (2026-10-24). Repairing Jordan Mentor's three-profile fault removed the
+  login from `LMentor Mentor1`, whose engagements *Lori Client1* and *Iva
+  Brito* now have a mentor nobody can sign in as; the worker's stamp
+  reconciliation warns on them every pass (`profilesWithoutUser: 2`).
+  Rehearsal data, harmless. Fix when Lakeside is next used: reassign both
+  in Client Administration, or give that profile a login. Also noted
+  there: the 50 profiles and bbmentors.org users are the Boston HubSpot
+  rehearsal load.
+
 - **Nine production partner records have no company linked** (found
   2026-10-11 by the ownership count for #40: 22 of 31 `CPartnerProfile`
   rows carry a `partnerCompanyId`). Not looked into: which nine, whether
