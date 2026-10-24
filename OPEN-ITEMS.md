@@ -15,6 +15,8 @@ found; move resolved items to the bottom with the resolution date.
     both profiles; remove the extra link and the notice goes. Lakeside's own
     data was repaired by hand 10-24-26 (Jordan Mentor's login removed from
     Charles Farris and LMentor Mentor1), so Lakeside shows no notice now.
+    Step page (10-24-26, uses Simone Achebe as the second profile):
+    https://claude.ai/artifact/MjdGx2s9392e5TkzrDvS2p
 
 57. **Marketing Management redesign — nine Drafts owed, then the build**
     (2026-10-23). Doug ruled the whole redesign 10-22/23-26 (rulings
