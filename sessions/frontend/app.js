@@ -159,7 +159,7 @@
 
   function notice(elId, text, kind) {
     var n = $(elId); n.textContent = text;
-    n.className = "sx__notice " + (kind === "error" ? "is-error" : "is-success");
+    n.className = "sx__notice " + (kind === "error" ? "is-error" : kind === "warn" ? "is-warn" : "is-success");
     show(n); n.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
@@ -472,6 +472,7 @@
       $("emptyState").textContent = res.profileFound === false
         ? (config.noProfileMessage || "Your login isn't linked to a profile — ask an administrator.")
         : (config.emptyMessage || "No records found.");
+      renderProfileChoice(res.profileChoice);
       refreshStatusFilter();
       renderTable();
       loadUnreadChips();
@@ -479,6 +480,25 @@
       if (e.status === 401) { showLogin(); return; }
       notice("listNotice", e.message, "error");
     } finally { hide($("loadingState")); }
+  }
+
+  // A login linked to SEVERAL mentor profiles is a data fault the person can
+  // see but not fix (the server picks the Active one; the others are a mass
+  // "Assigned Users" edit gone wrong). Name every profile and the one this
+  // page acts as, so an administrator knows which Assigned Users to clear.
+  function renderProfileChoice(choice) {
+    var el = $("profileNotice");
+    if (!el) return;
+    if (!choice || !choice.candidates || choice.candidates.length < 2) { hide(el); return; }
+    var chosen = choice.candidates.filter(function (c) { return c.id === choice.chosenId; })[0];
+    var names = choice.candidates.map(function (c) {
+      return c.name + (c.status ? " (" + c.status + ")" : "");
+    });
+    el.textContent = "Your login is linked to " + choice.candidates.length +
+      " mentor profiles: " + names.join(", ") + ". This page shows " +
+      (chosen ? chosen.name : "the first") + ". Ask an administrator to remove " +
+      "your login from the Assigned Users of the others.";
+    show(el);
   }
 
   // Grid unread/awaiting chips (§4.2): fetched AFTER the grid renders so a

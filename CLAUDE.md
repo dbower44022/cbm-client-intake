@@ -1206,6 +1206,13 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
+- **v0.280.0 (2026-10-24) — a login on several mentor profiles resolves to
+  the Active one; the grid names the others.** Lakeside, Jordan Mentor,
+  10-23-26: three profiles carried the login after a mass Assigned Users
+  edit, the resolver took the first (empty), the grid showed no clients.
+  Data repaired by hand; the guard is `sessions/service.choose_manager_profile`
+  + `profileChoice` on the list response. Committed, not pushed. Owed: the
+  live pass as a non-admin mentor (`OPEN-ITEMS.md` #58).
 - **v0.279.0 (2026-10-23) — Marketing Management is one page with six
   tabs** (build plan § 7e.2, step M1 of the redesign; rulings 89, 112, 114).
   Lists and Calls are tabs; a caller from another team sees the Calls tab

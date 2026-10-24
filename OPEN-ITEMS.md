@@ -6,6 +6,16 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+58. **Several-profiles guard — live pass owed** (v0.280.0, 2026-10-24).
+    One login on several `CMentorProfile` records now resolves to the Active
+    profile and Client Management names every candidate above the grid.
+    Verified by tests only. The live check is a real non-admin mentor whose
+    login is on two profiles (put it there on crm-test, it resets overnight):
+    the grid lists the Active profile's clients and the yellow notice names
+    both profiles; remove the extra link and the notice goes. Lakeside's own
+    data was repaired by hand 10-24-26 (Jordan Mentor's login removed from
+    Charles Farris and LMentor Mentor1), so Lakeside shows no notice now.
+
 57. **Marketing Management redesign — nine Drafts owed, then the build**
     (2026-10-23). Doug ruled the whole redesign 10-22/23-26 (rulings
     79–116, `prds/prospect-marketing/rulings.md` v1.47). The build is

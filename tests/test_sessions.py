@@ -226,7 +226,76 @@ async def test_resolve_manager_profile_membership_not_first_entry():
     assert await service.resolve_manager_profile(fake, "u-absent") is None
 
 
+@pytest.mark.asyncio
+async def test_resolve_manager_profile_prefers_active_when_several_match():
+    """One login on several profiles (Lakeside, Jordan Mentor, 2026-09-15: a
+    mass Assigned Users edit put the login on an empty Under Review profile
+    that sorted FIRST, so the grid showed no clients). The Active profile wins
+    regardless of list order; with no Active profile the first still wins."""
+    fake = Fake(mentors=[
+        {"id": "pU", "name": "Charles Farris", "mentorStatus": "Under Review", "assignedUsersIds": ["u1"]},
+        {"id": "p9", "name": "Jordan Mentor", "mentorStatus": "Active", "assignedUsersIds": ["u1"]},
+        {"id": "pX", "name": "Someone Else", "mentorStatus": "Active", "assignedUsersIds": ["u2"]},
+    ])
+    assert await service.resolve_manager_profile(fake, "u1") == "p9"
+    cands = await service.resolve_manager_profiles(fake, "u1")
+    assert [c["id"] for c in cands] == ["pU", "p9"]
+    # Two Active: the first in CRM order, deterministically.
+    assert service.choose_manager_profile([
+        {"id": "a", "name": "A", "mentorStatus": "Active"},
+        {"id": "b", "name": "B", "mentorStatus": "Active"},
+    ]) == "a"
+    # No Active at all: today's behaviour, the first match.
+    assert service.choose_manager_profile([
+        {"id": "a", "name": "A", "mentorStatus": "Under Review"},
+        {"id": "b", "name": "B", "mentorStatus": ""},
+    ]) == "a"
+    assert service.choose_manager_profile([]) is None
+
+
 # --- list_records ----------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_list_records_names_every_profile_when_several_match():
+    """The grid acts as the Active profile AND reports every candidate, so an
+    administrator knows which Assigned Users to clear. One match: no report."""
+    related = {"engagements1": [{"id": "E1", "name": "Wiley Coyote", "engagementStatus": "Active",
+                                 "createdAt": "2026-08-31 00:00:00"}]}
+
+    class Recording(Fake):
+        def __init__(self, **kw):
+            super().__init__(**kw)
+            self.related_reads = []
+
+        async def list_related(self, entity, record_id, link, **kw):
+            self.related_reads.append((entity, record_id, link))
+            return await super().list_related(entity, record_id, link, **kw)
+
+    fake = Recording(
+        mentors=[
+            {"id": "pU", "name": "Charles Farris", "mentorStatus": "Under Review", "assignedUsersIds": ["u1"]},
+            {"id": "p9", "name": "Jordan Mentor", "mentorStatus": "Active", "assignedUsersIds": ["u1"]},
+        ],
+        related=related,
+    )
+    res = await service.list_records(MENTOR, fake, _USER)
+    assert res["profileFound"] is True
+    assert [r["id"] for r in res["records"]] == ["E1"]
+    assert res["profileChoice"] == {
+        "chosenId": "p9",
+        "candidates": [
+            {"id": "pU", "name": "Charles Farris", "status": "Under Review"},
+            {"id": "p9", "name": "Jordan Mentor", "status": "Active"},
+        ],
+    }
+    # The reverse links were read on the CHOSEN profile, not the first match.
+    assert fake.related_reads and all(rid == "p9" for _, rid, _ in fake.related_reads)
+
+    one = Fake(mentors=[{"id": "p9", "name": "Jordan Mentor", "mentorStatus": "Active",
+                         "assignedUsersIds": ["u1"]}], related=related)
+    res = await service.list_records(MENTOR, one, _USER)
+    assert "profileChoice" not in res
+
 
 @pytest.mark.asyncio
 async def test_list_records_no_profile():

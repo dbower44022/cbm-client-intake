@@ -1,6 +1,6 @@
 # sessions/ — Client, Partner and Funder Management
 
-Last Updated: 10-22-26 12:10 · Revision 1.2
+Last Updated: 10-24-26 11:05 · Revision 1.3
 
 Detail for the session engine behind Client Management (`/mentorsessions`), Partner Management (`/partnersessions`) and Funder Management (`/sponsorsessions`): the grids, every record tab, quick add, managers and co-mentors, and the traps of this package.
 
@@ -33,7 +33,12 @@ one shared frontend that derives its domain from the first segment of its URL.
   never a `where` on `assignedUserId`** (prod's field ACL forbids it). A record
   assigned to a *duplicate unlinked* profile is invisible here — a recurring
   data trap ([[crm-test-duplicate-mentor-profiles]],
-  [[sessions-manager-profile-must-be-assigned]]).
+  [[sessions-manager-profile-must-be-assigned]]). **The opposite fault — one
+  login on SEVERAL profiles — resolves to the Active profile** (v0.280.0,
+  `choose_manager_profile`; a mass Assigned Users edit on Lakeside put Jordan
+  Mentor's login on three, and the grid read the first, an empty one). The
+  grid's response then carries `profileChoice` and the page names every
+  profile and the repair; the other callers get the same choice silently.
 - **Partner and Funder grids list ALL records** (`DomainConfig.list_all`), not
   just owned ones — the user's CRM ACL is the gate. This also means those
   domains never read `CMentorProfile` for the list, which is what fixed the
@@ -271,6 +276,7 @@ Watch for these when touching this package:
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 10-24-26 11:05 | Claude (Claude Code) | One login on several profiles: the Active-profile choice and the grid's report (v0.280.0). |
 | 1.2 | 10-22-26 12:10 | Claude (Claude Code) | The close-date stamp (ruling 70). |
 | 1.1 | 10-21-26 21:56 | Claude (Claude Code) | The status picker on every domain (v0.272.0). |
 | 1.0 | 10-20-26 17:30 | Claude (Claude Code) | Created from the root `CLAUDE.md` section, word for word (Doug's approval 10-20-26). |

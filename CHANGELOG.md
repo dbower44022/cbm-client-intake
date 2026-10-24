@@ -5,6 +5,27 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.280.0] — 2026-10-24
+
+**feat(sessions): a login linked to several mentor profiles resolves to the
+Active one, and the grid names the others.** Found on the Lakeside rehearsal
+CRM 10-23-26: Jordan Mentor saw "No client engagements found" although the
+Jordan Mentor profile owned five. A mass *Assigned Users* edit on 2026-09-15
+had put that login on three `CMentorProfile` records, and
+`resolve_manager_profile` took the first one the CRM returned — an empty
+Under Review profile. The resolver now gathers every profile linked to the
+login (`resolve_manager_profiles`) and `choose_manager_profile` prefers the
+one whose `mentorStatus` is Active, else the first in CRM order as before;
+more than one match logs a WARNING naming them. Client Management's list
+response carries `profileChoice` (the chosen id and every candidate with its
+status) whenever more than one profile matched, and the page shows a
+warning notice above the grid: the profiles, the one the page acts as, and
+the repair (remove the login from the others' Assigned Users). Every other
+caller of the resolver (My Mentor Profile, My Email, email sync, templates,
+the member page) gets the same choice silently. The data on Lakeside was
+repaired by hand first; the guard is for the next time. Tests only — the
+live pass is `OPEN-ITEMS.md` #58.
+
 ## [0.279.1] — 2026-10-23
 
 **fix(campaigns): leaving an unsaved list discards the edit.** Found writing

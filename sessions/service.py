@@ -240,31 +240,79 @@ def _is_crm_server_error(exc: EspoError) -> bool:
     return bool(m) and m.group(1).startswith("5")
 
 
-async def resolve_manager_profile(client: SessionClient, user_id: str) -> Optional[str]:
-    """The ``CMentorProfile`` id whose assigned login User is ``user_id``.
+#: The ``CMentorProfile.mentorStatus`` value that wins when one login is
+#: linked to several profiles (see :func:`choose_manager_profile`).
+ACTIVE_MENTOR_STATUS = "Active"
+
+
+async def resolve_manager_profiles(client: SessionClient, user_id: str) -> list[dict[str, Any]]:
+    """EVERY ``CMentorProfile`` whose assigned login User is ``user_id``, in
+    the CRM's own list order, each as ``{id, name, mentorStatus}``.
 
     Scans the profiles readable by this user and matches in Python — never a
     ``where`` on ``assignedUserId`` (prod forbids it). A regular user whose ACL
-    scopes ``CMentorProfile`` to "own" simply gets a one-row list. Returns None
-    when no profile is linked to the user. Matching is MEMBERSHIP over the
-    whole collaborators list (``is_assigned_to``), not equality against the
-    first entry — a profile listing another user first must still resolve.
+    scopes ``CMentorProfile`` to "own" simply gets a one-row list. Matching is
+    MEMBERSHIP over the whole collaborators list (``is_assigned_to``), not
+    equality against the first entry — a profile listing another user first
+    must still resolve.
+
+    One login, one profile is the model; more than one match is a data fault
+    (a mass "Assigned Users" edit in the CRM put Jordan Mentor's login on three
+    profiles on the Lakeside rehearsal CRM, 2026-09-15, and the grid read the
+    first — an empty Under Review profile — as the mentor). The callers choose
+    with :func:`choose_manager_profile`, which prefers an Active profile, and
+    ``list_records`` names every candidate so staff can repair the data.
     """
+    found: list[dict[str, Any]] = []
     offset = 0
     while True:
         data = await client.list(
             MENTOR_PROFILE,
-            select="id,assignedUserId,assignedUsersIds",
+            select="id,name,mentorStatus,assignedUserId,assignedUsersIds",
             max_size=_PAGE,
             offset=offset,
         )
         rows = data.get("list", [])
         for r in rows:
             if is_assigned_to(r, user_id):
-                return r["id"]
+                found.append({"id": r["id"], "name": r.get("name") or "", "mentorStatus": r.get("mentorStatus") or ""})
         if len(rows) < _PAGE:
-            return None
+            return found
         offset += _PAGE
+
+
+def choose_manager_profile(candidates: list[dict[str, Any]]) -> Optional[str]:
+    """The one profile id to act as, out of the login's matching profiles.
+
+    One candidate is the answer. Several: the first whose ``mentorStatus`` is
+    Active, else the first in CRM order (today's behaviour, kept so a CRM
+    whose profiles carry no status still resolves). None when there are none.
+    """
+    if not candidates:
+        return None
+    for c in candidates:
+        if c.get("mentorStatus") == ACTIVE_MENTOR_STATUS:
+            return c["id"]
+    return candidates[0]["id"]
+
+
+async def resolve_manager_profile(client: SessionClient, user_id: str) -> Optional[str]:
+    """The ``CMentorProfile`` id whose assigned login User is ``user_id``, or
+    None when no profile is linked to the user.
+
+    A login linked to several profiles resolves to the Active one (see
+    :func:`choose_manager_profile`) with a WARNING naming the others; the
+    grid route reports them to the person too (``list_records``).
+    """
+    candidates = await resolve_manager_profiles(client, user_id)
+    chosen = choose_manager_profile(candidates)
+    if len(candidates) > 1:
+        log.warning(
+            "manager profile ambiguous: user=%s chosen=%s candidates=%s",
+            user_id, chosen,
+            [(c["id"], c["name"], c["mentorStatus"]) for c in candidates],
+        )
+    return chosen
 
 
 async def resolve_user_mailbox(client: SessionClient, user_id: str) -> Optional[str]:
@@ -448,6 +496,7 @@ async def list_records(
     team whose role has no CMentorProfile grant can still load the grid.
     """
     rows: list[dict[str, Any]] = []
+    candidates: list[dict[str, Any]] = []
     select = await _list_select(cfg, client)
     if cfg.list_all:
         offset = 0
@@ -464,7 +513,8 @@ async def list_records(
                 break
             offset += _PAGE
     else:
-        profile_id = await resolve_manager_profile(client, user["userId"])
+        candidates = await resolve_manager_profiles(client, user["userId"])
+        profile_id = choose_manager_profile(candidates)
         if not profile_id:
             return {"records": [], "profileFound": False}
         links = [cfg.manager_owned_link]
@@ -489,7 +539,19 @@ async def list_records(
     records = [_grid_row(cfg, r) for r in rows]
     records.sort(key=lambda x: (x.get("createdAt") or ""), reverse=True)
     await _attach_sessions_near_now(cfg, client, records)
-    return {"records": records, "profileFound": True}
+    result: dict[str, Any] = {"records": records, "profileFound": True}
+    if not cfg.list_all and len(candidates) > 1:
+        # A login linked to SEVERAL profiles is a data fault the person can
+        # see but not fix: name the profiles and the one this page acts as,
+        # so an administrator knows exactly which Assigned Users to clear.
+        result["profileChoice"] = {
+            "chosenId": profile_id,
+            "candidates": [
+                {"id": c["id"], "name": c["name"], "status": c["mentorStatus"]}
+                for c in candidates
+            ],
+        }
+    return result
 
 
 def intake_referral_link(base_url: str, form_slug: str, record_id: str) -> str:
