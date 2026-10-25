@@ -1041,12 +1041,15 @@
   var MORE_FILTERS = ["status", "exit", "from", "to", "camp", "gate", "fit"];
   var grids = {
     pf: { section: "prospects", review: false, offset: 0, limit: 50, total: 0, rows: [], sort: "createdAt", dir: "desc", selected: {}, all: null },
-    rf: { section: "review", review: true, offset: 0, limit: 50, total: 0, rows: [], sort: "createdAt", dir: "asc", selected: {}, all: null },
+    rf: { section: "review", review: true, mode: "judge", offset: 0, limit: 50, total: 0, rows: [], sort: "createdAt", dir: "asc", selected: {}, all: null },
   };
+  var REVIEW_MODES = ["judge", "contacts"];
 
   function gridQuery(px) {
     var g = grids[px], out = {};
     GRID_FILTERS.forEach(function (f) { var e = $(px + "_" + f); if (e && e.value.trim()) out[GRID_PARAM[f]] = e.value.trim(); });
+    // The Review tab's mode rides the address like a filter (#review?mode=contacts).
+    if (g.review && g.mode && g.mode !== "judge") out.mode = g.mode;
     out.sort = g.sort; out.dir = g.dir;
     return out;
   }
@@ -1061,6 +1064,7 @@
   function readHash(px, params) {
     var g = grids[px];
     GRID_FILTERS.forEach(function (f) { var e = $(px + "_" + f); if (e && params[GRID_PARAM[f]] != null) e.value = params[GRID_PARAM[f]]; });
+    if (g.review) g.mode = REVIEW_MODES.indexOf(params.mode) >= 0 ? params.mode : "judge";
     if (params.sort) g.sort = params.sort;
     if (params.dir) g.dir = params.dir;
     g.offset = Math.max(0, parseInt(params.offset || "0", 10) || 0);
@@ -1088,11 +1092,16 @@
       // the shorter filter row — when the switch is on AND this CRM has the
       // fields (the server says so on every page).
       g.ladder = !!res.ladder;
-      if (!g.review) { applyLadderLayout(); loadCounts(); }
+      if (!g.review) { applyLadderLayout(); loadCounts(); } else applyReviewLayout();
       if (g.offset && !g.rows.length && g.total) { g.offset = Math.max(0, Math.floor((g.total - 1) / g.limit) * g.limit); return loadGrid(px); }
       (g.review ? renderReview : renderProspects)();
       renderPager(px); renderBulk(px);
-    } catch (e) { notice(e.message, "error"); }
+    } catch (e) {
+      // A contacts-mode address on a CRM without the ladder: say so, then
+      // show the judge queue rather than an empty tab.
+      if (g.review && g.mode === "contacts" && e.status === 400) { notice(e.message, "warn"); g.mode = "judge"; return loadGrid(px); }
+      notice(e.message, "error");
+    }
   }
 
   // --- the ladder on the Leads tab (build plan § 7e.4) ---------------------------------------
@@ -1227,7 +1236,7 @@
     box.checked = !!g.all || !!g.selected[p.id];
     box.addEventListener("change", function () {
       if (g.all) { g.all = null; }
-      if (box.checked) g.selected[p.id] = { id: p.id, leadStatus: p.leadStatus || "", sideExit: p.sideExit || "" };
+      if (box.checked) g.selected[p.id] = { id: p.id, leadStatus: p.leadStatus || "", sideExit: p.sideExit || "", qualificationLevel: p.qualificationLevel || "" };
       else delete g.selected[p.id];
       renderBulk(px);
     });
@@ -1376,7 +1385,46 @@
     }, "Assign");
   }
 
-  // --- the Review queue ----------------------------------------------------------------------------
+  // --- the Review queue — the research queue in two modes (build plan § 7e.6) -----------------
+  // Judge: Unqualified leads, decided on a website or an email. Contacts:
+  // Qualified leads still at Identified, given a named person and a phone or
+  // an email. The mode rides the address; the thead is drawn from it.
+  var REVIEW_HINTS = {
+    judge: "Leads waiting at Unqualified, oldest first. A lead needs a website or an email before it can be Qualified: Look it up, type what you find into the row and press Enter to Qualify — the cursor moves to the next lead. AI research fills the boxes from what the model found; Enter accepts them. Disqualify the obvious no's many at once by ticking them. Two reviewers can split the queue with the filters (one batch or ZIP each); a lead someone else has already decided is refused, naming who.",
+    contacts: "Qualified leads still at Identified, oldest first: a real business with no named person and no direct line. Look it up, type the person's first and last name and a phone or an email, and press Enter — the lead becomes Contactable, leaves this queue and the cursor moves to the next. AI research fills the boxes from what the model found; Enter accepts them. A lead given only a name stays here until a phone or an email arrives. A lead someone else has already moved is refused, naming who."
+  };
+  var REVIEW_COLUMNS = {
+    judge: [{ label: "Business" }, { label: "Fit", cls: "cm__fitonly" }, { label: "Person" }, { label: "City" }, { label: "Phone" }, { label: "Look it up" },
+            { label: "Website" }, { label: "Email" }, { label: "AI research", title: "Fill the boxes from the AI model's findings, or start research on this lead." }, { label: "Decide" }, { label: "Batch" }],
+    contacts: [{ label: "Business" }, { label: "Fit", cls: "cm__fitonly" }, { label: "City" }, { label: "Look it up" }, { label: "First name" }, { label: "Last name" },
+               { label: "Phone" }, { label: "Email" }, { label: "AI research", title: "Fill the boxes from the AI model's findings, or start research on this lead." }, { label: "Save" }, { label: "Batch" }]
+  };
+  function renderReviewHead() {
+    var g = grids.rf, tr = $("reviewHead").querySelector("tr");
+    Array.prototype.slice.call(tr.children, 1).forEach(function (c) { c.remove(); });
+    (REVIEW_COLUMNS[g.mode] || REVIEW_COLUMNS.judge).forEach(function (c) {
+      var th = el("th", c.cls || null, c.label);
+      if (c.title) th.title = c.title;
+      if (c.cls === "cm__fitonly") th.hidden = !g.fit;
+      tr.appendChild(th);
+    });
+  }
+  function applyReviewLayout() {
+    var g = grids.rf;
+    // The contacts switch is offered only when this CRM carries the level;
+    // with the ladder off, Review is exactly the judge queue.
+    if ($("rf_mode_contacts")) $("rf_mode_contacts").hidden = !g.ladder;
+    if (!g.ladder) g.mode = "judge";
+    REVIEW_MODES.forEach(function (m) { var b = $("rf_mode_" + m); if (b) b.classList.toggle("is-active", g.mode === m); });
+    text($("rf_hint"), REVIEW_HINTS[g.mode] || REVIEW_HINTS.judge);
+    $("reviewEmpty").textContent = g.mode === "contacts" ? "No Identified lead is waiting for a contact." : "Nothing waiting for review.";
+    renderReviewHead();
+  }
+  function setReviewMode(mode) {
+    var g = grids.rf;
+    if (g.mode === mode) return;
+    g.mode = mode; g.offset = 0; clearSelection("rf"); loadGrid("rf");
+  }
   function webSearchUrl(p) {
     var who = p.businessName || [p.firstName, p.lastName].filter(Boolean).join(" ") || p.name || "";
     var where = [p.mailingAddressCity, p.mailingAddressState].filter(Boolean).join(" ");
@@ -1385,7 +1433,7 @@
   function focusRow(i) {
     var rows = document.querySelectorAll("#reviewRows tr");
     var tr = rows[Math.min(i, rows.length - 1)];
-    if (tr) { var inp = tr.querySelector("input.cm__rvweb"); if (inp) { inp.focus(); inp.select(); } }
+    if (tr) { var inp = tr.querySelector("input.cm__rvbox"); if (inp) { inp.focus(); inp.select(); } }
   }
   function dropReviewRow(p, i) {
     var g = grids.rf;
@@ -1395,22 +1443,80 @@
     renderReview(); renderPager("rf"); renderBulk("rf");
     if (!g.rows.length && g.total) loadGrid("rf"); else focusRow(i);
   }
-  async function qualifyRow(p, web, mail, i, btn) {
+  function rowBox(cls, type, id, placeholder, value, label, short) {
+    var td = el("td"), inp = el("input", "cm__rvbox " + cls + (short ? " cm__rvbox--short" : ""));
+    inp.type = type; inp.id = id; inp.placeholder = placeholder; inp.value = value || ""; inp.autocomplete = "off";
+    inp.setAttribute("aria-label", label);
+    td.appendChild(inp); return { td: td, input: inp };
+  }
+  function seenOf(p) { return { seenStatus: p.leadStatus || "Unqualified", seenExit: p.sideExit || "", seenLevel: p.qualificationLevel || "" }; }
+
+  // --- AI research on a row: fill the boxes from the lead's findings, or start a run -----------
+  var aiStatus = null;
+  function aiStatusCheck() {
+    if (!aiStatus) aiStatus = fetch("/enrichment/api/status?targetType=lead", { credentials: "same-origin" })
+      .then(function (r) { return r.ok ? r.json() : { available: false, ready: false, reason: "AI research could not be checked (HTTP " + r.status + ")." }; })
+      .catch(function () { return { available: false, ready: false, reason: "AI research could not be checked — the server did not answer." }; });
+    return aiStatus;
+  }
+  function aiResearchButton(p, boxes, row) {
+    // ``boxes`` maps a suggestion key (website, email, phone, firstName,
+    // lastName) to the row's input for it; ``row.findingIds`` remembers which
+    // findings filled the boxes, so Enter can close them Accepted.
+    var btn = el("button", "cm__rowbtn", "AI research"); btn.type = "button";
+    btn.title = "With findings on this lead: fill the empty boxes from them. Without: start AI research on this lead.";
+    btn.addEventListener("click", async function () {
+      var done = window.CBMBusy ? CBMBusy.start(btn) : function () {};
+      try {
+        var sug = await api("/prospects/" + encodeURIComponent(p.id) + "/suggestions");
+        if (!sug.available) { notice("This CRM does not have the Enrichment Finding record type yet, so AI research cannot run here.", "warn"); return; }
+        if (sug.findingIds && sug.findingIds.length) {
+          var filled = [], WORDS = { website: "website", email: "email", phone: "phone", firstName: "first name", lastName: "last name" };
+          Object.keys(boxes).forEach(function (k) {
+            if (sug[k] && !boxes[k].value.trim()) { boxes[k].value = sug[k]; filled.push(k); }
+          });
+          row.findingIds = sug.findingIds;
+          if (filled.length) { notice("Filled from AI research: " + filled.map(function (k) { return WORDS[k] || k; }).join(", ") + ". Check them, then press Enter to save and accept the findings.", "ok"); boxes[filled[0]].focus(); }
+          else notice("The findings match what the row already holds. Press Enter to save and accept them, or edit a box first.", "ok");
+          return;
+        }
+        if (sug.researching) { notice("AI research is still running for " + (p.businessName || p.name) + " — this usually takes one to three minutes. Press the button again when it finishes.", "warn"); return; }
+        var st = await aiStatusCheck();
+        if (!st.available || !st.ready) { notice(st.reason || "AI research is not available on this deployment.", "warn"); return; }
+        if (!window.CBMEnrichment) { notice("The AI research script did not load — reload the page and try again.", "error"); return; }
+        window.CBMEnrichment.startRun({ targetType: "lead", ids: [p.id],
+          onStarted: function (r) { notice("AI research started on " + (p.businessName || p.name) + " (estimated $" + Number(r.estimate).toFixed(2) + "). Press AI research again in a minute or two to fill the boxes from what it found.", "ok"); } });
+      } catch (e) { notice(e.message, "error"); }
+      finally { done(); }
+    });
+    return btn;
+  }
+
+  async function qualifyRow(p, web, mail, i, btn, row) {
     if (!web.value.trim() && !mail.value.trim()) {
       notice("Type the website or email you found first. A lead without either can never be Qualified.", "warn");
       web.focus(); return;
     }
+    if (row.saving) return;
+    row.saving = true;
     var done = window.CBMBusy ? CBMBusy.start(btn) : function () {};
     try {
       await api("/prospects/" + encodeURIComponent(p.id) + "/review", { method: "POST", body: {
         action: "qualify", note: "", website: web.value.trim(), email: mail.value.trim(),
         seenStatus: p.leadStatus || "Unqualified", seenExit: p.sideExit || "" } });
+      if (row.findingIds && row.findingIds.length) {
+        // The boxes came from findings: close them Accepted (best-effort; the qualify stands).
+        // The lead is Qualified now and placement may have given it a level,
+        // so what was seen is the status alone — never the old (empty) level.
+        try { await api("/prospects/" + encodeURIComponent(p.id) + "/contacts", { method: "POST", body: { findingIds: row.findingIds, seenStatus: "Qualified", seenExit: p.sideExit || "" } }); }
+        catch (e2) { notice("Qualified, but the AI findings could not be marked accepted: " + e2.message, "warn"); }
+      }
       notice("Qualified: " + (p.businessName || p.name) + ".", "ok");
       dropReviewRow(p, i);
     } catch (e) {
       notice(e.message, e.status === 409 ? "warn" : "error");
       if (e.status === 409) dropReviewRow(p, i);
-    } finally { done(); }
+    } finally { row.saving = false; done(); }
   }
   function disqualifyRow(p, i) {
     var body = el("div", "cm__plan");
@@ -1432,27 +1538,97 @@
     setTimeout(function () { ta.focus(); }, 50);
   }
 
+  // The contacts row's save: Enter in any box, or the Save button. The row
+  // leaves the queue when the lead becomes Contactable or Referred; with only
+  // a name it stays, and the notice says what is still needed. Like the lead
+  // page's gap(), a save in flight or of what was just saved is not repeated.
+  async function saveContactsRow(p, boxes, i, btn, row) {
+    var typed = {};
+    Object.keys(boxes).forEach(function (k) { typed[k] = boxes[k].value.trim(); });
+    var key = JSON.stringify(typed) + "|" + (row.findingIds || []).join(",");
+    if (row.saving || key === row.savedKey) return;
+    var anyTyped = Object.keys(typed).some(function (k) { return typed[k] && typed[k] !== (p[k] || ""); });
+    if (!anyTyped && !(row.findingIds && row.findingIds.length)) {
+      notice("Type the person's first and last name and a phone or an email first.", "warn");
+      boxes.firstName.focus(); return;
+    }
+    row.saving = true;
+    var done = window.CBMBusy ? CBMBusy.start(btn) : function () {};
+    try {
+      var res = await api("/prospects/" + encodeURIComponent(p.id) + "/contacts", { method: "POST",
+        body: Object.assign({}, typed, seenOf(p), { findingIds: row.findingIds || [] }) });
+      row.savedKey = key; row.findingIds = [];
+      var closed = (res.findings && res.findings.closed) ? res.findings.closed.length : 0;
+      var skipped = (res.findings && res.findings.skipped) ? res.findings.skipped : [];
+      var tail = (closed ? " " + closed + " AI finding" + (closed === 1 ? "" : "s") + " accepted." : "")
+        + (skipped.length ? " Not accepted: " + skipped.map(function (s) { return s.why; }).join(" ") : "");
+      if (res.stays) {
+        Object.assign(p, res.prospect || {});
+        notice("Saved for " + (p.businessName || p.name) + " — still Identified; it still needs " + (res.needs || "a phone or an email") + "." + tail, "warn");
+        focusRow(i);
+      } else {
+        notice("Contact found for " + (p.businessName || p.name) + " — now " + (res.level || "Contactable") + "." + tail, "ok");
+        dropReviewRow(p, i);
+      }
+    } catch (e) {
+      notice(e.message, e.status === 409 ? "warn" : "error");
+      if (e.status === 409) dropReviewRow(p, i);
+    } finally { row.saving = false; done(); }
+  }
+
+  function businessCell(p) {
+    var g = grids.rf, nTd = el("td"); var a = el("a", "cm__link", p.businessName || p.name || "(unnamed)");
+    a.href = g.ladder ? ("/campaigns/lead/" + encodeURIComponent(p.id)) : "#";
+    a.addEventListener("click", function (ev) { ev.preventDefault(); openLead(p.id); });
+    if (g.ladder) a.target = "cbm-lead-" + p.id;
+    nTd.appendChild(a); return nTd;
+  }
+  function lookupCell(p) {
+    var sTd = el("td"); var s = el("a", "cm__link", "Look it up"); s.href = webSearchUrl(p); s.target = "cbm-lead-lookup"; s.rel = "noopener"; sTd.appendChild(s); return sTd;
+  }
+  function renderJudgeRow(p, i) {
+    var tr = el("tr"), row = { findingIds: [], saving: false }, who = p.businessName || p.name;
+    tr.appendChild(tickCell("rf", p));
+    tr.appendChild(businessCell(p));
+    if (grids.rf.fit) tr.appendChild(fitCell(p, true));
+    tr.appendChild(el("td", null, [p.firstName, p.lastName].filter(Boolean).join(" ") || "—"));
+    tr.appendChild(el("td", null, [p.mailingAddressCity, p.mailingAddressPostalCode].filter(Boolean).join(" ") || "—"));
+    tr.appendChild(el("td", null, p.phone || "—"));
+    tr.appendChild(lookupCell(p));
+    var web = rowBox("cm__rvweb", "url", "rv_web_" + p.id, "https://…", p.website, "Website for " + who);
+    var mail = rowBox("cm__rvmail", "email", "rv_mail_" + p.id, "name@…", p.email, "Email for " + who);
+    tr.appendChild(web.td); tr.appendChild(mail.td);
+    var aiTd = el("td"); aiTd.appendChild(aiResearchButton(p, { website: web.input, email: mail.input }, row)); tr.appendChild(aiTd);
+    var dTd = el("td");
+    var qb = el("button", "cm__rowbtn", "Qualify"); qb.type = "button"; qb.addEventListener("click", function () { qualifyRow(p, web.input, mail.input, i, qb, row); }); dTd.appendChild(qb);
+    var db = el("button", "cm__rowbtn", "Disqualify…"); db.type = "button"; db.addEventListener("click", function () { disqualifyRow(p, i); }); dTd.appendChild(db);
+    tr.appendChild(dTd);
+    [web.input, mail.input].forEach(function (inp) { inp.addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); qualifyRow(p, web.input, mail.input, i, qb, row); } }); });
+    tr.appendChild(el("td", null, p.importBatch || "—"));
+    return tr;
+  }
+  function renderContactsRow(p, i) {
+    var tr = el("tr"), row = { findingIds: [], saving: false, savedKey: null }, who = p.businessName || p.name;
+    tr.appendChild(tickCell("rf", p));
+    tr.appendChild(businessCell(p));
+    if (grids.rf.fit) tr.appendChild(fitCell(p, true));
+    tr.appendChild(el("td", null, [p.mailingAddressCity, p.mailingAddressPostalCode].filter(Boolean).join(" ") || "—"));
+    tr.appendChild(lookupCell(p));
+    var first = rowBox("cm__rvfirst", "text", "rv_first_" + p.id, "First", p.firstName, "First name for " + who, true);
+    var last = rowBox("cm__rvlast", "text", "rv_last_" + p.id, "Last", p.lastName, "Last name for " + who, true);
+    var phone = rowBox("cm__rvphone", "tel", "rv_phone_" + p.id, "216 555 0100", p.phone, "Phone for " + who, true);
+    var mail = rowBox("cm__rvmail", "email", "rv_mail_" + p.id, "name@…", p.email, "Email for " + who);
+    var boxes = { firstName: first.input, lastName: last.input, phone: phone.input, email: mail.input };
+    tr.appendChild(first.td); tr.appendChild(last.td); tr.appendChild(phone.td); tr.appendChild(mail.td);
+    var aiTd = el("td"); aiTd.appendChild(aiResearchButton(p, boxes, row)); tr.appendChild(aiTd);
+    var sTd = el("td"); var sb = el("button", "cm__rowbtn", "Save"); sb.type = "button"; sb.addEventListener("click", function () { saveContactsRow(p, boxes, i, sb, row); }); sTd.appendChild(sb); tr.appendChild(sTd);
+    Object.keys(boxes).forEach(function (k) { boxes[k].addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); saveContactsRow(p, boxes, i, sb, row); } }); });
+    tr.appendChild(el("td", null, p.importBatch || "—"));
+    return tr;
+  }
   function renderReview() {
     var g = grids.rf, body = $("reviewRows"); body.innerHTML = "";
-    g.rows.forEach(function (p, i) {
-      var tr = el("tr");
-      tr.appendChild(tickCell("rf", p));
-      var nTd = el("td"); var a = el("a", "cm__link", p.businessName || p.name || "(unnamed)"); a.href = "#"; a.addEventListener("click", function (ev) { ev.preventDefault(); openProspect(p.id); }); nTd.appendChild(a); tr.appendChild(nTd);
-      if (g.fit) tr.appendChild(fitCell(p, true));
-      tr.appendChild(el("td", null, [p.firstName, p.lastName].filter(Boolean).join(" ") || "—"));
-      tr.appendChild(el("td", null, [p.mailingAddressCity, p.mailingAddressPostalCode].filter(Boolean).join(" ") || "—"));
-      tr.appendChild(el("td", null, p.phone || "—"));
-      var sTd = el("td"); var s = el("a", "cm__link", "Search the web"); s.href = webSearchUrl(p); s.target = "cbm-lead-lookup"; s.rel = "noopener"; sTd.appendChild(s); tr.appendChild(sTd);
-      var wTd = el("td"); var web = el("input", "cm__rvweb"); web.type = "url"; web.id = "rv_web_" + p.id; web.placeholder = "https://…"; web.value = p.website || ""; web.setAttribute("aria-label", "Website for " + (p.businessName || p.name)); wTd.appendChild(web); tr.appendChild(wTd);
-      var eTd = el("td"); var mail = el("input", "cm__rvmail"); mail.type = "email"; mail.id = "rv_mail_" + p.id; mail.placeholder = "name@…"; mail.value = p.email || ""; mail.setAttribute("aria-label", "Email for " + (p.businessName || p.name)); eTd.appendChild(mail); tr.appendChild(eTd);
-      var dTd = el("td");
-      var qb = el("button", "cm__rowbtn", "Qualify"); qb.type = "button"; qb.addEventListener("click", function () { qualifyRow(p, web, mail, i, qb); }); dTd.appendChild(qb);
-      var db = el("button", "cm__rowbtn", "Disqualify…"); db.type = "button"; db.addEventListener("click", function () { disqualifyRow(p, i); }); dTd.appendChild(db);
-      tr.appendChild(dTd);
-      [web, mail].forEach(function (inp) { inp.addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); qualifyRow(p, web, mail, i, qb); } }); });
-      tr.appendChild(el("td", null, p.importBatch || "—"));
-      body.appendChild(tr);
-    });
+    g.rows.forEach(function (p, i) { body.appendChild(g.mode === "contacts" ? renderContactsRow(p, i) : renderJudgeRow(p, i)); });
   }
 
   function markSort(tableId, g) {
@@ -1987,6 +2163,7 @@
   $("kindFilter").addEventListener("change", renderCampaigns);
   $("prospectRefreshBtn").addEventListener("click", loadProspects);
   $("reviewRefreshBtn").addEventListener("click", loadReview);
+  REVIEW_MODES.forEach(function (m) { if ($("rf_mode_" + m)) $("rf_mode_" + m).addEventListener("click", function () { setReviewMode(m); }); });
   $("importBtn2").addEventListener("click", openImport);
   $("blockedReloadBtn").addEventListener("click", function () { location.reload(); });
   // The lock guards against editing one record in two tabs. When the other tab

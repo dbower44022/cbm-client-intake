@@ -1,6 +1,6 @@
 # campaigns/ — Marketing Management (was Campaign Management)
 
-Last Updated: 10-25-26 11:15 · Revision 1.7
+Last Updated: 10-25-26 12:36 · Revision 1.8
 
 Detail for Campaign Management (`/campaigns`, prospect marketing Phases 1 to 4 and the lead model): links, postcards, the landing page, imports, the Leads and Review grids, calls, texts, email, attribution and reporting.
 
@@ -329,6 +329,26 @@ the reason.
   `leadCodeAdmin` on its session): `leadcode.replace_for_lead` /
   `replace_for_contact` under the org-wide key, both records kept equal,
   the action log given `code_tail` (the last four) and never the code.
+- **Review is the research queue, in two modes** (v0.285.0, build plan
+  § 7e.6 — step M3, rulings 110, 121; rides `LEAD_LADDER`, no switch of its
+  own). *Judge* is the Unqualified queue as before; *Find contacts* lists
+  Qualified leads at Identified, and its row writes `firstName`, `lastName`,
+  `phone`, `email` through `leads.contacts_payload` (the lead page's
+  normalisation) as the user, then `ladder.after_write` — the row leaves
+  the queue only when the lead reaches Contactable or Referred. The mode
+  rides the address (`#review?mode=contacts`, `LeadQuery.from_params(…,
+  mode=)`); a CRM without the ladder refuses the contacts mode in words,
+  never answering the judge queue instead. **Every contacts decision also
+  sends `seenLevel`**, and `leads.changed_since` names who moved the level.
+  The row's *AI research* button fills the boxes from
+  `GET /prospects/{id}/suggestions` (`enrichment.runs.suggestions`, org-wide
+  key) and Enter closes those findings Accepted through
+  `enrichment.runs.close_findings` — values are never rewritten from a
+  finding at that point; with no findings it starts a one-lead run.
+  **Ruling 121 lives in `enrichment.runs.decide`:** a Person accepted on a
+  lead fills the lead's own empty person fields and creates no Contact
+  (ruling 43 stands). The Review thead is drawn by `app.js`
+  (`REVIEW_COLUMNS`) from the mode, like the Leads grid's.
 - Owed: nothing on production's CRM (both slots done 10-18-26; every
   campaign switch off there — turning one on is Doug's call at `/setup`);
   Boston with its release; a seeder and sandbox re-baseline; the Twilio
@@ -339,6 +359,7 @@ the reason.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.8 | 10-25-26 12:36 | Claude (Claude Code) | Review as the research queue (v0.285.0, § 7e.6, M3): the two modes, `seenLevel`, suggestions and `close_findings`, ruling 121 in `decide`. |
 | 1.7 | 10-25-26 11:15 | Claude (Claude Code) | The qualification ladder and the Leads tab (v0.284.0, § 7e.3–7e.4, M2): `ladder.py`, `after_write`, the sweep, the counts, Assign to, the lead's page. |
 | 1.6 | 10-23-26 01:33 | Claude (Claude Code) | One page, six tabs (v0.279.0, § 7e.2 M1): the shared object, the id prefixes, `callerOnly`, the ruling-number guard; the two old page addresses now redirects. |
 | 1.5 | 10-22-26 21:18 | Claude (Claude Code) | Renamed Marketing Management; Leads first (v0.278.0). |

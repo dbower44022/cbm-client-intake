@@ -6,7 +6,9 @@ the amounts named), E10 (a person found becomes a Contact only when accepted,
 never opted in to marketing), E12 (Verified is counted by the application),
 E14 (a Verified website or email goes into an EMPTY field on a lead), E18 (a
 person starts every run), E19 (only Client Administration decides a client's
-findings — enforced by the router's team gate).
+findings — enforced by the router's team gate), and prospect-marketing ruling
+121 (a Person accepted on a lead fills the lead's own empty person fields and
+creates no Contact — ruling 43 stands: a Contact is made only at first contact).
 
 Every CRM read and write here runs under the org-wide API client: the worker
 has no user, and Accept / Reject are gated by the application before they get
@@ -360,8 +362,10 @@ async def decide(client: EspoApi, finding_id: str, decision: str, *, actor: str,
     Accepting a field value writes it into the EMPTY field (never over a
     value); a person on a client becomes a Contact linked to the Company,
     carrying the Company's owners, not opted in to anything (E10). A person
-    on a lead, and a summary, can only be rejected (ruling 43: a lead's people
-    stay on the lead until first contact)."""
+    on a lead fills the lead's own empty ``firstName`` / ``lastName`` /
+    ``email`` and creates no Contact (ruling 121; ruling 43 stands) — one
+    whose every field the lead already holds closes as Accepted with nothing
+    written. A summary can only be rejected."""
     if decision not in (ST_ACCEPTED, ST_REJECTED):
         raise EnrichmentError("Accept or Reject only.")
     f = await client.get(FINDING, finding_id, select=FINDING_SELECT)
@@ -377,8 +381,6 @@ async def decide(client: EspoApi, finding_id: str, decision: str, *, actor: str,
         kind = f.get("kind")
         if kind == KIND_SUMMARY:
             raise EnrichmentError("A summary is for reading; it has nothing to accept.")
-        if kind == KIND_PERSON and target_type == TARGET_LEAD:
-            raise EnrichmentError("A person found on a lead stays on the lead until first contact (ruling 43).")
         if kind == KIND_FIELD:
             entity = PROSPECT if target_type == TARGET_LEAD else ACCOUNT
             field = f.get("targetField") or ""
@@ -398,10 +400,72 @@ async def decide(client: EspoApi, finding_id: str, decision: str, *, actor: str,
                     # A new phone or email may lift the lead's level (§ 7e.3).
                     from campaigns.ladder import after_write
                     await after_write(target_id, client=client)
+        elif kind == KIND_PERSON and target_type == TARGET_LEAD:
+            note = await _fill_lead_person(client, f, target_id)
         elif kind == KIND_PERSON:
             note = await _create_person(client, f, target_id, actor)
     await client.update(FINDING, finding_id, {"findingStatus": decision, **stamp})
     return {"id": finding_id, "status": decision, "note": note}
+
+
+def split_name(name: Any) -> tuple[str, str]:
+    """A person's name as ``(first, last)``: the last word is the surname,
+    everything before it the first name (one word is a surname alone)."""
+    parts = str(name or "").strip().split()
+    if len(parts) > 1:
+        return " ".join(parts[:-1]), parts[-1]
+    return "", parts[0] if parts else ""
+
+
+def person_fields(f: dict[str, Any]) -> dict[str, str]:
+    """What a Person finding offers a lead's own fields (ruling 121):
+    ``firstName``, ``lastName``, ``email`` — each only when the finding has it."""
+    first, last = split_name(f.get("personName"))
+    out = {"firstName": first, "lastName": last, "email": (f.get("personEmail") or "").strip()}
+    return {k: v for k, v in out.items() if v}
+
+
+async def _fill_lead_person(client: EspoApi, f: dict[str, Any], lead_id: str) -> str:
+    """Ruling 121: the person goes into the lead's EMPTY person fields; a
+    field the lead already holds is left as it is. Placement then runs (a
+    named person with an email lifts Identified to Contactable)."""
+    lead = await client.get(PROSPECT, lead_id, select="id,firstName,lastName,email,phone")
+    payload = {k: v for k, v in person_fields(f).items() if not str(lead.get(k) or "").strip()}
+    if not payload:
+        return "the lead already holds this person"
+    await client.update(PROSPECT, lead_id, payload)
+    from campaigns.ladder import after_write
+    await after_write(lead_id, client=client)
+    return ", ".join(f"{k} set to {v}" for k, v in payload.items())
+
+
+async def close_findings(client: EspoApi, finding_ids: list[str], *, target_id: str, actor: str,
+                         decision: str = ST_ACCEPTED) -> dict[str, list[dict[str, str]]]:
+    """Mark Proposed findings on one lead Accepted (or Rejected) WITHOUT
+    writing their values — the contacts queue (build plan § 7e.6) has already
+    written what the reviewer typed from them. A finding that is not this
+    lead's, or is already decided, is skipped and named; a CRM refusal is
+    reported, never raised, so the write that preceded it stands."""
+    out: dict[str, list[dict[str, str]]] = {"closed": [], "skipped": []}
+    stamp = {"findingStatus": decision, "decidedBy": actor, "decidedAt": _now_crm()}
+    for fid in list(dict.fromkeys(str(i or "") for i in finding_ids)):
+        if not _CRM_ID.match(fid):
+            out["skipped"].append({"id": fid, "why": "Not a finding id."})
+            continue
+        try:
+            f = await client.get(FINDING, fid, select="id,prospectId,findingStatus,decidedBy")
+            if not f or f.get("prospectId") != target_id:
+                out["skipped"].append({"id": fid, "why": "That finding does not belong to this lead."})
+                continue
+            if f.get("findingStatus") != ST_PROPOSED:
+                out["skipped"].append({"id": fid, "why": f"Already {str(f.get('findingStatus')).lower()} by "
+                                                          f"{f.get('decidedBy') or 'someone else'}."})
+                continue
+            await client.update(FINDING, fid, stamp)
+            out["closed"].append({"id": fid})
+        except EspoError as exc:
+            out["skipped"].append({"id": fid, "why": f"The CRM refused it: {exc}"})
+    return out
 
 
 async def _create_person(client: EspoApi, f: dict[str, Any], company_id: str, actor: str) -> str:
@@ -412,8 +476,7 @@ async def _create_person(client: EspoApi, f: dict[str, Any], company_id: str, ac
         if page.get("list"):
             raise EnrichmentError(f"{email} already belongs to the contact {page['list'][0].get('name')}; "
                                   "link them by hand if they belong to this company.")
-    parts = (f.get("personName") or "").strip().split()
-    first, last = (" ".join(parts[:-1]), parts[-1]) if len(parts) > 1 else ("", parts[0] if parts else "")
+    first, last = split_name(f.get("personName"))
     company = await client.get(ACCOUNT, company_id, select="id,assignedUsersIds,teamsIds")
     payload: dict[str, Any] = {
         "firstName": first or None, "lastName": last, "accountId": company_id,
@@ -433,6 +496,39 @@ async def _create_person(client: EspoApi, f: dict[str, Any], company_id: str, ac
 
 
 # --- what the screens read ------------------------------------------------------------------
+
+#: The boxes a Review row offers, and the finding field that fills each.
+SUGGESTION_BOXES = ("website", "email", "phone", "firstName", "lastName")
+
+
+def suggestions(findings: list[dict[str, Any]]) -> dict[str, Any]:
+    """The lead's Proposed findings mapped onto a Review row's boxes (build
+    plan § 7e.6): the newest Proposed value per box, a Person's name split
+    first / last, its email used when no email finding came first. Returns
+    ``{website, email, phone, firstName, lastName, findingIds}`` — the ids
+    are the findings that contributed, for the row to close on Enter."""
+    out: dict[str, Any] = {b: "" for b in SUGGESTION_BOXES}
+    used: list[str] = []
+    for f in findings:                      # newest first, as existing_findings reads them
+        if f.get("findingStatus") != ST_PROPOSED:
+            continue
+        kind = f.get("kind")
+        took = False
+        if kind == KIND_FIELD:
+            box = (f.get("targetField") or "").strip()
+            if box in ("website", "email", "phone") and not out[box] and str(f.get("proposedValue") or "").strip():
+                out[box] = str(f.get("proposedValue")).strip()
+                took = True
+        elif kind == KIND_PERSON:
+            for box, value in person_fields(f).items():
+                if not out[box]:
+                    out[box] = value
+                    took = True
+        if took and f.get("id"):
+            used.append(f["id"])
+    out["findingIds"] = used
+    return out
+
 
 def present(findings: list[dict[str, Any]]) -> dict[str, Any]:
     """Findings grouped for a panel: the newest summary, then the rest."""

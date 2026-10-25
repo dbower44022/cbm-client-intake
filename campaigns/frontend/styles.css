@@ -74,7 +74,7 @@ body { margin: 0; background: var(--cbm-bg, #f6f7f9); color: var(--cbm-text, #1e
 .cm__prose img { max-width: 100%; }
 .cm__qr { width: 64px; height: 64px; display: block; }
 .cm__short { font-family: ui-monospace, Menlo, monospace; font-size: .85rem; }
-.cm__rowbtn { font: inherit; font-size: .82rem; padding: .2rem .5rem; border-radius: 4px; border: 1px solid var(--cbm-border, #c9d1d8); background: var(--cbm-surface, #fff); cursor: pointer; margin: 0 .2rem .2rem 0; }
+.cm__rowbtn { font: inherit; font-size: .82rem; padding: .2rem .5rem; white-space: nowrap; border-radius: 4px; border: 1px solid var(--cbm-border, #c9d1d8); background: var(--cbm-surface, #fff); cursor: pointer; margin: 0 .2rem .2rem 0; }
 .cm__rowbtn:hover { background: var(--cbm-hover, #f2f5f7); }
 .cm__modal-overlay { position: fixed; inset: 0; background: rgba(20, 30, 40, .45); display: flex; align-items: center; justify-content: center; padding: 1rem; z-index: 50; }
 .cm__modal-overlay[hidden] { display: none; }
@@ -123,7 +123,15 @@ a.cm__navbtn { text-decoration: none; color: inherit; display: inline-block; }
 .cm__pager { display: flex; gap: .5rem; align-items: center; justify-content: flex-end; margin: .5rem 0; }
 .cm__pager .cm__count { margin-right: auto; font-variant-numeric: tabular-nums; }
 .cm__grid th.cm__tick, .cm__grid td.cm__tick { width: 2rem; }
-.cm__grid input.cm__rvweb, .cm__grid input.cm__rvmail { font: inherit; font-size: .88rem; width: 100%; min-width: 11rem; padding: .25rem .4rem; border: 1px solid var(--cbm-border, #c9d1d8); border-radius: 4px; }
+.cm__grid input.cm__rvbox { font: inherit; font-size: .88rem; width: 100%; min-width: 11rem; padding: .25rem .4rem; border: 1px solid var(--cbm-border, #c9d1d8); border-radius: 4px; }
+.cm__grid input.cm__rvbox--short { min-width: 7rem; }
+/* The research queue's two modes (build plan § 7e.6): one switch above the queue. */
+.cm__modeswitch { display: inline-flex; gap: 0; margin-right: .75rem; flex: 0 0 auto; }
+.cm__modebtn { font: inherit; font-size: .9rem; padding: .35rem .8rem; border: 1px solid var(--cbm-border, #c9d1d8); background: var(--cbm-surface, #fff); cursor: pointer; }
+.cm__modebtn:first-child { border-radius: 6px 0 0 6px; }
+.cm__modebtn:last-child { border-radius: 0 6px 6px 0; margin-left: -1px; }
+.cm__modebtn:hover { background: var(--cbm-hover, #f2f5f7); }
+.cm__modebtn.is-active { background: var(--cbm-primary, #1d5c63); border-color: var(--cbm-primary, #1d5c63); color: #fff; }
 .cm__linkbtn { font: inherit; background: none; border: 0; padding: 0; color: var(--cbm-primary, #1d5c63); text-decoration: underline; cursor: pointer; }
 /* A kind's own rule while a list is chosen (build plan § 7c): shown, but not in use. */
 .cm__rule--off { opacity: .55; }

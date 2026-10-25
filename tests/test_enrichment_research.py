@@ -346,18 +346,87 @@ async def test_accepting_a_person_on_a_client_creates_a_contact_never_opted_in()
         await runs.decide(crm, fid2, "Accepted", actor="x", target_type="company", target_id=cid2)
 
 
-async def test_a_person_on_a_lead_and_a_summary_can_only_be_rejected():
+async def test_accepting_a_person_on_a_lead_fills_its_empty_person_fields_and_makes_no_contact():
+    """Ruling 121: the person goes into the lead's own firstName / lastName /
+    email where they are empty; ruling 43 stands — no Contact is created."""
+    crm = FakeCrm()
+    lid = _put(crm, "CProspect", {"businessName": "S", "firstName": "", "lastName": "", "email": "", "phone": ""})
+    fid = _put(crm, "CEnrichmentFinding", {"prospectId": lid, "kind": "Person", "personName": "Jane Q Doe",
+                                           "personEmail": "jane@s.example", "findingStatus": "Proposed"})
+    out = await runs.decide(crm, fid, "Accepted", actor="Mark", target_type="lead", target_id=lid)
+    lead = crm.rows["CProspect"][lid]
+    assert (lead["firstName"], lead["lastName"], lead["email"]) == ("Jane Q", "Doe", "jane@s.example")
+    assert out["status"] == "Accepted" and "lastName set to Doe" in out["note"]
+    assert crm.rows["Contact"] == {} and crm.rows["CEnrichmentFinding"][fid]["decidedBy"] == "Mark"
+    # A field the lead already holds is never replaced; the rest still fill.
+    lid2 = _put(crm, "CProspect", {"businessName": "T", "firstName": "", "lastName": "", "email": "kept@t.example"})
+    fid2 = _put(crm, "CEnrichmentFinding", {"prospectId": lid2, "kind": "Person", "personName": "Roe",
+                                            "personEmail": "roe@t.example", "findingStatus": "Proposed"})
+    out2 = await runs.decide(crm, fid2, "Accepted", actor="Mark", target_type="lead", target_id=lid2)
+    assert crm.rows["CProspect"][lid2]["email"] == "kept@t.example" and crm.rows["CProspect"][lid2]["lastName"] == "Roe"
+    assert out2["note"] == "lastName set to Roe"
+
+
+async def test_accepting_a_person_the_lead_already_holds_closes_it_and_writes_nothing():
+    crm = FakeCrm()
+    lid = _put(crm, "CProspect", {"businessName": "S", "firstName": "Jane", "lastName": "Doe", "email": "jane@s.example"})
+    fid = _put(crm, "CEnrichmentFinding", {"prospectId": lid, "kind": "Person", "personName": "Jane Doe",
+                                           "personEmail": "jane@s.example", "findingStatus": "Proposed"})
+    before = dict(crm.rows["CProspect"][lid])
+    out = await runs.decide(crm, fid, "Accepted", actor="Mark", target_type="lead", target_id=lid)
+    assert out["note"] == "the lead already holds this person" and crm.rows["CProspect"][lid] == before
+    assert crm.rows["CEnrichmentFinding"][fid]["findingStatus"] == "Accepted"
+
+
+async def test_a_summary_can_only_be_rejected_and_a_finding_belongs_to_one_lead():
     crm = FakeCrm()
     lid = _put(crm, "CProspect", {"businessName": "S"})
-    fid = _put(crm, "CEnrichmentFinding", {"prospectId": lid, "kind": "Person", "personName": "Jane",
+    fid = _put(crm, "CEnrichmentFinding", {"prospectId": lid, "kind": "Summary", "summary": "A shop.",
                                            "findingStatus": "Proposed"})
-    with pytest.raises(runs.EnrichmentError, match="ruling 43"):
+    with pytest.raises(runs.EnrichmentError, match="nothing to accept"):
         await runs.decide(crm, fid, "Accepted", actor="x", target_type="lead", target_id=lid)
     out = await runs.decide(crm, fid, "Rejected", actor="x", target_type="lead", target_id=lid)
     assert out["status"] == "Rejected"
     other = _put(crm, "CProspect", {"businessName": "T"})
     with pytest.raises(runs.EnrichmentError, match="does not belong"):
         await runs.decide(crm, fid, "Rejected", actor="x", target_type="lead", target_id=other)
+
+
+def test_suggestions_map_the_newest_proposed_findings_onto_the_row_boxes():
+    """Build plan § 7e.6: one value per box, newest first; a Person's name
+    split first / last, its email only when no email finding came first;
+    decided findings and summaries ignored; the ids used are returned."""
+    rows = [
+        {"id": "f1", "kind": "Field value", "targetField": "email", "proposedValue": "new@s.example", "findingStatus": "Proposed"},
+        {"id": "f2", "kind": "Field value", "targetField": "email", "proposedValue": "old@s.example", "findingStatus": "Proposed"},
+        {"id": "f3", "kind": "Field value", "targetField": "phone", "proposedValue": "216 555 0100", "findingStatus": "Rejected"},
+        {"id": "f4", "kind": "Person", "personName": "Jane Q Doe", "personEmail": "jane@s.example", "findingStatus": "Proposed"},
+        {"id": "f5", "kind": "Field value", "targetField": "website", "proposedValue": "https://s.example", "findingStatus": "Applied"},
+        {"id": "f6", "kind": "Summary", "summary": "A shop.", "findingStatus": "Proposed"},
+        {"id": "f7", "kind": "Person", "personName": "Second Person", "findingStatus": "Proposed"},
+    ]
+    out = runs.suggestions(rows)
+    assert out == {"website": "", "email": "new@s.example", "phone": "", "firstName": "Jane Q", "lastName": "Doe",
+                   "findingIds": ["f1", "f4"]}
+    assert runs.suggestions([]) == {"website": "", "email": "", "phone": "", "firstName": "", "lastName": "", "findingIds": []}
+    assert runs.split_name("Cher") == ("", "Cher") and runs.split_name("  ") == ("", "")
+
+
+async def test_close_findings_marks_proposed_ones_accepted_and_names_the_rest():
+    crm = FakeCrm()
+    lid = _put(crm, "CProspect", {"businessName": "S", "email": ""})
+    mine = _put(crm, "CEnrichmentFinding", {"prospectId": lid, "kind": "Field value", "targetField": "email",
+                                            "proposedValue": "x@s.example", "findingStatus": "Proposed"})
+    done = _put(crm, "CEnrichmentFinding", {"prospectId": lid, "kind": "Person", "personName": "Z",
+                                            "findingStatus": "Rejected", "decidedBy": "Pat"})
+    other = _put(crm, "CEnrichmentFinding", {"prospectId": "lead-other", "kind": "Person", "personName": "Y",
+                                             "findingStatus": "Proposed"})
+    out = await runs.close_findings(crm, [mine, done, other, "bad id!", mine], target_id=lid, actor="Mark")
+    assert [c["id"] for c in out["closed"]] == [mine]
+    assert [(s["id"], s["why"][:12]) for s in out["skipped"]] == [(done, "Already reje"), (other, "That finding"), ("bad id!", "Not a findin")]
+    f = crm.rows["CEnrichmentFinding"][mine]
+    assert f["findingStatus"] == "Accepted" and f["decidedBy"] == "Mark" and f["decidedAt"]
+    assert crm.rows["CProspect"][lid]["email"] == ""          # closing never writes the value
 
 
 # --- starting a run under the budget (E8, E9) --------------------------------------------------

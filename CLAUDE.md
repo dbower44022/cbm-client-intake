@@ -1213,6 +1213,11 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
+- **v0.285.0 (2026-10-25) — Review is the research queue, two modes**
+  (build plan § 7e.6, M3; rulings 110, 121): *Judge* as before, *Find
+  contacts* for Identified leads, *AI research* on every row, a Person
+  accepted on a lead fills the lead itself. Rides `LEAD_LADDER`. Committed,
+  not pushed. **Live pass owed** (`OPEN-ITEMS.md` #57); then M4.
 - **v0.284.0 (2026-10-25) — the qualification ladder and the Leads tab**
   (build plan §§ 7e.3–7e.4, step M2; rulings 104–106, 108, 113, 117). Dark
   behind `LEAD_LADDER`; needs `marketing-redesign-crm-handoff.md`, applied
@@ -1231,24 +1236,5 @@ the strength of it.
   handoff (`marketing-redesign-crm-handoff.md`, § 7e.11), then M2.
 - **v0.276.0 (2026-10-22) — lead code D1** (§ 7d). Not pushed; inert
   without the CRM fields. Owed: live pass, D2 (`OPEN-ITEMS.md` #51).
-- **v0.271.0 (2026-10-21) — campaign lists, L2 (clients, partners,
-  funders).** Committed, not pushed; dark. Build plan § 7c.7; standing rules
-  in `campaigns/CLAUDE.md`. **Live-passed on crm-test 10-21-26 22:30**; funder status
-  applied there. Owed: production and Boston with the arc's slot; the
-  close-date Read-only finding (`OPEN-ITEMS.md` #51).
-- **v0.274.0 (2026-10-22) — lead enrichment phase 2, the AI research pass.**
-  Committed, not pushed; dark behind `ENRICHMENT_AI`. Staff start runs on a
-  lead, ticked leads or a client's company (rulings E18, E19); findings are
-  `CEnrichmentFinding` records (crm-test applied and verified 10-22-26).
-  Never run against the real model yet. Owed: the staff test on crm-test,
-  production at a Sunday slot, Boston, the list button (when lists go on).
-- **v0.269.0 (2026-10-20) — lead enrichment phase 1, the fit score.**
-  Committed, not pushed; dark (`ENRICHMENT_FREE_PASS`, `ENRICHMENT_WEB_CHECKS`
-  off). New package `enrichment/`, arc `prds/lead-enrichment/` (design rulings
-  E1–E17). crm-test's nine `CProspect` fit fields applied and verified; the
-  Leads and Review grids show the score when the CRM has the fields.
-  v0.270.1 keeps the Operations plan still while the worker scores.
-  **Live-passed on crm-test 10-21-26** (Doug as Mark Marketing; the web check
-  verified a real business's site). Owed: production at a Sunday slot, Boston.
 
 Everything else still owed is in `OPEN-ITEMS.md`.

@@ -29,6 +29,7 @@ from core.config import Settings, get_settings
 from core.espo import EspoClient, EspoError, forbidden_hint, is_forbidden, validation_failure
 from core.postal import estimated_cost
 from core.qr import qr_png, qr_svg
+from enrichment import runs as enrichment_runs
 from forms import SPECS_BY_SLUG
 
 from . import config as cfg
@@ -865,11 +866,13 @@ async def responses(campaign_id: str, request: Request) -> dict[str, Any]:
 async def list_prospects(request: Request) -> dict[str, Any]:
     """One page of leads and the total the filter matches (build plan § 7b):
     the search box ``q``, the filters, ``sort``/``dir``, ``offset``/``limit``.
-    ``review=1`` is the Review queue — Unqualified, no reason, oldest first."""
+    ``review=1`` is the Review queue — no reason, oldest first; its ``mode``
+    is ``judge`` (Unqualified; the default) or ``contacts`` (Qualified at
+    Identified, build plan § 7e.6)."""
     user, client = _actor(request)
     params = dict(request.query_params)
     lq = leads.LeadQuery.from_params(params, review_queue=params.get("review") in ("1", "true"),
-                                     me=user.get("userId") or "")
+                                     me=user.get("userId") or "", mode=str(params.get("mode") or ""))
     try:
         return await leads.search(client, lq)
     except CampaignError as exc:
@@ -917,7 +920,7 @@ async def bulk_resolve(body: BulkResolveIn, request: Request) -> dict[str, Any]:
     """*Select all n matching*: every lead the filter matches, with the status
     and reason the guard compares, refused above the cap."""
     user, client = _actor(request)
-    lq = leads.LeadQuery.from_params(body.query, review_queue=body.review)
+    lq = leads.LeadQuery.from_params(body.query, review_queue=body.review, mode=str(body.query.get("mode") or ""))
     try:
         items = await leads.resolve(client, lq)
     except CampaignError as exc:
@@ -1368,6 +1371,120 @@ async def review_prospect(prospect_id: str, body: ReviewIn, request: Request) ->
                                                        "sideExit": prospect.get("sideExit")}},
     )
     return result
+
+
+# --- the research queue's contacts mode (build plan § 7e.6; rulings 110, 121) ------------------
+
+class ContactsIn(BaseModel):
+    """What a contacts-queue row sends on Enter: the four boxes (each optional),
+    what the reviewer saw (the guard), and the findings the boxes were filled
+    from (closed Accepted once the values are written)."""
+    firstName: str = Field(default="", max_length=255)
+    lastName: str = Field(default="", max_length=255)
+    phone: str = Field(default="", max_length=255)
+    email: str = Field(default="", max_length=255)
+    seenStatus: Optional[str] = None
+    seenExit: Optional[str] = None
+    seenLevel: Optional[str] = None
+    findingIds: list[str] = Field(default_factory=list, max_length=50)
+
+
+ACTION_CONTACT_FOUND = "Lead Contact Found"
+
+
+@api_router.post("/prospects/{prospect_id}/contacts")
+async def lead_contacts(prospect_id: str, body: ContactsIn, request: Request) -> dict[str, Any]:
+    """The contacts queue's write: the person's name, phone and email typed
+    into the row, written as the user through the lead page's normalisation;
+    placement under the API client; the named findings closed Accepted.
+    ``stays`` says the lead is still Identified (the row stays, ``needs`` says
+    what is missing)."""
+    user, client = _actor(request)
+    settings = get_settings()
+    has_ladder = await leads.ladder_available(client)
+    lead = await _lead_or_404(request, client, prospect_id,
+                              select=leads.GUARD_SELECT_LADDER if has_ladder else leads.GUARD_SELECT)
+    seen: dict[str, Any] = {}
+    if body.seenStatus is not None:
+        seen["leadStatus"] = body.seenStatus
+    if body.seenExit is not None:
+        seen["sideExit"] = body.seenExit
+    if body.seenLevel is not None and has_ladder:
+        seen["qualificationLevel"] = body.seenLevel
+    moved = leads.changed_since(lead, seen) if seen else None
+    if moved:
+        raise HTTPException(status_code=409, detail=moved)
+    if lead.get("leadStatus") != cfg.LEAD_QUALIFIED or lead.get("sideExit"):
+        raise HTTPException(status_code=400, detail=(
+            "Only a Qualified lead still being worked takes a contact from this queue; this one is "
+            f"{lead.get('leadStatus') or 'unknown'}" + (f" and stopped ({lead['sideExit']})" if lead.get("sideExit") else "") + "."))
+    try:
+        payload = leads.contacts_payload(lead, {"firstName": body.firstName, "lastName": body.lastName,
+                                                "phone": body.phone, "email": body.email})
+    except CampaignError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    if not payload and not body.findingIds:
+        raise HTTPException(status_code=400, detail="Type the person's name and a phone or an email first — nothing new to save.")
+    updated = lead
+    if payload:
+        try:
+            updated = await client.update(cfg.PROSPECT, prospect_id, payload)
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not save the contact")
+    system = _system_client(settings)
+    level = await ladder.after_write(prospect_id, client=system, settings=settings,
+                                     store=getattr(request.app.state, "campaign_store", None))
+    findings: dict[str, Any] = {"closed": [], "skipped": []}
+    if body.findingIds:
+        if system is None:
+            findings["skipped"] = [{"id": i, "why": "This deployment has no CRM credential to close findings."} for i in body.findingIds]
+        else:
+            findings = await enrichment_runs.close_findings(system, body.findingIds, target_id=prospect_id,
+                                                            actor=user.get("name") or user.get("userName") or "staff")
+    after = {**lead, **payload}
+    final_level = level if level is not None else (after.get("qualificationLevel") or "")
+    stays = final_level not in (cfg.LEVEL_CONTACTABLE, cfg.LEVEL_REFERRED)
+    needs = leads.contacts_needed(after) if stays else ""
+    name = lead.get("businessName") or lead.get("name") or prospect_id
+    await record_action(
+        client, app=APP_CAMPAIGNS, category=CAT_RECORD_EDIT, action=ACTION_CONTACT_FOUND,
+        parent_type=cfg.PROSPECT, parent_id=prospect_id,
+        summary=(f"Contact found for \"{name}\": " + (", ".join(sorted(payload)) if payload else "nothing new")
+                 + (f" — level {final_level}" if final_level else "")
+                 + (f"; {len(findings['closed'])} AI finding(s) accepted" if findings["closed"] else "")),
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+        details={"written": payload, "was": {k: lead.get(k) for k in payload}, "level": level,
+                 "findings": findings},
+    )
+    return {"prospect": updated, "written": sorted(payload), "level": final_level or None, "stays": stays,
+            "needs": needs, "findings": findings}
+
+
+@api_router.get("/prospects/{prospect_id}/suggestions")
+async def lead_suggestions(prospect_id: str, request: Request) -> dict[str, Any]:
+    """The lead's Proposed AI findings mapped onto the Review row's boxes
+    (§ 7e.6), read under the org-wide key, plus whether research is still
+    running for it (``researching``)."""
+    user, client = _actor(request)
+    settings = get_settings()
+    await _lead_or_404(request, client, prospect_id, select="id,name")
+    out: dict[str, Any] = {b: "" for b in enrichment_runs.SUGGESTION_BOXES}
+    out.update({"findingIds": [], "researching": False, "available": False})
+    system = _system_client(settings)
+    if system is None or not await enrichment_runs.available(system):
+        return out
+    out["available"] = True
+    try:
+        out.update(enrichment_runs.suggestions(await enrichment_runs.existing_findings(system, prospect_id=prospect_id)))
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not read the lead's AI findings")
+    store = getattr(request.app.state, "enrichment_store", None)
+    if store is not None:
+        try:
+            out["researching"] = (await store.target_pending(prospect_id)) > 0
+        except Exception as exc:  # noqa: BLE001 — a store hiccup never hides the findings
+            log.warning("pending research read for %s failed: %s", prospect_id, exc)
+    return out
 
 
 # --- calls (§ 3.4; ruling 36) ---------------------------------------------------------------------

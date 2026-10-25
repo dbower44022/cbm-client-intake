@@ -21,6 +21,18 @@ found; move resolved items to the bottom with the resolution date.
     the lead. Not fixed on 10-25-26 because another session had uncommitted
     edits in `campaigns/service.py`.
 
+58. **Lead enrichment — production, Boston and the real-model test owed**
+    (2026-10-25, moved here from the root `CLAUDE.md` status window).
+    Phase 1, the fit score (v0.269.0, `ENRICHMENT_FREE_PASS` /
+    `ENRICHMENT_WEB_CHECKS`, live-passed on crm-test 10-21-26) and phase 2,
+    the AI research pass (v0.274.0, `ENRICHMENT_AI`, findings as
+    `CEnrichmentFinding`, crm-test applied 10-22-26) are pushed and dark.
+    Owed: phase 2's staff test on crm-test against the real model (never
+    run yet); both phases' CRM fields on production at a Sunday slot and on
+    Boston with its release; the list button when lists go on. Campaign
+    lists L2 (v0.271.0, live-passed 10-21-26) likewise owes production and
+    Boston with the arc's slot and the close-date Read-only finding (#51).
+
 57. **Marketing Management redesign — nine Drafts owed, then the build**
     (2026-10-23). Doug ruled the whole redesign 10-22/23-26 (rulings
     79–116, `prds/prospect-marketing/rulings.md` v1.47). The build is
@@ -43,9 +55,16 @@ found; move resolved items to the bottom with the resolution date.
     https://claude.ai/artifact/EE5rBgsV4LxeiNTWqx4BVN); the double save on
     Enter found at step 14 is fixed in v0.284.1. `LEAD_LADDER` is on at
     crm-test's /setup; step 21's Convert re-run and read back 12:08 (all
-    23 steps hold). Owed: M3 (Review as the research queue — plan approved
-    12:14, run it from `prompts/m3-review-research-queue-kickoff.md` in a
-    fresh session); the handoff on production
+    23 steps hold). **M3 built as v0.285.0 (10-25-26)**: Review as the
+    research queue — *Judge Unqualified leads* and *Find contacts for
+    Identified leads*, the contacts row's write with `seenLevel`, AI
+    research on every row filling the boxes from the lead's findings,
+    ruling 121 in `enrichment.runs.decide`; rides `LEAD_LADDER`. Checked
+    against the stub harness and by tests; committed, not pushed. Owed:
+    the M3 live pass on crm-test (step page
+    https://claude.ai/artifact/CoUeWPYhsjV8pgf7GpA391, 16 steps as Mark
+    Marketing),
+    then M4 (the import tool, § 7e.7); the handoff on production
     at the arc's slot and on Boston with its release; the layout question
     in the handoff's § 7.
 

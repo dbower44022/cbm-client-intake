@@ -100,6 +100,44 @@ def test_review_queue_is_fixed_to_unqualified_and_oldest_first():
     assert (lq.status, lq.exit, lq.dir) == (cfg.LEAD_UNQUALIFIED, "none", "asc")
 
 
+def test_review_queue_has_two_modes_and_refuses_an_unknown_one():
+    """Build plan § 7e.6: judge is today's queue; contacts is Qualified at
+    Identified, no exit, oldest first; the mode rides the query parameters."""
+    judge = leads.LeadQuery.from_params({}, review_queue=True, mode="judge")
+    assert (judge.mode, judge.status, judge.exit, judge.level, judge.dir) == ("judge", cfg.LEAD_UNQUALIFIED, "none", "", "asc")
+    contacts = leads.LeadQuery.from_params({"level": "Referred"}, review_queue=True, mode="contacts")
+    assert (contacts.mode, contacts.status, contacts.exit, contacts.level, contacts.dir) == (
+        "contacts", cfg.LEAD_QUALIFIED, "none", cfg.LEVEL_IDENTIFIED, "asc")
+    assert contacts.params()["mode"] == "contacts"
+    assert "mode" not in leads.LeadQuery.from_params({"mode": "contacts"}).params()   # not a Review query
+    assert leads.LeadQuery.from_params({}, review_queue=True, mode="hot").errors == ["Unknown review mode: choose judge or contacts."]
+
+
+def test_the_contacts_queue_needs_the_ladder_and_lists_only_identified_leads():
+    from tests.test_campaign_leads_ladder import FakeCrm as LadderCrm
+    crm = LadderCrm()
+    crm.lead(businessName="Acme", leadStatus=cfg.LEAD_UNQUALIFIED)
+    crm.lead(businessName="Birch", qualificationLevel=cfg.LEVEL_IDENTIFIED, createdAt="2026-10-05 12:00:00")
+    crm.lead(businessName="Cedar", qualificationLevel=cfg.LEVEL_CONTACTABLE, firstName="Ann", email="a@b.com")
+    crm.lead(businessName="Dune", qualificationLevel=cfg.LEVEL_IDENTIFIED, sideExit="Stale")
+    crm.lead(businessName="Elm", qualificationLevel=cfg.LEVEL_IDENTIFIED, createdAt="2026-10-02 12:00:00")
+    out = run(leads.search(crm, leads.LeadQuery.from_params({}, review_queue=True, mode="contacts")))
+    assert [r["businessName"] for r in out["prospects"]] == ["Elm", "Birch"] and out["ladder"] is True
+    judge = run(leads.search(crm, leads.LeadQuery.from_params({}, review_queue=True)))
+    assert [r["businessName"] for r in judge["prospects"]] == ["Acme"]
+    ids = run(leads.resolve(crm, leads.LeadQuery.from_params({}, review_queue=True, mode="contacts")))
+    assert [i["qualificationLevel"] for i in ids] == [cfg.LEVEL_IDENTIFIED] * 2
+    # A CRM without the ladder's fields refuses the contacts mode in words,
+    # never silently answering the judge queue.
+    bare = LadderCrm(ladder_fields=False)
+    bare.lead(businessName="Acme", leadStatus=cfg.LEAD_UNQUALIFIED)
+    with pytest.raises(CampaignError, match="Find contacts queue is not available"):
+        run(leads.search(bare, leads.LeadQuery.from_params({}, review_queue=True, mode="contacts")))
+    with pytest.raises(CampaignError, match="not available"):
+        run(leads.resolve(bare, leads.LeadQuery.from_params({}, review_queue=True, mode="contacts")))
+    assert [r["businessName"] for r in run(leads.search(bare, leads.LeadQuery.from_params({}, review_queue=True)))["prospects"]] == ["Acme"]
+
+
 def test_sort_is_whitelisted_and_page_capped_at_200():
     lq = leads.LeadQuery.from_params({"sort": "description; drop", "limit": "5000", "offset": "-3"})
     assert (lq.sort, lq.limit, lq.offset) == ("createdAt", 200, 0)
@@ -174,6 +212,15 @@ def test_select_all_refuses_above_the_cap():
 
 
 # --- the guard and the bulk actions ----------------------------------------------------------------
+
+def test_changed_since_sees_the_level_move():
+    lead = {"leadStatus": "Qualified", "sideExit": None, "qualificationLevel": "Contactable",
+            "modifiedByName": "Joe", "modifiedAt": "2026-10-25 12:00:00"}
+    assert leads.changed_since(lead, {"leadStatus": "Qualified", "sideExit": "", "qualificationLevel": "Identified"}) == \
+        "Already Contactable, by Joe at 2026-10-25 12:00 UTC."
+    assert leads.changed_since(lead, {"leadStatus": "Qualified", "sideExit": "", "qualificationLevel": "Contactable"}) is None
+    assert leads.changed_since({**lead, "qualificationLevel": None}, {"qualificationLevel": "Identified"}).startswith("Already moved off its level")
+
 
 def test_changed_since_names_who():
     lead = {"leadStatus": cfg.LEAD_QUALIFIED, "sideExit": None, "modifiedByName": "Mark Marketing",

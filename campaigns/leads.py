@@ -73,6 +73,15 @@ IN_CAMPAIGN_NO = "no"
 
 BULK_ACTIONS = (review.ACTION_DISQUALIFY, review.ACTION_DO_NOT_CONTACT, ACTION_ASSIGN)
 
+#: The Review tab's two modes (build plan § 7e.6, ruling 110). *Judge*:
+#: Unqualified leads, decided on a website or an email. *Contacts*: Qualified
+#: leads still at Identified, given a named person and a phone or an email.
+MODE_JUDGE = "judge"
+MODE_CONTACTS = "contacts"
+REVIEW_MODES = (MODE_JUDGE, MODE_CONTACTS)
+#: What the contacts row writes (§ 7e.6): the lead's own person fields, never a Contact.
+CONTACT_FIELDS = ("firstName", "lastName", "phone", "email")
+
 #: Read for every guarded decision: the fields the guard compares and the
 #: names it reports.
 GUARD_SELECT = cfg.PROSPECT_SELECT + ",modifiedByName,modifiedAt"
@@ -112,6 +121,7 @@ class LeadQuery:
     level: str = ""            # "" any, or one of cfg.LEVELS (§ 7e.4; the ladder)
     assigned: str = ""         # "" any, "none" unassigned, or a User id ("me" resolved by the router)
     replied: str = ""          # "1": Replied, not yet converted
+    mode: str = ""             # the Review queue's mode (judge / contacts), else ""
     sort: str = "createdAt"
     dir: str = "desc"
     offset: int = 0
@@ -119,7 +129,8 @@ class LeadQuery:
     errors: list[str] = field(default_factory=list)
 
     @classmethod
-    def from_params(cls, params: dict[str, Any], *, review_queue: bool = False, me: str = "") -> "LeadQuery":
+    def from_params(cls, params: dict[str, Any], *, review_queue: bool = False, me: str = "",
+                    mode: str = "") -> "LeadQuery":
         g = lambda k: str(params.get(k) or "").strip()  # noqa: E731
         lq = cls(q=g("q")[:200], status=g("status"), exit=g("exit"), source=g("source"),
                  batch=g("batch")[:255], place=g("place")[:100], arrived_from=g("arrivedFrom"),
@@ -142,8 +153,15 @@ class LeadQuery:
         except (TypeError, ValueError):
             lq.limit = PAGE
         if review_queue:
-            # The Review queue: Unqualified, no reason (§ 7b.1), oldest first.
-            lq.status, lq.exit = cfg.LEAD_UNQUALIFIED, "none"
+            # The Review queue (§ 7b.1, § 7e.6): no reason, oldest first. Judge
+            # is Unqualified; contacts is Qualified at Identified.
+            lq.mode = (mode or MODE_JUDGE).strip().lower()
+            if lq.mode == MODE_CONTACTS:
+                lq.status, lq.exit, lq.level = cfg.LEAD_QUALIFIED, "none", cfg.LEVEL_IDENTIFIED
+            elif lq.mode == MODE_JUDGE:
+                lq.status, lq.exit = cfg.LEAD_UNQUALIFIED, "none"
+            else:
+                lq.errors.append("Unknown review mode: choose judge or contacts.")
         if lq.sort not in SORT_FIELDS:
             lq.sort = "createdAt"
         if lq.dir not in ("asc", "desc"):
@@ -185,7 +203,7 @@ class LeadQuery:
                "arrivedTo": self.arrived_to, "inCampaign": self.in_campaign,
                "gate": self.gate, "minFit": "" if self.min_fit is None else str(self.min_fit),
                "level": self.level, "assigned": self.assigned, "replied": self.replied,
-               "sort": self.sort, "dir": self.dir}
+               "mode": self.mode, "sort": self.sort, "dir": self.dir}
         return {k: v for k, v in out.items() if v}
 
 
@@ -265,6 +283,14 @@ async def ladder_available(client: EspoApi) -> bool:
     return await ladder.available(client)
 
 
+def _refuse_contacts_without_ladder(lq: LeadQuery, has_ladder: bool) -> None:
+    """The contacts queue needs the level; a CRM without it is told so, never
+    handed the judge queue instead (§ 7e.6)."""
+    if lq.mode == MODE_CONTACTS and not has_ladder:
+        raise CampaignError("This CRM does not carry the ladder's lead fields yet, so the Find contacts "
+                            "queue is not available here. The Judge queue still is.")
+
+
 def _is_campaign(lq: LeadQuery) -> bool:
     return lq.in_campaign not in ("", IN_CAMPAIGN_YES, IN_CAMPAIGN_NO)
 
@@ -318,6 +344,7 @@ async def search(client: EspoApi, lq: LeadQuery) -> dict[str, Any]:
     if not fit:
         lq.without_fit()
     has_ladder = await ladder_available(client)
+    _refuse_contacts_without_ladder(lq, has_ladder)
     if not has_ladder:
         lq.without_ladder()
     select = cfg.PROSPECT_SELECT + ("," + FIT_SELECT if fit else "") + ("," + ladder.LADDER_SELECT if has_ladder else "")
@@ -424,10 +451,14 @@ async def resolve(client: EspoApi, lq: LeadQuery) -> list[dict[str, str]]:
         raise CampaignError(" ".join(lq.errors))
     if not await fit_available(client):
         lq.without_fit()
-    if not await ladder_available(client):
+    has_ladder = await ladder_available(client)
+    _refuse_contacts_without_ladder(lq, has_ladder)
+    if not has_ladder:
         lq.without_ladder()
-    rows = await _all(client, lq, select="id,leadStatus,sideExit", cap=BULK_CAP)
-    return [{"id": r["id"], "leadStatus": r.get("leadStatus") or "", "sideExit": r.get("sideExit") or ""}
+    select = "id,leadStatus,sideExit" + (",qualificationLevel" if has_ladder else "")
+    rows = await _all(client, lq, select=select, cap=BULK_CAP)
+    return [{"id": r["id"], "leadStatus": r.get("leadStatus") or "", "sideExit": r.get("sideExit") or "",
+             **({"qualificationLevel": r.get("qualificationLevel") or ""} if has_ladder else {})}
             for r in rows if r.get("id")]
 
 
@@ -436,12 +467,17 @@ def changed_since(lead: dict[str, Any], seen: dict[str, Any]) -> Optional[str]:
     says what changed and who changed it (§ 7b answer 5)."""
     was_status = (seen.get("leadStatus") or "")
     was_exit = (seen.get("sideExit") or "")
+    was_level = (seen.get("qualificationLevel") or "")
     now_status = lead.get("leadStatus") or ""
     now_exit = lead.get("sideExit") or ""
+    now_level = lead.get("qualificationLevel") or ""
     if "leadStatus" in seen and was_status and was_status != now_status:
         what = now_status
     elif "sideExit" in seen and was_exit != now_exit:
         what = f"stopped ({now_exit})" if now_exit else "worked again"
+    elif "qualificationLevel" in seen and was_level != now_level:
+        # The contacts queue (§ 7e.6): someone else found the person first.
+        what = now_level if now_level else "moved off its level"
     else:
         return None
     who = lead.get("modifiedByName") or "someone else"
@@ -586,6 +622,40 @@ def facts_payload(lead: dict[str, Any], changes: dict[str, Any], *, ladder_on: b
     if not out:
         raise CampaignError("Nothing changed.")
     return out
+
+
+def contacts_payload(lead: dict[str, Any], typed: dict[str, Any]) -> dict[str, Any]:
+    """The write a contacts-queue row makes (§ 7e.6): the four person fields
+    through :func:`facts_payload`, so a typed email is checked and an unchanged
+    value is not rewritten. Empty when nothing new was typed — the row may
+    still be closing accepted findings. Raises :class:`CampaignError` for a
+    field the row does not hold or a value that is not what it claims."""
+    changes = {}
+    for key, raw in (typed or {}).items():
+        if key not in CONTACT_FIELDS:
+            raise CampaignError(f"\"{key}\" is not a box on the contacts row.")
+        if str(raw or "").strip():
+            changes[key] = raw
+    if not changes:
+        return {}
+    try:
+        return facts_payload(lead, changes, ladder_on=True)
+    except CampaignError as exc:
+        if str(exc) == "Nothing changed.":
+            return {}
+        raise
+
+
+def contacts_needed(lead: dict[str, Any]) -> str:
+    """What an Identified lead still lacks to become Contactable, in plain
+    words; empty when it lacks nothing."""
+    have = ladder.facts(lead)
+    missing = []
+    if ladder.FACT_PERSON not in have:
+        missing.append("the person's name")
+    if ladder.FACT_PHONE not in have and ladder.FACT_EMAIL not in have:
+        missing.append("a phone or an email")
+    return " and ".join(missing)
 
 
 def activity_rows(touches: list[dict[str, Any]], actions: list[dict[str, Any]]) -> list[dict[str, Any]]:

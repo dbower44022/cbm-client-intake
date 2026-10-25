@@ -317,7 +317,11 @@
     <!-- ============================ REVIEW ============================ -->
     <section class="cm__panel" id="reviewPanel" hidden>
       <div class="cm__controls">
-        <p class="cm__hint cm__grow">Leads waiting at Unqualified, oldest first. A lead needs a website or an email before it can be Qualified: <strong>Search the web</strong>, type what you find into the row and press <strong>Enter</strong> to Qualify — the cursor moves to the next lead. Disqualify the obvious no's many at once by ticking them. Two reviewers can split the queue with the filters (one batch or ZIP each); a lead someone else has already decided is refused, naming who.</p>
+        <div class="cm__modeswitch" id="rf_modes" role="group" aria-label="Review mode">
+          <button type="button" class="cm__modebtn is-active" id="rf_mode_judge">Judge Unqualified leads</button>
+          <button type="button" class="cm__modebtn" id="rf_mode_contacts" hidden>Find contacts for Identified leads</button>
+        </div>
+        <p class="cm__hint cm__grow" id="rf_hint">Leads waiting at Unqualified, oldest first. A lead needs a website or an email before it can be Qualified: <strong>Look it up</strong>, type what you find into the row and press <strong>Enter</strong> to Qualify — the cursor moves to the next lead. Disqualify the obvious no's many at once by ticking them. Two reviewers can split the queue with the filters (one batch or ZIP each); a lead someone else has already decided is refused, naming who.</p>
         <div class="cm__actions"><button type="button" class="cbm-button cbm-button--secondary" id="reviewRefreshBtn">Refresh</button></div>
       </div>
       <div class="cm__controls cm__filters" id="rf_filters">
@@ -349,9 +353,9 @@
       </div>
       <div class="cm__gridwrap">
         <table class="cm__grid" id="reviewGrid">
-          <thead><tr>
+          <!-- The columns after the tick are drawn by app.js from the mode (judge / contacts). -->
+          <thead id="reviewHead"><tr>
             <th class="cm__tick"><input type="checkbox" id="rf_page" aria-label="Select this page" /></th>
-            <th>Business</th><th class="cm__fitonly" hidden>Fit</th><th>Person</th><th>City</th><th>Phone</th><th>Look it up</th><th>Website</th><th>Email</th><th>Decide</th><th>Batch</th>
           </tr></thead>
           <tbody id="reviewRows"></tbody>
         </table>

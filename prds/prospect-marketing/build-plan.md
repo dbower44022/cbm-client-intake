@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-25-26 12:22 · Revision 0.47 — change log at the end.
+Last Updated: 10-25-26 12:36 · Revision 0.48 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -2161,7 +2161,7 @@ address (Draft 2).
 source. A new `test_campaign_outreach.py` covers the guardrails, the opt-out
 line, the refusal without a `cbmEmail`, and the three outcomes.
 
-### 7e.6 Review as the research queue — ruling 110
+### 7e.6 Review as the research queue — ruling 110 (built as v0.285.0, 10-25-26; live pass owed)
 
 `LeadQuery.review_queue` gains a mode:
 
@@ -2553,8 +2553,29 @@ Team caller for M1 and M10).
    lead page's button and the Contact record page's two-press button.
 3. **M3: Review as the research queue** (§ 7e.6). About a day and a half.
    Plan approved by Doug 10-25-26 12:14 (three stops, routine choices
-   recorded in the kickoff); to be run in one session from
-   `prompts/m3-review-research-queue-kickoff.md`.
+   recorded in the kickoff); run in one session from
+   `prompts/m3-review-research-queue-kickoff.md`. **Built as v0.285.0
+   (10-25-26)**, all three stops without a pause. Routine choices, each
+   announced in the kickoff and built as written: the Review tab's mode
+   rides the address (`#review?mode=contacts`) like the filters; in the
+   contacts mode Enter writes whatever was typed, and a lead still
+   Identified afterwards stays in the queue with the notice naming what is
+   missing — it leaves only when placement moves it to Contactable or
+   Referred; the contacts write is guarded like every review decision, with
+   a new `seenLevel` and `changed_since` extended to the level; the row's
+   *AI research* button fills the boxes from the lead's Proposed findings
+   (or starts a one-lead run when there are none, or says so when research
+   is running or the feature is dark), and Enter then writes the values and
+   closes those findings Accepted without rewriting their values; accepting
+   a Person finding on a lead fills the lead's own empty `firstName`,
+   `lastName`, `email` and creates no Contact (ruling 121), `personName`
+   split as `_create_person` splits it; the findings read runs under the
+   org-wide key (the Marketing Admin Role does hold `CEnrichmentFinding`
+   read/edit through `migrate_enrichment_roles.py`, but every enrichment
+   read and write already runs under that key); a contacts-mode address on
+   a CRM without the ladder is refused in words and the page falls back to
+   the judge queue. Checked in the browser against the stub harness.
+   **Live pass owed** on crm-test (step page in `OPEN-ITEMS.md` #57).
 4. **M4: the import tool** (§ 7e.7), behind `IMPORT_TEMPLATES`. About
    five days.
 5. **M5: personal outreach** (§ 7e.5), behind `LEAD_OUTREACH`, after the
@@ -2845,7 +2866,7 @@ best-effort mirror.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — build plan |
-| Version | v0.26 — Phases 1–4 and the lead model built; §§ 7b and 7c built and live-passed on crm-test; § 7d (the lead identifier in every link, rulings 71–75) approved, D1 built; § 7e (the Marketing Management redesign, rulings 79–125) approved, steps M1 (v0.279.0) and M2 (v0.284.0) built |
+| Version | v0.26 — Phases 1–4 and the lead model built; §§ 7b and 7c built and live-passed on crm-test; § 7d (the lead identifier in every link, rulings 71–75) approved, D1 built; § 7e (the Marketing Management redesign, rulings 79–125) approved, steps M1 (v0.279.0), M2 (v0.284.0) and M3 (v0.285.0) built |
 | Last Updated | 10-25-26 12:22 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
@@ -2855,6 +2876,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.48 | 10-25-26 12:36 | Claude (Claude Code) | § 7e.13 step M3 built (v0.285.0): Review as the research queue, two modes; the routine choices recorded under the step; § 7e.6 heading marked built. Live pass owed. |
 | 0.47 | 10-25-26 12:22 | Claude (Claude Code) | § 7e.13 step M3: plan approved, kickoff prompt written (`prompts/m3-review-research-queue-kickoff.md`). |
 | 0.46 | 10-25-26 12:05 | Claude (Claude Code) | § 7e.13 step M2 live-passed on crm-test (Doug, 23 steps); v0.284.1 fix noted; step 21's conversion queried. Next: M3. |
 | 0.45 | 10-25-26 11:20 | Claude (Claude Code) | § 7e.13 step M2 built (v0.284.0): the ladder, the Leads tab, the lead's page; the routine choices recorded under the step. Live pass owed. |

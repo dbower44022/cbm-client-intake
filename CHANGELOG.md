@@ -5,6 +5,55 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.285.0] — 2026-10-25
+
+**feat(campaigns): Review is the research queue, in two modes** — step M3
+of the Marketing Management redesign (build plan § 7e.6; rulings 110, 121;
+ruling 43 stands). Rides **`LEAD_LADDER`** for the contacts mode and adds no
+switch of its own; with the ladder off, Review is exactly the tab it was.
+
+- **Two modes, one switch above the queue.** *Judge Unqualified leads* is
+  today's queue unchanged (Unqualified, no exit, oldest first; website or
+  email typed into the row, Enter qualifies). *Find contacts for Identified
+  leads* lists Qualified leads still at Identified, oldest first, each row
+  with First name, Last name, Phone and Email boxes; Enter writes whatever
+  was typed as the user (`leads.contacts_payload`, the lead page's
+  normalisation), placement runs under the org-wide key, and the row leaves
+  the queue when the lead becomes Contactable or Referred. A lead given only
+  a name stays, and the notice says what it still needs. The mode rides the
+  address (`#review?mode=contacts`); the contacts switch is shown only when
+  the grid answer says `ladder`, and a CRM without the ladder's fields
+  refuses the contacts queue in words (400), never silently answering the
+  judge queue. The Review thead is drawn by script from the mode.
+- **The guard covers the level.** The contacts row sends what the reviewer
+  saw — `seenStatus`, `seenExit` and the new `seenLevel` — and
+  `leads.changed_since` answers 409 naming who moved the lead
+  ("Already Contactable, by Pat at …").
+- **AI research on every row**, judge and contacts alike. With Proposed
+  findings on the lead the button fills the row's empty boxes from them
+  (`GET /campaigns/api/prospects/{id}/suggestions`: the newest Proposed value
+  per box, a Person's name split first / last, read under the org-wide key)
+  and Enter then writes the values and closes those findings Accepted
+  (`enrichment.runs.close_findings`, `decidedBy` the reviewer, values never
+  rewritten). With none it starts a research run for that one lead; while a
+  run is queued or running it says so; when AI research is dark it says why
+  on click. The button is always shown.
+- **Ruling 121 in `enrichment.runs.decide`:** accepting a Person finding on
+  a lead fills the lead's own empty `firstName`, `lastName` and `email`
+  (`split_name`, the same split `_create_person` uses), creates no Contact,
+  and runs placement; a Person the lead already holds closes as Accepted
+  with nothing written. The old refusal ("stays on the lead until first
+  contact") is gone.
+- New endpoint `POST /campaigns/api/prospects/{id}/contacts` (body the four
+  boxes, the seen fields, `findingIds`; answers `{prospect, written, level,
+  stays, needs, findings}`), one action-log row *Lead Contact Found*.
+- Tests: `tests/test_campaign_review_contacts.py` (new), the two modes and
+  the level guard in `test_campaign_leads.py`, ruling 121, the suggestions
+  mapping and `close_findings` in `test_enrichment_research.py`. Checked in
+  the browser against the stub harness: the mode switch, the fill, Enter
+  (one save for two presses), the stays path, the 409 drop, the ladder-off
+  fallback, the judge row's fill-and-qualify.
+
 ## [0.284.1] — 2026-10-25
 
 **fix(campaigns): an inline gap on the lead's page saved twice.** Found at
