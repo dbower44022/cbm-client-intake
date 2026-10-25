@@ -37,12 +37,13 @@ found; move resolved items to the bottom with the resolution date.
     clear, role read-back, conformance unchanged). **M2 built as v0.284.0
     (10-25-26)**: the ladder (`campaigns/ladder.py`), the Leads tab's
     counts, columns and *Assign to*, the lead's page at
-    `/campaigns/lead/{id}`; dark behind `LEAD_LADDER`. Owed: the M2 live
-    pass on crm-test as Mark Marketing (switch `LEAD_LADDER` on at /setup,
-    run Operations → *Lead levels* once to backfill, then the Leads tab and
-    a lead's page); then M3; the handoff on production at the arc's slot
-    and on Boston with its release; the layout question in the handoff's
-    § 7.
+    `/campaigns/lead/{id}`, *New code* on the lead's and the Contact's
+    pages (ruling 126); dark behind `LEAD_LADDER`. Owed: the M2 live pass
+    on crm-test, 23 steps as an administrator, Mark Marketing and Doug
+    (step page https://claude.ai/artifact/EE5rBgsV4LxeiNTWqx4BVN rev 1.0,
+    written 10-25-26 11:32 from a read of crm-test's leads); then M3; the
+    handoff on production at the arc's slot and on Boston with its
+    release; the layout question in the handoff's § 7.
 
 53. **Attendee linking escalation — live pass owed** (v0.258.6, 2026-10-15).
     A mentor whose Mentor Role reads/edits `CSession` at "own" could not
