@@ -348,7 +348,7 @@ don't exist:
 |---|---|
 | **The website still points at the old system** | The public programme page is built and live on production — `/webinars/`, with a page per event — but `clevelandbusinessmentors.org/webinars/` has not been redirected to it yet. Until that one redirect is added, this tool and the public page are separate worlds, and every webinar registrant on the live site is still an invisible lead. **Creating an event through this screen is what gives it a web address**, so create events here rather than in the CRM. |
 | **Automatic attendance from Zoom** | Built, but switched **off** and never yet run against the real Zoom account. Attendance is manual for now — the Registrants tab and door check-in. |
-| **Follow-up emails** | Built, but they need their five email templates created in EspoCRM before anything can send, and there is no button for them in this tool yet. See below. |
+| **Follow-up emails sent for real** | The **Follow-up** tab on each event previews and sends the five follow-ups, and every event email has its template in the CRM — but nothing has yet been sent to a real registrant, and sending needs the shared mailbox configured on the deployment. See below. |
 
 ---
 

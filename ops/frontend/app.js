@@ -387,7 +387,8 @@
     if (state.form && r.form_slug !== state.form) return false;
     if (!state.search) return true;
     var hay = [r.id, r.form_slug, intakeInfo(r).label, responseInfo(r).label, r.close_reason,
-               r.email, r.last_error, r.last_activity_by, fmtDate(r.received_at)]
+               r.email, r.first_name, r.last_name, r.company,
+               r.last_error, r.last_activity_by, fmtDate(r.received_at)]
       .filter(Boolean).join(" ").toLowerCase();
     return hay.indexOf(state.search) >= 0;
   }

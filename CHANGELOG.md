@@ -5,6 +5,31 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.283.1] — 2026-10-25
+
+**feat(events): the Follow-up tab, the email ledger, and Submission Admin
+search by name (Track D D2).**
+
+- **Follow-up tab** on an event in Event Administration: one card per
+  follow-up kind (Reminder, Recording, No Show, Mentor CTA, Survey) with its
+  template name and audience. **Preview** runs the sender's own planner as a
+  dry run and lists who would receive it and who is skipped and why;
+  **Send** is two clicks — the first previews and names the count, the second
+  sends — and explains itself when sending is not configured or nobody would
+  receive it. The tab's note says whether the stack is configured, whether
+  reminders go out automatically, and whether registration confirmations are
+  on. `GET /events/api/followups` now also names the confirmation kinds and
+  their switch.
+- **Emails column** on the Registrants tab: the confirmation's date and each
+  follow-up kind the person has received, from the ledgers on the row
+  (`REGISTRATION_SELECT` gains `followUpsSent` and `confirmationSentAt`).
+- **Submission Admin's search box matches the submitter's name and company**
+  (the list query now carries `first_name`, `last_name` and `company` from
+  the payload). Found by Doug on the production events test, 10-19-26:
+  "Registrant" matched nothing although four rows existed.
+
+No CRM change, no flag; the tab shows on every event. Verified by tests only.
+
 ## [0.280.0] — 2026-10-24
 
 **feat(sessions): a login linked to several mentor profiles resolves to the

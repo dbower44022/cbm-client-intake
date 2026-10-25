@@ -463,10 +463,14 @@ async def followup_catalogue(request: Request) -> dict[str, Any]:
     """What can be sent, and whether the stack is configured to send it."""
     _require_user(request)
     settings = get_settings()
+    from . import confirm
     return {
         "kinds": notify.catalogue(),
         "enabled": notify.notify_active(settings),
         "remindersAutomatic": settings.events_reminders,
+        # D3: the registrant's own emails ride a switch of their own; the tab
+        # says whether they are on, and names their templates.
+        "confirmations": {"enabled": confirm.active(settings), "kinds": confirm.catalogue()},
     }
 
 

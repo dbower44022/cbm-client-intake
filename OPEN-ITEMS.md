@@ -573,8 +573,9 @@ found; move resolved items to the bottom with the resolution date.
     which Zoom fills once Track C is on; no hand-pasted link on Public events.
     Until Track C, our page offers in-person events only and the website keeps
     the webinars; the two webinars shown on production today fall under the
-    rule when it ships; (4) **Submission Admin search by
-    name** (`matchesSearch` omits the submitter's name); (5) Doug's
+    rule when it ships; (4) ~~**Submission Admin search by
+    name**~~ **BUILT 10-25-26 11:24 (v0.283.1):** the search box matches the submitter's
+    name and company; (5) Doug's
     decisions on the **five-week series** (one event or five — check-in is
     per event) and whether the **Holiday Social** should be Internal;
     (6) data: three mentors' `mentorTitle` is a tagline, Cindie Pacheco's

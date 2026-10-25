@@ -752,6 +752,12 @@ class PostgresStore:
                 submission.c.attempt_count,
                 submission.c.last_error,
                 submission.c.payload["email"].astext.label("email"),
+                # The submitter's name and company, so Submission Admin's
+                # search box can find a person by name (found 10-19-26:
+                # "Registrant" matched nothing although four rows existed).
+                submission.c.payload["first_name"].astext.label("first_name"),
+                submission.c.payload["last_name"].astext.label("last_name"),
+                submission.c.payload["company"].astext.label("company"),
                 submission.c.notes,
                 submission.c.resolved_at,
                 submission.c.resolved_by,

@@ -171,9 +171,13 @@ would be indistinguishable from a slug.
 - **Phase 6b follow-ups** (`events/notify.py`): five sends as the shared info@
   identity, from EspoCRM templates. Once per registrant/event/kind, ledgered on
   `followUpsSent` **after** a successful send and enum-checked first. Preview is
-  the default. **Needs five templates** — `EventReminder`,
-  `EventRecordingAvailable`, `EventNoShow`, `EventMentorCTA`, `EventSurvey` —
-  and has no frontend yet.
+  the default. Templates `EventReminder`, `EventRecordingAvailable`,
+  `EventNoShow`, `EventMentorCTA`, `EventSurvey` (seeded by
+  `scripts/seed_event_templates.py`). **The Follow-up tab** (v0.283.1, D2) is
+  one card per kind: Preview is the planner's dry run (who receives, who is
+  skipped and why); Send is two clicks, the first previews and names the
+  count. The Registrants tab's **Emails** column shows the ledgers
+  (`confirmationSentAt`, `followUpsSent`), which ride `REGISTRATION_SELECT`.
 - **The registration confirmation is CBM's own and the ONLY email a
   registrant gets** (v0.277.0, Track D D3, `events/confirm.py`; design
   `prds/events/CBM_Events_Confirmation_Email_Design.md`; Doug's rulings

@@ -132,6 +132,7 @@
         <button type="button" class="ev__tab is-active" data-tab="overview">Overview</button>
         <button type="button" class="ev__tab" data-tab="registrants">Registrants</button>
         <button type="button" class="ev__tab" data-tab="checkin">Check-in</button>
+        <button type="button" class="ev__tab" data-tab="followups">Follow-up</button>
       </nav>
 
       <!-- The Overview is the WHOLE record, read-only, so staff can check an
@@ -180,7 +181,7 @@
           <thead>
             <tr>
               <th>Name</th><th>Email</th><th>Status</th><th>Source</th>
-              <th class="num">Minutes</th><th>Actions</th>
+              <th class="num">Minutes</th><th>Emails</th><th>Actions</th>
             </tr>
           </thead>
           <tbody id="regRows"></tbody>
@@ -194,6 +195,14 @@
                aria-label="Find a registrant" autocomplete="off" />
         <button type="button" class="cbm-button" id="walkInBtn">+ Add walk-in</button>
         <ul class="ev__roster" id="roster"></ul>
+      </div>
+
+      <!-- Follow-up: the five sends, preview first (EV-64, Track D D2). Each
+           card previews who would receive it and who is skipped and why, and
+           sends only on a second, named click. -->
+      <div class="ev__tabpanel ev__followups" data-panel="followups" hidden>
+        <p class="ev__fu-note" id="fuNote"></p>
+        <div class="ev__fu-cards" id="fuCards"></div>
       </div>
     </section>
   </main>

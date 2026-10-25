@@ -217,6 +217,7 @@
     renderOverview();
     renderRegistrants();
     renderRoster();
+    renderFollowUps().catch(function (e) { $("fuNote").textContent = e.message; });
   }
 
   function backToList() {
@@ -483,6 +484,7 @@
       cell(r.attendanceStatus || "—");
       cell(r.registrationSource || "—");
       cell(r.minutesAttended == null ? "—" : r.minutesAttended, "num");
+      tr.appendChild(ledgerCell(r));
 
       var actions = document.createElement("td");
       actions.appendChild(rowButton("Attended", function () {
@@ -498,6 +500,173 @@
       body.appendChild(tr);
     });
     $("regEmpty").hidden = rows.length > 0;
+  }
+
+  /* The emails this registrant has received: the confirmation (D3) and each
+     follow-up kind, from the ledgers on the row. "—" when none. */
+  function ledgerCell(r) {
+    var td = document.createElement("td");
+    td.className = "ev__ledgercell";
+    var chips = [];
+    if (r.confirmationSentAt) chips.push("Confirmed " + fmtStamp(r.confirmationSentAt));
+    (r.followUpsSent || []).forEach(function (kind) { chips.push(kind); });
+    if (!chips.length) { td.textContent = "—"; return td; }
+    chips.forEach(function (text) {
+      var chip = document.createElement("span");
+      chip.className = "ev__ledger";
+      chip.textContent = text;
+      td.appendChild(chip);
+    });
+    return td;
+  }
+
+  /* ---------- follow-up tab (EV-64) ----------
+   *
+   * One card per kind. Preview runs the same planner the send runs, as a dry
+   * run, and shows exactly who would receive it and who is skipped and why.
+   * Send is two clicks: the first previews and names the count, the second
+   * sends. Buttons are never disabled — a click explains itself. */
+
+  async function renderFollowUps() {
+    var host = $("fuCards");
+    host.innerHTML = "";
+    if (!state.followups) state.followups = await api("/followups");
+    var cat = state.followups;
+    var parts = [];
+    parts.push(cat.enabled
+      ? "Sending is configured: emails go out as the shared mailbox, once per registrant per kind."
+      : "Sending is not configured on this deployment (Events, Gmail sync and the shared mailbox are all needed). Preview still works; Send will say so.");
+    parts.push(cat.remindersAutomatic
+      ? "Reminders also go out automatically the day before."
+      : "Reminders are not automatic here; send them from this tab.");
+    var conf = cat.confirmations || {};
+    parts.push(conf.enabled
+      ? "Registration confirmations are on: each registrant received theirs when they registered (the Emails column on the Registrants tab)."
+      : "Registration confirmations are off (System Settings → Registration confirmation emails).");
+    $("fuNote").textContent = parts.join(" ");
+    (cat.kinds || []).forEach(function (kind) { host.appendChild(followUpCard(kind)); });
+  }
+
+  function followUpCard(kind) {
+    var card = document.createElement("section");
+    card.className = "ev__fu";
+    var title = document.createElement("h3");
+    title.textContent = kind.kind;
+    card.appendChild(title);
+    var desc = document.createElement("p");
+    desc.className = "ev__fu-desc";
+    desc.textContent = kind.description || "";
+    card.appendChild(desc);
+    var meta = document.createElement("p");
+    meta.className = "ev__fu-meta";
+    meta.textContent = "Template " + kind.template + " · goes to " + (kind.statuses || []).join(", ")
+      + (kind.needsOptIn ? " · marketing opt-in required" : "");
+    card.appendChild(meta);
+    var actions = document.createElement("div");
+    actions.className = "ev__fu-actions";
+    var previewBtn = document.createElement("button");
+    previewBtn.type = "button";
+    previewBtn.className = "cbm-button cbm-button--secondary";
+    previewBtn.textContent = "Preview";
+    var sendBtn = document.createElement("button");
+    sendBtn.type = "button";
+    sendBtn.className = "cbm-button";
+    sendBtn.textContent = "Send";
+    actions.appendChild(previewBtn);
+    actions.appendChild(sendBtn);
+    card.appendChild(actions);
+    var result = document.createElement("div");
+    result.className = "ev__fu-result";
+    card.appendChild(result);
+
+    var planned = null;   // the last preview, so Send knows the count it names
+
+    function showPlan(plan) {
+      result.innerHTML = "";
+      var head = document.createElement("p");
+      var n = (plan.recipients || []).length, m = (plan.skipped || []).length;
+      head.textContent = n + (n === 1 ? " registrant would receive it" : " registrants would receive it")
+        + (m ? ", " + m + " skipped" : "") + ".";
+      result.appendChild(head);
+      if (n) {
+        var ul = document.createElement("ul");
+        plan.recipients.forEach(function (p) {
+          var li = document.createElement("li");
+          li.textContent = (p.name ? p.name + " — " : "") + (p.email || "");
+          ul.appendChild(li);
+        });
+        result.appendChild(ul);
+      }
+      if (m) {
+        var reasons = {};
+        plan.skipped.forEach(function (s) { reasons[s.reason] = (reasons[s.reason] || 0) + 1; });
+        var why = document.createElement("p");
+        why.className = "ev__fu-meta";
+        why.textContent = "Skipped: " + Object.keys(reasons).map(function (k) { return reasons[k] + " " + k; }).join(", ") + ".";
+        result.appendChild(why);
+      }
+      (plan.errors || []).forEach(function (err) {
+        var e = document.createElement("p");
+        e.className = "ev__fu-error";
+        e.textContent = err;
+        result.appendChild(e);
+      });
+    }
+
+    async function preview() {
+      result.textContent = "Checking…";
+      planned = await api("/events/" + state.current.event.id + "/followups", {
+        method: "POST", body: JSON.stringify({ kind: kind.kind, preview: true }),
+      });
+      showPlan(planned);
+      sendBtn.textContent = planned.recipients.length
+        ? "Send to " + planned.recipients.length : "Send";
+      return planned;
+    }
+
+    previewBtn.addEventListener("click", function () {
+      preview().catch(function (e) { result.textContent = e.message; });
+    });
+    sendBtn.addEventListener("click", async function () {
+      try {
+        if (!planned) {
+          await preview();
+          if (planned.recipients.length) {
+            notice("Previewed: " + planned.recipients.length + " would receive the " + kind.kind
+              + " email. Click Send to " + planned.recipients.length + " again to send it.", "warn");
+          }
+          return;
+        }
+        if (!planned.recipients.length) {
+          notice("Nobody would receive the " + kind.kind + " email right now — see the skipped reasons.", "warn");
+          return;
+        }
+        if (!(state.followups || {}).enabled) {
+          notice("Sending is not configured on this deployment (Events, Gmail sync and the shared mailbox are all needed).", "error");
+          return;
+        }
+        var done = window.CBMBusy ? window.CBMBusy.start(sendBtn) : function () {};
+        var sent;
+        try {
+          sent = await api("/events/" + state.current.event.id + "/followups", {
+            method: "POST", body: JSON.stringify({ kind: kind.kind, preview: false }),
+          });
+        } finally { done(); }
+        planned = null;
+        sendBtn.textContent = "Send";
+        showPlan(sent);
+        var okMsg = "Sent the " + kind.kind + " email to " + sent.sent + (sent.sent === 1 ? " registrant." : " registrants.");
+        notice((sent.errors || []).length ? okMsg + " " + sent.errors.length + " could not be sent — see the card." : okMsg,
+               (sent.errors || []).length ? "warn" : "ok");
+        // The ledger chips on the Registrants tab come from the row; re-read.
+        var fresh = await api("/events/" + state.current.event.id);
+        state.current = fresh;
+        renderRegistrants();
+      } catch (e) {
+        notice(e.message, "error");
+      }
+    });
+    return card;
   }
 
   function rowButton(label, onClick) {

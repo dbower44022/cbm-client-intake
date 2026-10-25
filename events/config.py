@@ -186,6 +186,8 @@ REGISTRATION_SELECT = ",".join([
     "attendanceStatus", "attendanceSource", "registrationDate",
     "registrationSource", "minutesAttended", "joinTime", "leaveTime",
     "marketingOptIn", "zoomRegistrantId", "unmatchedParticipant",
+    # The email ledger the Registrants tab shows (D3 / Phase 6b).
+    "followUpsSent", "confirmationSentAt",
 ])
 
 
