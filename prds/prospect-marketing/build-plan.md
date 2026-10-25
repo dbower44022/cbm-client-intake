@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-25-26 18:41 · Revision 0.49 — change log at the end.
+Last Updated: 10-25-26 18:52 · Revision 0.50 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -2596,7 +2596,10 @@ Team caller for M1 and M10).
    The AI research button on a lead with no findings opened the start
    dialog (AI research is on at crm-test's /setup); no run was started.
 4. **M4: the import tool** (§ 7e.7), behind `IMPORT_TEMPLATES`. About
-   five days.
+   five days. Plan approved by Doug 10-25-26 18:44 (four stops, to be run
+   in one session; ruling 127 settled Undo's deletion — the org-wide key,
+   the API role gains delete on the lead record); kickoff
+   `prompts/m4-import-tool-kickoff.md`.
 5. **M5: personal outreach** (§ 7e.5), behind `LEAD_OUTREACH`, after the
    handoff's link and touch changes. About four days.
 6. **M6: lists** (§ 7e.8). About four days.
@@ -2895,6 +2898,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.50 | 10-25-26 18:52 | Claude (Claude Code) | § 7e.13 step M4: plan approved (four stops, one session), ruling 127 recorded, kickoff prompt written (`prompts/m4-import-tool-kickoff.md`). |
 | 0.49 | 10-25-26 18:41 | Claude (Claude Code) | § 7e.13 step M3 live-passed on crm-test (Doug, two step pages); v0.285.1 fix noted; the read-back recorded. Next: M4. |
 | 0.48 | 10-25-26 12:36 | Claude (Claude Code) | § 7e.13 step M3 built (v0.285.0): Review as the research queue, two modes; the routine choices recorded under the step; § 7e.6 heading marked built. Live pass owed. |
 | 0.47 | 10-25-26 12:22 | Claude (Claude Code) | § 7e.13 step M3: plan approved, kickoff prompt written (`prompts/m3-review-research-queue-kickoff.md`). |

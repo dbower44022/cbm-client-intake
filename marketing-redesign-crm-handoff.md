@@ -1,6 +1,6 @@
 # CRM handoff — the Marketing Management redesign (build plan § 7e.11)
 
-Last Updated: 10-25-26 02:15 · Revision 1.1 — change log at the end.
+Last Updated: 10-25-26 18:52 · Revision 1.2 — change log at the end.
 
 **What changes:** five fields, three relationships and two enum options,
 plus two read grants on the Marketing Admin Role. This is the one CRM
@@ -136,7 +136,7 @@ Claude. Never between 04:00 and 05:00 UTC, the nightly restore.
    (not set) -> own} - read back OK`, the same for `CCommunication {read:
    (not set) -> all}`, and `rebuild -> HTTP 200`. Everything else SKIPPED.
 
-## 4. The role grants — two conformance cells
+## 4. The role grants — three conformance cells
 
 Applied by `scripts/migrate_outreach_roles.py`, which gained them 10-24-26.
 Merge-only: it never lowers or removes a level.
@@ -145,6 +145,7 @@ Merge-only: it never lowers or removes a level.
 |---|---|---|---|
 | Marketing Admin Role | `CConversation` | read `own` (the other actions explicit `no`) | The lead's page lists the lead's conversations **as the user** (`comms/service.list_conversations`). The sync stamps the mailbox owner into the conversation's `assignedUsers` (`comms/crm.stamp_owners`), so `own` reaches exactly the assignee's own threads — ruling 118's shape, and the Mentor Role's |
 | Marketing Admin Role | `CCommunication` | read `all` (the other actions explicit `no`) | The thread view reads the messages as the user (`comms/service.conversation_thread`). The Mentor Role holds the same; a message is reachable only through a conversation the user can read |
+| CustomAppAPIRole | `CProspect` | delete `all` (added 10-25-26, ruling 127; M4) | *Undo this import* deletes the untouched leads a batch created, under the org-wide key, one action-log row naming the person who pressed it (`campaigns/imports`, M4). No role held delete on a lead before; the Marketing Admin Role still does not. Applied on crm-test by Doug before M4's live pass; production at the arc's slot; Boston with its release |
 
 § 7e.11 names only the `CConversation` read. The `CCommunication` read is
 added because the code path reads both as the user — inferred from
@@ -253,5 +254,6 @@ keeps requiring a campaign.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 10-25-26 18:52 | Claude (Claude Code) | § 4 gains the third cell: `CustomAppAPIRole` delete on `CProspect` (ruling 127, M4's Undo). Not yet applied anywhere; M4's session adds it to `migrate_outreach_roles.py` and Doug runs it on crm-test before the live pass. |
 | 1.1 | 10-25-26 02:15 | Claude (Claude Code) | crm-test: plan and role grants applied by Doug; § 5 steps 1–4 passed (shape, org-wide key reads and a write-and-clear, role read-back, conformance unchanged). crm-test complete. |
 | 1.0 | 10-24-26 15:20 | Claude (Claude Code) | Written for build plan § 7e.11 with rulings 117–125 applied. Every item verified against crm-test's metadata and roles 10-24-26 (nothing written): all nine additions absent, `outreachCampaign` already not required, `assignedUser` already enabled, Assignment Permission already `all`. Plan `scripts/plans/marketing-redesign.json` dry-run: 9 changes, fingerprint `6bb03652454a`. Two read grants added to `scripts/migrate_outreach_roles.py`; its dry run shows exactly those two. `redesign` step added to `scripts/prospect_crm_test.sh`. Conformance baseline 21 conformant. Not applied. |

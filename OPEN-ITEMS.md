@@ -67,7 +67,11 @@ found; move resolved items to the bottom with the resolution date.
     Found* rows read back, counts 3 · 4 · 4 · 1). Found and fixed on the
     way: the row's link opened the old pop-up (v0.285.1, pushed 13:30).
     Not exercised live: the row's 409 refusal of a lead moved since
-    (unit-tested). Owed: M4 (the import tool, § 7e.7); the handoff on production
+    (unit-tested). **M4 plan approved 10-25-26 18:44** (four stops in one
+    session; ruling 127: Undo deletes under the org-wide key, the API role
+    gains delete on `CProspect` — handoff § 4's third cell, not yet
+    applied anywhere); run it from `prompts/m4-import-tool-kickoff.md` in
+    a fresh session. Owed: M4 itself; the handoff on production
     at the arc's slot and on Boston with its release; the layout question
     in the handoff's § 7.
 

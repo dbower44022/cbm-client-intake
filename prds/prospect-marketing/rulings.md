@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-25-26 11:13 · Revision 1.49 — change log at the end.
+Last Updated: 10-25-26 18:52 · Revision 1.50 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -1335,6 +1335,18 @@ both after the redesign. Doug's reply at 11:13: "a".
      the paste-into-a-notice address with M7, the caller's link with M10.
      Standing cost, weighed by Doug: an email carries no code until M7.
      (10-25-26)
+127. **An undone import's leads are deleted under the org-wide key, and
+     the application's API role gains delete on the lead record** (option
+     1 of three). Put as a consequential decision for M4 (build plan
+     § 7e.7, ruling 87): no role could delete a lead; option 1 keeps
+     deletion a machine write, action-logged with the person who pressed
+     Undo, like placement, codes and conversion; option 2 gave the
+     Marketing Admin Team a hand delete right on every lead; option 3 left
+     the leads Disqualified. Doug: "1". Standing cost: one more role cell
+     in `marketing-redesign-crm-handoff.md` § 4 on every CRM (crm-test by
+     script before M4's live pass, production at the arc's slot, Boston
+     with its release); the CRM's own history shows the deletion as the
+     application. (10-25-26)
 
 ---
 
@@ -1465,6 +1477,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.50 | 10-25-26 18:52 | Claude (Claude Code) | Ruling 127 appended: an undone import's leads deleted under the org-wide key, the API role gains delete on the lead record (Doug's "1", M4 plan approval). |
 | 1.49 | 10-25-26 11:13 | Claude (Claude Code) | Ruling 126 appended: the lead code's D2 next, D3's pieces inside § 7e's steps M2, M7 and M10 (Doug's "a"). Header revision corrected from 1.47. |
 | 1.48 | 10-23-26 03:53 | Claude (Claude Code) | Rulings 117–125 appended: build plan § 7e.12's nine Drafts, approved as recommended — six as drafted, Drafts 4, 6 and 7 as Claude's recommended change (Doug, 10-23-26). |
 | 1.47 | 10-23-26 01:20 | Claude (Claude Code) | Rulings 114–116 appended: Calls — callers from other teams see only the Calls tab; Calls holds campaign call lists only; the Calls layout (Doug, 10-23-26). |
