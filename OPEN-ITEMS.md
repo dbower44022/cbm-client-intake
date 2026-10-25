@@ -6,6 +6,21 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+59. **The postcard landing page misreads a printed address whose first line
+    is not the street, and saves the misreading** (found in the D1 live
+    pass, 10-25-26). `campaigns/service.parse_address_text` takes line 1 as
+    the street and line 2 as the city. The sandbox's demo touches print
+    the business name first, so Tremont Coffee Roasters' page showed street
+    "Tremont Coffee Roasters" and city "2368 W 11th St", and the response —
+    though nothing was edited — wrote those boxes onto the lead as a
+    correction (state and ZIP emptied). Cards the application prints
+    (`postcard.address_text`) start with the street, but a street with a
+    second line (a suite) shifts the same way. Fix owed: find the
+    "City, ST ZIP" line instead of counting lines, and write a correction
+    only for a box the person changed. crm-test's nightly reset restores
+    the lead. Not fixed on 10-25-26 because another session had uncommitted
+    edits in `campaigns/service.py`.
+
 57. **Marketing Management redesign — nine Drafts owed, then the build**
     (2026-10-23). Doug ruled the whole redesign 10-22/23-26 (rulings
     79–116, `prds/prospect-marketing/rulings.md` v1.47). The build is
@@ -116,9 +131,20 @@ found; move resolved items to the bottom with the resolution date.
     contact, resolve, per-form prefill, cleared after). Pushed and live on
     crm-test 10-22-26. The live pass found, before it ran, that the company
     box on the information request, partner and funder forms was never
-    filled (v0.278.3, committed, not pushed). Owed: the D1 live pass on
-    10-23-26 from https://claude.ai/artifact/1GY9zFFjfP16SiBXQJyHKz (rev
-    1.0), D2, D3; production and Boston with the arc's slot.
+    filled (v0.278.3, pushed). **D1 LIVE-PASSED on crm-test 10-25-26 11:10**
+    by Doug from https://claude.ai/artifact/1GY9zFFjfP16SiBXQJyHKz (rev 1.1),
+    read back by Claude as the org-wide key: Tremont's card opened the landing
+    page, which converted the lead and handed `lead=sbxscan23459` to the
+    information request; the contact Pat Roaster took the lead's code at
+    conversion (one code, two holders); the request's receipt carried
+    `lead_code` and no `prospect_id`; a form link filled the company for a
+    known code and nothing for an unknown one; Ohio City Bike Works' call
+    record counted the click with its outcome kept at *No answer*. The count
+    read 2 for one intended visit (a second open, or the browser fetching
+    the address while it was typed — not diagnosed); D3 must expect mail
+    scanners to inflate email clicks the same way. Owed: D2, D3 (where they
+    go beside the redesign is put to Doug 10-25-26); production and Boston
+    with the arc's slot. Finding outside D1: #59.
     **At the production slot, also do these two (added 10-22-26; both
     live-passed on crm-test 10-22-26 as Mark Marketing). Without them, no
     campaign action records any history on production:**

@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-25-26 02:15 · Revision 0.42 — change log at the end.
+Last Updated: 10-25-26 11:11 · Revision 0.43 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -1690,7 +1690,7 @@ industry column are part of L1.
 
 ## 7d. The lead identifier in every link (rulings 71–73; drafted 10-22-26 for approval)
 
-**Status: APPROVED (10-22-26 01:35) — question 20 answered A (ruling 74), the prefill table in § 7d.4 confirmed as written (ruling 75). The CRM handoff of § 7d.5 is written (10-22-26 01:42, `lead-code-crm-handoff.md`, plan fingerprint `bec909277859`, dry run clean on crm-test). Applied on crm-test 10-22-26 12:45–12:48 and read back. **D1 built 10-22-26 13:00 (v0.276.0, committed, not pushed)**; its live pass on crm-test is owed, then D2.** Rulings 71 to 73
+**Status: APPROVED (10-22-26 01:35) — question 20 answered A (ruling 74), the prefill table in § 7d.4 confirmed as written (ruling 75). The CRM handoff of § 7d.5 is written (10-22-26 01:42, `lead-code-crm-handoff.md`, plan fingerprint `bec909277859`, dry run clean on crm-test). Applied on crm-test 10-22-26 12:45–12:48 and read back. **D1 built 10-22-26 (v0.276.0) and LIVE-PASSED on crm-test 10-25-26 11:10.** Next: D2 and D3, whose place beside § 7e was put to Doug 10-25-26.** Rulings 71 to 73
 (10-22-26) say that every link delivered to a known person carries that
 person's lead identifier after the campaign link, that the identifier
 belongs to the person for life, and that each form decides for itself what
@@ -2814,6 +2814,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.43 | 10-25-26 11:11 | Claude (Claude Code) | § 7d: D1 live-passed on crm-test (10-25-26 11:10); the click count and the landing-address finding (OPEN-ITEMS #59) recorded there. |
 | 0.42 | 10-25-26 02:15 | Claude (Claude Code) | § 7e.11: the CRM handoff applied on crm-test by Doug and its § 5 proof passed; M2 unblocked. |
 | 0.41 | 10-24-26 15:20 | Claude (Claude Code) | § 7e.11: the CRM handoff written (`marketing-redesign-crm-handoff.md`, plan fingerprint `6bb03652454a`), verified against crm-test, not applied; two findings noted (`assignedUser` enabled, campaign link not required) and the `CCommunication` read added to the role grants. |
 | 0.40 | 10-24-26 14:46 | Claude (Claude Code) | § 7e.13 step M1 live-passed on crm-test (Doug, 36 steps; the D9 touch read back). Next: the CRM handoff, then M2. |
