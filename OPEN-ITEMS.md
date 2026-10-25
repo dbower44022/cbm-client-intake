@@ -60,7 +60,7 @@ found; move resolved items to the bottom with the resolution date.
     Identified leads*, the contacts row's write with `seenLevel`, AI
     research on every row filling the boxes from the lead's findings,
     ruling 121 in `enrichment.runs.decide`; rides `LEAD_LADDER`. Checked
-    against the stub harness and by tests; committed, not pushed. Owed:
+    against the stub harness and by tests; pushed 10-25-26 13:14. Owed:
     the M3 live pass on crm-test (step page
     https://claude.ai/artifact/CoUeWPYhsjV8pgf7GpA391, 16 steps as Mark
     Marketing),
