@@ -17,9 +17,11 @@ found; move resolved items to the bottom with the resolution date.
     Calls). The nine Drafts in § 7e.12 ruled 10-23-26 (rulings 117–125).
     M1 built (v0.279.0/.1) and live-passed on crm-test 10-24-26 14:46. The
     one CRM handoff (`marketing-redesign-crm-handoff.md`, plan fingerprint
-    `6bb03652454a`) written 10-24-26, verified against crm-test, **not
-    applied**. Owed: Doug runs `scripts/prospect_crm_test.sh redesign` then
-    `roles`; Claude's § 5 reads; then M2.
+    `6bb03652454a`) written 10-24-26 and **applied on crm-test 10-25-26**
+    by Doug; its § 5 proof passed 02:12 (shape, org-wide key write-and-
+    clear, role read-back, conformance unchanged). Owed: M2 (the ladder and
+    the Leads tab), then the handoff on production at the arc's slot and
+    on Boston with its release; the layout question in the handoff's § 7.
 
 53. **Attendee linking escalation — live pass owed** (v0.258.6, 2026-10-15).
     A mentor whose Mentor Role reads/edits `CSession` at "own" could not

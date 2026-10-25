@@ -1,6 +1,6 @@
 # CRM handoff — the Marketing Management redesign (build plan § 7e.11)
 
-Last Updated: 10-24-26 15:20 · Revision 1.0 — change log at the end.
+Last Updated: 10-25-26 02:15 · Revision 1.1 — change log at the end.
 
 **What changes:** five fields, three relationships and two enum options,
 plus two read grants on the Marketing Admin Role. This is the one CRM
@@ -10,7 +10,7 @@ outreach, the reply flag) with rulings 117 to 125 applied. Everything is
 additive. Nothing is Read-only. Every piece is feature-detected, so the
 application stays as it is until the field exists.
 
-**Steps M2 to M5 of the redesign are not built until § 5's reads pass.**
+**Steps M2 to M5 of the redesign are not built until § 5's reads pass** (passed on crm-test 10-25-26 02:12).
 M2 (the ladder) needs the four `CProspect` fields and the two `CProspect`
 links; M5 (personal outreach) needs the rest.
 
@@ -24,7 +24,7 @@ grants on the six entities read from `GET /Role`. Nothing was written.
 
 | CRM | State |
 |---|---|
-| crm-test | **Not applied.** Plan dry-run 10-24-26 15:03: 9 changes, 1 already correct, fingerprint `6bb03652454a`. Role script dry-run 15:06: exactly the two grants in § 4. Conformance baseline 15:10: 21 conformant, exit 0. |
+| crm-test | **Applied 10-25-26 ~02:00** by Doug (`redesign`: 9 changed, 9 verified, `outreachCampaign` already not required; `roles`: both grants read back OK, rebuild 200). **§ 5 passed 02:12** as the configuration administrator and the org-wide key: shape as § 1 (`User.cLevelSetLeads`, no `levelSetLeads` or `cCLevelSetLeads`; `cConversationProspect` on both sides; channel ends `Personal call, Personal email`; no `readOnly`); three list reads 200 and `CConversation/{id}/prospects` 200; a write of `Identified` + `replied true` on one lead (Dana Okoro) read back equal, then cleared to empty/false and read back; Marketing Admin Role `CConversation.read own`, `CCommunication.read all`; conformance identical to the baseline (21 conformant). **crm-test complete. M2 may start.** |
 | Production | Not started. Rides the arc's deferred production slot (Doug, 10-20-26: no slot until campaign testing is finished). |
 | Boston | Not started. With its release. |
 
@@ -253,4 +253,5 @@ keeps requiring a campaign.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 10-25-26 02:15 | Claude (Claude Code) | crm-test: plan and role grants applied by Doug; § 5 steps 1–4 passed (shape, org-wide key reads and a write-and-clear, role read-back, conformance unchanged). crm-test complete. |
 | 1.0 | 10-24-26 15:20 | Claude (Claude Code) | Written for build plan § 7e.11 with rulings 117–125 applied. Every item verified against crm-test's metadata and roles 10-24-26 (nothing written): all nine additions absent, `outreachCampaign` already not required, `assignedUser` already enabled, Assignment Permission already `all`. Plan `scripts/plans/marketing-redesign.json` dry-run: 9 changes, fingerprint `6bb03652454a`. Two read grants added to `scripts/migrate_outreach_roles.py`; its dry run shows exactly those two. `redesign` step added to `scripts/prospect_crm_test.sh`. Conformance baseline 21 conformant. Not applied. |
