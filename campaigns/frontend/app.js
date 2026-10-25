@@ -1615,17 +1615,21 @@
       if (opts.readonly) { input.readOnly = true; input.title = opts.readonly; }
     }
     input.setAttribute("aria-label", opts.label || field);
-    var was = input.value;
+    var was = input.value, saving = false;
     async function save() {
-      if (input.value === was) return;
-      var changes = {}; changes[field] = input.value;
+      // Enter saves and the page redraws, which blurs the box: the blur must
+      // not save the same value again (found on the live pass, 10-25-26).
+      if (saving || input.value === was) return;
+      var before = was, value = input.value;
+      was = value; saving = true;
+      var changes = {}; changes[field] = value;
       var done = window.CBMBusy ? CBMBusy.start(input) : function () {};
       try {
         var res = await api("/prospects/" + encodeURIComponent(LEAD_ID) + "/facts", { method: "PATCH", body: { changes: changes } });
         notice("Saved" + (res.level ? " — level now " + res.level : "") + ".", "ok");
         await loadLead();
-      } catch (e) { notice(e.message, "error"); input.value = was; }
-      finally { done(); }
+      } catch (e) { notice(e.message, "error"); was = before; input.value = before; }
+      finally { saving = false; done(); }
     }
     if (!opts.readonly) {
       input.addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); save(); } if (ev.key === "Escape") { input.value = was; input.blur(); } });

@@ -5,6 +5,15 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.284.1] — 2026-10-25
+
+**fix(campaigns): an inline gap on the lead's page saved twice.** Found at
+step 14 of the M2 live pass: Enter saved the value and the page redrew,
+which blurred the box, and the blur saved the same value again — the
+second write answered "Nothing changed." in red over a save that had
+worked. The box now remembers what it saved and refuses a second save of
+the same value while one is in flight. `campaigns/frontend/app.js` only.
+
 ## [0.284.0] — 2026-10-25
 
 **feat(campaigns): the qualification ladder and the Leads tab** — step M2 of
