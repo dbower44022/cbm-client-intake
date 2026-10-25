@@ -43,7 +43,9 @@ found; move resolved items to the bottom with the resolution date.
     https://claude.ai/artifact/EE5rBgsV4LxeiNTWqx4BVN); the double save on
     Enter found at step 14 is fixed in v0.284.1. `LEAD_LADDER` is on at
     crm-test's /setup; step 21's Convert re-run and read back 12:08 (all
-    23 steps hold). Owed: M3 (Review as the research queue); the handoff on production
+    23 steps hold). Owed: M3 (Review as the research queue — plan approved
+    12:14, run it from `prompts/m3-review-research-queue-kickoff.md` in a
+    fresh session); the handoff on production
     at the arc's slot and on Boston with its release; the layout question
     in the handoff's § 7.
 

@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-25-26 12:05 · Revision 0.46 — change log at the end.
+Last Updated: 10-25-26 12:22 · Revision 0.47 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -2552,6 +2552,9 @@ Team caller for M1 and M10).
    same release**: `leadcode.replace_for_lead` / `replace_for_contact`, the
    lead page's button and the Contact record page's two-press button.
 3. **M3: Review as the research queue** (§ 7e.6). About a day and a half.
+   Plan approved by Doug 10-25-26 12:14 (three stops, routine choices
+   recorded in the kickoff); to be run in one session from
+   `prompts/m3-review-research-queue-kickoff.md`.
 4. **M4: the import tool** (§ 7e.7), behind `IMPORT_TEMPLATES`. About
    five days.
 5. **M5: personal outreach** (§ 7e.5), behind `LEAD_OUTREACH`, after the
@@ -2843,7 +2846,7 @@ best-effort mirror.
 |---|---|
 | Document | Prospect Marketing — build plan |
 | Version | v0.26 — Phases 1–4 and the lead model built; §§ 7b and 7c built and live-passed on crm-test; § 7d (the lead identifier in every link, rulings 71–75) approved, D1 built; § 7e (the Marketing Management redesign, rulings 79–125) approved, steps M1 (v0.279.0) and M2 (v0.284.0) built |
-| Last Updated | 10-25-26 12:05 |
+| Last Updated | 10-25-26 12:22 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
 | Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
@@ -2852,6 +2855,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.47 | 10-25-26 12:22 | Claude (Claude Code) | § 7e.13 step M3: plan approved, kickoff prompt written (`prompts/m3-review-research-queue-kickoff.md`). |
 | 0.46 | 10-25-26 12:05 | Claude (Claude Code) | § 7e.13 step M2 live-passed on crm-test (Doug, 23 steps); v0.284.1 fix noted; step 21's conversion queried. Next: M3. |
 | 0.45 | 10-25-26 11:20 | Claude (Claude Code) | § 7e.13 step M2 built (v0.284.0): the ladder, the Leads tab, the lead's page; the routine choices recorded under the step. Live pass owed. |
 | 0.44 | 10-25-26 11:13 | Claude (Claude Code) | Ruling 126: § 7d.6's D2 next (with the text's `{link}`), D3 split into § 7e.13's M2, M7 and M10. |
