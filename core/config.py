@@ -584,6 +584,15 @@ class Settings(BaseSettings):
     # Needs marketing-redesign-crm-handoff.md on the CRM; feature-detected.
     lead_ladder: bool = False
     lead_level_sweep_seconds: int = 900   # 0 stops the sweep
+    # The import tool (build plan § 7e.7; rulings 79-88, 111, 123, 127): saved
+    # templates, Excel, recognition and the four fixes, the preview as a job
+    # in the delivery worker, fills on known leads, the level per row, Undo.
+    # Read per request. Off, the Imports tab and both import endpoints behave
+    # exactly as before. The worker claims a queued preview every
+    # IMPORT_PLAN_POLL_SECONDS (0 stops it; a deployment with no running
+    # worker then never previews — the page says so after two minutes).
+    import_templates: bool = False
+    import_plan_poll_seconds: int = 5
     # --- Lead enrichment, phase 1: the free pass (prds/lead-enrichment/) ---
     # The worker scores every open lead (design § 4, rulings E2, E12-E14):
     # the service-area gate, then three signals. Off by default; nothing is

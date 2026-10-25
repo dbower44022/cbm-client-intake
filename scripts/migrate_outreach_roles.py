@@ -72,7 +72,11 @@ NEW_ENTITIES: tuple[str, ...] = ("CProspect", "COutreachCampaign", "COutreachTou
 
 #: (role name, scope, minimum levels). Order matches the handoff's table.
 ROLE_SCOPE_GRANTS: list[tuple[str, str, dict[str, str]]] = [
-    ("CustomAppAPIRole", "CProspect", {"create": "yes", "read": "all", "edit": "all"}),
+    # Ruling 127 (10-25-26, M4): *Undo this import* deletes the untouched leads
+    # a batch created under the org-wide key, one action-log row naming the
+    # person who pressed it (campaigns/imports.undo_import). No role held
+    # delete on a lead before; the Marketing Admin Role still does not.
+    ("CustomAppAPIRole", "CProspect", {"create": "yes", "read": "all", "edit": "all", "delete": "all"}),
     ("CustomAppAPIRole", "COutreachTouch", {"create": "yes", "read": "all", "edit": "all"}),
     # Edit as well as read: the worker's run moves the campaign to Running and
     # Complete and stamps runStartedAt / runCompletedAt under this role. Read

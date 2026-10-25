@@ -1,6 +1,6 @@
 # campaigns/ — Marketing Management (was Campaign Management)
 
-Last Updated: 10-25-26 12:36 · Revision 1.8
+Last Updated: 10-25-26 19:30 · Revision 1.9
 
 Detail for Campaign Management (`/campaigns`, prospect marketing Phases 1 to 4 and the lead model): links, postcards, the landing page, imports, the Leads and Review grids, calls, texts, email, attribution and reporting.
 
@@ -349,6 +349,30 @@ the reason.
   lead fills the lead's own empty person fields and creates no Contact
   (ruling 43 stands). The Review thead is drawn by `app.js`
   (`REVIEW_COLUMNS`) from the mode, like the Leads grid's.
+- **The import tool** (v0.286.0, build plan § 7e.7 — step M4, rulings
+  79–88, 111, 123, 127; dark behind **`IMPORT_TEMPLATES`**, read per
+  request; migration 0035; `openpyxl`). `campaigns/import_templates.py`
+  holds the template table, the mapping and its four fixes, recognition
+  and the required check; `campaigns/imports.py` the file reader
+  (`read_file`: CSV and `.xlsx`, a `SheetChoice` for several sheets), the
+  queued plan (`queue_plan` → the worker's `run_plan_cycle` →
+  `plan_batch_now`; dry-run plans inline), the fourth outcome `fills`, the
+  level per row and `undo_import`. **The preview never runs in a web
+  request** (ruling 123): the batch row carries `plan_status`, the page
+  polls `GET /prospects/import/{batchId}`. **The apply writes what the
+  preview showed**: the plan's `ladder` flag decides the level, not the
+  switch at apply time. *Enters at* Qualified still needs a website or an
+  email (ruling 42's floor). **Undo deletes under the org-wide key**
+  (ruling 127; the API role's `delete` on `CProspect` is in
+  `migrate_outreach_roles.py`), only leads nobody touched
+  (`touched_reasons` — a change within `UNDO_WINDOW` of the write is the
+  import's own), forgets their ledger rows, lists the rest; fills stay.
+  With the switch off, `plan_import` is the CSV path exactly as before
+  and a known row is skipped, not filled. The tab is `imports.js`
+  (ids `im_`), handed the Imports tab by `app.js`'s `loadImports` /
+  `openImport` when the session says `importTemplatesOn`; it never
+  registers an `onShow`. The demo template is restored nightly with the
+  demo links (`sandbox_demo.restore_demo_template`).
 - Owed: nothing on production's CRM (both slots done 10-18-26; every
   campaign switch off there — turning one on is Doug's call at `/setup`);
   Boston with its release; a seeder and sandbox re-baseline; the Twilio
@@ -359,6 +383,7 @@ the reason.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.9 | 10-25-26 19:30 | Claude (Claude Code) | The import tool (v0.286.0, § 7e.7, M4): templates, Excel, the worker preview, fills, the level per row, Undo under the org-wide key, the Imports tab script. |
 | 1.8 | 10-25-26 12:36 | Claude (Claude Code) | Review as the research queue (v0.285.0, § 7e.6, M3): the two modes, `seenLevel`, suggestions and `close_findings`, ruling 121 in `decide`. |
 | 1.7 | 10-25-26 11:15 | Claude (Claude Code) | The qualification ladder and the Leads tab (v0.284.0, § 7e.3–7e.4, M2): `ladder.py`, `after_write`, the sweep, the counts, Assign to, the lead's page. |
 | 1.6 | 10-23-26 01:33 | Claude (Claude Code) | One page, six tabs (v0.279.0, § 7e.2 M1): the shared object, the id prefixes, `callerOnly`, the ruling-number guard; the two old page addresses now redirects. |

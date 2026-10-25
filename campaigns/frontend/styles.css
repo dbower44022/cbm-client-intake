@@ -167,3 +167,27 @@ a.cm__navbtn { text-decoration: none; color: inherit; display: inline-block; }
 .cm__notes { white-space: pre-wrap; margin: 0; font-size: .92rem; }
 .cm__badge--identified { background: #e8edf0; } .cm__badge--contactable { background: #e3ecfb; color: #1f4b8f; } .cm__badge--referred { background: #e5f4ea; color: #1d6b3a; }
 .cm__badge--disqualified, .cm__badge--stopped { background: #f1e3e3; color: #7a2727; } .cm__badge--converted { background: #dfe9e6; color: #27514a; }
+
+/* The import tool (build plan § 7e.7): templates and history on the Imports tab, the
+   mapping grid with a fix picker beside each column, the preview's walk-through. */
+.cm__importtool { display: none; gap: 1.25rem; }
+body.cm--import-tool .cm__importtool { display: grid; }
+body.cm--import-tool #importsGrid, body.cm--import-tool #importsEmpty, body.cm--import-tool #importsCount { display: none; }
+.cm__block { display: grid; gap: .6rem; }
+.cm__h2 { margin: 0; font-size: 1.05rem; font-family: "Roboto Slab", Georgia, serif; }
+.cm__rowactions { display: flex; gap: .35rem; flex-wrap: wrap; white-space: nowrap; }
+.cm__smallbtn { padding: .2rem .6rem; font-size: .82rem; }
+.cm__mapgrid select { font: inherit; font-size: .9rem; max-width: 100%; }
+.cm__fixrows { display: grid; gap: .4rem; }
+.cm__fixrow { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; }
+.cm__fixrow select, .cm__fixrow input { font: inherit; font-size: .9rem; padding: .3rem .4rem; border: 1px solid var(--cbm-border, #c9d1d8); border-radius: 4px; }
+.cm__fixrow input.cm__joinwith { width: 4.5rem; }
+.cm__difflist { margin: 0; padding-left: 1.2rem; display: grid; gap: .3rem; font-size: .92rem; }
+.cm__diff--missing { color: var(--cbm-error, #8f1d1d); }
+.cm__check { display: inline-flex; gap: .4rem; align-items: baseline; }
+.cm__walk td { vertical-align: top; }
+.cm__walk tr.cm__row--excluded td { color: var(--cbm-muted, #4b5a63); text-decoration: line-through; }
+.cm__walk tr.cm__row--excluded td.cm__tick { text-decoration: none; }
+.cm__pairs { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: .1rem .6rem; font-size: .85rem; }
+.cm__pairs dt { color: var(--cbm-muted, #4b5a63); } .cm__pairs dd { margin: 0; }
+.cm__plan > .cbm-button { justify-self: start; }

@@ -34,6 +34,7 @@ from forms import SPECS_BY_SLUG
 
 from . import config as cfg
 from . import audience, calls, email as email_kind, imports, ladder, leadcode, leads, postcard, reporting, review, service, sms
+from . import import_templates as tpl
 from .conversion import CompanyConflict, ConversionRefused, Details, can_convert, convert_lead
 from .reporting import summarize_responses  # noqa: F401 — re-exported
 from .public import destination_path
@@ -194,6 +195,8 @@ async def session(request: Request) -> dict[str, Any]:
         "smsOn": settings.campaigns_sms,
         "listsOn": settings.campaign_lists,
         "ladderOn": settings.lead_ladder,
+        "importTemplatesOn": settings.import_templates,
+        "importSources": list(cfg.IMPORT_SOURCES),
         "levels": list(cfg.LEVELS),
         "sms": {"provider": settings.sms_provider, "hours": settings.sms_send_hours,
                 "timezone": settings.sms_timezone, "stages": list(sms.TEXTABLE_STAGES)},
@@ -1003,6 +1006,12 @@ async def recent_imports(request: Request) -> dict[str, Any]:
         "status": b["status"], "createdAt": b["created_at"].isoformat() if b.get("created_at") else None,
         "appliedAt": b["applied_at"].isoformat() if b.get("applied_at") else None,
         "counts": (b.get("plan") or {}).get("counts"), "result": b.get("result"),
+        # M4: the preview job, the file and template, the Undo stamp.
+        "planStatus": b.get("plan_status"), "fileName": b.get("file_name"),
+        "templateName": (b.get("plan") or {}).get("templateName") or "",
+        "excluded": len(b.get("excluded_rows") or []),
+        "undoneAt": b["undone_at"].isoformat() if b.get("undone_at") else None,
+        "undoneBy": b.get("undone_by"), "undoResult": b.get("undo_result"),
     } for b in rows]}
 
 
@@ -1225,28 +1234,184 @@ async def convert_prospect(prospect_id: str, request: Request) -> dict[str, Any]
     return {"converted": done.result()}
 
 
+def _require_templates(settings: Settings) -> None:
+    if not settings.import_templates:
+        raise HTTPException(status_code=404, detail="Import templates are switched off (IMPORT_TEMPLATES at /setup).")
+
+
 class ImportPlanIn(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     source: str = cfg.SOURCE_FILING
-    text: str
+    #: The CSV path as it has always worked: the file's text.
+    text: str = ""
     qualifiedBy: str = ""
     listSource: str = ""
+    #: M4 (IMPORT_TEMPLATES): the file as base64 inside the JSON, never
+    #: multipart; a sheet for a workbook with several; the template, or a
+    #: one-off mapping with the template's settings.
+    fileBase64: str = ""
+    fileName: str = ""
+    sheet: str = ""
+    templateId: str = ""
+    mapping: Optional[list[dict[str, Any]]] = None
+    entersAt: str = ""
+    referrerPartnerId: str = ""
+    referrerPartnerName: str = ""
+
+
+async def _template_or_404(store, template_id: str) -> dict[str, Any]:
+    row = await store.get_template(template_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="That import template was not found.")
+    return row
+
+
+async def _plan_settings_from(body: ImportPlanIn, store) -> dict[str, Any]:
+    if body.templateId:
+        template = await _template_or_404(store, body.templateId)
+        return tpl.plan_settings(template, door=template["door"])
+    try:
+        mapping = tpl.validate_mapping(body.mapping or [])
+    except CampaignError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    enters_at = body.entersAt.strip() or tpl.ENTERS_UNQUALIFIED
+    if enters_at not in tpl.ENTERS_AT:
+        raise HTTPException(status_code=400, detail="Enters at is Unqualified or Qualified.")
+    return tpl.plan_settings(None, door=body.source, qualified_by=body.qualifiedBy.strip(),
+                             list_source=body.listSource.strip(), enters_at=enters_at,
+                             referrer_partner_id=body.referrerPartnerId.strip(),
+                             referrer_partner_name=body.referrerPartnerName.strip(), mapping=mapping)
+
+
+def _read_table(body_file: str, name: str, sheet: str, text: str) -> tuple[dict[str, Any], str]:
+    """The uploaded file as a table, plus its hash. A workbook with several
+    sheets answers 409 with the sheet names; the page asks and posts again."""
+    try:
+        if body_file:
+            data = imports.decode_file(body_file)
+            return imports.read_file(name, data, sheet or None), imports.bytes_hash(data)
+        return imports.read_file(name or "file.csv", text, None), imports.file_hash(text)
+    except imports.SheetChoice as exc:
+        raise HTTPException(status_code=409, detail={"sheets": exc.sheets, "message": str(exc)})
+    except CampaignError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @api_router.post("/prospects/import/plan")
 async def import_plan(body: ImportPlanIn, request: Request) -> dict[str, Any]:
     user, client = _actor(request)
     settings = get_settings()
-    api_client = _api_client(settings, request)
+    api_client = None if settings.espo_dry_run else _api_client(settings, request)
     store = _store(request)
+    templated = settings.import_templates and (body.fileBase64 or body.templateId or body.mapping is not None)
+    if not templated:
+        # The CSV path, exactly as before the import tool.
+        if api_client is None:
+            api_client = _api_client(settings, request)
+        try:
+            plan = await imports.plan_import(api_client, store, text=body.text, name=body.name.strip(), door=body.source,
+                                             qualified_by=body.qualifiedBy.strip(), list_source=body.listSource.strip())
+        except CampaignError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not plan the import")
+        return plan
+    plan_settings = await _plan_settings_from(body, store)
+    table, sha = _read_table(body.fileBase64, body.fileName, body.sheet, body.text)
     try:
-        plan = await imports.plan_import(api_client, store, text=body.text, name=body.name.strip(), door=body.source,
-                                         qualified_by=body.qualifiedBy.strip(), list_source=body.listSource.strip())
+        batch = await imports.queue_plan(store, name=body.name.strip(), settings=plan_settings, table=table,
+                                         file_sha256=sha, file_name=body.fileName or "file.csv",
+                                         created_by=user.get("name") or user.get("userName") or "")
+    except CampaignError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    if settings.espo_dry_run:
+        # Dev has no worker worth waiting for: plan inline, so the harness and
+        # the tests see the finished preview at once.
+        inline = getattr(request.app.state, "import_plan_client", None) or client
+        try:
+            await imports.plan_batch_now(inline, store, batch["id"], ladder=False)
+        except CampaignError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not plan the import")
+        except Exception as exc:  # noqa: BLE001 — recorded on the batch; the poll shows it
+            log.warning("inline import plan failed: %s", exc)
+    return imports.plan_payload(await store.get_batch(batch["id"]))
+
+
+@api_router.get("/prospects/import/{batch_id}")
+async def import_status(batch_id: str, request: Request) -> dict[str, Any]:
+    """The poll while the worker plans (ruling 123), and the plan once ready."""
+    _actor(request)
+    store = _store(request)
+    batch = await store.get_batch(batch_id)
+    if not batch:
+        raise HTTPException(status_code=404, detail="That import was not found.")
+    return imports.plan_payload(batch)
+
+
+class ExcludedIn(BaseModel):
+    hashes: list[str] = Field(default_factory=list, max_length=5000)
+
+
+@api_router.put("/prospects/import/{batch_id}/excluded")
+async def import_excluded(batch_id: str, body: ExcludedIn, request: Request) -> dict[str, Any]:
+    """Per-row exclude (ruling 83): the row hashes the apply skips."""
+    _actor(request)
+    settings = get_settings()
+    _require_templates(settings)
+    store = _store(request)
+    batch = await store.get_batch(batch_id)
+    if not batch:
+        raise HTTPException(status_code=404, detail="That import was not found.")
+    if batch.get("status") == "applied":
+        raise HTTPException(status_code=400, detail="This import has been applied; nothing more can be excluded.")
+    known = {e["hash"] for e in (batch.get("plan") or {}).get("rows") or []}
+    hashes = [h for h in body.hashes if h in known]
+    await store.set_excluded_rows(batch_id, hashes)
+    return {"batchId": batch_id, "excludedRows": sorted(set(hashes))}
+
+
+class UndoIn(BaseModel):
+    #: Delete at most this many of the batch's leads, then answer with
+    #: ``remaining``; the page calls again until it is 0.
+    maxLeads: Optional[int] = Field(default=None, ge=1, le=500)
+
+
+@api_router.post("/prospects/import/{batch_id}/undo")
+async def import_undo(batch_id: str, body: UndoIn, request: Request) -> dict[str, Any]:
+    """*Undo this import* (rulings 87, 127)."""
+    user, client = _actor(request)
+    settings = get_settings()
+    _require_templates(settings)
+    api_client = getattr(request.app.state, "import_plan_client", None) if settings.espo_dry_run else None
+    api_client = api_client or _api_client(settings, request)
+    store = _store(request)
+    batch = await store.get_batch(batch_id)
+    if not batch:
+        raise HTTPException(status_code=404, detail="That import was not found.")
+    actor = user.get("name") or user.get("userName") or ""
+    try:
+        result = await imports.undo_import(api_client, store, batch, actor=actor, max_leads=body.maxLeads)
     except CampaignError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
-        raise _crm_failure(request, exc, "Could not plan the import")
-    return plan
+        raise _crm_failure(request, exc, "Could not undo the import")
+    if result["done"]:
+        total = result["total"]
+        first_id = (total.get("deleted") or [None])[0] or (total.get("touched") or [{}])[0].get("id") \
+            or await store.first_prospect_id(batch_id)
+        if first_id:
+            await record_action(
+                api_client, app=APP_CAMPAIGNS, category=CAT_STATUS, action="Import Undone",
+                parent_type=cfg.PROSPECT, parent_id=first_id,
+                summary=(f"Undid the import \"{batch['name']}\": {len(total.get('deleted') or [])} leads deleted, "
+                         f"{len(total.get('touched') or [])} touched and left"),
+                actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+                details={"deleted": total.get("deleted") or [], "touched": total.get("touched") or [],
+                         "pressedBy": actor},
+            )
+    return {"batchId": batch_id, "result": result}
 
 
 class ImportApplyIn(BaseModel):
@@ -1260,7 +1425,8 @@ class ImportApplyIn(BaseModel):
 async def import_apply(body: ImportApplyIn, request: Request) -> dict[str, Any]:
     user, client = _actor(request)
     settings = get_settings()
-    api_client = _api_client(settings, request)
+    api_client = getattr(request.app.state, "import_plan_client", None) if settings.espo_dry_run else None
+    api_client = api_client or _api_client(settings, request)
     store = _store(request)
     batch = await store.get_batch(body.batchId)
     if not batch:
@@ -1283,17 +1449,20 @@ async def import_apply(body: ImportApplyIn, request: Request) -> dict[str, Any]:
         if result.get("remaining") or result.get("errors"):
             return {"batchId": batch["id"], "result": result}
         counts = (batch.get("plan") or {}).get("counts") or {}
+        excluded = len(batch.get("excluded_rows") or [])
         first_id = first_id or await store.first_prospect_id(batch["id"])
         result_summary = {"created": counts.get("create", 0), "qualified": counts.get("qualified", 0),
                           "unqualified": counts.get("unqualified", 0), "duplicates": counts.get("alreadyKnown", 0),
-                          "errors": 0}
+                          "filled": counts.get("fills", 0), "excluded": excluded, "errors": 0}
         if first_id:
             await record_action(
                 client, app=APP_CAMPAIGNS, category=CAT_RECORD_EDIT, action="Leads Imported",
                 parent_type=cfg.PROSPECT, parent_id=first_id,
                 summary=(f"Imported \"{batch['name']}\" ({batch['door']}) in parts: {result_summary['created']} leads "
                          f"({result_summary['qualified']} Qualified, {result_summary['unqualified']} Unqualified), "
-                         f"{result_summary['duplicates']} duplicates"),
+                         f"{result_summary['duplicates']} duplicates"
+                         + (f", {result_summary['filled']} leads filled" if result_summary["filled"] else "")
+                         + (f", {excluded} rows excluded" if excluded else "")),
                 actor_id=user.get("userId", ""), actor_name=user.get("name", ""), details=result_summary,
             )
         return {"batchId": batch["id"], "result": result}
@@ -1307,6 +1476,109 @@ async def import_apply(body: ImportApplyIn, request: Request) -> dict[str, Any]:
             actor_id=user.get("userId", ""), actor_name=user.get("name", ""), details=result,
         )
     return {"batchId": batch["id"], "result": result}
+
+
+# --- import templates (rulings 79, 81, 82; M4) ------------------------------------------------
+
+class RecogniseIn(BaseModel):
+    fileBase64: str = ""
+    fileName: str = ""
+    sheet: str = ""
+    text: str = ""
+
+
+@api_router.post("/prospects/import/recognise")
+async def import_recognise(body: RecogniseIn, request: Request) -> dict[str, Any]:
+    """The file's headers → the suggested template with its differences, every
+    template's score, and the first rows for the mapping screen."""
+    _actor(request)
+    settings = get_settings()
+    _require_templates(settings)
+    store = _store(request)
+    table, sha = _read_table(body.fileBase64, body.fileName, body.sheet, body.text)
+    templates = await store.list_templates()
+    found = tpl.recognise(templates, table["columns"])
+    return {"columns": table["columns"], "rowCount": len(table["rows"]), "sheet": table.get("sheet"),
+            "sample": table["rows"][:3], "fileSha256": sha,
+            "priorBatch": ({"id": prior["id"], "appliedAt": prior["applied_at"].isoformat()}
+                           if (prior := await store.find_batch_by_file(sha)) else None),
+            "suggested": found["suggested"], "candidates": found["candidates"],
+            "identityMapping": tpl.identity_mapping(table["columns"]),
+            "fields": [{"name": k, "label": v} for k, v in tpl.FIELD_LABELS.items()]}
+
+
+async def _template_log_parent(store, template: dict[str, Any]) -> Optional[str]:
+    """The lead a template's history row hangs on: the first lead of its last
+    batch. With none there is no record to hang it on, and — as the import's
+    own history row does — the entry is skipped rather than refused."""
+    if template.get("last_batch_id"):
+        return await store.first_prospect_id(template["last_batch_id"])
+    return None
+
+
+async def _log_template(request: Request, client, store, template: dict[str, Any], action: str, user: dict) -> None:
+    parent = await _template_log_parent(store, template)
+    if not parent:
+        log.info("import template %s (%s) by %s — no lead to record the history on yet",
+                 action.lower(), template.get("name"), user.get("name"))
+        return
+    await record_action(
+        client, app=APP_CAMPAIGNS, category=CAT_RECORD_EDIT, action=action,
+        parent_type=cfg.PROSPECT, parent_id=parent,
+        summary=f"{action}: \"{template.get('name')}\" ({template.get('door')}, enters {template.get('enters_at')})",
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+        details={"templateId": template.get("id"), "mapping": template.get("mapping")},
+    )
+
+
+@api_router.get("/import-templates")
+async def import_templates_list(request: Request) -> dict[str, Any]:
+    _actor(request)
+    _require_templates(get_settings())
+    store = _store(request)
+    return {"templates": [tpl.template_payload(t) for t in await store.list_templates()],
+            "fields": [{"name": k, "label": v} for k, v in tpl.FIELD_LABELS.items()],
+            "entersAt": list(tpl.ENTERS_AT), "sources": list(cfg.IMPORT_SOURCES)}
+
+
+@api_router.post("/import-templates")
+async def import_template_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
+    user, client = _actor(request)
+    _require_templates(get_settings())
+    store = _store(request)
+    try:
+        values = tpl.validate_template(body)
+    except CampaignError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    row = await store.create_template(values, actor=user.get("name") or user.get("userName") or "")
+    await _log_template(request, client, store, row, "Import Template Created", user)
+    return {"template": tpl.template_payload(row)}
+
+
+@api_router.put("/import-templates/{template_id}")
+async def import_template_update(template_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+    user, client = _actor(request)
+    _require_templates(get_settings())
+    store = _store(request)
+    await _template_or_404(store, template_id)
+    try:
+        values = tpl.validate_template(body)
+    except CampaignError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    row = await store.update_template(template_id, values, actor=user.get("name") or user.get("userName") or "")
+    await _log_template(request, client, store, row, "Import Template Changed", user)
+    return {"template": tpl.template_payload(row)}
+
+
+@api_router.delete("/import-templates/{template_id}")
+async def import_template_delete(template_id: str, request: Request) -> dict[str, Any]:
+    user, client = _actor(request)
+    _require_templates(get_settings())
+    store = _store(request)
+    row = await _template_or_404(store, template_id)
+    await store.delete_template(template_id)
+    await _log_template(request, client, store, row, "Import Template Deleted", user)
+    return {"deleted": template_id}
 
 
 

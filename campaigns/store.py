@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 from sqlalchemy import (
@@ -24,9 +24,12 @@ from sqlalchemy import (
     Integer,
     String,
     Table,
+    Text,
     UniqueConstraint,
     and_,
+    delete,
     func,
+    or_,
     select,
     update,
 )
@@ -37,7 +40,8 @@ from core.config import Settings
 from core.store import make_async_engine, metadata, submission
 
 from . import config as cfg
-from .audience_store import AudienceStoreMixin
+from .audience_store import AudienceStoreMixin, STATE_IN, audience_list_member
+from .import_templates import ImportTemplateStoreMixin
 from .tokens import new_link_token
 
 campaign_link = Table(
@@ -87,7 +91,21 @@ prospect_import_batch = Table(
     Column("created_by", String(128)),
     Column("created_at", DateTime(timezone=True), nullable=False),
     Column("applied_at", DateTime(timezone=True)),
+    # M4 (migration 0035): the rows the reviewer excluded, the Undo stamp
+    # (ruling 87), the preview as a worker job (ruling 123), the template and
+    # file the batch came from.
+    Column("excluded_rows", JSONB),
+    Column("undone_at", DateTime(timezone=True)),
+    Column("undone_by", String(128)),
+    Column("undo_result", JSONB),
+    Column("plan_status", String(16)),
+    Column("plan_error", Text),
+    Column("plan_progress", JSONB),
+    Column("plan_claimed_at", DateTime(timezone=True)),
+    Column("template_id", String(36)),
+    Column("file_name", String(255)),
     Index("ix_prospect_import_batch_file", "file_sha256"),
+    Index("ix_prospect_import_batch_plan", "plan_status"),
 )
 
 prospect_import_row = Table(
@@ -124,6 +142,14 @@ lead_level_manual = Table(
 BATCH_PLANNED = "planned"
 BATCH_APPLIED = "applied"
 
+#: The preview as a worker job (ruling 123). None on a batch planned inline.
+PLAN_QUEUED = "queued"
+PLAN_RUNNING = "running"
+PLAN_READY = "ready"
+PLAN_FAILED = "failed"
+#: A plan left ``running`` with no progress for this long is taken again.
+PLAN_LEASE = timedelta(minutes=10)
+
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
@@ -146,7 +172,7 @@ def agent_class(user_agent: str) -> str:
     return "desktop"
 
 
-class CampaignStore(AudienceStoreMixin):
+class CampaignStore(AudienceStoreMixin, ImportTemplateStoreMixin):
     """Links, visits and the import ledger. One engine per store, like the
     other ``_engine.begin()`` stores in this application."""
 
@@ -390,13 +416,17 @@ class CampaignStore(AudienceStoreMixin):
 
     async def create_batch(
         self, *, name: str, door: str, file_sha256: str, row_count: int,
-        plan: dict[str, Any], created_by: str,
+        plan: dict[str, Any], created_by: str, plan_status: Optional[str] = None,
+        template_id: Optional[str] = None, file_name: Optional[str] = None,
     ) -> dict[str, Any]:
         row = {
             "id": str(uuid.uuid4()), "name": name, "door": door,
             "file_sha256": file_sha256, "row_count": row_count,
             "status": BATCH_PLANNED, "plan": plan, "result": None,
             "created_by": created_by, "created_at": _now(), "applied_at": None,
+            "excluded_rows": None, "undone_at": None, "undone_by": None, "undo_result": None,
+            "plan_status": plan_status, "plan_error": None, "plan_progress": None,
+            "plan_claimed_at": None, "template_id": template_id, "file_name": file_name,
         }
         async with self._engine.begin() as conn:
             await conn.execute(prospect_import_batch.insert().values(**row))
@@ -457,6 +487,133 @@ class CampaignStore(AudienceStoreMixin):
                 .order_by(prospect_import_batch.c.created_at.desc()).limit(limit)
             )).mappings().all()
         return [dict(r) for r in rows]
+
+    # --- the preview as a worker job (ruling 123) ---------------------------------
+
+    async def claim_plan(self, now: Optional[datetime] = None) -> Optional[dict[str, Any]]:
+        """Take one batch whose plan is queued — or left running past its lease
+        by a worker that died — and mark it running. Oldest first."""
+        now = now or _now()
+        b = prospect_import_batch
+        async with self._engine.begin() as conn:
+            row = (await conn.execute(
+                select(b).where(or_(b.c.plan_status == PLAN_QUEUED,
+                                    and_(b.c.plan_status == PLAN_RUNNING,
+                                         or_(b.c.plan_claimed_at.is_(None), b.c.plan_claimed_at < now - PLAN_LEASE))))
+                .order_by(b.c.created_at).limit(1).with_for_update(skip_locked=True)
+            )).mappings().first()
+            if not row:
+                return None
+            await conn.execute(update(b).where(b.c.id == row["id"])
+                               .values(plan_status=PLAN_RUNNING, plan_claimed_at=now))
+        out = dict(row)
+        out["plan_status"] = PLAN_RUNNING
+        return out
+
+    async def set_plan_progress(self, batch_id: str, progress: dict[str, Any]) -> None:
+        """What the worker has done so far (``rows checked of n``); the stamp
+        doubles as the lease."""
+        b = prospect_import_batch
+        async with self._engine.begin() as conn:
+            await conn.execute(update(b).where(b.c.id == batch_id)
+                               .values(plan_progress=progress, plan_claimed_at=_now()))
+
+    async def finish_plan(self, batch_id: str, *, plan: Optional[dict[str, Any]], status: str,
+                          error: Optional[str] = None, row_count: Optional[int] = None) -> None:
+        b = prospect_import_batch
+        values: dict[str, Any] = {"plan_status": status, "plan_error": error, "plan_progress": None}
+        if plan is not None:
+            values["plan"] = plan
+        if row_count is not None:
+            values["row_count"] = row_count
+        async with self._engine.begin() as conn:
+            await conn.execute(update(b).where(b.c.id == batch_id).values(**values))
+
+    async def set_excluded_rows(self, batch_id: str, hashes: list[str]) -> None:
+        b = prospect_import_batch
+        async with self._engine.begin() as conn:
+            await conn.execute(update(b).where(b.c.id == batch_id).values(excluded_rows=sorted(set(hashes))))
+
+    # --- fills and Undo (rulings 84, 87) -----------------------------------------
+
+    async def leads_for_hashes(self, hashes: list[str]) -> dict[str, str]:
+        """``{row hash: lead id}`` for the rows an earlier apply created — the
+        lead a repeat row fills (ruling 84). The create's own ledger row wins
+        over a later fill's."""
+        if not hashes:
+            return {}
+        r = prospect_import_row
+        async with self._engine.begin() as conn:
+            rows = (await conn.execute(
+                select(r.c.row_hash, r.c.prospect_id, r.c.outcome)
+                .where(and_(r.c.row_hash.in_(hashes), r.c.prospect_id.isnot(None)))
+                .order_by(r.c.created_at)
+            )).all()
+        out: dict[str, str] = {}
+        for row_hash, prospect_id, outcome in rows:
+            if row_hash not in out or outcome != "fills":
+                out[row_hash] = prospect_id
+        return out
+
+    async def batch_row_hashes(self, batch_id: str) -> set[str]:
+        """The rows THIS batch has recorded — what makes a part-by-part apply
+        resumable for fills too (a fill's hash is known across batches by
+        definition, so the across-batch check cannot tell done from to-do)."""
+        r = prospect_import_row
+        async with self._engine.begin() as conn:
+            rows = (await conn.execute(select(r.c.row_hash).where(r.c.batch_id == batch_id))).all()
+        return {x[0] for x in rows}
+
+    async def batch_created_leads(self, batch_id: str) -> list[dict[str, Any]]:
+        """The leads this batch CREATED (new leads and Duplicate-exit leads
+        alike), oldest first — what Undo may delete. Fills are not here."""
+        r = prospect_import_row
+        async with self._engine.begin() as conn:
+            rows = (await conn.execute(
+                select(r.c.prospect_id, r.c.row_hash, r.c.business_name, r.c.created_at, r.c.outcome)
+                .where(and_(r.c.batch_id == batch_id, r.c.prospect_id.isnot(None), r.c.outcome != "fills"))
+                .order_by(r.c.created_at, r.c.id)
+            )).mappings().all()
+        return [dict(x) for x in rows]
+
+    async def forget_rows(self, batch_id: str, prospect_ids: list[str]) -> None:
+        """Drop the ledger rows of leads Undo deleted, so their hashes are no
+        longer known and a later import creates them again."""
+        if not prospect_ids:
+            return
+        r = prospect_import_row
+        async with self._engine.begin() as conn:
+            await conn.execute(delete(r).where(and_(r.c.batch_id == batch_id, r.c.prospect_id.in_(prospect_ids))))
+
+    async def record_undo(self, batch_id: str, *, deleted: list[str], touched: list[dict[str, Any]],
+                          errors: list[dict[str, Any]], done: bool, actor: str) -> dict[str, Any]:
+        """Merge one Undo part into the batch's ``undo_result``; stamp the batch
+        undone when the last part finishes."""
+        b = prospect_import_batch
+        current = await self.get_batch(batch_id) or {}
+        result = dict(current.get("undo_result") or {"deleted": [], "touched": [], "errors": []})
+        result["deleted"] = list(result.get("deleted") or []) + list(deleted)
+        known = {t.get("id") for t in result.get("touched") or []}
+        result["touched"] = list(result.get("touched") or []) + [t for t in touched if t.get("id") not in known]
+        result["errors"] = list(errors)
+        values: dict[str, Any] = {"undo_result": result}
+        if done:
+            values.update(undone_at=_now(), undone_by=actor)
+        async with self._engine.begin() as conn:
+            await conn.execute(update(b).where(b.c.id == batch_id).values(**values))
+        return result
+
+    async def list_memberships(self, target_keys: list[str]) -> set[str]:
+        """Which of these targets sit in any campaign list (ruling 87's
+        "membership of any list")."""
+        if not target_keys:
+            return set()
+        m = audience_list_member
+        async with self._engine.begin() as conn:
+            rows = (await conn.execute(
+                select(m.c.target_key).where(and_(m.c.target_key.in_(target_keys), m.c.state == STATE_IN)).distinct()
+            )).all()
+        return {x[0] for x in rows}
 
 
 def make_campaign_store(settings: Settings) -> Optional[CampaignStore]:

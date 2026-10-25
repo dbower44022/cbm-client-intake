@@ -364,6 +364,18 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="How often the worker re-places the level of leads edited since its last pass "
             "(catches edits made in the CRM's own screens). 0 stops the sweep; "
             "/setup → Operations → Lead levels still runs it by hand."),
+    _s("import_templates", GROUP_FEATURES, "Import templates", kind="bool", component="both",
+       help="The import tool on the Imports tab: saved templates for recurring spreadsheets, "
+            "Excel as well as CSV, recognition of the matching template with the differences "
+            "shown, the four column fixes, a preview the delivery worker computes while the "
+            "page polls, repeat rows filling a lead's empty fields, the level per row, and "
+            "Undo this import. Off, the Imports tab and the CSV import behave exactly as "
+            "before. Read per request: no restart."),
+    _s("import_plan_poll_seconds", GROUP_FEATURES, "Import plan poll", kind="int", unit="s",
+       component="worker",
+       help="How often the delivery worker looks for an import preview waiting to be "
+            "computed. 0 stops it — then no import can be previewed, and the page says so "
+            "after two minutes."),
     _s("prospect_stale_sweep_seconds", GROUP_FEATURES, "Prospect stale sweep", kind="int",
        unit="s", component="worker",
        help="How often the worker runs the Stale sweep (default nightly). 0 "

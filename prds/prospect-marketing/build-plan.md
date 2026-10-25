@@ -2182,7 +2182,7 @@ fields where they are empty, and creates no Contact.
 **Tests.** `test_enrichment_research.py` (decide), `test_campaign_leads.py`
 (the queue).
 
-### 7e.7 The import tool — rulings 79–88
+### 7e.7 The import tool — rulings 79–88 (built as v0.286.0, 10-25-26; live pass owed)
 
 **Today.** `campaigns/imports.py` reads CSV only, with fixed column names.
 It plans (stored as a batch in the ledger) and applies in parts of 100,
@@ -2599,7 +2599,43 @@ Team caller for M1 and M10).
    five days. Plan approved by Doug 10-25-26 18:44 (four stops, to be run
    in one session; ruling 127 settled Undo's deletion — the org-wide key,
    the API role gains delete on the lead record); kickoff
-   `prompts/m4-import-tool-kickoff.md`.
+   `prompts/m4-import-tool-kickoff.md`. **Built as v0.286.0 (10-25-26)**,
+   all four stops without a pause. Routine choices, each announced in the
+   kickoff and built as written: the file travels as base64 inside the
+   JSON post (never multipart), CSV stays text, 5 MB and 5,000 rows; a
+   workbook with several sheets answers 409 with the names and the page
+   asks; `.xls` is refused in words; the level per row is the ladder's own
+   `placed(facts())` with the template's partner as the referrer; the
+   preview is a worker job (`plan_status` queued → running → ready /
+   failed, `IMPORT_PLAN_POLL_SECONDS` 5, the page polls every three
+   seconds and names the worker after two quiet minutes; dry-run plans
+   inline); the fourth outcome `fills` reads the known leads in id batches
+   of 100 and writes only empty fields as the user, then placement; a
+   Company or Contact match keeps the Duplicate lead; per-row exclude is
+   the batch's `excluded_rows`; recognition scores by the share of a
+   template's columns present, suggests above one half, renames at
+   difflib 0.8; the four fixes are mapping entries; Undo runs in parts of
+   100 like the apply, deletes under the org-wide key, forgets the deleted
+   rows' ledger entries and lists the touched leads, the batch stamped on
+   the last part; templates are action-logged on the first lead of their
+   last batch and skipped when there is none (the import's own pattern).
+   Two choices made on the way, both routine: *Enters at* Qualified keeps
+   ruling 42's floor (a row with neither website nor email enters
+   Unqualified, the preview saying why), and the apply takes the level
+   decision from the plan's own `ladder` flag so it writes exactly what
+   the preview showed. The demo template lives in the application
+   database, which the reset empties whatever the baseline holds, so it is
+   restored by the worker after each reset (with the demo links), by the
+   Operations job, and by the fifth seeder where the database is reachable
+   — a re-baseline alone cannot carry it. Checked in the browser against
+   the stub harness: recognition, the fix picker, the preview poll,
+   exclude, confirm, Show these leads, Undo, the editor. **Owed**: Doug
+   runs `scripts/migrate_outreach_roles.py --apply` on crm-test (the
+   `delete` cell) before the live pass; the live pass (step page
+   https://claude.ai/artifact/5bnDamVEDRKpHYFVaZkvbG, two rehearsal
+   workbooks: October mapped by hand and saved as a template, November
+   recognised with a rename and two fills, then both undone); the sandbox
+   re-baseline is not needed for the template (see above).
 5. **M5: personal outreach** (§ 7e.5), behind `LEAD_OUTREACH`, after the
    handoff's link and touch changes. About four days.
 6. **M6: lists** (§ 7e.8). About four days.
@@ -2888,8 +2924,8 @@ best-effort mirror.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — build plan |
-| Version | v0.26 — Phases 1–4 and the lead model built; §§ 7b and 7c built and live-passed on crm-test; § 7d (the lead identifier in every link, rulings 71–75) approved, D1 built; § 7e (the Marketing Management redesign, rulings 79–125) approved, steps M1 (v0.279.0), M2 (v0.284.0) and M3 (v0.285.0) built |
-| Last Updated | 10-25-26 12:22 |
+| Version | v0.26 — Phases 1–4 and the lead model built; §§ 7b and 7c built and live-passed on crm-test; § 7d (the lead identifier in every link, rulings 71–75) approved, D1 built; § 7e (the Marketing Management redesign, rulings 79–125) approved, steps M1 (v0.279.0), M2 (v0.284.0), M3 (v0.285.0) and M4 (v0.286.0) built |
+| Last Updated | 10-25-26 19:30 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
 | Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
@@ -2898,6 +2934,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.51 | 10-25-26 19:30 | Claude (Claude Code) | § 7e.13 step M4 built (v0.286.0): the import tool; the routine choices and the two made on the way recorded under the step; § 7e.7 heading marked built. The role script and the live pass owed. |
 | 0.50 | 10-25-26 18:52 | Claude (Claude Code) | § 7e.13 step M4: plan approved (four stops, one session), ruling 127 recorded, kickoff prompt written (`prompts/m4-import-tool-kickoff.md`). |
 | 0.49 | 10-25-26 18:41 | Claude (Claude Code) | § 7e.13 step M3 live-passed on crm-test (Doug, two step pages); v0.285.1 fix noted; the read-back recorded. Next: M4. |
 | 0.48 | 10-25-26 12:36 | Claude (Claude Code) | § 7e.13 step M3 built (v0.285.0): Review as the research queue, two modes; the routine choices recorded under the step; § 7e.6 heading marked built. Live pass owed. |

@@ -2022,7 +2022,10 @@
     setTimeout(function () { ta.focus(); }, 50);
   }
 
+  function importToolOn() { return !!(state.session && state.session.importTemplatesOn && window.CBMImports); }
   async function loadImports() {
+    // The import tool (build plan § 7e.7) owns the tab when its switch is on.
+    if (importToolOn()) return window.CBMImports.load();
     try {
       var res = await api("/prospects/imports");
       var body = $("importRows"); body.innerHTML = "";
@@ -2041,6 +2044,7 @@
   }
 
   function openImport() {
+    if (importToolOn()) return window.CBMImports.openImport();
     var body = el("div", "cm__plan");
     var fields = el("div", "cm__fields");
     function field(label, input, wide) { var f = el("div", "cm__field" + (wide ? " cm__field--wide" : "")); var l = el("label", null, label); l.htmlFor = input.id; f.appendChild(l); f.appendChild(input); fields.appendChild(f); return input; }
@@ -2140,6 +2144,8 @@
   window.CBMMarketing = {
     api: api, notice: notice, el: el, text: text, show: show, hide: hide, esc: esc, fmtDate: fmtDate,
     openModal: openModal, closeModal: closeModal, modalMsg: modalMsg, ask: ask,
+    onModalCancel: function (fn) { modal.onCancel = fn; },
+    batchOptions: fillBatchOptions,
     register: function (name, hooks) { sections[name] = hooks || {}; },
     showSection: showSection,
     session: function () { return state.session; },

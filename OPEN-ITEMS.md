@@ -69,11 +69,24 @@ found; move resolved items to the bottom with the resolution date.
     Not exercised live: the row's 409 refusal of a lead moved since
     (unit-tested). **M4 plan approved 10-25-26 18:44** (four stops in one
     session; ruling 127: Undo deletes under the org-wide key, the API role
-    gains delete on `CProspect` — handoff § 4's third cell, not yet
-    applied anywhere); run it from `prompts/m4-import-tool-kickoff.md` in
-    a fresh session. Owed: M4 itself; the handoff on production
-    at the arc's slot and on Boston with its release; the layout question
-    in the handoff's § 7.
+    gains delete on `CProspect` — handoff § 4's third cell). **M4 built as
+    v0.286.0 (10-25-26)**: templates, Excel, recognition and the four
+    fixes, the preview as a worker job, fills, the level per row, Undo;
+    dark behind `IMPORT_TEMPLATES`; migration 0035; `openpyxl`. Checked
+    against the stub harness and by 31 tests. Not pushed. **Owed, in
+    order**: (1) Doug runs `uv run python scripts/migrate_outreach_roles.py`
+    then `… --apply` on crm-test — the `delete` cell on the API role
+    (ruling 127; the classifier blocks a mutating role write from a
+    session); (2) the push; (3) `IMPORT_TEMPLATES` on at crm-test's /setup
+    and the live pass from the step page
+    https://claude.ai/artifact/5bnDamVEDRKpHYFVaZkvbG (rev 1.0, 36 steps in
+    nine sections; the two rehearsal workbooks are named in the M4 report);
+    (4) the
+    demo template appears on crm-test by itself after the next nightly
+    reset (the worker restores it) or at once through /setup → Operations
+    → *Sandbox demo campaign links*; then M5. Still owed: the handoff on
+    production at the arc's slot and on Boston with its release (now with
+    the third role cell); the layout question in the handoff's § 7.
 
 53. **Attendee linking escalation — live pass owed** (v0.258.6, 2026-10-15).
     A mentor whose Mentor Role reads/edits `CSession` at "own" could not

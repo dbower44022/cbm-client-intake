@@ -376,6 +376,36 @@
         <tbody id="importRows"></tbody>
       </table>
       <p class="cm__empty" id="importsEmpty" hidden>No imports yet.</p>
+      <!-- The import tool (imports.js): templates and history, shown in place of
+           the table above when the deployment's Import templates switch is on. -->
+      <div class="cm__importtool" id="im_tool">
+        <section class="cm__block">
+          <div class="cm__controls">
+            <h2 class="cm__h2">Templates</h2>
+            <span class="cm__count" id="im_templateCount"></span>
+            <div class="cm__actions">
+              <button type="button" class="cbm-button cbm-button--secondary" id="im_newTemplateBtn">New template</button>
+            </div>
+          </div>
+          <p class="cm__hint">A template remembers how one recurring spreadsheet maps onto a lead: its Lead Source, where its rows enter, who qualifies them, the referrer partner, and which column becomes which field. Templates are shared by the whole team.</p>
+          <table class="cm__grid" id="im_templates">
+            <thead><tr><th>Template</th><th>Lead Source</th><th>Enters at</th><th>List source</th><th>Referrer</th><th>Mapping</th><th>Last changed</th><th></th></tr></thead>
+            <tbody id="im_templateRows"></tbody>
+          </table>
+          <p class="cm__empty" id="im_templateEmpty" hidden>No templates yet. Import… maps a file's columns and can save the result as the first one.</p>
+        </section>
+        <section class="cm__block">
+          <div class="cm__controls">
+            <h2 class="cm__h2">History</h2>
+            <span class="cm__count" id="im_historyCount"></span>
+          </div>
+          <table class="cm__grid" id="im_history">
+            <thead><tr><th>Batch</th><th>Lead Source</th><th>File</th><th>Rows</th><th>Preview</th><th>Status</th><th>Planned</th><th>Applied</th><th>Result</th><th></th></tr></thead>
+            <tbody id="im_historyRows"></tbody>
+          </table>
+          <p class="cm__empty" id="im_historyEmpty" hidden>No imports yet.</p>
+        </section>
+      </div>
     </section>
 
     <!-- ========================== RECORD PAGE ========================== -->
@@ -577,5 +607,6 @@
        and reach the page through window.CBMMarketing. -->
   <script src="lists.js"></script>
   <script src="calls.js"></script>
+  <script src="imports.js"></script>
 </body>
 </html>

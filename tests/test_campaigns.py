@@ -188,7 +188,8 @@ class FakeStore:
         self.batches[row["id"]] = row; return row
     async def mark_applied(self, batch_id, result): self.batches[batch_id].update(status="applied", result=result)
     async def known_row_hashes(self, hashes): return {r["row_hash"] for r in self.rows if r["row_hash"] in set(hashes)}
-    async def record_rows(self, batch_id, rows): self.rows.extend(rows)
+    async def record_rows(self, batch_id, rows): self.rows.extend([{**r, "batch_id": batch_id} for r in rows])
+    async def batch_row_hashes(self, batch_id): return {r["row_hash"] for r in self.rows if r.get("batch_id") == batch_id}
     async def recent_batches(self, limit=25): return list(self.batches.values())
 
 

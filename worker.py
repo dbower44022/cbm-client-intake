@@ -445,6 +445,9 @@ async def main() -> None:
     # worker researches two records at a time).
     next_research = datetime.now(timezone.utc)
     research_store = None
+    # The import tool's preview (build plan § 7e.7, ruling 123): a queued batch
+    # is planned here, never in a web request, which is cut off after a minute.
+    next_import_plan = datetime.now(timezone.utc)
 
     while not stop.is_set():
         claimed = await run_cycle(store, settings, stop)
@@ -549,6 +552,17 @@ async def main() -> None:
             except Exception as exc:  # noqa: BLE001 — never fatal
                 log.warning("ai research cycle failed: %s", exc)
             next_research = now_cfg + timedelta(seconds=settings.enrichment_ai_poll_seconds)
+        import_plan_on = (settings.campaigns_enabled and settings.import_templates and not settings.espo_dry_run
+                          and settings.store_enabled and settings.import_plan_poll_seconds > 0)
+        if import_plan_on and now_cfg >= next_import_plan:
+            try:
+                from campaigns.imports import run_plan_cycle
+                taken = await run_plan_cycle(settings)
+            except Exception as exc:  # noqa: BLE001 — never fatal
+                taken = 0
+                log.warning("import plan cycle failed: %s", exc)
+            # One queued preview after another without waiting a whole poll.
+            next_import_plan = now_cfg if taken else now_cfg + timedelta(seconds=settings.import_plan_poll_seconds)
         mailing_on = settings.mailing_sync and not settings.espo_dry_run
         if mailing_on and settings.mailing_push_seconds > 0 and now_cfg >= next_mailing_push:
             try:

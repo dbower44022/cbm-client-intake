@@ -1213,6 +1213,14 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
+- **v0.286.0 (2026-10-25) — the import tool** (build plan § 7e.7, M4;
+  rulings 79–88, 111, 123, 127): templates, Excel, recognition and the
+  four fixes, the preview as a worker job, fills, the level per row, Undo
+  under the org-wide key. Dark behind `IMPORT_TEMPLATES`; migration 0035;
+  `openpyxl`. Committed, **not pushed**. Before the live pass Doug runs
+  `scripts/migrate_outreach_roles.py --apply` on crm-test (the API role's
+  `delete` on `CProspect`). Next: the push, the live pass, then M5
+  (`OPEN-ITEMS.md` #57).
 - **v0.285.0 (2026-10-25) — Review is the research queue, two modes**
   (build plan § 7e.6, M3; rulings 110, 121): *Judge* as before, *Find
   contacts* for Identified leads, *AI research* on every row, a Person
@@ -1235,7 +1243,4 @@ the strength of it.
   deployments; **live-passed on crm-test 10-24-26 14:46** by Doug. The nine
   Drafts in § 7e.12 are ruled (117–125, 10-23-26). Next: the redesign's CRM
   handoff (`marketing-redesign-crm-handoff.md`, § 7e.11), then M2.
-- **v0.276.0 (2026-10-22) — lead code D1** (§ 7d). Not pushed; inert
-  without the CRM fields. Owed: live pass, D2 (`OPEN-ITEMS.md` #51).
-
 Everything else still owed is in `OPEN-ITEMS.md`.

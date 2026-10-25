@@ -1,6 +1,6 @@
 # The training sandbox — nightly reset runbook
 
-Last Updated: 10-20-26 01:05 · Revision 1.2 — change log at the end.
+Last Updated: 10-25-26 19:30 · Revision 1.3 — change log at the end.
 
 crm-test does three jobs now: it is the **pre-production review gate**, the
 **training sandbox**, and the **release-test environment**. This document is
@@ -221,11 +221,21 @@ uv run python scripts/sandbox/seed_training_data.py --apply
 uv run python scripts/sandbox/enrich_training_data.py --apply
 uv run python scripts/sandbox/deepen_showcase_records.py --apply
 uv run python scripts/sandbox/seed_outreach_data.py --apply
+uv run python scripts/sandbox/seed_import_templates.py --apply
 uv run python scripts/sandbox/audit_showcase_records.py
 uv run python scripts/sandbox/check_containment.py
 ```
 
-All four seeders are idempotent, so the full set is the habit: each one owns
+**The fifth seeder is different**: the import tool's demo template lives in
+the APPLICATION database, which the app half of the reset empties every night
+whatever the CRM baseline holds, so `seed_import_templates.py` needs
+`DATABASE_URL` (the deployed container's console, or a machine on the
+database's trusted-source list) and a re-baseline never carries it. The worker
+puts the template back after every reset, with the demo links, and `/setup` →
+Operations → *Sandbox demo campaign links* does it on demand — from a laptop
+with no `DATABASE_URL` the script says so and stops.
+
+All five seeders are idempotent, so the full set is the habit: each one owns
 data the others do not (the seed owns the records and their management teams,
 the enrichment owns threads, gifts, events, presenters, sponsorship links and
 topics, the deepening owns the showcase records' every field, and the
@@ -354,6 +364,7 @@ than by default.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 10-25-26 19:30 | Claude (Claude Code) | The fifth seeder (`seed_import_templates.py`, the import tool's demo template) and why it runs where the application database is reachable; the worker and the Operations job restore the template too. |
 | 1.2 | 10-20-26 01:05 | Claude (Claude Code) | The baseline recaptured on 10-20-26. |
 | 1.1 | 10-20-26 00:21 | Claude (Claude Code) | The fourth seeder (`seed_outreach_data.py`) in the re-baseline sitting, and the demo campaign links the worker restores after every reset. Revision control added. |
 | 1.0 | — | — | The runbook before revision control. |

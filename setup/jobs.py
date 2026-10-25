@@ -237,7 +237,8 @@ JOBS: tuple[JobSpec, ...] = (
             "Training sandbox only. Lists the fixed demo links (the September "
             "postcard's landing page, the social and email campaigns' links) the "
             "application database is missing. Applying creates them with their "
-            "fixed codes. The nightly reset does the same straight after it "
+            "fixed codes, and the import tool's demo template when it is "
+            "missing. The nightly reset does the same straight after it "
             "empties the links table; run this after seeding, so you need not "
             "wait for the night. Refused on any CRM but crm-test."
         ),

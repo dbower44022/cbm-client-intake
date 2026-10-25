@@ -351,6 +351,7 @@ class _Ledger:
     def __init__(self):
         self.rows, self.applied = [], None
     async def known_row_hashes(self, hashes): return {r["row_hash"] for r in self.rows}
+    async def batch_row_hashes(self, batch_id): return {r["row_hash"] for r in self.rows}
     async def record_rows(self, batch_id, rows): self.rows.extend(rows)
     async def mark_applied(self, batch_id, result): self.applied = result
 

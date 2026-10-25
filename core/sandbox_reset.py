@@ -88,6 +88,10 @@ RESET_TABLES: tuple[str, ...] = (
     # snapshot goes with them. A hand-set level with no snapshot is never
     # moved by the sweep (ruling 117).
     "lead_level_manual",
+    # The import tool's saved templates (build plan § 7e.7): training data like
+    # the leads they map onto; the reset puts the one demo template back
+    # (campaigns/sandbox_demo.py) straight after emptying the table.
+    "import_template",
 )
 
 #: Configuration, authored artefacts and instance bookkeeping: never touched.

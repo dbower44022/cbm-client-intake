@@ -285,3 +285,43 @@ def test_seeder_stops_on_a_crm_without_the_lead_model():
     del crm.fields[cfg.PROSPECT]["leadStatus"]
     with pytest.raises(RuntimeError):
         asyncio.run(seed.run(crm, apply=False, now=NOW))
+
+
+# --- the demo import template (build plan § 7e.7, M4) ------------------------------------------
+
+class _TemplateStore(FakeStore):
+    def __init__(self):
+        super().__init__()
+        self.templates: list[dict] = []
+
+    async def list_templates(self): return list(self.templates)
+    async def create_template(self, values, *, actor):
+        row = {"id": f"t{len(self.templates) + 1}", **values, "created_by": actor}
+        self.templates.append(row); return row
+
+
+def test_the_demo_import_template_is_valid_and_restored_once():
+    from campaigns import import_templates as tpl
+
+    values = tpl.validate_template({
+        "name": demo.DEMO_TEMPLATE["name"], "source": demo.DEMO_TEMPLATE["door"],
+        "qualifiedBy": demo.DEMO_TEMPLATE["qualified_by"], "entersAt": demo.DEMO_TEMPLATE["enters_at"],
+        "mapping": demo.DEMO_TEMPLATE["mapping"], "headerSignature": demo.DEMO_TEMPLATE["header_signature"]})
+    assert values["mapping"] == demo.DEMO_TEMPLATE["mapping"]
+    assert tpl.missing_required(values["mapping"]) == []
+    # A filing's own column names are recognised at once.
+    found = tpl.recognise([{"id": "x", "name": demo.DEMO_TEMPLATE["name"], "mapping": demo.DEMO_TEMPLATE["mapping"]}],
+                          demo.DEMO_TEMPLATE["header_signature"])
+    assert found["suggested"]["score"] == 1.0
+    store = _TemplateStore()
+    assert asyncio.run(demo.restore_demo_template(store)) == {"created": 1, "present": 0}
+    assert asyncio.run(demo.restore_demo_template(store)) == {"created": 0, "present": 1}
+    assert store.templates[0]["created_by"] == demo.CREATED_BY and len(store.templates) == 1
+
+
+def test_the_template_table_resets_and_the_seeder_refuses_production():
+    from core.sandbox_reset import RESET_TABLES
+
+    assert "import_template" in RESET_TABLES
+    path = ROOT / "scripts" / "sandbox" / "seed_import_templates.py"
+    assert path.exists() and "--apply" in path.read_text(encoding="utf-8")

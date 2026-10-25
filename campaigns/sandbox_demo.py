@@ -75,6 +75,37 @@ DEMO_SCAN_TOKENS: tuple[str, ...] = (
 
 CREATED_BY = "the sandbox reset"
 
+#: The import tool's one demo template (build plan § 7e.7, M4): the state
+#: filing in the columns the demo leads were made from. Templates live in the
+#: application database, which the reset empties nightly whatever the CRM
+#: baseline holds, so — like the links — it is put back here every night, and
+#: by ``scripts/sandbox/seed_import_templates.py`` on demand.
+DEMO_TEMPLATE: dict[str, Any] = {
+    "name": "State filing — Ohio Secretary of State",
+    "door": cfg.SOURCE_FILING,
+    "list_source": None,
+    "qualified_by": "Ohio SOS filing filter v1",
+    "enters_at": cfg.LEAD_QUALIFIED,
+    "referrer_partner_id": None,
+    "referrer_partner_name": None,
+    "mapping": [
+        {"column": "entity_name", "field": "business_name"},
+        {"column": "charter_number", "field": "external_reference"},
+        {"column": "principal_office_street", "field": "mailing_street"},
+        {"column": "principal_office_city", "field": "mailing_city"},
+        {"column": "principal_office_state", "field": "mailing_state"},
+        {"column": "principal_office_zip", "field": "mailing_zip"},
+        {"split_name": "agent_name"},
+        {"column": "agent_phone", "field": "phone"},
+        {"column": "agent_email", "field": "email"},
+        {"column": "web_site", "field": "website"},
+        {"ignore": "filing_type"},
+    ],
+    "header_signature": ["entity_name", "charter_number", "principal_office_street", "principal_office_city",
+                         "principal_office_state", "principal_office_zip", "agent_name", "agent_phone",
+                         "agent_email", "web_site", "filing_type"],
+}
+
 
 def valid_token(token: str, length: int) -> bool:
     return len(token) == length and all(c in ALPHABET for c in token)
@@ -164,6 +195,20 @@ async def restore_demo_codes(client) -> dict[str, int]:
     return totals
 
 
+async def restore_demo_template(store) -> dict[str, int]:
+    """Create the demo import template when the store lacks one of that name.
+    Idempotent by name; a trainee's edits to it vanish with the nightly reset
+    like every other edit, and a template under another name is left alone."""
+    totals = {"created": 0, "present": 0}
+    existing = await store.list_templates()
+    if any(t.get("name") == DEMO_TEMPLATE["name"] for t in existing):
+        totals["present"] = 1
+        return totals
+    await store.create_template(dict(DEMO_TEMPLATE), actor=CREATED_BY)
+    totals["created"] = 1
+    return totals
+
+
 async def restore_demo_links(store, client) -> dict[str, int]:
     """Create every demo link the store lacks. Idempotent by code: a link that
     is already there is left exactly as it is."""
@@ -220,6 +265,11 @@ async def run_after_reset(settings: Settings) -> dict[str, int]:
                      codes["set"], codes["present"], codes["skipped"])
         except Exception as exc:  # noqa: BLE001 — the links still count
             log.warning("sandbox demo lead codes not restored: %s", exc)
+        try:
+            template = await restore_demo_template(store)
+            log.info("sandbox demo import template: %s created, %s present", template["created"], template["present"])
+        except Exception as exc:  # noqa: BLE001 — the links still count
+            log.warning("sandbox demo import template not restored: %s", exc)
         return totals
     except (EspoError, Exception) as exc:  # noqa: BLE001
         log.warning("sandbox demo links not restored: %s", exc)
@@ -231,7 +281,9 @@ async def run_after_reset(settings: Settings) -> dict[str, int]:
 async def job_dry_run(settings: Settings) -> str:
     store, client = _parts(settings)
     try:
-        return plan_text(await plan_demo_links(store, client))
+        text = plan_text(await plan_demo_links(store, client))
+        present = any(t.get("name") == DEMO_TEMPLATE["name"] for t in await store.list_templates())
+        return text + f"\nImport template \"{DEMO_TEMPLATE['name']}\": " + ("already present." if present else "would create.")
     finally:
         await store.dispose()
 
@@ -241,7 +293,9 @@ async def job_apply(settings: Settings) -> str:
     try:
         t = await restore_demo_links(store, client)
         c = await restore_demo_codes(client)
+        m = await restore_demo_template(store)
         return (f"{t['created']} demo links created, {t['present']} already present, {t['skipped']} skipped. "
-                f"Lead codes: {c['set']} set, {c['present']} present, {c['skipped']} skipped.")
+                f"Lead codes: {c['set']} set, {c['present']} present, {c['skipped']} skipped. "
+                f"Import template: {m['created']} created, {m['present']} present.")
     finally:
         await store.dispose()

@@ -5,6 +5,90 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.286.0] — 2026-10-25
+
+**feat(campaigns): the import tool** — step M4 of the Marketing Management
+redesign (build plan § 7e.7; rulings 79–88, 111, 123, 127). Dark behind
+**`IMPORT_TEMPLATES`** (off, read per request); with it off the Imports tab
+and both import endpoints behave exactly as before. One new dependency,
+`openpyxl`. **Migration 0035**: the `import_template` table, and on
+`prospect_import_batch` the preview-job columns (`plan_status`,
+`plan_error`, `plan_progress`, `plan_claimed_at`), `excluded_rows`, the
+Undo stamp (`undone_at`, `undone_by`, `undo_result`), `template_id` and
+`file_name`. `import_template` resets nightly on the sandbox; the worker
+puts the one demo template back after each reset (`campaigns/sandbox_demo`).
+
+- **Templates, shared by the team** (ruling 79): name, Lead Source, list
+  source, *Qualified by*, *Enters at* (ruling 111 — the template carries the
+  qualifying judgement; with ruling 42's floor kept: a row with neither a
+  website nor an email enters Unqualified whatever the template says), the
+  referrer partner, and the column mapping with the four fixes (ruling 82):
+  split a full name, join columns, a fixed value, ignore a column. Every
+  create, change and delete is action-logged on the first lead of the
+  template's last batch; with no batch yet there is no record to hang the
+  row on and the entry is skipped, as the import's own history row is.
+  `GET/POST/PUT/DELETE /campaigns/api/import-templates[/{id}]`.
+- **Excel and CSV** (ruling 80): `imports.read_file`, `openpyxl` read-only
+  with values only, the first row as headings, whole numbers without a
+  trailing `.0`; a workbook with several sheets answers 409 with the names
+  and the page asks which; `.xls` is refused with "save it as .xlsx". The
+  file travels as base64 inside the JSON post, like the CSV text always
+  has. 5 MB and 5,000 rows still.
+- **Recognition** (ruling 81, `POST /prospects/import/recognise`): every
+  template scored by the share of its columns present; the best above one
+  half is suggested, never applied without the person's confirm; new,
+  missing and likely-renamed columns (difflib ratio ≥ 0.8) listed; a
+  required field (business name; the four address parts) unmapped stops
+  the import with the field named. The renames can be saved to the
+  template.
+- **The preview is a worker job** (rulings 83, 123): `plan` stores the
+  mapped rows on a queued batch and answers at once; the delivery worker
+  (`imports.run_plan_cycle`, every `IMPORT_PLAN_POLL_SECONDS`, default 5)
+  claims it, runs the plan with progress (`rows checked of n`), and marks
+  it ready or failed with the reason; the page polls
+  `GET /prospects/import/{batchId}` every three seconds and after two
+  minutes with no movement says the worker may be down. Dry-run (dev)
+  plans inline. The walk-through sets the spreadsheet values beside the
+  lead fields; the counts are filters; each problem row names its reason;
+  *Exclude* per row (`PUT …/excluded`) is stored on the batch, skipped at
+  apply and counted.
+- **A repeat row fills a lead's empty fields** (ruling 84, the fourth
+  outcome `fills`): the ledger maps the row hash to the lead it created,
+  the lead's fillable fields are read in id batches of 100, only EMPTY ones
+  are planned and (re-checked) written as the user, then placement. A row
+  with nothing to fill is a repeat row as before; a Company or Contact
+  match keeps the Duplicate lead (ruling 85).
+- **The level per row** (ruling 111): `placed(facts(row))` with the
+  template's partner as the referrer fact; the apply writes exactly what
+  the preview showed (the plan carries whether the ladder was on).
+- **Undo** (rulings 87, 127; `POST /prospects/import/{batchId}/undo`, in
+  parts of 100 like the apply): a lead the batch created is *touched* when
+  it has a touch, sits on a campaign list, has a conversation
+  (feature-detected on `CProspect.conversations`), its status changed or
+  its level was set by hand after the write, it stopped (a side exit other
+  than the import's own Duplicate), or it was edited since — a change
+  inside five minutes of the write is the import's own. Untouched leads are
+  **deleted under the org-wide key**, their ledger rows forgotten so the
+  row imports again; touched leads are listed and left; fills stay; the
+  batch is stamped undone, one action-log row naming who pressed it and
+  every id deleted. **The API role needs delete on `CProspect`**
+  (`scripts/migrate_outreach_roles.py` gains the cell; the handoff's § 4).
+- **The Imports tab** (ruling 88, `campaigns/frontend/imports.js`, ids
+  `im_`): templates (list, editor with the mapping grid and a fix picker
+  beside each column) and history on one tab, *Import…* its one entry
+  point; the flow file → sheet → template suggested with the differences,
+  or the columns mapped by hand (and saved as a template) → preview →
+  confirm → the summary with *Show these leads* (`#prospects?batch=`);
+  history rows gain *Undo this import* (two presses) and the undone stamp
+  with the touched list. The modal is the page's, never `confirm()`.
+- **Sandbox**: `import_template` in `RESET_TABLES`; the demo template
+  *State filing — Ohio Secretary of State* restored by the worker after
+  the nightly reset, by the Operations job *Sandbox demo campaign links*,
+  and by `scripts/sandbox/seed_import_templates.py --apply` where the
+  application database is reachable.
+- Tests: `tests/test_campaign_import_templates.py` (31). The CSV path's
+  tests stay green with the switch off.
+
 ## [0.285.1] — 2026-10-25
 
 **fix(campaigns): a Review row's business link opened the old pop-up instead
