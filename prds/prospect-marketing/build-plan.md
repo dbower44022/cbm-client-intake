@@ -2543,7 +2543,9 @@ Team caller for M1 and M10).
    the pass: Gordon Square Florist Qualified · Referred, set by hand by Mark
    Marketing then lifted by the email and the partner, assigned to Sharon
    Rose, with a code; Dana Okoro's new code on her Contact and her lead
-   alike. Step 21's Convert did not read back as Converted — asked Doug. **Also (ruling 126):** § 7d.1's *New code* on the lead's page and
+   alike. Step 21's Convert, run again at 12:08: Converted, level cleared,
+   a Company and a Contact typed Prospect created under the API client, the
+   Contact carrying the lead's code; nine action-log rows by Mark Marketing. **Also (ruling 126):** § 7d.1's *New code* on the lead's page and
    on the contact's record page, Marketing Admin Team, action-logged with
    the old code's last four characters, written under the org-wide key
    (ruling 77's field rule drops a marketer's own write). **Built in the
