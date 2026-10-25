@@ -203,7 +203,7 @@ def test_bulk_does_skips_and_never_overwrites():
 
 def test_bulk_refuses_qualify_a_missing_reason_and_a_big_batch():
     crm = FakeCrm()
-    with pytest.raises(CampaignError, match="Only Disqualify and Do Not Contact"):
+    with pytest.raises(CampaignError, match="Only Disqualify, Do Not Contact and Assign to"):
         run(leads.apply_bulk(crm, None, [], review.ACTION_QUALIFY, reviewer="M", note=""))
     with pytest.raises(CampaignError, match="reason is required"):
         run(leads.apply_bulk(crm, None, [{"id": "abcdef1"}], review.ACTION_DISQUALIFY, reviewer="M", note=" "))

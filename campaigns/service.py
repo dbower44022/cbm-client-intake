@@ -504,6 +504,33 @@ async def get_prospect(client: EspoApi, prospect_id: str) -> dict[str, Any]:
     return await client.get(cfg.PROSPECT, prospect_id, select=cfg.PROSPECT_SELECT)
 
 
+async def record_actions(client: Optional[EspoApi], prospect_id: str) -> list[dict[str, Any]]:
+    """The action-history rows for one lead (core/action_log.py's CActionLog
+    half), newest first. Read under the org-wide key — the Marketing Admin
+    Role has no CActionLog grant and the rows are the record's own history.
+    Feature-gated: a CRM without the entity, or a refused read, is []."""
+    if client is None:
+        return []
+    try:
+        page = await client.list(
+            "CActionLog", select="id,name,actionType,category,actorName,summary,createdAt", max_size=_PAGE,
+            where=[{"type": "equals", "attribute": "recordId", "value": prospect_id}],
+            order_by="createdAt", order="desc",
+        )
+    except EspoError as exc:
+        log.info("action history for %s not read: %s", prospect_id, exc)
+        return []
+    return page.get("list", []) if isinstance(page, dict) else []
+
+
+async def partner_options(client: EspoApi) -> list[dict[str, str]]:
+    """Every partner profile by name, for the lead page's referrer picker.
+    Paged at the CRM's limit."""
+    rows = await _page_all(client, cfg.PARTNER_PROFILE, select="id,name", limit=2000)
+    return sorted(({"id": r["id"], "name": r.get("name") or "(unnamed)"} for r in rows if r.get("id")),
+                  key=lambda o: o["name"].lower())
+
+
 async def prospect_touches(client: EspoApi, prospect_id: str) -> list[dict[str, Any]]:
     page = await client.list(
         cfg.TOUCH, select=cfg.TOUCH_SELECT, max_size=_PAGE,

@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field
 from assignments import auth
 from assignments.auth import current_user, is_member
 from assignments.espo_user import client_for
-from core.action_log import CAT_RECORD_EDIT, CAT_STATUS, record_action
+from core.action_log import CAT_ASSIGNMENT, CAT_RECORD_EDIT, CAT_STATUS, record_action
 from core.admin_client import admin_client_factory
 from core.branding import abbr
 from core.config import Settings, get_settings
@@ -32,8 +32,8 @@ from core.qr import qr_png, qr_svg
 from forms import SPECS_BY_SLUG
 
 from . import config as cfg
-from . import audience, calls, email as email_kind, imports, ladder, leads, postcard, reporting, review, service, sms
-from .conversion import Details
+from . import audience, calls, email as email_kind, imports, ladder, leadcode, leads, postcard, reporting, review, service, sms
+from .conversion import CompanyConflict, ConversionRefused, Details, can_convert, convert_lead
 from .reporting import summarize_responses  # noqa: F401 — re-exported
 from .public import destination_path
 from .service import CampaignError
@@ -192,6 +192,8 @@ async def session(request: Request) -> dict[str, Any]:
         "callsOn": settings.campaigns_calls,
         "smsOn": settings.campaigns_sms,
         "listsOn": settings.campaign_lists,
+        "ladderOn": settings.lead_ladder,
+        "levels": list(cfg.LEVELS),
         "sms": {"provider": settings.sms_provider, "hours": settings.sms_send_hours,
                 "timezone": settings.sms_timezone, "stages": list(sms.TEXTABLE_STAGES)},
         "callStatuses": list(calls.CALLABLE_STATUSES),
@@ -399,6 +401,24 @@ async def update_campaign(campaign_id: str, body: ChangesIn, request: Request) -
 def _owner_reader(request: Request, client):
     """The org-wide client for the team list, else the user's own (dry run)."""
     return _system_client(get_settings()) or client
+
+
+async def _assignee(request: Request, client, user_id: str) -> dict[str, str]:
+    """The team member a lead is assigned to (ruling 108: Marketing Admin Team
+    members only) — the same list a campaign's owner comes from."""
+    user_id = (user_id or "").strip()
+    if not user_id:
+        raise HTTPException(status_code=400, detail="Choose the team member the lead goes to.")
+    try:
+        options = await service.owner_options(_owner_reader(request, client),
+                                              get_settings().campaigns_allowed_teams_list)
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not list the team members")
+    chosen = next((o for o in options if o["id"] == user_id), None)
+    if chosen is None:
+        raise HTTPException(status_code=400, detail="That person is not an active member of the Marketing "
+                                                    "Management team, so a lead cannot be assigned to them.")
+    return chosen
 
 
 @api_router.get("/owner-options")
@@ -848,13 +868,33 @@ async def list_prospects(request: Request) -> dict[str, Any]:
     ``review=1`` is the Review queue — Unqualified, no reason, oldest first."""
     user, client = _actor(request)
     params = dict(request.query_params)
-    lq = leads.LeadQuery.from_params(params, review_queue=params.get("review") in ("1", "true"))
+    lq = leads.LeadQuery.from_params(params, review_queue=params.get("review") in ("1", "true"),
+                                     me=user.get("userId") or "")
     try:
         return await leads.search(client, lq)
     except CampaignError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not list the leads")
+
+
+@api_router.get("/prospects/counts")
+async def prospect_counts(request: Request) -> dict[str, Any]:
+    """The Leads tab's counts across the top (build plan § 7e.4): Unqualified,
+    Identified, Contactable, Referred, Replied-not-converted, Disqualified, each
+    under the current filters and each a filter itself. Off while the ladder is
+    switched off."""
+    user, client = _actor(request)
+    settings = get_settings()
+    if not settings.lead_ladder:
+        return {"ladder": False}
+    lq = leads.LeadQuery.from_params(dict(request.query_params), me=user.get("userId") or "")
+    try:
+        return await leads.counts(client, lq)
+    except CampaignError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not count the leads")
 
 
 class BulkResolveIn(BaseModel):
@@ -865,6 +905,8 @@ class BulkResolveIn(BaseModel):
 class BulkIn(BaseModel):
     action: str
     note: str = Field(default="", max_length=4000)
+    #: Assign to… (§ 7e.4): the team member's User id.
+    assignee: str = ""
     items: list[dict[str, Any]] = Field(default_factory=list)
 
 
@@ -891,16 +933,32 @@ async def bulk_apply(body: BulkIn, request: Request) -> dict[str, Any]:
     row for the batch, naming every lead it changed."""
     user, client = _actor(request)
     settings = get_settings()
+    assignee = None
+    if body.action == leads.ACTION_ASSIGN:
+        assignee = await _assignee(request, client, body.assignee)
     try:
         result = await leads.apply_bulk(client, _system_client(settings), body.items, body.action,
                                         reviewer=user.get("name") or user.get("userName") or "",
-                                        note=body.note)
+                                        note=body.note, assignee=assignee)
     except CampaignError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    for d in result["done"]:
-        await ladder.after_write(d["id"], client=_system_client(settings), settings=settings,
-                                 store=getattr(request.app.state, "campaign_store", None))
-    if result["done"]:
+    if body.action != leads.ACTION_ASSIGN:
+        for d in result["done"]:
+            await ladder.after_write(d["id"], client=_system_client(settings), settings=settings,
+                                     store=getattr(request.app.state, "campaign_store", None))
+    if result["done"] and body.action == leads.ACTION_ASSIGN:
+        names = ", ".join(f'"{d["name"]}"' for d in result["done"][:20])
+        more = len(result["done"]) - 20
+        await record_action(
+            client, app=APP_CAMPAIGNS, category=CAT_ASSIGNMENT, action=f"{leads.ASSIGN_LABEL} (bulk)",
+            parent_type=cfg.PROSPECT, parent_id=result["done"][0]["id"],
+            summary=(f"Assigned {len(result['done'])} leads to {assignee['name']} — {names}"
+                     + (f" and {more} more" if more > 0 else "")),
+            actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+            details={"assignee": assignee, "done": result["done"], "skipped": result["skipped"],
+                     "failed": result["failed"]},
+        )
+    elif result["done"]:
         label = review.ACTION_LABELS[body.action]
         names = ", ".join(f'"{d["name"]}"' for d in result["done"][:20])
         more = len(result["done"]) - 20
@@ -945,17 +1003,223 @@ async def recent_imports(request: Request) -> dict[str, Any]:
     } for b in rows]}
 
 
-@api_router.get("/prospects/{prospect_id}")
-async def get_prospect(prospect_id: str, request: Request) -> dict[str, Any]:
+@api_router.get("/prospects/partner-options")
+async def prospect_partner_options(request: Request) -> dict[str, Any]:
+    """The partners a lead may name as its referrer (the lead page)."""
     user, client = _actor(request)
     try:
-        row = await service.get_prospect(client, prospect_id)
-        touches = await service.prospect_touches(client, prospect_id)
+        return {"options": await service.partner_options(client)}
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not list the partners")
+
+
+async def _lead_or_404(request: Request, client, prospect_id: str, *, select: str):
+    try:
+        row = await client.get(cfg.PROSPECT, prospect_id, select=select)
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not read the lead")
     if not row or not row.get("id"):
         raise HTTPException(status_code=404, detail="Lead not found.")
-    return {"prospect": row, "touches": touches}
+    return row
+
+
+async def _lead_select(client) -> tuple[str, bool]:
+    has_ladder = await leads.ladder_available(client)
+    select = cfg.PROSPECT_SELECT + ("," + ladder.LADDER_SELECT if has_ladder else "")
+    if await leadcode.available(client):
+        select += "," + leadcode.LEAD_FIELD      # the page shows the code and offers New code
+    return select, has_ladder
+
+
+@api_router.get("/prospects/{prospect_id}")
+async def get_prospect(prospect_id: str, request: Request) -> dict[str, Any]:
+    """One lead with everything its page shows (build plan § 7e.4): the record,
+    its touches, the action history and one Activity timeline, the hand-set
+    snapshot, and whether this CRM carries the ladder."""
+    user, client = _actor(request)
+    settings = get_settings()
+    select, has_ladder = await _lead_select(client)
+    row = await _lead_or_404(request, client, prospect_id, select=select)
+    try:
+        touches = await service.prospect_touches(client, prospect_id)
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not read the lead's touches")
+    actions = await service.record_actions(_system_client(settings), prospect_id)
+    manual = None
+    store = getattr(request.app.state, "campaign_store", None)
+    if store is not None and has_ladder and row.get("levelSetAt"):
+        try:
+            manual = await store.get_level_manual(prospect_id)
+        except Exception as exc:  # noqa: BLE001 — the page shows the CRM's who and when regardless
+            log.warning("level snapshot for %s not read: %s", prospect_id, exc)
+    return {"prospect": row, "touches": touches, "ladder": has_ladder and settings.lead_ladder,
+            "activity": leads.activity_rows(touches, actions),
+            "manualLevel": ({"level": manual["level"], "facts": manual.get("facts") or [],
+                             "setBy": manual.get("set_by")} if manual else None),
+            "levels": list(cfg.LEVELS)}
+
+
+class FactsIn(BaseModel):
+    changes: dict[str, Any] = Field(default_factory=dict)
+
+
+@api_router.patch("/prospects/{prospect_id}/facts")
+async def edit_prospect_facts(prospect_id: str, body: FactsIn, request: Request) -> dict[str, Any]:
+    """An inline gap filled on the lead's page (§ 7e.4), written as the user;
+    placement then runs under the API client."""
+    user, client = _actor(request)
+    settings = get_settings()
+    select, has_ladder = await _lead_select(client)
+    lead = await _lead_or_404(request, client, prospect_id, select=select)
+    try:
+        payload = leads.facts_payload(lead, body.changes, ladder_on=has_ladder)
+        updated = await client.update(cfg.PROSPECT, prospect_id, payload)
+    except CampaignError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not save the lead")
+    level = await ladder.after_write(prospect_id, client=_system_client(settings), settings=settings,
+                                     store=getattr(request.app.state, "campaign_store", None))
+    name = lead.get("businessName") or lead.get("name") or prospect_id
+    await record_action(
+        client, app=APP_CAMPAIGNS, category=CAT_RECORD_EDIT, action="Lead Edited",
+        parent_type=cfg.PROSPECT, parent_id=prospect_id,
+        summary=f"Edited the lead \"{name}\": {', '.join(k for k in sorted(payload) if k != 'name')}",
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+        details={"written": {k: v for k, v in payload.items()},
+                 "was": {k: lead.get(k) for k in payload}, "level": level},
+    )
+    return {"prospect": updated, "written": sorted(payload), "level": level}
+
+
+class LevelIn(BaseModel):
+    level: str
+
+
+@api_router.put("/prospects/{prospect_id}/level")
+async def set_prospect_level(prospect_id: str, body: LevelIn, request: Request) -> dict[str, Any]:
+    """Set level by hand (the ladder): written as the user with who and when;
+    the facts snapshot kept so only a new fact moves it later."""
+    user, client = _actor(request)
+    settings = get_settings()
+    if not settings.lead_ladder:
+        raise HTTPException(status_code=404, detail="The qualification ladder is switched off on this deployment.")
+    select, has_ladder = await _lead_select(client)
+    if not has_ladder:
+        raise HTTPException(status_code=409, detail="This CRM does not carry the ladder's lead fields yet.")
+    lead = await _lead_or_404(request, client, prospect_id, select=select)
+    try:
+        result = await ladder.set_by_hand(client, getattr(request.app.state, "campaign_store", None), lead,
+                                          body.level, user_id=user.get("userId", ""), user_name=user.get("name", ""))
+    except CampaignError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not set the level")
+    name = lead.get("businessName") or lead.get("name") or prospect_id
+    await record_action(
+        client, app=APP_CAMPAIGNS, category=CAT_STATUS, action="Lead Level Set",
+        parent_type=cfg.PROSPECT, parent_id=prospect_id,
+        summary=f"Set the level of \"{name}\" to {body.level}" + (f" (was {result['was']})" if result["was"] else ""),
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+        details={"written": result["written"], "was": result["was"]},
+    )
+    return result
+
+
+class AssigneeIn(BaseModel):
+    userId: str = ""
+
+
+@api_router.put("/prospects/{prospect_id}/assignee")
+async def assign_prospect(prospect_id: str, body: AssigneeIn, request: Request) -> dict[str, Any]:
+    """Assign the lead to a Marketing Admin Team member, as the user."""
+    user, client = _actor(request)
+    select, has_ladder = await _lead_select(client)
+    if not has_ladder:
+        raise HTTPException(status_code=409, detail="This CRM does not carry the lead's Assigned to field yet.")
+    lead = await _lead_or_404(request, client, prospect_id, select=select)
+    assignee = await _assignee(request, client, body.userId)
+    try:
+        updated = await client.update(cfg.PROSPECT, prospect_id, leads.assign_payload(lead, assignee))
+    except CampaignError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not assign the lead")
+    name = lead.get("businessName") or lead.get("name") or prospect_id
+    await record_action(
+        client, app=APP_CAMPAIGNS, category=CAT_ASSIGNMENT, action=leads.ASSIGN_LABEL,
+        parent_type=cfg.PROSPECT, parent_id=prospect_id,
+        summary=f"Assigned the lead \"{name}\" to {assignee['name']}"
+                + (f" (was {lead.get('assignedUserName')})" if lead.get("assignedUserName") else ""),
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+        details={"assignee": assignee, "was": lead.get("assignedUserId")},
+    )
+    return {"prospect": updated, "assignee": assignee}
+
+
+@api_router.post("/prospects/{prospect_id}/code")
+async def new_prospect_code(prospect_id: str, request: Request) -> dict[str, Any]:
+    """*New code* (build plan § 7d.1; ruling 126): a fresh lead code, written
+    under the API key; the old one stops resolving at once. Action-logged with
+    the old code's last four characters, never the whole code."""
+    user, client = _actor(request)
+    settings = get_settings()
+    lead = await _lead_or_404(request, client, prospect_id, select="id,name,businessName,leadStatus")
+    api_client = _api_client(settings, request)
+    try:
+        old, new = await leadcode.replace_for_lead(api_client, prospect_id)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not write the new code")
+    name = lead.get("businessName") or lead.get("name") or prospect_id
+    await record_action(
+        client, app=APP_CAMPAIGNS, category=CAT_RECORD_EDIT, action="Lead Code Replaced",
+        parent_type=cfg.PROSPECT, parent_id=prospect_id,
+        summary=f"New code for the lead \"{name}\" (was {leadcode.code_tail(old)})",
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+        details={"was": leadcode.code_tail(old)},
+    )
+    return {"replaced": bool(old), "code": new}
+
+
+@api_router.post("/prospects/{prospect_id}/convert")
+async def convert_prospect(prospect_id: str, request: Request) -> dict[str, Any]:
+    """Convert the lead from its own email or website: the Company and/or
+    Contact are made under the API client, like every other conversion."""
+    user, client = _actor(request)
+    settings = get_settings()
+    select, has_ladder = await _lead_select(client)
+    lead = await _lead_or_404(request, client, prospect_id, select=select)
+    if lead.get("leadStatus") == cfg.LEAD_CONVERTED:
+        raise HTTPException(status_code=400, detail="This lead is already Converted.")
+    if lead.get("sideExit"):
+        raise HTTPException(status_code=400, detail=f"This lead stopped being worked ({lead['sideExit']}); "
+                                                    "clear that first if it should be converted.")
+    details = Details()
+    if not can_convert(lead, details):
+        raise HTTPException(status_code=400, detail="A lead converts from an email, or a website for a business. "
+                                                    "Fill one in under What we know first.")
+    api_client = _api_client(settings, request)
+    try:
+        done = await convert_lead(api_client, lead, details, campaign_id=None)
+    except CompanyConflict as exc:
+        raise HTTPException(status_code=409, detail=(
+            f"A company named {exc.name} already exists at a different web address ({exc.existing_website}). "
+            "Settle which company this is in the CRM, then convert the lead there."))
+    except ConversionRefused as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not convert the lead")
+    name = lead.get("businessName") or lead.get("name") or prospect_id
+    await record_action(
+        client, app=APP_CAMPAIGNS, category=CAT_STATUS, action="Lead Converted",
+        parent_type=cfg.PROSPECT, parent_id=prospect_id,
+        summary=f"Converted the lead \"{name}\" from its page",
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+        details=done.result(),
+    )
+    return {"converted": done.result()}
 
 
 class ImportPlanIn(BaseModel):

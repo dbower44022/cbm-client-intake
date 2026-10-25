@@ -1,6 +1,6 @@
 # campaigns/ — Marketing Management (was Campaign Management)
 
-Last Updated: 10-23-26 01:33 · Revision 1.6
+Last Updated: 10-25-26 11:15 · Revision 1.7
 
 Detail for Campaign Management (`/campaigns`, prospect marketing Phases 1 to 4 and the lead model): links, postcards, the landing page, imports, the Leads and Review grids, calls, texts, email, attribution and reporting.
 
@@ -298,6 +298,37 @@ the reason.
   **No served campaigns file may cite a ruling number** (ruling 112) — the
   guard test fails on `ruling \d` and `CM-\d`; write the hint in plain words
   and leave the number in the documents.
+- **The qualification ladder and the Leads tab** (v0.284.0, build plan
+  §§ 7e.3 and 7e.4 — step M2 of the redesign, rulings 104–106, 108, 113,
+  117; dark behind **`LEAD_LADDER`**, read per request; needs
+  `marketing-redesign-crm-handoff.md` on the CRM, feature-detected by
+  `ladder.available`). **The rule is one module, `campaigns/ladder.py`**:
+  `facts` → `placed` → `next_level`; the level never moves backwards, and
+  after *Set level* only a NEW fact moves it forward — the facts snapshot is
+  `lead_level_manual` (reset nightly; no snapshot ⇒ never moved). **Call
+  `ladder.after_write(lead_id, client=…)` after any application write to a
+  lead** (best-effort, org-wide key, silent while off); the import computes
+  the level into the create instead (no per-row CRM call — the volume rule).
+  The worker's sweep covers leads modified since its watermark (memory; a
+  start looks back a day); the Operations job backfills every lead. **The
+  level is empty at any status but Qualified** — placement clears it. A level
+  edited in the CRM's own screens carries no `levelSetAt`, so the sweep may
+  lift it, never lower it. The Leads grid's columns are drawn by `app.js`
+  (`LADDER_COLUMNS` / `CLASSIC_COLUMNS`) from the `ladder` flag on every
+  `/prospects` answer; the counts are `GET /prospects/counts`, one `total`
+  each. *Assign to* (bulk, and on the lead's page) takes the campaign owner's
+  team-member list (`service.owner_options`) and `leads.assign_payload`
+  refuses a Converted, Disqualified or stopped lead. The lead's page is
+  `/campaigns/lead/{id}` (`LEAD_ID` in `app.js`, lock `lead:<id>`); its
+  inline gaps go through `leads.facts_payload` (a whitelist — `FACT_FIELDS`)
+  and are written as the user; *Convert* runs `convert_lead` under the API
+  client from the lead's own email or website. *Email* and *Log a call* are
+  shown and say they arrive with personal outreach (M5). ***New code***
+  (§ 7d.1, ruling 126) sits on the lead's page and on the directory's
+  Contact record page (`directory/router.py`, contacts kind only,
+  `leadCodeAdmin` on its session): `leadcode.replace_for_lead` /
+  `replace_for_contact` under the org-wide key, both records kept equal,
+  the action log given `code_tail` (the last four) and never the code.
 - Owed: nothing on production's CRM (both slots done 10-18-26; every
   campaign switch off there — turning one on is Doug's call at `/setup`);
   Boston with its release; a seeder and sandbox re-baseline; the Twilio
@@ -308,6 +339,7 @@ the reason.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.7 | 10-25-26 11:15 | Claude (Claude Code) | The qualification ladder and the Leads tab (v0.284.0, § 7e.3–7e.4, M2): `ladder.py`, `after_write`, the sweep, the counts, Assign to, the lead's page. |
 | 1.6 | 10-23-26 01:33 | Claude (Claude Code) | One page, six tabs (v0.279.0, § 7e.2 M1): the shared object, the id prefixes, `callerOnly`, the ruling-number guard; the two old page addresses now redirects. |
 | 1.5 | 10-22-26 21:18 | Claude (Claude Code) | Renamed Marketing Management; Leads first (v0.278.0). |
 | 1.4 | 10-22-26 13:00 | Claude (Claude Code) | The lead code bullet (v0.276.0, § 7d D1). |

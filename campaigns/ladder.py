@@ -309,7 +309,8 @@ async def plan_sweep(client: EspoApi, store: Any, since: str) -> list[dict[str, 
 
 
 def plan_text(plan: list[dict[str, Any]], since: str) -> str:
-    head = f"Leads edited since {since} UTC whose level would change: {len(plan)}."
+    scope = "Every lead" if since == _JOB_SINCE else f"Leads edited since {since} UTC"
+    head = f"{scope} whose level would change: {len(plan)} (of at most {_SWEEP_CAP:,} read)."
     lines = [f"  {r['id']}  {r['from'] or '(none)':<12} -> {r['to'] or '(none)':<12}  {r['name']}" for r in plan]
     return "\n".join([head, *lines]) if lines else head
 
@@ -354,8 +355,14 @@ async def run_level_sweep(settings: Settings, *, client: Optional[EspoApi] = Non
 
 # --- the Operations job (dry run, then apply that exact plan) ----------------------------------
 
+#: The Operations job covers every lead (the first rollout on a CRM that
+#: already holds leads needs a backfill); the worker's sweep covers only what
+#: changed. Both cap at ``_SWEEP_CAP`` rows.
+_JOB_SINCE = "1970-01-01 00:00:00"
+
+
 def _job_since() -> str:
-    return _crm_stamp(datetime.now(timezone.utc) - _FIRST_PASS_LOOKBACK)[:13] + ":00:00"
+    return _JOB_SINCE
 
 
 async def _job_client(settings: Settings) -> EspoApi:

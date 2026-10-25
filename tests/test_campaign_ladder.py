@@ -247,7 +247,7 @@ def test_sweep_is_off_without_the_switch():
 
 def test_plan_text_names_each_move():
     text = ladder.plan_text([{"id": "l1", "name": "Acme", "from": "", "to": C}], "2026-10-24 10:00:00")
-    assert "whose level would change: 1" in text and "(none)" in text and "Contactable" in text and "Acme" in text
+    assert "whose level would change: 1" in text and "(none)" in text and "Contactable" in text and "Acme" in text and "Leads edited since" in text
 
 
 # --- the import -----------------------------------------------------------------------------------

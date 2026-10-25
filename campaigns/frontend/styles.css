@@ -128,3 +128,34 @@ a.cm__navbtn { text-decoration: none; color: inherit; display: inline-block; }
 /* A kind's own rule while a list is chosen (build plan § 7c): shown, but not in use. */
 .cm__rule--off { opacity: .55; }
 .cm__plain { list-style: none; margin: 0; padding: 0; }
+
+/* The ladder (build plan § 7e.4): the counts across the top of the Leads tab, each a filter. */
+.cm__counts { display: flex; flex-wrap: wrap; gap: .5rem; }
+.cm__countchip { font: inherit; display: inline-flex; align-items: baseline; gap: .4rem; padding: .35rem .8rem; border-radius: 999px; border: 1px solid var(--cbm-border, #c9d1d8); background: var(--cbm-surface, #fff); cursor: pointer; }
+.cm__countchip:hover { background: var(--cbm-hover, #f2f5f7); }
+.cm__countchip.is-active { background: var(--cbm-primary, #1d5c63); border-color: var(--cbm-primary, #1d5c63); color: #fff; }
+.cm__countchip strong { font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.cm__countchip--muted { color: var(--cbm-muted, #4b5a63); }
+/* Reach: card, phone, email — lit when the lead can be reached that way. */
+.cm__reach { display: inline-flex; gap: .35rem; }
+.cm__reach span { display: inline-block; padding: .05rem .45rem; border-radius: 4px; font-size: .78rem; font-weight: 600; background: var(--cbm-chip, #e8edf0); color: var(--cbm-text, #1e2a33); }
+.cm__reach span.cm__reach--off { opacity: .35; text-decoration: line-through; }
+.cm__level--unq { color: var(--cbm-muted, #4b5a63); }
+.cm__level--stopped { color: #7a2727; }
+
+/* The lead's page (build plan § 7e.4). */
+.cm__h4 { margin: .4rem 0 0; font-size: .82rem; color: var(--cbm-muted, #4b5a63); text-transform: uppercase; letter-spacing: .05em; }
+.cm__muted { color: var(--cbm-muted, #4b5a63); font-weight: 400; text-transform: none; letter-spacing: 0; }
+.cm__facts input.cm__gap, .cm__facts select.cm__gap { font: inherit; width: 100%; box-sizing: border-box; padding: .25rem .4rem; border: 1px dashed var(--cbm-border, #c9d1d8); border-radius: 4px; background: var(--cbm-surface, #fff); }
+.cm__facts input.cm__gap:focus, .cm__facts select.cm__gap:focus { border-style: solid; outline: 2px solid var(--cbm-primary, #1d5c63); outline-offset: 1px; }
+.cm__facts .cm__gap--filled { border-style: solid; border-color: transparent; background: transparent; }
+.cm__facts .cm__gap--filled:hover { border-color: var(--cbm-border, #c9d1d8); }
+.cm__timeline { list-style: none; margin: 0; padding: 0 0 0 1rem; border-left: 2px solid var(--cbm-border, #e3e7eb); display: grid; gap: .6rem; }
+.cm__timeline li { position: relative; font-size: .92rem; }
+.cm__timeline li::before { content: ""; position: absolute; left: -1.42rem; top: .45rem; width: .6rem; height: .6rem; border-radius: 50%; background: var(--cbm-primary, #1d5c63); }
+.cm__timeline li.cm__tl--touch::before { background: var(--cbm-muted, #4b5a63); }
+.cm__timeline .cm__tl-when { color: var(--cbm-muted, #4b5a63); font-size: .82rem; }
+.cm__timeline .cm__tl-detail { color: var(--cbm-muted, #4b5a63); }
+.cm__notes { white-space: pre-wrap; margin: 0; font-size: .92rem; }
+.cm__badge--identified { background: #e8edf0; } .cm__badge--contactable { background: #e3ecfb; color: #1f4b8f; } .cm__badge--referred { background: #e5f4ea; color: #1d6b3a; }
+.cm__badge--disqualified, .cm__badge--stopped { background: #f1e3e3; color: #7a2727; } .cm__badge--converted { background: #dfe9e6; color: #27514a; }

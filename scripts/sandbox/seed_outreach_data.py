@@ -84,8 +84,10 @@ LEADS: tuple[dict[str, Any], ...] = (
      **_addr("1890 E 40th St", zip_="44103"), "website": "https://northcoastdrones.example.com",
      "leadStatus": cfg.LEAD_QUALIFIED, "leadSource": cfg.SOURCE_FILING, "externalReference": "OH-5120352",
      "addressStatus": cfg.ADDRESS_DEAD, "addressDeadDays": 9},
+    # A named person and a phone: the ladder places this one Contactable.
     {"key": "tremont", "name": "Tremont Coffee Roasters", "businessName": "Tremont Coffee Roasters",
      **_addr("2368 W 11th St"), "website": "https://tremontroasters.example.com", "phone": "+12165550163",
+     "firstName": "Lena", "lastName": "Varga",
      "leadStatus": cfg.LEAD_QUALIFIED, "leadSource": cfg.SOURCE_FILING, "externalReference": "OH-5120368"},
     {"key": "ohiocity", "name": "Ohio City Bike Works", "businessName": "Ohio City Bike Works",
      **_addr("1814 W 25th St"), "website": "https://ohiocitybikes.example.com", "phone": "+12165550172",
@@ -115,8 +117,10 @@ LEADS: tuple[dict[str, Any], ...] = (
     {"key": "kowalski", "name": "Hannah Kowalski", "firstName": "Hannah", "lastName": "Kowalski",
      "phone": "+12165550126", "leadStatus": cfg.LEAD_UNQUALIFIED, "leadSource": cfg.SOURCE_LIST,
      "importBatch": "Small-business fair sign-ups — Fall 2026"},
+    # A referrer and an email: the ladder places this one Referred.
     {"key": "bell", "name": "Marcus Bell", "firstName": "Marcus", "lastName": "Bell",
      "email": "marcus.bell@sandbox.cbmentors.org", "phone": "+12165550139",
+     "referredByName": "Pat Reilly, Tremont Chamber of Commerce",
      "leadStatus": cfg.LEAD_QUALIFIED, "leadSource": cfg.SOURCE_LIST,
      "importBatch": "Small-business fair sign-ups — Fall 2026"},
     # --- each way a lead stops being worked ---
@@ -411,8 +415,18 @@ async def seed_leads(s: OutreachSeeder) -> None:
             if known:
                 payload["alreadyKnownCompanyId"] = known["id"]
         payload.setdefault("description", NOTE)
-        await s.ensure(cfg.PROSPECT, lead["name"], {k: v for k, v in payload.items() if v is not None},
-                       key=f"lead:{lead['key']}")
+        # The qualification ladder (build plan § 7e.3): a Qualified demo lead
+        # carries the level its facts earn. ``clean`` drops the field on a CRM
+        # without it; ``fill`` gives it to a lead seeded before the ladder.
+        level = None
+        if lead["leadStatus"] == cfg.LEAD_QUALIFIED:
+            from campaigns.ladder import facts, placed
+            level = placed(facts(payload))
+            payload["qualificationLevel"] = level
+        lead_id = await s.ensure(cfg.PROSPECT, lead["name"], {k: v for k, v in payload.items() if v is not None},
+                                 key=f"lead:{lead['key']}")
+        if level and lead_id:
+            await s.fill(cfg.PROSPECT, lead_id, {"qualificationLevel": level}, lead["name"])
 
 
 async def seed_conversions(s: OutreachSeeder) -> None:

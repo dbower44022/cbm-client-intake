@@ -9,6 +9,8 @@
   "use strict";
   var segs = location.pathname.split("/");
   var RECORD_ID = segs[2] === "record" ? decodeURIComponent(segs[3] || "") : null;
+  // The lead's own page, /campaigns/lead/{id} (build plan § 7e.4).
+  var LEAD_ID = segs[2] === "lead" ? decodeURIComponent(segs[3] || "") : null;
   var API = "/campaigns/api";
   var HOST = (document.querySelector('meta[name="cbm-org"]') || {}).content || "";
 
@@ -1033,8 +1035,10 @@
   // The whole search rides the address (#prospects?q=… / #review?…), so it can
   // be bookmarked. Selection holds what the reviewer saw of each lead
   // (status and reason), which the server's guard compares before any write.
-  var GRID_FILTERS = ["q", "status", "exit", "source", "batch", "place", "from", "to", "camp", "gate", "fit"];
-  var GRID_PARAM = { q: "q", status: "status", exit: "exit", source: "source", batch: "batch", place: "place", from: "arrivedFrom", to: "arrivedTo", camp: "inCampaign", gate: "gate", fit: "minFit" };
+  var GRID_FILTERS = ["q", "status", "exit", "source", "batch", "place", "from", "to", "camp", "gate", "fit", "level", "replied", "assigned"];
+  var GRID_PARAM = { q: "q", status: "status", exit: "exit", source: "source", batch: "batch", place: "place", from: "arrivedFrom", to: "arrivedTo", camp: "inCampaign", gate: "gate", fit: "minFit", level: "level", replied: "replied", assigned: "assigned" };
+  // The filters the ladder folds behind "More filters" (build plan § 7e.4).
+  var MORE_FILTERS = ["status", "exit", "from", "to", "camp", "gate", "fit"];
   var grids = {
     pf: { section: "prospects", review: false, offset: 0, limit: 50, total: 0, rows: [], sort: "createdAt", dir: "desc", selected: {}, all: null },
     rf: { section: "review", review: true, offset: 0, limit: 50, total: 0, rows: [], sort: "createdAt", dir: "asc", selected: {}, all: null },
@@ -1080,10 +1084,125 @@
       // carries the fit fields (the server says so on every page).
       g.fit = !!res.fit;
       Array.prototype.forEach.call(document.querySelectorAll("#" + (g.review ? "reviewPanel" : "prospectsPanel") + " .cm__fitonly"), function (e) { e.hidden = !g.fit; });
+      // The ladder: the level and reach columns, Assigned to, the counts and
+      // the shorter filter row — when the switch is on AND this CRM has the
+      // fields (the server says so on every page).
+      g.ladder = !!res.ladder;
+      if (!g.review) { applyLadderLayout(); loadCounts(); }
       if (g.offset && !g.rows.length && g.total) { g.offset = Math.max(0, Math.floor((g.total - 1) / g.limit) * g.limit); return loadGrid(px); }
       (g.review ? renderReview : renderProspects)();
       renderPager(px); renderBulk(px);
     } catch (e) { notice(e.message, "error"); }
+  }
+
+  // --- the ladder on the Leads tab (build plan § 7e.4) ---------------------------------------
+  function applyLadderLayout() {
+    var g = grids.pf;
+    Array.prototype.forEach.call(document.querySelectorAll("#prospectsPanel .cm__ladderonly"), function (e) { e.hidden = !g.ladder; });
+    var anyMore = MORE_FILTERS.some(function (f) { var e = $("pf_" + f); return e && e.value.trim(); });
+    var open = !g.ladder || g.moreOpen || anyMore;
+    Array.prototype.forEach.call(document.querySelectorAll("#pf_filters .cm__morefilter"), function (e) {
+      e.hidden = !open || (e.classList.contains("cm__fitonly") && !g.fit);
+    });
+    if ($("pf_more")) { text($("pf_more"), open ? "Fewer filters" : "More filters"); $("pf_more").setAttribute("aria-expanded", open ? "true" : "false"); }
+    if (g.ladder) text($("pf_hint"), "Every lead, searched and counted by the CRM a page at a time. The counts across the top are filters: Unqualified, the three levels inside Qualified, replies waiting to be converted, Disqualified. Tick rows, or select everything the filters match, to Assign to a team member, Disqualify or mark Do Not Contact many at once. Open a lead to see what is known and reach them.");
+    renderProspectHead();
+  }
+  var COUNT_CHIPS = [
+    ["unqualified", "Unqualified", { status: "Unqualified", level: "", replied: "" }, true],
+    ["identified", "Identified", { status: "Qualified", level: "Identified", replied: "" }, false],
+    ["contactable", "Contactable", { status: "Qualified", level: "Contactable", replied: "" }, false],
+    ["referred", "Referred", { status: "Qualified", level: "Referred", replied: "" }, false],
+    ["replied", "Replied, not yet converted", { status: "", level: "", replied: "1" }, false],
+    ["disqualified", "Disqualified", { status: "Disqualified", level: "", replied: "" }, true],
+  ];
+  function chipActive(c) {
+    var want = c[2];
+    return ["status", "level", "replied"].every(function (k) { var e = $("pf_" + k); return (e ? e.value.trim() : "") === (want[k] || ""); });
+  }
+  async function loadCounts() {
+    var g = grids.pf, host = $("pf_counts");
+    if (!g.ladder) { hide(host); return; }
+    try {
+      var q = gridQuery("pf"); delete q.sort; delete q.dir; delete q.status; delete q.level; delete q.replied;
+      var res = await api("/prospects/counts" + (qs(q) ? "?" + qs(q) : ""));
+      host.innerHTML = "";
+      COUNT_CHIPS.forEach(function (c) {
+        if (res[c[0]] == null) return;
+        var b = el("button", "cm__countchip" + (c[3] ? " cm__countchip--muted" : "") + (chipActive(c) ? " is-active" : "")); b.type = "button";
+        b.appendChild(el("strong", null, Number(res[c[0]]).toLocaleString())); b.appendChild(el("span", null, c[1]));
+        b.title = chipActive(c) ? "Showing these leads — click to show every lead again." : "Show only these leads.";
+        b.addEventListener("click", function () {
+          var on = chipActive(c);
+          ["status", "level", "replied"].forEach(function (k) { var e = $("pf_" + k); if (e) e.value = on ? "" : (c[2][k] || ""); });
+          g.offset = 0; clearSelection("pf"); loadGrid("pf");
+        });
+        host.appendChild(b);
+      });
+      show(host);
+    } catch (e) { hide(host); }
+  }
+  // The Leads grid's columns: the ladder's set when this CRM has the fields,
+  // else the columns the tab always had.
+  function levelCell(p) {
+    var td = el("td");
+    var status = p.leadStatus || "Unqualified";
+    if (status === "Qualified") { td.textContent = p.qualificationLevel || "Qualified"; td.title = p.levelSetAt ? ("Set by hand" + (p.levelSetByHandName ? " by " + p.levelSetByHandName : "") + " " + fmtDate(p.levelSetAt)) : "Placed by the system from what the lead holds."; }
+    else { td.textContent = status; td.className = "cm__level--unq"; }
+    if (p.sideExit) { td.appendChild(el("span", "cm__level--stopped", " · " + p.sideExit)); }
+    return td;
+  }
+  function reachCell(p) {
+    var td = el("td"); var box = el("span", "cm__reach");
+    var card = !!(p.mailingAddressStreet && p.addressStatus !== "Dead");
+    var phone = !!p.phone;
+    var mailable = p.leadStatus === "Qualified" && (p.qualificationLevel === "Contactable" || p.qualificationLevel === "Referred");
+    var email = !!p.email && mailable;
+    [["Card", card, card ? "A postcard can reach this address." : (p.addressStatus === "Dead" ? "The address is dead." : "No street address.")],
+     ["Phone", phone, phone ? p.phone : "No phone number."],
+     ["Email", email, !p.email ? "No email address." : (email ? p.email : "Has an email, but only a Contactable or Referred lead may be emailed personally.")]
+    ].forEach(function (r) { var s = el("span", r[1] ? "" : "cm__reach--off", r[0]); s.title = r[2]; box.appendChild(s); });
+    td.appendChild(box); return td;
+  }
+  function personCell(p) { return el("td", null, [p.firstName, p.lastName].filter(Boolean).join(" ") || "—"); }
+  var LADDER_COLUMNS = [
+    { label: "Business", sort: "name" },
+    { label: "Level", sort: "qualificationLevel", title: "Unqualified, the level inside Qualified, or Disqualified." },
+    { label: "Contact person", sort: "lastName" },
+    { label: "Reach", title: "How the lead can be reached: a postcard, a phone call, a personal email." },
+    { label: "Fit", sort: "fitScore", cls: "cm__fitonly", title: "The free pass's fit score, 0 to 100. Click a score for its reasons." },
+    { label: "Assigned to", sort: "assignedUserName" },
+    { label: "Lead Source", sort: "leadSource" },
+    { label: "Last activity", sort: "modifiedAt" },
+  ];
+  var CLASSIC_COLUMNS = [
+    { label: "Business", sort: "name" },
+    { label: "Fit", sort: "fitScore", cls: "cm__fitonly", title: "The free pass's fit score, 0 to 100. Click a score for its reasons." },
+    { label: "Service area", cls: "cm__fitonly" }, { label: "County", cls: "cm__fitonly" },
+    { label: "Lead status", sort: "leadStatus" }, { label: "Stopped because", sort: "sideExit" }, { label: "Lead Source", sort: "leadSource" },
+    { label: "City", sort: "mailingAddressCity" }, { label: "ZIP", sort: "mailingAddressPostalCode" }, { label: "Address", sort: "addressStatus" },
+    { label: "Batch", sort: "importBatch" }, { label: "Arrived", sort: "createdAt" },
+  ];
+  function renderProspectHead() {
+    var g = grids.pf, tr = $("prospectHead").querySelector("tr");
+    Array.prototype.slice.call(tr.children, 1).forEach(function (c) { c.remove(); });
+    (g.ladder ? LADDER_COLUMNS : CLASSIC_COLUMNS).forEach(function (c) {
+      var th = el("th", c.cls || null, c.label);
+      if (c.sort) th.setAttribute("data-sort", c.sort);
+      if (c.title) th.title = c.title;
+      if (c.cls === "cm__fitonly") th.hidden = !g.fit;
+      tr.appendChild(th);
+    });
+  }
+  $("prospectHead").addEventListener("click", function (ev) {
+    var th = ev.target.closest("th[data-sort]"); if (!th) return;
+    var g = grids.pf, key = th.getAttribute("data-sort");
+    if (g.sort === key) g.dir = g.dir === "asc" ? "desc" : "asc"; else { g.sort = key; g.dir = "asc"; }
+    g.offset = 0; loadGrid("pf");
+  });
+  function openLead(id) {
+    if (grids.pf.ladder) { window.open("/campaigns/lead/" + encodeURIComponent(id), "cbm-lead-" + id); return; }
+    openProspect(id);
   }
   // The names the rest of the page already calls.
   function loadProspects() { return loadGrid("pf"); }
@@ -1201,14 +1320,60 @@
     g.rows.forEach(function (p) {
       var tr = el("tr");
       tr.appendChild(tickCell("pf", p));
-      var nTd = el("td"); var a = el("a", "cm__link", p.businessName || p.name || "(unnamed)"); a.href = "#"; a.addEventListener("click", function (ev) { ev.preventDefault(); openProspect(p.id); }); nTd.appendChild(a); tr.appendChild(nTd);
-      if (g.fit) { tr.appendChild(fitCell(p, false)); tr.appendChild(el("td", null, p.fitGate || "—")); tr.appendChild(el("td", null, p.fitCounty || "—")); }
-      tr.appendChild(el("td", null, p.leadStatus || "—")); tr.appendChild(el("td", null, p.sideExit || "—")); tr.appendChild(el("td", null, p.leadSource || "—"));
-      tr.appendChild(el("td", null, p.mailingAddressCity || "—")); tr.appendChild(el("td", null, p.mailingAddressPostalCode || "—")); tr.appendChild(el("td", null, p.addressStatus || "—"));
-      tr.appendChild(el("td", null, p.importBatch || "—")); tr.appendChild(el("td", null, fmtDate(p.createdAt)));
+      var nTd = el("td"); var a = el("a", "cm__link", p.businessName || p.name || "(unnamed)"); a.href = g.ladder ? ("/campaigns/lead/" + encodeURIComponent(p.id)) : "#"; a.addEventListener("click", function (ev) { ev.preventDefault(); openLead(p.id); }); nTd.appendChild(a); tr.appendChild(nTd);
+      if (g.ladder) {
+        tr.appendChild(levelCell(p)); tr.appendChild(personCell(p)); tr.appendChild(reachCell(p));
+        if (g.fit) tr.appendChild(fitCell(p, true));
+        tr.appendChild(el("td", null, p.assignedUserName || "—")); tr.appendChild(el("td", null, p.leadSource || "—"));
+        tr.appendChild(el("td", null, fmtDate(p.modifiedAt || p.createdAt)));
+      } else {
+        if (g.fit) { tr.appendChild(fitCell(p, false)); tr.appendChild(el("td", null, p.fitGate || "—")); tr.appendChild(el("td", null, p.fitCounty || "—")); }
+        tr.appendChild(el("td", null, p.leadStatus || "—")); tr.appendChild(el("td", null, p.sideExit || "—")); tr.appendChild(el("td", null, p.leadSource || "—"));
+        tr.appendChild(el("td", null, p.mailingAddressCity || "—")); tr.appendChild(el("td", null, p.mailingAddressPostalCode || "—")); tr.appendChild(el("td", null, p.addressStatus || "—"));
+        tr.appendChild(el("td", null, p.importBatch || "—")); tr.appendChild(el("td", null, fmtDate(p.createdAt)));
+      }
       body.appendChild(tr);
     });
     markSort("prospectGrid", g);
+  }
+
+  // Assign to…: the ticked leads, or all matching, go to one
+  // member of the Marketing Admin Team, written as the signed-in user.
+  async function openAssign(px) {
+    var g = grids[px], items = g.all ? g.all.slice() : Object.keys(g.selected).map(function (k) { return g.selected[k]; });
+    if (!items.length) { notice("Tick at least one lead first.", "warn"); return; }
+    var options;
+    try { options = await loadOwnerOptions(); } catch (e) { notice(e.message, "error"); return; }
+    var n = items.length;
+    var body = el("div", "cm__plan");
+    body.appendChild(el("p", null, "Assign " + n.toLocaleString() + " lead" + (n === 1 ? "" : "s") + " to one team member. A lead that is Converted, Disqualified or has stopped being worked is skipped, and says so."));
+    var f = el("div", "cm__field cm__field--wide"); var lab = el("label", null, "Team member"); lab.htmlFor = "as_user";
+    var sel = el("select"); sel.id = "as_user"; var none = el("option", null, "Choose…"); none.value = ""; sel.appendChild(none);
+    options.forEach(function (o) { var opt = el("option", null, o.name); opt.value = o.id; if (state.session && o.id === state.session.userId) opt.textContent = o.name + " (me)"; sel.appendChild(opt); });
+    f.appendChild(lab); f.appendChild(sel); body.appendChild(f);
+    var prog = el("p", "cm__hint"); body.appendChild(prog);
+    var running = false;
+    openModal("Assign " + n.toLocaleString() + " lead" + (n === 1 ? "" : "s"), body, async function () {
+      if (running) return;
+      if (!sel.value) { modalMsg("Choose the team member the leads go to.", "error"); return; }
+      running = true;
+      var done = 0, skipped = [], failed = [];
+      try {
+        for (var i = 0; i < items.length; i += 50) {
+          text(prog, "Working… " + Math.min(i, n).toLocaleString() + " of " + n.toLocaleString() + ".");
+          var res = await api("/prospects/bulk", { method: "POST", body: { action: "assign", assignee: sel.value, items: items.slice(i, i + 50) } });
+          done += (res.done || []).length; skipped = skipped.concat(res.skipped || []); failed = failed.concat(res.failed || []);
+        }
+      } catch (e) { failed.push({ name: "the remaining leads", why: e.message }); }
+      running = false;
+      var who = sel.options[sel.selectedIndex].textContent;
+      var summary = "Assigned to " + who + ": " + done.toLocaleString() + " done, " + skipped.length + " skipped, " + failed.length + " failed.";
+      var detail = skipped.concat(failed).slice(0, 12).map(function (s) { return (s.name || s.id) + " — " + s.why; });
+      text(prog, summary + (detail.length ? " " + detail.join(" · ") : ""));
+      $("modalSave").hidden = true;
+      notice(summary, failed.length ? "warn" : "ok");
+      clearSelection(px); loadGrid(px);
+    }, "Assign");
   }
 
   // --- the Review queue ----------------------------------------------------------------------------
@@ -1341,13 +1506,8 @@
     }
   }
   wireGrid("pf"); wireGrid("rf");
-  Array.prototype.forEach.call(document.querySelectorAll("#prospectGrid th[data-sort]"), function (th) {
-    th.addEventListener("click", function () {
-      var g = grids.pf, key = th.getAttribute("data-sort");
-      if (g.sort === key) g.dir = g.dir === "asc" ? "desc" : "asc"; else { g.sort = key; g.dir = "asc"; }
-      g.offset = 0; loadGrid("pf");
-    });
-  });
+  if ($("pf_bulkassign")) $("pf_bulkassign").addEventListener("click", function () { openAssign("pf"); });
+  if ($("pf_more")) $("pf_more").addEventListener("click", function () { grids.pf.moreOpen = !grids.pf.moreOpen; applyLadderLayout(); });
   $("pf_export").addEventListener("click", function () {
     var s = qs(gridQuery("pf"));
     var a = document.createElement("a"); a.href = API + "/prospects/export" + (s ? "?" + s : ""); a.rel = "noopener";
@@ -1409,6 +1569,228 @@
       if (window.CBMEnrichment) window.CBMEnrichment.panel(body, { targetType: "lead", recordId: p.id, onChange: function () { loadProspects(); } });
       openModal(p.businessName || p.name, body, null);
     } catch (e) { notice(e.message, "error"); }
+  }
+
+  // --- the lead's page (build plan § 7e.4) -----------------------------------------------------------
+  // The header: level, assignee, how we can reach them, the actions. What we
+  // know in three groups, with every empty field an inline gap written as the
+  // user (placement runs after each). Where it came from. One Activity
+  // timeline. Every action button stays visible; one that does not apply says
+  // why on click.
+  var lead = { data: null, partners: null };
+  var LEVEL_WORDS = {
+    Identified: "a real business, no named person or direct line yet",
+    Contactable: "a named person and a phone or an email",
+    Referred: "introduced by a partner or someone trusted, with a phone or an email",
+  };
+  async function loadLead() {
+    try {
+      lead.data = await api("/prospects/" + encodeURIComponent(LEAD_ID));
+      renderLead();
+    } catch (e) {
+      if (e.status === 404) notice("This lead was not found.", "error"); else notice(e.message, "error");
+    }
+  }
+  function leadLevelWord(p) {
+    var status = p.leadStatus || "Unqualified";
+    if (status === "Qualified") return p.qualificationLevel || "Qualified";
+    return status;
+  }
+  function leadBadgeClass(p) {
+    var w = leadLevelWord(p).toLowerCase();
+    return "cm__badge" + (["identified", "contactable", "referred", "disqualified", "converted"].indexOf(w) >= 0 ? " cm__badge--" + w : "");
+  }
+  function gap(p, field, opts) {
+    // One fact: a filled value shown plainly (click to edit), an empty one as a
+    // dashed box. Enter or leaving the box saves a change.
+    opts = opts || {};
+    var dd = el("dd");
+    var input = el(opts.select ? "select" : "input", "cm__gap" + (p[field] ? " cm__gap--filled" : ""));
+    if (opts.select) {
+      var none = el("option", null, "—"); none.value = ""; input.appendChild(none);
+      (opts.select || []).forEach(function (o) { var op = el("option", null, o.name); op.value = o.id; input.appendChild(op); });
+      input.value = p[field] || "";
+    } else {
+      input.type = opts.type || "text"; input.value = p[field] || ""; input.placeholder = opts.placeholder || "Add…"; input.autocomplete = "off";
+      if (opts.readonly) { input.readOnly = true; input.title = opts.readonly; }
+    }
+    input.setAttribute("aria-label", opts.label || field);
+    var was = input.value;
+    async function save() {
+      if (input.value === was) return;
+      var changes = {}; changes[field] = input.value;
+      var done = window.CBMBusy ? CBMBusy.start(input) : function () {};
+      try {
+        var res = await api("/prospects/" + encodeURIComponent(LEAD_ID) + "/facts", { method: "PATCH", body: { changes: changes } });
+        notice("Saved" + (res.level ? " — level now " + res.level : "") + ".", "ok");
+        await loadLead();
+      } catch (e) { notice(e.message, "error"); input.value = was; }
+      finally { done(); }
+    }
+    if (!opts.readonly) {
+      input.addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); save(); } if (ev.key === "Escape") { input.value = was; input.blur(); } });
+      input.addEventListener("blur", save);
+      if (opts.select) input.addEventListener("change", save);
+    }
+    dd.appendChild(input); return dd;
+  }
+  function factRow(host, label, node) { host.appendChild(el("dt", null, label)); host.appendChild(node); }
+  function plain(v) { return el("dd", null, v == null || v === "" ? "—" : String(v)); }
+  function reachSentence(p) {
+    var ways = [];
+    if (p.mailingAddressStreet && p.addressStatus !== "Dead") ways.push("a postcard to " + [p.mailingAddressStreet, p.mailingAddressCity].filter(Boolean).join(", "));
+    if (p.phone) ways.push("a call to " + p.phone);
+    var mailable = p.leadStatus === "Qualified" && (p.qualificationLevel === "Contactable" || p.qualificationLevel === "Referred");
+    if (p.email) ways.push(mailable ? "a personal email to " + p.email : "an email to " + p.email + " once the lead is Contactable or Referred");
+    return ways.length ? "How we can reach them: " + ways.join("; ") + "." : "How we can reach them: no address, phone or email yet — the gaps below are where to put what you find.";
+  }
+  async function renderLead() {
+    var d = lead.data, p = d.prospect;
+    document.title = HOST + " — " + (p.businessName || p.name || "Lead");
+    text($("ld_name"), p.businessName || p.name || "(unnamed)");
+    var lv = $("ld_level"); lv.textContent = leadLevelWord(p) + (p.sideExit ? " · " + p.sideExit : ""); lv.className = leadBadgeClass(p) + (p.sideExit ? " cm__badge--stopped" : "");
+    lv.title = p.leadStatus === "Qualified" ? (p.levelSetAt ? "Set by hand" + (p.levelSetByHandName ? " by " + p.levelSetByHandName : "") + " " + fmtDate(p.levelSetAt) + (d.manualLevel ? "; it moves up only when a new fact arrives" : "") : (LEVEL_WORDS[p.qualificationLevel] ? "Placed by the system: " + LEVEL_WORDS[p.qualificationLevel] + "." : "The system places the level from what the lead holds.")) : "";
+    text($("ld_assignee"), d.ladder ? (p.assignedUserName ? "· assigned to " + p.assignedUserName : "· not assigned yet") : "");
+    text($("ld_reach"), reachSentence(p));
+    Object.keys(PANELS).forEach(function (k) { $(PANELS[k]).hidden = true; });
+    show($("leadPanel"));
+    if (d.ladder && !lead.partners) {
+      try { lead.partners = (await api("/prospects/partner-options")).options || []; } catch (_) { lead.partners = []; }
+    }
+    var b = $("ld_business"); b.innerHTML = "";
+    factRow(b, "Business", gap(p, "businessName", { label: "Business name" }));
+    factRow(b, "Website", gap(p, "website", { label: "Website", placeholder: "Add a web address…" }));
+    factRow(b, "Street", gap(p, "mailingAddressStreet", { label: "Street" }));
+    factRow(b, "City", gap(p, "mailingAddressCity", { label: "City" }));
+    factRow(b, "State", gap(p, "mailingAddressState", { label: "State" }));
+    factRow(b, "ZIP", gap(p, "mailingAddressPostalCode", { label: "ZIP" }));
+    factRow(b, "Address status", plain(p.addressStatus));
+    var s = $("ld_person"); s.innerHTML = "";
+    factRow(s, "First name", gap(p, "firstName", { label: "First name" }));
+    factRow(s, "Last name", gap(p, "lastName", { label: "Last name" }));
+    factRow(s, "Phone", gap(p, "phone", { label: "Phone", type: "tel", placeholder: "Add a phone number…" }));
+    factRow(s, "Email", gap(p, "email", { label: "Email", type: "email", placeholder: "Add an email address…" }));
+    if (d.ladder) {
+      factRow(s, "Referred by (partner)", gap(p, "referredByPartnerId", { label: "Referred by (partner)", select: lead.partners || [] }));
+      factRow(s, "Referred by (name)", gap(p, "referredByName", { label: "Referred by (name)", placeholder: "Someone trusted who is not a partner…" }));
+    }
+    var f = $("ld_fit"); f.innerHTML = "";
+    if (p.fitScore != null && p.fitScore !== "") {
+      factRow(f, "Fit score", plain(p.fitScore + " of 100")); factRow(f, "Service area", plain(p.fitGate)); factRow(f, "County", plain(p.fitCounty));
+      var reasons = el("dd", null, p.fitReasons || "—"); reasons.style.whiteSpace = "pre-line"; factRow(f, "Why", reasons);
+    } else { factRow(f, "Fit score", plain("Not scored yet")); }
+    var o = $("ld_origin"); o.innerHTML = "";
+    factRow(o, "Lead Source", plain(p.leadSource)); factRow(o, "Batch", plain(p.importBatch)); factRow(o, "Reference", plain(p.externalReference));
+    factRow(o, "Arrived", plain(fmtDate(p.createdAt))); factRow(o, "Status", plain((p.leadStatus || "Unqualified") + (p.leadStatusChangedAt ? " since " + fmtDate(p.leadStatusChangedAt) : "")));
+    if (p.qualifiedBy) factRow(o, "Qualified by", plain(p.qualifiedBy + (p.qualifiedAt ? ", " + fmtDate(p.qualifiedAt) : "")));
+    if (p.sideExit) { factRow(o, "Stopped because", plain(p.sideExit)); factRow(o, "Reason note", plain(p.sideExitNote)); }
+    if (p.promotedCompanyName) factRow(o, "Converted to company", plain(p.promotedCompanyName));
+    if (p.promotedContactName) factRow(o, "Converted to contact", plain(p.promotedContactName));
+    if (p.alreadyKnownCompanyName) factRow(o, "Duplicate of company", plain(p.alreadyKnownCompanyName));
+    if (d.ladder && p.replied) factRow(o, "Replied", plain("Yes — convert the lead, or answer first"));
+    if (p.leadCode !== undefined) factRow(o, "Link code", plain(p.leadCode ? p.leadCode + " (the end of every personal link; New code replaces it)" : "None yet — minted the first time a campaign needs it, or by New code"));
+    var rv = $("ld_review"); rv.innerHTML = ""; rv.appendChild(reviewActions(p, loadLead));
+    text($("ld_notes"), p.description || "—");
+    var tl = $("ld_activity"); tl.innerHTML = "";
+    (d.activity || []).forEach(function (r) {
+      var li = el("li", "cm__tl--" + r.kind);
+      li.appendChild(el("div", "cm__tl-when", fmtDate(r.at) + (r.by ? " · " + r.by : "")));
+      li.appendChild(el("div", null, r.title));
+      if (r.detail) li.appendChild(el("div", "cm__tl-detail", r.detail));
+      tl.appendChild(li);
+    });
+    $("ld_activityEmpty").hidden = (d.activity || []).length > 0;
+    var en = $("ld_enrichment"); en.innerHTML = "";
+    if (window.CBMEnrichment) window.CBMEnrichment.panel(en, { targetType: "lead", recordId: p.id, onChange: loadLead });
+  }
+  function leadWhyNot(p, action) {
+    if (action === "level") {
+      if (!(lead.data && lead.data.ladder)) return "The qualification ladder is not switched on here, or this CRM does not carry its fields yet.";
+      if (p.leadStatus !== "Qualified") return "Only a Qualified lead has a level; this one is " + (p.leadStatus || "Unqualified") + ". Qualify it first (under Review).";
+      if (p.sideExit) return "This lead stopped being worked (" + p.sideExit + "); its level stays as it is.";
+    }
+    if (action === "assign") {
+      if (!(lead.data && lead.data.ladder)) return "This CRM does not carry the lead's Assigned to field yet.";
+      if (p.leadStatus === "Converted") return "This lead is Converted; its Company or Contact is the record to work now.";
+      if (p.leadStatus === "Disqualified") return "A Disqualified lead is not worked, so it is not assigned.";
+      if (p.sideExit) return "This lead stopped being worked (" + p.sideExit + "), so it is not assigned.";
+    }
+    if (action === "convert") {
+      if (p.leadStatus === "Converted") return "This lead is already Converted" + (p.promotedCompanyName || p.promotedContactName ? " — to " + [p.promotedCompanyName, p.promotedContactName].filter(Boolean).join(" and ") : "") + ".";
+      if (p.sideExit) return "This lead stopped being worked (" + p.sideExit + "); clear that first if it should be converted.";
+      if (!p.email && !(p.website && p.businessName)) return "A lead converts from an email, or a website for a business. Fill one in under What we know first.";
+    }
+    return "";
+  }
+  function openSetLevel(p) {
+    var why = leadWhyNot(p, "level"); if (why) { notice(why, "warn"); return; }
+    var body = el("div", "cm__plan");
+    body.appendChild(el("p", null, "The system places the level from what the lead holds; set it by hand when you know better. It never moves backwards on its own, and after a hand setting it moves up only when a new fact arrives — a phone, an email, a named person or a referrer."));
+    var f = el("div", "cm__field cm__field--wide"); var lab = el("label", null, "Level"); lab.htmlFor = "lv_pick";
+    var sel = el("select"); sel.id = "lv_pick";
+    (lead.data.levels || []).forEach(function (l) { var op = el("option", null, l + " — " + (LEVEL_WORDS[l] || "")); op.value = l; sel.appendChild(op); });
+    sel.value = p.qualificationLevel || (lead.data.levels || [])[0];
+    f.appendChild(lab); f.appendChild(sel); body.appendChild(f);
+    openModal("Set level — " + (p.businessName || p.name), body, async function () {
+      var res = await api("/prospects/" + encodeURIComponent(LEAD_ID) + "/level", { method: "PUT", body: { level: sel.value } });
+      closeModal(); notice("Level set to " + sel.value + (res.was ? " (was " + res.was + ")" : "") + ".", "ok"); loadLead();
+    }, "Set level");
+  }
+  async function openAssignOne(p) {
+    var why = leadWhyNot(p, "assign"); if (why) { notice(why, "warn"); return; }
+    var options;
+    try { options = await loadOwnerOptions(); } catch (e) { notice(e.message, "error"); return; }
+    var body = el("div", "cm__plan");
+    body.appendChild(el("p", null, "The team member who makes contact personally. Only members of the Marketing Management team are offered."));
+    var f = el("div", "cm__field cm__field--wide"); var lab = el("label", null, "Assign to"); lab.htmlFor = "as_one";
+    var sel = el("select"); sel.id = "as_one"; var none = el("option", null, "Choose…"); none.value = ""; sel.appendChild(none);
+    options.forEach(function (o) { var op = el("option", null, o.name + (state.session && o.id === state.session.userId ? " (me)" : "")); op.value = o.id; sel.appendChild(op); });
+    sel.value = p.assignedUserId || "";
+    f.appendChild(lab); f.appendChild(sel); body.appendChild(f);
+    openModal("Assign — " + (p.businessName || p.name), body, async function () {
+      if (!sel.value) { modalMsg("Choose the team member the lead goes to.", "error"); return; }
+      var res = await api("/prospects/" + encodeURIComponent(LEAD_ID) + "/assignee", { method: "PUT", body: { userId: sel.value } });
+      closeModal(); notice("Assigned to " + res.assignee.name + ".", "ok"); loadLead();
+    }, "Assign");
+  }
+  function convertLead(p) {
+    var why = leadWhyNot(p, "convert"); if (why) { notice(why, "warn"); return; }
+    var from = p.email ? "its email " + p.email : "its website " + p.website;
+    ask("Convert this lead?", "Convert " + (p.businessName || p.name) + " from " + from + ": " + (p.businessName ? "a Company" + (p.email ? " and a Contact" : "") : "a Contact") + " typed Prospect is created (or matched), and the lead is marked Converted.", { ok: "Convert" }).then(async function (ok) {
+      if (!ok) return;
+      try {
+        var res = await api("/prospects/" + encodeURIComponent(LEAD_ID) + "/convert", { method: "POST" });
+        var c = res.converted || {};
+        notice("Converted" + (c.companyId ? (c.companyCreated ? " — a new Company" : " — matched an existing Company") : "") + (c.contactId ? (c.contactCreated ? ", a new Contact" : ", an existing Contact") : "") + ".", "ok");
+        loadLead();
+      } catch (e) { notice(e.message, e.status === 409 ? "warn" : "error"); }
+    });
+  }
+  function notYet(what) { notice(what + " arrives with personal outreach, a later release. Until then, reach the lead by phone or through a campaign.", "warn"); }
+  // New code: a fresh personal-link code. The old one stops resolving at
+  // once; a notice already sent carries it until the next push rewrites the
+  // vendor's field, so the confirmation says so.
+  function newCode(p) {
+    var had = !!p.leadCode;
+    ask("New code for " + (p.businessName || p.name) + "?",
+        (had ? "The code at the end of this lead's personal links is replaced. A link printed or sent with the old code opens the campaign with no lead on it from now on, and the email service's field keeps the old code until the next push that includes this person."
+             : "This lead has no code yet; one is minted now and every personal link made for them will carry it."),
+        { ok: had ? "Replace the code" : "Mint a code" }).then(async function (ok) {
+      if (!ok) return;
+      try {
+        var res = await api("/prospects/" + encodeURIComponent(LEAD_ID) + "/code", { method: "POST" });
+        notice((res.replaced ? "Code replaced." : "Code minted.") + " New links for this lead end in " + res.code + ".", "ok");
+        loadLead();
+      } catch (e) { notice(e.message, e.status === 409 ? "warn" : "error"); }
+    });
+  }
+  if ($("ld_setlevel")) {
+    $("ld_setlevel").addEventListener("click", function () { if (lead.data) openSetLevel(lead.data.prospect); });
+    $("ld_assign").addEventListener("click", function () { if (lead.data) openAssignOne(lead.data.prospect); });
+    $("ld_convert").addEventListener("click", function () { if (lead.data) convertLead(lead.data.prospect); });
+    $("ld_newcode").addEventListener("click", function () { if (lead.data) newCode(lead.data.prospect); });
+    $("ld_email").addEventListener("click", function () { notYet("A personal email from here"); });
+    $("ld_call").addEventListener("click", function () { notYet("Logging a call from here"); });
   }
 
   // --- review actions (§ 2.3, § 3.8) ----------------------------------------------------------
@@ -1533,6 +1915,7 @@
   // list), and its onShow gets the hash's parameters (#lists?list=<id>).
   var SECTIONS = ["prospects", "lists", "campaigns", "review", "calls", "imports"];
   var PANELS = { prospects: "prospectsPanel", lists: "listsPanel", campaigns: "campaignsPanel", review: "reviewPanel", calls: "callsPanel", imports: "importsPanel" };
+  // The lead's page is not a tab: it is hidden with the tabs and shown by loadLead alone.
   var sections = {};
   function markNav(name) {
     Array.prototype.forEach.call(document.querySelectorAll("#sectionNav .cm__navbtn"), function (b) { b.classList.toggle("is-active", b.getAttribute("data-section") === name); });
@@ -1563,7 +1946,7 @@
   // A record page's links open this page by its tab name. When this page is
   // already open in that browser tab only the hash changes, so switch here.
   window.addEventListener("hashchange", function () {
-    if (RECORD_ID || !state.session || state.session.callerOnly || !state.session.available) return;
+    if (RECORD_ID || LEAD_ID || !state.session || state.session.callerOnly || !state.session.available) return;
     var h = hashParams();
     if (SECTIONS.indexOf(h.section) < 0) return;
     if (h.section === "prospects") readHash("pf", h.params);
@@ -1600,14 +1983,14 @@
   $("kindFilter").addEventListener("change", renderCampaigns);
   $("prospectRefreshBtn").addEventListener("click", loadProspects);
   $("reviewRefreshBtn").addEventListener("click", loadReview);
-  $("importBtn").addEventListener("click", openImport); $("importBtn2").addEventListener("click", openImport);
+  $("importBtn2").addEventListener("click", openImport);
   $("blockedReloadBtn").addEventListener("click", function () { location.reload(); });
   // The lock guards against editing one record in two tabs. When the other tab
   // is not where the person is, they decide: open here anyway (the other tab,
   // if real, keeps working; the last save wins).
   $("blockedOpenBtn").addEventListener("click", async function () {
     hide($("blockedView"));
-    await loadRecord();
+    if (LEAD_ID) await loadLead(); else await loadRecord();
   });
   wireSort("campaignGrid", state.sort, renderCampaigns);
 
@@ -1626,7 +2009,7 @@
       // they make. The server keeps every other door shut regardless.
       Array.prototype.forEach.call(document.querySelectorAll("#sectionNav .cm__navbtn"), function (b) { b.hidden = b.getAttribute("data-section") !== "calls"; });
       text($("pageSub"), "The calls you make for the call campaigns that name your team.");
-      if (RECORD_ID) { text($("offReason"), "Your account is not authorized to open campaigns here. Campaign calls are on the Calls tab."); show($("offPanel")); return; }
+      if (RECORD_ID || LEAD_ID) { text($("offReason"), "Your account is not authorized to open campaigns or leads here. Campaign calls are on the Calls tab."); show($("offPanel")); return; }
       if (!state.session.callsOn) { text($("offReason"), "Campaign calls are switched off on this deployment (CAMPAIGNS_CALLS at /setup)."); show($("offPanel")); return; }
       await showSection("calls");
       return;
@@ -1643,6 +2026,11 @@
       var owner = await acquireRecordLock("campaigns:" + RECORD_ID);
       if (!owner) { show($("blockedView")); return; }
       await loadRecord();
+    } else if (LEAD_ID) {
+      $("sectionNav").hidden = true;
+      var leadOwner = await acquireRecordLock("lead:" + LEAD_ID);
+      if (!leadOwner) { show($("blockedView")); return; }
+      await loadLead();
     } else {
       // Leads is the opening tab; a hash naming another tab wins. The
       // campaigns load first either way — the lead filters list them.

@@ -44,12 +44,66 @@
       <p id="offReason"></p>
     </section>
     <section class="cm__panel cm__blocked" id="blockedView" hidden>
-      <h2>This campaign is open in another tab</h2>
+      <h2>This record is open in another tab</h2>
       <p>Only one tab may edit a record at a time. Close the other tab and reload here, or open the record here anyway if there is no other tab.</p>
       <p class="cm__hint">The browser console names the tab that answered (look for "record lock yielded").</p>
       <div class="cm__runactions">
         <button type="button" class="cbm-button cbm-button--secondary" id="blockedReloadBtn">Reload</button>
         <button type="button" class="cbm-button" id="blockedOpenBtn">Open here anyway</button>
+      </div>
+    </section>
+
+    <!-- ============================ THE LEAD'S PAGE ============================ -->
+    <section class="cm__panel" id="leadPanel" hidden>
+      <div class="cm__recordhead">
+        <div>
+          <p class="cm__eyebrow">Lead · <span class="cm__badge" id="ld_level"></span> <span id="ld_assignee" class="cm__muted"></span></p>
+          <h2 id="ld_name"></h2>
+          <p class="cm__hint" id="ld_reach"></p>
+        </div>
+        <div class="cm__recordactions" id="ld_actions">
+          <button type="button" class="cbm-button cbm-button--secondary" id="ld_email">Email</button>
+          <button type="button" class="cbm-button cbm-button--secondary" id="ld_call">Log a call</button>
+          <button type="button" class="cbm-button cbm-button--secondary" id="ld_setlevel">Set level</button>
+          <button type="button" class="cbm-button cbm-button--secondary" id="ld_assign">Assign</button>
+          <button type="button" class="cbm-button cbm-button--secondary" id="ld_newcode" title="Mint a new personal link code for this lead; the old one stops working at once.">New code</button>
+          <button type="button" class="cbm-button" id="ld_convert">Convert</button>
+        </div>
+      </div>
+      <div class="cm__overview">
+        <div class="cm__ovleft">
+          <section class="cm__card">
+            <h3>What we know</h3>
+            <p class="cm__hint">An empty box is a gap: type what you find and press Enter. Every fact saved here places the lead's level again.</p>
+            <h4 class="cm__h4">Business</h4>
+            <div class="cm__facts" id="ld_business"></div>
+            <h4 class="cm__h4">Person</h4>
+            <div class="cm__facts" id="ld_person"></div>
+            <h4 class="cm__h4">Fit</h4>
+            <div class="cm__facts" id="ld_fit"></div>
+          </section>
+          <section class="cm__card">
+            <h3>Where it came from</h3>
+            <div class="cm__facts" id="ld_origin"></div>
+          </section>
+          <section class="cm__card">
+            <h3>Review</h3>
+            <div id="ld_review"></div>
+          </section>
+        </div>
+        <div class="cm__ovright">
+          <section class="cm__card">
+            <h3>Activity</h3>
+            <p class="cm__hint">Postcards, calls and texts, level and status changes, edits — newest first.</p>
+            <ol class="cm__timeline" id="ld_activity"></ol>
+            <p class="cm__empty" id="ld_activityEmpty" hidden>Nothing yet.</p>
+          </section>
+          <div id="ld_enrichment"></div>
+          <section class="cm__card">
+            <h3>Notes</h3>
+            <p class="cm__notes" id="ld_notes"></p>
+          </section>
+        </div>
       </div>
     </section>
 
@@ -202,35 +256,42 @@
     <!-- ============================ LEADS ============================= -->
     <section class="cm__panel" id="prospectsPanel" hidden>
       <div class="cm__controls">
-        <p class="cm__hint cm__grow">Every lead, searched and counted by the CRM a page at a time. Tick rows, or select everything the filters match, to Disqualify or mark Do Not Contact many at once. <strong>Export</strong> downloads what the filters match as a CSV file.</p>
+        <p class="cm__hint cm__grow" id="pf_hint">Every lead, searched and counted by the CRM a page at a time. Tick rows, or select everything the filters match, to Disqualify or mark Do Not Contact many at once. <strong>Export</strong> downloads what the filters match as a CSV file.</p>
         <div class="cm__actions">
-          <button type="button" class="cbm-button" id="importBtn">Import…</button>
           <button type="button" class="cbm-button cbm-button--secondary" id="pf_export">Export</button>
           <button type="button" class="cbm-button cbm-button--secondary" id="prospectRefreshBtn">Refresh</button>
         </div>
       </div>
+      <!-- The counts across the top (the ladder): each one is a filter. Drawn by app.js. -->
+      <div class="cm__counts" id="pf_counts" hidden></div>
       <div class="cm__controls cm__filters" id="pf_filters">
         <input type="search" id="pf_q" placeholder="Search name, person, email, phone, website, street, city, ZIP, filing number…" aria-label="Search leads" autocomplete="off" class="cm__bigsearch" />
-        <label class="cm__filter">Lead status <select id="pf_status"><option value="">All</option></select></label>
-        <label class="cm__filter">Stopped because
-          <select id="pf_exit"><option value="">All</option><option value="none">Still being worked</option></select>
+        <label class="cm__filter cm__ladderonly" hidden>Assigned to
+          <select id="pf_assigned"><option value="">Anyone</option><option value="me">Mine</option><option value="none">Nobody yet</option></select>
         </label>
         <label class="cm__filter">Lead Source <select id="pf_source"><option value="">All</option></select></label>
         <label class="cm__filter">Batch <input type="text" id="pf_batch" list="pf_batches" placeholder="Any" autocomplete="off" /></label>
         <datalist id="pf_batches"></datalist>
         <label class="cm__filter">ZIP or city <input type="text" id="pf_place" placeholder="44102 or Lakewood" autocomplete="off" size="12" /></label>
-        <label class="cm__filter">Arrived from <input type="date" id="pf_from" /></label>
-        <label class="cm__filter">to <input type="date" id="pf_to" /></label>
-        <label class="cm__filter">In a campaign
+        <button type="button" class="cm__rowbtn cm__ladderonly" id="pf_more" hidden aria-expanded="false">More filters</button>
+        <label class="cm__filter cm__morefilter">Lead status <select id="pf_status"><option value="">All</option></select></label>
+        <label class="cm__filter cm__morefilter">Stopped because
+          <select id="pf_exit"><option value="">All</option><option value="none">Still being worked</option></select>
+        </label>
+        <label class="cm__filter cm__morefilter">Arrived from <input type="date" id="pf_from" /></label>
+        <label class="cm__filter cm__morefilter">to <input type="date" id="pf_to" /></label>
+        <label class="cm__filter cm__morefilter">In a campaign
           <select id="pf_camp"><option value="">Any</option><option value="yes">Yes, any campaign</option><option value="no">No campaign yet</option></select>
         </label>
-        <label class="cm__filter cm__fitonly" hidden>Service area <select id="pf_gate"><option value="">All</option><option value="Passed">Passed</option><option value="Location unknown">Location unknown</option><option value="Out of area">Out of area</option></select></label>
-        <label class="cm__filter cm__fitonly" hidden>Fit at least <input type="number" id="pf_fit" min="0" max="100" step="1" placeholder="0–100" size="5" /></label>
+        <label class="cm__filter cm__fitonly cm__morefilter" hidden>Service area <select id="pf_gate"><option value="">All</option><option value="Passed">Passed</option><option value="Location unknown">Location unknown</option><option value="Out of area">Out of area</option></select></label>
+        <label class="cm__filter cm__fitonly cm__morefilter" hidden>Fit at least <input type="number" id="pf_fit" min="0" max="100" step="1" placeholder="0–100" size="5" /></label>
+        <input type="hidden" id="pf_level" /><input type="hidden" id="pf_replied" />
         <button type="button" class="cm__rowbtn" id="pf_clear">Clear filters</button>
       </div>
       <div class="cm__bulkbar" id="pf_bulk" hidden>
         <span id="pf_bulkcount"></span>
         <button type="button" class="cm__linkbtn" id="pf_all"></button>
+        <button type="button" class="cbm-button cbm-button--secondary cm__ladderonly" id="pf_bulkassign" hidden>Assign to…</button>
         <button type="button" class="cbm-button cbm-button--secondary" id="pf_bulkdq">Disqualify…</button>
         <button type="button" class="cbm-button cbm-button--secondary" id="pf_bulkdnc">Do Not Contact…</button>
         <button type="button" class="cbm-button cbm-button--secondary" id="pf_bulkai" hidden>AI research…</button>
@@ -243,20 +304,9 @@
       </div>
       <div class="cm__gridwrap">
         <table class="cm__grid" id="prospectGrid">
-          <thead><tr>
+          <!-- The columns depend on whether this CRM carries the ladder; app.js draws the head. -->
+          <thead id="prospectHead"><tr>
             <th class="cm__tick"><input type="checkbox" id="pf_page" aria-label="Select this page" /></th>
-            <th data-sort="name">Business</th>
-            <th data-sort="fitScore" class="cm__fitonly" hidden title="The free pass's fit score, 0 to 100. Click a score for its reasons.">Fit</th>
-            <th class="cm__fitonly" hidden>Service area</th>
-            <th class="cm__fitonly" hidden>County</th>
-            <th data-sort="leadStatus">Lead status</th>
-            <th data-sort="sideExit">Stopped because</th>
-            <th data-sort="leadSource">Lead Source</th>
-            <th data-sort="mailingAddressCity">City</th>
-            <th data-sort="mailingAddressPostalCode">ZIP</th>
-            <th data-sort="addressStatus">Address</th>
-            <th data-sort="importBatch">Batch</th>
-            <th data-sort="createdAt">Arrived</th>
           </tr></thead>
           <tbody id="prospectRows"></tbody>
         </table>

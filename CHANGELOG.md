@@ -5,6 +5,62 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.284.0] — 2026-10-25
+
+**feat(campaigns): the qualification ladder and the Leads tab** — step M2 of
+the Marketing Management redesign (build plan §§ 7e.3 and 7e.4; rulings
+104–106, 108, 111, 113, 117). Dark behind **`LEAD_LADDER`** (off, read per
+request) and feature-detected: a CRM without `marketing-redesign-crm-handoff.md`
+shows the Leads tab as before.
+
+- **The ladder** (`campaigns/ladder.py`): the level inside Qualified —
+  Identified, Contactable, Referred — placed by the system from what the lead
+  holds (a named person, a phone, an email, a referrer), settable by hand, and
+  never moved backwards. After a hand setting it moves forward only when a
+  fact absent at the setting is now present; the facts snapshot is the
+  application's (`lead_level_manual`, migration 0034, reset nightly on the
+  sandbox), and a hand-set level with no snapshot is never moved. Placement
+  runs after every application write to a lead — review, bulk actions,
+  enrichment's `land` and `decide`, the postcard response, call outcomes,
+  conversion, the lead page's edits — and the import computes the level into
+  the create. A worker sweep (`LEAD_LEVEL_SWEEP_SECONDS`, 900) re-places
+  leads edited since its last pass, which is how an edit in the CRM's own
+  screens gets its level; `/setup` → Operations → *Lead levels* backfills
+  every lead. Every placement write is the org-wide key's.
+- **The Leads tab**: six counts across the top, each a filter (Unqualified,
+  Identified, Contactable, Referred, *Replied, not yet converted*,
+  Disqualified), one CRM `total` each under the other filters; the filter row
+  shrinks to search, Assigned to (with *Mine* and *Nobody yet*), Lead Source,
+  batch and place, the rest behind *More filters*; columns Business, Level,
+  Contact person, Reach (card, phone, email — email lit only for a Contactable
+  or Referred lead), Fit, Assigned to, Lead Source, Last activity; bulk
+  *Assign to…* for Marketing Admin Team members, guarded like the other bulk
+  actions; the export gains the ladder's columns. The Import button leaves
+  the Leads tab (the Imports tab has its own).
+- **The lead's page**, `/campaigns/lead/{id}`, served like the campaign
+  record page with the single-tab guard: level, assignee and *How we can
+  reach them* in the header; the actions *Set level*, *Assign*, *Convert*,
+  and *Email* / *Log a call*, which say they arrive with personal outreach;
+  *What we know* in Business, Person and Fit with every empty field an inline
+  gap written as the user; *Where it came from*; one Activity timeline from
+  touches and the action history; the enrichment findings panel; the notes.
+  Set level, Assign, Convert and every edit record through the action log.
+- ***New code*** (build plan § 7d.1; ruling 126 rides it on M2) on the
+  lead's page and on the Contact's record page in the directory, for
+  Marketing Admin Team members: a fresh personal-link code written under the
+  org-wide key to the lead and its converted Contact (or the Contact and its
+  lead), the old code stopping at once; action-logged with the old code's
+  last four characters only. `leadcode.replace_for_lead` /
+  `replace_for_contact`; `POST /campaigns/api/prospects/{id}/code` and
+  `POST /directory/contacts/api/records/{id}/leadcode`; the directory session
+  carries `leadCodeAdmin`.
+- Settings `LEAD_LADDER` and `LEAD_LEVEL_SWEEP_SECONDS` on `/setup`; the
+  sandbox seeder gives its Qualified demo leads a level (Tremont Coffee
+  Roasters gains a named person, Marcus Bell a referrer). Tests:
+  `test_campaign_ladder.py`, `test_campaign_leads_ladder.py`,
+  `test_campaign_lead_page.py`. Live pass on crm-test owed (`OPEN-ITEMS.md`
+  #57).
+
 ## [0.283.1] — 2026-10-25
 
 **feat(events): the Follow-up tab, the email ledger, and Submission Admin

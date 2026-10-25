@@ -304,8 +304,35 @@
   function renderOverview() {
     var body = $("crOverviewBody");
     body.innerHTML = "";
+    if (session && session.leadCodeAdmin) body.appendChild(newCodeRow());
     R.panelsInto(body, detail.panels);
     if (!body.children.length) body.appendChild(el("p", "dir__restricted", "No details to show."));
+  }
+
+  // New code (prospect marketing): a fresh personal-link code for this
+  // contact. The old one stops resolving at once, so the button asks twice —
+  // a second press within ten seconds confirms; no browser dialog.
+  function newCodeRow() {
+    var row = el("div", "cr__actions");
+    var btn = el("button", "cbm-button cbm-button--secondary dir__sm", "New code"); btn.type = "button";
+    btn.title = "Mint a new code for this person's personal links. A link already sent with the old code opens the campaign with no person on it from then on.";
+    var armed = null;
+    btn.addEventListener("click", async function () {
+      if (!armed) {
+        armed = setTimeout(function () { armed = null; btn.textContent = "New code"; }, 10000);
+        btn.textContent = "Press again to replace the code";
+        return;
+      }
+      clearTimeout(armed); armed = null; btn.textContent = "New code";
+      try {
+        var res = await api("/records/" + encodeURIComponent(RECORD_ID) + "/leadcode", { method: "POST" });
+        var n = $("crNotice"); n.textContent = (res.replaced ? "Code replaced." : "Code minted.") + " New links for this person end in " + res.code + "."; n.className = "dir__notice dir__notice--ok"; show(n);
+      } catch (e) {
+        var m = $("crNotice"); m.textContent = e.message; m.className = "dir__notice dir__notice--error"; show(m);
+      }
+    });
+    row.appendChild(btn);
+    return row;
   }
 
   // ---- Contacts tab (Company record page) ---------------------------------

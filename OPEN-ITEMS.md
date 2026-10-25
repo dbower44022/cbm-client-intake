@@ -34,9 +34,15 @@ found; move resolved items to the bottom with the resolution date.
     one CRM handoff (`marketing-redesign-crm-handoff.md`, plan fingerprint
     `6bb03652454a`) written 10-24-26 and **applied on crm-test 10-25-26**
     by Doug; its § 5 proof passed 02:12 (shape, org-wide key write-and-
-    clear, role read-back, conformance unchanged). Owed: M2 (the ladder and
-    the Leads tab), then the handoff on production at the arc's slot and
-    on Boston with its release; the layout question in the handoff's § 7.
+    clear, role read-back, conformance unchanged). **M2 built as v0.284.0
+    (10-25-26)**: the ladder (`campaigns/ladder.py`), the Leads tab's
+    counts, columns and *Assign to*, the lead's page at
+    `/campaigns/lead/{id}`; dark behind `LEAD_LADDER`. Owed: the M2 live
+    pass on crm-test as Mark Marketing (switch `LEAD_LADDER` on at /setup,
+    run Operations → *Lead levels* once to backfill, then the Leads tab and
+    a lead's page); then M3; the handoff on production at the arc's slot
+    and on Boston with its release; the layout question in the handoff's
+    § 7.
 
 53. **Attendee linking escalation — live pass owed** (v0.258.6, 2026-10-15).
     A mentor whose Mentor Role reads/edits `CSession` at "own" could not

@@ -122,7 +122,55 @@ def make_router(cfg: DirectoryConfig) -> APIRouter:
             # record's dashboard from the analytics app (Phase E).
             "analyticsEnabled": get_settings().analytics_active,
             "eventsEnabled": get_settings().events_active,
+            # New code on a Contact's record page (prospect marketing § 7d.1,
+            # ruling 126): Marketing Admin Team members, on a CRM that carries
+            # the lead code fields and a deployment with the org-wide key.
+            "leadCodeAdmin": bool(cfg.contact_page and _lead_code_admin(user)
+                                  and _system_client(get_settings()) is not None),
         }
+
+    def _lead_code_admin(user: dict) -> bool:
+        return is_member(user, get_settings().campaigns_allowed_teams_list)
+
+    if cfg.contact_page:
+        @router.post("/records/{record_id}/leadcode")
+        async def new_lead_code(record_id: str, request: Request) -> dict:
+            """*New code* on the Contact (prospect marketing build plan § 7d.1;
+            ruling 126): a fresh personal-link code written under the org-wide
+            key — a marketer's own write is dropped by the field rule — and
+            copied to the lead the Contact was converted from. The old code
+            stops resolving at once. Action-logged with the old code's last
+            four characters only."""
+            user = _require_user(request)
+            if not _lead_code_admin(user):
+                raise HTTPException(status_code=403, detail="Only Marketing Management team members mint a new code.")
+            settings = get_settings()
+            client = client_for(settings, user)
+            try:
+                contact = await client.get(cfg.entity, record_id, select="id,name")
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not read the contact")
+            if not contact or not contact.get("id"):
+                raise HTTPException(status_code=404, detail="Contact not found.")
+            api_client = _system_client(settings)
+            if api_client is None:
+                raise HTTPException(status_code=503, detail="This deployment has no CRM credential for the code write.")
+            from campaigns import leadcode
+            try:
+                old, new = await leadcode.replace_for_contact(api_client, record_id)
+            except RuntimeError as exc:
+                raise HTTPException(status_code=409, detail=str(exc))
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not write the new code")
+            from core.action_log import CAT_RECORD_EDIT, record_action
+            await record_action(
+                client, app="Marketing Management", category=CAT_RECORD_EDIT, action="Lead Code Replaced",
+                parent_type=cfg.entity, parent_id=record_id,
+                summary=f"New code for the contact \"{contact.get('name') or record_id}\" (was {leadcode.code_tail(old)})",
+                actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+                details={"was": leadcode.code_tail(old)},
+            )
+            return {"replaced": bool(old), "code": new}
 
     @router.post("/logout")
     async def logout(request: Request) -> dict:

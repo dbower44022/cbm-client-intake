@@ -183,6 +183,49 @@ async def ensure_for_contact(client: EspoApi, contact_id: str) -> Optional[str]:
     return code
 
 
+async def replace_for_lead(client: EspoApi, lead_id: str) -> tuple[Optional[str], str]:
+    """*New code* (§ 7d.1; ruling 126 puts it in M2): a fresh code on the lead,
+    and on its converted Contact so the two stay equal. The old code stops
+    resolving at once. Under the API key (ruling 77's field rule drops a
+    marketer's own write). Returns ``(old, new)``; raises on a CRM without the
+    fields or a failed write."""
+    if not await available(client):
+        raise RuntimeError("This CRM does not carry the lead code fields yet.")
+    lead = await client.get(cfg.PROSPECT, lead_id, select=LEAD_SELECT)
+    old = lead.get(LEAD_FIELD) or None
+    code = await _fresh_code(client)
+    await client.update(cfg.PROSPECT, lead_id, {LEAD_FIELD: code})
+    if lead.get("promotedContactId"):
+        try:
+            await client.update(cfg.CONTACT, lead["promotedContactId"], {CONTACT_FIELD: code})
+        except EspoError as exc:
+            log.warning("new code %s not copied to contact %s: %s", code, lead["promotedContactId"], exc)
+    return old, code
+
+
+async def replace_for_contact(client: EspoApi, contact_id: str) -> tuple[Optional[str], str]:
+    """*New code* on a Contact's record page: a fresh code on the Contact, and
+    on the lead it was converted from so the two stay equal."""
+    if not await available(client):
+        raise RuntimeError("This CRM does not carry the lead code fields yet.")
+    contact = await client.get(cfg.CONTACT, contact_id, select=CONTACT_SELECT)
+    old = contact.get(CONTACT_FIELD) or None
+    code = await _fresh_code(client)
+    await client.update(cfg.CONTACT, contact_id, {CONTACT_FIELD: code})
+    lead = await client.find_one(cfg.PROSPECT, "promotedContactId", contact_id, select=LEAD_SELECT)
+    if lead and lead.get("id"):
+        try:
+            await client.update(cfg.PROSPECT, lead["id"], {LEAD_FIELD: code})
+        except EspoError as exc:
+            log.warning("new code %s not copied to lead %s: %s", code, lead["id"], exc)
+    return old, code
+
+
+def code_tail(code: Optional[str]) -> str:
+    """The old code's last four characters for the action log — never the whole code."""
+    return f"…{code[-4:]}" if code else "(none)"
+
+
 async def sync_on_conversion(client: EspoApi, lead_id: str, contact_id: Optional[str]) -> Optional[str]:
     """§ 7d.1: conversion copies the lead's code to its Contact, never mints a
     second. Null-fill in either direction — a lead with no code adopts the

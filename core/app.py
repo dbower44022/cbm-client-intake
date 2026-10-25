@@ -1232,6 +1232,12 @@ def create_app(
             "/campaigns/record/{record_id}", _campaign_record_page, methods=["GET"],
             response_class=HTMLResponse, include_in_schema=False,
         )
+        # The lead's own page (build plan § 7e.4): the same frontend booted
+        # into one lead, with the single-tab guard.
+        app.add_api_route(
+            "/campaigns/lead/{record_id}", _campaign_record_page, methods=["GET"],
+            response_class=HTMLResponse, include_in_schema=False,
+        )
         app.mount(
             "/campaigns",
             BrandedStaticFiles(directory=str(CAMPAIGNS_FRONTEND_DIR), html=True),
