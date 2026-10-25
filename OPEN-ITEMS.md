@@ -38,12 +38,14 @@ found; move resolved items to the bottom with the resolution date.
     (10-25-26)**: the ladder (`campaigns/ladder.py`), the Leads tab's
     counts, columns and *Assign to*, the lead's page at
     `/campaigns/lead/{id}`, *New code* on the lead's and the Contact's
-    pages (ruling 126); dark behind `LEAD_LADDER`. Owed: the M2 live pass
-    on crm-test, 23 steps as an administrator, Mark Marketing and Doug
-    (step page https://claude.ai/artifact/EE5rBgsV4LxeiNTWqx4BVN rev 1.0,
-    written 10-25-26 11:32 from a read of crm-test's leads); then M3; the
-    handoff on production at the arc's slot and on Boston with its
-    release; the layout question in the handoff's § 7.
+    pages (ruling 126); dark behind `LEAD_LADDER`. **Live-passed on
+    crm-test 10-25-26 12:00** by Doug (23 steps, step page
+    https://claude.ai/artifact/EE5rBgsV4LxeiNTWqx4BVN); the double save on
+    Enter found at step 14 is fixed in v0.284.1. `LEAD_LADDER` is on at
+    crm-test's /setup. Owed: step 21's Convert read back not converted
+    (asked); M3 (Review as the research queue); the handoff on production
+    at the arc's slot and on Boston with its release; the layout question
+    in the handoff's § 7.
 
 53. **Attendee linking escalation — live pass owed** (v0.258.6, 2026-10-15).
     A mentor whose Mentor Role reads/edits `CSession` at "own" could not

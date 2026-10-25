@@ -1216,10 +1216,11 @@ the strength of it.
 - **v0.284.0 (2026-10-25) — the qualification ladder and the Leads tab**
   (build plan §§ 7e.3–7e.4, step M2; rulings 104–106, 108, 113, 117). Dark
   behind `LEAD_LADDER`; needs `marketing-redesign-crm-handoff.md`, applied
-  on crm-test 10-25-26 and proved. Committed, not pushed. Standing rules in
-  `campaigns/CLAUDE.md`: call `ladder.after_write` after any application
-  write to a lead; the level is empty outside Qualified. Owed: the live
-  pass on crm-test as Mark Marketing (`OPEN-ITEMS.md` #57), then M3.
+  on crm-test 10-25-26 and proved. v0.284.0 and the v0.284.1 fix pushed and
+  live on both deployments; **live-passed on crm-test 10-25-26 12:00** by
+  Doug (23 steps). Standing rules in `campaigns/CLAUDE.md`: call
+  `ladder.after_write` after any application write to a lead; the level is
+  empty outside Qualified. Next: M3 (`OPEN-ITEMS.md` #57).
 - **v0.279.0 (2026-10-23) — Marketing Management is one page with six
   tabs** (build plan § 7e.2, step M1 of the redesign; rulings 89, 112, 114).
   Lists and Calls are tabs; a caller from another team sees the Calls tab

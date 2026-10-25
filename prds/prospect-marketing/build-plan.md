@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-25-26 11:20 · Revision 0.45 — change log at the end.
+Last Updated: 10-25-26 12:05 · Revision 0.46 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -2536,7 +2536,14 @@ Team caller for M1 and M10).
    level into the create (no per-row call); *Email* and *Log a call* are
    shown on the lead's page and say they arrive with M5; the Import button
    left the Leads tab. The Marketing Admin Role also reads `CCommunication`
-   (the handoff § 4). Live pass on crm-test owed. **Also (ruling 126):** § 7d.1's *New code* on the lead's page and
+   (the handoff § 4). **Live-passed on crm-test 10-25-26 12:00** by Doug
+   (23 steps as an administrator, Mark Marketing and himself; step page
+   https://claude.ai/artifact/EE5rBgsV4LxeiNTWqx4BVN). Found and fixed on
+   the way: an inline gap saved twice on Enter (v0.284.1). Read back after
+   the pass: Gordon Square Florist Qualified · Referred, set by hand by Mark
+   Marketing then lifted by the email and the partner, assigned to Sharon
+   Rose, with a code; Dana Okoro's new code on her Contact and her lead
+   alike. Step 21's Convert did not read back as Converted — asked Doug. **Also (ruling 126):** § 7d.1's *New code* on the lead's page and
    on the contact's record page, Marketing Admin Team, action-logged with
    the old code's last four characters, written under the org-wide key
    (ruling 77's field rule drops a marketer's own write). **Built in the
@@ -2834,7 +2841,7 @@ best-effort mirror.
 |---|---|
 | Document | Prospect Marketing — build plan |
 | Version | v0.26 — Phases 1–4 and the lead model built; §§ 7b and 7c built and live-passed on crm-test; § 7d (the lead identifier in every link, rulings 71–75) approved, D1 built; § 7e (the Marketing Management redesign, rulings 79–125) approved, steps M1 (v0.279.0) and M2 (v0.284.0) built |
-| Last Updated | 10-25-26 11:20 |
+| Last Updated | 10-25-26 12:05 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
 | Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
@@ -2843,6 +2850,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.46 | 10-25-26 12:05 | Claude (Claude Code) | § 7e.13 step M2 live-passed on crm-test (Doug, 23 steps); v0.284.1 fix noted; step 21's conversion queried. Next: M3. |
 | 0.45 | 10-25-26 11:20 | Claude (Claude Code) | § 7e.13 step M2 built (v0.284.0): the ladder, the Leads tab, the lead's page; the routine choices recorded under the step. Live pass owed. |
 | 0.44 | 10-25-26 11:13 | Claude (Claude Code) | Ruling 126: § 7d.6's D2 next (with the text's `{link}`), D3 split into § 7e.13's M2, M7 and M10. |
 | 0.43 | 10-25-26 11:11 | Claude (Claude Code) | § 7d: D1 live-passed on crm-test (10-25-26 11:10); the click count and the landing-address finding (OPEN-ITEMS #59) recorded there. |
