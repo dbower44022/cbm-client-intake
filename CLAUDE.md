@@ -1216,8 +1216,9 @@ the strength of it.
 - **v0.285.0 (2026-10-25) — Review is the research queue, two modes**
   (build plan § 7e.6, M3; rulings 110, 121): *Judge* as before, *Find
   contacts* for Identified leads, *AI research* on every row, a Person
-  accepted on a lead fills the lead itself. Rides `LEAD_LADDER`. Pushed
-  10-25-26 13:14. **Live pass owed** (`OPEN-ITEMS.md` #57); then M4.
+  accepted on a lead fills the lead itself. Rides `LEAD_LADDER`. v0.285.1
+  (the row's link) live on both deployments; **live-passed on crm-test
+  10-25-26 18:35** by Doug. Next: M4 (`OPEN-ITEMS.md` #57).
 - **v0.284.0 (2026-10-25) — the qualification ladder and the Leads tab**
   (build plan §§ 7e.3–7e.4, step M2; rulings 104–106, 108, 113, 117). Dark
   behind `LEAD_LADDER`; needs `marketing-redesign-crm-handoff.md`, applied

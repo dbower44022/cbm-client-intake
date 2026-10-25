@@ -60,11 +60,14 @@ found; move resolved items to the bottom with the resolution date.
     Identified leads*, the contacts row's write with `seenLevel`, AI
     research on every row filling the boxes from the lead's findings,
     ruling 121 in `enrichment.runs.decide`; rides `LEAD_LADDER`. Checked
-    against the stub harness and by tests; pushed 10-25-26 13:14. Owed:
-    the M3 live pass on crm-test (step page
-    https://claude.ai/artifact/CoUeWPYhsjV8pgf7GpA391, 16 steps as Mark
-    Marketing),
-    then M4 (the import tool, § 7e.7); the handoff on production
+    against the stub harness and by tests; pushed 10-25-26 13:14.
+    **Live-passed on crm-test 10-25-26 18:35** by Doug as Mark Marketing
+    (step pages https://claude.ai/artifact/CoUeWPYhsjV8pgf7GpA391 and
+    https://claude.ai/artifact/FAL7ijgrPFYaxGHuLVcXej; four *Lead Contact
+    Found* rows read back, counts 3 · 4 · 4 · 1). Found and fixed on the
+    way: the row's link opened the old pop-up (v0.285.1, pushed 13:30).
+    Not exercised live: the row's 409 refusal of a lead moved since
+    (unit-tested). Owed: M4 (the import tool, § 7e.7); the handoff on production
     at the arc's slot and on Boston with its release; the layout question
     in the handoff's § 7.
 

@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-25-26 12:36 · Revision 0.48 — change log at the end.
+Last Updated: 10-25-26 18:41 · Revision 0.49 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -2161,7 +2161,7 @@ address (Draft 2).
 source. A new `test_campaign_outreach.py` covers the guardrails, the opt-out
 line, the refusal without a `cbmEmail`, and the three outcomes.
 
-### 7e.6 Review as the research queue — ruling 110 (built as v0.285.0, 10-25-26; live pass owed)
+### 7e.6 Review as the research queue — ruling 110 (built as v0.285.0, 10-25-26; live-passed on crm-test 10-25-26 18:35)
 
 `LeadQuery.review_queue` gains a mode:
 
@@ -2575,7 +2575,26 @@ Team caller for M1 and M10).
    read and write already runs under that key); a contacts-mode address on
    a CRM without the ladder is refused in words and the page falls back to
    the judge queue. Checked in the browser against the stub harness.
-   **Live pass owed** on crm-test (step page in `OPEN-ITEMS.md` #57).
+   **Live-passed on crm-test 10-25-26 18:35** by Doug as Mark Marketing
+   (two step pages: https://claude.ai/artifact/CoUeWPYhsjV8pgf7GpA391 for
+   the judge queue, https://claude.ai/artifact/FAL7ijgrPFYaxGHuLVcXej for
+   the contacts row). Read back after the pass: four *Lead Contact Found*
+   rows by Mark Marketing — Marigold Pet Grooming (first and last name,
+   Contactable), Northcoast Drone Services (last name, still Identified;
+   then a phone, Contactable), Ohio City Bike Works (first and last name,
+   Contactable); Collinwood Records qualified from the judge row and
+   placed Identified; the Leads tab's counts 3 Unqualified · 4 Identified
+   · 4 Contactable · 1 Disqualified. Found and fixed on the way: the row's
+   business link opened the old facts pop-up when the page had been
+   opened straight on the Review tab (v0.285.1). The first run of the
+   contacts section went through the lead pages' gaps instead of the row
+   (the step page had sent the reader to a lead's page one step earlier);
+   the three leads were reset and the section rerun from a page that
+   names the row box in every step. Not exercised live: the 409 refusal
+   of a row whose lead moved since (step 6 of the second page — the row
+   had already left the queue); covered by the unit test and the harness.
+   The AI research button on a lead with no findings opened the start
+   dialog (AI research is on at crm-test's /setup); no run was started.
 4. **M4: the import tool** (§ 7e.7), behind `IMPORT_TEMPLATES`. About
    five days.
 5. **M5: personal outreach** (§ 7e.5), behind `LEAD_OUTREACH`, after the
@@ -2876,6 +2895,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.49 | 10-25-26 18:41 | Claude (Claude Code) | § 7e.13 step M3 live-passed on crm-test (Doug, two step pages); v0.285.1 fix noted; the read-back recorded. Next: M4. |
 | 0.48 | 10-25-26 12:36 | Claude (Claude Code) | § 7e.13 step M3 built (v0.285.0): Review as the research queue, two modes; the routine choices recorded under the step; § 7e.6 heading marked built. Live pass owed. |
 | 0.47 | 10-25-26 12:22 | Claude (Claude Code) | § 7e.13 step M3: plan approved, kickoff prompt written (`prompts/m3-review-research-queue-kickoff.md`). |
 | 0.46 | 10-25-26 12:05 | Claude (Claude Code) | § 7e.13 step M2 live-passed on crm-test (Doug, 23 steps); v0.284.1 fix noted; step 21's conversion queried. Next: M3. |
