@@ -142,9 +142,9 @@ found; move resolved items to the bottom with the resolution date.
     record counted the click with its outcome kept at *No answer*. The count
     read 2 for one intended visit (a second open, or the browser fetching
     the address while it was typed — not diagnosed); D3 must expect mail
-    scanners to inflate email clicks the same way. Owed: D2, D3 (where they
-    go beside the redesign is put to Doug 10-25-26); production and Boston
-    with the arc's slot. Finding outside D1: #59.
+    scanners to inflate email clicks the same way. Owed (ruling 126): D2
+    once the M2 session finishes; D3's pieces inside § 7e's M2, M7 and M10;
+    production and Boston with the arc's slot. Finding outside D1: #59.
     **At the production slot, also do these two (added 10-22-26; both
     live-passed on crm-test 10-22-26 as Mark Marketing). Without them, no
     campaign action records any history on production:**

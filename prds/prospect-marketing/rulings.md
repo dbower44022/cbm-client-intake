@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-23-26 01:20 · Revision 1.47 — change log at the end.
+Last Updated: 10-25-26 11:13 · Revision 1.49 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -1320,6 +1320,22 @@ not as the plan drafted them.
      and prospects with a phone* and *Dormant clients (a year)*; the
      sandbox seeders recreate them after each reset. (10-23-26)
 
+### Doug's ruling (10-25-26, on where the lead code's D2 and D3 go)
+
+After D1's live pass, put as one decision: option A, D2 next and D3's
+pieces built inside the redesign steps that rewrite that code anyway;
+option B, D2 and D3 now, pausing the redesign about four days; option C,
+both after the redesign. Doug's reply at 11:13: "a".
+
+126. **The lead code's D2 comes next, and D3 rides the redesign**
+     (option A). D2 — each form's prefill, the *Not you?* line, the
+     registration's one press — waits only for the session building M2
+     to finish. D3's pieces are built inside the § 7e steps that rewrite
+     the same code, never twice: *New code* with M2, the vendor field and
+     the paste-into-a-notice address with M7, the caller's link with M10.
+     Standing cost, weighed by Doug: an email carries no code until M7.
+     (10-25-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -1449,6 +1465,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.49 | 10-25-26 11:13 | Claude (Claude Code) | Ruling 126 appended: the lead code's D2 next, D3's pieces inside § 7e's steps M2, M7 and M10 (Doug's "a"). Header revision corrected from 1.47. |
 | 1.48 | 10-23-26 03:53 | Claude (Claude Code) | Rulings 117–125 appended: build plan § 7e.12's nine Drafts, approved as recommended — six as drafted, Drafts 4, 6 and 7 as Claude's recommended change (Doug, 10-23-26). |
 | 1.47 | 10-23-26 01:20 | Claude (Claude Code) | Rulings 114–116 appended: Calls — callers from other teams see only the Calls tab; Calls holds campaign call lists only; the Calls layout (Doug, 10-23-26). |
 | 1.46 | 10-23-26 01:08 | Claude (Claude Code) | Rulings 103–113 appended: Leads and Review — Review its own tab; a lead stays a lead until the owner responds; the five-level qualification ladder (refines 42); system placement, manual override, forward only; personal email to Contactable and Referred leads (amends 19); outreach by an assigned Marketing Admin Team member; the sync recognises lead addresses; Review as a two-mode research queue; import templates carry the qualifying judgement (replaces 18, generalises 53); no ruling numbers on screens; the Leads layout (Doug, 10-23-26). |

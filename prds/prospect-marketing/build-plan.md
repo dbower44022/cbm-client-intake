@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-25-26 11:11 · Revision 0.43 — change log at the end.
+Last Updated: 10-25-26 11:13 · Revision 0.44 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -1690,7 +1690,7 @@ industry column are part of L1.
 
 ## 7d. The lead identifier in every link (rulings 71–73; drafted 10-22-26 for approval)
 
-**Status: APPROVED (10-22-26 01:35) — question 20 answered A (ruling 74), the prefill table in § 7d.4 confirmed as written (ruling 75). The CRM handoff of § 7d.5 is written (10-22-26 01:42, `lead-code-crm-handoff.md`, plan fingerprint `bec909277859`, dry run clean on crm-test). Applied on crm-test 10-22-26 12:45–12:48 and read back. **D1 built 10-22-26 (v0.276.0) and LIVE-PASSED on crm-test 10-25-26 11:10.** Next: D2 and D3, whose place beside § 7e was put to Doug 10-25-26.** Rulings 71 to 73
+**Status: APPROVED (10-22-26 01:35) — question 20 answered A (ruling 74), the prefill table in § 7d.4 confirmed as written (ruling 75). The CRM handoff of § 7d.5 is written (10-22-26 01:42, `lead-code-crm-handoff.md`, plan fingerprint `bec909277859`, dry run clean on crm-test). Applied on crm-test 10-22-26 12:45–12:48 and read back. **D1 built 10-22-26 (v0.276.0) and LIVE-PASSED on crm-test 10-25-26 11:10.** Next (ruling 126): D2, after the M2 session; D3's pieces ride § 7e's M2, M7 and M10.** Rulings 71 to 73
 (10-22-26) say that every link delivered to a known person carries that
 person's lead identifier after the campaign link, that the identifier
 belongs to the person for life, and that each form decides for itself what
@@ -1911,8 +1911,15 @@ exists, and a code exists only when a campaign mints one or staff press
    About two days.
 2. **D2 — the forms prefill.** The seven rows of the table, each form's
    own screen; the *Not you?* line; the registration's one-press path on
-   the event page and in the calendar window. About two days.
-3. **D3 — delivery per kind.** The vendor custom field created and written
+   the event page and in the calendar window. About two days. **Ruling 126:
+   next, once the session building § 7e's M2 has finished** (one session on
+   the arc at a time). D2 also takes the text's `{link}` placeholder from D3,
+   because no § 7e step touches text campaigns.
+3. **D3 — delivery per kind.** **Ruling 126: not built as a step of its
+   own.** Its pieces ride the § 7e steps that rewrite the same code: *New
+   code* on the lead and the contact with M2; the vendor custom field, both
+   pushes and the paste-into-a-notice address with M7; the caller's link
+   with M10; the text's `{link}` with D2. As drafted: the vendor custom field created and written
    by both pushes; the paste-into-a-notice address on the Links tab; the
    text's `{link}` placeholder; the caller's link; *New code* on the lead
    and the contact. The live pass includes one real send from the trial
@@ -2520,7 +2527,10 @@ Team caller for M1 and M10).
    per running call campaign) and shows nothing on a failed read.
 2. **M2: the ladder and the Leads tab** (§§ 7e.3, 7e.4), behind
    `LEAD_LADDER`, after the handoff's lead fields on crm-test. About four
-   days.
+   days. **Also (ruling 126):** § 7d.1's *New code* on the lead's page and
+   on the contact's record page, Marketing Admin Team, action-logged with
+   the old code's last four characters, written under the org-wide key
+   (ruling 77's field rule drops a marketer's own write).
 3. **M3: Review as the research queue** (§ 7e.6). About a day and a half.
 4. **M4: the import tool** (§ 7e.7), behind `IMPORT_TEMPLATES`. About
    five days.
@@ -2529,12 +2539,20 @@ Team caller for M1 and M10).
 6. **M6: lists** (§ 7e.8). About four days.
 7. **M7: Constant Contact per list and the email campaign** (§ 7e.9
    first half), behind `CAMPAIGN_LIST_SYNC`. About three days, plus the
-   live send.
+   live send. **Also (ruling 126):** § 7d.2's email half — the vendor
+   custom field `cbm_lead_code`, created and checked by the application,
+   written by every push with the code minted for anyone who has none, and
+   the address to paste into a notice on the Links tab with its Copy
+   button. The live send confirms the two inferred vendor facts (§ 7d.2).
+   Expect mail scanners to open links: the D1 pass counted 2 clicks for
+   one intended visit.
 8. **M8: lists only and the campaign page** (§ 7e.9 second half). About
    four days.
 9. **M9: the send report and Recipients** (§ 7e.9). About three days.
 10. **M10: Promote this event and the roll-up, and the Calls tab**
-    (§§ 7e.9, 7e.10). About three days.
+    (§§ 7e.9, 7e.10). About three days. **Also (ruling 126):** § 7d.2's
+    caller's link — the person's campaign link plus code, with a Copy
+    button, minted when the call list is built.
 
 **Cost, named.**
 
@@ -2814,6 +2832,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.44 | 10-25-26 11:13 | Claude (Claude Code) | Ruling 126: § 7d.6's D2 next (with the text's `{link}`), D3 split into § 7e.13's M2, M7 and M10. |
 | 0.43 | 10-25-26 11:11 | Claude (Claude Code) | § 7d: D1 live-passed on crm-test (10-25-26 11:10); the click count and the landing-address finding (OPEN-ITEMS #59) recorded there. |
 | 0.42 | 10-25-26 02:15 | Claude (Claude Code) | § 7e.11: the CRM handoff applied on crm-test by Doug and its § 5 proof passed; M2 unblocked. |
 | 0.41 | 10-24-26 15:20 | Claude (Claude Code) | § 7e.11: the CRM handoff written (`marketing-redesign-crm-handoff.md`, plan fingerprint `6bb03652454a`), verified against crm-test, not applied; two findings noted (`assignedUser` enabled, campaign link not required) and the `CCommunication` read added to the role grants. |
