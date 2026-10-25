@@ -5,6 +5,15 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.285.1] — 2026-10-25
+
+**fix(campaigns): a Review row's business link opened the old pop-up instead
+of the lead's page** when the page had been opened straight on the Review
+tab. Found at step 6 of the M3 live pass: `openLead` read the ladder flag
+from the Leads grid alone, which a page reloaded on `#review` has never
+loaded, so the link fell back to the facts pop-up, which shows no level.
+It now reads either grid's answer. `campaigns/frontend/app.js` only.
+
 ## [0.285.0] — 2026-10-25
 
 **feat(campaigns): Review is the research queue, in two modes** — step M3

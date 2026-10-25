@@ -1210,7 +1210,9 @@
     g.offset = 0; loadGrid("pf");
   });
   function openLead(id) {
-    if (grids.pf.ladder) { window.open("/campaigns/lead/" + encodeURIComponent(id), "cbm-lead-" + id); return; }
+    // Either grid's answer says whether this CRM has the ladder: a page opened
+    // straight on the Review tab has never loaded the Leads grid (10-25-26).
+    if (grids.pf.ladder || grids.rf.ladder) { window.open("/campaigns/lead/" + encodeURIComponent(id), "cbm-lead-" + id); return; }
     openProspect(id);
   }
   // The names the rest of the page already calls.
