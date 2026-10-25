@@ -353,6 +353,17 @@ SETTINGS: tuple[SettingSpec, ...] = (
             "a declined business is marked failed."),
     _s("enrichment_ai_poll_seconds", GROUP_FEATURES, "AI research queue poll", kind="int", unit="s",
        component="worker", help="How often the worker takes the next records from the queue. 0 stops it."),
+    _s("lead_ladder", GROUP_FEATURES, "Lead qualification ladder", kind="bool", component="both",
+       help="The level inside Qualified — Identified, Contactable, Referred — placed by the "
+            "system and settable by hand, never moved backwards; the Leads tab's counts, "
+            "Level and Reach columns, Assigned to, and the lead's own page. Needs the "
+            "redesign's lead fields on the CRM (marketing-redesign-crm-handoff.md); without "
+            "them the Leads tab stays as before. Read per request: no restart."),
+    _s("lead_level_sweep_seconds", GROUP_FEATURES, "Lead level sweep", kind="int",
+       unit="s", component="worker",
+       help="How often the worker re-places the level of leads edited since its last pass "
+            "(catches edits made in the CRM's own screens). 0 stops the sweep; "
+            "/setup → Operations → Lead levels still runs it by hand."),
     _s("prospect_stale_sweep_seconds", GROUP_FEATURES, "Prospect stale sweep", kind="int",
        unit="s", component="worker",
        help="How often the worker runs the Stale sweep (default nightly). 0 "

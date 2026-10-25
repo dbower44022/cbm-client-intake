@@ -32,7 +32,7 @@ from core.qr import qr_png, qr_svg
 from forms import SPECS_BY_SLUG
 
 from . import config as cfg
-from . import audience, calls, email as email_kind, imports, leads, postcard, reporting, review, service, sms
+from . import audience, calls, email as email_kind, imports, ladder, leads, postcard, reporting, review, service, sms
 from .conversion import Details
 from .reporting import summarize_responses  # noqa: F401 — re-exported
 from .public import destination_path
@@ -897,6 +897,9 @@ async def bulk_apply(body: BulkIn, request: Request) -> dict[str, Any]:
                                         note=body.note)
     except CampaignError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+    for d in result["done"]:
+        await ladder.after_write(d["id"], client=_system_client(settings), settings=settings,
+                                 store=getattr(request.app.state, "campaign_store", None))
     if result["done"]:
         label = review.ACTION_LABELS[body.action]
         names = ", ".join(f'"{d["name"]}"' for d in result["done"][:20])
@@ -1085,6 +1088,11 @@ async def review_prospect(prospect_id: str, body: ReviewIn, request: Request) ->
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not save the review")
+    # The ladder (§ 7e.3): a qualify, a typed website or email, or a disqualify
+    # changes what the level should be. Best-effort, under the API client.
+    result["level"] = await ladder.after_write(
+        prospect_id, client=_system_client(settings), settings=settings,
+        store=getattr(request.app.state, "campaign_store", None))
     name = prospect.get("businessName") or prospect.get("name") or prospect_id
     await record_action(
         client, app=APP_CAMPAIGNS, category=CAT_STATUS, action=review.ACTION_LABELS[body.action],

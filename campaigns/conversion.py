@@ -239,6 +239,9 @@ async def mark_converted(client: EspoApi, lead: dict[str, Any], *, company_id: O
         fill["promotedContactId"] = contact_id
     if fill:
         await client.update(cfg.PROSPECT, lead["id"], fill)
+        # § 7e.3: a level belongs only to a Qualified lead; Converted clears it.
+        from .ladder import after_write
+        await after_write(lead["id"], client=client)
     # § 7d.1: one code per person — the Contact takes the lead's (never a second).
     from .leadcode import sync_on_conversion
     await sync_on_conversion(client, lead["id"], contact_id or lead.get("promotedContactId"))

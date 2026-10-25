@@ -256,6 +256,9 @@ async def land(client: EspoApi, result: research.Result, *, target_type: str, re
             record[target] = c.value
             status = ST_APPLIED
             counts["applied"] += 1
+            # A new email may lift the lead's level (build plan § 7e.3).
+            from campaigns.ladder import after_write
+            await after_write(record["id"], client=client)
         await client.create(FINDING, {
             **base, "name": f"{target}: {c.value}"[:150], "kind": KIND_FIELD, "targetField": target,
             "proposedValue": c.value, "currentValue": str(current) or None, "confidence": c.confidence,
@@ -391,6 +394,10 @@ async def decide(client: EspoApi, finding_id: str, decision: str, *, actor: str,
             else:
                 await client.update(entity, target_id, {field: f.get("proposedValue")})
                 note = f"{field} set to {f.get('proposedValue')}"
+                if target_type == TARGET_LEAD:
+                    # A new phone or email may lift the lead's level (§ 7e.3).
+                    from campaigns.ladder import after_write
+                    await after_write(target_id, client=client)
         elif kind == KIND_PERSON:
             note = await _create_person(client, f, target_id, actor)
     await client.update(FINDING, finding_id, {"findingStatus": decision, **stamp})

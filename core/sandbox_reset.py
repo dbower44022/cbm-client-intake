@@ -83,6 +83,11 @@ RESET_TABLES: tuple[str, ...] = (
     "audience_list_member",
     "audience_list_version",
     "audience_list",
+    # The qualification ladder's hand-set snapshot (build plan § 7e.3): the
+    # levels it refers to are on CRM rows the restore puts back, so the
+    # snapshot goes with them. A hand-set level with no snapshot is never
+    # moved by the sweep (ruling 117).
+    "lead_level_manual",
 )
 
 #: Configuration, authored artefacts and instance bookkeeping: never touched.

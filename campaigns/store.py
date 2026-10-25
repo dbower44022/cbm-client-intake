@@ -31,6 +31,7 @@ from sqlalchemy import (
     update,
 )
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from core.config import Settings
 from core.store import make_async_engine, metadata, submission
@@ -105,6 +106,21 @@ prospect_import_row = Table(
     Index("ix_prospect_import_row_hash", "row_hash"),
 )
 
+#: The qualification ladder's manual snapshot (build plan § 7e.3; rulings
+#: 106, 117; migration 0034). One row per lead whose level a person set by
+#: hand: the facts it held then, so the sweep can tell a NEW fact from an old
+#: one. The CRM holds the level itself and who set it, when.
+lead_level_manual = Table(
+    "lead_level_manual",
+    metadata,
+    Column("lead_id", String(32), primary_key=True),
+    Column("level", String(32), nullable=False),
+    Column("facts", JSONB, nullable=False),
+    Column("set_by_id", String(32)),
+    Column("set_by", String(128)),
+    Column("set_at", DateTime(timezone=True), nullable=False),
+)
+
 BATCH_PLANNED = "planned"
 BATCH_APPLIED = "applied"
 
@@ -139,6 +155,39 @@ class CampaignStore(AudienceStoreMixin):
 
     async def dispose(self) -> None:
         await self._engine.dispose()
+
+    # --- the ladder's manual snapshot (§ 7e.3) ----------------------------------
+
+    async def get_level_manual(self, lead_id: str) -> Optional[dict[str, Any]]:
+        async with self._engine.begin() as conn:
+            row = (await conn.execute(
+                select(lead_level_manual).where(lead_level_manual.c.lead_id == lead_id)
+            )).mappings().first()
+        return dict(row) if row else None
+
+    async def put_level_manual(self, lead_id: str, *, level: str, facts: list[str],
+                               set_by_id: str, set_by: str) -> dict[str, Any]:
+        """Record a hand-set level with the facts the lead held at that moment.
+        One row per lead: a second setting replaces the first."""
+        row = {"lead_id": lead_id, "level": level, "facts": sorted(facts),
+               "set_by_id": set_by_id or None, "set_by": set_by or None, "set_at": _now()}
+        async with self._engine.begin() as conn:
+            await conn.execute(
+                pg_insert(lead_level_manual).values(**row)
+                .on_conflict_do_update(index_elements=["lead_id"],
+                                       set_={k: v for k, v in row.items() if k != "lead_id"})
+            )
+        return row
+
+    async def level_manual_for(self, lead_ids: list[str]) -> dict[str, dict[str, Any]]:
+        """The snapshots for many leads at once (the sweep)."""
+        if not lead_ids:
+            return {}
+        async with self._engine.begin() as conn:
+            rows = (await conn.execute(
+                select(lead_level_manual).where(lead_level_manual.c.lead_id.in_(lead_ids))
+            )).mappings().all()
+        return {r["lead_id"]: dict(r) for r in rows}
 
     # --- links ----------------------------------------------------------------
 

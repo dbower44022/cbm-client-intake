@@ -92,6 +92,17 @@ LEAD_STATUSES = (LEAD_UNQUALIFIED, LEAD_QUALIFIED, LEAD_DISQUALIFIED, LEAD_CONVE
 #: campaign (ruling 44) and swept by the Stale sweep.
 LEAD_OPEN_STATUSES = (LEAD_UNQUALIFIED, LEAD_QUALIFIED)
 
+#: The level inside Qualified (``CProspect.qualificationLevel``; rulings 105,
+#: 106; build plan § 7e.3). Empty unless the lead is Qualified. Identified: a
+#: real business, no named person or direct line. Contactable: a named person
+#: and a phone or an email. Referred: a referrer and a phone or an email. The
+#: rule is ``campaigns/ladder.py``; the level never moves backwards.
+LEVEL_IDENTIFIED = "Identified"
+LEVEL_CONTACTABLE = "Contactable"
+LEVEL_REFERRED = "Referred"
+LEVELS = (LEVEL_IDENTIFIED, LEVEL_CONTACTABLE, LEVEL_REFERRED)
+LEVEL_RANK = {lv: i + 1 for i, lv in enumerate(LEVELS)}
+
 # --- a Company's or Contact's stages after first contact (ruling 50) -----------
 #: ``cFunnelStage`` / ``cEntryStage`` on Contact and Account. Candidate and
 #: Client are read from the engagement, never stored here.

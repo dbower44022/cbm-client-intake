@@ -105,6 +105,11 @@ async def orchestrate(sub: ProspectResponse, client: EspoApi) -> dict[str, Any]:
         if can_convert(lead, details):
             converted = await convert_lead(client, lead, details, campaign_id=campaign_id)
             result.update(converted.result())
+        else:
+            # The ladder (§ 7e.3): a phone or an email typed on the landing
+            # page may lift the level. A conversion clears it in mark_converted.
+            from campaigns.ladder import after_write
+            await after_write(lead["id"], client=client)
         result["action"] = sub.action
         return result
 

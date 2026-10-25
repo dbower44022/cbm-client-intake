@@ -576,6 +576,14 @@ class Settings(BaseSettings):
     # Operations runs it as dry-run then apply.
     prospect_stale_days: int = 180
     prospect_stale_sweep_seconds: int = 86400
+    # The qualification ladder (build plan § 7e.3, § 7e.4; rulings 104-106,
+    # 117): the level inside Qualified (Identified / Contactable / Referred),
+    # placed by the system after every application write and by a worker sweep
+    # over leads modified since its last pass; the Leads tab's counts, Level
+    # and Reach columns, Assigned to and the lead's page. Read per request.
+    # Needs marketing-redesign-crm-handoff.md on the CRM; feature-detected.
+    lead_ladder: bool = False
+    lead_level_sweep_seconds: int = 900   # 0 stops the sweep
     # --- Lead enrichment, phase 1: the free pass (prds/lead-enrichment/) ---
     # The worker scores every open lead (design § 4, rulings E2, E12-E14):
     # the service-area gate, then three signals. Off by default; nothing is

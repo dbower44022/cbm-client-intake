@@ -40,6 +40,7 @@ import re
 from datetime import datetime, timezone
 from typing import Any, Optional
 
+from core.config import get_settings
 from core.crm_upsert import website_key
 from core.espo import EspoApi, EspoError
 
@@ -342,7 +343,11 @@ def entry_status(source: str, row: dict[str, Any]) -> str:
 
 
 def _lead_payload(row: dict[str, Any], plan: dict[str, Any], batch_name: str,
-                  entry: dict[str, Any]) -> dict[str, Any]:
+                  entry: dict[str, Any], *, ladder_fields: bool = False) -> dict[str, Any]:
+    """The lead a row becomes. With ``ladder_fields`` (the CRM has the
+    redesign's fields and the switch is on) a Qualified row carries the level
+    its facts earn (build plan § 7e.3) — computed here, so the import at volume
+    makes no extra CRM call per row."""
     source = plan["door"]
     status = entry_status(source, row)
     now = _now_crm()
@@ -371,6 +376,9 @@ def _lead_payload(row: dict[str, Any], plan: dict[str, Any], batch_name: str,
     if status == cfg.LEAD_QUALIFIED:
         payload["qualifiedBy"] = (row.get("qualified_by") or plan.get("qualifiedBy") or "")[:255] or None
         payload["qualifiedAt"] = now
+        if ladder_fields:
+            from .ladder import facts, placed
+            payload["qualificationLevel"] = placed(facts(payload))
     if entry.get("outcome") == OUTCOME_ALREADY_KNOWN:
         payload["sideExit"] = cfg.EXIT_DUPLICATE
         payload["sideExitAt"] = now
@@ -410,6 +418,10 @@ async def apply_import(api_client: EspoApi, user_client: EspoApi, store, batch: 
     ledger: list[dict[str, Any]] = []
     writes = 0
     remaining = 0
+    ladder_fields = False
+    if get_settings().lead_ladder:
+        from .ladder import available as ladder_available
+        ladder_fields = await ladder_available(api_client)
     for entry in rows:
         outcome = entry.get("outcome")
         if outcome not in (OUTCOME_CREATE, OUTCOME_ALREADY_KNOWN) or entry["hash"] in done:
@@ -421,7 +433,7 @@ async def apply_import(api_client: EspoApi, user_client: EspoApi, store, batch: 
         writes += 1
         row = entry["row"]
         try:
-            payload = _lead_payload(row, plan, batch["name"], entry)
+            payload = _lead_payload(row, plan, batch["name"], entry, ladder_fields=ladder_fields)
             # The lead is the signed-in user's (ruling 33). Its link to a
             # matched Company is the API client's second write: EspoCRM checks
             # read access on the foreign record when a link rides a create, and

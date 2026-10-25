@@ -437,6 +437,10 @@ async def main() -> None:
     # Lead enrichment's free pass (prds/lead-enrichment/build-plan-phase-1.md):
     # a batch of leads scored every ENRICHMENT_SWEEP_SECONDS.
     next_fit_sweep = datetime.now(timezone.utc)
+    # The qualification ladder's sweep (prds/prospect-marketing/build-plan.md
+    # § 7e.3): re-places the level of every lead edited since the last pass,
+    # which is how an edit made in the CRM's own screens gets its level.
+    next_level_sweep = datetime.now(timezone.utc)
     # Lead enrichment phase 2: the AI research queue (people start runs; the
     # worker researches two records at a time).
     next_research = datetime.now(timezone.utc)
@@ -514,6 +518,15 @@ async def main() -> None:
             except Exception as exc:  # noqa: BLE001 — never fatal
                 log.warning("prospect stale sweep failed: %s", exc)
             next_stale_sweep = now_cfg + timedelta(seconds=settings.prospect_stale_sweep_seconds)
+        level_on = (settings.campaigns_enabled and settings.lead_ladder and not settings.espo_dry_run
+                    and settings.lead_level_sweep_seconds > 0)
+        if level_on and now_cfg >= next_level_sweep:
+            try:
+                from campaigns.ladder import run_level_sweep
+                await run_level_sweep(settings)
+            except Exception as exc:  # noqa: BLE001 — never fatal
+                log.warning("lead level sweep failed: %s", exc)
+            next_level_sweep = now_cfg + timedelta(seconds=settings.lead_level_sweep_seconds)
         fit_on = (settings.enrichment_free_pass and not settings.espo_dry_run
                   and settings.enrichment_sweep_seconds > 0)
         if fit_on and now_cfg >= next_fit_sweep:

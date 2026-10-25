@@ -193,6 +193,18 @@ async def _prospect_stale_apply(settings: Settings) -> str:
     return await job_apply(settings)
 
 
+async def _lead_level_dry(settings: Settings) -> str:
+    from campaigns.ladder import job_dry_run
+
+    return await job_dry_run(settings)
+
+
+async def _lead_level_apply(settings: Settings) -> str:
+    from campaigns.ladder import job_apply
+
+    return await job_apply(settings)
+
+
 async def _lead_fit_dry(settings: Settings) -> str:
     from enrichment.sweep import job_dry_run
 
@@ -246,6 +258,21 @@ JOBS: tuple[JobSpec, ...] = (
         mutating=True,
         dry_run=_prospect_stale_dry,
         apply=_prospect_stale_apply,
+    ),
+    JobSpec(
+        key="lead_level",
+        name="Lead levels",
+        description=(
+            "Lists the leads edited in the last day whose qualification level the "
+            "ladder would place differently — Identified, Contactable or Referred "
+            "inside Qualified, or cleared when the lead is no longer Qualified. "
+            "Applying writes exactly those levels; a level set by hand moves only "
+            "when a new fact allows it, and never backwards. The worker does the "
+            "same every 'Lead level sweep' seconds while the ladder is on."
+        ),
+        mutating=True,
+        dry_run=_lead_level_dry,
+        apply=_lead_level_apply,
     ),
     JobSpec(
         key="lead_fit",

@@ -510,6 +510,11 @@ async def record_outcome(api_client: EspoApi, user_client: EspoApi, user: dict[s
             await best_effort("stopped by Declined", api_client.update(cfg.PROSPECT, touch["prospectId"], {
                 "sideExit": cfg.EXIT_DECLINED, "sideExitAt": now,
                 "sideExitNote": f"Declined on a call from the campaign {campaign.get('name') or ''}".strip()}))
+    if touch.get("prospectId") and outcome in (cfg.OUTCOME_INTERESTED, cfg.OUTCOME_DECLINED):
+        # The ladder (§ 7e.3): an email or website given on the call, or the
+        # conversion it caused, changes what the level should be.
+        from .ladder import after_write
+        await after_write(touch["prospectId"], client=api_client)
     if call_again:
         fresh: dict[str, Any] = {
             "name": touch.get("name") or f"{campaign.get('name') or 'Campaign'} — {target.get('name') or ''}"[:255],
