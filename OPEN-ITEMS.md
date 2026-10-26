@@ -162,8 +162,10 @@ found; move resolved items to the bottom with the resolution date.
     `cbm_lead_code` field at Constant Contact, sign off an email campaign,
     send one real email from Constant Contact to one address Doug controls
     with the paste address in it, pick it in the app, follow the link and
-    see the code resolve. It is the check of every inferred vendor shape
-    (build plan § 7e.12 Draft 8); record each outcome there.
+    see the code resolve (step page
+    https://claude.ai/artifact/3YmoAaiHHAi2XFcJYAfK47, 37 steps, push
+    included). It is the check of every inferred vendor shape (build plan
+    § 7e.12 Draft 8); record each outcome there.
     Next: M7, Constant Contact per list and the email campaign (§ 7e.9
     first half). Still owed: the handoff on
     production at the arc's slot and on Boston with its release (now with
