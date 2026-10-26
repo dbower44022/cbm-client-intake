@@ -109,8 +109,8 @@ found; move resolved items to the bottom with the resolution date.
     page, the sync's lead source and the Replied flag, Conversations and
     the Mine chip; dark behind `LEAD_OUTREACH`; new setting
     `CHAPTER_POSTAL_ADDRESS`; no migration. Checked against the stub
-    harness and by 3,030 tests. **Owed, in order**: (1) Doug pushes
-    v0.288.0; (2) at crm-test's /setup, switch on *Personal outreach to
+    harness and by 3,030 tests. **Owed, in order**: (1) ~~Doug pushes
+    v0.288.0~~ pushed 10-26-26 00:16, live on crm-test; (2) at crm-test's /setup, switch on *Personal outreach to
     leads* and fill in *Chapter postal address*; (3) the live pass (step
     page https://claude.ai/artifact/X7zFhDzMThqXBUWaGJX9GZ rev 1.0, 28 steps) — Mark Marketing has no mentor
     profile and his user address is `mark.marketing@cbmentors.org`, so

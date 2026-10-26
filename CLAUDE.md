@@ -1232,10 +1232,12 @@ the strength of it.
   and the Replied flag, Conversations and the Mine chip. Dark behind
   `LEAD_OUTREACH`; new setting `CHAPTER_POSTAL_ADDRESS`; no migration.
   Built in one session, all four stops; checked against the stub harness
-  and by the tests. **Committed, not pushed; live pass owed** on crm-test
-  (step page in `OPEN-ITEMS.md` #57) — Mark Marketing has no mentor
-  profile, so ruling 120 resolves him by his user address; whether the
-  Gmail delegation can read that mailbox is the open question.
+  and by the tests. **Pushed 10-26-26 00:16 (deploys crm-test and
+  production, dark on both); live pass owed** on crm-test (step page
+  https://claude.ai/artifact/X7zFhDzMThqXBUWaGJX9GZ, `OPEN-ITEMS.md` #57)
+  — Mark Marketing has no mentor profile, so ruling 120 resolves him by
+  his user address; whether the Gmail delegation can read that mailbox is
+  the open question.
 - **v0.286.0 (2026-10-25) — the import tool** (build plan § 7e.7, M4;
   rulings 79–88, 111, 123, 127): templates, Excel, recognition and the
   four fixes, the preview as a worker job, fills, the level per row, Undo
