@@ -660,6 +660,16 @@ found; move resolved items to the bottom with the resolution date.
     the deploy for a larger record count, not an error.
 
 42. **Events: the production end-to-end test, and the redirect deferred.**
+    **Closing state 10-26-26 11:58 (session ended for a reboot; everything pushed,
+    production v0.289.0):** the test is complete; D3 confirmation built dark
+    (v0.277.0, live pass owed); D2 Follow-up tab, consent-over-false and
+    search-by-name built and live; durations on both CRMs. Owed, in order:
+    the confirmation's in-person live pass on crm-test, Track C with real
+    Zoom (then the online half), production's confirmation plan + seed +
+    switch, Boston, then the redirect once Doug lifts the hold. Doug's open
+    decisions: the five-week series as one event or five; the Holiday Social
+    Internal or Public; the presenter title / photo / topic data points.
+    Kickoff for the next session: `prompts/events-session-2026-10-26.md`.
     **THE TEST IS COMPLETE — 10-19-26 00:51.** Every section of the runbook
     (https://claude.ai/artifact/Dkbb1t7MKFb9vnjabpcyMc, rev 2.2) ran on
     production 10-18/19-26 and matched after the corrections below; the
