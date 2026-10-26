@@ -5,6 +5,21 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.287.0] — 2026-10-25
+
+**feat(campaigns): one request writes an import batch at a time.** Found on
+round two of the M4 live pass: two presses of Confirm for one batch within a
+second — two tabs, a fast double press, an automation retry — ran two
+applies that both passed the "already created" check before either had
+recorded a row, and every lead was created twice. **Migration 0036** adds
+`write_lease_at` / `write_lease_by` to `prospect_import_batch`; the apply
+(each part) and Undo (each part) claim the lease in one statement
+(`store.claim_write`) and release it when the request ends, success or
+failure. A second request while it is held answers 409: *This import is
+being written by Mark Marketing right now. Wait for it to finish, then look
+at the History block before trying again.* A lease older than five minutes
+belongs to a request that died and is taken over.
+
 ## [0.286.4] — 2026-10-25
 
 **fix(campaigns): an ignored column is not a new column.** Recognition listed

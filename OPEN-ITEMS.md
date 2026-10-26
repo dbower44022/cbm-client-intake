@@ -89,18 +89,18 @@ found; move resolved items to the bottom with the resolution date.
     import"; the history row on a surviving lead). v0.286.1–v0.286.3 pushed
     and live on both deployments (the tool is off on production).
     **v0.286.4** (an ignored column no longer reads as a new column) is
-    committed, not pushed. **New item owed**: the apply has no lock — two
-    presses of Confirm for one batch within a second (two tabs, or a fast
-    double press) create every row twice; seen when the automation re-ran a
-    script. Design: a lease on the batch's apply (a column, migration 0036)
-    refused with "being applied by <who>" while held. Also owed: the sandbox
+    committed, not pushed. **Found and fixed**: the apply had no lock — two
+    presses of Confirm for one batch within a second created every row
+    twice; v0.287.0 adds the batch write lease (migration 0036), the second
+    press answers 409 naming who holds it. Also owed: the sandbox
     carries two rehearsal leads (Parkside Dental Lab, Westown Upholstery)
     and a second template until tonight's reset. **Owed, in order**:
     (1) ~~the role cell~~ done 10-25-26 by Doug; (2) ~~the push~~ done;
     (3) ~~the live pass~~ done (step page
     https://claude.ai/artifact/5bnDamVEDRKpHYFVaZkvbG rev 1.1, 74 steps;
     the demo template restored through the Operations job in section 3);
-    (4) Doug pushes v0.286.4; (5) the apply lease; then M5. Still owed: the handoff on
+    (4) ~~Doug pushes v0.286.4~~ done 22:47; (5) ~~the apply lease~~ built
+    as v0.287.0 (migration 0036), committed, not pushed; then M5. Still owed: the handoff on
     production at the arc's slot and on Boston with its release (now with
     the third role cell); the layout question in the handoff's § 7.
 

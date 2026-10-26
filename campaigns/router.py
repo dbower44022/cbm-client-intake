@@ -35,6 +35,7 @@ from forms import SPECS_BY_SLUG
 from . import config as cfg
 from . import audience, calls, email as email_kind, imports, ladder, leadcode, leads, postcard, reporting, review, service, sms
 from . import import_templates as tpl
+from .store import BatchBusy
 from .conversion import CompanyConflict, ConversionRefused, Details, can_convert, convert_lead
 from .reporting import summarize_responses  # noqa: F401 — re-exported
 from .public import destination_path
@@ -1234,6 +1235,17 @@ async def convert_prospect(prospect_id: str, request: Request) -> dict[str, Any]
     return {"converted": done.result()}
 
 
+async def _claim_write(store, batch_id: str, actor: str, verb: str) -> None:
+    """Take the batch's write lease or answer 409 naming who holds it."""
+    try:
+        await store.claim_write(batch_id, actor)
+    except BatchBusy as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=(f"This import is being {verb} by {exc.held_by} right now. Wait for it to finish, "
+                    f"then look at the History block before trying again."))
+
+
 def _require_templates(settings: Settings) -> None:
     if not settings.import_templates:
         raise HTTPException(status_code=404, detail="Import templates are switched off (IMPORT_TEMPLATES at /setup).")
@@ -1391,12 +1403,15 @@ async def import_undo(batch_id: str, body: UndoIn, request: Request) -> dict[str
     if not batch:
         raise HTTPException(status_code=404, detail="That import was not found.")
     actor = user.get("name") or user.get("userName") or ""
+    await _claim_write(store, batch_id, actor, "undone")
     try:
         result = await imports.undo_import(api_client, store, batch, actor=actor, max_leads=body.maxLeads)
     except CampaignError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not undo the import")
+    finally:
+        await store.release_write(batch_id)
     if result["done"]:
         total = result["total"]
         deleted, touched = total.get("deleted") or [], total.get("touched") or []
@@ -1440,14 +1455,19 @@ async def import_apply(body: ImportApplyIn, request: Request) -> dict[str, Any]:
     batch = await store.get_batch(body.batchId)
     if not batch:
         raise HTTPException(status_code=404, detail="That import plan was not found — plan it again.")
+    actor_name = user.get("name") or user.get("userName") or ""
+    # One request writes a batch at a time (migration 0036): two presses of
+    # Confirm within a second created every lead twice on the M4 pass.
+    await _claim_write(store, batch["id"], actor_name, "written")
     try:
-        result = await imports.apply_import(api_client, client, store, batch,
-                                            user_name=user.get("name") or user.get("userName") or "",
+        result = await imports.apply_import(api_client, client, store, batch, user_name=actor_name,
                                             max_rows=body.maxRows)
     except CampaignError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not apply the import")
+    finally:
+        await store.release_write(batch["id"])
     # The action log needs a record to hang on; an import has many. The first
     # lead it made stands for the batch (an empty id is refused by
     # both the stream note and the CActionLog row — seen 10-15-26).

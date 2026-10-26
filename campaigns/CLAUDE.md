@@ -1,6 +1,6 @@
 # campaigns/ — Marketing Management (was Campaign Management)
 
-Last Updated: 10-25-26 20:50 · Revision 1.10
+Last Updated: 10-25-26 22:48 · Revision 1.11
 
 Detail for Campaign Management (`/campaigns`, prospect marketing Phases 1 to 4 and the lead model): links, postcards, the landing page, imports, the Leads and Review grids, calls, texts, email, attribution and reporting.
 
@@ -370,8 +370,11 @@ the reason.
   `store.filled_by_later_batch`, whatever the clock says), forgets every
   ledger row naming a deleted lead, lists the rest; fills stay. A known
   hash whose lead the CRM no longer has is a new row again (`stale` on the
-  plan entry; the apply drops its rows first). **The apply has no lock
-  yet**: two Confirms within a second double a batch (owed).
+  plan entry; the apply drops its rows first). **One request writes a batch
+  at a time** (v0.287.0, migration 0036): the apply and Undo claim the
+  batch's write lease (`store.claim_write`, one statement) and release it
+  when the request ends; a second press answers 409 naming who holds it; a
+  lease older than five minutes is taken over.
   With the switch off, `plan_import` is the CSV path exactly as before
   and a known row is skipped, not filled. The tab is `imports.js`
   (ids `im_`), handed the Imports tab by `app.js`'s `loadImports` /
@@ -388,6 +391,7 @@ the reason.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.11 | 10-25-26 22:48 | Claude (Claude Code) | The import batch write lease (v0.287.0). |
 | 1.10 | 10-25-26 20:50 | Claude (Claude Code) | The import tool live-passed (v0.286.3): the later-fill touch, stale ledger rows, the apply lock owed. |
 | 1.9 | 10-25-26 19:30 | Claude (Claude Code) | The import tool (v0.286.0, § 7e.7, M4): templates, Excel, the worker preview, fills, the level per row, Undo under the org-wide key, the Imports tab script. |
 | 1.8 | 10-25-26 12:36 | Claude (Claude Code) | Review as the research queue (v0.285.0, § 7e.6, M3): the two modes, `seenLevel`, suggestions and `close_findings`, ruling 121 in `decide`. |

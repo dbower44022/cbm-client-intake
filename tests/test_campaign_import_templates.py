@@ -75,6 +75,16 @@ class TemplateStore(FakeStore):
         return row
     async def find_batch_by_file(self, sha):
         return next((b for b in self.batches.values() if b["file_sha256"] == sha and b["status"] == "applied"), None)
+    async def claim_write(self, batch_id, actor, now=None):
+        from campaigns.store import BatchBusy, WRITE_LEASE
+        b = self.batches.get(batch_id)
+        if not b: return
+        now = now or _now()
+        if b.get("write_lease_at") and b["write_lease_at"] >= now - WRITE_LEASE:
+            raise BatchBusy(b.get("write_lease_by") or "", b["write_lease_at"])
+        b["write_lease_at"] = now; b["write_lease_by"] = actor
+    async def release_write(self, batch_id):
+        if batch_id in self.batches: self.batches[batch_id].update(write_lease_at=None, write_lease_by=None)
     async def claim_plan(self, now=None):
         for b in self.batches.values():
             if b.get("plan_status") == PLAN_QUEUED:
@@ -797,3 +807,48 @@ def test_a_ledger_row_whose_lead_is_gone_plans_as_a_create_again():
     assert [r for r in store.rows if r["prospect_id"] == named and r["outcome"] == "fills"]
     run(store.forget_rows(first["id"], [named]))
     assert [r for r in store.rows if r["prospect_id"] == named] == []
+
+
+# --- the write lease (migration 0036; found on the live pass) ----------------------------------------
+
+def test_a_second_confirm_while_the_batch_is_being_written_is_refused_naming_who(monkeypatch):
+    store, crm = TemplateStore(), Crm()
+    client = _client(monkeypatch, store, crm)
+    t = _template(store)
+    data = xlsx({"Members": [["Company", "Address", "Town", "Postcode", "Owner", "E-mail", "Ref", "Internal notes"],
+                             ["Acme Widgets", "1 Main St", "Cleveland", 44113, "Ann Lee", "ann@acme.example", "A1", "x"]]})
+    plan = client.post("/campaigns/api/prospects/import/plan",
+                       json={"name": "October", "templateId": t["id"], "fileBase64": _b64(data), "fileName": "m.xlsx"}).json()
+    # Another request holds the lease: refused, nothing written.
+    run(store.claim_write(plan["batchId"], "Pat Partner"))
+    res = client.post("/campaigns/api/prospects/import/apply", json={"batchId": plan["batchId"], "maxRows": 100})
+    assert res.status_code == 409 and "being written by Pat Partner" in res.json()["detail"]
+    assert crm.rows.get(cfg.PROSPECT, {}) == {}
+    # A stale lease (the request died) is taken; the apply runs and releases it.
+    store.batches[plan["batchId"]]["write_lease_at"] = _now() - timedelta(minutes=6)
+    res = client.post("/campaigns/api/prospects/import/apply", json={"batchId": plan["batchId"], "maxRows": 100})
+    assert res.status_code == 200 and res.json()["result"]["created"] == 1
+    assert store.batches[plan["batchId"]]["write_lease_at"] is None
+    # Undo takes the same lease.
+    run(store.claim_write(plan["batchId"], "Pat Partner"))
+    res = client.post(f"/campaigns/api/prospects/import/{plan['batchId']}/undo", json={"maxLeads": 100})
+    assert res.status_code == 409 and "being undone by Pat Partner" in res.json()["detail"]
+    run(store.release_write(plan["batchId"]))
+    res = client.post(f"/campaigns/api/prospects/import/{plan['batchId']}/undo", json={"maxLeads": 100})
+    assert res.status_code == 200 and len(res.json()["result"]["deleted"]) == 1
+    assert store.batches[plan["batchId"]]["write_lease_at"] is None
+
+
+def test_the_lease_is_released_when_the_apply_fails(monkeypatch):
+    """A refused write must not leave the batch locked for five minutes."""
+    store, crm = TemplateStore(), Crm()
+    client = _client(monkeypatch, store, crm)
+    import campaigns.router as router_mod
+
+    async def boom(*a, **kw):
+        raise CampaignError("the CRM said no")
+    monkeypatch.setattr(router_mod.imports, "apply_import", boom)
+    batch = _queue(store)
+    res = client.post("/campaigns/api/prospects/import/apply", json={"batchId": batch["id"], "maxRows": 100})
+    assert res.status_code == 400 and "the CRM said no" in res.json()["detail"]
+    assert store.batches[batch["id"]]["write_lease_at"] is None

@@ -104,6 +104,9 @@ prospect_import_batch = Table(
     Column("plan_claimed_at", DateTime(timezone=True)),
     Column("template_id", String(36)),
     Column("file_name", String(255)),
+    # The write lease (migration 0036): one apply or Undo request at a time.
+    Column("write_lease_at", DateTime(timezone=True)),
+    Column("write_lease_by", String(128)),
     Index("ix_prospect_import_batch_file", "file_sha256"),
     Index("ix_prospect_import_batch_plan", "plan_status"),
 )
@@ -149,6 +152,18 @@ PLAN_READY = "ready"
 PLAN_FAILED = "failed"
 #: A plan left ``running`` with no progress for this long is taken again.
 PLAN_LEASE = timedelta(minutes=10)
+#: A write lease (apply or Undo) older than this belongs to a request that
+#: died; the next request may take it.
+WRITE_LEASE = timedelta(minutes=5)
+
+
+class BatchBusy(RuntimeError):
+    """The batch is being written by another request (its lease is held)."""
+
+    def __init__(self, held_by: str, since: Optional[datetime]):
+        self.held_by = held_by or "someone"
+        self.since = since
+        super().__init__(f"being written by {self.held_by}")
 
 
 def _now() -> datetime:
@@ -427,6 +442,7 @@ class CampaignStore(AudienceStoreMixin, ImportTemplateStoreMixin):
             "excluded_rows": None, "undone_at": None, "undone_by": None, "undo_result": None,
             "plan_status": plan_status, "plan_error": None, "plan_progress": None,
             "plan_claimed_at": None, "template_id": template_id, "file_name": file_name,
+            "write_lease_at": None, "write_lease_by": None,
         }
         async with self._engine.begin() as conn:
             await conn.execute(prospect_import_batch.insert().values(**row))
@@ -509,6 +525,30 @@ class CampaignStore(AudienceStoreMixin, ImportTemplateStoreMixin):
         out = dict(row)
         out["plan_status"] = PLAN_RUNNING
         return out
+
+    async def claim_write(self, batch_id: str, actor: str, now: Optional[datetime] = None) -> None:
+        """Take the batch's write lease for one request (the apply's part, or
+        an Undo's). Raises :class:`BatchBusy` while another request holds a
+        live lease — the one statement decides, so two presses a few
+        milliseconds apart cannot both win."""
+        now = now or _now()
+        b = prospect_import_batch
+        async with self._engine.begin() as conn:
+            result = await conn.execute(
+                update(b).where(and_(b.c.id == batch_id,
+                                     or_(b.c.write_lease_at.is_(None), b.c.write_lease_at < now - WRITE_LEASE)))
+                .values(write_lease_at=now, write_lease_by=(actor or None)))
+            if result.rowcount:
+                return
+            row = (await conn.execute(select(b.c.write_lease_by, b.c.write_lease_at).where(b.c.id == batch_id))).first()
+        if row is None:
+            return                              # no such batch: the caller's 404 says so
+        raise BatchBusy(row[0] or "", row[1])
+
+    async def release_write(self, batch_id: str) -> None:
+        b = prospect_import_batch
+        async with self._engine.begin() as conn:
+            await conn.execute(update(b).where(b.c.id == batch_id).values(write_lease_at=None, write_lease_by=None))
 
     async def set_plan_progress(self, batch_id: str, progress: dict[str, Any]) -> None:
         """What the worker has done so far (``rows checked of n``); the stamp

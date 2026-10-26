@@ -1220,9 +1220,9 @@ the strength of it.
   `openpyxl`. **Live-passed on crm-test 10-25-26 20:49 as v0.286.3**
   (round two run by Claude in Doug's signed-in tab; four Undo and
   re-import defects found and fixed on the way, v0.286.1–v0.286.3, all
-  pushed). v0.286.4 (cosmetic) committed, not pushed. Owed: a lease on the
-  batch's apply (two Confirms within a second double every row). Next: M5
-  (`OPEN-ITEMS.md` #57).
+  pushed). v0.286.4 pushed 22:47. **v0.287.0** (the batch write lease,
+  migration 0036: two Confirms within a second no longer double a batch)
+  committed, not pushed. Next: push, M5 (`OPEN-ITEMS.md` #57).
 - **v0.285.0 (2026-10-25) — Review is the research queue, two modes**
   (build plan § 7e.6, M3; rulings 110, 121): *Judge* as before, *Find
   contacts* for Identified leads, *AI research* on every row, a Person
