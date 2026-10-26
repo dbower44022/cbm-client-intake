@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-26-26 12:10 · Revision 0.57 — change log at the end.
+Last Updated: 10-26-26 12:18 · Revision 0.58 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -1690,7 +1690,7 @@ industry column are part of L1.
 
 ## 7d. The lead identifier in every link (rulings 71–73; drafted 10-22-26 for approval)
 
-**Status: APPROVED (10-22-26 01:35) — question 20 answered A (ruling 74), the prefill table in § 7d.4 confirmed as written (ruling 75). The CRM handoff of § 7d.5 is written (10-22-26 01:42, `lead-code-crm-handoff.md`, plan fingerprint `bec909277859`, dry run clean on crm-test). Applied on crm-test 10-22-26 12:45–12:48 and read back. **D1 built 10-22-26 (v0.276.0) and LIVE-PASSED on crm-test 10-25-26 11:10.** Next (ruling 126): D2, after the M2 session; D3's pieces ride § 7e's M2, M7 and M10.** Rulings 71 to 73
+**Status: APPROVED (10-22-26 01:35) — question 20 answered A (ruling 74), the prefill table in § 7d.4 confirmed as written (ruling 75). The CRM handoff of § 7d.5 is written (10-22-26 01:42, `lead-code-crm-handoff.md`, plan fingerprint `bec909277859`, dry run clean on crm-test). Applied on crm-test 10-22-26 12:45–12:48 and read back. **D1 built 10-22-26 (v0.276.0) and LIVE-PASSED on crm-test 10-25-26 11:10.** Next (ruling 126): D2 with OPEN-ITEMS #59, in a window when no other session is on the arc. D3's pieces: *New code* built with M2 (v0.284.0), the vendor field with M7 (v0.290.0), the caller's link owed with M10.** Rulings 71 to 73
 (10-22-26) say that every link delivered to a known person carries that
 person's lead identifier after the campaign link, that the identifier
 belongs to the person for life, and that each form decides for itself what
@@ -3064,6 +3064,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.58 | 10-26-26 12:18 | Claude (Claude Code) | § 7d status: D3's pieces built with M2 and M7 recorded; D2 and OPEN-ITEMS #59 owed in the next free window. |
 | 0.57 | 10-26-26 12:10 | Claude (Claude Code) | § 7e.9's first half marked built (v0.290.0); § 7e.13 step M7: Doug's two rulings, the routine choices, those made on the way, the live send owed; § 7e.12 Draft 8 lists M7's inferred shapes. |
 | 0.56 | 10-26-26 11:55 | Claude (Claude Code) | § 7e.8 and § 7e.13 step M6 live-passed on crm-test; the read-back and the action-log defect it found. |
 | 0.55 | 10-26-26 02:50 | Claude (Claude Code) | § 7e.8 marked built (v0.289.0) and its migration number corrected to 0037; § 7e.13 step M6: the routine choices, those made on the way, the Postgres check of the migration, the live pass owed. |

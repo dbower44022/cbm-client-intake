@@ -275,9 +275,14 @@ found; move resolved items to the bottom with the resolution date.
     record counted the click with its outcome kept at *No answer*. The count
     read 2 for one intended visit (a second open, or the browser fetching
     the address while it was typed — not diagnosed); D3 must expect mail
-    scanners to inflate email clicks the same way. Owed (ruling 126): D2
-    once the M2 session finishes; D3's pieces inside § 7e's M2, M7 and M10;
-    production and Boston with the arc's slot. Finding outside D1: #59.
+    scanners to inflate email clicks the same way. Ruling 126's D3 pieces:
+    *New code* built with M2 (v0.284.0), the vendor field `cbm_lead_code`
+    with M7 (v0.290.0, live send owed under #57); the caller's link still
+    owed with M10. **Owed: D2** (each form's prefill, the *Not you?* line,
+    the registration's one press, the text's `{link}`) **and #59**, in the
+    next window when no other session is on the arc (Doug, 10-25-26: wait
+    for the redesign step in progress to finish first); production and
+    Boston with the arc's slot.
     **At the production slot, also do these two (added 10-22-26; both
     live-passed on crm-test 10-22-26 as Mark Marketing). Without them, no
     campaign action records any history on production:**
