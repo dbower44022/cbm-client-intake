@@ -128,14 +128,19 @@ found; move resolved items to the bottom with the resolution date.
     *Used by*; rides `CAMPAIGN_LISTS`; **migration 0037** (converts the
     crm-test test lists, drops `audience_list_entry`). Checked against the
     real app over the test fakes, the migration against a local Postgres,
-    and by 3,040+ tests. **Owed, in order**: (1) Doug pushes v0.289.0 once
-    the M5 pass is done (both commits go together — the push redeploys
-    crm-test under any pass in progress); (2) the live pass (step page
-    https://claude.ai/artifact/CyUnHZcBtjB79d3VkJozv1 rev 1.0, 28 steps as
-    Mark Marketing) — its section A adds `qualificationLevel` and `phone`
-    to the *Campaign list fields* setting at crm-test's /setup, because the
-    default lead fields have neither; (3) decide whether those two join
-    `audience.DEFAULT_FIELDS` (M7's ready-made lists will want the level).
+    and by 3,040+ tests. Pushed 10-26-26 09:19, live on both deployments
+    09:22. **Live-passed on crm-test 10-26-26 ~11:45** by Doug (step page
+    https://claude.ai/artifact/CyUnHZcBtjB79d3VkJozv1, 28 steps as Mark
+    Marketing); read back: the November postcard sends to *Leads with a
+    phone*, one Planned card (Gordon Square Florist). **Owed:** (1) **list
+    actions write no action-log row** — found on the read-back: a list has
+    no CRM record, `core/action_log.log_action` sends an empty
+    `recordType`/`recordId`, and the CRM refuses the row (HTTP 400, `field:
+    record, type: pattern`; eight refusals in crm-test's web log during
+    the pass). Since v0.270.0. Fix: leave the record reference out when
+    there is none; (2)
+    decide whether `qualificationLevel` and `phone` join
+    `audience.DEFAULT_FIELDS` (M7's prompt treats it as routine: yes).
     Next: M7, Constant Contact per list and the email campaign (§ 7e.9
     first half). Still owed: the handoff on
     production at the arc's slot and on Boston with its release (now with

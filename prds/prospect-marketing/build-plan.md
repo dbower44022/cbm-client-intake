@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-26-26 02:50 · Revision 0.55 — change log at the end.
+Last Updated: 10-26-26 11:55 · Revision 0.56 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -2247,7 +2247,7 @@ matching a Company or Contact creates a lead closed as Duplicate.
 plus a new `test_campaign_import_templates.py` covering recognition,
 renames, the four fixes, Excel, fills, undo and the touched rule.
 
-### 7e.8 Lists — rulings 90–95, 98 (built as v0.289.0, 10-26-26; live pass owed)
+### 7e.8 Lists — rulings 90–95, 98 (built as v0.289.0, 10-26-26; live-passed on crm-test 10-26-26 11:45)
 
 **The model.**
 
@@ -2713,8 +2713,19 @@ Team caller for M1 and M10).
    against a local Postgres with old-shape lists, a downgrade and a second
    upgrade — which emptied a converted recipe until the conversion learned
    to leave a new-shape recipe alone. Checked in the browser against the
-   real application over the test fakes. **Live pass owed** on crm-test
-   (`OPEN-ITEMS.md` #57).
+   real application over the test fakes. Pushed 10-26-26 09:19, live on
+   both deployments 09:22. **Live-passed on crm-test 10-26-26 ~11:45** by
+   Doug as Mark Marketing (step page
+   https://claude.ai/artifact/CyUnHZcBtjB79d3VkJozv1, 28 steps). Read back
+   after the pass: the November postcard campaign sends to *Leads with a
+   phone* (version 3: 4 members, 1 reached, 3 skipped) with one Planned
+   card, Gordon Square Florist — the exclusion held through the build.
+   **Found on the read-back:** no list action (create, save, run, Exclude,
+   Add people, Copy) wrote its action-log row; only the two the campaign
+   parents did. A list has no CRM record, `record_action` sent an empty
+   record reference, and the CRM refuses that (`field: record, type:
+   pattern`, crm-test's web log). The defect dates from v0.270.0;
+   `OPEN-ITEMS.md` #57 holds it.
 7. **M7: Constant Contact per list and the email campaign** (§ 7e.9
    first half), behind `CAMPAIGN_LIST_SYNC`. About three days, plus the
    live send. **Also (ruling 126):** § 7d.2's email half — the vendor
@@ -3010,6 +3021,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.56 | 10-26-26 11:55 | Claude (Claude Code) | § 7e.8 and § 7e.13 step M6 live-passed on crm-test; the read-back and the action-log defect it found. |
 | 0.55 | 10-26-26 02:50 | Claude (Claude Code) | § 7e.8 marked built (v0.289.0) and its migration number corrected to 0037; § 7e.13 step M6: the routine choices, those made on the way, the Postgres check of the migration, the live pass owed. |
 | 0.54 | 10-25-26 23:20 | Claude (Claude Code) | § 7e.13 step M5: plan approved (four stops, one session), ruling 128 recorded in § 7e.5, kickoff prompt written (`prompts/m5-personal-outreach-kickoff.md`). |
 | 0.53 | 10-25-26 20:50 | Claude (Claude Code) | § 7e.13 step M4 live-passed on crm-test (round two, run by Claude; v0.286.2 and v0.286.3 fixed on the way; the apply race owed); § 7e.7 heading marked live-passed. Next: M5. |

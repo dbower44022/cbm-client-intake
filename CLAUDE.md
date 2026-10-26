@@ -1222,9 +1222,10 @@ the strength of it.
   (Include groups minus Leave out groups), a static list is people added
   by hand, Exclude onto a static exclusion list, the kind fixed, Copy, the
   per-channel counts. Rides `CAMPAIGN_LISTS`; **migration 0037**.
-  Built in one session, all four stops. **Committed, not pushed** (Doug
-  pushes after the M5 pass); live pass owed (step page in `OPEN-ITEMS.md`
-  #57).
+  Built in one session, all four stops. Live on both deployments
+  10-26-26 09:22; **live-passed on crm-test 10-26-26 ~11:45** by Doug. The
+  read-back found list actions writing no action-log row (since v0.270.0;
+  `OPEN-ITEMS.md` #57).
 - **v0.288.0 (2026-10-26) — personal outreach from the lead's page**
   (build plan § 7e.5, M5; rulings 107–109, 115, 118–120, 122, 128): the
   shared composer (`frontend/shared/compose.js`, the session tools switched
