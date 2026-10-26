@@ -897,3 +897,71 @@ async def test_real_failures_still_hold_the_cursor():
     st = await store.get_sync_state(sc.mailbox)
     assert stats["failed"] == 1
     assert st.history_id == "100"  # held
+
+
+# --- a reply from an assigned lead (prospect marketing rulings 109, 118; M5) ---
+
+def _lead_scope(address="rosa@marigold.example"):
+    return crm.MailboxScope(
+        mailbox="mark.marketing@cbmentors.org", manager_name="Mark Marketing", owner_user_id="u-mark",
+        records=[crm.RecordRef(entity="CProspect", id="L1", name="Marigold Pet Grooming", addresses={address})],
+    )
+
+
+async def test_a_reply_from_the_leads_own_address_links_the_lead_and_marks_it_replied():
+    espo = FakeEspo()
+    store = MemoryCommsStore()
+    conv = await ingest_message(espo, store, _lead_scope(), sync.parse_message(
+        raw_message(frm="rosa@marigold.example", to="mark.marketing@cbmentors.org", subject="Re: Hello")))
+    assert conv
+    # Linked through the lead's conversation link, never a contact link (a lead has no Contact).
+    assert ("CConversation", conv, "prospects", "L1") in espo.relates
+    assert not [r for r in espo.relates if r[2] == "contacts"]
+    assert espo.records[("CProspect", "L1")] == {"replied": True}
+    # The owner (the assignee) is stamped so a read-own role sees the thread.
+    assert espo.records[("CConversation", conv)].get("assignedUsersIds") == ["u-mark"]
+
+
+async def test_our_own_message_to_the_lead_never_marks_it_replied():
+    espo = FakeEspo()
+    await ingest_message(espo, MemoryCommsStore(), _lead_scope(), sync.parse_message(
+        raw_message(frm="mark.marketing@cbmentors.org", to="rosa@marigold.example", subject="Hello")))
+    assert ("CProspect", "L1") not in espo.records
+
+
+async def test_a_stranger_on_the_leads_domain_is_not_the_lead():
+    espo = FakeEspo()
+    conv = await ingest_message(espo, MemoryCommsStore(), _lead_scope(), sync.parse_message(
+        raw_message(frm="someone.else@marigold.example", to="mark.marketing@cbmentors.org", subject="Hi")))
+    assert conv is None and ("CProspect", "L1") not in espo.records
+
+
+async def test_a_reply_on_a_crm_without_the_replied_field_links_but_does_not_write_it():
+    class NoField(FakeEspo):
+        async def metadata(self, key):
+            return {"leadStatus": {}}
+
+    espo = NoField()
+    conv = await ingest_message(espo, MemoryCommsStore(), _lead_scope(), sync.parse_message(
+        raw_message(frm="rosa@marigold.example", to="mark.marketing@cbmentors.org", subject="Re: Hello")))
+    assert ("CConversation", conv, "prospects", "L1") in espo.relates
+    assert ("CProspect", "L1") not in espo.records
+
+
+def test_conversion_clears_replied():
+    import asyncio
+    from campaigns.conversion import mark_converted
+
+    class Crm:
+        def __init__(self): self.updates = []
+        async def update(self, entity, record_id, payload): self.updates.append((entity, record_id, payload)); return {}
+        async def get(self, *a, **k): return {}
+        async def metadata(self, key): return None
+
+    crm_ = Crm()
+    asyncio.run(mark_converted(crm_, {"id": "L1", "leadStatus": "Qualified", "replied": True}, contact_id="c1"))
+    written = crm_.updates[0][2]
+    assert written["leadStatus"] == "Converted" and written["replied"] is False and written["promotedContactId"] == "c1"
+    crm_ = Crm()
+    asyncio.run(mark_converted(crm_, {"id": "L2", "leadStatus": "Qualified"}, contact_id="c1"))
+    assert "replied" not in crm_.updates[0][2]

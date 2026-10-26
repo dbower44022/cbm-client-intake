@@ -197,6 +197,7 @@ async def session(request: Request) -> dict[str, Any]:
         "listsOn": settings.campaign_lists,
         "ladderOn": settings.lead_ladder,
         "importTemplatesOn": settings.import_templates,
+        "leadOutreachOn": settings.lead_outreach,
         "importSources": list(cfg.IMPORT_SOURCES),
         "levels": list(cfg.LEVELS),
         "sms": {"provider": settings.sms_provider, "hours": settings.sms_send_hours,
@@ -897,7 +898,7 @@ async def prospect_counts(request: Request) -> dict[str, Any]:
         return {"ladder": False}
     lq = leads.LeadQuery.from_params(dict(request.query_params), me=user.get("userId") or "")
     try:
-        return await leads.counts(client, lq)
+        return await leads.counts(client, lq, me=user.get("userId") or "")
     except CampaignError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
@@ -1940,3 +1941,8 @@ async def mark_sent(campaign_id: str, request: Request) -> dict[str, Any]:
         actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
     )
     return result
+
+
+# Personal outreach (build plan § 7e.5) registers its endpoints on api_router;
+# the import sits last because that module uses this one's gate and helpers.
+from . import outreach_router  # noqa: E402,F401

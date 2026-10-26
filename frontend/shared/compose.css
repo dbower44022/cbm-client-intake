@@ -1,0 +1,122 @@
+/* Shared email composer — the styles behind frontend/shared/compose.js.
+
+   Lifted from sessions/frontend/styles.css on 10-25-26 (Doug's ruling: one
+   composer for the session tools and the lead's page). The class names keep
+   their sx__ prefix: they are identifiers the component's markup carries, not
+   a claim that the page is a session tool. Load this sheet BEFORE a page's
+   own stylesheet so the page's overrides still win. */
+
+/* --- the dialog shell ---------------------------------------------------- */
+.sx__modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-start; justify-content: center; padding: 4vh 1rem; }
+/* The base display:flex overrides the browser's [hidden]{display:none}; restore
+   it so the modal stays hidden until opened (was covering the whole screen). */
+.sx__modal[hidden] { display: none; }
+.sx__modal-backdrop { position: fixed; inset: 0; background: rgba(18, 28, 42, 0.45); }
+.sx__modal-card {
+  position: relative; z-index: 1; width: 100%; max-width: 30rem; max-height: 88vh; overflow: auto;
+  background: var(--cbm-surface, #fff); border-radius: var(--cbm-radius, 10px);
+  box-shadow: 0 12px 40px rgba(18, 28, 42, 0.25);
+}
+.sx__modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; padding: 0.9rem 1rem 0.6rem; border-bottom: 1px solid var(--cbm-border, #eef1f4); }
+.sx__modal-kind { margin: 0; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--cbm-slate-700, #667); }
+.sx__modal-name { margin: 0.1rem 0 0; }
+.sx__modal-actions { display: inline-flex; align-items: center; gap: 0.4rem; }
+.sx__modal-copy { background: none; border: 1px solid var(--cbm-border, #d7dce2); border-radius: 5px; padding: 0.2rem 0.55rem; font: inherit; font-size: 0.8rem; cursor: pointer; color: var(--cbm-blue, #1a5fb4); white-space: nowrap; }
+.sx__modal-copy:hover { background: #f2f5f9; }
+.sx__modal-close { background: none; border: none; font-size: 1.5rem; line-height: 1; cursor: pointer; color: var(--cbm-slate-700, #667); padding: 0 0.2rem; }
+.sx__modal-close:hover { color: var(--cbm-navy, #123); }
+.sx__modal-body { padding: 0.4rem 0; }
+.sx__modal-body .sx__fact { grid-template-columns: 7rem 1fr; }
+.sx__modal-foot { display: flex; gap: 0.5rem; justify-content: flex-end; flex-wrap: wrap; padding: 0.75rem 1rem 1rem; border-top: 1px solid var(--cbm-border, #eef1f4); }
+.sx__modal-foot .cbm-button { padding: 0.5rem 0.9rem; font-size: 0.9rem; }
+
+/* The compose dialog is a workspace, not a pop-up: 90% of the window, and the
+   person can RESIZE it from the bottom-right grip. Flex column so the header
+   and the Send/Cancel footer stay pinned while only the body scrolls. */
+.sx__modal--compose .sx__modal-card {
+  width: 90vw; height: 90vh; max-width: 96vw; max-height: 94vh;
+  min-width: 22rem; min-height: 16rem;
+  resize: both; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.sx__modal--compose .sx__modal-head { flex: 0 0 auto; }
+.sx__modal--compose .sx__modal-body { flex: 1 1 auto; overflow: auto; }
+.sx__modal--compose .sx__modal-foot { flex: 0 0 auto; align-items: center; }
+.sx__modal--compose textarea.sx__msg-input { min-height: 16rem; }
+/* The quoted original under a reply draft (view-side hint only — the editor
+   shows Jodit's own rendering of blockquote.quoted-reply). */
+.sx__modal--compose .sx__msg-rich blockquote.quoted-reply { border-left: 3px solid var(--cbm-border, #d7dce2); margin: 0.6rem 0 0; padding: 0.2rem 0 0.2rem 0.8rem; color: #556; }
+
+/* --- the From and fixed To rows (a page without the session tools' facts
+   rail still needs the two-column line) --------------------------------- */
+.sx__compose-from {
+  display: grid; grid-template-columns: 7rem 1fr; gap: 0.5rem;
+  padding: 0.45rem 1rem; border-bottom: 1px solid var(--cbm-border, #eef1f4);
+}
+.sx__compose-from .sx__fact-l { color: var(--cbm-slate-700, #667); font-size: var(--cbm-text-sm, 0.82rem); }
+.sx__compose-from .sx__fact-v { font-weight: 500; font-size: var(--cbm-text-sm, 0.9rem); overflow-wrap: anywhere; }
+
+/* --- notices and muted text (the session tools declare the same; a second
+   page needs them here) ---------------------------------------------------- */
+.sx__notice { padding: 0.6rem 0.8rem; border-radius: var(--cbm-radius, 6px); margin: 0.5rem 0; }
+.sx__notice.is-success { background: #e9f7ef; color: #1e6b3f; border: 1px solid #bfe3cd; }
+.sx__notice.is-error { background: #fdecea; color: #a12; border: 1px solid #f5c6c2; }
+/* Amber "review this" notice — placeholder warnings etc. (errors stay red). */
+.sx__notice.is-warn { background: #fdf6e7; border: 1px solid #ecc94b; color: #744210; }
+.sx__muted { color: var(--cbm-slate-700, #667); font-size: var(--cbm-text-sm, 0.9rem); }
+.sx__msg-rich { width: 100%; }
+/* Validation/status message pinned in the footer, left of the buttons. */
+.sx__foot-msg { flex: 1 1 auto; margin: 0; text-align: left; }
+.sx__foot-summary { flex: 1 1 auto; margin: 0; color: var(--cbm-slate-700, #667); font-size: 0.85rem; text-align: left; }
+
+/* --- fields --------------------------------------------------------------- */
+.sx__msg-body { padding: 0.6rem 1rem 0.2rem; white-space: pre-wrap; line-height: 1.55; color: var(--cbm-navy, #223); }
+.sx__msg-field { display: block; padding: 0.4rem 1rem; }
+/* display:block would override the browser's [hidden] — the Cc/Bcc rows use it. */
+.sx__msg-field[hidden] { display: none; }
+.sx__msg-label { display: block; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--cbm-slate-700, #667); margin-bottom: 0.2rem; }
+.sx__msg-input { width: 100%; box-sizing: border-box; padding: 0.45rem 0.55rem; font: inherit; border: 1px solid var(--cbm-border, #d7dce2); border-radius: 6px; }
+.sx__msg-input:focus { outline: 2px solid var(--cbm-blue, #1a5fb4); outline-offset: -1px; border-color: transparent; }
+textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
+/* To-list header line: label + All/None quick toggles. */
+.sx__to-head { display: flex; align-items: baseline; gap: 0.6rem; }
+.sx__to-head .sx__msg-label { margin-bottom: 0; }
+.sx__link-btn { background: none; border: none; padding: 0; font: inherit; font-size: 0.8rem; color: var(--cbm-blue, #1a5fb4); cursor: pointer; text-decoration: underline; }
+.sx__link-btn:hover { color: var(--cbm-navy, #123); }
+/* Cc/Bcc reveal links sit on the recipients label line. */
+.sx__ccbcc-toggles { margin-left: auto; display: inline-flex; gap: 0.7rem; }
+/* The To checklist of record contacts (all checked by default). */
+.sx__to-list { display: flex; flex-direction: column; gap: 0.3rem; padding: 0.4rem 0.6rem; border: 1px solid var(--cbm-border, #e3e8ee); border-radius: 8px; background: #f7f9fb; }
+.sx__to-list .sx__addr-check { font-weight: 500; white-space: normal; }
+
+/* --- attachments: template chips + local uploads, sizes and a total -------- */
+.sx__attach-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.2rem 0 0.4rem; }
+.sx__attach-chips:empty { display: none; }
+.sx__attach-chip { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.55rem; border: 1px solid var(--cbm-border, #e3e8ee); border-radius: 999px; background: #f7f9fb; font-size: 0.85rem; }
+.sx__attach-size { color: var(--cbm-slate-700, #667); font-size: 0.78rem; }
+.sx__attach-total { margin: 0.15rem 0 0; color: var(--cbm-slate-700, #667); font-size: 0.8rem; }
+.sx__chip-x { border: 0; background: none; cursor: pointer; color: var(--cbm-muted, #4a5568); font-size: 0.85rem; padding: 0 0.1rem; line-height: 1; }
+.sx__chip-x:hover { color: var(--cbm-danger, #c53030); }
+
+/* --- searchable combobox (template picker, company picker) ---------------- */
+.sx__combo { position: relative; flex: 1; min-width: 0; }
+.sx__combo input { width: 100%; box-sizing: border-box; }
+.sx__combo-list {
+  position: absolute; left: 0; right: 0; top: calc(100% + 2px); z-index: 30;
+  max-height: 16rem; overflow: auto; background: var(--cbm-surface, #fff);
+  border: 1px solid var(--cbm-border, #d7dce2); border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(18, 28, 42, 0.18); margin: 0; padding: 0.2rem 0; list-style: none;
+}
+.sx__combo-list li { padding: 0.35rem 0.6rem; cursor: pointer; }
+.sx__combo-list li:hover, .sx__combo-list li.is-active { background: #eef4fb; }
+.sx__combo-list li.is-muted { color: var(--cbm-slate-700, #667); font-style: italic; }
+/* Restored-draft notice with its own Start-fresh action. */
+.sx__draft-note { display: flex; align-items: center; gap: 0.6rem; }
+
+/* --- per-recipient resolution rows (the unknown-recipient router) --------- */
+.sx__opt-line { display: flex; gap: 0.4rem; align-items: center; margin: 0.3rem 0; }
+.sx__opt-line .sx__msg-input { flex: 1; min-width: 0; }
+.sx__addr-row { border: 1px solid var(--cbm-border, #e3e8ee); border-radius: 8px; padding: 0.5rem 0.75rem; margin: 0.5rem 1rem; }
+.sx__addr-row .sx__opt-line:first-child { justify-content: space-between; flex-wrap: wrap; }
+.sx__addr-check { display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600; white-space: nowrap; }
+.sx__addr-row input:disabled, .sx__addr-row select:disabled { opacity: 0.45; }

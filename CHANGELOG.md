@@ -5,6 +5,69 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.288.0] — 2026-10-26
+
+**feat(campaigns): personal outreach from the lead's page, on the shared
+composer** (build plan § 7e.5, step M5 of the Marketing Management redesign;
+rulings 107–109, 115, 118–120, 122, 128). Dark behind **`LEAD_OUTREACH`**
+(read per request); needs the redesign's CRM handoff (the lead's Assigned to
+and Replied fields, the conversation ↔ lead link), the Gmail integration and
+the new **`CHAPTER_POSTAL_ADDRESS`** setting (Presentation at /setup).
+
+- **The composer is one shared component** (ruling 128):
+  `frontend/shared/compose.js` + `compose.css`, lifted from the session
+  tools' page script with its styles. The session tools hand it their own
+  modal, their API and every feature; the lead's page hands it a fixed
+  recipient and runs it without Cc/Bcc, the record's Documents or reply.
+  No behaviour change in the session tools; their compose rules left
+  `sessions/frontend/styles.css` for the shared sheet.
+- **Email** on a lead's page: one message to the lead's own address from the
+  sender's own chapter mailbox — the mentor profile's address, else the
+  user's own on the mail domain (ruling 120; `comms.crm.user_mailbox`,
+  `comms.service.sender_mailbox`). The server refuses in words a lead that
+  is not Contactable or Referred, has a side exit, has no email, or is not
+  assigned to the sender ("Assign the lead to yourself first"), and any
+  recipient but the lead. Every message ends with the opt-out sentence AND
+  the chapter's postal address, appended when missing (ruling 122); an empty
+  address setting refuses the send naming it. Templates: the *Marketing*
+  category when any template has it, else every template; `{CProspect.*}`
+  resolves. One *Personal email* touch per send (Sent, the subject as its
+  name, no campaign, the sender and the Marketing Admin Team stamped);
+  action-log row *Lead Emailed* with the subject, never the body.
+- **Log a call**: one *Personal call* touch with Interested, Not interested
+  (note required) or No reply yet — stored as the campaign calls' own
+  words, Interested / Declined / No answer, because the touch's outcome
+  options are those (ruling 115: one kind of call, one vocabulary). The
+  consequences are the campaign calls' code, now shared as
+  `calls.apply_outcome`: Interested converts under the org-wide key (an
+  email or a website; otherwise the answer says why), Not interested stops
+  the lead by Declined with the note and never over another exit, No reply
+  yet writes the touch only; then placement. Action-log row *Lead Called*.
+- **The sync** (rulings 109, 118): `CProspect` joins `PARENT_LINKS`
+  (`prospects`) and the watched entities; every lead with an assignee and
+  an email joins the scope of the assignee's mailbox, resolved by the same
+  rule — a marketer with no mentor profile gets a scope of their own from
+  their leads alone. A reply from the lead's own address, exactly, links
+  the conversation to the lead and sets `CProspect.replied`; conversion
+  clears it. The three `PARENT_LINKS` loops take the new entry; My Email
+  opens a lead's conversation on the lead's page.
+- **The lead's page**: *Email* and *Log a call* work (each says why not in
+  words when it cannot), a **Conversations** block lists the lead's threads
+  as the user and opens each with the shared renderer, the **Replied** bar
+  with its prompt and a Convert button, the Activity timeline carries the
+  personal touches, and the Leads tab's counts gain **Mine** — the
+  Assigned-to filter preset to the signed-in user, one chip.
+- Endpoints on `/campaigns/api`: `GET /mailbox`, `GET /emailtemplates`,
+  `POST /prospects/{id}/emailtemplates/{tid}/parse`,
+  `POST /prospects/{id}/messages`, `POST /prospects/{id}/calls`,
+  `GET /prospects/{id}/conversations`, `GET /conversations/{id}`,
+  `POST /emailwriteback` (`campaigns/outreach_router.py`; the rules in
+  `campaigns/outreach.py`). Tests: `tests/test_shared_compose.py`,
+  `tests/test_campaign_outreach.py`, and the lead source in
+  `tests/test_comms_scopes.py` and `tests/test_comms_sync.py`.
+- With the switch off nothing changes: the two buttons say the feature is
+  not switched on, the sync is as before.
+
 ## [0.287.0] — 2026-10-25
 
 **feat(campaigns): one request writes an import batch at a time.** Found on

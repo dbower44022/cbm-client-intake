@@ -37,7 +37,30 @@ PARENT_LINKS = {
     "CEngagement": "engagements",
     "CPartnerProfile": "partnerProfiles",
     "CSponsorProfile": "sponsorProfiles",
+    # A lead in Marketing Management (prospect marketing ruling 109; the
+    # many-to-many of marketing-redesign-crm-handoff.md). A conversation is
+    # linked to a lead only through personal outreach to an ASSIGNED lead
+    # (ruling 118) — never by matching every lead's address.
+    "CProspect": "prospects",
 }
+LEAD = "CProspect"
+
+
+def user_mailbox(profile_email: Optional[str], user_email: Optional[str], domain: str) -> Optional[str]:
+    """The one rule for whose mailbox a person sends and reads as (prospect
+    marketing ruling 120, 10-23-26): their mentor profile's chapter address,
+    else their own user address when it is on the chapter's mail domain, else
+    none. Lowercased. Pure — the two readers (the compose and send through
+    the user's own token, the sync's scope build under the API key) call it
+    with what they read."""
+    profile = (profile_email or "").strip().lower()
+    if profile:
+        return profile
+    own = (user_email or "").strip().lower()
+    wanted = (domain or "").strip().lower()
+    if own and wanted and own.rsplit("@", 1)[-1] == wanted:
+        return own
+    return None
 # Link on CConversation for a parent record's Contacts.
 CONTACTS_LINK = "contacts"
 # hasMany from conversation to its messages; the FK on CCommunication.
@@ -215,12 +238,99 @@ async def build_scopes(client: Any, settings: Any) -> list[MailboxScope]:
                     }
                 if ref.addresses:
                     scope.records.append(ref)
-        # A manager with no active records still sweeps when other mapped
-        # members exist — their member↔member mail is worth capturing now
-        # that it has a home (the View Contact page).
-        if scope.records or scope.has_member_counterpart(set(member_contacts)):
+        scopes.append(scope)
+    await _add_assigned_leads(client, settings, scopes, data.get("list", []),
+                              internal=internal, member_contacts=member_contacts)
+    # A manager with no active records still sweeps when other mapped
+    # members exist — their member↔member mail is worth capturing now
+    # that it has a home (the View Contact page).
+    return [s for s in scopes if s.records or s.has_member_counterpart(set(member_contacts))]
+
+
+async def _add_assigned_leads(
+    client: Any, settings: Any, scopes: list[MailboxScope], profiles: list[dict[str, Any]],
+    *, internal: set[str], member_contacts: dict[str, str],
+) -> None:
+    """The lead source (prospect marketing rulings 109, 118, 120): every lead
+    with an assignee and an email joins the scope of that assignee's mailbox —
+    their mentor profile's chapter address, else their own user address on
+    the chapter's mail domain (:func:`user_mailbox`). A marketer whose
+    mailbox is on no mentor profile gets a scope of their own, built from
+    their leads alone. A user with no mailbox contributes nothing. Only
+    ASSIGNED leads are matched, exactly, by the lead's own address: matching
+    every lead against every mailbox would attach a stranger's reply to
+    whichever lead shared the address. A CRM without the lead record type
+    answers 404 and is skipped quietly."""
+    from assignments.service import assigned_user_id  # lazy — see the note atop
+
+    leads: list[dict[str, Any]] = []
+    offset = 0
+    while True:
+        try:
+            page = await client.list(
+                LEAD,
+                where=[{"type": "isNotNull", "attribute": "assignedUserId"},
+                       {"type": "isNotNull", "attribute": "email"}],
+                select="id,name,businessName,email,assignedUserId,assignedUserName",
+                max_size=_PAGE, offset=offset,
+            )
+        except EspoError as exc:
+            if is_not_found(exc):
+                log.debug("scope: no %s on this CRM", LEAD)
+            else:
+                log.warning("scope: assigned leads unreadable: %s", exc)
+            return
+        rows = page.get("list", []) or []
+        leads.extend(r for r in rows if r.get("assignedUserId") and r.get("email"))
+        if len(rows) < _PAGE:
+            break
+        offset += _PAGE
+    if not leads:
+        return
+    # The assignee's mailbox: the profile map first (one profile per login),
+    # then the user's own address, read once per user under the API key.
+    profile_mailbox: dict[str, str] = {}
+    for profile in profiles:
+        owner = assigned_user_id(profile)
+        addr = (profile.get("cbmEmail") or "").strip().lower()
+        if owner and addr:
+            profile_mailbox.setdefault(owner, addr)
+    domain = str(getattr(settings, "mentor_email_domain", "") or "")
+    by_mailbox = {s.mailbox: s for s in scopes}
+    resolved: dict[str, Optional[str]] = {}
+    for lead in leads:
+        uid = lead["assignedUserId"]
+        if uid not in resolved:
+            own = ""
+            if uid not in profile_mailbox:
+                try:
+                    me = await client.get("User", uid, select="emailAddress,name")
+                    own = (me or {}).get("emailAddress") or ""
+                except EspoError as exc:
+                    log.debug("scope: user %s unreadable for a lead mailbox: %s", uid, exc)
+            resolved[uid] = user_mailbox(profile_mailbox.get(uid), own, domain)
+        mailbox = resolved[uid]
+        if not mailbox:
+            continue
+        address = str(lead["email"]).strip().lower()
+        if not address or address.rsplit("@", 1)[-1] in internal:
+            continue
+        scope = by_mailbox.get(mailbox)
+        if scope is None:
+            scope = MailboxScope(
+                mailbox=mailbox,
+                manager_name=lead.get("assignedUserName") or "",
+                owner_user_id=uid,
+                internal_domains=internal,
+                member_contacts=member_contacts,
+            )
+            by_mailbox[mailbox] = scope
             scopes.append(scope)
-    return scopes
+        scope.records.append(RecordRef(
+            entity=LEAD, id=lead["id"],
+            name=lead.get("businessName") or lead.get("name") or "",
+            addresses={address},
+        ))
 
 
 # --- conversation / communication persistence --------------------------------

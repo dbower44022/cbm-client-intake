@@ -495,26 +495,15 @@ async def record_outcome(api_client: EspoApi, user_client: EspoApi, user: dict[s
             result["warnings"].append(f"{label} could not be written ({exc}).")
 
     converted = False
-    if outcome == cfg.OUTCOME_INTERESTED and touch.get("prospectId"):
-        converted = await _convert_on_interest(api_client, touch, campaign, details, result)
+    if touch.get("prospectId") and outcome in (cfg.OUTCOME_INTERESTED, cfg.OUTCOME_DECLINED):
+        converted = await apply_outcome(
+            api_client, touch["prospectId"], outcome,
+            f"Declined on a call from the campaign {campaign.get('name') or ''}".strip(),
+            details=details, touch_id=touch_id, campaign_id=touch.get("outreachCampaignId") or campaign.get("id"),
+            result=result, now=now)
         if converted and call_again:
             call_again = False
             result["warnings"].append("The lead converted, so no second call was planned.")
-    elif outcome == cfg.OUTCOME_DECLINED and touch.get("prospectId"):
-        prospect = await api_client.get(cfg.PROSPECT, touch["prospectId"], select="id,sideExit")
-        if prospect.get("sideExit"):
-            result["warnings"].append(
-                f"The lead had already stopped being worked ({prospect['sideExit']}); "
-                "Declined is recorded on the call only.")
-        else:
-            await best_effort("stopped by Declined", api_client.update(cfg.PROSPECT, touch["prospectId"], {
-                "sideExit": cfg.EXIT_DECLINED, "sideExitAt": now,
-                "sideExitNote": f"Declined on a call from the campaign {campaign.get('name') or ''}".strip()}))
-    if touch.get("prospectId") and outcome in (cfg.OUTCOME_INTERESTED, cfg.OUTCOME_DECLINED):
-        # The ladder (§ 7e.3): an email or website given on the call, or the
-        # conversion it caused, changes what the level should be.
-        from .ladder import after_write
-        await after_write(touch["prospectId"], client=api_client)
     if call_again:
         fresh: dict[str, Any] = {
             "name": touch.get("name") or f"{campaign.get('name') or 'Campaign'} — {target.get('name') or ''}"[:255],
@@ -539,13 +528,61 @@ async def record_outcome(api_client: EspoApi, user_client: EspoApi, user: dict[s
     return result
 
 
-async def _convert_on_interest(api_client: EspoApi, touch: dict[str, Any], campaign: dict[str, Any],
-                               details: Details, result: dict[str, Any]) -> bool:
+async def apply_outcome(api_client: EspoApi, lead_id: str, outcome: str, note: str, *,
+                        details: Optional[Details] = None, touch_id: str = "",
+                        campaign_id: Optional[str] = None, result: Optional[dict[str, Any]] = None,
+                        now: str = "") -> bool:
+    """What an outcome does to the LEAD, shared by a campaign call and a
+    personal call from the lead's page (build plan § 7e.5; ruling 115: one kind
+    of call, one vocabulary): *Interested* converts under the API client
+    (ruling 47 — an email or a website; otherwise the result says why in
+    words and the lead stays a lead); *Declined* stops the lead by the
+    Declined side exit with ``note``, never over another exit; anything else
+    changes nothing. Then the ladder places the level again. Best-effort
+    throughout — the caller has already written the touch. Returns True when
+    the lead converted. ``result`` collects ``consequences``, ``warnings``,
+    ``notConverted`` and ``converted`` for the caller's answer."""
+    result = result if result is not None else {"consequences": [], "warnings": []}
+    details = details or Details()
+    now = now or _crm_now()
+    converted = False
+    if outcome == cfg.OUTCOME_INTERESTED:
+        converted = await _convert_on_interest(api_client, lead_id, details, result,
+                                               touch_id=touch_id, campaign_id=campaign_id)
+    elif outcome == cfg.OUTCOME_DECLINED:
+        try:
+            prospect = await api_client.get(cfg.PROSPECT, lead_id, select="id,sideExit")
+        except EspoError as exc:
+            prospect = {}
+            result["warnings"].append(f"The lead could not be read ({exc}); Declined is recorded on the call only.")
+        if prospect.get("sideExit"):
+            result["warnings"].append(
+                f"The lead had already stopped being worked ({prospect['sideExit']}); "
+                "Declined is recorded on the call only.")
+        elif prospect.get("id"):
+            try:
+                await api_client.update(cfg.PROSPECT, lead_id, {
+                    "sideExit": cfg.EXIT_DECLINED, "sideExitAt": now, "sideExitNote": (note or "").strip() or None})
+                result["consequences"].append("stopped by Declined")
+            except EspoError as exc:
+                log.warning("lead %s: stopped by Declined failed: %s", lead_id, exc)
+                result["warnings"].append(f"stopped by Declined could not be written ({exc}).")
+    else:
+        return False
+    # The ladder (§ 7e.3): an email or website given on the call, or the
+    # conversion it caused, changes what the level should be.
+    from .ladder import after_write
+    await after_write(lead_id, client=api_client)
+    return converted
+
+
+async def _convert_on_interest(api_client: EspoApi, lead_id: str, details: Details, result: dict[str, Any], *,
+                               touch_id: str = "", campaign_id: Optional[str] = None) -> bool:
     """Interested on a lead (ruling 47): an email or a website converts it —
     under the API client, best-effort and reported. Returns True when it
     converted. Without either, the result says why and the lead stays a lead."""
     try:
-        lead = await api_client.get(cfg.PROSPECT, touch["prospectId"], select=cfg.PROSPECT_SELECT)
+        lead = await api_client.get(cfg.PROSPECT, lead_id, select=cfg.PROSPECT_SELECT)
     except EspoError as exc:
         result["warnings"].append(f"The lead could not be read to convert it ({exc}).")
         return False
@@ -562,8 +599,7 @@ async def _convert_on_interest(api_client: EspoApi, touch: dict[str, Any], campa
             + " (ruling 47). Call again to ask for one.")
         return False
     try:
-        done = await convert_lead(api_client, lead, details,
-                                  campaign_id=touch.get("outreachCampaignId") or campaign.get("id"))
+        done = await convert_lead(api_client, lead, details, campaign_id=campaign_id)
     except CompanyConflict as exc:
         result["notConverted"] = (
             f"Interested is recorded, but the lead was not converted: a company named {exc.name} "
@@ -578,9 +614,9 @@ async def _convert_on_interest(api_client: EspoApi, touch: dict[str, Any], campa
     # The touch names what the call made, so the campaign's Converted count
     # can read it from the touch (campaigns/reporting.py).
     links = {k: v for k, v in (("contactId", done.contact_id), ("companyId", done.company_id)) if v}
-    if links:
+    if links and touch_id:
         try:
-            await api_client.update(cfg.TOUCH, touch["id"], links)
+            await api_client.update(cfg.TOUCH, touch_id, links)
         except EspoError as exc:
             result["warnings"].append(f"The call could not be linked to the new records ({exc}).")
     return True

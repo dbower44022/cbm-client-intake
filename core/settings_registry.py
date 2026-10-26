@@ -371,6 +371,14 @@ SETTINGS: tuple[SettingSpec, ...] = (
             "page polls, repeat rows filling a lead's empty fields, the level per row, and "
             "Undo this import. Off, the Imports tab and the CSV import behave exactly as "
             "before. Read per request: no restart."),
+    _s("lead_outreach", GROUP_FEATURES, "Personal outreach to leads", kind="bool", component="both",
+       help="On a lead's page: Email through the full composer from the assignee's own chapter "
+            "mailbox (the mentor profile's address, else the user's own on the mail domain), Log a "
+            "call with Interested / Not interested / No reply yet, a Conversations block, and the "
+            "email sync attaching a reply from an assigned lead's address to the lead and marking "
+            "it Replied. Needs the lead's Assigned to and Replied fields and the conversation link "
+            "on the CRM (marketing-redesign-crm-handoff.md), the Gmail integration, and the "
+            "chapter postal address under Presentation. Read per request: no restart."),
     _s("import_plan_poll_seconds", GROUP_FEATURES, "Import plan poll", kind="int", unit="s",
        component="worker",
        help="How often the delivery worker looks for an import preview waiting to be "
@@ -615,6 +623,11 @@ SETTINGS: tuple[SettingSpec, ...] = (
             "email that used to say CBM says this instead — \"ask CBM staff\", the "
             "\"CBM contacts\" table, the daily digest subject. Substituted as pages "
             "are served, so a change takes effect on the next page load."),
+    _s("chapter_postal_address", GROUP_PRESENTATION, "Chapter postal address", kind="text", component="web",
+       help="The chapter's mailing address, one or more lines. Every personal email a lead receives "
+            "ends with the sentence offering a way to say no AND this address (the server appends "
+            "both when the message lacks them). Empty, personal email is refused and the refusal "
+            "names this setting."),
     _s("chapter_key", GROUP_PRESENTATION, "Chapter short label",
        help="This chapter's short label in the chapter list of the CRM standard — "
             "cleveland, boston. Every public event's reach includes it. It must be "

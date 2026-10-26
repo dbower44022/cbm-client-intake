@@ -11,6 +11,8 @@
   <link rel="stylesheet" href="/shared/vendor/jodit/jodit.min.css" />
   <link rel="stylesheet" href="/shared/charts.css" />
   <link rel="stylesheet" href="/shared/enrichment.css" />
+  <link rel="stylesheet" href="/shared/conversation.css" />
+  <link rel="stylesheet" href="/shared/compose.css" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="lists.css" />
   <!-- busy.js must load FIRST: it wraps fetch/XHR to give every button press
@@ -60,6 +62,11 @@
           <p class="cm__eyebrow">Lead · <span class="cm__badge" id="ld_level"></span> <span id="ld_assignee" class="cm__muted"></span></p>
           <h2 id="ld_name"></h2>
           <p class="cm__hint" id="ld_reach"></p>
+          <div class="cm__repliedbar" id="ld_repliedBar" hidden>
+            <span class="cm__badge cm__badge--replied">Replied</span>
+            <span id="ld_repliedText">This lead wrote back. Read the reply under Conversations, then convert the lead, or answer first.</span>
+            <button type="button" class="cbm-button" id="ld_repliedConvert">Convert</button>
+          </div>
         </div>
         <div class="cm__recordactions" id="ld_actions">
           <button type="button" class="cbm-button cbm-button--secondary" id="ld_email">Email</button>
@@ -93,8 +100,14 @@
         </div>
         <div class="cm__ovright">
           <section class="cm__card">
+            <h3>Conversations</h3>
+            <p class="cm__hint" id="ld_convHint">Email with this lead, sent from your own mailbox with the Email button above. A reply from the lead's own address lands here and marks the lead Replied.</p>
+            <ul class="cm__convlist" id="ld_conversations"></ul>
+            <p class="cm__empty" id="ld_conversationsEmpty" hidden>No email with this lead yet.</p>
+          </section>
+          <section class="cm__card">
             <h3>Activity</h3>
-            <p class="cm__hint">Postcards, calls and texts, level and status changes, edits — newest first.</p>
+            <p class="cm__hint">Postcards, campaign calls and texts, personal emails and calls, level and status changes, edits — newest first.</p>
             <ol class="cm__timeline" id="ld_activity"></ol>
             <p class="cm__empty" id="ld_activityEmpty" hidden>Nothing yet.</p>
           </section>
@@ -600,6 +613,8 @@
   <script src="/shared/footer.js"></script>
   <script src="/shared/vendor/jodit/jodit.min.js"></script>
   <script src="/shared/richtext.js"></script>
+  <script src="/shared/compose.js"></script>
+  <script src="/shared/conversation.js"></script>
   <script src="/shared/charts.js"></script>
   <script src="/shared/enrichment.js"></script>
   <script src="app.js"></script>

@@ -57,7 +57,7 @@ SORT_FIELDS = frozenset({
 LADDER_SORT_FIELDS = frozenset({"qualificationLevel", "assignedUserName", "modifiedAt"})
 #: The Leads tab's counts across the top (§ 7e.4), each a filter: the query
 #: parameters a chip applies.
-COUNT_KEYS = ("unqualified", "identified", "contactable", "referred", "replied", "disqualified")
+COUNT_KEYS = ("unqualified", "identified", "contactable", "referred", "replied", "disqualified", "mine")
 ASSIGN_UNASSIGNED = "none"
 ASSIGN_ME = "me"
 ACTION_ASSIGN = "assign"
@@ -362,11 +362,12 @@ async def search(client: EspoApi, lq: LeadQuery) -> dict[str, Any]:
             "ladder": has_ladder}
 
 
-def _count_queries(lq: LeadQuery) -> dict[str, LeadQuery]:
-    """The six counts across the top of the Leads tab (§ 7e.4), each the
-    current filters with its own status, level or reply condition."""
+def _count_queries(lq: LeadQuery, me: str = "") -> dict[str, LeadQuery]:
+    """The counts across the top of the Leads tab (§ 7e.4), each the current
+    filters with its own status, level or reply condition — plus *Mine*, the
+    signed-in user's assigned leads (rulings 108, 115), when ``me`` is known."""
     base = replace(lq, status="", level="", replied="", offset=0)
-    return {
+    out = {
         "unqualified": replace(base, status=cfg.LEAD_UNQUALIFIED),
         "identified": replace(base, status=cfg.LEAD_QUALIFIED, level=cfg.LEVEL_IDENTIFIED),
         "contactable": replace(base, status=cfg.LEAD_QUALIFIED, level=cfg.LEVEL_CONTACTABLE),
@@ -374,10 +375,15 @@ def _count_queries(lq: LeadQuery) -> dict[str, LeadQuery]:
         "replied": replace(base, replied="1"),
         "disqualified": replace(base, status=cfg.LEAD_DISQUALIFIED),
     }
+    if me:
+        out["mine"] = replace(base, assigned=me)
+    return out
 
 
 def _matches_count(row: dict[str, Any], q: LeadQuery) -> bool:
     if q.status and (row.get("leadStatus") or "") != q.status:
+        return False
+    if q.assigned and q.assigned != ASSIGN_UNASSIGNED and (row.get("assignedUserId") or "") != q.assigned:
         return False
     if q.level and (row.get("qualificationLevel") or "") != q.level:
         return False
@@ -386,7 +392,7 @@ def _matches_count(row: dict[str, Any], q: LeadQuery) -> bool:
     return True
 
 
-async def counts(client: EspoApi, lq: LeadQuery) -> dict[str, Any]:
+async def counts(client: EspoApi, lq: LeadQuery, me: str = "") -> dict[str, Any]:
     """The Leads tab's counts, one CRM ``total`` each, read side by side. A
     CRM without the ladder answers only Unqualified and Disqualified."""
     if lq.errors:
@@ -396,13 +402,13 @@ async def counts(client: EspoApi, lq: LeadQuery) -> dict[str, Any]:
     has_ladder = await ladder_available(client)
     if not has_ladder:
         lq.without_ladder()
-    queries = _count_queries(lq)
+    queries = _count_queries(lq, me)
     if not has_ladder:
         queries = {k: v for k, v in queries.items() if k in ("unqualified", "disqualified")}
     out: dict[str, Any] = {"ladder": has_ladder}
     if _is_campaign(lq):
-        rows = await _campaign_rows(client, replace(lq, status="", level="", replied=""),
-                                    select="id,leadStatus,qualificationLevel,replied" if has_ladder else "id,leadStatus")
+        rows = await _campaign_rows(client, replace(lq, status="", level="", replied="", assigned=""),
+                                    select="id,leadStatus,qualificationLevel,replied,assignedUserId" if has_ladder else "id,leadStatus")
         for key, q in queries.items():
             out[key] = sum(1 for r in rows if _matches_count(r, q))
         return out

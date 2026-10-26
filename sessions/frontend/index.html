@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="/shared/charts.css" />
   <link rel="stylesheet" href="/shared/datetime.css" />
   <link rel="stylesheet" href="/shared/address-paste.css" />
+  <link rel="stylesheet" href="/shared/compose.css" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -604,7 +605,7 @@
   </div>
 
   <!-- View / compose / reply an email (Communications tab). UI only for now. -->
-  <div class="sx__modal" id="commModal" hidden role="dialog" aria-modal="true" aria-labelledby="commModalTitle">
+  <div class="sx__modal sx__modal--compose" id="commModal" hidden role="dialog" aria-modal="true" aria-labelledby="commModalTitle">
     <div class="sx__modal-backdrop" id="commBackdrop"></div>
     <div class="sx__modal-card" role="document">
       <div class="sx__modal-head">
@@ -677,6 +678,7 @@
   <script src="/shared/quickmail.js"></script>
   <script src="/shared/vendor/jodit/jodit.min.js"></script>
   <script src="/shared/richtext.js"></script>
+  <script src="/shared/compose.js"></script>
   <script src="/shared/conversation.js"></script>
   <script src="/shared/charts.js"></script>
   <script src="/shared/datetime.js"></script>

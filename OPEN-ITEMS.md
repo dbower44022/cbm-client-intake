@@ -103,7 +103,24 @@ found; move resolved items to the bottom with the resolution date.
     as v0.287.0 (migration 0036), pushed 23:14. **M5 plan approved
     10-25-26 23:17** (four stops in one session; ruling 128: the full
     composer, shared); run it from `prompts/m5-personal-outreach-kickoff.md`
-    in a fresh session. Still owed: the handoff on
+    in a fresh session. **M5 built as v0.288.0 (10-26-26)**, all four
+    stops in one session: the shared composer (`frontend/shared/compose.js`,
+    the session tools switched to it), Email and Log a call on the lead's
+    page, the sync's lead source and the Replied flag, Conversations and
+    the Mine chip; dark behind `LEAD_OUTREACH`; new setting
+    `CHAPTER_POSTAL_ADDRESS`; no migration. Checked against the stub
+    harness and by 3,030 tests. **Owed, in order**: (1) Doug pushes
+    v0.288.0; (2) at crm-test's /setup, switch on *Personal outreach to
+    leads* and fill in *Chapter postal address*; (3) the live pass (step
+    page https://claude.ai/artifact/X7zFhDzMThqXBUWaGJX9GZ rev 1.0, 28 steps) — Mark Marketing has no mentor
+    profile and his user address is `mark.marketing@cbmentors.org`, so
+    ruling 120 resolves him; the pass stands or falls on whether the Gmail
+    delegation can read that mailbox (a sandbox login may be no real
+    Workspace mailbox — if not, run the pass as a user who has one, or give
+    Mark a mentor profile with a real `cbmEmail`); the only lead assigned
+    to him, Marigold Pet Grooming, has no email yet, so the tester adds one
+    they control first; (4) the reply test: answer from the lead's address
+    and watch the sync attach it within one pass. Still owed: the handoff on
     production at the arc's slot and on Boston with its release (now with
     the third role cell); the layout question in the handoff's § 7.
 

@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-25-26 18:52 · Revision 0.50 — change log at the end.
+Last Updated: 10-26-26 00:10 · Revision 0.51 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -2104,7 +2104,7 @@ whether it is customizable before the handoff is written (the
 Marketing Admin Role needs Assignment Permission that allows it. The
 handoff checks this.
 
-### 7e.5 Personal outreach — rulings 107–109
+### 7e.5 Personal outreach — rulings 107–109 (built as v0.288.0, 10-26-26; live pass owed)
 
 **Sending (ruling 107).** The record compose already exists:
 `POST /records/{id}/messages` in `sessions/router.py` calls
@@ -2659,7 +2659,35 @@ Team caller for M1 and M10).
    shared composer. Plan approved by Doug 10-25-26 23:17 (four stops, to
    be run in one session; ruling 128 settled the compose: the full
    composer, lifted into `frontend/shared/` and served to both pages);
-   kickoff `prompts/m5-personal-outreach-kickoff.md`.
+   kickoff `prompts/m5-personal-outreach-kickoff.md`. **Built as v0.288.0
+   (10-26-26)**, all four stops in one session. Routine choices, each
+   announced in the kickoff and built as written: the composer is one
+   component with a host object (`frontend/shared/compose.js`; the session
+   tools hand it their own modal and every feature, the lead's page a
+   fixed recipient and no Cc/Bcc, Documents or reply); the sender's mailbox
+   is one rule (`comms.crm.user_mailbox`) read by the compose, the send and
+   the sync; the guardrails run on the server and the page asks the same
+   questions first; the footer is appended when missing and an empty
+   address setting refuses; a *Personal email* touch per send and a
+   *Personal call* touch per call, each carrying the sender and the
+   Marketing Admin Team; the call's consequences are `calls.apply_outcome`,
+   pulled out of `record_outcome` and shared; the sync's lead source gives
+   a marketer with no profile a scope of their own; a reply from the lead's
+   exact address sets `replied`, conversion clears it; the Leads tab's
+   *Mine* chip is the Assigned-to filter preset to the signed-in user.
+   Found on the way: the touch's outcome enum holds only the campaign
+   calls' words (No answer, Interested, Declined — read from crm-test
+   10-25-26), so the personal call's three words are stored as those
+   (`cfg.PERSONAL_OUTCOME_STORED`), ruling 115 kept. Checked in the
+   browser against the stub harness: the composer on the lead's page
+   (From, the fixed To, a template applied with its leftover warning, the
+   send's payload), the call dialog's two refusals and a logged call, the
+   Conversations block and a thread, the Mine chip; and the component in
+   the session tools' shape (the address checklist on a reply, Cc, the
+   quote and signature, Documents, the unknown-recipient router). **Owed**:
+   the live pass on crm-test (step page in `OPEN-ITEMS.md` #57), which
+   needs an email the tester controls on Mark Marketing's lead and a
+   mailbox the Gmail delegation can read for him.
 6. **M6: lists** (§ 7e.8). About four days.
 7. **M7: Constant Contact per list and the email campaign** (§ 7e.9
    first half), behind `CAMPAIGN_LIST_SYNC`. About three days, plus the
@@ -2960,6 +2988,7 @@ best-effort mirror.
 | 0.53 | 10-25-26 20:50 | Claude (Claude Code) | § 7e.13 step M4 live-passed on crm-test (round two, run by Claude; v0.286.2 and v0.286.3 fixed on the way; the apply race owed); § 7e.7 heading marked live-passed. Next: M5. |
 | 0.52 | 10-25-26 20:15 | Claude (Claude Code) | § 7e.13 step M4: the live pass's first round (sections 1–7 passed; section 8's two Undo defects, fixed in v0.286.1). |
 | 0.51 | 10-25-26 19:30 | Claude (Claude Code) | § 7e.13 step M4 built (v0.286.0): the import tool; the routine choices and the two made on the way recorded under the step; § 7e.7 heading marked built. The role script and the live pass owed. |
+| 0.51 | 10-26-26 00:10 | Claude (Claude Code) | § 7e.5 marked built (v0.288.0); § 7e.13 step M5: the routine choices as built, the stored-outcome finding, the harness check, the live pass owed. |
 | 0.50 | 10-25-26 18:52 | Claude (Claude Code) | § 7e.13 step M4: plan approved (four stops, one session), ruling 127 recorded, kickoff prompt written (`prompts/m4-import-tool-kickoff.md`). |
 | 0.49 | 10-25-26 18:41 | Claude (Claude Code) | § 7e.13 step M3 live-passed on crm-test (Doug, two step pages); v0.285.1 fix noted; the read-back recorded. Next: M4. |
 | 0.48 | 10-25-26 12:36 | Claude (Claude Code) | § 7e.13 step M3 built (v0.285.0): Review as the research queue, two modes; the routine choices recorded under the step; § 7e.6 heading marked built. Live pass owed. |

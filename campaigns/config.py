@@ -77,6 +77,24 @@ OUTCOME_NO_ANSWER = "No answer"
 OUTCOME_INTERESTED = "Interested"
 OUTCOME_DECLINED = "Declined"
 CALL_OUTCOMES = (OUTCOME_NO_ANSWER, OUTCOME_INTERESTED, OUTCOME_DECLINED)
+#: Personal outreach from the lead's page (build plan § 7e.5; rulings 107-109,
+#: 115, 119): a touch with no campaign, on one of these two channels.
+KIND_PERSONAL_CALL = "Personal call"
+KIND_PERSONAL_EMAIL = "Personal email"
+PERSONAL_KINDS = (KIND_PERSONAL_CALL, KIND_PERSONAL_EMAIL)
+#: Ruling 108's three outcomes of a personal call, in the screen's words. The
+#: touch's ``outcome`` enum carries the campaign calls' words (read from
+#: crm-test 10-25-26: No answer, Interested, Declined), so each is STORED as
+#: the campaign call's equivalent — ruling 115: the same kind of call with the
+#: same outcomes, one vocabulary on the record.
+OUTCOME_NOT_INTERESTED = "Not interested"
+OUTCOME_NO_REPLY = "No reply yet"
+PERSONAL_CALL_OUTCOMES = (OUTCOME_INTERESTED, OUTCOME_NOT_INTERESTED, OUTCOME_NO_REPLY)
+PERSONAL_OUTCOME_STORED = {
+    OUTCOME_INTERESTED: OUTCOME_INTERESTED,
+    OUTCOME_NOT_INTERESTED: OUTCOME_DECLINED,
+    OUTCOME_NO_REPLY: OUTCOME_NO_ANSWER,
+}
 
 # --- leads (rulings 41-52; build plan § 7a) -------------------------------------
 #: A lead's status (``CProspect.leadStatus``, ruling 49). Every lead starts

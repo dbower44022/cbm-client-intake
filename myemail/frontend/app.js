@@ -203,7 +203,7 @@
       (r.records || []).forEach(function (rec) {
         var a = document.createElement("a");
         a.className = "me__rec";
-        a.href = "/" + rec.slug + "/record/" + encodeURIComponent(rec.id);
+        a.href = rec.href || ("/" + rec.slug + "/record/" + encodeURIComponent(rec.id));
         a.target = "_blank"; a.rel = "noopener";
         a.title = "Open " + (rec.name || "the record");
         a.textContent = rec.name || rec.id;
@@ -276,10 +276,10 @@
     var foot = $("threadFoot");
     var recWrap = document.createElement("div"); recWrap.className = "me__openrec";
     (c.records && c.records.length ? c.records : row.records || []).forEach(function (rec) {
-      if (!rec.slug) return;
+      if (!rec.slug && !rec.href) return;
       var a = document.createElement("a");
       a.className = "cbm-button";
-      a.href = "/" + rec.slug + "/record/" + encodeURIComponent(rec.id);
+      a.href = rec.href || ("/" + rec.slug + "/record/" + encodeURIComponent(rec.id));
       a.target = "_blank"; a.rel = "noopener";
       a.textContent = "Open " + (rec.name || "record") + " — reply there";
       recWrap.appendChild(a);

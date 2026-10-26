@@ -76,6 +76,16 @@ the one shared mailbox.
 (Every send is still attributed internally — the app logs which signed-in
 user sent each message, whichever identity it went out under.)
 
+**Personal outreach to a lead** (Marketing Management, the lead's page)
+uses the first identity with one more way to find it: the sender's own
+mailbox is their mentor profile's chapter address, or — for a marketing
+team member with no mentor profile — their own user address when it is on
+the chapter's mail domain. The message goes to the lead's own address
+alone, through the same composer the session tools use, and always ends
+with a sentence offering a way to say no and the chapter's postal address;
+the app appends both when the writer leaves them out. A reply from the
+lead's address lands on the lead's page and marks the lead *Replied*.
+
 ## 3. Where you read email
 
 Every place you read a conversation — My Email, a record's Communications

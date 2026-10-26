@@ -158,5 +158,7 @@ async def conversation_records(
                 "id": r["id"],
                 "name": r.get("name") or "",
                 "slug": slug_by_entity.get(entity, ""),
+                # A lead's page is not a session tool's record page (§ 7e.5).
+                "href": f"/campaigns/lead/{r['id']}" if entity == comms_crm.LEAD else "",
             })
     return out

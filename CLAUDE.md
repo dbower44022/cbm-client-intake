@@ -681,7 +681,11 @@ Umbrella reference: **`email-management.md`**. Deep dives:
 - **Two sending identities, deliberately**: mentor↔client mail sends as the
   manager's own `@cbmentors.org`; staff-tool outbound (Submission Admin,
   quick-compose) sends as the shared **info@ / "Cleveland Business Mentors"**
-  identity. Alerts keep their own address.
+  identity. Alerts keep their own address. **A personal email to a lead
+  is the first kind** (v0.288.0, ruling 120): the assignee's own mailbox —
+  their mentor profile's address, else their user's own on the mail domain
+  (`comms.crm.user_mailbox`, one rule for the compose, the send and the
+  sync scopes); the shared composer is `frontend/shared/compose.js`.
 - **Internal CBM↔CBM mail links to the members' Contacts, never to records** —
   it was polluting engagement Communications tabs.
 - **Compose** is one shared surface: templates, signature, attachments (local +
@@ -1213,6 +1217,17 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
+- **v0.288.0 (2026-10-26) — personal outreach from the lead's page**
+  (build plan § 7e.5, M5; rulings 107–109, 115, 118–120, 122, 128): the
+  shared composer (`frontend/shared/compose.js`, the session tools switched
+  to it), Email and Log a call on the lead's page, the sync's lead source
+  and the Replied flag, Conversations and the Mine chip. Dark behind
+  `LEAD_OUTREACH`; new setting `CHAPTER_POSTAL_ADDRESS`; no migration.
+  Built in one session, all four stops; checked against the stub harness
+  and by the tests. **Committed, not pushed; live pass owed** on crm-test
+  (step page in `OPEN-ITEMS.md` #57) — Mark Marketing has no mentor
+  profile, so ruling 120 resolves him by his user address; whether the
+  Gmail delegation can read that mailbox is the open question.
 - **v0.286.0 (2026-10-25) — the import tool** (build plan § 7e.7, M4;
   rulings 79–88, 111, 123, 127): templates, Excel, recognition and the
   four fixes, the preview as a worker job, fills, the level per row, Undo
@@ -1239,12 +1254,4 @@ the strength of it.
   Doug (23 steps). Standing rules in `campaigns/CLAUDE.md`: call
   `ladder.after_write` after any application write to a lead; the level is
   empty outside Qualified. Next: M3 (`OPEN-ITEMS.md` #57).
-- **v0.279.0 (2026-10-23) — Marketing Management is one page with six
-  tabs** (build plan § 7e.2, step M1 of the redesign; rulings 89, 112, 114).
-  Lists and Calls are tabs; a caller from another team sees the Calls tab
-  alone and gets a *Campaign calls* portal tile; no screen cites a ruling
-  number. No CRM change, no switch. v0.279.0 and v0.279.1 live on both
-  deployments; **live-passed on crm-test 10-24-26 14:46** by Doug. The nine
-  Drafts in § 7e.12 are ruled (117–125, 10-23-26). Next: the redesign's CRM
-  handoff (`marketing-redesign-crm-handoff.md`, § 7e.11), then M2.
 Everything else still owed is in `OPEN-ITEMS.md`.

@@ -233,6 +233,11 @@ async def mark_converted(client: EspoApi, lead: dict[str, Any], *, company_id: O
     if lead.get("leadStatus") != cfg.LEAD_CONVERTED:
         fill["leadStatus"] = cfg.LEAD_CONVERTED
         fill["leadStatusChangedAt"] = _now_crm()
+        # § 7e.5 (ruling 109): *Replied* is a prompt to convert; conversion
+        # answers it. Cleared only when the read shows it set — a CRM without
+        # the field never sees the key.
+        if lead.get("replied"):
+            fill["replied"] = False
     if company_id and not lead.get("promotedCompanyId"):
         fill["promotedCompanyId"] = company_id
     if contact_id and not lead.get("promotedContactId"):

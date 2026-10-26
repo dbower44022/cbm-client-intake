@@ -64,7 +64,7 @@ async def test_first_pass_builds_then_reuses_when_nothing_changed():
     assert second is first, "the same scope objects, no rebuild"
     assert _builds(espo) == 1
     # The change check is one one-row read per watched entity, nothing more.
-    checks = [c for c in espo.calls if c.startswith("list ")][1:]
+    checks = [c for c in espo.calls if c.startswith("list ")][2:]  # the build read profiles AND leads
     assert checks == [f"list {e}" for e in scopes.WATCHED_ENTITIES]
 
 
@@ -154,3 +154,89 @@ async def test_scope_build_reads_the_additional_manager_links_and_skips_an_absen
     scope = built[0]
     assert any(r.id == "p9" and "dana@keybank.example" in r.addresses for r in scope.records)
 
+
+
+# --- the lead source (prospect marketing rulings 109, 118, 120; M5) ----------
+
+async def test_assigned_leads_join_their_assignees_mailbox_and_only_assigned_ones():
+    """A lead with an assignee and an email joins the scope of the assignee's
+    mailbox — the mentor profile's address first. An unassigned lead, a lead
+    with no email, and a lead on an internal address contribute nothing."""
+    from comms.crm import build_scopes
+
+    class Espo(FakeEspo):
+        async def list(self, entity, *, where=None, select=None, max_size=50, offset=0, **kw):
+            self.calls.append(f"list {entity}")
+            if entity == "CProspect":
+                return {"list": [
+                    {"id": "L1", "name": "Marigold", "businessName": "Marigold Pet Grooming",
+                     "email": "Rosa@Marigold.example", "assignedUserId": "u1"},
+                    {"id": "L2", "name": "Nobody", "email": "x@unassigned.example"},          # dropped by the where in life
+                    {"id": "L3", "name": "Internal", "email": "pat@cbmentors.org", "assignedUserId": "u1"},
+                ]}
+            return await super().list(entity, where=where, select=select, max_size=max_size, **kw)
+
+    espo = Espo()
+    built = await build_scopes(espo, Cfg())
+    assert len(built) == 1
+    scope = built[0]
+    assert scope.mailbox == "m1@cbmentors.org"
+    leads = [r for r in scope.records if r.entity == "CProspect"]
+    assert [(r.id, r.addresses) for r in leads] == [("L1", {"rosa@marigold.example"})]
+    assert scope.records_for({"rosa@marigold.example"})[0].id == "L1"
+    # Exact address only: a stranger on the same domain is nobody's lead.
+    assert scope.records_for({"someone.else@marigold.example"}) == []
+
+
+async def test_a_marketer_without_a_profile_gets_a_scope_from_their_own_address():
+    """Ruling 120: no mentor profile, but the user's own address is on the
+    chapter's mail domain — a scope of their own, built from their leads. A
+    user whose address is elsewhere contributes no scope."""
+    from comms.crm import build_scopes
+
+    class Espo(FakeEspo):
+        async def list(self, entity, *, where=None, select=None, max_size=50, offset=0, **kw):
+            self.calls.append(f"list {entity}")
+            if entity == "CProspect":
+                return {"list": [
+                    {"id": "L1", "name": "Marigold", "email": "rosa@marigold.example", "assignedUserId": "u-mark",
+                     "assignedUserName": "Mark Marketing"},
+                    {"id": "L2", "name": "Elsewhere", "email": "ed@elsewhere.example", "assignedUserId": "u-gmail"},
+                ]}
+            return await super().list(entity, where=where, select=select, max_size=max_size, **kw)
+
+        async def get(self, entity, record_id, select=None):
+            self.calls.append(f"get {entity}/{record_id}")
+            return {"u-mark": {"id": "u-mark", "emailAddress": "Mark.Marketing@cbmentors.org", "name": "Mark Marketing"},
+                    "u-gmail": {"id": "u-gmail", "emailAddress": "ed@gmail.example"}}[record_id]
+
+    class Settings(Cfg):
+        mentor_email_domain = "cbmentors.org"
+
+    espo = Espo()
+    built = await build_scopes(espo, Settings())
+    by_mailbox = {s.mailbox: s for s in built}
+    assert set(by_mailbox) == {"m1@cbmentors.org", "mark.marketing@cbmentors.org"}
+    mark = by_mailbox["mark.marketing@cbmentors.org"]
+    assert mark.owner_user_id == "u-mark" and mark.manager_name == "Mark Marketing"
+    assert [r.id for r in mark.records] == ["L1"] and mark.records[0].entity == "CProspect"
+    assert espo.calls.count("get User/u-mark") == 1 and "get User/u-gmail" in espo.calls
+
+
+async def test_a_crm_without_leads_is_skipped_quietly(caplog):
+    from comms.crm import build_scopes
+
+    class Espo(FakeEspo):
+        async def list(self, entity, *, where=None, select=None, max_size=50, offset=0, **kw):
+            if entity == "CProspect":
+                raise EspoError("list CProspect failed: HTTP 404 Not Found")
+            return await super().list(entity, where=where, select=select, max_size=max_size, **kw)
+
+    with caplog.at_level("WARNING"):
+        built = await build_scopes(Espo(), Cfg())
+    assert len(built) == 1 and all(r.entity != "CProspect" for r in built[0].records)
+    assert "CProspect" not in caplog.text
+
+
+def test_leads_are_a_watched_entity():
+    assert "CProspect" in scopes.WATCHED_ENTITIES

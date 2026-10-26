@@ -1124,10 +1124,14 @@
     ["referred", "Referred", { status: "Qualified", level: "Referred", replied: "" }, false],
     ["replied", "Replied, not yet converted", { status: "", level: "", replied: "1" }, false],
     ["disqualified", "Disqualified", { status: "Disqualified", level: "", replied: "" }, true],
+    // Mine (personal outreach): the Assigned-to filter preset to the signed-in
+    // user, one chip. It leaves status, level and replied as they are.
+    ["mine", "Mine", { assigned: "me" }, false],
   ];
+  function chipKeys(c) { return Object.keys(c[2]); }
   function chipActive(c) {
     var want = c[2];
-    return ["status", "level", "replied"].every(function (k) { var e = $("pf_" + k); return (e ? e.value.trim() : "") === (want[k] || ""); });
+    return chipKeys(c).every(function (k) { var e = $("pf_" + k); return (e ? e.value.trim() : "") === (want[k] || ""); });
   }
   async function loadCounts() {
     var g = grids.pf, host = $("pf_counts");
@@ -1143,7 +1147,7 @@
         b.title = chipActive(c) ? "Showing these leads — click to show every lead again." : "Show only these leads.";
         b.addEventListener("click", function () {
           var on = chipActive(c);
-          ["status", "level", "replied"].forEach(function (k) { var e = $("pf_" + k); if (e) e.value = on ? "" : (c[2][k] || ""); });
+          chipKeys(c).forEach(function (k) { var e = $("pf_" + k); if (e) e.value = on ? "" : (c[2][k] || ""); });
           g.offset = 0; clearSelection("pf"); loadGrid("pf");
         });
         host.appendChild(b);
@@ -1870,6 +1874,7 @@
     if (p.promotedContactName) factRow(o, "Converted to contact", plain(p.promotedContactName));
     if (p.alreadyKnownCompanyName) factRow(o, "Duplicate of company", plain(p.alreadyKnownCompanyName));
     if (d.ladder && p.replied) factRow(o, "Replied", plain("Yes — convert the lead, or answer first"));
+    var bar = $("ld_repliedBar"); if (bar) bar.hidden = !(d.ladder && p.replied && p.leadStatus !== "Converted");
     if (p.leadCode !== undefined) factRow(o, "Link code", plain(p.leadCode ? p.leadCode + " (the end of every personal link; New code replaces it)" : "None yet — minted the first time a campaign needs it, or by New code"));
     var rv = $("ld_review"); rv.innerHTML = ""; rv.appendChild(reviewActions(p, loadLead));
     text($("ld_notes"), p.description || "—");
@@ -1882,6 +1887,7 @@
       tl.appendChild(li);
     });
     $("ld_activityEmpty").hidden = (d.activity || []).length > 0;
+    loadLeadConversations(p);
     var en = $("ld_enrichment"); en.innerHTML = "";
     if (window.CBMEnrichment) window.CBMEnrichment.panel(en, { targetType: "lead", recordId: p.id, onChange: loadLead });
   }
@@ -1948,7 +1954,164 @@
       } catch (e) { notice(e.message, e.status === 409 ? "warn" : "error"); }
     });
   }
-  function notYet(what) { notice(what + " arrives with personal outreach, a later release. Until then, reach the lead by phone or through a campaign.", "warn"); }
+  // --- personal outreach from the lead's page (build plan § 7e.5) ------------------------------
+  // Email opens the shared composer (frontend/shared/compose.js) to the lead's
+  // own address from the sender's own chapter mailbox; Log a call records a
+  // campaign-less call with one of three outcomes; Conversations lists the
+  // lead's threads and opens each with the shared renderer. The server holds
+  // the same guardrails; the screen says why in words before a round trip.
+  function outreachOff() {
+    return !(state.session && state.session.leadOutreachOn)
+      ? "Personal outreach is not switched on here (Personal outreach to leads at /setup)." : "";
+  }
+  function leadWhyNotEmail(p) {
+    var off = outreachOff(); if (off) return off;
+    if (!(lead.data && lead.data.ladder)) return "This CRM does not carry the lead's Assigned to field yet, so personal outreach is not available here.";
+    var mailable = p.leadStatus === "Qualified" && (p.qualificationLevel === "Contactable" || p.qualificationLevel === "Referred");
+    if (!mailable) return "Only a Contactable or Referred lead may be emailed personally; this one is " + leadLevelWord(p) + ". A named person and a phone or an email make a lead Contactable.";
+    if (p.sideExit) return "This lead stopped being worked (" + p.sideExit + "), so it is not emailed.";
+    if (!p.email) return "This lead has no email address. Add one under What we know first.";
+    return leadWhyNotMine(p);
+  }
+  function leadWhyNotMine(p) {
+    var me = state.session && state.session.userId;
+    if (p.assignedUserId && p.assignedUserId === me) return "";
+    if (p.assignedUserId) return "This lead is assigned to " + (p.assignedUserName || "someone else") + ". Assign the lead to yourself first.";
+    return "Assign the lead to yourself first.";
+  }
+  function leadWhyNotCall(p) {
+    var off = outreachOff(); if (off) return off;
+    if (!(lead.data && lead.data.ladder)) return "This CRM does not carry the lead's Assigned to field yet, so personal outreach is not available here.";
+    if (p.leadStatus === "Disqualified") return "A Disqualified lead is not worked, so a call on it is not logged.";
+    return leadWhyNotMine(p);
+  }
+  lead.mailbox = undefined;   // the sender's own mailbox and signature, fetched once per page
+  function openCompose(p) {
+    var why = leadWhyNotEmail(p); if (why) { notice(why, "warn"); return; }
+    if (!window.CBMCompose) { notice("The email composer did not load — reload the page and try again.", "error"); return; }
+    var base = "/prospects/" + encodeURIComponent(LEAD_ID);
+    var person = [p.firstName, p.lastName].filter(Boolean).join(" ");
+    CBMCompose.open({
+      apiBase: API,
+      api: function (path, opts) { opts = opts || {}; return api(path, { method: opts.method || "GET", body: opts.body }); },
+      endpoints: {
+        mailbox: "/mailbox",
+        templates: "/emailtemplates",
+        parse: function (tid) { return base + "/emailtemplates/" + encodeURIComponent(tid) + "/parse"; },
+        messages: base + "/messages",
+        writeBack: "/emailwriteback",
+      },
+      // One person to one person: no Cc/Bcc, no Documents folder, no reply from here.
+      features: { cc: false, templates: true, attachments: true, documents: false, drafts: true, reply: false, addressBook: false },
+      record: { entity: "CProspect", id: p.id, name: p.businessName || p.name || "", fixedRecipient: true,
+                contacts: [{ name: person || (p.businessName || ""), email: p.email }] },
+      sendingEnabled: true,
+      mailbox: {
+        get: function () { return lead.mailbox; },
+        set: function (mb, sig) { lead.mailbox = { mailbox: mb, signature: sig || "" }; },
+      },
+      fmtWhen: fmtDate,
+      onSent: function (res) {
+        if (res && (res.warnings || []).length) notice("Email sent. " + res.warnings.join(" "), "warn");
+        loadLead();
+      },
+      onUnauthorized: function () { location.assign("/?next=" + encodeURIComponent("/campaigns/")); },
+      notice: function (t, k) { notice(t, k === "error" ? "error" : "ok"); },
+    }, { to: p.email });
+  }
+  var CALL_OUTCOMES = [
+    ["Interested", "converts the lead from its email or website; with neither, the call is recorded and the lead stays a lead"],
+    ["Not interested", "stops the lead, with your note as the reason"],
+    ["No reply yet", "records the attempt only"],
+  ];
+  function openLogCall(p) {
+    var why = leadWhyNotCall(p); if (why) { notice(why, "warn"); return; }
+    var body = el("div", "cm__callform");
+    body.appendChild(el("p", null, "A call you made yourself, outside any campaign. It goes on the lead's Activity like a campaign call."));
+    var fs = el("fieldset"); fs.appendChild(el("legend", null, "What came of it"));
+    var picked = "";
+    CALL_OUTCOMES.forEach(function (o) {
+      var lab = el("label", "cm__radio"); var r = el("input"); r.type = "radio"; r.name = "ld_callOutcome"; r.value = o[0];
+      r.addEventListener("change", function () { picked = o[0]; });
+      lab.appendChild(r); var t = el("span", null, o[0] + " "); t.appendChild(el("small", null, "— " + o[1])); lab.appendChild(t); fs.appendChild(lab);
+    });
+    body.appendChild(fs);
+    var f1 = el("label", "cm__field cm__field--wide"); f1.appendChild(el("span", null, "Number called"));
+    var phone = el("input"); phone.type = "tel"; phone.value = p.phone || ""; phone.id = "ld_callPhone"; f1.appendChild(phone); body.appendChild(f1);
+    var f2 = el("label", "cm__field cm__field--wide"); f2.appendChild(el("span", null, "Notes (required for Not interested)"));
+    var notes = el("textarea"); notes.rows = 4; notes.maxLength = 4000; notes.id = "ld_callNotes"; f2.appendChild(notes); body.appendChild(f2);
+    openModal("Log a call — " + (p.businessName || p.name), body, async function () {
+      if (!picked) { modalMsg("Choose what came of the call.", "error"); return; }
+      if (picked === "Not interested" && !notes.value.trim()) { modalMsg("Say why the lead is not interested — the note is required.", "error"); return; }
+      var res = await api("/prospects/" + encodeURIComponent(LEAD_ID) + "/calls", { method: "POST", body: { outcome: picked, notes: notes.value.trim(), calledPhone: phone.value.trim() } });
+      closeModal();
+      var parts = ["Call logged: " + picked + "."];
+      if (res.notConverted) parts.push(res.notConverted);
+      else if ((res.consequences || []).indexOf("lead converted") >= 0) parts.push("The lead is Converted.");
+      else if ((res.consequences || []).indexOf("stopped by Declined") >= 0) parts.push("The lead stopped being worked.");
+      if ((res.warnings || []).length) parts.push(res.warnings.join(" "));
+      notice(parts.join(" "), (res.warnings || []).length ? "warn" : "ok");
+      loadLead();
+    }, "Log the call");
+  }
+  async function loadLeadConversations(p) {
+    var list = $("ld_conversations"), empty = $("ld_conversationsEmpty"), hint = $("ld_convHint");
+    if (!list) return;
+    list.innerHTML = ""; empty.hidden = true;
+    var off = outreachOff();
+    if (off) { text(hint, off + " Email with this lead is not shown."); return; }
+    var res;
+    try { res = await api("/prospects/" + encodeURIComponent(LEAD_ID) + "/conversations"); }
+    catch (e) { text(hint, e.message); return; }
+    if (!res.available) { text(hint, res.reason || "Conversations are not available here."); return; }
+    var rows = res.conversations || [];
+    empty.hidden = rows.length > 0;
+    rows.forEach(function (c) {
+      var li = el("li"); var b = el("button", "cm__convrow" + (c.unread ? " is-unread" : "")); b.type = "button";
+      b.appendChild(el("span", "cm__conv-subject", c.subject || "(no subject)"));
+      var when = el("span", "cm__conv-when", (c.messageCount ? c.messageCount + (c.messageCount === 1 ? " message · " : " messages · ") : "") + fmtDate(c.lastMessageAt));
+      b.appendChild(when);
+      var who = el("span", "cm__conv-who", c.participants || "");
+      if (c.awaiting) { who.appendChild(document.createTextNode(" ")); who.appendChild(el("span", "cm__conv-awaiting", "Their last message is unanswered")); }
+      b.appendChild(who);
+      b.addEventListener("click", function () { openConversation(c.id, c.subject); });
+      li.appendChild(b); list.appendChild(li);
+    });
+  }
+  function sanitizeHtml(html) {
+    var tmp = document.createElement("div");
+    tmp.innerHTML = html || "";
+    Array.prototype.forEach.call(tmp.querySelectorAll("script,style,iframe,object,embed,link,meta"), function (n) { n.remove(); });
+    Array.prototype.forEach.call(tmp.querySelectorAll("*"), function (n) {
+      Array.prototype.slice.call(n.attributes).forEach(function (a) {
+        var name = a.name.toLowerCase(), val = (a.value || "").replace(/\s/g, "").toLowerCase();
+        if (name.indexOf("on") === 0) n.removeAttribute(a.name);
+        else if ((name === "href" || name === "src") && val.indexOf("javascript:") === 0) n.removeAttribute(a.name);
+      });
+    });
+    return tmp.innerHTML;
+  }
+  async function openConversation(convId, subject) {
+    var body = el("div", "cm__thread");
+    body.appendChild(el("p", "cm__muted", "Loading…"));
+    openModal(subject || "Conversation", body, null);
+    var c;
+    try { c = await api("/conversations/" + encodeURIComponent(convId)); }
+    catch (e) { body.innerHTML = ""; body.appendChild(el("p", "cm__notice cm__notice--error", e.message)); return; }
+    body.innerHTML = "";
+    var msgs = c.messages || [];
+    if (!window.CBMConversation) { body.appendChild(el("p", null, "The conversation renderer did not load — reload the page.")); return; }
+    msgs.forEach(function (m, i) {
+      if (i === 0) body.appendChild(CBMConversation.startedDivider(m, { fmtWhen: fmtDate }));
+      body.appendChild(CBMConversation.messageCard(m, { sanitizeHtml: sanitizeHtml, fmtWhen: fmtDate, gmailMailbox: lead.mailbox ? lead.mailbox.mailbox : null }));
+    });
+    if (!msgs.length) body.appendChild(el("p", "cm__muted", "No messages stored for this conversation."));
+    body.appendChild(el("p", "cm__hint", "To answer, use the Email button on the lead's page; the reply joins this conversation through your mailbox."));
+    // The server stamped the thread read; the row loses its bold without a round trip.
+    Array.prototype.forEach.call(document.querySelectorAll("#ld_conversations .cm__convrow.is-unread"), function (r) {
+      if (r.querySelector(".cm__conv-subject") && r.querySelector(".cm__conv-subject").textContent === (subject || "(no subject)")) r.classList.remove("is-unread");
+    });
+  }
   // New code: a fresh personal-link code. The old one stops resolving at
   // once; a notice already sent carries it until the next push rewrites the
   // vendor's field, so the confirmation says so.
@@ -1971,8 +2134,9 @@
     $("ld_assign").addEventListener("click", function () { if (lead.data) openAssignOne(lead.data.prospect); });
     $("ld_convert").addEventListener("click", function () { if (lead.data) convertLead(lead.data.prospect); });
     $("ld_newcode").addEventListener("click", function () { if (lead.data) newCode(lead.data.prospect); });
-    $("ld_email").addEventListener("click", function () { notYet("A personal email from here"); });
-    $("ld_call").addEventListener("click", function () { notYet("Logging a call from here"); });
+    $("ld_email").addEventListener("click", function () { if (lead.data) openCompose(lead.data.prospect); });
+    $("ld_call").addEventListener("click", function () { if (lead.data) openLogCall(lead.data.prospect); });
+    $("ld_repliedConvert").addEventListener("click", function () { if (lead.data) convertLead(lead.data.prospect); });
   }
 
   // --- review actions (§ 2.3, § 3.8) ----------------------------------------------------------

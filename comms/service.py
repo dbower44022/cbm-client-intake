@@ -122,6 +122,37 @@ async def gmail_for_shared_mailbox(settings: Settings, mailbox: str) -> GmailCli
     return GmailClient(sa_info, mailbox, settings.request_timeout_seconds)
 
 
+async def sender_mailbox(user_client: Any, user: dict[str, Any], settings: Settings) -> str:
+    """The signed-in user's own chapter mailbox for personal outreach
+    (prospect marketing ruling 120): their mentor profile's ``cbmEmail``,
+    else their own User ``emailAddress`` when it is on ``MENTOR_EMAIL_DOMAIN``.
+    The rule itself is :func:`comms.crm.user_mailbox`; this reads the two
+    inputs through the user's own token. Raises :class:`CommsError` naming
+    what is missing when neither applies — a Marketing Admin Team member
+    usually has no mentor profile, which is why the user's address counts.
+    The address must still be a real licensed mailbox for the Gmail
+    delegation; the send reports a refusal there in its own words."""
+    from sessions.service import resolve_user_mailbox
+
+    user_id = user.get("userId") or ""
+    profile_email = await resolve_user_mailbox(user_client, user_id)
+    own = ""
+    if not profile_email:
+        try:
+            me = await user_client.get("User", user_id, select="emailAddress")
+            own = (me or {}).get("emailAddress") or ""
+        except EspoError as exc:
+            log.debug("own-user read for %s failed: %s", user_id, exc)
+    mailbox = crm.user_mailbox(profile_email, own, settings.mentor_email_domain)
+    if not mailbox:
+        raise CommsError(
+            f"There is no chapter mailbox on your profile or your user: your login has no {abbr()} "
+            f"profile with a {abbr()} email address, and your own address is not on "
+            f"{settings.mentor_email_domain}. Ask {abbr()} staff to add one."
+        )
+    return mailbox
+
+
 # --- reads (as the user) -------------------------------------------------------
 
 _CONV_SELECT = (

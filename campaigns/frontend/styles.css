@@ -191,3 +191,22 @@ body.cm--import-tool #importsGrid, body.cm--import-tool #importsEmpty, body.cm--
 .cm__pairs { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: .1rem .6rem; font-size: .85rem; }
 .cm__pairs dt { color: var(--cbm-muted, #4b5a63); } .cm__pairs dd { margin: 0; }
 .cm__plan > .cbm-button { justify-self: start; }
+
+/* --- the lead's page: personal outreach (build plan § 7e.5) ---------------- */
+.cm__repliedbar { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin-top: .5rem; padding: .5rem .75rem; border: 1px solid #ecc94b; border-radius: 8px; background: #fdf6e7; color: #744210; }
+.cm__repliedbar[hidden] { display: none; }
+.cm__badge--replied { background: #ecc94b; color: #3b2a05; }
+.cm__convlist { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
+.cm__convrow { font: inherit; text-align: left; width: 100%; display: grid; grid-template-columns: 1fr auto; gap: .2rem .8rem; padding: .5rem .7rem; border: 1px solid var(--cbm-border, #e3e7eb); border-radius: 8px; background: var(--cbm-surface, #fff); cursor: pointer; }
+.cm__convrow:hover { background: var(--cbm-hover, #f2f5f7); }
+.cm__convrow.is-unread .cm__conv-subject { font-weight: 700; }
+.cm__conv-subject { color: var(--cbm-text, #1e2a33); }
+.cm__conv-when, .cm__conv-who { color: var(--cbm-muted, #4b5a63); font-size: .85rem; }
+.cm__conv-who { grid-column: 1 / -1; }
+.cm__conv-awaiting { font-size: .78rem; font-weight: 700; color: #744210; }
+.cm__thread { display: grid; gap: .6rem; }
+.cm__callform { display: grid; gap: .7rem; }
+.cm__callform fieldset { border: 1px solid var(--cbm-border, #e3e7eb); border-radius: 8px; padding: .5rem .8rem; display: grid; gap: .35rem; }
+.cm__callform legend { padding: 0 .3rem; font-weight: 600; }
+.cm__callform label.cm__radio { display: flex; gap: .5rem; align-items: baseline; }
+.cm__callform label.cm__radio small { color: var(--cbm-muted, #4b5a63); }

@@ -55,6 +55,11 @@ class Settings(BaseSettings):
     # carries as the ``{{abbr}}`` token (Doug, 2026-09-25). Same safety property
     # as the name: the default renders exactly what the pages always said.
     organization_abbreviation: str = "CBM"
+    # The chapter's postal address, appended with the opt-out sentence to every
+    # personal email a lead receives (ruling 122: the two together are what
+    # makes the message lawful). One or more lines; empty refuses the send,
+    # naming this setting. Filled in at /setup on each deployment.
+    chapter_postal_address: str = ""
     # The chapter's short label — the lower-case name the deployment guide builds
     # into everything for a chapter (``cleveland``, ``boston``). An event's reach
     # always includes this chapter (Doug's F3 ruling 6), stored as this value in
@@ -593,6 +598,13 @@ class Settings(BaseSettings):
     # worker then never previews — the page says so after two minutes).
     import_templates: bool = False
     import_plan_poll_seconds: int = 5
+    # Personal outreach from the lead's page (build plan § 7e.5; rulings 107-109,
+    # 115, 118-120, 122, 128): *Email* through the shared composer from the
+    # assignee's own chapter mailbox, *Log a call* with three outcomes, the
+    # email sync attaching a reply to the assigned lead and flagging it
+    # Replied. Read per request. Off, the two buttons say the feature is not
+    # switched on and the sync is exactly as before.
+    lead_outreach: bool = False
     # --- Lead enrichment, phase 1: the free pass (prds/lead-enrichment/) ---
     # The worker scores every open lead (design § 4, rulings E2, E12-E14):
     # the service-area gate, then three signals. Off by default; nothing is

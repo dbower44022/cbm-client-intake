@@ -282,6 +282,8 @@ async def ingest_message(
     )
     if scope.owner_user_id:
         await crm.stamp_owners(espo, conv_id, {scope.owner_user_id})
+    if direction == "Inbound":
+        await _mark_leads_replied(espo, matched, parsed.from_address)
     # Inbound attachments auto-file to the linked records' Documents tabs
     # (email-quality §3.1) — best-effort, gated, never fails the ingest.
     if settings is not None:
@@ -289,6 +291,50 @@ async def ingest_message(
             settings, espo, store, gmail, scope, parsed, conv_id, matched, excludes,
         )
     return conv_id
+
+
+_lead_replied_known: dict[int, bool] = {}
+
+
+async def _lead_replied_supported(espo: Any) -> bool:
+    """Whether this CRM carries ``CProspect.replied`` (the redesign handoff).
+    Feature-detected once per client (the metadata read is cached by the real
+    client anyway); a client that cannot read metadata is trusted."""
+    key = id(espo)
+    if key in _lead_replied_known:
+        return _lead_replied_known[key]
+    reader = getattr(espo, "metadata", None)
+    ok = True
+    if reader is not None:
+        try:
+            fields = await reader(f"entityDefs.{crm.LEAD}.fields")
+            ok = isinstance(fields, dict) and "replied" in fields
+        except Exception as exc:  # noqa: BLE001 — unreadable is "not there"
+            log.debug("lead replied field check failed: %s", exc)
+            ok = False
+    _lead_replied_known[key] = ok
+    return ok
+
+
+async def _mark_leads_replied(espo: Any, matched: list[Any], from_address: str) -> None:
+    """An inbound message FROM a lead's own address flags the lead *Replied*
+    (prospect marketing ruling 109) — the lead's address exactly, never a
+    domain match, and only a lead the scope matched (so only an assigned
+    lead, ruling 118). Conversion clears the flag. Best-effort."""
+    sender = (from_address or "").strip().lower()
+    if not sender:
+        return
+    leads = [r for r in matched if r.entity == crm.LEAD and sender in r.addresses]
+    if not leads:
+        return
+    if not await _lead_replied_supported(espo):
+        return
+    for ref in leads:
+        try:
+            await espo.update(crm.LEAD, ref.id, {"replied": True})
+            log.info("lead %s replied from %s", ref.id, sender)
+        except EspoError as exc:
+            log.warning("lead %s replied flag not written: %s", ref.id, exc)
 
 
 async def _ingest_ids(

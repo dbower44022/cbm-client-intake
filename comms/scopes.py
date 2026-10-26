@@ -39,6 +39,9 @@ log = logging.getLogger("cbm_intake.comms.scopes")
 # from the contacts. A new or edited row in any of them can change a scope.
 WATCHED_ENTITIES = (
     crm.MENTOR_PROFILE, "CEngagement", "CPartnerProfile", "CSponsorProfile", "Contact",
+    # Assigned leads join the scopes (prospect marketing ruling 118): a new
+    # assignment, or an email typed on a lead, rebuilds them.
+    crm.LEAD,
 )
 # The watermark sits this far behind the build's start, so a record saved in
 # the same second as the build (clock skew, a write racing the read) is not

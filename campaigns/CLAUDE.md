@@ -1,6 +1,6 @@
 # campaigns/ — Marketing Management (was Campaign Management)
 
-Last Updated: 10-25-26 22:48 · Revision 1.11
+Last Updated: 10-26-26 00:10 · Revision 1.12
 
 Detail for Campaign Management (`/campaigns`, prospect marketing Phases 1 to 4 and the lead model): links, postcards, the landing page, imports, the Leads and Review grids, calls, texts, email, attribution and reporting.
 
@@ -381,6 +381,37 @@ the reason.
   `openImport` when the session says `importTemplatesOn`; it never
   registers an `onShow`. The demo template is restored nightly with the
   demo links (`sandbox_demo.restore_demo_template`).
+- **Personal outreach from the lead's page** (v0.288.0, build plan
+  § 7e.5 — step M5, rulings 107–109, 115, 118–120, 122, 128; dark behind
+  **`LEAD_OUTREACH`**, read per request; needs the redesign handoff's
+  Assigned to, Replied and the conversation link, the Gmail integration
+  and `CHAPTER_POSTAL_ADDRESS`). The rules are `campaigns/outreach.py`, the
+  endpoints `campaigns/outreach_router.py` (registered on `api_router` by
+  the tail import in `router.py`). **The composer is the shared
+  `frontend/shared/compose.js`** (ruling 128), opened with a host object;
+  on a lead it runs with a fixed recipient and no Cc/Bcc, Documents or
+  reply. **The sender's mailbox is one rule**, `comms.crm.user_mailbox`
+  (ruling 120: the mentor profile's address, else the user's own on
+  `MENTOR_EMAIL_DOMAIN`), read by `comms.service.sender_mailbox` for the
+  compose and the send and by the sync's scope build. **The server holds
+  the guardrails** (`outreach.why_not_email` / `why_not_call`,
+  `check_recipients`): Contactable or Referred, no side exit, an email,
+  assigned to the sender, the lead's own address as the only recipient; the
+  page asks the same questions first and says why in words. **Every
+  personal email ends with the opt-out sentence and the postal address**
+  (`outreach.append_footer`; an empty setting refuses, naming it). **A
+  personal call's three words are stored as the campaign calls' words**
+  (`cfg.PERSONAL_OUTCOME_STORED`: Not interested → Declined, No reply yet →
+  No answer — the touch's outcome enum has only those; read 10-25-26) and
+  its consequences are **`calls.apply_outcome`, shared with
+  `record_outcome`** — never a second Interested or Declined branch. A
+  personal touch has no campaign and carries the sender and the Marketing
+  Admin Team (`outreach.team_ids`). The sync: `comms.crm.PARENT_LINKS`
+  has `CProspect: prospects`, `_add_assigned_leads` builds the lead
+  source (a marketer-only mailbox gets its own scope), an inbound message
+  from the lead's exact address sets `replied` (`sync._mark_leads_replied`)
+  and `conversion.mark_converted` clears it. The Leads tab's **Mine** chip
+  is the Assigned-to filter preset to `me` (`leads.counts(…, me=)`).
 - Owed: nothing on production's CRM (both slots done 10-18-26; every
   campaign switch off there — turning one on is Doug's call at `/setup`);
   Boston with its release; a seeder and sandbox re-baseline; the Twilio
@@ -391,6 +422,7 @@ the reason.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.12 | 10-26-26 00:10 | Claude (Claude Code) | Personal outreach from the lead's page (v0.288.0, § 7e.5, M5): the shared composer, the one mailbox rule, the guardrails, the footer, the stored outcome words, `apply_outcome`, the sync's lead source, the Mine chip. |
 | 1.11 | 10-25-26 22:48 | Claude (Claude Code) | The import batch write lease (v0.287.0). |
 | 1.10 | 10-25-26 20:50 | Claude (Claude Code) | The import tool live-passed (v0.286.3): the later-fill touch, stale ledger rows, the apply lock owed. |
 | 1.9 | 10-25-26 19:30 | Claude (Claude Code) | The import tool (v0.286.0, § 7e.7, M4): templates, Excel, the worker preview, fills, the level per row, Undo under the org-wide key, the Imports tab script. |
