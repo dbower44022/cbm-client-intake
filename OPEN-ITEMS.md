@@ -27,8 +27,12 @@ found; move resolved items to the bottom with the resolution date.
     `ENRICHMENT_WEB_CHECKS`, live-passed on crm-test 10-21-26) and phase 2,
     the AI research pass (v0.274.0, `ENRICHMENT_AI`, findings as
     `CEnrichmentFinding`, crm-test applied 10-22-26) are pushed and dark.
-    Owed: phase 2's staff test on crm-test against the real model (never
-    run yet); both phases' CRM fields on production at a Sunday slot and on
+    Owed: phase 2's staff test on crm-test finished and recorded — the real
+    model DID run on 10-22-26 (Doug on crm-test: the Great Lakes Brewing
+    Company lead, which found the `www.` duplicate fixed in v0.277.1), but
+    which sections of the step page
+    https://claude.ai/artifact/JePeP4H6XSGY4PnXsUVKgV were completed is not
+    recorded (corrected 10-26-26 11:56); both phases' CRM fields on production at a Sunday slot and on
     Boston with its release; the list button when lists go on. Campaign
     lists L2 (v0.271.0, live-passed 10-21-26) likewise owes production and
     Boston with the arc's slot and the close-date Read-only finding (#51).

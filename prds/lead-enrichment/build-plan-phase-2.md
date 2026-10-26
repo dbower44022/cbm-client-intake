@@ -1,10 +1,16 @@
 # Build plan — lead enrichment phase 2: the AI research pass, started by staff
 
-Last Updated: 10-22-26 11:17 · Revision 0.3 (approved 10-22-26; built as v0.274.0)
+Last Updated: 10-26-26 11:56 · Revision 0.4 (approved 10-22-26; built as v0.274.0)
 
-**Status (10-22-26 11:17).** Approved by Doug as written (10-22-26). Built as
-v0.274.0, committed, not pushed, dark. crm-test carries the entity and the
-grants. Next: the staff test on crm-test (§ 6 step 2).
+**Status (10-26-26 11:56).** Approved by Doug as written (10-22-26). Built as
+v0.274.0 and pushed; dark. crm-test carries the entity and the grants. The
+real model first ran on crm-test on 10-22-26 (Doug, the Great Lakes Brewing
+Company lead); it found that a finding could propose a value the record
+already held in another form, fixed in v0.277.1 (`runs.same_value`). Later
+releases by the Marketing Management sessions build on this module (AI
+research on every Review row, `close_findings`, ruling 121 in `decide`).
+**Owed:** the rest of the staff test (§ 6 step 2), recorded; production at a
+Sunday slot; Boston; the list button.
 
 **What it delivers.** A person starts an AI research run on one lead, on a
 set of leads, or on one client's company. An AI model searches the web for
@@ -179,6 +185,7 @@ in the CRM, one record per proposed value.)
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.4 | 10-26-26 11:56 | Claude (Claude Code) | Status: the first real-model run (10-22-26) and v0.277.1; what is owed. |
 | 0.3 | 10-22-26 11:17 | Claude (Claude Code) | Approved; built as v0.274.0. |
 | 0.2 | 10-22-26 11:01 | Claude (Claude Code) | § 7 answered (E19). |
 | 0.1 | 10-22-26 10:51 | Claude (Claude Code) | Created from design § 5, § 6 and ruling E18. |

@@ -1,6 +1,6 @@
 # Kickoff prompt — lead and client enrichment, next session
 
-Last Updated: 10-22-26 11:19 · Revision 0.9
+Last Updated: 10-26-26 11:56 · Revision 1.0
 
 Operating mode: DETAIL (this repository's project default).
 
@@ -9,25 +9,35 @@ Read `README.md`, then `design.md`. The design was approved by Doug on
 10-20-26, section by section. Rulings E1 to E17 in § 1 are binding and
 append only; record any new answer as E18 onward.
 
-Phase 1 is built (v0.269.0, v0.270.1) and live-passed on crm-test
-10-21-26. Phase 2, the AI research pass started by staff, is built as
-v0.274.0 (rulings E18, E19; `prds/lead-enrichment/build-plan-phase-2.md`),
-dark behind `ENRICHMENT_AI`; crm-test carries `CEnrichmentFinding` and its
-grants. The staff test is the step page
-https://claude.ai/artifact/JePeP4H6XSGY4PnXsUVKgV (sections A to E). Its test
-data on crm-test (removed by the nightly reset; re-create if needed): leads
-Great Lakes Brewing Company, Superelectric Pinball Parlor, Banter Beer and
-Wine (batch "AI research live pass 10-22-26"), and the client Mitchell's
-Homemade Ice Cream (Account, CClientProfile, CEngagement
-6ada291ac5727bcbe — ids change on re-creation; the engagement needs
-mentoringNeedsDescription). When Doug sends "pushed", check crm-test's
-/healthz reads 0.274.0. After each section, read the findings back
-(`CEnrichmentFinding`), the run costs (`enrichment_run_item`), and for E13
-that the accepted person's Contact has no marketing opt-in.
+State at 10-26-26 11:56, read before anything else:
 
-Then: the list button (when the lists feature is on and its session agrees),
-production's two CRM changes at a Sunday slot, and § 9 question 6 (Business
-Status survey fields; elicit them from Doug first).
+- Phase 1, the fit score: v0.269.0 / v0.270.1, live-passed on crm-test
+  10-21-26, dark in production.
+- Phase 2, the AI research pass: v0.274.0, pushed, dark behind
+  `ENRICHMENT_AI`; crm-test carries `CEnrichmentFinding` and its grants.
+  The real model ran on crm-test on 10-22-26 and led to v0.277.1 (a finding
+  never proposes a value the record already holds). How much of the staff
+  test page https://claude.ai/artifact/JePeP4H6XSGY4PnXsUVKgV was completed
+  is NOT recorded — ask Doug first.
+- Other sessions have since built on `enrichment/` (the Marketing
+  Management redesign: AI research on every Review row, `close_findings`,
+  ruling 121). Read `git log -- enrichment/` and the root `CLAUDE.md`
+  before editing; one session on that arc at a time.
+- crm-test's nightly reset empties `CEnrichmentFinding` (a table newer than
+  the sandbox baseline) and removes the test leads and the test client.
+  Re-create them for a pass (`enrichment-finding-crm-handoff.md`; the
+  engagement needs `mentoringNeedsDescription`).
+
+Work in this order, one question per turn:
+
+1. Ask Doug how far the staff test got; finish and record the rest
+   (`OPEN-ITEMS.md` #58).
+2. Production's two CRM changes at a Sunday slot (`lead-fit-score-crm-handoff.md`
+   § 4, `enrichment-finding-crm-handoff.md` § 4) — write the step page when
+   Doug books it.
+3. The list button, when the lists feature's session agrees.
+4. § 9 question 6: which Business Status survey questions get real CRM
+   fields. Elicit them from Doug first.
 
 Still owed by Doug, not by the session: the segment list (§ 9 question 2)
 and the privacy-policy review (E7), which must read the AI model
@@ -37,6 +47,7 @@ provider's terms.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.0 | 10-26-26 11:56 | Claude (Claude Code) | End-of-session state: what ran, what other sessions changed, what is owed. |
 | 0.9 | 10-22-26 11:19 | Claude (Claude Code) | Phase 2 built; the staff-test page and its test data. |
 | 0.8 | 10-21-26 13:54 | Claude (Claude Code) | Phase 1 live-passed; next is phase 2. |
 | 0.7 | 10-21-26 09:56 | Claude (Claude Code) | Second live-pass attempt: what Claude does at each report-back. |
