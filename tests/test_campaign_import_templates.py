@@ -102,6 +102,12 @@ class TemplateStore(FakeStore):
         return [{"prospect_id": r["prospect_id"], "row_hash": r["row_hash"], "business_name": r.get("business_name"),
                  "created_at": r.get("created_at"), "outcome": r["outcome"]}
                 for r in self.rows if r.get("batch_id") == batch_id and r.get("prospect_id") and r["outcome"] != "fills"]
+    async def filled_by_later_batch(self, batch_id, prospect_ids):
+        out = {}
+        for r in self.rows:
+            if r.get("prospect_id") in prospect_ids and r["outcome"] == "fills" and r.get("batch_id") != batch_id:
+                out.setdefault(r["prospect_id"], self.batches[r["batch_id"]]["name"])
+        return out
     async def forget_rows(self, batch_id, prospect_ids):
         self.rows = [r for r in self.rows if not (r.get("batch_id") == batch_id and r.get("prospect_id") in set(prospect_ids))]
     async def record_undo(self, batch_id, *, deleted, touched, errors, done, actor):
@@ -683,3 +689,80 @@ def test_the_template_table_resets_nightly_and_the_api_role_gains_delete():
 def test_the_settings_exist_with_the_ruled_defaults():
     s = _settings()
     assert s.import_templates is False and s.import_plan_poll_seconds == 5
+
+
+# --- found on the live pass, 10-25-26 ---------------------------------------------------------------
+
+def test_a_lead_a_later_import_filled_is_touched_whatever_the_clock_says():
+    """The rehearsal's fills landed four minutes after the create — inside the
+    write window — and Undo deleted the filled leads. The ledger knows better."""
+    store, crm = TemplateStore(), Crm()
+    first, _ = _plan_and_apply(store, crm)
+    rows = _chamber_rows()
+    rows[1].update(owner="Pat Quiet", e_mail="pat@quiet.example")
+    _plan_and_apply(store, crm, rows=rows, name="Chamber, November")
+    result = run(imports.undo_import(crm, store, run(store.get_batch(first["id"])), actor="Mark"))
+    leads = {p["businessName"]: p for p in crm.rows[cfg.PROSPECT].values()}
+    assert [t["name"] for t in result["touched"]] == ["Quiet Shop"]
+    assert result["touched"][0]["why"] == "filled by a later import (Chamber, November)"
+    assert "Quiet Shop" in leads and len(result["deleted"]) == 2
+    assert crm.rows[cfg.PROSPECT][leads["Quiet Shop"]["id"]]["firstName"] == "Pat"
+
+
+def test_the_undo_history_row_hangs_on_a_lead_that_still_exists(monkeypatch):
+    """The CRM refuses a history row linked to a deleted record; a touched lead
+    carries it, and with none left the row is skipped and the log names the ids."""
+    store, crm = TemplateStore(), Crm()
+    client = _client(monkeypatch, store, crm)
+    import campaigns.router as router_mod
+    logged: list[dict] = []
+
+    async def capture(user_client, **kw):
+        logged.append(kw)
+    monkeypatch.setattr(router_mod, "record_action", capture)
+    t = _template(store)
+    data = xlsx({"Members": [["Company", "Address", "Town", "Postcode", "Owner", "E-mail", "Ref", "Internal notes"],
+                             ["Acme Widgets", "1 Main St", "Cleveland", 44113, "Ann Lee", "ann@acme.example", "A1", "x"],
+                             ["Quiet Shop", "2 Main St", "Cleveland", 44113, None, None, "Q2", None]]})
+    plan = client.post("/campaigns/api/prospects/import/plan",
+                       json={"name": "October", "templateId": t["id"], "fileBase64": _b64(data), "fileName": "m.xlsx"}).json()
+    client.post("/campaigns/api/prospects/import/apply", json={"batchId": plan["batchId"], "maxRows": 100})
+    leads = {p["businessName"]: p for p in crm.rows[cfg.PROSPECT].values()}
+    crm.add(cfg.TOUCH, {"prospectId": leads["Quiet Shop"]["id"], "touchStatus": "Sent"})
+    res = client.post(f"/campaigns/api/prospects/import/{plan['batchId']}/undo", json={"maxLeads": 100}).json()["result"]
+    assert res["deleted"] == [leads["Acme Widgets"]["id"]]
+    undone = [l for l in logged if l["action"] == "Import Undone"]
+    assert len(undone) == 1 and undone[0]["parent_id"] == leads["Quiet Shop"]["id"]
+    assert "1 leads deleted, 1 touched and left" in undone[0]["summary"]
+    # Every lead deleted: no record is left to carry the row, so none is written.
+    logged.clear()
+    plan2 = client.post("/campaigns/api/prospects/import/plan",
+                        json={"name": "November", "templateId": t["id"], "fileBase64": _b64(xlsx({"S": [
+                            ["Company", "Address", "Town", "Postcode", "Owner", "E-mail", "Ref", "Internal notes"],
+                            ["Third Place", "3 Main St", "Cleveland", 44113, None, None, "T3", None]]})), "fileName": "n.xlsx"}).json()
+    client.post("/campaigns/api/prospects/import/apply", json={"batchId": plan2["batchId"], "maxRows": 100})
+    res2 = client.post(f"/campaigns/api/prospects/import/{plan2['batchId']}/undo", json={"maxLeads": 100}).json()["result"]
+    assert len(res2["deleted"]) == 1 and [l for l in logged if l["action"] == "Import Undone"] == []
+
+
+def test_the_parts_summary_counts_exclude_the_excluded_rows(monkeypatch):
+    store, crm = TemplateStore(), Crm()
+    client = _client(monkeypatch, store, crm)
+    import campaigns.router as router_mod
+    logged: list[dict] = []
+
+    async def capture(user_client, **kw):
+        logged.append(kw)
+    monkeypatch.setattr(router_mod, "record_action", capture)
+    t = _template(store)
+    data = xlsx({"Members": [["Company", "Address", "Town", "Postcode", "Owner", "E-mail", "Ref", "Internal notes"],
+                             ["Acme Widgets", "1 Main St", "Cleveland", 44113, "Ann Lee", "ann@acme.example", "A1", "x"],
+                             ["Quiet Shop", "2 Main St", "Cleveland", 44113, None, None, "Q2", None]]})
+    plan = client.post("/campaigns/api/prospects/import/plan",
+                       json={"name": "October", "templateId": t["id"], "fileBase64": _b64(data), "fileName": "m.xlsx"}).json()
+    quiet = next(r for r in plan["rows"] if r["name"] == "Quiet Shop")
+    client.put(f"/campaigns/api/prospects/import/{plan['batchId']}/excluded", json={"hashes": [quiet["hash"]]})
+    client.post("/campaigns/api/prospects/import/apply", json={"batchId": plan["batchId"], "maxRows": 100})
+    row = [l for l in logged if l["action"] == "Leads Imported"][0]
+    assert row["details"]["created"] == 1 and row["details"]["unqualified"] == 0 and row["details"]["excluded"] == 1
+    assert "1 leads (1 Qualified, 0 Unqualified)" in row["summary"] and "1 rows excluded" in row["summary"]

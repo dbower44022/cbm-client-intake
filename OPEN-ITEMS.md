@@ -73,8 +73,14 @@ found; move resolved items to the bottom with the resolution date.
     v0.286.0 (10-25-26)**: templates, Excel, recognition and the four
     fixes, the preview as a worker job, fills, the level per row, Undo;
     dark behind `IMPORT_TEMPLATES`; migration 0035; `openpyxl`. Checked
-    against the stub harness and by 31 tests. Not pushed. **Owed, in
-    order**: (1) Doug runs `uv run python scripts/migrate_outreach_roles.py`
+    against the stub harness and by 31 tests. **Live pass started
+    10-25-26 ~19:50 Eastern** (sections 1–7 passed: the role cell, the
+    push of v0.286.0, the switch, the demo template, both rehearsal
+    imports, the fills read back); section 8 found Undo deleting the two
+    filled leads (the fills were inside the five-minute window) and the
+    *Import Undone* row refused by the CRM (hung on a deleted lead) —
+    both fixed in **v0.286.1**, not yet pushed; round two of sections 5–8
+    is on the step page. **Owed, in order**: (1) Doug runs `uv run python scripts/migrate_outreach_roles.py`
     then `… --apply` on crm-test — the `delete` cell on the API role
     (ruling 127; the classifier blocks a mutating role write from a
     session); (2) the push; (3) `IMPORT_TEMPLATES` on at crm-test's /setup

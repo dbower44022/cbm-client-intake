@@ -913,7 +913,7 @@ def _parse_crm_time(value: Any) -> Optional[datetime]:
 
 
 def touched_reasons(lead: dict[str, Any], written_at: Optional[datetime], *, has_touch: bool,
-                    in_list: bool, has_conversation: bool) -> list[str]:
+                    in_list: bool, has_conversation: bool, filled_by: str = "") -> list[str]:
     """Why a lead the batch created is *touched* (ruling 87) — every reason, in
     plain words; an empty list means Undo may delete it. A change inside
     :data:`UNDO_WINDOW` of the write is the import's own."""
@@ -930,6 +930,8 @@ def touched_reasons(lead: dict[str, Any], written_at: Optional[datetime], *, has
         reasons.append("is on a campaign list")
     if has_conversation:
         reasons.append("has a conversation")
+    if filled_by:
+        reasons.append(f"filled by a later import ({filled_by})")
     if later(lead.get("leadStatusChangedAt")):
         reasons.append(f"status changed since ({lead.get('leadStatus') or 'unknown'})")
     if str(lead.get("levelSetAt") or "").strip():
@@ -1027,6 +1029,11 @@ async def undo_import(api_client: EspoApi, store, batch: dict[str, Any], *, acto
             log.warning("undo: list membership check failed (%s) — counted as touched", exc)
             listed = set(ids)
         conversed = await _conversed(api_client, ids, conversations)
+        try:
+            filled = await store.filled_by_later_batch(batch["id"], ids)
+        except Exception as exc:  # noqa: BLE001 — an unreadable ledger counts as touched
+            log.warning("undo: later-fill check failed (%s) — counted as touched", exc)
+            filled = {i: "an import the ledger could not read" for i in ids}
         gone: list[str] = []
         chunk_deleted: list[str] = []
         for lead_id in ids:
@@ -1035,7 +1042,8 @@ async def undo_import(api_client: EspoApi, store, batch: dict[str, Any], *, acto
                 gone.append(lead_id)           # already deleted: nothing to undo, nothing to keep
                 continue
             reasons = touched_reasons(lead, written.get(lead_id), has_touch=lead_id in with_touch,
-                                      in_list=lead_id in listed, has_conversation=lead_id in conversed)
+                                      in_list=lead_id in listed, has_conversation=lead_id in conversed,
+                                      filled_by=filled.get(lead_id, ""))
             if reasons:
                 touched.append({"id": lead_id, "name": lead.get("businessName") or lead.get("name") or names[lead_id],
                                 "why": "; ".join(reasons)})

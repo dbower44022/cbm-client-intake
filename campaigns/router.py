@@ -1399,18 +1399,27 @@ async def import_undo(batch_id: str, body: UndoIn, request: Request) -> dict[str
         raise _crm_failure(request, exc, "Could not undo the import")
     if result["done"]:
         total = result["total"]
-        first_id = (total.get("deleted") or [None])[0] or (total.get("touched") or [{}])[0].get("id") \
-            or await store.first_prospect_id(batch_id)
-        if first_id:
+        deleted, touched = total.get("deleted") or [], total.get("touched") or []
+        summary = (f"Undid the import \"{batch['name']}\": {len(deleted)} leads deleted, "
+                   f"{len(touched)} touched and left")
+        # The history row needs a record that still exists: a deleted lead
+        # cannot carry it (the CRM refuses the link — found on the M4 pass,
+        # 10-25-26). A touched lead stands for the batch; when every lead was
+        # deleted there is none, the batch row keeps the full result, and the
+        # web log names every id.
+        anchor = touched[0].get("id") if touched else None
+        log.info("import undone: %s by %s — deleted %s; left %s", batch["name"], actor, deleted,
+                 [t.get("id") for t in touched])
+        if anchor:
             await record_action(
-                api_client, app=APP_CAMPAIGNS, category=CAT_STATUS, action="Import Undone",
-                parent_type=cfg.PROSPECT, parent_id=first_id,
-                summary=(f"Undid the import \"{batch['name']}\": {len(total.get('deleted') or [])} leads deleted, "
-                         f"{len(total.get('touched') or [])} touched and left"),
+                client, app=APP_CAMPAIGNS, category=CAT_STATUS, action="Import Undone",
+                parent_type=cfg.PROSPECT, parent_id=anchor, summary=summary,
                 actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
-                details={"deleted": total.get("deleted") or [], "touched": total.get("touched") or [],
-                         "pressedBy": actor},
+                details={"deleted": deleted, "touched": touched, "pressedBy": actor},
             )
+        else:
+            log.warning("import undone: no lead left to carry the history row for \"%s\" (%s deleted)",
+                        batch["name"], len(deleted))
     return {"batchId": batch_id, "result": result}
 
 
@@ -1449,11 +1458,17 @@ async def import_apply(body: ImportApplyIn, request: Request) -> dict[str, Any]:
         if result.get("remaining") or result.get("errors"):
             return {"batchId": batch["id"], "result": result}
         counts = (batch.get("plan") or {}).get("counts") or {}
-        excluded = len(batch.get("excluded_rows") or [])
+        excluded_hashes = set(batch.get("excluded_rows") or [])
+        excluded_rows = [e for e in (batch.get("plan") or {}).get("rows") or [] if e.get("hash") in excluded_hashes]
+        excluded = len(excluded_rows)
+        ex_create = [e for e in excluded_rows if e.get("outcome") == imports.OUTCOME_CREATE]
         first_id = first_id or await store.first_prospect_id(batch["id"])
-        result_summary = {"created": counts.get("create", 0), "qualified": counts.get("qualified", 0),
-                          "unqualified": counts.get("unqualified", 0), "duplicates": counts.get("alreadyKnown", 0),
-                          "filled": counts.get("fills", 0), "excluded": excluded, "errors": 0}
+        result_summary = {"created": counts.get("create", 0) - len(ex_create),
+                          "qualified": counts.get("qualified", 0) - sum(1 for e in ex_create if e.get("status") == cfg.LEAD_QUALIFIED),
+                          "unqualified": counts.get("unqualified", 0) - sum(1 for e in ex_create if e.get("status") != cfg.LEAD_QUALIFIED),
+                          "duplicates": counts.get("alreadyKnown", 0) - sum(1 for e in excluded_rows if e.get("outcome") == imports.OUTCOME_ALREADY_KNOWN),
+                          "filled": counts.get("fills", 0) - sum(1 for e in excluded_rows if e.get("outcome") == imports.OUTCOME_FILLS),
+                          "excluded": excluded, "errors": 0}
         if first_id:
             await record_action(
                 client, app=APP_CAMPAIGNS, category=CAT_RECORD_EDIT, action="Leads Imported",

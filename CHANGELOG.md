@@ -5,6 +5,29 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.286.1] — 2026-10-25
+
+**fix(campaigns): Undo kept its promise on the M4 live pass's rehearsal.**
+Found at section 8 of the pass (Doug, 10-25-26 ~20:00 Eastern), read back
+from crm-test's leads and web log:
+
+- **A lead a later import filled is touched whatever the clock says.** The
+  October rows were written at 23:55 UTC and the November fills at 23:59 —
+  inside Undo's five-minute "the import's own write" window — so the two
+  filled leads read as untouched and were deleted with their fills. The
+  ledger knows every fill: `store.filled_by_later_batch` now names the
+  later import, and `touched_reasons` lists *filled by a later import
+  (<batch>)*. The window stays for everything the ledger cannot see.
+- **The *Import Undone* history row hung on a lead that had just been
+  deleted**, which the CRM refuses (*Can't relate with non-existing
+  record*), and its stream note was posted under the org-wide key, which
+  may not post. The row now hangs on a touched lead that still exists,
+  posted as the user; when every lead was deleted there is no record to
+  carry it, so the batch row's `undo_result` is the record and the web log
+  names every id.
+- **The in-parts *Leads Imported* summary counted excluded rows as
+  created** ("4 leads" for three). It subtracts them now.
+
 ## [0.286.0] — 2026-10-25
 
 **feat(campaigns): the import tool** — step M4 of the Marketing Management

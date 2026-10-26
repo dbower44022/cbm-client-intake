@@ -576,6 +576,26 @@ class CampaignStore(AudienceStoreMixin, ImportTemplateStoreMixin):
             )).mappings().all()
         return [dict(x) for x in rows]
 
+    async def filled_by_later_batch(self, batch_id: str, prospect_ids: list[str]) -> dict[str, str]:
+        """``{lead id: the other batch's name}`` for the leads among these that a
+        LATER import filled (ruling 87: a fill is work done on the lead since,
+        whatever the clock says — the M4 rehearsal's fills landed four minutes
+        after the create, inside the write window, and were lost)."""
+        if not prospect_ids:
+            return {}
+        r, b = prospect_import_row, prospect_import_batch
+        async with self._engine.begin() as conn:
+            rows = (await conn.execute(
+                select(r.c.prospect_id, b.c.name)
+                .join(b, b.c.id == r.c.batch_id)
+                .where(and_(r.c.prospect_id.in_(prospect_ids), r.c.outcome == "fills", r.c.batch_id != batch_id))
+                .order_by(r.c.created_at)
+            )).all()
+        out: dict[str, str] = {}
+        for prospect_id, name in rows:
+            out.setdefault(prospect_id, name)
+        return out
+
     async def forget_rows(self, batch_id: str, prospect_ids: list[str]) -> None:
         """Drop the ledger rows of leads Undo deleted, so their hashes are no
         longer known and a later import creates them again."""
