@@ -29,7 +29,9 @@ found; move resolved items to the bottom with the resolution date.
     `CEnrichmentFinding`, crm-test applied 10-22-26) are pushed and dark.
     Owed: phase 2's staff test on crm-test finished and recorded — the real
     model DID run on 10-22-26 (Doug on crm-test: the Great Lakes Brewing
-    Company lead, which found the `www.` duplicate fixed in v0.277.1), but
+    Company lead, which found the `www.` duplicate fixed in v0.277.1 — still
+    owed: press Accept on that lead's website finding on crm-test; it should
+    turn Accepted and leave the website unchanged), but
     which sections of the step page
     https://claude.ai/artifact/JePeP4H6XSGY4PnXsUVKgV were completed is not
     recorded (corrected 10-26-26 11:56); both phases' CRM fields on production at a Sunday slot and on
