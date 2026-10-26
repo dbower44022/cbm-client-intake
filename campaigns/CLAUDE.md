@@ -1,6 +1,6 @@
 # campaigns/ — Marketing Management (was Campaign Management)
 
-Last Updated: 10-25-26 19:30 · Revision 1.9
+Last Updated: 10-25-26 20:50 · Revision 1.10
 
 Detail for Campaign Management (`/campaigns`, prospect marketing Phases 1 to 4 and the lead model): links, postcards, the landing page, imports, the Leads and Review grids, calls, texts, email, attribution and reporting.
 
@@ -366,7 +366,12 @@ the reason.
   (ruling 127; the API role's `delete` on `CProspect` is in
   `migrate_outreach_roles.py`), only leads nobody touched
   (`touched_reasons` — a change within `UNDO_WINDOW` of the write is the
-  import's own), forgets their ledger rows, lists the rest; fills stay.
+  import's own, but a fill by a LATER import is a touch by the ledger,
+  `store.filled_by_later_batch`, whatever the clock says), forgets every
+  ledger row naming a deleted lead, lists the rest; fills stay. A known
+  hash whose lead the CRM no longer has is a new row again (`stale` on the
+  plan entry; the apply drops its rows first). **The apply has no lock
+  yet**: two Confirms within a second double a batch (owed).
   With the switch off, `plan_import` is the CSV path exactly as before
   and a known row is skipped, not filled. The tab is `imports.js`
   (ids `im_`), handed the Imports tab by `app.js`'s `loadImports` /
@@ -383,6 +388,7 @@ the reason.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.10 | 10-25-26 20:50 | Claude (Claude Code) | The import tool live-passed (v0.286.3): the later-fill touch, stale ledger rows, the apply lock owed. |
 | 1.9 | 10-25-26 19:30 | Claude (Claude Code) | The import tool (v0.286.0, § 7e.7, M4): templates, Excel, the worker preview, fills, the level per row, Undo under the org-wide key, the Imports tab script. |
 | 1.8 | 10-25-26 12:36 | Claude (Claude Code) | Review as the research queue (v0.285.0, § 7e.6, M3): the two modes, `seenLevel`, suggestions and `close_findings`, ruling 121 in `decide`. |
 | 1.7 | 10-25-26 11:15 | Claude (Claude Code) | The qualification ladder and the Leads tab (v0.284.0, § 7e.3–7e.4, M2): `ladder.py`, `after_write`, the sweep, the counts, Assign to, the lead's page. |

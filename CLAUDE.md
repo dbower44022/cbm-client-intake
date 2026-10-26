@@ -1217,11 +1217,12 @@ the strength of it.
   rulings 79–88, 111, 123, 127): templates, Excel, recognition and the
   four fixes, the preview as a worker job, fills, the level per row, Undo
   under the org-wide key. Dark behind `IMPORT_TEMPLATES`; migration 0035;
-  `openpyxl`. Pushed 10-25-26; the role cell applied on crm-test. The live
-  pass's section 8 found Undo deleting two filled leads (the fills were
-  inside its five-minute window) and its history row refused by the CRM:
-  **v0.286.1** fixes both, not yet pushed. Next: push, round two of the
-  pass, then M5 (`OPEN-ITEMS.md` #57).
+  `openpyxl`. **Live-passed on crm-test 10-25-26 20:49 as v0.286.3**
+  (round two run by Claude in Doug's signed-in tab; four Undo and
+  re-import defects found and fixed on the way, v0.286.1–v0.286.3, all
+  pushed). v0.286.4 (cosmetic) committed, not pushed. Owed: a lease on the
+  batch's apply (two Confirms within a second double every row). Next: M5
+  (`OPEN-ITEMS.md` #57).
 - **v0.285.0 (2026-10-25) — Review is the research queue, two modes**
   (build plan § 7e.6, M3; rulings 110, 121): *Judge* as before, *Find
   contacts* for Identified leads, *AI research* on every row, a Person

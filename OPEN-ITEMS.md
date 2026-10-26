@@ -95,17 +95,12 @@ found; move resolved items to the bottom with the resolution date.
     script. Design: a lease on the batch's apply (a column, migration 0036)
     refused with "being applied by <who>" while held. Also owed: the sandbox
     carries two rehearsal leads (Parkside Dental Lab, Westown Upholstery)
-    and a second template until tonight's reset. **Owed, in order**: (1) Doug runs `uv run python scripts/migrate_outreach_roles.py`
-    then `… --apply` on crm-test — the `delete` cell on the API role
-    (ruling 127; the classifier blocks a mutating role write from a
-    session); (2) the push; (3) `IMPORT_TEMPLATES` on at crm-test's /setup
-    and the live pass from the step page
-    https://claude.ai/artifact/5bnDamVEDRKpHYFVaZkvbG (rev 1.0, 36 steps in
-    nine sections; the two rehearsal workbooks are named in the M4 report);
-    (4) the
-    demo template appears on crm-test by itself after the next nightly
-    reset (the worker restores it) or at once through /setup → Operations
-    → *Sandbox demo campaign links*; then M5. Still owed: the handoff on
+    and a second template until tonight's reset. **Owed, in order**:
+    (1) ~~the role cell~~ done 10-25-26 by Doug; (2) ~~the push~~ done;
+    (3) ~~the live pass~~ done (step page
+    https://claude.ai/artifact/5bnDamVEDRKpHYFVaZkvbG rev 1.1, 74 steps;
+    the demo template restored through the Operations job in section 3);
+    (4) Doug pushes v0.286.4; (5) the apply lease; then M5. Still owed: the handoff on
     production at the arc's slot and on Boston with its release (now with
     the third role cell); the layout question in the handoff's § 7.
 
