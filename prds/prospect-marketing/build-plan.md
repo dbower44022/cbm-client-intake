@@ -2123,7 +2123,11 @@ not in the screen:
 
 The sender is the user's own `cbmEmail`. **Today that is read from the
 user's `CMentorProfile`, and a marketing staff member may have none.** The
-compose refuses with a message naming what is missing (Draft 4).
+compose refuses with a message naming what is missing (Draft 4; ruled as
+ruling 120: the mentor profile's address, else the user's own on the mail
+domain). **The compose is the session tools' full composer, lifted into
+`frontend/shared/` and shared by both pages (ruling 128, 10-25-26); on a
+lead it runs without Cc/Bcc, Documents or reply.**
 
 **Log a call.** Today a call is a `COutreachTouch` on a running call
 campaign. Personal outreach has no campaign. **Draft 3**: the touch's
@@ -2651,7 +2655,11 @@ Team caller for M1 and M10).
    **M4 live-passed.** Next: M5; the sandbox
    re-baseline is not needed for the template (see above).
 5. **M5: personal outreach** (§ 7e.5), behind `LEAD_OUTREACH`, after the
-   handoff's link and touch changes. About four days.
+   handoff's link and touch changes. About four days, plus two for the
+   shared composer. Plan approved by Doug 10-25-26 23:17 (four stops, to
+   be run in one session; ruling 128 settled the compose: the full
+   composer, lifted into `frontend/shared/` and served to both pages);
+   kickoff `prompts/m5-personal-outreach-kickoff.md`.
 6. **M6: lists** (§ 7e.8). About four days.
 7. **M7: Constant Contact per list and the email campaign** (§ 7e.9
    first half), behind `CAMPAIGN_LIST_SYNC`. About three days, plus the
@@ -2939,7 +2947,7 @@ best-effort mirror.
 |---|---|
 | Document | Prospect Marketing — build plan |
 | Version | v0.26 — Phases 1–4 and the lead model built; §§ 7b and 7c built and live-passed on crm-test; § 7d (the lead identifier in every link, rulings 71–75) approved, D1 built; § 7e (the Marketing Management redesign, rulings 79–125) approved, steps M1 (v0.279.0), M2 (v0.284.0), M3 (v0.285.0) and M4 (v0.286.0, live-passed as v0.286.3) built |
-| Last Updated | 10-25-26 20:50 |
+| Last Updated | 10-25-26 23:20 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Session | 2026-10-14 planning session (v0.1) and the same evening's revision session (v0.2), both from `history/prompts/prospect-marketing-build-plan-prompt-v0.1.md`; moved into this directory the same night (v0.2.1) |
 | Related | `rulings.md` (rulings 1–27 and the Campaign Management requirements CM-1 to CM-11), `history/prospect-marketing-plan.md` (the discussion record), `prds/mailing-list-and-event-sponsorship-plan.md` (the notice vocabulary, the push), `prds/chapter-network/crm-update-runbook.md`, `forms/client_intake/orchestrator.py` (the partner-link precedent), `core/crm_upsert.py`, `core/mailing_sync.py` |
@@ -2948,6 +2956,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.54 | 10-25-26 23:20 | Claude (Claude Code) | § 7e.13 step M5: plan approved (four stops, one session), ruling 128 recorded in § 7e.5, kickoff prompt written (`prompts/m5-personal-outreach-kickoff.md`). |
 | 0.53 | 10-25-26 20:50 | Claude (Claude Code) | § 7e.13 step M4 live-passed on crm-test (round two, run by Claude; v0.286.2 and v0.286.3 fixed on the way; the apply race owed); § 7e.7 heading marked live-passed. Next: M5. |
 | 0.52 | 10-25-26 20:15 | Claude (Claude Code) | § 7e.13 step M4: the live pass's first round (sections 1–7 passed; section 8's two Undo defects, fixed in v0.286.1). |
 | 0.51 | 10-25-26 19:30 | Claude (Claude Code) | § 7e.13 step M4 built (v0.286.0): the import tool; the routine choices and the two made on the way recorded under the step; § 7e.7 heading marked built. The role script and the live pass owed. |

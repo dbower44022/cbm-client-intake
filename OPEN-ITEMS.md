@@ -100,7 +100,10 @@ found; move resolved items to the bottom with the resolution date.
     https://claude.ai/artifact/5bnDamVEDRKpHYFVaZkvbG rev 1.1, 74 steps;
     the demo template restored through the Operations job in section 3);
     (4) ~~Doug pushes v0.286.4~~ done 22:47; (5) ~~the apply lease~~ built
-    as v0.287.0 (migration 0036), committed, not pushed; then M5. Still owed: the handoff on
+    as v0.287.0 (migration 0036), pushed 23:14. **M5 plan approved
+    10-25-26 23:17** (four stops in one session; ruling 128: the full
+    composer, shared); run it from `prompts/m5-personal-outreach-kickoff.md`
+    in a fresh session. Still owed: the handoff on
     production at the arc's slot and on Boston with its release (now with
     the third role cell); the layout question in the handoff's § 7.
 

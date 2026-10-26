@@ -1222,7 +1222,9 @@ the strength of it.
   re-import defects found and fixed on the way, v0.286.1–v0.286.3, all
   pushed). v0.286.4 pushed 22:47. **v0.287.0** (the batch write lease,
   migration 0036: two Confirms within a second no longer double a batch)
-  committed, not pushed. Next: push, M5 (`OPEN-ITEMS.md` #57).
+  pushed 23:14. **M5 plan approved 23:17** (ruling 128, the full composer
+  shared with the session tools); run `prompts/m5-personal-outreach-kickoff.md`
+  in a fresh session (`OPEN-ITEMS.md` #57).
 - **v0.285.0 (2026-10-25) — Review is the research queue, two modes**
   (build plan § 7e.6, M3; rulings 110, 121): *Judge* as before, *Find
   contacts* for Identified leads, *AI research* on every row, a Person

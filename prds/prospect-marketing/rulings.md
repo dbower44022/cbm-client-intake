@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-25-26 18:52 · Revision 1.50 — change log at the end.
+Last Updated: 10-25-26 23:20 · Revision 1.51 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -1347,6 +1347,18 @@ both after the redesign. Doug's reply at 11:13: "a".
      script before M4's live pass, production at the arc's slot, Boston
      with its release); the CRM's own history shows the deletion as the
      application. (10-25-26)
+128. **The lead's page gets the full email composer, shared with the
+     session tools** (option 2 of two). Put as a consequential decision
+     for M5 (build plan § 7e.5, ruling 107): option 1, a small compose on
+     the lead's page (To fixed, Subject, a rich-text body, the signature);
+     option 2, the session tools' full composer — templates, attachments,
+     drafts — lifted from `sessions/frontend/app.js` into
+     `frontend/shared/` so both pages serve one component, with Cc/Bcc,
+     the record's Documents and reply off for a lead (one person to one
+     person; a lead has no Drive folder). Doug: "Full email composer".
+     Standing cost: about two days to lift the component before the
+     outreach work, and the session tools re-tested on the shared one.
+     (10-25-26)
 
 ---
 
@@ -1477,6 +1489,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.51 | 10-25-26 23:20 | Claude (Claude Code) | Ruling 128 appended: the lead's page gets the full email composer, shared with the session tools (Doug's "Full email composer", M5 plan approval). |
 | 1.50 | 10-25-26 18:52 | Claude (Claude Code) | Ruling 127 appended: an undone import's leads deleted under the org-wide key, the API role gains delete on the lead record (Doug's "1", M4 plan approval). |
 | 1.49 | 10-25-26 11:13 | Claude (Claude Code) | Ruling 126 appended: the lead code's D2 next, D3's pieces inside § 7e's steps M2, M7 and M10 (Doug's "a"). Header revision corrected from 1.47. |
 | 1.48 | 10-23-26 03:53 | Claude (Claude Code) | Rulings 117–125 appended: build plan § 7e.12's nine Drafts, approved as recommended — six as drafted, Drafts 4, 6 and 7 as Claude's recommended change (Doug, 10-23-26). |
