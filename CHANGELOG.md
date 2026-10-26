@@ -5,6 +5,17 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.289.1] — 2026-10-26
+
+**fix(core): an action with no CRM record writes its history row.** Every
+campaign-list action since v0.270.0 sent its `CActionLog` row with an empty
+record reference, and the CRM refused it (HTTP 400, `field: record, type:
+pattern`; eight refusals during M6's live pass, found on its read-back). A
+list lives in the application database, so it has no record to point at:
+`core/action_log.log_action` now leaves the reference out when there is
+none, and `record_action` skips the stream note (there is no stream to post
+on). Proven against crm-test's CRM: a record-less row stores. One new test.
+
 ## [0.289.0] — 2026-10-26
 
 **feat(campaigns): lists described by Include and Leave out** (build plan

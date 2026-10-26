@@ -201,11 +201,14 @@ async def log_action(
             # written as recordType/recordId. parentType/parentId are sent too so
             # this also works against a `parent`-named link; EspoCRM ignores an
             # attribute for a field that doesn't exist.
-            "recordType": parent_type,
-            "recordId": parent_id,
-            "parentType": parent_type,
-            "parentId": parent_id,
         }
+        # An action on something with no CRM record (a campaign list lives in
+        # the application database) carries no record reference: an empty
+        # recordType fails the CRM's pattern check and the whole row is
+        # refused (HTTP 400, every list action since v0.270.0, found 10-26-26).
+        if parent_type and parent_id:
+            payload.update({"recordType": parent_type, "recordId": parent_id,
+                            "parentType": parent_type, "parentId": parent_id})
         if actor_id:
             payload["actorId"] = actor_id
         await client.create(ACTION_LOG_ENTITY, payload)
@@ -248,10 +251,11 @@ async def record_action(
     keep); otherwise a standard ``[App] <summary> · by <Actor>`` line is posted.
     """
     note_text = note if note is not None else _default_note(app, summary, actor_name)
-    try:
-        await post_stream_note(user_client, parent_type, parent_id, note_text)
-    except Exception as exc:  # noqa: BLE001 — post_stream_note already swallows, belt-and-suspenders
-        log.warning("stream note failed (%s/%s): %s", parent_type, parent_id, exc)
+    if parent_type and parent_id:  # no CRM record ⇒ no stream to post on
+        try:
+            await post_stream_note(user_client, parent_type, parent_id, note_text)
+        except Exception as exc:  # noqa: BLE001 — post_stream_note already swallows, belt-and-suspenders
+            log.warning("stream note failed (%s/%s): %s", parent_type, parent_id, exc)
     await log_action(
         app=app, category=category, action=action,
         parent_type=parent_type, parent_id=parent_id, summary=summary,

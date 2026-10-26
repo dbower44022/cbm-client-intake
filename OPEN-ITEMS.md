@@ -138,7 +138,8 @@ found; move resolved items to the bottom with the resolution date.
     `recordType`/`recordId`, and the CRM refuses the row (HTTP 400, `field:
     record, type: pattern`; eight refusals in crm-test's web log during
     the pass). Since v0.270.0. Fix: leave the record reference out when
-    there is none; (2)
+    there is none — **fixed in v0.289.1 (10-26-26 11:56, not pushed)**, a record-less
+    row proven to store on crm-test; (2)
     decide whether `qualificationLevel` and `phone` join
     `audience.DEFAULT_FIELDS` (M7's prompt treats it as routine: yes).
     Next: M7, Constant Contact per list and the email campaign (§ 7e.9

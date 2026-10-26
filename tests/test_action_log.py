@@ -146,3 +146,23 @@ async def test_record_action_custom_note_text_preserved(monkeypatch):
     )
     notes = [p for e, p in user_client.created if e == "Note"]
     assert notes[0]["post"] == "Mentor X replaced with Y by Bob."
+
+
+@pytest.mark.anyio
+async def test_an_action_with_no_crm_record_carries_no_reference(monkeypatch):
+    """A campaign list lives in the application database: its action row must
+    not send an empty recordType, which the CRM refuses (HTTP 400, every list
+    action since v0.270.0, found 10-26-26), and no stream note is attempted."""
+    user_client = FakeEspo(scopes_has=True)
+    api_client = FakeEspo(scopes_has=True)
+    monkeypatch.setattr(action_log, "_actionlog_client", lambda: api_client)
+    await action_log.record_action(
+        user_client, app="Campaign Management", category=action_log.CAT_RECORD_EDIT,
+        action="Campaign List Created", parent_type="", parent_id="",
+        summary='Created the dynamic list "Downtown"', actor_name="Mark Marketing",
+    )
+    assert user_client.created == []
+    (entity, payload), = api_client.created
+    assert entity == "CActionLog" and payload["actionType"] == "Campaign List Created"
+    for key in ("recordType", "recordId", "parentType", "parentId"):
+        assert key not in payload
