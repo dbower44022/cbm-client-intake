@@ -108,6 +108,8 @@ class TemplateStore(FakeStore):
             if r.get("prospect_id") in prospect_ids and r["outcome"] == "fills" and r.get("batch_id") != batch_id:
                 out.setdefault(r["prospect_id"], self.batches[r["batch_id"]]["name"])
         return out
+    async def forget_hashes(self, hashes):
+        self.rows = [r for r in self.rows if r["row_hash"] not in set(hashes)]
     async def forget_rows(self, batch_id, prospect_ids):
         self.rows = [r for r in self.rows if r.get("prospect_id") not in set(prospect_ids)]
     async def record_undo(self, batch_id, *, deleted, touched, errors, done, actor):
@@ -780,6 +782,12 @@ def test_a_ledger_row_whose_lead_is_gone_plans_as_a_create_again():
     run(imports.plan_batch_now(crm, store, batch["id"], ladder=True))
     by_name = {r["name"]: r for r in run(store.get_batch(batch["id"]))["plan"]["rows"]}
     assert by_name["Quiet Shop"]["outcome"] == "create" and by_name["Acme Widgets"]["outcome"] == "known_row"
+    assert by_name["Quiet Shop"]["stale"] is True
+    # And the apply CREATES it (the across-batch check must not skip a stale hash — v0.286.3).
+    result = run(imports.apply_import(crm, crm, store, run(store.get_batch(batch["id"])), user_name="Mark"))
+    assert result["created"] == 1 and result["skipped"] == 2
+    assert "Quiet Shop" in {p["businessName"] for p in crm.rows[cfg.PROSPECT].values()}
+    assert len([r for r in store.rows if r["business_name"] == "Quiet Shop"]) == 1
     # And Undo forgets every row naming a deleted lead, other batches' fills included.
     rows = _chamber_rows(); rows[2].update(owner="Bo Ray", e_mail="bo@named.example")
     _plan_and_apply(store, crm, rows=rows, name="Fill Named Only")

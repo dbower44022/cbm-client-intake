@@ -596,6 +596,15 @@ class CampaignStore(AudienceStoreMixin, ImportTemplateStoreMixin):
             out.setdefault(prospect_id, name)
         return out
 
+    async def forget_hashes(self, hashes: list[str]) -> None:
+        """Drop every ledger row for these row hashes — the preview found them
+        naming leads the CRM no longer has, so nothing they record is true."""
+        if not hashes:
+            return
+        r = prospect_import_row
+        async with self._engine.begin() as conn:
+            await conn.execute(delete(r).where(r.c.row_hash.in_(hashes)))
+
     async def forget_rows(self, batch_id: str, prospect_ids: list[str]) -> None:
         """Drop EVERY ledger row that names a lead Undo deleted — this batch's
         creates and any other batch's fills alike — so the hashes are no longer

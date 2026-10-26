@@ -529,6 +529,8 @@ async def _plan_entries(api_client: EspoApi, store, rows: list[dict[str, Any]], 
             else:
                 entry["outcome"] = OUTCOME_CREATE
                 entry["status"] = entry_status_for(settings, row)
+                if (fills.get(h) or {}).get("gone"):
+                    entry["stale"] = True       # the ledger named a lead the CRM no longer has
                 counts["create"] += 1
                 counts["qualified" if entry["status"] == cfg.LEAD_QUALIFIED else "unqualified"] += 1
                 if entry["status"] == cfg.LEAD_QUALIFIED and ladder:
@@ -803,6 +805,12 @@ async def apply_import(api_client: EspoApi, user_client: EspoApi, store, batch: 
     plan = batch.get("plan") or {}
     rows = plan.get("rows") or []
     excluded = set(batch.get("excluded_rows") or [])
+    # A row the preview found pointing at a lead the CRM no longer has: its
+    # stale ledger rows are dropped first, or the across-batch check below
+    # would skip the create (round two of the M4 pass, 10-25-26, v0.286.3).
+    stale = [e["hash"] for e in rows if e.get("stale") and e["hash"] not in excluded]
+    if stale:
+        await store.forget_hashes(stale)
     done = await store.known_row_hashes([e["hash"] for e in rows])
     # A fill's hash is known across batches by definition: for fills "done"
     # means recorded by THIS batch.

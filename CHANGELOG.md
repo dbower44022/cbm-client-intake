@@ -5,6 +5,15 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.286.3] — 2026-10-25
+
+**fix(campaigns): the apply creates the rows the preview marked stale.**
+v0.286.2 taught the preview that a known hash whose lead is gone is a new
+row, but the apply's own across-batch "already created" check still saw the
+stale ledger rows and skipped the two creates (round two of the M4 pass:
+"1 New leads" for three). The preview marks such entries `stale`; the apply
+drops their ledger rows (`store.forget_hashes`) before the check.
+
 ## [0.286.2] — 2026-10-25
 
 **fix(campaigns): a ledger row whose lead is gone is a new row again.** Found
