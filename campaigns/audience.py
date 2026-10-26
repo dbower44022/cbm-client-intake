@@ -92,10 +92,12 @@ ORG_TYPES = ("client", "partner", "funder")
 
 #: § 7c.3, verified against crm-test's metadata on 10-20-26. ``industry`` on a
 #: lead (ruling 66) and ``funderStatus`` (ruling 67) are offered only where the
-#: CRM has them.
+#: CRM has them; so are the lead's ``qualificationLevel`` and ``phone`` (added
+#: by M7, owed from M6's live pass: the ready-made lists of M8 filter on the
+#: level).
 DEFAULT_FIELDS: dict[str, list[str]] = {
     "lead": ["leadStatus", "leadSource", "industry", "mailingAddressPostalCode", "mailingAddressCity",
-             "importBatch", "createdAt", "qualifiedAt", "sideExit"],
+             "importBatch", "createdAt", "qualifiedAt", "sideExit", "qualificationLevel", "phone"],
     "contact": [CONTACT_TYPE_FIELD, "cFunnelStage", "cMarketingOptIn", "cSmsOptIn", "cHowDidYouHear",
                 "addressPostalCode", "createdAt"],
     "client": ["engagementStatus", "closeDate", "closeReason", "engagementStartDate", "mentoringFocusAreas",
@@ -110,6 +112,7 @@ DEFAULT_FIELDS: dict[str, list[str]] = {
 }
 DEFAULT_LABELS: dict[str, dict[str, str]] = {
     "lead": {"leadStatus": "Lead status", "leadSource": "Lead Source", "industry": "Industry",
+             "qualificationLevel": "Level", "phone": "Phone",
              "mailingAddressPostalCode": "Postal code", "mailingAddressCity": "City",
              "importBatch": "Import batch", "createdAt": "Arrived", "qualifiedAt": "Qualified on",
              "sideExit": "Exit"},

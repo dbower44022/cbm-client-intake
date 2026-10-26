@@ -31,7 +31,9 @@ from core.action_log import CAT_RECORD_EDIT, CAT_STATUS, record_action
 from core.config import Settings, get_settings
 from core.espo import EspoError
 
-from . import audience
+import asyncio
+
+from . import audience, list_sync
 from . import config as cfg
 from .audience import AudienceError
 from .audience_store import (
@@ -94,6 +96,11 @@ def _public(row: dict[str, Any], *, used: int = 0, members: Optional[int] = None
         "members": members, "usedBy": used, "lastUsed": _iso(last_used),
         "createdBy": row.get("created_by") or "", "updatedBy": row.get("updated_by") or "",
         "updatedAt": _iso(row.get("updated_at")),
+        # The copy in Constant Contact (§ 7e.9); the page shows it when the
+        # session says listSyncOn.
+        "ccSync": bool(row.get("cc_sync")), "ccHasCopy": bool(row.get("cc_list_id")),
+        "ccLastSyncAt": _iso(row.get("cc_last_sync_at")), "ccLastSync": row.get("cc_last_sync") or {},
+        "ccStatus": list_sync.status_words(row),
     }
 
 
@@ -277,12 +284,24 @@ async def save_list(list_id: str, body: ListIn, request: Request) -> dict[str, A
         raise HTTPException(status_code=400, detail=KIND_FIXED)
     name, notes, kind, recipe = _validated(body)
     await _refuse_cycle(store, recipe, list_id)
+    settings = get_settings()
+    if name != row["name"] and row.get("cc_sync") and settings.campaign_list_sync:
+        _refuse_copy_name(settings, name)
+        await _refuse_twin(store, name, list_id)
     saved = await store.save_list(list_id, name=name, notes=notes, kind=kind, recipe=recipe, actor=_who(user))
     if saved["version"] != row["version"]:
         await _log(client, user, "Campaign List Changed",
                    f"Changed the list \"{name}\" — now version {saved['version']}",
                    details={"list": list_id, "version": saved["version"]})
-    return {"list": _public(saved)}
+    out: dict[str, Any] = {"list": _public(saved)}
+    if name != row["name"] and saved.get("cc_list_id") and settings.campaign_list_sync:
+        # The copy follows the rename now; if the vendor refuses, the next
+        # sync renames it (it finds the copy by its id).
+        problem = await list_sync.rename_copy(settings, saved["cc_list_id"], name)
+        out["copyNote"] = (f"The copy in Constant Contact is renamed \"{name}\"." if not problem else
+                           f"The copy in Constant Contact keeps its old name for now — the next sync renames "
+                           f"it ({problem}).")
+    return out
 
 
 class PreviewIn(BaseModel):
@@ -770,6 +789,94 @@ async def delete_list(list_id: str, request: Request) -> dict[str, Any]:
     await _log(client, user, "Campaign List Deleted", f"Deleted the unused list \"{row['name']}\"",
                details={"list": list_id})
     return {"ok": True}
+
+
+# --- the copy in Constant Contact (§ 7e.9, ruling 95) -----------------------------------
+
+def _require_sync(settings: Settings) -> None:
+    if not settings.campaign_list_sync:
+        raise HTTPException(status_code=404, detail=(
+            "Copies in Constant Contact are switched off (Campaign list copies at /setup)."))
+
+
+def _refuse_copy_name(settings: Settings, name: str) -> None:
+    if name.strip().casefold() == (settings.mailing_list_name or "").strip().casefold():
+        raise HTTPException(status_code=400, detail=(
+            f"\"{name}\" is the name of the standing mailing list at Constant Contact — a list with "
+            "its copy on needs a name of its own."))
+
+
+async def _refuse_twin(store, name: str, list_id: str) -> None:
+    for other in await store.all_lists():
+        if (other["id"] != list_id and other.get("cc_sync")
+                and other["name"].strip().casefold() == name.strip().casefold()):
+            raise HTTPException(status_code=400, detail=(
+                f"The list \"{other['name']}\" already keeps a copy under that name — two copies "
+                "cannot share a name at Constant Contact. Rename one of them."))
+
+
+class CopyOnIn(BaseModel):
+    on: bool
+
+
+@lists_router.put("/lists/{list_id}/cc-copy")
+async def set_copy(list_id: str, body: CopyOnIn, request: Request) -> dict[str, Any]:
+    """The *Keep a copy in Constant Contact* tick. Unticking stops the sync and
+    keeps the copy; the next mailing pass, or *Sync now*, makes or updates it."""
+    user, client = _actor(request)
+    settings = get_settings()
+    _require_lists(settings)
+    _require_sync(settings)
+    store = _store(request)
+    row = await _list_or_404(store, list_id)
+    if body.on:
+        _not_retired(row)
+        _refuse_copy_name(settings, row["name"])
+        await _refuse_twin(store, row["name"], list_id)
+    updated = await store.set_cc_sync(list_id, body.on, _who(user))
+    await _log(client, user, "Campaign List Copy " + ("On" if body.on else "Off"),
+               (f"The list \"{row['name']}\" now keeps a copy in Constant Contact" if body.on else
+                f"The list \"{row['name']}\" no longer keeps a copy in Constant Contact (the copy is kept)"),
+               details={"list": list_id})
+    return {"list": _public(updated)}
+
+
+async def run_sync_now(settings: Settings, request: Request, store, row: dict[str, Any]):
+    """One list's sync from a web request, bounded in time. Raises 400/504
+    with the reason in words."""
+    if not row.get("cc_sync"):
+        raise HTTPException(status_code=400, detail=(
+            f"The list \"{row['name']}\" keeps no copy in Constant Contact — tick Keep a copy in "
+            "Constant Contact first."))
+    _not_retired(row)
+    try:
+        result = await asyncio.wait_for(
+            list_sync.sync_now(settings, row, campaign_store=store, crm=_api_client(settings, request)),
+            timeout=list_sync.SYNC_NOW_SECONDS)
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail=(
+            "The sync is taking longer than a page can wait. What it finished is kept, and the next "
+            "mailing pass completes the rest — look again in a few minutes."))
+    if not result.ok:
+        raise HTTPException(status_code=400, detail=f"The copy could not be synced: {result.error}")
+    return result
+
+
+@lists_router.post("/lists/{list_id}/sync-now")
+async def sync_now(list_id: str, request: Request) -> dict[str, Any]:
+    user, client = _actor(request)
+    settings = get_settings()
+    _require_lists(settings)
+    _require_sync(settings)
+    store = _store(request)
+    row = await _list_or_404(store, list_id)
+    result = await run_sync_now(settings, request, store, row)
+    summary = result.summary
+    await _log(client, user, "Campaign List Synced",
+               (f"Synced the copy of \"{row['name']}\" in Constant Contact: {summary.get('audience', 0)} on it, "
+                f"{summary.get('added', 0)} added, {summary.get('removed', 0)} removed"),
+               details={"list": list_id, "summary": summary})
+    return {"list": _public(await store.get_list(list_id)), "summary": summary}
 
 
 # --- a campaign's list ----------------------------------------------------------------

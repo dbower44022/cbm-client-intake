@@ -1,6 +1,6 @@
 # campaigns/ — Marketing Management (was Campaign Management)
 
-Last Updated: 10-26-26 02:45 · Revision 1.13
+Last Updated: 10-26-26 12:05 · Revision 1.14
 
 Detail for Campaign Management (`/campaigns`, prospect marketing Phases 1 to 4 and the lead model): links, postcards, the landing page, imports, the Leads and Review grids, calls, texts, email, attribution and reporting.
 
@@ -206,7 +206,14 @@ the reason.
   configured; the body is parsed by hand (no python-multipart).
   **Email (`CAMPAIGNS_EMAIL`):** `campaigns/email.py` pushes each campaign
   as its OWN list `Campaign — <name>` and never reads or writes the
-  standing list or its stored id; *Mark as sent* completes it. **The
+  standing list or its stored id; *Mark as sent* completes it — **the
+  switch-off path since M7**: with `CAMPAIGN_LIST_SYNC` on, an email
+  campaign must choose a list, its build writes no touch (the send report
+  of M9 writes them), sign-off requires the list's copy and syncs it
+  (`router._sign_off_to_copy` → `lists_router.run_sync_now`), and *Pick the
+  email* stores the vendor's id on `COutreachCampaign.vendorEmailId`
+  (feature-detected, written under the API key) and moves it to Running;
+  `run_email_cycle` pushes nothing. **The
   funnel** (`reporting.funnel`, Candidate/Client from the engagement
   status) and **the campaign dashboard scope** `COutreachCampaign`
   (`analytics/campaigns.py`, counts under the org key after the user's read
@@ -265,7 +272,23 @@ the reason.
   `audience=` to each kind's `build_list`); one naming none builds exactly
   as before. **A Mentor, Member or Administrator contact is emailed at
   their `cbmEmail` only** — `audience.address_for_email`, used by the push
-  for every email campaign. **L2 (v0.271.0)**: clients (an *engagement*),
+  for every email campaign. **A list's copy in Constant Contact** (v0.290.0,
+  M7, § 7e.9, ruling 95; behind **`CAMPAIGN_LIST_SYNC`**; migration 0038's
+  `cc_*` columns): `campaigns/list_sync.py` is the per-list sync over
+  `core/mailing_sync`'s parameterised `build_plan` / `apply_plan`. The copy
+  holds `resolve_targets(..., KIND_EMAIL, ...)` of the list's current members,
+  is found by its stored id and then by name (**never create a copy without
+  looking by name first** — the reset empties the id, the vendor keeps the
+  list), follows a rename, and is never deleted by the application. One
+  worker pass (`run_pass`) reads the unsubscribes and the custom field once
+  and runs the standing list, then every active ticked list; *Sync now* is
+  the only sync a web request runs, for one list, bounded at
+  `SYNC_NOW_SECONDS`. **Every push writes the lead code** as the
+  `cf:cbm_lead_code` column (`give_codes`, minted under the org-wide key, at
+  most `MINT_PER_PASS`), and re-imports the people already on a copy so a
+  replaced code reaches the vendor. The vendor shapes M7 added are inferred
+  until the live send; the build plan's § 7e.12 Draft 8 records which were
+  confirmed. **L2 (v0.271.0)**: clients (an *engagement*),
   partners and funders; **dotted field names follow links**
   (`audience.resolve_path` — belongsTo walks `<link>Id`, hasOne walks
   backwards through the foreign key, so `CClientProfile.linkedCompany`
@@ -435,6 +458,7 @@ the reason.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.14 | 10-26-26 12:05 | Claude (Claude Code) | A list's copy in Constant Contact and the email campaign that sends to it (v0.290.0, § 7e.9, M7): the copy's identity, the one pass, the lead code column, the switch-off path kept. |
 | 1.13 | 10-26-26 02:45 | Claude (Claude Code) | Campaign lists rewritten to Include and Leave out (v0.289.0, § 7e.8, M6): the groups, static lists as hand rows, Exclude, the fixed kind, Copy, the per-channel counts. |
 | 1.12 | 10-26-26 00:10 | Claude (Claude Code) | Personal outreach from the lead's page (v0.288.0, § 7e.5, M5): the shared composer, the one mailbox rule, the guardrails, the footer, the stored outcome words, `apply_outcome`, the sync's lead source, the Mine chip. |
 | 1.11 | 10-25-26 22:48 | Claude (Claude Code) | The import batch write lease (v0.287.0). |

@@ -141,8 +141,14 @@ async def callback(
             return tokens.access_token
         client = mailing_mod.MailingClient(_fresh, base_url=settings.mailing_base_url)
         label = await client.account_label()
+        if settings.campaign_list_sync:
+            # The lead-code custom field, made once when the connection is made
+            # (build plan § 7d.2); every push checks it again.
+            from campaigns.list_sync import ensure_code_field
+
+            await ensure_code_field(client)
     except MailingError as exc:
-        log.info("mailing: account summary unavailable after connect: %s", exc)
+        log.info("mailing: account summary or custom field unavailable after connect: %s", exc)
 
     try:
         await store.save(

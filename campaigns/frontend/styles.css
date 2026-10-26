@@ -210,3 +210,8 @@ body.cm--import-tool #importsGrid, body.cm--import-tool #importsEmpty, body.cm--
 .cm__callform legend { padding: 0 .3rem; font-weight: 600; }
 .cm__callform label.cm__radio { display: flex; gap: .5rem; align-items: baseline; }
 .cm__callform label.cm__radio small { color: var(--cbm-muted, #4b5a63); }
+
+/* An email campaign with copies on (build plan § 7e.9): the address to paste
+   into a notice under each link, and the Pick the email choices. */
+.cm__paste { margin-top: .3rem; }
+.cm__pick { display: flex; flex-direction: column; gap: .35rem; margin-top: .5rem; }

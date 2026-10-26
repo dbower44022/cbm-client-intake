@@ -1,6 +1,6 @@
 # Mailing list sync — Constant Contact setup and activation runbook
 
-Last Updated: 10-09-26 11:35 · Revision 0.7 — change log at the end.
+Last Updated: 10-26-26 12:15 · Revision 0.8 — change log at the end.
 
 How to register this application with Constant Contact, connect one
 deployment to one Constant Contact account, and switch the audience push on.
@@ -385,6 +385,26 @@ must be read as a plan before it is allowed to write.
 
 ---
 
+## 4a. Copies of campaign lists and the lead-code field (v0.290.0)
+
+With **Campaign list copies** (`CAMPAIGN_LIST_SYNC`) switched on at /setup,
+the same connection does two more things. Nothing here needs a second
+authorisation: the `campaign_data` scope was asked for at the first connect.
+
+- **The custom field `cbm_lead_code`** is made in the Constant Contact account
+  when the connection is made, and checked by every push. Feature readiness →
+  Mailing list sync shows its state on the line *custom field cbm_lead_code*.
+  Never delete the field at Constant Contact: the next push makes it again,
+  and links in notices sent in between carry no code.
+- **A list in Marketing Management may keep a copy** in the account, under the
+  list's own name. The nightly push runs the standing list and then every
+  list with its copy on. A copy is never deleted by the application; delete
+  one at Constant Contact by hand only after unticking it in the application.
+
+On crm-test the copies survive the nightly reset at Constant Contact while
+the application forgets their ids; the next sync finds each copy again by its
+name.
+
 ## 5. Troubleshooting
 
 | Symptom | Meaning |
@@ -402,6 +422,7 @@ must be read as a plan before it is allowed to write.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.8 | 10-26-26 12:15 | Claude (Claude Code) | § 4a added: the lead-code custom field and the copies of campaign lists (v0.290.0, M7). |
 | 0.7 | 10-09-26 11:35 | Claude (Claude Code) | Live pass on crm-test: §§ 2–3 passed, § 4 dry run, apply and the vendor's list verified (Doug). § 5 gains the no-manual-unsubscribe row; Temporary Hold withheld as of v0.244.1. |
 | 0.6 | 10-09-26 02:17 | Claude (Claude Code) | § 4 rewritten to the built Operations jobs (Mailing list push / unsubscribe pull, dry run then apply, the plan's exact lines), the Features switch, and the last-push line. Status updated; v0.243.0 deployment recorded. |
 | 0.5 | 10-09-26 00:40 | Claude (Claude Code) | §§ 2–3 rewritten to the built page (v0.243.0): the two credential rows and the Change setting dialog, the Mailing list sync block on the Feature readiness tab with the connection line, the redirect address with Copy, Connect / Disconnect, and the outcome banner. Status updated. |

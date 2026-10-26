@@ -343,6 +343,37 @@ async def test_find_list_matches_the_name_ignoring_case_and_create_posts_the_nam
     assert fake.requests[2]["json"] == {"name": "Event notices", "favorite": False}
 
 
+async def test_find_list_by_id_and_rename_put_the_name(monkeypatch):
+    """M7: a list's copy follows the list by its id (inferred rename shape)."""
+    fake = FakeVendorHTTP([
+        (200, {"lists": [{"list_id": "L1", "name": "Old"}, {"list_id": "L2", "name": "Other"}]}, None),
+        (200, {"list_id": "L1", "name": "New"}, None),
+    ]).install(monkeypatch)
+    api = client()
+    assert (await api.find_list_by_id("L1"))["name"] == "Old"
+    assert await api.find_list_by_id("") is None                      # no request for an empty id
+    await api.rename_list("L1", "New")
+    assert fake.requests[1]["method"] == "PUT"
+    assert fake.requests[1]["url"].endswith("/contact_lists/L1")
+    assert fake.requests[1]["json"] == {"name": "New", "favorite": False}
+
+
+async def test_custom_fields_are_found_by_name_or_label_and_created_as_text(monkeypatch):
+    fake = FakeVendorHTTP([
+        (200, {"custom_fields": [{"custom_field_id": "f1", "label": "Shoe size", "name": "shoe_size"}],
+               "_links": {"next": {"href": "/v3/contact_custom_fields?cursor=2"}}}, None),
+        (200, {"custom_fields": [{"custom_field_id": "f2", "label": "cbm_lead_code", "name": "cbm_lead_code"}]}, None),
+        (200, {"custom_fields": []}, None),
+        (201, {"custom_field_id": "f3", "label": "cbm_lead_code", "name": "cbm_lead_code"}, None),
+    ]).install(monkeypatch)
+    api = client()
+    assert (await api.find_custom_field("CBM_LEAD_CODE"))["custom_field_id"] == "f2"
+    assert fake.requests[1]["url"].endswith("/contact_custom_fields?cursor=2")
+    assert await api.find_custom_field("cbm_lead_code") is None
+    await api.create_custom_field("cbm_lead_code")
+    assert fake.requests[3]["json"] == {"label": "cbm_lead_code", "type": "string"}
+
+
 async def test_import_chunks_at_the_vendor_maximum(monkeypatch):
     monkeypatch.setattr(m, "IMPORT_MAX", 2)
     fake = FakeVendorHTTP([

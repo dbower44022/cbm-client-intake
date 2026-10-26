@@ -241,6 +241,131 @@ async def sign_off(api_client: EspoApi, user_client: EspoApi, campaign: dict[str
     })
 
 
+# --- the copy of a list (CAMPAIGN_LIST_SYNC; § 7e.9, ruling 95) ---------------------------
+#
+# With the switch on, an email campaign sends to its list's kept-current copy in
+# Constant Contact. Build writes no touch (Doug's ruling at the M7 plan,
+# 10-26-26: the send report of M9 writes one per real recipient), sign-off syncs
+# the copy, staff send the notice at the vendor to that copy, and *Pick the
+# email* records which one and moves the campaign on. The per-campaign push
+# below, ``push_campaign`` and *Mark as sent*, serve the switch-off path only;
+# they go when the switch is retired.
+
+VENDOR_EMAIL_FIELD = "vendorEmailId"
+NEEDS_A_LIST = ("Choose a list for this email campaign first (Audience and content). An email goes to "
+                "a list's copy in Constant Contact.")
+
+
+async def build_for_copy(api_client: EspoApi, user_client: EspoApi, campaign: dict[str, Any],
+                         audience: Optional[dict[str, Any]]) -> dict[str, Any]:
+    """Build with the switch on: the list's count and its skips, no touches.
+    Planned touches left from a build before the switch are cancelled — the
+    send report writes the real ones."""
+    if campaign.get("campaignKind") != cfg.KIND_EMAIL:
+        raise CampaignError("This is not an email campaign.")
+    status = campaign.get("campaignStatus") or cfg.STATUS_DRAFT
+    if status not in (cfg.STATUS_DRAFT, cfg.STATUS_AWAITING):
+        raise CampaignError(f"The list cannot be rebuilt once the campaign is {status}.")
+    if not audience:
+        raise CampaignError(NEEDS_A_LIST)
+    cancelled = 0
+    for t in await service.campaign_touches(api_client, campaign["id"]):
+        if t.get("touchStatus") == cfg.TOUCH_PLANNED:
+            await api_client.update(cfg.TOUCH, t["id"], {"touchStatus": cfg.TOUCH_CANCELLED})
+            cancelled += 1
+    stamps: dict[str, Any] = {"selectionRule": json.dumps({"list": audience["list"]}),
+                              "selectionSummary": audience["summary"]}
+    if status == cfg.STATUS_DRAFT:
+        stamps["campaignStatus"] = cfg.STATUS_AWAITING
+    await service.stamp_campaign(user_client, api_client, campaign["id"], stamps)
+    reached = len(audience["targets"])
+    return {"pieces": reached, "created": 0, "kept": 0, "cancelled": cancelled, "rule": {"list": audience["list"]},
+            "summary": stamps["selectionSummary"], "audience": _audience_result(audience), "copy": True}
+
+
+def copy_refusal(list_row: Optional[dict[str, Any]]) -> str:
+    """Why this list cannot carry the email, in words, or empty."""
+    if not list_row:
+        return NEEDS_A_LIST
+    if list_row.get("status") != "active":
+        return f"The list \"{list_row['name']}\" is retired — choose an active list."
+    if not list_row.get("cc_sync"):
+        return (f"The list \"{list_row['name']}\" keeps no copy in Constant Contact. Open it on the Lists tab "
+                "and tick Keep a copy in Constant Contact, then sign off again.")
+    return ""
+
+
+def check_sign_off_to_copy(campaign: dict[str, Any], *, confirm: str, built: Optional[dict[str, Any]],
+                           list_row: Optional[dict[str, Any]], settings: Settings) -> int:
+    """Every refusal before the sync runs; the number of people the build
+    reached, which the typed confirmation must match."""
+    if campaign.get("campaignKind") != cfg.KIND_EMAIL:
+        raise CampaignError("This is not an email campaign.")
+    if campaign.get("campaignStatus") not in (cfg.STATUS_AWAITING, cfg.STATUS_DRAFT):
+        raise CampaignError(f"A campaign at {campaign.get('campaignStatus')} cannot be signed off.")
+    if not settings.mailing_client_id or not settings.mailing_client_secret:
+        raise CampaignError("The mailing service is not connected on this deployment (System Settings, Mailing).")
+    problem = copy_refusal(list_row)
+    if problem:
+        raise CampaignError(problem)
+    if not built:
+        raise CampaignError("Build the list first — it counts who the email will reach.")
+    count = int(built.get("reached") or 0)
+    if count == 0:
+        raise CampaignError("Nobody on the list can be emailed — build it again once it holds people who opted in.")
+    if str(confirm or "").strip() != str(count):
+        raise CampaignError(f"Type the number of people, {count}, to confirm.")
+    return count
+
+
+async def signed_off_to_copy(api_client: EspoApi, user_client: EspoApi, campaign: dict[str, Any], *,
+                             user_name: str, synced: dict[str, Any]) -> dict[str, Any]:
+    """After the sync: the stamps and Signed off. ``pieceCount`` is who the copy
+    holds now."""
+    return await service.stamp_campaign(user_client, api_client, campaign["id"], {
+        "pieceCount": int(synced.get("audience") or 0), "signedOffByName": user_name[:255],
+        "signedOffAt": _crm_now(), "campaignStatus": cfg.STATUS_SIGNED_OFF,
+    })
+
+
+async def vendor_email_available(client: EspoApi) -> bool:
+    try:
+        fields = await client.metadata(f"entityDefs.{cfg.CAMPAIGN}.fields")
+    except Exception as exc:  # noqa: BLE001 — unreadable is "not available"
+        log.warning("could not read the campaign fields (%s) — no email can be picked", exc)
+        return False
+    return isinstance(fields, dict) and isinstance(fields.get(VENDOR_EMAIL_FIELD), dict)
+
+
+def check_pick(campaign: dict[str, Any]) -> None:
+    if campaign.get("campaignKind") != cfg.KIND_EMAIL:
+        raise CampaignError("This is not an email campaign.")
+    if campaign.get(VENDOR_EMAIL_FIELD):
+        raise CampaignError("An email is already picked for this campaign.")
+    if campaign.get("campaignStatus") != cfg.STATUS_SIGNED_OFF:
+        raise CampaignError("Pick the email after the campaign is signed off and the email has gone out "
+                            "from Constant Contact.")
+
+
+async def pick_email(api_client: EspoApi, user_client: EspoApi, campaign: dict[str, Any], *,
+                     email_id: str, sent: list[dict[str, Any]]) -> dict[str, Any]:
+    """Record the email staff sent to the copy and move the campaign on (the
+    strip's Sent). ``sent`` is the vendor's listing, read again for this
+    request, so only an email that really went to the list can be picked."""
+    check_pick(campaign)
+    if not await vendor_email_available(api_client):
+        raise CampaignError("The CRM has no place for the picked email yet (the campaign's Constant Contact "
+                            "email id field) — the CRM change for the redesign is owed on this CRM.")
+    chosen = next((e for e in sent if e.get("id") == str(email_id or "")), None)
+    if not chosen:
+        raise CampaignError("That email was not sent to this campaign's list in the last 30 days — "
+                            "choose one from the list shown.")
+    updated = await service.stamp_campaign(user_client, api_client, campaign["id"], {
+        VENDOR_EMAIL_FIELD: chosen["id"][:64], "campaignStatus": cfg.STATUS_RUNNING, "runStartedAt": _crm_now(),
+    })
+    return {"campaign": updated, "email": chosen}
+
+
 # --- the push (worker) --------------------------------------------------------------------
 
 async def push_campaign(client: EspoApi, mail, campaign: dict[str, Any]) -> dict[str, int]:
@@ -302,6 +427,10 @@ async def run_email_cycle(settings: Settings, *, client: Optional[EspoApi] = Non
     people not yet pushed. Best effort, never raises."""
     totals = {"campaigns": 0, "pushed": 0, "withheld": 0, "skipped": 0, "errors": 0}
     if not (settings.campaigns_enabled and settings.campaigns_email) or settings.espo_dry_run:
+        return totals
+    if settings.campaign_list_sync and settings.campaign_lists:
+        # Copies on: an email goes to its list's copy, which the mailing pass
+        # keeps current; there is no per-campaign list to push.
         return totals
     if not settings.mailing_client_id or not settings.mailing_client_secret:
         return totals

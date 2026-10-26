@@ -276,6 +276,12 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="Named lists a campaign sends to (build plan § 7c): the Lists page in "
             "Marketing Management and the List picker on a campaign. Off, every campaign "
             "selects by its kind's own rule, as before. Read per request: no restart."),
+    _s("campaign_list_sync", GROUP_FEATURES, "Campaign list copies", kind="bool", component="both",
+       help="A list may keep a copy in Constant Contact, kept current by the mailing pass, and an "
+            "email campaign sends to its list's copy: sign-off syncs it, staff send the notice at "
+            "the mailing service, then pick that email in the campaign. Every push writes each "
+            "person's lead code to the custom field cbm_lead_code. Needs Campaign lists and the "
+            "mailing connection. Off, lists and email campaigns work as before."),
     _s("campaign_list_fields", GROUP_FEATURES, "Campaign list fields", component="web",
        help="The fields a list step may filter on, per record type (ruling 63), written "
             "as 'lead: leadStatus, leadSource; contact: cContactType, cFunnelStage'. Use "

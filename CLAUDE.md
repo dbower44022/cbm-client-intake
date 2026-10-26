@@ -1217,44 +1217,32 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
+- **v0.290.0 (2026-10-26) — a list's copy in Constant Contact and the
+  email campaign that sends to it** (build plan § 7e.9 first half and
+  § 7d.2, M7; rulings 95, 126). Dark behind `CAMPAIGN_LIST_SYNC`;
+  **migration 0038**. **Committed, not pushed**; the live send on
+  crm-test (`OPEN-ITEMS.md` #57) checks every inferred vendor shape.
 - **v0.289.0 (2026-10-26) — lists described by Include and Leave out**
   (build plan § 7e.8, M6; rulings 90–94, 98): a dynamic list is a search
   (Include groups minus Leave out groups), a static list is people added
   by hand, Exclude onto a static exclusion list, the kind fixed, Copy, the
   per-channel counts. Rides `CAMPAIGN_LISTS`; **migration 0037**.
   Built in one session, all four stops. Live on both deployments
-  10-26-26 09:22; **live-passed on crm-test 10-26-26 ~11:45** by Doug. The
-  read-back found list actions writing no action-log row (since v0.270.0;
-  `OPEN-ITEMS.md` #57).
+  10-26-26 09:22; **live-passed on crm-test 10-26-26 ~11:45** by Doug
+  (v0.289.1 fixed the action-log rows its read-back found missing).
 - **v0.288.0 (2026-10-26) — personal outreach from the lead's page**
   (build plan § 7e.5, M5; rulings 107–109, 115, 118–120, 122, 128): the
   shared composer (`frontend/shared/compose.js`, the session tools switched
   to it), Email and Log a call on the lead's page, the sync's lead source
   and the Replied flag, Conversations and the Mine chip. Dark behind
   `LEAD_OUTREACH`; new setting `CHAPTER_POSTAL_ADDRESS`; no migration.
-  Built in one session, all four stops; checked against the stub harness
-  and by the tests. **Pushed 10-26-26 00:16 (deploys crm-test and
+  **Pushed 10-26-26 00:16 (deploys crm-test and
   production, dark on both); live pass owed** on crm-test (step page
   https://claude.ai/artifact/X7zFhDzMThqXBUWaGJX9GZ, `OPEN-ITEMS.md` #57)
   — Mark Marketing has no mentor profile, so ruling 120 resolves him by
   his user address; whether the Gmail delegation can read that mailbox is
   the open question.
-- **v0.286.0 (2026-10-25) — the import tool** (build plan § 7e.7, M4;
-  rulings 79–88, 111, 123, 127): templates, Excel, recognition and the
-  four fixes, the preview as a worker job, fills, the level per row, Undo
-  under the org-wide key. Dark behind `IMPORT_TEMPLATES`; migration 0035;
-  `openpyxl`. **Live-passed on crm-test 10-25-26 20:49 as v0.286.3**
-  (round two run by Claude in Doug's signed-in tab; four Undo and
-  re-import defects found and fixed on the way, v0.286.1–v0.286.3, all
-  pushed). v0.286.4 pushed 22:47. **v0.287.0** (the batch write lease,
-  migration 0036: two Confirms within a second no longer double a batch)
-  pushed 23:14. **M5 plan approved 23:17** (ruling 128, the full composer
-  shared with the session tools); run `prompts/m5-personal-outreach-kickoff.md`
-  in a fresh session (`OPEN-ITEMS.md` #57).
-- **v0.285.0 (2026-10-25) — Review is the research queue, two modes**
-  (build plan § 7e.6, M3; rulings 110, 121): *Judge* as before, *Find
-  contacts* for Identified leads, *AI research* on every row, a Person
-  accepted on a lead fills the lead itself. Rides `LEAD_LADDER`. v0.285.1
-  (the row's link) live on both deployments; **live-passed on crm-test
-  10-25-26 18:35** by Doug. Next: M4 (`OPEN-ITEMS.md` #57).
+- **v0.286.0–v0.287.0 (2026-10-25) — the import tool** (§ 7e.7, M4),
+  dark behind `IMPORT_TEMPLATES`, migrations 0035–0036; live-passed on
+  crm-test 10-25-26 20:49 and pushed.
 Everything else still owed is in `OPEN-ITEMS.md`.

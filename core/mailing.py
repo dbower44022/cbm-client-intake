@@ -53,6 +53,25 @@ the first dry-run (plan § 11.10).
   ``source.contact_ids`` and ``list_ids`` (*inferred*). Removes membership, never
   the contact (ruling: removed from the list, never deleted).
 * **Account** — ``GET /account/summary``; ``organization_name`` (*inferred*).
+* **Rename a list** — ``PUT /contact_lists/{id}`` with ``name`` and
+  ``favorite`` (*inferred*; M7, build plan § 7e.9 — checked by the first live
+  sync of a renamed list).
+* **Custom fields** — ``GET /contact_custom_fields`` (key ``custom_fields``,
+  each with ``custom_field_id``, ``label``, ``name``, ``type``) and
+  ``POST /contact_custom_fields`` with ``label`` and ``type`` ``string``
+  (*inferred*). The bulk import writes one as the column ``cf:<name>``, where
+  ``name`` is the field's stored name (lowercase, underscores), not its label
+  — a vendor forum answer, not a documented rule (*inferred*; § 7d.2). The
+  merge tag in a notice is ``[[custom.<name>]]`` (*inferred*). The live send of
+  M7's stop D is the check of all three.
+* **Email campaigns** — ``GET /emails`` with ``limit`` (max 500) and
+  ``after_date`` (ISO, filters on the last update), key ``campaigns``, each with
+  ``campaign_id``, ``name``, ``current_status``, ``updated_at``; ``GET
+  /emails/{id}`` carries ``campaign_activities`` (``campaign_activity_id``,
+  ``role`` — the sent one is ``primary_email``); ``GET /emails/activities/{id}``
+  carries ``contact_list_ids`` and ``current_status`` (*inferred*, all of it;
+  M7's *Pick the email*, ruling 95, checked by the live send). The
+  ``campaign_data`` scope already covers them.
 
 Every failure raises :class:`MailingError`; callers treat the service as
 best-effort and never fail a CRM write because of it.
@@ -105,6 +124,12 @@ MIN_REQUEST_INTERVAL = 0.25
 ROW_ID = "default"
 STATUS_CONNECTED = "connected"
 STATUS_NEEDS_REAUTH = "needs_reauthorisation"
+
+#: ``GET /emails`` page asked for, and how many of them *Pick the email* opens.
+EMAILS_PAGE = 50
+EMAILS_EXAMINED = 25
+#: Email campaign states that mean it went out, or is going (inferred vocabulary).
+SENT_STATES = frozenset({"done", "sent", "executing", "completed"})
 
 #: Activity states that mean "finished" (inferred vocabulary).
 ACTIVITY_DONE = frozenset({"completed", "cancelled", "failed", "timed_out"})
@@ -693,6 +718,84 @@ class MailingClient:
         return await self._request(
             "POST", "/contact_lists", json_body={"name": name[:255], "favorite": False}
         )
+
+    async def find_list_by_id(self, list_id: str) -> Optional[dict[str, Any]]:
+        """The list with this id, or None — read from the same listing as
+        :meth:`find_list`, so no second endpoint shape is relied on."""
+        want = str(list_id or "")
+        if not want:
+            return None
+        for item in await self.lists():
+            if str(item.get("list_id") or "") == want:
+                return item
+        return None
+
+    async def rename_list(self, list_id: str, name: str) -> dict[str, Any]:
+        """Rename a list (*inferred* shape: ``PUT /contact_lists/{id}``)."""
+        return await self._request(
+            "PUT", f"/contact_lists/{list_id}", json_body={"name": name[:255], "favorite": False}
+        )
+
+    # --- custom fields (inferred, § 7d.2) ----------------------------------------
+
+    async def custom_fields(self) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = []
+        async for item in self._iter_pages("/contact_custom_fields", {"limit": 100}, key="custom_fields"):
+            out.append(item)
+        return out
+
+    async def find_custom_field(self, name: str) -> Optional[dict[str, Any]]:
+        """The custom field whose stored name or label is ``name``, or None."""
+        want = (name or "").strip().casefold()
+        for item in await self.custom_fields():
+            if want in (str(item.get("name") or "").strip().casefold(),
+                        str(item.get("label") or "").strip().casefold()):
+                return item
+        return None
+
+    async def create_custom_field(self, label: str) -> dict[str, Any]:
+        return await self._request(
+            "POST", "/contact_custom_fields", json_body={"label": label[:50], "type": "string"}
+        )
+
+    # --- email campaigns (inferred, § 7e.9) -------------------------------------
+
+    async def email_campaigns(self, *, after: datetime, limit: int = EMAILS_PAGE) -> list[dict[str, Any]]:
+        """Email campaigns updated since ``after``, newest first as the vendor
+        returns them; one page (``limit``) only."""
+        page = await self._request("GET", "/emails", params={
+            "limit": limit, "after_date": after.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")})
+        return list(page.get("campaigns") or [])
+
+    async def email_campaign(self, campaign_id: str) -> dict[str, Any]:
+        return await self._request("GET", f"/emails/{campaign_id}")
+
+    async def email_activity(self, activity_id: str) -> dict[str, Any]:
+        return await self._request("GET", f"/emails/activities/{activity_id}")
+
+    async def emails_sent_to_list(self, list_id: str, *, days: int = 30,
+                                  now: Optional[datetime] = None) -> list[dict[str, Any]]:
+        """The email campaigns sent (or sending) to ``list_id`` in the last
+        ``days`` days: ``{id, name, status, sentAt}``. At most
+        :data:`EMAILS_EXAMINED` campaigns are opened, two reads each, so the
+        request stays well inside a minute at the vendor's pace."""
+        since = (now or _now()) - timedelta(days=days)
+        out: list[dict[str, Any]] = []
+        for c in (await self.email_campaigns(after=since))[:EMAILS_EXAMINED]:
+            if str(c.get("current_status") or "").casefold() not in SENT_STATES:
+                continue
+            detail = await self.email_campaign(str(c.get("campaign_id") or ""))
+            primary = next((a for a in detail.get("campaign_activities") or []
+                            if str(a.get("role") or "") == "primary_email"), None)
+            if not primary:
+                continue
+            activity = await self.email_activity(str(primary.get("campaign_activity_id") or ""))
+            if str(list_id) not in [str(i) for i in activity.get("contact_list_ids") or []]:
+                continue
+            out.append({"id": str(c.get("campaign_id") or ""), "name": str(c.get("name") or ""),
+                        "status": str(c.get("current_status") or ""),
+                        "sentAt": str(c.get("last_sent_date") or c.get("updated_at") or "")})
+        return out
 
     # --- contacts -------------------------------------------------------------
 

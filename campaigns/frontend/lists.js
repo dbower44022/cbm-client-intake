@@ -207,6 +207,7 @@
           " as of then. A campaign build runs it again." +
           (run.version && run.version !== l.version ? " The list has changed since: press Run now." : "")
         : "Not run yet — press Run now to see who it holds today.");
+    renderCopy(l);
     renderProblems();
     renderSentences();
     $("ls_builder").hidden = !state.editing;
@@ -217,6 +218,55 @@
     (d.versions || []).forEach(function (v) {
       vs.appendChild(el("li", null, "Version " + v.version + " — " + (v.savedBy || "—") + ", " + fmtDate(v.savedAt)));
     });
+  }
+
+  // --- the copy in Constant Contact (build plan § 7e.9) -------------------------------
+
+  function copyOn() { var s = M.session(); return !!(s && s.listSyncOn); }
+
+  function renderCopy(l) {
+    $("ls_copyRow").hidden = !copyOn();
+    if (!copyOn()) return;
+    $("ls_ccTick").checked = !!l.ccSync;
+    var st = $("ls_ccStatus");
+    var failed = l.ccLastSync && l.ccLastSync.ok === false;
+    st.className = "ls__copystatus" + (failed ? " ls__copystatus--error" : "");
+    text(st, (l.ccStatus || "") + (l.ccLastSyncAt && l.ccSync ? " Last sync " + fmtDate(l.ccLastSyncAt) + "." : ""));
+  }
+
+  async function setCopy() {
+    if (!state.open) return;
+    var tick = $("ls_ccTick"), on = tick.checked, l = state.detail.list;
+    if (state.dirty) { tick.checked = !on; notice("Save the list first — the copy follows the saved list.", "warn"); return; }
+    if (on && l.status === "retired") { tick.checked = false; notice("A retired list keeps no copy — reactivate it first.", "warn"); return; }
+    try {
+      var res = await api(listPath("/cc-copy"), { method: "PUT", body: { on: on } });
+      state.detail.list = res.list;
+      notice(on ? "The list now keeps a copy in Constant Contact. Press Sync now to make it at once, or the next mailing pass makes it."
+                : "The list no longer keeps a copy. The copy at Constant Contact is kept as it was.", "ok");
+      renderCopy(res.list);
+      await loadLists();
+    } catch (e) { tick.checked = !on; notice(e.message, "error"); }
+  }
+
+  async function syncNow() {
+    if (!state.open) return;
+    var l = state.detail.list;
+    if (!l.ccSync) { notice("Tick Keep a copy in Constant Contact first — this list keeps no copy.", "warn"); return; }
+    if (state.dirty) { notice("Save the list first — Sync now uses the saved list.", "warn"); return; }
+    if (l.status === "retired") { notice("A retired list is not synced — reactivate it first.", "warn"); return; }
+    try {
+      var res = await api(listPath("/sync-now"), { method: "POST", timeoutMs: 70000 });
+      var sm = res.summary || {};
+      notice("Synced: " + plural(sm.audience || 0, "person", "people") + " on the copy — " +
+             (sm.added || 0).toLocaleString() + " added, " + (sm.removed || 0).toLocaleString() + " removed" +
+             (sm.withheld ? ", " + sm.withheld.toLocaleString() + " withheld as unsubscribed" : "") + ".", "ok");
+      state.detail.list = res.list;
+      renderCopy(res.list);
+    } catch (e) {
+      notice(e.message, "error");
+      try { await openList(state.open, true); } catch (e2) { /* the notice already says why */ }
+    }
   }
 
   function renderProblems() {
@@ -463,7 +513,8 @@
       state.dirty = false;
       var changed = res.list.version !== l.version;
       notice("Saved" + (changed ? " — version " + res.list.version + "." : ".") +
-             (changed && l.kind === "dynamic" ? " Press Run now to see who it holds." : ""), "ok");
+             (changed && l.kind === "dynamic" ? " Press Run now to see who it holds." : "") +
+             (res.copyNote ? " " + res.copyNote : ""), res.copyNote && res.copyNote.indexOf("keeps its old name") >= 0 ? "warn" : "ok");
       await loadLists();
       await openList(state.open, true);
     } catch (e) { notice(e.message, "error"); }
@@ -785,6 +836,8 @@
   $("ls_copyBtn").addEventListener("click", copyList);
   $("ls_retireBtn").addEventListener("click", retireOrReactivate);
   $("ls_deleteBtn").addEventListener("click", deleteList);
+  $("ls_ccTick").addEventListener("change", setCopy);
+  $("ls_syncNowBtn").addEventListener("click", syncNow);
   $("ls_editBtn").addEventListener("click", startEdit);
   $("ls_cancelEditBtn").addEventListener("click", cancelEdit);
   $("ls_addIncBtn").addEventListener("click", function () { addGroup("include"); });

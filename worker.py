@@ -568,11 +568,28 @@ async def main() -> None:
             try:
                 from core.mailing_sync import alerts_for, run_push
 
-                result = await run_push(settings, apply=True)
+                if settings.campaign_list_sync:
+                    # The standing list, then every list with its copy on, in
+                    # one pass (build plan § 7e.9): the unsubscribes and the
+                    # lead-code field are read once for all of them.
+                    from campaigns.list_sync import run_pass
+
+                    passed = await run_pass(settings)
+                    result, per_list = passed.standing, passed.lists
+                else:
+                    result, per_list = await run_push(settings, apply=True), []
                 log.info("mailing push: %s", (result.text or "").splitlines()[-1] if result.text else result.error)
                 for key, text, cooldown in alerts_for(result, kind="push", settings=settings):
                     if monitoring._due(alert_state, key, now_cfg, cooldown):
                         await monitoring.send_alert(settings, text)
+                for row, list_result in per_list:
+                    log.info("mailing list %s: %s", row.get("id"),
+                             "ok" if list_result.ok else list_result.error)
+                    for key, text, cooldown in alerts_for(
+                            list_result, kind=f"list_{row.get('id')}", settings=settings,
+                            label=f"The Constant Contact copy of the list \"{row.get('name')}\""):
+                        if monitoring._due(alert_state, key, now_cfg, cooldown):
+                            await monitoring.send_alert(settings, text)
             except Exception as exc:  # noqa: BLE001 — never crashes delivery
                 log.warning("mailing push failed: %s", exc)
             next_mailing_push = now_cfg + timedelta(seconds=settings.mailing_push_seconds)

@@ -147,7 +147,23 @@ found; move resolved items to the bottom with the resolution date.
     there is none — **fixed in v0.289.1 (10-26-26 11:56, not pushed)**, a record-less
     row proven to store on crm-test; (2)
     decide whether `qualificationLevel` and `phone` join
-    `audience.DEFAULT_FIELDS` (M7's prompt treats it as routine: yes).
+    `audience.DEFAULT_FIELDS` (M7's prompt treats it as routine: yes) —
+    **done in v0.290.0**. **M7 built as v0.290.0 (10-26-26)**, all four
+    stops in one session: a list's copy in Constant Contact (*Keep a copy*,
+    the status, *Sync now*, rename carried, one worker pass for every list)
+    and the email campaign that sends to it (a list required, no touches at
+    build, sign-off syncs the copy, *Pick the email*), the lead code written
+    to the vendor field `cbm_lead_code` by every push, the paste address on
+    the Links tab. Dark behind **`CAMPAIGN_LIST_SYNC`**; **migration 0038**.
+    **Committed, not pushed.** **Owed:** (1) the push (Doug); (2) on
+    crm-test, `CAMPAIGN_LIST_SYNC` on at /setup, and the mailing connection
+    usable (only Doug's own CBM login can re-authorise it); (3) **the live
+    send** — tick a list's copy, *Sync now*, see the list and the
+    `cbm_lead_code` field at Constant Contact, sign off an email campaign,
+    send one real email from Constant Contact to one address Doug controls
+    with the paste address in it, pick it in the app, follow the link and
+    see the code resolve. It is the check of every inferred vendor shape
+    (build plan § 7e.12 Draft 8); record each outcome there.
     Next: M7, Constant Contact per list and the email campaign (§ 7e.9
     first half). Still owed: the handoff on
     production at the arc's slot and on Boston with its release (now with

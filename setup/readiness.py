@@ -265,6 +265,27 @@ def _crm_rows(feature: Feature, crm: Optional[dict[str, Any]]) -> list[dict[str,
     return rows
 
 
+def _code_field_check(summary: dict[str, Any]) -> dict[str, Any]:
+    """The lead-code custom field, as the last push found it (build plan
+    § 7d.2). Read from the stored summary — the panel never calls the vendor."""
+    state = str(summary.get("customField") or "")
+    if not state:
+        return {"kind": "connection", "label": "custom field cbm_lead_code", "ok": None,
+                "detail": "not checked yet — the next mailing push checks it"}
+    if state.startswith("missing"):
+        return {"kind": "connection", "label": "custom field cbm_lead_code", "ok": False,
+                "detail": "custom field missing" + state[len("missing"):]}
+    if state.startswith("the CRM"):
+        return {"kind": "connection", "label": "custom field cbm_lead_code", "ok": None,
+                "detail": f"not used — {state}"}
+    if state == "recreated":
+        return {"kind": "connection", "label": "custom field cbm_lead_code", "ok": True,
+                "detail": "custom field missing at the last push — it was deleted at the mailing "
+                          "service and the push made it again; links in notices sent before then "
+                          "carry no code"}
+    return {"kind": "connection", "label": "custom field cbm_lead_code", "ok": True, "detail": state}
+
+
 async def _mailing_block(settings: Settings, mailing_store: Any) -> dict[str, Any]:
     """The connection state and the redirect address the panel shows (plan § 11.4).
 
@@ -292,6 +313,7 @@ async def _mailing_block(settings: Settings, mailing_store: Any) -> dict[str, An
         block["check"] = {"kind": "connection", "label": "connection", "ok": False,
                           "detail": "not connected"}
     elif conn.usable:
+        block["fieldCheck"] = _code_field_check(conn.last_push_summary or {})
         block["connection"] = conn.as_dict()
         block["check"] = {"kind": "connection", "label": "connection", "ok": True,
                           "detail": "connected as " + (conn.account_label or "the mailing account")}
@@ -328,6 +350,8 @@ async def readiness_payload(
         checks = _requirement_rows(feature, settings) + _crm_rows(feature, crm)
         if feature.key == "mailing":
             checks.append(mailing["check"])
+            if settings.campaign_list_sync and mailing.get("fieldCheck"):
+                checks.append(mailing["fieldCheck"])
         unmet = [c for c in checks if c["ok"] is False]
         unknown = [c for c in checks if c["ok"] is None]
         # A worker feature that is ON with no live worker is the exact shape of

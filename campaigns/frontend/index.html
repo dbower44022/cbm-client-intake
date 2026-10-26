@@ -143,6 +143,11 @@
             <span class="cm__badge" id="ls_kindBadge"></span>
             <span class="cm__badge" id="ls_lStatus"></span>
             <span class="ls__counts" id="ls_counts"></span>
+            <span class="ls__copy" id="ls_copyRow" hidden>
+              <label class="ls__copytick"><input type="checkbox" id="ls_ccTick" /> Keep a copy in Constant Contact</label>
+              <span class="ls__copystatus" id="ls_ccStatus"></span>
+              <button type="button" class="cbm-button cbm-button--secondary" id="ls_syncNowBtn">Sync now</button>
+            </span>
           </div>
           <div class="ls__head">
             <label class="cm__field ls__name">Name <input type="text" id="ls_lName" maxlength="200" /></label>
@@ -526,7 +531,8 @@
           <section class="cm__card" id="emailCard" hidden>
             <h3>Email list</h3>
             <div class="cm__tiles" id="emailTiles"></div>
-            <div class="cm__rule">
+            <p class="cm__notice cm__notice--ok" id="emailNext" hidden></p>
+            <div class="cm__rule" id="emailRuleBox">
               <p class="cm__hint">Who is on the list: Contacts who opted in to marketing email with a usable address (no cold email), typed Prospect at the stages ticked, or clients dormant for the days set.</p>
               <div id="emailStages"></div>
               <label class="cm__check"><input type="checkbox" id="emailDormant" /> …and clients whose last engagement closed more than <input type="number" id="emailDormantDays" min="0" value="365" style="width:5em" /> days ago</label>
@@ -536,6 +542,7 @@
               <button type="button" class="cbm-button cbm-button--secondary" id="emailBuildBtn">Build the list</button>
               <button type="button" class="cbm-button" id="emailSignoffBtn">Sign off and push</button>
               <button type="button" class="cbm-button cbm-button--secondary" id="emailSentBtn">Mark as sent</button>
+              <button type="button" class="cbm-button cbm-button--secondary" id="emailPickBtn" hidden>Pick the email</button>
             </div>
             <p class="cm__runnote" id="emailNote"></p>
           </section>

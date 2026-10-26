@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-26-26 11:55 · Revision 0.56 — change log at the end.
+Last Updated: 10-26-26 12:10 · Revision 0.57 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -2306,6 +2306,11 @@ The import, lists-of-lists and cycle tests stay, adapted.
 
 ### 7e.9 Constant Contact, campaigns and events — rulings 95–97, 99–102
 
+*The first half — a kept-current copy per list and the email campaign — is
+built as v0.290.0, 10-26-26 (step M7, § 7e.13); live send owed. Lists only,
+the campaign page, the grid, + New campaign and Promote this event are M8 and
+M10; the send report is M9.*
+
 **A kept-current copy per list (ruling 95).** `core/mailing_sync.py` works
 for one list, named by `MAILING_LIST_NAME`, with its id and last-push
 summary on the singleton `mailing_connection` row.
@@ -2510,6 +2515,14 @@ as Claude's recommended change, noted under each (rulings 120, 122, 123).
      polls that row. Not the enrichment run table.
 8. **The send report's vendor endpoints are inferred, not yet called.**
    - Cost: the first live run may reshape § 7e.9's report step.
+   - **M7's inferred shapes** (v0.290.0), each to be marked confirmed or
+     corrected by M7's live send on crm-test: the custom-field listing and
+     create (`/contact_custom_fields`); the import column `cf:<name>`
+     keyed on the stored name; the merge tag `[[custom.cbm_lead_code]]` in
+     a link; the list rename (`PUT /contact_lists/{id}`); the email listing
+     (`GET /emails?after_date=`), a campaign's `campaign_activities` with
+     the `primary_email` role, and the activity's `contact_list_ids`.
+     *Outcome: owed — the live send has not run.*
 9. **The ready-made lists are system lists**, undeletable but copyable,
    with the five names in § 7e.9.
 
@@ -2735,6 +2748,36 @@ Team caller for M1 and M10).
    button. The live send confirms the two inferred vendor facts (§ 7d.2).
    Expect mail scanners to open links: the D1 pass counted 2 clicks for
    one intended visit.
+   **Built as v0.290.0 (10-26-26)**, one session, all four stops, on
+   Doug's approval of the plan with two rulings: **an email campaign must
+   choose a list** from M7 on (its rule card is gone; the other kinds keep
+   theirs until M8), and **its build writes no touch** (the send report
+   writes one per real recipient; earlier Planned touches are cancelled).
+   Routine choices as announced: the sync parameterised rather than
+   copied (`build_plan` / `run_push` take the people, the stored id, the
+   unsubscribes and the code column; the standing push unchanged without
+   them); migration **0038** (not 0034, which went to the ladder); one
+   worker pass for the standing list and every ticked list, the
+   unsubscribes and the custom field read once, an alert key per list; the
+   level and the phone in the default list fields. Made on the way: the
+   per-list orchestration lives in `campaigns/list_sync.py` so
+   `core/mailing_sync` imports nothing from `campaigns`; the copy is found
+   by id and then by name, and a rename is converged by the sync as well
+   as attempted at once; people already on a copy are imported again
+   each pass so a replaced code reaches the vendor (one bulk call); minting
+   is capped at 500 a pass; a copy is refused the standing list's name and
+   another copy's; Readiness reads the custom field's state from the last
+   push's summary and never calls the vendor; with the switch off,
+   `push_campaign` and *Mark as sent* still serve (they go when the switch
+   is retired), and with it on `run_email_cycle` pushes nothing — so an
+   email campaign signed off under the old path before the switch is
+   turned on is not pushed afterwards; *Pick the email* opens at most 25
+   recent emails (two reads each) to stay inside a web request; the picked
+   campaign reads Running (the strip's Sent is M8's). Migration 0038 run
+   against a local Postgres over an existing list, down and up again.
+   Checked in the browser against the real application over the test
+   fakes. **Live send owed** on crm-test (`OPEN-ITEMS.md` #57); its
+   outcome goes under § 7e.12 Draft 8.
 8. **M8: lists only and the campaign page** (§ 7e.9 second half). About
    four days.
 9. **M9: the send report and Recipients** (§ 7e.9). About three days.
@@ -3021,6 +3064,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.57 | 10-26-26 12:10 | Claude (Claude Code) | § 7e.9's first half marked built (v0.290.0); § 7e.13 step M7: Doug's two rulings, the routine choices, those made on the way, the live send owed; § 7e.12 Draft 8 lists M7's inferred shapes. |
 | 0.56 | 10-26-26 11:55 | Claude (Claude Code) | § 7e.8 and § 7e.13 step M6 live-passed on crm-test; the read-back and the action-log defect it found. |
 | 0.55 | 10-26-26 02:50 | Claude (Claude Code) | § 7e.8 marked built (v0.289.0) and its migration number corrected to 0037; § 7e.13 step M6: the routine choices, those made on the way, the Postgres check of the migration, the live pass owed. |
 | 0.54 | 10-25-26 23:20 | Claude (Claude Code) | § 7e.13 step M5: plan approved (four stops, one session), ruling 128 recorded in § 7e.5, kickoff prompt written (`prompts/m5-personal-outreach-kickoff.md`). |

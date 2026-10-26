@@ -650,6 +650,10 @@ class Settings(BaseSettings):
     # Lists page and a campaign's List picker. Read per request. Off, every
     # campaign selects by its kind's own rule exactly as before.
     campaign_lists: bool = False
+    # A list's kept-current copy in Constant Contact, and the email campaign
+    # that sends to it (build plan § 7e.9, ruling 95). Read per request (web)
+    # and per pass (worker). Off, every list and email campaign works as before.
+    campaign_list_sync: bool = False
     # The fields a list step may use, per target type (ruling 63), as
     # "lead: leadStatus, leadSource; contact: cContactType" (a dotted name
     # follows links: client: engagementClient.industrySector). Empty: the

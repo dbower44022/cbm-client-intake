@@ -44,3 +44,9 @@
 .ls__missing { color: var(--cbm-error, #8f1d1d); }
 .ls__import textarea { font: inherit; font-family: var(--cbm-mono, monospace); min-width: min(36rem, 100%); padding: .4rem .5rem;
   border: 1px solid var(--cbm-border, #c9d1d8); border-radius: 6px; }
+
+/* The copy in Constant Contact, on the list's top line (build plan § 7e.9). */
+.ls__copy { display: inline-flex; flex-wrap: wrap; gap: .4rem .8rem; align-items: center; margin-left: auto; }
+.ls__copytick { display: inline-flex; gap: .35rem; align-items: center; font-weight: 600; }
+.ls__copystatus { color: var(--cbm-muted, #4b5a63); }
+.ls__copystatus--error { color: var(--cbm-danger, #a4262c); font-weight: 600; }

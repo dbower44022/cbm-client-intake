@@ -24,6 +24,20 @@ read before it writes anything (§ 11.5 step 7).
   ``emailAddressData`` (the write ``comms/service.py`` already makes). A
   contact the CRM does not hold is skipped, never created (ruling 1).
 
+**Per list (build plan § 7e.9, ruling 95).** :func:`build_plan` and
+:func:`apply_plan` serve any list: the caller may pass the people to hold
+(already consent-filtered — ``campaigns/list_sync.py`` resolves a campaign
+list's members through the email channel's rule, so a chapter member is held at
+their ``cbmEmail``), the list's stored id, the vendor's unsubscribes (read once
+per pass, not once per list) and the column key of the lead-code custom field.
+With none of them, the standing list's push is exactly what it was.
+
+**The lead code (§ 7d.2).** With a code key, each person's ``lead_code`` is
+written as that column of the import, and the people already on the list are
+imported again (``refresh``) so a code minted or replaced since reaches the
+vendor. The import never changes membership for them; an address the vendor
+holds as unsubscribed is never in it.
+
 Nothing here raises past :func:`run_push` / :func:`run_pull`: each returns a
 result whose ``ok``/``partial``/``error`` the caller reports. Alerting is the
 worker's (``alerts_for``), so a failure is said once, not once per cycle.
@@ -34,7 +48,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Awaitable, Callable, Optional
 
 from .config import Settings
 from .espo import EspoApi, EspoError
@@ -81,13 +95,16 @@ class Person:
     email: str
     first_name: str = ""
     last_name: str = ""
+    lead_code: str = ""
 
-    def import_row(self) -> dict[str, str]:
+    def import_row(self, code_key: Optional[str] = None) -> dict[str, str]:
         row = {"email": self.email}
         if self.first_name:
             row["first_name"] = self.first_name[:50]
         if self.last_name:
             row["last_name"] = self.last_name[:50]
+        if code_key and self.lead_code:
+            row[code_key] = self.lead_code
         return row
 
 
@@ -107,13 +124,23 @@ class Plan:
     audience: dict[str, Person]
     members: dict[str, Member]
     vendor_unsubscribed: set[str]
+    #: ``cf:<name>`` of the lead-code custom field, or None (no code written).
+    code_key: Optional[str] = None
+    #: The vendor list's current name when it differs from ``list_name`` (a
+    #: rename in the application the copy has not followed yet).
+    rename_from: Optional[str] = None
     add: list[Person] = field(default_factory=list)
     remove: list[Member] = field(default_factory=list)
     withheld: list[Person] = field(default_factory=list)   # in the audience, but the vendor says no
+    refresh: list[Person] = field(default_factory=list)    # on the list already; imported again for the code
 
     def compute(self) -> "Plan":
         for key in sorted(self.audience):
             if key in self.members:
+                if (self.code_key and self.audience[key].lead_code
+                        and key not in self.vendor_unsubscribed
+                        and self.members[key].permission not in NEVER_ADD):
+                    self.refresh.append(self.audience[key])
                 continue
             if key in self.vendor_unsubscribed:
                 self.withheld.append(self.audience[key])
@@ -133,7 +160,9 @@ class Plan:
         while the world stands still and changes the moment it does not."""
         lines = [
             f"Mailing list: {self.list_name!r}"
-            + ("" if self.list_id else " — does not exist yet; apply CREATES it"),
+            + ("" if self.list_id else " — does not exist yet; apply CREATES it")
+            + (f" — now named {self.rename_from!r} at the mailing service; apply RENAMES it"
+               if self.rename_from else ""),
             f"Audience (CRM, opted in, address usable): {len(self.audience)}",
             f"On the list now: {len(self.members)}",
             f"Already in step: {self.unchanged}",
@@ -148,6 +177,8 @@ class Plan:
                 f"service (never re-added): {len(self.withheld)}"
             )
             lines += [f"  ! {p.email}" for p in self.withheld]
+        if self.code_key:
+            lines.append(f"Lead codes written again for people already on the list: {len(self.refresh)}")
         return "\n".join(lines)
 
 
@@ -251,13 +282,35 @@ async def vendor_unsubscribed(mail: MailingClient) -> set[str]:
     return out
 
 
-async def build_plan(crm: EspoApi, mail: MailingClient, list_name: str) -> Plan:
-    found = await mail.find_list(list_name)
-    list_id = str(found.get("list_id")) if found else None
-    people = await audience(crm)
-    current = await members(mail, list_id) if list_id else {}
-    gone = await vendor_unsubscribed(mail)
-    return Plan(list_name, list_id, people, current, gone).compute()
+async def build_plan(
+    crm: EspoApi,
+    mail: MailingClient,
+    list_name: str,
+    *,
+    people: Optional[dict[str, Person]] = None,
+    list_id: Optional[str] = None,
+    gone: Optional[set[str]] = None,
+    code_key: Optional[str] = None,
+) -> Plan:
+    """The plan for one list. ``people`` defaults to the standing audience,
+    ``gone`` to a fresh read of the vendor's unsubscribes. With ``list_id`` the
+    list is found by its id first (it may have been renamed) and by name only
+    when the id is unknown at the vendor — after the sandbox reset emptied the
+    stored id, the copy is found again rather than created twice."""
+    found = await mail.find_list_by_id(list_id) if list_id else None
+    rename_from = None
+    if found and str(found.get("name") or "").strip() != list_name.strip():
+        rename_from = str(found.get("name") or "")
+    if not found:
+        found = await mail.find_list(list_name)
+    found_id = str(found.get("list_id")) if found else None
+    if people is None:
+        people = await audience(crm)
+    current = await members(mail, found_id) if found_id else {}
+    if gone is None:
+        gone = await vendor_unsubscribed(mail)
+    return Plan(list_name, found_id, people, current, gone, code_key=code_key,
+                rename_from=rename_from).compute()
 
 
 # --- the push --------------------------------------------------------------------
@@ -270,7 +323,12 @@ async def apply_plan(plan: Plan, mail: MailingClient, store: ConnectionStore) ->
         "added": 0, "removed": 0, "withheld": len(plan.withheld), "createdList": False,
         "partial": False,
     }
+    if plan.code_key:
+        summary["codesRefreshed"] = 0
     list_id = plan.list_id
+    if list_id and plan.rename_from is not None:
+        await mail.rename_list(list_id, plan.list_name)
+        summary["renamedFrom"] = plan.rename_from
     if not list_id:
         created = await mail.create_list(plan.list_name)
         list_id = str(created.get("list_id") or "")
@@ -279,8 +337,9 @@ async def apply_plan(plan: Plan, mail: MailingClient, store: ConnectionStore) ->
         summary["createdList"] = True
     await store.set_list_id(list_id)
     try:
-        if plan.add:
-            ids = await mail.import_contacts([p.import_row() for p in plan.add], list_id=list_id)
+        rows = [p.import_row(plan.code_key) for p in (*plan.add, *plan.refresh)]
+        if rows:
+            ids = await mail.import_contacts(rows, list_id=list_id)
             for activity_id in ids:
                 if activity_id:
                     last = await mail.wait_for_activity(activity_id)
@@ -288,6 +347,8 @@ async def apply_plan(plan: Plan, mail: MailingClient, store: ConnectionStore) ->
                         summary["partial"] = True
                         summary["importState"] = last.get("state")
             summary["added"] = len(plan.add)
+            if plan.code_key:
+                summary["codesRefreshed"] = len(plan.refresh)
         if plan.remove:
             await mail.remove_from_list([m.vendor_id for m in plan.remove if m.vendor_id], list_id=list_id)
             summary["removed"] = len(plan.remove)
@@ -333,14 +394,25 @@ async def run_push(
     crm: Optional[EspoApi] = None,
     mail: Optional[MailingClient] = None,
     store: Optional[ConnectionStore] = None,
+    gone: Optional[set[str]] = None,
+    prepare: Optional[Callable[[EspoApi, dict[str, Person]], Awaitable[dict[str, Person]]]] = None,
+    code_key: Optional[str] = None,
 ) -> PushResult:
-    """Plan the push; apply it when asked. Never raises."""
+    """Plan the standing list's push; apply it when asked. Never raises.
+
+    ``gone``, ``prepare`` (gives each person their lead code) and ``code_key``
+    are the per-list pass's (``campaigns/list_sync.py``); without them the
+    push is the standing one as it always was."""
     reason = _refused(settings)
     if reason:
         return PushResult(ok=False, error=reason, text=reason)
     try:
         crm, mail, store = _clients(settings, crm, mail, store)
-        plan = await build_plan(crm, mail, settings.mailing_list_name)
+        people = await audience(crm)
+        if prepare is not None:
+            people = await prepare(crm, people)
+        plan = await build_plan(crm, mail, settings.mailing_list_name, people=people,
+                                gone=gone, code_key=code_key)
     except MailingNotConnected as exc:
         text = f"Not connected: {exc}"
         return PushResult(ok=False, error=str(exc), text=text,
@@ -469,9 +541,12 @@ REAUTH_COOLDOWN = 7 * 86400
 FAILURE_COOLDOWN = 86400
 
 
-def alerts_for(result: Any, *, kind: str, settings: Settings) -> list[tuple[str, str, int]]:
+def alerts_for(result: Any, *, kind: str, settings: Settings,
+               label: str = "") -> list[tuple[str, str, int]]:
     """``(key, text, cooldown)`` for each alert this result deserves; the worker
-    dedups them with ``monitoring._due``."""
+    dedups them with ``monitoring._due``. A campaign list's sync passes
+    ``kind="list_<id>"`` (one key per list) and ``label``, the words the alert
+    uses for it."""
     out: list[tuple[str, str, int]] = []
     if getattr(result, "needs_reauthorisation", False):
         out.append((
@@ -482,10 +557,11 @@ def alerts_for(result: Any, *, kind: str, settings: Settings) -> list[tuple[str,
             REAUTH_COOLDOWN,
         ))
         return out
+    what = label or f"Mailing {kind}"
     if not result.ok:
-        out.append((f"mailing_{kind}_failed", f"Mailing {kind} failed: {result.error}", FAILURE_COOLDOWN))
+        out.append((f"mailing_{kind}_failed", f"{what} failed: {result.error}", FAILURE_COOLDOWN))
     elif getattr(result, "partial", False):
         out.append((f"mailing_{kind}_partial",
-                    f"Mailing {kind} was partial: {result.summary.get('error') or result.summary.get('importState')}",
+                    f"{what} was partial: {result.summary.get('error') or result.summary.get('importState')}",
                     FAILURE_COOLDOWN))
     return out

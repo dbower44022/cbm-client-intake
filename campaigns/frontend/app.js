@@ -525,7 +525,8 @@
       var both = await Promise.all([api("/campaigns/" + encodeURIComponent(c.id) + "/audience"), api("/lists")]);
       state.audience = both[0].audience;
       sel.innerHTML = "";
-      var none = el("option", null, "No list — use this kind's own rule below"); none.value = ""; sel.appendChild(none);
+      var copyEmail = c.campaignKind === "Email" && emailCopyMode();
+      var none = el("option", null, copyEmail ? "No list chosen" : "No list — use this kind's own rule below"); none.value = ""; sel.appendChild(none);
       (both[1].lists || []).forEach(function (l) {
         if (l.status === "retired" && !(state.audience && state.audience.listId === l.id)) return;
         var o = el("option", null, l.name + " (" + l.kind + (l.status === "retired" ? ", retired" : "") + ")"); o.value = l.id; sel.appendChild(o);
@@ -540,7 +541,9 @@
         (a.includeEveryContact ? " every contact on each client, partner or funder." : " the primary contact of each client, partner or funder.") +
         (a.builtVersion ? " Last built from version " + a.builtVersion + " on " + fmtDate(a.builtAt) + "." : " Not built yet.") +
         " The rule ticks below are not used while a list is chosen."
-      : "No list chosen: Build the list uses this kind's own rule below.");
+      : (c.campaignKind === "Email" && emailCopyMode()
+        ? "No list chosen. An email goes to a list's copy in Constant Contact: choose a list that keeps one."
+        : "No list chosen: Build the list uses this kind's own rule below."));
     var skips = $("audSkips"); skips.innerHTML = "";
     ((a && a.build && a.build.skipped) || []).forEach(function (x) { skips.appendChild(el("li", null, x.count + " skipped — " + x.reason)); });
     Array.prototype.forEach.call(document.querySelectorAll(".cm__rule"), function (box) { box.classList.toggle("cm__rule--off", !!a); });
@@ -558,10 +561,43 @@
 
   // --- the email kind (§ 3.3; rulings 19, 25) ---------------------------------------------------
   var EMAIL_PUSHED = "pushed to the mailing list";
+  // With copies on (build plan § 7e.9), an email campaign sends to its list's
+  // copy in Constant Contact: build counts, sign-off syncs the copy, staff send
+  // the notice there, then pick that email here.
+  function emailCopyMode() { return !!(state.session && state.session.listSyncOn); }
+
+  function renderEmailCopy(rec) {
+    var c = rec.campaign, ec = rec.emailCopy || {}, built = ec.built || {};
+    $("emailRuleBox").hidden = true;
+    $("emailSentBtn").hidden = true;
+    $("emailPickBtn").hidden = false;
+    text($("emailSignoffBtn"), "Sign off and sync");
+    var skipped = (built.skipped || []).reduce(function (n, x) { return n + (x.count || 0); }, 0);
+    tiles($("emailTiles"), [["Reached", built.reached != null ? built.reached : "—"], ["Skipped", built.reached != null ? skipped : "—"],
+      ["On the copy", c.pieceCount != null ? c.pieceCount : "—"], ["Email picked", ec.pickedEmailId ? "Yes" : "No"]]);
+    var next = $("emailNext"), list = ec.listName ? "\u201c" + ec.listName + "\u201d" : "";
+    var msg = "";
+    if (!ec.listId) msg = "Next: choose a list (Audience and content). An email goes to a list's copy in Constant Contact.";
+    else if (ec.problem) msg = "Next: " + ec.problem;
+    else if (c.campaignStatus === "Signed off" && !ec.pickedEmailId) msg = "Next: send it in Constant Contact to " + list + ", then pick that email here.";
+    else if (ec.pickedEmailId) msg = "Sent: the email picked here went to " + list + " from Constant Contact.";
+    else if (!built.reached && built.reached !== 0) msg = "Next: build the list to count who " + list + " reaches.";
+    else msg = "Next: sign off. Signing off brings the copy of " + list + " up to date in Constant Contact.";
+    text(next, msg); next.hidden = false;
+    var note = $("emailNote");
+    if (!state.session.emailOn) text(note, "Campaign emails are switched off on this deployment (CAMPAIGNS_EMAIL at /setup).");
+    else if (!state.session.mailingConnected) text(note, "The mailing service is not connected here (System Settings, Mailing).");
+    else if (!ec.fieldAvailable) text(note, "This CRM has no place for the picked email yet, so Pick the email will refuse until the CRM change for the redesign is made.");
+    else text(note, "The application never sends email: Constant Contact does. Design the notice there with this campaign's links (Links tab: the address to paste into a notice).");
+  }
+
   function renderEmailCard(rec) {
     var c = rec.campaign, card = $("emailCard");
     if (c.campaignKind !== "Email") { hide(card); return; }
     show(card);
+    if (emailCopyMode()) { renderEmailCopy(rec); return; }
+    $("emailRuleBox").hidden = false; $("emailSentBtn").hidden = false; $("emailPickBtn").hidden = true; $("emailNext").hidden = true;
+    text($("emailSignoffBtn"), "Sign off and push");
     var touches = rec.touches || [];
     var pushed = touches.filter(function (t) { return t.touchStatus === "Planned" && t.vendorStatus === EMAIL_PUSHED; }).length;
     var withheld = touches.filter(function (t) { return t.touchStatus === "Cancelled" && (t.vendorStatus || "").indexOf("withheld") === 0; }).length;
@@ -598,16 +634,70 @@
     var c = state.record.campaign;
     if (["Draft", "Awaiting sign-off", null, undefined, ""].indexOf(c.campaignStatus) < 0) { notice("The list cannot be rebuilt once the campaign is " + c.campaignStatus + ".", "warn"); return; }
     var rule = emailRule();
+    if (emailCopyMode() && !listChosen()) { notice("Choose a list for this email campaign first (Audience and content). An email goes to a list's copy in Constant Contact.", "warn"); return; }
     if (!listChosen() && !rule.stages.length && rule.dormantDays === null) { notice("Tick at least one stage, or the dormant clients.", "warn"); return; }
     try {
       var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/build", { method: "POST", body: { rule: rule } });
-      notice(audienceNote(res) + "List built: " + res.pieces + " people (" + res.created + " new, " + res.cancelled + " dropped).", res.audience && res.audience.skipped.length ? "warn" : "ok");
+      if (res.copy) notice(audienceNote(res) + "The email will reach " + res.pieces + " " + (res.pieces === 1 ? "person" : "people") + ".", res.audience && res.audience.skipped.length ? "warn" : "ok");
+      else notice(audienceNote(res) + "List built: " + res.pieces + " people (" + res.created + " new, " + res.cancelled + " dropped).", res.audience && res.audience.skipped.length ? "warn" : "ok");
       loadRecord();
     } catch (e) { notice(e.message, "error"); }
   });
 
+  function emailSignoffToCopy() {
+    var c = state.record.campaign, ec = state.record.emailCopy || {}, built = ec.built || {};
+    if (!ec.listId) { notice("Choose a list for this email campaign first (Audience and content).", "warn"); return; }
+    if (ec.problem) { notice(ec.problem, "warn"); return; }
+    if (built.reached == null) { notice("Build the list first — it counts who the email will reach.", "warn"); return; }
+    if (["Draft", "Awaiting sign-off", null, undefined, ""].indexOf(c.campaignStatus) < 0) { notice("A campaign at " + c.campaignStatus + " cannot be signed off.", "warn"); return; }
+    var body = el("div", "cm__plan");
+    body.appendChild(el("p", null, "This brings the copy of \u201c" + ec.listName + "\u201d in Constant Contact up to date: " + built.reached + " " +
+      (built.reached === 1 ? "person" : "people") + " when the list was built. Nobody is emailed until you send the notice from Constant Contact to that list."));
+    body.appendChild(el("p", "cm__hint", "Type the number of people to confirm. The sync can take up to a minute."));
+    var f = el("div", "cm__field"); var lab = el("label", null, "Number of people"); lab.htmlFor = "emailConfirm"; var inp = el("input"); inp.type = "text"; inp.id = "emailConfirm"; inp.autocomplete = "off";
+    f.appendChild(lab); f.appendChild(inp); body.appendChild(f);
+    openModal("Sign off and sync", body, async function () {
+      var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/signoff", { method: "POST", body: { confirm: inp.value }, timeoutMs: 70000 });
+      var n = (res.campaign && res.campaign.pieceCount) || 0;
+      closeModal(); notice("Signed off. The copy of \u201c" + ec.listName + "\u201d holds " + n + " " + (n === 1 ? "person" : "people") + ". Send the notice to it from Constant Contact, then pick that email here.", "ok"); loadRecord();
+    }, "Sign off and sync");
+    setTimeout(function () { inp.focus(); }, 50);
+  }
+
+  $("emailPickBtn").addEventListener("click", async function () {
+    if (!state.record) return;
+    var c = state.record.campaign, ec = state.record.emailCopy || {};
+    if (ec.pickedEmailId) { notice("An email is already picked for this campaign.", "warn"); return; }
+    if (c.campaignStatus !== "Signed off") { notice("Pick the email after the campaign is signed off and the email has gone out from Constant Contact.", "warn"); return; }
+    var res;
+    try { res = await api("/campaigns/" + encodeURIComponent(c.id) + "/emails", { timeoutMs: 70000 }); }
+    catch (e) { notice(e.message, "error"); return; }
+    var body = el("div", "cm__plan");
+    var emails = res.emails || [];
+    if (!emails.length) {
+      body.appendChild(el("p", null, "No email has gone to \u201c" + res.listName + "\u201d from Constant Contact in the last 30 days. Send the notice there to that list, then come back and pick it."));
+      openModal("Pick the email", body, async function () { closeModal(); }, "Close");
+      return;
+    }
+    body.appendChild(el("p", null, "The emails sent from Constant Contact to \u201c" + res.listName + "\u201d in the last 30 days. Pick the one this campaign sent."));
+    var group = el("div", "cm__pick");
+    emails.forEach(function (m, i) {
+      var lab = el("label", "cm__check"); var r = el("input"); r.type = "radio"; r.name = "emailPick"; r.value = m.id; r.id = "emailPick" + i;
+      lab.appendChild(r); lab.appendChild(document.createTextNode(" " + (m.name || "(no name)") + (m.sentAt ? " — " + fmtDate(m.sentAt) : "") + (m.status ? " (" + m.status + ")" : "")));
+      group.appendChild(lab);
+    });
+    body.appendChild(group);
+    openModal("Pick the email", body, async function () {
+      var picked = document.querySelector("input[name=emailPick]:checked");
+      if (!picked) { modalMsg("Choose one of the emails first.", "warn"); return; }
+      var out = await api("/campaigns/" + encodeURIComponent(c.id) + "/pick-email", { method: "POST", body: { emailId: picked.value }, timeoutMs: 70000 });
+      closeModal(); notice("Picked \u201c" + out.email.name + "\u201d. The campaign is now Running.", "ok"); loadRecord();
+    }, "Pick this email");
+  });
+
   $("emailSignoffBtn").addEventListener("click", function () {
     if (!state.record) return;
+    if (emailCopyMode()) { emailSignoffToCopy(); return; }
     var c = state.record.campaign, sum = state.record.touchSummary || {};
     if (!sum.planned) { notice("Build the list first — there is nobody on it.", "warn"); return; }
     var body = el("div", "cm__plan");
@@ -841,6 +931,11 @@
     else window.prompt("Copy the address", t);
   }
 
+  var PASTE_TAG = "[[custom.cbm_lead_code]]";
+  function pasteAddressShown() {
+    return emailCopyMode() && !!(state.record && state.record.campaign && state.record.campaign.campaignKind === "Email");
+  }
+
   function renderLinks() {
     var body = $("linkRows"); body.innerHTML = "";
     var links = state.links || [];
@@ -848,7 +943,17 @@
       var tr = el("tr");
       tr.appendChild(el("td", null, l.name));
       var sTd = el("td"); sTd.appendChild(el("span", "cm__short", l.shortUrl)); sTd.appendChild(document.createTextNode(" "));
-      var copy = el("button", "cm__rowbtn", "Copy"); copy.type = "button"; copy.addEventListener("click", function () { copyText(l.shortUrl, copy); }); sTd.appendChild(copy); tr.appendChild(sTd);
+      var copy = el("button", "cm__rowbtn", "Copy"); copy.type = "button"; copy.addEventListener("click", function () { copyText(l.shortUrl, copy); }); sTd.appendChild(copy);
+      if (pasteAddressShown()) {
+        // The address to paste into a notice (build plan § 7d.2): Constant
+        // Contact fills in each person's own code. Nobody should type the tag.
+        var paste = l.shortUrl.replace(/\/+$/, "") + "/" + PASTE_TAG;
+        var pRow = el("div", "cm__paste"); pRow.appendChild(el("span", "cm__hint", "To paste into a notice: "));
+        pRow.appendChild(el("span", "cm__short", paste)); pRow.appendChild(document.createTextNode(" "));
+        var pCopy = el("button", "cm__rowbtn", "Copy"); pCopy.type = "button"; pCopy.addEventListener("click", function () { copyText(paste, pCopy); });
+        pRow.appendChild(pCopy); sTd.appendChild(pRow);
+      }
+      tr.appendChild(sTd);
       tr.appendChild(el("td", null, destinationLabel(l)));
       var stTd = el("td"); stTd.appendChild(el("span", "cm__badge" + (l.state === "retired" ? " cm__badge--late" : ""), l.state)); tr.appendChild(stTd);
       var c = l.counts || {};

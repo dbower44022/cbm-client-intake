@@ -195,6 +195,9 @@ async def session(request: Request) -> dict[str, Any]:
         "callsOn": settings.campaigns_calls,
         "smsOn": settings.campaigns_sms,
         "listsOn": settings.campaign_lists,
+        # A list's copy in Constant Contact and the email campaign that sends to
+        # it (§ 7e.9); needs the lists.
+        "listSyncOn": settings.campaign_list_sync and settings.campaign_lists,
         "ladderOn": settings.lead_ladder,
         "importTemplatesOn": settings.import_templates,
         "leadOutreachOn": settings.lead_outreach,
@@ -360,9 +363,12 @@ async def get_campaign(campaign_id: str, request: Request) -> dict[str, Any]:
                          "fieldAvailable": await sms.message_field_available(client)}
         except EspoError as exc:
             log.warning("text message of %s unreadable: %s", campaign_id, exc)
+    email_copy = None
+    if row.get("campaignKind") == cfg.KIND_EMAIL and _copy_mode(settings):
+        email_copy = await _email_copy(request, settings, campaign_id)
     return {
         "campaign": row, "partners": partners, "funders": funders, "events": events, "callerTeams": caller_teams,
-        "smsCheck": sms_check,
+        "smsCheck": sms_check, "emailCopy": email_copy,
         "callerTeamIds": caller_team_ids,
         "touches": touches, "touchSummary": service.touch_summary(touches),
         "callBreakdown": reporting.touch_breakdown(touches),
@@ -374,6 +380,41 @@ async def get_campaign(campaign_id: str, request: Request) -> dict[str, Any]:
         "estimatedCost": estimated_cost(settings, service.touch_summary(touches)["planned"]),
         "currency": settings.postal_currency,
     }
+
+
+def _copy_mode(settings: Settings) -> bool:
+    """An email campaign sends to its list's copy (§ 7e.9): both switches on."""
+    return bool(settings.campaign_list_sync and settings.campaign_lists)
+
+
+async def _campaign_list(request: Request, campaign_id: str) -> tuple[Optional[dict[str, Any]], Optional[dict[str, Any]]]:
+    """The campaign's chosen list row and its audience row (the last build)."""
+    store = getattr(request.app.state, "campaign_store", None)
+    if store is None:
+        return None, None
+    chosen = await store.get_campaign_audience(campaign_id)
+    if not chosen:
+        return None, None
+    return await store.get_list(chosen["list_id"]), chosen
+
+
+async def _email_copy(request: Request, settings: Settings, campaign_id: str) -> dict[str, Any]:
+    """What the email campaign's strip needs: its list, the copy's state, the
+    picked email."""
+    api = _api_client(settings, request)
+    row, chosen = await _campaign_list(request, campaign_id)
+    available = await email_kind.vendor_email_available(api)
+    picked = ""
+    if available:
+        try:
+            picked = (await api.get(cfg.CAMPAIGN, campaign_id, select=f"id,{email_kind.VENDOR_EMAIL_FIELD}")
+                      or {}).get(email_kind.VENDOR_EMAIL_FIELD) or ""
+        except EspoError as exc:
+            log.warning("picked email of %s unreadable: %s", campaign_id, exc)
+    return {"listId": (row or {}).get("id"), "listName": (row or {}).get("name") or "",
+            "copyOn": bool((row or {}).get("cc_sync")), "listActive": (row or {}).get("status") == "active",
+            "problem": email_kind.copy_refusal(row), "built": ((chosen or {}).get("build") or None),
+            "pickedEmailId": picked, "fieldAvailable": available}
 
 
 class ChangesIn(BaseModel):
@@ -553,7 +594,12 @@ async def build_list(campaign_id: str, body: BuildIn, request: Request) -> dict[
             result = await sms.build_list(api_client, client, row, body.rule, audience=chosen)
         elif row.get("campaignKind") == cfg.KIND_EMAIL:
             _require_email(settings)
-            result = await email_kind.build_list(api_client, client, row, body.rule, audience=chosen)
+            if _copy_mode(settings):
+                # Doug's two rulings at the M7 plan (10-26-26): an email
+                # campaign needs a list, and its build writes no touches.
+                result = await email_kind.build_for_copy(api_client, client, row, chosen)
+            else:
+                result = await email_kind.build_list(api_client, client, row, body.rule, audience=chosen)
         else:
             result = await postcard.build_list(api_client, client, row, body.rule, settings, audience=chosen)
         if chosen:
@@ -589,6 +635,10 @@ async def sign_off(campaign_id: str, body: SignOffIn, request: Request) -> dict[
             _require_calls(settings)
             updated = await calls.sign_off(api_client, client, row,
                                            user_name=user.get("name") or user.get("userName") or "")
+        elif row.get("campaignKind") == cfg.KIND_EMAIL and _copy_mode(settings):
+            _require_email(settings)
+            updated = await _sign_off_to_copy(request, settings, api_client, client, row, body.confirm,
+                                              user.get("name") or user.get("userName") or "")
         elif row.get("campaignKind") == cfg.KIND_EMAIL:
             _require_email(settings)
             updated = await email_kind.sign_off(api_client, client, row, confirm=body.confirm,
@@ -613,7 +663,9 @@ async def sign_off(campaign_id: str, body: SignOffIn, request: Request) -> dict[
                  if row.get("campaignKind") == cfg.KIND_CALL else
                  f"Signed off the text message of \"{row.get('name')}\" to {updated.get('pieceCount')} people"
                  if row.get("campaignKind") == cfg.KIND_SMS else
-                 f"Signed off the email list of \"{row.get('name')}\": {updated.get('pieceCount')} people"
+                 (f"Signed off \"{row.get('name')}\": its list's copy in Constant Contact synced, "
+                  f"{updated.get('pieceCount')} people on it" if _copy_mode(settings) else
+                  f"Signed off the email list of \"{row.get('name')}\": {updated.get('pieceCount')} people")
                  if row.get("campaignKind") == cfg.KIND_EMAIL else
                  f"Signed off \"{row.get('name')}\": {updated.get('pieceCount')} pieces, "
                  f"estimated {updated.get('estimatedCost')} {updated.get('estimatedCostCurrency')}"),
@@ -1921,12 +1973,98 @@ async def _simulate_text(campaign_id: str, touch_id: str, kind: str, request: Re
     return result
 
 
-@api_router.post("/campaigns/{campaign_id}/mark-sent")
-async def mark_sent(campaign_id: str, request: Request) -> dict[str, Any]:
-    """Email kind: staff sent the notice at the mailing service (§ 3.3)."""
+async def _sign_off_to_copy(request: Request, settings: Settings, api_client, client, row: dict[str, Any],
+                            confirm: str, user_name: str) -> dict[str, Any]:
+    """Sign-off with the switch on: every refusal first, then *Sync now* for
+    the campaign's list, then Signed off. A failed sync leaves the campaign
+    where it was and says why."""
+    from .lists_router import run_sync_now
+
+    list_row, chosen = await _campaign_list(request, row["id"])
+    email_kind.check_sign_off_to_copy(row, confirm=confirm, built=(chosen or {}).get("build"),
+                                      list_row=list_row, settings=settings)
+    result = await run_sync_now(settings, request, _store(request), list_row)
+    return {**await email_kind.signed_off_to_copy(api_client, client, row, user_name=user_name,
+                                                  synced=result.summary),
+            "copy": result.summary}
+
+
+@api_router.get("/campaigns/{campaign_id}/emails")
+async def sent_emails(campaign_id: str, request: Request) -> dict[str, Any]:
+    """*Pick the email*: the account's emails sent to the campaign's list copy
+    in the last 30 days."""
+    _user, client = _actor(request)
+    settings = get_settings()
+    _require_email(settings)
+    if not _copy_mode(settings):
+        raise HTTPException(status_code=404, detail="Copies in Constant Contact are switched off (Campaign list copies at /setup).")
+    row = await _campaign_or_404(request, client, campaign_id)
+    if row.get("campaignKind") != cfg.KIND_EMAIL:
+        raise HTTPException(status_code=400, detail="This is not an email campaign.")
+    list_row, _chosen = await _campaign_list(request, campaign_id)
+    problem = email_kind.copy_refusal(list_row)
+    if problem:
+        raise HTTPException(status_code=400, detail=problem)
+    if not list_row.get("cc_list_id"):
+        raise HTTPException(status_code=400, detail=(
+            f"The list \"{list_row['name']}\" has no copy in Constant Contact yet — sign off the campaign "
+            "(it syncs the copy), or press Sync now on the list."))
+    from . import list_sync
+    from core.mailing import MailingError
+    try:
+        emails = await list_sync.emails_for_list(settings, list_row["cc_list_id"])
+    except MailingError as exc:
+        raise HTTPException(status_code=502, detail=f"Constant Contact could not list the emails: {exc}")
+    return {"listName": list_row["name"], "emails": emails}
+
+
+class PickIn(BaseModel):
+    emailId: str = Field(min_length=1, max_length=64)
+
+
+@api_router.post("/campaigns/{campaign_id}/pick-email")
+async def pick_email(campaign_id: str, body: PickIn, request: Request) -> dict[str, Any]:
     user, client = _actor(request)
     settings = get_settings()
     _require_email(settings)
+    if not _copy_mode(settings):
+        raise HTTPException(status_code=404, detail="Copies in Constant Contact are switched off (Campaign list copies at /setup).")
+    row = await _campaign_or_404(request, client, campaign_id)
+    api_client = _api_client(settings, request)
+    copy = await _email_copy(request, settings, campaign_id)
+    row = {**row, email_kind.VENDOR_EMAIL_FIELD: copy["pickedEmailId"]}
+    try:
+        email_kind.check_pick(row)
+    except CampaignError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    listed = await sent_emails(campaign_id, request)
+    try:
+        result = await email_kind.pick_email(api_client, client, row, email_id=body.emailId, sent=listed["emails"])
+    except CampaignError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not record the email")
+    await record_action(
+        client, app=APP_CAMPAIGNS, category=CAT_STATUS, action="Campaign Email Picked",
+        parent_type=cfg.CAMPAIGN, parent_id=campaign_id,
+        summary=(f"Picked the email \"{result['email']['name']}\", sent from Constant Contact to the list "
+                 f"\"{listed['listName']}\", for \"{row.get('name')}\""),
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+        details={"email": result["email"]},
+    )
+    return result
+
+
+@api_router.post("/campaigns/{campaign_id}/mark-sent")
+async def mark_sent(campaign_id: str, request: Request) -> dict[str, Any]:
+    """Email kind: staff sent the notice at the mailing service (§ 3.3). The
+    switch-off path only; with copies on, *Pick the email* is the confirmation."""
+    user, client = _actor(request)
+    settings = get_settings()
+    _require_email(settings)
+    if _copy_mode(settings):
+        raise HTTPException(status_code=400, detail=(
+            "Pick the email you sent from Constant Contact instead — picking it is the confirmation."))
     row = await _campaign_or_404(request, client, campaign_id)
     try:
         result = await email_kind.mark_as_sent(_api_client(settings, request), row)

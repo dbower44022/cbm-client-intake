@@ -5,6 +5,75 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.290.0] — 2026-10-26
+
+**feat(campaigns): a list keeps a copy in Constant Contact, and the email
+campaign sends to it** (build plan § 7e.9 first half and § 7d.2's email half,
+step M7 of the Marketing Management redesign; rulings 95, 100, 112, 126).
+Behind a new switch, **`CAMPAIGN_LIST_SYNC`** (*Campaign list copies* at
+/setup; read per request and per pass; needs `CAMPAIGN_LISTS` and the mailing
+connection). Off, lists and email campaigns work exactly as before.
+**Migration 0038.**
+
+- **A list's copy** (ruling 95). The list page's top line gains *Keep a copy
+  in Constant Contact*, the copy's status in words (the counts, or the last
+  error) and *Sync now* (`PUT /lists/{id}/cc-copy`, `POST /lists/{id}/sync-now`,
+  both action-logged; *Sync now* gives up waiting after 50 seconds and the
+  next pass finishes). The copy holds the list's members as the email channel
+  reaches them (`audience.resolve_targets`: the person's consent, a usable
+  address, a chapter member at their `cbmEmail`); a dynamic list is run for
+  its sync. An unsubscribe at the vendor is never re-added; a person who
+  leaves the list leaves the copy and stays in the account. Renaming a list
+  renames its copy (`PUT /contact_lists/{id}`); unticking or retiring stops
+  the sync and keeps the copy. A copy is refused the standing list's name and
+  another copy's.
+- **The copy is found by its id, then by its name**, so the nightly sandbox
+  reset (which empties `audience_list`) never makes a second one.
+- **One mailing pass for every list** (`campaigns/list_sync.run_pass`, the
+  worker's push with the switch on): the vendor's unsubscribes and the custom
+  field are read once, the standing *Event notices* list is pushed as before,
+  then every active list with its copy on. One list's failure is recorded on
+  its own row and alerted under its own key (`mailing_list_<id>_failed`)
+  without stopping the others. `core/mailing_sync.build_plan` / `run_push`
+  take the people, the stored id, the unsubscribes and the code column as
+  parameters; without them the standing push is unchanged.
+- **The lead code at the vendor** (§ 7d.2, ruling 126). The custom field
+  `cbm_lead_code` is created when the connection is made and checked on
+  every push (Readiness: *custom field cbm_lead_code*, read from the last
+  push's summary — *missing* when the vendor refused it, a warning when it had
+  to be made again). Every push writes each person's code as the import's
+  `cf:cbm_lead_code` column, minting one under the org-wide key for a contact
+  without one (at most 500 a pass), and imports the people already on a list
+  again so a new or replaced code reaches the vendor. The Links tab of an
+  email campaign shows each link a second time as the address to paste into
+  a notice, `…/c/{link}/[[custom.cbm_lead_code]]`, with Copy.
+- **The email campaign** (ruling 95; Doug's two rulings at the M7 plan,
+  10-26-26). An email campaign must choose a list (its rule card is gone;
+  the other kinds keep theirs until M8). *Build the list* counts who the
+  email reaches and **writes no touch** — the send report of M9 writes one
+  per real recipient; Planned touches from an earlier build are cancelled.
+  *Sign off and sync* requires the list's copy, takes the typed count,
+  syncs the copy and moves the campaign to Signed off. The card then says
+  "Next: send it in Constant Contact to <list>, then pick that email here".
+  *Pick the email* (`GET /campaigns/{id}/emails`,
+  `POST /campaigns/{id}/pick-email`) lists the emails sent to the copy in the
+  last 30 days, stores the pick on `COutreachCampaign.vendorEmailId`
+  (feature-detected; refused in words on a CRM without it) and moves the
+  campaign to Running. *Mark as sent* is refused with copies on; it and the
+  per-campaign push (`push_campaign`, `Campaign — <name>`) remain for the
+  switch-off path and go when the switch is retired.
+- **The default list fields** gain the lead's level and phone (owed from M6;
+  the ready-made lists of M8 filter on the level).
+- **Inferred, not yet called** (Draft 8), each marked in `core/mailing.py`:
+  the custom-field endpoints, the `cf:` import column and the merge tag's
+  spelling, the list rename, the email-campaign listing and its per-list
+  filter. The live send on crm-test is the check.
+- Tests: `tests/test_list_sync.py` (20) and `tests/test_list_copy_routes.py`
+  (13) new; two vendor-client tests in `tests/test_mailing.py`. Migration 0038
+  run against a local Postgres: upgrade over an existing list, downgrade,
+  upgrade again. Checked in the browser against the real application over the
+  test fakes.
+
 ## [0.289.1] — 2026-10-26
 
 **fix(core): an action with no CRM record writes its history row.** Every

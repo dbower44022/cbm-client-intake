@@ -1,7 +1,8 @@
 """Campaign audiences — the lists' own tables (build plan § 7c.5; ruling 64:
 lists live in the application's database, like campaign links). Migrations
-``0032_campaign_audience_lists`` and ``0037_lists_include_leave_out`` (the
-Include / Leave out recipe, § 7e.8); reset nightly on the sandbox.
+``0032_campaign_audience_lists``, ``0037_lists_include_leave_out`` (the
+Include / Leave out recipe, § 7e.8) and ``0038_list_constant_contact_copy``
+(the copy in Constant Contact, § 7e.9); reset nightly on the sandbox.
 
 A **dynamic** list's members are what its last run found (``source`` recipe,
 ``group_index`` the Include group that brought each one in). A **static**
@@ -69,6 +70,11 @@ audience_list = Table(
     Column("retired_by", String(128)),
     Column("retired_at", DateTime(timezone=True)),
     Column("needs_rebuild", Boolean, nullable=False, default=False),
+    # The kept-current copy in Constant Contact (§ 7e.9, ruling 95; migration 0038).
+    Column("cc_sync", Boolean, nullable=False, default=False),
+    Column("cc_list_id", String(64)),
+    Column("cc_last_sync_at", DateTime(timezone=True)),
+    Column("cc_last_sync", JSONB),
     Index("ix_audience_list_name", "name"),
 )
 
@@ -129,7 +135,8 @@ class AudienceStoreMixin:
                "status": STATUS_ACTIVE, "version": 1, "recipe": recipe,
                "last_run_at": None, "last_run_by": None, "last_run": None,
                "created_by": actor, "created_at": now, "updated_by": actor, "updated_at": now,
-               "retired_by": None, "retired_at": None, "needs_rebuild": False}
+               "retired_by": None, "retired_at": None, "needs_rebuild": False,
+               "cc_sync": False, "cc_list_id": None, "cc_last_sync_at": None, "cc_last_sync": None}
         async with self._engine.begin() as conn:
             await conn.execute(audience_list.insert().values(**row))
             await conn.execute(audience_list_version.insert().values(
@@ -188,6 +195,35 @@ class AudienceStoreMixin:
         async with self._engine.begin() as conn:
             await conn.execute(update(audience_list).where(audience_list.c.id == list_id).values(**values))
         return await self.get_list(list_id)
+
+    # --- the Constant Contact copy (§ 7e.9) ---------------------------------------
+
+    async def set_cc_sync(self, list_id: str, on: bool, actor: str) -> Optional[dict[str, Any]]:
+        """The tick. Unticking keeps ``cc_list_id``: the copy stays at the vendor,
+        and ticking again resumes it rather than making a second one."""
+        async with self._engine.begin() as conn:
+            await conn.execute(update(audience_list).where(audience_list.c.id == list_id).values(
+                cc_sync=bool(on), updated_by=actor, updated_at=_now()))
+        return await self.get_list(list_id)
+
+    async def set_cc_list_id(self, list_id: str, cc_list_id: str) -> None:
+        async with self._engine.begin() as conn:
+            await conn.execute(update(audience_list).where(audience_list.c.id == list_id).values(
+                cc_list_id=cc_list_id or None))
+
+    async def record_cc_sync(self, list_id: str, summary: dict[str, Any]) -> None:
+        """The last sync's summary — the counts, or ``error`` in words."""
+        async with self._engine.begin() as conn:
+            await conn.execute(update(audience_list).where(audience_list.c.id == list_id).values(
+                cc_last_sync_at=_now(), cc_last_sync=summary))
+
+    async def cc_sync_lists(self) -> list[dict[str, Any]]:
+        """Every active list with its copy on, by name — the worker's pass."""
+        async with self._engine.begin() as conn:
+            rows = (await conn.execute(select(audience_list).where(and_(
+                audience_list.c.cc_sync.is_(True), audience_list.c.status == STATUS_ACTIVE,
+            )).order_by(audience_list.c.name))).mappings().all()
+        return [dict(r) for r in rows]
 
     async def delete_list(self, list_id: str) -> None:
         async with self._engine.begin() as conn:

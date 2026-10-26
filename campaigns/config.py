@@ -227,6 +227,8 @@ CAMPAIGN_ENUM_NAMES: frozenset[str] = frozenset(f.name for f in CAMPAIGN_FIELDS 
 CAMPAIGN_APP_FIELDS: frozenset[str] = frozenset({
     "selectionRule", "selectionSummary", "pieceCount", "estimatedCost", "estimatedCostCurrency",
     "signedOffByName", "signedOffAt", "runStartedAt", "runCompletedAt",
+    # The email picked at the mailing service (§ 7e.9, ruling 95; feature-detected).
+    "vendorEmailId",
 })
 
 #: Fields a CRM may not carry yet (feature-detected, dropped from the form and
