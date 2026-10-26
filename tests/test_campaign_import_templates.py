@@ -255,6 +255,8 @@ def test_recognition_suggests_the_closest_template_and_names_every_difference():
     assert found["suggested"]["id"] == chamber["id"] and found["suggested"]["score"] == 0.86
     assert found["suggested"]["renamed"] == [{"from": "post_code", "to": "postcode", "ratio": 0.94}]
     assert found["suggested"]["new"] == ["website"] and found["suggested"]["missing"] == []
+    # An ignored column is known, not new (the live pass listed "notes" as new).
+    assert tpl.differences(chamber, headers + ["internal_notes"])["new"] == ["website"]
     assert [c["name"] for c in found["candidates"]] == ["Chamber list", "State filing"]
     # Nothing close enough: no suggestion, every candidate still scored.
     none = tpl.recognise(run(store.list_templates()), ["a", "b", "c"])

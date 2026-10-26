@@ -79,8 +79,23 @@ found; move resolved items to the bottom with the resolution date.
     imports, the fills read back); section 8 found Undo deleting the two
     filled leads (the fills were inside the five-minute window) and the
     *Import Undone* row refused by the CRM (hung on a deleted lead) —
-    both fixed in **v0.286.1**, not yet pushed; round two of sections 5–8
-    is on the step page. **Owed, in order**: (1) Doug runs `uv run python scripts/migrate_outreach_roles.py`
+    both fixed in **v0.286.1**. **Round two run by Claude 10-25-26
+    20:12–20:49** in a tab Doug signed in as Mark Marketing (results page
+    https://claude.ai/artifact/XpyHhSrvfQBuat1R7J4UKK): two more defects
+    found and fixed on the way — a deleted lead's stale ledger rows made a
+    re-import read it as a repeat row (v0.286.2) and then skip it at the
+    apply (v0.286.3) — then **sections 10–14 passed on v0.286.3** exactly as
+    the step page expects (Undo: "2 deleted, 2 left — filled by a later
+    import"; the history row on a surviving lead). v0.286.1–v0.286.3 pushed
+    and live on both deployments (the tool is off on production).
+    **v0.286.4** (an ignored column no longer reads as a new column) is
+    committed, not pushed. **New item owed**: the apply has no lock — two
+    presses of Confirm for one batch within a second (two tabs, or a fast
+    double press) create every row twice; seen when the automation re-ran a
+    script. Design: a lease on the batch's apply (a column, migration 0036)
+    refused with "being applied by <who>" while held. Also owed: the sandbox
+    carries two rehearsal leads (Parkside Dental Lab, Westown Upholstery)
+    and a second template until tonight's reset. **Owed, in order**: (1) Doug runs `uv run python scripts/migrate_outreach_roles.py`
     then `… --apply` on crm-test — the `delete` cell on the API role
     (ruling 127; the classifier blocks a mutating role write from a
     session); (2) the push; (3) `IMPORT_TEMPLATES` on at crm-test's /setup

@@ -5,6 +5,12 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.286.4] — 2026-10-25
+
+**fix(campaigns): an ignored column is not a new column.** Recognition listed
+the template's ignored `notes` column as "New column — rides along"; it is
+known to the template. Found on round two of the M4 pass.
+
 ## [0.286.3] — 2026-10-25
 
 **fix(campaigns): the apply creates the rows the preview marked stale.**

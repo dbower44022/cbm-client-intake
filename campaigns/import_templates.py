@@ -249,11 +249,17 @@ def likely_renames(file_columns: list[str], template_columns: list[str]) -> list
     return out
 
 
+def ignored_columns(mapping: list[dict[str, Any]]) -> set[str]:
+    return {e["ignore"] for e in (mapping or []) if e.get("ignore")}
+
+
 def differences(template: dict[str, Any], headers: list[str]) -> dict[str, Any]:
-    """New, missing and likely-renamed columns between a template and a file."""
+    """New, missing and likely-renamed columns between a template and a file.
+    A column the template ignores is known, not new (the M4 pass, 10-25-26)."""
     cols = source_columns(template.get("mapping") or [])
     present = set(headers)
-    new = [h for h in headers if h and h not in set(cols)]
+    known = set(cols) | ignored_columns(template.get("mapping") or [])
+    new = [h for h in headers if h and h not in known]
     missing = [c for c in cols if c not in present]
     renamed = likely_renames(new, missing)
     renamed_from = {r["from"] for r in renamed}
