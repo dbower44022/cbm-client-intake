@@ -1217,6 +1217,14 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
+- **v0.289.0 (2026-10-26) — lists described by Include and Leave out**
+  (build plan § 7e.8, M6; rulings 90–94, 98): a dynamic list is a search
+  (Include groups minus Leave out groups), a static list is people added
+  by hand, Exclude onto a static exclusion list, the kind fixed, Copy, the
+  per-channel counts. Rides `CAMPAIGN_LISTS`; **migration 0037**.
+  Built in one session, all four stops. **Committed, not pushed** (Doug
+  pushes after the M5 pass); live pass owed (step page in `OPEN-ITEMS.md`
+  #57).
 - **v0.288.0 (2026-10-26) — personal outreach from the lead's page**
   (build plan § 7e.5, M5; rulings 107–109, 115, 118–120, 122, 128): the
   shared composer (`frontend/shared/compose.js`, the session tools switched
@@ -1246,12 +1254,4 @@ the strength of it.
   accepted on a lead fills the lead itself. Rides `LEAD_LADDER`. v0.285.1
   (the row's link) live on both deployments; **live-passed on crm-test
   10-25-26 18:35** by Doug. Next: M4 (`OPEN-ITEMS.md` #57).
-- **v0.284.0 (2026-10-25) — the qualification ladder and the Leads tab**
-  (build plan §§ 7e.3–7e.4, step M2; rulings 104–106, 108, 113, 117). Dark
-  behind `LEAD_LADDER`; needs `marketing-redesign-crm-handoff.md`, applied
-  on crm-test 10-25-26 and proved. v0.284.0 and the v0.284.1 fix pushed and
-  live on both deployments; **live-passed on crm-test 10-25-26 12:00** by
-  Doug (23 steps). Standing rules in `campaigns/CLAUDE.md`: call
-  `ladder.after_write` after any application write to a lead; the level is
-  empty outside Qualified. Next: M3 (`OPEN-ITEMS.md` #57).
 Everything else still owed is in `OPEN-ITEMS.md`.

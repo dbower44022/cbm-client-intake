@@ -79,7 +79,6 @@ RESET_TABLES: tuple[str, ...] = (
     # Campaign audiences (build plan § 7c): named lists and the campaign's
     # choice of list. Training data; lists made in a pass are gone by morning.
     "campaign_audience",
-    "audience_list_entry",
     "audience_list_member",
     "audience_list_version",
     "audience_list",

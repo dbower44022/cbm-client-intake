@@ -120,7 +120,24 @@ found; move resolved items to the bottom with the resolution date.
     Mark a mentor profile with a real `cbmEmail`); the only lead assigned
     to him, Marigold Pet Grooming, has no email yet, so the tester adds one
     they control first; (4) the reply test: answer from the lead's address
-    and watch the sync attach it within one pass. Still owed: the handoff on
+    and watch the sync attach it within one pass. **M6 built as v0.289.0
+    (10-26-26)**, all four stops in one session: lists described by
+    Include and Leave out (rulings 90–94, 98) — a dynamic list is a search,
+    a static list is people added by hand, Exclude onto a static exclusion
+    list, the kind fixed, Copy, the per-channel counts, *Brought in by*,
+    *Used by*; rides `CAMPAIGN_LISTS`; **migration 0037** (converts the
+    crm-test test lists, drops `audience_list_entry`). Checked against the
+    real app over the test fakes, the migration against a local Postgres,
+    and by 3,040+ tests. **Owed, in order**: (1) Doug pushes v0.289.0 once
+    the M5 pass is done (both commits go together — the push redeploys
+    crm-test under any pass in progress); (2) the live pass (step page
+    https://claude.ai/artifact/CyUnHZcBtjB79d3VkJozv1 rev 1.0, 28 steps as
+    Mark Marketing) — its section A adds `qualificationLevel` and `phone`
+    to the *Campaign list fields* setting at crm-test's /setup, because the
+    default lead fields have neither; (3) decide whether those two join
+    `audience.DEFAULT_FIELDS` (M7's ready-made lists will want the level).
+    Next: M7, Constant Contact per list and the email campaign (§ 7e.9
+    first half). Still owed: the handoff on
     production at the arc's slot and on Boston with its release (now with
     the third role cell); the layout question in the handoff's § 7.
 

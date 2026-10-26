@@ -5,6 +5,64 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.289.0] — 2026-10-26
+
+**feat(campaigns): lists described by Include and Leave out** (build plan
+§ 7e.8, step M6 of the Marketing Management redesign; rulings 90–94 and 98).
+Rides the existing **`CAMPAIGN_LISTS`** switch — no new switch. **Migration
+0037.** A campaign that names a list still builds from it; the curated field
+list, `resolve_targets` and every send-time check are unchanged.
+
+- **A dynamic list is a search and nothing else** (rulings 90–92): its recipe
+  is `{"include": [group], "exclude": [group]}`. A group is records of one
+  type matching all its conditions, everyone on another list, or the records
+  a file names. Members are the union of the Include groups minus the union
+  of the Leave out groups; Leave out always wins and groups have no order.
+  Step order, *Keep only*, the per-step counts and the standing entries are
+  gone. The run report has one count per group.
+- **A static list is the people added by hand and nothing else** (rulings
+  91, 94): no recipe, never run, no "never run" refusal at build time.
+  *Add people* finds by name or email across all five record types
+  (`GET /lists/search/records?type=all`), or by one type's conditions
+  (`POST /lists/{id}/find`), with tick, select all and *Add ticked*
+  (`POST /lists/{id}/add-people`), copied once. *Remove* takes a person off.
+- **Exclude** on a dynamic list's member grid (ruling 92,
+  `POST /lists/{id}/exclude`): adds the person to a static exclusion list —
+  an existing one, or a new one named "<list> — do not include" — and makes
+  the dynamic list leave that list out if it does not already. The new-list
+  dialog offers an exclusion list to leave out from the start.
+- **The kind is fixed** (ruling 93): the Static / Dynamic switch is gone and
+  `PUT /lists/{id}` refuses a change in words. *Copy to a new static list*
+  (`POST /lists/{id}/copy`) takes the current members (a dynamic list is run
+  for it); campaigns stay on the original.
+- **The list page** (ruling 98): the top line names the list, its kind and
+  its members per channel — Email, Text, Postcard, each `resolve_targets`
+  read as a count (`GET /lists/{id}/counts`, computed on demand from the
+  members the grid shows, never stored). A dynamic list says who is on it in
+  one sentence per group (`audience.describe_group`), and *Edit* opens the
+  Include and Leave out panels. The member grid has search, sort and CSV
+  export (`GET /lists/{id}/export`), and on a dynamic list *Brought in by*
+  (the first Include group that matched, `audience_list_member.group_index`)
+  and *Exclude*. *Used by* lists each campaign with its date and reach
+  (`GET /lists/{id}/used-by`). The index shows name, kind, members and last
+  used.
+- **Migration 0037** converts the crm-test test lists: *Add* → an Include
+  group, *Remove* → a Leave out group, *Add list* / *Remove list* → list
+  groups, *import* → an Include file group. A list with *Keep only*, or
+  where an adding step followed a removing one, is converted as far as it
+  goes and marked **`needs_rebuild`** (the page says so until it is saved
+  again). Each dynamic list's *always exclude* entries become a static list
+  "<list> — exceptions" that it leaves out; *always include* entries are
+  dropped, each named in the migration log. A static list's members become
+  hand rows and its recipe is emptied. `audience_list_member.step` becomes
+  `group_index`; `audience_list_entry` is dropped. Run against Postgres
+  locally, including a downgrade and a second upgrade (which must not empty
+  a converted list — it now leaves a new-shape recipe alone).
+- **Smaller:** a list another list names in a group cannot be deleted (it is
+  named in the refusal); the contacts rule's message and two skip reasons
+  on the campaign page no longer cite a ruling number; the sandbox reset's table guard now subtracts tables a
+  later migration drops.
+
 ## [0.288.0] — 2026-10-26
 
 **feat(campaigns): personal outreach from the lead's page, on the shared

@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-26-26 00:10 · Revision 0.51 — change log at the end.
+Last Updated: 10-26-26 02:50 · Revision 0.55 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -2247,7 +2247,7 @@ matching a Company or Contact creates a lead closed as Duplicate.
 plus a new `test_campaign_import_templates.py` covering recognition,
 renames, the four fixes, Excel, fills, undo and the touched rule.
 
-### 7e.8 Lists — rulings 90–95, 98
+### 7e.8 Lists — rulings 90–95, 98 (built as v0.289.0, 10-26-26; live pass owed)
 
 **The model.**
 
@@ -2270,7 +2270,8 @@ renames, the four fixes, Excel, fills, undo and the touched rule.
   to a new static list* is a new route.
 
 **The data.** Lists exist only on crm-test, as test data, and the sandbox
-truncates the tables nightly. Migration 0034 converts what it can: Add
+truncates the tables nightly. Migration 0037 converts what it can (the
+number 0034 written here first went to the ladder's snapshot): Add
 steps become includes, Remove steps become excludes, and a list with *Keep
 only* or with step order that matters is marked *needs rebuilding* and
 shown so. Standing entries become a static list per dynamic list, named
@@ -2688,7 +2689,32 @@ Team caller for M1 and M10).
    the live pass on crm-test (step page in `OPEN-ITEMS.md` #57), which
    needs an email the tester controls on Mark Marketing's lead and a
    mailbox the Gmail delegation can read for him.
-6. **M6: lists** (§ 7e.8). About four days.
+6. **M6: lists** (§ 7e.8). About four days. Plan drafted in
+   `prompts/m6-lists-kickoff.md`, approved by Doug 10-26-26 ("run all four
+   stops"). **Built as v0.289.0 (10-26-26)**, four stops in one session.
+   Routine choices, each announced and built as written: the recipe is
+   `{"include": [group], "exclude": [group]}` with `match`, `list` and
+   `import` groups; migration 0037 converts each old step kind, marks
+   `needs_rebuild` for *Keep only* or order that mattered, turns *always
+   exclude* entries into a "<list> — exceptions" static list the dynamic
+   list leaves out, drops *always include* entries with a log line, and
+   turns a static list's members into hand rows with its recipe emptied
+   (a case the kickoff left out); `step` → `group_index`; no list seeder
+   exists, so none changed; *Brought in by* names the first Include group.
+   Made on the way: the per-channel counts read the members the grid shows
+   (a dynamic list's last run), so a never-run dynamic list asks to be run
+   first rather than running inside the count; a run records the Include
+   groups it used, so an Exclude (which changes only Leave out) keeps the
+   *Brought in by* labels; searching or sorting members by name reads every
+   name and is refused above 2,000 members (export instead), and an export
+   holds at most 10,000; a list another list names cannot be deleted; *Run
+   now* stays on a static list's page and says why it does not run; the
+   sentences drop the operator's typing hint. Migration 0037 was run
+   against a local Postgres with old-shape lists, a downgrade and a second
+   upgrade — which emptied a converted recipe until the conversion learned
+   to leave a new-shape recipe alone. Checked in the browser against the
+   real application over the test fakes. **Live pass owed** on crm-test
+   (`OPEN-ITEMS.md` #57).
 7. **M7: Constant Contact per list and the email campaign** (§ 7e.9
    first half), behind `CAMPAIGN_LIST_SYNC`. About three days, plus the
    live send. **Also (ruling 126):** § 7d.2's email half — the vendor
@@ -2984,6 +3010,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.55 | 10-26-26 02:50 | Claude (Claude Code) | § 7e.8 marked built (v0.289.0) and its migration number corrected to 0037; § 7e.13 step M6: the routine choices, those made on the way, the Postgres check of the migration, the live pass owed. |
 | 0.54 | 10-25-26 23:20 | Claude (Claude Code) | § 7e.13 step M5: plan approved (four stops, one session), ruling 128 recorded in § 7e.5, kickoff prompt written (`prompts/m5-personal-outreach-kickoff.md`). |
 | 0.53 | 10-25-26 20:50 | Claude (Claude Code) | § 7e.13 step M4 live-passed on crm-test (round two, run by Claude; v0.286.2 and v0.286.3 fixed on the way; the apply race owed); § 7e.7 heading marked live-passed. Next: M5. |
 | 0.52 | 10-25-26 20:15 | Claude (Claude Code) | § 7e.13 step M4: the live pass's first round (sections 1–7 passed; section 8's two Undo defects, fixed in v0.286.1). |

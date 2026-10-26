@@ -1,26 +1,27 @@
 """Campaign audiences — named lists and the engine that runs them (build plan
-§ 7c; rulings 58–68). L1: leads and contacts. L2: clients (an engagement),
-partners and funders; fields reached through a link; lists of lists; imports.
+§ 7c, reshaped by § 7e.8; rulings 58–68 and 90–94). Leads, contacts, clients
+(an engagement), partners and funders; fields reached through a link; lists of
+lists; imports.
 
-A **list** is an ordered **recipe** of steps (ruling 62):
+A **dynamic** list is a search and nothing else (rulings 90–92): its recipe is
+``{"include": [group, …], "exclude": [group, …]}``, and its members are the
+union of the Include groups minus the union of the Leave out groups. Leave out
+always wins; groups have no order. A group is one of:
 
-- ``add``        — every record of the step's type matching its conditions joins;
-- ``keep``       — of the members of the step's type, only those matching stay
-                   (members of other types pass through untouched);
-- ``remove``     — the members of the step's type matching leave;
-- ``addList``    — every member of another list joins;
-- ``removeList`` — every member of another list leaves (a standing exclusion list);
-- ``import``     — the records named in a pasted file (CRM ids, or email
-                   addresses for leads and contacts) join; a row matching
-                   nothing is counted, never created.
+- ``match``  — every record of one type matching all its conditions (ruling 63);
+- ``list``   — everyone on another list (a static exclusion list, typically);
+- ``import`` — the records a pasted file names (CRM ids, or email addresses
+               for leads and contacts); a row matching nothing is counted,
+               never created.
 
-Conditions within one step must all match (ruling 63). A **static** list runs
-once and is frozen; hand ticks then change it, and "Run again" keeps them. A
-**dynamic** list runs again at each campaign build; a hand edit on it is a
-standing entry, always include / always exclude, applied after the recipe
-(ruling 65).
+It runs again at every campaign build. A person kept off it goes onto a static
+exclusion list the dynamic list leaves out (the member grid's *Exclude*).
 
-The fields a step may use are a curated list per type (ruling 63) — the
+A **static** list is people added by hand and nothing else (rulings 91, 94):
+its recipe is empty and never run. Its *Add people* uses the same condition
+panel, copied once, no search saved. A list's kind is fixed (ruling 93).
+
+The fields a group may use are a curated list per type (ruling 63) — the
 setting ``CAMPAIGN_LIST_FIELDS``, editable at /setup, the defaults below when
 empty. A name with dots follows links: ``engagementClient.industrySector`` is
 the client profile's sector; ``engagementClient.linkedCompany.billingAddressPostalCode``
@@ -52,16 +53,16 @@ from core.phone import e164_or_none
 from core.postal import Address
 
 from . import config as cfg
-from .audience_store import KIND_STATIC, MODE_EXCLUDE, MODE_INCLUDE, STATE_IN, STATE_OUT
+from .audience_store import KIND_STATIC, STATE_IN
 
 log = logging.getLogger("cbm_intake.campaigns.audience")
 
 _PAGE = 200
 _ID_BATCH = 100
-#: A step whose result exceeds this is refused — "narrow the step" (§ 7c.4).
+#: A group whose result exceeds this is refused — "narrow it" (§ 7c.4).
 STEP_CAP = 20000
 #: A condition reached through a link resolves to the linked records' ids
-#: first; above this many the step is refused rather than sent as one huge
+#: first; above this many the group is refused rather than sent as one huge
 #: filter.
 VIA_CAP = 2000
 #: Rows a pasted import may hold.
@@ -69,12 +70,14 @@ IMPORT_CAP = 2000
 #: How deep "members of another list" may nest.
 LIST_DEPTH = 5
 
-ACTIONS = ("add", "keep", "remove", "addList", "removeList", "import")
-ACTION_LABELS = {"add": "Add matching", "keep": "Keep only matching", "remove": "Remove matching",
-                 "addList": "Add the members of list", "removeList": "Remove the members of list",
-                 "import": "Add from a file"}
-CONDITION_ACTIONS = ("add", "keep", "remove")
-LIST_ACTIONS = ("addList", "removeList")
+GROUP_MATCH = "match"
+GROUP_LIST = "list"
+GROUP_IMPORT = "import"
+GROUP_KINDS = (GROUP_MATCH, GROUP_LIST, GROUP_IMPORT)
+GROUP_LABELS = {GROUP_MATCH: "Records matching conditions", GROUP_LIST: "Everyone on another list",
+                GROUP_IMPORT: "The records a file names"}
+SIDES = ("include", "exclude")
+SIDE_LABELS = {"include": "Include", "exclude": "Leave out"}
 
 TYPES: dict[str, dict[str, str]] = {
     "lead": {"entity": cfg.PROSPECT, "label": "Leads", "one": "Lead"},
@@ -163,7 +166,7 @@ OPERATORS: dict[str, list[tuple[str, str]]] = {
 
 
 class AudienceError(Exception):
-    """A list or step a marketing user can fix — the message says how."""
+    """A list or group a marketing user can fix — the message says how."""
 
 
 # --- the curated field list (ruling 63) -----------------------------------------------------
@@ -259,7 +262,7 @@ async def _link_options(client, entity: str) -> list[dict[str, str]]:
 
 
 async def catalogue(client, settings: Optional[Settings], *, types: Iterable[str] = TYPES_BUILT) -> dict[str, Any]:
-    """The fields a step may use, per type, read live: label, family, operators
+    """The fields a group may use, per type, read live: label, family, operators
     and the CRM's options. A configured field the CRM lacks is listed under
     ``missing`` rather than offered (ruling 63: flagged, never silently used)."""
     wanted = configured_fields(settings)
@@ -303,7 +306,7 @@ def field_map(cat: dict[str, Any]) -> dict[str, dict[str, dict[str, Any]]]:
     return {t: {f["field"]: f for f in v["fields"]} for t, v in cat.items()}
 
 
-# --- recipes -----------------------------------------------------------------------------------
+# --- recipes: Include and Leave out (ruling 90) ------------------------------------------------
 
 def _import_values(v: Any) -> list[str]:
     if isinstance(v, str):
@@ -311,90 +314,118 @@ def _import_values(v: Any) -> list[str]:
     return [str(x).strip().strip('"') for x in (v or []) if str(x).strip().strip('"')]
 
 
+def empty_recipe() -> dict[str, Any]:
+    return {"include": [], "exclude": []}
+
+
+def normalise_group(g: Any) -> Optional[dict[str, Any]]:
+    """One group's shape; the catalogue check is ``check_recipe``."""
+    if not isinstance(g, dict):
+        return None
+    kind = str(g.get("kind") or "")
+    if kind == GROUP_LIST:
+        return {"kind": GROUP_LIST, "listId": str(g.get("listId") or "")}
+    if kind == GROUP_IMPORT:
+        return {"kind": GROUP_IMPORT, "type": str(g.get("type") or ""), "values": _import_values(g.get("values"))}
+    conds = [{"field": str(c["field"]), "op": str(c["op"]), "value": c.get("value")}
+             for c in g.get("conditions") or [] if isinstance(c, dict) and c.get("field") and c.get("op")]
+    return {"kind": kind or GROUP_MATCH, "type": str(g.get("type") or ""), "conditions": conds}
+
+
 def normalise_recipe(recipe: Any) -> dict[str, Any]:
-    """Shape only — the catalogue check is ``check_recipe``."""
-    steps = []
-    for s in (recipe or {}).get("steps") or []:
-        if not isinstance(s, dict):
-            continue
-        action = str(s.get("action") or "")
-        step: dict[str, Any] = {"action": action, "type": str(s.get("type") or ""), "conditions": []}
-        for c in s.get("conditions") or []:
-            if isinstance(c, dict) and c.get("field") and c.get("op"):
-                step["conditions"].append({"field": str(c["field"]), "op": str(c["op"]), "value": c.get("value")})
-        if action in LIST_ACTIONS:
-            step["listId"] = str(s.get("listId") or "")
-        if action == "import":
-            step["values"] = _import_values(s.get("values"))
-        steps.append(step)
-    return {"steps": steps}
+    """Shape only: ``{"include": [group], "exclude": [group]}``."""
+    recipe = recipe if isinstance(recipe, dict) else {}
+    return {side: [n for n in (normalise_group(g) for g in recipe.get(side) or []) if n] for side in SIDES}
+
+
+def groups(recipe: dict[str, Any]) -> Iterable[tuple[str, int, dict[str, Any]]]:
+    """Every group as (side, 1-based index, group)."""
+    for side in SIDES:
+        for i, g in enumerate(recipe.get(side) or [], start=1):
+            yield side, i, g
 
 
 def referenced_lists(recipe: dict[str, Any]) -> list[str]:
-    return [s["listId"] for s in recipe.get("steps") or [] if s.get("action") in LIST_ACTIONS and s.get("listId")]
+    return [g["listId"] for _s, _i, g in groups(recipe) if g.get("kind") == GROUP_LIST and g.get("listId")]
+
+
+def group_label(side: str, i: int) -> str:
+    return f"{SIDE_LABELS[side]} group {i}"
 
 
 def check_recipe(recipe: dict[str, Any], cat: dict[str, Any]) -> list[dict[str, Any]]:
-    """Every problem, per step, in words a marketing user can act on. Empty
+    """Every problem, per group, in words a marketing user can act on. Empty
     means the recipe can run."""
     fmap = field_map(cat)
     problems: list[dict[str, Any]] = []
 
-    def bad(i: int, msg: str) -> None:
-        problems.append({"step": i, "message": msg})
+    def bad(side: str, i: int, msg: str) -> None:
+        problems.append({"side": side, "group": i, "message": msg})
 
-    if not recipe["steps"]:
-        bad(0, "A list needs at least one step — start with Add matching.")
-    for i, s in enumerate(recipe["steps"]):
-        n = i + 1
-        if s["action"] not in ACTIONS:
-            bad(n, f"Step {n}: choose what the step does.")
+    if not recipe.get("include"):
+        bad("include", 0, "A dynamic list needs at least one Include group — press + Group under Include.")
+    for side, i, g in groups(recipe):
+        at = group_label(side, i)
+        if g["kind"] not in GROUP_KINDS:
+            bad(side, i, f"{at}: choose what the group holds.")
             continue
-        if s["action"] in LIST_ACTIONS:
-            if not s.get("listId"):
-                bad(n, f"Step {n}: choose the list whose members it adds or removes.")
+        if g["kind"] == GROUP_LIST:
+            if not g.get("listId"):
+                bad(side, i, f"{at}: choose the list whose members it holds.")
             continue
-        if s["type"] not in TYPES_BUILT:
-            bad(n, f"Step {n}: choose what the step selects (leads, contacts, clients, partners or funders).")
+        if g["type"] not in TYPES_BUILT:
+            bad(side, i, f"{at}: choose what it selects (leads, contacts, clients, partners or funders).")
             continue
-        if s["action"] == "import":
-            vals = s.get("values") or []
+        if g["kind"] == GROUP_IMPORT:
+            vals = g.get("values") or []
             if not vals:
-                bad(n, f"Step {n}: paste the CRM ids or email addresses to add, or choose a file.")
+                bad(side, i, f"{at}: paste the CRM ids or email addresses, or choose a file.")
             elif len(vals) > IMPORT_CAP:
-                bad(n, f"Step {n}: a file may hold at most {IMPORT_CAP:,} rows — split it into two steps.")
-            elif s["type"] in ORG_TYPES and any("@" in v for v in vals):
-                bad(n, f"Step {n}: {TYPES[s['type']]['label'].lower()} are matched by CRM id only — "
-                       "email addresses match leads and contacts.")
+                bad(side, i, f"{at}: a file may hold at most {IMPORT_CAP:,} rows — split it into two groups.")
+            elif g["type"] in ORG_TYPES and any("@" in v for v in vals):
+                bad(side, i, f"{at}: {TYPES[g['type']]['label'].lower()} are matched by CRM id only — "
+                             "email addresses match leads and contacts.")
             continue
-        if not s["conditions"]:
-            bad(n, f"Step {n} has no conditions — add at least one.")
-        fields = fmap.get(s["type"], {})
-        for c in s["conditions"]:
-            f = fields.get(c["field"])
-            if not f:
-                bad(n, f"Step {n}: the field {c['field']!r} is no longer offered for "
-                       f"{TYPES[s['type']]['label'].lower()} — edit or remove the condition.")
-                continue
-            if c["op"] not in {o for o, _ in OPERATORS[f["family"]]}:
-                bad(n, f"Step {n}: {f['label']} cannot use that comparison.")
-                continue
-            if c["op"] in ("in", "notIn", "anyOf", "noneOf") and not _as_list(c["value"]):
-                bad(n, f"Step {n}: {f['label']} — tick at least one value.")
-            if c["op"] in ("contains", "startsWith", "equals") and not str(c["value"] or "").strip():
-                bad(n, f"Step {n}: {f['label']} — type the text to match.")
-            if c["op"] in ("after", "before") and not _date(c["value"]):
-                bad(n, f"Step {n}: {f['label']} — give a date.")
-            if c["op"] in ("lastDays", "olderDays", "atLeast", "atMost") and _number(c["value"]) is None:
-                bad(n, f"Step {n}: {f['label']} — give a number.")
-        # Ruling 60: a contacts Add names the contact types it reaches.
-        if s["type"] == "contact" and s["action"] == "add" and not any(
-            c["field"] == CONTACT_TYPE_FIELD and c["op"] == "anyOf" and _as_list(c["value"])
-            for c in s["conditions"]
-        ):
-            bad(n, f"Step {n}: adding contacts must name the contact types it reaches "
-                   "(Contact type includes any of …) — ruling 60.")
+        problems.extend({"side": side, "group": i, "message": f"{at}: {m}"}
+                        for m in condition_problems(g, fmap))
+        # A contacts Include names the contact types it reaches: a chapter
+        # member is never swept in by accident.
+        if side == "include" and g["type"] == "contact" and not names_contact_types(g):
+            bad(side, i, f"{at}: a group of contacts must name the contact types it reaches "
+                         "(Contact type includes any of …).")
     return problems
+
+
+def names_contact_types(g: dict[str, Any]) -> bool:
+    return any(c["field"] == CONTACT_TYPE_FIELD and c["op"] == "anyOf" and _as_list(c["value"])
+               for c in g.get("conditions") or [])
+
+
+def condition_problems(g: dict[str, Any], fmap: dict[str, dict[str, dict[str, Any]]]) -> list[str]:
+    """What is wrong with a match group's conditions — shared with the static
+    list's *Add people* search."""
+    out: list[str] = []
+    if not g.get("conditions"):
+        out.append("it has no conditions — add at least one.")
+    fields = fmap.get(g.get("type") or "", {})
+    for c in g.get("conditions") or []:
+        f = fields.get(c["field"])
+        if not f:
+            out.append(f"the field {c['field']!r} is no longer offered for "
+                       f"{TYPES.get(g.get('type') or '', {}).get('label', 'records').lower()} — edit or remove the condition.")
+            continue
+        if c["op"] not in {o for o, _ in OPERATORS[f["family"]]}:
+            out.append(f"{f['label']} cannot use that comparison.")
+            continue
+        if c["op"] in ("in", "notIn", "anyOf", "noneOf") and not _as_list(c["value"]):
+            out.append(f"{f['label']} — tick at least one value.")
+        if c["op"] in ("contains", "startsWith", "equals") and not str(c["value"] or "").strip():
+            out.append(f"{f['label']} — type the text to match.")
+        if c["op"] in ("after", "before") and not _date(c["value"]):
+            out.append(f"{f['label']} — give a date.")
+        if c["op"] in ("lastDays", "olderDays", "atLeast", "atMost") and _number(c["value"]) is None:
+            out.append(f"{f['label']} — give a number.")
+    return out
 
 
 def _as_list(v: Any) -> list[str]:
@@ -425,7 +456,7 @@ def _empty(attr: str) -> dict[str, Any]:
 
 def condition_where(cond: dict[str, Any], field: dict[str, Any], *, now: Optional[datetime] = None) -> dict[str, Any]:
     """One condition as an EspoCRM ``where`` clause on the field's own entity
-    (the leaf of a link path; ``step_where`` walks the hops)."""
+    (the leaf of a link path; ``group_where`` walks the hops)."""
     a, op, v = field.get("leaf") or cond["field"], cond["op"], cond.get("value")
     fam = field["family"]
     if fam == "link":
@@ -490,7 +521,7 @@ _NOTHING = {"type": "in", "attribute": "id", "value": ["__none__"]}
 
 async def _via_where(client, field: dict[str, Any], clause: dict[str, Any]) -> dict[str, Any]:
     """Walk a link path backwards: the leaf entity's matching ids become a
-    filter on the entity before it, and so on to the step's own entity."""
+    filter on the entity before it, and so on to the group's own entity."""
     for hop in reversed(field.get("hops") or []):
         if hop["kind"] == "belongsTo":
             ids = await _ids_matching(client, hop["to"], [clause], cap=VIA_CAP,
@@ -517,10 +548,11 @@ async def _via_where(client, field: dict[str, Any], clause: dict[str, Any]) -> d
     return clause
 
 
-async def step_where(client, step: dict[str, Any], cat: dict[str, Any], *, now: Optional[datetime] = None) -> list[dict[str, Any]]:
-    fields = field_map(cat).get(step["type"], {})
+async def group_where(client, group: dict[str, Any], cat: dict[str, Any], *,
+                      now: Optional[datetime] = None) -> list[dict[str, Any]]:
+    fields = field_map(cat).get(group["type"], {})
     out = []
-    for c in step["conditions"]:
+    for c in group["conditions"]:
         f = fields[c["field"]]
         clause = condition_where(c, f, now=now)
         if f.get("hops"):
@@ -529,25 +561,41 @@ async def step_where(client, step: dict[str, Any], cat: dict[str, Any], *, now: 
     return out
 
 
-def describe_step(step: dict[str, Any], cat: dict[str, Any], list_names: Optional[dict[str, str]] = None) -> str:
-    """The step in a sentence — the history line and the build summary."""
-    if step["action"] in LIST_ACTIONS:
-        name = (list_names or {}).get(step.get("listId") or "", "another list")
-        return f"{ACTION_LABELS[step['action']]} “{name}”"
-    noun = TYPES.get(step["type"], {}).get("label", step["type"]).lower()
-    if step["action"] == "import":
-        return f"{ACTION_LABELS['import']}: {len(step.get('values') or [])} {noun} rows"
-    fields = field_map(cat).get(step["type"], {})
+def _conditions_text(group: dict[str, Any], cat: dict[str, Any]) -> str:
+    fields = field_map(cat).get(group["type"], {})
     parts = []
-    for c in step["conditions"]:
+    for c in group["conditions"]:
         f = fields.get(c["field"]) or {"label": c["field"], "family": "text"}
-        op_label = dict(OPERATORS.get(f["family"], [])).get(c["op"], c["op"])
+        # The operator's typing hint ("separate with commas") is for the
+        # builder, not the sentence.
+        op_label = dict(OPERATORS.get(f["family"], [])).get(c["op"], c["op"]).split(" (")[0]
         val = c.get("value")
+        if isinstance(val, str) and c["op"] in ("in", "notIn"):
+            val = ", ".join(_as_list(val))
         if isinstance(val, list):
             names = {o["value"]: o["label"] for o in f.get("options") or [] if isinstance(o, dict)}
             val = ", ".join("No type" if x == NO_TYPE else names.get(x, str(x)) for x in val)
         parts.append(f"{f['label']} {op_label}" + (f" {val}" if val not in (None, "") else ""))
-    return f"{ACTION_LABELS.get(step['action'], step['action'])}: {noun} where " + " and ".join(parts)
+    return " and ".join(parts)
+
+
+def describe_group(group: dict[str, Any], cat: dict[str, Any], list_names: Optional[dict[str, str]] = None) -> str:
+    """The group in one sentence — *who is on it* on the list page, the run
+    report and the history line."""
+    if group["kind"] == GROUP_LIST:
+        name = (list_names or {}).get(group.get("listId") or "", "another list")
+        return f"Everyone on the list “{name}”."
+    noun = TYPES.get(group["type"], {}).get("label", group["type"] or "records").lower()
+    if group["kind"] == GROUP_IMPORT:
+        n = len(group.get("values") or [])
+        return f"The {noun} a file names ({n:,} row{'' if n == 1 else 's'})."
+    cond = _conditions_text(group, cat)
+    return (f"{noun[:1].upper()}{noun[1:]} where {cond}." if cond else f"{noun[:1].upper()}{noun[1:]}, no conditions yet.")
+
+
+def describe_recipe(recipe: dict[str, Any], cat: dict[str, Any],
+                    list_names: Optional[dict[str, str]] = None) -> dict[str, list[str]]:
+    return {side: [describe_group(g, cat, list_names) for g in recipe.get(side) or []] for side in SIDES}
 
 
 # --- running ------------------------------------------------------------------------------------
@@ -562,15 +610,15 @@ async def _ids_matching(client, entity: str, where: list[dict[str, Any]], *, cap
         batch = page.get("list", [])
         out.extend(r["id"] for r in batch if r.get("id"))
         if len(out) > cap:
-            raise AudienceError(too_many or f"This step matches more than {cap:,} records — narrow the step.")
+            raise AudienceError(too_many or f"This group matches more than {cap:,} records — narrow it.")
         if len(batch) < _PAGE:
             return out
         offset += _PAGE
 
 
 async def _ids_matching_within(client, entity: str, where: list[dict[str, Any]], ids: list[str]) -> set[str]:
-    """Which of these ids match — the Keep only and Remove steps test only the
-    current members, in batches, so they never hit the cap."""
+    """Which of these ids match — a Leave out group tests only the records the
+    Include groups found, in batches, so it never hits the cap."""
     out: set[str] = set()
     for i in range(0, len(ids), _ID_BATCH):
         chunk = ids[i:i + _ID_BATCH]
@@ -615,52 +663,66 @@ def split_key(key: str) -> tuple[str, str]:
     return t, rid
 
 
+async def match_keys(client, group: dict[str, Any], cat: dict[str, Any], *,
+                     now: Optional[datetime] = None) -> list[str]:
+    """Every record a match group selects, as keys — an Include group, and the
+    static list's *Add people* search."""
+    where = await group_where(client, group, cat, now=now)
+    prefix = group["type"] + ":"
+    return [prefix + rid for rid in await _ids_matching(client, TYPES[group["type"]]["entity"], where)]
+
+
 async def run_recipe(client, recipe: dict[str, Any], cat: dict[str, Any], *, store=None,
                      now: Optional[datetime] = None, _seen: tuple[str, ...] = ()) -> dict[str, Any]:
-    """Run the steps in order. Returns ``keys`` (key → the step that added it,
-    in order), and per step its before / after counts."""
+    """The union of the Include groups minus the union of the Leave out
+    groups; Leave out always wins and groups have no order. Returns ``keys``
+    (key → the first Include group that holds it), one report line per group,
+    and the totals."""
     problems = check_recipe(recipe, cat)
     if problems:
         raise AudienceError(problems[0]["message"])
-    working: dict[str, int] = {}
-    report = []
+    included: dict[str, int] = {}
+    report: list[dict[str, Any]] = []
     names: dict[str, str] = {}
-    for i, step in enumerate(recipe["steps"], start=1):
-        before = len(working)
+    for i, g in enumerate(recipe["include"], start=1):
         extra: dict[str, Any] = {}
-        if step["action"] in LIST_ACTIONS:
-            other = await _other_list(store, step["listId"], _seen)
+        if g["kind"] == GROUP_LIST:
+            other = await _other_list(store, g["listId"], _seen)
             names[other["id"]] = other["name"]
-            members = await current_members(client, store, other, cat, _seen=_seen)
-            if step["action"] == "addList":
-                for k in members["keys"]:
-                    working.setdefault(k, i)
-            else:
-                for k in members["keys"]:
-                    working.pop(k, None)
-        elif step["action"] == "import":
-            ids, unmatched = await _import_ids(client, step["type"], step.get("values") or [])
-            for rid in ids:
-                working.setdefault(f"{step['type']}:{rid}", i)
+            keys = list((await current_members(client, store, other, cat, _seen=_seen))["keys"])
+        elif g["kind"] == GROUP_IMPORT:
+            ids, unmatched = await _import_ids(client, g["type"], g.get("values") or [])
+            keys = [f"{g['type']}:{rid}" for rid in ids]
             extra["unmatched"] = unmatched
         else:
-            entity = TYPES[step["type"]]["entity"]
-            where = await step_where(client, step, cat, now=now)
-            prefix = step["type"] + ":"
-            if step["action"] == "add":
-                for rid in await _ids_matching(client, entity, where):
-                    working.setdefault(prefix + rid, i)
-            else:
-                of_type = [split_key(k)[1] for k in working if k.startswith(prefix)]
-                matched = await _ids_matching_within(client, entity, where, of_type)
-                for rid in of_type:
-                    hit = rid in matched
-                    if (step["action"] == "keep" and not hit) or (step["action"] == "remove" and hit):
-                        working.pop(prefix + rid, None)
-        after = len(working)
-        report.append({"step": i, "summary": describe_step(step, cat, names), "before": before, "after": after,
-                       "added": max(after - before, 0), "dropped": max(before - after, 0), **extra})
-    return {"keys": working, "steps": report, "total": len(working)}
+            keys = await match_keys(client, g, cat, now=now)
+        for k in keys:
+            included.setdefault(k, i)
+        report.append({"side": "include", "group": i, "summary": describe_group(g, cat, names),
+                       "count": len(keys), **extra})
+    left_out: set[str] = set()
+    for i, g in enumerate(recipe["exclude"], start=1):
+        extra = {}
+        if g["kind"] == GROUP_LIST:
+            other = await _other_list(store, g["listId"], _seen)
+            names[other["id"]] = other["name"]
+            hit = set((await current_members(client, store, other, cat, _seen=_seen))["keys"]) & set(included)
+        elif g["kind"] == GROUP_IMPORT:
+            ids, unmatched = await _import_ids(client, g["type"], g.get("values") or [])
+            hit = {f"{g['type']}:{rid}" for rid in ids} & set(included)
+            extra["unmatched"] = unmatched
+        else:
+            prefix = g["type"] + ":"
+            of_type = [split_key(k)[1] for k in included if k.startswith(prefix)]
+            where = await group_where(client, g, cat, now=now)
+            hit = {prefix + rid for rid in await _ids_matching_within(client, TYPES[g["type"]]["entity"],
+                                                                         where, of_type)}
+        left_out |= hit
+        report.append({"side": "exclude", "group": i, "summary": describe_group(g, cat, names),
+                       "count": len(hit), **extra})
+    keys = {k: gi for k, gi in included.items() if k not in left_out}
+    return {"keys": keys, "groups": report, "included": len(included), "leftOut": len(included) - len(keys),
+            "total": len(keys)}
 
 
 async def _other_list(store, list_id: str, seen: tuple[str, ...]) -> dict[str, Any]:
@@ -672,13 +734,13 @@ async def _other_list(store, list_id: str, seen: tuple[str, ...]) -> dict[str, A
         raise AudienceError(f"Lists may nest at most {LIST_DEPTH} deep.")
     other = await store.get_list(list_id)
     if not other:
-        raise AudienceError("A step names a list that no longer exists — choose another.")
+        raise AudienceError("A group names a list that no longer exists — choose another.")
     return other
 
 
 async def reaches(store, start_ids: list[str], target: str, depth: int = 0) -> bool:
-    """Does following "members of list" steps from these lists reach ``target``?
-    The save refuses a cycle."""
+    """Does following "everyone on the list" groups from these lists reach
+    ``target``? The save refuses a cycle."""
     if depth > LIST_DEPTH:
         return False
     for lid in start_ids:
@@ -690,54 +752,59 @@ async def reaches(store, start_ids: list[str], target: str, depth: int = 0) -> b
     return False
 
 
-def apply_hand(keys: dict[str, int], hand_rows: list[dict[str, Any]]) -> dict[str, int]:
-    """A static list's hand ticks over a run's result."""
-    out = dict(keys)
-    for r in hand_rows:
-        if r.get("source") != "hand":
-            continue
-        if r.get("state") == STATE_OUT:
-            out.pop(r["target_key"], None)
-        elif r.get("state") == STATE_IN:
-            out.setdefault(r["target_key"], 0)
-    return out
-
-
-def apply_entries(keys: dict[str, int], entries: list[dict[str, Any]]) -> dict[str, int]:
-    """A dynamic list's standing entries, after the recipe (ruling 65)."""
-    out = dict(keys)
-    for e in entries:
-        if e.get("mode") == MODE_EXCLUDE:
-            out.pop(e["target_key"], None)
-        elif e.get("mode") == MODE_INCLUDE:
-            out.setdefault(e["target_key"], 0)
-    return out
-
-
 async def current_members(client, store, row: dict[str, Any], cat: dict[str, Any], *,
                           _seen: tuple[str, ...] = ()) -> dict[str, Any]:
-    """The list as a campaign would send to it now: a static list's frozen
-    membership; a dynamic list's recipe run now, with its standing entries."""
+    """The list as a campaign would send to it now: a static list's people
+    added by hand (rulings 91, 94 — never run, never empty by mistake), a
+    dynamic list's search run now."""
     if row["kind"] == KIND_STATIC:
         rows = await store.member_rows(row["id"])
-        if row.get("last_run_at") is None:
-            raise AudienceError(f"The static list \"{row['name']}\" has never been run — run it first.")
-        keys = {r["target_key"]: (r.get("step") or 0) for r in rows if r.get("state") == STATE_IN}
-        return {"keys": keys, "steps": (row.get("last_run") or {}).get("steps", []), "total": len(keys),
-                "frozen": True}
+        keys = {r["target_key"]: 0 for r in rows if r.get("state") == STATE_IN}
+        return {"keys": keys, "groups": [], "total": len(keys), "frozen": True}
     result = await run_recipe(client, normalise_recipe(row["recipe"]), cat, store=store,
                               _seen=(*_seen, row["id"]))
-    keys = apply_entries(result["keys"], await store.entries(row["id"]))
-    return {**result, "keys": keys, "total": len(keys), "frozen": False}
+    return {**result, "frozen": False}
+
+
+async def copy_to_static(client, store, row: dict[str, Any], cat: dict[str, Any], *, name: str,
+                         actor: str) -> tuple[dict[str, Any], int]:
+    """*Copy current members to a new static list* (ruling 93): the members as
+    they are now — a dynamic list is run for it — as hand rows on a new static
+    list. The campaigns stay on the original."""
+    members = await current_members(client, store, row, cat)
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    new = await store.copy_list(name=name, notes=f"Copied from \"{row['name']}\" on {stamp}.",
+                                keys=list(members["keys"]), actor=actor)
+    return new, members["total"]
+
+
+# --- per channel: how many a list reaches (ruling 98's top line) -------------------------------
+
+#: The channels the list page counts, in its order. Calls are a campaign kind
+#: of their own and are not on the top line.
+COUNT_CHANNELS = ((cfg.KIND_EMAIL, "Email"), (cfg.KIND_SMS, "Text"), (cfg.KIND_POSTCARD, "Postcard"))
+
+
+async def channel_counts(client, keys: Iterable[str]) -> list[dict[str, Any]]:
+    """For each channel, how many the members reach after every send-time
+    check — ``resolve_targets`` run per kind and read as its count only.
+    Computed on demand, never stored."""
+    keys = list(keys)
+    out = []
+    for kind, label in COUNT_CHANNELS:
+        resolved = await resolve_targets(client, kind, keys)
+        out.append({"channel": kind, "label": label, "count": len(resolved["targets"]),
+                    "skipped": sum(s["count"] for s in resolved["skipped"])})
+    return out
 
 
 # --- showing members -------------------------------------------------------------------------
 
 def used_fields(recipe: dict[str, Any]) -> dict[str, list[str]]:
     out: dict[str, list[str]] = {}
-    for s in recipe.get("steps") or []:
-        for c in s.get("conditions") or []:
-            lst = out.setdefault(s.get("type") or "", [])
+    for _side, _i, g in groups(recipe):
+        for c in g.get("conditions") or []:
+            lst = out.setdefault(g.get("type") or "", [])
             if c.get("field") and c["field"] not in lst:
                 lst.append(c["field"])
     return out
@@ -746,9 +813,8 @@ def used_fields(recipe: dict[str, Any]) -> dict[str, list[str]]:
 async def describe_members(client, keys: list[str], recipe: dict[str, Any], cat: dict[str, Any]) -> list[dict[str, Any]]:
     """One row per key: its type, name and the values of the curated fields
     the recipe used — nothing else (§ 7c.4, who sees what). A field reached
-    through a link shows its value only on the step's own record type when it
-    is a direct field. A record the CRM no longer holds is flagged, never
-    dropped."""
+    through a link shows no value here; a direct field shows on its own record
+    type. A record the CRM no longer holds is flagged, never dropped."""
     used = used_fields(recipe)
     fmap = field_map(cat)
     by_type: dict[str, list[str]] = {}
@@ -813,9 +879,9 @@ SKIP = {
     "exit": "the lead has left (an exit is set)",
     "disqualified": "the lead is Disqualified",
     "no_address": "no usable mailing address",
-    "carded": "already sent a postcard (one per business, ruling 14)",
+    "carded": "already sent a postcard (one card per business)",
     "no_contact": "a lead with no Contact yet — only a Contact can be emailed or texted",
-    "no_primary": "no primary contact on the record (ruling 59)",
+    "no_primary": "no primary contact on the record",
     "no_contacts": "no contacts on the record",
     "no_consent": "no consent for this channel",
     "no_email": "no usable email address",

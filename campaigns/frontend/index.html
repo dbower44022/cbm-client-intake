@@ -122,7 +122,7 @@
 
     <!-- ============================ LISTS ============================= -->
     <section class="cm__panel" id="listsPanel" hidden>
-      <p class="cm__hint">Named lists a campaign sends to: leads, contacts, clients, partners and funders chosen step by step, kept frozen or run again before each send.</p>
+      <p class="cm__hint">Named lists a campaign sends to. A <strong>dynamic</strong> list is a search — who to include, who to leave out — run again before every send. A <strong>static</strong> list holds exactly the people you add to it.</p>
       <div class="ls" id="ls_listsView" hidden>
         <section class="cm__panel ls__index">
           <div class="cm__controls">
@@ -131,58 +131,90 @@
             <div class="cm__actions"><button type="button" class="cbm-button" id="ls_newListBtn">+ New list</button></div>
           </div>
           <table class="cm__grid" id="ls_listGrid">
-            <thead><tr><th>List</th><th>Kind</th><th>Members</th><th>Used by</th><th>Last run</th></tr></thead>
+            <thead><tr><th>List</th><th>Kind</th><th>Members</th><th>Last used</th></tr></thead>
             <tbody id="ls_listRows"></tbody>
           </table>
-          <p class="cm__empty" id="ls_listsEmpty" hidden>No lists yet. A list is a set of leads and contacts a campaign sends to — start with + New list.</p>
+          <p class="cm__empty" id="ls_listsEmpty" hidden>No lists yet — start with + New list.</p>
         </section>
 
         <section class="cm__panel ls__detail" id="ls_detail" hidden>
+          <div class="ls__top">
+            <h2 class="ls__title" id="ls_title"></h2>
+            <span class="cm__badge" id="ls_kindBadge"></span>
+            <span class="cm__badge" id="ls_lStatus"></span>
+            <span class="ls__counts" id="ls_counts"></span>
+          </div>
           <div class="ls__head">
             <label class="cm__field ls__name">Name <input type="text" id="ls_lName" maxlength="200" /></label>
-            <label class="cm__field">Kind
-              <select id="ls_lKind">
-                <option value="static">Static — run once, then frozen and edited by hand</option>
-                <option value="dynamic">Dynamic — run again before every send</option>
-              </select>
-            </label>
-            <span class="cm__badge" id="ls_lStatus"></span>
             <div class="cm__runactions">
               <button type="button" class="cbm-button" id="ls_saveBtn">Save</button>
-              <button type="button" class="cbm-button cbm-button--secondary" id="ls_runBtn">Run</button>
+              <button type="button" class="cbm-button cbm-button--secondary" id="ls_runBtn">Run now</button>
+              <button type="button" class="cbm-button cbm-button--secondary" id="ls_copyBtn">Copy to a new static list</button>
               <button type="button" class="cbm-button cbm-button--secondary" id="ls_retireBtn">Retire</button>
               <button type="button" class="cbm-button cbm-button--secondary" id="ls_deleteBtn">Delete</button>
             </div>
           </div>
           <label class="cm__field cm__field--wide">Notes <textarea id="ls_lNotes" rows="2" maxlength="4000"></textarea></label>
-          <p class="cm__hint" id="ls_kindHint"></p>
+          <div class="cm__notice cm__notice--warn" id="ls_rebuild" hidden>This list was built with steps the new builder does not have. Check who is on it, then press Save.</div>
           <p class="cm__runnote" id="ls_runNote"></p>
           <div class="cm__notice cm__notice--warn" id="ls_problems" hidden></div>
 
           <div class="ls__cols">
-            <section class="cm__card ls__recipe">
-              <h3>Recipe</h3>
-              <p class="cm__hint">Steps run in order. <strong>Add matching</strong> widens the list; <strong>Keep only matching</strong> narrows the members of its own type; <strong>Remove matching</strong> takes them out. Conditions in one step must all match — for "either … or", use two Add steps. A step can also add or remove the members of another list (a standing exclusion list), or add the records a file names.</p>
-              <div id="ls_steps"></div>
-              <div class="cm__runactions">
-                <button type="button" class="cbm-button cbm-button--secondary" id="ls_addStepBtn">+ Add step</button>
-                <button type="button" class="cbm-button cbm-button--secondary" id="ls_previewBtn">Count every step</button>
+            <section class="cm__card" id="ls_whoCard">
+              <div class="cm__controls">
+                <h3 class="cm__grow">Who is on it</h3>
+                <button type="button" class="cbm-button cbm-button--secondary" id="ls_editBtn">Edit</button>
+              </div>
+              <div id="ls_sentences"></div>
+              <div class="ls__builder" id="ls_builder" hidden>
+                <div class="ls__side">
+                  <h4 class="ls__h4">Include — a record in any of these groups is on the list</h4>
+                  <div id="ls_incGroups"></div>
+                  <button type="button" class="cm__rowbtn" id="ls_addIncBtn">+ Group</button>
+                </div>
+                <div class="ls__side ls__side--out">
+                  <h4 class="ls__h4">Leave out — a record in any of these groups is never on the list</h4>
+                  <div id="ls_excGroups"></div>
+                  <button type="button" class="cm__rowbtn" id="ls_addExcBtn">+ Group</button>
+                </div>
+                <div class="cm__runactions">
+                  <button type="button" class="cbm-button cbm-button--secondary" id="ls_previewBtn">Count</button>
+                  <button type="button" class="cbm-button cbm-button--secondary" id="ls_cancelEditBtn">Cancel</button>
+                  <span class="ls__previewnote" id="ls_previewNote"></span>
+                </div>
               </div>
             </section>
 
-            <section class="cm__card ls__side">
-              <h3 id="ls_handTitle">Changed by hand</h3>
-              <p class="cm__hint" id="ls_handHint"></p>
-              <table class="cm__grid"><thead><tr><th>Record</th><th id="ls_handModeHead">Change</th><th>By</th><th></th></tr></thead><tbody id="ls_handRows"></tbody></table>
-              <p class="cm__empty" id="ls_handEmpty" hidden>Nothing changed by hand.</p>
-              <h4 class="ls__h4">Add or exclude a record by hand</h4>
+            <section class="cm__card" id="ls_addCard">
+              <div class="cm__controls">
+                <h3 class="cm__grow">Add people</h3>
+              </div>
+              <p class="cm__hint">Find people by name or email, or by conditions, tick them and press Add. They are copied onto the list once; no search is saved.</p>
               <div class="ls__search">
-                <select id="ls_searchType"><option value="lead">Leads</option><option value="contact">Contacts</option><option value="client">Clients</option><option value="partner">Partners</option><option value="funder">Funders</option></select>
                 <input type="search" id="ls_searchBox" placeholder="Type two letters of a name or email…" />
               </div>
-              <ul class="ls__results" id="ls_searchResults"></ul>
-              <h4 class="ls__h4">Used by</h4>
-              <ul class="ls__plain" id="ls_usedBy"></ul>
+              <div class="ls__findby">
+                <span>Or find</span>
+                <select id="ls_findType"></select>
+                <span>where</span>
+              </div>
+              <div id="ls_findConds"></div>
+              <div class="cm__runactions">
+                <button type="button" class="cm__rowbtn" id="ls_findAddCondBtn">+ Condition (and)</button>
+                <button type="button" class="cbm-button cbm-button--secondary" id="ls_findBtn">Find</button>
+              </div>
+              <div class="cm__controls">
+                <label class="cm__check"><input type="checkbox" id="ls_findAll" /> Select all</label>
+                <span class="cm__count" id="ls_findCount"></span>
+                <div class="cm__actions"><button type="button" class="cbm-button" id="ls_addTickedBtn">Add ticked</button></div>
+              </div>
+              <table class="cm__grid"><thead><tr><th></th><th>Type</th><th>Name</th><th></th></tr></thead><tbody id="ls_findRows"></tbody></table>
+            </section>
+
+            <section class="cm__card">
+              <h3>Used by</h3>
+              <table class="cm__grid"><thead><tr><th>Campaign</th><th>Kind</th><th>Status</th><th>Date</th><th>Reach</th></tr></thead><tbody id="ls_usedRows"></tbody></table>
+              <p class="cm__empty" id="ls_usedEmpty" hidden>No campaign uses this list yet.</p>
               <h4 class="ls__h4">Versions</h4>
               <ul class="ls__plain" id="ls_versions"></ul>
             </section>
@@ -191,12 +223,15 @@
           <section class="cm__card">
             <div class="cm__controls">
               <h3 class="cm__grow" id="ls_membersTitle">Members</h3>
+              <input type="search" class="ls__membersearch" id="ls_memberSearch" placeholder="Search members by name…" />
               <span class="cm__count" id="ls_memberCount"></span>
+              <button type="button" class="cm__rowbtn" id="ls_exportBtn">Export</button>
               <div class="cm__pager">
                 <button type="button" class="cm__rowbtn" id="ls_prevBtn">Previous</button>
                 <button type="button" class="cm__rowbtn" id="ls_nextBtn">Next</button>
               </div>
             </div>
+            <p class="cm__hint" id="ls_staleNote" hidden>The list has changed since it last ran — press Run now to see who is on it today and which group brought each one in.</p>
             <table class="cm__grid" id="ls_memberGrid">
               <thead id="ls_memberHead"></thead>
               <tbody id="ls_memberRows"></tbody>

@@ -103,10 +103,15 @@ MIGRATIONS = Path(__file__).resolve().parents[1] / "alembic" / "versions"
 
 
 def _tables_created_by_migrations() -> set[str]:
+    """Tables the migrations leave in place: every upgrade's creates, less the
+    tables a later upgrade drops (0037 drops ``audience_list_entry``)."""
     names: set[str] = set()
+    dropped: set[str] = set()
     for path in MIGRATIONS.glob("*.py"):
-        names |= set(re.findall(r'op\.create_table\(\s*"(\w+)"', path.read_text(encoding="utf-8")))
-    return names
+        upgrade = path.read_text(encoding="utf-8").split("def downgrade", 1)[0]
+        names |= set(re.findall(r'op\.create_table\(\s*"(\w+)"', upgrade))
+        dropped |= set(re.findall(r'op\.drop_table\(\s*"(\w+)"', upgrade))
+    return names - dropped
 
 
 def test_every_app_table_is_classified():

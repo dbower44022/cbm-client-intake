@@ -1,6 +1,6 @@
 # campaigns/ — Marketing Management (was Campaign Management)
 
-Last Updated: 10-26-26 00:10 · Revision 1.12
+Last Updated: 10-26-26 02:45 · Revision 1.13
 
 Detail for Campaign Management (`/campaigns`, prospect marketing Phases 1 to 4 and the lead model): links, postcards, the landing page, imports, the Leads and Review grids, calls, texts, email, attribution and reporting.
 
@@ -228,22 +228,36 @@ the reason.
   (`rung_available`): a CRM still on the old ladder gets none rather than a
   400. Every campaign read requires `CProspect.leadStatus`. Three counts:
   Responded, Converted, Became a client, partner or funder (46).
-- **Campaign lists** (v0.270.0, build plan § 7c, rulings 58–68; dark
-  behind **`CAMPAIGN_LISTS`**, read per request). `campaigns/audience.py`
-  is the engine, `audience_store.py` the five tables (migration 0032,
+- **Campaign lists** (v0.270.0, build plan § 7c, rulings 58–68; reshaped
+  by **M6, v0.289.0**, § 7e.8, rulings 90–94 and 98; dark behind
+  **`CAMPAIGN_LISTS`**, read per request). `campaigns/audience.py` is the
+  engine, `audience_store.py` the four tables (migrations 0032 and 0037,
   mixed into `CampaignStore`, reset nightly), `lists_router.py` the API,
-  the Lists tab (`/campaigns/#lists?list=<id>`; `lists.js`) the screen. A
-  list is an ordered recipe — *add*
-  widens, *keep* narrows **only its own type**, *remove* excludes; keep and
-  remove test only the current members in id batches, add refuses above
-  `STEP_CAP` (20,000). Static = frozen membership plus hand rows that
-  survive *Run again*; dynamic = re-run at every build plus standing
-  entries (ruling 65). **Step fields come only from the curated list**
-  (`CAMPAIGN_LIST_FIELDS`, defaults in `audience.DEFAULT_FIELDS`, checked
-  at /setup by `setup/verify._probe_campaign_list_fields`) — never offer
+  the Lists tab (`/campaigns/#lists?list=<id>`; `lists.js`) the screen.
+  **A dynamic list is a search and nothing else**: its recipe is
+  `{"include": [group], "exclude": [group]}` — a group is `match` (one type,
+  all its conditions), `list` (everyone on another list) or `import` (the
+  records a file names) — and its members are the union of the Includes
+  minus the union of the Leave outs; **Leave out always wins, groups have no
+  order**. A Leave out match group tests only the included records of its
+  type, in id batches; an Include match refuses above `STEP_CAP` (20,000).
+  A run stores its members with `group_index` (the first Include group that
+  matched — *Brought in by*) and the Include groups it used, so a changed
+  Leave out keeps the labels. **Never add a hand edit to a dynamic list**:
+  a person kept off goes onto a static exclusion list through
+  `POST /lists/{id}/exclude`, which adds a Leave out list group when needed.
+  **A static list is hand rows and nothing else**: empty recipe, never run,
+  `mark` / `add-people` / `unmark` only; `run` refuses it, and `mark` /
+  `unmark` refuse a dynamic list, in words. **The kind never changes**
+  (`save_list` raises, the router answers 400); *Copy* makes a static list.
+  The per-channel counts (`audience.channel_counts`, `GET /lists/{id}/counts`)
+  are `resolve_targets` per kind over the stored members, never stored.
+  A list another list names cannot be deleted. **Group fields come only
+  from the curated list** (`CAMPAIGN_LIST_FIELDS`, defaults in
+  `audience.DEFAULT_FIELDS`, checked at /setup by `setup/verify._probe_campaign_list_fields`) — never offer
   a field outside it: the member grid shows only the name and the fields
   the recipe used, which is the Marketing Admin Role's read boundary
-  (ruling 63). A contacts *Add* must name `cContactType` (ruling 60).
+  (ruling 63). A contacts Include group must name `cContactType` (ruling 60).
   **Members are records; recipients resolve at build time per channel**
   (`audience.resolve_targets`, the same target shapes each kind's
   `select_targets` produces) and every send-time check applies there. A
@@ -256,11 +270,10 @@ the reason.
   (`audience.resolve_path` — belongsTo walks `<link>Id`, hasOne walks
   backwards through the foreign key, so `CClientProfile.linkedCompany`
   resolves via `Account.cClientProfileId`); link fields filter by id with
-  names as options; `olderDays`; `addList` / `removeList` steps (cycle
-  refused at Save by `audience.reaches`, at run by `_seen`, depth
-  `LIST_DEPTH`) and `import` (ids, emails for leads and contacts, never
-  creates). A client / partner / funder reaches its primary contact, or
-  every contact (`ORG_SHAPE` names the links) when the campaign ticks
+  names as options; `olderDays`; list groups (cycle refused at Save by
+  `audience.reaches`, at run by `_seen`, depth `LIST_DEPTH`) and file
+  groups (ids, emails for leads and contacts, never creates). A client /
+  partner / funder reaches its primary contact, or every contact (`ORG_SHAPE` names the links) when the campaign ticks
   *Include every contact* (ruling 59); its card goes to its company
   (ruling 68, no ruling-14 check).
 - **The lead code** (v0.276.0, build plan § 7d D1, rulings 71–75 and 77;
@@ -422,6 +435,7 @@ the reason.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.13 | 10-26-26 02:45 | Claude (Claude Code) | Campaign lists rewritten to Include and Leave out (v0.289.0, § 7e.8, M6): the groups, static lists as hand rows, Exclude, the fixed kind, Copy, the per-channel counts. |
 | 1.12 | 10-26-26 00:10 | Claude (Claude Code) | Personal outreach from the lead's page (v0.288.0, § 7e.5, M5): the shared composer, the one mailbox rule, the guardrails, the footer, the stored outcome words, `apply_outcome`, the sync's lead source, the Mine chip. |
 | 1.11 | 10-25-26 22:48 | Claude (Claude Code) | The import batch write lease (v0.287.0). |
 | 1.10 | 10-25-26 20:50 | Claude (Claude Code) | The import tool live-passed (v0.286.3): the later-fill touch, stale ledger rows, the apply lock owed. |
