@@ -1095,7 +1095,7 @@ Two arcs are directories of their own, each worked separately; start at its
 
 - **`prds/chapter-network/`** — the chapter network: settled rulings, a phase
   file for each of phases 0–6, a decision log and its own task list.
-- **`prds/prospect-marketing/`** — prospect marketing and Campaign Management
+- **`prds/prospect-marketing/`** — prospect marketing and Marketing Management (was Campaign Management)
   (consolidated 10-14-26 after three sessions in one day left three documents
   that disagreed). `rulings.md` is the binding record, append only;
   `build-plan.md` is the one plan. **One session on that arc at a time.**
