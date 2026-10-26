@@ -597,13 +597,16 @@ class CampaignStore(AudienceStoreMixin, ImportTemplateStoreMixin):
         return out
 
     async def forget_rows(self, batch_id: str, prospect_ids: list[str]) -> None:
-        """Drop the ledger rows of leads Undo deleted, so their hashes are no
-        longer known and a later import creates them again."""
+        """Drop EVERY ledger row that names a lead Undo deleted — this batch's
+        creates and any other batch's fills alike — so the hashes are no longer
+        known and a later import creates the rows again. (Batch-scoped until
+        round two of the M4 pass, 10-25-26, left two fills rows pointing at
+        deleted leads, which made the rows "known, nothing to fill".)"""
         if not prospect_ids:
             return
         r = prospect_import_row
         async with self._engine.begin() as conn:
-            await conn.execute(delete(r).where(and_(r.c.batch_id == batch_id, r.c.prospect_id.in_(prospect_ids))))
+            await conn.execute(delete(r).where(r.c.prospect_id.in_(prospect_ids)))
 
     async def record_undo(self, batch_id: str, *, deleted: list[str], touched: list[dict[str, Any]],
                           errors: list[dict[str, Any]], done: bool, actor: str) -> dict[str, Any]:

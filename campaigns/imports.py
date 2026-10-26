@@ -459,8 +459,13 @@ async def _fill_candidates(api_client: EspoApi, store, rows: list[dict[str, Any]
             log.warning("import fills: %s leads could not be read: %s", len(chunk), exc)
     out: dict[str, dict[str, Any]] = {}
     for h, row in wanted.items():
-        lead = leads.get(lead_by_hash.get(h) or "")
+        lead_id = lead_by_hash.get(h) or ""
+        lead = leads.get(lead_id)
         if not lead:
+            # The ledger names a lead the CRM no longer has (deleted by hand,
+            # or by an Undo whose fills rows outlived it — round two of the M4
+            # pass, 10-25-26): the row is new again, not a repeat.
+            out[h] = {"leadId": None, "leadName": "", "fill": {}, "gone": True}
             continue
         fill = {attr: row[field] for field, attr in FILL_FIELDS.items()
                 if row.get(field) and not str(lead.get(attr) or "").strip()}
@@ -502,7 +507,7 @@ async def _plan_entries(api_client: EspoApi, store, rows: list[dict[str, Any]], 
         elif h in seen:
             entry.update(outcome=OUTCOME_DUPLICATE, note="the same row appears earlier in this file")
             counts["duplicate"] += 1
-        elif h in known:
+        elif h in known and not (fills.get(h) or {}).get("gone"):
             cand = fills.get(h)
             if cand and cand["fill"]:
                 entry.update(outcome=OUTCOME_FILLS, leadId=cand["leadId"], fill=cand["fill"],

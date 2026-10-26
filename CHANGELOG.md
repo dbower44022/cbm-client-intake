@@ -5,6 +5,18 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.286.2] — 2026-10-25
+
+**fix(campaigns): a ledger row whose lead is gone is a new row again.** Found
+on round two of the M4 live pass (Claude, in Doug's signed-in tab): round
+one's Undo forgot only the October batch's ledger rows, so the November
+batch's two *fills* rows still named the deleted leads, their hashes stayed
+known, and the worker planned them as repeat rows with nothing to fill
+(`create 2, knownRow 2` instead of `create 4`). Two changes: `_fill_candidates`
+marks a known hash whose lead the CRM no longer has as *gone* and the plan
+creates the row; `store.forget_rows` drops every ledger row naming a deleted
+lead, other batches' fills included.
+
 ## [0.286.1] — 2026-10-25
 
 **fix(campaigns): Undo kept its promise on the M4 live pass's rehearsal.**

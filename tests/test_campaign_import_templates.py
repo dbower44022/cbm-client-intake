@@ -109,7 +109,7 @@ class TemplateStore(FakeStore):
                 out.setdefault(r["prospect_id"], self.batches[r["batch_id"]]["name"])
         return out
     async def forget_rows(self, batch_id, prospect_ids):
-        self.rows = [r for r in self.rows if not (r.get("batch_id") == batch_id and r.get("prospect_id") in set(prospect_ids))]
+        self.rows = [r for r in self.rows if r.get("prospect_id") not in set(prospect_ids)]
     async def record_undo(self, batch_id, *, deleted, touched, errors, done, actor):
         b = self.batches[batch_id]
         result = dict(b.get("undo_result") or {"deleted": [], "touched": [], "errors": []})
@@ -766,3 +766,24 @@ def test_the_parts_summary_counts_exclude_the_excluded_rows(monkeypatch):
     row = [l for l in logged if l["action"] == "Leads Imported"][0]
     assert row["details"]["created"] == 1 and row["details"]["unqualified"] == 0 and row["details"]["excluded"] == 1
     assert "1 leads (1 Qualified, 0 Unqualified)" in row["summary"] and "1 rows excluded" in row["summary"]
+
+
+def test_a_ledger_row_whose_lead_is_gone_plans_as_a_create_again():
+    """Round two of the live pass: a lead deleted while another batch's fills
+    row still named it read as "known, nothing to fill". The row is new."""
+    store, crm = TemplateStore(), Crm()
+    first, _ = _plan_and_apply(store, crm)
+    leads = {p["businessName"]: p for p in crm.rows[cfg.PROSPECT].values()}
+    # A stale ledger row: the lead is deleted by hand, the row stays.
+    del crm.rows[cfg.PROSPECT][leads["Quiet Shop"]["id"]]
+    batch = _queue(store, name="Again")
+    run(imports.plan_batch_now(crm, store, batch["id"], ladder=True))
+    by_name = {r["name"]: r for r in run(store.get_batch(batch["id"]))["plan"]["rows"]}
+    assert by_name["Quiet Shop"]["outcome"] == "create" and by_name["Acme Widgets"]["outcome"] == "known_row"
+    # And Undo forgets every row naming a deleted lead, other batches' fills included.
+    rows = _chamber_rows(); rows[2].update(owner="Bo Ray", e_mail="bo@named.example")
+    _plan_and_apply(store, crm, rows=rows, name="Fill Named Only")
+    named = leads["Named Only"]["id"]
+    assert [r for r in store.rows if r["prospect_id"] == named and r["outcome"] == "fills"]
+    run(store.forget_rows(first["id"], [named]))
+    assert [r for r in store.rows if r["prospect_id"] == named] == []
