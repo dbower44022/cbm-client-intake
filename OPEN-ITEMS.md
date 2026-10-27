@@ -173,8 +173,8 @@ found; move resolved items to the bottom with the resolution date.
     (a CRM fix, not ours); (d) Constant Contact names a pasted-HTML email
     itself ("Live Send Test Email <date>"), and that name is what *Pick the
     email* shows.
-    Next: M7, Constant Contact per list and the email campaign (§ 7e.9
-    first half). Still owed: the handoff on
+    Next: M8, lists only and the campaign page (§ 7e.9 second half);
+    kickoff draft `prompts/m8-lists-only-kickoff.md`. Still owed: the handoff on
     production at the arc's slot and on Boston with its release (now with
     the third role cell); the layout question in the handoff's § 7.
 
