@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-27-26 18:52 · Revision 0.63 — change log at the end.
+Last Updated: 10-27-26 19:24 · Revision 0.64 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -2853,6 +2853,9 @@ Team caller for M1 and M10).
     (§§ 7e.9, 7e.10). About three days. **Also (ruling 126):** § 7d.2's
     caller's link — the person's campaign link plus code, with a Copy
     button, minted when the call list is built.
+11. **M11: the Lists tab, redesigned** (§ 7e.14, rulings 129–132). About
+    four and a half days, in five stops. Drafted 10-27-26 for Doug's
+    approval.
 
 **Cost, named.**
 
@@ -2867,6 +2870,116 @@ Team caller for M1 and M10).
   endpoints, and the send-report volume on a real list.
 - **The standing cost the rulings accepted:** CBM writes personally to
   people who never opted in (ruling 107).
+
+### 7e.14 The Lists tab, redesigned — rulings 129–132 (drafted 10-27-26 for approval)
+
+The built Lists tab (§ 7e.8, ruling 98) put the index, the settings, the
+builder, Add people and the member grid on one page that served none of
+them well. Rulings 129–132 split it into four screens, each built for one
+job. The approved design is the canvas
+https://claude.ai/artifact/H8TMg1nrFDbusQikSeYQSH. Rulings 90–95 are
+unchanged: what a list is, Include and Leave out, static and dynamic, and
+the Constant Contact copy all stay as built.
+
+**What the user gets.**
+
+- **The list view** is what the Lists tab opens on. A search box narrows
+  the lists by name and notes as you type. Filters cover type, Constant
+  Contact, and retired lists. Each row shows the full name, the type, the
+  members, last used, last updated, the Constant Contact link and the
+  notes; no cell is cut short. Column headings sort.
+- **Preview** is a switch on the list view. While it is on, the row a
+  click or an arrow key selects shows in a panel on the right: reach per
+  channel, who is on it in sentences, the campaigns using it, the details,
+  and the *Edit* and *View members* buttons. Enter opens Edit, V opens
+  View, and / puts the cursor in the search. The switch's state is
+  remembered in the browser.
+- **Edit** replaces the list view on the same page, with *← Lists* to go
+  back. It holds Settings (name, notes, the Constant Contact copy) and Who
+  is on it. On a dynamic list that is the Include and Leave out builder,
+  recounted after each change, with *Who this change moves* (who comes on
+  and who drops off against the saved list) and the campaigns the save
+  will reach. On a static list it is the member grid, with *+ Add people*
+  opening a search panel from the right and *Remove from this list* for
+  ticked people. One save bar shows while anything is unsaved, and leaving
+  with unsaved changes asks first (ruling 89's standing cost). Copy,
+  Retire and Delete are under *More*.
+- **View** opens the members in a browser tab of its own, named
+  `cbm-list-<id>` so a second click reuses it (ruling 130). It shows the
+  reach summary, a search over every column, filters by channel and by
+  the group that brought each person in, a dense grid with a *Columns*
+  picker, *Leave out…* on a dynamic list (ruling 92), *Refresh*, *Edit
+  list* and *Export*.
+
+**What changes underneath.**
+
+- **Counts are stored, and kept current** (ruling 131). Migration 0040
+  adds `channel_counts` (JSON: people, email, text, postcard, not
+  reachable) and `counted_at` to `audience_list`. A new worker pass
+  re-runs every active dynamic list and counts every active list each
+  night. It runs before the Constant Contact push, so the copies sync
+  from fresh members. *Refresh* on a page does the same for one list. A
+  campaign already under way keeps the version it recorded (ruling 64),
+  so a nightly run never changes what a signed-off campaign sends to. The
+  index reads the stored numbers and never calls the CRM.
+- **The preview count reports the difference.** The existing preview
+  route also returns who comes on and who drops off against the last run:
+  the totals, plus the first 50 names of each.
+- **The member grid reports reach per person.** The members route adds,
+  for the page shown only, whether each person is reachable by email,
+  text and postcard, using the same `resolve_targets` rules as a send. It
+  also gains filters by channel and by Include group, and more columns:
+  lead status, email address, phone, city, last activity.
+- **The View page** is served at `/campaigns/lists/{id}/members`, behind
+  the same team gate as the tab. It loads `busy.js` first and carries the
+  `{{org}}` token, like every page.
+
+**Switch.** `CAMPAIGN_LIST_SCREENS`, off by default, read per request,
+listed at `/setup`. Off, the tab is the built one, untouched. On, the tab
+opens on the list view. The old screens' code is removed in a later
+release, once the new ones have passed on crm-test. Rollback is turning
+the switch off. The nightly count pass rides `CAMPAIGN_LISTS` and needs no
+switch of its own.
+
+**Stops.** Work pauses after each stop for Doug's go-ahead. Doug may
+instead say to run several stops in one go.
+
+1. **Stop 1 — the server** (about a day and a half): the switch, migration
+   0040, the nightly count pass and *Refresh*, the index's stored numbers,
+   the preview's difference, the members route's reach and filters, and
+   their tests. Migration 0040 is run against a local Postgres with a
+   downgrade and a second upgrade, as M6's was.
+2. **Stop 2 — the list view and Preview** (about a day). They are checked
+   in the browser against the real application with 40 lists of long
+   names.
+3. **Stop 3 — Edit, both kinds** (about a day). The existing builder, Add
+   people and Exclude code moves here, restyled to the canvas.
+4. **Stop 4 — View** (about half a day). This is the page, its tab name
+   and its grid.
+5. **Stop 5 — documents and the live pass** (about half a day). This stop
+   covers `campaigns/CLAUDE.md`, the changelog, the version, and the staff
+   guide's Lists section. Then a live pass on crm-test, run by Claude in a
+   tab where Doug is signed in as Mark Marketing, with a results page for
+   Doug to review. Doug pushes.
+
+**Tests.** `test_campaign_lists.py` gains the stored counts, the nightly
+pass (a dynamic list re-run, a static list counted, a retired list
+skipped), the preview's difference, the per-person reach, and the two
+member filters. A new `test_campaign_list_screens.py` covers the switch,
+the View page's gate, `busy.js` first and the `{{org}}` token.
+`tests/test_shared_branding.py` gets the new page.
+
+**Cost, named.**
+
+- About four and a half days.
+- One more nightly job calling the CRM: one run per active dynamic list,
+  plus four counts per list. On crm-test that is a few dozen calls. A
+  chapter with hundreds of dynamic lists would need the pass spread out;
+  the pass logs its time so that shows.
+- The old and the new list screens both ship until the old ones are
+  removed, so a fix made to one in that window is not in the other.
+- The first count of a large list after a change takes a few seconds,
+  and the page shows that it is counting.
 
 ---
 
@@ -3132,6 +3245,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.64 | 10-27-26 19:24 | Claude (Claude Code) | § 7e.14 and § 7e.13 step M11 drafted for Doug's approval: the Lists tab redesigned (rulings 129–132) — list view with Preview, Edit and View separate, counts stored and refreshed nightly, five named stops, switch `CAMPAIGN_LIST_SCREENS`, migration 0040. |
 | 0.63 | 10-27-26 18:52 | Claude (Claude Code) | M9 live-passed on crm-test: the report's shapes confirmed but the bounce. |
 | 0.62 | 10-27-26 18:50 | Claude (Claude Code) | M9 built as v0.292.0: the send report, the Recipients tab, the opens fields' handoff, the call list size. |
 | 0.61 | 10-27-26 18:20 | Claude (Claude Code) | M8 live-passed on crm-test; v0.291.1. |
