@@ -201,6 +201,8 @@ async def session(request: Request) -> dict[str, Any]:
         "listSyncOn": settings.campaign_list_sync and settings.campaign_lists,
         # Every campaign sends to a list; the strip and tabs (§ 7e.9, M8).
         "listsOnlyOn": ready_made.lists_only(settings),
+        # The Lists tab redesigned: the list view, Edit and View (§ 7e.14, M11).
+        "listScreensOn": settings.campaign_list_screens and settings.campaign_lists,
         # The Constant Contact send report (§ 7e.9, M9).
         "sendReportOn": bool(settings.campaign_send_report),
         "ladderOn": settings.lead_ladder,

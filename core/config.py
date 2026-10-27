@@ -664,6 +664,14 @@ class Settings(BaseSettings):
     # Campaign lists and Campaign list copies. Read per pass and per request.
     campaign_send_report: bool = False
     campaign_send_report_seconds: int = 86400   # how often the worker reads; 0 stops it
+    # The Lists tab redesigned (build plan § 7e.14, rulings 129-132; M11): the
+    # list view with Preview, Edit and View as separate screens. Needs Campaign
+    # lists. Read per request. Off, the tab is the one built before.
+    campaign_list_screens: bool = False
+    # Every list's stored counts (ruling 131): the worker re-runs each active
+    # dynamic list and counts each active list this often. Rides Campaign
+    # lists. 0 stops the pass; Refresh on a list still counts it.
+    campaign_list_count_seconds: int = 86400
     # The fields a list step may use, per target type (ruling 63), as
     # "lead: leadStatus, leadSource; contact: cContactType" (a dotted name
     # follows links: client: engagementClient.industrySector). Empty: the

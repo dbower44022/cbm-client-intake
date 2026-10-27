@@ -33,7 +33,7 @@ from core.espo import EspoError
 
 import asyncio
 
-from . import audience, list_sync, ready_made
+from . import audience, list_counts, list_sync, ready_made
 from . import config as cfg
 from .audience import AudienceError
 from .audience_store import (
@@ -103,6 +103,8 @@ def _public(row: dict[str, Any], *, used: int = 0, members: Optional[int] = None
         "ccStatus": list_sync.status_words(row),
         # A ready-made list (Draft 9): never deleted, renamed, changed or retired.
         "system": ready_made.is_system(row),
+        # The stored counts (§ 7e.14, ruling 131): taken nightly and by Refresh.
+        "counts": row.get("counts") or None, "countedAt": _iso(row.get("counted_at")),
     }
 
 
@@ -339,8 +341,36 @@ async def preview(body: PreviewIn, request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not count the list")
-    return {"groups": result["groups"], "included": result["included"], "leftOut": result["leftOut"],
-            "total": result["total"]}
+    out = {"groups": result["groups"], "included": result["included"], "leftOut": result["leftOut"],
+           "total": result["total"], "diff": None}
+    # Who this change moves (§ 7e.14): against the saved list's last run.
+    if body.listId and store is not None:
+        row = await store.get_list(body.listId)
+        if row and row["kind"] == KIND_DYNAMIC and row.get("last_run_at") is not None:
+            try:
+                out["diff"] = await _diff(_api_client(settings, request), store, row, result["keys"], cat)
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not read who the change moves")
+    return out
+
+
+#: How many names *Who this change moves* shows on each side.
+DIFF_NAMES = 50
+
+
+async def _diff(client, store, row: dict[str, Any], new_keys, cat: dict[str, Any]) -> dict[str, Any]:
+    """Who comes on and who drops off, against the list's last run: the two
+    totals and the first ``DIFF_NAMES`` names of each, by name."""
+    old = set(list_counts.member_keys(row, await store.member_rows(row["id"])))
+    new = set(new_keys)
+    on, off = sorted(new - old), sorted(old - new)
+    names = await audience.describe_members(client, on[:DIFF_NAMES] + off[:DIFF_NAMES],
+                                            audience.empty_recipe(), cat)
+    by_key = {m["key"]: {"key": m["key"], "type": m["type"], "name": m["name"]} for m in names}
+    pick = lambda keys: sorted((by_key[k] for k in keys[:DIFF_NAMES] if k in by_key),  # noqa: E731
+                               key=lambda m: (m["name"] or "").lower())
+    return {"comesOn": len(on), "dropsOff": len(off), "comingOn": pick(on), "droppingOff": pick(off),
+            "lastRunAt": _iso(row.get("last_run_at"))}
 
 
 @lists_router.post("/lists/{list_id}/run")
@@ -375,6 +405,33 @@ async def run_list(list_id: str, request: Request) -> dict[str, Any]:
     return {"run": run}
 
 
+@lists_router.post("/lists/{list_id}/refresh")
+async def refresh_list(list_id: str, request: Request) -> dict[str, Any]:
+    """*Refresh* (§ 7e.14, ruling 131): a dynamic list run now, then either
+    kind counted — its people, the reach per channel, each member's reach —
+    and stored. The nightly pass does the same for every active list."""
+    user, client = _actor(request)
+    settings = get_settings()
+    _require_lists(settings)
+    store = _store(request)
+    row = await _list_or_404(store, list_id)
+    if row["status"] == STATUS_RETIRED:
+        raise HTTPException(status_code=400, detail="A retired list is not counted — reactivate it first.")
+    cat = await _catalogue(request, settings)
+    try:
+        out = await list_counts.refresh_one(_api_client(settings, request), store, row, cat, actor=_who(user))
+    except AudienceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not refresh the list")
+    if out["run"] is not None:
+        await _log(client, user, "Campaign List Run",
+                   f"Refreshed the list \"{row['name']}\": {out['run']['total']} members as of now",
+                   details={"list": list_id, "version": row["version"], "groups": out["run"]["groups"]})
+    fresh = await _list_or_404(store, list_id)
+    return {"run": out["run"], "counts": out["counts"], "countedAt": _iso(fresh.get("counted_at"))}
+
+
 # --- members --------------------------------------------------------------------------
 
 def _member_keys(row: dict[str, Any], rows: list[dict[str, Any]]) -> dict[str, Optional[int]]:
@@ -404,16 +461,31 @@ def _brought_in_by(row: dict[str, Any], cat: Optional[dict[str, Any]], names: di
 
 @lists_router.get("/lists/{list_id}/members")
 async def members(list_id: str, request: Request, offset: int = 0, limit: int = _MEMBERS_PAGE,
-                  q: str = "", sort: str = "", dir: str = "asc") -> dict[str, Any]:
+                  q: str = "", sort: str = "", dir: str = "asc", channel: str = "", group: int = 0,
+                  detail: bool = False) -> dict[str, Any]:
     """The list's members, a page at a time: a static list's people, a
     dynamic list's last run. Search (``q``, by name) and sort by ``name``,
-    ``type`` or ``broughtInBy``."""
-    _actor(request)
+    ``type`` or ``broughtInBy``. The View page (§ 7e.14) adds ``channel``
+    (email, text, postcard or none — from the stored reach), ``group`` (the
+    Include group that brought each in) and ``detail`` (the extra columns,
+    read as the user)."""
+    _user, user_client = _actor(request)
     settings = get_settings()
     _require_lists(settings)
     store = _store(request)
     row = await _list_or_404(store, list_id)
-    keyed = _member_keys(row, await store.member_rows(list_id))
+    member_rows = await store.member_rows(list_id)
+    keyed = _member_keys(row, member_rows)
+    reach = {r["target_key"]: r.get("reach") for r in member_rows}
+    uncounted = sum(1 for k in keyed if reach.get(k) is None)
+    if channel:
+        if channel not in audience.REACH_FILTERS:
+            raise HTTPException(status_code=400, detail="Filter by email, text, postcard or none.")
+        letter = audience.REACH_FILTERS[channel]
+        keyed = {k: g for k, g in keyed.items() if reach.get(k) is not None
+                 and ((letter and letter in reach[k]) or (not letter and reach[k] == ""))}
+    if group:
+        keyed = {k: g for k, g in keyed.items() if g == group}
     cat = await _catalogue(request, settings)
     recipe = audience.normalise_recipe(row["recipe"]) if row["kind"] == KIND_DYNAMIC else audience.empty_recipe()
     client = _api_client(settings, request)
@@ -452,11 +524,19 @@ async def members(list_id: str, request: Request, offset: int = 0, limit: int = 
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not read the members")
     label, stale = _brought_in_by(row, cat, await _list_names(store))
+    details = await audience.describe_details(user_client, [m["key"] for m in page]) if detail else {}
     for m in page:
         m["broughtInBy"] = label(keyed.get(m["key"]))
+        m["broughtInByIndex"] = keyed.get(m["key"])
+        m["reach"] = reach.get(m["key"])
+        if detail:
+            m["details"] = details.get(m["key"]) or {}
     return {"members": page, "total": total, "offset": offset, "limit": limit,
             "neverRun": row["kind"] == KIND_DYNAMIC and row.get("last_run_at") is None,
-            "changedSinceRun": stale and row.get("last_run_at") is not None}
+            "changedSinceRun": stale and row.get("last_run_at") is not None,
+            # Members whose reach has not been counted since they were written:
+            # the channel filter cannot place them until the next count.
+            "uncounted": uncounted}
 
 
 def _csv_line(values: list[Any]) -> str:

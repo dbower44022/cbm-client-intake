@@ -453,6 +453,10 @@ async def main() -> None:
     next_ready_made = datetime.now(timezone.utc)
     ready_made_store = None
     next_send_report = datetime.now(timezone.utc)
+    # Every list's stored counts (§ 7e.14, ruling 131): ten minutes after start,
+    # then every CAMPAIGN_LIST_COUNT_SECONDS. Not an interval after start, which
+    # a deploy a day would put off for ever.
+    next_list_count = datetime.now(timezone.utc) + timedelta(seconds=600)
 
     while not stop.is_set():
         claimed = await run_cycle(store, settings, stop)
@@ -594,6 +598,21 @@ async def main() -> None:
             except Exception as exc:  # noqa: BLE001 — never fatal
                 log.warning("send report pass failed: %s", exc)
             next_send_report = now_cfg + timedelta(seconds=settings.campaign_send_report_seconds)
+        if (settings.campaigns_enabled and settings.campaign_lists and settings.store_enabled
+                and not settings.espo_dry_run and settings.campaign_list_count_seconds > 0
+                and now_cfg >= next_list_count):
+            try:
+                from campaigns import list_counts
+                if ready_made_store is None:
+                    from campaigns.store import make_campaign_store
+                    ready_made_store = make_campaign_store(settings)
+                counted = await list_counts.run_pass(settings, store=ready_made_store)
+                log.info("list count pass: %d of %d list(s) counted in %ss%s", counted["counted"],
+                         counted["lists"], counted["seconds"],
+                         ("; not counted: " + ", ".join(counted["failed"])) if counted["failed"] else "")
+            except Exception as exc:  # noqa: BLE001 — never fatal
+                log.warning("list count pass failed: %s", exc)
+            next_list_count = now_cfg + timedelta(seconds=settings.campaign_list_count_seconds)
         mailing_on = settings.mailing_sync and not settings.espo_dry_run
         if mailing_on and settings.mailing_push_seconds > 0 and now_cfg >= next_mailing_push:
             try:

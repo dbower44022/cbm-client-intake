@@ -295,6 +295,16 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("campaign_send_report_seconds", GROUP_FEATURES, "Campaign send report interval", kind="int",
        component="worker",
        help="Seconds between the worker's reads of the send reports (default a day). 0 stops the reads."),
+    _s("campaign_list_screens", GROUP_FEATURES, "Campaign list screens", kind="bool", component="web",
+       help="The Lists tab redesigned: it opens on a searchable list of every list, with a "
+            "Preview panel; Edit and View are screens of their own, and View opens the members in "
+            "a separate browser tab. Needs Campaign lists. Read per request: no restart. Off, the "
+            "Lists tab is the one built before."),
+    _s("campaign_list_count_seconds", GROUP_FEATURES, "Campaign list count interval", kind="int",
+       component="worker",
+       help="Seconds between the worker's passes that re-run every active dynamic list and count "
+            "every active list's members and reach (default a day). 0 stops the pass; Refresh on a "
+            "list still counts that list."),
     _s("campaign_list_fields", GROUP_FEATURES, "Campaign list fields", component="web",
        help="The fields a list step may filter on, per record type (ruling 63), written "
             "as 'lead: leadStatus, leadSource; contact: cContactType, cFunnelStage'. Use "

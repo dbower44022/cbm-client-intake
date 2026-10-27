@@ -80,6 +80,10 @@ audience_list = Table(
     # A ready-made list (§ 7e.12 Draft 9; migration 0039): never deleted,
     # renamed or changed; Copy makes an ordinary list (campaigns/ready_made.py).
     Column("system", Boolean, nullable=False, default=False),
+    # The stored counts (§ 7e.14, ruling 131; migration 0040): people and the
+    # reach per channel, refreshed nightly and by *Refresh*.
+    Column("counts", JSONB),
+    Column("counted_at", DateTime(timezone=True)),
     Index("ix_audience_list_name", "name"),
 )
 
@@ -104,6 +108,9 @@ audience_list_member = Table(
     Column("group_index", Integer),
     Column("added_by", String(128)),
     Column("added_at", DateTime(timezone=True), nullable=False),
+    # The channels this member reaches — letters e/t/p, "" none, NULL not
+    # counted yet (§ 7e.14; migration 0040).
+    Column("reach", String(8)),
     Index("ix_audience_list_member_list", "list_id", "state"),
 )
 
@@ -238,6 +245,28 @@ class AudienceStoreMixin:
         async with self._engine.begin() as conn:
             await conn.execute(update(audience_list).where(audience_list.c.id == list_id).values(
                 cc_last_sync_at=_now(), cc_last_sync=summary))
+
+    async def record_counts(self, list_id: str, counts: dict[str, Any], reach: dict[str, str]) -> None:
+        """The stored counts (ruling 131) and each member's reach, in one
+        transaction. A member the count did not see keeps NULL."""
+        m = audience_list_member
+        by_value: dict[str, list[str]] = {}
+        for key, letters in reach.items():
+            by_value.setdefault(letters, []).append(key)
+        async with self._engine.begin() as conn:
+            await conn.execute(update(audience_list).where(audience_list.c.id == list_id).values(
+                counts=counts, counted_at=_now()))
+            for letters, keys in by_value.items():
+                for i in range(0, len(keys), 1000):
+                    await conn.execute(update(m).where(and_(
+                        m.c.list_id == list_id, m.c.target_key.in_(keys[i:i + 1000]))).values(reach=letters))
+
+    async def active_lists(self) -> list[dict[str, Any]]:
+        """Every active list, by name — the nightly count pass."""
+        async with self._engine.begin() as conn:
+            rows = (await conn.execute(select(audience_list).where(
+                audience_list.c.status == STATUS_ACTIVE).order_by(audience_list.c.name))).mappings().all()
+        return [dict(r) for r in rows]
 
     async def cc_sync_lists(self) -> list[dict[str, Any]]:
         """Every active list with its copy on, by name — the worker's pass."""

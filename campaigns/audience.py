@@ -839,6 +839,31 @@ async def channel_counts(client, keys: Iterable[str]) -> list[dict[str, Any]]:
     return out
 
 
+#: Each channel's letter in a member's stored reach (§ 7e.14).
+REACH_LETTERS = {cfg.KIND_EMAIL: "e", cfg.KIND_SMS: "t", cfg.KIND_POSTCARD: "p"}
+#: The View page's channel filter → the letter it needs ("none": no letter).
+REACH_FILTERS = {"email": "e", "text": "t", "postcard": "p", "none": ""}
+
+
+async def count_list(client, keys: Iterable[str]) -> dict[str, Any]:
+    """The stored counts (ruling 131): the members, how many people each
+    channel reaches after every send-time check, how many members reach
+    nobody, and each member's reach as letters. Three ``resolve_targets``
+    runs, the same as a send would make."""
+    keys = list(keys)
+    counts: dict[str, Any] = {"people": len(keys)}
+    reach: dict[str, str] = {k: "" for k in keys}
+    for kind, label in COUNT_CHANNELS:
+        resolved = await resolve_targets(client, kind, keys)
+        counts[label.lower()] = len(resolved["targets"])
+        letter = REACH_LETTERS[kind]
+        for k in resolved.get("reachedMembers") or ():
+            if k in reach:
+                reach[k] += letter
+    counts["notReachable"] = sum(1 for v in reach.values() if not v)
+    return {"counts": counts, "reach": reach}
+
+
 # --- showing members -------------------------------------------------------------------------
 
 def used_fields(recipe: dict[str, Any]) -> dict[str, list[str]]:
@@ -893,6 +918,38 @@ async def describe_members(client, keys: list[str], recipe: dict[str, Any], cat:
                 v = r.get(f + "Name") if info["family"] == "link" else r.get(f)
                 values[info["label"]] = ", ".join(map(str, v)) if isinstance(v, list) else v
         out.append({"key": k, "type": t, "id": rid, "name": name, "missing": False, "values": values})
+    return out
+
+
+#: The View page's extra columns (§ 7e.14), per record type: the CRM field for
+#: each. A client, partner or funder shows its name alone.
+DETAIL_FIELDS = {
+    "lead": {"email": "email", "phone": "phone", "city": "mailingAddressCity", "status": "leadStatus",
+             "company": "businessName", "activity": "modifiedAt"},
+    "contact": {"email": "emailAddress", "phone": "phoneNumber", "city": "addressCity",
+                "status": "cFunnelStage", "company": "accountName", "activity": "modifiedAt"},
+}
+
+
+async def describe_details(client, keys: list[str]) -> dict[str, dict[str, Any]]:
+    """key → the View page's extra columns, read as the signed-in user so the
+    CRM's own field rules decide what shows. A type the user may not read
+    comes back without details, never as an error."""
+    out: dict[str, dict[str, Any]] = {}
+    by_type: dict[str, list[str]] = {}
+    for k in keys:
+        t, rid = split_key(k)
+        if t in DETAIL_FIELDS:
+            by_type.setdefault(t, []).append(rid)
+    for t, ids in by_type.items():
+        fields = DETAIL_FIELDS[t]
+        select = ",".join(["id", *fields.values()])
+        try:
+            found = await _by_ids(client, TYPES[t]["entity"], ids, select)
+        except EspoError:
+            continue
+        for rid, r in found.items():
+            out[f"{t}:{rid}"] = {col: r.get(f) for col, f in fields.items()}
     return out
 
 
@@ -1054,8 +1111,13 @@ async def resolve_targets(client, kind: str, keys: Iterable[str], *, every_conta
     skipped: Counter = Counter()
     targets: list[dict[str, Any]] = []
     seen: set[str] = set()
+    # The member keys this channel reaches (§ 7e.14): a member whose person or
+    # card another member already took is reached too — the send covers it.
+    reached: set[str] = set()
 
-    def take(t: dict[str, Any], dedupe: str) -> None:
+    def take(t: dict[str, Any], dedupe: str, member: Optional[str] = None) -> None:
+        if member:
+            reached.add(member)
         if t["key"] in seen or dedupe in seen:
             skipped["duplicate"] += 1
             return
@@ -1079,13 +1141,13 @@ async def resolve_targets(client, kind: str, keys: Iterable[str], *, every_conta
         account_ids = [c.get("accountId") for c in contacts.values()] + [o.get("_companyId") for o in orgs.values()]
         accounts = await _by_ids(client, cfg.ACCOUNT, [a for a in account_ids if a], ACCOUNT_SELECT)
 
-        def card_to_company(acct: Optional[dict[str, Any]]) -> bool:
+        def card_to_company(acct: Optional[dict[str, Any]], member: str) -> bool:
             if not acct or not _company_address(acct).is_complete():
                 return False
             address = _company_address(acct)
             take({"key": f"company:{acct['id']}", "kind": "company", "id": acct["id"],
                   "name": acct.get("name") or "", "address": address, "stage": acct.get("cFunnelStage")},
-                 _card_key(address))
+                 _card_key(address), member)
             return True
 
         for k in keys:
@@ -1107,7 +1169,7 @@ async def resolve_targets(client, kind: str, keys: Iterable[str], *, every_conta
                     continue
                 take({"key": f"prospect:{rid}", "kind": "prospect", "id": rid,
                       "name": p.get("businessName") or p.get("name") or "", "address": address,
-                      "stage": p.get("leadStatus")}, _card_key(address))
+                      "stage": p.get("leadStatus")}, _card_key(address), k)
             elif t == "contact":
                 c = contacts.get(rid)
                 if not c:
@@ -1116,14 +1178,14 @@ async def resolve_targets(client, kind: str, keys: Iterable[str], *, every_conta
                 if rid in left:
                     skipped["exit"] += 1
                     continue
-                if card_to_company(accounts.get(c.get("accountId") or "")):
+                if card_to_company(accounts.get(c.get("accountId") or ""), k):
                     continue
                 address = contact_address(c)
                 if not address.is_complete():
                     skipped["no_address"] += 1
                     continue
                 take({"key": f"contact:{rid}", "kind": "contact", "id": rid, "name": c.get("name") or "",
-                      "address": address, "stage": c.get("cFunnelStage")}, _card_key(address))
+                      "address": address, "stage": c.get("cFunnelStage")}, _card_key(address), k)
             elif t in ORG_TYPES:
                 # Ruling 68: a card reached through a client, partner or funder
                 # is limited by this campaign alone (the de-duplication here).
@@ -1131,9 +1193,9 @@ async def resolve_targets(client, kind: str, keys: Iterable[str], *, every_conta
                 if not o:
                     skipped["missing"] += 1
                     continue
-                if not card_to_company(accounts.get(o.get("_companyId") or "")):
+                if not card_to_company(accounts.get(o.get("_companyId") or ""), k):
                     skipped["no_address"] += 1
-        return {"targets": targets, "skipped": _skips(skipped)}
+        return {"targets": targets, "skipped": _skips(skipped), "reachedMembers": reached}
 
     # The person channels: every member as the people it stands for.
     persons: list[tuple[str, Any]] = []   # (member key, contact id | {"_lead": lead})
@@ -1183,7 +1245,7 @@ async def resolve_targets(client, kind: str, keys: Iterable[str], *, every_conta
 
     if kind == cfg.KIND_EMAIL:
         cbm = await cbm_emails(client, [c["id"] for _, c in resolved if c.get("id") and is_member(c)])
-        for _k, c in resolved:
+        for k, c in resolved:
             if not email_consented(c):
                 skipped["no_consent"] += 1
                 continue
@@ -1199,9 +1261,9 @@ async def resolve_targets(client, kind: str, keys: Iterable[str], *, every_conta
                     continue
             take({"key": f"contact:{c['id']}", "kind": "contact", "id": c["id"], "name": c.get("name") or "",
                   "email": email, "first": c.get("firstName") or "", "last": c.get("lastName") or "",
-                  "stage": c.get("cFunnelStage")}, "email:" + email.lower())
+                  "stage": c.get("cFunnelStage")}, "email:" + email.lower(), k)
     elif kind == cfg.KIND_SMS:
-        for _k, c in resolved:
+        for k, c in resolved:
             if c.get("_lead"):
                 skipped["no_contact"] += 1
                 continue
@@ -1213,7 +1275,7 @@ async def resolve_targets(client, kind: str, keys: Iterable[str], *, every_conta
                 skipped["no_phone"] += 1
                 continue
             take({"key": f"contact:{c['id']}", "kind": "contact", "id": c["id"], "name": c.get("name") or "",
-                  "phone": phone, "stage": c.get("cFunnelStage")}, "phone:" + phone)
+                  "phone": phone, "stage": c.get("cFunnelStage")}, "phone:" + phone, k)
     elif kind == cfg.KIND_CALL:
         declined = await calls.declined_targets(client)
         for k, c in resolved:
@@ -1225,7 +1287,7 @@ async def resolve_targets(client, kind: str, keys: Iterable[str], *, every_conta
                     continue
                 take({"key": key, "kind": "prospect", "id": lead["id"],
                       "name": lead.get("businessName") or lead.get("name") or "", "phone": lead["phone"],
-                      "stage": lead.get("leadStatus")}, "phone:" + str(lead["phone"]))
+                      "stage": lead.get("leadStatus")}, "phone:" + str(lead["phone"]), k)
                 continue
             key = f"contact:{c['id']}"
             if key in declined or (k.startswith("lead:") and f"prospect:{split_key(k)[1]}" in declined):
@@ -1241,10 +1303,10 @@ async def resolve_targets(client, kind: str, keys: Iterable[str], *, every_conta
                 skipped["no_phone"] += 1
                 continue
             take({"key": key, "kind": "contact", "id": c["id"], "name": c.get("name") or "",
-                  "phone": phone, "stage": c.get("cFunnelStage")}, "phone:" + str(phone))
+                  "phone": phone, "stage": c.get("cFunnelStage")}, "phone:" + str(phone), k)
     else:
         raise AudienceError(f"A {kind} campaign does not send to a list.")
-    return {"targets": targets, "skipped": _skips(skipped)}
+    return {"targets": targets, "skipped": _skips(skipped), "reachedMembers": reached}
 
 
 async def _left(client, contact_ids: list[str]) -> set[str]:

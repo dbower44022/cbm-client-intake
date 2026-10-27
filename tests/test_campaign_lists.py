@@ -206,6 +206,16 @@ class FakeListStore:
     async def member_rows(self, list_id):
         return [dict(m) for k, m in self.members.items() if k[0] == list_id]
 
+    async def record_counts(self, list_id, counts, reach):
+        self.lists[list_id].update(counts=counts, counted_at=datetime.now(timezone.utc))
+        for key, letters in reach.items():
+            if (list_id, key) in self.members:
+                self.members[(list_id, key)]["reach"] = letters
+
+    async def active_lists(self):
+        return sorted((dict(r) for r in self.lists.values() if r["status"] == "active"),
+                      key=lambda r: r["name"])
+
     async def member_counts(self):
         out: dict[str, int] = {}
         for (lid, _k), m in self.members.items():
