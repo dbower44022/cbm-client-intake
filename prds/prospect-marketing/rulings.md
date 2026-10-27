@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-25-26 23:20 · Revision 1.51 — change log at the end.
+Last Updated: 10-27-26 19:15 · Revision 1.52 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -1360,6 +1360,51 @@ both after the redesign. Doug's reply at 11:13: "a".
      outreach work, and the session tools re-tested on the shared one.
      (10-25-26)
 
+### Doug's rulings (10-27-26, on the Lists tab, redesigned)
+
+Doug called the built Lists tab (v0.289.0–v0.291.1) "terrible". A first
+redesign that kept one combined list page was rejected. Doug then set out
+what was wrong; his message is quoted word for word in ruling 129. Claude
+read it back as seven points, and Doug answered the two decisions that
+followed one at a time. The four screens were drawn as a design canvas,
+https://claude.ai/artifact/H8TMg1nrFDbusQikSeYQSH, and approved at 19:10.
+These rulings replace ruling 98's layout. Rulings 90–95 still govern what
+a list is and how it behaves.
+
+129. **The Lists tab opens on a list view built for finding a list, and
+     Edit and View are separate screens.** Doug, word for word: "The
+     primary UI of the lists tab should be a list view that allows users
+     to review a large number of lists, and quickly locate the one that
+     they are looking to use. They would like to enter text into a search
+     to narrow the list. Then they need to see the full name (which will
+     be long to make it easy to understand the list), they type, # of
+     members, last used/updated, if it is linked to constant contact, and
+     notes. The UI should support turning on a preview mode, so that as
+     they click on a row, or press the arrow key to select a new row the
+     preview will show more details in a panel on the right side of the
+     screen. Then the user can edit a list, and that is where your nice
+     looking list UI can display the settings and make changes, or they
+     can View the list and see a new windows that shows a grid of the
+     members of the list. It does not make sense to combine these screens
+     into something that is not optimal for anything, instead make each
+     screen optimized for the task being performed by the user." Replaces
+     ruling 98. (10-27-26)
+130. **View opens the members grid in its own browser tab, reused for
+     each list** (option A of two). Option B kept View on the Marketing
+     Management page with a *Back to lists* link. Doug: "a". This amends
+     ruling 89 for this one screen; every other tab still stays on the
+     page. Standing cost: one screen breaks the one-page rule. (10-27-26)
+131. **Every dynamic list's member count is kept current: counted every
+     night, and again whenever someone asks** (option A of two). Option B
+     counted a list only when someone ran it, as built. Doug: "a".
+     Standing cost: a nightly job that makes more calls to the CRM, and
+     the first count of a large list takes a few seconds. (10-27-26)
+132. **The four screens are approved as drawn** on the canvas named above.
+     The screens are the list view with preview, the View tab, Edit for a
+     dynamic list and Edit for a static list. Doug: "approved". The build
+     is planned in `build-plan.md` and approved before any code changes.
+     (10-27-26)
+
 ---
 
 ## Requirements — the Campaign Management application
@@ -1480,8 +1525,8 @@ other source consumes a service before mentoring.
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — rulings |
-| Version | 1.48 |
-| Last Updated | 10-23-26 03:53 |
+| Version | 1.52 |
+| Last Updated | 10-27-26 19:15 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 | Source | `history/prospect-marketing-plan.md` v0.6 (10-14-26 21:55), sections *Doug's rulings (2026-08-11)*, *Doug's rulings (2026-10-13 and 2026-10-14)*, *The ladder as it stands*, *The walk, source by source*, *Doug's requirements (10-14-26)* |
 
@@ -1489,6 +1534,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.52 | 10-27-26 19:15 | Claude (Claude Code) | Rulings 129–132 appended: the Lists tab redesigned as a list view with preview, with Edit and View as separate screens (replaces ruling 98); View in its own browser tab (amends ruling 89); dynamic list counts kept current; the four screens approved as drawn (Doug, 10-27-26). The revision-control table's version corrected from 1.48. |
 | 1.51 | 10-25-26 23:20 | Claude (Claude Code) | Ruling 128 appended: the lead's page gets the full email composer, shared with the session tools (Doug's "Full email composer", M5 plan approval). |
 | 1.50 | 10-25-26 18:52 | Claude (Claude Code) | Ruling 127 appended: an undone import's leads deleted under the org-wide key, the API role gains delete on the lead record (Doug's "1", M4 plan approval). |
 | 1.49 | 10-25-26 11:13 | Claude (Claude Code) | Ruling 126 appended: the lead code's D2 next, D3's pieces inside § 7e's steps M2, M7 and M10 (Doug's "a"). Header revision corrected from 1.47. |
