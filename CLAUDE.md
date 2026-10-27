@@ -989,6 +989,9 @@ Conventions. Plan: `prds/action-history-plan.md`;
   script error to `POST /api/client-errors`; a report delayed by the broken
   connection carries `queued=Ns`. A 5xx timing line is WARNING and a crash
   ERROR. Start any "it didn't save" report there.
+- **Build a store once per process, never per request** (v0.290.1): each
+  owns a connection pool, and v0.290.0 exhausted crm-test's database that
+  way in four requests.
 - **Every API request logs what it cost** (v0.248.0):
   `timing GET /…/api/… 200 812ms crm=9/640ms` in the web log, plus a
   `Server-Timing` header. Start a slowness report there — the CRM-call count

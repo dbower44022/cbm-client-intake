@@ -24,10 +24,11 @@ per request.** Found by the M7 live send on crm-test, 10-27-26 11:35:
 - **Test.** `tests/test_mailing_shared_store.py`: repeat web and worker calls
   share one store, and nothing outside `core/mailing.py` and `core/app.py`
   calls `make_connection_store` (fails on v0.290.0).
-- Live outcomes of the vendor shapes so far (send on crm-test 10-27-26): the
-  custom-field endpoints, the `cf:cbm_lead_code` import column, the sign-off
-  sync and the email-campaign listing all confirmed. The merge tag and the
-  pick itself are still to be seen.
+- **M7 live-passed on crm-test 10-27-26 12:22** with this release: the
+  custom-field endpoints, the `cf:cbm_lead_code` import column, the merge
+  tag `[[custom.cbm_lead_code]]` (the delivered link opened with the
+  contact's code), the sign-off sync, the email listing and the pick all
+  confirmed; the list rename not exercised (build plan § 7e.12 Draft 8).
 - Not this change: `tests/test_comms_endpoints.py::test_disabled_returns_503`
   fails in the full run on v0.290.0 too (event loop closed; passes alone).
 
