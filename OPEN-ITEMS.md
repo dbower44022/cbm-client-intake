@@ -173,10 +173,24 @@ found; move resolved items to the bottom with the resolution date.
     (a CRM fix, not ours); (d) Constant Contact names a pasted-HTML email
     itself ("Live Send Test Email <date>"), and that name is what *Pick the
     email* shows.
-    Next: M8, lists only and the campaign page (§ 7e.9 second half);
-    kickoff draft `prompts/m8-lists-only-kickoff.md`. Still owed: the handoff on
-    production at the arc's slot and on Boston with its release (now with
-    the third role cell); the layout question in the handoff's § 7.
+    **M8 built as v0.291.0 (10-27-26)**, all four stops in one session
+    (plan approved by Doug 10-27-26 13:30: Decision 2 a built-in recipe for
+    *Dormant clients*, Decision 3 the layout question below): every
+    campaign sends to a list, five ready-made lists (migration 0039), the
+    stage strip, the *Audience and content* tab, ruling 101's grid and the
+    short + New campaign. Dark behind **`CAMPAIGN_LISTS_ONLY`**. Committed,
+    **not pushed**; live pass owed on crm-test (step page
+    https://claude.ai/artifact/N1S4U7qvjYUZk2v3Y56uqQ, run by Claude in a tab Doug signs in as Mark Marketing). Production's count of
+    rule-built campaigns in flight was not read (its credentials live only
+    in the container); the build gives any such campaign its kind's
+    ready-made list either way.
+    Next: the M8 live pass, then M9 (the send report and the Recipients
+    tab). Still owed: the handoff on production at the arc's slot and on
+    Boston with its release (now with the third role cell). **The layout
+    question in the handoff's § 7 is ruled** (Doug, 10-27-26, as
+    recommended): *Level*, *Referred by* and *Assigned User* stay off the
+    CRM's own lead layout; the application's lead page is the only place
+    they show.
 
 53. **Attendee linking escalation — live pass owed** (v0.258.6, 2026-10-15).
     A mentor whose Mentor Role reads/edits `CSession` at "own" could not

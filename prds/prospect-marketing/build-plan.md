@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-27-26 12:30 · Revision 0.59 — change log at the end.
+Last Updated: 10-27-26 14:15 · Revision 0.60 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -2307,9 +2307,12 @@ The import, lists-of-lists and cycle tests stay, adapted.
 ### 7e.9 Constant Contact, campaigns and events — rulings 95–97, 99–102
 
 *The first half — a kept-current copy per list and the email campaign — is
-built as v0.290.0, 10-26-26 (step M7, § 7e.13); live-passed on crm-test 10-27-26 12:22 with v0.290.1. Lists only,
-the campaign page, the grid, + New campaign and Promote this event are M8 and
-M10; the send report is M9.*
+built as v0.290.0, 10-26-26 (step M7, § 7e.13); live-passed on crm-test 10-27-26 12:22 with v0.290.1. **The
+second half's lists only, the campaign page's strip and tabs, the grid and
++ New campaign are built as v0.291.0, 10-27-26 (step M8)**, behind
+`CAMPAIGN_LISTS_ONLY`, migration 0039 (not the 0034 written below — 0034
+to 0038 went to earlier steps). Recipients and the send report are M9;
+Promote this event is M10.*
 
 **A kept-current copy per list (ruling 95).** `core/mailing_sync.py` works
 for one list, named by `MAILING_LIST_NAME`, with its id and last-push
@@ -2461,6 +2464,12 @@ The sandbox recapture adds seeders for templates and the ready-made lists
 All of it is feature-detected, so each piece stays dark until its field
 exists. Production's apply rides the arc's deferred Sunday slot.
 
+**The layout question (handoff § 7) — ruled 10-27-26 by Doug at the M8
+plan, as recommended:** *Level*, *Referred by* and *Assigned User* stay off
+the CRM's own lead layout; the application's lead page is the only place
+they show. Cost: someone working in the CRM's own screens does not see a
+lead's level or assignee.
+
 **Handoff written 10-24-26** (`marketing-redesign-crm-handoff.md`; plan
 `scripts/plans/marketing-redesign.json`, fingerprint `6bb03652454a`).
 **Applied on crm-test 10-25-26 by Doug; the handoff's § 5 proof passed
@@ -2536,6 +2545,12 @@ as Claude's recommended change, noted under each (rulings 120, 122, 123).
      that exhausted the app database (fixed in v0.290.1).
 9. **The ready-made lists are system lists**, undeletable but copyable,
    with the five names in § 7e.9.
+   *Built (v0.291.0, M8):* also unrenameable, unchangeable and never
+   retired, so the names stay recognisable across chapters. Four are
+   Include and Leave out conditions; *Dormant clients (a year)* is a
+   built-in selection, because "every engagement closed, the latest over a
+   year ago" is not a one-record condition (Doug, 10-27-26, Decision 2 at
+   the M8 plan: the built-in recipe, not a new condition kind).
 
 ### 7e.13 Order and cost
 
@@ -2791,7 +2806,29 @@ Team caller for M1 and M10).
    v0.290.1 fixing the connection leak the pass found); the outcome of
    each vendor shape is under § 7e.12 Draft 8.
 8. **M8: lists only and the campaign page** (§ 7e.9 second half). About
-   four days.
+   four days. Plan approved by Doug 10-27-26 13:30 ("run all four stops";
+   Decisions 2 and 3 as recommended); kickoff `prompts/m8-lists-only-kickoff.md`.
+   **Built as v0.291.0 (10-27-26)**, all four stops in one session, behind
+   `CAMPAIGN_LISTS_ONLY`, migration 0039. Routine choices, each announced
+   in the kickoff and built as written: five ready-made lists under fixed
+   ids, re-created by the worker when missing; a build reads the
+   campaign's list for every kind and refuses a rule payload; the strip
+   maps `campaignStatus` with no CRM change; the tabs Overview, Audience
+   and content, Links, Responses, Results, with the Touches table under
+   Responses until M9; ruling 101's grid filtered in the browser; ruling
+   102's short form. Decision 1 (campaigns built by a rule) was routine
+   on the evidence — crm-test had none in flight; production's count was
+   not read — and built as recommended: such a campaign is given its
+   kind's ready-made list. Choices made on the way: a ready-made list also
+   refuses rename, change, retire and Exclude; a list made through the API
+   may not carry a built-in selection; the grid reads each campaign's
+   partners, funders and events separately, eight at a time, because the
+   CRM has no list-read field for them (checked on crm-test 10-27-26); the
+   Links tab puts the landing page's link first, read as "the personal
+   form"; the Audience and content tab shows per-channel counts from the
+   list's last run. Each ready-made list was tested to select exactly what
+   its kind's old rule selected. Live pass owed on crm-test (step page
+   https://claude.ai/artifact/N1S4U7qvjYUZk2v3Y56uqQ).
 9. **M9: the send report and Recipients** (§ 7e.9). About three days.
 10. **M10: Promote this event and the roll-up, and the Calls tab**
     (§§ 7e.9, 7e.10). About three days. **Also (ruling 126):** § 7d.2's
@@ -3076,6 +3113,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.60 | 10-27-26 14:15 | Claude (Claude Code) | M8 built as v0.291.0: § 7e.9's header, Draft 9's built note, § 7e.13 M8; the handoff § 7 layout question ruled (no layout change). |
 | 0.59 | 10-27-26 12:30 | Claude (Claude Code) | M7 live-passed on crm-test 10-27-26 12:22: § 7e.12 Draft 8 records each inferred shape (four confirmed, the list rename not exercised); § 7e.9 and § 7e.13 step M7 marked live-passed; v0.290.1 named. |
 | 0.58 | 10-26-26 12:18 | Claude (Claude Code) | § 7d status: D3's pieces built with M2 and M7 recorded; D2 and OPEN-ITEMS #59 owed in the next free window. |
 | 0.57 | 10-26-26 12:10 | Claude (Claude Code) | § 7e.9's first half marked built (v0.290.0); § 7e.13 step M7: Doug's two rulings, the routine choices, those made on the way, the live send owed; § 7e.12 Draft 8 lists M7's inferred shapes. |

@@ -127,6 +127,18 @@ class FakeListStore:
                               "saved_by": actor, "saved_at": now})
         return dict(row)
 
+    async def create_system_list(self, *, list_id, name, notes, recipe, actor):
+        """A ready-made list (M8) under its fixed id; an existing one is kept."""
+        if list_id in self.lists:
+            return
+        now = datetime.now(timezone.utc)
+        self.lists[list_id] = {"id": list_id, "name": name, "notes": notes, "kind": "dynamic", "status": "active",
+                               "version": 1, "recipe": recipe, "last_run_at": None, "last_run_by": None,
+                               "last_run": None, "created_by": actor, "created_at": now, "updated_by": actor,
+                               "updated_at": now, "needs_rebuild": False, "system": True}
+        self.versions.append({"list_id": list_id, "version": 1, "kind": "dynamic", "recipe": recipe,
+                              "saved_by": actor, "saved_at": now})
+
     async def get_list(self, list_id):
         r = self.lists.get(list_id)
         return dict(r) if r else None

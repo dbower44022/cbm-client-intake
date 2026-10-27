@@ -100,6 +100,15 @@ body { margin: 0; background: var(--cbm-bg, #f6f7f9); color: var(--cbm-text, #1e
 .cm__plan table { font-size: .85rem; }
 .cm__footer { color: var(--cbm-muted, #4b5a63); font-size: .85rem; padding: 0 1.25rem 1rem; }
 @media (max-width: 900px) { .cm__overview { grid-template-columns: 1fr; } }
+/* The stage strip and the Audience and content tab (lists only, M8). */
+.cm__strip { margin: .5rem 0 .75rem; }
+.cm__stages { display: flex; gap: .25rem; list-style: none; margin: 0; padding: 0; }
+.cm__stage { flex: 1 1 0; padding: .45rem .7rem; border: 1px solid var(--cbm-border, #e3e7eb); border-radius: 6px;
+  color: var(--cbm-muted, #4b5a63); font-size: .9rem; text-align: center; }
+.cm__stage--done { background: var(--cbm-surface, #F0F5FA); color: var(--cbm-ink, #111111); }
+.cm__stage--now { border-color: var(--cbm-navy, #173B60); background: var(--cbm-navy, #173B60); color: #fff; font-weight: 600; }
+.cm__stripnext { margin: .45rem 0 0; }
+.cm__audgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(28rem, 1fr)); gap: 1rem; align-items: start; }
 
 /* Phase 3: the Calls link in the section nav, the call screen. */
 a.cm__navbtn { text-decoration: none; color: inherit; display: inline-block; }

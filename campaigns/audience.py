@@ -73,9 +73,16 @@ LIST_DEPTH = 5
 GROUP_MATCH = "match"
 GROUP_LIST = "list"
 GROUP_IMPORT = "import"
-GROUP_KINDS = (GROUP_MATCH, GROUP_LIST, GROUP_IMPORT)
+#: A recipe the conditions cannot express, written in code (build plan § 7e.9,
+#: M8): only a ready-made list carries one, and a list saved through the API
+#: may not (``campaigns/ready_made.py``).
+GROUP_BUILTIN = "builtin"
+GROUP_KINDS = (GROUP_MATCH, GROUP_LIST, GROUP_IMPORT, GROUP_BUILTIN)
 GROUP_LABELS = {GROUP_MATCH: "Records matching conditions", GROUP_LIST: "Everyone on another list",
-                GROUP_IMPORT: "The records a file names"}
+                GROUP_IMPORT: "The records a file names", GROUP_BUILTIN: "A ready-made selection"}
+#: The built-in selections, each by its key: what it selects, in words.
+BUILTIN_DORMANT = "dormant_clients"
+BUILTINS = {BUILTIN_DORMANT: "Clients whose engagements are all closed, the latest more than {days} days ago"}
 SIDES = ("include", "exclude")
 SIDE_LABELS = {"include": "Include", "exclude": "Leave out"}
 
@@ -330,6 +337,10 @@ def normalise_group(g: Any) -> Optional[dict[str, Any]]:
         return {"kind": GROUP_LIST, "listId": str(g.get("listId") or "")}
     if kind == GROUP_IMPORT:
         return {"kind": GROUP_IMPORT, "type": str(g.get("type") or ""), "values": _import_values(g.get("values"))}
+    if kind == GROUP_BUILTIN:
+        days = _number(g.get("days"))
+        return {"kind": GROUP_BUILTIN, "type": "contact", "builtin": str(g.get("builtin") or ""),
+                "days": int(days) if days is not None and days >= 0 else 365}
     conds = [{"field": str(c["field"]), "op": str(c["op"]), "value": c.get("value")}
              for c in g.get("conditions") or [] if isinstance(c, dict) and c.get("field") and c.get("op")]
     return {"kind": kind or GROUP_MATCH, "type": str(g.get("type") or ""), "conditions": conds}
@@ -346,6 +357,10 @@ def groups(recipe: dict[str, Any]) -> Iterable[tuple[str, int, dict[str, Any]]]:
     for side in SIDES:
         for i, g in enumerate(recipe.get(side) or [], start=1):
             yield side, i, g
+
+
+def has_builtin(recipe: dict[str, Any]) -> bool:
+    return any(g.get("kind") == GROUP_BUILTIN for _s, _i, g in groups(recipe))
 
 
 def referenced_lists(recipe: dict[str, Any]) -> list[str]:
@@ -375,6 +390,10 @@ def check_recipe(recipe: dict[str, Any], cat: dict[str, Any]) -> list[dict[str, 
         if g["kind"] == GROUP_LIST:
             if not g.get("listId"):
                 bad(side, i, f"{at}: choose the list whose members it holds.")
+            continue
+        if g["kind"] == GROUP_BUILTIN:
+            if g.get("builtin") not in BUILTINS:
+                bad(side, i, f"{at}: this ready-made selection is no longer offered.")
             continue
         if g["type"] not in TYPES_BUILT:
             bad(side, i, f"{at}: choose what it selects (leads, contacts, clients, partners or funders).")
@@ -588,6 +607,8 @@ def describe_group(group: dict[str, Any], cat: dict[str, Any], list_names: Optio
     if group["kind"] == GROUP_LIST:
         name = (list_names or {}).get(group.get("listId") or "", "another list")
         return f"Everyone on the list “{name}”."
+    if group["kind"] == GROUP_BUILTIN:
+        return BUILTINS.get(group.get("builtin") or "", "A ready-made selection").format(days=group.get("days", 365)) + "."
     noun = TYPES.get(group["type"], {}).get("label", group["type"] or "records").lower()
     if group["kind"] == GROUP_IMPORT:
         n = len(group.get("values") or [])
@@ -675,6 +696,19 @@ async def match_keys(client, group: dict[str, Any], cat: dict[str, Any], *,
     return [prefix + rid for rid in await _ids_matching(client, TYPES[group["type"]]["entity"], where)]
 
 
+async def builtin_keys(client, group: dict[str, Any], *, now: Optional[datetime] = None) -> set[str]:
+    """A built-in selection's members, as keys. *Dormant clients*: the primary
+    contacts of engagements that are all closed, the latest closing more than
+    ``days`` ago, who are typed Client — the email kind's old dormant rule."""
+    if group.get("builtin") != BUILTIN_DORMANT:
+        raise AudienceError("This ready-made selection is no longer offered.")
+    from .email import dormant_client_contacts  # local: that module imports this one
+
+    ids = sorted(await dormant_client_contacts(client, int(group.get("days") or 0), now=now))
+    contacts = await _by_ids(client, cfg.CONTACT, ids, f"id,{CONTACT_TYPE_FIELD}")
+    return {f"contact:{cid}" for cid, c in contacts.items() if "Client" in (c.get(CONTACT_TYPE_FIELD) or [])}
+
+
 async def run_recipe(client, recipe: dict[str, Any], cat: dict[str, Any], *, store=None,
                      now: Optional[datetime] = None, _seen: tuple[str, ...] = ()) -> dict[str, Any]:
     """The union of the Include groups minus the union of the Leave out
@@ -697,6 +731,8 @@ async def run_recipe(client, recipe: dict[str, Any], cat: dict[str, Any], *, sto
             ids, unmatched = await _import_ids(client, g["type"], g.get("values") or [])
             keys = [f"{g['type']}:{rid}" for rid in ids]
             extra["unmatched"] = unmatched
+        elif g["kind"] == GROUP_BUILTIN:
+            keys = sorted(await builtin_keys(client, g, now=now))
         else:
             keys = await match_keys(client, g, cat, now=now)
         for k in keys:
@@ -714,6 +750,8 @@ async def run_recipe(client, recipe: dict[str, Any], cat: dict[str, Any], *, sto
             ids, unmatched = await _import_ids(client, g["type"], g.get("values") or [])
             hit = {f"{g['type']}:{rid}" for rid in ids} & set(included)
             extra["unmatched"] = unmatched
+        elif g["kind"] == GROUP_BUILTIN:
+            hit = await builtin_keys(client, g, now=now) & set(included)
         else:
             prefix = g["type"] + ":"
             of_type = [split_key(k)[1] for k in included if k.startswith(prefix)]

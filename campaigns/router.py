@@ -35,6 +35,7 @@ from forms import SPECS_BY_SLUG
 from . import config as cfg
 from . import audience, calls, email as email_kind, imports, ladder, leadcode, leads, postcard, reporting, review, service, sms
 from . import import_templates as tpl
+from . import ready_made, strip as strip_mod
 from .store import BatchBusy
 from .conversion import CompanyConflict, ConversionRefused, Details, can_convert, convert_lead
 from .reporting import summarize_responses  # noqa: F401 — re-exported
@@ -198,6 +199,8 @@ async def session(request: Request) -> dict[str, Any]:
         # A list's copy in Constant Contact and the email campaign that sends to
         # it (§ 7e.9); needs the lists.
         "listSyncOn": settings.campaign_list_sync and settings.campaign_lists,
+        # Every campaign sends to a list; the strip and tabs (§ 7e.9, M8).
+        "listsOnlyOn": ready_made.lists_only(settings),
         "ladderOn": settings.lead_ladder,
         "importTemplatesOn": settings.import_templates,
         "leadOutreachOn": settings.lead_outreach,
@@ -260,13 +263,52 @@ async def _decorate(request: Request, rows: list[dict[str, Any]], client) -> lis
         subs = await store.submissions_by_link([l["token"] for l in all_links])
     else:
         visits, subs = {}, {}
+    related = await _grid_relations(client, rows) if ready_made.lists_only(get_settings()) else None
     for row in rows:
         links = links_by_campaign.get(row["id"], [])
         v = sum(visits.get(l["id"], {}).get("visits", 0) for l in links)
         s = sum(sum(subs.get(l["token"], {}).values()) for l in links)
-        partners = await service.related_names(client, row["id"], cfg.LINK_PARTNERS) if len(rows) <= 60 else None
+        extra: dict[str, Any] = {}
+        if related is not None:
+            # Ruling 101's grid: every row filled, whatever the count.
+            extra = {**related.get(row["id"], {}), "stage": strip_mod.stage_of(row.get("campaignStatus")),
+                     "reached": row.get("pieceCount")}
+            partners = extra.pop("partners", None)
+        else:
+            partners = await service.related_names(client, row["id"], cfg.LINK_PARTNERS) if len(rows) <= 60 else None
         out.append({**row, "links": len(links), "visits": v, "submissions": s,
-                    "partners": partners, "manualMoves": service.manual_moves(row)})
+                    "partners": partners, "manualMoves": service.manual_moves(row), **extra})
+    return out
+
+
+#: Related reads the grid runs at once (lists only).
+GRID_CONCURRENCY = 8
+
+
+async def _grid_relations(client, rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Partners, funders and events for every campaign on the grid (ruling
+    101), up to 200 rows. The CRM returns a campaign's relationships only one
+    campaign at a time (no field carries them on the list read — checked on
+    crm-test 10-27-26), so the reads run ``GRID_CONCURRENCY`` at once."""
+    import asyncio
+
+    funders_on = await service.funders_available(client)
+    gate = asyncio.Semaphore(GRID_CONCURRENCY)
+
+    async def one(campaign_id: str, link: str):
+        async with gate:
+            return await service.related_names(client, campaign_id, link)
+
+    out: dict[str, dict[str, Any]] = {}
+    shown = rows[:200]
+    links = [cfg.LINK_PARTNERS, cfg.LINK_EVENTS] + ([cfg.LINK_FUNDERS] if funders_on else [])
+    results = await asyncio.gather(*(one(r["id"], link) for r in shown for link in links))
+    keys = {cfg.LINK_PARTNERS: "partners", cfg.LINK_EVENTS: "events", cfg.LINK_FUNDERS: "funders"}
+    it = iter(results)
+    for r in shown:
+        out[r["id"]] = {keys[link]: next(it) for link in links}
+        if not funders_on:
+            out[r["id"]]["funders"] = None
     return out
 
 
@@ -366,7 +408,11 @@ async def get_campaign(campaign_id: str, request: Request) -> dict[str, Any]:
     email_copy = None
     if row.get("campaignKind") == cfg.KIND_EMAIL and _copy_mode(settings):
         email_copy = await _email_copy(request, settings, campaign_id)
+    strip = None
+    if ready_made.lists_only(settings):
+        strip = await _strip(request, user, row, sms_check)
     return {
+        "listsOnly": ready_made.lists_only(settings), "strip": strip,
         "campaign": row, "partners": partners, "funders": funders, "events": events, "callerTeams": caller_teams,
         "smsCheck": sms_check, "emailCopy": email_copy,
         "callerTeamIds": caller_team_ids,
@@ -380,6 +426,28 @@ async def get_campaign(campaign_id: str, request: Request) -> dict[str, Any]:
         "estimatedCost": estimated_cost(settings, service.touch_summary(touches)["planned"]),
         "currency": settings.postal_currency,
     }
+
+
+async def _adopt(request: Request, user: dict, row: dict[str, Any]) -> Optional[str]:
+    """Lists only: a campaign built by a rule box carries on with its kind's
+    ready-made list (decision 1 at the M8 plan). Best-effort."""
+    store = getattr(request.app.state, "campaign_store", None)
+    try:
+        return await ready_made.adopt(store, row, actor=user.get("name") or user.get("userName") or "")
+    except Exception as exc:  # noqa: BLE001 — the page still opens
+        log.warning("ready-made list for %s not given: %s", row.get("id"), exc)
+        return None
+
+
+async def _strip(request: Request, user: dict, row: dict[str, Any],
+                 sms_check: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
+    """The stage strip: the campaign's list by name, and what its content lacks."""
+    await _adopt(request, user, row)
+    list_row, _chosen = await _campaign_list(request, row["id"])
+    problem = ""
+    if row.get("campaignKind") == cfg.KIND_SMS and sms_check and sms_check.get("problems"):
+        problem = sms_check["problems"][0]
+    return strip_mod.strip(row, list_name=(list_row or {}).get("name") or "", content_problem=problem)
 
 
 def _copy_mode(settings: Settings) -> bool:
@@ -582,10 +650,21 @@ async def build_list(campaign_id: str, body: BuildIn, request: Request) -> dict[
     row = await _campaign_or_404(request, client, campaign_id)
     api_client = _api_client(settings, request)
     store = getattr(request.app.state, "campaign_store", None)
+    lists_only = ready_made.lists_only(settings)
+    if lists_only:
+        # Ruling 99: every campaign sends to a list; the rule boxes are gone.
+        if body.rule is not None:
+            raise HTTPException(status_code=400, detail=(
+                "Campaigns send to lists now — choose a list on the campaign's Audience and content tab."))
+        if store is None:
+            raise HTTPException(status_code=503, detail="Lists need the application database, which is not configured.")
+        await _adopt(request, user, row)
     try:
         # A campaign that names a list sends to it (build plan § 7c); None
         # when it names none or the lists are switched off.
         chosen = await audience.audience_for_build(api_client, store, settings, row)
+        if lists_only and not chosen:
+            raise CampaignError("Choose a list first — on the campaign's Audience and content tab.")
         if row.get("campaignKind") == cfg.KIND_CALL:
             _require_calls(settings)
             result = await calls.build_list(api_client, client, row, body.rule, audience=chosen)

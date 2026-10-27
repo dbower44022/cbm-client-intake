@@ -1220,6 +1220,10 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
+- **v0.291.0 (2026-10-27) — every campaign sends to a list; the campaign
+  page's strip, tabs and grid** (build plan § 7e.9 second half, M8; rulings
+  99–102). Dark behind `CAMPAIGN_LISTS_ONLY`; migration 0039 (the five
+  ready-made lists). Committed, not pushed; live pass owed on crm-test.
 - **v0.290.0–v0.290.1 (2026-10-26/27) — a list's copy in Constant Contact
   and the email campaign that sends to it** (build plan § 7e.9 first half
   and § 7d.2, M7; rulings 95, 126). Dark behind `CAMPAIGN_LIST_SYNC`;

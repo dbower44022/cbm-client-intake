@@ -266,6 +266,12 @@ async def run_after_reset(settings: Settings) -> dict[str, int]:
         except Exception as exc:  # noqa: BLE001 — the links still count
             log.warning("sandbox demo lead codes not restored: %s", exc)
         try:
+            from . import ready_made
+            made = await ready_made.ensure(store)
+            log.info("sandbox ready-made lists: %s created", made)
+        except Exception as exc:  # noqa: BLE001 — the links still count
+            log.warning("sandbox ready-made lists not restored: %s", exc)
+        try:
             template = await restore_demo_template(store)
             log.info("sandbox demo import template: %s created, %s present", template["created"], template["present"])
         except Exception as exc:  # noqa: BLE001 — the links still count

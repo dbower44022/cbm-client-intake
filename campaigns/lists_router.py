@@ -33,7 +33,7 @@ from core.espo import EspoError
 
 import asyncio
 
-from . import audience, list_sync
+from . import audience, list_sync, ready_made
 from . import config as cfg
 from .audience import AudienceError
 from .audience_store import (
@@ -101,6 +101,8 @@ def _public(row: dict[str, Any], *, used: int = 0, members: Optional[int] = None
         "ccSync": bool(row.get("cc_sync")), "ccHasCopy": bool(row.get("cc_list_id")),
         "ccLastSyncAt": _iso(row.get("cc_last_sync_at")), "ccLastSync": row.get("cc_last_sync") or {},
         "ccStatus": list_sync.status_words(row),
+        # A ready-made list (Draft 9): never deleted, renamed, changed or retired.
+        "system": ready_made.is_system(row),
     }
 
 
@@ -121,6 +123,11 @@ def _static_only(row: dict[str, Any], what: str) -> None:
         raise HTTPException(status_code=400, detail=(
             f"{what} is for static lists. A dynamic list is a search: change who is on it with Edit, "
             "or keep one person off it with Exclude."))
+
+
+def _not_system(row: dict[str, Any], what: str) -> None:
+    if ready_made.is_system(row):
+        raise HTTPException(status_code=400, detail=ready_made.REFUSED.format(name=row["name"], what=what))
 
 
 def _dynamic_only(row: dict[str, Any], what: str) -> None:
@@ -206,6 +213,9 @@ def _validated(body: ListIn) -> tuple[str, str, str, dict[str, Any]]:
         raise HTTPException(status_code=400, detail="A list is static or dynamic.")
     # A static list has no search (ruling 91): whatever was sent, it is empty.
     recipe = audience.normalise_recipe(body.recipe) if body.kind == KIND_DYNAMIC else audience.empty_recipe()
+    if audience.has_builtin(recipe):
+        raise HTTPException(status_code=400, detail=(
+            "Only a ready-made list holds a ready-made selection — include that list in a group instead."))
     return name, body.notes.strip(), body.kind, recipe
 
 
@@ -221,6 +231,8 @@ async def all_lists(request: Request) -> dict[str, Any]:
     _actor(request)
     _require_lists(get_settings())
     store = _store(request)
+    # The ready-made lists come back if the sandbox reset emptied them.
+    await ready_made.ensure(store)
     used = await store.usage_counts()
     counts = await store.member_counts()
     last = await store.last_used()
@@ -279,6 +291,7 @@ async def save_list(list_id: str, body: ListIn, request: Request) -> dict[str, A
     _require_lists(get_settings())
     store = _store(request)
     row = await _list_or_404(store, list_id)
+    _not_system(row, "renamed or changed")
     _not_retired(row)
     if body.kind != row["kind"]:
         raise HTTPException(status_code=400, detail=KIND_FIXED)
@@ -645,6 +658,10 @@ async def exclude(list_id: str, body: ExcludeIn, request: Request) -> dict[str, 
     _require_lists(get_settings())
     store = _store(request)
     row = await _list_or_404(store, list_id)
+    if ready_made.is_system(row):
+        raise HTTPException(status_code=400, detail=(
+            f"\"{row['name']}\" is a ready-made list, so nobody can be excluded from it here. Make a dynamic "
+            "list that includes it and leaves that person out, and send to that one."))
     _dynamic_only(row, "Exclude")
     _not_retired(row)
     key = _valid_key(body.key)
@@ -762,6 +779,8 @@ async def _set_status(list_id: str, request: Request, status: str) -> dict[str, 
     _require_lists(get_settings())
     store = _store(request)
     row = await _list_or_404(store, list_id)
+    if status == STATUS_RETIRED:
+        _not_system(row, "retired")
     updated = await store.set_list_status(list_id, status, _who(user))
     await _log(client, user, "Campaign List Retired" if status == STATUS_RETIRED else "Campaign List Reactivated",
                f"{'Retired' if status == STATUS_RETIRED else 'Reactivated'} the list \"{row['name']}\"",
@@ -777,6 +796,7 @@ async def delete_list(list_id: str, request: Request) -> dict[str, Any]:
     _require_lists(get_settings())
     store = _store(request)
     row = await _list_or_404(store, list_id)
+    _not_system(row, "deleted")
     if await store.campaigns_using(list_id):
         raise HTTPException(status_code=400,
                             detail="A campaign uses this list, so it cannot be deleted — retire it instead.")

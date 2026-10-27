@@ -654,6 +654,11 @@ class Settings(BaseSettings):
     # that sends to it (build plan § 7e.9, ruling 95). Read per request (web)
     # and per pass (worker). Off, every list and email campaign works as before.
     campaign_list_sync: bool = False
+    # Every campaign sends to a list (build plan § 7e.9 second half, ruling
+    # 99; M8): the rule boxes go, the five ready-made lists stand in for them,
+    # and the campaign page gets its stage strip and tabs. Needs Campaign
+    # lists. Read per request. Off, the rule boxes and the page work as before.
+    campaign_lists_only: bool = False
     # The fields a list step may use, per target type (ruling 63), as
     # "lead: leadStatus, leadSource; contact: cContactType" (a dotted name
     # follows links: client: engagementClient.industrySector). Empty: the

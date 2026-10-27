@@ -448,6 +448,10 @@ async def main() -> None:
     # The import tool's preview (build plan § 7e.7, ruling 123): a queued batch
     # is planned here, never in a web request, which is cut off after a minute.
     next_import_plan = datetime.now(timezone.utc)
+    # The ready-made lists (§ 7e.9, M8): re-created at start and every few
+    # minutes if missing — the sandbox reset empties their table.
+    next_ready_made = datetime.now(timezone.utc)
+    ready_made_store = None
 
     while not stop.is_set():
         claimed = await run_cycle(store, settings, stop)
@@ -563,6 +567,18 @@ async def main() -> None:
                 log.warning("import plan cycle failed: %s", exc)
             # One queued preview after another without waiting a whole poll.
             next_import_plan = now_cfg if taken else now_cfg + timedelta(seconds=settings.import_plan_poll_seconds)
+        if (settings.campaigns_enabled and settings.campaign_lists and settings.store_enabled
+                and now_cfg >= next_ready_made):
+            try:
+                from campaigns import ready_made
+                if ready_made_store is None:
+                    from campaigns.store import make_campaign_store
+                    ready_made_store = make_campaign_store(settings)
+                if ready_made_store is not None:
+                    await ready_made.ensure(ready_made_store)
+            except Exception as exc:  # noqa: BLE001 — never fatal
+                log.warning("ready-made lists not checked: %s", exc)
+            next_ready_made = now_cfg + timedelta(seconds=300)
         mailing_on = settings.mailing_sync and not settings.espo_dry_run
         if mailing_on and settings.mailing_push_seconds > 0 and now_cfg >= next_mailing_push:
             try:

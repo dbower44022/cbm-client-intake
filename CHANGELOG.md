@@ -5,6 +5,62 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.291.0] — 2026-10-27
+
+**feat(campaigns): every campaign sends to a list, and the campaign page gets
+its stage strip** (build plan § 7e.9 second half and § 7e.12 Draft 9, step M8
+of the Marketing Management redesign; rulings 99–102, 112). Behind a new
+switch, **`CAMPAIGN_LISTS_ONLY`** (*Campaigns send to lists only* at /setup,
+read per request, needs *Campaign lists*). Off, the rule boxes, the page and
+the grid work exactly as before. **Migration 0039.**
+
+- **The ready-made lists** (`campaigns/ready_made.py`; migration 0039 adds
+  `audience_list.system` and creates them under fixed ids): *All leads for
+  postcards*, *Opted-in prospects (Engaged and later)*, *Prospects with text
+  consent*, *Leads and prospects with a phone*, *Dormant clients (a year)*.
+  Four are Include and Leave out conditions; *Dormant clients* is a built-in
+  selection (a new group kind, `builtin`), because "every engagement closed,
+  the latest over a year ago" is not a one-record condition (Doug's ruling at
+  the M8 plan). Delete, rename, change, retire and Exclude refuse a
+  ready-made list in words; Copy makes an ordinary static list. A list saved
+  through the API may not carry a built-in selection. The worker re-creates a
+  missing ready-made list at start and every five minutes, and after the
+  sandbox reset; opening the Lists tab does too.
+- **Lists only** (ruling 99). With the switch on, a build reads the
+  campaign's list for every kind; a `rule` payload is refused, and a campaign
+  with no list is refused at build in words. `resolve_targets` keeps every
+  per-channel check (consent, exits, dead addresses, one card per business).
+  **A Draft or Awaiting sign-off campaign last built by a rule box is given
+  its kind's ready-made list** the first time it is opened or built
+  (decision 1 at the M8 plan) and carries on unchanged.
+- **The strip** (ruling 100; `campaigns/strip.py`): Draft, Ready, Signed off,
+  Sent, Results from today's `campaignStatus` — no CRM change — the current
+  stage highlighted and the one next action named, with a button to its tab.
+- **The tabs.** Overview; *Audience and content* (new: the list picker with
+  the ready-made lists first, the per-channel counts from the list's last
+  run, the kind's run card and content — the rule boxes hidden); Links (the
+  landing page's link first, then the forms); Responses; *Results* (the
+  Analytics tab, renamed). The Recipients tab is M9; the Touches table stays
+  under Responses until then.
+- **The grid** (ruling 101): Campaign, Channel, Stage, Event, Partners,
+  Funders, Owner, Dates, Reached, Responses; Channel, Stage, Event, Partner
+  and Funder filter in the browser. Partners, funders and events are read for
+  every row up to 200, eight reads at a time — the CRM carries no field that
+  returns a campaign's relationships on the list read (checked on crm-test),
+  so the 60-row cutoff goes without a single batched read. The Event cell
+  opens the event's page; its roll-up is M10.
+- **+ New campaign** (ruling 102): channel, name, owner (the creator by
+  default), and optionally events, partners and funders; it creates the
+  Draft and opens it in its own tab.
+- **Tests.** `tests/test_campaign_lists_only.py` (24): each ready-made list
+  resolves to exactly what its kind's `select_targets` selected over the same
+  fake CRM; the consent checks through a list; the refusals and Copy; the
+  build with and without the switch; the adoption; the strip per kind and
+  status; the grid past 60 rows; the migration's frozen copy equals
+  `ready_made.LISTS`. The migration ran on a local Postgres 16: up from 0038
+  (a pre-existing list kept), down (the five removed, the column dropped), up
+  again. Checked in the browser against the test fakes, switch on and off.
+
 ## [0.290.1] — 2026-10-27
 
 **fix(mailing): one Constant Contact connection store per process, not one

@@ -1,6 +1,6 @@
 # campaigns/ — Marketing Management (was Campaign Management)
 
-Last Updated: 10-26-26 12:05 · Revision 1.14
+Last Updated: 10-27-26 14:10 · Revision 1.15
 
 Detail for Campaign Management (`/campaigns`, prospect marketing Phases 1 to 4 and the lead model): links, postcards, the landing page, imports, the Leads and Review grids, calls, texts, email, attribution and reporting.
 
@@ -448,6 +448,27 @@ the reason.
   from the lead's exact address sets `replied` (`sync._mark_leads_replied`)
   and `conversion.mark_converted` clears it. The Leads tab's **Mine** chip
   is the Assigned-to filter preset to `me` (`leads.counts(…, me=)`).
+- **Lists only, the strip and the grid** (v0.291.0, build plan § 7e.9
+  second half, M8; rulings 99–102; dark behind **`CAMPAIGN_LISTS_ONLY`**,
+  read per request, needs `CAMPAIGN_LISTS`; migration 0039).
+  `ready_made.lists_only(settings)` is the one test. **The five ready-made
+  lists are `campaigns/ready_made.LISTS`, fixed ids, `system` true**;
+  migration 0039 holds a frozen copy a test keeps equal. `ensure(store)`
+  re-creates a missing one and never touches one that exists (the worker
+  every five minutes, the reset hook, `GET /lists`) — **never edit a
+  ready-made list's row in place to change it; change `LISTS` and write a
+  migration**. Delete, rename, change, retire and Exclude refuse a system
+  list (`lists_router._not_system`); Copy makes an ordinary static list.
+  *Dormant clients* is the one **`builtin` group** (`audience.builtin_keys`):
+  only a ready-made list may carry one, and `_validated` refuses it from the
+  API. With the switch on, `build_list` refuses a `rule` payload and a
+  campaign with no list; `ready_made.adopt` gives a rule-built Draft or
+  Awaiting sign-off campaign its kind's list (`FOR_KIND`). The strip is
+  `campaigns/strip.py` (no CRM change), on the record payload as `strip`;
+  the page moves the run cards into the *Audience and content* tab
+  (`placeCards`) and hides the rule boxes. The grid reads partners, funders
+  and events per row, eight at a time (`router._grid_relations`) — the CRM
+  has no list-read field for them. Recipients is M9, Promote this event M10.
 - Owed: nothing on production's CRM (both slots done 10-18-26; every
   campaign switch off there — turning one on is Doug's call at `/setup`);
   Boston with its release; a seeder and sandbox re-baseline; the Twilio
@@ -458,6 +479,7 @@ the reason.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.15 | 10-27-26 14:10 | Claude (Claude Code) | Lists only, the strip and the grid (v0.291.0, § 7e.9 second half, M8): the ready-made lists, the built-in group, adoption, the strip, the grid's per-row reads. |
 | 1.14 | 10-26-26 12:05 | Claude (Claude Code) | A list's copy in Constant Contact and the email campaign that sends to it (v0.290.0, § 7e.9, M7): the copy's identity, the one pass, the lead code column, the switch-off path kept. |
 | 1.13 | 10-26-26 02:45 | Claude (Claude Code) | Campaign lists rewritten to Include and Leave out (v0.289.0, § 7e.8, M6): the groups, static lists as hand rows, Exclude, the fixed kind, Copy, the per-channel counts. |
 | 1.12 | 10-26-26 00:10 | Claude (Claude Code) | Personal outreach from the lead's page (v0.288.0, § 7e.5, M5): the shared composer, the one mailbox rule, the guardrails, the footer, the stored outcome words, `apply_outcome`, the sync's lead source, the Mine chip. |

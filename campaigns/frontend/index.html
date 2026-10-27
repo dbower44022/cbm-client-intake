@@ -274,11 +274,24 @@
     <!-- ========================== CAMPAIGNS ========================== -->
     <section class="cm__panel" id="campaignsPanel" hidden>
       <div class="cm__controls">
-        <label class="cm__filter">Status
+        <label class="cm__filter" id="statusFilterWrap">Status
           <select id="statusFilter"><option value="">All</option></select>
         </label>
-        <label class="cm__filter">Kind
+        <label class="cm__filter"><span id="kindFilterText">Kind</span>
           <select id="kindFilter"><option value="">All</option></select>
+        </label>
+        <!-- Lists only: the grid filters by stage, event, partner and funder too. -->
+        <label class="cm__filter" id="stageFilterWrap" hidden>Stage
+          <select id="stageFilter"><option value="">All</option></select>
+        </label>
+        <label class="cm__filter" id="eventFilterWrap" hidden>Event
+          <select id="eventFilter"><option value="">All</option></select>
+        </label>
+        <label class="cm__filter" id="partnerFilterWrap" hidden>Partner
+          <select id="partnerFilter"><option value="">All</option></select>
+        </label>
+        <label class="cm__filter" id="funderFilterWrap" hidden>Funder
+          <select id="funderFilter"><option value="">All</option></select>
         </label>
         <input type="search" id="campaignSearch" placeholder="Search campaigns…" aria-label="Search campaigns" autocomplete="off" />
         <span class="cm__count" id="campaignCount"></span>
@@ -289,7 +302,7 @@
       </div>
       <div class="cm__gridwrap">
         <table class="cm__grid" id="campaignGrid">
-          <thead><tr>
+          <thead id="campaignHead"><tr>
             <th data-sort="name">Campaign</th>
             <th data-sort="campaignKind">Kind</th>
             <th data-sort="campaignStatus">Status</th>
@@ -473,11 +486,17 @@
           <span id="statusActions"></span>
         </div>
       </div>
+      <!-- The stage strip (lists only): five stages and the one next action. -->
+      <div class="cm__strip" id="recStrip" hidden>
+        <ol class="cm__stages" id="recStages"></ol>
+        <p class="cm__stripnext"><span id="recNext"></span> <button type="button" class="cm__rowbtn" id="recNextGo">Go there</button></p>
+      </div>
       <nav class="cm__tabs" id="recordTabs">
         <button type="button" class="cm__tab is-active" data-tab="overview">Overview</button>
+        <button type="button" class="cm__tab" data-tab="audience" id="audienceTabBtn" hidden>Audience and content</button>
         <button type="button" class="cm__tab" data-tab="links">Links</button>
         <button type="button" class="cm__tab" data-tab="responses">Responses</button>
-        <button type="button" class="cm__tab" data-tab="analytics">Analytics</button>
+        <button type="button" class="cm__tab" data-tab="analytics" id="resultsTabBtn">Analytics</button>
       </nav>
 
       <div class="cm__tabpanel cm__overview" data-panel="overview">
@@ -502,7 +521,7 @@
         <div class="cm__ovright">
           <section class="cm__card" id="audienceCard" hidden>
             <h3>Who this campaign reaches</h3>
-            <p class="cm__hint">Choose a named list, or leave it to this kind's own rule. A client, partner or funder on the list reaches its primary contact, or every contact on the record when the box is ticked. Consent, exits, dead addresses and one card per business still apply to everyone on a list.</p>
+            <p class="cm__hint" id="audHint">Choose a named list, or leave it to this kind's own rule. A client, partner or funder on the list reaches its primary contact, or every contact on the record when the box is ticked. Consent, exits, dead addresses and one card per business still apply to everyone on a list.</p>
             <div class="cm__controls">
               <select id="audList"></select>
               <label class="cm__check"><input type="checkbox" id="audEvery" /> Include every contact on the record</label>
@@ -510,6 +529,7 @@
               <a class="cm__link" id="audOpen" href="/campaigns/#lists" target="cbm-campaigns">Open the lists</a>
             </div>
             <p class="cm__summary" id="audState"></p>
+            <p class="cm__summary" id="audCounts" hidden></p>
             <ul class="cm__plain" id="audSkips"></ul>
           </section>
           <section class="cm__card" id="postcardCard" hidden>
@@ -582,11 +602,17 @@
             <p class="cm__hint" id="callersLine"></p>
             <p class="cm__hint">Callers record each call on the Calls tab of Marketing Management: <span class="cm__short" id="callsUrl"></span> <button type="button" class="cm__rowbtn" id="callsUrlCopy">Copy</button></p>
           </section>
-          <section class="cm__card">
+          <section class="cm__card" id="recNotesCard">
             <h3>Notes</h3>
             <div class="cm__prose" id="recNotes"></div>
           </section>
         </div>
+      </div>
+
+      <!-- Lists only: the campaign's list, its counts and the kind's content.
+           The cards move here from Overview's right-hand column. -->
+      <div class="cm__tabpanel" data-panel="audience" hidden>
+        <div class="cm__audgrid" id="audHost"></div>
       </div>
 
       <div class="cm__tabpanel" data-panel="links" hidden>

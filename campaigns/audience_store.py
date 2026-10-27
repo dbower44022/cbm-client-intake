@@ -1,8 +1,10 @@
 """Campaign audiences — the lists' own tables (build plan § 7c.5; ruling 64:
 lists live in the application's database, like campaign links). Migrations
 ``0032_campaign_audience_lists``, ``0037_lists_include_leave_out`` (the
-Include / Leave out recipe, § 7e.8) and ``0038_list_constant_contact_copy``
-(the copy in Constant Contact, § 7e.9); reset nightly on the sandbox.
+Include / Leave out recipe, § 7e.8), ``0038_list_constant_contact_copy``
+(the copy in Constant Contact, § 7e.9) and ``0039_ready_made_lists`` (the
+``system`` flag and the five ready-made lists, M8); reset nightly on the
+sandbox.
 
 A **dynamic** list's members are what its last run found (``source`` recipe,
 ``group_index`` the Include group that brought each one in). A **static**
@@ -75,6 +77,9 @@ audience_list = Table(
     Column("cc_list_id", String(64)),
     Column("cc_last_sync_at", DateTime(timezone=True)),
     Column("cc_last_sync", JSONB),
+    # A ready-made list (§ 7e.12 Draft 9; migration 0039): never deleted,
+    # renamed or changed; Copy makes an ordinary list (campaigns/ready_made.py).
+    Column("system", Boolean, nullable=False, default=False),
     Index("ix_audience_list_name", "name"),
 )
 
@@ -136,12 +141,29 @@ class AudienceStoreMixin:
                "last_run_at": None, "last_run_by": None, "last_run": None,
                "created_by": actor, "created_at": now, "updated_by": actor, "updated_at": now,
                "retired_by": None, "retired_at": None, "needs_rebuild": False,
-               "cc_sync": False, "cc_list_id": None, "cc_last_sync_at": None, "cc_last_sync": None}
+               "cc_sync": False, "cc_list_id": None, "cc_last_sync_at": None, "cc_last_sync": None,
+               "system": False}
         async with self._engine.begin() as conn:
             await conn.execute(audience_list.insert().values(**row))
             await conn.execute(audience_list_version.insert().values(
                 list_id=row["id"], version=1, kind=kind, recipe=recipe, saved_by=actor, saved_at=now))
         return row
+
+    async def create_system_list(self, *, list_id: str, name: str, notes: str, recipe: dict[str, Any],
+                                 actor: str) -> None:
+        """A ready-made list under its fixed id. A row already there (another
+        process got there first) is left alone."""
+        now = _now()
+        async with self._engine.begin() as conn:
+            res = await conn.execute(pg_insert(audience_list).values(
+                id=list_id, name=name, notes=notes or None, kind=KIND_DYNAMIC, status=STATUS_ACTIVE, version=1,
+                recipe=recipe, created_by=actor, created_at=now, updated_by=actor, updated_at=now,
+                needs_rebuild=False, cc_sync=False, system=True,
+            ).on_conflict_do_nothing(index_elements=["id"]))
+            if res.rowcount:
+                await conn.execute(pg_insert(audience_list_version).values(
+                    list_id=list_id, version=1, kind=KIND_DYNAMIC, recipe=recipe, saved_by=actor, saved_at=now,
+                ).on_conflict_do_nothing(index_elements=["list_id", "version"]))
 
     async def get_list(self, list_id: str) -> Optional[dict[str, Any]]:
         async with self._engine.begin() as conn:

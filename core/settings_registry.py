@@ -282,6 +282,11 @@ SETTINGS: tuple[SettingSpec, ...] = (
             "the mailing service, then pick that email in the campaign. Every push writes each "
             "person's lead code to the custom field cbm_lead_code. Needs Campaign lists and the "
             "mailing connection. Off, lists and email campaigns work as before."),
+    _s("campaign_lists_only", GROUP_FEATURES, "Campaigns send to lists only", kind="bool", component="web",
+       help="Every campaign sends to a list: the per-kind rule boxes go, five ready-made lists stand in "
+            "for them, and the campaign page shows its stage strip and the Audience and content tab. "
+            "A campaign already built by a rule box is given its kind's ready-made list. Needs Campaign "
+            "lists. Read per request: no restart. Off, campaigns work as before."),
     _s("campaign_list_fields", GROUP_FEATURES, "Campaign list fields", component="web",
        help="The fields a list step may filter on, per record type (ruling 63), written "
             "as 'lead: leadStatus, leadSource; contact: cContactType, cFunnelStage'. Use "

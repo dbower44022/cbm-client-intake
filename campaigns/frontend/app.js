@@ -290,11 +290,99 @@
     try {
       var res = await api("/campaigns");
       state.campaigns = res.campaigns || [];
+      if (gridListsOnly()) {
+        fillRelationFilter($("eventFilter"), "events"); fillRelationFilter($("partnerFilter"), "partners"); fillRelationFilter($("funderFilter"), "funders");
+      }
       renderCampaigns();
     } catch (e) { notice(e.message, "error"); }
   }
 
+  // --- lists only: the flat grid --------------------------------------------------------
+  var GRID_COLUMNS = [["Campaign", "name"], ["Channel", "campaignKind"], ["Stage", "stageOrder"], ["Event", "eventNames"],
+    ["Partners", "partnerNames"], ["Funders", "funderNames"], ["Owner", "assignedUserName"], ["Dates", "startDate"],
+    ["Reached", "reached", "num"], ["Responses", "submissions", "num"]];
+  var GRID_STAGES = ["Draft", "Ready", "Signed off", "Sent", "Results"];
+  function gridListsOnly() { return !!(state.session && state.session.listsOnlyOn); }
+  function setupListsOnlyGrid() {
+    var tr = el("tr");
+    GRID_COLUMNS.forEach(function (c) { var th = el("th", c[2] || null, c[0]); th.setAttribute("data-sort", c[1]); tr.appendChild(th); });
+    var head = $("campaignHead"); head.innerHTML = ""; head.appendChild(tr);
+    wireSort("campaignGrid", state.sort, renderCampaigns);
+    hide($("statusFilterWrap")); text($("kindFilterText"), "Channel");
+    ["stageFilterWrap", "eventFilterWrap", "partnerFilterWrap", "funderFilterWrap"].forEach(function (id) { show($(id)); });
+    fillSelect($("stageFilter"), GRID_STAGES.concat(["Cancelled"]), 1);
+    ["stageFilter", "eventFilter", "partnerFilter", "funderFilter"].forEach(function (id) { $(id).addEventListener("change", renderCampaigns); });
+  }
+  function names(items) { return (items || []).map(function (p) { return p.name; }).join(", "); }
+  function fillRelationFilter(sel, key) {
+    var keep = sel.value, seen = {}, opts = [];
+    state.campaigns.forEach(function (c) { (c[key] || []).forEach(function (r) { if (!seen[r.id]) { seen[r.id] = 1; opts.push(r); } }); });
+    opts.sort(function (a, b) { return a.name.localeCompare(b.name); });
+    sel.innerHTML = ""; var all = el("option", null, "All"); all.value = ""; sel.appendChild(all);
+    opts.forEach(function (r) { var o = el("option", null, r.name); o.value = r.id; sel.appendChild(o); });
+    sel.value = keep && seen[keep] ? keep : "";
+  }
+  function hasRelation(c, key, id) { return !id || (c[key] || []).some(function (r) { return r.id === id; }); }
+  function relationCell(items, link) {
+    var td = el("td");
+    if (items === null || items === undefined) { td.textContent = "—"; return td; }
+    if (!items.length) { td.textContent = "none"; return td; }
+    items.forEach(function (r, i) {
+      if (i) td.appendChild(document.createTextNode(", "));
+      if (link) { var a = el("a", "cm__link", r.name); a.href = link(r); a.target = "cbm-events"; td.appendChild(a); }
+      else td.appendChild(document.createTextNode(r.name));
+    });
+    return td;
+  }
+  function renderCampaignsListsOnly() {
+    var q = ($("campaignSearch").value || "").toLowerCase();
+    var kind = $("kindFilter").value, stage = $("stageFilter").value;
+    var ev = $("eventFilter").value, pa = $("partnerFilter").value, fu = $("funderFilter").value;
+    state.campaigns.forEach(function (c) {
+      c.stageWord = c.stage || (c.campaignKind === "Social media" ? (c.campaignStatus || "Draft") : "Cancelled");
+      c.stageOrder = GRID_STAGES.indexOf(c.stage) >= 0 ? GRID_STAGES.indexOf(c.stage) : 9;
+      c.eventNames = names(c.events); c.partnerNames = names(c.partners); c.funderNames = names(c.funders);
+    });
+    var rows = state.campaigns.filter(function (c) {
+      if (kind && c.campaignKind !== kind) return false;
+      if (stage && c.stageWord !== stage) return false;
+      if (!hasRelation(c, "events", ev) || !hasRelation(c, "partners", pa) || !hasRelation(c, "funders", fu)) return false;
+      if (!q) return true;
+      return [c.name, c.campaignKind, c.stageWord, c.assignedUserName, c.eventNames, c.partnerNames, c.funderNames].join(" ").toLowerCase().indexOf(q) >= 0;
+    });
+    var k = state.sort.key, dir = state.sort.dir;
+    rows.sort(function (a, b) {
+      var x = a[k], y = b[k];
+      if (x == null || x === "") return 1; if (y == null || y === "") return -1;
+      if (typeof x === "number" && typeof y === "number") return (x - y) * dir;
+      return String(x).localeCompare(String(y), undefined, { numeric: true }) * dir;
+    });
+    var body = $("campaignRows"); body.innerHTML = "";
+    rows.forEach(function (c) {
+      var tr = el("tr");
+      var nameTd = el("td"); var a = el("a", "cm__link", c.name || "(unnamed)");
+      a.href = "/campaigns/record/" + encodeURIComponent(c.id);
+      a.addEventListener("click", function (e) {
+        if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return;
+        e.preventDefault(); window.open(a.href, "cbm-rec-campaigns-" + c.id);
+      });
+      nameTd.appendChild(a); tr.appendChild(nameTd);
+      tr.appendChild(el("td", null, c.campaignKind || "—"));
+      var stTd = el("td"); stTd.appendChild(el("span", statusClass(c.campaignStatus), c.stageWord)); tr.appendChild(stTd);
+      // The event's own page; its campaigns roll-up arrives later.
+      tr.appendChild(relationCell(c.events, function (r) { return "/events/?event=" + encodeURIComponent(r.id); }));
+      tr.appendChild(relationCell(c.partners)); tr.appendChild(relationCell(c.funders));
+      tr.appendChild(el("td", null, c.assignedUserName || "—"));
+      tr.appendChild(el("td", null, (c.startDate || c.endDate) ? (fmtDate(c.startDate) + " – " + fmtDate(c.endDate)) : "—"));
+      tr.appendChild(el("td", "num", c.reached == null ? "—" : c.reached)); tr.appendChild(el("td", "num", c.submissions));
+      body.appendChild(tr);
+    });
+    text($("campaignCount"), rows.length + " of " + state.campaigns.length);
+    $("campaignsEmpty").hidden = state.campaigns.length > 0;
+  }
+
   function renderCampaigns() {
+    if (gridListsOnly()) { renderCampaignsListsOnly(); return; }
     var q = ($("campaignSearch").value || "").toLowerCase();
     var st = $("statusFilter").value, kind = $("kindFilter").value;
     var rows = state.campaigns.filter(function (c) {
@@ -339,8 +427,61 @@
     return state.fields;
   }
 
+  // The short form: the essentials only — channel, name, owner (the creator by
+  // default) and optionally events, partners and funders. Content, list and
+  // dates are set on the campaign's page.
+  async function openNewCampaignShort() {
+    var f = state.fields, me = state.session.userId || "";
+    var body = el("div", "cm__plan");
+    var grid = el("div", "cm__fields"); body.appendChild(grid);
+    function field(label, id, input) {
+      var w = el("div", "cm__field"); var l = el("label", null, label); l.htmlFor = id; input.id = id;
+      w.appendChild(l); w.appendChild(input); grid.appendChild(w); return input;
+    }
+    var kind = el("select"); kind.appendChild(el("option", null, "—")).value = "";
+    (f.options.campaignKind || []).forEach(function (o) {
+      var opt = el("option", null, o); opt.value = o;
+      if (f.kindsBuilt.indexOf(o) < 0) { opt.disabled = true; opt.textContent = o + " (a later phase)"; }
+      kind.appendChild(opt);
+    });
+    field("Channel *", "nc_kind", kind);
+    var name = el("input"); name.type = "text"; name.maxLength = 255; field("Name *", "nc_name", name);
+    var owner = el("select"); var mine = el("option", null, state.session.name || "Me"); mine.value = me; owner.appendChild(mine);
+    field("Owner", "nc_owner", owner);
+    loadOwnerOptions().then(function (opts) {
+      owner.innerHTML = "";
+      if (!opts.some(function (o) { return o.id === me; })) { var o0 = el("option", null, state.session.name || "Me"); o0.value = me; owner.appendChild(o0); }
+      opts.forEach(function (o) { var op = el("option", null, o.name); op.value = o.id; owner.appendChild(op); });
+      owner.value = me;
+    }).catch(function () { /* the creator stays the owner */ });
+    var rel = el("div", "cm__group"); rel.appendChild(el("h4", null, f.fundersAvailable ? "Events, partners and funders (optional)" : "Events and partners (optional)"));
+    var events = pickList("events", "Events", f.eventOptions, [], "The events this campaign advertises.");
+    var partners = pickList("partners", "Partners", f.partnerOptions, [], "The partners this campaign is for. A client who arrives through it is credited to every one.");
+    var funders = f.fundersAvailable ? pickList("funders", "Funders", f.funderOptions, [], "The funders paying for or sponsoring this campaign.") : null;
+    rel.appendChild(events); rel.appendChild(partners); if (funders) rel.appendChild(funders); body.appendChild(rel);
+    body.appendChild(el("p", "cm__hint", "The list, the content and the dates are set on the campaign's page, which opens in its own tab."));
+    openModal("New campaign", body, async function () {
+      if (!kind.value) { modalMsg("Choose the campaign's channel.", "error"); return; }
+      if (!name.value.trim()) { modalMsg("Give the campaign a name.", "error"); return; }
+      var data = { changes: { name: name.value.trim(), campaignKind: kind.value },
+        eventIds: f.eventOptions ? events.getChosen() : null, partnerIds: f.partnerOptions ? partners.getChosen() : null,
+        funderIds: funders && f.funderOptions ? funders.getChosen() : null };
+      var res = await api("/campaigns", { method: "POST", body: data });
+      if (owner.value && owner.value !== me) {
+        try { await api("/campaigns/" + encodeURIComponent(res.campaign.id) + "/owner", { method: "PUT", body: { userId: owner.value } }); }
+        catch (e) { notice("Created \"" + res.campaign.name + "\", but the owner could not be changed: " + e.message, "warn"); }
+      }
+      closeModal();
+      notice("Created \"" + res.campaign.name + "\" as a draft.", "ok");
+      window.open("/campaigns/record/" + encodeURIComponent(res.campaign.id), "cbm-rec-campaigns-" + res.campaign.id);
+      loadCampaigns();
+    }, "Create");
+    setTimeout(function () { kind.focus(); }, 50);
+  }
+
   async function openNewCampaign() {
     try { await ensureFields(); } catch (e) { notice(e.message, "error"); return; }
+    if (gridListsOnly()) { await openNewCampaignShort(); return; }
     var form = campaignForm(null, [], []);
     openModal("New campaign", form, async function () {
       var data = form.collect();
@@ -502,7 +643,53 @@
     renderSmsCard(rec);
     renderEmailCard(rec);
     renderAudience(rec);
+    renderListsOnly(rec);
     show($("recordPanel"));
+  }
+
+  // --- lists only: the strip and the Audience and content tab (build plan § 7e.9) ----------------
+  function listsOnly() { return !!(state.record && state.record.listsOnly); }
+  var RUN_CARDS = ["audienceCard", "postcardCard", "emailCard", "smsCard", "callCard"];
+  var TAB_OF = { "Overview": "overview", "Audience and content": "audience", "Links": "links", "Responses": "responses", "Results": "analytics" };
+  function placeCards(on) {
+    var host = on ? $("audHost") : $("recNotesCard").parentNode;
+    RUN_CARDS.forEach(function (id) {
+      var card = $(id);
+      if (on) host.appendChild(card); else host.insertBefore(card, $("recNotesCard"));
+    });
+  }
+  function renderListsOnly(rec) {
+    var on = !!rec.listsOnly;
+    placeCards(on);
+    $("audienceTabBtn").hidden = !on;
+    text($("resultsTabBtn"), on ? "Results" : "Analytics");
+    // The rule boxes are gone: a campaign sends to its list.
+    Array.prototype.forEach.call(document.querySelectorAll(".cm__rule"), function (box) { if (on) box.hidden = true; });
+    var s = rec.strip, strip = $("recStrip");
+    if (!on || !s) { hide(strip); return; }
+    var ol = $("recStages"); ol.innerHTML = "";
+    var at = s.current ? s.stages.indexOf(s.current) : -1;
+    s.stages.forEach(function (name, i) {
+      var li = el("li", "cm__stage" + (i < at ? " cm__stage--done" : i === at ? " cm__stage--now" : ""), name);
+      if (i === at) li.setAttribute("aria-current", "step");
+      ol.appendChild(li);
+    });
+    text($("recNext"), s.next || "");
+    $("recNextGo").setAttribute("data-go", TAB_OF[s.tab] || "overview");
+    text($("recNextGo"), "Go to " + (s.tab || "Overview"));
+    show(strip);
+  }
+  $("recNextGo").addEventListener("click", function () {
+    var tab = $("recNextGo").getAttribute("data-go") || "overview";
+    var btn = document.querySelector('#recordTabs .cm__tab[data-tab="' + tab + '"]');
+    if (btn) btn.click();
+  });
+  // A build sends no rule while lists only is on; a campaign must have its list.
+  function buildBody(rule) { return listsOnly() ? {} : { rule: rule }; }
+  function refuseWithoutList() {
+    if (!listsOnly() || listChosen()) return false;
+    notice("Choose a list first — on the Audience and content tab, then press Use this list.", "warn");
+    return true;
   }
 
   // --- the campaign's list (build plan § 7c) ----------------------------------------------------
@@ -526,10 +713,12 @@
       state.audience = both[0].audience;
       sel.innerHTML = "";
       var copyEmail = c.campaignKind === "Email" && emailCopyMode();
-      var none = el("option", null, copyEmail ? "No list chosen" : "No list — use this kind's own rule below"); none.value = ""; sel.appendChild(none);
-      (both[1].lists || []).forEach(function (l) {
+      var none = el("option", null, copyEmail || rec.listsOnly ? "No list chosen" : "No list — use this kind's own rule below"); none.value = ""; sel.appendChild(none);
+      // The ready-made lists first, each named as such.
+      var lists = (both[1].lists || []).slice().sort(function (x, y) { return (y.system ? 1 : 0) - (x.system ? 1 : 0); });
+      lists.forEach(function (l) {
         if (l.status === "retired" && !(state.audience && state.audience.listId === l.id)) return;
-        var o = el("option", null, l.name + " (" + l.kind + (l.status === "retired" ? ", retired" : "") + ")"); o.value = l.id; sel.appendChild(o);
+        var o = el("option", null, l.name + " (" + (l.system ? "ready-made" : l.kind) + (l.status === "retired" ? ", retired" : "") + ")"); o.value = l.id; sel.appendChild(o);
       });
       sel.value = state.audience ? state.audience.listId : "";
       $("audEvery").checked = !!(state.audience && state.audience.includeEveryContact);
@@ -540,13 +729,29 @@
       ? "Sends to the " + a.listKind + " list \u201c" + a.listName + "\u201d, now at version " + a.listVersion + "," +
         (a.includeEveryContact ? " every contact on each client, partner or funder." : " the primary contact of each client, partner or funder.") +
         (a.builtVersion ? " Last built from version " + a.builtVersion + " on " + fmtDate(a.builtAt) + "." : " Not built yet.") +
-        " The rule ticks below are not used while a list is chosen."
+        (rec.listsOnly ? "" : " The rule ticks below are not used while a list is chosen.")
+      : rec.listsOnly ? "No list chosen. Choose one above and press Use this list — every campaign sends to a list. The ready-made lists stand in for the old rules."
       : (c.campaignKind === "Email" && emailCopyMode()
         ? "No list chosen. An email goes to a list's copy in Constant Contact: choose a list that keeps one."
         : "No list chosen: Build the list uses this kind's own rule below."));
+    if (rec.listsOnly) {
+      text($("audHint"), "Every campaign sends to a list. The ready-made lists hold what each kind used to select; any list from the Lists tab will do. A client, partner or funder on the list reaches its primary contact, or every contact on the record when the box is ticked. Consent, exits, dead addresses and one card per business still apply to everyone on a list.");
+      renderAudienceCounts(a);
+    } else hide($("audCounts"));
     var skips = $("audSkips"); skips.innerHTML = "";
     ((a && a.build && a.build.skipped) || []).forEach(function (x) { skips.appendChild(el("li", null, x.count + " skipped — " + x.reason)); });
     Array.prototype.forEach.call(document.querySelectorAll(".cm__rule"), function (box) { box.classList.toggle("cm__rule--off", !!a); });
+  }
+  async function renderAudienceCounts(a) {
+    var box = $("audCounts");
+    if (!a) { hide(box); return; }
+    try {
+      var res = await api("/lists/" + encodeURIComponent(a.listId) + "/counts");
+      if (res.neverRun) text(box, "Per channel: the list has not been run on the Lists tab yet, so only this campaign's own channel is counted (Build the list). Open the lists and press Run to count email, text and postcard.");
+      else text(box, "Per channel, from the list's " + res.members + " members as last run: " +
+        (res.counts || []).map(function (x) { return x.label + " " + x.count; }).join(" · ") + ".");
+      show(box);
+    } catch (e) { text(box, "The per-channel counts could not be read: " + e.message); show(box); }
   }
   $("audSave").addEventListener("click", async function () {
     if (!state.record) return;
@@ -554,7 +759,7 @@
     if (["Draft", "Awaiting sign-off", null, undefined, ""].indexOf(c.campaignStatus) < 0) { notice("The list cannot be changed once the campaign is " + c.campaignStatus + ".", "warn"); return; }
     try {
       await api("/campaigns/" + encodeURIComponent(c.id) + "/audience", { method: "PUT", body: { listId: $("audList").value || null, includeEveryContact: $("audEvery").checked } });
-      notice($("audList").value ? "List chosen. Build the list to see who it reaches." : "List cleared — the kind's own rule applies.", "ok");
+      notice($("audList").value ? "List chosen. Build the list to see who it reaches." : listsOnly() ? "List cleared — choose another before building." : "List cleared — the kind's own rule applies.", "ok");
       loadRecord();
     } catch (e) { notice(e.message, "error"); }
   });
@@ -633,11 +838,12 @@
     if (!state.record) return;
     var c = state.record.campaign;
     if (["Draft", "Awaiting sign-off", null, undefined, ""].indexOf(c.campaignStatus) < 0) { notice("The list cannot be rebuilt once the campaign is " + c.campaignStatus + ".", "warn"); return; }
+    if (refuseWithoutList()) return;
     var rule = emailRule();
     if (emailCopyMode() && !listChosen()) { notice("Choose a list for this email campaign first (Audience and content). An email goes to a list's copy in Constant Contact.", "warn"); return; }
     if (!listChosen() && !rule.stages.length && rule.dormantDays === null) { notice("Tick at least one stage, or the dormant clients.", "warn"); return; }
     try {
-      var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/build", { method: "POST", body: { rule: rule } });
+      var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/build", { method: "POST", body: buildBody(rule) });
       if (res.copy) notice(audienceNote(res) + "The email will reach " + res.pieces + " " + (res.pieces === 1 ? "person" : "people") + ".", res.audience && res.audience.skipped.length ? "warn" : "ok");
       else notice(audienceNote(res) + "List built: " + res.pieces + " people (" + res.created + " new, " + res.cancelled + " dropped).", res.audience && res.audience.skipped.length ? "warn" : "ok");
       loadRecord();
@@ -770,10 +976,11 @@
     if (!state.record) return;
     var c = state.record.campaign;
     if (["Draft", "Awaiting sign-off", null, undefined, ""].indexOf(c.campaignStatus) < 0) { notice("The list cannot be rebuilt once the campaign is " + c.campaignStatus + ".", "warn"); return; }
+    if (refuseWithoutList()) return;
     var stages = Array.prototype.filter.call(document.querySelectorAll("[data-smsstage]"), function (cb) { return cb.checked; }).map(function (cb) { return cb.value; });
     if (!listChosen() && !stages.length) { notice("Tick at least one stage to text.", "warn"); return; }
     try {
-      var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/build", { method: "POST", body: { rule: { stages: stages } } });
+      var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/build", { method: "POST", body: buildBody({ stages: stages }) });
       notice(audienceNote(res) + "List built: " + res.pieces + " to text (" + res.created + " new, " + res.cancelled + " dropped).", res.audience && res.audience.skipped.length ? "warn" : "ok");
       loadRecord();
     } catch (e) { notice(e.message, "error"); }
@@ -843,10 +1050,11 @@
     if (!state.record) return;
     var c = state.record.campaign;
     if (["Draft", "Awaiting sign-off", null, undefined, ""].indexOf(c.campaignStatus) < 0) { notice("The list cannot be rebuilt once the campaign is " + c.campaignStatus + ".", "warn"); return; }
+    if (refuseWithoutList()) return;
     var callRule = chosenCallRule();
     if (!listChosen() && !callRule.statuses.length && !callRule.stages.length) { notice("Tick at least one lead status or stage to call.", "warn"); return; }
     try {
-      var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/build", { method: "POST", body: { rule: callRule } });
+      var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/build", { method: "POST", body: buildBody(callRule) });
       notice(audienceNote(res) + "List built: " + res.pieces + " to call (" + res.created + " new, " + res.cancelled + " dropped).", res.audience && res.audience.skipped.length ? "warn" : "ok");
       loadRecord();
     } catch (e) { notice(e.message, "error"); }
@@ -881,10 +1089,11 @@
     var c = state.record.campaign;
     if (c.campaignKind !== "Postcard") { notice("Only a postcard campaign builds a list.", "warn"); return; }
     if (["Draft", "Awaiting sign-off", null, undefined, ""].indexOf(c.campaignStatus) < 0) { notice("The list cannot be rebuilt once the campaign is " + c.campaignStatus + ".", "warn"); return; }
+    if (refuseWithoutList()) return;
     var postcardRule = currentRule();
     if (!listChosen() && !postcardRule.statuses.length && !postcardRule.stages.length) { notice("Tick at least one: Unqualified leads, Qualified leads, or Companies typed Prospect.", "warn"); return; }
     try {
-      var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/build", { method: "POST", body: { rule: postcardRule } });
+      var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/build", { method: "POST", body: buildBody(postcardRule) });
       notice(audienceNote(res) + "List built: " + res.pieces + " planned (" + res.created + " new, " + res.cancelled + " dropped). Estimated cost " + money(res.estimatedCost, res.currency) + ".", res.audience && res.audience.skipped.length ? "warn" : "ok");
       loadRecord();
     } catch (e) { notice(e.message, "error"); }
@@ -938,7 +1147,13 @@
 
   function renderLinks() {
     var body = $("linkRows"); body.innerHTML = "";
-    var links = state.links || [];
+    var links = (state.links || []).slice();
+    // Lists only: the personal form (the landing page each person's code
+    // opens) first, then the public forms, then the rest.
+    if (listsOnly()) {
+      var rank = function (l) { return l.destination_kind === "landing" ? 0 : l.destination_kind === "form" ? 1 : 2; };
+      links.sort(function (x, y) { return rank(x) - rank(y); });
+    }
     links.forEach(function (l) {
       var tr = el("tr");
       tr.appendChild(el("td", null, l.name));
@@ -2473,6 +2688,7 @@
       return;
     }
     if (!state.session.available) { text($("offReason"), state.session.reason); show($("offPanel")); return; }
+    if (state.session.listsOnlyOn) setupListsOnlyGrid();
     if (!state.session.storeAvailable) notice("The application database is not configured here, so links and imports are unavailable; campaigns themselves still work.", "warn");
     try {
       await ensureFields();

@@ -1,6 +1,6 @@
 # CRM handoff — the Marketing Management redesign (build plan § 7e.11)
 
-Last Updated: 10-25-26 18:52 · Revision 1.2 — change log at the end.
+Last Updated: 10-27-26 14:15 · Revision 1.3 — change log at the end.
 
 **What changes:** five fields, three relationships and two enum options,
 plus two read grants on the Marketing Admin Role. This is the one CRM
@@ -221,6 +221,10 @@ Putting *Level*, *Referred by* and *Assigned User* on the CRM layout is a
 decision for Doug, recorded in the build plan when made; the mechanism
 would be an extension of `scripts/apply_lead_layouts.py`.
 
+**Ruled 10-27-26 (Doug, at the M8 plan, as recommended): no layout
+change.** The three fields stay off the CRM's own lead layout; the
+application's lead page is the only place they show. Build plan § 7e.11.
+
 ## 8. Production and Boston
 
 **Production**, at the arc's deferred Sunday 17:00 UTC slot, by a human,
@@ -254,6 +258,7 @@ keeps requiring a campaign.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 10-27-26 14:15 | Claude (Claude Code) | § 7: the layout question ruled — no layout change (Doug, 10-27-26, at the M8 plan). |
 | 1.2 | 10-25-26 18:52 | Claude (Claude Code) | § 4 gains the third cell: `CustomAppAPIRole` delete on `CProspect` (ruling 127, M4's Undo). Not yet applied anywhere; M4's session adds it to `migrate_outreach_roles.py` and Doug runs it on crm-test before the live pass. |
 | 1.1 | 10-25-26 02:15 | Claude (Claude Code) | crm-test: plan and role grants applied by Doug; § 5 steps 1–4 passed (shape, org-wide key reads and a write-and-clear, role read-back, conformance unchanged). crm-test complete. |
 | 1.0 | 10-24-26 15:20 | Claude (Claude Code) | Written for build plan § 7e.11 with rulings 117–125 applied. Every item verified against crm-test's metadata and roles 10-24-26 (nothing written): all nine additions absent, `outreachCampaign` already not required, `assignedUser` already enabled, Assignment Permission already `all`. Plan `scripts/plans/marketing-redesign.json` dry-run: 9 changes, fingerprint `6bb03652454a`. Two read grants added to `scripts/migrate_outreach_roles.py`; its dry run shows exactly those two. `redesign` step added to `scripts/prospect_crm_test.sh`. Conformance baseline 21 conformant. Not applied. |
