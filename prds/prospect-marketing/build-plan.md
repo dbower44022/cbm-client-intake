@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-27-26 18:20 · Revision 0.61 — change log at the end.
+Last Updated: 10-27-26 18:50 · Revision 0.62 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -2311,8 +2311,9 @@ built as v0.290.0, 10-26-26 (step M7, § 7e.13); live-passed on crm-test 10-27-2
 second half's lists only, the campaign page's strip and tabs, the grid and
 + New campaign are built as v0.291.0, 10-27-26 (step M8)**, behind
 `CAMPAIGN_LISTS_ONLY`, migration 0039 (not the 0034 written below — 0034
-to 0038 went to earlier steps). Recipients and the send report are M9;
-Promote this event is M10.*
+to 0038 went to earlier steps). **Recipients and the send report are built
+as v0.292.0, 10-27-26 (step M9)**, behind `CAMPAIGN_SEND_REPORT`. Promote this
+event is M10.*
 
 **A kept-current copy per list (ruling 95).** `core/mailing_sync.py` works
 for one list, named by `MAILING_LIST_NAME`, with its id and last-push
@@ -2829,6 +2830,26 @@ Team caller for M1 and M10).
    list's last run. Each ready-made list was tested to select exactly what
    its kind's old rule selected. **Live-passed on crm-test 10-27-26 18:15**, run by Claude in a tab Doug signed in as Mark Marketing (Doug ran sections A to D and step 12; step page https://claude.ai/artifact/N1S4U7qvjYUZk2v3Y56uqQ). Each campaign built by a rule box before the switch was given its kind's ready-made list after it and rebuilt to the same people, nothing added or dropped: postcard 3 = 3 (13 members; 4 already carded, 4 exits, 2 no address), text 0 = 0, calls 8 = 8 (17 members; 5 no phone, 4 exits). A ready-made list refused delete, retire and rename in words; Copy made a static list. The postcard signed off (dry run) and completed; the call list opened at once (Sent); the text refused sign-off (no wording, nobody to text). The short form made an email campaign in Draft; its build refused without a list. *Opted-in prospects* reached 0, and so does the old rule for Engaged and Opportunity on crm-test (the one opted-in prospect is at Prospect), so the email sign-off refused as it should and the copy was not exercised; M7 proved it. *Dormant clients* holds 0: no crm-test engagement closed over a year ago. The grid's columns and its Stage, Channel, Event and Partner filters checked live. Found and fixed as v0.291.1: the strip doubled a bracket on a text campaign without wording. Found, not fixed: a signed-off call campaign shows Reached — on the grid and *People on the list* — on its page, because the call sign-off stores no piece count (it predates M8).
 9. **M9: the send report and Recipients** (§ 7e.9). About three days.
+   Plan approved by Doug 10-27-26 18:30, with his ruling that opens are
+   recorded on the CRM's touch (two new fields, `openCount` and
+   `firstOpenedAt`, `coutreach-touch-opens-crm-handoff.md`, applied on
+   crm-test the same evening) rather than in the application's database.
+   **Built as v0.292.0 (10-27-26)**, three stops in one session, behind
+   `CAMPAIGN_SEND_REPORT`, no migration. Routine choices as announced: one
+   touch per recipient keyed by Contact and updated in place; Delivered
+   unless bounced (Constant Contact gives no per-person delivery time, so
+   `deliveredAt` stays empty); matching by the campaign's list, then the
+   Contact's email, then a member's chapter address, an unmatched address
+   counted and never created; a daily worker read for 30 days from the
+   pick, then Complete; *Read the report now* capped at 300 writes; the
+   Recipients tab for every kind with lists only on, replacing the Touches
+   table; the call sign-off stores the list's size. Made on the way: an
+   empty outcome becomes Clicked on a click, and a human outcome is never
+   overwritten; the opens column and fields are feature-detected. **The
+   tracking endpoints are inferred** (`/reports/email_reports/{activity}/tracking/{sends|bounces|opens|clicks}`,
+   rows of `tracking_activities` with `email_address`, `created_time`,
+   `bounce_code`); the live pass confirms or corrects them. Live pass
+   owed on crm-test.
 10. **M10: Promote this event and the roll-up, and the Calls tab**
     (§§ 7e.9, 7e.10). About three days. **Also (ruling 126):** § 7d.2's
     caller's link — the person's campaign link plus code, with a Copy
@@ -3112,6 +3133,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.62 | 10-27-26 18:50 | Claude (Claude Code) | M9 built as v0.292.0: the send report, the Recipients tab, the opens fields' handoff, the call list size. |
 | 0.61 | 10-27-26 18:20 | Claude (Claude Code) | M8 live-passed on crm-test; v0.291.1. |
 | 0.60 | 10-27-26 14:15 | Claude (Claude Code) | M8 built as v0.291.0: § 7e.9's header, Draft 9's built note, § 7e.13 M8; the handoff § 7 layout question ruled (no layout change). |
 | 0.59 | 10-27-26 12:30 | Claude (Claude Code) | M7 live-passed on crm-test 10-27-26 12:22: § 7e.12 Draft 8 records each inferred shape (four confirmed, the list rename not exercised); § 7e.9 and § 7e.13 step M7 marked live-passed; v0.290.1 named. |

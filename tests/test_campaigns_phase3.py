@@ -186,7 +186,7 @@ def test_call_selection_applies_every_term():
     assert calls.normalise_rule({"stages": ["Unverified", "Lead"]}) == {"statuses": ["Unqualified", "Qualified"], "stages": []}
 
 
-def test_call_build_and_sign_off_start_the_list_without_a_piece_count():
+def test_call_build_and_sign_off_start_the_list_and_record_its_size():
     crm = FakeCrm()
     _seed_callable(crm)
     camp = crm.add(cfg.CAMPAIGN, {"name": "Chamber calls", "campaignKind": "Call", "campaignStatus": "Draft"})
@@ -198,7 +198,7 @@ def test_call_build_and_sign_off_start_the_list_without_a_piece_count():
     assert {t["channel"] for t in crm.rows[cfg.TOUCH].values() if t.get("outreachCampaignId") == camp["id"]} == {"Call"}
     signed = run(calls.sign_off(crm, crm, camp, user_name="Mark"))
     assert signed["campaignStatus"] == "Running" and signed["signedOffByName"] == "Mark"
-    assert "pieceCount" not in signed
+    assert signed["pieceCount"] == 3                                   # the list's size (M9)
     with pytest.raises(service.CampaignError):
         run(calls.build_list(crm, crm, signed, None))                   # running: no rebuild
 

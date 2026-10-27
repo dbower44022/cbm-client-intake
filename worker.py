@@ -452,6 +452,7 @@ async def main() -> None:
     # minutes if missing — the sandbox reset empties their table.
     next_ready_made = datetime.now(timezone.utc)
     ready_made_store = None
+    next_send_report = datetime.now(timezone.utc)
 
     while not stop.is_set():
         claimed = await run_cycle(store, settings, stop)
@@ -579,6 +580,20 @@ async def main() -> None:
             except Exception as exc:  # noqa: BLE001 — never fatal
                 log.warning("ready-made lists not checked: %s", exc)
             next_ready_made = now_cfg + timedelta(seconds=300)
+        # The Constant Contact send report (§ 7e.9, M9): one read a day by default.
+        if (settings.campaigns_enabled and settings.campaign_send_report and settings.store_enabled
+                and settings.campaign_send_report_seconds > 0 and now_cfg >= next_send_report):
+            try:
+                from campaigns import send_report
+                if ready_made_store is None:
+                    from campaigns.store import make_campaign_store
+                    ready_made_store = make_campaign_store(settings)
+                read = await send_report.run_report_cycle(settings, campaign_store=ready_made_store)
+                if read:
+                    log.info("send report pass: %d campaign(s) read", len(read))
+            except Exception as exc:  # noqa: BLE001 — never fatal
+                log.warning("send report pass failed: %s", exc)
+            next_send_report = now_cfg + timedelta(seconds=settings.campaign_send_report_seconds)
         mailing_on = settings.mailing_sync and not settings.espo_dry_run
         if mailing_on and settings.mailing_push_seconds > 0 and now_cfg >= next_mailing_push:
             try:

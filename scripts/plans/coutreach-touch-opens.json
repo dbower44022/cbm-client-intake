@@ -1,0 +1,10 @@
+{
+  "name": "coutreach-touch-opens",
+  "description": "Prospect marketing, build plan § 7e.9 (ruling 96; Doug's ruling at the M9 plan, 10-27-26): the Constant Contact send report records opens on the touch beside clicks. COutreachTouch gains openCount (how many times the recipient opened the email) and firstOpenedAt (the first open). Additive only; nothing Read-only (ruling 40: the application writes both under the org-wide API key). The Marketing Admin Role reads touches already. Handoff: coutreach-touch-opens-crm-handoff.md.",
+  "fields": [
+    {"entity": "COutreachTouch", "name": "openCount", "type": "int", "min": 0, "label": "Opens",
+     "tooltipText": "How many times the recipient opened the email, as Constant Contact reports it. Some mail programs open every message automatically, so this runs high."},
+    {"entity": "COutreachTouch", "name": "firstOpenedAt", "type": "datetime", "label": "First opened",
+     "tooltipText": "When the recipient first opened the email, as Constant Contact reports it."}
+  ]
+}

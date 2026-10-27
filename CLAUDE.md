@@ -1220,17 +1220,17 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
-- **v0.291.0 (2026-10-27) — every campaign sends to a list; the campaign
-  page's strip, tabs and grid** (build plan § 7e.9 second half, M8; rulings
-  99–102). Dark behind `CAMPAIGN_LISTS_ONLY`; migration 0039 (the five
-  ready-made lists). Pushed 10-27-26 17:56; **live-passed on crm-test
-  18:15** (v0.291.1, the strip's wording, committed, not pushed).
-- **v0.290.0–v0.290.1 (2026-10-26/27) — a list's copy in Constant Contact
-  and the email campaign that sends to it** (build plan § 7e.9 first half
-  and § 7d.2, M7; rulings 95, 126). Dark behind `CAMPAIGN_LIST_SYNC`;
-  migration 0038. **Live-passed on crm-test 10-27-26 12:22** with one real
-  send; v0.290.1 fixed the per-request connection store the pass found.
-  Production stays dark.
+- **v0.292.0 (2026-10-27) — the Constant Contact send report and the
+  Recipients tab** (build plan § 7e.9, M9; ruling 96). Dark behind
+  `CAMPAIGN_SEND_REPORT`; no migration; the CRM fields `openCount` and
+  `firstOpenedAt` on `COutreachTouch` (`coutreach-touch-opens-crm-handoff.md`,
+  done on crm-test, owed on production and Boston). Committed, not pushed;
+  live pass owed — the report shapes are inferred.
+- **v0.291.0–v0.291.1 (2026-10-27) — every campaign sends to a list; the
+  campaign page's strip, tabs and grid** (build plan § 7e.9 second half, M8;
+  rulings 99–102). Dark behind `CAMPAIGN_LISTS_ONLY`; migration 0039.
+  **Live-passed on crm-test 10-27-26 18:15**; both pushed. Production stays
+  dark.
 - **v0.288.0 (2026-10-26) — personal outreach from the lead's page**
   (build plan § 7e.5, M5; rulings 107–109, 115, 118–120, 122, 128): the
   shared composer (`frontend/shared/compose.js`, the session tools switched

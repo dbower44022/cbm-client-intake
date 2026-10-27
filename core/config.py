@@ -659,6 +659,11 @@ class Settings(BaseSettings):
     # and the campaign page gets its stage strip and tabs. Needs Campaign
     # lists. Read per request. Off, the rule boxes and the page work as before.
     campaign_lists_only: bool = False
+    # The Constant Contact send report (build plan § 7e.9, ruling 96; M9): each
+    # picked email's report read for 30 days, one touch per recipient. Needs
+    # Campaign lists and Campaign list copies. Read per pass and per request.
+    campaign_send_report: bool = False
+    campaign_send_report_seconds: int = 86400   # how often the worker reads; 0 stops it
     # The fields a list step may use, per target type (ruling 63), as
     # "lead: leadStatus, leadSource; contact: cContactType" (a dotted name
     # follows links: client: engagementClient.industrySector). Empty: the

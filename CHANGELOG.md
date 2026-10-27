@@ -5,6 +5,45 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.292.0] — 2026-10-27
+
+**feat(campaigns): the Constant Contact send report and the Recipients tab**
+(build plan § 7e.9, step M9 of the Marketing Management redesign; ruling 96).
+Behind a new switch, **`CAMPAIGN_SEND_REPORT`** (*Campaign send report* at
+/setup; needs *Campaign lists* and *Campaign list copies*), with
+`CAMPAIGN_SEND_REPORT_SECONDS` (a day). No migration. **CRM change:**
+`COutreachTouch.openCount` and `firstOpenedAt`
+(`coutreach-touch-opens-crm-handoff.md`; applied on crm-test 10-27-26,
+owed on production and Boston), feature-detected.
+
+- **The report** (`campaigns/send_report.py`). For each Running email
+  campaign whose sent email was picked, the worker reads the email's sends,
+  bounces, opens and clicks from Constant Contact for 30 days and writes one
+  touch per recipient, updated in place: Delivered, or Returned with the
+  bounce code; opens and clicks with their first times; an empty outcome
+  becomes Clicked. Recipients are matched to Contacts through the campaign's
+  list, then by email, then by a member's chapter address; an address that
+  matches nobody is counted and named, never created. When the 30 days end
+  the campaign moves to Complete. **The vendor's tracking endpoints are
+  inferred** from its V3 reference and not yet called; the live pass checks
+  them.
+- **Recipients tab** (with lists only on): every touch on the campaign,
+  paged, searchable by name or address, filtered by status, exportable as
+  CSV, with delivery columns (Opens when the CRM has the field). *Read the
+  report now* on an email campaign reads its report at once (at most 300
+  writes; the nightly pass finishes the rest). It replaces the Touches table
+  under Responses.
+- **A call sign-off records the list's size** (`pieceCount`), so a running
+  call campaign shows its Reached count (found by the M8 live pass).
+- **Tests.** `tests/test_campaign_send_report.py` (11): one row per address
+  from the four reports; one touch per matched recipient, a member matched by
+  chapter address, a stranger counted and not created; a second read writes
+  nothing and a new open updates only the open fields; a human outcome kept;
+  no open fields, the rest recorded; the web cap; completion at 30 days; the
+  refusals; the worker pass; the routes, paging, search, status filter and
+  export. The call sign-off test now expects the size. Checked in the
+  browser against the test fakes.
+
 ## [0.291.1] — 2026-10-27
 
 **fix(campaigns): the stage strip no longer doubles a bracket.** Found by the

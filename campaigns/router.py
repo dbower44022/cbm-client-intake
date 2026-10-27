@@ -201,6 +201,8 @@ async def session(request: Request) -> dict[str, Any]:
         "listSyncOn": settings.campaign_list_sync and settings.campaign_lists,
         # Every campaign sends to a list; the strip and tabs (§ 7e.9, M8).
         "listsOnlyOn": ready_made.lists_only(settings),
+        # The Constant Contact send report (§ 7e.9, M9).
+        "sendReportOn": bool(settings.campaign_send_report),
         "ladderOn": settings.lead_ladder,
         "importTemplatesOn": settings.import_templates,
         "leadOutreachOn": settings.lead_outreach,
@@ -2158,6 +2160,161 @@ async def mark_sent(campaign_id: str, request: Request) -> dict[str, Any]:
         actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
     )
     return result
+
+
+# --- the send report and Recipients (§ 7e.9, ruling 96; M9) ------------------------------
+
+@api_router.post("/campaigns/{campaign_id}/report")
+async def read_report_now(campaign_id: str, request: Request) -> dict[str, Any]:
+    """*Read the report now*: one email campaign's Constant Contact report,
+    written as its recipients' touches (at most ``WEB_WRITE_CAP`` writes; the
+    nightly pass finishes the rest)."""
+    from . import list_sync, send_report
+    from core.mailing import MailingError
+
+    user, client = _actor(request)
+    settings = get_settings()
+    problem = send_report.refusal(settings)
+    if problem:
+        raise HTTPException(status_code=400, detail=problem)
+    row = await _campaign_or_404(request, client, campaign_id)
+    if row.get("campaignKind") != cfg.KIND_EMAIL:
+        raise HTTPException(status_code=400, detail="Only an email campaign has a send report.")
+    api_client = _api_client(settings, request)
+    try:
+        whole = await api_client.get(cfg.CAMPAIGN, campaign_id, select=f"id,{email_kind.VENDOR_EMAIL_FIELD}") or {}
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not read the campaign")
+    row = {**row, email_kind.VENDOR_EMAIL_FIELD: whole.get(email_kind.VENDOR_EMAIL_FIELD) or ""}
+    if not row[email_kind.VENDOR_EMAIL_FIELD]:
+        raise HTTPException(status_code=400, detail="Pick the email you sent first — the report belongs to that email.")
+    try:
+        mail, _conn = list_sync.mail_clients(settings)
+    except MailingError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    result = await send_report.read_campaign(settings, row, crm=api_client, mail=mail,
+                                             store=getattr(request.app.state, "campaign_store", None),
+                                             max_writes=send_report.WEB_WRITE_CAP)
+    if not result.ok:
+        raise HTTPException(status_code=502, detail=result.words())
+    await record_action(
+        client, app=APP_CAMPAIGNS, category=CAT_RECORD_EDIT, action="Campaign Report Read",
+        parent_type=cfg.CAMPAIGN, parent_id=campaign_id,
+        summary=f"Read the Constant Contact report of \"{row.get('name')}\": {result.words()}",
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""), details=result.summary(),
+    )
+    return {"report": result.summary(), "words": result.words()}
+
+
+RECIPIENTS_CAP = 5000
+
+
+def _reached_at(t: dict[str, Any]) -> str:
+    """Where the touch reached the person: the email (in the report's touch
+    name), the phone called, or the first line of the address mailed."""
+    if t.get("calledPhone"):
+        return t["calledPhone"]
+    if t.get("mailedAddress"):
+        return str(t["mailedAddress"]).splitlines()[0]
+    name = str(t.get("name") or "")
+    if t.get("channel") == cfg.KIND_EMAIL and " — " in name:
+        tail = name.rsplit(" — ", 1)[1]
+        return tail if "@" in tail else ""
+    return ""
+
+
+async def _recipients(request: Request, campaign_id: str) -> tuple[list[dict[str, Any]], bool]:
+    from . import send_report
+
+    user, client = _actor(request)
+    settings = get_settings()
+    await _campaign_or_404(request, client, campaign_id)
+    reader = _system_client(settings) or client
+    opens = await send_report.open_fields_available(reader)
+    select = cfg.TOUCH_SELECT + ",clickCount,firstClickedAt" + (",openCount,firstOpenedAt" if opens else "")
+    rows: list[dict[str, Any]] = []
+    offset = 0
+    try:
+        while len(rows) < RECIPIENTS_CAP:
+            page = await reader.list(cfg.TOUCH, select=select, max_size=200, offset=offset, order_by="createdAt",
+                                     order="asc", where=[{"type": "equals", "attribute": "outreachCampaignId",
+                                                          "value": campaign_id}])
+            batch = page.get("list", [])
+            rows.extend(batch)
+            if len(batch) < 200:
+                break
+            offset += 200
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not read the recipients")
+    out = []
+    for t in rows:
+        out.append({
+            "id": t.get("id"), "who": t.get("contactName") or t.get("prospectName") or t.get("companyName") or "",
+            "whoType": "contact" if t.get("contactId") else "lead" if t.get("prospectId") else "company" if t.get("companyId") else "",
+            "whoId": t.get("contactId") or t.get("prospectId") or t.get("companyId") or "",
+            "reachedAt": _reached_at(t), "channel": t.get("channel") or "", "status": t.get("touchStatus") or "",
+            "outcome": t.get("outcome") or "", "sentAt": t.get("sentAt") or "",
+            "deliveredAt": t.get("deliveredAt") or "", "returnedAt": t.get("returnedAt") or "",
+            "vendorStatus": t.get("vendorStatus") or "", "opens": t.get("openCount") if opens else None,
+            "firstOpenedAt": t.get("firstOpenedAt") or "", "clicks": t.get("clickCount") or 0,
+            "firstClickedAt": t.get("firstClickedAt") or "", "scans": t.get("scanCount") or 0,
+        })
+    return out, opens
+
+
+def _match(r: dict[str, Any], q: str, status: str) -> bool:
+    if status and r["status"] != status:
+        return False
+    return not q or q in f"{r['who']} {r['reachedAt']}".lower()
+
+
+@api_router.get("/campaigns/{campaign_id}/recipients")
+async def recipients(campaign_id: str, request: Request, q: str = "", status: str = "",
+                     offset: int = 0, limit: int = 50) -> dict[str, Any]:
+    """The campaign's touches as recipients: paged, searchable by name or
+    address, filtered by status (ruling 96's Recipients view)."""
+    rows, opens = await _recipients(request, campaign_id)
+    q = q.strip().lower()
+    found = [r for r in rows if _match(r, q, status)]
+    counts: dict[str, int] = {}
+    for r in rows:
+        counts[r["status"]] = counts.get(r["status"], 0) + 1
+    limit = max(1, min(limit, 200))
+    offset = max(0, offset)
+    return {"recipients": found[offset: offset + limit], "total": len(found), "all": len(rows),
+            "statusCounts": counts, "opensRecorded": opens, "offset": offset, "limit": limit,
+            "capped": len(rows) >= RECIPIENTS_CAP}
+
+
+@api_router.get("/campaigns/{campaign_id}/recipients.csv")
+async def recipients_csv(campaign_id: str, request: Request, q: str = "", status: str = "") -> StreamingResponse:
+    import csv
+    import io
+
+    rows, opens = await _recipients(request, campaign_id)
+    q = q.strip().lower()
+    heads = ["Recipient", "Type", "Reached at", "Channel", "Status", "Outcome", "Sent", "Delivered", "Returned",
+             "Delivery note"] + (["Opens", "First opened"] if opens else []) + ["Clicks", "First clicked", "Scans",
+                                                                                 "CRM id"]
+
+    def line(values: list[Any]) -> str:
+        buf = io.StringIO()
+        csv.writer(buf).writerow(["" if v is None else v for v in values])
+        return buf.getvalue()
+
+    def gen():
+        yield line(heads)
+        for r in rows:
+            if not _match(r, q, status):
+                continue
+            yield line([r["who"], r["whoType"], r["reachedAt"], r["channel"], r["status"], r["outcome"], r["sentAt"],
+                        r["deliveredAt"], r["returnedAt"], r["vendorStatus"]]
+                       + ([r["opens"], r["firstOpenedAt"]] if opens else [])
+                       + [r["clicks"], r["firstClickedAt"], r["scans"], r["whoId"]])
+
+    return StreamingResponse(gen(), media_type="text/csv; charset=utf-8",
+                             headers={"Content-Disposition": f'attachment; filename="recipients-{campaign_id}.csv"',
+                                      "Cache-Control": "no-store"})
 
 
 # Personal outreach (build plan § 7e.5) registers its endpoints on api_router;

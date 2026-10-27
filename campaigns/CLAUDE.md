@@ -1,6 +1,6 @@
 # campaigns/ — Marketing Management (was Campaign Management)
 
-Last Updated: 10-27-26 14:10 · Revision 1.15
+Last Updated: 10-27-26 18:50 · Revision 1.16
 
 Detail for Campaign Management (`/campaigns`, prospect marketing Phases 1 to 4 and the lead model): links, postcards, the landing page, imports, the Leads and Review grids, calls, texts, email, attribution and reporting.
 
@@ -469,6 +469,28 @@ the reason.
   (`placeCards`) and hides the rule boxes. The grid reads partners, funders
   and events per row, eight at a time (`router._grid_relations`) — the CRM
   has no list-read field for them. Recipients is M9, Promote this event M10.
+- **The send report and Recipients** (v0.292.0, build plan § 7e.9, M9;
+  ruling 96; dark behind **`CAMPAIGN_SEND_REPORT`**, read per pass and per
+  request, needs `CAMPAIGN_LISTS` and `CAMPAIGN_LIST_SYNC`).
+  `campaigns/send_report.py`: for each Running email campaign with a picked
+  `vendorEmailId`, the worker (every `CAMPAIGN_SEND_REPORT_SECONDS`, a day)
+  reads the primary activity's four tracking reports and writes **one
+  `COutreachTouch` per recipient, keyed by Contact, updated in place** — never
+  a second. Delivered unless bounced (Returned, the code in `vendorStatus`);
+  `clickCount` / `firstClickedAt`; `openCount` / `firstOpenedAt`
+  feature-detected (`coutreach-touch-opens-crm-handoff.md`); an empty outcome
+  becomes Clicked, a human one is never overwritten. **Matching** is the
+  campaign's list resolved for email first (members at their chapter
+  address), then `Contact.emailAddress`, then `CMentorProfile.cbmEmail`; an
+  unmatched address is counted and named, never created. After 30 days from
+  the pick the campaign completes. *Read the report now* (`POST
+  …/campaigns/{id}/report`) writes at most `WEB_WRITE_CAP` touches. **Never
+  build a store inside `run_report_cycle`** — the worker passes its own.
+  The vendor's tracking shapes are inferred until the live pass. **The
+  Recipients tab** (lists only): `GET …/recipients` (paged, `q`, `status`)
+  and `…/recipients.csv`, read under the org-wide key after the user's read
+  of the campaign; it replaces the Touches table under Responses. A call
+  sign-off now stores `pieceCount`.
 - Owed: nothing on production's CRM (both slots done 10-18-26; every
   campaign switch off there — turning one on is Doug's call at `/setup`);
   Boston with its release; a seeder and sandbox re-baseline; the Twilio
@@ -479,6 +501,7 @@ the reason.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.16 | 10-27-26 18:50 | Claude (Claude Code) | The send report and the Recipients tab (v0.292.0, § 7e.9, M9). |
 | 1.15 | 10-27-26 14:10 | Claude (Claude Code) | Lists only, the strip and the grid (v0.291.0, § 7e.9 second half, M8): the ready-made lists, the built-in group, adoption, the strip, the grid's per-row reads. |
 | 1.14 | 10-26-26 12:05 | Claude (Claude Code) | A list's copy in Constant Contact and the email campaign that sends to it (v0.290.0, § 7e.9, M7): the copy's identity, the one pass, the lead code column, the switch-off path kept. |
 | 1.13 | 10-26-26 02:45 | Claude (Claude Code) | Campaign lists rewritten to Include and Leave out (v0.289.0, § 7e.8, M6): the groups, static lists as hand rows, Exclude, the fixed kind, Copy, the per-channel counts. |

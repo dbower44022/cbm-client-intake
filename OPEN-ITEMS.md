@@ -183,8 +183,16 @@ found; move resolved items to the bottom with the resolution date.
     rule-built campaigns in flight was not read (its credentials live only
     in the container); the build gives any such campaign its kind's
     ready-made list either way.
-    Next: M9 (the send report and the Recipients tab); it should also store
-    a call list's size at sign-off. Still owed: the handoff on production at the arc's slot and on
+    **M9 built as v0.292.0 (10-27-26)**: the Constant Contact send report
+    (one touch per recipient, opens and clicks, 30 days, then Complete) and
+    the Recipients tab; the call sign-off stores the list's size. Dark
+    behind **`CAMPAIGN_SEND_REPORT`**. CRM fields `COutreachTouch.openCount`
+    and `firstOpenedAt` applied on crm-test 10-27-26
+    (`coutreach-touch-opens-crm-handoff.md`); **owed on production and
+    Boston**. Committed, not pushed; **live pass owed** — the vendor's
+    tracking endpoints are inferred.
+    Next: the M9 live pass, then M10 (Promote this event, the roll-up, the
+    Calls tab). Still owed: the handoff on production at the arc's slot and on
     Boston with its release (now with the third role cell). **The layout
     question in the handoff's § 7 is ruled** (Doug, 10-27-26, as
     recommended): *Level*, *Referred by* and *Assigned User* stay off the

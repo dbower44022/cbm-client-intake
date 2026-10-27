@@ -495,6 +495,7 @@
         <button type="button" class="cm__tab is-active" data-tab="overview">Overview</button>
         <button type="button" class="cm__tab" data-tab="audience" id="audienceTabBtn" hidden>Audience and content</button>
         <button type="button" class="cm__tab" data-tab="links">Links</button>
+        <button type="button" class="cm__tab" data-tab="recipients" id="recipientsTabBtn" hidden>Recipients</button>
         <button type="button" class="cm__tab" data-tab="responses">Responses</button>
         <button type="button" class="cm__tab" data-tab="analytics" id="resultsTabBtn">Analytics</button>
       </nav>
@@ -638,6 +639,30 @@
         </div>
         <p class="cm__hint" id="anaMsg" hidden></p>
         <div class="an__grid" id="anaGrid"></div>
+      </div>
+
+      <!-- Lists only: everyone the campaign reached, with delivery columns. -->
+      <div class="cm__tabpanel" data-panel="recipients" hidden>
+        <div class="cm__controls">
+          <input type="search" id="rcSearch" placeholder="Search by name or address…" aria-label="Search recipients" autocomplete="off" />
+          <label class="cm__filter">Status <select id="rcStatus"><option value="">All</option></select></label>
+          <span class="cm__count" id="rcCount"></span>
+          <div class="cm__actions">
+            <button type="button" class="cbm-button cbm-button--secondary" id="rcReadBtn">Read the report now</button>
+            <button type="button" class="cbm-button cbm-button--secondary" id="rcExportBtn">Export</button>
+          </div>
+        </div>
+        <p class="cm__hint" id="rcHint"></p>
+        <table class="cm__grid" id="rcGrid">
+          <thead><tr><th>Recipient</th><th>Reached at</th><th>Status</th><th>Outcome</th><th>Sent</th><th>Returned</th>
+            <th class="num" id="rcOpensHead">Opens</th><th class="num">Clicks</th><th class="num">Scans</th></tr></thead>
+          <tbody id="rcRows"></tbody>
+        </table>
+        <p class="cm__empty" id="rcEmpty" hidden>Nobody yet. A list's people appear here when it is built; an email's, once its report is read.</p>
+        <div class="cm__controls">
+          <button type="button" class="cm__rowbtn" id="rcPrev">Previous</button>
+          <button type="button" class="cm__rowbtn" id="rcNext">Next</button>
+        </div>
       </div>
 
       <div class="cm__tabpanel" data-panel="responses" hidden>

@@ -295,7 +295,7 @@ async def sign_off(api_client: EspoApi, user_client: EspoApi, campaign: dict[str
         raise CampaignError("Build the list first — there is nobody on it to call.")
     now = _crm_now()
     return await service.stamp_campaign(user_client, api_client, campaign["id"], {
-        "signedOffByName": user_name[:255], "signedOffAt": now,
+        "signedOffByName": user_name[:255], "signedOffAt": now, "pieceCount": rows,
         "campaignStatus": cfg.STATUS_RUNNING, "runStartedAt": now,
     })
 

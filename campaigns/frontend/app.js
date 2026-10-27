@@ -662,6 +662,7 @@
     var on = !!rec.listsOnly;
     placeCards(on);
     $("audienceTabBtn").hidden = !on;
+    $("recipientsTabBtn").hidden = !on;
     text($("resultsTabBtn"), on ? "Results" : "Analytics");
     // The rule boxes are gone: a campaign sends to its list.
     Array.prototype.forEach.call(document.querySelectorAll(".cm__rule"), function (box) { if (on) box.hidden = true; });
@@ -1271,7 +1272,8 @@
     });
     $("responsesEmpty").hidden = (r.responses || []).length > 0;
     var touches = rec.touches || [];
-    var ts = $("touchSection"); ts.hidden = !touches.length;
+    // Lists only: the Recipients tab replaces the Touches table.
+    var ts = $("touchSection"); ts.hidden = !touches.length || listsOnly();
     var tb = $("touchRows"); tb.innerHTML = "";
     touches.forEach(function (t2) {
       var tr = el("tr");
@@ -1318,7 +1320,69 @@
       // the buttons each row offers (found on the Phase 4 pass, C4).
       if (tab === "responses") loadRecord().then(loadResponses);
       if (tab === "analytics") loadAnalytics(false);
+      if (tab === "recipients") { rc.offset = 0; loadRecipients(); }
     });
+  });
+
+  // --- the Recipients tab (lists only): who the campaign reached ----------------------------
+  var rc = { offset: 0, limit: 50, timer: null };
+  function rcQuery(extra) {
+    var q = "q=" + encodeURIComponent($("rcSearch").value || "") + "&status=" + encodeURIComponent($("rcStatus").value || "");
+    return q + (extra || "");
+  }
+  async function loadRecipients() {
+    var c = state.record && state.record.campaign; if (!c) return;
+    var isEmail = c.campaignKind === "Email";
+    $("rcReadBtn").hidden = !isEmail;
+    text($("rcHint"), isEmail
+      ? "Each person the email went to, from Constant Contact's report: delivered or bounced, opens and clicks. The report is read every night for 30 days after the email is picked; Read the report now reads it at once."
+      : "Each person on the campaign's list as built, and what happened to each.");
+    try {
+      var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/recipients?" + rcQuery("&offset=" + rc.offset + "&limit=" + rc.limit));
+      var sel = $("rcStatus"), keep = sel.value;
+      sel.innerHTML = ""; var all = el("option", null, "All"); all.value = ""; sel.appendChild(all);
+      Object.keys(res.statusCounts || {}).sort().forEach(function (k) { var o = el("option", null, k + " (" + res.statusCounts[k] + ")"); o.value = k; sel.appendChild(o); });
+      sel.value = keep;
+      $("rcOpensHead").hidden = !res.opensRecorded;
+      var body = $("rcRows"); body.innerHTML = "";
+      res.recipients.forEach(function (r) {
+        var tr = el("tr");
+        tr.appendChild(el("td", null, r.who || "—")); tr.appendChild(el("td", null, r.reachedAt || "—"));
+        var st = el("td"); st.appendChild(el("span", "cm__badge", r.status || "—")); if (r.vendorStatus && r.status === "Returned") st.appendChild(el("span", "cm__hint", " " + r.vendorStatus)); tr.appendChild(st);
+        tr.appendChild(el("td", null, r.outcome || "—"));
+        tr.appendChild(el("td", null, r.sentAt ? fmtDate(r.sentAt) : "—")); tr.appendChild(el("td", null, r.returnedAt ? fmtDate(r.returnedAt) : "—"));
+        var op = el("td", "num", r.opens == null ? "—" : r.opens); op.hidden = !res.opensRecorded; tr.appendChild(op);
+        tr.appendChild(el("td", "num", r.clicks || 0)); tr.appendChild(el("td", "num", r.scans || 0));
+        body.appendChild(tr);
+      });
+      var shownTo = Math.min(res.offset + res.recipients.length, res.total);
+      text($("rcCount"), res.total ? (res.offset + 1) + "–" + shownTo + " of " + res.total + (res.total !== res.all ? " (" + res.all + " in all)" : "") : "");
+      $("rcEmpty").hidden = res.all > 0;
+      rc.total = res.total;
+    } catch (e) { notice(e.message, "error"); }
+  }
+  $("rcSearch").addEventListener("input", function () { clearTimeout(rc.timer); rc.timer = setTimeout(function () { rc.offset = 0; loadRecipients(); }, 300); });
+  $("rcStatus").addEventListener("change", function () { rc.offset = 0; loadRecipients(); });
+  $("rcPrev").addEventListener("click", function () {
+    if (rc.offset === 0) { notice("This is the first page.", "ok"); return; }
+    rc.offset = Math.max(0, rc.offset - rc.limit); loadRecipients();
+  });
+  $("rcNext").addEventListener("click", function () {
+    if (rc.offset + rc.limit >= (rc.total || 0)) { notice("This is the last page.", "ok"); return; }
+    rc.offset += rc.limit; loadRecipients();
+  });
+  $("rcExportBtn").addEventListener("click", function () {
+    var c = state.record && state.record.campaign; if (!c) return;
+    window.location.href = API + "/campaigns/" + encodeURIComponent(c.id) + "/recipients.csv?" + rcQuery();
+  });
+  $("rcReadBtn").addEventListener("click", async function () {
+    var c = state.record && state.record.campaign; if (!c) return;
+    if (!(state.session && state.session.sendReportOn)) { notice("The send report is switched off on this deployment (Campaign send report at /setup).", "warn"); return; }
+    try {
+      var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/report", { method: "POST", timeoutMs: 70000 });
+      notice(res.words, res.report && res.report.unmatched ? "warn" : "ok");
+      rc.offset = 0; await loadRecord(); loadRecipients();
+    } catch (e) { notice(e.message, "error"); }
   });
 
   // --- analytics tab: the campaign's dashboard (§ 6) -------------------------------------

@@ -287,6 +287,14 @@ SETTINGS: tuple[SettingSpec, ...] = (
             "for them, and the campaign page shows its stage strip and the Audience and content tab. "
             "A campaign already built by a rule box is given its kind's ready-made list. Needs Campaign "
             "lists. Read per request: no restart. Off, campaigns work as before."),
+    _s("campaign_send_report", GROUP_FEATURES, "Campaign send report", kind="bool", component="both",
+       help="Each email campaign's Constant Contact report is read for 30 days after its email is "
+            "picked: one touch per recipient — delivered or bounced, opens and clicks — and the "
+            "campaign completes when the 30 days end. Also the Recipients tab's Read the report now. "
+            "Needs Campaign lists, Campaign list copies and the mailing connection. Off, nothing is read."),
+    _s("campaign_send_report_seconds", GROUP_FEATURES, "Campaign send report interval", kind="int",
+       component="worker",
+       help="Seconds between the worker's reads of the send reports (default a day). 0 stops the reads."),
     _s("campaign_list_fields", GROUP_FEATURES, "Campaign list fields", component="web",
        help="The fields a list step may filter on, per record type (ruling 63), written "
             "as 'lead: leadStatus, leadSource; contact: cContactType, cFunnelStage'. Use "
