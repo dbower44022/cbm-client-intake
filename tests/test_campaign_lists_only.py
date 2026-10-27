@@ -290,8 +290,9 @@ def test_the_strip_maps_each_status(kind):
 
 def test_the_strip_names_missing_content_and_the_email_pick():
     sms_draft = strip_mod.strip({"campaignKind": cfg.KIND_SMS, "campaignStatus": cfg.STATUS_DRAFT},
-                                list_name="L", content_problem="Write the text message first.")
-    assert sms_draft["next"].startswith("Next: write the text message first")
+                                list_name="L", content_problem="Write the text message first (the campaign's form, Text message).")
+    assert sms_draft["next"] == ("Next: write the text message first — press Edit to change it "
+                                 "(Audience and content).")
     email = strip_mod.strip({"campaignKind": cfg.KIND_EMAIL, "campaignStatus": cfg.STATUS_SIGNED_OFF},
                             list_name="Opted-in prospects (Engaged and later)")
     assert "Constant Contact" in email["next"] and "Opted-in prospects" in email["next"]

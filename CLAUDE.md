@@ -1223,7 +1223,8 @@ the strength of it.
 - **v0.291.0 (2026-10-27) — every campaign sends to a list; the campaign
   page's strip, tabs and grid** (build plan § 7e.9 second half, M8; rulings
   99–102). Dark behind `CAMPAIGN_LISTS_ONLY`; migration 0039 (the five
-  ready-made lists). Committed, not pushed; live pass owed on crm-test.
+  ready-made lists). Pushed 10-27-26 17:56; **live-passed on crm-test
+  18:15** (v0.291.1, the strip's wording, committed, not pushed).
 - **v0.290.0–v0.290.1 (2026-10-26/27) — a list's copy in Constant Contact
   and the email campaign that sends to it** (build plan § 7e.9 first half
   and § 7d.2, M7; rulings 95, 126). Dark behind `CAMPAIGN_LIST_SYNC`;

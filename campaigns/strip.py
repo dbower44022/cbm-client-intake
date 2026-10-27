@@ -47,6 +47,15 @@ def strip(campaign: dict[str, Any], *, list_name: str = "", content_problem: str
             "cancelled": status == cfg.STATUS_CANCELLED}
 
 
+def _action(problem: str) -> str:
+    """A content problem as the next action: lower-case first word, no full
+    stop, and no bracket of its own (the strip adds the tab's)."""
+    import re
+
+    text = re.sub(r"\s*\([^)]*\)\s*\.?$", "", problem.strip()).rstrip(".")
+    return text[:1].lower() + text[1:]
+
+
 def _next(kind: str, status: str, list_name: str, content_problem: str) -> tuple[str, str]:
     if status == cfg.STATUS_CANCELLED:
         return "This campaign is cancelled. Reopen it as a draft to use it again.", "Overview"
@@ -54,11 +63,11 @@ def _next(kind: str, status: str, list_name: str, content_problem: str) -> tuple
         if not list_name:
             return f"Next: choose a list ({AUDIENCE_TAB}).", AUDIENCE_TAB
         if content_problem:
-            return f"Next: {content_problem[:1].lower()}{content_problem[1:].rstrip('.')} ({AUDIENCE_TAB}).", AUDIENCE_TAB
+            return f"Next: {_action(content_problem)} — press Edit to change it ({AUDIENCE_TAB}).", AUDIENCE_TAB
         return f"Next: build the list from \"{list_name}\" ({AUDIENCE_TAB}).", AUDIENCE_TAB
     if status == cfg.STATUS_AWAITING:
         if content_problem:
-            return f"Next: {content_problem[:1].lower()}{content_problem[1:].rstrip('.')} ({AUDIENCE_TAB}).", AUDIENCE_TAB
+            return f"Next: {_action(content_problem)} — press Edit to change it ({AUDIENCE_TAB}).", AUDIENCE_TAB
         return f"Next: check the counts and sign off ({AUDIENCE_TAB}).", AUDIENCE_TAB
     if status == cfg.STATUS_SIGNED_OFF:
         if kind == cfg.KIND_EMAIL:

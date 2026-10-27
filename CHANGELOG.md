@@ -5,6 +5,23 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.291.1] — 2026-10-27
+
+**fix(campaigns): the stage strip no longer doubles a bracket.** Found by the
+M8 live pass on crm-test, 10-27-26: a text campaign without wording read
+*Next: write the text message first (the campaign's form, Text message)
+(Audience and content).* `campaigns/strip.py` now drops the content problem's
+own bracket and says where the wording is changed: *Next: write the text
+message first — press Edit to change it (Audience and content).*
+
+- **M8 live-passed on crm-test 10-27-26 18:15** with v0.291.0: each
+  campaign built by a rule box rebuilt to the same people from its
+  ready-made list (postcard 3, text 0, calls 8); the refusals, Copy, the
+  strip, the short form, the grid and its filters checked. Build plan
+  § 7e.13 holds the detail.
+- Not fixed: a signed-off call campaign shows no Reached count (the call
+  sign-off stores no piece count; it predates M8).
+
 ## [0.291.0] — 2026-10-27
 
 **feat(campaigns): every campaign sends to a list, and the campaign page gets

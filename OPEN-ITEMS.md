@@ -179,13 +179,12 @@ found; move resolved items to the bottom with the resolution date.
     campaign sends to a list, five ready-made lists (migration 0039), the
     stage strip, the *Audience and content* tab, ruling 101's grid and the
     short + New campaign. Dark behind **`CAMPAIGN_LISTS_ONLY`**. Committed,
-    **not pushed**; live pass owed on crm-test (step page
-    https://claude.ai/artifact/N1S4U7qvjYUZk2v3Y56uqQ, run by Claude in a tab Doug signs in as Mark Marketing). Production's count of
+    pushed 10-27-26 17:56. **Live-passed on crm-test 10-27-26 18:15**, run by Claude in a tab Doug signed in as Mark Marketing (Doug ran sections A to D and step 12; step page https://claude.ai/artifact/N1S4U7qvjYUZk2v3Y56uqQ). Each campaign built by a rule box before the switch was given its kind's ready-made list after it and rebuilt to the same people, nothing added or dropped: postcard 3 = 3 (13 members; 4 already carded, 4 exits, 2 no address), text 0 = 0, calls 8 = 8 (17 members; 5 no phone, 4 exits). A ready-made list refused delete, retire and rename in words; Copy made a static list. The postcard signed off (dry run) and completed; the call list opened at once (Sent); the text refused sign-off (no wording, nobody to text). The short form made an email campaign in Draft; its build refused without a list. *Opted-in prospects* reached 0, and so does the old rule for Engaged and Opportunity on crm-test (the one opted-in prospect is at Prospect), so the email sign-off refused as it should and the copy was not exercised; M7 proved it. *Dormant clients* holds 0: no crm-test engagement closed over a year ago. The grid's columns and its Stage, Channel, Event and Partner filters checked live. Found and fixed as v0.291.1: the strip doubled a bracket on a text campaign without wording. Found, not fixed: a signed-off call campaign shows Reached — on the grid and *People on the list* — on its page, because the call sign-off stores no piece count (it predates M8). v0.291.1 committed, not pushed. Production's count of
     rule-built campaigns in flight was not read (its credentials live only
     in the container); the build gives any such campaign its kind's
     ready-made list either way.
-    Next: the M8 live pass, then M9 (the send report and the Recipients
-    tab). Still owed: the handoff on production at the arc's slot and on
+    Next: M9 (the send report and the Recipients tab); it should also store
+    a call list's size at sign-off. Still owed: the handoff on production at the arc's slot and on
     Boston with its release (now with the third role cell). **The layout
     question in the handoff's § 7 is ruled** (Doug, 10-27-26, as
     recommended): *Level*, *Referred by* and *Assigned User* stay off the
