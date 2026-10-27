@@ -5,6 +5,32 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.290.1] — 2026-10-27
+
+**fix(mailing): one Constant Contact connection store per process, not one
+per request.** Found by the M7 live send on crm-test, 10-27-26 11:35:
+*Pick this email* answered 500 twice, and the web log showed
+`asyncpg TooManyConnectionsError` from `ConnectionStore.access_token`.
+
+- **Cause.** `campaigns/list_sync.mail_clients` (new in v0.290.0) built a new
+  `ConnectionStore` — a new database engine with its own pool — on every web
+  request that talked to Constant Contact (*Sync now*, sign-off, opening
+  *Pick the email*, picking), and nothing closed it. Four such requests used
+  up crm-test's database connections. The worker's `core/mailing_sync._clients`
+  built one per pass the same way.
+- **Fix.** `core/mailing.shared_connection_store` returns one store per event
+  loop (one per deployed process) for a given database and key; `mail_clients`
+  and `_clients` use it. `create_app` keeps building the app's own store once.
+- **Test.** `tests/test_mailing_shared_store.py`: repeat web and worker calls
+  share one store, and nothing outside `core/mailing.py` and `core/app.py`
+  calls `make_connection_store` (fails on v0.290.0).
+- Live outcomes of the vendor shapes so far (send on crm-test 10-27-26): the
+  custom-field endpoints, the `cf:cbm_lead_code` import column, the sign-off
+  sync and the email-campaign listing all confirmed. The merge tag and the
+  pick itself are still to be seen.
+- Not this change: `tests/test_comms_endpoints.py::test_disabled_returns_503`
+  fails in the full run on v0.290.0 too (event loop closed; passes alone).
+
 ## [0.290.0] — 2026-10-26
 
 **feat(campaigns): a list keeps a copy in Constant Contact, and the email

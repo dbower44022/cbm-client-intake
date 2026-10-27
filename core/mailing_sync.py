@@ -60,7 +60,7 @@ from .mailing import (
     MailingNotConnected,
     MailingRateLimited,
     make_client,
-    make_connection_store,
+    shared_connection_store,
 )
 
 log = logging.getLogger("cbm_intake.mailing.sync")
@@ -362,7 +362,7 @@ async def apply_plan(plan: Plan, mail: MailingClient, store: ConnectionStore) ->
 def _clients(settings: Settings, crm: Optional[EspoApi], mail: Optional[MailingClient],
              store: Optional[ConnectionStore]) -> tuple[EspoApi, MailingClient, ConnectionStore]:
     if store is None:
-        store = make_connection_store(settings)
+        store = shared_connection_store(settings)
     if store is None:
         raise MailingNotConnected("No database is attached, so there is no mailing connection.")
     if mail is None:

@@ -882,6 +882,41 @@ def make_connection_store(settings: Any) -> Optional[ConnectionStore]:
     return ConnectionStore(settings.database_url, cipher)
 
 
+#: One connection store per event loop, per database and key. Each store owns
+#: a database engine with its own connection pool, so a store built per
+#: request or per pass is a pool that is never closed — v0.290.0 exhausted
+#: crm-test's database connections that way in four web requests (10-27-26).
+#: A deployed process runs one loop, so this is one store per process; the
+#: loop is in the key because an engine cannot outlive the loop it served.
+_SHARED_STORES: dict[tuple[str, str, int], tuple[Any, ConnectionStore]] = {}
+
+
+def shared_connection_store(settings: Any) -> Optional[ConnectionStore]:
+    """The connection store for request and pass code: built on first use,
+    then reused. Only ``create_app`` (once per app) builds one directly."""
+    import asyncio
+
+    url = getattr(settings, "database_url", "") or ""
+    if not url:
+        return None
+    try:
+        loop: Any = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+    for k, (seen, _store) in list(_SHARED_STORES.items()):
+        if seen is not None and seen.is_closed():
+            del _SHARED_STORES[k]
+    key = (url, getattr(settings, "app_encryption_key", "") or "", id(loop))
+    entry = _SHARED_STORES.get(key)
+    if entry is None:
+        store = make_connection_store(settings)
+        if store is None:
+            return None
+        _SHARED_STORES[key] = (loop, store)
+        return store
+    return entry[1]
+
+
 def make_client(store: ConnectionStore, client_id: str, client_secret: str, *, base_url: str = DEFAULT_BASE_URL) -> MailingClient:
     """A client whose tokens come from the connection store, refreshed under its lock."""
 

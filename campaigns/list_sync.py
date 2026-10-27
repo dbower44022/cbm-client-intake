@@ -307,9 +307,9 @@ async def run_pass(settings: Settings, *, crm: Optional[EspoApi] = None, mail: O
 def mail_clients(settings: Settings) -> tuple[MailingClient, Any]:
     """The vendor client and the connection store for a web request. A test
     seam: the route tests replace it with fakes."""
-    from core.mailing import make_client, make_connection_store
+    from core.mailing import make_client, shared_connection_store
 
-    store = make_connection_store(settings)
+    store = shared_connection_store(settings)
     if store is None:
         raise MailingNotConnected("No database is attached, so there is no mailing connection.")
     return make_client(store, settings.mailing_client_id, settings.mailing_client_secret,
