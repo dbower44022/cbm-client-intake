@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-26-26 12:18 · Revision 0.58 — change log at the end.
+Last Updated: 10-27-26 12:30 · Revision 0.59 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -2307,7 +2307,7 @@ The import, lists-of-lists and cycle tests stay, adapted.
 ### 7e.9 Constant Contact, campaigns and events — rulings 95–97, 99–102
 
 *The first half — a kept-current copy per list and the email campaign — is
-built as v0.290.0, 10-26-26 (step M7, § 7e.13); live send owed. Lists only,
+built as v0.290.0, 10-26-26 (step M7, § 7e.13); live-passed on crm-test 10-27-26 12:22 with v0.290.1. Lists only,
 the campaign page, the grid, + New campaign and Promote this event are M8 and
 M10; the send report is M9.*
 
@@ -2522,7 +2522,18 @@ as Claude's recommended change, noted under each (rulings 120, 122, 123).
      a link; the list rename (`PUT /contact_lists/{id}`); the email listing
      (`GET /emails?after_date=`), a campaign's `campaign_activities` with
      the `primary_email` role, and the activity's `contact_list_ids`.
-     *Outcome: owed — the live send has not run.*
+     *Outcome (live send on crm-test, 10-27-26 11:27–12:22):* the
+     custom-field listing and create — **confirmed** (Sync now made
+     `cbm_lead_code`; Constant Contact shows it under that name); the
+     import column `cf:cbm_lead_code` — **confirmed** (the contact held
+     `b862ryw9ur5q`, the CRM's code); the merge tag
+     `[[custom.cbm_lead_code]]` in a link — **confirmed** (the delivered
+     link opened `…&lead=b862ryw9ur5q`); the email listing, its activity
+     and `contact_list_ids` — **confirmed** (*Pick the email* listed the
+     send, the pick moved the campaign to Running); the list rename —
+     **not exercised**, still inferred. No shape needed correcting. The
+     pass found one defect of ours, a connection store built per request
+     that exhausted the app database (fixed in v0.290.1).
 9. **The ready-made lists are system lists**, undeletable but copyable,
    with the five names in § 7e.9.
 
@@ -2776,8 +2787,9 @@ Team caller for M1 and M10).
    campaign reads Running (the strip's Sent is M8's). Migration 0038 run
    against a local Postgres over an existing list, down and up again.
    Checked in the browser against the real application over the test
-   fakes. **Live send owed** on crm-test (`OPEN-ITEMS.md` #57); its
-   outcome goes under § 7e.12 Draft 8.
+   fakes. **Live-passed on crm-test 10-27-26 12:22** (one real email,
+   v0.290.1 fixing the connection leak the pass found); the outcome of
+   each vendor shape is under § 7e.12 Draft 8.
 8. **M8: lists only and the campaign page** (§ 7e.9 second half). About
    four days.
 9. **M9: the send report and Recipients** (§ 7e.9). About three days.
@@ -3064,6 +3076,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.59 | 10-27-26 12:30 | Claude (Claude Code) | M7 live-passed on crm-test 10-27-26 12:22: § 7e.12 Draft 8 records each inferred shape (four confirmed, the list rename not exercised); § 7e.9 and § 7e.13 step M7 marked live-passed; v0.290.1 named. |
 | 0.58 | 10-26-26 12:18 | Claude (Claude Code) | § 7d status: D3's pieces built with M2 and M7 recorded; D2 and OPEN-ITEMS #59 owed in the next free window. |
 | 0.57 | 10-26-26 12:10 | Claude (Claude Code) | § 7e.9's first half marked built (v0.290.0); § 7e.13 step M7: Doug's two rulings, the routine choices, those made on the way, the live send owed; § 7e.12 Draft 8 lists M7's inferred shapes. |
 | 0.56 | 10-26-26 11:55 | Claude (Claude Code) | § 7e.8 and § 7e.13 step M6 live-passed on crm-test; the read-back and the action-log defect it found. |

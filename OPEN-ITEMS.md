@@ -155,17 +155,24 @@ found; move resolved items to the bottom with the resolution date.
     build, sign-off syncs the copy, *Pick the email*), the lead code written
     to the vendor field `cbm_lead_code` by every push, the paste address on
     the Links tab. Dark behind **`CAMPAIGN_LIST_SYNC`**; **migration 0038**.
-    **Committed, not pushed.** **Owed:** (1) the push (Doug); (2) on
-    crm-test, `CAMPAIGN_LIST_SYNC` on at /setup, and the mailing connection
-    usable (only Doug's own CBM login can re-authorise it); (3) **the live
-    send** — tick a list's copy, *Sync now*, see the list and the
-    `cbm_lead_code` field at Constant Contact, sign off an email campaign,
-    send one real email from Constant Contact to one address Doug controls
-    with the paste address in it, pick it in the app, follow the link and
-    see the code resolve (step page
-    https://claude.ai/artifact/3YmoAaiHHAi2XFcJYAfK47, 37 steps, push
-    included). It is the check of every inferred vendor shape (build plan
-    § 7e.12 Draft 8); record each outcome there.
+    Pushed 10-26-26. **Live-passed on crm-test 10-27-26 12:22**, run by
+    Claude in a tab Doug signed in as Mark Marketing (step page
+    https://claude.ai/artifact/3YmoAaiHHAi2XFcJYAfK47): one real email
+    from Constant Contact to doug@dougbower.com, the delivered link opened
+    `…/info-request/?campaign=…&link=s65n7qrq&lead=b862ryw9ur5q`, the pick
+    moved the campaign to Running. Four inferred vendor shapes confirmed,
+    the list rename not exercised (build plan § 7e.12 Draft 8). **Found and
+    fixed as v0.290.1** (pushed 10-27-26 ~12:00): every web request to
+    Constant Contact built a new connection store and database pool, never
+    closed — the pick answered 500 (`TooManyConnectionsError`). Smaller
+    findings from the pass: (a) the form opened with the name and email
+    empty, which is by design until D2 (§ 7d.6) — the step page wrongly
+    promised it filled; (b) the build notice says "1 members"; (c) crm-test's
+    `Contact.cSuffix` enum offers only "Jr" with no blank, so every Contact
+    made on the CRM screen is stamped "Jr" and the CRM refuses to clear it
+    (a CRM fix, not ours); (d) Constant Contact names a pasted-HTML email
+    itself ("Live Send Test Email <date>"), and that name is what *Pick the
+    email* shows.
     Next: M7, Constant Contact per list and the email campaign (§ 7e.9
     first half). Still owed: the handoff on
     production at the arc's slot and on Boston with its release (now with

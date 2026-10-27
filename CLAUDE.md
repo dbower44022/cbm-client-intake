@@ -1217,19 +1217,12 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
-- **v0.290.0 (2026-10-26) — a list's copy in Constant Contact and the
-  email campaign that sends to it** (build plan § 7e.9 first half and
-  § 7d.2, M7; rulings 95, 126). Dark behind `CAMPAIGN_LIST_SYNC`;
-  **migration 0038**. **Committed, not pushed**; the live send on
-  crm-test (`OPEN-ITEMS.md` #57) checks every inferred vendor shape.
-- **v0.289.0 (2026-10-26) — lists described by Include and Leave out**
-  (build plan § 7e.8, M6; rulings 90–94, 98): a dynamic list is a search
-  (Include groups minus Leave out groups), a static list is people added
-  by hand, Exclude onto a static exclusion list, the kind fixed, Copy, the
-  per-channel counts. Rides `CAMPAIGN_LISTS`; **migration 0037**.
-  Built in one session, all four stops. Live on both deployments
-  10-26-26 09:22; **live-passed on crm-test 10-26-26 ~11:45** by Doug
-  (v0.289.1 fixed the action-log rows its read-back found missing).
+- **v0.290.0–v0.290.1 (2026-10-26/27) — a list's copy in Constant Contact
+  and the email campaign that sends to it** (build plan § 7e.9 first half
+  and § 7d.2, M7; rulings 95, 126). Dark behind `CAMPAIGN_LIST_SYNC`;
+  migration 0038. **Live-passed on crm-test 10-27-26 12:22** with one real
+  send; v0.290.1 fixed the per-request connection store the pass found.
+  Production stays dark.
 - **v0.288.0 (2026-10-26) — personal outreach from the lead's page**
   (build plan § 7e.5, M5; rulings 107–109, 115, 118–120, 122, 128): the
   shared composer (`frontend/shared/compose.js`, the session tools switched
@@ -1242,7 +1235,4 @@ the strength of it.
   — Mark Marketing has no mentor profile, so ruling 120 resolves him by
   his user address; whether the Gmail delegation can read that mailbox is
   the open question.
-- **v0.286.0–v0.287.0 (2026-10-25) — the import tool** (§ 7e.7, M4),
-  dark behind `IMPORT_TEMPLATES`, migrations 0035–0036; live-passed on
-  crm-test 10-25-26 20:49 and pushed.
 Everything else still owed is in `OPEN-ITEMS.md`.
