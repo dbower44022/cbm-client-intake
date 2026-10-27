@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-27-26 18:50 · Revision 0.62 — change log at the end.
+Last Updated: 10-27-26 18:52 · Revision 0.63 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -2848,8 +2848,7 @@ Team caller for M1 and M10).
    overwritten; the opens column and fields are feature-detected. **The
    tracking endpoints are inferred** (`/reports/email_reports/{activity}/tracking/{sends|bounces|opens|clicks}`,
    rows of `tracking_activities` with `email_address`, `created_time`,
-   `bounce_code`); the live pass confirms or corrects them. Live pass
-   owed on crm-test.
+   `bounce_code`); the live pass confirms or corrects them. **Live-passed on crm-test 10-27-26 18:50** by Claude in a tab signed in as Mark Marketing, reading the M7 live send's report (no new send): *Read the report now* wrote one touch — Doug M7 Send Test, doug@dougbower.com, Delivered, sent 15:34 UTC, 1 open and 1 click (both 16:26 UTC), outcome Clicked, opens recorded; a second read answered *1 recipient in the report, 0 new, 0 updated, 1 unchanged*. **Confirmed:** the primary activity lookup, the four `/reports/email_reports/{activity}/tracking/…` endpoints, the `tracking_activities` key, `email_address` and `created_time`. **Not exercised:** a bounce (`bounce_code`), and the 30-day completion.
 10. **M10: Promote this event and the roll-up, and the Calls tab**
     (§§ 7e.9, 7e.10). About three days. **Also (ruling 126):** § 7d.2's
     caller's link — the person's campaign link plus code, with a Copy
@@ -3133,6 +3132,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.63 | 10-27-26 18:52 | Claude (Claude Code) | M9 live-passed on crm-test: the report's shapes confirmed but the bounce. |
 | 0.62 | 10-27-26 18:50 | Claude (Claude Code) | M9 built as v0.292.0: the send report, the Recipients tab, the opens fields' handoff, the call list size. |
 | 0.61 | 10-27-26 18:20 | Claude (Claude Code) | M8 live-passed on crm-test; v0.291.1. |
 | 0.60 | 10-27-26 14:15 | Claude (Claude Code) | M8 built as v0.291.0: § 7e.9's header, Draft 9's built note, § 7e.13 M8; the handoff § 7 layout question ruled (no layout change). |

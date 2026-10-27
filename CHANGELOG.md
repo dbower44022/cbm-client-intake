@@ -33,6 +33,9 @@ owed on production and Boston), feature-detected.
   report now* on an email campaign reads its report at once (at most 300
   writes; the nightly pass finishes the rest). It replaces the Touches table
   under Responses.
+- **Live-passed on crm-test 10-27-26 18:50** on the M7 send: one touch, Delivered,
+  1 open, 1 click; a second read changed nothing. Every inferred tracking shape
+  confirmed except the bounce, which the send did not produce.
 - **A call sign-off records the list's size** (`pieceCount`), so a running
   call campaign shows its Reached count (found by the M8 live pass).
 - **Tests.** `tests/test_campaign_send_report.py` (11): one row per address

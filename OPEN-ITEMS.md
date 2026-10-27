@@ -189,10 +189,8 @@ found; move resolved items to the bottom with the resolution date.
     behind **`CAMPAIGN_SEND_REPORT`**. CRM fields `COutreachTouch.openCount`
     and `firstOpenedAt` applied on crm-test 10-27-26
     (`coutreach-touch-opens-crm-handoff.md`); **owed on production and
-    Boston**. Committed, not pushed; **live pass owed** — the vendor's
-    tracking endpoints are inferred.
-    Next: the M9 live pass, then M10 (Promote this event, the roll-up, the
-    Calls tab). Still owed: the handoff on production at the arc's slot and on
+    Boston**. Pushed 10-27-26 18:42. **Live-passed on crm-test 10-27-26 18:50** by Claude in a tab signed in as Mark Marketing, reading the M7 live send's report (no new send): *Read the report now* wrote one touch — Doug M7 Send Test, doug@dougbower.com, Delivered, sent 15:34 UTC, 1 open and 1 click (both 16:26 UTC), outcome Clicked, opens recorded; a second read answered *1 recipient in the report, 0 new, 0 updated, 1 unchanged*. **Confirmed:** the primary activity lookup, the four `/reports/email_reports/{activity}/tracking/…` endpoints, the `tracking_activities` key, `email_address` and `created_time`. **Not exercised:** a bounce (`bounce_code`), and the 30-day completion.
+    Next: M10 (Promote this event, the roll-up, the Calls tab). Still owed: the handoff on production at the arc's slot and on
     Boston with its release (now with the third role cell). **The layout
     question in the handoff's § 7 is ruled** (Doug, 10-27-26, as
     recommended): *Level*, *Referred by* and *Assigned User* stay off the

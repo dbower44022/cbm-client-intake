@@ -1224,8 +1224,8 @@ the strength of it.
   Recipients tab** (build plan § 7e.9, M9; ruling 96). Dark behind
   `CAMPAIGN_SEND_REPORT`; no migration; the CRM fields `openCount` and
   `firstOpenedAt` on `COutreachTouch` (`coutreach-touch-opens-crm-handoff.md`,
-  done on crm-test, owed on production and Boston). Committed, not pushed;
-  live pass owed — the report shapes are inferred.
+  done on crm-test, owed on production and Boston). Pushed; **live-passed
+  on crm-test 10-27-26 18:50** (the bounce shape not exercised).
 - **v0.291.0–v0.291.1 (2026-10-27) — every campaign sends to a list; the
   campaign page's strip, tabs and grid** (build plan § 7e.9 second half, M8;
   rulings 99–102). Dark behind `CAMPAIGN_LISTS_ONLY`; migration 0039.
