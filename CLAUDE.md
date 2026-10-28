@@ -1220,6 +1220,12 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
+- **v0.293.0 (2026-10-27) — the Lists tab redesigned** (build plan
+  § 7e.14, M11; rulings 129–132): the list view with Preview, Edit, and
+  View in its own browser tab; counts stored and refreshed daily.
+  Dark behind `CAMPAIGN_LIST_SCREENS`; migration 0040; no CRM change.
+  Committed, not pushed; live pass owed.
+
 - **v0.292.0 (2026-10-27) — the Constant Contact send report and the
   Recipients tab** (build plan § 7e.9, M9; ruling 96). Dark behind
   `CAMPAIGN_SEND_REPORT`; no migration; the CRM fields `openCount` and

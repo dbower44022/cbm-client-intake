@@ -1,6 +1,6 @@
 # campaigns/ — Marketing Management (was Campaign Management)
 
-Last Updated: 10-27-26 18:50 · Revision 1.16
+Last Updated: 10-27-26 21:10 · Revision 1.17
 
 Detail for Campaign Management (`/campaigns`, prospect marketing Phases 1 to 4 and the lead model): links, postcards, the landing page, imports, the Leads and Review grids, calls, texts, email, attribution and reporting.
 
@@ -491,6 +491,27 @@ the reason.
   and `…/recipients.csv`, read under the org-wide key after the user's read
   of the campaign; it replaces the Touches table under Responses. A call
   sign-off now stores `pieceCount`.
+- **The Lists tab redesigned** (v0.293.0, build plan § 7e.14, M11;
+  rulings 129–132; dark behind **`CAMPAIGN_LIST_SCREENS`**, read per
+  request, needs `CAMPAIGN_LISTS`; migration 0040). `listview.js` (ids
+  `lv_`) draws the list view, Preview and Edit; `lists.js` keeps the old
+  screens and **hands the tab over in its `M.register` while the session
+  says `listScreensOn`** — the one place the two meet. View is a page of its
+  own, `list-members.html`, served at `/campaigns/lists/{id}/members` by
+  `core/app.py` and opened in the browser tab `cbm-list-<id>` (ruling 130,
+  the one exception to one page). **Counts are stored**: `audience_list.counts`
+  / `counted_at` and `audience_list_member.reach` (letters e, t, p; NULL =
+  not counted since written), written only by `campaigns/list_counts.
+  refresh_one` — *Refresh* (`POST /lists/{id}/refresh`) and the worker pass
+  (`run_pass`, every `CAMPAIGN_LIST_COUNT_SECONDS`, first ten minutes after
+  start; the worker passes its own store). `audience.count_list` is three
+  `resolve_targets` runs; `resolve_targets` now returns `reachedMembers`,
+  the member keys a channel reaches (a duplicate counts as reached). The old
+  *Run now* does not update the stored counts. The preview route returns
+  `diff` (who comes on and drops off against the last run, 50 names a side);
+  the members route takes `channel`, `group` and `detail` (the View columns,
+  read as the user by `audience.describe_details`); the name search takes
+  `listId` and marks `onList`.
 - Owed: nothing on production's CRM (both slots done 10-18-26; every
   campaign switch off there — turning one on is Doug's call at `/setup`);
   Boston with its release; a seeder and sandbox re-baseline; the Twilio
@@ -501,6 +522,7 @@ the reason.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.17 | 10-27-26 21:10 | Claude (Claude Code) | The Lists tab redesigned (v0.293.0, § 7e.14, M11): the hand-over in `lists.js`, View's page, the stored counts and their pass, the route additions. |
 | 1.16 | 10-27-26 18:50 | Claude (Claude Code) | The send report and the Recipients tab (v0.292.0, § 7e.9, M9). |
 | 1.15 | 10-27-26 14:10 | Claude (Claude Code) | Lists only, the strip and the grid (v0.291.0, § 7e.9 second half, M8): the ready-made lists, the built-in group, adoption, the strip, the grid's per-row reads. |
 | 1.14 | 10-26-26 12:05 | Claude (Claude Code) | A list's copy in Constant Contact and the email campaign that sends to it (v0.290.0, § 7e.9, M7): the copy's identity, the one pass, the lead code column, the switch-off path kept. |

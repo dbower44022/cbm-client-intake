@@ -5,6 +5,44 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.293.0] — 2026-10-27
+
+**feat(campaigns): the Lists tab redesigned — a list view with Preview, and
+Edit and View as screens of their own** (build plan § 7e.14, step M11 of the
+Marketing Management redesign; rulings 129–132). The new screens are behind
+a new switch, **`CAMPAIGN_LIST_SCREENS`** (*Campaign list screens* at /setup;
+needs *Campaign lists*); off, the Lists tab is the one built before. The
+stored counts and their nightly pass ride *Campaign lists*, with
+**`CAMPAIGN_LIST_COUNT_SECONDS`** (a day). **Migration 0040.** No CRM change.
+
+- **The list view.** The tab opens on every list: a search over names and
+  notes, filters (type, in Constant Contact, retired), and a sortable grid
+  with the full name, type, members, last used, updated, the Constant
+  Contact copy and the notes. The arrow keys move the selection; Enter opens
+  Edit, V opens View, / goes to the search.
+- **Preview** is a switch on the list view, remembered per browser: the
+  selected list's reach per channel, who is on it, the campaigns using it
+  and its details, with Edit, View members and Refresh.
+- **Edit** replaces the list view on the same page. Settings first (name,
+  notes, the Constant Contact copy); then, on a dynamic list, the Include and
+  Leave out builder, recounted a moment after each change, with *Who this
+  change moves* (who comes on and who drops off against the last run) and
+  the campaigns the save reaches; on a static list, its members, *Remove
+  from this list* and an *Add people* panel. One save bar while anything is
+  unsaved; Copy, Retire and Delete under *More*.
+- **View** opens one list's members in a browser tab of its own
+  (`/campaigns/lists/{id}/members`, reused per list): the reach summary,
+  filters by channel and by the group that brought each person in, extra
+  columns read as the signed-in user, *Leave out…*, Refresh, Export.
+- **Counts are stored and kept current** (ruling 131). Each list keeps its
+  people and reach per channel, and each member its own reach. A worker pass
+  re-runs every active dynamic list and counts every active list ten minutes
+  after start and then daily; *Refresh* does one list. A signed-off campaign
+  keeps the list version it recorded, so a nightly run never changes what it
+  sends to.
+- **Not yet passed live.** Checked against the real application over the
+  test fakes with 45 lists, in a headless browser.
+
 ## [0.292.0] — 2026-10-27
 
 **feat(campaigns): the Constant Contact send report and the Recipients tab**

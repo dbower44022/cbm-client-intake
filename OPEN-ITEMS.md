@@ -196,6 +196,13 @@ found; move resolved items to the bottom with the resolution date.
     recommended): *Level*, *Referred by* and *Assigned User* stay off the
     CRM's own lead layout; the application's lead page is the only place
     they show.
+    **M11 built as v0.293.0 (10-27-26)**: the Lists tab redesigned
+    (rulings 129–132, § 7e.14) — the list view with Preview, Edit, and
+    View in its own browser tab; counts stored and refreshed daily. Dark
+    behind **`CAMPAIGN_LIST_SCREENS`**; migration 0040. **Owed, in order**:
+    (1) Doug pushes; (2) at crm-test's /setup, switch on *Campaign list
+    screens*; (3) the live pass, run by Claude in a tab Doug signs in as
+    Mark Marketing.
 
 53. **Attendee linking escalation — live pass owed** (v0.258.6, 2026-10-15).
     A mentor whose Mentor Role reads/edits `CSession` at "own" could not

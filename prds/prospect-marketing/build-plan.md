@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-27-26 19:24 · Revision 0.64 — change log at the end.
+Last Updated: 10-27-26 21:10 · Revision 0.65 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -2854,8 +2854,23 @@ Team caller for M1 and M10).
     caller's link — the person's campaign link plus code, with a Copy
     button, minted when the call list is built.
 11. **M11: the Lists tab, redesigned** (§ 7e.14, rulings 129–132). About
-    four and a half days, in five stops. Drafted 10-27-26 for Doug's
-    approval.
+    four and a half days, in five stops. Approved 10-27-26 ("approved");
+    Doug ran stops 2–4 without pausing. **Built as v0.293.0 (10-27-26).**
+    Made on the way, each announced: the count pass runs on its own
+    schedule (ten minutes after start, then daily), not before the
+    Constant Contact push — the copy's sync re-runs the list itself, and an
+    interval counted from start never fires on a deployment pushed more than
+    once a day; saving a dynamic list refreshes its counts at once, and an
+    add or remove on a static list recounts in the background; Edit's live
+    count gives people, not the split by channel (three more CRM passes per
+    change), the saved split shows when nothing is changed; View's search
+    is by name, not every column (the other columns are read a page at a
+    time); the name search marks who is already on the list. Migration 0040
+    run on a local Postgres over an existing list, down and up again.
+    Checked in a headless browser against the real application over the
+    test fakes, 45 lists; the switch off leaves the old tab exactly as it
+    was. No staff guide covers Marketing Management, so none was changed.
+    **Live pass owed** on crm-test.
 
 **Cost, named.**
 
@@ -2871,7 +2886,7 @@ Team caller for M1 and M10).
 - **The standing cost the rulings accepted:** CBM writes personally to
   people who never opted in (ruling 107).
 
-### 7e.14 The Lists tab, redesigned — rulings 129–132 (drafted 10-27-26 for approval)
+### 7e.14 The Lists tab, redesigned — rulings 129–132 (built as v0.293.0, 10-27-26; live pass owed)
 
 The built Lists tab (§ 7e.8, ruling 98) put the index, the settings, the
 builder, Add people and the member grid on one page that served none of
@@ -3245,6 +3260,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.65 | 10-27-26 21:10 | Claude (Claude Code) | § 7e.14 and step M11 marked built (v0.293.0): the choices made on the way, the checks, the live pass owed. |
 | 0.64 | 10-27-26 19:24 | Claude (Claude Code) | § 7e.14 and § 7e.13 step M11 drafted for Doug's approval: the Lists tab redesigned (rulings 129–132) — list view with Preview, Edit and View separate, counts stored and refreshed nightly, five named stops, switch `CAMPAIGN_LIST_SCREENS`, migration 0040. |
 | 0.63 | 10-27-26 18:52 | Claude (Claude Code) | M9 live-passed on crm-test: the report's shapes confirmed but the bounce. |
 | 0.62 | 10-27-26 18:50 | Claude (Claude Code) | M9 built as v0.292.0: the send report, the Recipients tab, the opens fields' handoff, the call list size. |
