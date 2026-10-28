@@ -34,6 +34,8 @@
   // --- pure helpers (no DOM; tested under node) ---------------------------------
 
   var DATE_RE = /^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2})?)?/;
+  // A date as the pages print it: "Oct 27, 2026" or "Oct 27, 2026, 6:14 PM".
+  var SHOWN_DATE_RE = /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2}, \d{4}/;
   var NUM_RE = /^[-+]?[$€£]?\s*[\d,]*\.?\d+\s*%?$/;
 
   /* What a cell's value sorts as: an empty value last whichever way, a
@@ -50,6 +52,10 @@
     if (DATE_RE.test(s)) {
       var t = Date.parse(s.length === 19 ? s.replace(" ", "T") + "Z" : s);
       if (!isNaN(t)) return { kind: 3, v: t };
+    }
+    if (SHOWN_DATE_RE.test(s)) {
+      var shown = Date.parse(s.replace(/,(?=\s*\d{1,2}:)/, ""));
+      if (!isNaN(shown)) return { kind: 3, v: shown };
     }
     return { kind: 1, v: s.toLowerCase() };
   }
@@ -150,7 +156,11 @@
 
     function heads() { return Array.prototype.slice.call(table.querySelectorAll("thead th")); }
     function colOf(th, i) { return th.getAttribute("data-col") || String(i); }
-    function sortable(th) { return th.getAttribute("data-sortable") !== "false" && !th.classList.contains("cbm-grid__nosort"); }
+    // A heading with no words (a tick box or an actions column) never sorts.
+    function sortable(th) {
+      if (th.getAttribute("data-sortable") === "false" || th.classList.contains("cbm-grid__nosort")) return false;
+      return !!(th.getAttribute("data-label") || th.textContent.replace(/[▲▼]\d*/g, "").trim());
+    }
     function labels() {
       var out = {};
       heads().forEach(function (th, i) { out[colOf(th, i)] = (th.getAttribute("data-label") || th.textContent).replace(/[▲▼]\d*/g, "").trim(); });

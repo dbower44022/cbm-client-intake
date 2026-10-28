@@ -288,7 +288,7 @@
 
   async function loadCampaigns() {
     try {
-      var res = await api("/campaigns");
+      var res = await busyOver("campaignGrid", api("/campaigns"));
       state.campaigns = res.campaigns || [];
       if (gridListsOnly()) {
         fillRelationFilter($("eventFilter"), "events"); fillRelationFilter($("partnerFilter"), "partners"); fillRelationFilter($("funderFilter"), "funders");
@@ -303,11 +303,36 @@
     ["Reached", "reached", "num"], ["Responses", "submissions", "num"]];
   var GRID_STAGES = ["Draft", "Ready", "Signed off", "Sent", "Results"];
   function gridListsOnly() { return !!(state.session && state.session.listsOnlyOn); }
+
+  // The shared grid (frontend/shared/grid.js; prds/shared-grid-plan.md § 8):
+  // the Campaigns grid sorts here, on several columns, newest first by default.
+  var campaignGrid = null;
+  function sortCampaignRows(rows) {
+    var keys = campaignGrid ? campaignGrid.keys() : [];
+    if (!keys.length) keys = [{ col: "createdAt", dir: "desc" }];
+    return window.CBMGrid ? CBMGrid.sortBy(rows, keys, function (c, col) { return c[col]; }) : rows;
+  }
+  function ensureCampaignGrid() {
+    Array.prototype.forEach.call(document.querySelectorAll("#campaignGrid thead th"), function (th) {
+      var k = th.getAttribute("data-sort");
+      if (k) th.setAttribute("data-col", k); else th.setAttribute("data-sortable", "false");
+    });
+    if (!window.CBMGrid) return;
+    if (!campaignGrid) campaignGrid = CBMGrid.enhance($("campaignGrid"), { key: "marketing.campaigns", onSort: function () { renderCampaigns(); } });
+    else campaignGrid.refresh();
+  }
+  // A grid whose rows are drawn whole: the shared grid sorts the drawn rows.
+  function gridify(id, key) {
+    var t = $(id);
+    if (!t || !window.CBMGrid) return;
+    if (!t._cbmGrid) t._cbmGrid = CBMGrid.enhance(t, { key: key }); else t._cbmGrid.refresh();
+  }
+  function busyOver(id, promise) { return window.CBMBusy && CBMBusy.loading && $(id) ? CBMBusy.loading($(id), promise) : promise; }
   function setupListsOnlyGrid() {
     var tr = el("tr");
     GRID_COLUMNS.forEach(function (c) { var th = el("th", c[2] || null, c[0]); th.setAttribute("data-sort", c[1]); tr.appendChild(th); });
     var head = $("campaignHead"); head.innerHTML = ""; head.appendChild(tr);
-    wireSort("campaignGrid", state.sort, renderCampaigns);
+    ensureCampaignGrid();
     hide($("statusFilterWrap")); text($("kindFilterText"), "Channel");
     ["stageFilterWrap", "eventFilterWrap", "partnerFilterWrap", "funderFilterWrap"].forEach(function (id) { show($(id)); });
     fillSelect($("stageFilter"), GRID_STAGES.concat(["Cancelled"]), 1);
@@ -350,13 +375,7 @@
       if (!q) return true;
       return [c.name, c.campaignKind, c.stageWord, c.assignedUserName, c.eventNames, c.partnerNames, c.funderNames].join(" ").toLowerCase().indexOf(q) >= 0;
     });
-    var k = state.sort.key, dir = state.sort.dir;
-    rows.sort(function (a, b) {
-      var x = a[k], y = b[k];
-      if (x == null || x === "") return 1; if (y == null || y === "") return -1;
-      if (typeof x === "number" && typeof y === "number") return (x - y) * dir;
-      return String(x).localeCompare(String(y), undefined, { numeric: true }) * dir;
-    });
+    rows = sortCampaignRows(rows);
     var body = $("campaignRows"); body.innerHTML = "";
     rows.forEach(function (c) {
       var tr = el("tr");
@@ -392,13 +411,7 @@
       var hay = [c.name, c.campaignKind, c.campaignStatus, c.assignedUserName, (c.partners || []).map(function (p) { return p.name; }).join(" ")].join(" ").toLowerCase();
       return hay.indexOf(q) >= 0;
     });
-    var k = state.sort.key, dir = state.sort.dir;
-    rows.sort(function (a, b) {
-      var x = a[k], y = b[k];
-      if (x == null || x === "") return 1; if (y == null || y === "") return -1;
-      if (typeof x === "number" && typeof y === "number") return (x - y) * dir;
-      return String(x).localeCompare(String(y), undefined, { numeric: true }) * dir;
-    });
+    rows = sortCampaignRows(rows);
     var body = $("campaignRows"); body.innerHTML = "";
     rows.forEach(function (c) {
       var tr = el("tr");
@@ -1191,6 +1204,7 @@
       body.appendChild(tr);
     });
     $("linksEmpty").hidden = links.length > 0;
+    gridify("linksGrid", "marketing.links");
   }
 
   function openLinkModal(existing) {
@@ -1306,6 +1320,8 @@
       }
       tr.appendChild(aTd); tb.appendChild(tr);
     });
+    gridify("responsesGrid", "marketing.responses");
+    gridify("touchGrid", "marketing.touches");
   }
 
   // --- tabs on the record page -------------------------------------------------------------------
@@ -2575,7 +2591,7 @@
     // The import tool (build plan § 7e.7) owns the tab when its switch is on.
     if (importToolOn()) return window.CBMImports.load();
     try {
-      var res = await api("/prospects/imports");
+      var res = await busyOver("importsGrid", api("/prospects/imports"));
       var body = $("importRows"); body.innerHTML = "";
       (res.batches || []).forEach(function (b) {
         var tr = el("tr");
@@ -2586,6 +2602,7 @@
         body.appendChild(tr);
       });
       text($("importsCount"), (res.batches || []).length + " recent");
+      gridify("importsGrid", "marketing.imports");
       fillBatchOptions(res.batches);
       $("importsEmpty").hidden = (res.batches || []).length > 0;
     } catch (e) { notice(e.message, "error"); }
@@ -2729,7 +2746,7 @@
     hide($("blockedView"));
     if (LEAD_ID) await loadLead(); else await loadRecord();
   });
-  wireSort("campaignGrid", state.sort, renderCampaigns);
+  ensureCampaignGrid();
 
   (async function init() {
     try {

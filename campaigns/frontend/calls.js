@@ -28,9 +28,26 @@
     return isNaN(d.getTime()) ? v : d.toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
   }
 
+  // The shared grid (frontend/shared/grid.js; prds/shared-grid-plan.md § 8).
+  // The call list sorts its data, not its drawn rows: an open call's form
+  // row must stay under its call.
+  var CALL_COLS = ["name", "person", "phone", "stage", "campaignName", "plannedAt"];
+  var callGrid = null;
+  function callGridOn() {
+    if (callGrid || !window.CBMGrid) return;
+    var ths = document.querySelectorAll("#cl_callGrid thead th");
+    CALL_COLS.forEach(function (c, i) { if (ths[i]) ths[i].setAttribute("data-col", c); });
+    callGrid = CBMGrid.enhance(document.getElementById("cl_callGrid"), { key: "marketing.calls", onSort: function () { render(); } });
+  }
+  function busy(promise) {
+    var grid = document.getElementById("cl_callGrid");
+    return window.CBMBusy && CBMBusy.loading && grid ? CBMBusy.loading(grid, promise) : promise;
+  }
+
   async function load() {
+    callGridOn();
     try {
-      state.data = await api("/calls");
+      state.data = await busy(api("/calls"));
     } catch (e) { notice(e.message, "error"); return; }
     var d = state.data;
     text($("cl_callWarning"), d.warning);
@@ -60,6 +77,7 @@
       if (camp && r.campaignId !== camp) return false;
       return !q || [r.name, r.person, r.phone, r.campaignName, r.city].join(" ").toLowerCase().indexOf(q) >= 0;
     });
+    if (callGrid && callGrid.keys().length) rows = CBMGrid.sortBy(rows, callGrid.keys(), function (r, col) { return r[col]; });
     var body = $("cl_callRows"); body.innerHTML = "";
     rows.forEach(function (r) {
       var tr = el("tr", "cm__callrow" + (state.open === r.touchId ? " is-open" : ""));

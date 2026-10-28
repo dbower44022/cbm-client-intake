@@ -37,17 +37,30 @@
   function option(sel, value, label) { var o = el("option", null, label); o.value = value; sel.appendChild(o); return o; }
   function field(host, label, input, wide) { var f = el("div", "cm__field" + (wide ? " cm__field--wide" : "")); var l = el("label", null, label); if (input.id) l.htmlFor = input.id; f.appendChild(l); f.appendChild(input); host.appendChild(f); return input; }
 
+  // The shared grid and spinner (prds/shared-grid-plan.md § 8).
+  function gridify(id, key) {
+    var t = document.getElementById(id);
+    if (!t || !window.CBMGrid) return;
+    if (!t._cbmGrid) t._cbmGrid = CBMGrid.enhance(t, { key: key }); else t._cbmGrid.refresh();
+  }
+  function busy(id, promise) {
+    var t = document.getElementById(id);
+    return window.CBMBusy && CBMBusy.loading && t ? CBMBusy.loading(t, promise) : promise;
+  }
+
   // --- loading -------------------------------------------------------------------------------------
   async function load() {
     if (!on()) return;
     document.body.classList.add("cm--import-tool");
     try {
-      var t = await api("/import-templates");
+      var t = await busy("im_templates", api("/import-templates"));
       state.templates = t.templates || []; state.fields = t.fields || []; state.entersAt = t.entersAt || state.entersAt; state.sources = t.sources || [];
-      var h = await api("/prospects/imports");
+      var h = await busy("im_history", api("/prospects/imports"));
       state.batches = h.batches || [];
     } catch (e) { notice(e.message, "error"); return; }
     renderTemplates(); renderHistory();
+    gridify("im_templates", "marketing.importTemplates");
+    gridify("im_history", "marketing.importHistory");
     if (M.batchOptions) M.batchOptions(state.batches);
   }
 
