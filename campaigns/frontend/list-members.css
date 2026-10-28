@@ -42,8 +42,6 @@ body.lm { margin: 0; background: #fff; color: #1F2933; font-family: var(--cbm-fo
 .lm__grid { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .lm__grid th { position: sticky; top: 0; background: #fff; text-align: left; font-weight: 600; font-size: .8rem; color: #374151; padding: .5rem .6rem; border-bottom: 2px solid #D9E0E8; white-space: nowrap; }
 .lm__grid td { padding: .42rem .6rem; border-bottom: 1px solid #EEF1F4; white-space: nowrap; }
-.lm__grid tbody tr:nth-child(even) td { background: #FBFCFD; }
-.lm__grid tbody tr:hover td { background: #F1F6FB; }
 .lm__grid a { color: var(--cbm-blue-dark, #045CB4); font-weight: 500; }
 .lm__yes { color: #1E6B34; font-weight: 600; }
 .lm__no { color: #9CA3AF; }

@@ -466,6 +466,33 @@ def _brought_in_by(row: dict[str, Any], cat: Optional[dict[str, Any]], names: di
     return label, last.get("version") != row["version"]
 
 
+#: The member columns the server can sort (the shared grid's server mode,
+#: prds/shared-grid-plan.md): the reach columns sort reachable first.
+_REACH_SORT = {"reachEmail": "e", "reachText": "t", "reachPostcard": "p"}
+_SORTABLE = ("name", "type", "broughtInBy", *_REACH_SORT)
+
+
+def _sort_keys(sort: str, dir: str) -> list[tuple[str, str]]:
+    """``name:asc,type:desc`` (several keys), or one column with ``dir`` as
+    the old screens send it. An unknown column is refused in words."""
+    sort = (sort or "").strip()
+    if not sort:
+        return []
+    if ":" not in sort and "," not in sort:
+        parts = [(sort, "desc" if dir == "desc" else "asc")]
+    else:
+        parts = []
+        for piece in sort.split(","):
+            col, _, d = piece.strip().partition(":")
+            parts.append((col.strip(), "desc" if d.strip() == "desc" else "asc"))
+    for col, _d in parts:
+        if col not in _SORTABLE:
+            raise HTTPException(status_code=400, detail=(
+                f"Members cannot be sorted by \"{col}\" — sort by name, type, the group that brought "
+                "them in, or how they can be reached."))
+    return parts[:6]
+
+
 @lists_router.get("/lists/{list_id}/members")
 async def members(list_id: str, request: Request, offset: int = 0, limit: int = _MEMBERS_PAGE,
                   q: str = "", sort: str = "", dir: str = "asc", channel: str = "", group: int = 0,
@@ -499,8 +526,30 @@ async def members(list_id: str, request: Request, offset: int = 0, limit: int = 
     limit = max(1, min(limit, 200))
     offset = max(0, offset)
     q = q.strip().lower()
-    reverse = dir == "desc"
-    if q or sort == "name":
+    order = _sort_keys(sort, dir)
+    by_name = any(c == "name" for c, _d in order)
+
+    def value(key: str, col: str, names: dict[str, str]):
+        if col == "name":
+            return (names.get(key) or "").lower()
+        if col == "type":
+            return audience.split_key(key)[0]
+        if col == "broughtInBy":
+            return keyed.get(key) or 0
+        letters = reach.get(key)
+        # Reachable first going up; not counted yet always last.
+        return 2 if letters is None else (0 if _REACH_SORT[col] in letters else 1)
+
+    def ordered(keys: list[str], names: dict[str, str]) -> list[str]:
+        keys = sorted(keys)
+        for col, d in reversed(order):   # stable sorts, least significant key first
+            if col in _REACH_SORT:
+                keys.sort(key=lambda k: (value(k, col, names) == 2, value(k, col, names) if d == "asc" else -value(k, col, names)))
+            else:
+                keys.sort(key=lambda k: value(k, col, names), reverse=d == "desc")
+        return keys
+
+    if q or by_name:
         if len(keyed) > MEMBER_SEARCH_CAP:
             raise HTTPException(status_code=400, detail=(
                 f"This list has more than {MEMBER_SEARCH_CAP:,} members, too many to search or sort by name "
@@ -511,20 +560,13 @@ async def members(list_id: str, request: Request, offset: int = 0, limit: int = 
             raise _crm_failure(request, exc, "Could not read the members")
         if q:
             described = [m for m in described if q in (m["name"] or "").lower()]
-        if sort == "name":
-            described.sort(key=lambda m: (m["name"] or "").lower(), reverse=reverse)
-        elif sort == "type":
-            described.sort(key=lambda m: m["type"], reverse=reverse)
-        elif sort == "broughtInBy":
-            described.sort(key=lambda m: keyed.get(m["key"]) or 0, reverse=reverse)
+        names = {m["key"]: m["name"] for m in described}
+        by_key = {m["key"]: m for m in described}
+        described = [by_key[k] for k in ordered(list(by_key), names)]
         total = len(described)
         page = described[offset: offset + limit]
     else:
-        keys = sorted(keyed)
-        if sort == "type":
-            keys.sort(key=lambda k: audience.split_key(k)[0], reverse=reverse)
-        elif sort == "broughtInBy":
-            keys.sort(key=lambda k: keyed.get(k) or 0, reverse=reverse)
+        keys = ordered(list(keyed), {})
         total = len(keys)
         try:
             page = await audience.describe_members(client, keys[offset: offset + limit], recipe, cat)

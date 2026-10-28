@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/shared/tokens.css" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="/shared/grid.css" />
   <link rel="stylesheet" href="list-members.css" />
   <!-- busy.js must load FIRST: it wraps fetch/XHR to give every button press
        immediate feedback (product-wide convention). -->
@@ -52,7 +53,7 @@
   </div>
   <p class="lm__hint" id="lm_uncounted" hidden></p>
 
-  <div class="lm__gridbox">
+  <div class="lm__gridbox" id="lm_gridbox">
     <table class="lm__grid" id="lm_grid">
       <thead><tr id="lm_head"></tr></thead>
       <tbody id="lm_rows"></tbody>
@@ -86,6 +87,7 @@
     <p>&copy; <span data-cbm-year></span> {{org}}. All rights reserved. <span data-cbm-version></span></p>
   </footer>
   <script src="/shared/footer.js"></script>
+  <script src="/shared/grid.js"></script>
   <script src="list-members.js"></script>
 </body>
 </html>

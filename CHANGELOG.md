@@ -5,6 +5,36 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.294.0] — 2026-10-27
+
+**feat(shared): resizable columns, alternating rows, multi-column sorting,
+a preview divider and loading spinners** (`prds/shared-grid-plan.md`;
+Doug's ruling 10-27-26, option B — built once, the Lists screens first).
+No switch; no migration.
+
+- **`frontend/shared/grid.js` and `grid.css`.** Any table gains column
+  handles (drag, double-click to fit, arrow keys; widths remembered per
+  browser, *Reset columns*), shaded alternate rows, and multi-column
+  sorting: click to sort, Shift-click to add a key, ▲1 / ▼2 on the
+  headings, the order in words under the grid with *Clear sort*. Sorting
+  runs in the browser, or is handed to the screen for a grid the server
+  pages; a column the server cannot sort says so.
+- **`frontend/shared/splitpane.js` and `.css`.** A draggable divider before
+  a preview pane: arrow keys, double-click to reset, width remembered; it
+  hides while the pane is hidden or the panes stack.
+- **`busy.js`, on every page.** `CBMBusy.loading` puts a spinner over a grid
+  or panel while it waits; a link that opens another page spins until the
+  browser leaves (a moment for a new tab); a *Loading…* pill shows while a
+  page opens, after 400 ms so a fast page never flashes it.
+- **The Lists screens use them.** The list view (sorted in the browser,
+  every column) with the divider before Preview; Edit's member grid and
+  *Who this change moves*; View, sorted by the server over name, type, the
+  group that brought each person in and the three reach columns (the
+  members route takes `sort=name:asc,type:desc`). Spinners over the grid,
+  Preview, Edit, the member grids and the Add people results.
+- **The standard** is in the root `CLAUDE.md`; the other applications follow
+  one per release (`OPEN-ITEMS.md` #60).
+
 ## [0.293.1] — 2026-10-27
 
 **fix(campaigns): two faults the M11 live pass found** (build plan § 7e.14).

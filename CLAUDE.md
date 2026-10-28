@@ -1132,7 +1132,19 @@ ordered do-this-next list for the grant build on crm-test.
   spinner is self-wiring — one script tag — but it wraps `fetch` and
   `XMLHttpRequest`, so it must precede any script that can start a request. Any
   new page must include it. It is visual only and **never sets `disabled`**.
-  Manual control: `var done = CBMBusy.start(btn); … done();`.
+  Manual control: `var done = CBMBusy.start(btn); … done();`. It also shows a
+  *Loading…* pill while a page opens and a spinner on a link that opens a
+  page; **wrap every grid or panel that waits on the server in
+  `CBMBusy.loading(el, promise)`**.
+- **Every grid uses the shared grid** (Doug's ruling 10-27-26, option B):
+  `frontend/shared/grid.js` + `grid.css` — `CBMGrid.enhance(table, {key,
+  onSort})` gives resizable columns, alternating rows and multi-column
+  sorting (in the browser, or via `onSort` for a server-paged grid, whose
+  unsortable columns carry `data-sortable="false"` and say why). A grid
+  with a preview pane puts `frontend/shared/splitpane.js` between them. New
+  or changed grids use them now; the older screens are rolled out one
+  application per release (`OPEN-ITEMS.md` #60). Plan:
+  `prds/shared-grid-plan.md`.
 - **Action buttons are never disabled and never hidden** — validate on click and
   show a message naming the missing input or the missing permission. A missing
   button reads as a bug and generates support calls. Transient in-flight
@@ -1220,6 +1232,10 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
+- **v0.294.0 (2026-10-27) — the shared grid, divider and spinners**
+  (`prds/shared-grid-plan.md`): Lists first, then one application per
+  release (`OPEN-ITEMS.md` #60). The `busy.js` spinners reach every page.
+  Committed, not pushed; live pass owed.
 - **v0.293.0 (2026-10-27) — the Lists tab redesigned** (build plan
   § 7e.14, M11; rulings 129–132): the list view with Preview, Edit, and
   View in its own browser tab; counts stored and refreshed daily.

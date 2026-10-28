@@ -14,20 +14,24 @@
   var segs = location.pathname.split("/");
   var LIST_ID = decodeURIComponent(segs[3] || "");
   var TYPE_ONE = { lead: "Lead", contact: "Contact", client: "Client", partner: "Partner", funder: "Funder" };
+  // sort: true — the server can sort the column (the members route's sort
+  // list); the others are read a page at a time and cannot be sorted.
   var COLUMNS = [
-    { key: "name", label: "Name", fixed: true },
+    { key: "name", label: "Name", fixed: true, sort: true },
     { key: "company", label: "Company" },
-    { key: "type", label: "Type" },
+    { key: "type", label: "Type", sort: true },
     { key: "status", label: "Status" },
     { key: "email", label: "Email address" },
     { key: "phone", label: "Phone" },
     { key: "city", label: "City" },
-    { key: "rE", label: "Email" },
-    { key: "rT", label: "Text" },
-    { key: "rP", label: "Post" },
-    { key: "by", label: "Brought in by", dynamicOnly: true },
+    { key: "reachEmail", label: "Email", sort: true },
+    { key: "reachText", label: "Text", sort: true },
+    { key: "reachPostcard", label: "Post", sort: true },
+    { key: "broughtInBy", label: "Brought in by", dynamicOnly: true, sort: true },
     { key: "activity", label: "Last changed" }
   ];
+  var NOSORT = "Can't be sorted: this column is read one page at a time.";
+  var grid = null, headSig = "";
   var st = { list: null, detail: null, offset: 0, limit: 50, total: 0, q: "", channel: "", group: 0, hidden: {}, lists: [] };
   try { st.hidden = JSON.parse(localStorage.getItem(COLS_KEY) || "{}") || {}; } catch (_) { st.hidden = {}; }
 
@@ -138,11 +142,12 @@
   async function loadMembers() {
     // A name search reads every member's name, so it is the only time the
     // page asks for the name order; paging otherwise reads one page alone.
+    var sort = grid ? grid.sortParam() : "";
     var qs = "?detail=true&offset=" + st.offset + "&limit=" + st.limit +
-      (st.q ? "&q=" + encodeURIComponent(st.q) + "&sort=name" : "") +
+      (st.q ? "&q=" + encodeURIComponent(st.q) : "") + (sort ? "&sort=" + encodeURIComponent(sort) : "") +
       (st.channel ? "&channel=" + st.channel : "") + (st.group ? "&group=" + st.group : "");
     try {
-      var res = await api(listPath("/members") + qs);
+      var res = await (window.CBMBusy && CBMBusy.loading ? CBMBusy.loading($("lm_gridbox"), api(listPath("/members") + qs)) : api(listPath("/members") + qs));
       st.total = res.total;
       renderMembers(res);
     } catch (e) { notice(e.message, "error"); }
@@ -162,10 +167,25 @@
 
   function renderMembers(res) {
     var cols = visibleColumns(), dynamic = isDynamic(), system = st.list && st.list.system;
-    var head = $("lm_head");
-    head.textContent = "";
-    cols.forEach(function (c) { head.appendChild(el("th", null, c.label)); });
-    if (dynamic && !system) { var th = el("th"); th.appendChild(el("span", "lm__sr", "Actions")); head.appendChild(th); }
+    // The headings are drawn again only when the columns change, so the
+    // shared grid keeps their widths and handles.
+    var sig = cols.map(function (c) { return c.key; }).join(",") + (dynamic && !system ? ",act" : "");
+    if (sig !== headSig) {
+      headSig = sig;
+      var head = $("lm_head");
+      head.textContent = "";
+      cols.forEach(function (c) {
+        var th = el("th", null, c.label);
+        th.setAttribute("data-col", c.key);
+        if (!c.sort) { th.setAttribute("data-sortable", "false"); th.title = NOSORT; }
+        head.appendChild(th);
+      });
+      if (dynamic && !system) {
+        var th = el("th"); th.setAttribute("data-col", "actions"); th.setAttribute("data-sortable", "false");
+        th.appendChild(el("span", "lm__sr", "Actions")); head.appendChild(th);
+      }
+      if (grid) grid.refresh();
+    }
     var tb = $("lm_rows");
     tb.textContent = "";
     (res.members || []).forEach(function (m) {
@@ -178,10 +198,10 @@
           tr.appendChild(td);
         }
         else if (c.key === "type") tr.appendChild(el("td", "lm__muted", TYPE_ONE[m.type] || m.type));
-        else if (c.key === "rE") tr.appendChild(reachCell(m.reach, "e"));
-        else if (c.key === "rT") tr.appendChild(reachCell(m.reach, "t"));
-        else if (c.key === "rP") tr.appendChild(reachCell(m.reach, "p"));
-        else if (c.key === "by") { var bt = el("td"); if (m.broughtInBy) bt.appendChild(el("span", "lm__src", m.broughtInBy)); else bt.textContent = "—"; tr.appendChild(bt); }
+        else if (c.key === "reachEmail") tr.appendChild(reachCell(m.reach, "e"));
+        else if (c.key === "reachText") tr.appendChild(reachCell(m.reach, "t"));
+        else if (c.key === "reachPostcard") tr.appendChild(reachCell(m.reach, "p"));
+        else if (c.key === "broughtInBy") { var bt = el("td"); if (m.broughtInBy) bt.appendChild(el("span", "lm__src", m.broughtInBy)); else bt.textContent = "—"; tr.appendChild(bt); }
         else if (c.key === "activity") tr.appendChild(el("td", "lm__muted", d.activity ? fmtDay(d.activity) : "—"));
         else { var v = d[c.key]; tr.appendChild(el("td", c.key === "company" ? null : "lm__muted", v == null || v === "" ? "—" : String(v))); }
       });
@@ -310,6 +330,13 @@
   $("lm_exTarget").addEventListener("change", function () { $("lm_exNewWrap").hidden = $("lm_exTarget").value !== "__new"; });
   $("lm_exCancel").addEventListener("click", function () { $("lm_excludeDlg").close(); });
   $("lm_exOk").addEventListener("click", confirmExclude);
+
+  // The shared grid (frontend/shared/grid.js): widths, the stripe, and a
+  // multi-column sort the server does.
+  if (window.CBMGrid) grid = CBMGrid.enhance($("lm_grid"), {
+    key: "lists.members", statusAfter: $("lm_gridbox"),
+    onSort: function () { st.offset = 0; loadMembers(); }
+  });
 
   (async function init() {
     if (!LIST_ID) { notice("This address names no list.", "error"); return; }

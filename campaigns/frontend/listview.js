@@ -35,7 +35,7 @@
 
   var st = {
     loaded: false, cat: null, lists: [], q: "", kind: "", cc: false, retired: false,
-    sort: { key: "name", dir: 1 }, sel: null, preview: false, screen: "index",
+    sortKeys: [{ col: "name", dir: "asc" }], grid: null, memGrid: null, sel: null, preview: false, screen: "index",
     details: {}, previewSeq: 0,
     edit: null
   };
@@ -54,7 +54,7 @@
   // --- the lists ---------------------------------------------------------------------
 
   async function loadLists() {
-    var res = await api("/lists");
+    var res = await busy(st.screen === "index" ? $("lv_listbox") : null, api("/lists"));
     st.lists = res.lists || [];
     renderIndex();
   }
@@ -79,25 +79,25 @@
     return st.q.toLowerCase().split(/\s+/).every(function (w) { return !w || hay.indexOf(w) >= 0; });
   }
 
-  function sortValue(l, key) {
-    if (key === "members") { var m = membersOf(l); return m == null ? -1 : m; }
-    if (key === "kind") return l.kind;
-    if (key === "lastUsed") return l.lastUsed || "";
-    if (key === "updatedAt") return l.updatedAt || "";
-    if (key === "cc") return l.ccSync ? 1 : 0;
-    return (l.name || "").toLowerCase();
+  // What each column sorts by, for the shared grid's multi-column sort.
+  function sortValue(l, col) {
+    if (col === "members") return membersOf(l);
+    if (col === "kind") return l.kind === "dynamic" ? "Dynamic" : "Static";
+    if (col === "lastUsed") return l.lastUsed || "";
+    if (col === "updatedAt") return l.updatedAt || "";
+    if (col === "cc") return l.ccSync ? "Linked" : "";
+    if (col === "notes") return l.notes || "";
+    return l.name || "";
   }
 
   function visibleLists() {
     var rows = st.lists.filter(matches);
-    var key = st.sort.key, dir = st.sort.dir;
-    rows.sort(function (a, b) {
-      var x = sortValue(a, key), y = sortValue(b, key);
-      if (x < y) return -dir; if (x > y) return dir;
-      return (a.name || "").localeCompare(b.name || "");
-    });
-    return rows;
+    var keys = st.sortKeys.length ? st.sortKeys : [{ col: "name", dir: "asc" }];
+    return window.CBMGrid ? CBMGrid.sortBy(rows, keys, sortValue) : rows;
   }
+
+  // The shared loading spinner over a grid or panel while it waits.
+  function busy(target, promise) { return window.CBMBusy && CBMBusy.loading && target ? CBMBusy.loading(target, promise) : promise; }
 
   function kindBadge(kind) {
     return el("span", "lv__kind lv__kind--" + kind, kind === "dynamic" ? "Dynamic" : "Static");
@@ -146,10 +146,7 @@
         : st.q ? "No list's name or notes contain \"" + st.q + "\"." : "No list matches these filters.");
       show(empty);
     } else hide(empty);
-    Array.prototype.forEach.call(document.querySelectorAll("#lv_grid th[data-sort]"), function (th) {
-      var k = th.getAttribute("data-sort");
-      th.setAttribute("aria-sort", k === st.sort.key ? (st.sort.dir > 0 ? "ascending" : "descending") : "none");
-    });
+    if (st.grid) st.grid.refresh();
     renderPreview();
   }
 
@@ -303,7 +300,7 @@
     body.appendChild(section("Details", dl));
     box.appendChild(body);
     try {
-      var d = await detailOf(l.id);
+      var d = await busy(body, detailOf(l.id));
       if (seq !== st.previewSeq) return;
       who.replaceWith(sentencesBlock(d.detail));
       used.replaceWith(usedBlock(d.usedBy));
@@ -411,7 +408,7 @@
   async function openEdit(id, force) {
     if (!force && !(await leaveEdit())) return;
     try {
-      var d = await api("/lists/" + enc(id));
+      var d = await busy($("lv_root"), api("/lists/" + enc(id)));
       st.details[id] = null;
       st.edit = {
         id: id, detail: d, recipe: JSON.parse(JSON.stringify(d.list.recipe || { include: [], exclude: [] })),
@@ -721,7 +718,7 @@
     var seq = ++e.liveSeq;
     e.live = { counting: true }; renderLive();
     try {
-      var res = await api("/lists/preview", { method: "POST", body: { recipe: e.recipe, listId: e.id }, timeoutMs: 300000 });
+      var res = await busy($("lv_eDiff"), api("/lists/preview", { method: "POST", body: { recipe: e.recipe, listId: e.id }, timeoutMs: 300000 }));
       if (st.edit !== e || seq !== e.liveSeq) return;
       e.counts = {};
       (res.groups || []).forEach(function (g) { e.counts[g.side + g.group] = g; });
@@ -753,6 +750,7 @@
     t.appendChild(tb);
     var scroll = el("div", "lv__difflist"); scroll.appendChild(t);
     body.appendChild(scroll);
+    if (window.CBMGrid) CBMGrid.enhance(t, { key: "lists.diff" });
     var more = (diff.comesOn - diff.comingOn.length) + (diff.dropsOff - diff.droppingOff.length);
     if (more > 0) body.appendChild(el("p", "lv__muted lv__small", "… and " + plural(more, "more person", "more people") + " not named here."));
   }
@@ -883,9 +881,10 @@
 
   async function loadEditMembers() {
     var e = st.edit, m = e.mem;
-    var qs = "?offset=" + m.offset + "&limit=" + m.limit + (m.q ? "&q=" + enc(m.q) : "");
+    var sort = st.memGrid ? st.memGrid.sortParam() : "";
+    var qs = "?offset=" + m.offset + "&limit=" + m.limit + (m.q ? "&q=" + enc(m.q) : "") + (sort ? "&sort=" + enc(sort) : "");
     try {
-      var res = await api("/lists/" + enc(e.id) + "/members" + qs);
+      var res = await busy($("lv_eMembers"), api("/lists/" + enc(e.id) + "/members" + qs));
       if (st.edit !== e) return;
       m.total = res.total; m.rows = res.members || [];
       renderEditMembers();
@@ -1031,7 +1030,7 @@
       var q = $("lv_dQ").value.trim();
       if (q.length < 2) return;
       try {
-        var res = await api("/lists/search/records?type=" + enc(e.drawer.type) + "&q=" + enc(q) + "&listId=" + enc(e.id));
+        var res = await busy($("lv_dRows"), api("/lists/search/records?type=" + enc(e.drawer.type) + "&q=" + enc(q) + "&listId=" + enc(e.id)));
         if (st.edit !== e) return;
         e.drawer.found = res.records || [];
         e.drawer.keys = e.drawer.found.filter(function (r) { return !r.onList; }).map(function (r) { return r.key; });
@@ -1045,7 +1044,7 @@
   async function findByConditions() {
     var e = st.edit;
     try {
-      var res = await api("/lists/" + enc(e.id) + "/find", { method: "POST", body: { group: e.drawer.find }, timeoutMs: 180000 });
+      var res = await busy($("lv_dRows"), api("/lists/" + enc(e.id) + "/find", { method: "POST", body: { group: e.drawer.find }, timeoutMs: 180000 }));
       e.drawer.found = res.records || [];
       e.drawer.keys = res.keys || [];
       e.drawer.ticked = {}; $("lv_dAll").checked = false;
@@ -1125,16 +1124,21 @@
   toggleChip("lv_retiredChip", "retired");
   $("lv_previewSwitch").addEventListener("click", function () { setPreview(!st.preview); });
   $("lv_newBtn").addEventListener("click", newList);
-  Array.prototype.forEach.call(document.querySelectorAll("#lv_grid th[data-sort]"), function (th) {
-    th.tabIndex = 0;
-    function sortBy() {
-      var k = th.getAttribute("data-sort");
-      if (st.sort.key === k) st.sort.dir = -st.sort.dir; else { st.sort.key = k; st.sort.dir = k === "name" || k === "kind" ? 1 : -1; }
-      renderIndex();
-    }
-    th.addEventListener("click", sortBy);
-    th.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); sortBy(); } });
-  });
+  // The shared grid (frontend/shared/grid.js): resizable columns, the
+  // stripe, multi-column sorting done here in the browser; and the divider
+  // between the grid and Preview (frontend/shared/splitpane.js).
+  if (window.CBMGrid) {
+    st.grid = CBMGrid.enhance($("lv_grid"), {
+      key: "lists.index", sort: [{ col: "name", dir: "asc" }],
+      onSort: function (keys) { st.sortKeys = keys; renderIndex(); }
+    });
+    st.sortKeys = st.grid.keys();
+    st.memGrid = CBMGrid.enhance($("lv_eMemGrid"), {
+      key: "lists.editMembers",
+      onSort: function () { if (st.edit) { st.edit.mem.offset = 0; loadEditMembers(); } }
+    });
+  }
+  if (window.CBMSplit) CBMSplit.attach($("lv_listbox"), $("lv_preview"), { key: "lists.preview", initial: 440, min: 300, max: 900 });
   $("lv_rows").addEventListener("keydown", onGridKey);
   document.addEventListener("keydown", onPageKey);
 

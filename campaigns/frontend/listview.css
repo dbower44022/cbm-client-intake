@@ -42,9 +42,6 @@
 .lv__grid { width: 100%; border-collapse: collapse; font-size: .92rem; }
 .lv__grid th { text-align: left; font-weight: 600; font-size: .82rem; color: #374151; padding: .6rem .75rem; background: #F7F9FB;
   border-bottom: 1px solid var(--lv-line); white-space: nowrap; }
-.lv__grid th[data-sort] { cursor: pointer; user-select: none; }
-.lv__grid th[aria-sort="ascending"]::after { content: " ▲"; color: var(--lv-muted); }
-.lv__grid th[aria-sort="descending"]::after { content: " ▼"; color: var(--lv-muted); }
 .lv__grid td { padding: .65rem .75rem; border-bottom: 1px solid var(--lv-soft); vertical-align: top; }
 #lv_rows tr { cursor: pointer; }
 #lv_rows tr:hover td { background: #F7FAFD; }
@@ -145,7 +142,7 @@
 .lv__cardhead h3 { margin: 0 !important; }
 .lv__smallsearch { font: inherit; border: 1px solid #C3CDD8; border-radius: 6px; padding: .4rem .6rem; flex: 0 1 16rem; min-width: 0; }
 .lv__bulk { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; background: #FFF7E8; border: 1px solid #EBD3A6; border-radius: 8px; padding: .45rem .75rem; margin-bottom: .6rem; }
-.lv__grid--members tr.is-ticked td { background: #FFFBF2; }
+.lv__grid--members tbody tr.is-ticked > td { background: #FFFBF2; }
 .lv__yes { color: var(--lv-ok); font-weight: 600; }
 .lv__no { color: #9CA3AF; }
 .lv__pager { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: .6rem; font-size: .88rem; color: var(--lv-muted); }

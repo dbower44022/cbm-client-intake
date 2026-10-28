@@ -15,6 +15,8 @@
   <link rel="stylesheet" href="/shared/compose.css" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="lists.css" />
+  <link rel="stylesheet" href="/shared/grid.css" />
+  <link rel="stylesheet" href="/shared/splitpane.css" />
   <link rel="stylesheet" href="listview.css" />
   <!-- busy.js must load FIRST: it wraps fetch/XHR to give every button press
        immediate feedback (product-wide convention). -->
@@ -147,17 +149,17 @@
             <button type="button" class="cbm-button" id="lv_newBtn">+ New list</button>
           </div>
           <div class="lv__body">
-            <section class="lv__listbox" aria-label="Lists">
+            <section class="lv__listbox" id="lv_listbox" aria-label="Lists">
               <div class="lv__tablebox">
                 <table class="lv__grid" id="lv_grid">
                   <thead><tr>
-                    <th data-sort="name" aria-sort="ascending">Name</th>
-                    <th data-sort="kind">Type</th>
-                    <th data-sort="members" class="lv__num">Members</th>
-                    <th data-sort="lastUsed">Last used</th>
-                    <th data-sort="updatedAt">Updated</th>
-                    <th data-sort="cc" id="lv_ccHead">Constant Contact</th>
-                    <th>Notes</th>
+                    <th data-col="name">Name</th>
+                    <th data-col="kind">Type</th>
+                    <th data-col="members" class="lv__num">Members</th>
+                    <th data-col="lastUsed">Last used</th>
+                    <th data-col="updatedAt">Updated</th>
+                    <th data-col="cc" id="lv_ccHead">Constant Contact</th>
+                    <th data-col="notes">Notes</th>
                   </tr></thead>
                   <tbody id="lv_rows"></tbody>
                 </table>
@@ -231,8 +233,8 @@
                   <button type="button" class="cm__rowbtn" id="lv_clearBtn">Clear</button>
                 </div>
                 <div class="lv__tablebox">
-                  <table class="lv__grid lv__grid--members">
-                    <thead><tr><th><input type="checkbox" id="lv_eAll" aria-label="Select every member on this page" /></th><th>Name</th><th>Type</th><th>Email</th><th>Text</th><th>Post</th></tr></thead>
+                  <table class="lv__grid lv__grid--members" id="lv_eMemGrid">
+                    <thead><tr><th data-col="tick" data-sortable="false" data-label="Select"><input type="checkbox" id="lv_eAll" aria-label="Select every member on this page" /></th><th data-col="name">Name</th><th data-col="type">Type</th><th data-col="reachEmail" data-label="Email">Email</th><th data-col="reachText" data-label="Text">Text</th><th data-col="reachPostcard" data-label="Post">Post</th></tr></thead>
                     <tbody id="lv_eMemRows"></tbody>
                   </table>
                 </div>
@@ -869,6 +871,8 @@
   <script src="app.js"></script>
   <!-- The Lists and Calls tabs keep their own scripts; both load after app.js
        and reach the page through window.CBMMarketing. -->
+  <script src="/shared/grid.js"></script>
+  <script src="/shared/splitpane.js"></script>
   <script src="listview.js"></script>
   <script src="lists.js"></script>
   <script src="calls.js"></script>

@@ -6,6 +6,20 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+60. **The shared grid rollout — one application per release** (2026-10-27).
+    Doug's ruling 10-27-26: every grid has resizable columns, alternating
+    rows and multi-column sorting, a preview pane has a divider, and a
+    spinner shows while anything loads; option B — built once, Lists first
+    (v0.294.0), then each application. Plan: `prds/shared-grid-plan.md`.
+    The spinners in `busy.js` already reach every page. **Owed, one release
+    each:** Client Administration; Mentor Administration; Client, Partner and
+    Funder Management (one shared frontend); Submission Admin; the
+    Workspace Directories; My Email; Event Administration; System Settings;
+    the rest of Marketing Management (Leads, Campaigns, Review, Calls,
+    Imports). A server-paged grid also needs its route to take a `sort`
+    list; each release names the columns its server can sort and marks the
+    rest `data-sortable="false"`.
+
 59. **The postcard landing page misreads a printed address whose first line
     is not the street, and saves the misreading** (found in the D1 live
     pass, 10-25-26). `campaigns/service.parse_address_text` takes line 1 as

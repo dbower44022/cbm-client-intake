@@ -274,3 +274,51 @@ def test_the_screens_never_disable_a_button_and_open_view_in_a_named_tab():
     assert 'return "cbm-list-" + id;' in view and "window.open(viewUrl(id), viewTab(id))" in view
     # Preview remembers its switch per browser, and survives a blocked store.
     assert "localStorage.getItem(PREVIEW_KEY)" in view and "try { st.preview" in view
+
+
+# --- the shared grid on the Lists screens (prds/shared-grid-plan.md, stop 2) ---------
+
+def test_members_sort_on_several_keys_on_the_server(monkeypatch):
+    crm = ListCrm()
+    a = _lead(crm, "Bakery", industry="Manufacturing")
+    b = _lead(crm, "Acme", industry="Retail Trade")
+    c = _lead(crm, "Cobbler", industry="Manufacturing")
+    client = _client(monkeypatch, crm, Both())
+    lid = _new(client, "Two groups", "dynamic", include=[
+        match("lead", ("industry", "in", ["Manufacturing"])), match("lead", ("industry", "in", ["Retail Trade"]))])
+    client.post(f"{API}/{lid}/run")
+    by_group_then_name_desc = client.get(f"{API}/{lid}/members?sort=broughtInBy:asc,name:desc").json()["members"]
+    assert [m["id"] for m in by_group_then_name_desc] == [c["id"], a["id"], b["id"]]
+    by_name = client.get(f"{API}/{lid}/members?sort=name").json()["members"]
+    assert [m["id"] for m in by_name] == [b["id"], a["id"], c["id"]], "the old single-column form still works"
+    refused = client.get(f"{API}/{lid}/members?sort=city:asc")
+    assert refused.status_code == 400 and "cannot be sorted" in refused.json()["detail"]
+
+
+def test_members_sort_reachable_first_and_uncounted_last(monkeypatch):
+    crm = ListCrm()
+    everywhere, card_only, nobody = _people(crm)
+    keys = [f"contact:{nobody['id']}", f"lead:{card_only['id']}", f"contact:{everywhere['id']}"]
+    client = _client(monkeypatch, crm, Both())
+    sid = _new(client, "Picked", "static")
+    client.post(f"{API}/{sid}/add-people", json={"keys": keys})
+    client.post(f"{API}/{sid}/refresh")
+    email_first = [m["key"] for m in client.get(f"{API}/{sid}/members?sort=reachEmail:asc,name:asc").json()["members"]]
+    assert email_first[0] == f"contact:{everywhere['id']}"
+    email_last = [m["key"] for m in client.get(f"{API}/{sid}/members?sort=reachEmail:desc").json()["members"]]
+    assert email_last[-1] == f"contact:{everywhere['id']}"
+
+
+def test_the_lists_screens_load_the_shared_grid_divider_and_spinner():
+    index = (FRONTEND / "index.html").read_text()
+    members = (FRONTEND / "list-members.html").read_text()
+    for html in (index, members):
+        assert '<script src="/shared/grid.js"></script>' in html and 'href="/shared/grid.css"' in html
+        assert html.index("/shared/busy.js") < html.index("/shared/grid.js")
+    assert '<script src="/shared/splitpane.js"></script>' in index and 'href="/shared/splitpane.css"' in index
+    view = (FRONTEND / "listview.js").read_text()
+    assert 'CBMGrid.enhance($("lv_grid")' in view and 'CBMGrid.enhance($("lv_eMemGrid")' in view
+    assert 'CBMSplit.attach($("lv_listbox"), $("lv_preview")' in view
+    assert "CBMBusy.loading(target, promise)" in view
+    lm = (FRONTEND / "list-members.js").read_text()
+    assert 'CBMGrid.enhance($("lm_grid")' in lm and "CBMBusy.loading($(\"lm_gridbox\")" in lm
