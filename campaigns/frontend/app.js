@@ -1341,20 +1341,24 @@
   });
 
   // --- the Recipients tab (lists only): who the campaign reached ----------------------------
-  var rc = { offset: 0, limit: 50, timer: null };
+  var rc = { offset: 0, limit: 50, timer: null, grid: null };
   function rcQuery(extra) {
     var q = "q=" + encodeURIComponent($("rcSearch").value || "") + "&status=" + encodeURIComponent($("rcStatus").value || "");
+    if (rc.grid && rc.grid.sortParam()) q += "&sort=" + encodeURIComponent(rc.grid.sortParam());
     return q + (extra || "");
   }
   async function loadRecipients() {
     var c = state.record && state.record.campaign; if (!c) return;
+    // The shared grid, sorted by the server on several columns (§ 8).
+    if (!rc.grid && window.CBMGrid) rc.grid = CBMGrid.enhance($("rcGrid"), { key: "marketing.recipients",
+      onSort: function () { rc.offset = 0; loadRecipients(); } });
     var isEmail = c.campaignKind === "Email";
     $("rcReadBtn").hidden = !isEmail;
     text($("rcHint"), isEmail
       ? "Each person the email went to, from Constant Contact's report: delivered or bounced, opens and clicks. The report is read every night for 30 days after the email is picked; Read the report now reads it at once."
       : "Each person on the campaign's list as built, and what happened to each.");
     try {
-      var res = await api("/campaigns/" + encodeURIComponent(c.id) + "/recipients?" + rcQuery("&offset=" + rc.offset + "&limit=" + rc.limit));
+      var res = await busyOver("rcGrid", api("/campaigns/" + encodeURIComponent(c.id) + "/recipients?" + rcQuery("&offset=" + rc.offset + "&limit=" + rc.limit)));
       var sel = $("rcStatus"), keep = sel.value;
       sel.innerHTML = ""; var all = el("option", null, "All"); all.value = ""; sel.appendChild(all);
       Object.keys(res.statusCounts || {}).sort().forEach(function (k) { var o = el("option", null, k + " (" + res.statusCounts[k] + ")"); o.value = k; sel.appendChild(o); });
@@ -1440,8 +1444,8 @@
   // The filters the ladder folds behind "More filters" (build plan § 7e.4).
   var MORE_FILTERS = ["status", "exit", "from", "to", "camp", "gate", "fit"];
   var grids = {
-    pf: { section: "prospects", review: false, offset: 0, limit: 50, total: 0, rows: [], sort: "createdAt", dir: "desc", selected: {}, all: null },
-    rf: { section: "review", review: true, mode: "judge", offset: 0, limit: 50, total: 0, rows: [], sort: "createdAt", dir: "asc", selected: {}, all: null },
+    pf: { section: "prospects", review: false, offset: 0, limit: 50, total: 0, rows: [], sort: "createdAt:desc", dir: "", selected: {}, all: null, table: "prospectGrid", grid: null },
+    rf: { section: "review", review: true, mode: "judge", offset: 0, limit: 50, total: 0, rows: [], sort: "createdAt:asc", dir: "", selected: {}, all: null, table: "reviewGrid", grid: null },
   };
   var REVIEW_MODES = ["judge", "contacts"];
 
@@ -1450,8 +1454,29 @@
     GRID_FILTERS.forEach(function (f) { var e = $(px + "_" + f); if (e && e.value.trim()) out[GRID_PARAM[f]] = e.value.trim(); });
     // The Review tab's mode rides the address like a filter (#review?mode=contacts).
     if (g.review && g.mode && g.mode !== "judge") out.mode = g.mode;
-    out.sort = g.sort; out.dir = g.dir;
+    out.sort = g.sort; if (g.dir) out.dir = g.dir;
     return out;
+  }
+
+  // The shared grid on Leads and Review (prds/shared-grid-plan.md § 8): the
+  // server sorts, on several columns where the CRM has its sorted-list
+  // endpoint, else on the first.
+  function sortKeys(sort, dir) {
+    var raw = String(sort || "");
+    if (raw.indexOf(":") < 0 && raw.indexOf(",") < 0) return raw ? [{ col: raw, dir: dir === "asc" ? "asc" : "desc" }] : [];
+    return raw.split(",").filter(Boolean).map(function (p) { var kv = p.split(":"); return { col: kv[0], dir: kv[1] === "desc" ? "desc" : "asc" }; });
+  }
+  function leadGridOn(px) {
+    var g = grids[px];
+    var ths = document.querySelectorAll("#" + g.table + " thead th");
+    if (!window.CBMGrid) return;
+    if (!g.grid) {
+      g.grid = CBMGrid.enhance($(g.table), { key: "marketing." + g.section, onSort: function (keys) {
+        g.sort = CBMGrid.sortParam(keys) || (g.review ? "createdAt:asc" : "createdAt:desc"); g.dir = ""; g.offset = 0; loadGrid(px);
+      } });
+    } else g.grid.refresh();
+    g.grid.setSort(sortKeys(g.sort, g.dir), true);
+    return ths;
   }
   function qs(obj) { return Object.keys(obj).filter(function (k) { return obj[k] !== "" && obj[k] != null; }).map(function (k) { return encodeURIComponent(k) + "=" + encodeURIComponent(obj[k]); }).join("&"); }
 
@@ -1465,8 +1490,7 @@
     var g = grids[px];
     GRID_FILTERS.forEach(function (f) { var e = $(px + "_" + f); if (e && params[GRID_PARAM[f]] != null) e.value = params[GRID_PARAM[f]]; });
     if (g.review) g.mode = REVIEW_MODES.indexOf(params.mode) >= 0 ? params.mode : "judge";
-    if (params.sort) g.sort = params.sort;
-    if (params.dir) g.dir = params.dir;
+    if (params.sort) { g.sort = params.sort; g.dir = params.dir || ""; }
     g.offset = Math.max(0, parseInt(params.offset || "0", 10) || 0);
   }
   function hashParams() {
@@ -1482,8 +1506,15 @@
     var q = gridQuery(px); q.offset = g.offset; q.limit = g.limit; if (g.review) q.review = 1;
     writeHash(px);
     try {
-      var res = await api("/prospects?" + qs(q));
+      var res = await busyOver(g.table, api("/prospects?" + qs(q)));
       g.rows = res.prospects || []; g.total = res.total || 0;
+      // A CRM without the sorted-list endpoint sorted by the first column only:
+      // say so once, and show the sort that was used.
+      if (res.multiSort === false && res.sort) {
+        if (!g.toldOneColumn) { notice("This CRM sorts leads by one column at a time, so only the first column you chose was used.", "warn"); g.toldOneColumn = true; }
+        g.sort = res.sort; g.dir = ""; writeHash(px);
+        if (g.grid) g.grid.setSort(sortKeys(g.sort, ""), true);
+      }
       // Lead enrichment's fit columns and filters: shown only when this CRM
       // carries the fit fields (the server says so on every page).
       g.fit = !!res.fit;
@@ -1601,18 +1632,13 @@
     Array.prototype.slice.call(tr.children, 1).forEach(function (c) { c.remove(); });
     (g.ladder ? LADDER_COLUMNS : CLASSIC_COLUMNS).forEach(function (c) {
       var th = el("th", c.cls || null, c.label);
-      if (c.sort) th.setAttribute("data-sort", c.sort);
+      if (c.sort) th.setAttribute("data-col", c.sort); else th.setAttribute("data-sortable", "false");
       if (c.title) th.title = c.title;
       if (c.cls === "cm__fitonly") th.hidden = !g.fit;
       tr.appendChild(th);
     });
+    leadGridOn("pf");
   }
-  $("prospectHead").addEventListener("click", function (ev) {
-    var th = ev.target.closest("th[data-sort]"); if (!th) return;
-    var g = grids.pf, key = th.getAttribute("data-sort");
-    if (g.sort === key) g.dir = g.dir === "asc" ? "desc" : "asc"; else { g.sort = key; g.dir = "asc"; }
-    g.offset = 0; loadGrid("pf");
-  });
   function openLead(id) {
     // Either grid's answer says whether this CRM has the ladder: a page opened
     // straight on the Review tab has never loaded the Leads grid (10-25-26).
@@ -1749,7 +1775,6 @@
       }
       body.appendChild(tr);
     });
-    markSort("prospectGrid", g);
   }
 
   // Assign to…: the ticked leads, or all matching, go to one
@@ -1800,20 +1825,22 @@
     contacts: "Qualified leads still at Identified, oldest first: a real business with no named person and no direct line. Look it up, type the person's first and last name and a phone or an email, and press Enter — the lead becomes Contactable, leaves this queue and the cursor moves to the next. AI research fills the boxes from what the model found; Enter accepts them. A lead given only a name stays here until a phone or an email arrives. A lead someone else has already moved is refused, naming who."
   };
   var REVIEW_COLUMNS = {
-    judge: [{ label: "Business" }, { label: "Fit", cls: "cm__fitonly" }, { label: "Person" }, { label: "City" }, { label: "Phone" }, { label: "Look it up" },
-            { label: "Website" }, { label: "Email" }, { label: "AI research", title: "Fill the boxes from the AI model's findings, or start research on this lead." }, { label: "Decide" }, { label: "Batch" }],
-    contacts: [{ label: "Business" }, { label: "Fit", cls: "cm__fitonly" }, { label: "City" }, { label: "Look it up" }, { label: "First name" }, { label: "Last name" },
-               { label: "Phone" }, { label: "Email" }, { label: "AI research", title: "Fill the boxes from the AI model's findings, or start research on this lead." }, { label: "Save" }, { label: "Batch" }]
+    judge: [{ label: "Business", sort: "name" }, { label: "Fit", cls: "cm__fitonly", sort: "fitScore" }, { label: "Person", sort: "lastName" }, { label: "City", sort: "mailingAddressCity" }, { label: "Phone" }, { label: "Look it up" },
+            { label: "Website" }, { label: "Email" }, { label: "AI research", title: "Fill the boxes from the AI model's findings, or start research on this lead." }, { label: "Decide" }, { label: "Batch", sort: "importBatch" }],
+    contacts: [{ label: "Business", sort: "name" }, { label: "Fit", cls: "cm__fitonly", sort: "fitScore" }, { label: "City", sort: "mailingAddressCity" }, { label: "Look it up" }, { label: "First name" }, { label: "Last name" },
+               { label: "Phone" }, { label: "Email" }, { label: "AI research", title: "Fill the boxes from the AI model's findings, or start research on this lead." }, { label: "Save" }, { label: "Batch", sort: "importBatch" }]
   };
   function renderReviewHead() {
     var g = grids.rf, tr = $("reviewHead").querySelector("tr");
     Array.prototype.slice.call(tr.children, 1).forEach(function (c) { c.remove(); });
     (REVIEW_COLUMNS[g.mode] || REVIEW_COLUMNS.judge).forEach(function (c) {
       var th = el("th", c.cls || null, c.label);
+      if (c.sort) th.setAttribute("data-col", c.sort); else th.setAttribute("data-sortable", "false");
       if (c.title) th.title = c.title;
       if (c.cls === "cm__fitonly") th.hidden = !g.fit;
       tr.appendChild(th);
     });
+    leadGridOn("rf");
   }
   function applyReviewLayout() {
     var g = grids.rf;

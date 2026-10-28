@@ -818,8 +818,8 @@
         </div>
         <p class="cm__hint" id="rcHint"></p>
         <table class="cm__grid" id="rcGrid">
-          <thead><tr><th>Recipient</th><th>Reached at</th><th>Status</th><th>Outcome</th><th>Sent</th><th>Returned</th>
-            <th class="num" id="rcOpensHead">Opens</th><th class="num">Clicks</th><th class="num">Scans</th></tr></thead>
+          <thead><tr><th data-col="who">Recipient</th><th data-col="reachedAt">Reached at</th><th data-col="status">Status</th><th data-col="outcome">Outcome</th><th data-col="sentAt">Sent</th><th data-col="returnedAt">Returned</th>
+            <th class="num" id="rcOpensHead" data-col="opens">Opens</th><th class="num" data-col="clicks">Clicks</th><th class="num" data-col="scans">Scans</th></tr></thead>
           <tbody id="rcRows"></tbody>
         </table>
         <p class="cm__empty" id="rcEmpty" hidden>Nobody yet. A list's people appear here when it is built; an email's, once its report is read.</p>

@@ -322,3 +322,16 @@ def test_the_lists_screens_load_the_shared_grid_divider_and_spinner():
     assert "CBMBusy.loading(target, promise)" in view
     lm = (FRONTEND / "list-members.js").read_text()
     assert 'CBMGrid.enhance($("lm_grid")' in lm and "CBMBusy.loading($(\"lm_gridbox\")" in lm
+
+
+def test_recipients_sort_on_several_columns_and_refuse_an_unknown_one():
+    from fastapi import HTTPException
+    from campaigns.router import _sort_recipients
+    rows = [{"who": "Bea", "clicks": 1}, {"who": "Al", "clicks": 3}, {"who": "Cy", "clicks": 1}, {"who": "", "clicks": 0}]
+    assert [r["who"] for r in _sort_recipients(rows, "clicks:desc,who:asc")] == ["Al", "Bea", "Cy", ""]
+    assert [r["who"] for r in _sort_recipients(rows, "")] == ["Bea", "Al", "Cy", ""]
+    try:
+        _sort_recipients(rows, "secret:asc")
+        raise AssertionError("an unknown column must be refused")
+    except HTTPException as exc:
+        assert exc.status_code == 400

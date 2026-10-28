@@ -450,3 +450,66 @@ def test_review_queue_takes_the_out_of_area_filter():
     crm = _fit_crm()
     out = run(leads.search(crm, leads.LeadQuery.from_params({"gate": "Out of area"}, review_queue=True)))
     assert [r["name"] for r in out["prospects"]] == ["B"]
+
+
+# --- several sort keys (prds/shared-grid-plan.md § 8) ----------------------------------
+
+class SortedCrm(FakeCrm):
+    """FakeCrm plus the CRM's SortedList endpoint (sorted-list-crm-handoff.md)."""
+
+    def __init__(self):
+        super().__init__()
+        self.sorted_calls: list[list] = []
+
+    async def sorted_list(self, entity, order, *, where=None, select=None, max_size=50, offset=0):
+        assert max_size <= 200
+        self.sorted_calls.append(list(order))
+        rows = [r for r in self.rows[entity].values() if all(_match(r, c) for c in (where or []))]
+        for col, d in reversed(order):
+            rows.sort(key=lambda r: str(r.get(col) or ""), reverse=d == "desc")
+        return {"list": [dict(r) for r in rows[offset:offset + max_size]]}
+
+
+def test_several_sort_keys_are_parsed_whitelisted_and_kept_in_order():
+    lq = leads.LeadQuery.from_params({"sort": "leadStatus:asc,name:desc,description:asc,leadStatus:desc"})
+    assert lq.order == [("leadStatus", "asc"), ("name", "desc")]
+    assert (lq.sort, lq.dir) == ("leadStatus", "asc")
+    assert lq.params()["sort"] == "leadStatus:asc,name:desc" and "dir" not in lq.params()
+    old = leads.LeadQuery.from_params({"sort": "name", "dir": "asc"})
+    assert old.order == [("name", "asc")] and old.params()["dir"] == "asc"
+
+
+def test_several_keys_sort_through_the_crm_endpoint_with_the_true_total():
+    crm = SortedCrm()
+    crm.lead(name="Bakery", leadStatus=cfg.LEAD_QUALIFIED)
+    crm.lead(name="Acme", leadStatus=cfg.LEAD_QUALIFIED)
+    crm.lead(name="Cobbler", leadStatus=cfg.LEAD_UNQUALIFIED)
+    out = run(leads.search(crm, leads.LeadQuery.from_params({"sort": "leadStatus:asc,name:desc", "limit": "2"})))
+    assert [p["name"] for p in out["prospects"]] == ["Bakery", "Acme"]
+    assert out["total"] == 3 and out["multiSort"] is True and out["sort"] == "leadStatus:asc,name:desc"
+    assert crm.sorted_calls == [[("leadStatus", "asc"), ("name", "desc")]]
+
+
+def test_a_crm_without_the_endpoint_sorts_by_the_first_key_and_says_so():
+    class NoEndpoint(SortedCrm):
+        async def sorted_list(self, *a, **kw):
+            return None
+    crm = NoEndpoint()
+    crm.lead(name="B", leadStatus=cfg.LEAD_QUALIFIED)
+    crm.lead(name="A", leadStatus=cfg.LEAD_UNQUALIFIED)
+    out = run(leads.search(crm, leads.LeadQuery.from_params({"sort": "leadStatus:desc,name:asc"})))
+    assert out["multiSort"] is False and out["sort"] == "leadStatus:desc"
+    assert [p["leadStatus"] for p in out["prospects"]] == [cfg.LEAD_UNQUALIFIED, cfg.LEAD_QUALIFIED]
+
+
+def test_one_key_never_calls_the_endpoint():
+    crm = SortedCrm()
+    crm.lead(name="A")
+    out = run(leads.search(crm, leads.LeadQuery.from_params({"sort": "name", "dir": "asc"})))
+    assert crm.sorted_calls == [] and out["multiSort"] is True
+
+
+def test_rows_sort_on_several_keys_with_empty_values_last():
+    rows = [{"a": "x", "b": "2"}, {"a": "", "b": "1"}, {"a": "x", "b": "1"}, {"a": "w", "b": None}]
+    assert leads.sort_rows(rows, [("a", "asc"), ("b", "desc")]) == [
+        {"a": "w", "b": None}, {"a": "x", "b": "2"}, {"a": "x", "b": "1"}, {"a": "", "b": "1"}]

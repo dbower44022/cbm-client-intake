@@ -2270,14 +2270,36 @@ def _match(r: dict[str, Any], q: str, status: str) -> bool:
     return not q or q in f"{r['who']} {r['reachedAt']}".lower()
 
 
+#: The Recipients columns a sort list may name (prds/shared-grid-plan.md § 8).
+RECIPIENT_SORT = ("who", "reachedAt", "status", "outcome", "sentAt", "returnedAt", "opens", "clicks", "scans")
+
+
+def _sort_recipients(rows: list[dict[str, Any]], sort: str) -> list[dict[str, Any]]:
+    """``who:asc,clicks:desc``: several keys, empty values last either way.
+    An unknown column is refused in words."""
+    keys = []
+    for piece in [p for p in (sort or "").split(",") if p.strip()]:
+        col, _, d = piece.strip().partition(":")
+        if col not in RECIPIENT_SORT:
+            raise HTTPException(status_code=400, detail=f"Recipients cannot be sorted by \"{col}\".")
+        keys.append((col, d.strip() == "desc"))
+    for col, desc in reversed(keys[:6]):
+        filled = [r for r in rows if r.get(col) not in (None, "")]
+        empty = [r for r in rows if r.get(col) in (None, "")]
+        filled.sort(key=lambda r: r[col] if isinstance(r[col], (int, float)) else str(r[col]).lower(), reverse=desc)
+        rows = filled + empty
+    return rows
+
+
 @api_router.get("/campaigns/{campaign_id}/recipients")
 async def recipients(campaign_id: str, request: Request, q: str = "", status: str = "",
-                     offset: int = 0, limit: int = 50) -> dict[str, Any]:
+                     offset: int = 0, limit: int = 50, sort: str = "") -> dict[str, Any]:
     """The campaign's touches as recipients: paged, searchable by name or
-    address, filtered by status (ruling 96's Recipients view)."""
+    address, filtered by status (ruling 96's Recipients view), sorted on
+    several columns (``sort=who:asc,clicks:desc``)."""
     rows, opens = await _recipients(request, campaign_id)
     q = q.strip().lower()
-    found = [r for r in rows if _match(r, q, status)]
+    found = _sort_recipients([r for r in rows if _match(r, q, status)], sort)
     counts: dict[str, int] = {}
     for r in rows:
         counts[r["status"]] = counts.get(r["status"], 0) + 1

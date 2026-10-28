@@ -124,6 +124,9 @@ class LeadQuery:
     mode: str = ""             # the Review queue's mode (judge / contacts), else ""
     sort: str = "createdAt"
     dir: str = "desc"
+    #: Every sort key, first is ``sort``/``dir`` (prds/shared-grid-plan.md § 8):
+    #: several columns sort through the CRM's SortedList endpoint.
+    order: list = field(default_factory=list)
     offset: int = 0
     limit: int = PAGE
     errors: list[str] = field(default_factory=list)
@@ -162,10 +165,8 @@ class LeadQuery:
                 lq.status, lq.exit = cfg.LEAD_UNQUALIFIED, "none"
             else:
                 lq.errors.append("Unknown review mode: choose judge or contacts.")
-        if lq.sort not in SORT_FIELDS:
-            lq.sort = "createdAt"
-        if lq.dir not in ("asc", "desc"):
-            lq.dir = "desc"
+        lq.order = parse_order(g("sort"), lq.dir)
+        lq.sort, lq.dir = lq.order[0]
         for label, value in (("From", lq.arrived_from), ("To", lq.arrived_to)):
             if value and not _DATE.match(value):
                 lq.errors.append(f"{label} date must be a date (YYYY-MM-DD).")
@@ -187,14 +188,16 @@ class LeadQuery:
     def without_fit(self) -> None:
         """Drop the fit filters and sort, for a CRM without the fit fields."""
         self.gate, self.min_fit = "", None
-        if self.sort == "fitScore":
-            self.sort = "createdAt"
+        self._drop_sort({"fitScore"})
 
     def without_ladder(self) -> None:
         """Drop the ladder's filters and sort, for a CRM without its fields."""
         self.level, self.assigned, self.replied = "", "", ""
-        if self.sort in LADDER_SORT_FIELDS:
-            self.sort = "createdAt"
+        self._drop_sort(LADDER_SORT_FIELDS)
+
+    def _drop_sort(self, fields) -> None:
+        self.order = [k for k in (self.order or [(self.sort, self.dir)]) if k[0] not in fields] or [("createdAt", "desc")]
+        self.sort, self.dir = self.order[0]
 
     def params(self) -> dict[str, str]:
         """The query as request parameters (for a bulk resolve sent back)."""
@@ -203,8 +206,45 @@ class LeadQuery:
                "arrivedTo": self.arrived_to, "inCampaign": self.in_campaign,
                "gate": self.gate, "minFit": "" if self.min_fit is None else str(self.min_fit),
                "level": self.level, "assigned": self.assigned, "replied": self.replied,
-               "mode": self.mode, "sort": self.sort, "dir": self.dir}
+               "mode": self.mode, "sort": sort_param(self.order) if len(self.order) > 1 else self.sort,
+               "dir": "" if len(self.order) > 1 else self.dir}
         return {k: v for k, v in out.items() if v}
+
+
+#: At most this many sort keys (the CRM endpoint's own limit).
+SORT_KEYS_MAX = 6
+
+
+def parse_order(raw: str, default_dir: str = "desc") -> list[tuple[str, str]]:
+    """``name:asc,leadStatus:desc`` (several keys), or one column with
+    ``default_dir`` as the old grids send it. Columns outside ``SORT_FIELDS``
+    are dropped; nothing left is the newest first."""
+    raw = (raw or "").strip()
+    default_dir = default_dir if default_dir in ("asc", "desc") else "desc"
+    pieces = raw.split(",") if (":" in raw or "," in raw) else ([f"{raw}:{default_dir}"] if raw else [])
+    out: list[tuple[str, str]] = []
+    for piece in pieces:
+        col, _, d = piece.strip().partition(":")
+        col = col.strip()
+        if col in SORT_FIELDS and col not in [c for c, _ in out]:
+            out.append((col, "desc" if d.strip() == "desc" else "asc"))
+    return out[:SORT_KEYS_MAX] or [("createdAt", default_dir)]
+
+
+def sort_param(order: list[tuple[str, str]]) -> str:
+    return ",".join(f"{c}:{d}" for c, d in order)
+
+
+def sort_rows(rows: list[dict[str, Any]], order: list[tuple[str, str]]) -> list[dict[str, Any]]:
+    """Rows sorted like the CRM would on several keys, empty values last in
+    either direction."""
+    rows = list(rows)
+    for col, d in reversed(order):
+        filled = [r for r in rows if r.get(col) not in (None, "")]
+        empty = [r for r in rows if r.get(col) in (None, "")]
+        filled.sort(key=lambda r: str(r.get(col)).lower(), reverse=d == "desc")
+        rows = filled + empty
+    return rows
 
 
 def _search_clause(q: str) -> Optional[dict[str, Any]]:
@@ -330,10 +370,7 @@ async def _campaign_rows(client: EspoApi, lq: LeadQuery, *, select: str) -> list
                                  where=base + [{"type": "in", "attribute": "id", "value": chunk}])
         rows.extend(page.get("list", []))
     # Sorted like the CRM would, with empty values last in either direction.
-    filled = [r for r in rows if r.get(lq.sort) not in (None, "")]
-    empty = [r for r in rows if r.get(lq.sort) in (None, "")]
-    filled.sort(key=lambda r: str(r.get(lq.sort)).lower(), reverse=lq.dir == "desc")
-    return filled + empty
+    return sort_rows(rows, lq.order or [(lq.sort, lq.dir)])
 
 
 async def search(client: EspoApi, lq: LeadQuery) -> dict[str, Any]:
@@ -351,15 +388,29 @@ async def search(client: EspoApi, lq: LeadQuery) -> dict[str, Any]:
     if _is_campaign(lq):
         rows = await _campaign_rows(client, lq, select=select)
         return {"prospects": rows[lq.offset:lq.offset + lq.limit], "total": len(rows),
-                "offset": lq.offset, "limit": lq.limit, "fit": fit, "ladder": has_ladder}
-    page = await client.list(cfg.PROSPECT, select=select, where=build_where(lq) or None,
-                             max_size=lq.limit, offset=lq.offset, order_by=lq.sort, order=lq.dir)
-    rows = page.get("list", [])
-    total = page.get("total")
+                "offset": lq.offset, "limit": lq.limit, "fit": fit, "ladder": has_ladder,
+                "multiSort": True, "sort": sort_param(lq.order)}
+    where = build_where(lq) or None
+    # Several sort keys go through the CRM's SortedList endpoint; a CRM
+    # without it sorts by the first key (prds/shared-grid-plan.md § 8).
+    multi = len(lq.order) > 1 and hasattr(client, "sorted_list")
+    sorted_page = None
+    if multi:
+        sorted_page = await client.sorted_list(cfg.PROSPECT, lq.order, where=where, select=select,
+                                               max_size=lq.limit, offset=lq.offset)
+    if sorted_page is not None:
+        rows = sorted_page.get("list", [])
+        total = (await client.list(cfg.PROSPECT, select="id", where=where, max_size=1)).get("total")
+    else:
+        page = await client.list(cfg.PROSPECT, select=select, where=where,
+                                 max_size=lq.limit, offset=lq.offset, order_by=lq.sort, order=lq.dir)
+        rows = page.get("list", [])
+        total = page.get("total")
     if not isinstance(total, int) or total < 0:
         total = lq.offset + len(rows)
     return {"prospects": rows, "total": total, "offset": lq.offset, "limit": lq.limit, "fit": fit,
-            "ladder": has_ladder}
+            "ladder": has_ladder, "multiSort": sorted_page is not None or len(lq.order) == 1,
+            "sort": sort_param(lq.order if sorted_page is not None else lq.order[:1])}
 
 
 def _count_queries(lq: LeadQuery, me: str = "") -> dict[str, LeadQuery]:

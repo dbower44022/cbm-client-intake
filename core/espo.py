@@ -28,6 +28,10 @@ import httpx
 log = logging.getLogger("cbm_intake.espo")
 
 
+#: Whether each CRM has the SortedList endpoint: base URL -> (seen, when).
+_SORTED_LIST_SEEN: dict[str, tuple[bool, float]] = {}
+
+
 def _encode_where_clause(prefix: str, clause: dict[str, Any]) -> list[tuple[str, str]]:
     """Serialize one EspoCRM ``where`` clause into bracketed query params.
 
@@ -604,6 +608,47 @@ class EspoClient:
             raise EspoError(
                 f"list {entity} failed: {http_error_detail(resp)}"
             )
+        return resp.json()
+
+    async def sorted_list(
+        self,
+        entity: str,
+        order: list[tuple[str, str]],
+        *,
+        where: Optional[list[dict[str, Any]]] = None,
+        select: Optional[str] = None,
+        max_size: int = 50,
+        offset: int = 0,
+    ) -> Optional[dict[str, Any]]:
+        """A page sorted on several columns, through the CRM's own
+        ``SortedList`` endpoint (sorted-list-crm-handoff.md). Returns
+        ``{"list": [...]}`` — no total — or None when this CRM does not have
+        the endpoint (remembered per CRM for ten minutes). Raises EspoError on
+        any other refusal."""
+        import time as _time
+
+        known = _SORTED_LIST_SEEN.get(self._base)
+        if known is not None and known[0] is False and _time.monotonic() - known[1] < 600:
+            return None
+        params: list[tuple[str, str]] = [
+            ("maxSize", str(max_size)),
+            ("orderList", ",".join(f"{c}:{'desc' if d == 'desc' else 'asc'}" for c, d in order)),
+        ]
+        if offset:
+            params.append(("offset", str(offset)))
+        if select:
+            params.append(("select", select))
+        for i, clause in enumerate(where or []):
+            params.extend(_encode_where_clause(f"where[{i}]", clause))
+        resp = await self._request(
+            "GET", f"{self._base}/SortedList/{entity}", op=f"sorted list {entity}", params=params
+        )
+        if resp.status_code == 404:
+            _SORTED_LIST_SEEN[self._base] = (False, _time.monotonic())
+            return None
+        if resp.status_code >= 400:
+            raise EspoError(f"sorted list {entity} failed: {http_error_detail(resp)}")
+        _SORTED_LIST_SEEN[self._base] = (True, _time.monotonic())
         return resp.json()
 
     async def list_related(
