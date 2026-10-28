@@ -1,6 +1,6 @@
 # CRM handoff — partner and funder associations: `CPartnerAssociation`
 
-Last Updated: 10-28-26 02:10 · Revision 0.1 — see change log at the end.
+Last Updated: 10-28-26 02:14 · Revision 0.2 — see change log at the end.
 
 One new record type, one record per tie between a partner or funder and a
 business (or a person or lead with no business yet), and one new link on event
@@ -15,7 +15,7 @@ the entity and the new link, and writes nothing until both exist.
 
 | CRM | State | Evidence |
 |---|---|---|
-| crm-test | **Not applied.** Dry run 10-28-26: every name free, fingerprint `8dd9d9264170`. | The applier's dry run. |
+| crm-test | **Done 10-28-26** by Doug: `scripts/partner_association_crm_test.sh plan` created and read back the entity, both fields and all eight links; `… roles` set and read back the five grants and rebuilt (HTTP 200). Claude then read it with the org-wide key: `CPartnerAssociation` lists (200, total 0), the seven links present, neither field Read-only, `registrationCompany` → Account. The non-admin check rides the live pass. | The applier's and the role script's output; the key read. |
 | Production | **Not applied.** At a Sunday 17:00 UTC slot, after crm-test's live pass. | — |
 | Boston | **Owed** with its release. | — |
 
@@ -99,4 +99,5 @@ Claude writes the step page when the slot is booked. Boston:
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.2 | 10-28-26 02:14 | Claude (Claude Code) | Applied on crm-test by Doug; verified with the org-wide key. |
 | 0.1 | 10-28-26 02:10 | Claude (Claude Code) | Created; dry run on crm-test clean. |
