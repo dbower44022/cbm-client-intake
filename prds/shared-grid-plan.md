@@ -1,0 +1,134 @@
+# Shared grid, divider and loading spinner — plan
+
+Last Updated: 10-27-26 21:41 · Revision 0.1 — change log at the end.
+
+**Status: drafted for Doug's approval.** Nothing is built.
+
+## 1. The ruling
+
+Doug, 10-27-26 21:30, word for word: "All grids must have resizable
+columns, alternating colored rows, multi-column sorting, a divider bar to
+resize the preview pane, and Should always show a spinning icon while
+another page or function is loading."
+
+Doug, 10-27-26 21:41, on scope: option B. The behaviour is built once, as
+shared parts every page loads, and fitted to the three Lists grids first.
+The other applications follow one per release. The standard goes into the
+root `CLAUDE.md` when the shared parts exist, so every new or changed grid
+must use them. Standing cost, accepted: for some weeks the older screens
+behave differently from the Lists screens.
+
+## 2. What the user gets
+
+- **Resizable columns.** Every grid column has a handle on its right edge.
+  Dragging it changes the column's width. A double-click on the handle fits
+  the column to its widest cell. A keyboard user tabs to the handle and
+  presses the left and right arrow keys. Each grid remembers its widths in
+  that browser; *Reset columns* in the grid's footer restores them.
+- **Alternating row colours.** Every second row is shaded, from the page's
+  colour tokens, in both themes. The selected row and a hovered row stay
+  distinct from the shading.
+- **Multi-column sorting.** A click on a heading sorts by that column alone;
+  a second click reverses it. Shift-click adds the column as the next sort
+  key, and the heading shows its position: ▲1, ▼2. A plain click starts
+  again from one column. The grid's footer says what it is sorted by, in
+  words, with *Clear sort*.
+- **A divider for the preview pane.** On a screen with a preview panel, a
+  bar between the grid and the panel drags to resize both. Arrow keys move
+  it when it has focus; a double-click restores the default. The width is
+  remembered in that browser.
+- **A spinner while anything loads.** Three cases, all one shared look:
+  1. a grid or panel waiting on the server shows a spinner over itself,
+     with its old content dimmed, until the answer arrives;
+  2. a page opening shows a spinner until its first data has arrived;
+  3. a link or button that opens another page shows a spinner on itself
+     until the browser leaves or the new tab has opened.
+  The pressed-button spinner `busy.js` already gives stays as it is.
+
+## 3. How it is built
+
+- **`frontend/shared/grid.js` and `grid.css`** — `CBMGrid.enhance(table,
+  options)` adds the handles, the shading and the sorting to an existing
+  `<table>`, so a screen keeps drawing its own rows. Two sort modes:
+  - **in the browser** (the grid holds every row): the component sorts the
+    rows on any column, numbers as numbers, dates as dates;
+  - **on the server** (the grid holds one page): the component calls the
+    screen back with the list of sort keys, and only columns the server can
+    sort are sortable. The others say so in the heading's tooltip.
+- **`frontend/shared/splitpane.js` and `.css`** — `CBMSplit.attach(left,
+  right, options)` puts the divider between two panes.
+- **The spinner** — `busy.js` gains `CBMBusy.loading(element, promise)`,
+  the overlay spinner, and the page-opening and link cases. Like the rest
+  of `busy.js` it never disables anything.
+- **Widths, sort and divider position** are stored per grid in the
+  browser's own storage, wrapped so a blocked store changes nothing but the
+  memory.
+
+## 4. Fitted first: the Lists screens
+
+- **The list view**: every column resizable and sortable in the browser,
+  multi-column; shading; the divider between the grid and Preview; the
+  spinner over the grid while the lists load and over Preview while a list
+  is read.
+- **View** (`list-members.html`): resizing and shading on every column.
+  Sorting on the server, multi-column, over the columns the server can
+  sort: name, type, the group that brought each person in, and the three
+  reach columns. The extra columns (company, status, email address, phone,
+  city, last changed) are read one page at a time and cannot be sorted
+  without reading the whole list; they are not sortable. The members route
+  gains a `sort` list (`name:asc,type:desc`). Sorting by name still reads
+  every name, so it keeps its 2,000-member limit.
+- **Edit**: the static list's member grid and the *Who this change moves*
+  table get the same treatment.
+
+## 5. Stops
+
+Work pauses after each stop for Doug's go-ahead, unless he says to run
+several together.
+
+1. **Stop 1 — the shared parts** (about two days): `grid.js`, `splitpane.js`,
+   the spinner in `busy.js`, their stylesheets, and a test page under the
+   preview harness. Tests for the sort order, the stored widths and the
+   keyboard handles.
+2. **Stop 2 — the Lists screens** (about a day and a half): the list view,
+   Preview's divider, Edit's grids, View with server-side multi-column sort
+   and the route's `sort` list. Checked in a headless browser against the
+   application over the test fakes.
+3. **Stop 3 — the standard, the documents and the live pass** (about half a
+   day): the convention in the root `CLAUDE.md`, a guard test that the
+   Lists screens load the shared parts, the changelog and version, the
+   rollout list in `OPEN-ITEMS.md`, then a live pass on crm-test as Mark
+   Marketing with a results page.
+
+## 6. The rollout after this plan
+
+One application per release, each a small item in `OPEN-ITEMS.md`: Client
+Administration, Mentor Administration, the three Management screens,
+Submission Admin, the Directories, My Email, Events, System Settings, and
+the rest of Marketing Management (Leads, Campaigns, Review, Calls,
+Imports). Each server-paged grid needs its own server sort work, and the
+item says which columns it can sort.
+
+## 7. Cost
+
+- About four days for this plan.
+- About two to three weeks for the whole rollout, one application at a
+  time.
+- A server-paged grid sorts only on columns its server can sort.
+- Mixed behaviour between the Lists screens and the rest until the rollout
+  finishes.
+
+## Revision control
+
+| Field | Value |
+|---|---|
+| Document | Shared grid, divider and loading spinner — plan |
+| Version | 0.1 |
+| Last Updated | 10-27-26 21:41 |
+| Prepared by | Claude (Claude Code), for D. Bower |
+
+### Change log
+
+| Rev | Date (MM-DD-YY HH:MM) | Author | Change |
+|---|---|---|---|
+| 0.1 | 10-27-26 21:41 | Claude (Claude Code) | Drafted from Doug's ruling of 10-27-26 21:30 and his choice of option B. |
