@@ -6,6 +6,16 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+61. **Partner and funder associations — production, Boston, the report**
+    (2026-10-28). Built as v0.295.0 (`prds/partner-association-plan.md`).
+    Owed: (1) the live pass on crm-test; (2) the CRM change on production at
+    a Sunday slot and on Boston with its release
+    (`partner-association-crm-handoff.md` § 4); (3) the Operations job's
+    backfill run on each CRM after its change; (4) **the partner's
+    attendance report** — Doug's decision 3: companies that had someone
+    attend, the attendees optional, never someone who did not attend — not
+    yet designed or built.
+
 60. **The shared grid rollout — one application per release** (2026-10-27).
     Doug's ruling 10-27-26: every grid has resizable columns, alternating
     rows and multi-column sorting, a preview pane has a divider, and a

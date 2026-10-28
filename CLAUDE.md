@@ -1217,6 +1217,11 @@ ordered do-this-next list for the grant build on crm-test.
   rather than requiring a coordinated deploy — the established pattern is that
   the feature stays dark until the CRM field exists, then activates with no
   deploy.
+- **Every partner or funder tie goes through `core/partner_links.py`**
+  (`prds/partner-association-plan.md`): one `CPartnerAssociation` per tie,
+  held by the company, never deleted, written under the org-wide key. A new
+  place where a partner or funder meets a business calls it — never a link
+  of its own.
 - **Best-effort side effects never fail the user's save** — calendar, stream
   notes, grants, provisioning, receipts and stamping all report through the
   response payload instead of raising.
@@ -1232,6 +1237,11 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
+- **v0.295.0 (2026-10-28) — partner and funder associations**
+  (`prds/partner-association-plan.md`): one `CPartnerAssociation` per tie,
+  written by `core/partner_links.py` from conversion, import, intake,
+  attendance and Client Management's *Refer to a partner*; lists select by
+  them. CRM change on crm-test only. Committed, not pushed; live pass owed.
 - **v0.294.0 (2026-10-27) — the shared grid, divider and spinners**
   (`prds/shared-grid-plan.md`): Lists first, then one application per
   release (`OPEN-ITEMS.md` #60). The `busy.js` spinners reach every page.

@@ -5,6 +5,42 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.295.0] — 2026-10-28
+
+**feat: partner and funder associations, and lists that select by them**
+(`prds/partner-association-plan.md`; Doug's rulings 10-28-26). **CRM change:**
+`CPartnerAssociation` and `CEventRegistration.registrationCompany`
+(`partner-association-crm-handoff.md`; applied on crm-test 10-28-26, owed on
+production and Boston). Feature-detected: a CRM without it is untouched. No
+switch; no migration.
+
+- **One association per tie** between a partner or funder and a business:
+  the partner referred it to CBM, someone from it attended the partner's or
+  funder's event, or a mentor referred it to the partner. Held by the
+  company — every contact there, now or later, counts — else by the person
+  or the lead until there is a company, then it moves there and stays. A
+  second partner is a second association; the application never deletes one.
+  All written by `core/partner_links.py` under the org-wide key.
+- **Written by:** lead conversion (the lead's referring partner and its ties
+  move to the new company); the import (a different partner on a known lead
+  adds a second association); client intake (each referring partner);
+  attendance at an event with partners or funders (attended only — never a
+  no-show); a mentor's **Refer to a partner** on the engagement's Overview in
+  Client Management, which also logs it on the engagement; and a nightly move
+  to the company once a person or lead has one.
+- **The registration remembers the company** the person was with when they
+  registered, so a company's attendance survives the person leaving.
+- **Backfill:** the Operations job *Partner and funder associations* at
+  `/setup` — dry run, then apply — writes what the records already imply
+  (leads' and engagements' referring partners, past attendance).
+- **Lists:** two new groups — *Associated with a partner or funder*
+  (optionally by reason) and *Attended an event* (or registered) — reaching
+  the person, or every contact at the company when ticked. The list view
+  gains **Partners, Events and Funders** columns from the list's own groups;
+  Preview shows them and each campaign's under *Used by*.
+- **Not in this release:** the partner's attendance report (decision 3 is its
+  requirement); `OPEN-ITEMS.md`.
+
 ## [0.294.0] — 2026-10-27
 
 **feat(shared): resizable columns, alternating rows, multi-column sorting,

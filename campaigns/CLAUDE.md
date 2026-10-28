@@ -1,6 +1,6 @@
 # campaigns/ — Marketing Management (was Campaign Management)
 
-Last Updated: 10-27-26 21:10 · Revision 1.17
+Last Updated: 10-28-26 02:32 · Revision 1.18
 
 Detail for Campaign Management (`/campaigns`, prospect marketing Phases 1 to 4 and the lead model): links, postcards, the landing page, imports, the Leads and Review grids, calls, texts, email, attribution and reporting.
 
@@ -512,6 +512,14 @@ the reason.
   the members route takes `channel`, `group` and `detail` (the View columns,
   read as the user by `audience.describe_details`); the name search takes
   `listId` and marks `onList`.
+- **Lists by partner, funder and event** (v0.295.0,
+  `prds/partner-association-plan.md`, decision 6): group kinds
+  `associated` (partners / funders, optional reasons) and `attended`
+  (events, attended or registered), run by `audience.association_keys` over
+  `CPartnerAssociation` and the registrations; offered by the catalogue only
+  when `core.partner_links.available`. A group keeps the chosen names
+  (`names`), which `lists_router._reaches` turns into the list view's
+  Partners, Events and Funders columns without a CRM read.
 - Owed: nothing on production's CRM (both slots done 10-18-26; every
   campaign switch off there — turning one on is Doug's call at `/setup`);
   Boston with its release; a seeder and sandbox re-baseline; the Twilio
@@ -522,6 +530,7 @@ the reason.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.18 | 10-28-26 02:32 | Claude (Claude Code) | Lists by partner, funder and event (v0.295.0). |
 | 1.17 | 10-27-26 21:10 | Claude (Claude Code) | The Lists tab redesigned (v0.293.0, § 7e.14, M11): the hand-over in `lists.js`, View's page, the stored counts and their pass, the route additions. |
 | 1.16 | 10-27-26 18:50 | Claude (Claude Code) | The send report and the Recipients tab (v0.292.0, § 7e.9, M9). |
 | 1.15 | 10-27-26 14:10 | Claude (Claude Code) | Lists only, the strip and the grid (v0.291.0, § 7e.9 second half, M8): the ready-made lists, the built-in group, adoption, the strip, the grid's per-row reads. |
