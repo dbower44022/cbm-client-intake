@@ -52,8 +52,11 @@ stored counts and their nightly pass ride *Campaign lists*, with
   after start and then daily; *Refresh* does one list. A signed-off campaign
   keeps the list version it recorded, so a nightly run never changes what it
   sends to.
-- **Not yet passed live.** Checked against the real application over the
-  test fakes with 45 lists, in a headless browser.
+- **Live-passed on crm-test 10-27-26 21:25 Eastern** by Claude as Mark
+  Marketing (results page https://claude.ai/artifact/7s79Cw5ybA4dnjinomPYsu): every screen, the
+  ready-made refusal, Leave out, Add people and Remove, Delete, and the
+  worker's pass ("9 of 9 list(s) counted in 5.1s"). Two display faults
+  found, fixed in 0.293.1.
 
 ## [0.292.0] — 2026-10-27
 

@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-27-26 21:10 · Revision 0.65 — change log at the end.
+Last Updated: 10-27-26 21:25 · Revision 0.66 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -2870,7 +2870,14 @@ Team caller for M1 and M10).
     Checked in a headless browser against the real application over the
     test fakes, 45 lists; the switch off leaves the old tab exactly as it
     was. No staff guide covers Marketing Management, so none was changed.
-    **Live pass owed** on crm-test.
+    Pushed 10-27-26 ~21:12. **Live-passed on crm-test 10-27-26 21:25** by
+    Claude in a tab signed in as Mark Marketing (results page
+    https://claude.ai/artifact/7s79Cw5ybA4dnjinomPYsu). The worker's first pass: "9 of 9
+    list(s) counted in 5.1s". **Found and fixed (v0.293.1):** "reach nobody"
+    named people a call list can phone (calls are not a counted channel),
+    now *by none of email, text or postcard*; View's summary lagged the grid
+    after *Leave out*, now recounted in the background. Not exercised live:
+    Copy, Retire, a synced copy from Edit, the drawer's Find by conditions.
 
 **Cost, named.**
 
@@ -2886,7 +2893,7 @@ Team caller for M1 and M10).
 - **The standing cost the rulings accepted:** CBM writes personally to
   people who never opted in (ruling 107).
 
-### 7e.14 The Lists tab, redesigned — rulings 129–132 (built as v0.293.0, 10-27-26; live pass owed)
+### 7e.14 The Lists tab, redesigned — rulings 129–132 (built as v0.293.0, 10-27-26; live-passed on crm-test 10-27-26 21:25)
 
 The built Lists tab (§ 7e.8, ruling 98) put the index, the settings, the
 builder, Add people and the member grid on one page that served none of
@@ -3260,6 +3267,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.66 | 10-27-26 21:25 | Claude (Claude Code) | § 7e.14 and step M11: live-passed on crm-test 10-27-26 21:25; the two faults fixed in v0.293.1. |
 | 0.65 | 10-27-26 21:10 | Claude (Claude Code) | § 7e.14 and step M11 marked built (v0.293.0): the choices made on the way, the checks, the live pass owed. |
 | 0.64 | 10-27-26 19:24 | Claude (Claude Code) | § 7e.14 and § 7e.13 step M11 drafted for Doug's approval: the Lists tab redesigned (rulings 129–132) — list view with Preview, Edit and View separate, counts stored and refreshed nightly, five named stops, switch `CAMPAIGN_LIST_SCREENS`, migration 0040. |
 | 0.63 | 10-27-26 18:52 | Claude (Claude Code) | M9 live-passed on crm-test: the report's shapes confirmed but the bounce. |

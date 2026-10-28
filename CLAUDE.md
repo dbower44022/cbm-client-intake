@@ -1224,7 +1224,9 @@ the strength of it.
   § 7e.14, M11; rulings 129–132): the list view with Preview, Edit, and
   View in its own browser tab; counts stored and refreshed daily.
   Dark behind `CAMPAIGN_LIST_SCREENS`; migration 0040; no CRM change.
-  Committed, not pushed; live pass owed.
+  Pushed and **live-passed on crm-test 10-27-26 21:25** (results page
+  https://claude.ai/artifact/7s79Cw5ybA4dnjinomPYsu); v0.293.1, the two display fixes the
+  pass found, committed, not pushed. Production stays dark.
 
 - **v0.292.0 (2026-10-27) — the Constant Contact send report and the
   Recipients tab** (build plan § 7e.9, M9; ruling 96). Dark behind
