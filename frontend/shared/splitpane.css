@@ -1,0 +1,11 @@
+/* Shared divider between a grid and its preview pane (splitpane.js). */
+.cbm-split__left { flex: 1 1 0; min-width: 0; }
+.cbm-split__bar { flex: 0 0 12px; align-self: stretch; cursor: col-resize; position: relative; touch-action: none; margin: 0 -2px; }
+.cbm-split__bar[hidden] { display: none !important; }
+.cbm-split__bar::before { content: ""; position: absolute; top: 0; bottom: 0; left: 5px; width: 2px; border-radius: 2px; background: #D1D9E2; transition: background .12s; }
+.cbm-split__bar::after { content: ""; position: absolute; top: 50%; left: 2px; width: 8px; height: 2.4rem; margin-top: -1.2rem; border-radius: 4px;
+  background: #fff; border: 1px solid #B8C6D4; box-shadow: 0 1px 2px rgba(23, 59, 96, .12); }
+.cbm-split__bar:hover::before, .cbm-split__bar.is-dragging::before, .cbm-split__bar:focus-visible::before { background: var(--cbm-navy, #173B60); }
+.cbm-split__bar:focus-visible { outline: none; }
+.cbm-split__bar:focus-visible::after { border-color: var(--cbm-navy, #173B60); box-shadow: 0 0 0 3px rgba(23, 59, 96, .2); }
+@media (prefers-reduced-motion: reduce) { .cbm-split__bar::before { transition: none; } }

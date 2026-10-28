@@ -1,0 +1,21 @@
+/* Shared grid behaviour (frontend/shared/grid.js; prds/shared-grid-plan.md):
+   the stripe, the sortable headings, the resize handles and the status line.
+   Colours come from the CBM tokens, with fallbacks. */
+.cbm-grid { --cbm-grid-stripe: #F5F8FB; --cbm-grid-hover: #EDF3F9; --cbm-grid-handle: #9FB3C8; }
+.cbm-grid tbody tr:nth-child(even) > td { background-color: var(--cbm-grid-stripe); }
+.cbm-grid tbody tr:hover > td { background-color: var(--cbm-grid-hover); }
+.cbm-grid th { position: relative; }
+.cbm-grid th.cbm-grid__sortable { cursor: pointer; user-select: none; }
+.cbm-grid th.cbm-grid__sortable:hover { color: var(--cbm-navy, #173B60); }
+.cbm-grid th:focus-visible { outline: 2px solid var(--cbm-navy, #173B60); outline-offset: -2px; }
+.cbm-grid td { overflow-wrap: anywhere; }
+.cbm-grid__ind { margin-left: .3em; font-size: .85em; color: var(--cbm-navy, #173B60); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cbm-grid__handle { position: absolute; top: 0; right: -4px; width: 9px; height: 100%; cursor: col-resize; z-index: 2; touch-action: none; }
+.cbm-grid__handle::after { content: ""; position: absolute; top: 25%; bottom: 25%; left: 4px; width: 1px; background: var(--cbm-grid-handle); opacity: .55; }
+.cbm-grid th:hover .cbm-grid__handle::after, .cbm-grid__handle:focus-visible::after, .cbm-grid__handle.is-dragging::after { opacity: 1; width: 2px; left: 3px; background: var(--cbm-navy, #173B60); top: 0; bottom: 0; }
+.cbm-grid__handle:focus-visible { outline: none; }
+.cbm-grid__status { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .9rem; padding: .4rem .75rem; font-size: .84rem; color: #4B5563; }
+.cbm-grid__status[hidden] { display: none !important; }
+.cbm-grid__link { font: inherit; background: none; border: 0; padding: 0; color: var(--cbm-blue-dark, #045CB4); cursor: pointer; text-decoration: underline; }
+.cbm-grid__link[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { .cbm-grid * { transition: none !important; } }

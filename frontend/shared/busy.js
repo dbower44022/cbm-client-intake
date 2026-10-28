@@ -66,6 +66,26 @@
       "@media (prefers-reduced-motion: reduce){",
       "  .cbm-busy::after{animation:none;border-right-color:currentColor;opacity:.5;}",
       "}",
+      /* A grid or panel waiting on the server (CBMBusy.loading): its content */
+      /* dimmed, a spinner over it, nothing disabled. */
+      ".cbm-loading{position:relative;}",
+      ".cbm-loading>*{opacity:.45;transition:opacity .15s;}",
+      ".cbm-loading::after{content:'';position:absolute;z-index:5;top:min(45%,6rem);left:50%;",
+      "  width:1.8rem;height:1.8rem;margin:-.9rem 0 0 -.9rem;border-radius:50%;",
+      "  border:3px solid #173B60;border-right-color:transparent;animation:cbm-busy-spin .7s linear infinite;}",
+      /* A link that opens another page: a small spinner after its text. */
+      ".cbm-busy-link::after{content:'';display:inline-block;width:.8em;height:.8em;margin-left:.4em;",
+      "  vertical-align:-.1em;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;",
+      "  animation:cbm-busy-spin .6s linear infinite;}",
+      /* A page opening: a pill at the top until its first data has arrived. */
+      ".cbm-pageload{position:fixed;z-index:9999;top:calc(.6rem + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);",
+      "  display:flex;align-items:center;gap:.5rem;padding:.35rem .8rem .35rem .6rem;border-radius:999px;",
+      "  background:#173B60;color:#fff;font:500 13px/1.2 system-ui,sans-serif;box-shadow:0 4px 14px rgba(23,59,96,.25);pointer-events:none;}",
+      ".cbm-pageload::before{content:'';width:.9rem;height:.9rem;border-radius:50%;border:2px solid #fff;",
+      "  border-right-color:transparent;animation:cbm-busy-spin .6s linear infinite;}",
+      "@media (prefers-reduced-motion: reduce){",
+      "  .cbm-loading::after,.cbm-busy-link::after,.cbm-pageload::before{animation:none;border-right-color:currentColor;opacity:.6;}",
+      "}",
     ].join("\n");
     var tag = document.createElement("style");
     tag.setAttribute("data-cbm-busy", "1");
@@ -234,9 +254,52 @@
     report({ kind: "rejection", message: msg });
   });
 
+  // --- the page-opening spinner ------------------------------------------
+  // Every request since the page began is counted; the pill shows from the
+  // start and goes once the page has loaded and nothing has been in flight
+  // for a moment — that is, once its first data has arrived. Only the
+  // opening: later requests are shown on their button or their panel.
+  var inflight = 0, opening = true, pill = null, quietTimer = null, PAGE_CAP_MS = 30000;
+  function showPill() {
+    if (!opening || pill || !document.body) return;
+    injectCss();
+    pill = document.createElement("div");
+    pill.className = "cbm-pageload";
+    pill.setAttribute("role", "status");
+    pill.textContent = "Loading…";
+    document.body.appendChild(pill);
+  }
+  function endOpening() {
+    if (!opening) return;
+    opening = false;
+    clearTimeout(quietTimer);
+    if (pill) { pill.remove(); pill = null; }
+  }
+  function maybeEnd() {
+    if (!opening || inflight > 0 || document.readyState !== "complete") return;
+    clearTimeout(quietTimer);
+    quietTimer = setTimeout(function () { if (inflight === 0) endOpening(); }, 250);
+  }
+  function track() {
+    inflight += 1;
+    clearTimeout(quietTimer);
+    var settled = false;
+    return function () { if (settled) return; settled = true; inflight -= 1; maybeEnd(); };
+  }
+  // Shown only when the opening takes long enough to notice: a fast page
+  // never flashes it.
+  setTimeout(function () {
+    if (document.body) showPill();
+    else document.addEventListener("DOMContentLoaded", showPill);
+  }, 400);
+  window.addEventListener("load", maybeEnd);
+  setTimeout(endOpening, PAGE_CAP_MS);
+  if (document.readyState === "complete") maybeEnd();
+
   if (window.fetch) {
     var wrappedFetch = window.fetch;
     window.fetch = function (input, init) {
+      var untrack = track();
       var done = attach();
       var started = Date.now();
       var method = String((init && init.method) || (input && input.method) || "GET").toUpperCase();
@@ -246,8 +309,10 @@
         out = wrappedFetch.apply(this, arguments);
       } catch (err) {
         if (done) done();
+        untrack();
         throw err;
       }
+      if (out && out.then) out.then(untrack, untrack); else untrack();
       if (done && out && out.then) {
         // Settle on BOTH outcomes; never swallow the result or the rejection.
         out.then(done, done);
@@ -270,6 +335,7 @@
     window.XMLHttpRequest.prototype.send = function () {
       var done = attach();
       var xhr = this, started = Date.now();
+      this.addEventListener("loadend", track());
       if (done) {
         // loadend fires for success, error, abort and timeout alike.
         this.addEventListener("loadend", done);
@@ -340,5 +406,63 @@
     );
   }
 
-  window.CBMBusy = { start: start, fetch: fetchWithTimeout };
+  // --- a grid or panel loading --------------------------------------------
+  // Doug's ruling 10-27-26: "Should always show a spinning icon while another
+  // page or function is loading" (prds/shared-grid-plan.md).
+  //
+  //   CBMBusy.loading(gridBox, api("/lists"));   // spinner until it settles
+  //   var stop = CBMBusy.loading(panel); ...; stop();
+  //
+  // Returns the promise it was given (so it can be awaited in place), or a
+  // stop function. Visual only: nothing is disabled.
+  function loading(el, promise) {
+    if (!el || !el.classList) return promise || function () {};
+    injectCss();
+    el.classList.add("cbm-loading");
+    el.setAttribute("aria-busy", "true");
+    var count = (el._cbmLoading || 0) + 1;
+    el._cbmLoading = count;
+    var stopped = false;
+    function stop() {
+      if (stopped) return;
+      stopped = true;
+      el._cbmLoading = (el._cbmLoading || 1) - 1;
+      if (el._cbmLoading <= 0) { el.classList.remove("cbm-loading"); el.removeAttribute("aria-busy"); }
+    }
+    if (promise && promise.then) { promise.then(stop, stop); return promise; }
+    return stop;
+  }
+
+  // --- a link that opens another page --------------------------------------
+  // Runs after the page's own handlers (bubble phase). Same tab: the spinner
+  // stays until the browser leaves. A new tab, or a link the page handled
+  // itself (window.open): a moment, so the press is seen.
+  function opensPage(a, e) {
+    var href = a.getAttribute("href");
+    if (!href || href.charAt(0) === "#" || /^(javascript|mailto|tel|sms|data|blob):/i.test(href) || a.hasAttribute("download")) return false;
+    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return false;
+    try {
+      var u = new URL(a.href, location.href);
+      if (!/^https?:$/.test(u.protocol)) return false;
+      var here = location.href.split("#")[0];
+      if (u.href.split("#")[0] === here && !a.target) return false;   // a hash on this page
+    } catch (_) { return false; }
+    return true;
+  }
+  document.addEventListener("click", function (e) {
+    var a = e.target && e.target.closest ? e.target.closest("a[href]") : null;
+    if (!a || !opensPage(a, e)) return;
+    var stop = start(a);
+    if (!a.classList.contains("cbm-button")) {
+      // An inline link keeps its size: the spinner sits after the text.
+      a.classList.remove("cbm-busy");
+      a.classList.add("cbm-busy-link");
+      stop = function () { a.classList.remove("cbm-busy-link"); };
+    }
+    var sameTab = !e.defaultPrevented && (!a.target || a.target === "_self");
+    setTimeout(stop, sameTab ? 20000 : 1200);
+    if (sameTab) window.addEventListener("pagehide", stop, { once: true });
+  });
+
+  window.CBMBusy = { start: start, fetch: fetchWithTimeout, loading: loading };
 })();
