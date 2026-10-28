@@ -7,7 +7,10 @@
  * EspoCRM's own list endpoint sorts by one field. This takes the same query
  * parameters (where[…], select, maxSize, offset, textFilter) plus
  *
- *     sortBy=leadStatus:asc,name:desc
+ *     orderList=leadStatus:asc,name:desc
+ *
+ * (not "sortBy": EspoCRM reads that as an old name for its own one-field
+ * orderBy and refuses the list — found on crm-test 10-28-26).
  *
  * and applies the same access control as the standard list: the caller must
  * read the entity type, the query is built with strict access control (the
@@ -58,7 +61,7 @@ class SortedList implements Action
         $defs = $this->entityManager->getDefs()->getEntity($entityType);
         $order = [];
 
-        foreach (explode(',', (string) ($request->getQueryParam('sortBy') ?? '')) as $piece) {
+        foreach (explode(',', (string) ($request->getQueryParam('orderList') ?? '')) as $piece) {
             $piece = trim($piece);
             if ($piece === '') {
                 continue;

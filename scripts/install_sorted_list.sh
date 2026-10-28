@@ -31,7 +31,7 @@ php_file="custom/Espo/Custom/Api/SortedList.php"
 routes="custom/Espo/Custom/Resources/routes.json"
 
 echo "== $chapter ($target): sorted list endpoint, $mode"
-echo "EspoCRM: $(remote "docker exec -w /var/www/html espocrm php -r '\$c=include \"data/config.php\"; echo \$c[\"version\"] ?? \"?\";'" 2>/dev/null || echo '?')"
+echo "EspoCRM: $(remote "docker exec -w /var/www/html espocrm php command.php version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1" 2>/dev/null || echo '?')"
 
 if [ "$mode" = "--remove" ]; then
   remote "docker exec -w /var/www/html espocrm rm -f $php_file"
