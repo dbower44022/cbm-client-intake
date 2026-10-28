@@ -5,6 +5,28 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.296.0] — 2026-10-28
+
+**feat: the shared grid on the rest of Marketing Management** (rollout 1,
+`prds/shared-grid-plan.md` § 8; Doug's ruling 10-28-26). No switch; no
+migration. **CRM change:** the multi-column sorted list endpoint
+(`sorted-list-crm-handoff.md`; installed on crm-test 10-28-26, owed on
+production and Boston). Feature-detected: a CRM without it sorts Leads and
+Review by one column, as before.
+
+- **Every grid on the Campaigns, Calls and Imports tabs and on a campaign's
+  page** (Campaigns, Call list, the three Imports grids, Links, Responses,
+  Touches): resizable columns, shaded rows, sort on several columns in the
+  browser (shift-click adds a column), and a spinner while it loads.
+- **Leads and Review** sort on the server. A sort on more than one column
+  reads the page through the CRM's new `SortedList` endpoint
+  (`EspoClient.sorted_list`, `leads.parse_order`); the total still comes
+  from the standard list. A CRM without the endpoint sorts by the first
+  column, and the page says so once.
+- **Recipients** sorts on the server too (`sort=name:asc,status:desc`).
+- `grid.js` sorts dates as the pages print them ("Oct 27, 2026"), and a
+  heading with no text (a tick-box column) never sorts.
+
 ## [0.295.1] — 2026-10-28
 
 **fix: two faults the partner association live pass found.**

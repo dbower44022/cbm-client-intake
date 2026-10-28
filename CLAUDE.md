@@ -1237,6 +1237,12 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
+- **v0.296.0 (2026-10-28) — the shared grid on the rest of Marketing
+  Management** (`prds/shared-grid-plan.md` § 8): every grid there; Leads,
+  Review and Recipients sort on several columns on the server, Leads and
+  Review through the CRM's `SortedList` endpoint (`sorted-list-crm-handoff.md`,
+  crm-test only; one column without it). Committed, **not pushed; live pass
+  owed**.
 - **v0.295.0 (2026-10-28) — partner and funder associations**
   (`prds/partner-association-plan.md`): one `CPartnerAssociation` per tie,
   written by `core/partner_links.py` from conversion, import, intake,
@@ -1256,17 +1262,6 @@ the strength of it.
   https://claude.ai/artifact/7s79Cw5ybA4dnjinomPYsu); v0.293.1, the two display fixes the
   pass found, pushed 10-27-26 21:28. Production stays dark.
 
-- **v0.292.0 (2026-10-27) — the Constant Contact send report and the
-  Recipients tab** (build plan § 7e.9, M9; ruling 96). Dark behind
-  `CAMPAIGN_SEND_REPORT`; no migration; the CRM fields `openCount` and
-  `firstOpenedAt` on `COutreachTouch` (`coutreach-touch-opens-crm-handoff.md`,
-  done on crm-test, owed on production and Boston). Pushed; **live-passed
-  on crm-test 10-27-26 18:50** (the bounce shape not exercised).
-- **v0.291.0–v0.291.1 (2026-10-27) — every campaign sends to a list; the
-  campaign page's strip, tabs and grid** (build plan § 7e.9 second half, M8;
-  rulings 99–102). Dark behind `CAMPAIGN_LISTS_ONLY`; migration 0039.
-  **Live-passed on crm-test 10-27-26 18:15**; both pushed. Production stays
-  dark.
 - **v0.288.0 (2026-10-26) — personal outreach from the lead's page**
   (build plan § 7e.5, M5; rulings 107–109, 115, 118–120, 122, 128): the
   shared composer (`frontend/shared/compose.js`, the session tools switched

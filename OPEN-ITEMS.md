@@ -27,8 +27,9 @@ found; move resolved items to the bottom with the resolution date.
     each:** Client Administration; Mentor Administration; Client, Partner and
     Funder Management (one shared frontend); Submission Admin; the
     Workspace Directories; My Email; Event Administration; System Settings;
-    the rest of Marketing Management (Leads, Campaigns, Review, Calls,
-    Imports). A server-paged grid also needs its route to take a `sort`
+    and the rest of Marketing Management — **built as v0.296.0 (rollout 1,
+    plan § 8), live pass on crm-test owed; its `SortedList` CRM endpoint is
+    owed on production and Boston** (`sorted-list-crm-handoff.md`). A server-paged grid also needs its route to take a `sort`
     list; each release names the columns its server can sort and marks the
     rest `data-sortable="false"`.
 
