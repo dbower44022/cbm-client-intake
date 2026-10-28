@@ -203,7 +203,7 @@ found; move resolved items to the bottom with the resolution date.
     pushes~~ done; (2) ~~the switch on crm-test~~ done; (3) ~~the live
     pass~~ **passed 10-27-26 21:25** (results page
     https://claude.ai/artifact/7s79Cw5ybA4dnjinomPYsu). Two display faults fixed in
-    **v0.293.1, committed, not pushed**. Production: Doug's call.
+    **v0.293.1, pushed 10-27-26 21:28**, live on both. Production: Doug's call.
 
 53. **Attendee linking escalation — live pass owed** (v0.258.6, 2026-10-15).
     A mentor whose Mentor Role reads/edits `CSession` at "own" could not

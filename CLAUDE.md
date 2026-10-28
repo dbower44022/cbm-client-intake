@@ -1226,7 +1226,7 @@ the strength of it.
   Dark behind `CAMPAIGN_LIST_SCREENS`; migration 0040; no CRM change.
   Pushed and **live-passed on crm-test 10-27-26 21:25** (results page
   https://claude.ai/artifact/7s79Cw5ybA4dnjinomPYsu); v0.293.1, the two display fixes the
-  pass found, committed, not pushed. Production stays dark.
+  pass found, pushed 10-27-26 21:28. Production stays dark.
 
 - **v0.292.0 (2026-10-27) — the Constant Contact send report and the
   Recipients tab** (build plan § 7e.9, M9; ruling 96). Dark behind
