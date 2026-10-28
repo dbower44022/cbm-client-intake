@@ -799,6 +799,7 @@
 
     renderNextSession(d);
     renderOtherContacts(d);
+    renderPartnerTies(d);
     renderOverallNotes(d);
     renderNoteFeed(d.noteFeed || []);
     renderDiscussion(d);
@@ -1240,6 +1241,59 @@
         card.appendChild(row);
       });
     }
+    box.appendChild(card);
+  }
+
+  // --- Partners and funders (engagements only; prds/partner-association-plan.md):
+  // the partners and funders associated with the client's company, and a
+  // mentor's *Refer to a partner*, which records the referral for good.
+  var PARTNER_REASON_WORDS = { "Referred to CBM": "referred the client to us",
+    "Attended an event": "the client attended their event", "Referred by CBM": "we referred the client to them" };
+
+  async function renderPartnerTies(d) {
+    var box = $("partnerTies"); if (!box) return;
+    box.innerHTML = "";
+    if (!config || config.parentEntity !== "CEngagement" || !d || !d.id) return;
+    var forId = d.id, res;
+    try { res = await api("/records/" + encodeURIComponent(d.id) + "/partnerties"); }
+    catch (e) { return; }
+    if (!currentDetail || currentDetail.id !== forId || !res || !res.available) return;
+    var card = document.createElement("div"); card.className = "sx__facts sx__ocard";
+    card.appendChild(cardHead("Partners and funders"));
+    if (!(res.ties || []).length) {
+      var none = document.createElement("div"); none.className = "sx__muted"; none.textContent = "None associated yet.";
+      card.appendChild(none);
+    }
+    (res.ties || []).forEach(function (t) {
+      var row = document.createElement("div"); row.className = "sx__oc";
+      var who = document.createElement("strong"); who.textContent = t.partner || t.funder || "—";
+      row.appendChild(who);
+      var why = document.createElement("span"); why.className = "sx__oc-role";
+      why.textContent = (t.funder ? "funder · " : "") + (PARTNER_REASON_WORDS[t.reason] || t.reason || "") +
+        (t.event ? " — " + t.event : "");
+      row.appendChild(why);
+      card.appendChild(row);
+    });
+    var open = document.createElement("button"); open.type = "button";
+    open.className = "cbm-button cbm-button--secondary sx__sm"; open.textContent = "Refer to a partner";
+    var form = document.createElement("div"); form.className = "sx__oc"; form.hidden = true;
+    var sel = document.createElement("select"); sel.setAttribute("aria-label", "The partner the client was referred to");
+    var blank = document.createElement("option"); blank.value = ""; blank.textContent = "— choose a partner —"; sel.appendChild(blank);
+    (res.partners || []).forEach(function (p) { var o = document.createElement("option"); o.value = p.id; o.textContent = p.name; sel.appendChild(o); });
+    var go = document.createElement("button"); go.type = "button"; go.className = "cbm-button sx__sm"; go.textContent = "Record the referral";
+    var msg = document.createElement("div"); msg.className = "sx__muted";
+    form.appendChild(sel); form.appendChild(go);
+    open.addEventListener("click", function () { form.hidden = !form.hidden; if (!form.hidden) sel.focus(); });
+    go.addEventListener("click", async function () {
+      if (!sel.value) { msg.textContent = "Choose the partner the client was referred to."; return; }
+      try {
+        var r = await api("/records/" + encodeURIComponent(forId) + "/partnerreferral",
+                          { method: "POST", body: JSON.stringify({ partnerId: sel.value }) });
+        msg.textContent = "Recorded: referred to " + (r.partner || "the partner") + ".";
+        renderPartnerTies(currentDetail);
+      } catch (e) { msg.textContent = e.message || "The referral could not be recorded."; }
+    });
+    card.appendChild(open); card.appendChild(form); card.appendChild(msg);
     box.appendChild(card);
   }
 

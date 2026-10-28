@@ -663,6 +663,84 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 )
             return result
 
+    if cfg.parent_entity == "CEngagement":
+        # A mentor refers the client to a partner (prds/partner-association-plan.md,
+        # decision 5). The mentor's own read of the engagement is the gate; the
+        # association is written under the org-wide key, as every one is.
+
+        async def _engagement_for(request: Request, parent_id: str) -> tuple[dict, dict]:
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            try:
+                eng = await client.get("CEngagement", parent_id,
+                                       select="id,name,clientOrganizationId,primaryEngagementContactId")
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not read the engagement")
+            if not eng or not eng.get("id"):
+                raise HTTPException(status_code=404, detail="That engagement could not be found.")
+            return user, eng
+
+        @router.get("/records/{parent_id}/partnerties")
+        async def partner_ties(parent_id: str, request: Request) -> dict:
+            """The partners and funders associated with the client's company
+            (else its primary contact), and the partners a mentor can refer to."""
+            from core import partner_links
+
+            _user, eng = await _engagement_for(request, parent_id)
+            api = _api_client(get_settings())
+            if api is None or not await partner_links.available(api):
+                return {"available": False, "ties": [], "partners": []}
+            holder = (("companyId", eng["clientOrganizationId"]) if eng.get("clientOrganizationId")
+                      else ("contactId", eng.get("primaryEngagementContactId")))
+            try:
+                ties = [] if not holder[1] else (await api.list(
+                    partner_links.ENTITY, where=[{"type": "equals", "attribute": holder[0], "value": holder[1]}],
+                    select=partner_links.SELECT, max_size=200, order_by="associatedAt", order="desc")).get("list") or []
+                partners = (await api.list(partner_links.PARTNER, select="id,name", max_size=200,
+                                           order_by="name", order="asc")).get("list") or []
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not read the partner associations")
+            return {"available": True, "partners": [{"id": p["id"], "name": p.get("name") or p["id"]} for p in partners],
+                    "ties": [{"id": t["id"], "reason": t.get("reason"),
+                              "partner": t.get("partnerProfileName"), "funder": t.get("sponsorProfileName"),
+                              "event": t.get("eventName"), "person": t.get("contactName"),
+                              "at": t.get("associatedAt")} for t in ties]}
+
+        @router.post("/records/{parent_id}/partnerreferral")
+        async def partner_referral(parent_id: str, request: Request) -> dict:
+            from core import partner_links
+
+            user, eng = await _engagement_for(request, parent_id)
+            body = await request.json()
+            partner_id = str((body or {}).get("partnerId") or "").strip()
+            if not partner_id:
+                raise HTTPException(status_code=400, detail="Choose the partner the client was referred to.")
+            api = _api_client(get_settings())
+            if api is None or not await partner_links.available(api):
+                raise HTTPException(status_code=400, detail=(
+                    "This CRM does not record partner referrals yet (partner-association-crm-handoff.md)."))
+            try:
+                partner = await api.get(partner_links.PARTNER, partner_id, select="id,name")
+            except EspoError:
+                partner = None
+            if not partner or not partner.get("id"):
+                raise HTTPException(status_code=400, detail="That partner could not be found.")
+            if not (eng.get("clientOrganizationId") or eng.get("primaryEngagementContactId")):
+                raise HTTPException(status_code=400, detail=(
+                    "This engagement names neither a company nor a primary contact to associate."))
+            assoc_id = await partner_links.on_mentor_referral(api, partner_id=partner_id, engagement=eng)
+            if not assoc_id:
+                raise HTTPException(status_code=502, detail="The referral could not be recorded — try again.")
+            await action_log.record_action(
+                client_for(get_settings(), user), app=cfg.title, category=action_log.CAT_CONTACT,
+                action=action_log.ACT_PARTNER_REFERRAL,
+                parent_type=cfg.parent_entity, parent_id=parent_id,
+                summary=f"Referred to the partner {partner.get('name')}.",
+                actor_id=user["userId"], actor_name=user["name"],
+                details={"partnerId": partner_id, "associationId": assoc_id},
+            )
+            return {"ok": True, "associationId": assoc_id, "partner": partner.get("name")}
+
     if cfg.primary_contact_settable:
         # Registered only where the domain owns its primary contact (partner +
         # funder) — the mentor domain's comes from intake, so the route doesn't

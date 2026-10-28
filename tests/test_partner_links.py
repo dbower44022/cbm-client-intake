@@ -12,12 +12,22 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
+
 from core import partner_links as pl
 from tests.test_campaigns import FakeCrm
 
 
 def run(coro):
     return asyncio.run(coro)
+
+
+@pytest.fixture(autouse=True)
+def _fresh_settings():
+    from core.config import get_settings
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
 
 
 class AssocCrm(FakeCrm):
@@ -182,3 +192,54 @@ def test_the_operations_job_is_registered_and_mutating():
     from setup.jobs import JOBS
     job = next(j for j in JOBS if j.key == "partner_associations")
     assert job.mutating and job.dry_run and job.apply
+
+
+# --- stop 3: a mentor's Refer to a partner (Client Management) -----------------------
+
+def _sessions(monkeypatch, crm):
+    from fastapi.testclient import TestClient
+    from core.app import create_app
+    from core.config import get_settings
+    from forms import info_request
+
+    monkeypatch.setenv("SESSION_SECRET", "test-secret")
+    monkeypatch.setenv("ESPO_DRY_RUN", "false")
+    monkeypatch.setenv("ESPO_API_KEY", "k")
+    monkeypatch.setenv("ESPO_BASE_URL", "https://crm.example")
+    get_settings.cache_clear()
+    user = {"userId": "u1", "userName": "joe", "name": "Joe Mentor", "isAdmin": False, "teams": ["Mentor Team"]}
+    monkeypatch.setattr("sessions.router.current_user", lambda request, key=None: user)
+    monkeypatch.setattr("sessions.router.client_for", lambda settings, u: crm)
+    monkeypatch.setattr("core.espo.EspoClient", lambda *a, **k: crm)
+    logged = []
+
+    async def _log(*a, **kw):
+        logged.append(kw)
+    monkeypatch.setattr("sessions.router.action_log.record_action", _log)
+    return TestClient(create_app([info_request.SPEC])), logged
+
+
+def test_a_mentor_refers_the_client_to_a_partner(monkeypatch):
+    crm = AssocCrm()
+    lib, _bank, _f, bakery, alicia = _setup(crm)
+    eng = crm.add("CEngagement", {"name": "Moreno", "clientOrganizationId": bakery["id"],
+                                  "primaryEngagementContactId": alicia["id"]})
+    client, logged = _sessions(monkeypatch, crm)
+    with client as c:
+        before = c.get(f"/mentorsessions/api/records/{eng['id']}/partnerties").json()
+        assert before["available"] is True and before["ties"] == []
+        assert {"id": lib["id"], "name": "Lakewood Library"} in before["partners"]
+        assert c.post(f"/mentorsessions/api/records/{eng['id']}/partnerreferral", json={}).status_code == 400
+        r = c.post(f"/mentorsessions/api/records/{eng['id']}/partnerreferral", json={"partnerId": lib["id"]})
+        assert r.status_code == 200, r.text
+        after = c.get(f"/mentorsessions/api/records/{eng['id']}/partnerties").json()
+    assert [t["reason"] for t in after["ties"]] == [pl.REASON_REFERRED_BY]
+    assert crm.assocs()[0]["companyId"] == bakery["id"] and crm.assocs()[0]["engagementId"] == eng["id"]
+    assert logged and logged[0]["summary"] == "Referred to the partner Lakewood Library."
+
+
+def test_the_referral_routes_exist_only_for_engagements(monkeypatch):
+    crm = AssocCrm()
+    client, _logged = _sessions(monkeypatch, crm)
+    with client as c:
+        assert c.get("/partnersessions/api/records/P1/partnerties").status_code in (404, 405)
