@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="cbm-org" content="{{org}}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{org}} — List members</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="list-members.css" />
+  <!-- busy.js must load FIRST: it wraps fetch/XHR to give every button press
+       immediate feedback (product-wide convention). -->
+  <script src="/shared/busy.js"></script>
+</head>
+<body class="lm">
+  <!-- View (build plan § 7e.14): one list's members in a browser tab of its
+       own, opened from the Lists tab and reused for the same list. -->
+  <header class="lm__top">
+    <div class="lm__titles">
+      <div class="lm__ctx">Members of the list · <span id="lm_kind"></span></div>
+      <h1 id="lm_title">Reading the list…</h1>
+    </div>
+    <span class="lm__grow"></span>
+    <button type="button" class="lm__btn" id="lm_refreshBtn">Refresh</button>
+    <a class="lm__btn" id="lm_editLink" href="/campaigns/#lists" target="cbm-campaigns">Edit list</a>
+    <button type="button" class="lm__btn lm__btn--gold" id="lm_exportBtn">Export</button>
+  </header>
+
+  <div class="lm__notice" id="lm_notice" role="status" aria-live="polite" hidden></div>
+
+  <section class="lm__sum" id="lm_sum" aria-label="Who it reaches"></section>
+
+  <div class="lm__tools">
+    <label class="lm__search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+      <input type="search" id="lm_q" placeholder="Search by name" aria-label="Search members by name" autocomplete="off" />
+    </label>
+    <div class="lm__chips" role="group" aria-label="Reachable by" id="lm_channels">
+      <button type="button" class="lm__chip is-on" data-channel="" aria-pressed="true">Everyone</button>
+      <button type="button" class="lm__chip" data-channel="email" aria-pressed="false">Email</button>
+      <button type="button" class="lm__chip" data-channel="text" aria-pressed="false">Text</button>
+      <button type="button" class="lm__chip" data-channel="postcard" aria-pressed="false">Postcard</button>
+      <button type="button" class="lm__chip" data-channel="none" aria-pressed="false">Not reachable</button>
+    </div>
+    <label class="lm__groupsel" id="lm_groupWrap" hidden>Brought in by <select id="lm_group" aria-label="Brought in by"></select></label>
+    <div class="lm__menu">
+      <button type="button" class="lm__btn lm__btn--light" id="lm_colsBtn" aria-haspopup="true" aria-expanded="false">Columns ▾</button>
+      <div class="lm__menulist" id="lm_cols" hidden></div>
+    </div>
+  </div>
+  <p class="lm__hint" id="lm_uncounted" hidden></p>
+
+  <div class="lm__gridbox">
+    <table class="lm__grid" id="lm_grid">
+      <thead><tr id="lm_head"></tr></thead>
+      <tbody id="lm_rows"></tbody>
+    </table>
+    <p class="lm__empty" id="lm_empty" hidden></p>
+  </div>
+
+  <div class="lm__pager">
+    <span id="lm_range"></span>
+    <label>Rows <select id="lm_limit" aria-label="Rows per page"><option>20</option><option selected>50</option><option>100</option><option>200</option></select></label>
+    <span class="lm__grow"></span>
+    <button type="button" class="lm__btn lm__btn--light" id="lm_prev">Previous</button>
+    <button type="button" class="lm__btn lm__btn--light" id="lm_next">Next</button>
+  </div>
+
+  <dialog class="lm__dialog" id="lm_excludeDlg" aria-labelledby="lm_exH">
+    <form method="dialog" id="lm_excludeForm">
+      <h2 id="lm_exH">Leave out of this list</h2>
+      <p id="lm_exText"></p>
+      <label class="lm__field">Add them to <select id="lm_exTarget"></select></label>
+      <label class="lm__field" id="lm_exNewWrap">Name of the new exclusion list <input type="text" id="lm_exNew" maxlength="200" /></label>
+      <p class="lm__dlgmsg" id="lm_exMsg" role="alert"></p>
+      <div class="lm__dlgacts">
+        <button type="button" class="lm__btn lm__btn--light" id="lm_exCancel">Cancel</button>
+        <button type="button" class="lm__btn lm__btn--gold" id="lm_exOk">Leave out</button>
+      </div>
+    </form>
+  </dialog>
+
+  <footer class="cm__footer">
+    <p>&copy; <span data-cbm-year></span> {{org}}. All rights reserved. <span data-cbm-version></span></p>
+  </footer>
+  <script src="/shared/footer.js"></script>
+  <script src="list-members.js"></script>
+</body>
+</html>

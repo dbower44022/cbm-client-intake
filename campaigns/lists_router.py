@@ -171,9 +171,10 @@ _SEARCH_ATTRS = {"lead": ["businessName", "name", "email"], "contact": ["name", 
 
 
 @lists_router.get("/lists/search/records")
-async def search_records(request: Request, type: str = "all", q: str = "") -> dict[str, Any]:
+async def search_records(request: Request, type: str = "all", q: str = "", listId: str = "") -> dict[str, Any]:
     """Find records by name or email — every type at once (``type=all``) or
-    one. The static list's *Add people* name-or-email box."""
+    one. The static list's *Add people* name-or-email box. With ``listId``,
+    each record says whether it is already on that list (§ 7e.14)."""
     _actor(request)
     settings = get_settings()
     _require_lists(settings)
@@ -195,6 +196,12 @@ async def search_records(request: Request, type: str = "all", q: str = "") -> di
         out += [{"key": f"{t}:{r['id']}", "type": t,
                  "name": (r.get("businessName") or r.get("name") or "") if t == "lead" else r.get("name") or ""}
                 for r in page.get("list", [])]
+    if listId:
+        store = _store(request)
+        row = await _list_or_404(store, listId)
+        on = set(list_counts.member_keys(row, await store.member_rows(listId)))
+        for r in out:
+            r["onList"] = r["key"] in on
     return {"records": out}
 
 

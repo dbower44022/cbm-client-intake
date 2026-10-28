@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="/shared/compose.css" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="lists.css" />
+  <link rel="stylesheet" href="listview.css" />
   <!-- busy.js must load FIRST: it wraps fetch/XHR to give every button press
        immediate feedback (product-wide convention). -->
   <script src="/shared/busy.js"></script>
@@ -122,7 +123,162 @@
 
     <!-- ============================ LISTS ============================= -->
     <section class="cm__panel" id="listsPanel" hidden>
-      <p class="cm__hint">Named lists a campaign sends to. A <strong>dynamic</strong> list is a search — who to include, who to leave out — run again before every send. A <strong>static</strong> list holds exactly the people you add to it.</p>
+      <!-- The Lists tab redesigned (build plan § 7e.14): the list view with
+           Preview, and Edit, drawn by listview.js while the session says
+           listScreensOn. View is its own page, list-members.html. -->
+      <div class="lv" id="lv_root" hidden>
+        <div id="lv_index">
+          <div class="lv__bar">
+            <label class="lv__search">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+              <input type="search" id="lv_q" placeholder="Search lists by name or notes" aria-label="Search lists by name or notes" autocomplete="off" />
+              <span class="lv__matches" id="lv_matches"></span>
+            </label>
+            <div class="lv__chips" role="group" aria-label="Type">
+              <button type="button" class="lv__chip is-on" data-kind="" aria-pressed="true">All</button>
+              <button type="button" class="lv__chip" data-kind="dynamic" aria-pressed="false">Dynamic</button>
+              <button type="button" class="lv__chip" data-kind="static" aria-pressed="false">Static</button>
+            </div>
+            <div class="lv__chips" role="group" aria-label="More filters">
+              <button type="button" class="lv__chip" id="lv_ccChip" aria-pressed="false">In Constant Contact</button>
+              <button type="button" class="lv__chip" id="lv_retiredChip" aria-pressed="false">Retired</button>
+            </div>
+            <button type="button" class="lv__switch" id="lv_previewSwitch" role="switch" aria-checked="false"><span class="lv__track"><span class="lv__knob"></span></span>Preview</button>
+            <button type="button" class="cbm-button" id="lv_newBtn">+ New list</button>
+          </div>
+          <div class="lv__body">
+            <section class="lv__listbox" aria-label="Lists">
+              <div class="lv__tablebox">
+                <table class="lv__grid" id="lv_grid">
+                  <thead><tr>
+                    <th data-sort="name" aria-sort="ascending">Name</th>
+                    <th data-sort="kind">Type</th>
+                    <th data-sort="members" class="lv__num">Members</th>
+                    <th data-sort="lastUsed">Last used</th>
+                    <th data-sort="updatedAt">Updated</th>
+                    <th data-sort="cc" id="lv_ccHead">Constant Contact</th>
+                    <th>Notes</th>
+                  </tr></thead>
+                  <tbody id="lv_rows"></tbody>
+                </table>
+              </div>
+              <p class="cm__empty" id="lv_empty" hidden></p>
+              <div class="lv__foot"><span><kbd>↑</kbd> <kbd>↓</kbd> move</span><span><kbd>Enter</kbd> edit</span><span><kbd>V</kbd> view members</span><span><kbd>/</kbd> search</span><span class="lv__grow"></span><span>Click a column heading to sort</span></div>
+            </section>
+            <aside class="lv__preview" id="lv_preview" hidden aria-label="Preview of the selected list"></aside>
+          </div>
+        </div>
+
+        <div id="lv_edit" hidden>
+          <div class="lv__crumb"><a href="#lists" id="lv_back">← Lists</a></div>
+          <div class="lv__head">
+            <h2 class="lv__h1">Edit list</h2>
+            <span id="lv_eKind"></span>
+            <span class="lv__grow"></span>
+            <button type="button" class="lv__btnlight" id="lv_eRefreshBtn">Refresh</button>
+            <a class="cbm-button cbm-button--secondary" id="lv_eView" href="#">View members ↗</a>
+            <div class="lv__menu">
+              <button type="button" class="lv__btnlight" id="lv_moreBtn" aria-haspopup="menu" aria-expanded="false">More ▾</button>
+              <div class="lv__menulist" id="lv_moreMenu" role="menu" hidden>
+                <button type="button" role="menuitem" id="lv_copyBtn">Copy to a new static list</button>
+                <button type="button" role="menuitem" id="lv_retireBtn">Retire</button>
+                <button type="button" role="menuitem" class="lv__danger" id="lv_deleteBtn">Delete</button>
+              </div>
+            </div>
+          </div>
+          <div class="cm__notice cm__notice--warn" id="lv_eNote" hidden></div>
+          <div class="lv__cols">
+            <div class="lv__wide">
+              <section class="cm__card" aria-labelledby="lv_setH">
+                <h3 id="lv_setH">Settings</h3>
+                <label class="lv__field">Name <input type="text" id="lv_eName" maxlength="200" /><span class="lv__hint">Say who is on it, so anyone can pick it from the list of lists without opening it.</span></label>
+                <label class="lv__field">Notes <textarea id="lv_eNotes" rows="3" maxlength="4000"></textarea></label>
+                <div class="lv__ccrow" id="lv_eCc" hidden>
+                  <button type="button" class="lv__switch lv__switch--plain" id="lv_eCcSwitch" role="switch" aria-checked="false"><span class="lv__track"><span class="lv__knob"></span></span>Keep a copy in Constant Contact</button>
+                  <span class="lv__muted" id="lv_eCcStatus"></span>
+                  <span class="lv__grow"></span>
+                  <button type="button" class="cm__rowbtn" id="lv_eSyncBtn">Sync now</button>
+                </div>
+              </section>
+              <section class="cm__card" id="lv_eWho" aria-labelledby="lv_whoH" hidden>
+                <h3 id="lv_whoH">Who is on it</h3>
+                <p class="lv__hint">Someone in <strong>any</strong> Include group is on the list. Someone in <strong>any</strong> Leave out group is never on it.</p>
+                <div class="lv__lab lv__lab--inc">Include</div>
+                <div id="lv_eInc"></div>
+                <div class="lv__addrow">
+                  <button type="button" class="lv__dash" data-add="include" data-kind="match">+ Records matching conditions</button>
+                  <button type="button" class="lv__dash" data-add="include" data-kind="list">+ Everyone on another list</button>
+                  <button type="button" class="lv__dash" data-add="include" data-kind="import">+ The people a file names</button>
+                </div>
+                <div class="lv__lab lv__lab--exc">Leave out — always wins</div>
+                <div id="lv_eExc"></div>
+                <div class="lv__addrow">
+                  <button type="button" class="lv__dash" data-add="exclude" data-kind="list">+ Leave out everyone on a list</button>
+                  <button type="button" class="lv__dash" data-add="exclude" data-kind="match">+ Leave out records matching conditions</button>
+                </div>
+              </section>
+              <section class="cm__card" id="lv_eMembers" aria-labelledby="lv_memH" hidden>
+                <div class="lv__cardhead">
+                  <h3 id="lv_memH">Who is on it</h3>
+                  <span class="lv__muted" id="lv_eMemCount"></span>
+                  <span class="lv__grow"></span>
+                  <input type="search" class="lv__smallsearch" id="lv_eMemQ" placeholder="Search members by name" aria-label="Search members by name" />
+                  <button type="button" class="cbm-button" id="lv_addBtn">+ Add people</button>
+                </div>
+                <div class="lv__bulk" id="lv_eBulk" hidden>
+                  <strong id="lv_eBulkCount"></strong>
+                  <button type="button" class="cm__rowbtn lv__danger" id="lv_removeBtn">Remove from this list</button>
+                  <button type="button" class="cm__rowbtn" id="lv_clearBtn">Clear</button>
+                </div>
+                <div class="lv__tablebox">
+                  <table class="lv__grid lv__grid--members">
+                    <thead><tr><th><input type="checkbox" id="lv_eAll" aria-label="Select every member on this page" /></th><th>Name</th><th>Type</th><th>Email</th><th>Text</th><th>Post</th></tr></thead>
+                    <tbody id="lv_eMemRows"></tbody>
+                  </table>
+                </div>
+                <p class="cm__empty" id="lv_eMemEmpty" hidden></p>
+                <div class="lv__pager"><span id="lv_eMemRange"></span><span class="lv__grow"></span><button type="button" class="cm__rowbtn" id="lv_eMemPrev">Previous</button><button type="button" class="cm__rowbtn" id="lv_eMemNext">Next</button></div>
+              </section>
+            </div>
+            <div class="lv__side">
+              <section class="lv__live" id="lv_eLive" aria-live="polite"></section>
+              <section class="cm__card" id="lv_eDiff" hidden aria-labelledby="lv_diffH">
+                <h3 id="lv_diffH">Who this change moves</h3>
+                <div id="lv_eDiffBody"></div>
+              </section>
+              <section class="cm__card" aria-labelledby="lv_usedH">
+                <h3 id="lv_usedH">Used by</h3>
+                <div id="lv_eUsed"></div>
+              </section>
+            </div>
+          </div>
+          <div class="lv__savebar" id="lv_saveBar" role="region" aria-label="Unsaved changes" hidden>
+            <span class="lv__unsaved"><span class="lv__dot"></span><span id="lv_saveText">Unsaved changes</span></span>
+            <span class="lv__grow"></span>
+            <button type="button" class="cm__rowbtn" id="lv_discardBtn">Discard</button>
+            <button type="button" class="cbm-button" id="lv_saveBtn">Save list</button>
+          </div>
+        </div>
+
+        <aside class="lv__drawer" id="lv_drawer" hidden aria-labelledby="lv_drawerH">
+          <div class="lv__dhead"><h3 id="lv_drawerH">Add people</h3><span class="lv__grow"></span><button type="button" class="cm__rowbtn" id="lv_drawerClose" aria-label="Close Add people">Close</button></div>
+          <div class="lv__dbody">
+            <label class="lv__search"><input type="search" id="lv_dQ" placeholder="Type two letters of a name, company or email" aria-label="Find people by name, company or email" autocomplete="off" /></label>
+            <div class="lv__chips" role="group" aria-label="Look in" id="lv_dTypes"></div>
+            <details class="lv__conds" id="lv_dCondBox">
+              <summary>Find by conditions instead</summary>
+              <div class="lv__findby"><span>Find</span><select id="lv_dFindType" aria-label="Record type"></select><span>where</span></div>
+              <div id="lv_dConds"></div>
+              <div class="lv__addrow"><button type="button" class="cm__rowbtn" id="lv_dAddCond">+ Condition (and)</button><button type="button" class="cbm-button cbm-button--secondary" id="lv_dFind">Find</button></div>
+            </details>
+            <div class="lv__dcount"><label class="cm__check"><input type="checkbox" id="lv_dAll" /> Select every match</label><span id="lv_dCount" class="lv__muted"></span></div>
+            <div id="lv_dRows" class="lv__results"></div>
+            <p class="lv__hint">People are copied onto the list once. No search is saved — that is what a dynamic list is for.</p>
+          </div>
+          <div class="lv__dfoot"><span class="lv__muted" id="lv_dTicked">0 ticked</span><span class="lv__grow"></span><button type="button" class="cm__rowbtn" id="lv_dCancel">Cancel</button><button type="button" class="cbm-button" id="lv_dAdd">Add people</button></div>
+        </aside>
+      </div>
+      <p class="cm__hint" id="ls_intro">Named lists a campaign sends to. A <strong>dynamic</strong> list is a search — who to include, who to leave out — run again before every send. A <strong>static</strong> list holds exactly the people you add to it.</p>
       <div class="ls" id="ls_listsView" hidden>
         <section class="cm__panel ls__index">
           <div class="cm__controls">
@@ -713,6 +869,7 @@
   <script src="app.js"></script>
   <!-- The Lists and Calls tabs keep their own scripts; both load after app.js
        and reach the page through window.CBMMarketing. -->
+  <script src="listview.js"></script>
   <script src="lists.js"></script>
   <script src="calls.js"></script>
   <script src="imports.js"></script>

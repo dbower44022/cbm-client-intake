@@ -1,0 +1,185 @@
+/* The Lists tab redesigned (build plan § 7e.14): the list view with
+   Preview, and Edit. Builds on styles.css; no page width cap (density by
+   packing). Every rule is scoped to .lv so the old screens are untouched. */
+.lv { --lv-ink: #1F2933; --lv-muted: #4B5563; --lv-line: #D9E0E8; --lv-soft: #EEF1F4; --lv-sel: #E3ECF5;
+      --lv-blue: #0B4F94; --lv-blue-bg: #DCEBFA; --lv-out: #9B2C2C; --lv-out-bg: #FDF6F6; --lv-ok: #1E6B34;
+      color: var(--lv-ink); }
+.lv [hidden] { display: none !important; }
+.lv__grow { flex: 1; }
+.lv__muted { color: var(--lv-muted); }
+.lv__small { font-size: .86rem; }
+.lv__plain { margin: 0; color: var(--lv-muted); }
+.lv__pad { padding: 1.2rem; }
+.lv__hint { display: block; margin: .3rem 0 0; font-size: .86rem; color: var(--lv-muted); font-weight: 400; }
+.lv__error { color: var(--lv-out); font-weight: 600; }
+.lv kbd { font: inherit; font-size: .78rem; border: 1px solid #C3CDD8; border-bottom-width: 2px; border-radius: 4px; padding: 0 .3rem; background: #fff; }
+
+/* --- the toolbar -------------------------------------------------------------- */
+.lv__bar { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem .9rem; margin-bottom: .8rem; }
+.lv__search { display: flex; align-items: center; gap: .5rem; flex: 1 1 26rem; min-height: 2.75rem; padding: 0 .8rem;
+  border: 1px solid #9FB3C8; border-radius: 8px; background: #fff; color: var(--lv-muted); }
+.lv__search:focus-within { border-color: var(--cbm-navy, #173B60); box-shadow: 0 0 0 3px rgba(23, 59, 96, .15); }
+.lv__search input { flex: 1; min-width: 0; border: 0; outline: 0; font: inherit; font-size: 1rem; background: transparent; color: var(--lv-ink); }
+.lv__matches { font-size: .86rem; white-space: nowrap; }
+.lv__chips { display: flex; flex-wrap: wrap; gap: .35rem; }
+.lv__chip { font: inherit; font-size: .88rem; border: 1px solid #C3CDD8; background: #fff; color: #374151;
+  border-radius: 999px; padding: .3rem .8rem; cursor: pointer; min-height: 2rem; }
+.lv__chip:hover { border-color: var(--cbm-navy, #173B60); }
+.lv__chip.is-on { background: var(--cbm-navy, #173B60); border-color: var(--cbm-navy, #173B60); color: #fff; }
+.lv__switch { display: inline-flex; align-items: center; gap: .5rem; font: inherit; font-weight: 500; color: var(--cbm-navy, #173B60);
+  background: #fff; border: 1px solid #C3CDD8; border-radius: 999px; padding: .25rem .8rem .25rem .35rem; cursor: pointer; min-height: 2.25rem; }
+.lv__switch--plain { border: 0; padding-left: 0; background: transparent; }
+.lv__track { width: 2.1rem; height: 1.25rem; border-radius: 999px; background: #C3CDD8; position: relative; transition: background .15s; }
+.lv__knob { position: absolute; top: .15rem; left: .15rem; width: .95rem; height: .95rem; border-radius: 50%; background: #fff; transition: left .15s; }
+.lv__switch[aria-checked="true"] .lv__track { background: var(--cbm-navy, #173B60); }
+.lv__switch--plain[aria-checked="true"] .lv__track { background: #2E7D4F; }
+.lv__switch[aria-checked="true"] .lv__knob { left: 1rem; }
+
+/* --- the list view ------------------------------------------------------------ */
+.lv__body { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; }
+.lv__listbox { flex: 999 1 40rem; min-width: 0; background: #fff; border: 1px solid var(--lv-line); border-radius: 10px; overflow: hidden; }
+.lv__tablebox { overflow-x: auto; }
+.lv__grid { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.lv__grid th { text-align: left; font-weight: 600; font-size: .82rem; color: #374151; padding: .6rem .75rem; background: #F7F9FB;
+  border-bottom: 1px solid var(--lv-line); white-space: nowrap; }
+.lv__grid th[data-sort] { cursor: pointer; user-select: none; }
+.lv__grid th[aria-sort="ascending"]::after { content: " ▲"; color: var(--lv-muted); }
+.lv__grid th[aria-sort="descending"]::after { content: " ▼"; color: var(--lv-muted); }
+.lv__grid td { padding: .65rem .75rem; border-bottom: 1px solid var(--lv-soft); vertical-align: top; }
+#lv_rows tr { cursor: pointer; }
+#lv_rows tr:hover td { background: #F7FAFD; }
+#lv_rows tr.is-sel td { background: var(--lv-sel); }
+#lv_rows tr.is-sel td:first-child { box-shadow: inset 3px 0 0 var(--cbm-navy, #173B60); }
+#lv_rows tr:focus { outline: 2px solid var(--cbm-navy, #173B60); outline-offset: -2px; }
+.lv__name { min-width: 15rem; }
+.lv__nm { font-weight: 600; color: var(--cbm-navy, #173B60); white-space: normal; overflow-wrap: anywhere; }
+.lv__num { text-align: right !important; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lv__date { white-space: nowrap; color: var(--lv-muted); }
+.lv__notes { color: var(--lv-muted); min-width: 9rem; max-width: 40ch; white-space: normal; overflow-wrap: anywhere; }
+.lv__tag { display: inline-block; margin-left: .45rem; font-size: .74rem; font-weight: 600; border-radius: 4px; padding: .05rem .4rem;
+  background: #ECEEF1; color: #374151; vertical-align: 1px; white-space: nowrap; }
+.lv__tag--ready { background: #FBF0DC; color: #6B4A12; }
+.lv__tag--warn { background: #FFF1D6; color: #7A4A06; }
+.lv__kind { display: inline-flex; align-items: center; font-size: .78rem; font-weight: 600; border-radius: 999px; padding: .1rem .6rem; white-space: nowrap; }
+.lv__kind--dynamic { background: var(--lv-blue-bg); color: var(--lv-blue); }
+.lv__kind--static { background: #ECEEF1; color: #374151; }
+.lv__cc { display: inline-flex; align-items: center; gap: .4rem; white-space: nowrap; }
+.lv__ccdot { width: .5rem; height: .5rem; border-radius: 50%; background: #2E7D4F; }
+.lv__foot { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem 1.1rem; padding: .55rem .9rem; border-top: 1px solid var(--lv-soft);
+  font-size: .82rem; color: var(--lv-muted); }
+
+/* --- Preview ------------------------------------------------------------------ */
+.lv__preview { flex: 1 1 24rem; min-width: 0; max-width: 34rem; background: #fff; border: 1px solid var(--lv-line); border-radius: 10px;
+  position: sticky; top: .75rem; max-height: calc(100vh - 1.5rem); overflow-y: auto; }
+.lv__ph { padding: 1rem 1.2rem .9rem; border-bottom: 1px solid var(--lv-soft); }
+.lv__ptitle { font-family: var(--cbm-font-serif, "Roboto Slab", Georgia, serif); font-size: 1.15rem; font-weight: 600; color: var(--cbm-navy, #173B60);
+  margin: .4rem 0 0; line-height: 1.35; overflow-wrap: anywhere; }
+.lv__pacts { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .8rem; }
+.lv__pacts .cbm-button { padding: .45rem .9rem; font-size: .9rem; text-decoration: none; }
+.lv__pb { padding: .9rem 1.2rem 1.1rem; display: flex; flex-direction: column; gap: 1rem; }
+.lv__ps h4 { margin: 0 0 .4rem; font-size: .75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--lv-muted); }
+.lv__figs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .45rem; }
+.lv__fig { background: #F4F7FA; border-radius: 8px; padding: .45rem .6rem; }
+.lv__figv { font-size: 1.15rem; font-weight: 600; color: var(--cbm-navy, #173B60); font-variant-numeric: tabular-nums; }
+.lv__figl { font-size: .78rem; color: var(--lv-muted); }
+.lv__rule { font-size: .9rem; padding: .45rem .65rem; border-radius: 6px; background: #F7F9FB; border: 1px solid var(--lv-soft); }
+.lv__rule--out { background: var(--lv-out-bg); border-color: #F0DADA; margin-top: .35rem; }
+.lv__or { font-size: .78rem; color: #6B7280; padding: .2rem 0 .2rem .8rem; }
+.lv__kv { display: grid; grid-template-columns: auto 1fr; gap: .3rem .9rem; margin: 0; font-size: .9rem; }
+.lv__kv dt { color: var(--lv-muted); white-space: nowrap; }
+.lv__kv dd { margin: 0; overflow-wrap: anywhere; }
+
+/* --- Edit --------------------------------------------------------------------- */
+.lv__crumb { margin-bottom: .4rem; font-size: .9rem; }
+.lv__head { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem .9rem; margin-bottom: .9rem; }
+.lv__head .cbm-button { text-decoration: none; }
+.lv__h1 { margin: 0; font-family: var(--cbm-font-serif, "Roboto Slab", Georgia, serif); font-size: 1.4rem; color: var(--cbm-navy, #173B60); }
+.lv__menu { position: relative; }
+.lv__menulist { position: absolute; right: 0; top: calc(100% + .3rem); z-index: 20; min-width: 16rem; background: #fff; border: 1px solid var(--lv-line);
+  border-radius: 8px; box-shadow: 0 8px 24px rgba(23, 59, 96, .14); padding: .3rem; display: flex; flex-direction: column; }
+.lv__menulist button { font: inherit; text-align: left; background: transparent; border: 0; border-radius: 6px; padding: .55rem .7rem; cursor: pointer; color: var(--lv-ink); }
+.lv__menulist button:hover, .lv__menulist button:focus { background: var(--lv-sel); outline: 0; }
+.lv__danger { color: var(--lv-out) !important; }
+.lv__cols { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; padding-bottom: 4.5rem; }
+.lv__wide { flex: 999 1 40rem; min-width: 0; display: flex; flex-direction: column; gap: 1rem; }
+.lv__side { flex: 1 1 22rem; min-width: 0; display: flex; flex-direction: column; gap: 1rem; position: sticky; top: .75rem; }
+.lv .cm__card h3 { margin: 0 0 .7rem; color: var(--cbm-navy, #173B60); font-size: 1.05rem; }
+.lv__field { display: flex; flex-direction: column; gap: .3rem; font-weight: 500; color: #374151; margin-bottom: .9rem; }
+.lv__field input, .lv__field textarea { font: inherit; font-weight: 400; border: 1px solid #C3CDD8; border-radius: 6px; padding: .55rem .7rem; color: var(--lv-ink); background: #fff; }
+#lv_eName { font-size: 1.05rem; font-weight: 500; color: var(--cbm-navy, #173B60); }
+.lv__ccrow { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .9rem; padding: .6rem .85rem; border: 1px solid var(--lv-soft); border-radius: 8px; background: #FAFBFD; }
+.lv__lab { font-size: .75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin: 1rem 0 .5rem; }
+.lv__lab--inc { color: var(--lv-blue); }
+.lv__lab--exc { color: var(--lv-out); }
+.lv__group { border: 1px solid #C9D6E3; border-radius: 10px; padding: .75rem .9rem; background: #fff; display: flex; flex-direction: column; gap: .5rem; }
+.lv__group--out { border-color: #E8C9C9; background: #FFFBFB; }
+.lv__ghead { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.lv__gcount { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; color: #374151; }
+.lv__cond { display: flex; flex-wrap: wrap; align-items: flex-start; gap: .5rem; padding-left: 2.6rem; position: relative; }
+.lv__and { position: absolute; left: 0; top: .45rem; width: 2.1rem; text-align: right; font-size: .78rem; font-weight: 600; color: #6B7280; }
+.lv__indent { padding-left: 2.6rem; }
+.lv select, .lv__cond input[type="text"], .lv__cond input[type="date"], .lv__cond input[type="number"] {
+  font: inherit; border: 1px solid #C3CDD8; border-radius: 6px; padding: .35rem .5rem; background: #fff; color: var(--lv-ink); min-height: 2.1rem; }
+.lv__numin { width: 7em; }
+.lv__ticks { display: flex; flex-wrap: wrap; gap: .3rem; }
+.lv__tick { display: inline-flex; align-items: center; gap: .3rem; font-size: .88rem; border: 1px solid #C9D6E3; border-radius: 999px; padding: .15rem .6rem .15rem .4rem; cursor: pointer; background: #fff; }
+.lv__tick.is-on { background: #EEF5FC; border-color: #9DBDE0; color: var(--lv-blue); font-weight: 500; }
+.lv__import textarea { font-family: var(--cbm-mono, monospace); width: 100%; max-width: 40rem; box-sizing: border-box; border: 1px solid #C3CDD8; border-radius: 6px; padding: .4rem .5rem; }
+.lv__addrow { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .6rem; }
+.lv__dash { font: inherit; font-size: .88rem; font-weight: 500; border: 1px dashed #9FB3C8; background: transparent; color: var(--cbm-navy, #173B60);
+  border-radius: 8px; padding: .5rem .8rem; cursor: pointer; }
+.lv__dash:hover { background: #F4F8FC; }
+.lv__live { background: var(--cbm-navy, #173B60); color: #fff; border-radius: 10px; padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: .35rem; }
+.lv__livel { color: #D6E2EE; font-size: .88rem; }
+.lv__liveb { font-size: 1.6rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.lv__livemsg { font-size: 1rem; }
+.lv__delta { align-self: flex-start; background: #2B5583; border-radius: 999px; padding: .1rem .65rem; font-size: .86rem; }
+.lv__grid--tight td, .lv__grid--tight th { padding: .4rem .5rem; }
+.lv__difflist { max-height: 22rem; overflow-y: auto; border: 1px solid var(--lv-soft); border-radius: 6px; }
+.lv__btnlight { font: inherit; font-weight: 500; display: inline-flex; align-items: center; gap: .4rem; min-height: 2.6rem; padding: .5rem 1rem;
+  border-radius: 6px; border: 1px solid #C3CDD8; background: #fff; color: var(--cbm-navy, #173B60); cursor: pointer; }
+.lv__btnlight:hover { background: #F4F8FC; border-color: var(--cbm-navy, #173B60); }
+.lv__plus { color: var(--lv-ok); font-weight: 600; white-space: nowrap; }
+.lv__minus { color: var(--lv-out); font-weight: 600; white-space: nowrap; }
+.lv__cardhead { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .8rem; margin-bottom: .6rem; }
+.lv__cardhead h3 { margin: 0 !important; }
+.lv__smallsearch { font: inherit; border: 1px solid #C3CDD8; border-radius: 6px; padding: .4rem .6rem; flex: 0 1 16rem; min-width: 0; }
+.lv__bulk { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; background: #FFF7E8; border: 1px solid #EBD3A6; border-radius: 8px; padding: .45rem .75rem; margin-bottom: .6rem; }
+.lv__grid--members tr.is-ticked td { background: #FFFBF2; }
+.lv__yes { color: var(--lv-ok); font-weight: 600; }
+.lv__no { color: #9CA3AF; }
+.lv__pager { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: .6rem; font-size: .88rem; color: var(--lv-muted); }
+.lv__savebar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem;
+  background: #fff; border-top: 1px solid #D1D5DB; box-shadow: 0 -4px 16px rgba(23, 59, 96, .1); padding: .7rem 1.5rem; }
+.lv__unsaved { display: inline-flex; align-items: center; gap: .5rem; font-weight: 600; color: #7A4A06; }
+.lv__dot { width: .55rem; height: .55rem; border-radius: 50%; background: var(--cbm-gold, #CB963B); }
+
+/* --- Add people: the drawer ----------------------------------------------------- */
+.lv__drawer { position: fixed; top: 0; right: 0; bottom: 0; z-index: 40; width: min(34rem, 100%); background: #fff; border-left: 1px solid #D1D5DB;
+  box-shadow: -8px 0 24px rgba(23, 59, 96, .14); display: flex; flex-direction: column; }
+.lv__dhead { display: flex; align-items: center; gap: .5rem; padding: 1rem 1.1rem; border-bottom: 1px solid var(--lv-soft); }
+.lv__dhead h3 { margin: 0; font-size: 1.05rem; color: var(--cbm-navy, #173B60); overflow-wrap: anywhere; }
+.lv__dbody { flex: 1; overflow-y: auto; padding: .9rem 1.1rem; display: flex; flex-direction: column; gap: .7rem; }
+.lv__dbody .lv__search { flex: 0 0 auto; }
+.lv__conds { border: 1px solid var(--lv-soft); border-radius: 8px; padding: .5rem .75rem; }
+.lv__conds summary { cursor: pointer; font-weight: 500; color: var(--cbm-navy, #173B60); }
+.lv__conds .lv__cond { padding-left: 0; margin-top: .5rem; }
+.lv__conds .lv__and { position: static; width: auto; }
+.lv__findby { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: .6rem; }
+.lv__dcount { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; font-size: .88rem; }
+.lv__results { display: flex; flex-direction: column; gap: .25rem; }
+.lv__res { display: flex; align-items: center; gap: .6rem; padding: .5rem .6rem; border-radius: 8px; border: 1px solid transparent; cursor: pointer; }
+.lv__res:hover { background: #F7FAFD; }
+.lv__res.is-ticked { background: #F4F8FC; border-color: #C9D6E3; }
+.lv__res.is-on { opacity: .7; cursor: default; }
+.lv__restext { display: flex; flex-direction: column; min-width: 0; }
+.lv__resname { font-weight: 500; overflow-wrap: anywhere; }
+.lv__already { margin-left: auto; font-size: .8rem; font-weight: 600; color: var(--lv-ok); white-space: nowrap; }
+.lv__dfoot { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; padding: .8rem 1.1rem; border-top: 1px solid var(--lv-soft); }
+
+@media (max-width: 700px) {
+  .lv__figs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lv__cond, .lv__indent { padding-left: 0; }
+  .lv__and { position: static; width: auto; }
+  .lv__preview, .lv__side { position: static; max-height: none; }
+}

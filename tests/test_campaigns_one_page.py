@@ -56,7 +56,8 @@ def test_every_section_has_a_panel_and_no_id_is_declared_twice():
     # The rehoused panels own their ids under a prefix; the shared chrome is unprefixed and single.
     lists_panel = html[html.index('id="listsPanel"'):html.index('id="callsPanel"')]
     calls_panel = html[html.index('id="callsPanel"'):html.index('id="campaignsPanel"')]
-    assert all(i.startswith("ls_") for i in re.findall(r'\bid="([^"]+)"', lists_panel)[1:])
+    # ls_ the built screens, lv_ the redesigned ones (build plan § 7e.14).
+    assert all(i.startswith(("ls_", "lv_")) for i in re.findall(r'\bid="([^"]+)"', lists_panel)[1:])
     assert all(i.startswith("cl_") for i in re.findall(r'\bid="([^"]+)"', calls_panel)[1:])
     for shared in ("modal", "notice", "offPanel", "offReason", "userCorner", "whoName"):
         assert ids.count(shared) == 1, shared
@@ -66,17 +67,22 @@ def test_the_two_scripts_load_after_the_page_script_and_speak_through_the_shared
     html = _text(FRONTEND / "index.html")
     order = re.findall(r'<script src="([^"]+)"', html)
     assert order.index("/shared/busy.js") == 0
-    assert order.index("app.js") < order.index("lists.js") < order.index("calls.js")
+    assert order.index("app.js") < order.index("listview.js") < order.index("lists.js") < order.index("calls.js")
     assert 'href="lists.css"' in html
     app = _text(FRONTEND / "app.js")
     assert "window.CBMMarketing = {" in app
     for key in ("api: api", "notice: notice", "ask: ask", "register: function", "showSection: showSection", "session: function"):
         assert key in app, key
-    for name in ("lists.js", "calls.js"):
+    for name in ("lists.js", "listview.js", "calls.js"):
         js = _text(FRONTEND / name)
         assert "var M = window.CBMMarketing;" in js and "if (!M) return;" in js
         assert "/calls/session" not in js and "location.assign(" not in js, f"{name} keeps no page of its own"
-    assert 'M.register("lists", { onShow: onShow, onLeave: leaveUnsaved })' in _text(FRONTEND / "lists.js")
+    lists = _text(FRONTEND / "lists.js")
+    assert 'M.register("lists", {' in lists
+    # The redesigned screens take the tab only while the session says so.
+    assert "s.listScreensOn && window.CBMListView" in lists
+    assert "window.CBMListView.onShow(params) : onShow(params)" in lists
+    assert "window.CBMListView.onLeave() : leaveUnsaved()" in lists
     assert 'M.register("calls", { onShow:' in _text(FRONTEND / "calls.js")
 
 
@@ -85,6 +91,9 @@ def test_the_scripts_address_only_their_own_prefixed_ids():
     assert all(i.startswith("ls_") for i in re.findall(r'\$\("([^"]+)"\)', lists)), "lists.js reaches only ls_ ids"
     calls = _text(FRONTEND / "calls.js")
     assert all(i.startswith("cl_") for i in re.findall(r'\$\("([^"]+)"\)', calls)), "calls.js reaches only cl_ ids"
+    view = _text(FRONTEND / "listview.js")
+    assert all(i.startswith("lv_") or i == "listsPanel" for i in re.findall(r'\$\("([^"]+)"\)', view)), \
+        "listview.js reaches only lv_ ids (and the panel it lives in)"
     app = _text(FRONTEND / "app.js")
     assert not re.search(r'\$\("(ls|cl)_', app), "app.js never reaches into the other tabs"
 

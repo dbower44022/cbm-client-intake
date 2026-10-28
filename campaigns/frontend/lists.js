@@ -827,7 +827,17 @@
     if (want && want !== state.open) await openList(want);
     else writeHash();
   }
-  M.register("lists", { onShow: onShow, onLeave: leaveUnsaved });
+  // The redesigned screens (listview.js, build plan § 7e.14) take the tab
+  // while the session says listScreensOn; this file serves it otherwise.
+  function redesigned() { var s = M.session(); return !!(s && s.listScreensOn && window.CBMListView); }
+  M.register("lists", {
+    onShow: function (params) {
+      $("ls_intro").hidden = redesigned();
+      if (redesigned()) $("ls_listsView").hidden = true;
+      return redesigned() ? window.CBMListView.onShow(params) : onShow(params);
+    },
+    onLeave: function () { return redesigned() ? window.CBMListView.onLeave() : leaveUnsaved(); }
+  });
 
   $("ls_newListBtn").addEventListener("click", newList);
   $("ls_showRetired").addEventListener("change", renderLists);

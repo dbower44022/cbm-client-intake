@@ -235,3 +235,42 @@ def test_migration_0040_adds_the_three_columns():
     text = path.read_text()
     for col in ('"counts"', '"counted_at"', '"reach"'):
         assert text.count(col) == 2, col
+
+
+# --- stops 2 to 4: the screens -------------------------------------------------------
+
+FRONTEND = Path(__file__).resolve().parent.parent / "campaigns" / "frontend"
+
+
+def test_the_view_page_is_served_with_busy_js_first_and_the_org_named(monkeypatch):
+    client = _client(monkeypatch, ListCrm(), Both())
+    resp = client.get("/campaigns/lists/list1/members")
+    assert resp.status_code == 200
+    html = resp.text
+    assert '<base href="/campaigns/">' in html and "{{org}}" not in html
+    scripts = html.split('<script src="')[1:]
+    assert scripts[0].startswith("/shared/busy.js")
+    assert "list-members.js" in html and 'name="cbm-org"' in html
+
+
+def test_the_name_search_says_who_is_already_on_the_list(monkeypatch):
+    crm = ListCrm()
+    pat = _contact(crm, "Pat Doe")
+    _contact(crm, "Pat Other")
+    client = _client(monkeypatch, crm, Both())
+    sid = _new(client, "Picked", "static")
+    client.post(f"{API}/{sid}/add-people", json={"keys": [f"contact:{pat['id']}"]})
+    rows = client.get(f"{API}/search/records?type=contact&q=Pat&listId={sid}").json()["records"]
+    assert {r["name"]: r["onList"] for r in rows} == {"Pat Doe": True, "Pat Other": False}
+    plain = client.get(f"{API}/search/records?type=contact&q=Pat").json()["records"]
+    assert all("onList" not in r for r in plain)
+
+
+def test_the_screens_never_disable_a_button_and_open_view_in_a_named_tab():
+    view = (FRONTEND / "listview.js").read_text()
+    members = (FRONTEND / "list-members.js").read_text()
+    for js in (view, members):
+        assert ".disabled = true" not in js and 'setAttribute("disabled"' not in js
+    assert 'return "cbm-list-" + id;' in view and "window.open(viewUrl(id), viewTab(id))" in view
+    # Preview remembers its switch per browser, and survives a blocked store.
+    assert "localStorage.getItem(PREVIEW_KEY)" in view and "try { st.preview" in view

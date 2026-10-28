@@ -1238,6 +1238,21 @@ def create_app(
             "/campaigns/lead/{record_id}", _campaign_record_page, methods=["GET"],
             response_class=HTMLResponse, include_in_schema=False,
         )
+
+        # View (build plan § 7e.14): one list's members in a browser tab of
+        # its own. The page is a shell; every read it makes is team-gated.
+        def _campaign_list_members_page(list_id: str) -> HTMLResponse:
+            html = render_branding(
+                (CAMPAIGNS_FRONTEND_DIR / "list-members.html").read_text(encoding="utf-8"),
+                settings,
+            )
+            html = html.replace("<head>", '<head><base href="/campaigns/">', 1)
+            return HTMLResponse(html, headers={"Cache-Control": "no-store"})
+
+        app.add_api_route(
+            "/campaigns/lists/{list_id}/members", _campaign_list_members_page, methods=["GET"],
+            response_class=HTMLResponse, include_in_schema=False,
+        )
         app.mount(
             "/campaigns",
             BrandedStaticFiles(directory=str(CAMPAIGNS_FRONTEND_DIR), html=True),
