@@ -1242,7 +1242,7 @@ the strength of it.
   written by `core/partner_links.py` from conversion, import, intake,
   attendance and Client Management's *Refer to a partner*; lists select by
   them. CRM change on crm-test only. Pushed and **live-passed on crm-test
-  10-28-26**; v0.295.1 (two fixes from the pass) committed, not pushed.
+  10-28-26**; v0.295.1 (two fixes from the pass) pushed 10-28-26 10:42.
 - **v0.294.0 (2026-10-27) — the shared grid, divider and spinners**
   (`prds/shared-grid-plan.md`): Lists first, then one application per
   release (`OPEN-ITEMS.md` #60). The `busy.js` spinners reach every page.
