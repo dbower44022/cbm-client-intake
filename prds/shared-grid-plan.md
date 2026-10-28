@@ -1,8 +1,9 @@
 # Shared grid, divider and loading spinner — plan
 
-Last Updated: 10-27-26 22:04 · Revision 0.2 — change log at the end.
+Last Updated: 10-28-26 00:24 · Revision 0.3 — change log at the end.
 
-**Status: approved 10-27-26; stops 1–3 built as v0.294.0; live pass owed.**
+**Status: approved 10-27-26; stops 1–3 built as v0.294.0; live-passed on crm-test 10-28-26 00:23**
+(https://claude.ai/artifact/AWjNEvmyq7mrwLVyDd2yJF).
 Made on the way: the *Loading…* pill appears only after 400 ms, so a fast
 page never flashes it; widths are set as outer widths and the last column
 takes the remaining room, so a dragged column moves by exactly the drag.
@@ -126,13 +127,14 @@ item says which columns it can sort.
 | Field | Value |
 |---|---|
 | Document | Shared grid, divider and loading spinner — plan |
-| Version | 0.2 |
-| Last Updated | 10-27-26 22:04 |
+| Version | 0.3 |
+| Last Updated | 10-28-26 00:24 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.3 | 10-28-26 00:24 | Claude (Claude Code) | Live-passed on crm-test; nothing to fix. |
 | 0.2 | 10-27-26 22:04 | Claude (Claude Code) | Approved; stops 1–3 built as v0.294.0; the two choices made on the way. |
 | 0.1 | 10-27-26 21:41 | Claude (Claude Code) | Drafted from Doug's ruling of 10-27-26 21:30 and his choice of option B. |

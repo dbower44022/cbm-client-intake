@@ -10,7 +10,8 @@ found; move resolved items to the bottom with the resolution date.
     Doug's ruling 10-27-26: every grid has resizable columns, alternating
     rows and multi-column sorting, a preview pane has a divider, and a
     spinner shows while anything loads; option B — built once, Lists first
-    (v0.294.0), then each application. Plan: `prds/shared-grid-plan.md`.
+    (v0.294.0, live-passed on crm-test 10-28-26 00:23), then each
+    application. Plan: `prds/shared-grid-plan.md`.
     The spinners in `busy.js` already reach every page. **Owed, one release
     each:** Client Administration; Mentor Administration; Client, Partner and
     Funder Management (one shared frontend); Submission Admin; the

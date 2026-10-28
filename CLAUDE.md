@@ -1235,7 +1235,8 @@ the strength of it.
 - **v0.294.0 (2026-10-27) — the shared grid, divider and spinners**
   (`prds/shared-grid-plan.md`): Lists first, then one application per
   release (`OPEN-ITEMS.md` #60). The `busy.js` spinners reach every page.
-  Committed, not pushed; live pass owed.
+  Pushed; **live-passed on crm-test 10-28-26 00:23** (results page
+  https://claude.ai/artifact/AWjNEvmyq7mrwLVyDd2yJF).
 - **v0.293.0 (2026-10-27) — the Lists tab redesigned** (build plan
   § 7e.14, M11; rulings 129–132): the list view with Preview, Edit, and
   View in its own browser tab; counts stored and refreshed daily.

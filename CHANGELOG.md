@@ -34,6 +34,8 @@ No switch; no migration.
   Preview, Edit, the member grids and the Add people results.
 - **The standard** is in the root `CLAUDE.md`; the other applications follow
   one per release (`OPEN-ITEMS.md` #60).
+- **Live-passed on crm-test 10-28-26 00:23** by Claude (results page
+  https://claude.ai/artifact/AWjNEvmyq7mrwLVyDd2yJF): every check passed, nothing to fix.
 
 ## [0.293.1] — 2026-10-27
 
