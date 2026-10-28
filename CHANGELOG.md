@@ -50,7 +50,8 @@ switch; no migration.
   Preview shows them and each campaign's under *Used by*.
 - **Not in this release:** the partner's attendance report (decision 3 is its
   requirement); `OPEN-ITEMS.md`.
-- **Live-passed on crm-test 10-28-26** by Claude: the backfill wrote 7
+- **Live-passed on crm-test 10-28-26** by Claude (results page
+  https://claude.ai/artifact/94RW44pjS43iQJdMLe9hkh): the backfill wrote 7
   associations and a re-run none; lists by partner, funder, reason and event
   counted correctly; Joe Mentor (not an administrator) recorded *Refer to a
   partner* on Ashgrove Cabinetry — the association names the engagement and
