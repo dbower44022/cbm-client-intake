@@ -87,6 +87,7 @@
     if (col === "updatedAt") return l.updatedAt || "";
     if (col === "cc") return l.ccSync ? "Linked" : "";
     if (col === "notes") return l.notes || "";
+    if (col === "partners" || col === "events" || col === "funders") return (l[col] || []).join(", ");
     return l.name || "";
   }
 
@@ -133,6 +134,7 @@
         else ct.textContent = "—";
         tr.appendChild(ct);
       }
+      ["partners", "events", "funders"].forEach(function (k) { tr.appendChild(el("td", "lv__orgs", (l[k] || []).join(", "))); });
       tr.appendChild(el("td", "lv__notes", l.notes || ""));
       tr.addEventListener("click", function () { select(l.id, false); });
       tr.addEventListener("dblclick", function () { openEdit(l.id); });
@@ -245,6 +247,10 @@
       a.href = "/campaigns/record/" + enc(u.campaignId); a.target = "cbm-rec-campaigns-" + u.campaignId;
       dd.appendChild(a);
       dd.appendChild(document.createTextNode(" · " + (u.status || "—") + (u.reach == null ? "" : " · " + num(u.reach) + " reached")));
+      var orgs = [["partners", u.partners], ["events", u.events], ["funders", u.funders]].filter(function (x) { return (x[1] || []).length; });
+      if (orgs.length) dd.appendChild(el("div", "lv__muted lv__small", orgs.map(function (x) {
+        return x[0].charAt(0).toUpperCase() + x[0].slice(1) + ": " + x[1].map(function (o) { return o.name; }).join(", ");
+      }).join(" · ")));
       dl.appendChild(dd);
     });
     wrap.appendChild(dl);
@@ -289,6 +295,12 @@
     var who = el("div", "lv__muted", "Reading the list…");
     var used = el("div", "lv__muted", "Reading…");
     body.appendChild(section("Who is on it", who));
+    var aims = [["Partners", l.partners], ["Events", l.events], ["Funders", l.funders]].filter(function (x) { return (x[1] || []).length; });
+    if (aims.length) {
+      var adl = el("dl", "lv__kv");
+      aims.forEach(function (x) { adl.appendChild(el("dt", null, x[0])); adl.appendChild(el("dd", null, x[1].join(", "))); });
+      body.appendChild(section("Built to reach", adl));
+    }
     body.appendChild(section("Used by", used));
     var dl = el("dl", "lv__kv");
     function kv(k, v) { dl.appendChild(el("dt", null, k)); dl.appendChild(el("dd", null, v)); }
@@ -492,11 +504,76 @@
   function addGroup(side, kind) {
     var l = st.edit.detail.list;
     if (l.status === "retired" || l.system) { notice(l.system ? "A ready-made list cannot be changed — Copy it under More." : "A retired list cannot be changed — reactivate it first.", "warn"); return; }
-    var g = kind === "list" ? { kind: "list", listId: "" } : kind === "import" ? { kind: "import", type: "lead", values: [] }
-      : { kind: "match", type: "lead", conditions: [blankCondition()] };
+    var g = blankGroup(kind);
     st.edit.recipe[side].push(g);
     changed("Unsaved changes — a group added");
     renderGroups();
+  }
+
+  function blankGroup(kind) {
+    if (kind === "list") return { kind: "list", listId: "" };
+    if (kind === "import") return { kind: "import", type: "lead", values: [] };
+    if (kind === "associated") return { kind: "associated", partners: [], funders: [], reasons: [], every: false, names: {} };
+    if (kind === "attended") return { kind: "attended", events: [], status: "attended", every: false, names: {} };
+    return { kind: "match", type: "lead", conditions: [blankCondition()] };
+  }
+
+  // The chosen partners, funders or events as removable tags, with a picker to
+  // add one. Names are kept in the group so the list view never asks the CRM.
+  function chooser(g, key, options, placeholder) {
+    var wrap = el("div", "lv__ticks lv__indent");
+    (g[key] || []).forEach(function (id, j) {
+      var tag = el("span", "lv__tick is-on", g.names[id] || id);
+      var x = el("button", "cm__rowbtn", "×"); x.type = "button"; x.setAttribute("aria-label", "Remove " + (g.names[id] || id));
+      x.addEventListener("click", function () { g[key].splice(j, 1); changed(); renderGroups(); });
+      tag.appendChild(x); wrap.appendChild(tag);
+    });
+    var opts = [["", placeholder]].concat((options || []).filter(function (o) { return (g[key] || []).indexOf(o.id) < 0; })
+      .map(function (o) { return [o.id, o.name]; }));
+    wrap.appendChild(selectBox(opts, "", function (v) {
+      if (!v) return;
+      var o = (options || []).filter(function (x) { return x.id === v; })[0];
+      g[key].push(v); g.names[v] = o ? o.name : v; changed(); renderGroups();
+    }, placeholder));
+    return wrap;
+  }
+
+  function orgGroupBody(g, card) {
+    var orgs = (st.cat && st.cat.orgs) || {};
+    if (g.kind === "associated") {
+      card.appendChild(el("div", "lv__lab lv__indent", "Partners"));
+      card.appendChild(chooser(g, "partners", orgs.partners, "+ Add a partner"));
+      card.appendChild(el("div", "lv__lab lv__indent", "Funders"));
+      card.appendChild(chooser(g, "funders", orgs.funders, "+ Add a funder"));
+      var reasons = el("div", "lv__ticks lv__indent");
+      reasons.appendChild(el("span", "lv__muted", "Only when they"));
+      (orgs.reasons || []).forEach(function (r) {
+        var on = g.reasons.indexOf(r.value) >= 0;
+        var lab = el("label", "lv__tick" + (on ? " is-on" : ""));
+        var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = on;
+        cb.addEventListener("change", function () {
+          var at = g.reasons.indexOf(r.value);
+          if (cb.checked && at < 0) g.reasons.push(r.value);
+          if (!cb.checked && at >= 0) g.reasons.splice(at, 1);
+          changed(); renderGroups();
+        });
+        lab.appendChild(cb); lab.appendChild(document.createTextNode(r.label)); reasons.appendChild(lab);
+      });
+      reasons.appendChild(el("span", "lv__muted", "— none ticked means any reason"));
+      card.appendChild(reasons);
+    } else {
+      card.appendChild(chooser(g, "events", orgs.events, "+ Add an event"));
+      var st2 = el("div", "lv__ticks lv__indent");
+      st2.appendChild(selectBox([["attended", "who attended"], ["registered", "who registered (attended or not)"]], g.status,
+        function (v) { g.status = v; changed(); renderGroups(); }, "Attended or registered"));
+      card.appendChild(st2);
+    }
+    var every = el("label", "cm__check lv__indent");
+    var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = !!g.every;
+    cb.addEventListener("change", function () { g.every = cb.checked; changed(); });
+    every.appendChild(cb);
+    every.appendChild(document.createTextNode(" Every contact at the company, not only the person"));
+    card.appendChild(every);
   }
 
   function renderGroups() {
@@ -521,13 +598,24 @@
   function groupCard(side, g, i) {
     var card = el("div", "lv__group" + (side === "exclude" ? " lv__group--out" : ""));
     var head = el("div", "lv__ghead");
-    head.appendChild(selectBox((st.cat.groupKinds || []).map(function (k) { return [k.kind, k.label]; }), g.kind, function (v) {
-      g.kind = v;
-      if (v === "list") { g.listId = g.listId || ""; delete g.conditions; delete g.values; delete g.type; }
-      else if (v === "import") { g.values = g.values || []; g.type = g.type || "lead"; delete g.conditions; }
-      else { g.type = g.type || "lead"; g.conditions = [blankCondition()]; delete g.values; }
+    head.appendChild(selectBox((st.cat.groupKinds || []).filter(function (k) { return k.kind !== "builtin" || g.kind === "builtin"; })
+      .map(function (k) { return [k.kind, k.label]; }), g.kind, function (v) {
+      var fresh = blankGroup(v);
+      Object.keys(g).forEach(function (k) { delete g[k]; });
+      Object.keys(fresh).forEach(function (k) { g[k] = fresh[k]; });
       changed(); renderGroups();
     }, "Kind of group"));
+    if (g.kind === "associated" || g.kind === "attended" || g.kind === "builtin") {
+      var cnt0 = el("span", "lv__gcount", groupCount(side, i));
+      cnt0.setAttribute("data-count", side + (i + 1));
+      head.appendChild(cnt0);
+      var del0 = el("button", "cm__rowbtn", "Remove group"); del0.type = "button";
+      del0.addEventListener("click", function () { st.edit.recipe[side].splice(i, 1); st.edit.counts = {}; changed("Unsaved changes — a group removed"); renderGroups(); });
+      head.appendChild(del0);
+      card.appendChild(head);
+      if (g.kind !== "builtin") orgGroupBody(g, card);
+      return card;
+    }
     if (g.kind === "list") {
       var lists = [["", "— choose a list —"]].concat(st.lists.filter(function (l) {
         return l.id !== st.edit.id && (l.status !== "retired" || l.id === g.listId);
@@ -705,6 +793,8 @@
     for (var i = 0; i < all.length; i++) {
       var g = all[i];
       if (g.kind === "list" && !g.listId) return "Choose the list each list group names.";
+      if (g.kind === "associated" && !(g.partners.length || g.funders.length)) return "Choose a partner or funder for each association group.";
+      if (g.kind === "attended" && !g.events.length) return "Choose an event for each event group.";
       if (g.kind === "match") for (var j = 0; j < g.conditions.length; j++) if (!g.conditions[j].field) return "Choose a field for each condition.";
     }
     return "";
@@ -1083,6 +1173,8 @@
       try { st.cat = await api("/lists/catalogue"); } catch (e) { notice(e.message, "error"); return; }
       st.loaded = true;
       setPreview(st.preview);
+      var assoc = (st.cat.groupKinds || []).some(function (k) { return k.kind === "associated"; });
+      Array.prototype.forEach.call(document.querySelectorAll("#lv_eWho [data-needs-assoc]"), function (b) { b.hidden = !assoc; });
     }
     try { await loadLists(); } catch (e) { notice(e.message, "error"); return; }
     var want = params && params.list;

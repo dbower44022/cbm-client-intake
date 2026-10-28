@@ -33,6 +33,10 @@ REASON_REFERRED_TO = "Referred to CBM"
 REASON_ATTENDED = "Attended an event"
 REASON_REFERRED_BY = "Referred by CBM"
 REASONS = (REASON_REFERRED_TO, REASON_ATTENDED, REASON_REFERRED_BY)
+#: Each reason as a client's record says it.
+REASON_WORDS = {REASON_REFERRED_TO: "referred the client to us",
+                REASON_ATTENDED: "the client attended their event",
+                REASON_REFERRED_BY: "we referred the client to them"}
 #: An event's partners and funders (events/config.py EventLink).
 EVENT_PARTNERS = "partnerProfiles"
 EVENT_FUNDERS = "sponsorProfiles"

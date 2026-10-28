@@ -1247,9 +1247,6 @@
   // --- Partners and funders (engagements only; prds/partner-association-plan.md):
   // the partners and funders associated with the client's company, and a
   // mentor's *Refer to a partner*, which records the referral for good.
-  var PARTNER_REASON_WORDS = { "Referred to CBM": "referred the client to us",
-    "Attended an event": "the client attended their event", "Referred by CBM": "we referred the client to them" };
-
   async function renderPartnerTies(d) {
     var box = $("partnerTies"); if (!box) return;
     box.innerHTML = "";
@@ -1269,7 +1266,7 @@
       var who = document.createElement("strong"); who.textContent = t.partner || t.funder || "—";
       row.appendChild(who);
       var why = document.createElement("span"); why.className = "sx__oc-role";
-      why.textContent = (t.funder ? "funder · " : "") + (PARTNER_REASON_WORDS[t.reason] || t.reason || "") +
+      why.textContent = (t.funder ? "funder · " : "") + (t.why || t.reason || "") +
         (t.event ? " — " + t.event : "");
       row.appendChild(why);
       card.appendChild(row);

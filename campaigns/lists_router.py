@@ -105,7 +105,24 @@ def _public(row: dict[str, Any], *, used: int = 0, members: Optional[int] = None
         "system": ready_made.is_system(row),
         # The stored counts (§ 7e.14, ruling 131): taken nightly and by Refresh.
         "counts": row.get("counts") or None, "countedAt": _iso(row.get("counted_at")),
+        # What the list is built to reach (prds/partner-association-plan.md,
+        # decision 6): the partners, funders and events its own groups name.
+        **_reaches(row),
     }
+
+
+def _reaches(row: dict[str, Any]) -> dict[str, list[str]]:
+    out: dict[str, list[str]] = {"partners": [], "funders": [], "events": []}
+    if row["kind"] != KIND_DYNAMIC:
+        return out
+    for _side, _i, g in audience.groups(audience.normalise_recipe(row["recipe"])):
+        names = g.get("names") or {}
+        if g["kind"] == audience.GROUP_ASSOCIATED:
+            out["partners"] += [names.get(i, i) for i in g.get("partners") or []]
+            out["funders"] += [names.get(i, i) for i in g.get("funders") or []]
+        elif g["kind"] == audience.GROUP_ATTENDED:
+            out["events"] += [names.get(i, i) for i in g.get("events") or []]
+    return {k: list(dict.fromkeys(v)) for k, v in out.items()}
 
 
 async def _list_or_404(store, list_id: str) -> dict[str, Any]:
@@ -159,8 +176,25 @@ async def list_catalogue(request: Request) -> dict[str, Any]:
     settings = get_settings()
     _require_lists(settings)
     cat = await _catalogue(request, settings)
-    return {"types": cat,
-            "groupKinds": [{"kind": k, "label": audience.GROUP_LABELS[k]} for k in audience.GROUP_KINDS],
+    # The association groups appear only on a CRM that records associations
+    # (prds/partner-association-plan.md); their choices come with them.
+    from core import partner_links
+    api = _api_client(settings, request)
+    assoc = await partner_links.available(api)
+    kinds = [k for k in audience.GROUP_KINDS if assoc or k not in (audience.GROUP_ASSOCIATED, audience.GROUP_ATTENDED)]
+    orgs: dict[str, Any] = {}
+    if assoc:
+        orgs = {"reasons": [{"value": r, "label": w} for r, w in audience.ASSOC_REASON_WORDS.items()]}
+        for key, entity, order in (("partners", partner_links.PARTNER, "name"), ("funders", partner_links.FUNDER, "name"),
+                                   ("events", "CEvent", "dateStart")):
+            try:
+                rows = (await api.list(entity, select="id,name", max_size=200, order_by=order,
+                                       order="desc" if key == "events" else "asc")).get("list") or []
+            except EspoError:
+                rows = []
+            orgs[key] = [{"id": r["id"], "name": r.get("name") or r["id"]} for r in rows]
+    return {"types": cat, "orgs": orgs,
+            "groupKinds": [{"kind": k, "label": audience.GROUP_LABELS[k]} for k in kinds],
             "sides": [{"side": s, "label": audience.SIDE_LABELS[s]} for s in audience.SIDES],
             "stepCap": audience.STEP_CAP, "addCap": ADD_CAP, "findShown": FIND_SHOWN}
 
@@ -887,6 +921,18 @@ async def used_by(list_id: str, request: Request) -> dict[str, Any]:
             "reach": build.get("reached") if build else c.get("pieceCount"),
             "builtVersion": u.get("built_version"), "builtAt": _iso(u.get("built_at")),
         })
+    # Each campaign's partners, events and funders (decision 6), for Preview.
+    if found:
+        from .router import _grid_relations
+        try:
+            rel = await _grid_relations(client, [{"id": i} for i in found])
+        except EspoError:
+            rel = {}
+        for o in out:
+            r = rel.get(o["campaignId"]) or {}
+            o["partners"] = r.get("partners") or []
+            o["events"] = r.get("events") or []
+            o["funders"] = r.get("funders") or []
     out.sort(key=lambda x: x["date"] or "", reverse=True)
     return {"usedBy": out}
 

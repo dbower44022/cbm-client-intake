@@ -243,3 +243,67 @@ def test_the_referral_routes_exist_only_for_engagements(monkeypatch):
     client, _logged = _sessions(monkeypatch, crm)
     with client as c:
         assert c.get("/partnersessions/api/records/P1/partnerties").status_code in (404, 405)
+
+
+# --- stop 4: lists select by associations and attendance ------------------------------
+
+def _org_world():
+    from campaigns import config as ccfg
+    crm = AssocCrm()
+    lib, bank, fund, bakery, alicia = _setup(crm)
+    ben = crm.add(ccfg.CONTACT, {"name": "Ben Baker", "accountId": bakery["id"]})
+    solo = crm.add(ccfg.CONTACT, {"name": "Sam Solo"})
+    lead = crm.add(ccfg.PROSPECT, {"name": "Lead Co"})
+    run(pl.associate(crm, reason=pl.REASON_REFERRED_TO, partner_id=lib["id"], company_id=bakery["id"], contact_id=alicia["id"]))
+    run(pl.associate(crm, reason=pl.REASON_REFERRED_BY, partner_id=lib["id"], contact_id=solo["id"]))
+    run(pl.associate(crm, reason=pl.REASON_REFERRED_TO, partner_id=bank["id"], lead_id=lead["id"]))
+    return crm, lib, bank, fund, bakery, alicia, ben, solo, lead
+
+
+def test_an_associated_group_reaches_the_person_or_everyone_at_the_company():
+    from campaigns import audience
+    crm, lib, bank, _f, _bakery, alicia, ben, solo, lead = _org_world()
+    g = audience.normalise_group({"kind": "associated", "partners": [lib["id"]], "names": {lib["id"]: "Lakewood Library"}})
+    assert run(audience.association_keys(crm, g)) == {f"contact:{alicia['id']}", f"contact:{solo['id']}"}
+    g["every"] = True
+    assert run(audience.association_keys(crm, g)) == {f"contact:{alicia['id']}", f"contact:{ben['id']}", f"contact:{solo['id']}"}
+    g2 = audience.normalise_group({"kind": "associated", "partners": [lib["id"]], "reasons": ["Referred to CBM"]})
+    assert run(audience.association_keys(crm, g2)) == {f"contact:{alicia['id']}"}
+    g3 = audience.normalise_group({"kind": "associated", "partners": [bank["id"]]})
+    assert run(audience.association_keys(crm, g3)) == {f"lead:{lead['id']}"}, "a tie still on a lead reaches the lead"
+    assert "Lakewood Library" in audience.describe_group(g, {}) and "every contact" in audience.describe_group(g, {})
+
+
+def test_an_attended_group_reaches_attendees_and_their_company():
+    from campaigns import audience
+    crm, lib, _b, _f, bakery, alicia, ben, _solo, _lead = _org_world()
+    ev = crm.add("CEvent", {"name": "Spring Clinic"})
+    other = crm.add("Contact", {"name": "No Show"})
+    crm.add("CEventRegistration", {"eventId": ev["id"], "contactId": alicia["id"], "attendanceStatus": "Attended",
+                                   pl.REG_COMPANY: bakery["id"]})
+    crm.add("CEventRegistration", {"eventId": ev["id"], "contactId": other["id"], "attendanceStatus": "No-show"})
+    g = audience.normalise_group({"kind": "attended", "events": [ev["id"]], "names": {ev["id"]: "Spring Clinic"}})
+    assert run(audience.association_keys(crm, g)) == {f"contact:{alicia['id']}"}
+    g["status"] = "registered"
+    assert run(audience.association_keys(crm, g)) == {f"contact:{alicia['id']}", f"contact:{other['id']}"}
+    g = audience.normalise_group({"kind": "attended", "events": [ev["id"]], "every": True})
+    assert run(audience.association_keys(crm, g)) == {f"contact:{alicia['id']}", f"contact:{ben['id']}"}
+    assert audience.describe_group(audience.normalise_group({"kind": "attended", "events": [ev["id"]],
+                                                             "names": {ev["id"]: "Spring Clinic"}}), {}) \
+        == "People who attended Spring Clinic."
+
+
+def test_the_new_groups_must_name_something():
+    from campaigns import audience
+    rec = audience.normalise_recipe({"include": [{"kind": "associated"}], "exclude": [{"kind": "attended"}]})
+    msgs = [p["message"] for p in audience.check_recipe(rec, {})]
+    assert any("partner or funder" in m for m in msgs) and any("event" in m for m in msgs)
+
+
+def test_the_list_says_which_partners_events_and_funders_it_is_built_to_reach():
+    from campaigns.lists_router import _reaches
+    row = {"kind": "dynamic", "recipe": {"include": [
+        {"kind": "associated", "partners": ["p1"], "funders": ["f1"], "names": {"p1": "Lakewood Library", "f1": "Adler Foundation"}},
+        {"kind": "attended", "events": ["e1"], "names": {"e1": "Spring Clinic"}}], "exclude": []}}
+    assert _reaches(row) == {"partners": ["Lakewood Library"], "funders": ["Adler Foundation"], "events": ["Spring Clinic"]}
+    assert _reaches({"kind": "static", "recipe": row["recipe"]}) == {"partners": [], "funders": [], "events": []}

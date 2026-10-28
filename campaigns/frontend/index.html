@@ -159,6 +159,9 @@
                     <th data-col="lastUsed">Last used</th>
                     <th data-col="updatedAt">Updated</th>
                     <th data-col="cc" id="lv_ccHead">Constant Contact</th>
+                    <th data-col="partners">Partners</th>
+                    <th data-col="events">Events</th>
+                    <th data-col="funders">Funders</th>
                     <th data-col="notes">Notes</th>
                   </tr></thead>
                   <tbody id="lv_rows"></tbody>
@@ -211,12 +214,15 @@
                   <button type="button" class="lv__dash" data-add="include" data-kind="match">+ Records matching conditions</button>
                   <button type="button" class="lv__dash" data-add="include" data-kind="list">+ Everyone on another list</button>
                   <button type="button" class="lv__dash" data-add="include" data-kind="import">+ The people a file names</button>
+                  <button type="button" class="lv__dash" data-add="include" data-kind="associated" data-needs-assoc hidden>+ Associated with a partner or funder</button>
+                  <button type="button" class="lv__dash" data-add="include" data-kind="attended" data-needs-assoc hidden>+ Attended an event</button>
                 </div>
                 <div class="lv__lab lv__lab--exc">Leave out — always wins</div>
                 <div id="lv_eExc"></div>
                 <div class="lv__addrow">
                   <button type="button" class="lv__dash" data-add="exclude" data-kind="list">+ Leave out everyone on a list</button>
                   <button type="button" class="lv__dash" data-add="exclude" data-kind="match">+ Leave out records matching conditions</button>
+                  <button type="button" class="lv__dash" data-add="exclude" data-kind="associated" data-needs-assoc hidden>+ Leave out those associated with a partner or funder</button>
                 </div>
               </section>
               <section class="cm__card" id="lv_eMembers" aria-labelledby="lv_memH" hidden>

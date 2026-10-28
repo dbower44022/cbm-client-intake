@@ -53,6 +53,7 @@
 .lv__num { text-align: right !important; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .lv__date { white-space: nowrap; color: var(--lv-muted); }
 .lv__notes { color: var(--lv-muted); min-width: 9rem; max-width: 40ch; white-space: normal; overflow-wrap: anywhere; }
+.lv__orgs { color: var(--lv-ink); min-width: 7rem; max-width: 28ch; white-space: normal; overflow-wrap: anywhere; font-size: .88rem; }
 .lv__tag { display: inline-block; margin-left: .45rem; font-size: .74rem; font-weight: 600; border-radius: 4px; padding: .05rem .4rem;
   background: #ECEEF1; color: #374151; vertical-align: 1px; white-space: nowrap; }
 .lv__tag--ready { background: #FBF0DC; color: #6B4A12; }

@@ -702,6 +702,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 raise _crm_failure(request, exc, "Could not read the partner associations")
             return {"available": True, "partners": [{"id": p["id"], "name": p.get("name") or p["id"]} for p in partners],
                     "ties": [{"id": t["id"], "reason": t.get("reason"),
+                              "why": partner_links.REASON_WORDS.get(t.get("reason") or "", t.get("reason") or ""),
                               "partner": t.get("partnerProfileName"), "funder": t.get("sponsorProfileName"),
                               "event": t.get("eventName"), "person": t.get("contactName"),
                               "at": t.get("associatedAt")} for t in ties]}

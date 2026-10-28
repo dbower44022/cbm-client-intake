@@ -77,9 +77,19 @@ GROUP_IMPORT = "import"
 #: M8): only a ready-made list carries one, and a list saved through the API
 #: may not (``campaigns/ready_made.py``).
 GROUP_BUILTIN = "builtin"
-GROUP_KINDS = (GROUP_MATCH, GROUP_LIST, GROUP_IMPORT, GROUP_BUILTIN)
+#: Partner and funder associations (prds/partner-association-plan.md): the
+#: companies and people associated with chosen partners or funders, and the
+#: people who attended (or registered for) chosen events.
+GROUP_ASSOCIATED = "associated"
+GROUP_ATTENDED = "attended"
+GROUP_KINDS = (GROUP_MATCH, GROUP_LIST, GROUP_IMPORT, GROUP_BUILTIN, GROUP_ASSOCIATED, GROUP_ATTENDED)
 GROUP_LABELS = {GROUP_MATCH: "Records matching conditions", GROUP_LIST: "Everyone on another list",
-                GROUP_IMPORT: "The records a file names", GROUP_BUILTIN: "A ready-made selection"}
+                GROUP_IMPORT: "The records a file names", GROUP_BUILTIN: "A ready-made selection",
+                GROUP_ASSOCIATED: "Associated with a partner or funder",
+                GROUP_ATTENDED: "Attended an event"}
+#: The association reasons, in the words a group shows.
+ASSOC_REASON_WORDS = {"Referred to CBM": "referred to us", "Attended an event": "attended their event",
+                      "Referred by CBM": "referred to them by a mentor"}
 #: The built-in selections, each by its key: what it selects, in words.
 BUILTIN_DORMANT = "dormant_clients"
 BUILTINS = {BUILTIN_DORMANT: "Clients whose engagements are all closed, the latest more than {days} days ago"}
@@ -337,6 +347,17 @@ def normalise_group(g: Any) -> Optional[dict[str, Any]]:
         return {"kind": GROUP_LIST, "listId": str(g.get("listId") or "")}
     if kind == GROUP_IMPORT:
         return {"kind": GROUP_IMPORT, "type": str(g.get("type") or ""), "values": _import_values(g.get("values"))}
+    if kind == GROUP_ASSOCIATED:
+        ids = lambda v: [str(x) for x in (v or []) if x]  # noqa: E731
+        names = lambda v: {str(k): str(n) for k, n in (v or {}).items()} if isinstance(v, dict) else {}  # noqa: E731
+        return {"kind": GROUP_ASSOCIATED, "partners": ids(g.get("partners")), "funders": ids(g.get("funders")),
+                "reasons": [r for r in ids(g.get("reasons")) if r in ASSOC_REASON_WORDS],
+                "every": bool(g.get("every")), "names": names(g.get("names"))}
+    if kind == GROUP_ATTENDED:
+        return {"kind": GROUP_ATTENDED, "events": [str(x) for x in (g.get("events") or []) if x],
+                "status": "registered" if g.get("status") == "registered" else "attended",
+                "every": bool(g.get("every")),
+                "names": {str(k): str(n) for k, n in (g.get("names") or {}).items()} if isinstance(g.get("names"), dict) else {}}
     if kind == GROUP_BUILTIN:
         days = _number(g.get("days"))
         return {"kind": GROUP_BUILTIN, "type": "contact", "builtin": str(g.get("builtin") or ""),
@@ -394,6 +415,14 @@ def check_recipe(recipe: dict[str, Any], cat: dict[str, Any]) -> list[dict[str, 
         if g["kind"] == GROUP_BUILTIN:
             if g.get("builtin") not in BUILTINS:
                 bad(side, i, f"{at}: this ready-made selection is no longer offered.")
+            continue
+        if g["kind"] == GROUP_ASSOCIATED:
+            if not (g.get("partners") or g.get("funders")):
+                bad(side, i, f"{at}: choose at least one partner or funder.")
+            continue
+        if g["kind"] == GROUP_ATTENDED:
+            if not g.get("events"):
+                bad(side, i, f"{at}: choose at least one event.")
             continue
         if g["type"] not in TYPES_BUILT:
             bad(side, i, f"{at}: choose what it selects (leads, contacts, clients, partners or funders).")
@@ -609,6 +638,22 @@ def describe_group(group: dict[str, Any], cat: dict[str, Any], list_names: Optio
         return f"Everyone on the list “{name}”."
     if group["kind"] == GROUP_BUILTIN:
         return BUILTINS.get(group.get("builtin") or "", "A ready-made selection").format(days=group.get("days", 365)) + "."
+    if group["kind"] == GROUP_ASSOCIATED:
+        names = group.get("names") or {}
+        who = ", ".join(names.get(i, "a partner") for i in group.get("partners") or [])
+        funders = ", ".join(names.get(i, "a funder") for i in group.get("funders") or [])
+        orgs = " and ".join(x for x in (who, (f"the funder{'s' if len(group.get('funders') or []) > 1 else ''} {funders}" if funders else "")) if x)
+        why = ""
+        if group.get("reasons"):
+            why = " (" + " or ".join(ASSOC_REASON_WORDS[r] for r in group["reasons"]) + ")"
+        reach = "every contact at each company" if group.get("every") else "the person each tie came through"
+        return f"Companies and people associated with {orgs or 'a partner'}{why} — {reach}."
+    if group["kind"] == GROUP_ATTENDED:
+        names = group.get("names") or {}
+        evs = ", ".join(names.get(i, "an event") for i in group.get("events") or [])
+        verb = "registered for" if group.get("status") == "registered" else "attended"
+        tail = ", and every contact at their company" if group.get("every") else ""
+        return f"People who {verb} {evs or 'an event'}{tail}."
     noun = TYPES.get(group["type"], {}).get("label", group["type"] or "records").lower()
     if group["kind"] == GROUP_IMPORT:
         n = len(group.get("values") or [])
@@ -709,6 +754,89 @@ async def builtin_keys(client, group: dict[str, Any], *, now: Optional[datetime]
     return {f"contact:{cid}" for cid, c in contacts.items() if "Client" in (c.get(CONTACT_TYPE_FIELD) or [])}
 
 
+async def _contacts_at(client, company_ids: Iterable[str]) -> set[str]:
+    """Every contact whose company is one of these, as keys."""
+    ids = sorted({c for c in company_ids if c})
+    out: set[str] = set()
+    for i in range(0, len(ids), _ID_BATCH):
+        offset = 0
+        while True:
+            page = await client.list(cfg.CONTACT, select="id", max_size=_PAGE, offset=offset,
+                                     where=[{"type": "in", "attribute": "accountId", "value": ids[i:i + _ID_BATCH]}])
+            batch = page.get("list", [])
+            out.update(f"contact:{r['id']}" for r in batch if r.get("id"))
+            if len(batch) < _PAGE:
+                break
+            offset += _PAGE
+    return out
+
+
+async def association_keys(client, group: dict[str, Any]) -> set[str]:
+    """The members an *associated* or *attended* group reaches, as keys.
+
+    *Associated*: every partner or funder association on the chosen ones (and
+    reasons) — the person the tie came through, or, with *every*, every
+    contact at the company; a tie on a company with no person reaches every
+    contact there; a tie still on a lead reaches the lead.
+    *Attended*: the registrations at the chosen events, attended (or any
+    registration but a cancelled one) — the person, and with *every* every
+    contact at the company they registered from."""
+    from core import partner_links as pl
+
+    keys: set[str] = set()
+    companies: set[str] = set()
+    if group["kind"] == GROUP_ASSOCIATED:
+        if not await pl.available(client):
+            raise AudienceError("This CRM does not record partner and funder associations yet.")
+        for attr, ids in (("partnerProfileId", group.get("partners")), ("sponsorProfileId", group.get("funders"))):
+            for i in range(0, len(ids or []), _ID_BATCH):
+                where = [{"type": "in", "attribute": attr, "value": ids[i:i + _ID_BATCH]}]
+                if group.get("reasons"):
+                    where.append({"type": "in", "attribute": "reason", "value": group["reasons"]})
+                offset = 0
+                while True:
+                    page = await client.list(pl.ENTITY, select="id,companyId,contactId,leadId", where=where,
+                                             max_size=_PAGE, offset=offset)
+                    batch = page.get("list", [])
+                    for r in batch:
+                        if r.get("companyId") and (group.get("every") or not r.get("contactId")):
+                            companies.add(r["companyId"])
+                        if r.get("contactId"):
+                            keys.add(f"contact:{r['contactId']}")
+                        elif r.get("leadId") and not r.get("companyId"):
+                            keys.add(f"lead:{r['leadId']}")
+                    if len(batch) < _PAGE:
+                        break
+                    offset += _PAGE
+                    if offset > STEP_CAP:
+                        raise AudienceError(f"This group matches more than {STEP_CAP:,} associations — narrow it.")
+    else:
+        statuses = ["Attended"] if group.get("status") != "registered" else ["Registered", "Attended", "No-show", "Waitlisted"]
+        reg_company = await pl.registration_company_available(client)
+        select = "id,contactId" + (f",{pl.REG_COMPANY}" if reg_company else "")
+        ids = group.get("events") or []
+        for i in range(0, len(ids), _ID_BATCH):
+            offset = 0
+            while True:
+                page = await client.list("CEventRegistration", select=select, max_size=_PAGE, offset=offset, where=[
+                    {"type": "in", "attribute": "eventId", "value": ids[i:i + _ID_BATCH]},
+                    {"type": "in", "attribute": "attendanceStatus", "value": statuses}])
+                batch = page.get("list", [])
+                for r in batch:
+                    if r.get("contactId"):
+                        keys.add(f"contact:{r['contactId']}")
+                    if group.get("every") and r.get(pl.REG_COMPANY):
+                        companies.add(r[pl.REG_COMPANY])
+                if len(batch) < _PAGE:
+                    break
+                offset += _PAGE
+                if offset > STEP_CAP:
+                    raise AudienceError(f"This group matches more than {STEP_CAP:,} registrations — narrow it.")
+    if companies:
+        keys |= await _contacts_at(client, companies)
+    return keys
+
+
 async def run_recipe(client, recipe: dict[str, Any], cat: dict[str, Any], *, store=None,
                      now: Optional[datetime] = None, _seen: tuple[str, ...] = ()) -> dict[str, Any]:
     """The union of the Include groups minus the union of the Leave out
@@ -733,6 +861,8 @@ async def run_recipe(client, recipe: dict[str, Any], cat: dict[str, Any], *, sto
             extra["unmatched"] = unmatched
         elif g["kind"] == GROUP_BUILTIN:
             keys = sorted(await builtin_keys(client, g, now=now))
+        elif g["kind"] in (GROUP_ASSOCIATED, GROUP_ATTENDED):
+            keys = sorted(await association_keys(client, g))
         else:
             keys = await match_keys(client, g, cat, now=now)
         for k in keys:
@@ -752,6 +882,8 @@ async def run_recipe(client, recipe: dict[str, Any], cat: dict[str, Any], *, sto
             extra["unmatched"] = unmatched
         elif g["kind"] == GROUP_BUILTIN:
             hit = await builtin_keys(client, g, now=now) & set(included)
+        elif g["kind"] in (GROUP_ASSOCIATED, GROUP_ATTENDED):
+            hit = await association_keys(client, g) & set(included)
         else:
             prefix = g["type"] + ":"
             of_type = [split_key(k)[1] for k in included if k.startswith(prefix)]
