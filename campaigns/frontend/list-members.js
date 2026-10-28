@@ -92,7 +92,7 @@
   function renderSummary() {
     var box = $("lm_sum"), l = st.list, c = l.counts;
     box.textContent = "";
-    [[c && c.people, "people"], [c && c.email, "by email"], [c && c.text, "by text"], [c && c.postcard, "by postcard"], [c && c.notReachable, "reach nobody"]].forEach(function (f) {
+    [[c && c.people, "people"], [c && c.email, "by email"], [c && c.text, "by text"], [c && c.postcard, "by postcard"], [c && c.notReachable, "by none of these"]].forEach(function (f) {
       var s = el("span", "lm__fig"); s.appendChild(el("b", null, num(f[0]))); s.appendChild(document.createTextNode(" " + f[1])); box.appendChild(s);
     });
     box.appendChild(el("span", "lm__grow"));
@@ -264,7 +264,15 @@
       notice((excluding.name || "The person") + " is on \"" + res.exclusionList.name + "\"" + (res.linked ? ", which this list now leaves out." : " and stays off this list."), "ok");
       await loadList();
       await loadMembers();
+      recountQuietly();
     } catch (e) { $("lm_exMsg").textContent = e.message; }
+  }
+
+  // The stored counts after a Leave out, without holding the page.
+  function recountQuietly() {
+    api(listPath("/refresh"), { method: "POST", timeoutMs: 300000 })
+      .then(function () { return loadList(); })
+      .catch(function () { /* the next count catches up */ });
   }
 
   // --- wiring -------------------------------------------------------------------------

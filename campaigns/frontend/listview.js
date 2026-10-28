@@ -286,7 +286,7 @@
     var reach = el("div");
     reach.appendChild(figures(l.counts));
     reach.appendChild(el("div", "lv__muted lv__small", l.countedAt ? "Counted " + fmtDate(l.countedAt) +
-      (l.counts && l.counts.notReachable ? " · " + num(l.counts.notReachable) + " reach nobody" : "")
+      (l.counts && l.counts.notReachable ? " · " + num(l.counts.notReachable) + " by none of email, text or postcard" : "")
       : "Not counted yet — press Refresh, or wait for tonight's count."));
     body.appendChild(section("Reaches", reach));
     var who = el("div", "lv__muted", "Reading the list…");

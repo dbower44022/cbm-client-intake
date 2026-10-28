@@ -5,6 +5,18 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.293.1] — 2026-10-27
+
+**fix(campaigns): two faults the M11 live pass found** (build plan § 7e.14).
+
+- **"Reach nobody" overstated it.** The count covers email, text and
+  postcard only; a call list's members can still be phoned. Preview now says
+  *by none of email, text or postcard*, View's summary *by none of these*,
+  and View's filter is *None of these*.
+- **Leave out left View's summary behind.** Taking a person off a dynamic
+  list in View now recounts the list in the background, so the summary
+  matches the grid.
+
 ## [0.293.0] — 2026-10-27
 
 **feat(campaigns): the Lists tab redesigned — a list view with Preview, and
