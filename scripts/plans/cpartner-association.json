@@ -1,0 +1,41 @@
+{
+  "name": "cpartner-association",
+  "description": "Partner and funder associations (prds/partner-association-plan.md; Doug's rulings 10-28-26): one record per tie between a partner or funder and a company, or a person or lead with no company yet — the partner referred them to CBM, they attended the partner's or funder's event, or a mentor referred them to the partner. Never deleted by the application. Plus CEventRegistration.registrationCompany: the company the person was with when they registered. Additive only; nothing Read-only (the application writes every field under the org-wide API key). Handoff: partner-association-crm-handoff.md.",
+  "entities": [
+    {"name": "PartnerAssociation", "type": "Base",
+     "labelSingular": "Partner or Funder Association", "labelPlural": "Partner and Funder Associations", "stream": false}
+  ],
+  "fields": [
+    {"entity": "CPartnerAssociation", "name": "reason", "type": "enum", "required": true, "label": "Reason",
+     "options": ["Referred to CBM", "Attended an event", "Referred by CBM"], "default": "Referred to CBM",
+     "tooltipText": "Why the partner or funder is associated: they referred the business to CBM, someone from it attended their event, or a mentor referred the business to them."},
+    {"entity": "CPartnerAssociation", "name": "associatedAt", "type": "datetime", "label": "Associated on",
+     "tooltipText": "When the tie arose: the referral, the event, or the mentor's referral."}
+  ],
+  "links": [
+    {"entity": "CPartnerAssociation", "link": "partnerProfile", "linkType": "manyToOne",
+     "entityForeign": "CPartnerProfile", "linkForeign": "associations",
+     "label": "Partner", "labelForeign": "Associated companies and contacts"},
+    {"entity": "CPartnerAssociation", "link": "sponsorProfile", "linkType": "manyToOne",
+     "entityForeign": "CSponsorProfile", "linkForeign": "associations",
+     "label": "Funder", "labelForeign": "Associated companies and contacts"},
+    {"entity": "CPartnerAssociation", "link": "company", "linkType": "manyToOne",
+     "entityForeign": "Account", "linkForeign": "partnerAssociations",
+     "label": "Company", "labelForeign": "Partner and funder associations"},
+    {"entity": "CPartnerAssociation", "link": "contact", "linkType": "manyToOne",
+     "entityForeign": "Contact", "linkForeign": "partnerAssociations",
+     "label": "Person", "labelForeign": "Partner and funder associations"},
+    {"entity": "CPartnerAssociation", "link": "lead", "linkType": "manyToOne",
+     "entityForeign": "CProspect", "linkForeign": "partnerAssociations",
+     "label": "Lead", "labelForeign": "Partner and funder associations"},
+    {"entity": "CPartnerAssociation", "link": "event", "linkType": "manyToOne",
+     "entityForeign": "CEvent", "linkForeign": "partnerAssociations",
+     "label": "Event", "labelForeign": "Partner and funder associations"},
+    {"entity": "CPartnerAssociation", "link": "engagement", "linkType": "manyToOne",
+     "entityForeign": "CEngagement", "linkForeign": "partnerAssociations",
+     "label": "Engagement", "labelForeign": "Partner and funder associations"},
+    {"entity": "CEventRegistration", "link": "registrationCompany", "linkType": "manyToOne",
+     "entityForeign": "Account", "linkForeign": "eventRegistrations",
+     "label": "Company when registered", "labelForeign": "Event registrations"}
+  ]
+}
