@@ -1,0 +1,7 @@
+[
+    {
+        "route": "/SortedList/:entityType",
+        "method": "get",
+        "actionClassName": "Espo\\Custom\\Api\\SortedList"
+    }
+]

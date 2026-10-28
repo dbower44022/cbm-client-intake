@@ -1,6 +1,6 @@
 # Shared grid, divider and loading spinner — plan
 
-Last Updated: 10-28-26 00:24 · Revision 0.3 — change log at the end.
+Last Updated: 10-28-26 10:46 · Revision 0.4 — change log at the end.
 
 **Status: approved 10-27-26; stops 1–3 built as v0.294.0; live-passed on crm-test 10-28-26 00:23**
 (https://claude.ai/artifact/AWjNEvmyq7mrwLVyDd2yJF).
@@ -122,19 +122,57 @@ item says which columns it can sort.
 - Mixed behaviour between the Lists screens and the rest until the rollout
   finishes.
 
+## 8. Rollout 1 — the rest of Marketing Management (drafted 10-28-26)
+
+Doug, 10-28-26: "Let's roll out the grid to all of the Marketing Management
+apps first. Then we will expand from there."
+
+**The grids, and how each can sort.**
+
+| Grid | Where | Its rows | Multi-column sort |
+|---|---|---|---|
+| Campaigns | Campaigns tab | all, in the browser | yes, in the browser |
+| Call list | Calls tab | all, in the browser | yes, in the browser |
+| Imports, templates, history | Imports tab | all, in the browser | yes, in the browser |
+| Links, Responses, Touches | the campaign's page | all, in the browser | yes, in the browser |
+| Recipients | the campaign's page | the application pages them from rows it already holds | yes, on the server (a `sort` list, as View's) |
+| Leads | Leads tab | **the CRM pages them** | **one column** — the CRM sorts a page by one field |
+| Review | Review tab | **the CRM pages them** | **one column** — same |
+
+Every grid gets resizable columns, the shading, and a spinner over it while
+it loads. None of these tabs has a preview pane, so no divider.
+
+**The decision this needs** (put to Doug 10-28-26): Leads and Review. The
+CRM sorts a page of records by one field only, and the Leads grid was built
+to read one page at a time because reading every lead stopped silently at
+2,000 and timed out (v0.267.0). Multi-column sorting there means either one
+column only, or reading up to 2,000 matching leads on every sort to order
+them in the application.
+
+**Stops.** Work pauses after each for Doug's go-ahead.
+
+1. **The browser-sorted grids** — Campaigns, Call list, the three Imports
+   grids, and the campaign page's Links, Responses and Touches (about a
+   day).
+2. **The server-sorted grids** — Recipients with a `sort` list, and Leads
+   and Review as decided (about a day).
+3. **Documents and the live pass** on crm-test as Mark Marketing, with a
+   results page (about half a day).
+
 ## Revision control
 
 | Field | Value |
 |---|---|
 | Document | Shared grid, divider and loading spinner — plan |
-| Version | 0.3 |
-| Last Updated | 10-28-26 00:24 |
+| Version | 0.4 |
+| Last Updated | 10-28-26 10:46 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.4 | 10-28-26 10:46 | Claude (Claude Code) | § 8 rollout 1, the rest of Marketing Management, drafted for approval with one decision. |
 | 0.3 | 10-28-26 00:24 | Claude (Claude Code) | Live-passed on crm-test; nothing to fix. |
 | 0.2 | 10-27-26 22:04 | Claude (Claude Code) | Approved; stops 1–3 built as v0.294.0; the two choices made on the way. |
 | 0.1 | 10-27-26 21:41 | Claude (Claude Code) | Drafted from Doug's ruling of 10-27-26 21:30 and his choice of option B. |
