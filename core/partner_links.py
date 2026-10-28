@@ -445,17 +445,21 @@ def _client(settings) -> Optional[EspoApi]:
     return EspoClient(settings.espo_base_url, settings.espo_api_key, settings.request_timeout_seconds)
 
 
-def plan_text(plan: list[dict[str, Any]]) -> str:
+def plan_text(plan: list[dict[str, Any]], names: Optional[dict[str, str]] = None) -> str:
     """The backfill plan in words, deterministic (the job's fingerprint is
-    taken from it): one line per tie, sorted, and a count per kind."""
+    taken from it): one line per tie, sorted, and a count per kind. ``names``
+    turns ids into names a reviewer can check."""
+    names = names or {}
     by_kind: dict[str, int] = {}
     lines = []
     for item in plan:
         kind = item["why"] if not item["why"].startswith("attended ") else "attended an event"
         by_kind[kind] = by_kind.get(kind, 0) + 1
-        org = f"partner {item.get('partner_id')}" if item.get("partner_id") else f"funder {item.get('funder_id')}"
-        holder = (f"company {item['company_id']}" if item.get("company_id")
-                  else f"contact {item['contact_id']}" if item.get("contact_id") else f"lead {item.get('lead_id')}")
+        oid = item.get("partner_id") or item.get("funder_id")
+        org = ("partner " if item.get("partner_id") else "funder ") + names.get(oid, oid or "")
+        hid, kind = ((item["company_id"], "company") if item.get("company_id")
+                     else (item["contact_id"], "contact") if item.get("contact_id") else (item.get("lead_id"), "lead"))
+        holder = f"{kind} {names.get(hid, hid)}"
         lines.append(f"  {item['reason']}: {org} → {holder} ({item['why']})")
     head = [f"{len(plan)} association(s) the records already imply. Each is written once; "
             "one already there is left as it is."]
@@ -470,7 +474,25 @@ async def job_dry_run(settings) -> str:
     if not await available(client):
         raise RuntimeError("This CRM does not have partner and funder associations yet "
                            "(partner-association-crm-handoff.md).")
-    return plan_text(await plan_backfill(client))
+    plan = await plan_backfill(client)
+    return plan_text(plan, await _names_for(client, plan))
+
+
+async def _names_for(client: EspoApi, plan: list[dict[str, Any]]) -> dict[str, str]:
+    """Names for every id the plan mentions, read in batches. Best-effort."""
+    wanted = {PARTNER: "partner_id", FUNDER: "funder_id", "Account": "company_id", "Contact": "contact_id",
+              "CProspect": "lead_id"}
+    out: dict[str, str] = {}
+    for entity, key in wanted.items():
+        ids = sorted({i[key] for i in plan if i.get(key)})
+        for n in range(0, len(ids), _ID_BATCH):
+            try:
+                rows = (await client.list(entity, where=[{"type": "in", "attribute": "id", "value": ids[n:n + _ID_BATCH]}],
+                                          select="id,name", max_size=PAGE)).get("list") or []
+            except EspoError:
+                continue
+            out.update({r["id"]: r.get("name") or r["id"] for r in rows})
+    return out
 
 
 async def job_apply(settings) -> str:
