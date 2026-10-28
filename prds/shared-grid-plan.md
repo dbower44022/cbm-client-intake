@@ -1,6 +1,6 @@
 # Shared grid, divider and loading spinner — plan
 
-Last Updated: 10-28-26 16:12 · Revision 0.6 — change log at the end.
+Last Updated: 10-28-26 16:36 · Revision 0.7 — change log at the end.
 
 **Status: approved 10-27-26; stops 1–3 built as v0.294.0; live-passed on crm-test 10-28-26 00:23**
 (https://claude.ai/artifact/AWjNEvmyq7mrwLVyDd2yJF).
@@ -168,22 +168,24 @@ Review and Recipients sort through it; a CRM without it sorts by one column.
 2. **The server-sorted grids** (built 10-28-26 as v0.296.0) — Recipients with a `sort` list, and Leads
    and Review as decided (about a day).
 3. **Documents and the live pass** on crm-test as Mark Marketing, with a
-   results page (about half a day). Documents done 10-28-26; the live pass
-   waits for the push.
+   results page (about half a day). Documents done; pushed and live-passed
+   10-28-26 16:33 (https://claude.ai/artifact/Gf8B5gXMmDLgUwZZ1dAjTS), as an
+   administrator — the sort as Mark Marketing owed.
 
 ## Revision control
 
 | Field | Value |
 |---|---|
 | Document | Shared grid, divider and loading spinner — plan |
-| Version | 0.6 |
-| Last Updated | 10-28-26 16:12 |
+| Version | 0.7 |
+| Last Updated | 10-28-26 16:36 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.7 | 10-28-26 16:36 | Claude (Claude Code) | § 8: rollout 1 live-passed on crm-test. |
 | 0.6 | 10-28-26 16:12 | Claude (Claude Code) | § 8: stop 2 built (v0.296.0); stop 3's documents done, the live pass owed. |
 | 0.5 | 10-28-26 13:20 | Claude (Claude Code) | § 8: the decision for Leads and Review — the CRM sorted-list endpoint, measured on crm-test; stop 1 built. |
 | 0.4 | 10-28-26 10:46 | Claude (Claude Code) | § 8 rollout 1, the rest of Marketing Management, drafted for approval with one decision. |

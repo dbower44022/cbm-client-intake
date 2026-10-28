@@ -28,7 +28,7 @@ found; move resolved items to the bottom with the resolution date.
     Funder Management (one shared frontend); Submission Admin; the
     Workspace Directories; My Email; Event Administration; System Settings;
     and the rest of Marketing Management — **built as v0.296.0 (rollout 1,
-    plan § 8), live pass on crm-test owed; its `SortedList` CRM endpoint is
+    plan § 8), live-passed on crm-test 10-28-26 as an administrator — the sort as Mark Marketing owed; its `SortedList` CRM endpoint is
     owed on production and Boston** (`sorted-list-crm-handoff.md`). A server-paged grid also needs its route to take a `sort`
     list; each release names the columns its server can sort and marks the
     rest `data-sortable="false"`.
