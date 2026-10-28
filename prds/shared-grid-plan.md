@@ -1,6 +1,6 @@
 # Shared grid, divider and loading spinner — plan
 
-Last Updated: 10-28-26 10:46 · Revision 0.4 — change log at the end.
+Last Updated: 10-28-26 13:20 · Revision 0.5 — change log at the end.
 
 **Status: approved 10-27-26; stops 1–3 built as v0.294.0; live-passed on crm-test 10-28-26 00:23**
 (https://claude.ai/artifact/AWjNEvmyq7mrwLVyDd2yJF).
@@ -149,9 +149,20 @@ to read one page at a time because reading every lead stopped silently at
 column only, or reading up to 2,000 matching leads on every sort to order
 them in the application.
 
+**Decided 10-28-26.** Doug asked whether the slowness was the grid or the
+database, and named three alternatives: two writes to keep a copy in step, a
+change to EspoCRM itself, or our own API in front of it. Measured on
+crm-test: the CRM's web API sorts by one field (a list is refused) and
+returns 200 rows a request; the database underneath is not the limit. Doug
+chose to try changing the CRM: a custom endpoint, `GET /api/v1/SortedList/{type}`
+(`crm/extensions/sorted-list/`, `sorted-list-crm-handoff.md`), installed on
+crm-test 10-28-26 — two-column sort correct, as fast as the standard
+one-column list (150–190 ms), the standard list's access control. Leads,
+Review and Recipients sort through it; a CRM without it sorts by one column.
+
 **Stops.** Work pauses after each for Doug's go-ahead.
 
-1. **The browser-sorted grids** — Campaigns, Call list, the three Imports
+1. **The browser-sorted grids** (built 10-28-26, commit b3e8edf) — Campaigns, Call list, the three Imports
    grids, and the campaign page's Links, Responses and Touches (about a
    day).
 2. **The server-sorted grids** — Recipients with a `sort` list, and Leads
@@ -164,14 +175,15 @@ them in the application.
 | Field | Value |
 |---|---|
 | Document | Shared grid, divider and loading spinner — plan |
-| Version | 0.4 |
-| Last Updated | 10-28-26 10:46 |
+| Version | 0.5 |
+| Last Updated | 10-28-26 13:20 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.5 | 10-28-26 13:20 | Claude (Claude Code) | § 8: the decision for Leads and Review — the CRM sorted-list endpoint, measured on crm-test; stop 1 built. |
 | 0.4 | 10-28-26 10:46 | Claude (Claude Code) | § 8 rollout 1, the rest of Marketing Management, drafted for approval with one decision. |
 | 0.3 | 10-28-26 00:24 | Claude (Claude Code) | Live-passed on crm-test; nothing to fix. |
 | 0.2 | 10-27-26 22:04 | Claude (Claude Code) | Approved; stops 1–3 built as v0.294.0; the two choices made on the way. |
