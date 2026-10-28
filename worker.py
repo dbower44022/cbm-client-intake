@@ -457,6 +457,10 @@ async def main() -> None:
     # then every CAMPAIGN_LIST_COUNT_SECONDS. Not an interval after start, which
     # a deploy a day would put off for ever.
     next_list_count = datetime.now(timezone.utc) + timedelta(seconds=600)
+    # Partner and funder associations held by a person or lead whose company
+    # now exists move to it (prds/partner-association-plan.md, decision 2):
+    # fifteen minutes after start, then daily. Feature-detected per pass.
+    next_partner_transfer = datetime.now(timezone.utc) + timedelta(seconds=900)
 
     while not stop.is_set():
         claimed = await run_cycle(store, settings, stop)
@@ -613,6 +617,16 @@ async def main() -> None:
             except Exception as exc:  # noqa: BLE001 — never fatal
                 log.warning("list count pass failed: %s", exc)
             next_list_count = now_cfg + timedelta(seconds=settings.campaign_list_count_seconds)
+        if not settings.espo_dry_run and now_cfg >= next_partner_transfer:
+            try:
+                from core.partner_links import run_nightly
+                moved = await run_nightly(settings)
+                if moved.get("checked"):
+                    log.info("partner association transfer: %d checked, %d moved to a company, %d errors",
+                             moved["checked"], moved["moved"], moved["errors"])
+            except Exception as exc:  # noqa: BLE001 — never fatal
+                log.warning("partner association transfer failed: %s", exc)
+            next_partner_transfer = now_cfg + timedelta(seconds=86400)
         mailing_on = settings.mailing_sync and not settings.espo_dry_run
         if mailing_on and settings.mailing_push_seconds > 0 and now_cfg >= next_mailing_push:
             try:

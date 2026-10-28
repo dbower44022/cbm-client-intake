@@ -425,7 +425,16 @@ async def opportunity_on_attendance(api_client: EspoApi, registration_id: str) -
     record holding a relationship type (ruling 37), whatever the attendance
     source (a manual mark, a door check-in or the Zoom pull). Under the
     org-wide API client: the Marketing Admin Role does not edit Contacts.
-    Best-effort; returns the stage written, or None."""
+    Best-effort; returns the stage written, or None.
+
+    Also the partner and funder associations attendance creates (decision 4 of
+    prds/partner-association-plan.md): every caller of attendance already
+    comes through here."""
+    try:
+        from core.partner_links import on_attendance
+        await on_attendance(api_client, registration_id)
+    except Exception as exc:  # noqa: BLE001 — never fails the attendance
+        log.warning("attendance associations for registration %s: %s", registration_id, exc)
     try:
         reg = await api_client.get("CEventRegistration", registration_id, select="id,contactId,attendanceStatus")
         if not reg or reg.get("attendanceStatus") != "Attended" or not reg.get("contactId"):

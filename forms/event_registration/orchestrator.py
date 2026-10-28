@@ -305,6 +305,10 @@ async def deliver(
         created = await client.create(cfg.REGISTRATION, payload)
         registration_id = created["id"]
         outcome = "created"
+        # The company the person was with when they registered (partner
+        # associations, decision 3). Best-effort.
+        from core.partner_links import stamp_registration_company
+        await stamp_registration_company(client, registration_id, payload.get("contactId"))
 
     # Ruling 48: the lead the form named is Converted, or a new Contact gets a
     # lead behind it, Converted at once, its Lead Source Event registration.

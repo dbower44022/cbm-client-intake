@@ -229,7 +229,34 @@ async def _sandbox_links_apply(settings: Settings) -> str:
     return await job_apply(settings)
 
 
+async def _partner_assoc_dry(settings: Settings) -> str:
+    from core.partner_links import job_dry_run
+
+    return await job_dry_run(settings)
+
+
+async def _partner_assoc_apply(settings: Settings) -> str:
+    from core.partner_links import job_apply
+
+    return await job_apply(settings)
+
+
 JOBS: tuple[JobSpec, ...] = (
+    JobSpec(
+        key="partner_associations",
+        name="Partner and funder associations",
+        description=(
+            "Lists the partner and funder associations the records already imply: "
+            "a lead's referring partner, an engagement's referring partners, and "
+            "everyone who attended an event that has partners or funders. Applying "
+            "writes each once (one already there is left), then moves any held by "
+            "a person or lead to their company. Safe to run again. The worker "
+            "moves new ones to a company every night."
+        ),
+        mutating=True,
+        dry_run=_partner_assoc_dry,
+        apply=_partner_assoc_apply,
+    ),
     JobSpec(
         key="sandbox_demo_links",
         name="Sandbox demo campaign links",

@@ -778,6 +778,28 @@ def _lead_payload(row: dict[str, Any], plan: dict[str, Any], batch_name: str,
     return {k: v for k, v in payload.items() if v is not None}
 
 
+async def _second_partner(api_client: EspoApi, lead_id: str, partner_id: str) -> dict[str, Any]:
+    """The template's partner on a known lead, under the API key: it becomes
+    the lead's referrer when it has none, else a second association. Returns
+    nothing for the user's fill. Never raises."""
+    try:
+        cur = await api_client.get(cfg.PROSPECT, lead_id, select="id,referredByPartnerId")
+    except EspoError:
+        return {}
+    have = (cur or {}).get("referredByPartnerId")
+    if not have:
+        # Under the API key, like the create: the referrer is the import's to set.
+        try:
+            await api_client.update(cfg.PROSPECT, lead_id, {"referredByPartnerId": partner_id})
+        except EspoError:
+            pass
+        return {}
+    if have != partner_id:
+        from core.partner_links import REASON_REFERRED_TO, associate
+        await associate(api_client, reason=REASON_REFERRED_TO, partner_id=partner_id, lead_id=lead_id)
+    return {}
+
+
 def _match_links(entry: dict[str, Any]) -> dict[str, str]:
     """A Duplicate's link to the Company it matched. A matched Contact is named
     in the reason note only — never on ``promotedContact`` (*Converted to
@@ -850,6 +872,11 @@ async def apply_import(api_client: EspoApi, user_client: EspoApi, store, batch: 
                     result["skipped"] += 1
                     continue
                 fill = {k: v for k, v in entry["fill"].items() if not str(lead.get(k) or "").strip()}
+                # The template's partner on a lead already here: it becomes the
+                # lead's referrer when it has none, else a second association
+                # (prds/partner-association-plan.md, decision 2).
+                if ladder_fields and plan.get("referrerPartnerId"):
+                    fill.update(await _second_partner(api_client, entry["leadId"], plan["referrerPartnerId"]))
                 if fill:
                     await user_client.update(cfg.PROSPECT, entry["leadId"], fill)
                     from .ladder import after_write

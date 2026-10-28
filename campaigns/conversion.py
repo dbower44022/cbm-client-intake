@@ -222,7 +222,25 @@ async def convert_lead(client: EspoApi, lead: dict[str, Any], details: Details, 
 
     await mark_converted(client, lead, company_id=out.company_id, contact_id=out.contact_id)
     out.lead_converted = True
+    # The lead's partner ties move to the business (prds/partner-association-plan.md,
+    # decision 2). Best-effort: a conversion never fails on them.
+    try:
+        await _carry_partner_ties(client, lead, out)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("lead %s partner associations not carried: %s", lead.get("id"), exc)
     return out
+
+
+async def _carry_partner_ties(client: EspoApi, lead: dict[str, Any], out: "Converted") -> None:
+    from core import partner_links
+    if not await partner_links.available(client):
+        return
+    if "referredByPartnerId" not in lead:
+        links = await client.metadata(f"entityDefs.{cfg.PROSPECT}.links")
+        if isinstance(links, dict) and "referredByPartner" in links:
+            row = await client.get(cfg.PROSPECT, lead["id"], select="id,referredByPartnerId")
+            lead = {**lead, "referredByPartnerId": (row or {}).get("referredByPartnerId")}
+    await partner_links.on_conversion(client, lead, company_id=out.company_id, contact_id=out.contact_id)
 
 
 async def mark_converted(client: EspoApi, lead: dict[str, Any], *, company_id: Optional[str] = None,

@@ -1272,6 +1272,10 @@ async def add_registrant(
     if contact_id:
         registration["contactId"] = contact_id
     created = await client.create(cfg.REGISTRATION, registration)
+    # The company the person was with when they registered (partner
+    # associations, decision 3). Best-effort.
+    from core.partner_links import stamp_registration_company
+    await stamp_registration_company(client, created["id"], contact_id)
     return await client.get(cfg.REGISTRATION, created["id"])
 
 

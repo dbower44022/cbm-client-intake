@@ -357,6 +357,15 @@ async def _create_engagement(
     related = await attrib.relate_referring_partners(client, created["id"], referring)
     if related:
         attr.written["referringPartnerIds"] = related
+    # Each referring partner is associated with the company for good
+    # (prds/partner-association-plan.md, decisions 1–2). Best-effort.
+    if referring:
+        try:
+            from core.partner_links import on_intake
+            await on_intake(client, partner_ids=referring, company_id=account_id, contact_id=contact_id,
+                            engagement_id=created["id"])
+        except Exception as exc:  # noqa: BLE001 — never fails the intake
+            log.warning("intake partner associations not written: %s", exc)
     return created["id"]
 
 

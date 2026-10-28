@@ -475,6 +475,10 @@ async def register_member(
         payload["registrationDate"] = moment.strftime("%Y-%m-%d %H:%M:%S")
         created = await client.create(cfg.REGISTRATION, payload)
         registration_id, outcome = created["id"], "created"
+        # The company the person was with when they registered (partner
+        # associations, decision 3). Best-effort.
+        from core.partner_links import stamp_registration_company
+        await stamp_registration_company(client, registration_id, payload.get("contactId"))
     # D3: the member's confirmation, with the event's Join URL (D2: a registered
     # member sees it). Best-effort by construction.
     from . import confirm
