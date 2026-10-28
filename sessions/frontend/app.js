@@ -1273,14 +1273,20 @@
     });
     var open = document.createElement("button"); open.type = "button";
     open.className = "cbm-button cbm-button--secondary sx__sm"; open.textContent = "Refer to a partner";
-    var form = document.createElement("div"); form.className = "sx__oc"; form.hidden = true;
+    // Shown and hidden by style, not the hidden attribute: .sx__oc sets
+    // display:flex, which beats [hidden] (found in the live pass, 10-28-26).
+    var form = document.createElement("div"); form.className = "sx__oc"; form.style.display = "none";
     var sel = document.createElement("select"); sel.setAttribute("aria-label", "The partner the client was referred to");
     var blank = document.createElement("option"); blank.value = ""; blank.textContent = "— choose a partner —"; sel.appendChild(blank);
     (res.partners || []).forEach(function (p) { var o = document.createElement("option"); o.value = p.id; o.textContent = p.name; sel.appendChild(o); });
     var go = document.createElement("button"); go.type = "button"; go.className = "cbm-button sx__sm"; go.textContent = "Record the referral";
     var msg = document.createElement("div"); msg.className = "sx__muted";
     form.appendChild(sel); form.appendChild(go);
-    open.addEventListener("click", function () { form.hidden = !form.hidden; if (!form.hidden) sel.focus(); });
+    open.addEventListener("click", function () {
+      var showing = form.style.display !== "none";
+      form.style.display = showing ? "none" : "flex";
+      if (!showing) sel.focus();
+    });
     go.addEventListener("click", async function () {
       if (!sel.value) { msg.textContent = "Choose the partner the client was referred to."; return; }
       try {

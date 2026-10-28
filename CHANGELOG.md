@@ -5,6 +5,16 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.295.1] — 2026-10-28
+
+**fix: two faults the partner association live pass found.**
+
+- **The backfill's dry run named nothing.** Its plan listed CRM ids; it now
+  names the partners, funders and companies, so the plan can be checked.
+- **Refer to a partner's picker showed before the button was pressed.** The
+  card's row style set `display:flex`, which beats the `hidden` attribute;
+  the picker is now shown and hidden by style.
+
 ## [0.295.0] — 2026-10-28
 
 **feat: partner and funder associations, and lists that select by them**
@@ -40,6 +50,12 @@ switch; no migration.
   Preview shows them and each campaign's under *Used by*.
 - **Not in this release:** the partner's attendance report (decision 3 is its
   requirement); `OPEN-ITEMS.md`.
+- **Live-passed on crm-test 10-28-26** by Claude: the backfill wrote 7
+  associations and a re-run none; lists by partner, funder, reason and event
+  counted correctly; Joe Mentor (not an administrator) recorded *Refer to a
+  partner* on Ashgrove Cabinetry — the association names the engagement and
+  the history says "Referred to the partner Harborview Legal Clinic." Two
+  faults, fixed in 0.295.1.
 
 ## [0.294.0] — 2026-10-27
 

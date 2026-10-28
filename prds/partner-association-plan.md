@@ -1,11 +1,11 @@
 # Partner and funder associations — and the Lists columns that use them
 
-Last Updated: 10-28-26 02:32 · Revision 1.2 — change log at the end.
+Last Updated: 10-28-26 10:34 · Revision 1.3 — change log at the end.
 
 Prepared by Claude (Claude Code), for D. Bower. Discussed with Doug in plan
 mode 10-28-26 00:33–01:28 and approved; every decision below is his.
 
-**Status: stops 1–5 built as v0.295.0 (10-28-26); live pass owed.** Stop 1 (the CRM change): `partner-association-crm-handoff.md`,
+**Status: stops 1–5 built as v0.295.0 and live-passed on crm-test 10-28-26; v0.295.1 fixes the two faults the pass found.** Stop 1 (the CRM change): `partner-association-crm-handoff.md`,
 `scripts/plans/cpartner-association.json` (fingerprint `8dd9d9264170`),
 `scripts/migrate_partner_association_roles.py`. Made on the way: the plan file
 run by the shared applier stands in for a migrate script (the
@@ -161,6 +161,7 @@ Work pauses after each for Doug's go-ahead.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 10-28-26 10:34 | Claude (Claude Code) | Live-passed on crm-test; v0.295.1. |
 | 1.2 | 10-28-26 02:32 | Claude (Claude Code) | Stops 2–5 built as v0.295.0. Made on the way: a lead's own *Referred by partner* stays its first tie until conversion (no per-row CRM call at import — the volume rule); a different partner on a known lead becomes a second association only on a row that also fills fields; a company-held tie with no person reaches every contact there; the *attended* group's *every contact* uses the company recorded at registration, so registrations made before v0.295.0 reach the person only. |
 | 1.1 | 10-28-26 02:10 | Claude (Claude Code) | Copied into the repository; status of stop 1; two choices made on the way. |
 | 1.0 | 10-28-26 01:30 | Claude (Claude Code) | Approved by Doug in plan mode. |
