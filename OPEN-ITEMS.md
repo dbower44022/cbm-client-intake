@@ -6,6 +6,13 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+62. **A company's record page: the Events tab errors** (found in the grid
+    live pass, 2026-10-29). `directory/frontend/record.js` asks
+    `/records/{id}/events`, and the directory router's `record_events` reads
+    the id as a **Contact** — on a company page it is an Account id, so the
+    tab shows "Request failed (504)". Older than v0.300.0. Fix: on a
+    company, read the history of its contacts (or hide the tab there).
+
 61. **Partner and funder associations — production, Boston, the report**
     (2026-10-28). Built as v0.295.0 (`prds/partner-association-plan.md`).
     (1) ~~the live pass on crm-test~~ **passed 10-28-26** (backfill applied
@@ -24,8 +31,9 @@ found; move resolved items to the bottom with the resolution date.
     (v0.294.0, live-passed on crm-test 10-28-26 00:23), then each
     application. Plan: `prds/shared-grid-plan.md`.
     The spinners in `busy.js` already reach every page. **Owed, one release
-    each:** — **all built by v0.300.0 (plan § 12, 10-29-26); its live
-    pass owed**. Client Administration (**built as v0.299.0, plan § 11;
+    each:** — **all built by v0.300.0 (plan § 12) and live-passed on
+    crm-test 10-29-26** — the rollout is complete; this item stays open only
+    for SortedList on production and Boston. Client Administration (**built as v0.299.0, plan § 11;
     live-passed on crm-test 10-28-26**); Mentor Administration (**built as
     v0.297.0, plan § 9; live-passed on crm-test 10-28-26**); Client, Partner and
     Funder Management (one shared frontend; **built as v0.298.0, plan § 10;

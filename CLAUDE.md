@@ -1240,8 +1240,10 @@ the strength of it.
 - **v0.300.0 (2026-10-29) — the shared grid everywhere**
   (`prds/shared-grid-plan.md` § 12): Submission Admin, the Directories
   (server sort through `SortedList`), My Email, Event Administration, System
-  Settings and the Analytics panels. No CRM change. Committed, **not
-  pushed; live pass owed**.
+  Settings and the Analytics panels; v0.300.1 un-disables the directory
+  edit window's Save. No CRM change. Pushed 10-29-26; **live-passed on
+  crm-test 10-29-26 10:25** (results page https://claude.ai/artifact/9CTxsPvY4uWE36Mp6HgQy4; Submission Admin, My Email
+  and System Settings on a local copy only).
 - **v0.299.0 (2026-10-28) — the shared grid on Client Administration**
   (`prds/shared-grid-plan.md` § 11), and the engagement list pages past 200.
   No CRM change. Pushed 10-28-26 23:31; **live-passed on crm-test
