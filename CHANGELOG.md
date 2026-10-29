@@ -5,6 +5,16 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.300.2] — 2026-10-29
+
+**fix: a company's Events tab** (`OPEN-ITEMS.md` #62). On a company's
+record page the tab read the company's id as a contact and showed "Request
+failed (504)". It now lists every registration of the company's contacts,
+newest first, with a Person column naming who went
+(`events.reporting.people_history`); the user's own read of the company and
+its contacts gates it, and the history rides the org-wide key, as the
+contact tab does. Older than v0.300.0.
+
 ## [0.300.1] — 2026-10-29
 
 **fix: the directory edit window's Save is never disabled.** It was greyed

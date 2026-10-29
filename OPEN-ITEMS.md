@@ -7,7 +7,7 @@ found; move resolved items to the bottom with the resolution date.
 ## Needs a fix / decision
 
 62. **A company's record page: the Events tab errors** (found in the grid
-    live pass, 2026-10-29). `directory/frontend/record.js` asks
+    live pass, 2026-10-29) — **fixed in v0.300.2, live check owed**. `directory/frontend/record.js` asks
     `/records/{id}/events`, and the directory router's `record_events` reads
     the id as a **Contact** — on a company page it is an Account id, so the
     tab shows "Request failed (504)". Older than v0.300.0. Fix: on a

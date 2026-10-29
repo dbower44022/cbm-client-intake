@@ -253,6 +253,14 @@
       var rows = res.events || [];
       var body = $("crEvtBody");
       body.innerHTML = "";
+      // A company's tab names who went: a Person column after Event.
+      var byPerson = !!res.byPerson;
+      var headRow = $("crEvtTable").querySelector("thead tr");
+      if (byPerson && !headRow.querySelector('[data-col="person"]')) {
+        var pth = document.createElement("th"); pth.scope = "col"; pth.textContent = "Person";
+        pth.setAttribute("data-col", "person");
+        headRow.insertBefore(pth, headRow.children[2]);
+      }
       rows.forEach(function (r) {
         var tr = document.createElement("tr");
         function cell(text, sortAs) {
@@ -264,6 +272,7 @@
         // The date shows as "Oct 27, 2026" and sorts by the start itself.
         cell(r.dateLabel, r.startsAtUtc || "");
         cell(r.title);
+        if (byPerson) cell(r.person);
         cell(r.category);
         // The status IS the outcome — "Registered" on a past event means they
         // never showed and attendance was never resolved, which is worth seeing.

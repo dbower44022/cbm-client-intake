@@ -60,6 +60,31 @@ async def test_contact_history_is_empty_without_a_contact():
     assert await reporting.contact_history(FakeCrm(), "") == []
 
 
+async def test_people_history_names_who_went_for_a_company():
+    """A company's Events tab (OPEN-ITEMS #62): every registration of its
+    contacts, newest first, each naming the person; a single contact's
+    history carries no name."""
+    events = [
+        make_event(id="e1", name="Older", dateStart="2026-01-10 16:00:00", slug="older"),
+        make_event(id="e2", name="Newer", dateStart="2026-06-10 16:00:00", slug="newer"),
+    ]
+    regs = [_reg("r1", "e1", "c1"), _reg("r2", "e2", "c2"), _reg("r3", "e2", "c9")]
+    out = await reporting.people_history(
+        FakeCrm(events, regs), [{"id": "c1", "name": "Ann"}, {"id": "c2", "name": "Bo"}])
+    assert [(r["title"], r["person"]) for r in out] == [("Newer", "Bo"), ("Older", "Ann")]
+    single = await reporting.contact_history(FakeCrm(events, regs), "c1")
+    assert "person" not in single[0]
+
+
+def test_a_company_events_tab_reads_its_contacts_not_the_company_as_a_contact():
+    directory = Path("directory/router.py").read_text(encoding="utf-8")
+    body = directory.split('"/records/{record_id}/events"', 1)[1].split("if cfg.mentor_page", 1)[0]
+    company = body.split('if cfg.entity == "Account":', 1)[1].split("# The user's own ACL", 1)[0]
+    assert 'client.get("Account", record_id' in company
+    assert 'client.list_related(\n                    "Account", record_id, "contacts"' in company
+    assert "people_history(reader," in company and '"byPerson": True' in company
+
+
 # --- EV-72 (Doug's explicit requirement) -------------------------------------
 
 async def test_rollup_deduplicates_by_event_and_names_who_attended():

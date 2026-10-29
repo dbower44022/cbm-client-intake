@@ -243,7 +243,26 @@ def make_router(cfg: DirectoryConfig) -> APIRouter:
         if not settings.events_active:
             return {"events": [], "enabled": False}
         client = client_for(settings, user)
-        from events.reporting import contact_history
+        from events.reporting import contact_history, people_history
+
+        if cfg.entity == "Account":
+            # A company's tab: every registration of its contacts, each naming
+            # the person (OPEN-ITEMS #62 — the tab used to read the company id
+            # as a contact and fail). Gated by the user's own read of the
+            # company and its contacts; the history rides the org-wide key.
+            try:
+                if not await client.get("Account", record_id, select="id"):
+                    raise HTTPException(status_code=404, detail="Record not found.")
+                people = await client.list_related(
+                    "Account", record_id, "contacts", select="id,name", max_size=200)
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not read this company")
+            reader = _system_client(settings) or client
+            try:
+                rows = await people_history(reader, people.get("list", []))
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load the event history")
+            return {"events": rows, "enabled": True, "byPerson": True}
 
         # The user's own ACL gates the tab: a contact they may not read is the
         # same 403 / 404 the rest of the record answers with.
