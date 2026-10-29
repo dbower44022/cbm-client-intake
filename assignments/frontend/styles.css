@@ -199,10 +199,6 @@ body { display: flex; flex-direction: column; }
    centered header. */
 .assign__table td.days-cell { white-space: nowrap; color: var(--cbm-slate-700); text-align: center; }
 .assign__table th.col-days { text-align: center; }
-.assign__table th.is-sortable { cursor: pointer; user-select: none; }
-.assign__table th.is-sortable:hover { color: var(--cbm-blue); }
-.assign__table th[data-dir="asc"]::after { content: " ▲"; font-size: 0.7em; }
-.assign__table th[data-dir="desc"]::after { content: " ▼"; font-size: 0.7em; }
 
 /* Notes column — click-to-edit internal process notes */
 .notes-view {
@@ -604,10 +600,6 @@ body { display: flex; flex-direction: column; }
 .mentor-table th.num, .mentor-table td.num { text-align: center; white-space: nowrap; }
 /* Dates stay on one line — a wrapped "Aug 1, 2026" reads as two values. */
 .mentor-table th.date, .mentor-table td.date { white-space: nowrap; }
-.mentor-table th.is-sortable { cursor: pointer; user-select: none; }
-.mentor-table th.is-sortable:hover { color: var(--cbm-blue); }
-.mentor-table th[data-dir="asc"]::after { content: " ▲"; font-size: 0.7em; }
-.mentor-table th[data-dir="desc"]::after { content: " ▼"; font-size: 0.7em; }
 .mentor-name-cell { font-weight: 600; color: var(--cbm-ink); white-space: nowrap; }
 .mentor-empty { color: var(--cbm-text); padding: 1.25rem 0.7rem; }
 .mentor-table .chips { gap: 0.25rem; }

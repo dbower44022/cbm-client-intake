@@ -24,7 +24,8 @@ found; move resolved items to the bottom with the resolution date.
     (v0.294.0, live-passed on crm-test 10-28-26 00:23), then each
     application. Plan: `prds/shared-grid-plan.md`.
     The spinners in `busy.js` already reach every page. **Owed, one release
-    each:** Client Administration; Mentor Administration (**built as
+    each:** Client Administration (**built as v0.299.0, plan § 11; live
+    pass owed**); Mentor Administration (**built as
     v0.297.0, plan § 9; live-passed on crm-test 10-28-26**); Client, Partner and
     Funder Management (one shared frontend; **built as v0.298.0, plan § 10;
     live-passed on crm-test 10-28-26**); Submission Admin; the

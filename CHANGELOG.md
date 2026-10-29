@@ -5,6 +5,24 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.299.0] — 2026-10-28
+
+**feat: the shared grid on Client Administration** (rollout 4,
+`prds/shared-grid-plan.md` § 11). No switch; no migration; no CRM change.
+
+- **The engagement list** and **Available Mentors** have resizable
+  columns, shaded rows and sorting on several columns (shift-click adds
+  one), remembered per browser; the old one-column sort is gone. The list
+  keeps the server's order (newest first) until a heading is clicked;
+  Available Mentors still opens on Max Clients, highest first, with
+  *Unlimited* above every number and blank counts last.
+- **Changed:** every first click sorts ascending (dates, Days Pending and
+  the mentor counts used to start highest first). The mentor window now
+  opens at once with a spinner while the roster loads.
+- **Fixed:** the engagement list read one page of 200 and stopped, so a
+  status filter matching more than 200 engagements silently showed the
+  newest 200. It now pages through every match.
+
 ## [0.298.0] — 2026-10-28
 
 **feat: the shared grid on Client, Partner and Funder Management** (rollout

@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="/shared/tokens.css" />
   <link rel="stylesheet" href="/shared/vendor/jodit/jodit.min.css" />
   <link rel="stylesheet" href="/shared/enrichment.css" />
+  <link rel="stylesheet" href="/shared/grid.css" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -57,13 +58,13 @@
         <table class="assign__table" id="engTable" hidden>
           <thead>
             <tr>
-              <th scope="col" class="col-eng is-sortable" data-sort="name">Engagement</th>
-              <th scope="col" class="col-status is-sortable" data-sort="status">Status</th>
-              <th scope="col" class="col-company is-sortable" data-sort="companyName">Company</th>
-              <th scope="col" class="is-sortable" data-sort="mentorName">Assign to mentor</th>
-              <th scope="col" class="col-assigned is-sortable" data-sort="assignedDate">Assigned Date</th>
-              <th scope="col" class="col-days is-sortable" data-sort="daysPending">Days Pending</th>
-              <th scope="col" class="col-notes is-sortable" data-sort="notes">Notes</th>
+              <th scope="col" class="col-eng" data-col="name">Engagement</th>
+              <th scope="col" class="col-status" data-col="status">Status</th>
+              <th scope="col" class="col-company" data-col="companyName">Company</th>
+              <th scope="col" data-col="mentorName">Assign to mentor</th>
+              <th scope="col" class="col-assigned" data-col="assignedDate">Assigned Date</th>
+              <th scope="col" class="col-days" data-col="daysPending">Days Pending</th>
+              <th scope="col" class="col-notes" data-col="notes">Notes</th>
             </tr>
           </thead>
           <tbody id="engBody"></tbody>
@@ -95,19 +96,19 @@
           <table class="mentor-table" id="mentorTable">
             <thead>
               <tr>
-                <th data-sort="name" class="is-sortable">Mentor</th>
-                <th data-sort="status" class="is-sortable">Status</th>
-                <th data-sort="mentorType" class="is-sortable">Type</th>
-                <th data-sort="acceptingNewClients" class="is-sortable">Accepting</th>
-                <th data-sort="activeClients" class="is-sortable num">Active Clients</th>
-                <th data-sort="coMentorClients" class="is-sortable num">CoMentors</th>
-                <th data-sort="maxCapacity" class="is-sortable num">Max Clients</th>
-                <th data-sort="availableCapacity" class="is-sortable num">Available</th>
-                <th data-sort="assignedLast30" class="is-sortable num">Assigned (30d)</th>
-                <th data-sort="lastClientAssigned" class="is-sortable date">Last Assigned</th>
-                <th data-sort="lifetimeClients" class="is-sortable num">Lifetime</th>
-                <th data-sort="industryExperience" class="is-sortable">Industry Experience</th>
-                <th>Areas of Expertise</th>
+                <th data-col="name">Mentor</th>
+                <th data-col="status">Status</th>
+                <th data-col="mentorType">Type</th>
+                <th data-col="acceptingNewClients">Accepting</th>
+                <th data-col="activeClients" class="num">Active Clients</th>
+                <th data-col="coMentorClients" class="num">CoMentors</th>
+                <th data-col="maxCapacity" class="num">Max Clients</th>
+                <th data-col="availableCapacity" class="num">Available</th>
+                <th data-col="assignedLast30" class="num">Assigned (30d)</th>
+                <th data-col="lastClientAssigned" class="date">Last Assigned</th>
+                <th data-col="lifetimeClients" class="num">Lifetime</th>
+                <th data-col="industryExperience">Industry Experience</th>
+                <th data-col="expertise" data-sortable="false">Areas of Expertise</th>
               </tr>
             </thead>
             <tbody id="mentorTbody"></tbody>
@@ -210,6 +211,7 @@
   <!-- busy.js first: it wraps fetch/XHR, so it must be in place before any
        other script can start a request. -->
   <script src="/shared/busy.js"></script>
+  <script src="/shared/grid.js"></script>
   <script src="/shared/phone-format.js"></script>
   <script src="/shared/vendor/jodit/jodit.min.js"></script>
   <script src="/shared/richtext.js"></script>

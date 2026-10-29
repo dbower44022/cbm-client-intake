@@ -1216,6 +1216,36 @@ async def test_list_engagements_query_and_shape():
             "value": ["Submitted", "Pending Acceptance"]} in where
 
 
+async def test_list_engagements_pages_through_every_match():
+    """More than 200 matches: every one comes back, newest first, and no page
+    asks for more than 200 (EspoCRM refuses that with a 403). One page of 200
+    used to be the whole list — a status filter matching 450 showed 200."""
+
+    class PagingClient(FakeClient):
+        def __init__(self, **kw):
+            super().__init__(**kw)
+            self.pages: list[dict] = []
+
+        async def list(self, entity, *, where=None, **kwargs):
+            if entity == service.ENGAGEMENT:
+                self.pages.append(kwargs)
+            return await super().list(entity, where=where, **kwargs)
+
+    stored = [
+        {"id": f"e{i:03d}", "name": f"E{i}", "engagementStatus": "Submitted",
+         "createdAt": f"2026-01-01 00:00:{i % 60:02d}"}
+        for i in range(450)
+    ]
+    client = PagingClient(lists={service.ENGAGEMENT: {"total": 450, "list": stored}})
+    rows = await service.list_engagements(client, ["Submitted"])
+    assert [r["id"] for r in rows] == [r["id"] for r in stored]
+    assert len(client.pages) == 3
+    assert all(p["max_size"] <= 200 for p in client.pages)
+    assert [p["offset"] for p in client.pages] == [0, 200, 400]
+    # Newest first on every page.
+    assert all(p["order_by"] == "createdAt" and p["order"] == "desc" for p in client.pages)
+
+
 async def test_update_engagement_notes_writes_description():
     client = FakeClient()
     res = await service.update_engagement_notes(client, "e1", "Call back next week.")

@@ -1,6 +1,6 @@
 # Shared grid, divider and loading spinner — plan
 
-Last Updated: 10-28-26 22:07 · Revision 1.3 — change log at the end.
+Last Updated: 10-28-26 23:27 · Revision 1.5 — change log at the end.
 
 **Status: approved 10-27-26; stops 1–3 built as v0.294.0; live-passed on crm-test 10-28-26 00:23**
 (https://claude.ai/artifact/AWjNEvmyq7mrwLVyDd2yJF).
@@ -258,19 +258,57 @@ other screen now.
    applications (a mentor, a partner manager and a funder manager, or Doug
    as an administrator), with a results page.
 
+## 11. Rollout 4 — Client Administration (drafted 10-28-26)
+
+Doug, 10-28-26: Client Administration next, built by a subagent (his "yes"
+to the split: Claude writes and gets the plan approved, one subagent builds
+and checks it locally, Claude reviews, versions, documents, and runs the
+live pass).
+
+**The grids.** Two, both with the application's own one-column sort today,
+both replaced by the shared grid and sorted in the browser:
+
+- **The engagement list** (`engTable`, the landing screen) — Engagement,
+  Status, Company, Assign to mentor, Assigned Date, Days Pending, Notes.
+  The *Assign to mentor* and *Notes* cells hold controls (a picker, the
+  notes editor); they sort by their value, not their control.
+- **Available Mentors** (`mentorTable`, the window that opens to choose a
+  mentor) — 12 columns; its default stays Max Clients, highest first.
+  *Unlimited* and blank counts follow the Mentor Administration rule.
+
+**Found while planning, fixed in the same release (routine):** the
+engagement list reads ONE page of 200 from the CRM and stops, so a status
+filter matching more than 200 engagements shows the newest 200 and says
+nothing. It will page through every match, as the session tools do — the
+sort is meaningless over a list that was silently cut.
+
+**Spinners** over the engagement list and the mentor window while they
+load. **No divider:** a row opens the engagement in a window, as today.
+
+**Stops.** Work pauses after each for Doug's go-ahead.
+
+1. **Build** (the subagent; built 10-28-26) — both grids, the spinners, the paging fix,
+   the old sort code removed, tests, a check on a local copy.
+2. **Review, version, documents and the live pass** (Claude; v0.299.0,
+   reviewed and documented 10-28-26, the live pass waits for the push) on
+   crm-test as
+   a member of the Client Administration Team or Doug, with a results page.
+
 ## Revision control
 
 | Field | Value |
 |---|---|
 | Document | Shared grid, divider and loading spinner — plan |
-| Version | 1.3 |
-| Last Updated | 10-28-26 22:07 |
+| Version | 1.5 |
+| Last Updated | 10-28-26 23:27 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.5 | 10-28-26 23:27 | Claude (Claude Code) | § 11: built by a subagent and reviewed (v0.299.0); Doug: run both stops. |
+| 1.4 | 10-28-26 22:25 | Claude (Claude Code) | § 11 rollout 4, Client Administration, drafted for approval. |
 | 1.3 | 10-28-26 22:07 | Claude (Claude Code) | § 10: rollout 3 live-passed on crm-test. |
 | 1.2 | 10-28-26 21:28 | Claude (Claude Code) | § 10: stops 1 and 2 built (v0.298.0); Events is in all three applications. |
 | 1.1 | 10-28-26 20:58 | Claude (Claude Code) | § 10 rollout 3, Client, Partner and Funder Management, drafted for approval. |

@@ -236,7 +236,7 @@
   // --- data + rendering ---
   async function fetchEngagements() {
     var qs = statusQuery();
-    var eng = await api("/engagements" + (qs ? "?" + qs : ""));
+    var eng = await busyOver($("tableWrap"), api("/engagements" + (qs ? "?" + qs : "")));
     notesRich = !!eng.notesRich;
     return eng;
   }
@@ -286,7 +286,6 @@
 
   // --- engagement grid sorting + search (client-side, like the mentors grid) ---
   var engRows = [];                     // last-loaded rows, in server order (newest first)
-  var engSort = { key: null, dir: 1 }; // key null = keep the server order
   var engQuery = "";                    // full-text search over the loaded rows
 
   function renderTable(engagements) {
@@ -306,19 +305,32 @@
     repaintEngagements();
   });
 
+  // The value an engagement column sorts by — read from the row's data, never
+  // from the cell, because two cells hold controls (the mentor picker and the
+  // notes editor). A blank returns null or "" so it sorts last either way.
   function engSortVal(e, k) {
-    // UTC "YYYY-MM-DD HH:MM:SS" stamps compare correctly as strings; a row
-    // without one ("") sorts before any date ascending, after it descending.
-    if (k === "assignedDate") return e.assignedDate || "";
-    // Numeric: unassigned rows (-1) sort below any real day count.
-    if (k === "daysPending") { var d = daysPending(e); return d == null ? -1 : d; }
-    return (e[k] || "").toString().toLowerCase();
+    if (k === "assignedDate") return e.assignedDate || "";   // a UTC CRM stamp
+    if (k === "daysPending") return daysPending(e);            // a number, or null
+    if (k === "notes") return notesPreviewText(e.notes || "");
+    return e[k] == null ? "" : String(e[k]);
   }
+
+  // The shared grid on the engagement list (prds/shared-grid-plan.md § 11):
+  // it holds the sort; the rows are drawn here, after the search. No default
+  // sort — until a heading is clicked the list keeps the server order, newest
+  // first.
+  var engGrid = null;
+  function ensureEngGrid() {
+    if (engGrid || !window.CBMGrid) return;
+    engGrid = CBMGrid.enhance($("engTable"), { key: "assignments.engagements", onSort: function () { repaintEngagements(); } });
+  }
+  // A spinner over a grid or panel while it waits on the server.
+  function busyOver(el, promise) { return window.CBMBusy && CBMBusy.loading ? CBMBusy.loading(el, promise) : promise; }
 
   function repaintEngagements() {
     var body = $("engBody");
     body.innerHTML = "";
-    updateEngSortIndicators();
+    ensureEngGrid();
     var rows = engRows.slice();
     var q = engQuery.trim().toLowerCase();
     if (q) {
@@ -333,42 +345,12 @@
       return;
     }
     hide($("emptyState"));
-    if (engSort.key) {
-      var k = engSort.key, dir = engSort.dir;
-      rows.sort(function (a, b) {
-        var va = engSortVal(a, k), vb = engSortVal(b, k);
-        return (va < vb ? -1 : va > vb ? 1 : 0) * dir;
-      });
-    }
+    var keys = engGrid ? engGrid.keys() : [];
+    if (keys.length) rows = CBMGrid.sortBy(rows, keys, engSortVal);
     rows.forEach(function (eng) { body.appendChild(buildRow(eng)); });
     show($("engTable"));
+    if (engGrid) engGrid.refresh();
   }
-
-  function updateEngSortIndicators() {
-    Array.prototype.forEach.call($("engTable").querySelectorAll("th[data-sort]"), function (th) {
-      var active = th.getAttribute("data-sort") === engSort.key;
-      th.setAttribute("aria-sort", active ? (engSort.dir === 1 ? "ascending" : "descending") : "none");
-      th.dataset.dir = active ? (engSort.dir === 1 ? "asc" : "desc") : "";
-    });
-  }
-
-  Array.prototype.forEach.call(
-    document.querySelectorAll("#engTable th[data-sort]"),
-    function (th) {
-      th.addEventListener("click", function () {
-        var key = th.getAttribute("data-sort");
-        if (engSort.key === key) {
-          engSort.dir = -engSort.dir;
-        } else {
-          engSort.key = key;
-          // Dates most-recent-first and day counts longest-waiting-first on
-          // the first click; text columns A→Z.
-          engSort.dir = (key === "assignedDate" || key === "daysPending") ? -1 : 1;
-        }
-        repaintEngagements();
-      });
-    }
-  );
 
   // --- row selection (click) + context menu (right-click) ---
   var selectedEngId = null;
@@ -1279,8 +1261,7 @@
   var reviewMentorTypes = [];
   // Default to Active mentors, highest capacity first (best fit to take a
   // new client); the admin can widen to other statuses.
-  var mentorFilter = { q: "", status: "Active", type: "", industry: "", expertise: "", availOnly: false,
-                       sortKey: "maxCapacity", sortDir: -1 };
+  var mentorFilter = { q: "", status: "Active", type: "", industry: "", expertise: "", availOnly: false };
 
   // mentorType may be a single enum (string) or a multi-enum (array); normalize
   // to a list so the column/filter/search handle both.
@@ -1300,18 +1281,29 @@
             (m.expertise || []).join(" ")].join(" ").toLowerCase();
   }
 
+  // The value a mentor column sorts by (the Mentor Administration rule):
+  // Unlimited above every number in Available, a blank count last whichever
+  // way (the shared grid's rule for null and "").
   function sortVal(m, k) {
+    if (k === "availableCapacity") return m.availableCapacity === -1 ? Infinity : (typeof m.availableCapacity === "number" ? m.availableCapacity : null);
     if (k === "maxCapacity" || k === "activeClients" || k === "coMentorClients" ||
         k === "assignedLast30" || k === "lifetimeClients")
-      return m[k] == null ? -Infinity : m[k];
-    if (k === "availableCapacity") return mentorAvail(m);
-    // A CRM datetime string sorts correctly as-is; never-assigned mentors sort
-    // to the bottom of a most-recent-first sort, which is where they belong.
+      return typeof m[k] === "number" ? m[k] : null;
     if (k === "lastClientAssigned") return m.lastClientAssigned || "";
-    if (k === "acceptingNewClients") return m.acceptingNewClients ? 1 : 0;
-    if (k === "mentorType") return mentorTypes(m).join(", ").toLowerCase();
-    if (k === "industryExperience") return (m.industryExperience || []).join(", ").toLowerCase();
-    return (m[k] || "").toString().toLowerCase();
+    if (k === "acceptingNewClients") return m.acceptingNewClients ? "Yes" : "No";
+    if (k === "mentorType") return (Array.isArray(m.mentorType) ? m.mentorType.filter(Boolean) : (m.mentorType ? [m.mentorType] : [])).join(", ");
+    if (k === "industryExperience") return (m.industryExperience || []).join(", ");
+    return m[k] == null ? "" : String(m[k]);
+  }
+
+  // The shared grid on Available Mentors (prds/shared-grid-plan.md § 11): it
+  // holds the sort; the rows are drawn here, after the search and filters.
+  var MENTOR_DEFAULT = [{ col: "maxCapacity", dir: "desc" }];
+  var mentorGrid = null;
+  function mentorKeys() { var k = mentorGrid ? mentorGrid.keys() : []; return k.length ? k : MENTOR_DEFAULT; }
+  function ensureMentorGrid() {
+    if (mentorGrid || !window.CBMGrid) return;
+    mentorGrid = CBMGrid.enhance($("mentorTable"), { key: "assignments.mentors", sort: MENTOR_DEFAULT, onSort: function () { applyMentorFilter(); } });
   }
 
   function distinct(getList) {
@@ -1349,17 +1341,14 @@
       if (mentorFilter.availOnly && !mentorHasCapacity(m)) return false;
       return true;
     });
-    var k = mentorFilter.sortKey, dir = mentorFilter.sortDir;
-    rows.sort(function (a, b) {
-      var va = sortVal(a, k), vb = sortVal(b, k);
-      return (va < vb ? -1 : va > vb ? 1 : 0) * dir;
-    });
+    ensureMentorGrid();
+    if (window.CBMGrid) rows = CBMGrid.sortBy(rows, mentorKeys(), sortVal);
     renderMentorRows(rows);
     $("mentorCount").textContent =
       "Showing " + rows.length + " of " + reviewMentors.length + " mentors" +
       (reviewMetricsAvailable ? "" :
         " — client counts unavailable (your account can't read engagements)");
-    updateSortIndicators();
+    if (mentorGrid) mentorGrid.refresh();
   }
 
   function renderMentorRows(rows) {
@@ -1421,14 +1410,6 @@
 
   function numText(v) { return v == null ? "—" : String(v); }
 
-  function updateSortIndicators() {
-    Array.prototype.forEach.call($("mentorTable").querySelectorAll("th[data-sort]"), function (th) {
-      var active = th.getAttribute("data-sort") === mentorFilter.sortKey;
-      th.setAttribute("aria-sort", active ? (mentorFilter.sortDir === 1 ? "ascending" : "descending") : "none");
-      th.dataset.dir = active ? (mentorFilter.sortDir === 1 ? "asc" : "desc") : "";
-    });
-  }
-
   // When the review modal is opened FROM an engagement's Assign/Reassign flow
   // it carries that engagement, so the detail popup's footer button can
   // complete the assignment (Doug's ruling 2026-09-01). The toolbar button
@@ -1442,9 +1423,12 @@
         (mentorReviewCtx.eng.name || "engagement") + "\u201d \u2014 Available Mentors"
       : "Available Mentors";
     clearNotice();
+    // The window opens at once; on the first open its grid shows the spinner
+    // while the roster loads.
+    show($("mentorModal"));
     try {
       if (!reviewMentors.length) {
-        var res = await api("/mentors?all=true");
+        var res = await busyOver($("mentorTable").parentElement, api("/mentors?all=true"));
         reviewMentors = res.mentors || [];
         reviewMetricsAvailable = res.metricsAvailable !== false;
         reviewMentorTypes = res.mentorTypeOptions || [];
@@ -1462,9 +1446,9 @@
       fillFilterSelect($("mentorExpertiseFilter"),
         distinct(function (m) { return m.expertise || []; }), "All areas of expertise");
       applyMentorFilter();
-      show($("mentorModal"));
       $("mentorSearch").focus();
     } catch (e) {
+      hide($("mentorModal"));
       if (e.status === 401) { showLogin(); return; }
       notice(e.message, "error");
     }
@@ -1587,23 +1571,6 @@
   $("mentorAvailOnly").addEventListener("change", function () {
     mentorFilter.availOnly = this.checked; applyMentorFilter();
   });
-  Array.prototype.forEach.call(
-    document.querySelectorAll("#mentorTable th[data-sort]"),
-    function (th) {
-      th.addEventListener("click", function () {
-        var key = th.getAttribute("data-sort");
-        if (mentorFilter.sortKey === key) {
-          mentorFilter.sortDir = -mentorFilter.sortDir;
-        } else {
-          mentorFilter.sortKey = key;
-          // numbers default high→low, text low→high
-          mentorFilter.sortDir = (key === "name" || key === "industryExperience" || key === "mentorType") ? 1 : -1;
-        }
-        applyMentorFilter();
-      });
-    }
-  );
-
   function doAssign(tr, eng, mentorProfileId, mentorLabel) {
     if (!mentorProfileId) return;
     showConfirmModal({

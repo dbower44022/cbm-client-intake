@@ -164,3 +164,65 @@ def test_the_session_tools_load_the_grid_and_drop_their_own_sort():
     assert 'SLUG + ".attendees"' in js and 'SLUG + ".contacts.' in js
     # Buttons are never disabled: Open in Drive explains itself instead.
     assert "has no Google Drive address on record" in js
+
+
+# --- rollout 4: Client Administration (plan § 11) -----------------------------
+
+ASSIGNMENTS = SHARED.parent.parent / "assignments" / "frontend"
+
+
+def test_client_administration_loads_the_grid_and_drops_its_own_sort():
+    page = (ASSIGNMENTS / "index.html").read_text()
+    js = (ASSIGNMENTS / "app.js").read_text()
+    css = (ASSIGNMENTS / "styles.css").read_text()
+    assert page.index("/shared/busy.js") < page.index("/shared/grid.js") < page.index('src="app.js"')
+    assert "/shared/grid.css" in page
+    assert 'data-sort="' not in page and "is-sortable" not in page
+    assert "is-sortable" not in css and "data-dir" not in css
+    for key in ("assignments.engagements", "assignments.mentors"):
+        assert f'"{key}"' in js
+    assert "engSort =" not in js and "mentorFilter.sortKey" not in js
+    assert "updateSortIndicators" not in js and "updateEngSortIndicators" not in js
+
+
+def test_available_mentors_sort_unlimited_above_every_number_and_blanks_last():
+    js = (ASSIGNMENTS / "app.js").read_text()
+    start = js.index("  function sortVal(m, k) {")
+    fn = js[start:js.index("\n  }\n", start) + 4]
+    rows = [
+        {"name": "a", "availableCapacity": 2, "maxCapacity": 3},
+        {"name": "b", "availableCapacity": -1, "maxCapacity": None},
+        {"name": "c", "availableCapacity": None, "maxCapacity": 1},
+        {"name": "d", "availableCapacity": 5, "maxCapacity": 8},
+    ]
+    got = _node(fn + f"""
+const rows = {json.dumps(rows)};
+const up = G.sortBy(rows, [{{col: "availableCapacity", dir: "asc"}}], sortVal).map(r => r.name);
+const down = G.sortBy(rows, [{{col: "availableCapacity", dir: "desc"}}], sortVal).map(r => r.name);
+const max = G.sortBy(rows, [{{col: "maxCapacity", dir: "desc"}}], sortVal).map(r => r.name);
+console.log(JSON.stringify({{up, down, max}}));
+""")
+    assert got == {"up": ["a", "d", "b", "c"], "down": ["b", "d", "a", "c"], "max": ["d", "a", "c", "b"]}
+
+
+def test_engagements_sort_by_their_data_not_their_controls():
+    js = (ASSIGNMENTS / "app.js").read_text()
+    start = js.index("  function engSortVal(e, k) {")
+    fn = js[start:js.index("\n  }\n", start) + 4]
+    stubs = """
+function daysPending(e) { return e.status === "Pending Acceptance" ? e.days : null; }
+function notesPreviewText(h) { return h; }
+"""
+    rows = [
+        {"name": "Zed", "status": "Submitted", "days": None},
+        {"name": "Amy", "status": "Pending Acceptance", "days": 12},
+        {"name": "Bob", "status": "Pending Acceptance", "days": 3},
+        {"name": "Cal", "status": "Submitted", "days": None},
+    ]
+    got = _node(stubs + fn + f"""
+const rows = {json.dumps(rows)};
+const two = G.sortBy(rows, [{{col: "status", dir: "asc"}}, {{col: "name", dir: "asc"}}], engSortVal).map(r => r.name);
+const days = G.sortBy(rows, [{{col: "daysPending", dir: "desc"}}], engSortVal).map(r => r.name);
+console.log(JSON.stringify({{two, days}}));
+""")
+    assert got == {"two": ["Amy", "Bob", "Cal", "Zed"], "days": ["Amy", "Bob", "Zed", "Cal"]}

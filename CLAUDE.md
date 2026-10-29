@@ -1237,6 +1237,9 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
+- **v0.299.0 (2026-10-28) — the shared grid on Client Administration**
+  (`prds/shared-grid-plan.md` § 11), and the engagement list pages past 200.
+  No CRM change. Committed, **not pushed; live pass owed**.
 - **v0.298.0 (2026-10-28) — the shared grid on Client, Partner and
   Funder Management** (`prds/shared-grid-plan.md` § 10): every grid of the
   three; the Contacts tables resize but do not sort. No CRM change.

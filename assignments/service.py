@@ -189,25 +189,45 @@ async def _referring_partners(
     return out
 
 
+# A CRM list page: EspoCRM answers a page above recordListMaxSizeLimit (200)
+# with a 403, not a truncation.
+_ENGAGEMENT_PAGE = 200
+
+
 async def list_engagements(
     client: AssignClient, statuses: list[str]
 ) -> list[dict[str, Any]]:
-    """Engagements in any of ``statuses``, newest first, with grid display fields."""
-    data = await client.list(
-        ENGAGEMENT,
-        where=[{"type": "in", "attribute": "engagementStatus", "value": list(statuses)}],
-        select=(
-            "name,createdAt,engagementStatus,primaryEngagementContactName,"
-            "engagementClientName,engagementClientId,"
-            "clientOrganizationName,clientOrganizationId,"
-            "mentorProfileId,mentorProfileName,"
-            "engagementAssignedDate,description"
-        ),
-        max_size=200,
-        order_by="createdAt",
-        order="desc",
-    )
-    rows = data.get("list", [])
+    """Engagements in any of ``statuses``, newest first, with grid display fields.
+
+    Pages through every match (``_ENGAGEMENT_PAGE`` at a time — EspoCRM
+    refuses a page above 200 with a 403): reading one page silently cut a
+    status filter matching more than 200 engagements to the newest 200, and
+    the grid's sort is meaningless over a list that was cut.
+    """
+    rows: list[dict[str, Any]] = []
+    offset = 0
+    while True:
+        data = await client.list(
+            ENGAGEMENT,
+            where=[{"type": "in", "attribute": "engagementStatus", "value": list(statuses)}],
+            select=(
+                "name,createdAt,engagementStatus,primaryEngagementContactName,"
+                "engagementClientName,engagementClientId,"
+                "clientOrganizationName,clientOrganizationId,"
+                "mentorProfileId,mentorProfileName,"
+                "engagementAssignedDate,description"
+            ),
+            max_size=_ENGAGEMENT_PAGE,
+            offset=offset,
+            order_by="createdAt",
+            order="desc",
+        )
+        page = data.get("list", []) if isinstance(data, dict) else []
+        rows.extend(page)
+        offset += len(page)
+        total = data.get("total") if isinstance(data, dict) else None
+        if len(page) < _ENGAGEMENT_PAGE or (isinstance(total, int) and offset >= total):
+            break
     await _fill_company_names(client, rows)
     return [
         {
