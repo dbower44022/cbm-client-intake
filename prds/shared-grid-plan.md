@@ -1,6 +1,6 @@
 # Shared grid, divider and loading spinner — plan
 
-Last Updated: 10-28-26 23:27 · Revision 1.5 — change log at the end.
+Last Updated: 10-28-26 23:51 · Revision 1.6 — change log at the end.
 
 **Status: approved 10-27-26; stops 1–3 built as v0.294.0; live-passed on crm-test 10-28-26 00:23**
 (https://claude.ai/artifact/AWjNEvmyq7mrwLVyDd2yJF).
@@ -290,7 +290,7 @@ load. **No divider:** a row opens the engagement in a window, as today.
 1. **Build** (the subagent; built 10-28-26) — both grids, the spinners, the paging fix,
    the old sort code removed, tests, a check on a local copy.
 2. **Review, version, documents and the live pass** (Claude; v0.299.0,
-   reviewed and documented 10-28-26, the live pass waits for the push) on
+   pushed and live-passed 10-28-26 23:50, https://claude.ai/artifact/Xuy5Mw2wQ1vqxf4vfDyZzw) on
    crm-test as
    a member of the Client Administration Team or Doug, with a results page.
 
@@ -299,14 +299,15 @@ load. **No divider:** a row opens the engagement in a window, as today.
 | Field | Value |
 |---|---|
 | Document | Shared grid, divider and loading spinner — plan |
-| Version | 1.5 |
-| Last Updated | 10-28-26 23:27 |
+| Version | 1.6 |
+| Last Updated | 10-28-26 23:51 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.6 | 10-28-26 23:51 | Claude (Claude Code) | § 11: rollout 4 live-passed on crm-test. |
 | 1.5 | 10-28-26 23:27 | Claude (Claude Code) | § 11: built by a subagent and reviewed (v0.299.0); Doug: run both stops. |
 | 1.4 | 10-28-26 22:25 | Claude (Claude Code) | § 11 rollout 4, Client Administration, drafted for approval. |
 | 1.3 | 10-28-26 22:07 | Claude (Claude Code) | § 10: rollout 3 live-passed on crm-test. |
