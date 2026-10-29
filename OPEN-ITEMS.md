@@ -6,13 +6,6 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
-62. **A company's record page: the Events tab errors** (found in the grid
-    live pass, 2026-10-29) — **fixed in v0.300.2, live check owed**. `directory/frontend/record.js` asks
-    `/records/{id}/events`, and the directory router's `record_events` reads
-    the id as a **Contact** — on a company page it is an Account id, so the
-    tab shows "Request failed (504)". Older than v0.300.0. Fix: on a
-    company, read the history of its contacts (or hide the tab there).
-
 61. **Partner and funder associations — production, Boston, the report**
     (2026-10-28). Built as v0.295.0 (`prds/partner-association-plan.md`).
     (1) ~~the live pass on crm-test~~ **passed 10-28-26** (backfill applied
@@ -2264,6 +2257,15 @@ toggle.
     over the fix on 2026-10-07, so the fix is still owed.
 
 ## Resolved
+
+62. **A company's record page: the Events tab errors** (found in the grid
+    live pass, 2026-10-29) — **RESOLVED 10-29-26: fixed in v0.300.2–v0.300.3,
+    live-checked on crm-test (Brightline Bakehouse lists Dana Whitcomb's two
+    events with her name)**. `directory/frontend/record.js` asks
+    `/records/{id}/events`, and the directory router's `record_events` reads
+    the id as a **Contact** — on a company page it is an Account id, so the
+    tab shows "Request failed (504)". Older than v0.300.0. Fix: on a
+    company, read the history of its contacts (or hide the tab there).
 
 **RESOLVED 2026-10-24 — #58, the several-profiles guard live pass.** Doug
 ran the step page (https://claude.ai/artifact/MjdGx2s9392e5TkzrDvS2p,
