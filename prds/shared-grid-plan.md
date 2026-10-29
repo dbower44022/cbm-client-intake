@@ -1,6 +1,6 @@
 # Shared grid, divider and loading spinner — plan
 
-Last Updated: 10-28-26 21:28 · Revision 1.2 — change log at the end.
+Last Updated: 10-28-26 22:07 · Revision 1.3 — change log at the end.
 
 **Status: approved 10-27-26; stops 1–3 built as v0.294.0; live-passed on crm-test 10-28-26 00:23**
 (https://claude.ai/artifact/AWjNEvmyq7mrwLVyDd2yJF).
@@ -253,8 +253,8 @@ other screen now.
    code removed; tests and a check in the local harness.
 2. **The partner and funder tabs** (built 10-28-26) — Referred Clients, Events, Campaigns,
    Contributions and its totals, Grants and Deliverables.
-3. **Documents, version and the live pass** (v0.298.0; documents done
-   10-28-26; the live pass waits for the push) on crm-test in all three
+3. **Documents, version and the live pass** (v0.298.0; pushed and
+   live-passed 10-28-26 22:00, https://claude.ai/artifact/VEXHEfV43e1YQduzLayT4V) on crm-test in all three
    applications (a mentor, a partner manager and a funder manager, or Doug
    as an administrator), with a results page.
 
@@ -263,14 +263,15 @@ other screen now.
 | Field | Value |
 |---|---|
 | Document | Shared grid, divider and loading spinner — plan |
-| Version | 1.2 |
-| Last Updated | 10-28-26 21:28 |
+| Version | 1.3 |
+| Last Updated | 10-28-26 22:07 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 10-28-26 22:07 | Claude (Claude Code) | § 10: rollout 3 live-passed on crm-test. |
 | 1.2 | 10-28-26 21:28 | Claude (Claude Code) | § 10: stops 1 and 2 built (v0.298.0); Events is in all three applications. |
 | 1.1 | 10-28-26 20:58 | Claude (Claude Code) | § 10 rollout 3, Client, Partner and Funder Management, drafted for approval. |
 | 1.0 | 10-28-26 20:57 | Claude (Claude Code) | § 9: rollout 2 live-passed on crm-test. |

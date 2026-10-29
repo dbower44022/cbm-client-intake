@@ -1240,7 +1240,9 @@ the strength of it.
 - **v0.298.0 (2026-10-28) — the shared grid on Client, Partner and
   Funder Management** (`prds/shared-grid-plan.md` § 10): every grid of the
   three; the Contacts tables resize but do not sort. No CRM change.
-  Committed, **not pushed; live pass owed**.
+  Pushed 10-28-26 21:31; **live-passed on crm-test 10-28-26 22:00**
+  (results page https://claude.ai/artifact/VEXHEfV43e1YQduzLayT4V; attendees and Documents in the harness only, Grants
+  not reachable).
 - **v0.297.0 (2026-10-28) — the shared grid on Mentor Administration**
   (`prds/shared-grid-plan.md` § 9): the roster, the status sweep's results
   and the Documents tab; Open in Drive no longer disabled. No CRM change.

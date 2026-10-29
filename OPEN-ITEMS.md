@@ -27,7 +27,7 @@ found; move resolved items to the bottom with the resolution date.
     each:** Client Administration; Mentor Administration (**built as
     v0.297.0, plan § 9; live-passed on crm-test 10-28-26**); Client, Partner and
     Funder Management (one shared frontend; **built as v0.298.0, plan § 10;
-    live pass owed**); Submission Admin; the
+    live-passed on crm-test 10-28-26**); Submission Admin; the
     Workspace Directories; My Email; Event Administration; System Settings;
     and the rest of Marketing Management — **built as v0.296.0 (rollout 1,
     plan § 8), live-passed on crm-test 10-28-26, as an administrator and as Mark Marketing; its `SortedList` CRM endpoint is
