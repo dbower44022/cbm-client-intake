@@ -1240,7 +1240,8 @@ the strength of it.
 - **v0.297.0 (2026-10-28) — the shared grid on Mentor Administration**
   (`prds/shared-grid-plan.md` § 9): the roster, the status sweep's results
   and the Documents tab; Open in Drive no longer disabled. No CRM change.
-  Committed, **not pushed; live pass owed**.
+  Pushed 10-28-26 20:50; **live-passed on crm-test 10-28-26 20:55**
+  (results page https://claude.ai/artifact/W2EsernSeTqMqSbtjXWYdP).
 - **v0.296.0 (2026-10-28) — the shared grid on the rest of Marketing
   Management** (`prds/shared-grid-plan.md` § 8): every grid there; Leads,
   Review and Recipients sort on several columns on the server, Leads and
