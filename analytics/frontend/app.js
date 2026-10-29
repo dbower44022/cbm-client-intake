@@ -53,6 +53,16 @@
     }
     return e;
   }
+  // The shared grid (prds/shared-grid-plan.md § 12) on the two library
+  // lists: resizable columns, shading and a sort in place (every row is
+  // here; a row's buttons move with it). The actions column has no heading,
+  // so it never sorts. The lists open in their own order until someone sorts.
+  function fitGrid(table, key) {
+    return window.CBMGrid ? window.CBMGrid.enhance(table, { key: key }) : null;
+  }
+  function busyOver(el, promise) {
+    return window.CBMBusy && window.CBMBusy.loading ? window.CBMBusy.loading(el, promise) : promise;
+  }
   function opt(v, label, sel) { var o = h("option", { value: v }, label); if (sel) o.selected = true; return o; }
 
   function fail(msg) { show($("dashView"), false); show($("manageView"), false); show($("msgView"), true); $("msgText").textContent = msg; }
@@ -117,8 +127,9 @@
     show($("loadingState"), true); notice(""); renderTabs();
     try {
       var qs = state.range ? "?range=" + encodeURIComponent(state.range) : "";
-      var body = force ? await api("/pages/" + state.pageKey + "/refresh" + qs, { method: "POST" })
-        : await api("/pages/" + state.pageKey + qs);
+      var body = await busyOver($("panelGrid"), force
+        ? api("/pages/" + state.pageKey + "/refresh" + qs, { method: "POST" })
+        : api("/pages/" + state.pageKey + qs));
       renderRangeSelect(body.timeRange); renderPanels(body);
     } catch (e) { if (e.message !== "unauth") notice(e.message); }
     finally { show($("loadingState"), false); }
@@ -150,14 +161,15 @@
   async function loadMetrics() {
     var host = $("metricList"); host.innerHTML = "Loading…";
     var data;
-    try { data = await api("/admin/metrics"); } catch (e) { host.innerHTML = ""; host.appendChild(h("p", { class: "an__empty" }, e.message)); return; }
+    try { data = await busyOver(host, api("/admin/metrics")); } catch (e) { host.innerHTML = ""; host.appendChild(h("p", { class: "an__empty" }, e.message)); return; }
     state.metricShapes = {}; state.allMetrics = [];
     (data.builtins || []).forEach(function (m) { state.metricShapes[m.key] = m.result_shape; state.allMetrics.push({ key: m.key, name: m.name, builtin: true, applies_to: m.applies_to || ["system"] }); });
     (data.metrics || []).forEach(function (m) { state.metricShapes[m.key] = m.result_shape; state.allMetrics.push({ key: m.key, name: m.name, applies_to: m.applies_to || ["system"] }); });
     state.recordTypes = data.recordTypes || [];
     host.innerHTML = "";
     var table = h("table", { class: "an__mtable" }, h("thead", {}, h("tr", {},
-      h("th", {}, "Name"), h("th", {}, "Key"), h("th", {}, "Shape"), h("th", {}, "Used by"), h("th", {}, ""))));
+      h("th", { "data-col": "name" }, "Name"), h("th", { "data-col": "key" }, "Key"), h("th", { "data-col": "shape" }, "Shape"),
+      h("th", { "data-col": "usedBy" }, "Used by"), h("th", { "data-col": "actions" }, ""))));
     var tb = h("tbody");
     // Authored + customized-built-in metrics: Edit + Delete (a customized
     // built-in also offers "Reset to default").
@@ -189,6 +201,7 @@
         h("td", {}, "—"), h("td", { class: "an__row-actions" }, actions)));
     });
     table.appendChild(tb); host.appendChild(table);
+    fitGrid(table, "analytics.metrics");
     // Restore deleted built-ins.
     var hidden = data.hiddenBuiltins || [];
     if (hidden.length) {
@@ -419,9 +432,10 @@
     // ensure the metric map is populated (for the page editor's viz options)
     if (!state.allMetrics.length) { try { await primeMetrics(); } catch (e) { /* ignore */ } }
     var data;
-    try { data = await api("/admin/pages"); } catch (e) { host.innerHTML = ""; host.appendChild(h("p", { class: "an__empty" }, e.message)); return; }
+    try { data = await busyOver(host, api("/admin/pages")); } catch (e) { host.innerHTML = ""; host.appendChild(h("p", { class: "an__empty" }, e.message)); return; }
     host.innerHTML = "";
-    var table = h("table", { class: "an__mtable" }, h("thead", {}, h("tr", {}, h("th", {}, "Title"), h("th", {}, "Key"), h("th", {}, "Panels"), h("th", {}, ""))));
+    var table = h("table", { class: "an__mtable" }, h("thead", {}, h("tr", {}, h("th", { "data-col": "title" }, "Title"),
+      h("th", { "data-col": "key" }, "Key"), h("th", { "data-col": "panels" }, "Panels"), h("th", { "data-col": "actions" }, ""))));
     var tb = h("tbody");
     var customKeys = {};
     (data.pages || []).forEach(function (p) { customKeys[p.key] = 1; });
@@ -443,6 +457,7 @@
           h("button", { class: "an__link-btn", onClick: function () { customizePage(p); } }, "Edit / customize"))));
     });
     table.appendChild(tb); host.appendChild(table);
+    fitGrid(table, "analytics.pages");
     host.appendChild(h("p", { class: "an__hint" }, "Tip: “Edit / customize” a built-in page (e.g. System Analytics) to add, remove, or reorder its panels — including your own metrics."));
   }
   async function resetPage(p) {

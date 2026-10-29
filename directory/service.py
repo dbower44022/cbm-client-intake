@@ -295,6 +295,25 @@ def _where(
     return where
 
 
+#: The most columns one directory sort may name (the shared grid's
+#: multi-column sort; prds/shared-grid-plan.md § 12).
+SORT_KEYS_MAX = 4
+
+
+def parse_sort(raw: str, cols: list[dict[str, Any]]) -> list[tuple[str, str]]:
+    """``name:asc,emailAddress:desc`` → ``[("name","asc"), …]``. Only the
+    grid's own sortable columns are kept, each once, at most
+    :data:`SORT_KEYS_MAX`; anything else is dropped."""
+    allowed = {c["key"] for c in cols if c.get("sortable")}
+    out: list[tuple[str, str]] = []
+    for piece in (raw or "").split(","):
+        col, _, d = piece.strip().partition(":")
+        col = col.strip()
+        if col in allowed and col not in [c for c, _ in out]:
+            out.append((col, "desc" if d.strip().lower() == "desc" else "asc"))
+    return out[:SORT_KEYS_MAX]
+
+
 async def list_records(
     client: DirClient,
     cfg: DirectoryConfig,
@@ -305,9 +324,17 @@ async def list_records(
     page_size: int = _PAGE,
     order_by: Optional[str] = None,
     order: Optional[str] = None,
+    sort: str = "",
 ) -> dict[str, Any]:
     """One page of the directory grid: ACL-scoped, searched, filtered, sorted.
-    Returns ``{columns, rows, total, page, pageSize, hasMore}``."""
+    Returns ``{columns, rows, total, page, pageSize, hasMore, sort,
+    multiSort}``.
+
+    ``sort`` (``col:dir,col:dir``) sorts on several columns through the CRM's
+    ``SortedList`` endpoint; a CRM without it — or one that refuses a column
+    — sorts by the first column only, and ``multiSort`` is then false with
+    ``sort`` naming the order actually used. ``order_by``/``order`` is the
+    old one-column form and still works."""
     meta = _Meta(client, cfg.entity)
     cols = await columns(client, cfg)
     filter_defs = {f["key"]: f["type"] for f in await filters(client, cfg)}
@@ -316,17 +343,43 @@ async def list_records(
 
     page = max(1, page)
     page_size = max(1, min(page_size, 200))
-    ob = order_by if order_by else cfg.default_order
+    keys = parse_sort(sort, cols)
+    if not keys and order_by:
+        keys = [(order_by, "desc" if (order or "").lower() == "desc" else "asc")]
     extra = (cfg.contact_ref_attr,) if cfg.contact_ref_attr else ()
-    data = await client.list(
-        cfg.entity,
-        select=await _select(meta, cfg, extra=extra),
-        where=where or None,
-        max_size=page_size,
-        offset=(page - 1) * page_size,
-        order_by=ob,
-        order=(order or "asc"),
-    )
+    select = await _select(meta, cfg, extra=extra)
+    offset = (page - 1) * page_size
+
+    data: Optional[dict[str, Any]] = None
+    multi = len(keys) > 1
+    fell_back = False
+    if multi and hasattr(client, "sorted_list"):
+        try:
+            sorted_page = await client.sorted_list(  # type: ignore[attr-defined]
+                cfg.entity, keys, where=where or None, select=select,
+                max_size=page_size, offset=offset,
+            )
+        except EspoError as exc:
+            # A column the endpoint cannot sort (a link, say): one column.
+            log.info("directory %s: several-column sort refused (%s); first column only", cfg.entity, exc)
+            sorted_page = None
+        if sorted_page is not None:
+            counted = await client.list(cfg.entity, select="id", where=where or None, max_size=1)
+            data = {"list": sorted_page.get("list", []), "total": counted.get("total")}
+    if data is None:
+        if multi:
+            keys = keys[:1]
+            fell_back = True
+        ob, od = keys[0] if keys else (cfg.default_order, "asc")
+        data = await client.list(
+            cfg.entity,
+            select=select,
+            where=where or None,
+            max_size=page_size,
+            offset=offset,
+            order_by=ob,
+            order=od,
+        )
     raw = data.get("list", [])
     rows = []
     for r in raw:
@@ -338,14 +391,18 @@ async def list_records(
         for c in cols:
             row[c["key"]] = _read_cell(r, c["key"])
         rows.append(row)
-    total = data.get("total", len(raw))
+    total = data.get("total")
+    if not isinstance(total, int) or total < 0:
+        total = offset + len(raw)
     return {
         "columns": cols,
         "rows": rows,
         "total": total,
         "page": page,
         "pageSize": page_size,
-        "hasMore": (page - 1) * page_size + len(raw) < total,
+        "hasMore": offset + len(raw) < total,
+        "sort": ",".join(f"{c}:{d}" for c, d in keys),
+        "multiSort": not fell_back,
     }
 
 

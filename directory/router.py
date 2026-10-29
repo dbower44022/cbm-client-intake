@@ -186,6 +186,7 @@ def make_router(cfg: DirectoryConfig) -> APIRouter:
         orderBy: str = "",
         order: str = "asc",
         filters: str = "",
+        sort: str = "",
     ) -> dict:
         user = _require_user(request)
         client = client_for(get_settings(), user)
@@ -199,7 +200,7 @@ def make_router(cfg: DirectoryConfig) -> APIRouter:
             return await service.list_records(
                 client, cfg, q=q, applied_filters=applied,
                 page=page, page_size=pageSize,
-                order_by=orderBy or None, order=order,
+                order_by=orderBy or None, order=order, sort=sort,
             )
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not load the directory")

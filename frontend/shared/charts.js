@@ -189,7 +189,7 @@
     return ctx.crmUrl.replace(/\/+$/, "") + "/#" + entity + "/view/" + id;
   }
 
-  function renderTable(host, data, ctx) {
+  function renderTable(host, data, ctx, gridKey) {
     var cols = (data && data.columns) || [];
     var rows = (data && data.rows) || [];
     if (!rows.length) { host.appendChild(el("p", "anc-empty", "Nothing to show.")); return; }
@@ -197,6 +197,7 @@
     var thead = el("thead"), htr = el("tr");
     cols.forEach(function (c) {
       var th = el("th", c.align === "right" ? "is-right" : null, c.label);
+      if (c.key) th.setAttribute("data-col", c.key);
       htr.appendChild(th);
     });
     thead.appendChild(htr);
@@ -224,6 +225,13 @@
     });
     table.appendChild(tbody);
     host.appendChild(table);
+    // The shared grid (prds/shared-grid-plan.md § 12): resizable columns,
+    // shading and a sort on several columns, in place — every row is here.
+    // Only on a page that loads grid.js; elsewhere the table stays as it was.
+    // The rows open in the metric's own order until someone sorts.
+    if (window.CBMGrid) {
+      try { window.CBMGrid.enhance(table, { key: gridKey }); } catch (_) { /* the plain table stays */ }
+    }
   }
 
   // --- dispatch --------------------------------------------------------------
@@ -238,7 +246,7 @@
     if (shape === "scalar") renderStat(host, data);
     else if (shape === "series") renderSeries(host, data, viz);
     else if (shape === "breakdown") renderBreakdown(host, data, viz);
-    else if (shape === "rows") renderTable(host, data, ctx);
+    else if (shape === "rows") renderTable(host, data, ctx, "analytics.rows." + (panel.key || "preview"));
     else host.appendChild(el("p", "anc-err", "Unsupported panel type."));
   }
 

@@ -1,8 +1,9 @@
 /* Submission Admin console — vanilla JS. Sign-in happens once at the portal
    (/), which sends the user back here after login.
 
-   Rebuilt 2026-07-19 (Doug's spec): full-height grid with sortable +
-   drag-resizable columns, center search, alternating rows; a sessions-style
+   Rebuilt 2026-07-19 (Doug's spec): full-height grid on the shared grid
+   (frontend/shared/grid.js — resizable columns, alternating rows, sorting on
+   several columns), center search; a sessions-style
    tabbed detail view (Overview with facts rail + editable staff notes +
    the email conversation with the submitter; Details with the raw
    payload/progress/error; Communications with the full thread + compose
@@ -75,8 +76,8 @@
   var state = { intake: "", response: "open", form: "", search: "" };
   var rows = [];                 // the loaded submissions
   var countsCache = {};          // last /submissions counts, so chips redraw on filter
-  var sortKey = null, sortDir = 1;
-  var colWidths = null;          // frozen column widths after the first grip drag
+  var subGrid = null;            // the shared grid on the queue (CBMGrid)
+  var corrGrid = null;           // the shared grid on Other correspondence
   var config = null;             // /session payload (crmUrl, commsEnabled)
   var current = null;            // the open submission row (full detail)
   var messages = null;           // cached conversation for the open submission
@@ -225,13 +226,19 @@
   }
 
   // --- list -----------------------------------------------------------------
+  // The spinner over a grid while its rows load (busy.js; a page without it
+  // just waits).
+  function busyOver(el, promise) {
+    return window.CBMBusy && CBMBusy.loading && el ? CBMBusy.loading(el, promise) : promise;
+  }
+
   async function loadData() {
     clearNotice("notice");
     show($("loadingState")); hide($("subTable")); hide($("emptyState"));
     try {
       // Load everything; intake / response / form / search all filter client-side
       // (so the count chips can apply the same filters with one click).
-      var data = await api("/submissions");
+      var data = await busyOver($("gridWrap"), api("/submissions"));
       rows = data.submissions || [];
       countsCache = data.counts || {};
       renderTable();   // renders the grid AND the count chips (renderCounts)
@@ -326,10 +333,10 @@
   var COLUMNS = [
     { key: "id", label: "Reference", get: function (r) { return (r.id || "").slice(0, 8); } },
     { key: "form_slug", label: "Form" },
-    { key: "_intake", label: "Intake status", sortKey: "_intakeSort" },
-    { key: "_response", label: "Response status", sortKey: "_responseSort" },
+    { key: "_intake", label: "Intake status" },
+    { key: "_response", label: "Response status" },
     { key: "email", label: "Submitter" },
-    { key: "_lastact", label: "Last activity", sortKey: "last_activity_at" },
+    { key: "_lastact", label: "Last activity" },
     { key: "received_at", label: "Received", fmt: fmtDate },
     { key: "_actions", label: "", sort: false },
   ];
@@ -393,76 +400,53 @@
     return hay.indexOf(state.search) >= 0;
   }
 
-  function sortedRows(list) {
-    if (!sortKey) return list;
-    return list.slice().sort(function (a, b) {
-      var x = a[sortKey], y = b[sortKey];
-      if (x == null || x === "") return y == null || y === "" ? 0 : 1;
-      if (y == null || y === "") return -1;
-      if (typeof x === "number" && typeof y === "number") return (x - y) * sortDir;
-      return String(x).localeCompare(String(y), undefined, { numeric: true, sensitivity: "base" }) * sortDir;
+  /* What a queue row sorts by in a column (the shared grid orders the rows
+   * from their data — the status cells are pills and the action cell holds
+   * controls). The two statuses sort by their work-queue rank, not their
+   * words; a dated column by its time; a blank ("—") sorts last. */
+  function queueSortVal(r, col) {
+    if (col === "_intake") return INTAKE_RANK[intakeInfo(r).label];
+    if (col === "_response") {
+      var lbl = responseInfo(r).label;
+      return lbl === "—" ? null : RESPONSE_RANK[lbl];
+    }
+    if (col === "_lastact" || col === "received_at") {
+      var d = parseTs(r[col === "_lastact" ? "last_activity_at" : "received_at"]);
+      return d ? d.getTime() : null;
+    }
+    if (col === "id") return (r.id || "").slice(0, 8);
+    var v = r[col];
+    return v == null ? "" : v;
+  }
+
+  // The heading row is built once; the shared grid keeps its widths and sort.
+  function ensureQueueGrid() {
+    if (subGrid) return;
+    var head = $("subHead"); head.innerHTML = "";
+    var htr = document.createElement("tr");
+    COLUMNS.forEach(function (c) {
+      var th = document.createElement("th");
+      if (c.cls) th.className = c.cls;
+      th.setAttribute("data-col", c.key);
+      if (c.sort === false) th.setAttribute("data-sortable", "false");
+      th.textContent = c.label;
+      htr.appendChild(th);
     });
+    head.appendChild(htr);
+    if (window.CBMGrid) {
+      subGrid = CBMGrid.enhance($("subTable"), {
+        key: "ops.queue",
+        // No starting sort: the queue opens in the server's order, as before.
+        onSort: function () { renderTable(); },
+      });
+    }
   }
 
   function renderTable() {
     renderCounts();   // keep the count chips (and their active-filter highlight) in step
-    var head = $("subHead"); head.innerHTML = "";
-    var htr = document.createElement("tr");
-    COLUMNS.forEach(function (c, i) {
-      var th = document.createElement("th");
-      if (c.cls) th.className = c.cls;
-      th.textContent = c.label;
-      if (colWidths && colWidths[i]) th.style.width = colWidths[i] + "px";
-      if (c.sort !== false) {
-        var sk = c.sortKey || c.key;
-        if (sortKey === sk) {
-          var ind = document.createElement("span"); ind.textContent = sortDir > 0 ? " ▲" : " ▼";
-          th.appendChild(ind);
-          th.setAttribute("aria-sort", sortDir > 0 ? "ascending" : "descending");
-        }
-        th.addEventListener("click", function () {
-          if (sortKey === sk) { sortDir = -sortDir; }
-          else { sortKey = sk; sortDir = sk === "received_at" || sk === "attempt_count" ? -1 : 1; }
-          renderTable();
-        });
-      }
-      // Drag grip: first drag freezes the table layout so widths stick.
-      var grip = document.createElement("span"); grip.className = "grip";
-      grip.addEventListener("pointerdown", function (e) {
-        e.preventDefault(); e.stopPropagation();
-        var table = $("subTable");
-        if (!colWidths) {
-          colWidths = Array.prototype.map.call(head.querySelectorAll("th"), function (h) {
-            return h.getBoundingClientRect().width;
-          });
-          table.style.tableLayout = "fixed";
-        }
-        var startX = e.clientX, startW = colWidths[i];
-        function move(ev) {
-          colWidths[i] = Math.max(48, startW + (ev.clientX - startX));
-          head.querySelectorAll("th")[i].style.width = colWidths[i] + "px";
-          ev.preventDefault();
-        }
-        function up() {
-          window.removeEventListener("pointermove", move);
-          window.removeEventListener("pointerup", up);
-          window.removeEventListener("pointercancel", up);
-        }
-        window.addEventListener("pointermove", move);
-        window.addEventListener("pointerup", up);
-        window.addEventListener("pointercancel", up);
-      });
-      grip.addEventListener("click", function (e) { e.stopPropagation(); });
-      th.appendChild(grip);
-      htr.appendChild(th);
-    });
-    head.appendChild(htr);
-
-    rows.forEach(function (r) {   // sort keys for the two status columns
-      r._intakeSort = INTAKE_RANK[intakeInfo(r).label];
-      r._responseSort = RESPONSE_RANK[responseInfo(r).label];
-    });
-    var list = sortedRows(rows.filter(rowMatches));
+    ensureQueueGrid();
+    var list = rows.filter(rowMatches);
+    if (subGrid && subGrid.keys().length) list = CBMGrid.sortBy(list, subGrid.keys(), queueSortVal);
     var body = $("subBody"); body.innerHTML = "";
     if (!list.length) {
       hide($("subTable"));
@@ -473,6 +457,7 @@
     hide($("emptyState"));
     list.forEach(function (r) { body.appendChild(buildRow(r)); });
     show($("subTable"));
+    if (subGrid) subGrid.refresh();
   }
 
   function buildRow(r) {
@@ -1360,7 +1345,7 @@
     clearNotice("corrNotice");
     show($("corrLoading")); hide($("corrTable")); hide($("corrEmpty"));
     try {
-      var res = await api("/correspondence");
+      var res = await busyOver($("corrTable").parentElement, api("/correspondence"));
       corrThreads = res.threads || [];
       if (res.reason) { notice("corrNotice", res.reason, "warn"); }
     } catch (e) {
@@ -1394,8 +1379,11 @@
       var snip = document.createElement("div"); snip.className = "ops__snip";
       snip.textContent = t.snippet || "";
       c2.appendChild(subj); c2.appendChild(snip);
+      c2.setAttribute("data-sort", t.subject || "");   // sorts by subject, not snippet
       var c3 = document.createElement("td"); c3.className = "ops__nowrap";
       c3.textContent = fmtDate(t.lastAt);
+      var at = parseTs(t.lastAt);
+      c3.setAttribute("data-sort", at ? at.toISOString() : "");
 
       tr.appendChild(c0); tr.appendChild(c1); tr.appendChild(c2); tr.appendChild(c3);
       tr.addEventListener("click", function () { openCorrThread(t); });
@@ -1404,6 +1392,11 @@
       });
       body.appendChild(tr);
     });
+    if (!corrGrid && window.CBMGrid) {
+      // In place: the grid orders these rows by their cells. No starting
+      // sort — the threads open in the server's order, as before.
+      corrGrid = CBMGrid.enhance($("corrTable"), { key: "ops.correspondence" });
+    } else if (corrGrid) corrGrid.refresh();
   }
 
   async function openCorrThread(t) {

@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="/shared/tokens.css" />
   <link rel="stylesheet" href="/shared/vendor/jodit/jodit.min.css" />
   <link rel="stylesheet" href="/shared/conversation.css" />
+  <link rel="stylesheet" href="/shared/grid.css" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -82,7 +83,7 @@
       <p class="ops__notice" id="corrNotice" role="status" hidden></p>
       <div class="ops__gridwrap">
         <table class="ops__table" id="corrTable" hidden>
-          <thead><tr><th></th><th>With</th><th>Subject</th><th>Last message</th></tr></thead>
+          <thead><tr><th data-col="owed">Status</th><th data-col="with">With</th><th data-col="subject">Subject</th><th data-col="lastAt">Last message</th></tr></thead>
           <tbody id="corrBody"></tbody>
         </table>
         <p class="ops__empty" id="corrEmpty" hidden>No other correspondence right now.</p>
@@ -163,6 +164,7 @@
   <!-- busy.js first: it wraps fetch/XHR, so it must be in place before any
        other script can start a request. -->
   <script src="/shared/busy.js"></script>
+  <script src="/shared/grid.js"></script>
   <script src="/shared/vendor/jodit/jodit.min.js"></script>
   <script src="/shared/richtext.js"></script>
   <script src="/shared/quickmail.js"></script>

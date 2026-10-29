@@ -78,7 +78,10 @@
             they are set — and settings on the denylist can never be changed from this
             page at all.
           </p>
-          <table class="su__table"><tbody id="otherRows"></tbody></table>
+          <table class="su__table" id="otherTable">
+            <thead><tr><th data-col="setting">Setting</th><th data-col="value">Value</th><th data-col="note">Note</th></tr></thead>
+            <tbody id="otherRows"></tbody>
+          </table>
         </details>
       </div>
 
@@ -115,8 +118,8 @@
           <input type="search" id="historyKey" class="su__search" placeholder="Filter by setting key…" aria-label="Filter history by key" />
           <button type="button" class="cbm-button cbm-button--secondary" id="historyBtn">Load</button>
         </div>
-        <table class="su__table">
-          <thead><tr><th>When</th><th>Setting</th><th>Change</th><th>Who</th><th>Reason</th></tr></thead>
+        <table class="su__table" id="historyTable">
+          <thead><tr><th data-col="when">When</th><th data-col="setting">Setting</th><th data-col="change">Change</th><th data-col="who">Who</th><th data-col="reason">Reason</th></tr></thead>
           <tbody id="historyRows"></tbody>
         </table>
       </div>
@@ -167,6 +170,8 @@
   <!-- busy.js first: it wraps fetch/XHR, so it must precede any script that
        can start a request. -->
   <script src="/shared/busy.js"></script>
+  <link rel="stylesheet" href="/shared/grid.css" />
+  <script src="/shared/grid.js"></script>
   <script src="app.js"></script>
   <script src="/shared/footer.js"></script>
 </body>

@@ -14,6 +14,8 @@
   <!-- busy.js must load FIRST: it wraps fetch/XHR to give every button press
        immediate feedback (product-wide convention). -->
   <script src="/shared/busy.js"></script>
+  <link rel="stylesheet" href="/shared/grid.css" />
+  <script src="/shared/grid.js"></script>
 </head>
 <body>
   <main class="ev">
@@ -65,15 +67,15 @@
         <table class="ev__grid" id="eventGrid">
           <thead>
             <tr>
-              <th data-sort="name">Event</th>
-              <th data-sort="startsAtUtc">When</th>
-              <th data-sort="format">Format</th>
-              <th data-sort="status">Status</th>
-              <th data-sort="registered" class="num">Registered</th>
-              <th data-sort="attended" class="num">Attended</th>
-              <th data-sort="showRate" class="num">Show rate</th>
-              <th data-sort="published">Shown</th>
-              <th data-sort="recording">Recording</th>
+              <th data-col="name">Event</th>
+              <th data-col="startsAtUtc">When</th>
+              <th data-col="format">Format</th>
+              <th data-col="status">Status</th>
+              <th data-col="registered" class="num">Registered</th>
+              <th data-col="attended" class="num">Attended</th>
+              <th data-col="showRate" class="num">Show rate</th>
+              <th data-col="published">Shown</th>
+              <th data-col="recording">Recording</th>
             </tr>
           </thead>
           <tbody id="eventRows"></tbody>
@@ -109,7 +111,8 @@
       <div class="ev__tiles" id="repConvTiles"></div>
       <table class="ev__grid" id="repConvTable" hidden>
         <thead><tr>
-          <th>Engagement</th><th>Status</th><th>First attended</th><th>Became a client</th>
+          <th data-col="engagement">Engagement</th><th data-col="status">Status</th>
+          <th data-col="firstAttended">First attended</th><th data-col="becameClient">Became a client</th>
         </tr></thead>
         <tbody id="repConvRows"></tbody>
       </table>
@@ -177,11 +180,13 @@
             <button type="button" class="cbm-button cbm-button--secondary" id="addRegBtn">+ Add registrant</button>
           </div>
         </div>
-        <table class="ev__grid">
+        <table class="ev__grid" id="regTable">
           <thead>
             <tr>
-              <th>Name</th><th>Email</th><th>Status</th><th>Source</th>
-              <th class="num">Minutes</th><th>Emails</th><th>Actions</th>
+              <th data-col="name">Name</th><th data-col="email">Email</th>
+              <th data-col="status">Status</th><th data-col="source">Source</th>
+              <th data-col="minutes" class="num">Minutes</th><th>Emails</th>
+              <th data-col="actions" data-sortable="false">Actions</th>
             </tr>
           </thead>
           <tbody id="regRows"></tbody>

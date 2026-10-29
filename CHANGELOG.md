@@ -5,6 +5,34 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.300.0] — 2026-10-29
+
+**feat: the shared grid everywhere** (rollout 5, `prds/shared-grid-plan.md`
+§ 12; Doug: "complete these all, so the grids are consistent everywhere").
+No switch; no migration; no CRM change.
+
+- **Submission Admin** — the queue and Other correspondence. Response and
+  Intake status sort by their place in the work queue, not A–Z.
+- **The Workspace Directories** — the directory grids, the company pop-up's
+  contacts, and a record page's Events, Contacts and Communications. The
+  directory grid is paged by the server, so its route takes
+  `sort=col:dir,…` (sortable columns only, at most four): several columns
+  through the CRM's `SortedList` endpoint where it is installed, else the
+  first column with a one-time note. The default stays name A–Z.
+- **My Email** — the inbox.
+- **Event Administration** — the event list, the registrants and the
+  conversion report.
+- **System Settings** — the settings, the environment diff, the job runs
+  and the history; the settings tables gain a Setting / Value / Source
+  heading row and, like the run history, resize and shade but do not sort.
+- **Analytics** — every *rows* panel (dashboards and every record's
+  Analytics tab) and the Metrics and Pages library lists.
+- **Fixed:** the directory's Prev and Next buttons were disabled at the
+  ends; they stay clickable and say "This is the first page." / "This is
+  the last page."
+- **Changed:** every first click sorts ascending; an event with no show
+  rate now sorts last both ways.
+
 ## [0.299.0] — 2026-10-28
 
 **feat: the shared grid on Client Administration** (rollout 4,

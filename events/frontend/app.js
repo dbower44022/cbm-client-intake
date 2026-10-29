@@ -26,7 +26,6 @@
     chapterKey: "",
     session: {},
     current: null,      // { event, counts, registrations }
-    sort: { key: "startsAtUtc", dir: -1 },
     scope: "published",
     scopeChosen: false, // set once the user picks for themselves
     search: "",
@@ -121,23 +120,64 @@
           .join(" ").toLowerCase().indexOf(needle) !== -1;
       });
     }
-    var key = state.sort.key, dir = state.sort.dir;
-    return rows.sort(function (a, b) {
-      var av = sortValue(a, key), bv = sortValue(b, key);
-      if (av === bv) return 0;
-      return (av > bv ? 1 : -1) * dir;
-    });
+    ensureGrids();
+    return window.CBMGrid ? CBMGrid.sortBy(rows, gridKeys(eventGrid, EVENT_SORT), eventSortValue) : rows;
   }
 
-  function sortValue(row, key) {
+  /* ---------- the shared grid (prds/shared-grid-plan.md § 12) ----------
+   * The events list and the registrants are ordered here, from their data
+   * (the grid holds only the keys); the conversion report sorts in place.
+   * A blank value sorts last either way. */
+
+  var EVENT_SORT = [{ col: "startsAtUtc", dir: "desc" }];
+  var eventGrid = null, regGrid = null, convGrid = null;
+
+  function ensureGrids() {
+    if (!window.CBMGrid) return;
+    if (!eventGrid) eventGrid = CBMGrid.enhance($("eventGrid"), { key: "events.list", sort: EVENT_SORT, statusAfter: $("eventGrid").parentElement, onSort: function () { renderList(); } });
+    if (!regGrid) {
+      // The Emails heading carries no data-col in the page (a test reads it
+      // as plain <th>Emails</th>), so it is named here before the grid sees it.
+      Array.prototype.forEach.call($("regTable").querySelectorAll("thead th"), function (th) {
+        if (!th.hasAttribute("data-col") && th.textContent.trim() === "Emails") th.setAttribute("data-col", "emails");
+      });
+    }
+    if (!regGrid) regGrid = CBMGrid.enhance($("regTable"), { key: "events.registrants", onSort: function () { if (state.current) renderRegistrants(); } });
+    if (!convGrid) convGrid = CBMGrid.enhance($("repConvTable"), { key: "events.conversion" });
+  }
+
+  function gridKeys(grid, fallback) {
+    var keys = grid ? grid.keys() : [];
+    return keys.length ? keys : (fallback || []);
+  }
+
+  function busyOver(el, promise) {
+    return window.CBMBusy && window.CBMBusy.loading ? window.CBMBusy.loading(el, promise) : promise;
+  }
+
+  function eventSortValue(row, col) {
     var counts = row.summary_counts || {};
-    if (key === "registered") return counts.registered || 0;
-    if (key === "attended") return counts.attended || 0;
-    if (key === "showRate") return counts.showRate == null ? -1 : counts.showRate;
-    if (key === "published") return (row.state || {}).label || "";
-    if (key === "recording") return row.recordingUrl ? 1 : 0;
-    if (key === "name") return (row.topic || "").toLowerCase();
-    return (row[key] || "").toString().toLowerCase();
+    if (col === "name") return row.topic || "";
+    if (col === "startsAtUtc") return row.startsAtUtc || null;
+    if (col === "registered" || col === "attended" || col === "showRate") {
+      return counts[col] == null ? null : Number(counts[col]);
+    }
+    if (col === "published") return (row.state || {}).label || (row.publishToWebsite ? "Shown" : "Hidden");
+    if (col === "recording") return row.recordingUrl ? "Yes" : null;
+    return row[col] == null ? null : String(row[col]);
+  }
+
+  function registrantSortValue(r, col) {
+    if (col === "name") return ((r.firstName || "") + " " + (r.lastName || "")).trim() || null;
+    if (col === "email") return r.email || null;
+    if (col === "status") return r.attendanceStatus || null;
+    if (col === "source") return r.registrationSource || null;
+    if (col === "minutes") return r.minutesAttended == null ? null : Number(r.minutesAttended);
+    if (col === "emails") {
+      var sent = (r.confirmationSentAt ? ["Confirmed"] : []).concat(r.followUpsSent || []);
+      return sent.length ? sent.join(" ") : null;
+    }
+    return null;
   }
 
   function renderList() {
@@ -193,7 +233,7 @@
   }
 
   async function loadEvents() {
-    var data = await api("/events");
+    var data = await busyOver($("eventGrid").parentElement, api("/events"));
     state.events = data.events || [];
     // Open on the work, when there is any — once, and only before the user has
     // chosen for themselves. Reloading the grid later must not yank them back
@@ -208,7 +248,7 @@
   /* ---------- detail ---------- */
 
   async function openEvent(id) {
-    var data = await api("/events/" + id);
+    var data = await busyOver(state.current ? $("detailPanel") : $("listPanel"), api("/events/" + id));
     state.current = data;
     $("listPanel").hidden = true;
     $("detailPanel").hidden = false;
@@ -460,10 +500,12 @@
 
   function registrantRows() {
     var needle = ($("regSearch").value || "").trim().toLowerCase();
-    return (state.current.registrations || []).filter(function (r) {
+    var rows = (state.current.registrations || []).filter(function (r) {
       if (!needle) return true;
       return [r.firstName, r.lastName, r.email].join(" ").toLowerCase().indexOf(needle) !== -1;
     });
+    ensureGrids();
+    return window.CBMGrid ? CBMGrid.sortBy(rows, gridKeys(regGrid), registrantSortValue) : rows;
   }
 
   function renderRegistrants() {
@@ -1239,7 +1281,7 @@
            + "&end=" + encodeURIComponent($("repTo").value || "");
     $("repStatus").textContent = "Working…";
     try {
-      var totals = await api("/reports/program" + qs);
+      var totals = await busyOver($("reportsPanel"), api("/reports/program" + qs));
       var host = $("repTotals");
       host.innerHTML = "";
       tile(host, "Events held", totals.eventsHeld);
@@ -1248,7 +1290,7 @@
       tile(host, "Came more than once", totals.repeatAttendees);
       tile(host, "Repeat rate", pctOrDash(totals.repeatRate));
 
-      var conv = await api("/reports/conversion" + qs);
+      var conv = await busyOver($("reportsPanel"), api("/reports/conversion" + qs));
       var chost = $("repConvTiles");
       chost.innerHTML = "";
       tile(chost, "Attendees", conv.attendees);
@@ -1269,6 +1311,8 @@
         body.appendChild(tr);
       });
       $("repConvTable").hidden = !(conv.rows || []).length;
+      ensureGrids();
+      if (convGrid) convGrid.refresh();
       $("repConvEmpty").hidden = !!(conv.rows || []).length;
       $("repStatus").textContent = "";
     } catch (e) {
@@ -1753,15 +1797,6 @@
 
     Array.prototype.forEach.call(document.querySelectorAll(".ev__tab"), function (tab) {
       tab.addEventListener("click", function () { showTab(tab.dataset.tab); });
-    });
-    Array.prototype.forEach.call(document.querySelectorAll("[data-sort]"), function (th) {
-      th.addEventListener("click", function () {
-        var key = th.dataset.sort;
-        state.sort = state.sort.key === key
-          ? { key: key, dir: -state.sort.dir }
-          : { key: key, dir: key === "startsAtUtc" ? -1 : 1 };
-        renderList();
-      });
     });
 
     $("modalClose").addEventListener("click", closeModal);

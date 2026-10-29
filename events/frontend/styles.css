@@ -49,7 +49,7 @@ body { margin: 0; background: var(--cbm-bg, #f6f7f9); color: var(--cbm-text, #21
 .ev__grid { width: 100%; border-collapse: collapse; font-size: .92rem; }
 .ev__grid thead th { position: sticky; top: 0; z-index: 1; background: #f2f5f9;
   text-align: left; padding: .55rem .7rem; border-bottom: 1px solid #dde3ec;
-  cursor: pointer; user-select: none; white-space: nowrap; }
+  white-space: nowrap; }
 .ev__grid td { padding: .5rem .7rem; border-bottom: 1px solid #eef1f5; vertical-align: top; }
 .ev__grid tbody tr:nth-child(even) { background: #fafbfd; }
 .ev__grid tbody tr:hover { background: #eef4fd; cursor: pointer; }

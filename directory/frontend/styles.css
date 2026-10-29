@@ -94,21 +94,18 @@ html, body { height: 100%; margin: 0; }
   position: sticky; top: 0; z-index: 1;
   background: var(--cbm-navy); color: #fff;
   text-align: left; padding: 0.5rem 0.7rem; font-weight: 600; white-space: nowrap;
-  cursor: pointer; user-select: none;
 }
-.dir__table thead th .dir__grip {
-  position: absolute; right: 0; top: 0; width: 6px; height: 100%;
-  cursor: col-resize;
-}
+/* The shared grid's heading colours, over the navy heading row. */
+.dir__table.cbm-grid th.cbm-grid__sortable:hover,
+.dir__table.cbm-grid .cbm-grid__ind { color: #fff; }
 .dir__table thead th { position: sticky; }
 .dir__table th { position: relative; }
 .dir__table tbody td { padding: 0.45rem 0.7rem; border-bottom: 1px solid var(--cbm-border); vertical-align: top; }
 .dir__table tbody tr { cursor: pointer; }
-.dir__table tbody tr:nth-child(even) { background: var(--cbm-surface); }
 .dir__table tbody tr:hover { background: var(--cbm-blue-50, #eef4fb); }
 .dir__table tbody tr.is-selected { background: var(--cbm-blue-100, #d9e8f8); outline: 2px solid var(--cbm-blue); outline-offset: -2px; }
-.dir__table--resized { table-layout: fixed; }
-.dir__sortarrow { font-size: 0.75em; margin-left: 0.25rem; opacity: 0.9; }
+/* The shared grid shades cells, so the selection is painted on the cells too. */
+.dir__table tbody tr.is-selected > td { background-color: var(--cbm-blue-100, #d9e8f8); }
 .dir__cell-chips { display: flex; flex-wrap: wrap; gap: 0.25rem; }
 .dir__pill { background: var(--cbm-surface); border: 1px solid var(--cbm-border); border-radius: 999px; padding: 0.05rem 0.5rem; font-size: 0.8rem; color: var(--cbm-slate-700); }
 .dir__table a { color: var(--cbm-blue); }

@@ -1,6 +1,6 @@
 /* Submission Admin console — builds on /shared/tokens.css.
    Rebuilt 2026-07-19 (Doug's spec): full-height grid with sticky header,
-   sortable + drag-resizable columns, center search, top-right user corner,
+   the shared grid's sorting and resizable columns, center search, top-right user corner,
    alternating row colours; sessions-style tabbed detail view. */
 
 html, body { height: 100%; }
@@ -55,17 +55,12 @@ body { margin: 0; display: flex; flex-direction: column; }
 .ops__table th, .ops__table td { text-align: left; padding: 0.5rem 0.7rem;
   border-bottom: 1px solid var(--cbm-border); vertical-align: top; font-size: var(--cbm-text-sm); }
 .ops__table thead th { position: sticky; top: 0; z-index: 2; color: var(--cbm-navy);
-  background: var(--cbm-surface); font-weight: var(--cbm-fw-heading); cursor: pointer;
-  user-select: none; white-space: nowrap; }
-.ops__table thead th .grip { position: absolute; top: 0; right: 0; width: 7px; height: 100%;
-  cursor: col-resize; }
-.ops__table thead th .grip:hover { background: rgba(203, 150, 59, 0.35); }
-.ops__table thead th { position: sticky; }
+  background: var(--cbm-surface); font-weight: var(--cbm-fw-heading);
+  white-space: nowrap; }
 .ops__table th.num, .ops__table td.num { text-align: right; }
 .ops__table td.err { color: var(--cbm-text); max-width: 320px; word-break: break-word; }
-/* Alternating row colours + row hover; rows are clickable. */
-.ops__table tbody tr:nth-child(even) { background: #f6f8fb; }
-.ops__table tbody tr:hover { background: #eef4fb; }
+/* Alternating rows, hover, sorting and resizing come from the shared grid
+   (/shared/grid.css); rows are clickable. */
 .ops__table tbody tr { cursor: pointer; }
 .ops__empty, .ops__loading { color: var(--cbm-text); padding: 1.25rem 1rem; }
 

@@ -57,6 +57,14 @@
 }
 .su__table td { padding: 0.45rem 0.5rem; border-bottom: 1px solid #ececec; vertical-align: top; }
 .su__row.is-overridden { background: #f4f9f6; }
+/* The shared grid stripes cells; an overridden setting keeps its own tint. */
+.su__table.cbm-grid tbody tr.su__row.is-overridden > td { background-color: #f4f9f6; }
+/* The run history: each run's report is a hidden row under it, so the stripe
+   follows the runs (su__alt), not the position; a report keeps its own tint. */
+.su__table--runs.cbm-grid tbody tr:nth-child(even) > td { background-color: transparent; }
+.su__table--runs.cbm-grid tbody tr.su__alt > td { background-color: var(--cbm-grid-stripe); }
+.su__table--runs.cbm-grid tbody tr:hover > td { background-color: var(--cbm-grid-hover); }
+.su__table--runs.cbm-grid tbody tr.su__runrow > td { background-color: var(--cbm-surface-alt, #f7f7f9); }
 .su__namecell { width: 46%; }
 .su__valuecell { width: 18%; font-variant-numeric: tabular-nums; }
 .su__metacell { width: 36%; }

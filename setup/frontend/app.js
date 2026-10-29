@@ -150,6 +150,30 @@
     return note;
   }
 
+  /* ---------- the shared grid (prds/shared-grid-plan.md § 12) ----------
+   * A settings group is a form laid out in rows (a Change button per
+   * setting, in the group's own order), so it resizes and shades but never
+   * sorts; so does the run history, whose report opens as an extra row under
+   * its run. The read-only lists — all settings, the environment diff and
+   * the change history — sort in place. A table rebuilt by innerHTML is a new
+   * element, so it is enhanced again; its widths and sort come back from the
+   * grid's own store. */
+  var SETTINGS_HEAD = '<thead><tr><th data-col="setting" data-sortable="false">Setting</th>'
+    + '<th data-col="value" data-sortable="false">Value</th>'
+    + '<th data-col="source" data-sortable="false">Source</th></tr></thead>';
+
+  function fitGrid(table, key) {
+    if (!table || !window.CBMGrid) return null;
+    if (!table._grid) table._grid = window.CBMGrid.enhance(table, { key: key });
+    return table._grid;
+  }
+
+  function gridRefresh(grid) { if (grid) grid.refresh(); }
+
+  function busyOver(el, promise) {
+    return el && window.CBMBusy && window.CBMBusy.loading ? window.CBMBusy.loading(el, promise) : promise;
+  }
+
   function renderSettings() {
     var page = state.page;
     var filter = ($("filterBox").value || "").toLowerCase();
@@ -164,15 +188,20 @@
       if (!rows.length) return;
       html += '<section class="su__group"><h2 class="su__h2">' + esc(group.name) + "</h2>"
             + groupNote(group.name)
-            + '<table class="su__table"><tbody>' + rows.map(settingRow).join("") + "</tbody></table></section>";
+            + '<table class="su__table su__table--settings">' + SETTINGS_HEAD + "<tbody>"
+            + rows.map(settingRow).join("") + "</tbody></table></section>";
     });
     $("groups").innerHTML = html || '<p class="su__hint">Nothing matches that filter.</p>';
+    Array.prototype.forEach.call($("groups").querySelectorAll("table"), function (t) {
+      fitGrid(t, "setup.settings");
+    });
 
     $("otherRows").innerHTML = page.other.map(function (r) {
       return "<tr><td>" + esc(r.label) + '<div class="su__key">' + esc(r.key) + "</div></td>"
         + "<td>" + (r.secret ? (r.isSet ? "set" : "not set") : esc(r.value || "—")) + "</td>"
         + "<td>" + (r.denylisted ? '<span class="su__chip su__chip--muted">Never editable</span>' : "") + "</td></tr>";
     }).join("");
+    gridRefresh(fitGrid($("otherTable"), "setup.allSettings"));
 
     text($("overrideStat"),
       page.overrideCount + " override" + (page.overrideCount === 1 ? "" : "s")
@@ -562,7 +591,7 @@
   // --- environment diff ------------------------------------------------------
 
   async function loadDiff() {
-    var data = await api("/diff");
+    var data = await busyOver($("diffRows"), api("/diff"));
     if (!data.ok) {
       $("diffRows").innerHTML = '<p class="su__hint">' + esc(data.error) + "</p>";
       text($("diffStat"), "");
@@ -575,8 +604,8 @@
         + "curated setting.</p>";
       return;
     }
-    $("diffRows").innerHTML = '<table class="su__table"><thead><tr><th>Setting</th><th>'
-      + esc(data.localEnvironment || "here") + "</th><th>" + esc(data.peerEnvironment || "peer")
+    $("diffRows").innerHTML = '<table class="su__table"><thead><tr><th data-col="setting">Setting</th><th data-col="local">'
+      + esc(data.localEnvironment || "here") + '</th><th data-col="peer">' + esc(data.peerEnvironment || "peer")
       + "</th></tr></thead><tbody>"
       + data.differences.map(function (d) {
         return "<tr><td>" + esc(d.label) + '<div class="su__key">' + esc(d.key) + "</div></td>"
@@ -586,6 +615,7 @@
           + (d.peerOverridden ? ' <span class="su__chip su__chip--override">override</span>' : "")
           + "</td></tr>";
       }).join("") + "</tbody></table>";
+    fitGrid($("diffRows").querySelector("table"), "setup.diff");
   }
 
   // --- operations ------------------------------------------------------------
@@ -604,7 +634,7 @@
   }
 
   async function loadJobs() {
-    var data = await api("/jobs");
+    var data = await busyOver($("jobHistory"), api("/jobs"));
     if (!data.available) {
       $("jobRows").innerHTML = '<p class="su__hint">No database is attached, so jobs '
         + "cannot be run or recorded here.</p>";
@@ -641,10 +671,13 @@
     jobRuns = {};
     data.recent.forEach(function (r) { jobRuns[r.id] = r; });
     $("jobHistory").innerHTML = data.recent.length
-      ? '<table class="su__table"><thead><tr><th>When</th><th>Job</th><th>Mode</th><th>Status</th><th>Who</th><th>Reason</th><th>Report</th></tr></thead><tbody>'
-        + data.recent.map(function (r) {
+      ? '<table class="su__table su__table--runs"><thead><tr>'
+        + ["When", "Job", "Mode", "Status", "Who", "Reason", "Report"].map(function (h) {
+            return '<th data-col="' + h.toLowerCase() + '" data-sortable="false">' + h + "</th>";
+          }).join("") + "</tr></thead><tbody>"
+        + data.recent.map(function (r, i) {
             var has = !!(r.output || r.error);
-            return "<tr><td>" + esc((r.startedAt || "").replace("T", " ").slice(0, 16)) + "</td>"
+            return "<tr" + (i % 2 ? ' class="su__alt"' : "") + "><td>" + esc((r.startedAt || "").replace("T", " ").slice(0, 16)) + "</td>"
               + "<td>" + esc(r.name) + "</td><td>" + esc(r.mode) + "</td>"
               + '<td><span class="su__chip su__chip--' + esc(r.status) + '">' + esc(r.status) + "</span></td>"
               + "<td>" + esc(r.actor) + "</td><td>" + esc(r.reason) + "</td>"
@@ -655,6 +688,7 @@
               + '<td colspan="7"></td></tr>';
           }).join("") + "</tbody></table>"
       : '<p class="su__hint">No jobs have been run yet.</p>';
+    fitGrid($("jobHistory").querySelector("table"), "setup.runs");
   }
 
   function resultBlock(result) {
@@ -701,7 +735,7 @@
 
   async function loadHistory() {
     var key = ($("historyKey").value || "").trim();
-    var data = await api("/history?limit=200" + (key ? "&key=" + encodeURIComponent(key) : ""));
+    var data = await busyOver($("historyTable"), api("/history?limit=200" + (key ? "&key=" + encodeURIComponent(key) : "")));
     $("historyRows").innerHTML = data.history.length
       ? data.history.map(function (h) {
           var change = h.action === "clear"
@@ -712,6 +746,7 @@
             + "<td>" + esc(h.actor) + "</td><td>" + esc(h.reason) + "</td></tr>";
         }).join("")
       : '<tr><td colspan="5">Nothing recorded yet.</td></tr>';
+    gridRefresh(fitGrid($("historyTable"), "setup.history"));
   }
 
   // --- tabs + boot -----------------------------------------------------------
@@ -735,7 +770,7 @@
 
   async function boot() {
     try {
-      var page = await api("/settings");
+      var page = await busyOver($("bodyView").hidden ? null : $("bodyView"), api("/settings"));
       state.page = page;
     } catch (e) {
       showMessage(e.message);

@@ -28,9 +28,9 @@
 /* Fixed layout so long participants/snippets wrap inside their columns
    instead of pushing Conversation/Last-activity off-screen. */
 .cr__inbox { table-layout: fixed; }
-.cr__inbox th:nth-child(1) { width: 12rem; }
-.cr__inbox th:nth-child(2) { width: 30%; }
-.cr__inbox th:nth-child(4) { width: 13rem; }
+.cr__inbox th[data-col="status"] { width: 12rem; }
+.cr__inbox th[data-col="participants"] { width: 30%; }
+.cr__inbox th[data-col="lastMessageAt"] { width: 13rem; }
 .cr__inbox td { overflow: hidden; }
 .cr__inbox tbody tr { cursor: pointer; }
 .cr__inbox-row.is-unread .cr__inbox-subject { font-weight: 700; }
@@ -42,9 +42,6 @@
 .cr__inbox-subject { display: block; }
 .cr__inbox-snippet { display: block; color: var(--cbm-slate-700); font-size: 0.85rem; }
 .cr__inbox-date { white-space: nowrap; color: var(--cbm-slate-700); }
-.cr__th-sort { cursor: pointer; user-select: none; }
-.cr__th-sort[data-dir="asc"]::after { content: " ▲"; font-size: 0.75em; }
-.cr__th-sort[data-dir="desc"]::after { content: " ▼"; font-size: 0.75em; }
 
 .cr__tag {
   display: inline-block; background: var(--cbm-surface); border: 1px solid var(--cbm-border);
@@ -156,6 +153,7 @@
 }
 .cr__contacts-table tbody tr { cursor: pointer; }
 .cr__contacts-table tbody tr.is-selected { background: #eef4fb; }
+.cr__contacts-table tbody tr.is-selected > td { background-color: #eef4fb; }
 .cr__contacts-table tbody tr:hover { background: #f5f8fc; }
 @media (max-width: 700px) {
   .cr__contacts { flex-direction: column; }

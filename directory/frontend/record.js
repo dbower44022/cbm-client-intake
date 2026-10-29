@@ -27,7 +27,29 @@
   var detail = null;           // /records/{id} payload (name + panels)
   var contactEmails = [];      // [{name, email}] — the contact's own addresses
   var convRows = [];
-  var convSort = { key: null, dir: 1 };
+
+  // ---- the shared grid (frontend/shared/grid.js; prds/shared-grid-plan.md § 12)
+  var sharedGrids = {};
+  function fitGrid(id, key, repaint) {
+    var t = $(id);
+    if (!t || !window.CBMGrid) return null;
+    if (!sharedGrids[id]) {
+      sharedGrids[id] = CBMGrid.enhance(t, { key: "directory.record." + key,
+        onSort: repaint ? function () { repaint(); } : undefined });
+    } else sharedGrids[id].refresh();
+    return sharedGrids[id];
+  }
+  function gridOrder(id, list, val) {
+    var g = sharedGrids[id], keys = g ? g.keys() : [];
+    if (!keys.length) return list;
+    return CBMGrid.sortBy(list, keys, function (r, col) {
+      var v = val(r, col);
+      return v === "" || v === undefined ? null : v;
+    });
+  }
+  function busyOver(el, promise) {
+    return window.CBMBusy && CBMBusy.loading && el ? CBMBusy.loading(el, promise) : promise;
+  }
   var senderMailbox;           // undefined = not fetched; null = none
   var senderSignature = "";
   var composeGuard = null;     // {dirty(), discard(), backConvId}
@@ -227,18 +249,20 @@
     hide($("crEvtNotice")); hide($("crEvtTable")); hide($("crEvtEmpty"));
     show($("crEvtLoading"));
     try {
-      var res = await api("/records/" + encodeURIComponent(RECORD_ID) + "/events");
+      var res = await busyOver($("crEvtTable").parentElement, api("/records/" + encodeURIComponent(RECORD_ID) + "/events"));
       var rows = res.events || [];
       var body = $("crEvtBody");
       body.innerHTML = "";
       rows.forEach(function (r) {
         var tr = document.createElement("tr");
-        function cell(text) {
+        function cell(text, sortAs) {
           var td = document.createElement("td");
           td.textContent = text == null || text === "" ? "—" : text;
+          if (sortAs !== undefined) td.setAttribute("data-sort", sortAs || "");
           tr.appendChild(td);
         }
-        cell(r.dateLabel);
+        // The date shows as "Oct 27, 2026" and sorts by the start itself.
+        cell(r.dateLabel, r.startsAtUtc || "");
         cell(r.title);
         cell(r.category);
         // The status IS the outcome — "Registered" on a past event means they
@@ -247,7 +271,7 @@
         cell(r.minutesAttended == null ? "" : String(r.minutesAttended));
         body.appendChild(tr);
       });
-      if (rows.length) { show($("crEvtTable")); hide($("crEvtEmpty")); }
+      if (rows.length) { show($("crEvtTable")); hide($("crEvtEmpty")); fitGrid("crEvtTable", "events"); }
       else { hide($("crEvtTable")); show($("crEvtEmpty")); }
     } catch (e) {
       evtLoaded = false;      // let a retry happen on the next visit
@@ -379,6 +403,8 @@
       tr.addEventListener("click", function () { selectContact(c.id); });
       tbody.appendChild(tr);
     });
+    // Every contact is here, so the shared grid sorts the rows in place.
+    fitGrid("crContactsTable", "contacts");
     // Auto-select the first row so the preview isn't empty on first open.
     selectContact(list[0].id);
   }
@@ -460,16 +486,14 @@
     head.innerHTML = "";
     var tr = el("tr");
     CONV_COLUMNS.forEach(function (c) {
-      var th = el("th", "cr__th-sort", c.label);
-      th.setAttribute("data-sort", c.key);
-      th.addEventListener("click", function () {
-        if (convSort.key === c.key) convSort.dir = -convSort.dir;
-        else { convSort.key = c.key; convSort.dir = c.key === "lastMessageAt" ? -1 : 1; }
-        renderConversationRows(convRows);
-      });
+      var th = el("th", null, c.label);
+      th.setAttribute("data-col", c.key);
       tr.appendChild(th);
     });
     head.appendChild(tr);
+    // The rows carry chips and a snippet, so the grid sorts the data and this
+    // page repaints in that order.
+    fitGrid("crInboxTable", "conversations", function () { renderConversationRows(convRows); });
   }
 
   function renderComms() {
@@ -497,7 +521,7 @@
     $("crNoMessages").textContent = "Loading conversations…";
     show($("crNoMessages")); hide($("crInboxTable"));
     try {
-      var res = await api("/records/" + encodeURIComponent(RECORD_ID) + "/conversations");
+      var res = await busyOver($("crInboxTable").parentElement, api("/records/" + encodeURIComponent(RECORD_ID) + "/conversations"));
       if (res.notice) {
         convRows = [];
         $("crNoMessages").textContent = res.notice;
@@ -514,18 +538,17 @@
     }
   }
 
+  // What a conversation sorts by in each column: the stamp itself for Last
+  // activity (an ISO-like CRM stamp), the words otherwise; blank sorts last.
   function convSortVal(c, k) {
-    if (k === "lastMessageAt") return c.lastMessageAt || "";
-    return (c[k] || "").toString().toLowerCase();
+    if (k === "lastMessageAt") return c.lastMessageAt || null;
+    if (k === "subject") return c.subject || null;
+    var v = c[k];
+    return v == null || v === "" ? null : String(v);
   }
 
   function renderConversationRows(rows) {
     var body = $("crInboxBody"); body.innerHTML = "";
-    Array.prototype.forEach.call(document.querySelectorAll("#crInboxTable th[data-sort]"), function (th) {
-      var active = th.getAttribute("data-sort") === convSort.key;
-      th.setAttribute("aria-sort", active ? (convSort.dir === 1 ? "ascending" : "descending") : "none");
-      th.dataset.dir = active ? (convSort.dir === 1 ? "asc" : "desc") : "";
-    });
     if (!rows.length) {
       $("crNoMessages").textContent = "No email conversations between you and " +
         ((detail && detail.name) || "this contact") +
@@ -535,14 +558,7 @@
       return;
     }
     hide($("crNoMessages")); show($("crInboxTable"));
-    rows = rows.slice();
-    if (convSort.key) {
-      var k = convSort.key, dir = convSort.dir;
-      rows.sort(function (a, b) {
-        var va = convSortVal(a, k), vb = convSortVal(b, k);
-        return (va < vb ? -1 : va > vb ? 1 : 0) * dir;
-      });
-    }
+    rows = gridOrder("crInboxTable", rows.slice(), convSortVal);
     rows.forEach(function (c) {
       var tr = el("tr", "cr__inbox-row" + (c.unread ? " is-unread" : ""));
       tr.tabIndex = 0; tr.setAttribute("role", "button");

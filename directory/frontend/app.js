@@ -17,8 +17,10 @@
   var state = {
     session: null, columns: [], rows: [], selectedId: null,
     page: 1, pageSize: 50, total: 0, hasMore: false,
-    orderBy: "", order: "asc", q: "", applied: {}, detailCache: {},
+    sort: "", q: "", applied: {}, detailCache: {},
   };
+  var grid = null;          // the shared grid (frontend/shared/grid.js)
+  var headSig = "";         // the columns the heading row was built for
 
   // ---- API helper ---------------------------------------------------------
   async function api(path, opts) {
@@ -76,25 +78,51 @@
   }
 
   // ---- grid ---------------------------------------------------------------
-  function setSort(key) {
-    if (state.orderBy === key) { state.order = state.order === "asc" ? "desc" : "asc"; }
-    else { state.orderBy = key; state.order = "asc"; }
-    state.page = 1; loadRecords();
+  // The rows are paged by the server, so the shared grid only holds the sort
+  // keys and the server sorts (several columns where the CRM has its
+  // sorted-list endpoint, else the first). prds/shared-grid-plan.md § 12.
+  function sortKeys(sort) {
+    return String(sort || "").split(",").filter(Boolean).map(function (p) {
+      var kv = p.split(":"); return { col: kv[0], dir: kv[1] === "desc" ? "desc" : "asc" };
+    });
   }
 
-  function renderGrid() {
-    var head = $("gridHead"), body = $("gridBody");
-    head.innerHTML = ""; body.innerHTML = "";
+  function fitGrid() {
+    if (!window.CBMGrid) return;
+    if (!grid) {
+      grid = CBMGrid.enhance($("grid"), {
+        key: "directory." + KIND,
+        statusAfter: $("grid").parentElement,
+        onSort: function (keys) { state.sort = CBMGrid.sortParam(keys); state.page = 1; loadRecords(); },
+      });
+      state.sort = grid.sortParam();
+    } else grid.refresh();
+  }
+
+  // The heading row follows the CRM's list layout; it is rebuilt only when
+  // the columns change, so the grid keeps its handles and widths.
+  function renderHead() {
+    var sig = state.columns.map(function (c) { return c.key + ":" + c.label + ":" + (c.sortable ? 1 : 0); }).join("|");
+    if (sig === headSig) return;
+    headSig = sig;
+    var head = $("gridHead"); head.innerHTML = "";
     var tr = el("tr");
     state.columns.forEach(function (c) {
       var th = el("th", null, c.label);
-      if (c.sortable) {
-        th.addEventListener("click", function () { setSort(c.key); });
-        if (state.orderBy === c.key) { var ar = el("span", "dir__sortarrow", state.order === "asc" ? "▲" : "▼"); th.appendChild(ar); }
-      } else { th.style.cursor = "default"; }
+      th.setAttribute("data-col", c.key);
+      if (!c.sortable) {
+        th.setAttribute("data-sortable", "false");
+        th.title = "The CRM cannot sort by this column.";
+      }
       tr.appendChild(th);
     });
     head.appendChild(tr);
+  }
+
+  function renderGrid() {
+    var body = $("gridBody");
+    body.innerHTML = "";
+    renderHead();
 
     state.rows.forEach(function (r) {
       var row = el("tr");
@@ -157,32 +185,11 @@
       row.addEventListener("dblclick", function () { openView(r.id); });
       body.appendChild(row);
     });
-    makeColumnsResizable($("grid"));
+    fitGrid();
 
     var from = state.total ? (state.page - 1) * state.pageSize + 1 : 0;
     var to = (state.page - 1) * state.pageSize + state.rows.length;
     $("pageInfo").textContent = state.total ? ("Showing " + from + "–" + to + " of " + state.total) : "No records";
-    $("prevBtn").disabled = state.page <= 1;
-    $("nextBtn").disabled = !state.hasMore;
-  }
-
-  function makeColumnsResizable(table) {
-    var ths = table.querySelectorAll("thead th");
-    ths.forEach(function (th) {
-      if (th.querySelector(".dir__grip")) return;
-      var grip = el("span", "dir__grip");
-      grip.addEventListener("click", function (e) { e.stopPropagation(); });
-      grip.addEventListener("mousedown", function (e) {
-        e.preventDefault(); e.stopPropagation();
-        table.classList.add("dir__table--resized");
-        table.querySelectorAll("thead th").forEach(function (h) { if (!h.style.width) h.style.width = h.offsetWidth + "px"; });
-        var startX = e.pageX, startW = th.offsetWidth;
-        function mv(ev) { th.style.width = Math.max(60, startW + ev.pageX - startX) + "px"; }
-        function up() { document.removeEventListener("mousemove", mv); document.removeEventListener("mouseup", up); }
-        document.addEventListener("mousemove", mv); document.addEventListener("mouseup", up);
-      });
-      th.appendChild(grip);
-    });
   }
 
   // The Contact id a row's name click opens the View Contact page for: the row
@@ -199,15 +206,30 @@
     renderPreview(id);
   }
 
+  var toldOneColumn = false;
   async function loadRecords() {
-    var params = new URLSearchParams({ q: state.q, page: String(state.page), pageSize: String(state.pageSize), order: state.order });
-    if (state.orderBy) params.set("orderBy", state.orderBy);
+    var params = new URLSearchParams({ q: state.q, page: String(state.page), pageSize: String(state.pageSize) });
+    if (state.sort) params.set("sort", state.sort);
     if (Object.keys(state.applied).length) params.set("filters", JSON.stringify(state.applied));
+    var req = api("/records?" + params.toString());
+    if (window.CBMBusy && CBMBusy.loading) CBMBusy.loading($("grid").parentElement, req);
     try {
-      var data = await api("/records?" + params.toString());
+      var data = await req;
       state.columns = data.columns; state.rows = data.rows;
       state.total = data.total; state.hasMore = data.hasMore;
       renderGrid();
+      // A CRM without the sorted-list endpoint sorted by the first column
+      // only: say so once, and show the sort that was used.
+      if (data.multiSort === false && !toldOneColumn) {
+        notify("This CRM sorts the directory by one column at a time, so only the first column you chose was used.");
+        toldOneColumn = true;
+      }
+      // The heading shows the order the server used (a column it could not
+      // sort is dropped).
+      if (grid && typeof data.sort === "string" && data.sort !== state.sort) {
+        state.sort = data.sort;
+        grid.setSort(sortKeys(state.sort), true);
+      }
     } catch (e) { if (e.status === 401) return fail(e); notify(e.message); }
   }
 
@@ -244,7 +266,9 @@
     block.appendChild(el("h3", null, "Company Contacts"));
     var table = el("table", "dir__contacts");
     var thead = el("thead"); var htr = el("tr");
-    ["Name", "Phone", "Email"].forEach(function (h) { htr.appendChild(el("th", null, h)); });
+    [["name", "Name"], ["phone", "Phone"], ["email", "Email"]].forEach(function (h) {
+      var th = el("th", null, h[1]); th.setAttribute("data-col", h[0]); htr.appendChild(th);
+    });
     thead.appendChild(htr); table.appendChild(thead);
     var tbody = el("tbody");
     contacts.forEach(function (c) {
@@ -258,6 +282,8 @@
       tbody.appendChild(tr);
     });
     table.appendChild(tbody); block.appendChild(table); container.appendChild(block);
+    // Every row is here, so the shared grid sorts them in place.
+    if (window.CBMGrid) CBMGrid.enhance(table, { key: "directory.companyContacts" });
   }
 
   async function openView(id) {
@@ -512,8 +538,9 @@
     });
     $("viewBtn").addEventListener("click", function () { if (state.selectedId) openView(state.selectedId); else notify("Select a record first, then click View."); });
     $("editBtn").addEventListener("click", function () { if (state.selectedId) openEdit(state.selectedId); else notify("Select a record first, then click Edit."); });
-    $("prevBtn").addEventListener("click", function () { if (state.page > 1) { state.page--; loadRecords(); } });
-    $("nextBtn").addEventListener("click", function () { if (state.hasMore) { state.page++; loadRecords(); } });
+    // Never disabled (house rule): a click with nowhere to go says why.
+    $("prevBtn").addEventListener("click", function () { if (state.page > 1) { state.page--; loadRecords(); } else notify("This is the first page."); });
+    $("nextBtn").addEventListener("click", function () { if (state.hasMore) { state.page++; loadRecords(); } else notify("This is the last page."); });
     $("modalClose").addEventListener("click", closeModal);
     $("modalCancelBtn").addEventListener("click", closeModal);
     $("modalSaveBtn").addEventListener("click", saveEdit);
@@ -540,6 +567,7 @@
       show($("mainView"));
       wire();
       renderChips();
+      fitGrid();            // before the first load, so a remembered sort is used
       await loadRecords();
     } catch (e) { fail(e); }
   })();

@@ -1141,9 +1141,9 @@ ordered do-this-next list for the grant build on crm-test.
   onSort})` gives resizable columns, alternating rows and multi-column
   sorting (in the browser, or via `onSort` for a server-paged grid, whose
   unsortable columns carry `data-sortable="false"` and say why). A grid
-  with a preview pane puts `frontend/shared/splitpane.js` between them. New
-  or changed grids use them now; the older screens are rolled out one
-  application per release (`OPEN-ITEMS.md` #60). Plan:
+  with a preview pane puts `frontend/shared/splitpane.js` between them. Every
+  served grid uses them since v0.300.0; a new grid uses them from the
+  start. Plan:
   `prds/shared-grid-plan.md`.
 - **Action buttons are never disabled and never hidden** — validate on click and
   show a message naming the missing input or the missing permission. A missing
@@ -1237,6 +1237,11 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
+- **v0.300.0 (2026-10-29) — the shared grid everywhere**
+  (`prds/shared-grid-plan.md` § 12): Submission Admin, the Directories
+  (server sort through `SortedList`), My Email, Event Administration, System
+  Settings and the Analytics panels. No CRM change. Committed, **not
+  pushed; live pass owed**.
 - **v0.299.0 (2026-10-28) — the shared grid on Client Administration**
   (`prds/shared-grid-plan.md` § 11), and the engagement list pages past 200.
   No CRM change. Pushed 10-28-26 23:31; **live-passed on crm-test

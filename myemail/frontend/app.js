@@ -9,6 +9,7 @@
   var rows = [];            // inbox rows from the server
   var filter = "all";       // all | unread | awaiting
   var search = "";
+  var grid = null;          // the shared grid (frontend/shared/grid.js)
 
   function $(id) { return document.getElementById(id); }
   function show(el) { el.hidden = false; }
@@ -129,7 +130,9 @@
     hide($("notice"));
     show($("loadingState")); hide($("inboxTable")); hide($("emptyState"));
     try {
-      var res = await api("/inbox");
+      var req = api("/inbox");
+    if (window.CBMBusy && CBMBusy.loading) CBMBusy.loading($("inboxTable").parentElement, req);
+    var res = await req;
       rows = res.conversations || [];
       hide($("loadingState"));
       if (res.profileFound === false) {
@@ -157,7 +160,29 @@
     return hay.indexOf(q.toLowerCase()) !== -1;
   }
 
+  // What a conversation sorts by in each column (prds/shared-grid-plan.md
+  // § 12): the record names, the people, the subject, and the stamp itself
+  // for Last message; blank sorts last.
+  function inboxSortVal(r, col) {
+    var v;
+    if (col === "record") v = (r.records || []).map(function (x) { return x.name || ""; }).join(", ");
+    else if (col === "people") v = r.participants;
+    else if (col === "subject") v = r.subject;
+    else if (col === "lastMessageAt") v = r.lastMessageAt;
+    return v == null || v === "" ? null : v;
+  }
+
+  // The rows carry chips, links and a snippet, so the grid sorts the data and
+  // this page repaints in that order. The server's order (newest first) stays
+  // the default.
+  function fitGrid() {
+    if (grid || !window.CBMGrid) return;
+    grid = CBMGrid.enhance($("inboxTable"), { key: "myemail.inbox",
+      onSort: function () { renderRows(); } });
+  }
+
   function renderRows() {
+    fitGrid();
     var unread = rows.filter(function (r) { return r.unread; }).length;
     var awaiting = rows.filter(function (r) { return r.awaitingReply; }).length;
     var uc = $("unreadCount"), ac = $("awaitingCount");
@@ -178,6 +203,7 @@
       return;
     }
     hide($("emptyState")); show($("inboxTable"));
+    if (grid && grid.keys().length) visible = CBMGrid.sortBy(visible, grid.keys(), inboxSortVal);
     visible.forEach(function (r) {
       var tr = document.createElement("tr");
       tr.className = "me__row" + (r.unread ? " is-unread" : "");
