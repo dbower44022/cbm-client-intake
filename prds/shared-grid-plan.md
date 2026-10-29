@@ -170,7 +170,7 @@ Review and Recipients sort through it; a CRM without it sorts by one column.
 3. **Documents and the live pass** on crm-test as Mark Marketing, with a
    results page (about half a day). Documents done; pushed and live-passed
    10-28-26 16:33 (https://claude.ai/artifact/Gf8B5gXMmDLgUwZZ1dAjTS), as an
-   administrator — the sort as Mark Marketing owed.
+   administrator and as Mark Marketing.
 
 ## Revision control
 

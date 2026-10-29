@@ -1242,9 +1242,8 @@ the strength of it.
   Review and Recipients sort on several columns on the server, Leads and
   Review through the CRM's `SortedList` endpoint (`sorted-list-crm-handoff.md`,
   crm-test only; one column without it). Pushed 10-28-26 16:23;
-  **live-passed on crm-test 10-28-26 16:33 as an administrator** (results
-  page https://claude.ai/artifact/Gf8B5gXMmDLgUwZZ1dAjTS); the same sort as
-  Mark Marketing owed.
+  **live-passed on crm-test 10-28-26**, as an administrator and as Mark
+  Marketing (results page https://claude.ai/artifact/Gf8B5gXMmDLgUwZZ1dAjTS).
 - **v0.295.0 (2026-10-28) — partner and funder associations**
   (`prds/partner-association-plan.md`): one `CPartnerAssociation` per tie,
   written by `core/partner_links.py` from conversion, import, intake,
