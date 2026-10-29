@@ -35,10 +35,6 @@
   border-bottom: 1px solid var(--cbm-border); vertical-align: middle; font-size: var(--cbm-text-sm); }
 .ma__table thead th { color: var(--cbm-navy); background: var(--cbm-surface); font-weight: var(--cbm-fw-heading); }
 .ma__table th.num, .ma__table td.num { text-align: center; }
-.ma__table th.is-sortable { cursor: pointer; user-select: none; }
-.ma__table th.is-sortable:hover { color: var(--cbm-blue); }
-.ma__table th[data-dir="asc"]::after { content: " ▲"; font-size: 10px; }
-.ma__table th[data-dir="desc"]::after { content: " ▼"; font-size: 10px; }
 .ma-row:hover { background: var(--cbm-surface); }
 .ma__empty, .ma__loading { color: var(--cbm-text); padding: 1.25rem 0; }
 
@@ -236,7 +232,8 @@
 .ma__doc-pending-name { font-weight: 600; word-break: break-all; }
 .ma__doc-type { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; }
 .ma__doc-type select { padding: 0.35rem 0.5rem; border: 1px solid var(--cbm-border, #d7dce2); border-radius: 6px; font: inherit; }
-.ma__doc-acts { display: inline-flex; gap: 0.35rem; white-space: nowrap; }
+.ma__doc-acts { white-space: nowrap; }
+.ma__doc-acts .cbm-button + .cbm-button { margin-left: 0.35rem; }
 .ma__doc-acts .cbm-button[disabled] { opacity: 0.55; cursor: not-allowed; }
 /* A file edited in Drive since the app last synced it (lazy refresh flag). */
 .ma__doc-flag {

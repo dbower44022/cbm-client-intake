@@ -12,7 +12,7 @@
   var isAdmin = false;     // gates the Email Setup screen
   var docsEnabled = false; // GDRIVE_DOCS server-side: shows the Documents tab
   var analyticsEnabled = false; // ANALYTICS_ENABLED: shows the Analytics tab
-  var filter = { q: "", status: "", record: "", type: "", sortKey: "name", sortDir: 1 };
+  var filter = { q: "", status: "", record: "", type: "" };
 
   // Permission-team assignment (Status tab). teamState = the current mentor's
   // {teams, assignedTeamIds, provisioned, available}; loaded lazily when the
@@ -141,7 +141,7 @@
     var ln = $("listNotice"); hide(ln);
     show($("loadingState")); hide($("mentorTable")); hide($("emptyState"));
     try {
-      var res = await api("/mentors");
+      var res = await busyOver($("listView"), api("/mentors"));
       mentors = res.mentors || [];
       // False when the server couldn't read CEngagement (metric columns come
       // back blank) — noted on the count line so blanks aren't read as zeros.
@@ -171,13 +171,26 @@
     found.forEach(function (v) { if (out.indexOf(v) < 0) out.push(v); });
     return out;
   }
-  function avail(m) { return m.availableCapacity === -1 ? Infinity : (typeof m.availableCapacity === "number" ? m.availableCapacity : -Infinity); }
+  // A spinner over a grid or panel while it waits on the server.
+  function busyOver(el, promise) { return window.CBMBusy && CBMBusy.loading ? CBMBusy.loading(el, promise) : promise; }
   function haystack(m) { return [m.name, m.status, m.cbmEmail, m.mentorType, (m.expertise || []).join(" "), (m.focusAreas || []).join(" ")].join(" ").toLowerCase(); }
+  // The value a roster column sorts by: Unlimited above every number in
+  // Available, a blank count last whichever way (the shared grid's rule).
   function sortVal(m, k) {
-    if (k === "availableCapacity") return avail(m);
+    if (k === "availableCapacity") return m.availableCapacity === -1 ? Infinity : (typeof m.availableCapacity === "number" ? m.availableCapacity : null);
     if (k === "activeClients" || k === "maxCapacity" || k === "assignedLast30" || k === "lifetimeClients")
-      return m[k] == null ? -Infinity : m[k];
-    return (m[k] || "").toString().toLowerCase();
+      return typeof m[k] === "number" ? m[k] : null;
+    return m[k] == null ? "" : String(m[k]);
+  }
+
+  // The shared grid on the roster (prds/shared-grid-plan.md § 9): it holds
+  // the sort; the rows are drawn here, after the search and filters.
+  var ROSTER_DEFAULT = [{ col: "name", dir: "asc" }];
+  var rosterGrid = null;
+  function rosterKeys() { var k = rosterGrid ? rosterGrid.keys() : []; return k.length ? k : ROSTER_DEFAULT; }
+  function ensureRosterGrid() {
+    if (rosterGrid || !window.CBMGrid) return;
+    rosterGrid = CBMGrid.enhance($("mentorTable"), { key: "mentoradmin.roster", sort: ROSTER_DEFAULT, onSort: function () { renderTable(); } });
   }
 
   function renderTable() {
@@ -189,8 +202,8 @@
       if (filter.type && m.mentorType !== filter.type) return false;
       return true;
     });
-    var k = filter.sortKey, dir = filter.sortDir;
-    rows.sort(function (a, b) { var x = sortVal(a, k), y = sortVal(b, k); return (x < y ? -1 : x > y ? 1 : 0) * dir; });
+    ensureRosterGrid();
+    rows = window.CBMGrid ? CBMGrid.sortBy(rows, rosterKeys(), sortVal) : rows;
 
     var tb = $("mentorBody"); tb.innerHTML = "";
     $("count").textContent = "Showing " + rows.length + " of " + mentors.length + " mentors" +
@@ -219,7 +232,6 @@
       tb.appendChild(tr);
     });
     show($("mentorTable"));
-    updateSortIndicators();
   }
   function cell(content, cls) { var td = document.createElement("td"); if (cls) td.className = cls; if (content instanceof Node) td.appendChild(content); else td.textContent = content; return td; }
   // Clickable email: opens the app's quick-compose dialog (sends as the
@@ -239,24 +251,11 @@
     if (!rs) { var d = document.createElement("span"); d.className = "ro-muted"; d.textContent = "—"; return d; }
     var s = document.createElement("span"); s.className = "complete-badge complete-" + rs.toLowerCase(); s.textContent = rs; return s;
   }
-  function updateSortIndicators() {
-    Array.prototype.forEach.call($("mentorTable").querySelectorAll("th[data-sort]"), function (th) {
-      th.dataset.dir = th.getAttribute("data-sort") === filter.sortKey ? (filter.sortDir === 1 ? "asc" : "desc") : "";
-    });
-  }
-  Array.prototype.forEach.call(document.querySelectorAll("#mentorTable th[data-sort]"), function (th) {
-    th.addEventListener("click", function () {
-      var key = th.getAttribute("data-sort");
-      if (filter.sortKey === key) filter.sortDir = -filter.sortDir;
-      else { filter.sortKey = key; filter.sortDir = (key === "name" || key === "status" || key === "cbmEmail" || key === "mentorType") ? 1 : -1; }
-      renderTable();
-    });
-  });
 
   // --- detail / edit ---
   async function openMentor(id) {
     try {
-      current = await api("/mentors/" + encodeURIComponent(id));
+      current = await busyOver($("listView"), api("/mentors/" + encodeURIComponent(id)));
     } catch (e) { if (e.status === 401) { showLogin(); return; } notice("listNotice", e.message, "error"); return; }
     // The detail GET self-heals a drifted recordStatus (persist-on-view). If it
     // changed the stored value, reload the grid on return so the Record column matches.
@@ -480,6 +479,7 @@
     table.appendChild(tbody);
     wrap.appendChild(table);
     card.appendChild(wrap);
+    if (window.CBMGrid) CBMGrid.enhance(table, { key: "mentoradmin.verify" });
 
     var btn = document.createElement("button");
     btn.type = "button"; btn.className = "cbm-button"; btn.textContent = "Close";
@@ -674,6 +674,7 @@
       "<th scope='col'>Uploaded by</th><th scope='col'>Uploaded</th><th scope='col'></th></tr></thead>";
     var tbody = document.createElement("tbody"); tbody.id = "mdocBody"; table.appendChild(tbody);
     panel.appendChild(table);
+    if (window.CBMGrid) table._grid = CBMGrid.enhance(table, { key: "mentoradmin.documents" });
 
     var empty = document.createElement("p"); empty.className = "ma__muted"; empty.id = "mdocEmpty"; empty.hidden = true;
     panel.appendChild(empty);
@@ -729,7 +730,7 @@
     hide($("mdocError")); hide($("mdocTable"));
     var empty = $("mdocEmpty"); empty.textContent = "Loading documents…"; show(empty);
     try {
-      var res = await api("/mentors/" + encodeURIComponent(current.id) + "/documents" + mdocListQuery());
+      var res = await busyOver($("mdocTable").parentElement, api("/mentors/" + encodeURIComponent(current.id) + "/documents" + mdocListQuery()));
       mdocTypes = res.docTypes || [];
       mdocMaxMb = res.maxFileMb || mdocMaxMb;
       renderMentorDocRows(res.documents || []);
@@ -782,7 +783,7 @@
       }
       var c1 = document.createElement("td"); c1.textContent = d.docType || "";
       var c2 = document.createElement("td"); c2.textContent = d.uploadedBy || "—";
-      var c3 = document.createElement("td"); c3.textContent = fmtDocDate(d.uploadedAt);
+      var c3 = document.createElement("td"); c3.textContent = fmtDocDate(d.uploadedAt); c3.setAttribute("data-sort", d.uploadedAt || "");
       var c4 = document.createElement("td"); c4.className = "ma__doc-acts";
       ["View", "Download", "Open in Drive", archived ? "Restore" : "Archive"].forEach(function (label) {
         var b = document.createElement("button");
@@ -816,6 +817,7 @@
       tr.appendChild(c0); tr.appendChild(c1); tr.appendChild(c2); tr.appendChild(c3); tr.appendChild(c4);
       body.appendChild(tr);
     });
+    var grid = $("mdocTable")._grid; if (grid) grid.refresh();
   }
 
   // Archive/Restore with the product's two-step confirm (the Details-tab

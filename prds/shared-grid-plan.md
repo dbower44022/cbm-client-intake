@@ -1,6 +1,6 @@
 # Shared grid, divider and loading spinner — plan
 
-Last Updated: 10-28-26 16:36 · Revision 0.7 — change log at the end.
+Last Updated: 10-28-26 20:33 · Revision 0.8 — change log at the end.
 
 **Status: approved 10-27-26; stops 1–3 built as v0.294.0; live-passed on crm-test 10-28-26 00:23**
 (https://claude.ai/artifact/AWjNEvmyq7mrwLVyDd2yJF).
@@ -172,19 +172,52 @@ Review and Recipients sort through it; a CRM without it sorts by one column.
    10-28-26 16:33 (https://claude.ai/artifact/Gf8B5gXMmDLgUwZZ1dAjTS), as an
    administrator and as Mark Marketing.
 
+## 9. Rollout 2 — Mentor Administration (drafted 10-28-26)
+
+Doug, 10-28-26: option 1, Mentor Administration next.
+
+**The grids.** Mentor Administration loads the whole roster into the
+browser, so every grid sorts in the browser; no route changes and no CRM
+change.
+
+- **The roster** (`mentorTable`, the list screen) — 11 columns, one-column
+  sort today. It gets resizable columns, shaded rows and a sort on several
+  columns. The page's search and three filters stay as they are; the sort
+  is applied after them, through `CBMGrid.sortBy` with the page's own
+  values, so *Unlimited* still sorts above every number in Available and a
+  blank count still sorts last. The default sort stays Mentor A–Z.
+- **The Update Mentor Status results** (the table in its window) — 6
+  columns, no sort today; it gets the shared grid.
+- **A mentor's Documents tab** (`mdocTable`) — File, Type, Uploaded by,
+  Uploaded; the action column never sorts.
+
+**Spinners.** The roster, the mentor's record and the Documents list show
+the spinner over themselves while they load (`CBMBusy.loading`).
+
+**No divider.** No screen has a preview pane; a row opens the mentor's
+record in place, as today.
+
+**Stops.** Work pauses after each for Doug's go-ahead.
+
+1. **Build** — the three grids and the spinners, the old sort code
+   removed, tests, and a check in the local harness.
+2. **Documents, version and the live pass** on crm-test as a member of the
+   Mentor Administration Team, with a results page.
+
 ## Revision control
 
 | Field | Value |
 |---|---|
 | Document | Shared grid, divider and loading spinner — plan |
-| Version | 0.7 |
-| Last Updated | 10-28-26 16:36 |
+| Version | 0.8 |
+| Last Updated | 10-28-26 20:33 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.8 | 10-28-26 20:33 | Claude (Claude Code) | § 9 rollout 2, Mentor Administration, drafted for approval. |
 | 0.7 | 10-28-26 16:36 | Claude (Claude Code) | § 8: rollout 1 live-passed on crm-test. |
 | 0.6 | 10-28-26 16:12 | Claude (Claude Code) | § 8: stop 2 built (v0.296.0); stop 3's documents done, the live pass owed. |
 | 0.5 | 10-28-26 13:20 | Claude (Claude Code) | § 8: the decision for Leads and Review — the CRM sorted-list endpoint, measured on crm-test; stop 1 built. |

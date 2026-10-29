@@ -105,3 +105,40 @@ def test_the_divider_is_reachable_by_keyboard():
     assert '"ArrowLeft"' in js and '"ArrowRight"' in js and '"dblclick"' in js
     grid = (SHARED / "grid.js").read_text()
     assert 'h.setAttribute("role", "separator")' in grid and "h.tabIndex = 0" in grid
+
+
+# --- rollout 2: Mentor Administration (plan § 9) ------------------------------
+
+MENTORADMIN = SHARED.parent.parent / "mentoradmin" / "frontend"
+
+
+def test_mentor_administration_loads_the_grid_and_fits_its_three_grids():
+    page = (MENTORADMIN / "index.html").read_text()
+    js = (MENTORADMIN / "app.js").read_text()
+    assert page.index("/shared/busy.js") < page.index("/shared/grid.js") < page.index('src="app.js"')
+    assert "/shared/grid.css" in page
+    # The old one-column sort is gone; every roster heading names its column.
+    assert "is-sortable" not in page and "data-sort=" not in page
+    assert page.count('<th data-col="') == 11
+    for key in ("mentoradmin.roster", "mentoradmin.verify", "mentoradmin.documents"):
+        assert f'"{key}"' in js
+    assert "sortKey" not in js and "updateSortIndicators" not in js
+
+
+def test_the_roster_sorts_unlimited_above_every_number_and_blanks_last():
+    js = (MENTORADMIN / "app.js").read_text()
+    start = js.index("  function sortVal(m, k) {")
+    fn = js[start:js.index("\n  }\n", start) + 4]
+    rows = [
+        {"name": "a", "availableCapacity": 2},
+        {"name": "b", "availableCapacity": -1},
+        {"name": "c", "availableCapacity": None},
+        {"name": "d", "availableCapacity": 5},
+    ]
+    got = _node(fn + f"""
+const rows = {json.dumps(rows)};
+const up = G.sortBy(rows, [{{col: "availableCapacity", dir: "asc"}}], sortVal).map(r => r.name);
+const down = G.sortBy(rows, [{{col: "availableCapacity", dir: "desc"}}], sortVal).map(r => r.name);
+console.log(JSON.stringify({{up, down}}));
+""")
+    assert got == {"up": ["a", "d", "b", "c"], "down": ["b", "d", "a", "c"]}
