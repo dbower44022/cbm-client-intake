@@ -1,6 +1,6 @@
 # Shared grid, divider and loading spinner — plan
 
-Last Updated: 10-28-26 23:51 · Revision 1.6 — change log at the end.
+Last Updated: 10-28-26 23:58 · Revision 1.7 — change log at the end.
 
 **Status: approved 10-27-26; stops 1–3 built as v0.294.0; live-passed on crm-test 10-28-26 00:23**
 (https://claude.ai/artifact/AWjNEvmyq7mrwLVyDd2yJF).
@@ -294,19 +294,57 @@ load. **No divider:** a row opens the engagement in a window, as today.
    crm-test as
    a member of the Client Administration Team or Doug, with a results page.
 
+## 12. Rollout 5 — every remaining grid (drafted 10-28-26)
+
+Doug, 10-28-26: "Lets complete these all, so the grids are consistent
+everywhere." Every table not yet on the shared grid, found by a sweep of
+every served page (10-28-26 23:56):
+
+- **Submission Admin** (`ops/`) — its submission queue and any other
+  table on the page.
+- **The Workspace Directories** (`directory/`) — the directory grids and
+  the record pages' tables.
+- **My Email** (`myemail/`) — the inbox.
+- **Event Administration** (`events/`) — its three tables.
+- **System Settings** (`setup/`) — its tables (settings, jobs, the
+  environment diff).
+- **Analytics** — the *rows* panels (`frontend/shared/charts.js`), which
+  every dashboard and every record's Analytics tab draws.
+
+The same rules as §§ 9–11: the shared grid, the page's own sort removed,
+rows ordered from their data where a cell holds a control, blanks last,
+spinners over grids that wait on the server, no button disabled. A table
+that is a form laid out in rows (inputs per row, no list to scan) gets
+the resizing and shading but no sort, as the Contacts tables did. A grid
+whose rows are paged by the server gets a server sort or, where the
+server cannot sort, one column with the reason on the heading.
+
+**Built by three subagents in parallel**, each owning separate folders and
+its own test file, so none touches another's files: (A) Submission Admin;
+(B) the Directories and My Email; (C) Event Administration, System
+Settings and the Analytics panels. None changes the shared grid itself;
+a change it needs is reported to Claude.
+
+**Stops.**
+
+1. **Build** (the three subagents), each with tests and a local check.
+2. **Review, version, documents** (Claude), then Doug's push.
+3. **The live pass** on crm-test across all six, with one results page.
+
 ## Revision control
 
 | Field | Value |
 |---|---|
 | Document | Shared grid, divider and loading spinner — plan |
-| Version | 1.6 |
-| Last Updated | 10-28-26 23:51 |
+| Version | 1.7 |
+| Last Updated | 10-28-26 23:58 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.7 | 10-28-26 23:58 | Claude (Claude Code) | § 12 rollout 5, every remaining grid (Doug: complete them all). |
 | 1.6 | 10-28-26 23:51 | Claude (Claude Code) | § 11: rollout 4 live-passed on crm-test. |
 | 1.5 | 10-28-26 23:27 | Claude (Claude Code) | § 11: built by a subagent and reviewed (v0.299.0); Doug: run both stops. |
 | 1.4 | 10-28-26 22:25 | Claude (Claude Code) | § 11 rollout 4, Client Administration, drafted for approval. |
