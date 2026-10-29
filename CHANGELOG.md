@@ -5,6 +5,23 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.297.0] — 2026-10-28
+
+**feat: the shared grid on Mentor Administration** (rollout 2,
+`prds/shared-grid-plan.md` § 9). No switch; no migration; no CRM change.
+
+- **The roster** sorts on several columns (shift-click adds one), with
+  resizable columns and shaded rows; the search and filters are unchanged.
+  *Unlimited* still sorts above every number in Available, and a blank count
+  sorts last either way. The sort is remembered in the browser.
+- **The Update Mentor Status results** and **a mentor's Documents** get the
+  same grid; the Documents action column never sorts.
+- **Spinners** over the roster, the mentor's record and the Documents list
+  while they load.
+- **Fixed:** the Documents action cell was a flex box, so it did not fill its
+  row; and *Open in Drive* was disabled when a file had no Drive address —
+  it now stays clickable and says why it cannot open.
+
 ## [0.296.0] — 2026-10-28
 
 **feat: the shared grid on the rest of Marketing Management** (rollout 1,

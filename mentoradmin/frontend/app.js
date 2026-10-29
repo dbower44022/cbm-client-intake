@@ -798,13 +798,13 @@
           b.title = "Download the original file — open it with the application installed for its type";
           b.addEventListener("click", function () { downloadMdoc(d); });
         } else if (label === "Open in Drive") {
-          if (d.webViewLink) {
-            b.addEventListener("click", function () {
-              window.open(d.webViewLink, "_blank", "noopener");
-            });
-          } else {
-            b.disabled = true;
-          }
+          // Never disabled: with no Drive address the press says why.
+          b.addEventListener("click", function () {
+            if (d.webViewLink) { window.open(d.webViewLink, "_blank", "noopener"); return; }
+            var err = $("mdocError");
+            err.textContent = "“" + (d.filename || "This file") + "” has no Google Drive address on record, so it cannot be opened in Drive. Use View or Download instead.";
+            show(err);
+          });
         } else if (label === "Archive" || label === "Restore") {
           var action = archived ? "restore" : "archive";
           b.title = archived

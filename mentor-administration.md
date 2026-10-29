@@ -21,7 +21,10 @@ The landing screen lists every mentor. You can:
 
 - **Search** by name, email, expertise, or focus area.
 - **Filter** by mentoring status, **Record** (completeness) status, or mentor type.
-- **Sort** by any column.
+- **Sort** by any column; **shift-click** another heading to sort by it next
+  (the headings show 1, 2, …), and *Clear sort* goes back to Mentor A–Z.
+  Drag a heading's right edge to widen a column; *Reset columns* undoes it.
+  Your sort and widths are remembered in this browser.
 
 Columns: **Mentor · Mentor Email · Record · Status · Type · Created · Active
 Clients · Max Clients · Available · Assigned (30d) · Lifetime**.

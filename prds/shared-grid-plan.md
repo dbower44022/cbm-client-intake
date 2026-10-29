@@ -1,6 +1,6 @@
 # Shared grid, divider and loading spinner — plan
 
-Last Updated: 10-28-26 20:33 · Revision 0.8 — change log at the end.
+Last Updated: 10-28-26 20:45 · Revision 0.9 — change log at the end.
 
 **Status: approved 10-27-26; stops 1–3 built as v0.294.0; live-passed on crm-test 10-28-26 00:23**
 (https://claude.ai/artifact/AWjNEvmyq7mrwLVyDd2yJF).
@@ -199,24 +199,26 @@ record in place, as today.
 
 **Stops.** Work pauses after each for Doug's go-ahead.
 
-1. **Build** — the three grids and the spinners, the old sort code
+1. **Build** (built 10-28-26) — the three grids and the spinners, the old sort code
    removed, tests, and a check in the local harness.
 2. **Documents, version and the live pass** on crm-test as a member of the
-   Mentor Administration Team, with a results page.
+   Mentor Administration Team, with a results page. v0.297.0; also makes
+   *Open in Drive* clickable with a reason (Doug's go, 10-28-26).
 
 ## Revision control
 
 | Field | Value |
 |---|---|
 | Document | Shared grid, divider and loading spinner — plan |
-| Version | 0.8 |
-| Last Updated | 10-28-26 20:33 |
+| Version | 0.9 |
+| Last Updated | 10-28-26 20:45 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.9 | 10-28-26 20:45 | Claude (Claude Code) | § 9: stop 1 built; v0.297.0. |
 | 0.8 | 10-28-26 20:33 | Claude (Claude Code) | § 9 rollout 2, Mentor Administration, drafted for approval. |
 | 0.7 | 10-28-26 16:36 | Claude (Claude Code) | § 8: rollout 1 live-passed on crm-test. |
 | 0.6 | 10-28-26 16:12 | Claude (Claude Code) | § 8: stop 2 built (v0.296.0); stop 3's documents done, the live pass owed. |

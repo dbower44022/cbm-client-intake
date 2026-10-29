@@ -1237,6 +1237,10 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
+- **v0.297.0 (2026-10-28) — the shared grid on Mentor Administration**
+  (`prds/shared-grid-plan.md` § 9): the roster, the status sweep's results
+  and the Documents tab; Open in Drive no longer disabled. No CRM change.
+  Committed, **not pushed; live pass owed**.
 - **v0.296.0 (2026-10-28) — the shared grid on the rest of Marketing
   Management** (`prds/shared-grid-plan.md` § 8): every grid there; Leads,
   Review and Recipients sort on several columns on the server, Leads and

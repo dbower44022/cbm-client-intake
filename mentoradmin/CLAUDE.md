@@ -1,6 +1,6 @@
 # mentoradmin/ — Mentor Administration
 
-Last Updated: 10-20-26 17:30 · Revision 1.0
+Last Updated: 10-28-26 20:45 · Revision 1.1
 
 Detail for the Mentor Administration application (`/mentoradmin`): the roster, the editable mentor record, completeness, provisioning and the status sweep.
 
@@ -75,10 +75,17 @@ detail screen that edits any whitelisted field on `CMentorProfile`.
   `Accepted-Provisional`, runs `reconcile_user_links`, and bulk re-syncs
   `recordStatus`. This is the staff-facing repair button for stamp drift. It
   **reports, never creates** — see the temp-password reason above.
+- **The three grids use the shared grid** (v0.297.0,
+  `prds/shared-grid-plan.md` § 9): the roster's rows are drawn by
+  `renderTable` after the search and filters and ordered by
+  `CBMGrid.sortBy` with `sortVal` (the grid only holds the keys,
+  `mentoradmin.roster`); the sweep's results and Documents sort in the
+  browser.
 - Functional reference for staff: `mentor-administration.md`.
 
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 10-28-26 20:45 | Claude (Claude Code) | The three grids on the shared grid (v0.297.0). |
 | 1.0 | 10-20-26 17:30 | Claude (Claude Code) | Created from the root `CLAUDE.md` section, word for word (Doug's approval 10-20-26). |
