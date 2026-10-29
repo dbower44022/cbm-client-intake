@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="/shared/datetime.css" />
   <link rel="stylesheet" href="/shared/address-paste.css" />
   <link rel="stylesheet" href="/shared/compose.css" />
+  <link rel="stylesheet" href="/shared/grid.css" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -136,12 +137,12 @@
       <div class="sx__dpanel" data-dpanel="sessions" hidden>
         <table class="sx__table" id="sessionsTable" hidden>
           <thead><tr>
-            <th data-sort="name">Session</th>
-            <th data-sort="status">Status</th>
-            <th data-sort="sessionType">Type</th>
-            <th data-sort="dateStart">When</th>
-            <th data-sort="duration">Duration</th>
-            <th data-sort="participants">Participants</th>
+            <th data-col="name">Session</th>
+            <th data-col="status">Status</th>
+            <th data-col="sessionType">Type</th>
+            <th data-col="dateStart">When</th>
+            <th data-col="duration">Duration</th>
+            <th data-col="participants">Participants</th>
             <th></th>
           </tr></thead>
           <tbody id="sessionsBody"></tbody>
@@ -184,12 +185,12 @@
         <p class="sx__loading" id="rclLoading" hidden>Loading…</p>
         <table class="sx__table" id="rclTable" hidden>
           <thead><tr>
-            <th data-sort="name" scope="col">Client Engagement</th>
-            <th data-sort="startDate" scope="col">Date Started</th>
-            <th data-sort="lastContact" scope="col">Last Contact</th>
-            <th data-sort="mentorName" scope="col">Assigned Mentor</th>
-            <th data-sort="contactName" scope="col">Primary Contact</th>
-            <th data-sort="totalSessions" scope="col">Sessions</th>
+            <th data-col="name" scope="col">Client Engagement</th>
+            <th data-col="startDate" scope="col">Date Started</th>
+            <th data-col="lastContact" scope="col">Last Contact</th>
+            <th data-col="mentorName" scope="col">Assigned Mentor</th>
+            <th data-col="contactName" scope="col">Primary Contact</th>
+            <th data-col="totalSessions" scope="col">Sessions</th>
           </tr></thead>
           <tbody id="rclBody"></tbody>
         </table>
@@ -213,10 +214,10 @@
         <p class="sx__loading" id="evtLoading" hidden>Loading…</p>
         <table class="sx__table" id="evtTable" hidden>
           <thead><tr>
-            <th data-sort="startsAtUtc" scope="col">Date</th>
-            <th data-sort="title" scope="col">Event</th>
-            <th data-sort="category" scope="col">Topic</th>
-            <th data-sort="attendees" scope="col">Who attended</th>
+            <th data-col="startsAtUtc" scope="col">Date</th>
+            <th data-col="title" scope="col">Event</th>
+            <th data-col="category" scope="col">Topic</th>
+            <th data-col="attendees" scope="col">Who attended</th>
           </tr></thead>
           <tbody id="evtBody"></tbody>
         </table>
@@ -241,12 +242,12 @@
         <div class="ctb__tiles" id="speTiles" hidden></div>
         <table class="sx__table" id="speTable" hidden>
           <thead><tr>
-            <th data-sort="startsAtUtc" scope="col">Date</th>
-            <th data-sort="title" scope="col">Event</th>
-            <th data-sort="status" scope="col">Status</th>
-            <th data-sort="registered" scope="col">Registered</th>
-            <th data-sort="attended" scope="col">Attended</th>
-            <th data-sort="clients" scope="col">Became clients</th>
+            <th data-col="startsAtUtc" scope="col">Date</th>
+            <th data-col="title" scope="col">Event</th>
+            <th data-col="status" scope="col">Status</th>
+            <th data-col="registered" scope="col">Registered</th>
+            <th data-col="attended" scope="col">Attended</th>
+            <th data-col="clients" scope="col">Became clients</th>
           </tr></thead>
           <tbody id="speBody"></tbody>
         </table>
@@ -317,14 +318,14 @@
         </div>
         <table class="sx__table" id="ctbTable" hidden>
           <thead><tr>
-            <th data-sort="name" scope="col">Contribution</th>
-            <th data-sort="contributionType" scope="col">Type</th>
-            <th data-sort="status" scope="col">Status</th>
-            <th data-sort="amount" scope="col">Amount</th>
-            <th data-sort="expectedPaymentDate" scope="col">Expected</th>
-            <th data-sort="receivedDate" scope="col">Received</th>
-            <th data-sort="giftType" scope="col">Gift type</th>
-            <th data-sort="acknowledgmentSent" scope="col">Ack’d</th>
+            <th data-col="name" scope="col">Contribution</th>
+            <th data-col="contributionType" scope="col">Type</th>
+            <th data-col="status" scope="col">Status</th>
+            <th data-col="amount" scope="col">Amount</th>
+            <th data-col="expectedPaymentDate" scope="col">Expected</th>
+            <th data-col="receivedDate" scope="col">Received</th>
+            <th data-col="giftType" scope="col">Gift type</th>
+            <th data-col="acknowledgmentSent" scope="col">Ack’d</th>
             <th scope="col"></th>
           </tr></thead>
           <tbody id="ctbBody"></tbody>
@@ -358,12 +359,12 @@
         <p class="ctb__recency" id="grtRecency" hidden></p>
         <table class="sx__table" id="grtTable" hidden>
           <thead><tr>
-            <th data-sort="name" scope="col">Grant</th>
-            <th data-sort="grantStatus" scope="col">Status</th>
-            <th data-sort="awardAmount" scope="col">Award</th>
-            <th data-sort="periodStart" scope="col">Period</th>
-            <th data-sort="reportDue" scope="col">Next report</th>
-            <th data-sort="deliverables" scope="col">Deliverables</th>
+            <th data-col="name" scope="col">Grant</th>
+            <th data-col="grantStatus" scope="col">Status</th>
+            <th data-col="awardAmount" scope="col">Award</th>
+            <th data-col="periodStart" scope="col">Period</th>
+            <th data-col="reportDue" scope="col">Next report</th>
+            <th data-col="deliverables" scope="col">Deliverables</th>
             <th scope="col"></th>
           </tr></thead>
           <tbody id="grtBody"></tbody>
@@ -675,6 +676,7 @@
   <!-- busy.js first: it wraps fetch/XHR, so it must be in place before any
        other script can start a request. -->
   <script src="/shared/busy.js"></script>
+  <script src="/shared/grid.js"></script>
   <script src="/shared/phone-format.js"></script>
   <script src="/shared/quickmail.js"></script>
   <script src="/shared/vendor/jodit/jodit.min.js"></script>

@@ -348,6 +348,9 @@
 
     function refresh() {
       addHandles();
+      // A page that rebuilt its heading row lost the widths set on it.
+      var first = heads()[0];
+      if (Object.keys(state.widths).length && first && !first.style.width) applyStoredWidths();
       paintHeads();
       paintStatus();
       sortRows();

@@ -16,6 +16,8 @@
 .cbm-grid__handle:focus-visible { outline: none; }
 .cbm-grid__status { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .9rem; padding: .4rem .75rem; font-size: .84rem; color: #4B5563; }
 .cbm-grid__status[hidden] { display: none !important; }
+/* A grid the page has hidden (no rows yet) takes its status line with it. */
+table.cbm-grid[hidden] + .cbm-grid__status { display: none !important; }
 .cbm-grid__link { font: inherit; background: none; border: 0; padding: 0; color: var(--cbm-blue-dark, #045CB4); cursor: pointer; text-decoration: underline; }
 .cbm-grid__link[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) { .cbm-grid * { transition: none !important; } }

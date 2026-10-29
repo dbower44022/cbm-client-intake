@@ -5,6 +5,30 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.298.0] — 2026-10-28
+
+**feat: the shared grid on Client, Partner and Funder Management** (rollout
+3, `prds/shared-grid-plan.md` § 10). One shared frontend, so all three at
+once. No switch; no migration; no CRM change.
+
+- **Every grid** — the record list, Sessions, Communications, Documents, a
+  session's attendees, Events, Referred Clients, Campaigns, Contributions
+  and its totals by period, Grants and a grant's Deliverables — has
+  resizable columns, shaded rows and sorting on several columns
+  (shift-click adds one), remembered per browser. The application's own
+  one-column sort and drag grips are gone.
+- **Changed:** the first click on a date column now sorts oldest first,
+  as on every other screen; the second click reverses it.
+- **The Contacts tables** on the Details tab resize and shade but do not
+  sort — a contact's Edit opens its form as the next row.
+- **Spinners** over the record list and each tab's grid while they load.
+- **Fixed:** *Open in Drive* was disabled when a file had no Drive address
+  — it now stays clickable and says why; the Documents action cell fills
+  its row.
+- **The shared grid** keeps its column widths when a page rebuilds the
+  heading row (the Leads grid lost them on every load), and its status
+  line hides with an empty, hidden grid.
+
 ## [0.297.0] — 2026-10-28
 
 **feat: the shared grid on Mentor Administration** (rollout 2,

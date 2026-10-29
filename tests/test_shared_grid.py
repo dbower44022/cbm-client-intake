@@ -142,3 +142,25 @@ const down = G.sortBy(rows, [{{col: "availableCapacity", dir: "desc"}}], sortVal
 console.log(JSON.stringify({{up, down}}));
 """)
     assert got == {"up": ["a", "d", "b", "c"], "down": ["b", "d", "a", "c"]}
+
+
+# --- rollout 3: Client, Partner and Funder Management (plan § 10) -------------
+
+SESSIONS = SHARED.parent.parent / "sessions" / "frontend"
+
+
+def test_the_session_tools_load_the_grid_and_drop_their_own_sort():
+    page = (SESSIONS / "index.html").read_text()
+    js = (SESSIONS / "app.js").read_text()
+    css = (SESSIONS / "styles.css").read_text()
+    assert page.index("/shared/busy.js") < page.index("/shared/grid.js") < page.index('src="app.js"')
+    assert "/shared/grid.css" in page
+    assert 'data-sort="' not in page
+    for gone in ("makeColumnsResizable", "sx__col-grip", "sessionsSort =", "convSort =", "sx__th-sort"):
+        assert gone not in js and gone not in css, gone
+    for table in ("recordsTable", "sessionsTable", "inboxTable", "docsTable", "rclTable", "evtTable",
+                  "speTable", "spcTable", "ctbTable", "ctbPeriodTable", "grtTable", "grtDelivTable"):
+        assert f'"{table}"' in js, table
+    assert 'SLUG + ".attendees"' in js and 'SLUG + ".contacts.' in js
+    # Buttons are never disabled: Open in Drive explains itself instead.
+    assert "has no Google Drive address on record" in js

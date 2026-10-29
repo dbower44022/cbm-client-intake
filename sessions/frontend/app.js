@@ -82,8 +82,6 @@
   var commTrapEl = null;    // focus-trap root while the comm modal is open
   var search = "";
   var statusFilter = "";        // selected status value ("" = all)
-  var sortKey = null;           // grid column key to sort by (null = default order)
-  var sortDir = 1;              // 1 asc, -1 desc
   var recordUnread = {};        // id -> {unread:N, awaiting:bool} (async, §4.2)
   var unreadOnly = false;       // grid filter: only rows with unread mail
 
@@ -448,7 +446,7 @@
     hide($("listNotice"));
     show($("loadingState")); hide($("recordsTable")); hide($("emptyState"));
     try {
-      var res = await api("/records");
+      var res = await busyOver($("listView"), api("/records"));
       records = res.records || [];
       // The Next Session column derives ONLY from the row's real sessions:
       // soonest SCHEDULED session that is today (viewer-local) or later. The
@@ -588,36 +586,59 @@
     });
   }
 
-  function setSort(key) {
-    if (sortKey === key) { sortDir = -sortDir; } else { sortKey = key; sortDir = 1; }
-    renderTable();
+  // --- the shared grid (prds/shared-grid-plan.md § 10) ----------------------
+  // Every grid here has all its rows in the browser. A grid drawn from an
+  // array passes its painter as repaint and orders its rows with gridOrder;
+  // a grid whose cells say it all is sorted in place (gridRefresh after a
+  // paint). Sort and widths are remembered per browser, per application.
+  var sharedGrids = {};
+  function fitGrid(id, key, repaint, sort) {
+    var t = $(id);
+    if (!t || !window.CBMGrid) return null;
+    if (!sharedGrids[id]) {
+      sharedGrids[id] = CBMGrid.enhance(t, { key: SLUG + "." + key, sort: sort || [],
+        onSort: repaint ? function () { repaint(); } : undefined });
+    }
+    return sharedGrids[id];
   }
-
-  function sortRows(rows) {
-    if (!sortKey) return rows;
-    return rows.slice().sort(function (a, b) {
-      var x = a[sortKey], y = b[sortKey];
-      if (x == null || x === "") return y == null || y === "" ? 0 : 1;   // blanks last
-      if (y == null || y === "") return -1;
-      var c = String(x).localeCompare(String(y), undefined, { numeric: true, sensitivity: "base" });
-      return c * sortDir;
+  function gridOrder(id, list, val) {
+    var g = sharedGrids[id], keys = g ? g.keys() : [];
+    if (!keys.length) return list;
+    return CBMGrid.sortBy(list, keys, function (r, col) {
+      var v = val(r, col);
+      return v === "" || v === undefined ? null : v;
     });
   }
+  // A spinner over a grid's panel (or any element) while it waits on the server.
+  function busyOver(el, promise) {
+    if (typeof el === "string") { var t = $(el); el = t && t.parentElement; }
+    return window.CBMBusy && CBMBusy.loading && el ? CBMBusy.loading(el, promise) : promise;
+  }
+  function gridRefresh(id) { if (sharedGrids[id]) sharedGrids[id].refresh(); }
+
+  // The record list's heading follows the domain's columns; it is rebuilt
+  // only when they change, so the grid keeps its handles and widths.
+  var recordsHeadSig = "";
+  function recordSortVal(r, col) { return r[col] == null ? "" : r[col]; }
 
   function renderTable() {
     var cols = allColumns();
-    var head = $("recordsHead"); head.innerHTML = "";
-    var htr = document.createElement("tr");
-    cols.forEach(function (c) {
-      var th = document.createElement("th"); th.className = "sx__th-sort";
-      th.textContent = c.label;
-      if (sortKey === c.key) { var ind = document.createElement("span"); ind.className = "sx__sortind"; ind.textContent = sortDir > 0 ? " ▲" : " ▼"; th.appendChild(ind); th.setAttribute("aria-sort", sortDir > 0 ? "ascending" : "descending"); }
-      onActivate(th, function () { setSort(c.key); });
-      htr.appendChild(th);
-    });
-    head.appendChild(htr);
+    var sig = cols.map(function (c) { return c.key + ":" + c.label; }).join("|");
+    if (sig !== recordsHeadSig) {
+      recordsHeadSig = sig;
+      var head = $("recordsHead"); head.innerHTML = "";
+      var htr = document.createElement("tr");
+      cols.forEach(function (c) {
+        var th = document.createElement("th"); th.scope = "col";
+        th.textContent = c.label; th.setAttribute("data-col", c.key);
+        htr.appendChild(th);
+      });
+      head.appendChild(htr);
+      if (sharedGrids.recordsTable) gridRefresh("recordsTable");
+      else fitGrid("recordsTable", "records", renderTable);
+    }
 
-    var rows = sortRows(records.filter(matches));
+    var rows = gridOrder("recordsTable", records.filter(matches), recordSortVal);
     $("count").textContent = records.length ? "Showing " + rows.length + " of " + records.length : "";
     var tb = $("recordsBody"); tb.innerHTML = "";
     if (!rows.length) { show($("emptyState")); hide($("recordsTable")); return; }
@@ -1668,7 +1689,7 @@
     $("docsBody").innerHTML = "";
     $("noDocs").textContent = "Loading documents…"; show($("noDocs")); hide($("docsTable"));
     try {
-      var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/documents" + docListQuery());
+      var res = await busyOver("docsTable", api("/records/" + encodeURIComponent(currentDetail.id) + "/documents" + docListQuery()));
       docTypes = res.docTypes || [];
       docMaxMb = res.maxFileMb || docMaxMb;
       renderDocumentRows(res.documents || []);
@@ -1713,7 +1734,7 @@
       if (d.changedInDrive) c0.appendChild(tag("Updated in Drive", "flag"));
       var c1 = document.createElement("td"); if (d.docType) c1.appendChild(tag(d.docType, "type"));
       var c2 = document.createElement("td"); c2.textContent = d.uploadedBy || "—";
-      var c3 = document.createElement("td"); c3.textContent = fmtSessionDate(d.uploadedAt, "short");
+      var c3 = document.createElement("td"); c3.textContent = fmtSessionDate(d.uploadedAt, "short"); c3.setAttribute("data-sort", d.uploadedAt || "");
       var c4 = document.createElement("td"); c4.className = "sx__doc-acts";
       ["View", "Download", "Open in Drive", archived ? "Restore" : "Archive"].forEach(function (label) {
         var b = document.createElement("button");
@@ -1728,13 +1749,11 @@
           b.title = "Download the original file — open it with the application installed for its type";
           b.addEventListener("click", function () { downloadDoc(d); });
         } else if (label === "Open in Drive") {
-          if (d.webViewLink) {
-            b.addEventListener("click", function () {
-              window.open(d.webViewLink, "_blank", "noopener");
-            });
-          } else {
-            b.disabled = true;
-          }
+          // Never disabled: with no Drive address the press says why.
+          b.addEventListener("click", function () {
+            if (d.webViewLink) { window.open(d.webViewLink, "_blank", "noopener"); return; }
+            notice("docsNotice", "“" + (d.filename || "This file") + "” has no Google Drive address on record, so it cannot be opened in Drive. Use View or Download instead.", "error");
+          });
         } else if (label === "Archive" || label === "Restore") {
           var action = archived ? "restore" : "archive";
           b.title = archived
@@ -1747,7 +1766,9 @@
       tr.appendChild(c0); tr.appendChild(c1); tr.appendChild(c2); tr.appendChild(c3); tr.appendChild(c4);
       body.appendChild(tr);
     });
+    gridRefresh("docsTable");
   }
+  fitGrid("docsTable", "documents");
 
   // Archive/Restore with the product's two-step confirm (the Details-tab
   // Remove precedent): first click arms the button, second click acts;
@@ -2005,11 +2026,8 @@
 
   function commsOn() { return !!(config && config.commsEnabled); }
 
-  // Conversation-list sorting + resizing — same capabilities as the Sessions
-  // grid (v0.72.0): sortable headers (first click sorts, dates newest-first;
-  // second reverses) and drag-to-resize column grips. The head is built once
-  // and kept across tab revisits so resized widths survive.
-  var convSort = { key: null, dir: 1 };
+  // The conversation list is a shared grid; its head is built once and kept
+  // across tab revisits so the widths survive.
   var convRows = [];
   var CONV_COLUMNS = [
     { key: "status", label: "Status" },
@@ -2025,20 +2043,11 @@
     head.innerHTML = "";
     CONV_COLUMNS.forEach(function (c) {
       var th = document.createElement("th");
-      th.scope = "col"; th.textContent = c.label;
-      th.className = "sx__th-sort"; th.setAttribute("data-sort", c.key);
-      onActivate(th, function () {
-        if (convSort.key === c.key) {
-          convSort.dir = -convSort.dir;
-        } else {
-          convSort.key = c.key;
-          convSort.dir = c.key === "lastMessageAt" ? -1 : 1;
-        }
-        renderConversationRows(convRows);
-      });
+      th.scope = "col"; th.textContent = c.label; th.setAttribute("data-col", c.key);
       head.appendChild(th);
     });
-    makeColumnsResizable($("inboxTable"));
+    if (sharedGrids.inboxTable) gridRefresh("inboxTable");
+    else fitGrid("inboxTable", "conversations", function () { renderConversationRows(convRows); });
   }
 
   function renderComms() {
@@ -2063,7 +2072,7 @@
     var body = $("inboxBody"); body.innerHTML = "";
     $("noMessages").textContent = "Loading conversations…"; show($("noMessages")); hide($("inboxTable"));
     try {
-      var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/conversations");
+      var res = await busyOver("inboxTable", api("/records/" + encodeURIComponent(currentDetail.id) + "/conversations"));
       convRows = res.conversations || [];
       renderConversationRows(convRows);
     } catch (e) {
@@ -2078,30 +2087,14 @@
     return (c[k] || "").toString().toLowerCase();
   }
 
-  function updateConvSortIndicators() {
-    Array.prototype.forEach.call(document.querySelectorAll("#inboxTable th[data-sort]"), function (th) {
-      var active = th.getAttribute("data-sort") === convSort.key;
-      th.setAttribute("aria-sort", active ? (convSort.dir === 1 ? "ascending" : "descending") : "none");
-      th.dataset.dir = active ? (convSort.dir === 1 ? "asc" : "desc") : "";
-    });
-  }
-
   function renderConversationRows(rows) {
     var body = $("inboxBody"); body.innerHTML = "";
-    updateConvSortIndicators();
     if (!rows.length) {
       $("noMessages").textContent = "No email conversations found for this record yet.";
       show($("noMessages")); hide($("inboxTable")); return;
     }
     hide($("noMessages")); show($("inboxTable"));
-    rows = rows.slice();
-    if (convSort.key) {
-      var k = convSort.key, dir = convSort.dir;
-      rows.sort(function (a, b) {
-        var va = convSortVal(a, k), vb = convSortVal(b, k);
-        return (va < vb ? -1 : va > vb ? 1 : 0) * dir;
-      });
-    }
+    rows = gridOrder("inboxTable", rows.slice(), convSortVal);
     rows.forEach(function (c) {
       var tr = document.createElement("tr");
       // Unread (this user hasn't opened it since the last message) reads bold
@@ -4103,7 +4096,9 @@
       ? ["Name"].concat(showRole ? ["Role"] : [], ["Phone", "Email", "City", "Contact via"],
                         showAgreements ? ["Agreements"] : [], [""])
       : ["Name", "Role", "Phone", "Email", "Contact via", ""];
-    cols.forEach(function (c) { var th = document.createElement("th"); th.textContent = c; htr.appendChild(th); });
+    // No sorting here: a contact's Edit opens its form as the next row, and a
+    // sort would separate the two (prds/shared-grid-plan.md § 10).
+    cols.forEach(function (c) { var th = document.createElement("th"); th.textContent = c; th.setAttribute("data-sortable", "false"); htr.appendChild(th); });
     thead.appendChild(htr); table.appendChild(thead);
     var tb = document.createElement("tbody");
     items.forEach(function (item, i) {
@@ -4166,6 +4161,7 @@
       }
     });
     table.appendChild(tb); wrap.appendChild(table);
+    if (window.CBMGrid) CBMGrid.enhance(table, { key: SLUG + ".contacts." + (isClient ? "client" : "cbm") });
     return wrap;
   }
 
@@ -4528,24 +4524,12 @@
     return panel;
   }
 
-  // Sessions-grid column sorting (same interaction as the Client Administration
-  // grids): first click sorts (text A→Z, dates newest-first), second reverses.
-  // Server default order (most recent first) until a header is clicked.
-  var sessionsSort = { key: null, dir: 1 };
-
+  // The Sessions grid (shared grid): the server's order (most recent first)
+  // until a heading is clicked.
   function sessionSortVal(s, k) {
     if (k === "duration") return sessionDurationSeconds(s) || 0;
-    if (k === "participants") return (s.participants || []).join(", ").toLowerCase();
-    if (k === "dateStart") return s.dateStart || "";  // UTC stamps compare as strings
-    return (s[k] || "").toString().toLowerCase();
-  }
-
-  function updateSessionsSortIndicators() {
-    Array.prototype.forEach.call(document.querySelectorAll("#sessionsTable th[data-sort]"), function (th) {
-      var active = th.getAttribute("data-sort") === sessionsSort.key;
-      th.setAttribute("aria-sort", active ? (sessionsSort.dir === 1 ? "ascending" : "descending") : "none");
-      th.dataset.dir = active ? (sessionsSort.dir === 1 ? "asc" : "desc") : "";
-    });
+    if (k === "participants") return (s.participants || []).join(", ");
+    return s[k] == null ? "" : s[k];
   }
 
   function renderSessions(d) {
@@ -4553,14 +4537,7 @@
     var tb = $("sessionsBody"); tb.innerHTML = "";
     $("noSessions").hidden = list.length > 0;
     $("sessionsTable").hidden = list.length === 0;
-    updateSessionsSortIndicators();
-    if (sessionsSort.key) {
-      var k = sessionsSort.key, dir = sessionsSort.dir;
-      list.sort(function (a, b) {
-        var va = sessionSortVal(a, k), vb = sessionSortVal(b, k);
-        return (va < vb ? -1 : va > vb ? 1 : 0) * dir;
-      });
-    }
+    list = gridOrder("sessionsTable", list, sessionSortVal);
     list.forEach(function (s) {
       var tr = document.createElement("tr");
       var nameCell = document.createElement("td");
@@ -4582,58 +4559,8 @@
   }
   function td(text) { var c = document.createElement("td"); c.textContent = text; return c; }
 
-  Array.prototype.forEach.call(
-    document.querySelectorAll("#sessionsTable th[data-sort]"),
-    function (th) {
-      th.classList.add("sx__th-sort");
-      onActivate(th, function () {
-        var key = th.getAttribute("data-sort");
-        if (sessionsSort.key === key) {
-          sessionsSort.dir = -sessionsSort.dir;
-        } else {
-          sessionsSort.key = key;
-          sessionsSort.dir = key === "dateStart" ? -1 : 1;
-        }
-        if (currentDetail) renderSessions(currentDetail);
-      });
-    }
-  );
+  fitGrid("sessionsTable", "sessions", function () { if (currentDetail) renderSessions(currentDetail); });
 
-  // Draggable column resizing: a slim grip on each sortable header's right
-  // edge. The first drag freezes the current widths (table-layout: fixed) so
-  // resizing one column doesn't reflow the rest; widths live on the th
-  // elements, so they survive re-renders (only the tbody is rebuilt).
-  function makeColumnsResizable(table) {
-    var ths = table.querySelectorAll("thead th[data-sort]");
-    var all = table.querySelectorAll("thead th");
-    Array.prototype.forEach.call(ths, function (th) {
-      var grip = document.createElement("span");
-      grip.className = "sx__col-grip";
-      grip.setAttribute("aria-hidden", "true");
-      grip.addEventListener("click", function (e) { e.stopPropagation(); });  // never sort
-      grip.addEventListener("mousedown", function (e) {
-        e.preventDefault(); e.stopPropagation();
-        if (!table.classList.contains("sx__table--resized")) {
-          Array.prototype.forEach.call(all, function (t) {
-            t.style.width = t.getBoundingClientRect().width + "px";
-          });
-          table.classList.add("sx__table--resized");
-        }
-        var startX = e.clientX, startW = th.getBoundingClientRect().width;
-        function move(ev) { th.style.width = Math.max(60, startW + ev.clientX - startX) + "px"; }
-        function up() {
-          document.removeEventListener("mousemove", move);
-          document.removeEventListener("mouseup", up);
-          document.body.classList.remove("sx__col-resizing");
-        }
-        document.addEventListener("mousemove", move);
-        document.addEventListener("mouseup", up);
-        document.body.classList.add("sx__col-resizing");
-      });
-      th.appendChild(grip);
-    });
-  }
-  makeColumnsResizable($("sessionsTable"));
 
   // --- Referred Clients tab (partner domain only) ---------------------------
   // The client engagements that name this partner as their referring partner
@@ -4643,19 +4570,11 @@
   // it in the MENTOR domain's own record page — a stable per-record window, so
   // re-clicking reuses the tab and that page's own single-tab guard blocks a
   // genuine duplicate ("duplicate tab control").
-  var rcl = { forId: null, rows: [], status: "", search: "", sort: { key: null, dir: 1 } };
+  var rcl = { forId: null, rows: [], status: "", search: "" };
 
   function rclSortVal(r, k) {
     if (k === "totalSessions") return Number(r.totalSessions) || 0;
-    return (r[k] || "").toString().toLowerCase();
-  }
-
-  function updateRclSortIndicators() {
-    Array.prototype.forEach.call(document.querySelectorAll("#rclTable th[data-sort]"), function (th) {
-      var active = th.getAttribute("data-sort") === rcl.sort.key;
-      th.setAttribute("aria-sort", active ? (rcl.sort.dir === 1 ? "ascending" : "descending") : "none");
-      th.dataset.dir = active ? (rcl.sort.dir === 1 ? "asc" : "desc") : "";
-    });
+    return r[k] == null ? "" : r[k];
   }
 
   // A cell whose value opens a read-only pop-up (the mentor / primary contact);
@@ -4691,14 +4610,7 @@
         .map(function (v) { return v == null ? "" : String(v); }).join(" ").toLowerCase();
       return hay.indexOf(q) >= 0;
     });
-    if (rcl.sort.key) {
-      var k = rcl.sort.key, dir = rcl.sort.dir;
-      list.sort(function (a, b) {
-        var va = rclSortVal(a, k), vb = rclSortVal(b, k);
-        return (va < vb ? -1 : va > vb ? 1 : 0) * dir;
-      });
-    }
-    updateRclSortIndicators();
+    list = gridOrder("rclTable", list, rclSortVal);
     $("rclCount").textContent = rcl.rows.length
       ? "Showing " + list.length + " of " + rcl.rows.length : "";
     var tb = $("rclBody"); tb.innerHTML = "";
@@ -4816,7 +4728,7 @@
     hide($("rclNotice")); hide($("rclTable")); hide($("noRcl"));
     show($("rclLoading"));
     try {
-      var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/referredclients");
+      var res = await busyOver("rclTable", api("/records/" + encodeURIComponent(currentDetail.id) + "/referredclients"));
       rcl.rows = res.records || [];
       refreshRclStatusFilter();
       paintRcl();
@@ -4826,19 +4738,7 @@
     } finally { hide($("rclLoading")); }
   }
 
-  Array.prototype.forEach.call(
-    document.querySelectorAll("#rclTable th[data-sort]"),
-    function (th) {
-      th.classList.add("sx__th-sort");
-      onActivate(th, function () {
-        var key = th.getAttribute("data-sort");
-        if (rcl.sort.key === key) rcl.sort.dir = -rcl.sort.dir;
-        else { rcl.sort.key = key; rcl.sort.dir = (key === "startDate" || key === "lastContact" || key === "totalSessions") ? -1 : 1; }
-        paintRcl();
-      });
-    }
-  );
-  if ($("rclTable")) makeColumnsResizable($("rclTable"));
+  fitGrid("rclTable", "referred", paintRcl);
   if ($("rclStatus")) $("rclStatus").addEventListener("change", function () { rcl.status = this.value; paintRcl(); });
   if ($("rclSearch")) $("rclSearch").addEventListener("input", function () { rcl.search = this.value; paintRcl(); });
 
@@ -4846,7 +4746,8 @@
   // Events attended across ALL of the engagement's contacts, deduplicated by
   // event, newest first, each row naming who went. The server does the rollup
   // (events/reporting.engagement_rollup); this paints it.
-  var evt = { forId: null, rows: [], search: "", sort: { key: "startsAtUtc", dir: -1 } };
+  var evt = { forId: null, rows: [], search: "" };
+  function evtSortVal(r, k) { return k === "attendees" ? (r.attendees || []).length : (r[k] == null ? "" : r[k]); }
 
   function paintEvt() {
     var rows = evt.rows.slice();
@@ -4857,13 +4758,7 @@
           .join(" ").toLowerCase().indexOf(needle) !== -1;
       });
     }
-    var key = evt.sort.key, dir = evt.sort.dir;
-    rows.sort(function (a, b) {
-      var av = key === "attendees" ? (a.attendees || []).length : (a[key] || "");
-      var bv = key === "attendees" ? (b.attendees || []).length : (b[key] || "");
-      if (av === bv) return 0;
-      return (av > bv ? 1 : -1) * dir;
-    });
+    rows = gridOrder("evtTable", rows, evtSortVal);
 
     var body = $("evtBody");
     body.innerHTML = "";
@@ -4904,7 +4799,7 @@
     hide($("evtNotice")); hide($("evtTable")); hide($("noEvt"));
     show($("evtLoading"));
     try {
-      var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/events");
+      var res = await busyOver("evtTable", api("/records/" + encodeURIComponent(currentDetail.id) + "/events"));
       evt.rows = res.events || [];
       paintEvt();
     } catch (e) {
@@ -4913,19 +4808,7 @@
     } finally { hide($("evtLoading")); }
   }
 
-  Array.prototype.forEach.call(
-    document.querySelectorAll("#evtTable th[data-sort]"),
-    function (th) {
-      th.classList.add("sx__th-sort");
-      onActivate(th, function () {
-        var key = th.getAttribute("data-sort");
-        if (evt.sort.key === key) evt.sort.dir = -evt.sort.dir;
-        else { evt.sort.key = key; evt.sort.dir = (key === "startsAtUtc" || key === "attendees") ? -1 : 1; }
-        paintEvt();
-      });
-    }
-  );
-  if ($("evtTable")) makeColumnsResizable($("evtTable"));
+  fitGrid("evtTable", "events", paintEvt, [{ col: "startsAtUtc", dir: "desc" }]);
   if ($("evtSearch")) {
     $("evtSearch").addEventListener("input", function () { evt.search = this.value; paintEvt(); });
   }
@@ -4935,20 +4818,13 @@
   // computes every number (events/reporting.sponsor_rollup); a count the CRM
   // could not supply arrives as null and renders "—", never 0. The endpoint
   // answers available:false with a reason on a CRM that lacks the link.
-  var spe = { forId: null, rows: [], totals: null, sort: { key: "startsAtUtc", dir: -1 } };
+  var spe = { forId: null, rows: [], totals: null };
 
   function speNum(v) { return v == null ? "—" : String(v); }
 
   function paintSpe() {
-    var rows = spe.rows.slice();
-    var key = spe.sort.key, dir = spe.sort.dir;
-    rows.sort(function (a, b) {
-      var av = a[key], bv = b[key];
-      if (av == null) av = key === "title" || key === "status" || key === "startsAtUtc" ? "" : -1;
-      if (bv == null) bv = key === "title" || key === "status" || key === "startsAtUtc" ? "" : -1;
-      if (av === bv) return 0;
-      return (av > bv ? 1 : -1) * dir;
-    });
+    // A count the CRM could not supply (null) sorts last, like a blank.
+    var rows = gridOrder("speTable", spe.rows.slice(), function (r, k) { return r[k] == null ? "" : r[k]; });
     var tiles = $("speTiles");
     tiles.innerHTML = "";
     var t = spe.totals || {};
@@ -4991,7 +4867,7 @@
     hide($("speUnavailable"));
     show($("speLoading"));
     try {
-      var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/sponsoredevents");
+      var res = await busyOver("speTable", api("/records/" + encodeURIComponent(currentDetail.id) + "/sponsoredevents"));
       if (res.available === false) {
         $("speUnavailable").textContent = res.reason || "Events are not available on this CRM yet.";
         show($("speUnavailable"));
@@ -5007,19 +4883,7 @@
     } finally { hide($("speLoading")); }
   }
 
-  Array.prototype.forEach.call(
-    document.querySelectorAll("#speTable th[data-sort]"),
-    function (th) {
-      th.classList.add("sx__th-sort");
-      onActivate(th, function () {
-        var key = th.getAttribute("data-sort");
-        if (spe.sort.key === key) spe.sort.dir = -spe.sort.dir;
-        else { spe.sort.key = key; spe.sort.dir = key === "title" || key === "status" ? 1 : -1; }
-        paintSpe();
-      });
-    }
-  );
-  if ($("speTable")) makeColumnsResizable($("speTable"));
+  fitGrid("speTable", "sponsoredEvents", paintSpe, [{ col: "startsAtUtc", dir: "desc" }]);
 
   // --- Campaigns tab (partner, CM-5; funder, ruling 57) -----------------------
   // The campaigns this partner or funder is named on. Counts come from the application's
@@ -5058,7 +4922,9 @@
     });
     if (spc.rows.length) { show($("spcTable")); hide($("noSpc")); }
     else { hide($("spcTable")); show($("noSpc")); }
+    gridRefresh("spcTable");
   }
+  fitGrid("spcTable", "campaigns");
 
   async function renderSponsoredCampaigns() {
     if (!currentDetail || !$("spcBody")) return;
@@ -5068,7 +4934,7 @@
     hide($("spcNotice")); hide($("spcTable")); hide($("noSpc")); hide($("spcUnavailable"));
     show($("spcLoading"));
     try {
-      var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/sponsoredcampaigns");
+      var res = await busyOver("spcTable", api("/records/" + encodeURIComponent(currentDetail.id) + "/sponsoredcampaigns"));
       if (res.available === false) {
         $("spcUnavailable").textContent = res.reason || "Campaigns are not available on this CRM yet.";
         show($("spcUnavailable"));
@@ -5092,7 +4958,7 @@
   var ctb = {
     forId: null, rows: [], summary: null, parentName: "",
     spec: null, options: {}, required: [],
-    sort: { key: null, dir: 1 }, periodMode: "half",
+    periodMode: "half",
     editing: null,        // the row being edited (null = create)
     fieldEls: {},         // field name -> input element
     snapshot: {},         // field name -> value at render (diffed on save)
@@ -5135,7 +5001,7 @@
         var f = await api("/contributionfields");
         ctb.spec = f.fields || []; ctb.options = f.options || {}; ctb.required = f.required || [];
       }
-      var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/contributions");
+      var res = await busyOver("ctbTable", api("/records/" + encodeURIComponent(currentDetail.id) + "/contributions"));
       ctb.rows = res.records || [];
       ctb.summary = res.summary || null;
       ctb.parentName = res.parentName || (currentDetail.record && currentDetail.record.name) || "";
@@ -5208,22 +5074,16 @@
       tr.appendChild(td(w.count ? String(w.count) : "—"));
       tr.appendChild(td(w.count ? ctbMoney(w.total) : "—"));
       if (!w.count) tr.className = "ctb__period-empty";
+      tr.cells[0].setAttribute("data-sort", w.start || "");
       tb.appendChild(tr);
     });
+    gridRefresh("ctbPeriodTable");
   }
 
   function ctbSortVal(r, k) {
-    if (k === "amount") return Number(r.amount) || 0;
+    if (k === "amount") return r.amount == null || r.amount === "" ? "" : Number(r.amount);
     if (k === "acknowledgmentSent") return r.acknowledgmentSent ? 1 : 0;
-    return (r[k] || "").toString().toLowerCase();
-  }
-
-  function updateCtbSortIndicators() {
-    Array.prototype.forEach.call(document.querySelectorAll("#ctbTable th[data-sort]"), function (th) {
-      var active = th.getAttribute("data-sort") === ctb.sort.key;
-      th.setAttribute("aria-sort", active ? (ctb.sort.dir === 1 ? "ascending" : "descending") : "none");
-      th.dataset.dir = active ? (ctb.sort.dir === 1 ? "asc" : "desc") : "";
-    });
+    return r[k] == null ? "" : r[k];
   }
 
   function paintCtbTable() {
@@ -5231,14 +5091,7 @@
     var tb = $("ctbBody"); tb.innerHTML = "";
     $("noCtb").hidden = list.length > 0;
     $("ctbTable").hidden = list.length === 0;
-    updateCtbSortIndicators();
-    if (ctb.sort.key) {
-      var k = ctb.sort.key, dir = ctb.sort.dir;
-      list.sort(function (a, b) {
-        var va = ctbSortVal(a, k), vb = ctbSortVal(b, k);
-        return (va < vb ? -1 : va > vb ? 1 : 0) * dir;
-      });
-    }
+    list = gridOrder("ctbTable", list, ctbSortVal);
     list.forEach(function (r) {
       var tr = document.createElement("tr");
       if (r.excluded) tr.className = "ctb__row--excluded";
@@ -5272,19 +5125,8 @@
     });
   }
 
-  Array.prototype.forEach.call(
-    document.querySelectorAll("#ctbTable th[data-sort]"),
-    function (th) {
-      th.classList.add("sx__th-sort");
-      onActivate(th, function () {
-        var key = th.getAttribute("data-sort");
-        if (ctb.sort.key === key) ctb.sort.dir = -ctb.sort.dir;
-        else { ctb.sort.key = key; ctb.sort.dir = /Date$/.test(key) || key === "amount" ? -1 : 1; }
-        paintCtbTable();
-      });
-    }
-  );
-  makeColumnsResizable($("ctbTable"));
+  fitGrid("ctbTable", "contributions", paintCtbTable);
+  fitGrid("ctbPeriodTable", "contributionPeriods");
 
   $("ctbPeriodBtn").addEventListener("click", function () {
     var p = $("ctbPeriods");
@@ -5525,7 +5367,6 @@
   // itself instead of erroring.
   var grt = {
     forId: null, rows: [], summary: null, parentName: "", available: true,
-    sort: { key: null, dir: 1 },
     editing: null,                                   // the grant being edited
     g: { spec: [], options: {}, required: [], fieldEls: {}, snapshot: {} },
     d: { spec: [], options: {}, required: [], fieldEls: {}, snapshot: {} },
@@ -5568,7 +5409,7 @@
         var d = f.deliverable || {};
         grt.d.spec = d.fields || []; grt.d.options = d.options || {}; grt.d.required = d.required || [];
       }
-      var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/grants");
+      var res = await busyOver("grtTable", api("/records/" + encodeURIComponent(currentDetail.id) + "/grants"));
       grt.available = res.available !== false;
       grt.rows = res.records || [];
       grt.summary = res.summary || null;
@@ -5630,17 +5471,9 @@
   }
 
   function grtSortVal(r, k) {
-    if (k === "awardAmount") return Number(r.awardAmount) || 0;
+    if (k === "awardAmount") return r.awardAmount == null || r.awardAmount === "" ? "" : Number(r.awardAmount);
     if (k === "deliverables") return Number(r.deliverableCount) || 0;
-    return (r[k] || "").toString().toLowerCase();
-  }
-
-  function updateGrtSortIndicators() {
-    Array.prototype.forEach.call(document.querySelectorAll("#grtTable th[data-sort]"), function (th) {
-      var active = th.getAttribute("data-sort") === grt.sort.key;
-      th.setAttribute("aria-sort", active ? (grt.sort.dir === 1 ? "ascending" : "descending") : "none");
-      th.dataset.dir = active ? (grt.sort.dir === 1 ? "asc" : "desc") : "";
-    });
+    return r[k] == null ? "" : r[k];
   }
 
   function grtPeriodText(r) {
@@ -5653,14 +5486,7 @@
     tb.innerHTML = "";
     $("noGrt").hidden = list.length > 0;
     $("grtTable").hidden = list.length === 0;
-    updateGrtSortIndicators();
-    if (grt.sort.key) {
-      var k = grt.sort.key, dir = grt.sort.dir;
-      list.sort(function (a, b) {
-        var va = grtSortVal(a, k), vb = grtSortVal(b, k);
-        return (va < vb ? -1 : va > vb ? 1 : 0) * dir;
-      });
-    }
+    list = gridOrder("grtTable", list, grtSortVal);
     list.forEach(function (r) {
       var tr = document.createElement("tr");
       if (r.excluded) tr.className = "grt__row--excluded";
@@ -5701,22 +5527,7 @@
     });
   }
 
-  Array.prototype.forEach.call(
-    document.querySelectorAll("#grtTable th[data-sort]"),
-    function (th) {
-      th.classList.add("sx__th-sort");
-      onActivate(th, function () {
-        var key = th.getAttribute("data-sort");
-        if (grt.sort.key === key) grt.sort.dir = -grt.sort.dir;
-        else {
-          grt.sort.key = key;
-          grt.sort.dir = /Date$|^period|^reportDue$/.test(key) || key === "awardAmount" ? -1 : 1;
-        }
-        paintGrtTable();
-      });
-    }
-  );
-  makeColumnsResizable($("grtTable"));
+  fitGrid("grtTable", "grants", paintGrtTable);
 
   // --- shared field builder (grant + deliverable use the same one) ----------
   // ``ctx`` is grt.g or grt.d — spec, live CRM options, required list, and the
@@ -5999,7 +5810,9 @@
       actions.appendChild(edit); tr.appendChild(actions);
       tb.appendChild(tr);
     });
+    gridRefresh("grtDelivTable");
   }
+  fitGrid("grtDelivTable", "deliverables");
 
   function syncDelivRating() {
     var typeEl = grt.d.fieldEls.deliverableType;
@@ -6611,6 +6424,7 @@
     // on a narrow window the TABLE scrolls inside the card — never the page.
     var wrap = document.createElement("div"); wrap.className = "sx__attwrap";
     wrap.appendChild(table);
+    if (window.CBMGrid) CBMGrid.enhance(table, { key: SLUG + ".attendees" });
     zone.appendChild(wrap);
     return zone;
   }

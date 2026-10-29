@@ -52,33 +52,13 @@
 .sx__table th { color: var(--cbm-slate-700, #556); font-weight: 600; }
 .sx__table tbody tr:nth-child(even) { background: #f6f8fb; }   /* zebra striping */
 .sx__table tbody tr:hover { background: #eaf1f9; }
-/* Sortable column headers. */
-.sx__th-sort { cursor: pointer; user-select: none; white-space: nowrap; }
-.sx__th-sort:hover { color: var(--cbm-navy, #123); }
-/* Sort headers are keyboard-focusable (Enter/Space to sort) — show the focus. */
-.sx__th-sort:focus-visible, .sx__table th[data-sort]:focus-visible { outline: 2px solid var(--cbm-blue, #1a5fb4); outline-offset: -2px; }
-.sx__sortind { color: var(--cbm-blue, #1a5fb4); }
-/* Sessions + Communications grids: stable theads, so the sort arrow rides
-   data-dir (set by JS) instead of an injected span; columns resize via a grip
-   on each header's right edge. Participants gets generous room by default. */
-.sx__table th[data-sort] { position: relative; }
-.sx__table th[data-dir="asc"]::after { content: " ▲"; font-size: 0.7em; color: var(--cbm-blue, #1a5fb4); }
-.sx__table th[data-dir="desc"]::after { content: " ▼"; font-size: 0.7em; color: var(--cbm-blue, #1a5fb4); }
-#sessionsTable th[data-sort="name"] { width: 22%; }
-#sessionsTable th[data-sort="participants"] { width: 28%; }
-#inboxTable th[data-sort="status"] { width: 8%; }
-#inboxTable th[data-sort="participants"] { width: 26%; }
-#inboxTable th[data-sort="lastMessageAt"] { width: 11%; }
-.sx__col-grip {
-  position: absolute; top: 0; right: -4px; width: 8px; height: 100%;
-  cursor: col-resize; user-select: none; z-index: 1;
-}
-.sx__col-grip:hover { background: rgba(26, 95, 180, 0.25); }
-body.sx__col-resizing, body.sx__col-resizing * { cursor: col-resize !important; user-select: none; }
-/* Once any column is resized, widths are frozen (fixed layout) so one column's
-   change doesn't reflow the others; long values wrap instead of overflowing. */
-.sx__table--resized { table-layout: fixed; }
-.sx__table--resized th, .sx__table--resized td { overflow-wrap: anywhere; }
+/* Sorting, resizing and the sort marks come from the shared grid
+   (/shared/grid.css). Generous default room for the wide columns. */
+#sessionsTable th[data-col="name"] { width: 22%; }
+#sessionsTable th[data-col="participants"] { width: 28%; }
+#inboxTable th[data-col="status"] { width: 8%; }
+#inboxTable th[data-col="participants"] { width: 26%; }
+#inboxTable th[data-col="lastMessageAt"] { width: 11%; }
 .sx__link {
   background: none; border: none; padding: 0; cursor: pointer;
   color: var(--cbm-blue, #1a5fb4); font: inherit; font-weight: 600; text-align: left;
@@ -861,7 +841,8 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
 .sx__doc-pending[hidden] { display: none; }
 .sx__doc-pending-name { font-weight: 600; word-break: break-all; }
 .sx__doc-type { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; }
-.sx__doc-acts { display: inline-flex; gap: 0.35rem; white-space: nowrap; }
+.sx__doc-acts { white-space: nowrap; }
+.sx__doc-acts .cbm-button + .cbm-button { margin-left: 0.35rem; }
 .sx__doc-acts .cbm-button[disabled] { opacity: 0.55; cursor: not-allowed; }
 .sx__doc-file { word-break: break-all; }
 /* DOC-07: the "Include archived" toggle + archived rows (dimmed, never gone). */

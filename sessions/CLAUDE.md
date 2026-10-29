@@ -1,6 +1,6 @@
 # sessions/ — Client, Partner and Funder Management
 
-Last Updated: 10-24-26 11:05 · Revision 1.3
+Last Updated: 10-28-26 21:28 · Revision 1.4
 
 Detail for the session engine behind Client Management (`/mentorsessions`), Partner Management (`/partnersessions`) and Funder Management (`/sponsorsessions`): the grids, every record tab, quick add, managers and co-mentors, and the traps of this package.
 
@@ -271,11 +271,19 @@ Watch for these when touching this package:
   (`ifThen(name == null || name == '', …)`) or it clobbers the supplied title.
 - **One record, one tab** — records open in a stable per-record window and a
   `BroadcastChannel` elects one owner tab ([[single-tab-record-guard]]).
+- **Every grid is the shared grid** (v0.298.0, `prds/shared-grid-plan.md`
+  § 10): `fitGrid(id, key, repaint, sort)` once per table, keyed by `SLUG`;
+  a painter that draws from an array orders its rows with
+  `gridOrder(id, rows, sortVal)` (a blank sorts last), and a table sorted in
+  place calls `gridRefresh(id)` after it paints. The record list's heading
+  is rebuilt only when the domain's columns change. The Contacts tables
+  never sort (their edit row follows the contact).
 
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.4 | 10-28-26 21:28 | Claude (Claude Code) | Every grid on the shared grid (v0.298.0). |
 | 1.3 | 10-24-26 11:05 | Claude (Claude Code) | One login on several profiles: the Active-profile choice and the grid's report (v0.280.0). |
 | 1.2 | 10-22-26 12:10 | Claude (Claude Code) | The close-date stamp (ruling 70). |
 | 1.1 | 10-21-26 21:56 | Claude (Claude Code) | The status picker on every domain (v0.272.0). |

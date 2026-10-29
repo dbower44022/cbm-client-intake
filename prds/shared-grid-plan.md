@@ -1,6 +1,6 @@
 # Shared grid, divider and loading spinner — plan
 
-Last Updated: 10-28-26 20:57 · Revision 1.0 — change log at the end.
+Last Updated: 10-28-26 21:28 · Revision 1.2 — change log at the end.
 
 **Status: approved 10-27-26; stops 1–3 built as v0.294.0; live-passed on crm-test 10-28-26 00:23**
 (https://claude.ai/artifact/AWjNEvmyq7mrwLVyDd2yJF).
@@ -206,19 +206,73 @@ record in place, as today.
    *Open in Drive* clickable with a reason (Doug's go, 10-28-26). Pushed
    and live-passed 10-28-26 20:55 (https://claude.ai/artifact/W2EsernSeTqMqSbtjXWYdP).
 
+## 10. Rollout 3 — Client, Partner and Funder Management (drafted 10-28-26)
+
+Doug, 10-28-26: option 2. One shared frontend (`sessions/frontend/`) serves
+all three applications, so one release fits all three.
+
+**Every grid already has every row in the browser** — the server pages
+through the CRM before it answers — so every grid sorts in the browser. No
+route changes and no CRM change. Today eight of them have the
+application's own one-column sort and drag grips (`makeColumnsResizable`);
+those are replaced by the shared grid, not kept beside it.
+
+**The grids** (the tab, then which applications have it):
+
+- **The record list** — the landing grid of all three; its columns come
+  from the domain's configuration.
+- **Sessions** — all three.
+- **Communications** (the conversation list) — all three.
+- **Documents** — all three.
+- **A session's attendees** (the session page) — all three.
+- **Referred Clients** — Partner Management.
+- **Events** — all three (Client Management lists the events the
+  client's people attended; Partner and Funder Management the events they
+  sponsored).
+- **Campaigns** — Partner and Funder Management.
+- **Contributions** and its **Totals by period** — Funder Management.
+- **Grants** and a grant's **Deliverables** — Funder Management.
+
+**One exception, decided as routine:** the **Contacts** table on the
+Details tab gets resizable columns and shading but **no sorting**. Its
+*Edit* opens the contact's form as an extra row under the contact, and a
+sort would separate the two.
+
+**One change in behaviour, announced:** today the first click on a date
+column sorts newest first; with the shared grid every first click sorts
+ascending (oldest first) and the second reverses it — the same as every
+other screen now.
+
+**Spinners** over the record list and each tab's grid while they load.
+**No divider:** a row opens the record in its own tab, as today.
+
+**Stops.** Work pauses after each for Doug's go-ahead.
+
+1. **The grids every application has** (built 10-28-26) — the record list, Sessions,
+   Communications, Documents, attendees, Contacts; the old sort and grip
+   code removed; tests and a check in the local harness.
+2. **The partner and funder tabs** (built 10-28-26) — Referred Clients, Events, Campaigns,
+   Contributions and its totals, Grants and Deliverables.
+3. **Documents, version and the live pass** (v0.298.0; documents done
+   10-28-26; the live pass waits for the push) on crm-test in all three
+   applications (a mentor, a partner manager and a funder manager, or Doug
+   as an administrator), with a results page.
+
 ## Revision control
 
 | Field | Value |
 |---|---|
 | Document | Shared grid, divider and loading spinner — plan |
-| Version | 1.0 |
-| Last Updated | 10-28-26 20:57 |
+| Version | 1.2 |
+| Last Updated | 10-28-26 21:28 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 10-28-26 21:28 | Claude (Claude Code) | § 10: stops 1 and 2 built (v0.298.0); Events is in all three applications. |
+| 1.1 | 10-28-26 20:58 | Claude (Claude Code) | § 10 rollout 3, Client, Partner and Funder Management, drafted for approval. |
 | 1.0 | 10-28-26 20:57 | Claude (Claude Code) | § 9: rollout 2 live-passed on crm-test. |
 | 0.9 | 10-28-26 20:45 | Claude (Claude Code) | § 9: stop 1 built; v0.297.0. |
 | 0.8 | 10-28-26 20:33 | Claude (Claude Code) | § 9 rollout 2, Mentor Administration, drafted for approval. |
