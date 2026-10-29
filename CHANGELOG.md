@@ -5,6 +5,14 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.300.1] — 2026-10-29
+
+**fix: the directory edit window's Save is never disabled.** It was greyed
+out until a field changed; it now stays clickable, and a Save with nothing
+changed says "Nothing has changed yet — edit a field, then save." instead
+of closing the window. Only the in-flight disable while a save runs
+remains.
+
 ## [0.300.0] — 2026-10-29
 
 **feat: the shared grid everywhere** (rollout 5, `prds/shared-grid-plan.md`

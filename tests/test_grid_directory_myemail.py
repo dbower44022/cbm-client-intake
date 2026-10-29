@@ -187,3 +187,11 @@ async def test_no_sort_keeps_the_default_order_and_one_column_needs_no_endpoint(
     client = _Sorting()
     await service.list_records(client, COMPANIES, order_by="cCompanyType", order="desc")
     assert client.calls == [("list", "cCompanyType", "desc")]
+
+
+def test_the_edit_window_save_is_never_disabled():
+    js = (Path(__file__).resolve().parent.parent / "directory" / "frontend" / "app.js").read_text()
+    # Only the in-flight disable while a save runs remains.
+    assert '$("modalSaveBtn").disabled = !changed' not in js
+    assert '$("modalSaveBtn").disabled = true; $("saveInfo").textContent = "Saving' in js
+    assert "Nothing has changed yet" in js

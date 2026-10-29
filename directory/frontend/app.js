@@ -372,7 +372,6 @@
       if (dirty) changed++;
     });
     $("saveInfo").textContent = changed ? (changed + (changed === 1 ? " field changed" : " fields changed")) : "No changes yet";
-    $("modalSaveBtn").disabled = !changed;
   }
 
   async function openEdit(id) {
@@ -435,7 +434,7 @@
     });
     hide($("modalEditBtn"));
     show($("modalFoot"));
-    $("saveInfo").textContent = "No changes yet"; $("modalSaveBtn").disabled = true;
+    $("saveInfo").textContent = "No changes yet"; $("modalSaveBtn").disabled = false;
     openModal();
   }
 
@@ -446,7 +445,8 @@
       var now = f.getVal();
       if (!sameVal(now, editing.snapshot[f.name])) changes[f.name] = now;
     });
-    if (!Object.keys(changes).length) { closeModal(); return; }
+    // Never disabled (house rule): a Save with nothing changed says so.
+    if (!Object.keys(changes).length) { $("saveInfo").textContent = "Nothing has changed yet — edit a field, then save."; return; }
     $("modalSaveBtn").disabled = true; $("saveInfo").textContent = "Saving…";
     try {
       await api("/records/" + editing.id, { method: "PUT", body: JSON.stringify({ changes: changes }) });
