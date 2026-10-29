@@ -70,10 +70,13 @@ async def test_people_history_names_who_went_for_a_company():
     ]
     regs = [_reg("r1", "e1", "c1"), _reg("r2", "e2", "c2"), _reg("r3", "e2", "c9")]
     out = await reporting.people_history(
-        FakeCrm(events, regs), [{"id": "c1", "name": "Ann"}, {"id": "c2", "name": "Bo"}])
+        FakeCrm(events, regs), [{"id": "c1", "name": "Ann"}, {"id": "c2", "name": "Bo"}], named=True)
     assert [(r["title"], r["person"]) for r in out] == [("Newer", "Bo"), ("Older", "Ann")]
     single = await reporting.contact_history(FakeCrm(events, regs), "c1")
     assert "person" not in single[0]
+    # A company with one contact still names them.
+    one = await reporting.people_history(FakeCrm(events, regs), [{"id": "c1", "name": "Ann"}], named=True)
+    assert one[0]["person"] == "Ann"
 
 
 def test_a_company_events_tab_reads_its_contacts_not_the_company_as_a_contact():
@@ -82,7 +85,7 @@ def test_a_company_events_tab_reads_its_contacts_not_the_company_as_a_contact():
     company = body.split('if cfg.entity == "Account":', 1)[1].split("# The user's own ACL", 1)[0]
     assert 'client.get("Account", record_id' in company
     assert 'client.list_related(\n                    "Account", record_id, "contacts"' in company
-    assert "people_history(reader," in company and '"byPerson": True' in company
+    assert "people_history(reader," in company and "named=True" in company and '"byPerson": True' in company
 
 
 # --- EV-72 (Doug's explicit requirement) -------------------------------------

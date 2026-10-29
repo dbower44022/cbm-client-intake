@@ -111,17 +111,17 @@ async def contact_history(client: EspoApi, contact_id: str) -> list[dict[str, An
 
 
 async def people_history(
-    client: EspoApi, contacts: list[dict[str, Any]]
+    client: EspoApi, contacts: list[dict[str, Any]], *, named: bool = False
 ) -> list[dict[str, Any]]:
     """Every registration of these people, newest first, one row each with
-    status — and ``person`` (the contact's name) when there are several, so a
-    company's Events tab names who went (OPEN-ITEMS #62)."""
+    status — and, when ``named``, ``person`` (the contact's name), so a
+    company's Events tab names who went even when it has one contact
+    (OPEN-ITEMS #62)."""
     by_id = {c["id"]: c for c in contacts if c.get("id")}
     if not by_id:
         return []
     regs = await _registrations_for_contacts(client, list(by_id))
     events = await _events_by_id(client, [r.get("eventId") for r in regs])
-    many = len(by_id) > 1
     out = []
     for reg in regs:
         event = events.get(reg.get("eventId") or "")
@@ -134,7 +134,7 @@ async def people_history(
             "minutesAttended": reg.get("minutesAttended"),
             "registrationId": reg.get("id"),
         }
-        if many:
+        if named:
             row["person"] = (by_id.get(reg.get("contactId") or "") or {}).get("name") or ""
         out.append(row)
     out.sort(key=lambda r: r.get("startsAtUtc") or "", reverse=True)

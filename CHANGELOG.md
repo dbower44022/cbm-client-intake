@@ -5,6 +5,12 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.300.3] — 2026-10-29
+
+**fix: a company's Events tab names the person even when the company has
+one contact** — the live check of v0.300.2 showed the Person column blank on
+a one-contact company.
+
 ## [0.300.2] — 2026-10-29
 
 **fix: a company's Events tab** (`OPEN-ITEMS.md` #62). On a company's

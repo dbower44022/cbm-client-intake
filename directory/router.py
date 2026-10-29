@@ -259,7 +259,7 @@ def make_router(cfg: DirectoryConfig) -> APIRouter:
                 raise _crm_failure(request, exc, "Could not read this company")
             reader = _system_client(settings) or client
             try:
-                rows = await people_history(reader, people.get("list", []))
+                rows = await people_history(reader, people.get("list", []), named=True)
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not load the event history")
             return {"events": rows, "enabled": True, "byPerson": True}
