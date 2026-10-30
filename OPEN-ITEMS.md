@@ -10,10 +10,10 @@ found; move resolved items to the bottom with the resolution date.
     (2026-10-28). Built as v0.295.0 (`prds/partner-association-plan.md`).
     (1) ~~the live pass on crm-test~~ **passed 10-28-26** (backfill applied
     there; two faults fixed in v0.295.1, pushed 10-28-26). Owed: (2) the CRM change on production —
-    **booked Sunday 11-01-26 17:00 UTC, step page https://claude.ai/artifact/RAMr71hQ9JXqXmZJMu4jEL** — and on Boston,
+    **done 10-30-26 with its backfill (step page part B)** — and on Boston,
     **blocked: Boston has no `CProspect` until the outreach CRM change**
     (`partner-association-crm-handoff.md` § 0); (3) the Operations job's
-    backfill run on each CRM after its change; (4) **the partner's
+    backfill run on Boston after its change (production done 10-30-26); (4) **the partner's
     attendance report** — Doug's decision 3: companies that had someone
     attend, the attendees optional, never someone who did not attend — not
     yet designed or built.
@@ -27,7 +27,8 @@ found; move resolved items to the bottom with the resolution date.
     The spinners in `busy.js` already reach every page. **Owed, one release
     each:** — **all built by v0.300.0 (plan § 12) and live-passed on
     crm-test 10-29-26** — the rollout is complete; this item stays open only
-    for SortedList on production and Boston. Client Administration (**built as v0.299.0, plan § 11;
+    for SortedList on Boston (production installed 10-30-26; Boston after
+    the Lakeside rehearsal, step page parts A and C). Client Administration (**built as v0.299.0, plan § 11;
     live-passed on crm-test 10-28-26**); Mentor Administration (**built as
     v0.297.0, plan § 9; live-passed on crm-test 10-28-26**); Client, Partner and
     Funder Management (one shared frontend; **built as v0.298.0, plan § 10;
