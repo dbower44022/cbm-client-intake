@@ -1,6 +1,6 @@
 # CRM handoff — partner and funder associations: `CPartnerAssociation`
 
-Last Updated: 10-30-26 00:35 · Revision 0.4 — see change log at the end.
+Last Updated: 10-30-26 02:09 · Revision 0.5 — see change log at the end.
 
 One new record type, one record per tie between a partner or funder and a
 business (or a person or lead with no business yet), and one new link on event
@@ -17,7 +17,7 @@ the entity and the new link, and writes nothing until both exist.
 |---|---|---|
 | crm-test | **Done 10-28-26** by Doug: `scripts/partner_association_crm_test.sh plan` created and read back the entity, both fields and all eight links; `… roles` set and read back the five grants and rebuilt (HTTP 200). Claude then read it with the org-wide key: `CPartnerAssociation` lists (200, total 0), the seven links present, neither field Read-only, `registrationCompany` → Account. The non-admin check rides the live pass. | The applier's and the role script's output; the key read. |
 | Production | **Done 10-30-26** by Doug (step page part B, run early): the plan applied (fingerprint 8dd9d9264170, every item verified), the five grants set and read back, rebuild 200; the Operations backfill wrote 4 associations (0 refused) and moved 1 to a company. | Doug's console output; B12–B13. |
-| Boston | **Blocked.** Its dry run (10-29-26, `scripts/partner_association_boston.sh plan`) fails: Boston has no `CProspect`, so the `lead` link cannot be built. Needs the outreach CRM change first (`coutreach-entities-crm-handoff.md`). | The dry run's FAILED line. |
+| Boston | **Done 10-30-26** by Doug after Boston's outreach change: the plan applied (fingerprint 8dd9d9264170, as production), the five grants set and read back. The backfill waits for Boston's next release (its application, v0.280.0, has no job; Boston has no partner or funder records yet). | Doug's terminal output. |
 
 Decided here, and said so:
 
@@ -100,6 +100,7 @@ fingerprint is of the work left, so it differs between CRMs.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.5 | 10-30-26 02:09 | Claude (Claude Code) | Applied on Boston. |
 | 0.4 | 10-30-26 00:35 | Claude (Claude Code) | Applied on production, backfill run. |
 | 0.3 | 10-29-26 22:28 | Claude (Claude Code) | Production booked on the Sunday step page; the production and Boston helper scripts; Boston blocked on `CProspect`. |
 | 0.2 | 10-28-26 02:14 | Claude (Claude Code) | Applied on crm-test by Doug; verified with the org-wide key. |

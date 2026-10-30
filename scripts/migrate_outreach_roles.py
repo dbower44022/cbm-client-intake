@@ -346,6 +346,18 @@ async def main() -> int:
         if role is None:
             failed.append(f"role '{role_name}' does not exist on this instance")
             continue
+        # A rule for a field this CRM does not have yet (the lead code before
+        # lead-code.json, on production and Boston) is skipped, not failed: the
+        # CRM refuses the whole fieldData update for an unknown field (Boston,
+        # 10-30-26). Re-run after the plan that adds it.
+        known = await client.metadata(f"entityDefs.{scope}.fields") or {}
+        absent = [f for f in fields if f not in known]
+        if absent:
+            skipped.append(f"{role_name}: {scope} field rules for {', '.join(absent)} "
+                           "- not on this CRM yet; re-run after the plan that adds them")
+        fields = tuple(f for f in fields if f in known)
+        if not fields:
+            continue
         field_data: dict[str, Any] = dict(role.get("fieldData") or {})
         scope_rules: dict[str, Any] = dict(field_data.get(scope) or {})
         todo = [f for f in fields if (scope_rules.get(f) or {}) != rule]

@@ -21,11 +21,10 @@ found; move resolved items to the bottom with the resolution date.
     (1) ~~the live pass on crm-test~~ **passed 10-28-26** (backfill applied
     there; two faults fixed in v0.295.1, pushed 10-28-26). Owed: (2) the CRM change on production —
     **done 10-30-26 with its backfill (step page part B)** — and on Boston,
-    **blocked: Boston has no `CProspect` until the outreach CRM change** —
-    **step page written 10-30-26 (Doug's option A: Boston to production's
-    level), https://claude.ai/artifact/V9aNhNDzDM8e6FqkHU6BKv, with
-    `scripts/prospect_crm_boston.sh`; Boston's backfill after its next
-    release**
+    **done 10-30-26 on Boston too, after its outreach CRM change
+    (Doug's option A: Boston to production's level, step page
+    https://claude.ai/artifact/V9aNhNDzDM8e6FqkHU6BKv); Boston's backfill
+    after its next release**
     (`partner-association-crm-handoff.md` § 0); (3) the Operations job's
     backfill run on Boston after its change (production done 10-30-26); (4) **the partner's
     attendance report** — **built as v0.301.0

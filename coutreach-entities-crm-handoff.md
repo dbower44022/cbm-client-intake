@@ -1,6 +1,6 @@
 # CRM handoff — prospect marketing and Campaign Management (Phase 1): `CProspect`, `COutreachCampaign`, `COutreachTouch`
 
-Last Updated: 10-18-26 16:45 · Revision 1.8 — see change log at the end.
+Last Updated: 10-30-26 02:09 · Revision 1.9 — see change log at the end.
 
 Three new record types and the links that tie them to what the CRM already
 holds. A **prospect record** (`CProspect`) is a quarantine for a business or
@@ -35,7 +35,7 @@ removed, renamed or narrowed. Safe to apply ahead of the code.
 |---|---|---|
 | crm-test | **Done 10-15-26 01:06–01:19.** § 2 applied by Doug through `scripts/prospect_crm_test.sh outreach` (the applier with `--expect 6b29c8928dcf`; the `--apply` is refused to Claude by the session classifier): 78 changes, 77 read back, no failure — **`mailingAddress` was accepted as the `address` type** (item (b) settled; sub-fields `mailingAddressStreet/City/State/Country/PostalCode` present). § 3.1 by Doug (`notes`): `description` reads `wysiwyg`. § 3.2 by Claude through the admin API (`PUT /Settings`): Prospects and Campaigns after Information Requests, Touches removed, read back. **Also done, not in the plan:** the three detail layouts carried only `name`, so every new field and many-to-one link was added to a *Details* panel and the list layouts gained five columns each, read back (the layout API, admin). § 4 applied by Doug (`roles`): six grants set and read back, every re-check already held, rebuild 200; **re-run 10-15-26 11:4x for the seventh grant**, `CustomAppAPIRole` edit on `COutreachCampaign` (the worker's run; v0.258.4). § 5 steps 1, 2, 4, 5 passed as the org-wide key (three 200s with `total: 0`; `scopes.CCProspect` empty; the sync dry run clean; the conformance diff before/after empty). § 5 step 3 **passed 10-15-26 01:49** — Doug as Mark Marketing (tabs, a Draft Postcard campaign, a Prospect with a mailing address, a Planned touch on it, the touch listed on the campaign) and as Sally Sponsor (no tabs, the list refused); the partner relate as Mark Marketing answered *operation requires edit access to foreign record*, the expected both-sides check (item (i)). **crm-test complete; soaking to the Sunday slot.** | This document's output, 10-15-26 01:06–01:19; Doug's pass 01:49 ("all steps passed"). |
 | Production | **Done 10-18-26** by Doug from the step page https://claude.ai/artifact/DPDwikp24BWMsg2UZs3naF (`scripts/prospect_crm_prod.sh` in the web container; notes conversion from the build computer). **Read back by Claude 10-18-26 01:03 Eastern** from inside the container: the three org-key reads 200, all eight shape checks ok (cSmsOptIn, the address type, wysiwyg notes, `referringPartners`, `attributedPartnerProfiles`, the Prospect company type, the *Prospect Response* receipt option, no double prefix); `ui` and `labels` report nothing to do. The roles dry run now shows only **two Mentor Role grants added by Phase 3** (v0.261.0, ruling 36) — Phase 3's, not this handoff's; apply them with Phase 3. Section 6 (the non-admin look) is Doug's. Feature still switched off on production. | `scripts/prospect_crm_prod.sh verify`, `ui`, `roles`, `labels`, 10-18-26. |
-| Boston | **Owed** — with the release that carries Phase 1. | *Inferred:* built from crm-test's files before this change. |
+| Boston | **Done 10-30-26** by Doug, to production's level (step page https://claude.ai/artifact/V9aNhNDzDM8e6FqkHU6BKv, `scripts/prospect_crm_boston.sh`): the opt-in field, the three entities (78 changes, fingerprint 6b29c8928dcf), the receipt option, the app-owned fields, the text-message field, the notes conversion, the tab list and layouts, the labels, the action-history record types, then the roles. Claude read the three entities back as admin (200). | Doug's terminal output; Claude's read. |
 
 Nine things to know before the apply. The first was Doug's to rule on and
 is ruled; the rest are decided here and said so.
@@ -528,6 +528,7 @@ none of them has ever been stored on any CRM. Doug's ruling 40 (option A):
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.9 | 10-30-26 02:09 | Claude (Claude Code) | Applied on Boston to production's level (Doug, 10-30-26). |
 | 1.8 | 10-18-26 16:45 | Claude (Claude Code) | §§ 9–10 and the Mentor Role grants of § 4 done on production (Doug, second slot of 10-18-26), read back from the container; Boston owed. |
 | 1.7 | 10-18-26 11:20 | Claude (Claude Code) | § 10: ruling 40 — the eight app-owned campaign fields stop being Read-only (plan `coutreach-campaign-app-fields.json`, `965d932407f3`) and take a field rule on the Marketing Admin Role. |
 | 1.6 | 10-18-26 02:00 | Claude (Claude Code) | § 9: the text-message field (rulings 38, 39), plan `coutreach-sms-message.json`, fingerprint `7a68865149b4`; one word in each slot script. |
