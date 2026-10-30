@@ -16,7 +16,7 @@ size or it costs every future session. The rule that keeps it small:
   and rulings that govern future work, the traps, the conventions.
 - **Detail about one application belongs in that application's folder**, in
   its own `CLAUDE.md` (`assignments/`, `mentoradmin/`, `sessions/`, `setup/`,
-  `campaigns/`, `events/` so far). Claude Code loads it only when a session
+  `campaigns/`, `events/`, `docs/`, `ops/` so far). Claude Code loads it only when a session
   works in that folder, so a rule another package depends on stays here, with
   a pointer. This file was moved under that rule on 10-20-26, when it reached
   182,447 characters against Claude Code's 150,000 limit; keep it under 80,000.
@@ -474,42 +474,10 @@ rely on:
 ### Submission Admin — `/ops`
 
 Marketing Admin Team. A multi-admin review-and-respond workspace over the
-durable store. Staff reference: `submission-admin.md`.
-
-- **Two status axes, deliberately separate**: **Intake status** (what happened
-  to this arrival — Received / Completed / Held-Spam / Held-Email / Error /
-  Discarded, the CRM receipt vocabulary) and **Response status** (where the
-  reply conversation stands — New → In progress → Reply owed / Waiting on them →
-  Responded → Closed). Machine words like `pending`/`needs_attention` never
-  render. Count chips are one-click filters; filtering is client-side.
-- **No owner — coordination by visibility**: an attributed comment stream, an
-  automatic activity feed, and presence ("viewed 4 min ago").
-- **A Held-Company row has its own control, not Approve** (v0.238.0): the
-  company the submission names exists at a different web address, so
-  *Company ▾* offers *Same company* / *Different company* (name required,
-  must differ from the one on file); both write `delivery_overrides` and
-  re-queue. A bare re-drive is not offered — it would hit the same conflict.
-- **Close requires a reason**; discard requires one too (422 without) and stamps
-  who/when/why on the CRM receipt. A submitter replying on an anchored thread
-  after close **auto-reopens** it.
-- **Record-creating submissions auto-close** on successful delivery ("Process
-  completed") — they are owned by the downstream admin team from that point, so
-  the open queue is only info-request and info-email items needing a reply.
-- **Email is thread-anchored**, not an address search: every send records its
-  Gmail thread on the submission, and the conversation view reads only anchored
-  threads. Sends go as **`OPS_MAILBOX`** (info@, display name "CBM Info") so
-  every admin sees the same conversation.
-- **Inbound info@ capture**: the worker polls the shared inbox and captures each
-  new thread as a **held `info-email` submission** for triage. Approve = redrive
-  (creates CRM records via the info-request orchestrator); Discard = spam with
-  zero CRM residue. Layered stateless dedup means replies to anchored threads
-  never double-capture. **Only ONE poller may run** — setting `OPS_MAILBOX` on
-  both environments double-captures.
-- **Other correspondence** surfaces inbound info@ threads not tied to a
-  submission (replies to notices staff sent), read and replied to in-app,
-  nothing stored.
-- `?submission=<id>` deep-links a row even when filtered out; alert emails use
-  it via `APP_BASE_URL`.
+durable store. **Detail: `ops/CLAUDE.md`.** Rules other packages rely on:
+**only ONE info@ poller may run** — setting `OPS_MAILBOX` on both
+environments double-captures; sends go as `OPS_MAILBOX`; machine words like
+`pending`/`needs_attention` never render.
 
 ### Workspace Directories — `/directory`
 
@@ -723,49 +691,12 @@ Umbrella reference: **`email-management.md`**. Deep dives:
 
 ### Documents — Google Drive
 
-`docs/` package, gated by `GDRIVE_DOCS`. Setup runbook: `GDRIVE-DOCS-SETUP.md`;
-PRD in `prompts/Google Drive Documents/`.
-
-- Folder scheme under the shared drive: `{Entity Label}/{Record Name} (id)/`,
-  with engagement folders **nested under their client**. Labels are configurable
-  (`GDRIVE_ENTITY_LABELS`: Contact=Mentors, CEngagement=Clients, …).
-- **Access model (Doug's ruling, PRD v1.5)**: no person is a member of the
-  shared drive except the two designated system administrators; the **service
-  account is the operational member** and all Drive ops run as it
-  (`GDRIVE_IDENTITY=service`). Drive-side access is per-person folder-level
-  **Commenter** grants mirroring CRM entitlements, revoked by the same app
-  actions that end the entitlement, plus a **nightly reconciliation** that
-  re-derives grants from the CRM. `Mentors/` personnel folders get **no**
-  grants. Commenter means uploads can never bypass the app's index.
-- **A grant needs a real Google account.** The person's address is their
-  `CMentorProfile.cbmEmail`, and mentor provisioning back-fills that
-  (`firstname.lastname@` the `MENTOR_EMAIL_DOMAIN` setting, default
-  `cbmentors.org`) **without creating a Workspace mailbox**
-  — so the address often doesn't exist, which is the norm on crm-test. Drive
-  400s a silent share to an unknown address, so `create_permission` raises
-  `DriveNoAccountError` and the reconciliation counts it as `unfulfillable`,
-  **not** an error: logged and counted, never alerted, retried every pass so it
-  self-heals the day the mailbox appears. In-app document access is unaffected
-  either way (the app reads Drive as the service account); only opening the
-  folder directly in Drive needs the grant.
-- **A drive member needs no grant.** The two designated administrators ARE
-  shared-drive members, so Drive reports their access on every folder as
-  *inherited* (`permissionDetails[].inherited`, `permissionType: member`) and
-  merges any file-level grant into that one permission. The engine treats
-  at-least-Commenter inherited access as satisfying the entitlement —
-  `driveMembers` in the result, never a create and never a delete. Before
-  v0.201.2 it skipped inherited permissions outright, so it re-created the same
-  grant every night forever without converging.
-- **Rollback rule**: a row-write failure deletes the Drive file; a Drive failure
-  never writes a row. Uploads pre-assign ids via `files.generateIds` so a retry
-  can't duplicate.
-- **Archive** moves the file to `_Archived` **first**, then flips metadata, with
-  a move-back rollback on a mid-failure.
-- Viewing streams through an ACL-gated proxy; **the browser is the cache**
-  (immutable responses on modifiedTime-versioned URLs). Office formats
-  convert-on-view; `?original=true` streams exact bytes for download.
-- `documentsFolderUrl` write-back is feature-detected and inert until the CRM
-  field exists.
+`docs/` package, gated by `GDRIVE_DOCS`. **Detail: `docs/CLAUDE.md`** (folder
+scheme, the access model, grants, rollback and archive rules). Rules other
+packages rely on: the service account is the drive's operational member and
+all Drive operations run as it; a person's access is a folder-level
+Commenter grant mirroring their CRM entitlement, revoked by the same app
+action that ends it; a grant needs a real Google account.
 
 ### Calendar, meetings and transcripts
 
@@ -1241,54 +1172,6 @@ the strength of it.
   by company** (`prds/partner-attendance-report-plan.md`): the Events tab's
   *Who attended* panel, Copy and CSV. No CRM change. Pushed 10-30-26;
   **live-passed on crm-test 10-30-26 01:07** (results page https://claude.ai/artifact/AxWr4jsMPsPgfxvL8yUpgQ).
-- **v0.300.0 (2026-10-29) — the shared grid everywhere**
-  (`prds/shared-grid-plan.md` § 12): Submission Admin, the Directories
-  (server sort through `SortedList`), My Email, Event Administration, System
-  Settings and the Analytics panels; v0.300.1 un-disables the directory
-  edit window's Save. No CRM change. Pushed 10-29-26; **live-passed on
-  crm-test 10-29-26 10:25** (results page https://claude.ai/artifact/9CTxsPvY4uWE36Mp6HgQy4; Submission Admin, My Email
-  and System Settings on a local copy only).
-- **v0.299.0 (2026-10-28) — the shared grid on Client Administration**
-  (`prds/shared-grid-plan.md` § 11), and the engagement list pages past 200.
-  No CRM change. Pushed 10-28-26 23:31; **live-passed on crm-test
-  10-28-26 23:50** (results page https://claude.ai/artifact/Xuy5Mw2wQ1vqxf4vfDyZzw).
-- **v0.298.0 (2026-10-28) — the shared grid on Client, Partner and
-  Funder Management** (`prds/shared-grid-plan.md` § 10): every grid of the
-  three; the Contacts tables resize but do not sort. No CRM change.
-  Pushed 10-28-26 21:31; **live-passed on crm-test 10-28-26 22:00**
-  (results page https://claude.ai/artifact/VEXHEfV43e1YQduzLayT4V; attendees and Documents in the harness only, Grants
-  not reachable).
-- **v0.297.0 (2026-10-28) — the shared grid on Mentor Administration**
-  (`prds/shared-grid-plan.md` § 9): the roster, the status sweep's results
-  and the Documents tab; Open in Drive no longer disabled. No CRM change.
-  Pushed 10-28-26 20:50; **live-passed on crm-test 10-28-26 20:55**
-  (results page https://claude.ai/artifact/W2EsernSeTqMqSbtjXWYdP).
-- **v0.296.0 (2026-10-28) — the shared grid on the rest of Marketing
-  Management** (`prds/shared-grid-plan.md` § 8): every grid there; Leads,
-  Review and Recipients sort on several columns on the server, Leads and
-  Review through the CRM's `SortedList` endpoint (`sorted-list-crm-handoff.md`,
-  crm-test only; one column without it). Pushed 10-28-26 16:23;
-  **live-passed on crm-test 10-28-26**, as an administrator and as Mark
-  Marketing (results page https://claude.ai/artifact/Gf8B5gXMmDLgUwZZ1dAjTS).
-- **v0.295.0 (2026-10-28) — partner and funder associations**
-  (`prds/partner-association-plan.md`): one `CPartnerAssociation` per tie,
-  written by `core/partner_links.py` from conversion, import, intake,
-  attendance and Client Management's *Refer to a partner*; lists select by
-  them. CRM change on crm-test only. Pushed and **live-passed on crm-test
-  10-28-26**; v0.295.1 (two fixes from the pass) pushed 10-28-26 10:42.
-- **v0.294.0 (2026-10-27) — the shared grid, divider and spinners**
-  (`prds/shared-grid-plan.md`): Lists first, then one application per
-  release (`OPEN-ITEMS.md` #60). The `busy.js` spinners reach every page.
-  Pushed; **live-passed on crm-test 10-28-26 00:23** (results page
-  https://claude.ai/artifact/AWjNEvmyq7mrwLVyDd2yJF).
-- **v0.293.0 (2026-10-27) — the Lists tab redesigned** (build plan
-  § 7e.14, M11; rulings 129–132): the list view with Preview, Edit, and
-  View in its own browser tab; counts stored and refreshed daily.
-  Dark behind `CAMPAIGN_LIST_SCREENS`; migration 0040; no CRM change.
-  Pushed and **live-passed on crm-test 10-27-26 21:25** (results page
-  https://claude.ai/artifact/7s79Cw5ybA4dnjinomPYsu); v0.293.1, the two display fixes the
-  pass found, pushed 10-27-26 21:28. Production stays dark.
-
 - **v0.288.0 (2026-10-26) — personal outreach from the lead's page**
   (build plan § 7e.5, M5; rulings 107–109, 115, 118–120, 122, 128): the
   shared composer (`frontend/shared/compose.js`, the session tools switched
