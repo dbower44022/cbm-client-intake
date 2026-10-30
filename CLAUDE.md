@@ -1239,8 +1239,8 @@ the strength of it.
 
 - **v0.301.0 (2026-10-30) — who attended a partner's or funder's events,
   by company** (`prds/partner-attendance-report-plan.md`): the Events tab's
-  *Who attended* panel, Copy and CSV. No CRM change. Committed, **not pushed;
-  live pass owed**.
+  *Who attended* panel, Copy and CSV. No CRM change. Pushed 10-30-26;
+  **live-passed on crm-test 10-30-26 01:07** (results page https://claude.ai/artifact/AxWr4jsMPsPgfxvL8yUpgQ).
 - **v0.300.0 (2026-10-29) — the shared grid everywhere**
   (`prds/shared-grid-plan.md` § 12): Submission Admin, the Directories
   (server sort through `SortedList`), My Email, Event Administration, System
