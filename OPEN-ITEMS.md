@@ -9,9 +9,10 @@ found; move resolved items to the bottom with the resolution date.
 61. **Partner and funder associations — production, Boston, the report**
     (2026-10-28). Built as v0.295.0 (`prds/partner-association-plan.md`).
     (1) ~~the live pass on crm-test~~ **passed 10-28-26** (backfill applied
-    there; two faults fixed in v0.295.1, pushed 10-28-26). Owed: (2) the CRM change on production at
-    a Sunday slot and on Boston with its release
-    (`partner-association-crm-handoff.md` § 4); (3) the Operations job's
+    there; two faults fixed in v0.295.1, pushed 10-28-26). Owed: (2) the CRM change on production —
+    **booked Sunday 11-01-26 17:00 UTC, step page https://claude.ai/artifact/RAMr71hQ9JXqXmZJMu4jEL** — and on Boston,
+    **blocked: Boston has no `CProspect` until the outreach CRM change**
+    (`partner-association-crm-handoff.md` § 0); (3) the Operations job's
     backfill run on each CRM after its change; (4) **the partner's
     attendance report** — Doug's decision 3: companies that had someone
     attend, the attendees optional, never someone who did not attend — not

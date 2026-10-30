@@ -1,6 +1,6 @@
 # CRM handoff — partner and funder associations: `CPartnerAssociation`
 
-Last Updated: 10-28-26 02:14 · Revision 0.2 — see change log at the end.
+Last Updated: 10-29-26 22:28 · Revision 0.3 — see change log at the end.
 
 One new record type, one record per tie between a partner or funder and a
 business (or a person or lead with no business yet), and one new link on event
@@ -16,8 +16,8 @@ the entity and the new link, and writes nothing until both exist.
 | CRM | State | Evidence |
 |---|---|---|
 | crm-test | **Done 10-28-26** by Doug: `scripts/partner_association_crm_test.sh plan` created and read back the entity, both fields and all eight links; `… roles` set and read back the five grants and rebuilt (HTTP 200). Claude then read it with the org-wide key: `CPartnerAssociation` lists (200, total 0), the seven links present, neither field Read-only, `registrationCompany` → Account. The non-admin check rides the live pass. | The applier's and the role script's output; the key read. |
-| Production | **Not applied.** At a Sunday 17:00 UTC slot, after crm-test's live pass. | — |
-| Boston | **Owed** with its release. | — |
+| Production | **Not applied.** Booked for Sunday 11-01-26 17:00 UTC: step page https://claude.ai/artifact/RAMr71hQ9JXqXmZJMu4jEL part B, with `scripts/partner_association_production.sh` in the web console, then the Operations backfill. | — |
+| Boston | **Blocked.** Its dry run (10-29-26, `scripts/partner_association_boston.sh plan`) fails: Boston has no `CProspect`, so the `lead` link cannot be built. Needs the outreach CRM change first (`coutreach-entities-crm-handoff.md`). | The dry run's FAILED line. |
 
 Decided here, and said so:
 
@@ -91,13 +91,15 @@ second sets and reads back the five grants and rebuilds.
 Production at a Sunday slot, from inside the production web container: the
 applier with this plan and fingerprint, then
 `scripts/migrate_partner_association_roles.py --apply` under the admin login.
-Claude writes the step page when the slot is booked. Boston:
-`scripts/apply_plan.sh boston scripts/plans/cpartner-association.json
-8dd9d9264170`, then the role script against Boston.
+Step page: https://claude.ai/artifact/RAMr71hQ9JXqXmZJMu4jEL. Boston: `scripts/partner_association_boston.sh plan`,
+`plan-apply <fingerprint>`, `roles`, `roles-apply` — once its CRM has
+`CProspect`. The apply takes the fingerprint its own dry run prints: the
+fingerprint is of the work left, so it differs between CRMs.
 
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.3 | 10-29-26 22:28 | Claude (Claude Code) | Production booked on the Sunday step page; the production and Boston helper scripts; Boston blocked on `CProspect`. |
 | 0.2 | 10-28-26 02:14 | Claude (Claude Code) | Applied on crm-test by Doug; verified with the org-wide key. |
 | 0.1 | 10-28-26 02:10 | Claude (Claude Code) | Created; dry run on crm-test clean. |

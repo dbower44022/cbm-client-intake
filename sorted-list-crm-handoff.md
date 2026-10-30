@@ -1,6 +1,6 @@
 # CRM handoff — the multi-column sorted list endpoint
 
-Last Updated: 10-28-26 13:20 · Revision 0.1 — see change log at the end.
+Last Updated: 10-29-26 22:28 · Revision 0.2 — see change log at the end.
 
 A small piece of our own code in the CRM: `GET /api/v1/SortedList/{entityType}`
 returns a page of records sorted on up to six columns, which EspoCRM's own
@@ -26,8 +26,9 @@ returned; callers take it from the standard list with the same `where`.
 | CRM | State | Evidence |
 |---|---|---|
 | crm-test | **Installed 10-28-26** by Doug (`scripts/install_sorted_list.sh test`, EspoCRM 9.3.10). Checked by Claude with the org-wide key: two-column sort correct; 150–190 ms, the same as the standard one-column list; `where` and paging consistent; an unknown column 400, an unreadable type 403, a page over 200 refused; linked names (a contact's company) returned. | The checks above. |
-| Production | **Not installed.** At a Sunday slot, after the grids built on it pass on crm-test. | — |
-| Boston | **Not installed.** EspoCRM 10 — checked against the 10 source (every class and method present), not yet run. | — |
+| Production | **Not installed.** Booked for Sunday 11-01-26 17:00 UTC: step page https://claude.ai/artifact/RAMr71hQ9JXqXmZJMu4jEL part B (`install_sorted_list.sh production`, then `check_sorted_list.sh production` in the web console). | — |
+| Lakeside | **Not installed.** The EspoCRM 10 rehearsal: step page part A, any day before the slot. | `check_sorted_list.sh lakeside` answered 404 (not installed) 10-29-26. |
+| Boston | **Not installed.** EspoCRM 10; step page part C at the slot, only if Lakeside passes. | — |
 
 ## 1. Install
 
@@ -58,4 +59,5 @@ could change them. The check is § 2.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.2 | 10-29-26 22:28 | Claude (Claude Code) | `scripts/check_sorted_list.sh` (read-only check, passed on crm-test 10-29-26); production, Lakeside and Boston booked on the Sunday step page. |
 | 0.1 | 10-28-26 13:20 | Claude (Claude Code) | Created; installed and checked on crm-test. |
