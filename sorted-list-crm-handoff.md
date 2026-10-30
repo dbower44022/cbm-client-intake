@@ -1,6 +1,6 @@
 # CRM handoff — the multi-column sorted list endpoint
 
-Last Updated: 10-30-26 00:47 · Revision 0.4 — see change log at the end.
+Last Updated: 10-30-26 00:48 · Revision 0.5 — see change log at the end.
 
 A small piece of our own code in the CRM: `GET /api/v1/SortedList/{entityType}`
 returns a page of records sorted on up to six columns, which EspoCRM's own
@@ -28,7 +28,7 @@ returned; callers take it from the standard list with the same `where`.
 | crm-test | **Installed 10-28-26** by Doug (`scripts/install_sorted_list.sh test`, EspoCRM 9.3.10). Checked by Claude with the org-wide key: two-column sort correct; 150–190 ms, the same as the standard one-column list; `where` and paging consistent; an unknown column 400, an unreadable type 403, a page over 200 refused; linked names (a contact's company) returned. | The checks above. |
 | Production | **Installed 10-30-26** by Doug (step page part B, run early). `check_sorted_list.sh production` in the web console: all four checks passed (181 companies); the Companies directory sorted on two columns with no one-column note. | Doug's console output; B11. |
 | Lakeside | **Installed 10-30-26** by Doug (step page part A), EspoCRM 10.0.10: `check_sorted_list.sh lakeside` passed all four checks (200 rows sorted on two columns). The EspoCRM 10 rehearsal for Boston passed. | Doug's terminal output. |
-| Boston | **Not installed.** EspoCRM 10; Lakeside passed, so step page part C goes ahead at the slot. | — |
+| Boston | **Installed 10-30-26** by Doug (step page part C, run early), EspoCRM 10.0.10: `check_sorted_list.sh boston` passed all four checks. Boston holds one company, so the ordering itself was proven on Lakeside (same version, 200 rows); Boston proves the route, the access control and the refusals. Unused until Boston's next release. | Doug's terminal output. |
 
 ## 1. Install
 
@@ -59,6 +59,7 @@ could change them. The check is § 2.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.5 | 10-30-26 00:48 | Claude (Claude Code) | Boston installed and checked. |
 | 0.4 | 10-30-26 00:47 | Claude (Claude Code) | Lakeside (EspoCRM 10) installed and checked; Boston cleared. |
 | 0.3 | 10-30-26 00:35 | Claude (Claude Code) | Installed and checked on production. |
 | 0.2 | 10-29-26 22:28 | Claude (Claude Code) | `scripts/check_sorted_list.sh` (read-only check, passed on crm-test 10-29-26); production, Lakeside and Boston booked on the Sunday step page. |

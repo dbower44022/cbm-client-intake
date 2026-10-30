@@ -18,28 +18,6 @@ found; move resolved items to the bottom with the resolution date.
     attend, the attendees optional, never someone who did not attend — not
     yet designed or built.
 
-60. **The shared grid rollout — one application per release** (2026-10-27).
-    Doug's ruling 10-27-26: every grid has resizable columns, alternating
-    rows and multi-column sorting, a preview pane has a divider, and a
-    spinner shows while anything loads; option B — built once, Lists first
-    (v0.294.0, live-passed on crm-test 10-28-26 00:23), then each
-    application. Plan: `prds/shared-grid-plan.md`.
-    The spinners in `busy.js` already reach every page. **Owed, one release
-    each:** — **all built by v0.300.0 (plan § 12) and live-passed on
-    crm-test 10-29-26** — the rollout is complete; this item stays open only
-    for SortedList on Boston (production installed 10-30-26; Boston after
-    the Lakeside rehearsal, step page parts A and C). Client Administration (**built as v0.299.0, plan § 11;
-    live-passed on crm-test 10-28-26**); Mentor Administration (**built as
-    v0.297.0, plan § 9; live-passed on crm-test 10-28-26**); Client, Partner and
-    Funder Management (one shared frontend; **built as v0.298.0, plan § 10;
-    live-passed on crm-test 10-28-26**); Submission Admin; the
-    Workspace Directories; My Email; Event Administration; System Settings;
-    and the rest of Marketing Management — **built as v0.296.0 (rollout 1,
-    plan § 8), live-passed on crm-test 10-28-26, as an administrator and as Mark Marketing; its `SortedList` CRM endpoint is
-    owed on production and Boston** (`sorted-list-crm-handoff.md`). A server-paged grid also needs its route to take a `sort`
-    list; each release names the columns its server can sort and marks the
-    rest `data-sortable="false"`.
-
 59. **The postcard landing page misreads a printed address whose first line
     is not the street, and saves the misreading** (found in the D1 live
     pass, 10-25-26). `campaigns/service.parse_address_text` takes line 1 as
@@ -2259,6 +2237,28 @@ toggle.
     over the fix on 2026-10-07, so the fix is still owed.
 
 ## Resolved
+
+60. **The shared grid rollout — one application per release** (2026-10-27)
+    — **RESOLVED 10-30-26**.
+    Doug's ruling 10-27-26: every grid has resizable columns, alternating
+    rows and multi-column sorting, a preview pane has a divider, and a
+    spinner shows while anything loads; option B — built once, Lists first
+    (v0.294.0, live-passed on crm-test 10-28-26 00:23), then each
+    application. Plan: `prds/shared-grid-plan.md`.
+    The spinners in `busy.js` already reach every page. **Owed, one release
+    each:** — **all built by v0.300.0 (plan § 12) and live-passed on
+    crm-test 10-29-26** — the rollout is complete — **closed 10-30-26: SortedList is installed on crm-test, production,
+    Lakeside and Boston**; Boston's application uses it from its next release. Client Administration (**built as v0.299.0, plan § 11;
+    live-passed on crm-test 10-28-26**); Mentor Administration (**built as
+    v0.297.0, plan § 9; live-passed on crm-test 10-28-26**); Client, Partner and
+    Funder Management (one shared frontend; **built as v0.298.0, plan § 10;
+    live-passed on crm-test 10-28-26**); Submission Admin; the
+    Workspace Directories; My Email; Event Administration; System Settings;
+    and the rest of Marketing Management — **built as v0.296.0 (rollout 1,
+    plan § 8), live-passed on crm-test 10-28-26, as an administrator and as Mark Marketing; its `SortedList` CRM endpoint is
+    owed on production and Boston** (`sorted-list-crm-handoff.md`). A server-paged grid also needs its route to take a `sort`
+    list; each release names the columns its server can sort and marks the
+    rest `data-sortable="false"`.
 
 62. **A company's record page: the Events tab errors** (found in the grid
     live pass, 2026-10-29) — **RESOLVED 10-29-26: fixed in v0.300.2–v0.300.3,
