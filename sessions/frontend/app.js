@@ -4851,6 +4851,12 @@
       cell(speNum(r.registered), "sx__num");
       cell(speNum(r.attended), "sx__num");
       cell(speNum(r.clients), "sx__num");
+      var act = document.createElement("td"); act.className = "att__act";
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "cbm-button cbm-button--secondary sx__sm";
+      b.textContent = "Who attended"; b.setAttribute("data-att-event", r.id);
+      b.addEventListener("click", function () { openAttendance(r.id); });
+      act.appendChild(b); tr.appendChild(act);
       body.appendChild(tr);
     });
     if (rows.length) { show(tiles); show($("speTable")); hide($("noSpe")); }
@@ -4863,6 +4869,7 @@
     if (spe.forId === currentDetail.id) { paintSpe(); return; }
     spe.forId = currentDetail.id;
     spe.rows = []; spe.totals = null;
+    speAttState.data = null; hide($("speAtt"));
     hide($("speNotice")); hide($("speTable")); hide($("noSpe")); hide($("speTiles"));
     hide($("speUnavailable"));
     show($("speLoading"));
@@ -4884,6 +4891,156 @@
   }
 
   fitGrid("speTable", "sponsoredEvents", paintSpe, [{ col: "startsAtUtc", dir: "desc" }]);
+
+  // --- Who attended, by company (prds/partner-attendance-report-plan.md) ----
+  // Attended registrations only, grouped by the company the person
+  // registered under (events/reporting.sponsor_attendance). Names stay
+  // hidden until Show names is ticked, in the grid, the Copy text and the
+  // download alike. Nothing is stored; Copy and Download build from the rows.
+  var speAttState = { data: null, eventId: null, headSig: "" };
+
+  function attColumns() {
+    var cols = [{ key: "company", label: "Company" }, { key: "attended", label: "Attended" }];
+    if (!speAttState.eventId) cols.push({ key: "events", label: "Events" });
+    if ($("speAttNames").checked) cols.push({ key: "names", label: "People" });
+    return cols;
+  }
+  function attCell(r, key) {
+    if (key === "events" || key === "names") return (r[key] || []).join(", ");
+    return r[key] == null ? "" : r[key];
+  }
+  function attRows() {
+    var rows = ((speAttState.data && speAttState.data.rows) || []).slice();
+    var none = rows.filter(function (r) { return r.companyId == null; });
+    var some = rows.filter(function (r) { return r.companyId != null; });
+    // The no-company bucket stays last whatever the sort.
+    return gridOrder("speAttTable", some, attCell).concat(none);
+  }
+  function attTitle() {
+    var d = speAttState.data || {}, evs = d.events || [];
+    if (speAttState.eventId) return (evs[0] && evs[0].title) || "This event";
+    if (!evs.length) return "All events";
+    var first = evs[0].dateLabel, last = evs[evs.length - 1].dateLabel;
+    return first === last ? "All events, " + first : "All events, " + first + " to " + last;
+  }
+
+  function paintAtt() {
+    if (!speAttState.data) return;
+    var d = speAttState.data, cols = attColumns();
+    $("speAttTitle").textContent = "Who attended — " + attTitle();
+    $("speAttSummary").textContent = d.companies + (d.companies === 1 ? " company" : " companies") +
+      " · " + d.people + (d.people === 1 ? " person" : " people") + " attended";
+    var sig = cols.map(function (c) { return c.key; }).join("|");
+    if (sig !== speAttState.headSig) {
+      speAttState.headSig = sig;
+      var head = $("speAttHead"); head.innerHTML = "";
+      var htr = document.createElement("tr");
+      cols.forEach(function (c) {
+        var th = document.createElement("th"); th.scope = "col";
+        th.textContent = c.label; th.setAttribute("data-col", c.key);
+        htr.appendChild(th);
+      });
+      head.appendChild(htr);
+      if (sharedGrids.speAttTable) gridRefresh("speAttTable");
+      else fitGrid("speAttTable", "attendance", paintAtt, [{ col: "company", dir: "asc" }]);
+    }
+    var body = $("speAttBody"); body.innerHTML = "";
+    attRows().forEach(function (r) {
+      var tr = document.createElement("tr");
+      cols.forEach(function (c) {
+        var td = document.createElement("td");
+        if (c.key === "attended") td.className = "sx__num";
+        var v = attCell(r, c.key);
+        td.textContent = v === "" ? "—" : String(v);
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+    var has = (d.rows || []).length > 0;
+    if (has) { show($("speAttTable")); hide($("speAttEmpty")); }
+    else {
+      hide($("speAttTable"));
+      $("speAttEmpty").textContent = speAttState.eventId
+        ? "Nobody was marked as attended at this event."
+        : "Nobody was marked as attended at any of these events.";
+      show($("speAttEmpty"));
+    }
+  }
+
+  async function openAttendance(eventId) {
+    if (!currentDetail) return;
+    speAttState.eventId = eventId || null; speAttState.data = null;
+    var panel = $("speAtt");
+    hide($("speAttNotice")); hide($("speAttTable")); hide($("speAttEmpty"));
+    $("speAttTitle").textContent = "Who attended";
+    $("speAttSummary").textContent = "Loading…";
+    show(panel);
+    panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    var url = "/records/" + encodeURIComponent(currentDetail.id) + "/sponsoredevents/attendance" +
+      (eventId ? "?event=" + encodeURIComponent(eventId) : "");
+    try {
+      var res = await busyOver(panel, api(url));
+      if (res.available === false) {
+        $("speAttSummary").textContent = "";
+        notice("speAttNotice", res.reason || "Events are not available on this CRM yet.", "warn");
+        return;
+      }
+      speAttState.data = res;
+      paintAtt();
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      $("speAttSummary").textContent = "";
+      notice("speAttNotice", e.message, "error");
+    }
+  }
+
+  function attPlainText() {
+    var names = $("speAttNames").checked;
+    return attRows().map(function (r) {
+      var line = r.company + " — " + r.attended + " attended";
+      if (names && (r.names || []).length) line += " (" + r.names.join(", ") + ")";
+      return line;
+    }).join("\n");
+  }
+  function csvField(v) {
+    var t = v == null ? "" : String(v);
+    return /[",\r\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+  }
+  function attCsv() {
+    var cols = attColumns();
+    var lines = [cols.map(function (c) { return csvField(c.label); }).join(",")];
+    attRows().forEach(function (r) {
+      lines.push(cols.map(function (c) { return csvField(attCell(r, c.key)); }).join(","));
+    });
+    return lines.join("\r\n") + "\r\n";
+  }
+  function fileSlug(text) {
+    return String(text || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "record";
+  }
+
+  $("speAttAll").addEventListener("click", function () { openAttendance(null); });
+  $("speAttClose").addEventListener("click", function () { hide($("speAtt")); });
+  $("speAttNames").addEventListener("change", paintAtt);
+  $("speAttCopy").addEventListener("click", function () {
+    if (!speAttState.data) { notice("speAttNotice", "Nothing to copy yet — the list is still loading.", "warn"); return; }
+    var text = attPlainText(), btn = $("speAttCopy");
+    var done = function () { btn.textContent = "✓ Copied"; setTimeout(function () { btn.textContent = "Copy"; }, 1500); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text); done(); });
+    } else { fallbackCopy(text); done(); }
+  });
+  $("speAttCsv").addEventListener("click", function () {
+    if (!speAttState.data) { notice("speAttNotice", "Nothing to download yet — the list is still loading.", "warn"); return; }
+    var ev = speAttState.eventId && (speAttState.data.events || [])[0];
+    var name = fileSlug(currentDetail && currentDetail.name) + "-attendance-" +
+      (ev ? fileSlug(ev.title) : "all") + ".csv";
+    var blob = new Blob(["\ufeff" + attCsv()], { type: "text/csv;charset=utf-8" });
+    var href = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = href; a.download = name; a.style.display = "none";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(href); }, 1000);
+  });
 
   // --- Campaigns tab (partner, CM-5; funder, ruling 57) -----------------------
   // The campaigns this partner or funder is named on. Counts come from the application's

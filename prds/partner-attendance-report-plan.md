@@ -1,8 +1,8 @@
 # Partner and funder attendance report — plan
 
-Last Updated: 10-30-26 00:52 · Revision 0.1 — change log at the end.
+Last Updated: 10-30-26 01:03 · Revision 0.2 — change log at the end.
 
-**Status: drafted for Doug's approval.** Decision 3 of
+**Status: approved 10-30-26 ("run all stops"); built as v0.301.0; live pass owed.** Decision 3 of
 `prds/partner-association-plan.md` is the requirement; this plan is the
 report itself (`OPEN-ITEMS.md` #61, item 4).
 
@@ -66,7 +66,7 @@ On the Events tab, each event row gains **Who attended**; above the grid,
 
 Work pauses after each for Doug's go-ahead.
 
-1. **Build** (a subagent, as the grid rollout was): the server function and
+1. **Build** (a subagent, as the grid rollout was; built 10-30-26): the server function and
    route with tests (attended only, the three-step company rule, names,
    the 404), the page, and a check on a local copy.
 2. **Review, version, documents** (Claude), then Doug's push.
@@ -79,12 +79,13 @@ Work pauses after each for Doug's go-ahead.
 | Field | Value |
 |---|---|
 | Document | Partner and funder attendance report — plan |
-| Version | 0.1 |
-| Last Updated | 10-30-26 00:52 |
+| Version | 0.2 |
+| Last Updated | 10-30-26 01:03 |
 | Prepared by | Claude (Claude Code), for D. Bower |
 
 ### Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.2 | 10-30-26 01:03 | Claude (Claude Code) | Approved; built (v0.301.0). Built-in choices: the company count leaves out *No company on file*; one person at two events counts once per company; a Close button; the CSV starts with a byte-order mark for Excel. |
 | 0.1 | 10-30-26 00:52 | Claude (Claude Code) | Drafted from decision 3 and Doug's choice of option A. |

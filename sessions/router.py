@@ -1024,6 +1024,51 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not load this record's events")
 
+        @router.get("/records/{parent_id}/sponsoredevents/attendance")
+        async def sponsored_events_attendance(
+            parent_id: str, request: Request, event: Optional[str] = None,
+        ) -> dict:
+            """Who attended this partner's or funder's events, by company
+            (prds/partner-attendance-report-plan.md). The Events tab's gate:
+            the user's own read of the parent, then the org-wide key."""
+            user = _require_user(request)
+            settings = get_settings()
+            client = client_for(settings, user)
+            from events.reporting import EventNotLinked, sponsor_attendance
+
+            link = cfg.sponsored_events_link
+            try:
+                if not await client.get(cfg.parent_entity, parent_id, select="id"):
+                    raise HTTPException(status_code=404, detail="Record not found.")
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not read this record")
+            reader = _system_client(settings) or client
+            try:
+                defs = await reader.metadata(
+                    f"entityDefs.{cfg.parent_entity}.links.{link}")
+            except Exception as exc:  # noqa: BLE001 — a probe never raises
+                log.info("%s.%s not detectable (%s)", cfg.parent_entity, link, exc)
+                defs = None
+            if not isinstance(defs, dict) or not defs:
+                return {
+                    "available": False, "events": [], "companies": 0, "people": 0,
+                    "rows": [],
+                    "reason": (
+                        f"This CRM does not link events to {cfg.parent_label.lower()}s "
+                        f"yet ({cfg.parent_entity}.{link} is missing)."
+                    ),
+                }
+            try:
+                return await sponsor_attendance(
+                    reader, cfg.parent_entity, parent_id, link, event_id=event or None)
+            except EventNotLinked:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"That event is not one of this {cfg.parent_label.lower()}'s events.",
+                )
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load who attended")
+
     if cfg.sponsored_campaigns_link:
         # CM-5 (prds/prospect-marketing/build-plan.md § 3.8) and ruling 57: the
         # campaigns this partner or funder is named on, with their link, visit and submission counts.

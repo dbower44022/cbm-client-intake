@@ -1,6 +1,6 @@
 # sessions/ — Client, Partner and Funder Management
 
-Last Updated: 10-28-26 21:28 · Revision 1.4
+Last Updated: 10-30-26 01:03 · Revision 1.5
 
 Detail for the session engine behind Client Management (`/mentorsessions`), Partner Management (`/partnersessions`) and Funder Management (`/sponsorsessions`): the grids, every record tab, quick add, managers and co-mentors, and the traps of this package.
 
@@ -125,6 +125,12 @@ one shared frontend that derives its domain from the first segment of its URL.
   of the parent record gates the tab — the Partner Manager and Sponsor Manager
   roles hold no event, registration or engagement access, and the numbers are
   aggregates (the directory-availability precedent).
+- **Who attended, by company** (v0.301.0,
+  `prds/partner-attendance-report-plan.md`): the Events tab's *Who attended*
+  panel, `events.reporting.sponsor_attendance` behind
+  `/records/{id}/sponsoredevents/attendance` — attended only, the company at
+  registration else now, names only when *Show names* is on; Copy and the CSV
+  are built in the browser.
 - **Grants (funder only, `grants_link`)** — the Grants tab: awards, their
   deliverables, and later their funder reports. The **grant is the hub**:
   `CContribution` rows become its payments and deliverables its obligations, and
@@ -283,6 +289,7 @@ Watch for these when touching this package:
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.5 | 10-30-26 01:03 | Claude (Claude Code) | Who attended, by company (v0.301.0). |
 | 1.4 | 10-28-26 21:28 | Claude (Claude Code) | Every grid on the shared grid (v0.298.0). |
 | 1.3 | 10-24-26 11:05 | Claude (Claude Code) | One login on several profiles: the Active-profile choice and the grid's report (v0.280.0). |
 | 1.2 | 10-22-26 12:10 | Claude (Claude Code) | The close-date stamp (ruling 70). |

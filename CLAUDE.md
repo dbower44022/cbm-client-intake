@@ -1237,6 +1237,10 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
+- **v0.301.0 (2026-10-30) — who attended a partner's or funder's events,
+  by company** (`prds/partner-attendance-report-plan.md`): the Events tab's
+  *Who attended* panel, Copy and CSV. No CRM change. Committed, **not pushed;
+  live pass owed**.
 - **v0.300.0 (2026-10-29) — the shared grid everywhere**
   (`prds/shared-grid-plan.md` § 12): Submission Admin, the Directories
   (server sort through `SortedList`), My Email, Event Administration, System

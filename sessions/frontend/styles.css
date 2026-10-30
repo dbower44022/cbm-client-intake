@@ -1035,3 +1035,10 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
 
 /* Numeric cells (the partner / funder Events tab). */
 .sx__table td.sx__num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Who attended, by company (prds/partner-attendance-report-plan.md). */
+.att { margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid var(--cbm-border, #d9dde3); }
+.att__summary { margin: 0 0 0.5rem; color: var(--cbm-slate-700, #667); }
+.att__names { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.9rem; }
+.att__act { white-space: nowrap; text-align: right; }
+.sx__sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }

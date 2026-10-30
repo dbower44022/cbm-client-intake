@@ -5,6 +5,25 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.301.0] — 2026-10-30
+
+**feat: who attended a partner's or funder's events, by company**
+(`prds/partner-attendance-report-plan.md`; decision 3 of the association
+plan, Doug's option A). No switch; no migration; no CRM change.
+
+- **On the Events tab** of Partner Management and Funder Management: *Who
+  attended* on each event and *Who attended — all events*. A panel lists
+  each company that had someone attend and how many (and, for all events,
+  which events), from `events.reporting.sponsor_attendance` through
+  `GET /records/{id}/sponsoredevents/attendance?event=`.
+- **Only people marked Attended.** A person counts under the company they
+  were with when they registered, else their company now, else *No company
+  on file* (listed last, named).
+- **Show names** (off by default) adds a People column; **Copy** (one
+  company a line) and **Download (CSV)** carry names only while it is on.
+- The Events tab's gate: the user's own read of the record, then the
+  org-wide key. An event not linked to the record answers 404.
+
 ## [0.300.3] — 2026-10-29
 
 **fix: a company's Events tab names the person even when the company has

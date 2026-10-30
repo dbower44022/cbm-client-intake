@@ -14,7 +14,8 @@ found; move resolved items to the bottom with the resolution date.
     **blocked: Boston has no `CProspect` until the outreach CRM change**
     (`partner-association-crm-handoff.md` § 0); (3) the Operations job's
     backfill run on Boston after its change (production done 10-30-26); (4) **the partner's
-    attendance report** — Doug's decision 3: companies that had someone
+    attendance report** — **built as v0.301.0
+    (`prds/partner-attendance-report-plan.md`), live pass owed**; — Doug's decision 3: companies that had someone
     attend, the attendees optional, never someone who did not attend — not
     yet designed or built.
 

@@ -235,6 +235,9 @@
       <div class="sx__dpanel" data-dpanel="sponsoredEvents" hidden>
         <div class="sx__comm-head">
           <h3>Events</h3>
+          <span class="sx__comm-acts">
+            <button type="button" class="cbm-button cbm-button--secondary sx__sm" id="speAttAll">Who attended — all events</button>
+          </span>
         </div>
         <p class="sx__notice" id="speNotice" role="status" hidden></p>
         <p class="sx__loading" id="speLoading" hidden>Loading…</p>
@@ -248,6 +251,7 @@
             <th data-col="registered" scope="col">Registered</th>
             <th data-col="attended" scope="col">Attended</th>
             <th data-col="clients" scope="col">Became clients</th>
+            <th data-sortable="false" scope="col"><span class="sx__sr">Actions</span></th>
           </tr></thead>
           <tbody id="speBody"></tbody>
         </table>
@@ -255,6 +259,27 @@
           No {{abbr}} event is linked to this record yet. Partners and funders are
           added to an event in Event Administration.
         </p>
+        <!-- Who attended, by company (prds/partner-attendance-report-plan.md):
+             attended registrations only; names hidden until Show names. Copy
+             and Download are built in the browser from the rows. -->
+        <section class="att" id="speAtt" hidden aria-labelledby="speAttTitle">
+          <div class="sx__comm-head">
+            <h3 id="speAttTitle">Who attended</h3>
+            <span class="sx__comm-acts">
+              <label class="att__names"><input type="checkbox" id="speAttNames"> Show names</label>
+              <button type="button" class="cbm-button cbm-button--secondary sx__sm" id="speAttCopy">Copy</button>
+              <button type="button" class="cbm-button cbm-button--secondary sx__sm" id="speAttCsv">Download (CSV)</button>
+              <button type="button" class="cbm-button cbm-button--secondary sx__sm" id="speAttClose">Close</button>
+            </span>
+          </div>
+          <p class="sx__notice" id="speAttNotice" role="status" hidden></p>
+          <p class="att__summary" id="speAttSummary"></p>
+          <table class="sx__table" id="speAttTable" hidden>
+            <thead id="speAttHead"></thead>
+            <tbody id="speAttBody"></tbody>
+          </table>
+          <p class="sx__muted" id="speAttEmpty" hidden>Nobody was marked as attended at this event.</p>
+        </section>
       </div>
 
       <!-- Campaigns (partner, CM-5; funder, ruling 57 — prds/prospect-marketing/

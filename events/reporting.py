@@ -23,6 +23,7 @@ import logging
 from datetime import datetime
 from typing import Any, Iterable, Optional
 
+from core import partner_links
 from core.espo import EspoApi, EspoError
 
 from . import config as cfg
@@ -353,7 +354,7 @@ async def conversion_report(
 
 
 async def _registrations_for_events(
-    client: EspoApi, event_ids: list[str]
+    client: EspoApi, event_ids: list[str], select: str = cfg.REGISTRATION_SELECT
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for start in range(0, len(event_ids), 100):
@@ -362,7 +363,7 @@ async def _registrations_for_events(
         while True:
             data = await client.list(
                 cfg.REGISTRATION,
-                select=cfg.REGISTRATION_SELECT,
+                select=select,
                 where=[{"type": "in", "attribute": "eventId", "value": chunk}],
                 max_size=200, offset=offset,
             )
@@ -477,3 +478,118 @@ async def sponsor_rollup(
         "clients": len(converted_contacts) if creations is not None else None,
     }
     return {"available": True, "events": rows, "totals": totals}
+
+
+# --- who attended a partner's or funder's events, by company ------------------
+# prds/partner-attendance-report-plan.md. Decision 3 (Doug, 10-28-26):
+# attendance is reported BY COMPANY, the person as optional detail, and
+# someone who did not attend is never reported.
+
+#: The bucket for an attendee with no company on either record.
+NO_COMPANY = "No company on file"
+
+
+class EventNotLinked(LookupError):
+    """The event asked for is not one of this partner's or funder's events."""
+
+
+async def _contacts_by_id(
+    client: EspoApi, contact_ids: list[str]
+) -> dict[str, dict[str, Any]]:
+    """id -> {name, accountId, accountName}, read in chunks of 100."""
+    out: dict[str, dict[str, Any]] = {}
+    for start in range(0, len(contact_ids), 100):
+        chunk = contact_ids[start:start + 100]
+        data = await client.list(
+            "Contact", select="id,name,accountId,accountName",
+            where=[{"type": "in", "attribute": "id", "value": chunk}],
+            max_size=len(chunk),
+        )
+        for row in data.get("list", []):
+            if row.get("id"):
+                out[row["id"]] = row
+    return out
+
+
+def _person_name(reg: dict[str, Any], contact: dict[str, Any]) -> str:
+    name = " ".join(p for p in ((reg.get("firstName") or "").strip(),
+                                (reg.get("lastName") or "").strip()) if p)
+    return name or (contact.get("name") or "").strip() or (reg.get("email") or "").strip()
+
+
+async def sponsor_attendance(
+    client: EspoApi, parent_entity: str, parent_id: str, link: str,
+    event_id: Optional[str] = None,
+) -> dict[str, Any]:
+    """Who attended this partner's or funder's events, by company.
+
+    The events are the ones the Events tab lists (the parent's ``link``);
+    ``event_id`` narrows to one of them and raises :class:`EventNotLinked`
+    when it is not among them. Only registrations marked Attended count.
+    A person's company is the one they registered under
+    (``CEventRegistration.registrationCompany``, read only when the CRM has
+    that link), else their Contact's company now, else none — listed by name
+    under :data:`NO_COMPANY`, which sorts last.
+    """
+    data = await client.list_related(
+        parent_entity, parent_id, link, select=cfg.PUBLIC_SELECT, max_size=200,
+    )
+    events = [e for e in data.get("list", []) if e.get("id")]
+    if event_id:
+        events = [e for e in events if e["id"] == event_id]
+        if not events:
+            raise EventNotLinked(event_id)
+    events.sort(key=lambda e: e.get("dateStart") or "")
+    refs = {e["id"]: _event_ref(e) for e in events}
+
+    regs: list[dict[str, Any]] = []
+    if events:
+        select = cfg.REGISTRATION_SELECT
+        if await partner_links.registration_company_available(client):
+            select += ",registrationCompanyId,registrationCompanyName"
+        regs = [r for r in await _registrations_for_events(client, list(refs), select)
+                if (r.get("attendanceStatus") or "") in ATTENDED]
+    contact_ids = sorted({r["contactId"] for r in regs if r.get("contactId")})
+    contacts = await _contacts_by_id(client, contact_ids) if contact_ids else {}
+
+    groups: dict[Optional[str], dict[str, Any]] = {}
+    people: set[str] = set()
+    for reg in regs:
+        contact = contacts.get(reg.get("contactId") or "") or {}
+        if reg.get("registrationCompanyId"):
+            cid, cname = reg["registrationCompanyId"], reg.get("registrationCompanyName")
+        elif contact.get("accountId"):
+            cid, cname = contact["accountId"], contact.get("accountName")
+        else:
+            cid, cname = None, NO_COMPANY
+        person = (reg.get("contactId")
+                  or (reg.get("email") or "").strip().lower()
+                  or reg.get("id") or "")
+        people.add(person)
+        g = groups.setdefault(cid, {"companyId": cid, "company": cname or "(unnamed company)",
+                                    "_people": set(), "_events": set(), "_names": set()})
+        g["_people"].add(person)
+        g["_events"].add(reg.get("eventId") or "")
+        name = _person_name(reg, contact)
+        if name:
+            g["_names"].add(name)
+
+    order = list(refs)  # oldest first
+    rows = []
+    for g in groups.values():
+        rows.append({
+            "companyId": g["companyId"],
+            "company": g["company"],
+            "attended": len(g["_people"]),
+            "events": [refs[i]["title"] for i in order if i in g["_events"]],
+            "names": sorted(g["_names"], key=str.casefold),
+        })
+    rows.sort(key=lambda r: (r["companyId"] is None, r["company"].casefold()))
+    return {
+        "available": True,
+        "events": [{k: refs[i][k] for k in ("id", "title", "dateLabel", "startsAtUtc")}
+                   for i in order],
+        "companies": sum(1 for r in rows if r["companyId"] is not None),
+        "people": len(people),
+        "rows": rows,
+    }
