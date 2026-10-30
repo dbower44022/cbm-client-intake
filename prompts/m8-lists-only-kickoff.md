@@ -1,6 +1,12 @@
 # Kickoff — M8: lists only and the campaign page
 
-Last Updated: 10-27-26 12:45 · Revision 1.0 — change log at the end.
+Last Updated: 10-30-26 01:40 · Revision 1.1 — change log at the end.
+
+> **RETIRED 10-30-26 — do not run.** M8 was built from this prompt as
+> v0.291.0 (commit `73d311e`, 10-27-26), fixed as v0.291.1 (`be45316`),
+> pushed, and live-passed on crm-test 10-27-26 18:15. Its three decisions
+> were ruled the same day (build plan § 7e.13, item 8). Kept as the record
+> of what the M8 session was asked to do.
 
 Operating mode: DETAIL. **The plan below is a draft, not yet approved.**
 The session's **first reply** states the operating mode and the loaded
@@ -228,3 +234,4 @@ the M5 live pass and D2 as the alternatives.
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
 | 1.0 | 10-27-26 12:45 | Claude (Claude Code) | Written after the M7 live pass, at Doug's request; the plan is a draft for his approval in the M8 session's first reply. |
+| 1.1 | 10-30-26 01:40 | Claude (Claude Code) | Marked retired at Doug's request: M8 was built, pushed and live-passed on 10-27-26; a session given this prompt on 10-30-26 found it stale. |
