@@ -11,7 +11,11 @@ found; move resolved items to the bottom with the resolution date.
     (1) ~~the live pass on crm-test~~ **passed 10-28-26** (backfill applied
     there; two faults fixed in v0.295.1, pushed 10-28-26). Owed: (2) the CRM change on production —
     **done 10-30-26 with its backfill (step page part B)** — and on Boston,
-    **blocked: Boston has no `CProspect` until the outreach CRM change**
+    **blocked: Boston has no `CProspect` until the outreach CRM change** —
+    **step page written 10-30-26 (Doug's option A: Boston to production's
+    level), https://claude.ai/artifact/V9aNhNDzDM8e6FqkHU6BKv, with
+    `scripts/prospect_crm_boston.sh`; Boston's backfill after its next
+    release**
     (`partner-association-crm-handoff.md` § 0); (3) the Operations job's
     backfill run on Boston after its change (production done 10-30-26); (4) **the partner's
     attendance report** — **built as v0.301.0
@@ -1085,8 +1089,8 @@ found; move resolved items to the bottom with the resolution date.
     deepened to 194/194 fields and 62/63 relationships on the showcase records,
     contained (`check_containment.py` reports 0 blocking issues), baseline
     captured and the restore proved end to end. Docs: `SANDBOX-RESET.md`
-    (engineers), `training-guide.md` (trainers, also published to the docs
-    site), `demo-records.md` (the data reference).
+    (engineers), `training/training-guide.md` (trainers, also published to the docs
+    site), `training/demo-records.md` (the data reference).
 
     What is still owed:
 
@@ -2346,7 +2350,7 @@ created, 0 present, 0 skipped` in the worker log), and the codes answered
     demand at `/setup` → Operations → *Sandbox demo campaign links*. **Applied
     on crm-test 10-20-26 04:17 UTC** (52 changes, a second dry run 0, read
     back under the org key; the November postcard's list selects exactly the
-    three leads `demo-records.md` names), so it survives only until 04:00 UTC
+    three leads `training/demo-records.md` names), so it survives only until 04:00 UTC
     on 10-21-26 unless the recapture runs today. **The step page is rewritten
     for it** (revision 2.0, 10-20-26 00:25, same address): push, the four
     seeders with today's dry-run counts, the Operations job, the recapture,
@@ -2387,7 +2391,7 @@ no company linked — see the Data cleanup section.**
     Sally Sponsor's role (Sponsor Manager Role, the roles standard) reads
     `CSponsorProfile` at **team**, and none of the six sandbox funders carried
     a team or an assigned user, so her grid was empty while an administrator
-    saw all six (administrators bypass ACL). The demo in `demo-records.md`
+    saw all six (administrators bypass ACL). The demo in `training/demo-records.md`
     ("Open: Harrowgate Family Trust") predates crm-test being brought to the
     roles standard on 2026-09-13, which is the likely moment it broke.
     **Worked around 2026-10-07:** all six funders were put in the Sponsor
