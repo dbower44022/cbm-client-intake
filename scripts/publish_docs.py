@@ -3,13 +3,13 @@
 Several documents in this repo have a twin on
 ``docs.clevelandbusinessmentors.org`` and carry a "keep the two in sync" note
 whose only enforcement, until now, was somebody remembering. That already
-failed once: ``training-guide.md`` was published saying the nightly reset was
+failed once: ``training/training-guide.md`` was published saying the nightly reset was
 "not yet switched on", and the reset was armed an hour later (2026-08-22).
 
 ``--check`` is the point of this script. ``--publish`` is the convenience.
 
 **The site is PUBLICLY readable** — no login. Never publish credentials, live
-usernames, or anything identifying real accounts. ``training-guide.md`` ships
+usernames, or anything identifying real accounts. ``training/training-guide.md`` ships
 its six sign-in usernames stripped for exactly that reason, and
 :func:`for_publication` refuses to publish anything that still contains one.
 
@@ -29,7 +29,7 @@ Usage::
 
     uv run python scripts/publish_docs.py                      # check all, exit 1 on drift
     uv run python scripts/publish_docs.py --list
-    uv run python scripts/publish_docs.py --publish training-guide.md
+    uv run python scripts/publish_docs.py --publish training/training-guide.md
 """
 
 from __future__ import annotations
@@ -67,7 +67,7 @@ class Doc:
 
 
 PUBLISHED: tuple[Doc, ...] = (
-    Doc("training-guide.md", "Training Sandbox",
+    Doc("training/training-guide.md", "Training Sandbox",
         "Running a training session on the sandbox"),
     Doc("data-model.md", "Data Model", "How the data is structured",
         check_only=True,

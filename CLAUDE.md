@@ -16,10 +16,11 @@ size or it costs every future session. The rule that keeps it small:
   and rulings that govern future work, the traps, the conventions.
 - **Detail about one application belongs in that application's folder**, in
   its own `CLAUDE.md` (`assignments/`, `mentoradmin/`, `sessions/`, `setup/`,
-  `campaigns/`, `events/`, `docs/`, `ops/` so far). Claude Code loads it only when a session
-  works in that folder, so a rule another package depends on stays here, with
-  a pointer. This file was moved under that rule on 10-20-26, when it reached
-  182,447 characters against Claude Code's 150,000 limit; keep it under 80,000.
+  `campaigns/`, `events/`, `docs/`, `ops/`, `training/` so far). Claude Code
+  loads it only when a session works in that folder, so a rule another package
+  depends on stays here, with a pointer. This file was moved under that rule on
+  10-20-26, when it reached 182,447 characters against Claude Code's 150,000
+  limit; keep it under 80,000.
 - The "Current status" section at the bottom is a **rolling window of the last
   few releases**. When a release is deployed and verified, delete its block —
   the changelog owns it. Do not prepend a new block and keep the old ones.
@@ -206,7 +207,7 @@ hard-code `1000:1000`; it must be the container's `www-data` (33)
 team's Entity Manager work (it lives in files, and the reset rebuilds from it),
 the `/setup` overrides in `app_setting`, roles, teams, email templates and the
 integration credentials. Runbook: `SANDBOX-RESET.md`; the training data and its
-showcase records: `training-guide.md` and `demo-records.md`.
+showcase records: `training/training-guide.md` and `training/demo-records.md`.
 
 ## Commands
 
@@ -219,7 +220,7 @@ docker build -t cbm-intake . && docker run --rm -p 8099:8080 cbm-intake  # prod-
 uv run python scripts/sync_form_options.py          # dry-run: form dropdowns vs live CRM enums
 uv run python scripts/sync_form_options.py --write  # apply the sync (review the git diff)
 uv run python scripts/publish_docs.py               # check every docs-site twin for drift
-uv run python scripts/publish_docs.py --publish training-guide.md   # publish one
+uv run python scripts/publish_docs.py --publish training/training-guide.md   # publish one
 uv run python scripts/render_deployment_guide.py    # chapter deployment guide: YAML steps -> guide/ (--check in CI)
 ```
 
@@ -996,8 +997,8 @@ publishing refused.
 | `data-model.md` | **ERD reference** — the CRM entity model, the 18 Postgres tables, the soft key that joins them, and the cardinality rulings. **Published to the docs site** as *Data Model → How the data is structured* — keep the two in sync |
 | `mentor-administration.md` | `/mentoradmin` functionality + the completeness rules |
 | `mentor-directory.md` | Mentors directory + the read-only mentor profile page |
-| `training-guide.md` | **Delivering a training session**: who to sign in as, the per-audience walkthroughs, what to tell the room, and how the overnight reset behaves. **Published to the docs site** as *Training Sandbox → Running a training session* — keep the two in sync, and note the published copy omits the sign-in usernames because that site is public |
-| `demo-records.md` | The data reference behind that guide — which record to open for each user type, and what is on each of its tabs |
+| `training/training-guide.md` | **Delivering a training session**: who to sign in as, the per-audience walkthroughs, what to tell the room, and how the overnight reset behaves. **Published to the docs site** as *Training Sandbox → Running a training session* — keep the two in sync, and note the published copy omits the sign-in usernames because that site is public |
+| `training/demo-records.md` | The data reference behind that guide — which record to open for each user type, and what is on each of its tabs |
 | `SANDBOX-RESET.md` | The training sandbox: the nightly restore, containment, capturing and re-baselining |
 | `address-paste.md` | Staff guide to pasting a whole address into one box |
 | `chapter-colours.md` | **Changing a chapter's colours**: the colour file, entering its address at `/setup`, where each of the four colours appears and what stays fixed, the check, the undo. Companion to deployment guide step 6.5 |

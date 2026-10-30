@@ -14,7 +14,7 @@ tab. Everything around it is thinner on purpose: that is what makes the
 showcase record look normal rather than staged.
 
 This is the **reference**. For running an actual session — who to sign in as,
-what to click in what order, what to tell the room — use `training-guide.md`;
+what to click in what order, what to tell the room — use `training/training-guide.md`;
 it links here rather than repeating any of it. Setup and mechanics live in
 `SANDBOX-RESET.md`. The data is produced by
 `scripts/sandbox/seed_training_data.py` and

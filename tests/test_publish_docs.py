@@ -76,7 +76,7 @@ def test_ordinary_prose_passes_the_guard():
 def test_the_published_training_guide_carries_no_usernames():
     """The real document, not a fixture — this is the one that goes public."""
     text = publish_docs.for_publication(
-        (REPO / "training-guide.md").read_text(encoding="utf-8")
+        (REPO / "training/training-guide.md").read_text(encoding="utf-8")
     )
     publish_docs.guard(publish_docs.PUBLISHED[0], text)
 

@@ -248,7 +248,7 @@ with a parser): the org-wide API key may not create a campaign.
 application's database, which the app half empties every night whatever the
 baseline holds. So the worker puts a fixed list of demo links back straight
 after it empties the table (`campaigns/sandbox_demo.py`, Doug's ruling
-10-20-26), with fixed codes — the card addresses in `demo-records.md` never
+10-20-26), with fixed codes — the card addresses in `training/demo-records.md` never
 change. After seeding, run `/setup` → Operations → **Sandbox demo campaign
 links** (dry run, then apply) rather than wait for the night. A demo campaign
 the CRM does not hold is skipped and reported, never an error. Pick a morning

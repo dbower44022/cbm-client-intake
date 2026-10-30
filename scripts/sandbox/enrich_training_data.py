@@ -7,7 +7,7 @@ Contributions tab with no gifts, a partner with no sessions and no referred
 clients. Doug's requirement (2026-08-22) is that **each user type has at least
 one record rich enough to demonstrate every feature**, so this fills the gaps on
 a nominated record per domain — the "showcase" records that
-``demo-records.md`` documents.
+``training/demo-records.md`` documents.
 
 Deliberately concentrated rather than spread: one obviously-rich record per
 domain is what a demo needs, and the thinner records around it are what makes
@@ -45,7 +45,8 @@ from core.config import get_settings  # noqa: E402
 
 CRM_FMT = "%Y-%m-%d %H:%M:%S"
 
-#: The record each user type is demonstrated on. Keep in step with demo-records.md.
+#: The record each user type is demonstrated on.
+#: Keep in step with training/demo-records.md.
 SHOWCASE = {
     "engagement": "Brightline Bakehouse — Mentoring",
     "partner": "Cuyahoga Small Business Alliance",

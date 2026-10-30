@@ -13,8 +13,8 @@
 
 The stage that shows the chapter's staff how to use the system before they use it
 on real records. It is written from Cleveland's own training material: the trainer's
-guide (`training-guide.md`), the record-by-record reference behind it
-(`demo-records.md`), and the runbook for the training system's nightly reset
+guide (`training/training-guide.md`), the record-by-record reference behind it
+(`training/demo-records.md`), and the runbook for the training system's nightly reset
 (`SANDBOX-RESET.md`).
 
 Two rulings shape it:
@@ -101,7 +101,7 @@ will not say their own chapter's name.
 **First:** step 16.1.
 
 **How to do it today:** at the start of the first session, say it out loud. Use the
-three points in the "What to tell the room" section of `training-guide.md`. It is a
+three points in the "What to tell the room" section of `training/training-guide.md`. It is a
 training system and every record is invented. Nobody is expected to save anything.
 And if someone does save something, nothing can escape. Then add the chapter's
 own point: the name on every page is Cleveland's, and their own system will show
@@ -130,7 +130,7 @@ uses, and has done each main task once themselves.
 
 **First:** step 16.2.
 
-**How to do it today:** follow the walkthroughs in `training-guide.md`, one per
+**How to do it today:** follow the walkthroughs in `training/training-guide.md`, one per
 role. Each names the account to sign in as, the record to open and what to point
 out. The mentor walkthrough is the longest, at 30 to 40 minutes. Use the chapter
 training account for each role in place of Cleveland's own training account.
