@@ -6,6 +6,16 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+63. **The email composer's company box hides "+ New company…"**
+    (2026-10-30, found while fixing the same fault in the Add a partner
+    dialog, v0.301.1). When an email adds an unknown address as a new
+    contact, `frontend/shared/compose.js` offers a Company search box whose
+    "+ New company…" entry disappears once the typed text matches no
+    company. Worse than the dialog: a typed but unpicked company is
+    dropped without a message, and the contact is created with no
+    company. Fix to follow the dialog's ruling (option C) or a ruling of
+    its own.
+
 61. **Partner and funder associations — production, Boston, the report**
     (2026-10-28). Built as v0.295.0 (`prds/partner-association-plan.md`).
     (1) ~~the live pass on crm-test~~ **passed 10-28-26** (backfill applied
@@ -1488,6 +1498,15 @@ block a deploy.)*
     than silent loss ([[prod-ccommunication-field-length-drift]]).
 
 ## Live verification owed
+
+64. **Add a partner / Add a funder — the new-company confirmation**
+    (v0.301.1, 2026-10-30). Checked in a stubbed preview only. On
+    crm-test, as a non-admin in Partner Management: type a company the
+    CRM lacks, fill nothing else, click Create — expect "… isn't a company
+    we know", the name editable, *Create company and partner* creating
+    the company and filling Partner name. Then type an existing company's
+    exact name without picking it — expect no confirmation and the
+    existing company used. Repeat once in Funder Management.
 
 55. **Company website rules — live cases owed** (v0.236.0, v0.237.0,
     2026-10-07; moved here from `CLAUDE.md` "Current status" 10-20-26).

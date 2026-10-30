@@ -6083,6 +6083,7 @@
 
   async function openQuickAdd() {
     if (!quickAddOn()) return;
+    qaddHideConfirm();
     hide($("qaddNotice"));
     qadd.discardArmed = false;
     $("qaddCancelBtn").textContent = "Cancel";
@@ -6119,6 +6120,8 @@
 
   function closeQuickAdd() {
     hide($("qaddModal"));
+    qaddHideConfirm();
+    qadd.companyCombo = null; qadd.companyNewBox = null;
     qadd.fieldEls = {};
     qadd.nameAuto = "";
     qadd.companyChoice = null;
@@ -6225,13 +6228,13 @@
         },
       });
       var opts = qadd.companies.map(function (a) {
-        var site = (a.website || "").replace(/^https?:\/\//i, "").replace(/^www\./i, "").replace(/\/$/, "");
-        return { id: a.id, name: a.name, label: a.name + (site ? " — " + site : "") };
+        return { id: a.id, name: a.name, label: qaddCompanyLabel(a) };
       });
       opts.push({ id: "__new__", label: "+ New company…", muted: true });
       combo.setOptions(opts);
       combo.input.className += " qadd__input";
       wrap.appendChild(combo.el);
+      qadd.companyCombo = combo; qadd.companyNewBox = newBox;
       el = newBox;
     } else if (f.type === "enum") {
       el = document.createElement("select");
@@ -6268,14 +6271,140 @@
     return wrap;
   }
 
+  function qaddCompanyLabel(a) {
+    var site = (a.website || "").replace(/^https?:\/\//i, "").replace(/^www\./i, "").replace(/\/$/, "");
+    return a.name + (site ? " — " + site : "");
+  }
+
+  // What a typed-but-unpicked company name means. Pure, so a test can run it.
+  // {kind:"none"} — nothing typed; {kind:"exact", company} — exactly one
+  // company has that name (capitals and spacing ignored); {kind:"new", name,
+  // near, several} — create it after confirming, offering the near matches
+  // (the companies the search would have shown) instead. Two companies with
+  // the same name are never guessed between: both are offered.
+  function qaddCompanyIntent(typed, companies) {
+    function norm(s) { return String(s || "").toLowerCase().replace(/\s+/g, " ").trim(); }
+    var t = norm(typed);
+    if (!t) return { kind: "none" };
+    var exact = [], near = [];
+    (companies || []).forEach(function (a) {
+      var n = norm(a.name);
+      if (!n) return;
+      if (n === t) exact.push(a);
+      else if (n.indexOf(t) !== -1 || (n.length >= 3 && t.indexOf(n) !== -1)) near.push(a);
+    });
+    if (exact.length === 1) return { kind: "exact", company: exact[0] };
+    return {
+      kind: "new", name: String(typed).replace(/\s+/g, " ").trim(),
+      near: exact.concat(near).slice(0, 8), several: exact.length > 1,
+    };
+  }
+
+  // Use an existing company, exactly as picking it from the list would.
+  function qaddUseCompany(a) {
+    qadd.companyChoice = { id: a.id, name: a.name };
+    if (qadd.companyCombo) qadd.companyCombo.setText(qaddCompanyLabel(a));
+    if (qadd.companyNewBox) { qadd.companyNewBox.hidden = true; qadd.companyNewBox.value = ""; }
+    qaddMirrorName(a.name);
+  }
+
+  // The record name follows the company until the user edits it.
+  function qaddMirrorName(n) {
+    var el = qadd.fieldEls.name;
+    if (el && el.value === qadd.nameAuto) { qadd.nameAuto = n; el.value = n; }
+  }
+
+  function qaddHideConfirm() {
+    var box = $("qaddConfirm");
+    if (box) { hide(box); box.innerHTML = ""; }
+    show($("qaddForm")); show($("qaddHint")); show($("qaddActions"));
+  }
+
+  // "Create it as a new company?" — shown in place of the form, with the
+  // typed name editable so a typo can be fixed before anything is created.
+  function qaddShowConfirm(intent) {
+    var box = $("qaddConfirm"); box.innerHTML = "";
+    hide($("qaddNotice")); hide($("qaddForm")); hide($("qaddHint")); hide($("qaddActions"));
+    var title = document.createElement("p"); title.className = "qadd__confirm-title";
+    title.textContent = intent.several
+      ? "More than one company is named “" + intent.name + "”."
+      : "“" + intent.name + "” isn't a company we know.";
+    box.appendChild(title);
+    var ask = document.createElement("p");
+    ask.textContent = "Create it as a new company? Correct the name first if it's misspelled.";
+    box.appendChild(ask);
+    var label = document.createElement("label"); label.className = "qadd__label";
+    label.textContent = "New company name";
+    var input = document.createElement("input"); input.type = "text";
+    input.className = "qadd__input"; input.value = intent.name;
+    label.appendChild(input); box.appendChild(label);
+    var msg = document.createElement("p"); msg.className = "sx__notice"; msg.hidden = true;
+    box.appendChild(msg);
+    if (intent.near && intent.near.length) {
+      var or = document.createElement("p");
+      or.textContent = "Or use a company we already have:";
+      box.appendChild(or);
+      var ul = document.createElement("ul"); ul.className = "qadd__confirm-near";
+      intent.near.forEach(function (a) {
+        var li = document.createElement("li");
+        var b = document.createElement("button"); b.type = "button"; b.className = "sx__link";
+        b.textContent = qaddCompanyLabel(a);
+        b.addEventListener("click", function () {
+          qaddUseCompany(a); qaddHideConfirm(); saveQuickAdd();
+        });
+        li.appendChild(b); ul.appendChild(li);
+      });
+      box.appendChild(ul);
+    }
+    var actions = document.createElement("div"); actions.className = "qadd__form-actions";
+    var back = document.createElement("button"); back.type = "button";
+    back.className = "cbm-button cbm-button--secondary"; back.textContent = "Back";
+    back.addEventListener("click", function () {
+      qaddHideConfirm();
+      if (qadd.companyCombo) qadd.companyCombo.input.focus();
+    });
+    var go = document.createElement("button"); go.type = "button"; go.className = "cbm-button";
+    go.textContent = "Create company and " + String(config.parentLabel || "record").toLowerCase();
+    go.addEventListener("click", function () {
+      var n = input.value.replace(/\s+/g, " ").trim();
+      if (!n) { msg.className = "sx__notice is-error"; msg.textContent = "Type the company's name, or choose Back."; show(msg); input.focus(); return; }
+      // A corrected name that now matches one known company uses it — never a duplicate.
+      var again = qaddCompanyIntent(n, qadd.companies);
+      if (again.kind === "exact") qaddUseCompany(again.company);
+      else {
+        qadd.companyChoice = null;
+        qadd.companyNewBox.value = n; qadd.companyNewBox.hidden = false;
+        qadd.companyCombo.setText("+ New company…");
+        qaddMirrorName(n);
+      }
+      qaddHideConfirm(); saveQuickAdd();
+    });
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); go.click(); }
+    });
+    actions.appendChild(back); actions.appendChild(go); box.appendChild(actions);
+    show(box); input.focus(); input.select();
+  }
+
   async function saveQuickAdd() {
     if (qadd.saving || !qadd.spec) return;
     hide($("qaddNotice"));
     var changes = {}, missing = [];
     var chosen = qadd.companyChoice && qadd.companyChoice.id ? qadd.companyChoice : null;
+    // A name typed in the company search box but never picked (Doug's
+    // ruling 10-30-26, option C): one exact match is used as if picked;
+    // anything else asks "create it as a new company?" before saving.
+    var pending = null;
+    if (!chosen && qadd.companyCombo && qadd.companyNewBox && qadd.companyNewBox.hidden) {
+      var intent = qaddCompanyIntent(qadd.companyCombo.input.value, qadd.companies);
+      if (intent.kind === "exact") { qaddUseCompany(intent.company); chosen = qadd.companyChoice; }
+      else if (intent.kind === "new") pending = intent;
+    }
     (qadd.spec || []).forEach(function (f) {
       var v = qaddValue(f.name);
-      if (f.name === "company" && chosen) return;  // the picker answered it
+      if (f.name === "company" && (chosen || pending)) return;  // the picker answered it
+      // An empty record name is filled from the company the user confirms.
+      if (f.name === "name" && pending && (v === "" || v == null)) return;
       if (f.required && (v === "" || v == null)) {
         missing.push(f.name === "company" && qadd.companies && qadd.companies.length
           ? "Company (pick one, or choose \"+ New company…\" and type its name)" : f.label);
@@ -6287,6 +6416,7 @@
       notice("qaddNotice", "Please complete: " + missing.join(", ") + ".", "error");
       return;
     }
+    if (pending) { qaddShowConfirm(pending); return; }
     qadd.saving = true; $("qaddSaveBtn").disabled = true;
     try {
       var res = await api("/records", { method: "POST", body: JSON.stringify({ changes: changes }) });

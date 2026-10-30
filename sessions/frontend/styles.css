@@ -974,6 +974,12 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
 .qadd__form-actions {
   display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 0.8rem;
 }
+/* An author display beats [hidden], so the parts the confirmation swaps out
+   need it said explicitly. */
+.qadd__form[hidden], .qadd__form-actions[hidden] { display: none; }
+.qadd__confirm-title { font-weight: 700; color: var(--cbm-navy, #00205B); margin: 0.2rem 0 0.4rem; }
+.qadd__confirm .qadd__label { display: flex; flex-direction: column; gap: 0.25rem; margin: 0.6rem 0; }
+.qadd__confirm-near { margin: 0.2rem 0 0; padding-left: 1.2rem; }
 
 /* --- Grants tab (the funder grant book — prds/grant-management-plan.md) ----
    The grant modal FILLS the window rather than capping at a comfortable

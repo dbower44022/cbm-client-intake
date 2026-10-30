@@ -5,6 +5,31 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.301.1] — 2026-10-30
+
+**fix: a new company can be entered in the Add a partner / Add a funder
+dialog** (Doug's report and ruling 10-30-26, option C). The Company search
+box hid its "+ New company…" entry as soon as the typed text matched no
+company, so the save said "choose + New company…" when there was none to
+choose. No switch; no migration; no CRM change.
+
+- **A name typed but never picked is resolved at Create.** Exactly one
+  company with that name (capitals and spacing ignored) is used as if
+  picked. Otherwise the form gives way to a confirmation: "… isn't a
+  company we know. Create it as a new company?", the name editable, the
+  near matches offered as links, and *Back* / *Create company and
+  partner* (or *funder*).
+- **Two companies with the same name are never guessed between** — the
+  confirmation says so and offers both.
+- **A corrected name that now matches one company uses it**, never a
+  duplicate. An empty Partner name / Funder name is filled from the
+  confirmed company; every other required field is checked first.
+- The decision is `qaddCompanyIntent` in `sessions/frontend/app.js`,
+  tested under node (`tests/test_quick_add_company_confirm.py`).
+- **Known, not changed:** the email composer's new-contact company box
+  (`frontend/shared/compose.js`) has the same hidden entry, and there a
+  typed but unpicked company is dropped without a message.
+
 ## [0.301.0] — 2026-10-30
 
 **feat: who attended a partner's or funder's events, by company**

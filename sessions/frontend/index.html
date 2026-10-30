@@ -597,6 +597,9 @@
         <p class="sx__notice" id="qaddNotice" role="status" hidden></p>
         <p class="sx__loading" id="qaddLoading" hidden>Loading…</p>
         <form id="qaddForm" class="qadd__form"></form>
+        <!-- "Create it as a new company?" — replaces the form when a typed
+             company name was never picked (built by qaddShowConfirm). -->
+        <div id="qaddConfirm" class="qadd__confirm" hidden></div>
         <p class="sx__muted" id="qaddHint">
           An existing company with the same name, or contact with the same email, is
           reused rather than duplicated. Everything else is filled in on the
@@ -605,7 +608,7 @@
         <!-- Right-aligned, so Create is LAST: the committing action belongs in
              the corner the eye ends on. (The contribution editor keeps
              Save-then-Cancel because its row is left-aligned.) -->
-        <div class="qadd__form-actions">
+        <div class="qadd__form-actions" id="qaddActions">
           <button type="button" class="cbm-button cbm-button--secondary" id="qaddCancelBtn">Cancel</button>
           <button type="button" class="cbm-button" id="qaddSaveBtn">Create</button>
         </div>
