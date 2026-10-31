@@ -596,14 +596,17 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 await details_svc.link_contact(cfg, client, parent_id, body.contactId)
                 return {"status": "ok"}
             changes = dict(body.changes or {})
+            # The company the person chose — picked (accountId) or typed as
+            # new (newCompanyName) — is passed apart from the field changes,
+            # whose whitelist would drop it (v0.302.1).
+            chosen_company = changes.pop("accountId", None) or None
             if body.newCompanyName:
-                account_id = await comms_service.resolve_company(
+                chosen_company = await comms_service.resolve_company(
                     client, _api_client(get_settings()), body.newCompanyName
-                )
-                if account_id:
-                    changes["accountId"] = account_id
+                ) or chosen_company
             created = await details_svc.create_contact(
-                cfg, client, parent_id, changes, match_client=_api_client(get_settings())
+                cfg, client, parent_id, changes, match_client=_api_client(get_settings()),
+                company_id=chosen_company,
             )
             return {"status": "ok", "id": created["id"],
                     "matched": bool(created.get("matched")), "name": created.get("name")}

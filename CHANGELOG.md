@@ -5,6 +5,24 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.302.1] — 2026-10-31
+
+**fix: a company chosen for a new contact in the email composer is the
+contact's company** (Doug's ruling 10-30-26, option A — found on the
+v0.302.0 live pass). The row's company, picked or typed as new, rode to
+the server as `accountId` inside the field changes, where the Contact
+field whitelist dropped it; the record's own company was stamped instead.
+Every company chosen in that row since at least July was lost, and a new
+one was created with nothing linked to it. No switch; no migration; no CRM
+change.
+
+- `sessions/router.py` takes the chosen company out of the changes and
+  passes it to `sessions.details.create_contact` as `company_id`, which
+  wins over the record's company. No company chosen: the record's
+  company, as before.
+- A contact matched by email is still reused and only null-filled; its
+  company is not changed.
+
 ## [0.302.0] — 2026-10-30
 
 **feat: the email composer asks before creating a company it does not

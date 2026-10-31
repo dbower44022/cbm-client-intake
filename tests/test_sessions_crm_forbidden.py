@@ -196,3 +196,35 @@ def test_session_error_on_save_returns_readable_400(monkeypatch):
                   json={"changes": {"sessionNotes": "<p>x</p>"}})
     assert r.status_code == 400
     assert "too large" in r.json()["detail"]
+
+
+def test_the_chosen_company_reaches_the_contact_create(monkeypatch):
+    # v0.302.1: a picked company (accountId) and a typed new one
+    # (newCompanyName) are passed as company_id, not left in the changes.
+    _as(monkeypatch, _USER)
+    seen = []
+
+    async def create(cfg, client, parent_id, changes, **kwargs):
+        seen.append((dict(changes), kwargs.get("company_id")))
+        return {"id": "C1"}
+
+    async def resolve(user_client, api_client, name):
+        return "new-" + name
+
+    monkeypatch.setattr("sessions.details.create_contact", create)
+    monkeypatch.setattr("comms.service.resolve_company", resolve)
+    monkeypatch.setattr("sessions.router._api_client", lambda settings: object(), raising=False)
+    with TestClient(_app(monkeypatch)) as c:
+        r1 = c.post("/partnersessions/api/records/P1/contacts",
+                    json={"changes": {"firstName": "Lee", "lastName": "Test", "accountId": "A1"}})
+        r2 = c.post("/partnersessions/api/records/P1/contacts",
+                    json={"changes": {"firstName": "Dana", "lastName": "Test"},
+                          "newCompanyName": "Lorain Test Hardware"})
+        r3 = c.post("/partnersessions/api/records/P1/contacts",
+                    json={"changes": {"firstName": "Kim", "lastName": "Test"}})
+    assert [r.status_code for r in (r1, r2, r3)] == [200, 200, 200]
+    assert seen == [
+        ({"firstName": "Lee", "lastName": "Test"}, "A1"),
+        ({"firstName": "Dana", "lastName": "Test"}, "new-Lorain Test Hardware"),
+        ({"firstName": "Kim", "lastName": "Test"}, None),
+    ]

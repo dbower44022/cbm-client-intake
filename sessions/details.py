@@ -683,9 +683,15 @@ async def _matched_contact(
 
 async def create_contact(
     cfg: DomainConfig, client: SessionClient, parent_id: str, changes: dict[str, Any],
-    *, match_client: Any = None,
+    *, match_client: Any = None, company_id: Optional[str] = None,
 ) -> dict[str, Any]:
     """Create a NEW contact and link it to this record in one operation.
+
+    ``company_id`` is a company the person chose for the contact (the email
+    composer's row); it wins over the record's own company (Doug's ruling
+    10-30-26, option A). It used to ride in ``changes`` as ``accountId``,
+    where the field whitelist dropped it and the record's company was
+    stamped instead.
 
     The payload is whitelisted against the live Contact field spec (drifted enum
     values dropped — same policy as saves) and the company affiliation
@@ -713,12 +719,15 @@ async def create_contact(
         existing = await _matched_contact(match_client or client, email, fill_keys)
         if existing:
             return await _reuse_contact(cfg, client, parent_id, existing, payload, fill_keys)
-    try:
-        company_id = await _resolve_company_id(cfg, client, parent_id)
-        if company_id:
-            payload.setdefault("accountId", company_id)
-    except EspoError as exc:
-        log.warning("could not read company for new contact on %s: %s", parent_id, exc)
+    if company_id:
+        payload["accountId"] = company_id
+    else:
+        try:
+            record_company = await _resolve_company_id(cfg, client, parent_id)
+            if record_company:
+                payload.setdefault("accountId", record_company)
+        except EspoError as exc:
+            log.warning("could not read company for new contact on %s: %s", parent_id, exc)
     created = await client.create(CONTACT, payload)
     try:
         await client.relate(cfg.parent_entity, parent_id, cfg.parent_contacts_link, created["id"])

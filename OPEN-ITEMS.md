@@ -1499,6 +1499,13 @@ block a deploy.)*
     with that company. Also: an existing company typed exactly (used
     without a question), and No company. Known, not changed: the row's
     search list offers only the first 50 companies as you type.
+    **First pass 10-31-26 03:55 UTC:** the question and the corrected
+    company worked, but the contact got the record's company — the chosen
+    company had never reached a contact (the field whitelist dropped it);
+    fixed in v0.302.1 (Doug's ruling, option A). On crm-test the send
+    itself fails for training accounts (their sandbox mailbox cannot send:
+    *Request failed (504)*); the contact is added before the send, so the
+    check still reads. Repeat sections C and D after v0.302.1 deploys.
 
 55. **Company website rules — live cases owed** (v0.236.0, v0.237.0,
     2026-10-07; moved here from `CLAUDE.md` "Current status" 10-20-26).

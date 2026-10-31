@@ -1265,6 +1265,21 @@ async def test_create_contact_whitelists_stamps_company_and_links():
     assert fake.relates == [("CEngagement", "E1", "engagementContacts", res["id"])]
 
 
+@pytest.mark.asyncio
+async def test_create_contact_keeps_a_chosen_company_over_the_records():
+    # The email composer's row: the person chose a company for the contact.
+    # It used to ride in changes as accountId, where the whitelist dropped it
+    # and the record's company was stamped instead (v0.302.1, Doug's ruling
+    # 10-30-26, option A).
+    fake = Fake(
+        records={("CEngagement", "E1"): {"clientOrganizationId": "acct1"}},
+        meta_fields={"firstName": {"type": "varchar"}, "lastName": {"type": "varchar"}},
+    )
+    await details.create_contact(MENTOR, fake, "E1", {"firstName": "Dana", "lastName": "Test"},
+                                 company_id="lorain")
+    assert fake.created[0][1] == {"firstName": "Dana", "lastName": "Test", "accountId": "lorain"}
+
+
 _EMAIL_META = {
     "firstName": {"type": "varchar"}, "lastName": {"type": "varchar"},
     "emailAddress": {"type": "email"}, "phoneNumber": {"type": "phone"},
