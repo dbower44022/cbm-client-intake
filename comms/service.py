@@ -1371,9 +1371,11 @@ async def search_companies(user_client: Any, query: str = "") -> list[dict[str, 
     if q:
         where = [{"type": "contains", "attribute": "name", "value": q}]
     data = await user_client.list(
-        "Account", where=where, select="name", max_size=50, order_by="name"
+        "Account", where=where, select="name,website", max_size=50, order_by="name"
     )
-    return [{"id": a["id"], "name": a.get("name")} for a in data.get("list", [])]
+    # The website tells two same-named companies apart (v0.302.0).
+    return [{"id": a["id"], "name": a.get("name"), "website": a.get("website") or ""}
+            for a in data.get("list", [])]
 
 
 async def resolve_company(

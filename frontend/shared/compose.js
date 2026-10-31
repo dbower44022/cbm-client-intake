@@ -94,6 +94,36 @@
     return (n / (1024 * 1024)).toFixed(1) + " MB";
   }
 
+  // What a company name typed in the search box but never picked means
+  // (Doug's ruling 10-30-26, option A — the same rule as the Add a partner
+  // dialog, whose twin is qaddCompanyIntent in sessions/frontend/app.js; a
+  // test runs both on the same cases). {kind:"none"} — nothing typed;
+  // {kind:"exact", company} — exactly one company has that name (capitals
+  // and spacing ignored); {kind:"new", name, near, several} — ask first,
+  // offering the near matches. Two same-named companies are never guessed.
+  function companyIntent(typed, companies) {
+    function norm(s) { return String(s || "").toLowerCase().replace(/\s+/g, " ").trim(); }
+    var t = norm(typed);
+    if (!t) return { kind: "none" };
+    var exact = [], near = [];
+    (companies || []).forEach(function (a) {
+      var n = norm(a.name);
+      if (!n) return;
+      if (n === t) exact.push(a);
+      else if (n.indexOf(t) !== -1 || (n.length >= 3 && t.indexOf(n) !== -1)) near.push(a);
+    });
+    if (exact.length === 1) return { kind: "exact", company: exact[0] };
+    return {
+      kind: "new", name: String(typed).replace(/\s+/g, " ").trim(),
+      near: exact.concat(near).slice(0, 8), several: exact.length > 1,
+    };
+  }
+
+  function companyLabel(a) {
+    var site = (a.website || "").replace(/^https?:\/\//i, "").replace(/^www\./i, "").replace(/\/$/, "");
+    return (a.name || a.id) + (site ? " — " + site : "");
+  }
+
   // Searchable dropdown (template picker, company picker): one input, a
   // filtered list below it. opts: {placeholder, options: [{id,label,muted}],
   // emptyLabel, onSelect(id|null, option), allowClear}. Returns {el, input,
@@ -1089,21 +1119,114 @@
             }
           },
         });
+        var companyList = [];
+        async function companiesMatching(text) {
+          var found = [];
+          try {
+            var res = await api(endpoints.companies + "?q=" + encodeURIComponent(text));
+            found = (res && res.companies) || [];
+          } catch (e) { found = []; }   // best-effort: the page's own list still answers
+          var seen = {}, out = [];
+          companyList.concat(found).forEach(function (a) { if (a && a.id && !seen[a.id]) { seen[a.id] = 1; out.push(a); } });
+          return out;
+        }
         getCompanies().then(function (res) {
-          var opts = (res.companies || []).map(function (a) { return { id: a.id, label: a.name || a.id }; });
+          companyList = res.companies || [];
+          var opts = companyList.map(function (a) { return { id: a.id, label: companyLabel(a) }; });
           opts.push({ id: "__new__", label: "+ New company…", muted: true });
           companyCombo.setOptions(opts);
         });
         line3.appendChild(companyCombo.el); line3.appendChild(newCompany);
         row.appendChild(line3);
+        // "… isn't a company we know" — asked in the row when a typed name
+        // was never picked; answered here, then Add & Send again.
+        var ask = document.createElement("div"); ask.className = "sx__addr-ask"; ask.hidden = true;
+        row.appendChild(ask);
+        function useCompany(a) {
+          companyChoice.id = a.id; companyChoice.newName = "";
+          newCompany.hidden = true; newCompany.value = "";
+          companyCombo.setText(a.name || a.id);
+        }
+        function answered(text) {
+          ask.hidden = true; ask.innerHTML = ""; err.hidden = true;
+          clearFootMsg();
+          footWarn(text + " Click Add & Send to continue.");
+        }
+        function askCompany(intent) {
+          companyCombo.close();
+          ask.innerHTML = "";
+          var title = document.createElement("p"); title.className = "sx__addr-ask-title";
+          title.textContent = intent.several
+            ? "More than one company is named \u201c" + intent.name + "\u201d."
+            : "\u201c" + intent.name + "\u201d isn't a company we know.";
+          ask.appendChild(title);
+          var q = document.createElement("p");
+          q.textContent = "Create it as a new company for " + addr + "? Correct the name first if it's misspelled.";
+          ask.appendChild(q);
+          var line = document.createElement("div"); line.className = "sx__opt-line";
+          var nameBox = document.createElement("input"); nameBox.type = "text";
+          nameBox.className = "sx__msg-input"; nameBox.value = intent.name;
+          nameBox.setAttribute("aria-label", "New company name");
+          var create = document.createElement("button"); create.type = "button"; create.className = "cbm-button";
+          create.textContent = "Create it as a new company";
+          var none = document.createElement("button"); none.type = "button";
+          none.className = "cbm-button cbm-button--secondary"; none.textContent = "No company";
+          line.appendChild(nameBox); line.appendChild(create); line.appendChild(none);
+          ask.appendChild(line);
+          var msg = document.createElement("p"); msg.className = "form-error"; msg.hidden = true;
+          ask.appendChild(msg);
+          if (intent.near && intent.near.length) {
+            var or = document.createElement("p"); or.textContent = "Or use a company we already have:";
+            ask.appendChild(or);
+            var ul = document.createElement("ul"); ul.className = "sx__addr-ask-near";
+            intent.near.forEach(function (a) {
+              var li = document.createElement("li");
+              var b = document.createElement("button"); b.type = "button"; b.className = "sx__link";
+              b.textContent = companyLabel(a);
+              b.addEventListener("click", function () { useCompany(a); answered("Using " + (a.name || a.id) + " for " + addr + "."); });
+              li.appendChild(b); ul.appendChild(li);
+            });
+            ask.appendChild(ul);
+          }
+          create.addEventListener("click", function () {
+            var n = nameBox.value.replace(/\s+/g, " ").trim();
+            if (!n) { msg.textContent = "Type the company's name, or choose No company."; msg.hidden = false; nameBox.focus(); return; }
+            // A corrected name that now matches one known company uses it — never a duplicate.
+            var again = companyIntent(n, companyList.concat(intent.near || []));
+            if (again.kind === "exact") { useCompany(again.company); answered("Using " + again.company.name + " for " + addr + "."); return; }
+            companyChoice.id = "__new__"; newCompany.value = n; newCompany.hidden = false;
+            companyCombo.setText("+ New company…");
+            answered(n + " will be created for " + addr + ".");
+          });
+          nameBox.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); create.click(); } });
+          none.addEventListener("click", function () {
+            companyChoice.id = ""; newCompany.hidden = true; newCompany.value = "";
+            companyCombo.setText("");
+            answered(addr + " will be added with no company.");
+          });
+          ask.hidden = false;
+          nameBox.focus(); nameBox.select();
+        }
         function setEnabled() {
           [first, last, phone, companyCombo.input, newCompany].forEach(function (el) { el.disabled = !check.checked; });
         }
         check.addEventListener("change", setEnabled);
+        check.addEventListener("change", function () { if (!check.checked) { ask.hidden = true; ask.innerHTML = ""; } });
         resolver = async function () {
           if (!check.checked) return false;
           if (!first.value.trim() && !last.value.trim()) {
             throw new Error("Enter a name for " + addr + " (or uncheck \"Add to this record\").");
+          }
+          if (!companyChoice.id && newCompany.hidden && companyCombo.input.value.trim()) {
+            // The row's list holds the first 50 companies only, so ask the
+            // server for the typed name too before calling it unknown.
+            var pool = await companiesMatching(companyCombo.input.value.trim());
+            var intent = companyIntent(companyCombo.input.value, pool);
+            if (intent.kind === "exact") useCompany(intent.company);
+            else if (intent.kind === "new") {
+              askCompany(intent);
+              throw new Error("Answer the company question for " + addr + " below, then click Add & Send again.");
+            }
           }
           var changes = { firstName: first.value.trim(), lastName: last.value.trim(), emailAddress: addr };
           if (phone.value.trim()) changes.phoneNumber = phone.value.trim();

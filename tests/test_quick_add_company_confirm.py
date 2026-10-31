@@ -202,3 +202,67 @@ def test_the_confirmation_applies_the_follow_rule():
     assert 'qaddFollowsCorrection(qaddValue("name"), intent.name, n)' in show
     # The rule runs before either branch, so an exact match follows too.
     assert show.index("qaddFollowsCorrection(") < show.index("var again = qaddCompanyIntent(n")
+
+
+# --- the email composer's new-contact company box (v0.302.0) ------------------
+# Doug's ruling 10-30-26, option A: the same rule inside the composer row.
+# The composer carries its own copy (companyIntent); it must agree with the
+# dialog's on every case.
+
+_COMPOSE_JS = (_ROOT / "frontend" / "shared" / "compose.js").read_text()
+_COMPOSE_CSS = (_ROOT / "frontend" / "shared" / "compose.css").read_text()
+
+_COMPOSE_HARNESS = _HARNESS.replace("this.f = qaddCompanyIntent;", "this.f = companyIntent;")
+
+
+@pytest.fixture(scope="module")
+def compose_results(tmp_path_factory):
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("no node runtime")
+    tmp = tmp_path_factory.mktemp("compose")
+    (tmp / "harness.js").write_text(_COMPOSE_HARNESS)
+    (tmp / "fn.js").write_text(_function(_COMPOSE_JS, "companyIntent"))
+    (tmp / "cases.json").write_text(json.dumps(_CASES))
+    out = subprocess.run(
+        [node, str(tmp / "harness.js"), str(tmp / "fn.js"), str(tmp / "cases.json")],
+        capture_output=True, text=True, timeout=60,
+    )
+    assert out.returncode == 0, out.stderr
+    return json.loads(out.stdout)
+
+
+def test_the_composer_rule_matches_the_dialog_rule(results, compose_results):
+    assert compose_results == results
+
+
+def test_the_composer_row_asks_before_creating():
+    row = _function(_COMPOSE_JS, "addressRow")
+    # The check runs before the contact is created, and stops the send.
+    assert "companyIntent(companyCombo.input.value, pool)" in row
+    # The row's list is the first 50 only: the server is asked for the name.
+    assert "await companiesMatching(companyCombo.input.value.trim())" in row
+    assert 'api(endpoints.companies + "?q=" + encodeURIComponent(text))' in row
+    assert row.index("askCompany(intent);") < row.index("await api(endpoints.addContact, { method: \"POST\", body: payload })")
+    assert 'throw new Error("Answer the company question for "' in row
+    # Three answers: create (name editable), no company, or a near match.
+    assert '"Create it as a new company"' in row and '"No company"' in row
+    assert 'again.kind === "exact") { useCompany(again.company)' in row
+    assert ".sx__addr-ask-title" in _COMPOSE_CSS
+
+
+def test_the_composer_company_search_carries_the_website():
+    import asyncio
+    from comms import service as comms_service
+
+    class Client:
+        async def list(self, entity, **kw):
+            self.kw = kw
+            return {"list": [{"id": "A2", "name": "Key Bank", "website": "https://keybank.com"},
+                             {"id": "A3", "name": "Key Bank", "website": None}]}
+
+    c = Client()
+    out = asyncio.run(comms_service.search_companies(c, "key bank"))
+    assert c.kw["select"] == "name,website" and c.kw["max_size"] == 50
+    assert out == [{"id": "A2", "name": "Key Bank", "website": "https://keybank.com"},
+                   {"id": "A3", "name": "Key Bank", "website": ""}]

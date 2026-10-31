@@ -120,3 +120,8 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
 .sx__addr-row .sx__opt-line:first-child { justify-content: space-between; flex-wrap: wrap; }
 .sx__addr-check { display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600; white-space: nowrap; }
 .sx__addr-row input:disabled, .sx__addr-row select:disabled { opacity: 0.45; }
+/* The row's "isn't a company we know" question (v0.302.0). */
+.sx__addr-ask { border-top: 1px dashed var(--cbm-border, #e3e8ee); margin-top: 0.4rem; padding-top: 0.4rem; }
+.sx__addr-ask p { margin: 0.25rem 0; }
+.sx__addr-ask-title { font-weight: 700; color: var(--cbm-navy, #00205B); }
+.sx__addr-ask-near { margin: 0.2rem 0 0; padding-left: 1.2rem; }

@@ -5,6 +5,31 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.302.0] — 2026-10-30
+
+**feat: the email composer asks before creating a company it does not
+know** (Doug's ruling 10-30-26, option A — the Add a partner dialog's rule,
+inside the composer row). Emailing an address the CRM lacks offers an *Add
+to this record* row with a Company search box; its "+ New company…" entry
+vanished once the typed text matched nothing, and a company typed but never
+picked was dropped without a word — the contact was created with no
+company. Client, Partner and Funder Management's Communications tabs (the
+lead's page has no such row). No switch; no migration; no CRM change.
+
+- **At Add & Send, a typed company is resolved first.** Exactly one
+  company with that name is used as if picked. Otherwise the row asks
+  "… isn't a company we know. Create it as a new company?", with the name
+  editable, *No company*, and the near matches as links — and nothing is
+  sent until it is answered.
+- **The server is asked for the typed name** before calling it unknown:
+  the row's list holds only the first 50 companies.
+- **The company search returns the website**, so two same-named companies
+  read apart (`comms.service.search_companies`).
+- The rule is `companyIntent` in `frontend/shared/compose.js`; a test runs
+  it against the dialog's `qaddCompanyIntent` on the same cases.
+- **Known, not changed:** the row's search list still offers only the
+  first 50 companies as you type.
+
 ## [0.301.2] — 2026-10-30
 
 **fix: the partner or funder name follows a company name corrected on the
