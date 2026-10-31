@@ -6,6 +6,19 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+65. **The email composer's new-contact row — three smaller faults**
+    (2026-10-31, found on the #63 live pass). (1) The row's Company
+    search list holds only the first 50 companies alphabetically, as the
+    user can read them; a company beyond them never appears as you type
+    (Add & Send still finds it by asking the server, v0.302.0). (2) A list
+    that opens near the bottom of the New email dialog is cut off by the
+    dialog's edge until the dialog is scrolled
+    (`~/Pictures/Capture_2026-10-31_10-55-48.png`). (3) On crm-test a
+    training account's send fails as *Request failed (504)*: its
+    `@sandbox.cbmentors.org` mailbox cannot send (Gmail `invalid_grant`),
+    which is the sandbox's design, but the message says nothing useful.
+    None blocks work; each wants a small change of its own.
+
 61. **Partner and funder associations — production, Boston, the report**
     (2026-10-28). Built as v0.295.0 (`prds/partner-association-plan.md`).
     (1) ~~the live pass on crm-test~~ **passed 10-28-26** (backfill applied
@@ -1488,25 +1501,6 @@ block a deploy.)*
 
 ## Live verification owed
 
-63. **The email composer's company question — live check owed**
-    (v0.302.0, 2026-10-30; found 10-30-26 while fixing the same fault in
-    the Add a partner dialog, Doug's ruling option A). Checked in a
-    stubbed preview only. On crm-test, as a non-admin on a partner's
-    Communications tab: email an address the CRM lacks, type a company
-    that does not exist without picking it, click Send then Add & Send —
-    expect "… isn't a company we know" in the row and nothing sent; correct
-    the name, Create it as a new company, Add & Send — expect the contact
-    with that company. Also: an existing company typed exactly (used
-    without a question), and No company. Known, not changed: the row's
-    search list offers only the first 50 companies as you type.
-    **First pass 10-31-26 03:55 UTC:** the question and the corrected
-    company worked, but the contact got the record's company — the chosen
-    company had never reached a contact (the field whitelist dropped it);
-    fixed in v0.302.1 (Doug's ruling, option A). On crm-test the send
-    itself fails for training accounts (their sandbox mailbox cannot send:
-    *Request failed (504)*); the contact is added before the send, so the
-    check still reads. Repeat sections C and D after v0.302.1 deploys.
-
 55. **Company website rules — live cases owed** (v0.236.0, v0.237.0,
     2026-10-07; moved here from `CLAUDE.md` "Current status" 10-20-26).
     Both verified by tests only. (a) v0.237.0: "+ Add partner" on crm-test
@@ -2261,6 +2255,18 @@ toggle.
     over the fix on 2026-10-07, so the fix is still owed.
 
 ## Resolved
+
+63. **The email composer's company question** (v0.302.0 and v0.302.1,
+    2026-10-30) — **RESOLVED 10-31-26**. Live pass on crm-test as Partner
+    Manager on Cuyahoga Small Business Alliance's Communications tab: a
+    misspelled new company asked the question in the row, the corrected
+    name was created once and became Dana Test's only company; an existing
+    company typed in lower case and never picked was used without a
+    question and became Lee Test's only company, no duplicate. Both
+    contacts are on the record's contact list. The first pass (10-31-26
+    03:55 UTC) found the chosen company had never reached a contact; fixed
+    in v0.302.1. The send itself fails for training accounts — follow-up
+    in #65.
 
 64. **Add a partner / Add a funder — the new-company confirmation**
     (v0.301.1, 2026-10-30) — **RESOLVED 10-30-26**. Live pass on crm-test
