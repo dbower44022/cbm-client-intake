@@ -150,3 +150,55 @@ def test_the_confirmation_panel_is_wired():
     assert '"Create company and "' in show
     # A corrected name that matches a known company uses it, never a duplicate.
     assert re.search(r'again\.kind === "exact"\) qaddUseCompany', show)
+
+
+# --- the record name follows a corrected company name (v0.301.2) -------------
+# Doug's ruling 10-30-26: on the crm-test pass the company was corrected to
+# "Rocky River Test Bakery" while the partner kept "Rocky Rivr Test Bakery".
+
+_FOLLOW_HARNESS = """
+const fs = require("fs"), vm = require("vm");
+const sandbox = {};
+vm.createContext(sandbox);
+vm.runInContext(fs.readFileSync(process.argv[2], "utf8") + "\\nthis.f = qaddFollowsCorrection;", sandbox);
+const cases = JSON.parse(fs.readFileSync(process.argv[3], "utf8"));
+console.log(JSON.stringify(cases.map((c) => sandbox.f(c[0], c[1], c[2]))));
+"""
+
+_FOLLOW_CASES = [
+    # (record name, typed company, corrected company) -> follows?
+    (("Rocky Rivr Test Bakery", "Rocky Rivr Test Bakery", "Rocky River Test Bakery"), True),
+    (("rocky  rivr test bakery", "Rocky Rivr Test Bakery", "Rocky River Test Bakery"), True),
+    (("Rocky Bakery Partnership", "Rocky Rivr Test Bakery", "Rocky River Test Bakery"), False),
+    (("", "Rocky Rivr Test Bakery", "Rocky River Test Bakery"), False),
+    (("Rocky Rivr Test Bakery", "Rocky Rivr Test Bakery", "rocky rivr test bakery"), False),
+]
+
+
+@pytest.fixture(scope="module")
+def follows(tmp_path_factory):
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("no node runtime")
+    tmp = tmp_path_factory.mktemp("qaddfollow")
+    (tmp / "harness.js").write_text(_FOLLOW_HARNESS)
+    (tmp / "fn.js").write_text(_function(_APP_JS, "qaddFollowsCorrection"))
+    (tmp / "cases.json").write_text(json.dumps([c[0] for c in _FOLLOW_CASES]))
+    out = subprocess.run(
+        [node, str(tmp / "harness.js"), str(tmp / "fn.js"), str(tmp / "cases.json")],
+        capture_output=True, text=True, timeout=60,
+    )
+    assert out.returncode == 0, out.stderr
+    return json.loads(out.stdout)
+
+
+@pytest.mark.parametrize("index", range(len(_FOLLOW_CASES)))
+def test_record_name_follows_only_an_exact_typo(follows, index):
+    assert follows[index] is _FOLLOW_CASES[index][1]
+
+
+def test_the_confirmation_applies_the_follow_rule():
+    show = _function(_APP_JS, "qaddShowConfirm")
+    assert 'qaddFollowsCorrection(qaddValue("name"), intent.name, n)' in show
+    # The rule runs before either branch, so an exact match follows too.
+    assert show.index("qaddFollowsCorrection(") < show.index("var again = qaddCompanyIntent(n")

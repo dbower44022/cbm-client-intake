@@ -5,6 +5,20 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.301.2] — 2026-10-30
+
+**fix: the partner or funder name follows a company name corrected on the
+new-company confirmation** (Doug's ruling 10-30-26, from the v0.301.1 live
+pass). The crm-test check corrected "Rocky Rivr Test Bakery" to "Rocky
+River Test Bakery" on the confirmation; the company took the correction
+and the partner kept the typo. No switch; no migration; no CRM change.
+
+- When the Partner name / Funder name still reads exactly as the
+  misspelled company name (capitals and spacing ignored), it takes the
+  corrected name — even if someone typed it. Any other name is left alone.
+- The rule is `qaddFollowsCorrection` in `sessions/frontend/app.js`,
+  tested under node with the other dialog cases.
+
 ## [0.301.1] — 2026-10-30
 
 **fix: a new company can be entered in the Add a partner / Add a funder

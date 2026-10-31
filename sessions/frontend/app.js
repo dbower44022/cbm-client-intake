@@ -6300,6 +6300,15 @@
     };
   }
 
+  // Whether the record name should follow a company name corrected on the
+  // confirmation: only when it still reads exactly as the misspelled name
+  // (capitals and spacing ignored) and the name really changed. Pure.
+  function qaddFollowsCorrection(recordName, typed, corrected) {
+    function norm(s) { return String(s || "").toLowerCase().replace(/\s+/g, " ").trim(); }
+    var r = norm(recordName), t = norm(typed);
+    return !!r && r === t && norm(corrected) !== t;
+  }
+
   // Use an existing company, exactly as picking it from the list would.
   function qaddUseCompany(a) {
     qadd.companyChoice = { id: a.id, name: a.name };
@@ -6368,6 +6377,9 @@
     go.addEventListener("click", function () {
       var n = input.value.replace(/\s+/g, " ").trim();
       if (!n) { msg.className = "sx__notice is-error"; msg.textContent = "Type the company's name, or choose Back."; show(msg); input.focus(); return; }
+      // A record name still holding exactly the misspelled company name
+      // follows the correction, even if it was typed (Doug's ruling 10-30-26).
+      if (qaddFollowsCorrection(qaddValue("name"), intent.name, n)) qadd.nameAuto = qaddValue("name");
       // A corrected name that now matches one known company uses it — never a duplicate.
       var again = qaddCompanyIntent(n, qadd.companies);
       if (again.kind === "exact") qaddUseCompany(again.company);

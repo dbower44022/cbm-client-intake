@@ -1498,15 +1498,6 @@ block a deploy.)*
 
 ## Live verification owed
 
-64. **Add a partner / Add a funder — the new-company confirmation**
-    (v0.301.1, 2026-10-30). Checked in a stubbed preview only. On
-    crm-test, as a non-admin in Partner Management: type a company the
-    CRM lacks, fill nothing else, click Create — expect "… isn't a company
-    we know", the name editable, *Create company and partner* creating
-    the company and filling Partner name. Then type an existing company's
-    exact name without picking it — expect no confirmation and the
-    existing company used. Repeat once in Funder Management.
-
 55. **Company website rules — live cases owed** (v0.236.0, v0.237.0,
     2026-10-07; moved here from `CLAUDE.md` "Current status" 10-20-26).
     Both verified by tests only. (a) v0.237.0: "+ Add partner" on crm-test
@@ -2261,6 +2252,17 @@ toggle.
     over the fix on 2026-10-07, so the fix is still owed.
 
 ## Resolved
+
+64. **Add a partner / Add a funder — the new-company confirmation**
+    (v0.301.1, 2026-10-30) — **RESOLVED 10-30-26**. Live pass on crm-test
+    as Partner Manager and Sally Sponsor: the confirmation, Back, the
+    corrected name, an existing company typed but not picked, and the
+    funder side all passed (records read back from the CRM). One finding:
+    the partner kept the misspelled name while the company took the
+    corrected one; the record name now follows the correction when it
+    still reads exactly as the typo (v0.301.2, Doug's ruling 10-30-26). A
+    one-off 521 from DigitalOcean's edge at 19:34:30 UTC never reached the
+    application and wrote nothing.
 
 60. **The shared grid rollout — one application per release** (2026-10-27)
     — **RESOLVED 10-30-26**.
