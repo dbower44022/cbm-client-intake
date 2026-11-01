@@ -468,6 +468,12 @@ rely on:
   merge-only; a same-named company at a different website is refused here
   (held on a public form); a known email is reused, never duplicated; a new
   contact or company is stamped with its creator and the domain team.
+  **A company name typed but never picked is never created silently, never
+  dropped** (Doug's rulings 10-30-26): one exact match is used; otherwise
+  the screen asks "… isn't a company we know. Create it?" with the name
+  editable — the Add a partner / funder dialog and the email composer's
+  new-contact row alike, one rule (`qaddCompanyIntent` / `companyIntent`,
+  kept identical by a test).
 - **Co-mentor visibility needs both** the `engagements` reverse link and the
   co-mentor's User in the engagement's `assignedUsers`.
 - **An engagement's mentor is changed only in Client Administration.**

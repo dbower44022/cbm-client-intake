@@ -191,6 +191,13 @@ with an **"Add to this record" checkbox** (checked by default):
 - **New to the CRM**: the row shows a small form — first name, last name,
   phone, and company (pick an existing company from the list, or choose
   "+ New company…" and type a name; the company is created in the CRM).
+  The company you choose is the new contact's company; with none, they
+  get the record's company. If you **type a company name without picking
+  it**, Add & Send checks it first: an exact match is used; otherwise the
+  row asks "… isn't a company we know. Create it as a new company?" — fix
+  the spelling if needed and choose **Create it as a new company**, **No
+  company**, or one of the near matches it lists, then click Add & Send
+  again. Nothing is sent until every such question is answered.
   Leave the box checked and fill it in; Send creates the contact on this
   record and sends.
 - **Uncheck the box** on any row to send without adding that person — a

@@ -1,6 +1,6 @@
 # sessions/ — Client, Partner and Funder Management
 
-Last Updated: 10-30-26 01:03 · Revision 1.5
+Last Updated: 11-01-26 18:55 · Revision 1.6
 
 Detail for the session engine behind Client Management (`/mentorsessions`), Partner Management (`/partnersessions`) and Funder Management (`/sponsorsessions`): the grids, every record tab, quick add, managers and co-mentors, and the traps of this package.
 
@@ -157,7 +157,22 @@ one shared frontend that derives its domain from the first segment of its URL.
   Company is a picker** (every company under the org-wide key, website
   beside the name, "+ New company…" for the typed path): a chosen company's
   id rides as `companyId` and skips the match and the website rule — the
-  way to make a company that is both a partner and a funder. **A picked
+  way to make a company that is both a partner and a funder. **A name
+  typed in the picker but never picked asks first** (v0.301.1, Doug's
+  ruling 10-30-26, option C — the picker hid "+ New company…" once the
+  typed text matched nothing): at Create, one exact match is used as if
+  picked; otherwise the form gives way to "… isn't a company we know.
+  Create it as a new company?" with the name editable and the near
+  matches offered; two same-named companies are never guessed between. A
+  record name still reading exactly as the misspelled company follows the
+  correction (v0.301.2). **The email composer's new-contact row follows
+  the same rule** (v0.302.0), asking in the row and checking the server
+  for the typed name; **the company chosen there is the new contact's
+  company** (v0.302.1 — `create_contact(company_id=…)`; it used to ride in
+  the changes as `accountId`, where the field whitelist dropped it, so
+  every such company was lost). The row's list holds every company the
+  user can read up to 1,000 (v0.302.2), and both search lists open upward
+  when there is no room below (v0.302.4). **A picked
   company with an empty contact block inherits the primary contact of its
   record in the other application** (Partner Management ↔ Funder
   Management; v0.257.0, Doug 2026-10-14): the newest such record naming
@@ -289,6 +304,7 @@ Watch for these when touching this package:
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.6 | 11-01-26 18:55 | Claude (Claude Code) | A company typed but never picked asks first, in the add dialog and the composer row; the composer's chosen company reaches the contact (v0.301.1–v0.302.4). |
 | 1.5 | 10-30-26 01:03 | Claude (Claude Code) | Who attended, by company (v0.301.0). |
 | 1.4 | 10-28-26 21:28 | Claude (Claude Code) | Every grid on the shared grid (v0.298.0). |
 | 1.3 | 10-24-26 11:05 | Claude (Claude Code) | One login on several profiles: the Active-profile choice and the grid's report (v0.280.0). |

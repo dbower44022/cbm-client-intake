@@ -174,7 +174,10 @@ pinned while the body scrolls.
   once: each such address gets an "Add to this record" row (existing CRM
   people link; brand-new people get a small create form; CBM members become
   CBM contacts, never client contacts). Leave the box checked to add them,
-  or uncheck to send one-off; then click **Add & Send**. Either way the
+  or uncheck to send one-off; then click **Add & Send**. A company typed
+  for a new person but never picked from the list is asked about first —
+  never created or dropped silently (details in
+  [`communications-tab.md`](communications-tab.md)). Either way the
   conversation stays on the record and their replies keep arriving.
 
 **Reply, Reply All, Forward.** From a thread: **Reply** answers the last
