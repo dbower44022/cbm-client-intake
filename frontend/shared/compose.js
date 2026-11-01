@@ -23,8 +23,9 @@
                                     addContact, addComentor, writeBack
      features                       {cc, templates, attachments, documents,
                                     drafts, reply, addressBook}
-     record                         {entity, id, name, contacts:[{name,email}],
-                                    supportsComentor, fixedRecipient}
+     record                         {entity, id, name, kind, contacts:[{name,email}],
+                                    supportsComentor, fixedRecipient} — kind is
+                                    the record's word ("partner"), for messages
      sendingEnabled                 false => the Send button explains that
                                     email is not switched on here
      mailbox                        {get() -> {mailbox, signature}|undefined,
@@ -1042,10 +1043,22 @@
       }
       optionsPanel.innerHTML = "";
       var head = document.createElement("p"); head.className = "sx__notice is-warn";
-      head.textContent = (unknown.length === 1 ? "This recipient isn't" : "These recipients aren't") +
-        " a contact on this record. Leave \"Add to this record\" checked to link them" +
-        " (fill in the details for new people), or uncheck to send without adding." +
-        " Then click Add & Send.";
+      // Names the record and its kind when the host says them (Doug's
+      // wording 11-01-26): "this partner (Cuyahoga Small Business Alliance)".
+      var one = unknown.length === 1;
+      var kind = String(record.kind || "").trim(), rname = String(record.name || "").trim();
+      if (kind && rname) {
+        head.textContent = (one ? "This recipient isn't a contact" : "These recipients aren't contacts") +
+          " on this " + kind + " (" + rname + "). Leave \"Add to this record\" checked to link " +
+          (one ? "them as a contact" : "them as contacts") + " for " + rname +
+          " (fill in the details for new people), or uncheck to send without adding." +
+          " Then click Add & Send.";
+      } else {
+        head.textContent = (one ? "This recipient isn't" : "These recipients aren't") +
+          " a contact on this record. Leave \"Add to this record\" checked to link them" +
+          " (fill in the details for new people), or uncheck to send without adding." +
+          " Then click Add & Send.";
+      }
       optionsPanel.appendChild(head);
       commResolvers = [];
       unknown.forEach(function (addr) {

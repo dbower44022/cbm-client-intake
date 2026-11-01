@@ -2737,6 +2737,7 @@
       },
       features: { cc: true, templates: true, attachments: true, documents: docsOn(), drafts: true, reply: true, addressBook: true },
       record: { id: rec.id, name: rec.name || "", contacts: rec.contacts || [],
+                kind: String((config && config.parentLabel) || "").toLowerCase(),
                 supportsComentor: !!(config && config.supportsComentor) },
       sendingEnabled: commsOn(),
       mailbox: {

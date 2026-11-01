@@ -297,3 +297,13 @@ def test_the_composer_company_list_pages_past_the_first_page():
     huge = Client(5000)
     assert len(asyncio.run(comms_service.search_companies(huge, ""))) == 1000
     assert len(huge.calls) == 5
+
+
+def test_the_unknown_recipient_note_names_the_record():
+    # Doug's wording 11-01-26: "This recipient isn't a contact on this
+    # partner (<partner name>). Leave "Add to this record" checked to link
+    # them as a contact for <partner name> …"
+    assert '" on this " + kind + " (" + rname + "). Leave \\"Add to this record\\" checked to link "' in _COMPOSE_JS
+    assert '(one ? "them as a contact" : "them as contacts") + " for " + rname' in _COMPOSE_JS
+    app_js = (_ROOT / "sessions" / "frontend" / "app.js").read_text()
+    assert 'kind: String((config && config.parentLabel) || "").toLowerCase(),' in app_js

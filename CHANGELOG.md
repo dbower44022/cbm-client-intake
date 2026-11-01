@@ -5,6 +5,22 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.302.3] — 2026-11-01
+
+**fix: the email composer's note about unknown recipients names the
+record** (Doug's wording 11-01-26). It said "isn't a contact on this
+record"; it now says which record and what kind: "This recipient isn't a
+contact on this partner (Cuyahoga Small Business Alliance). Leave "Add to
+this record" checked to link them as a contact for Cuyahoga Small Business
+Alliance …". Partner, funder and engagement on the three Management
+screens; the plural reads "These recipients aren't contacts … as contacts
+for …". A host that does not say the record's kind keeps the old wording.
+No switch; no migration; no CRM change.
+
+- `frontend/shared/compose.js` builds the note from `record.kind` and
+  `record.name`; `sessions/frontend/app.js` passes the kind from each
+  screen's record label.
+
 ## [0.302.2] — 2026-10-31
 
 **fix: the email composer's company list holds every company, not the

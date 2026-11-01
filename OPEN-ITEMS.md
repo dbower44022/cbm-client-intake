@@ -10,9 +10,9 @@ found; move resolved items to the bottom with the resolution date.
     (2026-10-31, found on the #63 live pass). (1) ~~The row's Company
     search list holds only the first 50 companies alphabetically~~ —
     **fixed in v0.302.2** (every company the user can read, paged at 200
-    up to 1,000, as the Add a partner dialog does; live check owed on
-    production, where there are more than 50: type a company starting
-    with W). (2) A list
+    up to 1,000, as the Add a partner dialog does) — **verified on
+    production 11-01-26** (Doug's check completed; the log shows the list
+    loaded at 19:34 UTC in one read). (2) A list
     that opens near the bottom of the New email dialog is cut off by the
     dialog's edge until the dialog is scrolled
     (`~/Pictures/Capture_2026-10-31_10-55-48.png`). (3) On crm-test a
