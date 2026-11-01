@@ -307,3 +307,16 @@ def test_the_unknown_recipient_note_names_the_record():
     assert '(one ? "them as a contact" : "them as contacts") + " for " + rname' in _COMPOSE_JS
     app_js = (_ROOT / "sessions" / "frontend" / "app.js").read_text()
     assert 'kind: String((config && config.parentLabel) || "").toLowerCase(),' in app_js
+
+
+def test_both_search_lists_open_upward_when_tight():
+    # Doug's ruling 11-01-26, option A: a list with no room below inside a
+    # scrolling dialog opens upward and shrinks to fit (v0.302.4). The
+    # composer and the Add a partner dialog each carry a copy of the list.
+    app_js = (_ROOT / "sessions" / "frontend" / "app.js").read_text()
+    for src in (_COMPOSE_JS, app_js):
+        combo = _function(src, "makeCombobox")
+        assert "if (!list.hidden) placeList();" in combo
+        assert 'list.classList.add("is-up")' in combo
+    assert _function(_COMPOSE_JS, "placeList") == _function(app_js, "placeList")
+    assert ".sx__combo-list.is-up { top: auto; bottom: calc(100% + 2px);" in _COMPOSE_CSS

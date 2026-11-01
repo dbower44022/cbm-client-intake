@@ -12,10 +12,13 @@ found; move resolved items to the bottom with the resolution date.
     **fixed in v0.302.2** (every company the user can read, paged at 200
     up to 1,000, as the Add a partner dialog does) — **verified on
     production 11-01-26** (Doug's check completed; the log shows the list
-    loaded at 19:34 UTC in one read). (2) A list
+    loaded at 19:34 UTC in one read). (2) ~~A list
     that opens near the bottom of the New email dialog is cut off by the
     dialog's edge until the dialog is scrolled
-    (`~/Pictures/Capture_2026-10-31_10-55-48.png`). (3) On crm-test a
+    (`~/Pictures/Capture_2026-10-31_10-55-48.png`)~~ — **fixed in
+    v0.302.4**: it opens upward when there is no room below (Doug's ruling
+    11-01-26, option A), in the composer and the Add a partner dialog;
+    checked in the preview only. (3) On crm-test a
     training account's send fails as *Request failed (504)*: its
     `@sandbox.cbmentors.org` mailbox cannot send (Gmail `invalid_grant`),
     which is the sandbox's design, but the message says nothing useful.

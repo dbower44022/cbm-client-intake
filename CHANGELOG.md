@@ -5,6 +5,21 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.302.4] — 2026-11-01
+
+**fix: a search list with no room below opens upward** (open item #65,
+part 2; Doug's ruling 11-01-26, option A). The company list in the email
+composer's new-contact row opened below its box inside the dialog's
+scrolling area, whose edge cut it off — only *No company* showed until the
+dialog was scrolled. No switch; no migration; no CRM change.
+
+- The list measures the room below and above its box inside any scrolling
+  area; when below is too tight and above has more, it opens upward. Its
+  height is capped to the roomier side.
+- Both copies of the list — `frontend/shared/compose.js` and the Add a
+  partner / Add a funder dialog's in `sessions/frontend/app.js` — carry
+  the same `placeList`; a test keeps them identical.
+
 ## [0.302.3] — 2026-11-01
 
 **fix: the email composer's note about unknown recipients names the

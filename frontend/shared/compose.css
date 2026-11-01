@@ -107,6 +107,8 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
   border: 1px solid var(--cbm-border, #d7dce2); border-radius: 6px;
   box-shadow: 0 8px 24px rgba(18, 28, 42, 0.18); margin: 0; padding: 0.2rem 0; list-style: none;
 }
+/* No room below inside a scrolling dialog: the list opens upward (v0.302.4). */
+.sx__combo-list.is-up { top: auto; bottom: calc(100% + 2px); box-shadow: 0 -8px 24px rgba(18, 28, 42, 0.18); }
 .sx__combo-list li { padding: 0.35rem 0.6rem; cursor: pointer; }
 .sx__combo-list li:hover, .sx__combo-list li.is-active { background: #eef4fb; }
 .sx__combo-list li.is-muted { color: var(--cbm-slate-700, #667); font-style: italic; }

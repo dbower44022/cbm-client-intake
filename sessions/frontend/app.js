@@ -2626,6 +2626,30 @@
       });
       list.hidden = !visible.length;
       input.setAttribute("aria-expanded", String(!visible.length ? false : true));
+      if (!list.hidden) placeList();
+    }
+    // Open upward when the space below is too tight (Doug's ruling
+    // 11-01-26, option A): the list sits inside a scrolling dialog, whose
+    // edge clipped it. Height shrinks to the roomier side.
+    function placeList() {
+      list.classList.remove("is-up"); list.style.maxHeight = "";
+      var box = input.getBoundingClientRect();
+      var top = 0, bottom = window.innerHeight;
+      for (var p = wrap.parentElement; p && p !== document.body; p = p.parentElement) {
+        var oy = getComputedStyle(p).overflowY;
+        if (oy === "auto" || oy === "scroll" || oy === "hidden") {
+          var r = p.getBoundingClientRect();
+          top = Math.max(top, r.top); bottom = Math.min(bottom, r.bottom);
+        }
+      }
+      var below = bottom - box.bottom - 8, above = box.top - top - 8;
+      var want = Math.min(list.scrollHeight, 256);
+      if (below < want && above > below) {
+        list.classList.add("is-up");
+        list.style.maxHeight = Math.max(80, Math.min(256, above)) + "px";
+      } else {
+        list.style.maxHeight = Math.max(80, Math.min(256, below)) + "px";
+      }
     }
     function highlight() {
       Array.prototype.forEach.call(list.children, function (li, i) {
