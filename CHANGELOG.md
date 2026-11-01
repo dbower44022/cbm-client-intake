@@ -5,6 +5,20 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.302.2] — 2026-10-31
+
+**fix: the email composer's company list holds every company, not the
+first 50** (open item #65, part 1; plan approved by Doug 10-31-26). The
+new-contact row's Company search box listed only the first 50 companies
+alphabetically, so a company late in the alphabet never appeared as you
+typed. No switch; no migration; no CRM change.
+
+- `comms.service.search_companies` with no search text reads every
+  company the user can read, 200 at a time (a bigger page is refused by
+  the CRM) up to 1,000 — the same reach as the Add a partner dialog's
+  list. With search text it still returns up to 50 matches, which is how
+  Add & Send checks a typed name.
+
 ## [0.302.1] — 2026-10-31
 
 **fix: a company chosen for a new contact in the email composer is the

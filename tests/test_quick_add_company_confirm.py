@@ -266,3 +266,34 @@ def test_the_composer_company_search_carries_the_website():
     assert c.kw["select"] == "name,website" and c.kw["max_size"] == 50
     assert out == [{"id": "A2", "name": "Key Bank", "website": "https://keybank.com"},
                    {"id": "A3", "name": "Key Bank", "website": ""}]
+
+
+def test_the_composer_company_list_pages_past_the_first_page():
+    # v0.302.2: with no query the row's list holds every company the user
+    # can read, paged at 200 (a bigger page is a 403) up to 1,000 — it was
+    # the first 50 only.
+    import asyncio
+    from comms import service as comms_service
+
+    class Client:
+        def __init__(self, total):
+            self.total, self.calls = total, []
+
+        async def list(self, entity, **kw):
+            self.calls.append((kw.get("offset"), kw.get("max_size")))
+            start, size = kw.get("offset") or 0, kw["max_size"]
+            assert size <= 200
+            n = max(0, min(size, self.total - start))
+            return {"list": [{"id": f"A{start + i}", "name": f"Co {start + i:04d}"} for i in range(n)]}
+
+    small = Client(34)
+    assert len(asyncio.run(comms_service.search_companies(small, ""))) == 34
+    assert small.calls == [(0, 200)]
+
+    mid = Client(450)
+    assert len(asyncio.run(comms_service.search_companies(mid, ""))) == 450
+    assert mid.calls == [(0, 200), (200, 200), (400, 200)]
+
+    huge = Client(5000)
+    assert len(asyncio.run(comms_service.search_companies(huge, ""))) == 1000
+    assert len(huge.calls) == 5

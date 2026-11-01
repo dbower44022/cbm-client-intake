@@ -1364,18 +1364,41 @@ async def lookup_contact_by_email(user_client: Any, address: str) -> dict[str, A
 
 
 async def search_companies(user_client: Any, query: str = "") -> list[dict[str, Any]]:
-    """Accounts for the compose dialog's company picker (empty query = first
-    page, alphabetical — CBM-scale)."""
-    where = None
+    """Accounts for the compose dialog's company picker, read as the user.
+
+    No query: EVERY company the user can read, paged at 200 up to
+    ``_COMPANY_LIST_MAX`` — the same reach as the Add a partner dialog's
+    list (v0.302.2; it was the first 50 only, so a company late in the
+    alphabet never appeared as you typed). A query: up to 50 names
+    containing it, which is how Add & Send checks a typed name."""
     q = (query or "").strip()
     if q:
-        where = [{"type": "contains", "attribute": "name", "value": q}]
-    data = await user_client.list(
-        "Account", where=where, select="name,website", max_size=50, order_by="name"
-    )
+        data = await user_client.list(
+            "Account", where=[{"type": "contains", "attribute": "name", "value": q}],
+            select="name,website", max_size=50, order_by="name",
+        )
+        rows = data.get("list", [])
+    else:
+        rows = []
+        offset = 0
+        while offset < _COMPANY_LIST_MAX:
+            data = await user_client.list(
+                "Account", select="name,website", max_size=_COMPANY_PAGE,
+                offset=offset, order_by="name",
+            )
+            page = data.get("list", [])
+            rows.extend(page)
+            if len(page) < _COMPANY_PAGE:
+                break
+            offset += _COMPANY_PAGE
     # The website tells two same-named companies apart (v0.302.0).
     return [{"id": a["id"], "name": a.get("name"), "website": a.get("website") or ""}
-            for a in data.get("list", [])]
+            for a in rows]
+
+
+# A list page above 200 is refused by the CRM, not truncated ([[espo-list-maxsize-limit]]).
+_COMPANY_PAGE = 200
+_COMPANY_LIST_MAX = 1000
 
 
 async def resolve_company(

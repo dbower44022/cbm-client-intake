@@ -7,10 +7,12 @@ found; move resolved items to the bottom with the resolution date.
 ## Needs a fix / decision
 
 65. **The email composer's new-contact row — three smaller faults**
-    (2026-10-31, found on the #63 live pass). (1) The row's Company
-    search list holds only the first 50 companies alphabetically, as the
-    user can read them; a company beyond them never appears as you type
-    (Add & Send still finds it by asking the server, v0.302.0). (2) A list
+    (2026-10-31, found on the #63 live pass). (1) ~~The row's Company
+    search list holds only the first 50 companies alphabetically~~ —
+    **fixed in v0.302.2** (every company the user can read, paged at 200
+    up to 1,000, as the Add a partner dialog does; live check owed on
+    production, where there are more than 50: type a company starting
+    with W). (2) A list
     that opens near the bottom of the New email dialog is cut off by the
     dialog's edge until the dialog is scrolled
     (`~/Pictures/Capture_2026-10-31_10-55-48.png`). (3) On crm-test a
