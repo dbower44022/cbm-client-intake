@@ -32,7 +32,10 @@ found; move resolved items to the bottom with the resolution date.
     **done 10-30-26 on Boston too, after its outreach CRM change
     (Doug's option A: Boston to production's level, step page
     https://claude.ai/artifact/V9aNhNDzDM8e6FqkHU6BKv); Boston's backfill
-    after its next release**
+    after its next release** — **that release is done: Boston runs v0.302.4
+    since 11-01-26 22:40**, so the backfill job is now on Boston. Boston
+    held no partner or funder records on 10-30-26 (not re-checked), so the
+    job runs at Boston's System Settings page once it has some
     (`partner-association-crm-handoff.md` § 0); (3) the Operations job's
     backfill run on Boston after its change (production done 10-30-26); (4) **the partner's
     attendance report** — **built as v0.301.0
@@ -671,7 +674,11 @@ found; move resolved items to the bottom with the resolution date.
     5 of https://claude.ai/artifact/Covmt3vPbZnvWpr8WdQBY6, private, *Boston Release
     Changes*, rev 2.0 10-18-26 — one page for both of this arc's Boston
     changes, with #46; not yet run as of 10-18-26 22:50, Boston still at
-    v0.232.0). **Boston's applications run v0.232.0**
+    v0.232.0). **Version update 11-01-26:** Boston's applications run
+    **v0.302.4** since 11-01-26 22:40 (release tag v0.302.4, read from its
+    `/healthz`), so the release half of (e) is done; the Overview half of
+    the pass is still owed. The text below is the state before that
+    release. ~~Boston's applications run v0.232.0~~
     (the last release-lane cut), which predates the Overview following the
     live type (v0.252.0) and the line-break fix (v0.252.2). Doug's ruling
     10-11-26 20:5x: **convert the CRM tonight, release next Sunday** — the
@@ -730,7 +737,10 @@ found; move resolved items to the bottom with the resolution date.
     dry run against Boston signed in as its administrator and printed the
     same fingerprint `f2d6a41ea16c`, and Boston holds one mentor profile,
     no partner and no funder records (the add itself cannot be exercised
-    there until a second profile exists). Boston's image is v0.232.0, which
+    there until a second profile exists). **Update 11-01-26: Boston's
+    image is v0.302.4 since 22:40, which ships the applier, so the apply
+    can now run from Boston's own web console.** As written 10-14-26:
+    Boston's image is v0.232.0, which
     predates the applier shipping in the image, so the apply runs from this
     computer through the new `scripts/apply_plan.sh boston …` wrapper
     (parses `~/.config/cbm-boston/boston.env`, never sources it). Step page
@@ -740,7 +750,9 @@ found; move resolved items to the bottom with the resolution date.
     `/setup`, the pass on a test funder, its removal). **State 10-18-26
     22:50 (session closed without the go):** nothing on the page has run —
     Boston still reports v0.232.0, the release lane still points at
-    v0.232.0 (main is at v0.264.2), and the re-probe found both links
+    v0.232.0 (main is at v0.264.2; **superseded 11-01-26 22:40: Boston
+    reports v0.302.4 and the release lane points at v0.302.4** — the two
+    links themselves were not re-probed), and the re-probe found both links
     still absent with the dry run still printing `f2d6a41ea16c`. The page
     was rebuilt to the 10-17-26 step standard (rev 2.0: done boxes with
     progress and reset, a Before-you-start block, every changing step
