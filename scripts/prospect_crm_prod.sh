@@ -19,6 +19,24 @@
 #   ui         scripts/apply_outreach_ui.py (tab list, detail and list layouts)
 #   verify     scripts/apply_outreach_ui.py --verify (org-wide key; no apply form)
 #
+# The go-live words (11-01-26; fingerprints read on crm-test — a production
+# dry run that differs makes the apply refuse, and nothing changes):
+#   leadmodel   scripts/plans/coutreach-lead-model.json         fingerprint 6e228dbb7d33
+#   touchpos    scripts/plans/coutreach-touch-positions.json    fingerprint 6c2e1d42af30
+#   leadlabels  scripts/relabel_outreach_lead.py ("Outreach Lead", ruling 50)
+#   leadlayouts scripts/apply_lead_layouts.py (needs leadmodel first)
+#   leadmove    scripts/migrate_lead_model_values.py (org-wide key; ruling 45)
+#   funders     scripts/plans/coutreach-funders.json            fingerprint 4658d1450804
+#   industry    scripts/plans/cprospect-industry.json           fingerprint 82ec87c36dce
+#   industryopts  prints Account.cIndustrySector to compare with that plan
+#   funderstatus  scripts/plans/csponsor-funder-status.json     fingerprint 84636d15191f
+#   closedate   scripts/plans/cengagement-close-date-writable.json fingerprint c80d9070da1d
+#   leadcode    scripts/plans/lead-code.json                    fingerprint bec909277859
+#   redesign    scripts/plans/marketing-redesign.json           fingerprint 6bb03652454a
+#   opens       scripts/plans/coutreach-touch-opens.json        fingerprint 50cae75c1274
+#   fitscore    scripts/plans/cprospect-fit-score.json          fingerprint 8e57af53eef5
+#   relabelco   scripts/relabel_info_request_companies.py (org-wide key; ruling 34)
+#
 # Exists because each full invocation is past the length a pasted console line
 # survives, and so the fingerprints are pinned: the applier refuses an apply
 # whose plan moved since the dry run. The notes conversion is NOT here — it runs
@@ -53,5 +71,20 @@ case "$step" in
   labels)   exec "$PY" scripts/relabel_outreach_campaign.py $flag ;;
   ui)       exec "$PY" scripts/apply_outreach_ui.py $flag ;;
   verify)   exec "$PY" scripts/apply_outreach_ui.py --verify ;;
-  *) echo "usage: bash scripts/prospect_crm_prod.sh <whoami|sms|outreach|receipt|smstext|appfields|roles|actionlog|labels|ui|verify> [apply]" >&2; exit 64 ;;
+  leadmodel) plan scripts/plans/coutreach-lead-model.json 6e228dbb7d33 ;;
+  touchpos) plan scripts/plans/coutreach-touch-positions.json 6c2e1d42af30 ;;
+  leadlabels) exec "$PY" scripts/relabel_outreach_lead.py $flag ;;
+  leadlayouts) exec "$PY" scripts/apply_lead_layouts.py $flag ;;
+  leadmove) exec "$PY" scripts/migrate_lead_model_values.py $flag ;;
+  funders)  plan scripts/plans/coutreach-funders.json 4658d1450804 ;;
+  industry) plan scripts/plans/cprospect-industry.json 82ec87c36dce ;;
+  industryopts) exec "$PY" scripts/espo_admin.py metadata entityDefs.Account.fields.cIndustrySector.options ;;
+  funderstatus) plan scripts/plans/csponsor-funder-status.json 84636d15191f ;;
+  closedate) plan scripts/plans/cengagement-close-date-writable.json c80d9070da1d ;;
+  leadcode) plan scripts/plans/lead-code.json bec909277859 ;;
+  redesign) plan scripts/plans/marketing-redesign.json 6bb03652454a ;;
+  opens)    plan scripts/plans/coutreach-touch-opens.json 50cae75c1274 ;;
+  fitscore) plan scripts/plans/cprospect-fit-score.json 8e57af53eef5 ;;
+  relabelco) exec "$PY" scripts/relabel_info_request_companies.py $flag ;;
+  *) echo "usage: bash scripts/prospect_crm_prod.sh <step> [apply] — the steps are listed at the top of this file" >&2; exit 64 ;;
 esac
