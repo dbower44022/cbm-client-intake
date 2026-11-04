@@ -1,6 +1,6 @@
 # Screenshot capture list — Module 1, Create the event
 
-Last Updated: 11-04-26 10:52 · Revision 1.1 — see change log at the end.
+Last Updated: 11-04-26 12:50 · Revision 1.2 — see change log at the end.
 
 Seven screenshots, one per slide in module 1. Each one exists because its slide
 names a control the reader has to find; none is decorative.
@@ -24,9 +24,22 @@ the course is needed when you do.
 - Capture **the control and enough around it to locate it**, not the whole
   screen. A full-screen shot of a 4K monitor reduces the thing being pointed at
   to a few pixels.
-- Save every file as **PNG**. Each step below gives the whole path to save to,
-  in full, so you never have to look back at this block. They all land in this
-  one folder, which already exists:
+- Save every file as **PNG**, not as the capture tool's own `.smk` format — a
+  browser cannot display a `.smk`, so the course cannot show one. If it is
+  easier to save the `.smk` and convert afterwards, save it in the same folder
+  and run:
+  ```
+  uv run python /home/doug/Dropbox/Projects/cbm-client-intake/training/events-marketing-manager/smk-to-png.py
+  ```
+- **Capture the application only.** If the capture tool's own window, its
+  layers panel or its filmstrip of recent captures is in frame, the screenshot
+  teaches the tool instead of the application and has to be taken again.
+- **Saving a file does not put it in the course.** Tell me when captures are
+  in the folder and I publish them; that is what carries the images onto the
+  page.
+- Each step below gives the whole path to save to, in full, so you never have
+  to look back at this block. They all land in this one folder, which already
+  exists:
   ```
   /home/doug/Dropbox/Projects/cbm-client-intake/training/events-marketing-manager/course/shots/
   ```
@@ -157,5 +170,6 @@ slides need correcting too.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 11-04-26 12:50 | Claude (Claude Code) | After the first capture came back as a `.smk` with the editor in frame, and did not appear because the shots were never in the publish: the PNG requirement and the converter, the capture-the-application-only rule, and the fact that a saved file reaches the page only when the course is published again. |
 | 1.1 | 11-04-26 10:52 | Claude (Claude Code) | Doug, 11-04-26: always give full paths. Every save step now carries the whole path to save to, rather than a bare filename under a folder named once in the opening block. |
 | 1.0 | 11-04-26 10:20 | Claude (Claude Code) | Created after Doug's 11-04-26 decision to carry the explanatory weight with screenshots rather than per-step clips. Seven captures, one per module 1 slide, each tied to a control its slide names. |

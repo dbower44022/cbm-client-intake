@@ -266,6 +266,10 @@
       var p2 = el("p");
       p2.appendChild(document.createTextNode("Save it as "));
       p2.appendChild(el("code", null, (COURSE.shotsDir || "shots/") + s.shot.file));
+      p2.appendChild(document.createTextNode(
+        " — as a PNG, not the capture tool's own format. Saving it there does not " +
+        "put it on this page on its own: the course has to be published again, " +
+        "which is what carries the image across."));
       ph.appendChild(p2);
       fig.appendChild(ph);
     });
