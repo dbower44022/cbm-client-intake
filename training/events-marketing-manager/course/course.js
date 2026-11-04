@@ -47,7 +47,8 @@ window.COURSE = {
           body: [
             "This screen is what gives an event its web address. An event typed straight " +
             "into the CRM has no page, so nothing can link to it and nobody can register.",
-            "The public programme page is built and live, but the marketing site has not " +
+            "The public workshops and webinars page is built and live, but the marketing " +
+            "site has not " +
             "been redirected to it yet. Until that one redirect is added, this tool and " +
             "the live site are separate worlds."
           ],
@@ -249,7 +250,7 @@ window.COURSE = {
       id: "m5",
       title: "See what it did",
       state: "planned",
-      summary: "Attendance, the programme and conversion reports, and the event's " +
+      summary: "Attendance, the event and conversion reports, and the event's " +
                "Campaigns tab.",
       slides: [],
       videos: []

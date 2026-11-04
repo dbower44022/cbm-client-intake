@@ -5,7 +5,7 @@ Last Updated: 11-04-26 10:22 · Revision 1.2 — see change log at the end.
 **Approved 11-04-26.** Module 1 is built; the development Artifact is
 https://claude.ai/artifact/T1DhFMnfVwxAHfggAXS83b
 
-The first training programme for this application. Audience, form and delivery
+The first training course for this application. Audience, form and delivery
 surface are Doug's, 10-30-26 and 11-04-26; everything else here is a draft.
 
 ## What this is
@@ -21,7 +21,7 @@ the job.
 
 ## Doug's rulings behind it
 
-- 10-30-26 — the training programmes live in this repository, not a separate
+- 10-30-26 — the training courses live in this repository, not a separate
   project folder.
 - 11-04-26 — **Artifact during development; a page in the application once it
   is mature.** Both surfaces, in that order.
@@ -186,7 +186,7 @@ Videos:
 ### Module 5 — See what it did
 Slides:
 - Attendance, and where it shows up elsewhere.
-- The programme and conversion reports. **Conversion counts an attendee only
+- The course and conversion reports. **Conversion counts an attendee only
   when their engagement postdates their first attended event** — otherwise a
   client who happened to attend would read as a win the event did not earn.
 - The event's Campaigns tab: Reached, Registered, Attended, the "not linked"

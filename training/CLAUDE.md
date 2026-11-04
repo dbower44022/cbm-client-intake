@@ -1,34 +1,41 @@
-# training/ — training programmes for the CBM applications
+# training/ — training material for the CBM applications
 
-Last Updated: 10-30-26 01:28 · Revision 1.1
+Last Updated: 11-04-26 10:35 · Revision 1.2
 
-Detail for the training programmes: where a programme lives, the sandbox it is
+Detail for the training material: where a course lives, the sandbox it is
 delivered on, the audiences it is written for, the names it must use, and the
 standard a walkthrough is written to.
 
 Claude Code loads this file only when a session reads or edits files in this
 folder. It does **not** replace the root `CLAUDE.md` — Claude Code walks up the
-tree, so a session rooted here loads both. Keep programme detail here and do
+tree, so a session rooted here loads both. Keep course detail here and do
 not restate an application rule that already lives in the root file or in an
 application folder's own `CLAUDE.md`; point at it instead.
 
 ## What this folder is
 
-A **training programme** is how a person is *taught to use* one of the staff or
-mentor applications. It is not documentation of how a feature works — that
-belongs with the application, in the guides the root `CLAUDE.md` lists.
+A **training course** teaches a person to use one of the staff or mentor
+applications. This folder holds the courses, and the material used to deliver
+training live on the sandbox. Neither is documentation of how a feature works —
+that belongs with the application, in the references the root `CLAUDE.md`
+lists.
+
+**The word "programme" is not used here** (Doug, 11-04-26). The deliverable is
+a **course**; the slate of public workshops and webinars that Event
+Administration manages is the **workshops and webinars page**, which is what
+the application itself calls it on screen.
 
 The difference decides where a document goes:
 
 - *How does the held-company control behave?* → `submission-admin.md`, an
   application guide.
 - *What do I put in front of a room of new Client Administration staff for
-  forty minutes, and what do they click?* → a programme here.
+  forty minutes, and what do they click?* → a course here.
 
-## One folder per programme
+## One folder per course
 
-`training/<programme-name>/`, named for its audience and its purpose, holding
-that programme's own documents. A programme is a deliverable in its own right,
+`training/<course-name>/`, named for its audience and its purpose, holding
+that course's own documents. A course is a deliverable in its own right,
 so it carries revision control and a change log like every other document.
 
 Two training documents exist already and live in this folder:
@@ -45,20 +52,20 @@ its test, `scripts/sandbox/enrich_training_data.py`, the root `CLAUDE.md`,
 `OPEN-ITEMS.md`, `SANDBOX-RESET.md` and the chapter deployment guide's training
 method. `CHANGELOG.md` deliberately keeps the old paths, because it is history.
 
-Treat them as the first programme's material, not as the template for the next
-one: they are two documents covering nine audiences on one sandbox, which is
-where the existing training started, not where a programme has to end up.
+Treat them as the sandbox training material, not as the template for a
+course: they are two documents covering nine audiences on one sandbox, which is
+where the existing training started, not where a course has to end up.
 
-## The sandbox reverts every night — a programme cannot rely on its own data
+## The sandbox reverts every night — a course cannot rely on its own data
 
 Training is delivered on **crm-test**, which doubles as the training sandbox and
 is restored to a fixed snapshot nightly in two halves: the CRM at **04:00 UTC**
 (droplet cron) and the application's own Postgres an hour later (the
 `delivery-worker`, `SANDBOX_NIGHTLY_RESET`). Runbook: `SANDBOX-RESET.md`.
 
-What this means for a programme:
+What this means for a course:
 
-- **Anything created during the day is gone by morning.** A programme whose
+- **Anything created during the day is gone by morning.** A course whose
   exercise depends on a record someone made for the rehearsal will work once
   and fail the second time it is delivered.
 - **Permanent demo data belongs in the baseline**, through a seeder stage and a
@@ -66,7 +73,7 @@ What this means for a programme:
   or a column needs its own seeder stage, or the nightly reset truncates it.
 - **Between 04:00 and 05:00 UTC the two halves disagree** — application rows
   outlive the CRM records they point at. Do not schedule a rehearsal there and
-  do not write a programme step that reads as a defect in that hour.
+  do not write a course step that reads as a defect in that hour.
 - A night can be paused with `touch /var/www/espocrm/.sandbox-hold` on the
   droplet (the CRM half only; the worker flag is separate). Droplet commands
   are Doug's to run.
@@ -89,14 +96,14 @@ The existing walkthroughs cover nine audiences, each gated by a team:
 - Marketing Management (`/campaigns`)
 
 **Rehearse as a real non-admin in the audience's own team.** EspoCRM
-administrators bypass ACL entirely, so a programme walked through on an admin
+administrators bypass ACL entirely, so a course walked through on an admin
 login proves nothing about what the room will see — it is how several
 mentor-only bugs stayed invisible for weeks. The portal gate is per
 application, and a missing team shows as a 403 naming the team required.
 
 ## Use the user-facing names, never the package or route name
 
-A programme is read by staff, so it uses the words on the screen. The traps:
+A course is read by staff, so it uses the words on the screen. The traps:
 
 - **Client Administration** is the page title; the package and route stay
   `assignments`.
@@ -105,7 +112,7 @@ A programme is read by staff, so it uses the words on the screen. The traps:
 - **Funder** is display wording only — the CRM entities stay `CSponsorProfile`.
 - **Company** is how the Account entity is presented everywhere.
 - The organisation's name is a token in served pages (`{{org}}`) because the
-  application serves Cleveland, Boston and Lakeside. A programme naming a
+  application serves Cleveland, Boston and Lakeside. A course naming a
   chapter's web address, colours or sign-ins is **Cleveland-specific** unless
   it says otherwise. The chapter-facing training method is
   `prds/chapter-network/deployment-guide/7-Methods-Training.md`.
@@ -132,7 +139,7 @@ Three steps or fewer may sit in prose; anything longer is a runbook page.
 ## Publishing
 
 `scripts/publish_docs.py` is the only publish path, and its `PUBLISHED` tuple is
-the registry — a new published programme needs an entry there plus a book and
+the registry — a new published course needs an entry there plus a book and
 page on the docs site. The site is **readable without signing in**, so a publish
 is refused if the text still carries a live `@cbmentors.org` address or a
 credential, and `training-guide.md`'s published copy deliberately omits the six
@@ -142,5 +149,6 @@ sign-in usernames. Do not "helpfully" restore them.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 11-04-26 10:35 | Claude (Claude Code) | Doug, 11-04-26: the word "programme" is not used. Replaced throughout this folder — the deliverable is a course, and the events sense is the workshops and webinars page, the application's own words. The application still says Programme in four user-visible places; that is `OPEN-ITEMS.md` work, not this file's. |
 | 1.1 | 10-30-26 01:28 | Claude (Claude Code) | `training-guide.md` and `demo-records.md` moved into this folder from the repository root on Doug's ruling, with all 22 references across eight files repointed; `CHANGELOG.md` left carrying the old paths as history. The open question in revision 1.0 is settled. |
-| 1.0 | 10-30-26 01:17 | Claude (Claude Code) | Created, after Doug's ruling 10-30-26 that the training programmes live in this repository rather than a separate project folder. Holds the orientation for a training session: what a programme is, the nightly sandbox reset constraint, the nine audiences and the non-admin rehearsal rule, the user-facing names, the step standard, and the publish path. The move of `training-guide.md` and `demo-records.md` under this folder is left open. |
+| 1.0 | 10-30-26 01:17 | Claude (Claude Code) | Created, after Doug's ruling 10-30-26 that the training courses live in this repository rather than a separate project folder. Holds the orientation for a training session: what a course is, the nightly sandbox reset constraint, the nine audiences and the non-admin rehearsal rule, the user-facing names, the step standard, and the publish path. The move of `training-guide.md` and `demo-records.md` under this folder is left open. |

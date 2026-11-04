@@ -245,7 +245,7 @@ The other five campaigns:
 | `Fall follow-up calls` | Call, Running, called by the Marketing Admin Team and the Mentor Team | The Calls page lists Marigold Pet Grooming and Gordon Square Florist to call. Three calls are already recorded: no answer (Ohio City Bike Works), interested (Slavic Village Bakery, converted to a Company and Contact Pavel Novak) and declined (Kamm's Corners Hardware) |
 | `Marketing on a Shoestring — Email` | Email, Complete | Event Marketing on a Shoestring; link `/c/sbxevnt7` opens the webinar |
 | `Webinar reminder — Text` | Text, Draft | The wording carries STOP and the link `/c/sbxtext8`; sign-off works, and the dry-run text client sends nothing |
-| `LinkedIn — Spring workshops` | Social media, Running, LinkedIn | Partner Northgate Chamber of Commerce, event Hiring Your First Employee, three links: `/c/sbxweb23` (programme), `/c/sbxmntr4` (request a mentor), `/c/sbxask56` (ask a question). Engagement Riverbend Cycles — Mentoring came through it; contact Dana Okoro (an information request, at Opportunity) too |
+| `LinkedIn — Spring workshops` | Social media, Running, LinkedIn | Partner Northgate Chamber of Commerce, event Hiring Your First Employee, three links: `/c/sbxweb23` (workshops and webinars page), `/c/sbxmntr4` (request a mentor), `/c/sbxask56` (ask a question). Engagement Riverbend Cycles — Mentoring came through it; contact Dana Okoro (an information request, at Opportunity) too |
 
 **The leads**, on the Leads grid and the Review tab: four Unqualified
 (Detroit Shoreway Signs and Collinwood Records have no website; Hannah
