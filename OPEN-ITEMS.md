@@ -265,7 +265,7 @@ found; move resolved items to the bottom with the resolution date.
     **M10 built as v0.303.0 (11-03-26)**: Promote this event and the
     event's Campaigns tab (dark behind **`EVENT_PROMOTE`**), the Calls tab's
     side panel and the caller's link (dark behind **`CALLS_PANEL`**). No
-    migration, no CRM change. Committed, not pushed; **live pass owed** on
+    migration, no CRM change. Pushed 11-03-26 (on origin at 23:58); **live pass owed** on
     crm-test (a registration through a promoted campaign's link is the one
     path the fakes cannot prove; step page
     https://claude.ai/artifact/LPT8MgA4iUPv49tiT4AUzX). Still owed: the handoff on production at the arc's slot and on

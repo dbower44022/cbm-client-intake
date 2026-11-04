@@ -1179,7 +1179,8 @@ the strength of it.
 - **v0.303.0 (2026-11-03) — Promote this event, the event's Campaigns
   tab, and the Calls tab's side panel** (build plan §§ 7e.9, 7e.10, M10;
   rulings 97, 116, 126). Dark behind `EVENT_PROMOTE` and `CALLS_PANEL`; no
-  migration, no CRM change. **Committed, not pushed; live pass owed** on
+  migration, no CRM change. **Pushed 11-03-26 (deploys crm-test and
+  production, dark on both); live pass owed** on
   crm-test (step page https://claude.ai/artifact/LPT8MgA4iUPv49tiT4AUzX,
   `OPEN-ITEMS.md` #57).
 - **v0.301.0 (2026-10-30) — who attended a partner's or funder's events,
