@@ -5,6 +5,31 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.303.2] — 2026-11-04
+
+**fix: the worker's event emails follow System Settings** (Doug's rulings
+11-03-26 and 11-04-26, option 1 each; found during the production events
+go-live). No migration; no CRM change; every switch keeps its value.
+
+- **Event reminder emails** is read on every pass. The worker used to decide
+  once at start-up, before System Settings' overrides load, so the switch
+  did nothing there (the fault `OPEN-ITEMS.md` #34 records for the mail
+  switches). Switching it on now runs the first pass at once. Each change of
+  state is logged once: `event reminders enabled …`, `… switched off`, or
+  `event reminders are switched on but cannot send: …`, naming what the
+  worker lacks.
+- **Worker-side event emails and the Zoom attendance pull need only the
+  Events switch** (`EVENTS_ENABLED`), not staff sign-in. They checked
+  `events_active`, which also needs `SESSION_SECRET`, a web-only secret, so
+  on production every reminder, every confirmation sent at delivery and
+  every attendance pull would have been refused (the worker log,
+  11-04-26 05:23 UTC). `events/notify.notify_active` and
+  `events/attendance.run_attendance_cycle` read the switch alone; the
+  attendance pull is also decided per pass.
+- Production's worker gets the switch from System Settings: *Events &
+  Webinars* set On there reaches it on the next refresh. Web already has it
+  from the deployment file, so nothing changes there.
+
 ## [0.303.1] — 2026-11-04
 
 **feat: the encryption key can be rotated without re-entering a secret**

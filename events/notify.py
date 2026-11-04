@@ -82,9 +82,15 @@ BY_KIND = {f.kind: f for f in FOLLOW_UPS}
 
 
 def notify_active(settings: Settings) -> bool:
-    """Every piece must be present: the feature, the send stack, the identity."""
+    """Every piece must be present: the feature, the send stack, the identity.
+
+    The feature is the Events switch alone, not ``events_active``: that also
+    needs the staff sign-in secret, which the worker never holds, so on
+    production every worker-side event email (reminders, confirmations at
+    delivery) was refused (found 11-04-26 in the worker log).
+    """
     return bool(
-        settings.events_active
+        settings.events_enabled
         and settings.gmail_sync
         and settings.ops_mailbox
         and not settings.espo_dry_run

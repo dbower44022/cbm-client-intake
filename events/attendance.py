@@ -248,7 +248,9 @@ async def run_attendance_cycle(
     """The worker's timer body. Best-effort: never raises."""
     totals = {"events": 0, "resolved": 0, "pending": 0, "attended": 0,
               "noShow": 0, "unmatched": 0, "errors": 0}
-    if not settings.events_active or settings.espo_dry_run:
+    # The Events switch alone: the worker holds no staff sign-in secret, so
+    # events_active is false there (as notify.notify_active, 11-04-26).
+    if not settings.events_enabled or settings.espo_dry_run:
         return totals
     zoom = zoom or make_zoom_client(settings)
     if zoom is None:

@@ -91,8 +91,7 @@ def _reminder_state(settings: Settings) -> str:
     if not settings.events_reminders:
         return "off"
     missing = [name for name, ok in (
-        ("Events & Webinars on this worker (EVENTS_ENABLED, ASSIGNMENTS_ENABLED, "
-         "SESSION_SECRET)", settings.events_active),
+        ("Events & Webinars (EVENTS_ENABLED) on this worker", settings.events_enabled),
         ("Gmail sync (GMAIL_SYNC)", settings.gmail_sync),
         ("the shared mailbox (OPS_MAILBOX)", bool(settings.ops_mailbox)),
         ("a live CRM (ESPO_DRY_RUN is on)", not settings.espo_dry_run),
@@ -396,19 +395,10 @@ async def main() -> None:
     # finished online event. Inert without Zoom, and bounded at both ends by the
     # grace / give-up windows so a webinar that was never held is not polled
     # forever.
+    # Read on every pass, like the reminders below, so System Settings' Events
+    # switch reaches the worker without a restart (11-04-26).
     next_attendance = datetime.now(timezone.utc)
-    attendance_on = (
-        settings.events_active
-        and settings.events_attendance_seconds > 0
-        and not settings.espo_dry_run
-    )
-    if attendance_on:
-        log.info(
-            "events attendance pull enabled (every %ss, grace %smin, give up after %sh)",
-            settings.events_attendance_seconds,
-            settings.events_attendance_grace_minutes,
-            settings.events_attendance_give_up_hours,
-        )
+    attendance_was_on = False
 
     # Event reminders (Phase 6b). The only time-driven follow-up; the other
     # four are staff-triggered. Inert without Gmail + the shared mailbox. The
@@ -498,6 +488,20 @@ async def main() -> None:
             next_settings = now_cfg + timedelta(
                 seconds=max(5, settings.setup_refresh_seconds)
             )
+        attendance_on = (
+            settings.events_enabled
+            and settings.events_attendance_seconds > 0
+            and not settings.espo_dry_run
+        )
+        if attendance_on != attendance_was_on:
+            if attendance_on:
+                log.info(
+                    "events attendance pull enabled (every %ss, grace %smin, give up after %sh)",
+                    settings.events_attendance_seconds,
+                    settings.events_attendance_grace_minutes,
+                    settings.events_attendance_give_up_hours,
+                )
+            attendance_was_on = attendance_on
         if attendance_on and now_cfg >= next_attendance:
             try:
                 from events.attendance import run_attendance_cycle

@@ -288,10 +288,19 @@ def test_reminder_state_on_when_everything_present():
 
 
 def test_reminder_state_names_what_is_missing():
-    state = worker._reminder_state(_reminder_settings(gmail_sync=False, session_secret=""))
+    state = worker._reminder_state(_reminder_settings(gmail_sync=False, events_enabled=False))
     assert state.startswith("blocked: ")
-    assert "GMAIL_SYNC" in state and "SESSION_SECRET" in state
+    assert "GMAIL_SYNC" in state and "EVENTS_ENABLED" in state
     assert "OPS_MAILBOX" not in state
+
+
+def test_reminders_need_no_session_secret():
+    """Production's worker holds no SESSION_SECRET (worker log, 11-04-26)."""
+    from events import notify
+
+    s = _reminder_settings(session_secret="")
+    assert worker._reminder_state(s) == "on"
+    assert notify.notify_active(s)
 
 
 def test_reminder_switch_is_not_decided_at_startup():
