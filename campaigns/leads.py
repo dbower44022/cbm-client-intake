@@ -384,7 +384,10 @@ async def search(client: EspoApi, lq: LeadQuery) -> dict[str, Any]:
     _refuse_contacts_without_ladder(lq, has_ladder)
     if not has_ladder:
         lq.without_ladder()
-    select = cfg.PROSPECT_SELECT + ("," + FIT_SELECT if fit else "") + ("," + ladder.LADDER_SELECT if has_ladder else "")
+    # modifiedAt is the Leads grid's Last activity column; without it the
+    # page fell back to the creation date.
+    select = (cfg.PROSPECT_SELECT + ",modifiedAt" + ("," + FIT_SELECT if fit else "")
+              + ("," + ladder.LADDER_SELECT if has_ladder else ""))
     if _is_campaign(lq):
         rows = await _campaign_rows(client, lq, select=select)
         return {"prospects": rows[lq.offset:lq.offset + lq.limit], "total": len(rows),

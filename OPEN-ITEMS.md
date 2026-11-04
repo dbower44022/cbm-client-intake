@@ -6,6 +6,14 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+67. **One test fails when the whole suite runs: `test_disabled_returns_503`**
+    (2026-11-04, found while testing v0.303.4). `tests/test_comms_endpoints.py::
+    test_disabled_returns_503` raises `RuntimeError: Event loop is closed`
+    in a full run, and passes alone and with the other comms tests. It fails
+    the same way on v0.303.3 without the v0.303.4 changes, so it predates
+    them. Likely state shared between tests (the process-wide connection
+    pool or a cached client bound to a closed loop). Not investigated.
+
 66. **One login on two mentor profiles — David Weissman's record, and
     hardening** (2026-11-02, production). On 10-16-26 15:18 (CRM time) a
     staff member replaced David Weissman's login with Doug Bower's under
@@ -214,14 +222,16 @@ found; move resolved items to the bottom with the resolution date.
     refuses no outcome ("Choose what came of the call.") and *Not
     interested* with no note; *No reply yet* logged a "Personal call done
     · No answer" touch and a "Lead Called" action, lead unchanged; Mine
-    counts 1 and filters to Marigold. Still owed: the opt-out ending read
-    on the received message (Doug), and the Mark Marketing mailbox
-    question. **Three small faults found, none blocking:** (a) the Leads
+    counts 1 and filters to Marigold. Still owed: the Mark Marketing
+    mailbox question. **Three small faults found, none blocking:** (a) the Leads
     grid's *Last activity* shows the creation date — `cfg.PROSPECT_SELECT`
     has no `modifiedAt`, so `app.js` falls back to `createdAt` (M2);
     (b) the call dialog keeps a refusal message on screen after the choice
     that caused it is changed; (c) the grid footer reads "Sorted by
-    createdAt", a machine word. **M6 built as v0.289.0
+    createdAt", a machine word. All three fixed in v0.303.4 (11-04-26,
+    unpushed). The opt-out ending confirmed by Doug 11-04-26: the opt-out
+    sentence and "Cleveland Business Mentors 1 Public Square Cleveland, OH
+    44113". **M6 built as v0.289.0
     (10-26-26)**, all four stops in one session: lists described by
     Include and Leave out (rulings 90–94, 98) — a dynamic list is a search,
     a static list is people added by hand, Exclude onto a static exclusion

@@ -226,3 +226,13 @@ const days = G.sortBy(rows, [{{col: "daysPending", dir: "desc"}}], engSortVal).m
 console.log(JSON.stringify({{two, days}}));
 """)
     assert got == {"two": ["Amy", "Bob", "Cal", "Zed"], "days": ["Amy", "Bob", "Zed", "Cal"]}
+
+
+def test_a_sort_key_without_a_column_is_named_in_words():
+    # "Sorted by createdAt" showed under the Leads grid (M5 live pass,
+    # 11-04-26): the default order's key has no column, so the grid takes
+    # its words from opts.labels.
+    grid = (SHARED / "grid.js").read_text()
+    assert "opts.labels" in grid
+    app = (SHARED.parent.parent / "campaigns" / "frontend" / "app.js").read_text()
+    assert 'labels: { createdAt: "Arrived" }' in app

@@ -1471,7 +1471,7 @@
     var ths = document.querySelectorAll("#" + g.table + " thead th");
     if (!window.CBMGrid) return;
     if (!g.grid) {
-      g.grid = CBMGrid.enhance($(g.table), { key: "marketing." + g.section, onSort: function (keys) {
+      g.grid = CBMGrid.enhance($(g.table), { key: "marketing." + g.section, labels: { createdAt: "Arrived" }, onSort: function (keys) {
         g.sort = CBMGrid.sortParam(keys) || (g.review ? "createdAt:asc" : "createdAt:desc"); g.dir = ""; g.offset = 0; loadGrid(px);
       } });
     } else g.grid.refresh();
@@ -2459,14 +2459,14 @@
     var picked = "";
     CALL_OUTCOMES.forEach(function (o) {
       var lab = el("label", "cm__radio"); var r = el("input"); r.type = "radio"; r.name = "ld_callOutcome"; r.value = o[0];
-      r.addEventListener("change", function () { picked = o[0]; });
+      r.addEventListener("change", function () { picked = o[0]; modalMsg(""); });
       lab.appendChild(r); var t = el("span", null, o[0] + " "); t.appendChild(el("small", null, "— " + o[1])); lab.appendChild(t); fs.appendChild(lab);
     });
     body.appendChild(fs);
     var f1 = el("label", "cm__field cm__field--wide"); f1.appendChild(el("span", null, "Number called"));
     var phone = el("input"); phone.type = "tel"; phone.value = p.phone || ""; phone.id = "ld_callPhone"; f1.appendChild(phone); body.appendChild(f1);
     var f2 = el("label", "cm__field cm__field--wide"); f2.appendChild(el("span", null, "Notes (required for Not interested)"));
-    var notes = el("textarea"); notes.rows = 4; notes.maxLength = 4000; notes.id = "ld_callNotes"; f2.appendChild(notes); body.appendChild(f2);
+    var notes = el("textarea"); notes.rows = 4; notes.maxLength = 4000; notes.id = "ld_callNotes"; notes.addEventListener("input", function () { modalMsg(""); }); f2.appendChild(notes); body.appendChild(f2);
     openModal("Log a call — " + (p.businessName || p.name), body, async function () {
       if (!picked) { modalMsg("Choose what came of the call.", "error"); return; }
       if (picked === "Not interested" && !notes.value.trim()) { modalMsg("Say why the lead is not interested — the note is required.", "error"); return; }

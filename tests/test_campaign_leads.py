@@ -513,3 +513,11 @@ def test_rows_sort_on_several_keys_with_empty_values_last():
     rows = [{"a": "x", "b": "2"}, {"a": "", "b": "1"}, {"a": "x", "b": "1"}, {"a": "w", "b": None}]
     assert leads.sort_rows(rows, [("a", "asc"), ("b", "desc")]) == [
         {"a": "w", "b": None}, {"a": "x", "b": "2"}, {"a": "x", "b": "1"}, {"a": "", "b": "1"}]
+
+
+def test_the_grid_reads_the_last_change_for_its_last_activity_column():
+    # The Leads grid's Last activity column showed the creation date: the
+    # read never asked for modifiedAt (found on the M5 live pass, 11-04-26).
+    crm = _fit_crm()
+    run(leads.search(crm, leads.LeadQuery.from_params({})))
+    assert "modifiedAt" in crm.selects[-1].split(",")

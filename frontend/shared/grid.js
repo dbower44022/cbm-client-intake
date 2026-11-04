@@ -161,8 +161,11 @@
       if (th.getAttribute("data-sortable") === "false" || th.classList.contains("cbm-grid__nosort")) return false;
       return !!(th.getAttribute("data-label") || th.textContent.replace(/[▲▼]\d*/g, "").trim());
     }
+    // opts.labels names a sort key that has no column of its own (a grid's
+    // default order), so the status line never shows a field name.
     function labels() {
       var out = {};
+      Object.keys(opts.labels || {}).forEach(function (k) { out[k] = opts.labels[k]; });
       heads().forEach(function (th, i) { out[colOf(th, i)] = (th.getAttribute("data-label") || th.textContent).replace(/[▲▼]\d*/g, "").trim(); });
       return out;
     }

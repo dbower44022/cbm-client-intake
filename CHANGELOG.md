@@ -5,6 +5,21 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.303.4] — 2026-11-04
+
+**fix: three small faults in Marketing Management, found on the M5 live
+pass.** No switch change; no migration; no CRM change.
+
+- The Leads grid's *Last activity* column showed the date a lead was
+  created. Its read never asked the CRM for the last change
+  (`campaigns/leads.search` now selects `modifiedAt`).
+- The *Log a call* dialog kept a refusal on screen after the choice that
+  caused it was changed. Picking an outcome or typing a note now clears it.
+- The Leads and Review grids' status line read "Sorted by createdAt". The
+  default order has no column of its own; the shared grid now takes words
+  for such a key from `opts.labels`, and the two grids name it *Arrived*.
+
+
 ## [0.303.3] — 2026-11-04
 
 **fix: two small faults on Promote this event, found on the M10 live pass.**
