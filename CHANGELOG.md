@@ -5,6 +5,22 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.303.1] — 2026-11-04
+
+**feat: the encryption key can be rotated without re-entering a secret**
+(`OPEN-ITEMS.md` #33, Doug's option B, 11-04-26). No migration; no switch.
+
+- `APP_ENCRYPTION_KEY` may hold several keys separated by commas, newest
+  first (`NEW,OLD`): new values are encrypted with the first, a value under
+  any of them still decrypts (`core/crypto.SecretCipher`, Fernet's
+  MultiFernet). One key behaves exactly as before.
+- `scripts/rotate_encryption_key.sh` (inside the web container): a dry run
+  counts every stored secret as on the newest key, to re-encrypt, or
+  unreadable; `apply` re-encrypts the older ones in one transaction and reads
+  each back. It covers the /setup secrets (value and previous value), Email
+  Setup's Google service-account blob and the Constant Contact tokens, and
+  never prints a secret. Then the key is set to the new one alone.
+
 ## [0.303.0] — 2026-11-03
 
 **feat: Promote this event, the event's Campaigns tab, and the Calls tab's
