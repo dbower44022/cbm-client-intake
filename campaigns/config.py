@@ -18,6 +18,9 @@ TOUCH = "COutreachTouch"
 PARTNER_PROFILE = "CPartnerProfile"
 SPONSOR_PROFILE = "CSponsorProfile"
 EVENT = "CEvent"
+EVENT_REGISTRATION = "CEventRegistration"
+#: The event side of CM-6 (the reverse of the campaign's ``events``).
+EVENT_CAMPAIGNS_LINK = "outreachCampaigns"
 ACCOUNT = "Account"
 CONTACT = "Contact"
 

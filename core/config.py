@@ -668,6 +668,14 @@ class Settings(BaseSettings):
     # list view with Preview, Edit and View as separate screens. Needs Campaign
     # lists. Read per request. Off, the tab is the one built before.
     campaign_list_screens: bool = False
+    # Promote this event and the event's Campaigns tab (build plan § 7e.9,
+    # ruling 97; M10). Needs Marketing Management and Campaign lists. Read per
+    # request. Off, Event Administration shows neither.
+    event_promote: bool = False
+    # The Calls tab laid out as ruling 116 drafts it (build plan § 7e.10; M10):
+    # the side panel, Call again at a chosen time, attempts, Done today and
+    # the caller's personal link. Read per request. Off, the tab as before.
+    calls_panel: bool = False
     # Every list's stored counts (ruling 131): the worker re-runs each active
     # dynamic list and counts each active list this often. Rides Campaign
     # lists. 0 stops the pass; Refresh on a list still counts it.

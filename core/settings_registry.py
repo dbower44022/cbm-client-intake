@@ -300,6 +300,17 @@ SETTINGS: tuple[SettingSpec, ...] = (
             "Preview panel; Edit and View are screens of their own, and View opens the members in "
             "a separate browser tab. Needs Campaign lists. Read per request: no restart. Off, the "
             "Lists tab is the one built before."),
+    _s("event_promote", GROUP_FEATURES, "Promote this event", kind="bool", component="web",
+       help="A Promote this event button on an event in Event Administration makes one draft campaign "
+            "per ticked channel, each linked to the event, with a link to its registration page and "
+            "the chosen list; the event gains a Campaigns tab counting who each campaign reached, "
+            "registered and attended. Needs Marketing Management and Campaign lists. Read per "
+            "request: no restart. Off, Event Administration shows neither."),
+    _s("calls_panel", GROUP_FEATURES, "Calls tab side panel", kind="bool", component="web",
+       help="The Calls tab with a count line, the brief at the top, attempts and the last attempt "
+            "per row, and a side panel holding what we know, the person's own link and the four "
+            "outcomes; Call again takes a time, and recording moves to the next row. Read per "
+            "request: no restart. Off, the Calls tab works as before."),
     _s("campaign_list_count_seconds", GROUP_FEATURES, "Campaign list count interval", kind="int",
        component="worker",
        help="Seconds between the worker's passes that re-run every active dynamic list and count "

@@ -258,6 +258,7 @@
     renderRegistrants();
     renderRoster();
     renderFollowUps().catch(function (e) { $("fuNote").textContent = e.message; });
+    if (promoteOn()) renderEventCampaigns().catch(function (e) { $("campNote").textContent = e.message; });
   }
 
   function backToList() {
@@ -787,6 +788,197 @@
         : "Registration cancelled.", "ok");
       await refreshDetail();
     } catch (e) { notice(e.message, "error"); }
+  }
+
+  /* ---------- M10: Promote this event and the Campaigns tab ----------
+   *
+   * Both ride EVENT_PROMOTE, which the session reports. Promote makes one Draft
+   * campaign per ticked channel through Marketing Management's API (the user
+   * needs that team as well; the server says so in words). The Campaigns tab is
+   * read from this app's own events API under the org-wide key. */
+
+  // No default sort: the server's order puts the linked campaigns first.
+  var campGrid = null;
+
+  function promoteOn() { return !!(state.session && state.session.promote); }
+
+  function campaignHref(id) { return "/campaigns/record/" + encodeURIComponent(id); }
+
+  async function marketingApi(path, opts) {
+    var options = Object.assign({ headers: { "Content-Type": "application/json" } }, opts || {});
+    var resp = await fetch("/campaigns/api" + path, options);
+    if (resp.status === 401) { window.location.href = "/?next=/events/"; throw new Error("Not signed in."); }
+    var data = null;
+    try { data = await resp.json(); } catch (e) { /* empty body */ }
+    if (!resp.ok) throw new Error((data && data.detail) || ("Request failed (" + resp.status + ")"));
+    return data;
+  }
+
+  async function openPromote() {
+    if (!state.current) return;
+    var ev = state.current.event;
+    var opts = await busyOver($("detailPanel"), marketingApi("/promote/options?event=" + encodeURIComponent(ev.id)));
+    var rows = [];
+    openModal("Promote this event", function (body) {
+      var intro = document.createElement("p");
+      intro.className = "ev__rephint";
+      intro.textContent = "Tick the channels to promote “" + (opts.event.name || "this event") + "” by. "
+        + "Each makes a draft campaign linked to this event, with a link to its page and the list you choose. "
+        + "You then build and sign off each campaign in Marketing Management.";
+      body.appendChild(intro);
+      var grid = document.createElement("div");
+      grid.className = "ev__promote";
+      ["Channel", "Campaign name", "List"].forEach(function (h) {
+        var d = document.createElement("span"); d.className = "ev__promote-head"; d.textContent = h; grid.appendChild(d);
+      });
+      opts.channels.forEach(function (ch) {
+        var lab = document.createElement("label"); lab.className = "ev__multi-item";
+        var box = document.createElement("input"); box.type = "checkbox"; box.checked = !!ch.ticked;
+        box.setAttribute("aria-label", ch.words);
+        var word = document.createElement("span"); word.textContent = ch.words;
+        lab.appendChild(box); lab.appendChild(word); grid.appendChild(lab);
+        var name = document.createElement("input"); name.type = "text"; name.value = ch.name || "";
+        name.maxLength = 150; name.setAttribute("aria-label", ch.words + " campaign name");
+        var pick = document.createElement("select"); pick.setAttribute("aria-label", ch.words + " list");
+        var blank = document.createElement("option"); blank.value = ""; blank.textContent = "— choose a list —";
+        pick.appendChild(blank);
+        (opts.lists || []).forEach(function (l) {
+          var o = document.createElement("option"); o.value = l.id;
+          o.textContent = l.name + (l.system ? " (ready-made)" : "");
+          if (l.id === ch.listId) o.selected = true;
+          pick.appendChild(o);
+        });
+        if (ch.refusal) {
+          var off = document.createElement("p"); off.className = "ev__promote-off"; off.textContent = ch.refusal;
+          grid.appendChild(off);
+        } else {
+          grid.appendChild(name); grid.appendChild(pick);
+        }
+        rows.push({ ch: ch, box: box, name: name, pick: pick });
+      });
+      body.appendChild(grid);
+    }, async function () {
+      var ticked = rows.filter(function (r) { return r.box.checked; });
+      if (!ticked.length) { $("modalMsg").textContent = "Tick at least one channel."; return; }
+      for (var i = 0; i < ticked.length; i++) {
+        var r = ticked[i];
+        if (r.ch.refusal) { $("modalMsg").textContent = r.ch.refusal; return; }
+        if (!r.name.value.trim()) { $("modalMsg").textContent = "The " + r.ch.words.toLowerCase() + " campaign needs a name."; r.name.focus(); return; }
+        if (!r.pick.value) { $("modalMsg").textContent = "Choose the list the " + r.ch.words.toLowerCase() + " campaign sends to."; r.pick.focus(); return; }
+      }
+      var res = await marketingApi("/promote", { method: "POST", body: JSON.stringify({
+        eventId: ev.id,
+        channels: ticked.map(function (r) { return { kind: r.ch.kind, name: r.name.value.trim(), listId: r.pick.value }; }),
+      }) });
+      showPromoted(res);
+      renderEventCampaigns().catch(function () { /* the tab says so when opened */ });
+    }, "Make the campaigns", { wide: true });
+  }
+
+  function showPromoted(res) {
+    var made = res.campaigns || [];
+    var body = $("modalBody"); body.innerHTML = "";
+    var p = document.createElement("p");
+    p.textContent = "Made " + made.length + " draft campaign" + (made.length === 1 ? "" : "s")
+      + ". Open each to build its list and sign it off:";
+    body.appendChild(p);
+    var ul = document.createElement("ul"); ul.className = "ev__promote-made";
+    made.forEach(function (m) {
+      var li = document.createElement("li");
+      var a = document.createElement("a"); a.href = campaignHref(m.id); a.textContent = m.name;
+      a.addEventListener("click", function (e) { e.preventDefault(); window.open(a.href, "cbm-rec-campaigns-" + m.id); });
+      li.appendChild(a);
+      (m.warnings || []).forEach(function (w) {
+        var s = document.createElement("div"); s.className = "ev__promote-warn"; s.textContent = w; li.appendChild(s);
+      });
+      ul.appendChild(li);
+    });
+    body.appendChild(ul);
+    $("modalMsg").textContent = "";
+    $("modalSave").textContent = "Done";
+    modalSave = async function () { closeModal(); showTab("campaigns"); };
+    var warned = made.some(function (m) { return (m.warnings || []).length; });
+    notice("Made " + made.length + " campaign" + (made.length === 1 ? "" : "s") + " to promote this event."
+      + (warned ? " Some need a step by hand — see the list." : ""), warned ? "warn" : "ok");
+  }
+
+  function campSortValue(row, col) { return row[col]; }
+
+  async function renderEventCampaigns() {
+    if (!state.current || !promoteOn()) return;
+    var id = state.current.event.id;
+    if (!campGrid && window.CBMGrid) {
+      campGrid = CBMGrid.enhance($("campTable"), { key: "events.campaigns",
+        onSort: function () { drawEventCampaigns(); } });
+    }
+    state.campaigns = await busyOver($("campTable").parentElement, api("/events/" + id + "/campaigns"));
+    $("campPeople").hidden = true;
+    drawEventCampaigns();
+  }
+
+  function numberCell(value, campaignId, measure, label) {
+    var td = document.createElement("td"); td.className = "num";
+    if (value === null || value === undefined) { td.textContent = "—"; return td; }
+    if (!value) { td.textContent = "0"; return td; }
+    var b = document.createElement("button"); b.type = "button"; b.className = "ev__numbtn"; b.textContent = String(value);
+    b.addEventListener("click", function (e) {
+      e.stopPropagation();
+      showCampaignPeople(campaignId, measure, label).catch(function (err) { notice(err.message, "error"); });
+    });
+    td.appendChild(b); return td;
+  }
+
+  function drawEventCampaigns() {
+    var d = state.campaigns || { rows: [] };
+    var rows = (d.rows || []).slice();
+    if (window.CBMGrid && campGrid && campGrid.keys().length) rows = CBMGrid.sortBy(rows, campGrid.keys(), campSortValue);
+    var tb = $("campRows"); tb.innerHTML = "";
+    rows.forEach(function (r) {
+      var tr = document.createElement("tr");
+      var name = document.createElement("td");
+      var a = document.createElement("a"); a.href = campaignHref(r.campaignId); a.textContent = r.name;
+      a.addEventListener("click", function (e) { e.preventDefault(); window.open(a.href, "cbm-rec-campaigns-" + r.campaignId); });
+      name.appendChild(a);
+      if (!r.linked) { var t = document.createElement("span"); t.className = "ev__tag"; t.textContent = "not linked"; t.title = "A registration for this event came through this campaign, but the campaign is not linked to the event."; name.appendChild(t); }
+      tr.appendChild(name);
+      [r.channel || "—", r.status || "—"].forEach(function (v) { var td = document.createElement("td"); td.textContent = v; tr.appendChild(td); });
+      tr.appendChild(numberCell(r.reached, r.campaignId, "reached", r.name));
+      tr.appendChild(numberCell(r.registered, r.campaignId, "registered", r.name));
+      tr.appendChild(numberCell(r.attended, r.campaignId, "attended", r.name));
+      tb.appendChild(tr);
+    });
+    var none = d.noCampaign || { registered: 0, attended: 0 };
+    var tr = document.createElement("tr");
+    var lab = document.createElement("td"); lab.textContent = "No campaign"; tr.appendChild(lab);
+    ["", "", "num"].forEach(function (cls) { var td = document.createElement("td"); td.textContent = "—"; td.className = cls; tr.appendChild(td); });
+    tr.appendChild(numberCell(none.registered, "none", "registered", "No campaign"));
+    tr.appendChild(numberCell(none.attended, "none", "attended", "No campaign"));
+    tb.appendChild(tr);
+    $("campEmpty").hidden = (d.rows || []).length > 0;
+    if (d.creditAvailable === false) {
+      $("campNote").textContent = "This CRM does not record which campaign brought a registration, so every "
+        + "registration is counted under No campaign.";
+    }
+  }
+
+  var MEASURE_WORDS = { reached: "Reached by", registered: "Registered through", attended: "Attended through" };
+
+  async function showCampaignPeople(campaignId, measure, label) {
+    var id = state.current.event.id;
+    var res = await busyOver($("campTable").parentElement, api("/events/" + id + "/campaigns/people?campaign="
+      + encodeURIComponent(campaignId) + "&measure=" + encodeURIComponent(measure)));
+    var people = res.people || [];
+    $("campPeopleTitle").textContent = (campaignId === "none"
+      ? (measure === "attended" ? "Attended, no campaign" : "Registered, no campaign")
+      : MEASURE_WORDS[measure] + " “" + label + "”") + " — " + people.length;
+    var ul = $("campPeopleList"); ul.innerHTML = "";
+    people.forEach(function (p) {
+      var li = document.createElement("li");
+      li.textContent = p.name + (p.email ? " · " + p.email : "") + (p.detail ? " · " + p.detail : "");
+      ul.appendChild(li);
+    });
+    $("campPeople").hidden = false;
+    $("campPeople").scrollIntoView({ block: "nearest" });
   }
 
   /* ---------- modal ---------- */
@@ -1782,6 +1974,12 @@
     $("editBtn").addEventListener("click", editEvent);
     $("zoomBtn").addEventListener("click", syncZoom);
     $("recordingBtn").addEventListener("click", addRecording);
+    $("promoteBtn").addEventListener("click", function () {
+      openPromote().catch(function (e) { notice(e.message, "error"); });
+    });
+    $("campRefreshBtn").addEventListener("click", function () {
+      renderEventCampaigns().catch(function (e) { notice(e.message, "error"); });
+    });
     $("addRegBtn").addEventListener("click", function () { addRegistrant(false); });
     $("walkInBtn").addEventListener("click", function () { addRegistrant(true); });
 
@@ -1817,6 +2015,8 @@
       state.session = await api("/session");
       $("whoName").textContent = state.session.name || state.session.userName || "";
       $("userCorner").hidden = false;
+      $("promoteBtn").hidden = !promoteOn();
+      $("campaignsTabBtn").hidden = !promoteOn();
       var fieldData = await api("/fields");
       state.fields = fieldData.fields || [];
       state.links = fieldData.links || [];

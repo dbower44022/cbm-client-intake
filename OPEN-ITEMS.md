@@ -262,7 +262,12 @@ found; move resolved items to the bottom with the resolution date.
     and `firstOpenedAt` applied on crm-test 10-27-26
     (`coutreach-touch-opens-crm-handoff.md`); **owed on production and
     Boston**. Pushed 10-27-26 18:42. **Live-passed on crm-test 10-27-26 18:50** by Claude in a tab signed in as Mark Marketing, reading the M7 live send's report (no new send): *Read the report now* wrote one touch — Doug M7 Send Test, doug@dougbower.com, Delivered, sent 15:34 UTC, 1 open and 1 click (both 16:26 UTC), outcome Clicked, opens recorded; a second read answered *1 recipient in the report, 0 new, 0 updated, 1 unchanged*. **Confirmed:** the primary activity lookup, the four `/reports/email_reports/{activity}/tracking/…` endpoints, the `tracking_activities` key, `email_address` and `created_time`. **Not exercised:** a bounce (`bounce_code`), and the 30-day completion.
-    Next: M10 (Promote this event, the roll-up, the Calls tab). Still owed: the handoff on production at the arc's slot and on
+    **M10 built as v0.303.0 (11-03-26)**: Promote this event and the
+    event's Campaigns tab (dark behind **`EVENT_PROMOTE`**), the Calls tab's
+    side panel and the caller's link (dark behind **`CALLS_PANEL`**). No
+    migration, no CRM change. Committed, not pushed; **live pass owed** on
+    crm-test (a registration through a promoted campaign's link is the one
+    path the fakes cannot prove). Still owed: the handoff on production at the arc's slot and on
     Boston with its release (now with the third role cell). **The layout
     question in the handoff's § 7 is ruled** (Doug, 10-27-26, as
     recommended): *Level*, *Referred by* and *Assigned User* stay off the
@@ -383,8 +388,8 @@ found; move resolved items to the bottom with the resolution date.
     the address while it was typed — not diagnosed); D3 must expect mail
     scanners to inflate email clicks the same way. Ruling 126's D3 pieces:
     *New code* built with M2 (v0.284.0), the vendor field `cbm_lead_code`
-    with M7 (v0.290.0, live send owed under #57); the caller's link still
-    owed with M10. **Owed: D2** (each form's prefill, the *Not you?* line,
+    with M7 (v0.290.0, live send owed under #57); the caller's link built
+    with M10 (v0.303.0, live pass owed). **Owed: D2** (each form's prefill, the *Not you?* line,
     the registration's one press, the text's `{link}`) **and #59**, in the
     next window when no other session is on the arc (Doug, 10-25-26: wait
     for the redesign step in progress to finish first); production and

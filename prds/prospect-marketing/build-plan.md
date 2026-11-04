@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 10-27-26 21:25 · Revision 0.66 — change log at the end.
+Last Updated: 11-03-26 23:59 · Revision 0.67 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -2312,8 +2312,9 @@ second half's lists only, the campaign page's strip and tabs, the grid and
 + New campaign are built as v0.291.0, 10-27-26 (step M8)**, behind
 `CAMPAIGN_LISTS_ONLY`, migration 0039 (not the 0034 written below — 0034
 to 0038 went to earlier steps). **Recipients and the send report are built
-as v0.292.0, 10-27-26 (step M9)**, behind `CAMPAIGN_SEND_REPORT`. Promote this
-event is M10.*
+as v0.292.0, 10-27-26 (step M9)**, behind `CAMPAIGN_SEND_REPORT`. **Promote this
+event and the event's Campaigns tab are built as v0.303.0, 11-03-26 (step M10)**,
+behind `EVENT_PROMOTE`.*
 
 **A kept-current copy per list (ruling 95).** `core/mailing_sync.py` works
 for one list, named by `MAILING_LIST_NAME`, with its id and last-push
@@ -2414,6 +2415,9 @@ optionally event, partners and funders) creates the Draft and opens it.
 `test_events_*` (the tab), and a new `test_campaign_send_report.py`.
 
 ### 7e.10 The Calls tab — rulings 115, 116
+
+*Built as v0.303.0, 11-03-26 (step M10), behind `CALLS_PANEL`, with § 7d.2's
+caller's link (ruling 126).*
 
 `calls.js` moves into the page as the Calls panel:
 
@@ -2853,6 +2857,27 @@ Team caller for M1 and M10).
     (§§ 7e.9, 7e.10). About three days. **Also (ruling 126):** § 7d.2's
     caller's link — the person's campaign link plus code, with a Copy
     button, minted when the call list is built.
+    Plan approved by Doug 11-03-26 ("run all four stops"), presented
+    10-30-26: four stops, no decision passing the two-part test. **Built as
+    v0.303.0 (11-03-26)**, behind two switches, `EVENT_PROMOTE` and
+    `CALLS_PANEL`; no migration, no CRM change. Checked on crm-test before
+    building (read-only): the registration's campaign field and the event's
+    campaign link both exist; 5 events, 3 campaigns already linked to an
+    event, no registration credited to a campaign yet, one Running call
+    campaign. Choices made on the way, each a routine one: Promote checks
+    every channel before writing anything, and a CRM failure part-way
+    names the campaigns already made; the form's result lists the new
+    campaigns as links that open in their own browser tabs rather than
+    opening them itself (a browser blocks several windows opened after a
+    request); the Campaigns tab counts Reached from the campaign's touches
+    (sent, delivered, returned or called), so an email campaign shows 0
+    until its send report has written them; *What we know* on the Calls
+    side panel is drawn from the call row's own facts, not the lead page's
+    component, because a caller outside the marketing team cannot open the
+    lead's page; the codes for the caller's link are minted at build, and
+    a list built before the switch shows the campaign's own link and says
+    the person has no code; "called today" uses the events programme's
+    time zone. **Live pass owed** on crm-test.
 11. **M11: the Lists tab, redesigned** (§ 7e.14, rulings 129–132). About
     four and a half days, in five stops. Approved 10-27-26 ("approved");
     Doug ran stops 2–4 without pausing. **Built as v0.293.0 (10-27-26).**
@@ -3267,6 +3292,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.67 | 11-03-26 23:59 | Claude (Claude Code) | § 7e.9, § 7e.10 and § 7e.13 step M10 marked built (v0.303.0): the plan's approval, the crm-test counts, the choices made on the way. |
 | 0.66 | 10-27-26 21:25 | Claude (Claude Code) | § 7e.14 and step M11: live-passed on crm-test 10-27-26 21:25; the two faults fixed in v0.293.1. |
 | 0.65 | 10-27-26 21:10 | Claude (Claude Code) | § 7e.14 and step M11 marked built (v0.293.0): the choices made on the way, the checks, the live pass owed. |
 | 0.64 | 10-27-26 19:24 | Claude (Claude Code) | § 7e.14 and § 7e.13 step M11 drafted for Doug's approval: the Lists tab redesigned (rulings 129–132) — list view with Preview, Edit and View separate, counts stored and refreshed nightly, five named stops, switch `CAMPAIGN_LIST_SCREENS`, migration 0040. |

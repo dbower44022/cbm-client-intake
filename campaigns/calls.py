@@ -224,7 +224,8 @@ async def select_targets(client: EspoApi, rule: Optional[dict[str, Any]]) -> lis
 # --- build the list and sign off ---------------------------------------------------------
 
 async def build_list(api_client: EspoApi, user_client: EspoApi, campaign: dict[str, Any],
-                     rule: Optional[dict[str, Any]], audience: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+                     rule: Optional[dict[str, Any]], audience: Optional[dict[str, Any]] = None,
+                     *, mint_codes: bool = False) -> dict[str, Any]:
     """Reconcile this campaign's Planned touches to the selection: a new target
     gains a Planned row, a dropped target's Planned row is Cancelled, a row
     already recorded is never touched. Draft moves to Awaiting sign-off."""
@@ -254,6 +255,7 @@ async def build_list(api_client: EspoApi, user_client: EspoApi, campaign: dict[s
             continue
         await api_client.create(cfg.TOUCH, _planned_payload(campaign, target, team_ids))
         created += 1
+    minted = await mint_for_targets(api_client, list(wanted.values())) if mint_codes else None
     stamps: dict[str, Any] = {
         "selectionRule": json.dumps({"list": audience["list"]} if audience else rule),
         "selectionSummary": audience["summary"] if audience else rule_summary(rule),
@@ -263,6 +265,7 @@ async def build_list(api_client: EspoApi, user_client: EspoApi, campaign: dict[s
     await service.stamp_campaign(user_client, api_client, campaign["id"], stamps)
     return {"pieces": kept + created, "created": created, "kept": kept, "cancelled": cancelled,
             "rule": rule, "summary": stamps["selectionSummary"],
+            **({"codes": minted} if minted is not None else {}),
             **({"audience": _audience_result(audience)} if audience else {})}
 
 
@@ -408,25 +411,31 @@ async def _target_detail(client: EspoApi, touch: dict[str, Any]) -> dict[str, An
 
 
 async def call_list(api_client: EspoApi, user_client: EspoApi, user: dict[str, Any],
-                    settings: Settings) -> dict[str, Any]:
+                    settings: Settings, *, store=None, base_url: str = "") -> dict[str, Any]:
     """The Calls screen: every Planned touch of every Running call campaign the
     user may call for (ruling 36), with the number to ring."""
     default = settings.campaigns_allowed_teams_list
+    panel = bool(getattr(settings, "calls_panel", False))
     campaigns = await running_call_campaigns(api_client)
     allowed, others = [], []
     for c in campaigns:
         teams = campaign_team_names(c, default)
         (allowed if may_call(user, teams) else others).append({**c, "_teams": teams})
     rows: list[dict[str, Any]] = []
+    every: dict[str, list[dict[str, Any]]] = {}
     for c in allowed:
-        touches = [t for t in await service.campaign_touches(user_client, c["id"])
-                   if t.get("touchStatus") == cfg.TOUCH_PLANNED]
+        every[c["id"]] = await service.campaign_touches(user_client, c["id"])
+        touches = [t for t in every[c["id"]] if t.get("touchStatus") == cfg.TOUCH_PLANNED]
         if any(t.get("assignedUserId") for t in touches):
             touches = [t for t in touches if not t.get("assignedUserId")
                        or t.get("assignedUserId") == user.get("userId")]
         for t in touches:
-            rows.append({"touchId": t["id"], "campaignId": c["id"], "campaignName": c.get("name") or "",
-                         "plannedAt": t.get("plannedAt"), **await _target_detail(user_client, t)})
+            row = {"touchId": t["id"], "campaignId": c["id"], "campaignName": c.get("name") or "",
+                   "plannedAt": t.get("plannedAt"), **await _target_detail(user_client, t)}
+            if panel:
+                row.update(prospectId=t.get("prospectId") or "", contactId=t.get("contactId") or "",
+                           targetKey=_target_key(t) or "")
+            rows.append(row)
     message = ""
     if not allowed:
         if others:
@@ -435,20 +444,181 @@ async def call_list(api_client: EspoApi, user_client: EspoApi, user: dict[str, A
                        f"campaigns are for: {', '.join(names)}.")
         else:
             message = "No call campaign is running."
-    return {
+    out = {
         "warning": UNRECORDED_WARNING,
         "message": message,
         "campaigns": [{"id": c["id"], "name": c.get("name"), "teams": c["_teams"],
                        "brief": c.get("description") or ""} for c in allowed],
         "rows": rows,
     }
+    if panel:
+        out.update(await panel_extras(api_client, rows, every, allowed, store=store, base_url=base_url))
+    return out
+
+
+# --- the Calls tab side panel (build plan § 7e.10, ruling 116; M10) ------------------------
+
+#: The chapter's own clock, for "called today": the events programme's zone.
+from events.config import PUBLIC_TIMEZONE as CHAPTER_TIMEZONE  # noqa: E402
+#: A Call again time this far in the past is a mistake, not a plan.
+CALL_AGAIN_GRACE_SECONDS = 300
+
+
+def _parse_crm(stamp: Optional[str]) -> Optional[datetime]:
+    if not stamp:
+        return None
+    try:
+        return datetime.strptime(stamp[:19], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+def check_call_again_at(stamp: str) -> str:
+    """A Call again time from the shared date-and-time control: a CRM stamp
+    (UTC), not in the past."""
+    when = _parse_crm(stamp)
+    if when is None:
+        raise CampaignError("Choose the day and time to call again.")
+    if (datetime.now(timezone.utc) - when).total_seconds() > CALL_AGAIN_GRACE_SECONDS:
+        raise CampaignError("That time has already passed — choose a time from now on.")
+    return when.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _local_day(stamp: Optional[str]) -> Optional[str]:
+    from zoneinfo import ZoneInfo
+    when = _parse_crm(stamp)
+    return when.astimezone(ZoneInfo(CHAPTER_TIMEZONE)).date().isoformat() if when else None
+
+
+def _today() -> str:
+    from zoneinfo import ZoneInfo
+    return datetime.now(ZoneInfo(CHAPTER_TIMEZONE)).date().isoformat()
+
+
+async def mint_for_targets(api_client: EspoApi, targets: list[dict[str, Any]]) -> Optional[dict[str, int]]:
+    """Ruling 126: the caller's link carries the person's code, minted when the
+    call list is built. Under the API key (the code field is read-only to the
+    marketing role). None on a CRM without the code fields."""
+    from . import leadcode
+    if not await leadcode.available(api_client):
+        return None
+    minted = failed = 0
+    for t in targets:
+        try:
+            if t.get("kind") == "prospect":
+                await leadcode.ensure_for_lead(api_client, t["id"])
+            elif t.get("kind") == "contact":
+                await leadcode.ensure_for_contact(api_client, t["id"])
+            else:
+                continue
+            minted += 1
+        except EspoError as exc:
+            log.warning("code for %s %s not minted: %s", t.get("kind"), t.get("id"), exc)
+            failed += 1
+    return {"ready": minted, "failed": failed}
+
+
+async def _by_ids(api_client: EspoApi, entity: str, ids: list[str], select: str) -> dict[str, dict[str, Any]]:
+    out: dict[str, dict[str, Any]] = {}
+    for start in range(0, len(ids), 100):
+        chunk = ids[start:start + 100]
+        page = await api_client.list(entity, select=select, max_size=len(chunk),
+                                     where=[{"type": "in", "attribute": "id", "value": chunk}])
+        out.update({r["id"]: r for r in page.get("list", []) if r.get("id")})
+    return out
+
+
+async def _codes_and_levels(api_client: EspoApi, rows: list[dict[str, Any]]) -> None:
+    """Each row's code and, for a Qualified lead, its level — two batched reads
+    under the API key, never one per row."""
+    from . import ladder, leadcode
+    codes_on = await leadcode.available(api_client)
+    levels_on = await ladder.available(api_client)
+    lead_ids = sorted({r["prospectId"] for r in rows if r.get("prospectId")})
+    contact_ids = sorted({r["contactId"] for r in rows if r.get("contactId") and not r.get("prospectId")})
+    leads: dict[str, dict[str, Any]] = {}
+    contacts: dict[str, dict[str, Any]] = {}
+    try:
+        if lead_ids and (codes_on or levels_on):
+            select = ",".join(["id"] + ([leadcode.LEAD_FIELD] if codes_on else [])
+                              + (["qualificationLevel", "leadStatus"] if levels_on else []))
+            leads = await _by_ids(api_client, cfg.PROSPECT, lead_ids, select)
+        if contact_ids and codes_on:
+            contacts = await _by_ids(api_client, cfg.CONTACT, contact_ids, f"id,{leadcode.CONTACT_FIELD}")
+    except EspoError as exc:
+        log.warning("call list codes and levels unreadable: %s", exc)
+    for r in rows:
+        lead = leads.get(r.get("prospectId") or "")
+        contact = contacts.get(r.get("contactId") or "")
+        r["code"] = ((lead or {}).get(leadcode.LEAD_FIELD) or (contact or {}).get(leadcode.CONTACT_FIELD) or "")
+        r["level"] = ((lead or {}).get("qualificationLevel") or ""
+                      if (lead or {}).get("leadStatus") == cfg.LEAD_QUALIFIED else "")
+
+
+async def _first_links(store, campaign_ids: list[str]) -> dict[str, dict[str, Any]]:
+    out: dict[str, dict[str, Any]] = {}
+    if store is None:
+        return out
+    for cid in campaign_ids:
+        try:
+            links = [l for l in await store.list_links(cid) if l.get("state") == cfg.LINK_ACTIVE]
+        except Exception as exc:  # noqa: BLE001 — the panel says there is no link
+            log.warning("links of %s unreadable: %s", cid, exc)
+            continue
+        if links:
+            out[cid] = links[0]
+    return out
+
+
+async def panel_extras(api_client: EspoApi, rows: list[dict[str, Any]], every: dict[str, list[dict[str, Any]]],
+                       campaigns: list[dict[str, Any]], *, store=None, base_url: str = "") -> dict[str, Any]:
+    """Ruling 116's additions to the call list: attempts and the last attempt
+    per row, the personal link, the level, the rows planned for later sunk to
+    the bottom with their time, Done today and the count line."""
+    names = {c["id"]: c.get("name") or "" for c in campaigns}
+    attempts: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    today = _today()
+    done_today: list[dict[str, Any]] = []
+    for cid, touches in every.items():
+        for t in touches:
+            if t.get("touchStatus") != cfg.TOUCH_DONE:
+                continue
+            key = _target_key(t) or ""
+            attempts.setdefault((cid, key), []).append(t)
+            if _local_day(t.get("doneAt")) == today:
+                done_today.append({"touchId": t["id"], "campaignId": cid, "campaignName": names.get(cid, ""),
+                                   "name": t.get("companyName") or t.get("prospectName") or t.get("contactName")
+                                   or t.get("name") or "",
+                                   "person": t.get("contactName") or "", "outcome": t.get("outcome") or "",
+                                   "doneAt": t.get("doneAt")})
+    await _codes_and_levels(api_client, rows)
+    links = await _first_links(store, list(every))
+    now = datetime.now(timezone.utc)
+    base = (base_url or "").rstrip("/")
+    for r in rows:
+        made = attempts.get((r["campaignId"], r.get("targetKey") or ""), [])
+        last = max(made, key=lambda t: t.get("doneAt") or "", default=None)
+        r["attempts"] = len(made)
+        r["lastAttempt"] = ({"at": last.get("doneAt"), "outcome": last.get("outcome") or ""} if last else None)
+        planned = _parse_crm(r.get("plannedAt"))
+        r["later"] = bool(planned and planned > now)
+        link = links.get(r["campaignId"])
+        r["link"] = (f"{base}/c/{link['token']}" + (f"/{r['code']}" if r.get("code") else "")) if link else ""
+        r["linkNote"] = ("" if link and r.get("code") else
+                         "This campaign has no link yet, so there is no personal link to give." if not link else
+                         "This person has no code yet, so the link is the campaign's own: a response "
+                         "through it is not tied to this person.")
+    rows.sort(key=lambda r: (r["later"], r.get("plannedAt") or ""))
+    done_today.sort(key=lambda d: d.get("doneAt") or "", reverse=True)
+    return {"panel": True, "doneToday": done_today,
+            "counts": {"left": len(rows), "calledToday": len(done_today)}}
 
 
 # --- recording an outcome ------------------------------------------------------------------
 
 async def record_outcome(api_client: EspoApi, user_client: EspoApi, user: dict[str, Any], touch_id: str, *,
                          outcome: str, notes: str, call_again: bool, settings: Settings,
-                         details: Optional[Details] = None) -> dict[str, Any]:
+                         details: Optional[Details] = None, call_again_at: Optional[str] = None) -> dict[str, Any]:
     """One call's outcome. The touch is written as the caller first — a refused
     grant changes nothing — then the consequences under the API client, each
     best-effort and reported. ``details`` is what the caller typed for an
@@ -458,6 +628,7 @@ async def record_outcome(api_client: EspoApi, user_client: EspoApi, user: dict[s
         raise CampaignError("The outcome is No answer, Interested or Declined.")
     if call_again and outcome == cfg.OUTCOME_DECLINED:
         raise CampaignError("Call again goes with No answer, or with Interested when the lead could not be converted.")
+    again_at = check_call_again_at(call_again_at) if call_again and call_again_at else None
     touch = await user_client.get(cfg.TOUCH, touch_id, select=cfg.TOUCH_SELECT)
     if not touch or not touch.get("id"):
         raise LookupError("Call not found.")
@@ -507,7 +678,7 @@ async def record_outcome(api_client: EspoApi, user_client: EspoApi, user: dict[s
     if call_again:
         fresh: dict[str, Any] = {
             "name": touch.get("name") or f"{campaign.get('name') or 'Campaign'} — {target.get('name') or ''}"[:255],
-            "channel": cfg.KIND_CALL, "touchStatus": cfg.TOUCH_PLANNED, "plannedAt": now,
+            "channel": cfg.KIND_CALL, "touchStatus": cfg.TOUCH_PLANNED, "plannedAt": again_at or now,
             "outreachCampaignId": campaign["id"],
         }
         for key in ("prospectId", "contactId", "companyId"):

@@ -5,6 +5,48 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.303.0] — 2026-11-03
+
+**feat: Promote this event, the event's Campaigns tab, and the Calls tab's
+side panel** (build plan §§ 7e.9 and 7e.10, step M10; rulings 97, 116 and
+126's caller's link; plan approved by Doug 11-03-26, "run all four stops").
+Two new switches, both off and read per request; no migration; no CRM
+change.
+
+- **`EVENT_PROMOTE`** (needs Marketing Management and Campaign lists).
+  *Promote this event* on an event's page in Event Administration opens a
+  form: one row per channel (email, text, postcard ticked; calls offered),
+  each with a name and a list, preset to the channel's ready-made list. It
+  makes one Draft campaign per ticked channel through the normal create
+  path (`campaigns/promote.py`), each linked to the event, given a link to
+  the event's page and sent to the chosen list. Everything is checked
+  before anything is written; a channel switched off on the deployment is
+  refused in words. The user needs both the Event Administration team and
+  the Marketing Management team. Routes: `GET /campaigns/api/promote/options`,
+  `POST /campaigns/api/promote`.
+- **The event's Campaigns tab**: one row per campaign linked to the event,
+  plus any other campaign a registration for it is credited to ("not
+  linked"), with Reached (touches sent, delivered, returned or called),
+  Registered and Attended, and a *No campaign* row. Each number opens the
+  people behind it. Read under the org-wide key after the user's own read
+  of the event. Routes: `GET /events/api/events/{id}/campaigns` and
+  `…/campaigns/people`. A CRM without the registration's campaign field
+  counts everyone under *No campaign* and says so.
+- **`CALLS_PANEL`**: the Calls tab as ruling 116 drafts it — the count line
+  ("3 left to call · 2 called today"), the brief at the top (folding), the
+  columns Business, Person, Number, Level, Last attempt, Attempts and
+  Campaign, a row planned for later at the bottom with its time, *Done
+  today*, and a side panel with what we know, the person's own link with
+  Copy, the call notes and four outcomes: No answer, Call again (a time
+  from the shared date-and-time control), Interested, Not interested
+  (stored as Declined). Recording one opens the next row.
+- **The caller's link** (§ 7d.2, ruling 126): building a call list with the
+  panel on mints each person's lead code under the API key; the panel shows
+  the campaign's first active link plus the code. Codes and levels are read
+  in one batched read per record type, never one per row.
+- `calls.record_outcome` takes `call_again_at`; a time already past is
+  refused. Off, the call list answers exactly as before.
+
 ## [0.302.4] — 2026-11-01
 
 **fix: a search list with no room below opens upward** (open item #65,

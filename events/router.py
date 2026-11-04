@@ -37,6 +37,8 @@ from . import reporting
 from . import service
 from . import visibility
 from .zoom_sync import adopt_existing_webinar, sync_event_webinar
+from campaigns import promote as promote_mod
+from campaigns.service import CampaignError
 
 log = logging.getLogger("cbm_intake.events")
 
@@ -166,6 +168,8 @@ async def session(request: Request) -> dict[str, Any]:
         "zoomEnabled": settings.zoom_active,
         "publicBaseUrl": settings.events_public_base_url,
         "websiteLive": settings.events_public_api,
+        # M10: the Promote button and the Campaigns tab (ruling 97).
+        "promote": promote_mod.is_on(settings),
     }
 
 
@@ -920,3 +924,49 @@ async def get_presenter_photo(event_id: str, entry_id: str, request: Request) ->
         content=data, media_type=content_type or "application/octet-stream",
         headers={"Cache-Control": "private, max-age=60"},
     )
+
+
+# --- the event's Campaigns tab (build plan § 7e.9, ruling 97; M10) ---------------------
+
+
+def _rollup_reader(settings):
+    """The org-wide key: no team role reads registrations or every campaign's
+    touches. The caller's own read of the event gates the tab first."""
+    if settings.espo_dry_run or not settings.espo_api_key:
+        raise HTTPException(status_code=503, detail="This deployment has no CRM credential for the campaign counts.")
+    from core.espo import EspoClient
+    return EspoClient(settings.espo_base_url, settings.espo_api_key, settings.request_timeout_seconds)
+
+
+async def _rollup_gate(request: Request, event_id: str):
+    settings = get_settings()
+    if not promote_mod.is_on(settings):
+        raise HTTPException(status_code=404, detail=promote_mod.why_off(settings))
+    _, client = await _actor(request)
+    try:
+        ev = await client.get(cfg.EVENT, event_id, select="id,name")
+    except EspoError as exc:
+        raise _crm_failure(exc, "read the event") from exc
+    if not ev or not ev.get("id"):
+        raise HTTPException(status_code=404, detail="Event not found.")
+    return _rollup_reader(settings)
+
+
+@api_router.get("/events/{event_id}/campaigns")
+async def event_campaigns(event_id: str, request: Request) -> dict[str, Any]:
+    api = await _rollup_gate(request, event_id)
+    try:
+        return await promote_mod.rollup(api, event_id)
+    except EspoError as exc:
+        raise _crm_failure(exc, "count the event's campaigns") from exc
+
+
+@api_router.get("/events/{event_id}/campaigns/people")
+async def event_campaign_people(event_id: str, campaign: str, measure: str, request: Request) -> dict[str, Any]:
+    api = await _rollup_gate(request, event_id)
+    try:
+        return await promote_mod.people(api, event_id, campaign, measure)
+    except CampaignError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except EspoError as exc:
+        raise _crm_failure(exc, "read the people behind the count") from exc

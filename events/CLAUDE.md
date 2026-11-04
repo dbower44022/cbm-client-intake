@@ -1,6 +1,6 @@
 # events/ — Events, Webinars and the public pages
 
-Last Updated: 10-20-26 17:30 · Revision 1.0
+Last Updated: 11-03-26 23:59 · Revision 1.1
 
 Detail for Event Administration (`/events`), the public programme pages (`/webinars/`), presenters, topics, attendance, follow-ups, reporting and the portal events rail.
 
@@ -209,6 +209,13 @@ would be indistinguishable from a slug.
   tab** (v0.249.2, Doug's ruling 2026-10-11, option B): no team role reads
   `CEventRegistration`, so as the user they 403'd for every non-administrator
   since they shipped. Same rule as the partner / funder Events tab.
+- **Promote this event and the Campaigns tab** (v0.303.0, M10; dark behind
+  `EVENT_PROMOTE`, which the events `/session` reports as `promote`). The
+  button and the tab are drawn by `app.js` (`openPromote`,
+  `renderEventCampaigns`) and call Marketing Management's API for the
+  form and the create (`/campaigns/api/promote*`) and this router for the
+  counts (`/events/api/events/{id}/campaigns`). The logic is
+  `campaigns/promote.py`; detail in `campaigns/CLAUDE.md`.
 - **Registration recognition is designed, not built** —
   `prds/events/CBM_Events_Registration_Recognition_Plan.md` (Doug's rulings
   2026-08-17): recognise a returning registrant by a signed device token, else
@@ -308,4 +315,5 @@ would be indistinguishable from a slug.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 11-03-26 23:59 | Claude (Claude Code) | Promote this event and the Campaigns tab (v0.303.0, M10). |
 | 1.0 | 10-20-26 17:30 | Claude (Claude Code) | Created from the root `CLAUDE.md` section, word for word (Doug's approval 10-20-26). |

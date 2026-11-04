@@ -67,6 +67,18 @@
       briefs.appendChild(div);
     });
     $("cl_briefs").hidden = !briefs.childNodes.length;
+    // The side panel layout while the server says CALLS_PANEL is on.
+    var panel = !!d.panel;
+    $("cl_panelWrap").hidden = !panel;
+    $("cl_classicWrap").hidden = panel;
+    if (panel) {
+      $("cl_briefs").hidden = true;
+      var top = $("cl_briefTopList"); top.innerHTML = "";
+      while (briefs.firstChild) top.appendChild(briefs.firstChild);
+      $("cl_briefTop").hidden = !top.childNodes.length;
+      renderPanel();
+      return;
+    }
     render();
   }
 
@@ -153,9 +165,192 @@
     return tr;
   }
 
+  /* ---------- the side panel (build plan § 7e.10) ---------- */
+
+  var PANEL_COLS = ["name", "person", "phone", "level", "lastAt", "attempts", "campaignName"];
+  var panelGrid = null;
+  function panelGridOn() {
+    if (panelGrid || !window.CBMGrid) return;
+    var ths = document.querySelectorAll("#cl_panelGrid thead th");
+    PANEL_COLS.forEach(function (c, i) { if (ths[i]) ths[i].setAttribute("data-col", c); });
+    panelGrid = CBMGrid.enhance(document.getElementById("cl_panelGrid"), { key: "marketing.calls.panel", onSort: function () { renderPanel(); } });
+  }
+
+  function panelRows() {
+    var d = state.data || { rows: [] };
+    var q = ($("cl_callSearch").value || "").toLowerCase(), camp = $("cl_campaignFilter").value;
+    var rows = (d.rows || []).filter(function (r) {
+      if (camp && r.campaignId !== camp) return false;
+      return !q || [r.name, r.person, r.phone, r.campaignName, r.city].join(" ").toLowerCase().indexOf(q) >= 0;
+    });
+    if (panelGrid && panelGrid.keys().length) {
+      rows = CBMGrid.sortBy(rows, panelGrid.keys(), function (r, col) {
+        return col === "lastAt" ? (r.lastAttempt || {}).at || "" : r[col];
+      });
+    }
+    return rows;
+  }
+
+  function tel(phone) { var a = el("a", "cm__phone", phone); a.href = "tel:" + phone.replace(/[^0-9+]/g, ""); return a; }
+
+  function renderPanel() {
+    panelGridOn();
+    var d = state.data || {};
+    var rows = panelRows();
+    var body = $("cl_panelRows"); body.innerHTML = "";
+    rows.forEach(function (r) {
+      var tr = el("tr", (state.open === r.touchId ? "is-open" : "") + (r.later ? " is-later" : ""));
+      tr.appendChild(el("td", null, r.name || "—"));
+      tr.appendChild(el("td", null, r.person || "—"));
+      var ph = el("td");
+      if (r.phone) { var a = tel(r.phone); a.addEventListener("click", function (e) { e.stopPropagation(); }); ph.appendChild(a); }
+      else ph.textContent = r.error || "—";
+      tr.appendChild(ph);
+      tr.appendChild(el("td", null, r.level || "—"));
+      var last = r.lastAttempt;
+      tr.appendChild(el("td", null, last ? fmtDate(last.at) + (last.outcome ? " · " + last.outcome : "") : "—"));
+      tr.appendChild(el("td", null, String(r.attempts || 0)));
+      tr.appendChild(el("td", null, r.campaignName + (r.later ? " · call again " + fmtDate(r.plannedAt) : "")));
+      tr.addEventListener("click", function () { openSide(r.touchId); });
+      body.appendChild(tr);
+    });
+    $("cl_panelEmpty").hidden = rows.length > 0;
+    var c = d.counts || { left: rows.length, calledToday: 0 };
+    text($("cl_callCount"), c.left + " left to call · " + c.calledToday + " called today");
+    renderDoneToday();
+    if (state.open && !rows.some(function (r) { return r.touchId === state.open; })) state.open = null;
+    drawSide();
+  }
+
+  function renderDoneToday() {
+    var done = (state.data || {}).doneToday || [];
+    var body = $("cl_doneRows"); body.innerHTML = "";
+    done.forEach(function (x) {
+      var tr = el("tr");
+      [x.name || "—", x.person || "—", x.outcome || "—", fmtDate(x.doneAt), x.campaignName || "—"].forEach(function (v) { tr.appendChild(el("td", null, v)); });
+      body.appendChild(tr);
+    });
+    $("cl_doneEmpty").hidden = done.length > 0;
+    $("cl_doneGrid").hidden = !done.length;
+    text($("cl_doneSummary"), "Done today (" + done.length + ")");
+  }
+
+  function openSide(touchId) { state.open = touchId; renderPanel(); }
+
+  function rowById(id) { return ((state.data || {}).rows || []).filter(function (r) { return r.touchId === id; })[0] || null; }
+
+  function fact(dl, label, value) {
+    if (!value) return;
+    dl.appendChild(el("dt", null, label)); dl.appendChild(el("dd", null, value));
+  }
+
+  function drawSide() {
+    var side = $("cl_side"); side.innerHTML = "";
+    var r = state.open ? rowById(state.open) : null;
+    if (!r) { side.appendChild(el("p", "cm__hint", "Choose a row to see what we know and record the call.")); return; }
+    side.appendChild(el("h3", null, (r.person || r.name || "This call") + (r.person && r.name ? " at " + r.name : "")));
+    if (r.phone) side.appendChild(tel(r.phone)); else side.appendChild(el("p", "cm__notice cm__notice--error", r.error || "There is no number on this record."));
+    if (r.doNotCall) side.appendChild(el("p", "cm__notice cm__notice--error", "This number is now marked do-not-call or opted out. Do not ring it; record Not interested if they asked not to be called."));
+    if (r.later) side.appendChild(el("p", "cm__hint", "Planned for " + fmtDate(r.plannedAt) + ". You may call earlier."));
+
+    side.appendChild(el("h4", null, "What we know"));
+    var dl = el("dl");
+    fact(dl, "Business", r.name); fact(dl, "Person", r.person); fact(dl, "City", r.city);
+    fact(dl, r.kind === "prospect" ? "Status" : "Stage", r.stage); fact(dl, "Level", r.level);
+    fact(dl, "Email", r.email); fact(dl, "Website", r.website);
+    fact(dl, "Attempts", String(r.attempts || 0));
+    if (r.lastAttempt) fact(dl, "Last attempt", fmtDate(r.lastAttempt.at) + (r.lastAttempt.outcome ? " · " + r.lastAttempt.outcome : ""));
+    fact(dl, "Campaign", r.campaignName);
+    side.appendChild(dl);
+
+    side.appendChild(el("h4", null, "Their personal link"));
+    var lk = el("div", "cm__calllink");
+    if (r.link) {
+      lk.appendChild(el("span", "cm__short", r.link));
+      var copy = el("button", "cm__rowbtn", "Copy"); copy.type = "button";
+      copy.addEventListener("click", function () {
+        (navigator.clipboard ? navigator.clipboard.writeText(r.link) : Promise.reject(new Error("no clipboard")))
+          .then(function () { notice("Copied the link for " + (r.person || r.name) + ".", "ok"); })
+          .catch(function () { notice("Could not copy — select the link and copy it by hand.", "warn"); });
+      });
+      lk.appendChild(copy);
+    }
+    side.appendChild(lk);
+    if (r.linkNote) side.appendChild(el("p", "cm__hint", r.linkNote));
+
+    var nl = el("label", null, "Call notes"); nl.htmlFor = "cl_sideNotes";
+    var notes = el("textarea"); notes.id = "cl_sideNotes"; notes.maxLength = 8000;
+    side.appendChild(nl); side.appendChild(notes);
+
+    var conv = null;
+    if (r.kind === "prospect") {
+      conv = {};
+      var box = el("div", "cm__fields");
+      box.appendChild(el("p", "cm__hint cm__field--wide", "If they are interested: ask for an email" + (r.business ? " or the business's website" : "") +
+        ". Either one turns this lead into a Prospect; without one, Interested is recorded and the lead stays a lead."));
+      [["firstName", "First name", r.firstName || ""], ["lastName", "Last name", r.lastName || ""], ["email", "Email", r.email || ""], ["website", "Website", r.website || ""]].forEach(function (f) {
+        var fd = el("div", "cm__field"); var id = "cl_side_" + f[0]; var lb = el("label", null, f[1]); lb.htmlFor = id;
+        var inp = el("input"); inp.type = f[0] === "email" ? "email" : "text"; inp.id = id; inp.value = f[2]; inp.autocomplete = "off";
+        inp.maxLength = f[0] === "email" || f[0] === "website" ? 255 : 100;
+        fd.appendChild(lb); fd.appendChild(inp); box.appendChild(fd); conv[f[0]] = inp;
+      });
+      side.appendChild(box);
+    }
+
+    var again = el("div", "cm__callagain"); again.hidden = true;
+    again.appendChild(el("p", null, "When should they be called again?"));
+    var picker = window.CBMDateTime ? CBMDateTime.create({}) : el("p", "cm__notice cm__notice--error", "The time picker did not load — refresh the page.");
+    again.appendChild(picker);
+    var plan = el("button", "cbm-button", "Plan the call"); plan.type = "button";
+    again.appendChild(plan);
+
+    var acts = el("div", "cm__runactions");
+    function btn(label, cls, fn) { var b = el("button", cls, label); b.type = "button"; b.addEventListener("click", fn); acts.appendChild(b); return b; }
+    btn("No answer", "cbm-button cbm-button--secondary", function () { send(r, "No answer", notes, conv, false, ""); });
+    btn("Call again", "cbm-button cbm-button--secondary", function () { again.hidden = false; });
+    btn("Interested", "cbm-button", function () { send(r, "Interested", notes, conv, false, ""); });
+    // Not interested is stored as Declined, the word the call record holds.
+    btn("Not interested", "cbm-button cbm-button--secondary", function () { send(r, "Declined", notes, conv, false, ""); });
+    plan.addEventListener("click", function () {
+      var stamp = window.CBMDateTime ? CBMDateTime.read(picker) : null;
+      if (!stamp) { notice("Choose the day and time to call again.", "warn"); return; }
+      send(r, "No answer", notes, conv, true, stamp);
+    });
+    side.appendChild(acts);
+    side.appendChild(again);
+  }
+
+  var OUTCOME_WORDS = { "Declined": "Not interested" };
+
+  async function send(r, outcome, notes, conv, callAgain, when) {
+    var body = { outcome: outcome, notes: notes.value, callAgain: callAgain, callAgainAt: when || "" };
+    if (conv && outcome === "Interested") {
+      var em = conv.email.value.trim();
+      if (em && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { notice("“" + em + "” is not an email address.", "warn"); conv.email.focus(); return; }
+      body.email = em; body.website = conv.website.value.trim();
+      body.firstName = conv.firstName.value.trim(); body.lastName = conv.lastName.value.trim();
+    }
+    var order = panelRows().map(function (x) { return x.touchId; });
+    var at = order.indexOf(r.touchId);
+    try {
+      var res = await api("/calls/" + encodeURIComponent(r.touchId) + "/outcome", { method: "POST", body: body });
+      var extra = (res.consequences || []).length ? " (" + res.consequences.join(", ") + ")" : "";
+      var warn = (res.warnings || []).slice(); if (res.notConverted) warn.unshift(res.notConverted);
+      var word = callAgain ? "Call again " + fmtDate(when) : (OUTCOME_WORDS[outcome] || outcome);
+      notice("Recorded " + word + " for " + (r.person || r.name) + extra + "." + (warn.length ? " " + warn.join(" ") : ""), warn.length ? "warn" : "ok");
+    } catch (e) { notice(e.message, "error"); return; }
+    // Recording one moves to the next row.
+    var nextId = order[at + 1] || null;
+    state.open = nextId;
+    await load();
+    if (state.open && !rowById(state.open)) {
+      var now = panelRows(); state.open = now.length ? now[Math.min(at, now.length - 1)].touchId : null; renderPanel();
+    }
+  }
+
   $("cl_callRefreshBtn").addEventListener("click", load);
-  $("cl_callSearch").addEventListener("input", render);
-  $("cl_campaignFilter").addEventListener("change", render);
+  $("cl_callSearch").addEventListener("input", function () { (state.data || {}).panel ? renderPanel() : render(); });
+  $("cl_campaignFilter").addEventListener("change", function () { (state.data || {}).panel ? renderPanel() : render(); });
 
   // Shown by app.js when the Calls tab opens (it refused the tab when calls
   // are switched off). The list is re-read each time: another caller may have

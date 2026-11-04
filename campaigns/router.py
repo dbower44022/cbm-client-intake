@@ -671,7 +671,8 @@ async def build_list(campaign_id: str, body: BuildIn, request: Request) -> dict[
             raise CampaignError("Choose a list first — on the campaign's Audience and content tab.")
         if row.get("campaignKind") == cfg.KIND_CALL:
             _require_calls(settings)
-            result = await calls.build_list(api_client, client, row, body.rule, audience=chosen)
+            result = await calls.build_list(api_client, client, row, body.rule, audience=chosen,
+                                            mint_codes=bool(settings.calls_panel))
         elif row.get("campaignKind") == cfg.KIND_SMS:
             _require_sms(settings)
             result = await sms.build_list(api_client, client, row, body.rule, audience=chosen)
@@ -1949,7 +1950,9 @@ async def call_list(request: Request) -> dict[str, Any]:
     client = client_for(settings, user)
     api_client = _api_client(settings, request)
     try:
-        return await calls.call_list(api_client, client, user, settings)
+        return await calls.call_list(api_client, client, user, settings,
+                                     store=getattr(request.app.state, "campaign_store", None),
+                                     base_url=_base_url(request, settings))
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not read the call list")
 
@@ -1962,6 +1965,9 @@ class OutcomeIn(BaseModel):
     outcome: str
     notes: str = Field(default="", max_length=8000)
     callAgain: bool = False
+    # The time to call again (a CRM stamp, UTC, from the shared date-and-time
+    # control; the Calls tab side panel). Empty: the row is planned for now.
+    callAgainAt: str = Field(default="", max_length=19)
     # Interested on a lead (ruling 47): either an email or a website converts it.
     email: str = Field(default="", max_length=255)
     website: str = Field(default="", max_length=255)
@@ -1983,7 +1989,7 @@ async def record_outcome(touch_id: str, body: OutcomeIn, request: Request) -> di
                           first_name=body.firstName.strip(), last_name=body.lastName.strip())
         result = await calls.record_outcome(api_client, client, user, touch_id, outcome=body.outcome,
                                             notes=body.notes, call_again=body.callAgain, settings=settings,
-                                            details=details)
+                                            details=details, call_again_at=body.callAgainAt or None)
     except CampaignError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except LookupError as exc:
@@ -2344,3 +2350,97 @@ async def recipients_csv(campaign_id: str, request: Request, q: str = "", status
 # Personal outreach (build plan § 7e.5) registers its endpoints on api_router;
 # the import sits last because that module uses this one's gate and helpers.
 from . import outreach_router  # noqa: E402,F401
+
+
+# --- Promote this event (build plan § 7e.9, ruling 97; M10) -----------------------------
+
+from . import promote as promote_mod  # noqa: E402 — kept beside its routes
+
+
+def _promote_user(request: Request) -> tuple[dict, Any]:
+    """Both teams: Event Administration's (the button sits on an event) and
+    Marketing Management's (the campaigns are made as the user)."""
+    settings = get_settings()
+    why = promote_mod.why_off(settings)
+    if why:
+        raise HTTPException(status_code=404, detail=why)
+    user, client = _actor(request)
+    teams = settings.events_allowed_teams_list
+    if not is_member(user, teams):
+        raise HTTPException(status_code=403, detail=(
+            f"Promoting an event needs the {', '.join(teams) or 'admin'} team as well, because the "
+            "button sits on the event in Event Administration."))
+    return user, client
+
+
+async def _promote_event(request: Request, client, event_id: str) -> dict[str, Any]:
+    try:
+        ev = await client.get(cfg.EVENT, event_id, select="id,name,slug")
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not read the event")
+    if not ev or not ev.get("id"):
+        raise HTTPException(status_code=404, detail="Event not found.")
+    return ev
+
+
+@api_router.get("/promote/options")
+async def promote_options(event: str, request: Request) -> dict[str, Any]:
+    _user, client = _promote_user(request)
+    settings = get_settings()
+    store = _store(request)
+    ev = await _promote_event(request, client, event)
+    await ready_made.ensure(store)
+    lists = [{"id": r["id"], "name": r["name"], "system": bool(r.get("system"))}
+             for r in await store.all_lists() if r.get("status") == "active"]
+    lists.sort(key=lambda r: (not r["system"], r["name"].lower()))
+    known = {r["id"] for r in lists}
+    return {
+        "event": {"id": ev["id"], "name": ev.get("name") or ""},
+        "lists": lists,
+        "channels": [{"kind": k, "words": promote_mod.CHANNEL_WORDS[k], "ticked": k in promote_mod.TICKED
+                      and not promote_mod.channel_switch(settings, k),
+                      "refusal": promote_mod.channel_switch(settings, k),
+                      "name": promote_mod.default_name(ev.get("name") or "", k),
+                      "listId": ready_made.FOR_KIND.get(k) if ready_made.FOR_KIND.get(k) in known else ""}
+                     for k in promote_mod.CHANNELS],
+    }
+
+
+class PromoteChannelIn(BaseModel):
+    kind: str
+    name: str = ""
+    listId: str = ""
+
+
+class PromoteIn(BaseModel):
+    eventId: str
+    channels: list[PromoteChannelIn] = Field(default_factory=list)
+
+
+@api_router.post("/promote")
+async def promote_event(body: PromoteIn, request: Request) -> dict[str, Any]:
+    user, client = _promote_user(request)
+    settings = get_settings()
+    store = _store(request)
+    ev = await _promote_event(request, client, body.eventId)
+    wanted = [promote_mod.Channel(kind=c.kind, name=c.name, list_id=c.listId) for c in body.channels]
+    lists = {c.list_id: await store.get_list(c.list_id) for c in wanted if c.list_id}
+    try:
+        channels = promote_mod.check_channels(settings, wanted, lists)
+        made = await promote_mod.create_all(
+            client, store, event=ev, channels=channels, user_id=user.get("userId", ""),
+            actor=user.get("name") or user.get("userName") or "", settings=settings,
+            admin_factory=admin_client_factory(settings))
+    except CampaignError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not make the campaigns")
+    for m in made:
+        await record_action(
+            client, app=APP_CAMPAIGNS, category=CAT_RECORD_EDIT, action="Campaign Created",
+            parent_type=cfg.CAMPAIGN, parent_id=m["id"],
+            summary=f"Created the {m['kind']} campaign \"{m['name']}\" to promote the event \"{ev.get('name')}\"",
+            actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+            details={"event": ev["id"], "list": m["listId"], "promote": True},
+        )
+    return {"event": {"id": ev["id"], "name": ev.get("name") or ""}, "campaigns": made}

@@ -224,3 +224,20 @@ body.cm--import-tool #importsGrid, body.cm--import-tool #importsEmpty, body.cm--
    into a notice under each link, and the Pick the email choices. */
 .cm__paste { margin-top: .3rem; }
 .cm__pick { display: flex; flex-direction: column; gap: .35rem; margin-top: .5rem; }
+
+/* ---------- The Calls tab side panel (M10) ---------- */
+.cm__callpanel { display: grid; gap: .8rem; }
+.cm__callbrief summary, #cl_doneToday summary { cursor: pointer; font-weight: 600; }
+.cm__callsplit { display: grid; grid-template-columns: minmax(0, 3fr) minmax(22rem, 2fr); gap: .8rem; align-items: start; }
+@media (max-width: 900px) { .cm__callsplit { grid-template-columns: 1fr; } }
+.cm__callside { position: sticky; top: .5rem; }
+.cm__callside h3 { margin: 0; }
+.cm__callside dl { display: grid; grid-template-columns: max-content 1fr; gap: .25rem .8rem; margin: 0; }
+.cm__callside dt { color: var(--cbm-muted, #5f6b76); }
+.cm__callside dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.cm__callside textarea { width: 100%; box-sizing: border-box; min-height: 4.5rem; font: inherit; }
+.cm__calllink { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+.cm__callagain { display: grid; gap: .4rem; padding: .6rem; border: 1px dashed var(--cbm-border, #c9d1d8); border-radius: 6px; }
+#cl_panelRows tr { cursor: pointer; }
+#cl_panelRows tr.is-open td { background: var(--cbm-surface-alt, #e9f0f7); }
+#cl_panelRows tr.is-later td { color: var(--cbm-muted, #5f6b76); }

@@ -1176,6 +1176,11 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
+- **v0.303.0 (2026-11-03) — Promote this event, the event's Campaigns
+  tab, and the Calls tab's side panel** (build plan §§ 7e.9, 7e.10, M10;
+  rulings 97, 116, 126). Dark behind `EVENT_PROMOTE` and `CALLS_PANEL`; no
+  migration, no CRM change. **Committed, not pushed; live pass owed** on
+  crm-test (`OPEN-ITEMS.md` #57).
 - **v0.301.0 (2026-10-30) — who attended a partner's or funder's events,
   by company** (`prds/partner-attendance-report-plan.md`): the Events tab's
   *Who attended* panel, Copy and CSV. No CRM change. Pushed 10-30-26;

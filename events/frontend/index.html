@@ -128,6 +128,8 @@
           <button type="button" class="cbm-button cbm-button--secondary" id="editBtn">Edit</button>
           <button type="button" class="cbm-button cbm-button--secondary" id="zoomBtn">Create / sync Zoom webinar</button>
           <button type="button" class="cbm-button cbm-button--secondary" id="recordingBtn">Add recording</button>
+          <!-- M10: shown while EVENT_PROMOTE is on; it validates on click. -->
+          <button type="button" class="cbm-button" id="promoteBtn" hidden>Promote this event</button>
         </div>
       </div>
 
@@ -136,6 +138,7 @@
         <button type="button" class="ev__tab" data-tab="registrants">Registrants</button>
         <button type="button" class="ev__tab" data-tab="checkin">Check-in</button>
         <button type="button" class="ev__tab" data-tab="followups">Follow-up</button>
+        <button type="button" class="ev__tab" data-tab="campaigns" id="campaignsTabBtn" hidden>Campaigns</button>
       </nav>
 
       <!-- The Overview is the WHOLE record, read-only, so staff can check an
@@ -208,6 +211,36 @@
       <div class="ev__tabpanel ev__followups" data-panel="followups" hidden>
         <p class="ev__fu-note" id="fuNote"></p>
         <div class="ev__fu-cards" id="fuCards"></div>
+      </div>
+
+      <!-- Campaigns (M10): one row per campaign that promoted this
+           event — linked to it, or credited on a registration — and the
+           registrations no campaign brought. Each number opens its people. -->
+      <div class="ev__tabpanel ev__campaigns" data-panel="campaigns" hidden>
+        <p class="ev__rephint" id="campNote">Each campaign that promotes this event, with how many people it
+          reached, how many registered through it and how many attended. A registration counts for the
+          campaign that first brought it. Press a number to see the people behind it.</p>
+        <div class="ev__controls">
+          <div class="ev__actions">
+            <button type="button" class="cbm-button cbm-button--secondary" id="campRefreshBtn">Refresh</button>
+          </div>
+        </div>
+        <table class="ev__grid" id="campTable">
+          <thead>
+            <tr>
+              <th data-col="name">Campaign</th><th data-col="channel">Channel</th>
+              <th data-col="status">Status</th><th data-col="reached" class="num">Reached</th>
+              <th data-col="registered" class="num">Registered</th><th data-col="attended" class="num">Attended</th>
+            </tr>
+          </thead>
+          <tbody id="campRows"></tbody>
+        </table>
+        <p class="ev__empty" id="campEmpty" hidden>No campaign promotes this event yet. Promote this event, at
+          the top of the page, makes one per channel.</p>
+        <section class="ev__people" id="campPeople" hidden>
+          <h3 id="campPeopleTitle"></h3>
+          <ul id="campPeopleList"></ul>
+        </section>
       </div>
     </section>
   </main>

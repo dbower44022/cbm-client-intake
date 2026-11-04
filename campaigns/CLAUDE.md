@@ -1,6 +1,6 @@
 # campaigns/ — Marketing Management (was Campaign Management)
 
-Last Updated: 10-28-26 16:14 · Revision 1.19
+Last Updated: 11-03-26 23:59 · Revision 1.20
 
 Detail for Campaign Management (`/campaigns`, prospect marketing Phases 1 to 4 and the lead model): links, postcards, the landing page, imports, the Leads and Review grids, calls, texts, email, attribution and reporting.
 
@@ -527,6 +527,28 @@ the reason.
   `sorted-list-crm-handoff.md`), the total from the standard list. **A CRM
   without it answers `multiSort: false`** and the first key is used — the
   page says so once. Recipients sorts its own rows (`router._sort_recipients`).
+- **Promote this event and the Calls tab side panel** (v0.303.0, build
+  plan §§ 7e.9 and 7e.10, M10; rulings 97, 116, 126). **`EVENT_PROMOTE`**
+  (read per request; needs Marketing Management and Campaign lists):
+  `campaigns/promote.py` — `check_channels` refuses everything before
+  anything is written, `create_all` makes one Draft per ticked channel
+  through `service.create_campaign` as the user, links it to the event,
+  gives it a link to the event's page and sets its list; the user needs
+  BOTH the events and the campaigns team (`router._promote_user`). The
+  event's Campaigns tab is `promote.rollup` / `promote.people`, served by
+  `events/router.py` under the org-wide key after the user's read of the
+  event; Reached is `REACHED_STATUSES` touches, the credit is the
+  registration's own `outreachCampaignId` (feature-detected — a CRM
+  without it puts everyone under *No campaign*). **`CALLS_PANEL`** (read
+  per request): `calls.call_list` adds `panel_extras` (attempts, last
+  attempt, `later`, the link, level, *Done today*, the count line) — codes
+  and levels in one batched read per type, never per row; the classic
+  answer is unchanged with it off. `build_list(..., mint_codes=True)` mints
+  each person's code at build (ruling 126). `record_outcome` takes
+  `call_again_at` (a CRM stamp from `CBMDateTime`; past refused). *Not
+  interested* is stored as Declined. `calls.js` draws the panel in
+  `renderPanel` / `drawSide` (ids `cl_`); the campaigns page now loads
+  `/shared/datetime.js`.
 - Owed: nothing on production's CRM (both slots done 10-18-26; every
   campaign switch off there — turning one on is Doug's call at `/setup`);
   Boston with its release; a seeder and sandbox re-baseline; the Twilio
@@ -537,6 +559,7 @@ the reason.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.20 | 11-03-26 23:59 | Claude (Claude Code) | Promote this event and the Calls tab side panel (v0.303.0, M10). |
 | 1.19 | 10-28-26 16:14 | Claude (Claude Code) | Several-column sort on Leads, Review and Recipients (v0.296.0). |
 | 1.18 | 10-28-26 02:32 | Claude (Claude Code) | Lists by partner, funder and event (v0.295.0). |
 | 1.17 | 10-27-26 21:10 | Claude (Claude Code) | The Lists tab redesigned (v0.293.0, § 7e.14, M11): the hand-over in `lists.js`, View's page, the stored counts and their pass, the route additions. |
