@@ -1184,23 +1184,9 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
-- **v0.303.0 (2026-11-03) — Promote this event, the event's Campaigns
-  tab, and the Calls tab's side panel** (build plan §§ 7e.9, 7e.10, M10;
-  rulings 97, 116, 126). Dark behind `EVENT_PROMOTE` and `CALLS_PANEL`; no
-  migration, no CRM change. Pushed 11-03-26 (dark on both deployments).
-  **Live-passed on crm-test 11-04-26 01:35**; v0.303.3 (two small fixes)
-  pushed 11-04-26. **Both switches ON on production since 11-04-26 01:44**
-  (`OPEN-ITEMS.md` #57).
-- **v0.288.0 (2026-10-26) — personal outreach from the lead's page**
-  (build plan § 7e.5, M5; rulings 107–109, 115, 118–120, 122, 128): the
-  shared composer (`frontend/shared/compose.js`, the session tools switched
-  to it), Email and Log a call on the lead's page, the sync's lead source
-  and the Replied flag, Conversations and the Mine chip. Dark behind
-  `LEAD_OUTREACH`; new setting `CHAPTER_POSTAL_ADDRESS`; no migration.
-  **Pushed 10-26-26 00:16 (deploys crm-test and
-  production, dark on both). Live-passed on crm-test 11-04-26 as Douglas
-  Bower** (send, thread, Replied, Log a call, Mine, the opt-out ending).
-  Ruling 133 (11-04-26): personal outreach is for staff with a real
-  mailbox. **ON in production since 11-04-26** (`OPEN-ITEMS.md` #57). A test lead takes a
-  plus-address, never the tester's everyday one.
+- **v0.303.5 (2026-11-04) is the latest, deployed and verified on both
+  deployments.** M10 (Promote this event, the Calls side panel) and M5
+  (personal outreach from the lead's page) are both live-passed and ON in
+  production since 11-04-26; v0.303.4 and v0.303.5 were small fixes. The
+  Marketing Management switches still off are listed in `OPEN-ITEMS.md` #57.
 Everything else still owed is in `OPEN-ITEMS.md`.

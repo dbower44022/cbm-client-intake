@@ -1,6 +1,9 @@
 # Kickoff — the M5 live pass: personal outreach from the lead's page
 
-Last Updated: 11-04-26 01:50 · Revision 1.0 — change log at the end.
+**DONE 11-04-26.** The pass ran in one session and passed; M5 is on in
+production (ruling 133). Results: `OPEN-ITEMS.md` #57. Kept as the record.
+
+Last Updated: 11-04-26 14:32 · Revision 1.1 — change log at the end.
 
 Operating mode: DETAIL. The session's **first reply** states the operating
 mode, the loaded `CLAUDE.md` files and what `git log origin/main..main`
@@ -60,4 +63,5 @@ mailbox is unknown. A group or an alias 403s `unauthorized_client`
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 11-04-26 14:32 | Claude (Claude Code) | Marked done: the pass passed 11-04-26 and M5 is on in production. |
 | 1.0 | 11-04-26 01:50 | Claude (Claude Code) | Written at the close of the M10 session, as the recommended next step. |

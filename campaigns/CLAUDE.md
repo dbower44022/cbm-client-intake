@@ -1,6 +1,6 @@
 # campaigns/ — Marketing Management (was Campaign Management)
 
-Last Updated: 11-04-26 01:50 · Revision 1.21
+Last Updated: 11-04-26 14:32 · Revision 1.22
 
 Detail for Campaign Management (`/campaigns`, prospect marketing Phases 1 to 4 and the lead model): links, postcards, the landing page, imports, the Leads and Review grids, calls, texts, email, attribution and reporting.
 
@@ -448,6 +448,12 @@ the reason.
   from the lead's exact address sets `replied` (`sync._mark_leads_replied`)
   and `conversion.mark_converted` clears it. The Leads tab's **Mine** chip
   is the Assigned-to filter preset to `me` (`leads.counts(…, me=)`).
+  **Ruling 133** (11-04-26, on in production that day): personal outreach
+  is for staff with a real chapter mailbox — a user with none gets the
+  composer, and Send is refused in words. **A test lead takes a
+  plus-address, never the tester's everyday address**: the new-address
+  backfill links every thread in the assignee's mailbox that mentions the
+  lead's address, and a message from it sets Replied (M5 live pass).
 - **Lists only, the strip and the grid** (v0.291.0, build plan § 7e.9
   second half, M8; rulings 99–102; dark behind **`CAMPAIGN_LISTS_ONLY`**,
   read per request, needs `CAMPAIGN_LISTS`; migration 0039).
@@ -560,6 +566,7 @@ the reason.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.22 | 11-04-26 14:32 | Claude (Claude Code) | Personal outreach: ruling 133 and the plus-address rule for test leads (M5 live pass, 11-04-26). |
 | 1.21 | 11-04-26 01:50 | Claude (Claude Code) | The Owed line no longer says every campaign switch is off on production (live since 11-03-26; M10's two switches on 11-04-26). |
 | 1.20 | 11-03-26 23:59 | Claude (Claude Code) | Promote this event and the Calls tab side panel (v0.303.0, M10). |
 | 1.19 | 10-28-26 16:14 | Claude (Claude Code) | Several-column sort on Leads, Review and Recipients (v0.296.0). |
