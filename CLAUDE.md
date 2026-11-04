@@ -140,7 +140,15 @@ runbook: `DEPLOYMENT.md`; plain-language console companion:
   any creds you still need locally first ([[overlay-regen-encrypts-secrets]]).
   **Backups of an overlay are secrets too** — `.do/*.bak*` is ignored since one
   published production's `APP_ENCRYPTION_KEY` (2026-09-14, found 09-23,
-  `OPEN-ITEMS.md` #33). Never `git add` anything under `.do/` but `app.yaml`.
+  `OPEN-ITEMS.md` #33; the key was replaced 11-04-26). Never `git add`
+  anything under `.do/` but `app.yaml`. **The local production overlay is
+  stale** — build a `doctl apps update` from `doctl apps spec get`, not from it.
+- **Rotating `APP_ENCRYPTION_KEY`**: the setting accepts `NEW,OLD` (encrypt
+  with the first, decrypt with any); `scripts/rotate_encryption_key.sh` in the
+  web container re-locks every stored secret, `scripts/encryption_key_spec.py`
+  builds the spec from the live one; both print fingerprints, never a key.
+  **Never rotate crm-test's key** — its nightly reset restores data locked
+  with it.
 - Each app runs a **web** component and a **`delivery-worker`** (`python -m
   worker`), plus a **PRE_DEPLOY `migrate` job** (`alembic upgrade head`).
   Alembic is the sole schema authority — there is no boot-time `create_all()`,
@@ -1183,10 +1191,6 @@ the strength of it.
   production, dark on both); live pass owed** on
   crm-test (step page https://claude.ai/artifact/LPT8MgA4iUPv49tiT4AUzX,
   `OPEN-ITEMS.md` #57).
-- **v0.301.0 (2026-10-30) — who attended a partner's or funder's events,
-  by company** (`prds/partner-attendance-report-plan.md`): the Events tab's
-  *Who attended* panel, Copy and CSV. No CRM change. Pushed 10-30-26;
-  **live-passed on crm-test 10-30-26 01:07** (results page https://claude.ai/artifact/AxWr4jsMPsPgfxvL8yUpgQ).
 - **v0.288.0 (2026-10-26) — personal outreach from the lead's page**
   (build plan § 7e.5, M5; rulings 107–109, 115, 118–120, 122, 128): the
   shared composer (`frontend/shared/compose.js`, the session tools switched
