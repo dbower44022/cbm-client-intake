@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 11-04-26 01:50 · Revision 0.69 — change log at the end.
+Last Updated: 11-04-26 10:44 · Revision 0.70 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -2732,7 +2732,11 @@ Team caller for M1 and M10).
    quote and signature, Documents, the unknown-recipient router). **Owed**:
    the live pass on crm-test (step page in `OPEN-ITEMS.md` #57), which
    needs an email the tester controls on Mark Marketing's lead and a
-   mailbox the Gmail delegation can read for him.
+   mailbox the Gmail delegation can read for him. **Email half passed on
+   crm-test 11-04-26 10:43** as Douglas Bower: the send, the thread, and
+   Replied set only by the lead's exact address (detail and the
+   plus-address finding in `OPEN-ITEMS.md` #57). Still owed: the opt-out
+   ending, Log a call, the Mine chip, the Mark Marketing mailbox.
 6. **M6: lists** (§ 7e.8). About four days. Plan drafted in
    `prompts/m6-lists-kickoff.md`, approved by Doug 10-26-26 ("run all four
    stops"). **Built as v0.289.0 (10-26-26)**, four stops in one session.
@@ -3292,6 +3296,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.70 | 11-04-26 10:44 | Claude (Claude Code) | § 7e.13 step M5: the email half of the live pass passed on crm-test 11-04-26 10:43; the rest owed. |
 | 0.69 | 11-04-26 01:50 | Claude (Claude Code) | § 7e.13 step M10: v0.303.3 pushed and both switches on on production. |
 | 0.68 | 11-04-26 01:40 | Claude (Claude Code) | § 7e.13 step M10: live-passed on crm-test 11-04-26 01:35; the two faults fixed in v0.303.3. |
 | 0.67 | 11-03-26 23:59 | Claude (Claude Code) | § 7e.9, § 7e.10 and § 7e.13 step M10 marked built (v0.303.0): the plan's approval, the crm-test counts, the choices made on the way. |

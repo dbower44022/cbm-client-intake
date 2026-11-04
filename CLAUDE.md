@@ -1198,9 +1198,10 @@ the strength of it.
   and the Replied flag, Conversations and the Mine chip. Dark behind
   `LEAD_OUTREACH`; new setting `CHAPTER_POSTAL_ADDRESS`; no migration.
   **Pushed 10-26-26 00:16 (deploys crm-test and
-  production, dark on both); live pass owed** on crm-test (step page
-  https://claude.ai/artifact/X7zFhDzMThqXBUWaGJX9GZ, `OPEN-ITEMS.md` #57)
-  — Mark Marketing has no mentor profile, so ruling 120 resolves him by
-  his user address; whether the Gmail delegation can read that mailbox is
-  the open question.
+  production, dark on both). Email half live-passed on crm-test 11-04-26**
+  (send, thread, Replied); still owed: the opt-out ending, Log a call, the
+  Mine chip, and Mark Marketing's mailbox — he has no mentor profile, so
+  ruling 120 resolves him by his user address, and whether the Gmail
+  delegation can read it is the open question (`OPEN-ITEMS.md` #57). A
+  test lead takes a plus-address, never the tester's everyday one.
 Everything else still owed is in `OPEN-ITEMS.md`.

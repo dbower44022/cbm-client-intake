@@ -109,7 +109,7 @@ found; move resolved items to the bottom with the resolution date.
     Switched ON at /setup: Marketing Management, calls, lists, list screens,
     lists only, the ladder, import templates, lead fit scores and web checks,
     service area `OH:Cuyahoga|OH:Lake`. Still OFF on production: Campaign
-    texts, personal outreach (M5 live pass owed), the postcard landing page
+    texts, personal outreach (M5 live pass half done 11-04-26), the postcard landing page
     (#59), the AI research, everything Constant Contact. Still owed: the
     roles standard updated for these grants; the § 6 removals of the old
     options (Doug decides); the close-date backfill question; Boston. Doug ruled the whole redesign 10-22/23-26 (rulings
@@ -198,7 +198,21 @@ found; move resolved items to the bottom with the resolution date.
     Mark a mentor profile with a real `cbmEmail`); the only lead assigned
     to him, Marigold Pet Grooming, has no email yet, so the tester adds one
     they control first; (4) the reply test: answer from the lead's address
-    and watch the sync attach it within one pass. **M6 built as v0.289.0
+    and watch the sync attach it within one pass. **Email half passed on
+    crm-test 11-04-26 10:43**, run by Claude in Doug's tab as Douglas Bower
+    (who has a mentor profile, so ruling 120's user-address case is still
+    untested): Marigold's Email set to `doug+marigold@dougbower.com`,
+    Replied cleared by hand in the CRM, one personal email sent 10:20 from
+    `doug.bower@cbmentors.org`; a reply from `doug@dougbower.com` joined
+    the thread and correctly left Replied off; a reply from the
+    plus-address at 10:41 joined the same thread (3 messages) and set
+    Replied. **Finding:** a test lead must never carry the tester's own
+    everyday address — Marigold first held `doug@dougbower.com`, and the
+    new-address backfill linked every thread in the assignee's mailbox
+    that mentions it (and set Replied); working as designed, use a
+    plus-address. Still owed from the step page: the opt-out ending read
+    on the received message, Log a call, the Mine chip, and the Mark
+    Marketing mailbox question. **M6 built as v0.289.0
     (10-26-26)**, all four stops in one session: lists described by
     Include and Leave out (rulings 90–94, 98) — a dynamic list is a search,
     a static list is people added by hand, Exclude onto a static exclusion
