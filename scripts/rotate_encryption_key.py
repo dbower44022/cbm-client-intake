@@ -38,7 +38,9 @@ from sqlalchemy import inspect, select, update  # noqa: E402
 
 from core.app_config import app_config  # noqa: E402
 from core.config import Settings  # noqa: E402
-from core.crypto import CryptoError, SecretCipher  # noqa: E402
+import hashlib  # noqa: E402
+
+from core.crypto import CryptoError, SecretCipher, split_keys  # noqa: E402
 from core.mailing import mailing_connection  # noqa: E402
 from core.settings_store import app_setting  # noqa: E402
 from core.store import make_async_engine  # noqa: E402
@@ -75,7 +77,9 @@ async def main() -> int:
     except CryptoError as exc:
         print(f"APP_ENCRYPTION_KEY: {exc}")
         return 2
-    print(f"Keys in APP_ENCRYPTION_KEY: {cipher.key_count} (the first is the one values move to)")
+    prints = [hashlib.sha256(k.encode()).hexdigest()[:8] for k in split_keys(settings.app_encryption_key)]
+    print(f"Keys in APP_ENCRYPTION_KEY: {cipher.key_count}, fingerprints {', '.join(prints)} "
+          "(the first is the one values move to)")
     if cipher.key_count < 2 and apply:
         print("Only one key is set, so there is nothing to rotate to. Set NEW,OLD first.")
         return 2

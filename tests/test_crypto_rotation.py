@@ -66,3 +66,23 @@ def test_the_script_classifies_without_reading_out_a_secret():
         "app_config": ["value_encrypted"],
         "mailing_connection": ["access_token", "refresh_token"],
     }
+
+
+def test_the_spec_helper_never_prints_a_key(tmp_path, monkeypatch, capsys):
+    path = Path(__file__).resolve().parent.parent / "scripts" / "encryption_key_spec.py"
+    spec = importlib.util.spec_from_file_location("encryption_key_spec", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    monkeypatch.setattr(mod, "NEW_FILE", tmp_path / "new-key")
+    overlay = tmp_path / "overlay.yaml"
+    overlay.write_text(f"services:\n- name: web\n  envs:\n  - key: APP_ENCRYPTION_KEY\n    value: {OLD}\n    type: SECRET\n")
+    monkeypatch.setattr(mod, "OVERLAY", overlay)
+    assert mod.cmd_generate() == 0
+    assert (tmp_path / "new-key").stat().st_mode & 0o777 == 0o600
+    assert mod.cmd_fingerprints() == 0
+    assert mod.cmd_overlay() == 0
+    out = capsys.readouterr().out
+    new = (tmp_path / "new-key").read_text().strip()
+    assert new not in out and OLD not in out
+    assert mod.fp(OLD) in out and mod.fp(new) in out
+    assert new in overlay.read_text() and OLD not in overlay.read_text()
