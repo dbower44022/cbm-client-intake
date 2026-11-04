@@ -78,7 +78,25 @@ found; move resolved items to the bottom with the resolution date.
     Boston with the arc's slot and the close-date Read-only finding (#51).
 
 57. **Marketing Management redesign — nine Drafts owed, then the build**
-    (2026-10-23). Doug ruled the whole redesign 10-22/23-26 (rulings
+    (2026-10-23). **PRODUCTION LIVE 11-03-26** (Doug lifted the 10-20-26
+    deferral 11-01-26 and chose option A: only what passed on crm-test).
+    Runbook https://claude.ai/artifact/3U6qsmKJ7RjtPFBafNgmNy rev 1.3, all
+    parts done 11-03-26 and part F passed as a non-administrator Marketing
+    Admin Team member. Applied on production's CRM: the lead model, touch
+    positions, lead labels and layouts, the value move (0 leads, nothing to
+    move), funders, industry, funder status, the writable close date, lead
+    code, the redesign, touch opens, the fit score, the role script (rulings
+    54, 69, 77, 78, 127 and the redesign's two reads), the action-history
+    types (campaigns, leads, touches, events, registrations) and ruling 34's
+    relabel (11 companies; Cleveland Business Mentors retyped Other and
+    Cleveland Public Library Partner by hand first, Doug option 2).
+    Switched ON at /setup: Marketing Management, calls, lists, list screens,
+    lists only, the ladder, import templates, lead fit scores and web checks,
+    service area `OH:Cuyahoga|OH:Lake`. Still OFF on production: Campaign
+    texts, personal outreach (M5 live pass owed), the postcard landing page
+    (#59), the AI research, everything Constant Contact. Still owed: the
+    roles standard updated for these grants; the § 6 removals of the old
+    options (Doug decides); the close-date backfill question; Boston. Doug ruled the whole redesign 10-22/23-26 (rulings
     79–116, `prds/prospect-marketing/rulings.md` v1.47). The build is
     `prds/prospect-marketing/build-plan.md` § 7e: ten steps (M1 one page
     with six tabs; M2 the qualification ladder and Leads tab; M3 Review as
@@ -1278,7 +1296,7 @@ empty company on a partner/funder now renders as "—" and is fixable in the app
 ## CRM prerequisites outstanding
 
 **Marketing Admin Role: `User` read all, edit own — crm-test DONE 10-22-26,
-production and Boston owed** (ruling 78). Without it a marketer can make
+production DONE 11-03-26 (marketing go-live, step C19), Boston owed** (ruling 78). Without it a marketer can make
 only themself a campaign's owner; handing it to a colleague is refused
 ("read access to the User record this COutreachCampaign links to").
 `scripts/migrate_outreach_roles.py` carries the grant (`scripts/outreach_roles.sh`
@@ -1290,7 +1308,7 @@ Production at the Sunday slot from inside the web container; Boston with its
 release. Campaign Management is dark on both, so nothing breaks meanwhile.
 
 **`CActionLog.record` cannot point at an event — crm-test DONE 2026-10-07,
-production and Boston owed** (found 2026-10-07 in the crm-test web log during
+production DONE 11-03-26 (marketing go-live, step C21), Boston owed** (found 2026-10-07 in the crm-test web log during
 the Phase B pass). Applied on crm-test by `scripts/migrate_actionlog_record_entities.py`
 (dry-run by default, idempotent, ships in the image for the production
 container), read back, and proven by a probe `CActionLog` row with

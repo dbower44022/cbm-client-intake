@@ -25,7 +25,7 @@ grants on the six entities read from `GET /Role`. Nothing was written.
 | CRM | State |
 |---|---|
 | crm-test | **Applied 10-25-26 ~02:00** by Doug (`redesign`: 9 changed, 9 verified, `outreachCampaign` already not required; `roles`: both grants read back OK, rebuild 200). **§ 5 passed 02:12** as the configuration administrator and the org-wide key: shape as § 1 (`User.cLevelSetLeads`, no `levelSetLeads` or `cCLevelSetLeads`; `cConversationProspect` on both sides; channel ends `Personal call, Personal email`; no `readOnly`); three list reads 200 and `CConversation/{id}/prospects` 200; a write of `Identified` + `replied true` on one lead (Dana Okoro) read back equal, then cleared to empty/false and read back; Marketing Admin Role `CConversation.read own`, `CCommunication.read all`; conformance identical to the baseline (21 conformant). **crm-test complete. M2 may start.** |
-| Production | Not started. Rides the arc's deferred production slot (Doug, 10-20-26: no slot until campaign testing is finished). |
+| Production | **Applied 11-03-26** by Doug from the go-live runbook (https://claude.ai/artifact/3U6qsmKJ7RjtPFBafNgmNy, step C15: 9 changed, 9 verified, `outreachCampaign` already not required); `roles apply` set both grants and ruling 127's CProspect delete for the org-wide key, all read back OK, rebuild 200. Read back by Claude from the console output 11-03-26 23:14. |
 | Boston | Not started. With its release. |
 
 ## 1. What the plan does — and what it was going to do and does not need to

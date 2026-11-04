@@ -16,7 +16,7 @@ life. It lives in the CRM, on the lead and on the contact.
 | CRM | State |
 |---|---|
 | crm-test | **Fields applied 10-22-26 12:45** by Doug (`leadcode`: 4 created, 4 verified, `Clicked` already present). **§ 4 steps 1, 2 and 4 passed 12:47** as the org-wide key: shape as § 1, no stray `Contact.leadCode` or `cCLeadCode`; three reads 200; a write and read-back on one lead (Banter Beer and Wine) and one contact (Simone Achebe), both cleared after; conformance identical to the baseline. **Field rules applied 12:48** by Doug (`roles`; the same run also applied ruling 78's Marketing Admin Role User grant, read all / edit own, from a parallel session's uncommitted script edit, on Doug's choice). **§ 4 step 3 passed 12:50**: both rules read back as the configuration administrator `{read: yes, edit: no}`; an org-wide-key write to `leadCode` still stores. **crm-test complete. D1 may start.** |
-| Production | Not started. Rides the arc's deferred production slot (Doug, 10-20-26: no slot until campaign testing is finished). |
+| Production | **Applied 11-03-26** by Doug from the go-live runbook (https://claude.ai/artifact/3U6qsmKJ7RjtPFBafNgmNy, step C14: 4 created, 4 verified, `Clicked` already present); **field rules applied** in the same session (`roles apply`, both read back OK). Read back by Claude from the console output 11-03-26 23:14. |
 | Boston | Not started. With its release. |
 
 ## 1. The fields — applied by the plan file, never by hand
