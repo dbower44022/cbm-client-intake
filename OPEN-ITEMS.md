@@ -267,7 +267,8 @@ found; move resolved items to the bottom with the resolution date.
     side panel and the caller's link (dark behind **`CALLS_PANEL`**). No
     migration, no CRM change. Committed, not pushed; **live pass owed** on
     crm-test (a registration through a promoted campaign's link is the one
-    path the fakes cannot prove). Still owed: the handoff on production at the arc's slot and on
+    path the fakes cannot prove; step page
+    https://claude.ai/artifact/LPT8MgA4iUPv49tiT4AUzX). Still owed: the handoff on production at the arc's slot and on
     Boston with its release (now with the third role cell). **The layout
     question in the handoff's § 7 is ruled** (Doug, 10-27-26, as
     recommended): *Level*, *Referred by* and *Assigned User* stay off the
