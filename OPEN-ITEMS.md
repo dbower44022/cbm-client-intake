@@ -6,6 +6,22 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+66. **One login on two mentor profiles — David Weissman's record, and
+    hardening** (2026-11-02, production). On 10-16-26 15:18 (CRM time) a
+    staff member replaced David Weissman's login with Doug Bower's under
+    Assigned Users on David's mentor profile (`6a62ca9f5188b9656`),
+    almost certainly in the CRM's own interface; its CBM email reads
+    `Doug.Bower@cbmentors.org`. The nightly repair then copied Doug's
+    login onto David's Contact (10-17-26 04:05). David's own login is
+    linked to no profile, so he sees no clients. Owed: (1) **the data
+    repair** — David back on his profile's Assigned Users, his CBM email
+    back to `david.weissman@cbmentors.org`, Doug's login off his Contact;
+    **waiting on Doug's confirmation from the staff involved, do not
+    repair before it**; (2) **the design session** — prevention, logging
+    and alerting, kickoff `prompts/mentor-login-integrity-design-prompt-v0.1.md`;
+    (3) the CRM's Action History was already purged for 10-16 when read
+    on 11-02, so the retention setting is part of (2).
+
 65. **The email composer's new-contact row — three smaller faults**
     (2026-10-31, found on the #63 live pass). (1) ~~The row's Company
     search list holds only the first 50 companies alphabetically~~ —
