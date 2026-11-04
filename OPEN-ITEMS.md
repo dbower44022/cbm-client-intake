@@ -804,6 +804,22 @@ found; move resolved items to the bottom with the resolution date.
     the deploy for a larger record count, not an error.
 
 42. **Events: the production end-to-end test, and the redirect deferred.**
+    **PRODUCTION GO-LIVE 11-04-26 01:31** (runbook
+    https://claude.ai/artifact/GnDQ9NMbqabYjhPyNFqFpP rev 1.2, every part
+    done; part H passed as a non-administrator Marketing Admin Team member:
+    both sponsorship pickers list names, the Follow-up tab names no missing
+    template). On production's CRM: Phase A sponsorship (0 hosts to carry,
+    `partnerHost` removed by hand, `check_partner_host_removed` OK), the
+    Seat Offered option, the eight event templates, the action-history
+    types (marketing page C21) and the Marketing Admin Role's funder read.
+    **Event reminder emails ON** (Doug, option A, 11-03-26): it needed
+    v0.303.2 — the worker read the switch only at start-up, and its event
+    emails required the web-only `SESSION_SECRET` — plus *Events & Webinars*
+    set On in System Settings so the worker has the switch; the worker
+    logged `event reminders enabled` at 06:31 UTC. Production held no event
+    registrations, so the two 10-19-26 test ones are gone (step 8-1 closed).
+    Still owed: confirmations and the redirect, with Zoom (D3-1, D3-2);
+    Boston.
     **Closing state 10-26-26 11:58 (session ended for a reboot; everything pushed,
     production v0.289.0):** the test is complete; D3 confirmation built dark
     (v0.277.0, live pass owed); D2 Follow-up tab, consent-over-false and
@@ -1351,7 +1367,9 @@ production at a Sunday 17:00 UTC slot, then Boston with the release that
 carries the code. The application reads neither link until Phase B ships.
 **Ruled 2026-10-07:** the Marketing Admin Role gets `read: all` on
 `CPartnerProfile` and `CSponsorProfile` — applied on crm-test; production and
-Boston owed with their Phase A apply, and the roles standard capture
+Boston owed with their Phase A apply (**production DONE 11-04-26**: Phase A
+applied, `partnerHost` removed, check OK, funder read set by
+`scripts/migrate_outreach_roles.py`; Boston owed), and the roles standard capture
 (`prds/chapter-network/roles-standard/prod-capture-2026-08-31.json`) must gain
 the two cells when production does, or the conformance check reports crm-test
 as drifted.
