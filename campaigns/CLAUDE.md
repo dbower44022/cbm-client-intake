@@ -1,6 +1,6 @@
 # campaigns/ — Marketing Management (was Campaign Management)
 
-Last Updated: 11-03-26 23:59 · Revision 1.20
+Last Updated: 11-04-26 01:50 · Revision 1.21
 
 Detail for Campaign Management (`/campaigns`, prospect marketing Phases 1 to 4 and the lead model): links, postcards, the landing page, imports, the Leads and Review grids, calls, texts, email, attribution and reporting.
 
@@ -549,8 +549,9 @@ the reason.
   interested* is stored as Declined. `calls.js` draws the panel in
   `renderPanel` / `drawSide` (ids `cl_`); the campaigns page now loads
   `/shared/datetime.js`.
-- Owed: nothing on production's CRM (both slots done 10-18-26; every
-  campaign switch off there — turning one on is Doug's call at `/setup`);
+- Owed: nothing on production's CRM (both slots done 10-18-26; Marketing
+  Management live there since 11-03-26, and which switches are on is in
+  `OPEN-ITEMS.md` #57 — turning one on is Doug's call at `/setup`);
   Boston with its release; a seeder and sandbox re-baseline; the Twilio
   account and A2P 10DLC before any real text; questions 2, 4, 5 before the
   first real card (`OPEN-ITEMS.md` #51).
@@ -559,6 +560,7 @@ the reason.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.21 | 11-04-26 01:50 | Claude (Claude Code) | The Owed line no longer says every campaign switch is off on production (live since 11-03-26; M10's two switches on 11-04-26). |
 | 1.20 | 11-03-26 23:59 | Claude (Claude Code) | Promote this event and the Calls tab side panel (v0.303.0, M10). |
 | 1.19 | 10-28-26 16:14 | Claude (Claude Code) | Several-column sort on Leads, Review and Recipients (v0.296.0). |
 | 1.18 | 10-28-26 02:32 | Claude (Claude Code) | Lists by partner, funder and event (v0.295.0). |
