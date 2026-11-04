@@ -379,6 +379,31 @@ async def test_pool_is_rebuilt_after_close(monkeypatch):
     await close_shared_http()
 
 
+def test_a_pool_from_a_dead_loop_is_dropped_not_closed():
+    # OPEN-ITEMS 67: a pool left behind by an earlier test's loop made the
+    # next app shutdown raise "Event loop is closed".
+    import asyncio
+
+    import core.espo as espo
+
+    async def build():
+        espo.shared_http()
+
+    async def use():
+        old = espo._pool
+        await close_shared_http()                 # must not raise
+        assert espo._pool is None and not old.is_closed   # dropped, not closed
+        fresh = shared_http()
+        assert fresh is not old and not fresh.is_closed
+        await close_shared_http()
+        assert fresh.is_closed                     # this loop's pool still closes
+
+    dead = asyncio.new_event_loop()
+    dead.run_until_complete(build())
+    dead.close()
+    asyncio.run(use())
+
+
 @pytest.mark.asyncio
 async def test_per_call_timeout_rides_the_request(monkeypatch):
     captured = {}

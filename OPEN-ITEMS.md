@@ -6,14 +6,6 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
-67. **One test fails when the whole suite runs: `test_disabled_returns_503`**
-    (2026-11-04, found while testing v0.303.4). `tests/test_comms_endpoints.py::
-    test_disabled_returns_503` raises `RuntimeError: Event loop is closed`
-    in a full run, and passes alone and with the other comms tests. It fails
-    the same way on v0.303.3 without the v0.303.4 changes, so it predates
-    them. Likely state shared between tests (the process-wide connection
-    pool or a cached client bound to a closed loop). Not investigated.
-
 66. **One login on two mentor profiles — David Weissman's record, and
     hardening** (2026-11-02, production). On 10-16-26 15:18 (CRM time) a
     staff member replaced David Weissman's login with Doug Bower's under
@@ -2348,6 +2340,15 @@ toggle.
     over the fix on 2026-10-07, so the fix is still owed.
 
 ## Resolved
+
+67. **One test fails when the whole suite runs: `test_disabled_returns_503`** —
+    **RESOLVED 11-04-26 in v0.303.5**: an earlier test left the shared
+    connection pool bound to its own, since closed, event loop, and the next
+    app shutdown's `close_shared_http` tried to close it there. The pool from
+    a dead loop is now dropped; the full suite runs clean (3,283 passed).
+    Found 2026-11-04 while testing v0.303.4: `tests/test_comms_endpoints.py::
+    test_disabled_returns_503` raised `RuntimeError: Event loop is closed`
+    in a full run and passed alone; it failed the same way on v0.303.3.
 
 33. **Production's `APP_ENCRYPTION_KEY` was published in plain text** —
     **RESOLVED 11-04-26**: production runs a new key alone (fingerprint

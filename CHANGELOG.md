@@ -5,6 +5,21 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.303.5] — 2026-11-04
+
+**fix: closing the CRM connection pool no longer touches a dead event
+loop** (`OPEN-ITEMS.md` #67). No switch change; no migration; no CRM change;
+no change in a running app.
+
+- `core/espo.close_shared_http` drops a pool built on an earlier event loop
+  instead of closing it. Closing it raised "Event loop is closed", which
+  failed `test_disabled_returns_503` in every full test run (it passed
+  alone). Only tests run more than one loop; in the app the pool always
+  belongs to the running loop and is closed exactly as before.
+- New test: a pool from a dead loop is dropped, and the running loop's pool
+  still closes. The full suite runs clean (3,283 passed).
+
+
 ## [0.303.4] — 2026-11-04
 
 **fix: three small faults in Marketing Management, found on the M5 live

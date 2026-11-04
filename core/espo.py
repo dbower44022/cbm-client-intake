@@ -398,10 +398,21 @@ def shared_http() -> httpx.AsyncClient:
 
 
 async def close_shared_http() -> None:
-    """Close the pool (lifespan shutdown). Safe to call when there is none."""
+    """Close the pool (lifespan shutdown). Safe to call when there is none.
+
+    A pool built on an earlier event loop is dropped, not closed: closing it
+    would touch that dead loop and raise "Event loop is closed", and its
+    sockets died with the loop. Only tests run more than one loop.
+    """
     global _pool, _pool_loop
-    pool, _pool, _pool_loop = _pool, None, None
-    if pool is not None and not pool.is_closed:
+    pool, loop, _pool, _pool_loop = _pool, _pool_loop, None, None
+    if pool is None or pool.is_closed:
+        return
+    try:
+        running = asyncio.get_running_loop()
+    except RuntimeError:
+        running = None
+    if loop is running:
         await pool.aclose()
 
 # --- the metadata cache -------------------------------------------------------
