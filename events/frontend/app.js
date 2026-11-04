@@ -858,6 +858,7 @@
       });
       body.appendChild(grid);
     }, async function () {
+      $("modalMsg").textContent = "";
       var ticked = rows.filter(function (r) { return r.box.checked; });
       if (!ticked.length) { $("modalMsg").textContent = "Tick at least one channel."; return; }
       for (var i = 0; i < ticked.length; i++) {

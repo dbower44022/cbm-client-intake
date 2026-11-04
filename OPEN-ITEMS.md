@@ -265,10 +265,7 @@ found; move resolved items to the bottom with the resolution date.
     **M10 built as v0.303.0 (11-03-26)**: Promote this event and the
     event's Campaigns tab (dark behind **`EVENT_PROMOTE`**), the Calls tab's
     side panel and the caller's link (dark behind **`CALLS_PANEL`**). No
-    migration, no CRM change. Pushed 11-03-26 (on origin at 23:58); **live pass owed** on
-    crm-test (a registration through a promoted campaign's link is the one
-    path the fakes cannot prove; step page
-    https://claude.ai/artifact/LPT8MgA4iUPv49tiT4AUzX). Still owed: the handoff on production at the arc's slot and on
+    migration, no CRM change. Pushed 11-03-26 (on origin at 23:58). **Live-passed on crm-test 11-04-26 01:35**, run by Claude in a tab Doug signed in as Mark Marketing, then Joe Mentor (step page https://claude.ai/artifact/LPT8MgA4iUPv49tiT4AUzX). On a test event made for the pass (in person, next week): Promote made the email, text and postcard Drafts, each owned by Mark Marketing, linked to the event, with one link to the event's page and its ready-made list; a missing name was refused in the same words on the page and at the server. A registration through the email campaign's link was credited to it: Registered 1, No campaign 0, and the number opened the registrant. A calls-only promotion built 8 people (the M8 pass's 8) with 8 codes minted and none failed; signed off, every row's link ended in that person's code. Call again at 10:00 AM two days on dropped the row to the bottom, opened the next row and counted under Done today. As Joe Mentor: the Calls tab alone, the side panel on the Mentor Team's campaign only, the no-link note in words; Promote and the event's Campaigns tab refused with a 403 naming the team. Found and fixed as v0.303.3: the Promote form kept an earlier refusal on screen while the next try ran, and the list of people behind a number wrapped in a narrow column. Not exercised: Attended (nobody has attended the test event) and the not-linked label (crm-test has no registration credited to a campaign outside its event). v0.303.3 committed, not pushed. Still owed: the handoff on production at the arc's slot and on
     Boston with its release (now with the third role cell). **The layout
     question in the handoff's § 7 is ruled** (Doug, 10-27-26, as
     recommended): *Level*, *Referred by* and *Assigned User* stay off the
@@ -390,7 +387,7 @@ found; move resolved items to the bottom with the resolution date.
     scanners to inflate email clicks the same way. Ruling 126's D3 pieces:
     *New code* built with M2 (v0.284.0), the vendor field `cbm_lead_code`
     with M7 (v0.290.0, live send owed under #57); the caller's link built
-    with M10 (v0.303.0, live pass owed). **Owed: D2** (each form's prefill, the *Not you?* line,
+    with M10 (v0.303.0, live-passed 11-04-26). **Owed: D2** (each form's prefill, the *Not you?* line,
     the registration's one press, the text's `{link}`) **and #59**, in the
     next window when no other session is on the arc (Doug, 10-25-26: wait
     for the redesign step in progress to finish first); production and

@@ -1,6 +1,6 @@
 # Prospect Marketing — build plan v0.2 (2026-10-14)
 
-Last Updated: 11-03-26 23:59 · Revision 0.67 — change log at the end.
+Last Updated: 11-04-26 01:40 · Revision 0.68 — change log at the end.
 
 **v0.8 (10-18-26 23:16): rulings 41–44 change the record model.** Every
 record from an outside source is a **Lead** (Unqualified, Qualified,
@@ -2877,7 +2877,7 @@ Team caller for M1 and M10).
     lead's page; the codes for the caller's link are minted at build, and
     a list built before the switch shows the campaign's own link and says
     the person has no code; "called today" uses the events programme's
-    time zone. Pushed 11-03-26. **Live pass owed** on crm-test.
+    time zone. Pushed 11-03-26. **Live-passed on crm-test 11-04-26 01:35**, run by Claude in a tab Doug signed in as Mark Marketing, then Joe Mentor (step page https://claude.ai/artifact/LPT8MgA4iUPv49tiT4AUzX). On a test event made for the pass (in person, next week): Promote made the email, text and postcard Drafts, each owned by Mark Marketing, linked to the event, with one link to the event's page and its ready-made list; a missing name was refused in the same words on the page and at the server. A registration through the email campaign's link was credited to it: Registered 1, No campaign 0, and the number opened the registrant. A calls-only promotion built 8 people (the M8 pass's 8) with 8 codes minted and none failed; signed off, every row's link ended in that person's code. Call again at 10:00 AM two days on dropped the row to the bottom, opened the next row and counted under Done today. As Joe Mentor: the Calls tab alone, the side panel on the Mentor Team's campaign only, the no-link note in words; Promote and the event's Campaigns tab refused with a 403 naming the team. Found and fixed as v0.303.3: the Promote form kept an earlier refusal on screen while the next try ran, and the list of people behind a number wrapped in a narrow column. Not exercised: Attended (nobody has attended the test event) and the not-linked label (crm-test has no registration credited to a campaign outside its event).
 11. **M11: the Lists tab, redesigned** (§ 7e.14, rulings 129–132). About
     four and a half days, in five stops. Approved 10-27-26 ("approved");
     Doug ran stops 2–4 without pausing. **Built as v0.293.0 (10-27-26).**
@@ -3292,6 +3292,7 @@ best-effort mirror.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.68 | 11-04-26 01:40 | Claude (Claude Code) | § 7e.13 step M10: live-passed on crm-test 11-04-26 01:35; the two faults fixed in v0.303.3. |
 | 0.67 | 11-03-26 23:59 | Claude (Claude Code) | § 7e.9, § 7e.10 and § 7e.13 step M10 marked built (v0.303.0): the plan's approval, the crm-test counts, the choices made on the way. |
 | 0.66 | 10-27-26 21:25 | Claude (Claude Code) | § 7e.14 and step M11: live-passed on crm-test 10-27-26 21:25; the two faults fixed in v0.293.1. |
 | 0.65 | 10-27-26 21:10 | Claude (Claude Code) | § 7e.14 and step M11 marked built (v0.293.0): the choices made on the way, the checks, the live pass owed. |

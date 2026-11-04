@@ -5,6 +5,18 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.303.3] — 2026-11-04
+
+**fix: two small faults on Promote this event, found on the M10 live pass.**
+No switch change; no migration; no CRM change.
+
+- The Promote form cleared an earlier refusal only when the next answer
+  came back, so the old red words sat beside a request that was already
+  succeeding. It now clears them on the press.
+- The list of people behind a number on the event's Campaigns tab wrapped
+  in a narrow column; it now fills the width in columns of at least 22rem.
+
+
 ## [0.303.2] — 2026-11-04
 
 **fix: the worker's event emails follow System Settings** (Doug's rulings
