@@ -116,9 +116,11 @@ found; move resolved items to the bottom with the resolution date.
     Cleveland Public Library Partner by hand first, Doug option 2).
     Switched ON at /setup: Marketing Management, calls, lists, list screens,
     lists only, the ladder, import templates, lead fit scores and web checks,
-    service area `OH:Cuyahoga|OH:Lake`. Still OFF on production: Campaign
-    texts, personal outreach (M5 live-passed 11-04-26; ruling 133 clears it
-    to switch on — Doug's step at /setup), the postcard landing page
+    service area `OH:Cuyahoga|OH:Lake`. **Personal outreach to leads ON
+    since 11-04-26** (M5 live-passed, ruling 133; read back 12:39: the
+    override `true` and the chapter postal address "Cleveland Business
+    Mentors 1 Public Square Cleveland, OH 44113"). Still OFF on production: Campaign
+    texts, the postcard landing page
     (#59), the AI research, everything Constant Contact. Still owed: the
     roles standard updated for these grants; the § 6 removals of the old
     options (Doug decides); the close-date backfill question; Boston. Doug ruled the whole redesign 10-22/23-26 (rulings

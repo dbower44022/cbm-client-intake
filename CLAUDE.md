@@ -1201,7 +1201,6 @@ the strength of it.
   production, dark on both). Live-passed on crm-test 11-04-26 as Douglas
   Bower** (send, thread, Replied, Log a call, Mine, the opt-out ending).
   Ruling 133 (11-04-26): personal outreach is for staff with a real
-  mailbox; switch on at production's /setup without the ruling-120
-  fallback tested (`OPEN-ITEMS.md` #57). A test lead takes a
+  mailbox. **ON in production since 11-04-26** (`OPEN-ITEMS.md` #57). A test lead takes a
   plus-address, never the tester's everyday one.
 Everything else still owed is in `OPEN-ITEMS.md`.
