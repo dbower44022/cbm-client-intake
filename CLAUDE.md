@@ -1188,9 +1188,9 @@ the strength of it.
   tab, and the Calls tab's side panel** (build plan §§ 7e.9, 7e.10, M10;
   rulings 97, 116, 126). Dark behind `EVENT_PROMOTE` and `CALLS_PANEL`; no
   migration, no CRM change. Pushed 11-03-26 (dark on both deployments).
-  **Live-passed on crm-test 11-04-26 01:35** (step page
-  https://claude.ai/artifact/LPT8MgA4iUPv49tiT4AUzX); two small faults
-  fixed as v0.303.3, committed, not pushed (`OPEN-ITEMS.md` #57).
+  **Live-passed on crm-test 11-04-26 01:35**; v0.303.3 (two small fixes)
+  pushed 11-04-26. **Both switches ON on production since 11-04-26 01:44**
+  (`OPEN-ITEMS.md` #57).
 - **v0.288.0 (2026-10-26) — personal outreach from the lead's page**
   (build plan § 7e.5, M5; rulings 107–109, 115, 118–120, 122, 128): the
   shared composer (`frontend/shared/compose.js`, the session tools switched
