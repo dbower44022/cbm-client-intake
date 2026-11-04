@@ -999,7 +999,14 @@ found; move resolved items to the bottom with the resolution date.
     The key alone does not open anything: it decrypts the secrets `/setup`
     stores in production's database, so it matters together with a copy of that
     database. **Ruled 2026-09-23 (Doug, option A): replace the key and re-enter
-    every `/setup`-stored secret.** Done in the repository: the three `.bak`
+    every `/setup`-stored secret.** **Changed 11-04-26 to option B** (Doug):
+    rotate with a two-key hand-over instead — v0.303.1 lets
+    `APP_ENCRYPTION_KEY` hold `NEW,OLD`, `scripts/rotate_encryption_key.sh`
+    re-locks every stored secret in the container, and
+    `scripts/encryption_key_spec.py` builds the settings from the LIVE spec
+    (the overlay below is stale and half-edited). Step page:
+    https://claude.ai/artifact/GZu3xFpZ9mV77HLtZKEA27 — **owed: Doug runs it**.
+    Done in the repository: the three `.bak`
     files untracked (kept locally) and `.do/*.bak*` ignored. **Owed, Doug's
     hands:** generate a new key, set it on production's web and worker and in
     the local `.do/app.prod-crm.yaml` (or the next `doctl apps update` puts the
