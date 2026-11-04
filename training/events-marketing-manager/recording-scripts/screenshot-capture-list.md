@@ -1,6 +1,6 @@
 # Screenshot capture list — Module 1, Create the event
 
-Last Updated: 11-04-26 10:20 · Revision 1.0 — see change log at the end.
+Last Updated: 11-04-26 10:52 · Revision 1.1 — see change log at the end.
 
 Seven screenshots, one per slide in module 1. Each one exists because its slide
 names a control the reader has to find; none is decorative.
@@ -24,11 +24,9 @@ the course is needed when you do.
 - Capture **the control and enough around it to locate it**, not the whole
   screen. A full-screen shot of a 4K monitor reduces the thing being pointed at
   to a few pixels.
-- Save every file as **PNG** into this folder:
-  ```
-  ~/Dropbox/Projects/cbm-client-intake/training/events-marketing-manager/course/shots/
-  ```
-  In a Save dialog that does not expand `~`, that folder is:
+- Save every file as **PNG**. Each step below gives the whole path to save to,
+  in full, so you never have to look back at this block. They all land in this
+  one folder, which already exists:
   ```
   /home/doug/Dropbox/Projects/cbm-client-intake/training/events-marketing-manager/course/shots/
   ```
@@ -50,7 +48,7 @@ the course is needed when you do.
 
 3. Save the capture as:
    ```
-   m1-event-list.png
+   /home/doug/Dropbox/Projects/cbm-client-intake/training/events-marketing-manager/course/shots/m1-event-list.png
    ```
 
 ---
@@ -66,7 +64,7 @@ the course is needed when you do.
 
 3. Save the capture as:
    ```
-   m1-form-behaviour-fields.png
+   /home/doug/Dropbox/Projects/cbm-client-intake/training/events-marketing-manager/course/shots/m1-form-behaviour-fields.png
    ```
 
 4. In the same event form, scroll to the **Publishing** group.
@@ -76,7 +74,7 @@ the course is needed when you do.
 
 6. Save the capture as:
    ```
-   m1-publishing-group.png
+   /home/doug/Dropbox/Projects/cbm-client-intake/training/events-marketing-manager/course/shots/m1-publishing-group.png
    ```
 
 7. In the same event form, set **Audience** to:
@@ -90,7 +88,7 @@ the course is needed when you do.
 
 9. Save the capture as:
    ```
-   m1-limit-to-teams.png
+   /home/doug/Dropbox/Projects/cbm-client-intake/training/events-marketing-manager/course/shots/m1-limit-to-teams.png
    ```
 
 10. At the bottom of the event form, click **Cancel**.
@@ -114,7 +112,7 @@ section 1 of `module-1-create.md` creates.
 
 3. Save the capture as:
    ```
-   m1-zoom-button.png
+   /home/doug/Dropbox/Projects/cbm-client-intake/training/events-marketing-manager/course/shots/m1-zoom-button.png
    ```
 
 4. On the event's screen, open the event form and scroll to the **Content**
@@ -127,7 +125,7 @@ section 1 of `module-1-create.md` creates.
 
 6. Save the capture as:
    ```
-   m1-event-graphic.png
+   /home/doug/Dropbox/Projects/cbm-client-intake/training/events-marketing-manager/course/shots/m1-event-graphic.png
    ```
 
 7. In the same event form, scroll to the **Presenters** group under
@@ -140,7 +138,7 @@ section 1 of `module-1-create.md` creates.
 
 9. Save the capture as:
    ```
-   m1-presenters.png
+   /home/doug/Dropbox/Projects/cbm-client-intake/training/events-marketing-manager/course/shots/m1-presenters.png
    ```
 
 10. At the bottom of the event form, click **Cancel**.
@@ -159,4 +157,5 @@ slides need correcting too.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 11-04-26 10:52 | Claude (Claude Code) | Doug, 11-04-26: always give full paths. Every save step now carries the whole path to save to, rather than a bare filename under a folder named once in the opening block. |
 | 1.0 | 11-04-26 10:20 | Claude (Claude Code) | Created after Doug's 11-04-26 decision to carry the explanatory weight with screenshots rather than per-step clips. Seven captures, one per module 1 slide, each tied to a control its slide names. |

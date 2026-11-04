@@ -27,6 +27,13 @@ window.COURSE = {
   signIn: "Mark Marketing — the Marketing Admin Team holds Event Administration " +
           "and Marketing Management alike, so the whole arc is one sign-in.",
 
+  /* Where a screenshot lives on disk. The player prints this whole path when a
+     capture is missing, so nobody has to work out what a relative "shots/"
+     means. It is a development affordance: drop this field when the course is
+     shared with its audience, by when every screenshot exists and the note
+     never renders. */
+  shotsDir: "/home/doug/Dropbox/Projects/cbm-client-intake/training/events-marketing-manager/course/shots/",
+
   modules: [
     {
       id: "m1",
