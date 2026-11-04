@@ -1304,8 +1304,9 @@ wraps it). On crm-test the grant was already held when Doug's dry run read
 it at 12:50 — inferred, not checked: a parallel session's `--apply` picked up
 the uncommitted line from the shared working tree. Live-passed there 12:51
 as Mark Marketing (handed to Sharon Rose, unchanged save writes nothing).
-Production at the Sunday slot from inside the web container; Boston with its
-release. Campaign Management is dark on both, so nothing breaks meanwhile.
+Production done 11-03-26 from inside the web container (marketing go-live,
+step C19); Boston owed. Marketing Management is dark on Boston, so nothing
+breaks there meanwhile.
 
 **`CActionLog.record` cannot point at an event — crm-test DONE 2026-10-07,
 production DONE 11-03-26 (marketing go-live, step C21), Boston owed** (found 2026-10-07 in the crm-test web log during
