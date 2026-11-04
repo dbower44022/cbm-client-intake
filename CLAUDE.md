@@ -1199,9 +1199,9 @@ the strength of it.
   `LEAD_OUTREACH`; new setting `CHAPTER_POSTAL_ADDRESS`; no migration.
   **Pushed 10-26-26 00:16 (deploys crm-test and
   production, dark on both). Live-passed on crm-test 11-04-26 as Douglas
-  Bower** (send, thread, Replied, Log a call, Mine, the opt-out ending);
-  still owed: Mark Marketing's mailbox — he has no mentor profile, so
-  ruling 120 resolves him by his user address, and whether the Gmail
-  delegation can read it is the open question (`OPEN-ITEMS.md` #57). A
-  test lead takes a plus-address, never the tester's everyday one.
+  Bower** (send, thread, Replied, Log a call, Mine, the opt-out ending).
+  Ruling 133 (11-04-26): personal outreach is for staff with a real
+  mailbox; switch on at production's /setup without the ruling-120
+  fallback tested (`OPEN-ITEMS.md` #57). A test lead takes a
+  plus-address, never the tester's everyday one.
 Everything else still owed is in `OPEN-ITEMS.md`.

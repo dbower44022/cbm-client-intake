@@ -1,6 +1,6 @@
 # Prospect Marketing — rulings
 
-Last Updated: 10-27-26 19:15 · Revision 1.52 — change log at the end.
+Last Updated: 11-04-26 12:36 · Revision 1.53 — change log at the end.
 
 **This file is the binding record of the arc.** It holds, word for word,
 every decision Doug has made about prospect marketing and the Campaign
@@ -1404,6 +1404,19 @@ a list is and how it behaves.
      dynamic list and Edit for a static list. Doug: "approved". The build
      is planned in `build-plan.md` and approved before any code changes.
      (10-27-26)
+133. **Personal outreach is for staff with a real chapter mailbox; the
+     switch goes on without the ruling-120 fallback tested** (Doug's "1",
+     11-04-26, after the M5 live pass). The pass ran as a user with a
+     mentor profile; Mark Marketing, the sandbox marketer, has no real
+     mailbox, so the fallback to a user's own address could not be tried.
+     Read from the code, not run: such a user's composer opens, Send is
+     refused in words ("Couldn't send the message from … — the mailbox
+     refused"), nothing leaves, and the mail sync writes one worker-log
+     warning per pass for that mailbox while a lead is assigned to them; no
+     alert email. Amends ruling 120 by adding the rule; does not change its
+     resolution. Standing cost: the refusal comes at Send rather than
+     before the composer opens, and the log noise; refusing up front is a
+     later build if anyone meets it. (11-04-26)
 
 ---
 
@@ -1534,6 +1547,7 @@ other source consumes a service before mentoring.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.53 | 11-04-26 12:36 | Claude (Claude Code) | Ruling 133 appended: personal outreach is for staff with a real chapter mailbox; the switch goes on with the ruling-120 fallback untested (Doug's "1", after the M5 live pass). |
 | 1.52 | 10-27-26 19:15 | Claude (Claude Code) | Rulings 129–132 appended: the Lists tab redesigned as a list view with preview, with Edit and View as separate screens (replaces ruling 98); View in its own browser tab (amends ruling 89); dynamic list counts kept current; the four screens approved as drawn (Doug, 10-27-26). The revision-control table's version corrected from 1.48. |
 | 1.51 | 10-25-26 23:20 | Claude (Claude Code) | Ruling 128 appended: the lead's page gets the full email composer, shared with the session tools (Doug's "Full email composer", M5 plan approval). |
 | 1.50 | 10-25-26 18:52 | Claude (Claude Code) | Ruling 127 appended: an undone import's leads deleted under the org-wide key, the API role gains delete on the lead record (Doug's "1", M4 plan approval). |

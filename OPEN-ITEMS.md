@@ -117,7 +117,8 @@ found; move resolved items to the bottom with the resolution date.
     Switched ON at /setup: Marketing Management, calls, lists, list screens,
     lists only, the ladder, import templates, lead fit scores and web checks,
     service area `OH:Cuyahoga|OH:Lake`. Still OFF on production: Campaign
-    texts, personal outreach (M5 live pass half done 11-04-26), the postcard landing page
+    texts, personal outreach (M5 live-passed 11-04-26; ruling 133 clears it
+    to switch on — Doug's step at /setup), the postcard landing page
     (#59), the AI research, everything Constant Contact. Still owed: the
     roles standard updated for these grants; the § 6 removals of the old
     options (Doug decides); the close-date backfill question; Boston. Doug ruled the whole redesign 10-22/23-26 (rulings
@@ -222,8 +223,9 @@ found; move resolved items to the bottom with the resolution date.
     refuses no outcome ("Choose what came of the call.") and *Not
     interested* with no note; *No reply yet* logged a "Personal call done
     · No answer" touch and a "Lead Called" action, lead unchanged; Mine
-    counts 1 and filters to Marigold. Still owed: the Mark Marketing
-    mailbox question. **Three small faults found, none blocking:** (a) the Leads
+    counts 1 and filters to Marigold. Mark Marketing has no real mailbox
+    (Doug, 11-04-26), so the ruling-120 fallback could not be tried; ruling
+    133 (Doug's "1") switches on without it. **Three small faults found, none blocking:** (a) the Leads
     grid's *Last activity* shows the creation date — `cfg.PROSPECT_SELECT`
     has no `modifiedAt`, so `app.js` falls back to `createdAt` (M2);
     (b) the call dialog keeps a refusal message on screen after the choice
