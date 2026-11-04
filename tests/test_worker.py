@@ -267,3 +267,37 @@ async def test_record_creating_form_autocloses_on_delivery():
     await worker.process_one(store, _settings(), _volunteer_claimed())
     assert len(store.completed) == 1
     assert store.autoclosed == [("vol-1", "Process completed")]
+
+
+# --- event reminders read their switch on every pass (11-03-26) ---------------
+
+def _reminder_settings(**over):
+    base = dict(espo_dry_run=False, events_enabled=True, assignments_enabled=True,
+                session_secret="x" * 32, gmail_sync=True, ops_mailbox="info@example.org",
+                events_reminders=True)
+    base.update(over)
+    return Settings(**base)
+
+
+def test_reminder_state_off_when_switch_off():
+    assert worker._reminder_state(_reminder_settings(events_reminders=False)) == "off"
+
+
+def test_reminder_state_on_when_everything_present():
+    assert worker._reminder_state(_reminder_settings()) == "on"
+
+
+def test_reminder_state_names_what_is_missing():
+    state = worker._reminder_state(_reminder_settings(gmail_sync=False, session_secret=""))
+    assert state.startswith("blocked: ")
+    assert "GMAIL_SYNC" in state and "SESSION_SECRET" in state
+    assert "OPS_MAILBOX" not in state
+
+
+def test_reminder_switch_is_not_decided_at_startup():
+    """The pass must consult _reminder_state each time, not a boot-time flag."""
+    import inspect
+
+    src = inspect.getsource(worker.main)
+    assert "reminders_on" not in src
+    assert "_reminder_state(settings)" in src

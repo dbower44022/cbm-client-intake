@@ -79,6 +79,27 @@ def _next_sandbox_reset(settings: Settings, after: datetime) -> datetime:
     )
 
 
+def _reminder_state(settings: Settings) -> str:
+    """Whether the event reminder pass may send, read fresh on every pass.
+
+    ``off`` when the switch is off, ``on`` when every piece the send needs is
+    present, else ``blocked: …`` naming what is missing. Read per pass so the
+    System Settings switch takes effect without a restart: deciding it once at
+    start-up, before the overrides load, made the switch inert (the fault
+    OPEN-ITEMS #34 describes for the mail switches; found 11-03-26).
+    """
+    if not settings.events_reminders:
+        return "off"
+    missing = [name for name, ok in (
+        ("Events & Webinars on this worker (EVENTS_ENABLED, ASSIGNMENTS_ENABLED, "
+         "SESSION_SECRET)", settings.events_active),
+        ("Gmail sync (GMAIL_SYNC)", settings.gmail_sync),
+        ("the shared mailbox (OPS_MAILBOX)", bool(settings.ops_mailbox)),
+        ("a live CRM (ESPO_DRY_RUN is on)", not settings.espo_dry_run),
+    ) if not ok]
+    return "blocked: " + ", ".join(missing) if missing else "on"
+
+
 def _is_transient(exc: Exception) -> bool:
     """Retry network blips and CRM 5xx/408/429; treat 4xx (bad data) as permanent."""
     if isinstance(exc, (httpx.TransportError, httpx.TimeoutException)):
@@ -390,14 +411,11 @@ async def main() -> None:
         )
 
     # Event reminders (Phase 6b). The only time-driven follow-up; the other
-    # four are staff-triggered. Inert without Gmail + the shared mailbox.
+    # four are staff-triggered. Inert without Gmail + the shared mailbox. The
+    # switch is read on every pass (_reminder_state), so System Settings turns
+    # it on and off without a restart; each change of state is logged once.
     next_reminder = datetime.now(timezone.utc)
-    reminders_on = settings.events_reminders and settings.events_reminder_seconds > 0
-    if reminders_on:
-        log.info(
-            "event reminders enabled (every %ss, %sh before the event)",
-            settings.events_reminder_seconds, settings.events_reminder_lead_hours,
-        )
+    reminder_state = "off"
 
     # System Settings overrides. The worker is a separate container from web, so
     # it re-reads `app_setting` on its own timer — this is the lag between an
@@ -490,13 +508,27 @@ async def main() -> None:
             next_attendance = now_cfg + timedelta(
                 seconds=settings.events_attendance_seconds
             )
-        if reminders_on and now_cfg >= next_reminder:
-            try:
-                from events.notify import run_reminder_cycle
+        if settings.events_reminder_seconds > 0 and now_cfg >= next_reminder:
+            state = _reminder_state(settings)
+            if state != reminder_state:
+                if state == "on":
+                    log.info(
+                        "event reminders enabled (every %ss, %sh before the event)",
+                        settings.events_reminder_seconds, settings.events_reminder_lead_hours,
+                    )
+                elif state == "off":
+                    log.info("event reminders switched off")
+                else:
+                    log.warning("event reminders are switched on but cannot send: %s",
+                                state.removeprefix("blocked: "))
+                reminder_state = state
+            if state == "on":
+                try:
+                    from events.notify import run_reminder_cycle
 
-                await run_reminder_cycle(settings)
-            except Exception as exc:  # noqa: BLE001 — never crashes delivery
-                log.warning("event reminder pass failed: %s", exc)
+                    await run_reminder_cycle(settings)
+                except Exception as exc:  # noqa: BLE001 — never crashes delivery
+                    log.warning("event reminder pass failed: %s", exc)
             next_reminder = now_cfg + timedelta(seconds=settings.events_reminder_seconds)
         campaigns_on = (settings.campaigns_enabled and not settings.espo_dry_run
                         and settings.campaigns_run_seconds > 0 and settings.store_enabled)
