@@ -508,7 +508,7 @@ async def main() -> None:
             next_attendance = now_cfg + timedelta(
                 seconds=settings.events_attendance_seconds
             )
-        if settings.events_reminder_seconds > 0 and now_cfg >= next_reminder:
+        if settings.events_reminder_seconds > 0:
             state = _reminder_state(settings)
             if state != reminder_state:
                 if state == "on":
@@ -522,14 +522,16 @@ async def main() -> None:
                     log.warning("event reminders are switched on but cannot send: %s",
                                 state.removeprefix("blocked: "))
                 reminder_state = state
-            if state == "on":
+            # A pass is due on the timer; while the switch is off the timer
+            # stands still, so switching on runs the first pass at once.
+            if state == "on" and now_cfg >= next_reminder:
                 try:
                     from events.notify import run_reminder_cycle
 
                     await run_reminder_cycle(settings)
                 except Exception as exc:  # noqa: BLE001 — never crashes delivery
                     log.warning("event reminder pass failed: %s", exc)
-            next_reminder = now_cfg + timedelta(seconds=settings.events_reminder_seconds)
+                next_reminder = now_cfg + timedelta(seconds=settings.events_reminder_seconds)
         campaigns_on = (settings.campaigns_enabled and not settings.espo_dry_run
                         and settings.campaigns_run_seconds > 0 and settings.store_enabled)
         if campaigns_on and now_cfg >= next_campaign_run:

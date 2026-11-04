@@ -99,6 +99,11 @@ ROLE_SCOPE_GRANTS: list[tuple[str, str, dict[str, str]]] = [
     # Re-checks for the two pickers on a campaign (CM-2 partners, CM-6 events).
     ("Marketing Admin Role", "CEvent", {"read": "all"}),
     ("Marketing Admin Role", "CPartnerProfile", {"read": "all"}),
+    # The funder picker on a campaign (ruling 57) and on an event (Phase A of
+    # the event-sponsorship plan, Doug's ruling 10-07-26: read all on partner
+    # AND funder profiles, nothing else). Applied by hand on crm-test that day;
+    # named here so production and Boston gain it through this script.
+    ("Marketing Admin Role", "CSponsorProfile", {"read": "all"}),
     # Ruling 54 (10-19-26, the lead model): marketing staff read every Company,
     # read only — a converted lead leads them to its Company. Creates and edits
     # stay the application's, under the API role (ruling 33). An absent scope
