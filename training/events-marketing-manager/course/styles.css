@@ -239,6 +239,37 @@ a { color: var(--link); }
 .fact dt { font-weight: 500; color: var(--fg); }
 .fact dd { margin: 0; color: var(--muted); }
 
+.shot { margin: 1.4rem 0 0; }
+.shot img {
+  display: block;
+  max-width: 100%;
+  border: 1px solid var(--hair);
+  border-radius: 6px;
+  background: var(--cbm-surface);
+}
+.shot figcaption {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.shot-missing {
+  border: 1px dashed var(--hair);
+  border-radius: 6px;
+  padding: 0.9rem 1rem;
+  background: var(--cbm-surface);
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.shot-missing p { margin: 0 0 0.4rem; }
+.shot-missing p:last-child { margin-bottom: 0; }
+.shot-missing code {
+  background: var(--panel);
+  border: 1px solid var(--hair);
+  border-radius: 4px;
+  padding: 0.1rem 0.35rem;
+  word-break: break-word;
+}
+
 .note {
   margin-top: 1.25rem;
   padding: 0.7rem 0.9rem;

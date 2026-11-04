@@ -37,6 +37,13 @@ window.COURSE = {
       slides: [
         {
           title: "Create it here, not in the CRM",
+          shot: {
+            file: "m1-event-list.png",
+            caption: "The event list. The Shown column on the right reads back what the " +
+                     "three visibility controls add up to.",
+            alt: "The Event Administration list, with a + New event button above it and a " +
+                 "Shown column on the right of each row."
+          },
           body: [
             "This screen is what gives an event its web address. An event typed straight " +
             "into the CRM has no page, so nothing can link to it and nobody can register.",
@@ -48,6 +55,12 @@ window.COURSE = {
         },
         {
           title: "The fields that carry behaviour",
+          shot: {
+            file: "m1-form-behaviour-fields.png",
+            caption: "Title, Format, Capacity and Registration closes on the new-event form.",
+            alt: "The top of the event form showing the Title, Format, Capacity and " +
+                 "Registration closes fields."
+          },
           body: [
             "Most of the form is description and category. Four fields change what the " +
             "application does."
@@ -64,6 +77,13 @@ window.COURSE = {
         },
         {
           title: "Three separate questions decide who sees it",
+          shot: {
+            file: "m1-publishing-group.png",
+            caption: "The Publishing group: Show this event, Audience and Display from, " +
+                     "the three controls in one place.",
+            alt: "The Publishing group of the event form, showing the Show this event tick, " +
+                 "the Audience choice and the Display from control."
+          },
           body: [
             "They are read in this order, and each one can hide the event on its own."
           ],
@@ -82,6 +102,11 @@ window.COURSE = {
         },
         {
           title: "Zoom, and the two things it is not",
+          shot: {
+            file: "m1-zoom-button.png",
+            caption: "Create / sync Zoom webinar, on a saved Virtual event.",
+            alt: "The event screen with the Create / sync Zoom webinar button."
+          },
           body: [
             "Create / sync Zoom webinar provisions the webinar under the shared Zoom host " +
             "and stores its ID and join link on the event. Registration is auto-approved, " +
@@ -102,6 +127,12 @@ window.COURSE = {
         },
         {
           title: "Limit to teams is not privacy",
+          shot: {
+            file: "m1-limit-to-teams.png",
+            caption: "Limit to teams, which only appears once Audience is Internal.",
+            alt: "The event form with Audience set to Internal and the Limit to teams box " +
+                 "below it."
+          },
           body: [
             "On an Internal event, Limit to teams decides who sees it on the portal. It is " +
             "not a permission: anyone who can read events in the CRM can still find it.",
@@ -110,6 +141,13 @@ window.COURSE = {
         },
         {
           title: "Give it a graphic, or it has no picture",
+          shot: {
+            file: "m1-event-graphic.png",
+            caption: "The Event graphic control in the Content group: Choose image…, then " +
+                     "Upload graphic.",
+            alt: "The Content group of the event form showing the Event graphic control with " +
+                 "its Choose image and Upload graphic buttons."
+          },
           body: [
             "Without a graphic the website's calendar card falls back to the recording's " +
             "video thumbnail — and an upcoming event has no recording, so it would have no " +
@@ -127,6 +165,12 @@ window.COURSE = {
         },
         {
           title: "Presenters are copied once, then the event's own",
+          shot: {
+            file: "m1-presenters.png",
+            caption: "The Presenters group with two entries — a mentor and a guest — and " +
+                     "the Edit, photo, Up, Down and Remove controls on each row.",
+            alt: "The Presenters group of the event form with two presenter entries listed."
+          },
           body: [
             "Adding a mentor copies their public biography, their mentor title and their " +
             "photo onto this event's presenter entry. Adding anyone else brings their title " +

@@ -247,6 +247,33 @@
     return card;
   }
 
+  /* A screenshot that has not been captured yet says so and names the file it
+     wants, rather than showing a broken image. Dropping the file into shots/
+     makes it appear with no edit to the content. */
+  function shot(s) {
+    var fig = el("figure", "shot");
+    var img = document.createElement("img");
+    img.src = "shots/" + s.shot.file;
+    img.alt = words(s.shot.alt || s.shot.caption || "");
+    img.loading = "lazy";
+    img.addEventListener("error", function () {
+      fig.innerHTML = "";
+      var ph = el("div", "shot-missing");
+      var p1 = el("p");
+      p1.appendChild(el("strong", null, "Screenshot not captured yet. "));
+      p1.appendChild(document.createTextNode(words(s.shot.caption)));
+      ph.appendChild(p1);
+      var p2 = el("p");
+      p2.appendChild(document.createTextNode("Save it as "));
+      p2.appendChild(el("code", null, "shots/" + s.shot.file));
+      ph.appendChild(p2);
+      fig.appendChild(ph);
+    });
+    fig.appendChild(img);
+    fig.appendChild(el("figcaption", null, s.shot.caption));
+    return fig;
+  }
+
   function slide(st) {
     var s = st.data;
     var card = el("section", "card");
@@ -263,6 +290,7 @@
       });
       card.appendChild(dl);
     }
+    if (s.shot) card.appendChild(shot(s));
     if (s.note) card.appendChild(el("div", "note", s.note));
     card.appendChild(doneRow(st));
     return card;

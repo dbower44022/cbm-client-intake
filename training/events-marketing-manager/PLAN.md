@@ -1,6 +1,6 @@
 # Course plan — the events marketing manager
 
-Last Updated: 11-04-26 01:10 · Revision 1.1 — see change log at the end.
+Last Updated: 11-04-26 10:22 · Revision 1.2 — see change log at the end.
 
 **Approved 11-04-26.** Module 1 is built; the development Artifact is
 https://claude.ai/artifact/T1DhFMnfVwxAHfggAXS83b
@@ -26,6 +26,16 @@ the job.
 - 11-04-26 — **Artifact during development; a page in the application once it
   is mature.** Both surfaces, in that order.
 - 11-04-26 — audience and form, as above.
+- 11-04-26 — **not a learning management system course.** CBM runs no learning
+  management system today and this course carries no completion record, so it
+  is reference material for one role. Authoring stays here. Note that CBM's own
+  business requirements do specify one for *mentor* training, writing
+  completion back to the mentor's Contact (`MR-ONBOARD-REQ-002` in the
+  `ClevelandBusinessMentors` repository) — if that is ever stood up, this
+  course exports into it from the content file rather than being re-authored.
+- 11-04-26 — **screenshots carry the explanatory weight, not per-step clips.**
+  One walkthrough per module stays the video; a slide that names a control gets
+  a screenshot, and nothing gets a decorative one.
 
 ## Assumption I am working under
 
@@ -218,5 +228,6 @@ Between two stopping points I work without asking.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 11-04-26 10:22 | Claude (Claude Code) | Doug's two rulings of 11-04-26 recorded: no learning management system and no completion record, so authoring stays here; and screenshots rather than per-step clips. Module 1's seven slides each gained a screenshot, the player renders one and names the file when it is missing, and `recording-scripts/screenshot-capture-list.md` says how to capture them. |
 | 1.1 | 11-04-26 01:10 | Claude (Claude Code) | Approved by Doug 11-04-26 and module 1 built: the player, the content file, module 1's seven slides and its three recording scripts, published as the development Artifact. Added the finding that an Artifact cannot embed an iframe, so a walkthrough is a link out until the course moves into the application. |
 | 1.0 | 11-04-26 00:42 | Claude (Claude Code) | Created for approval. Audience and form from Doug 11-04-26; the Artifact-then-application surface ruling the same day. Five modules mapped against the application as built, the dark marketing middle held for recording, the content-as-data architecture that makes the application move cheap, and the two documentation defects found while mapping. |
