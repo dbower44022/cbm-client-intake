@@ -210,9 +210,18 @@ found; move resolved items to the bottom with the resolution date.
     everyday address — Marigold first held `doug@dougbower.com`, and the
     new-address backfill linked every thread in the assignee's mailbox
     that mentions it (and set Replied); working as designed, use a
-    plus-address. Still owed from the step page: the opt-out ending read
-    on the received message, Log a call, the Mine chip, and the Mark
-    Marketing mailbox question. **M6 built as v0.289.0
+    plus-address. **Log a call and Mine passed 10:47–10:48**: the dialog
+    refuses no outcome ("Choose what came of the call.") and *Not
+    interested* with no note; *No reply yet* logged a "Personal call done
+    · No answer" touch and a "Lead Called" action, lead unchanged; Mine
+    counts 1 and filters to Marigold. Still owed: the opt-out ending read
+    on the received message (Doug), and the Mark Marketing mailbox
+    question. **Three small faults found, none blocking:** (a) the Leads
+    grid's *Last activity* shows the creation date — `cfg.PROSPECT_SELECT`
+    has no `modifiedAt`, so `app.js` falls back to `createdAt` (M2);
+    (b) the call dialog keeps a refusal message on screen after the choice
+    that caused it is changed; (c) the grid footer reads "Sorted by
+    createdAt", a machine word. **M6 built as v0.289.0
     (10-26-26)**, all four stops in one session: lists described by
     Include and Leave out (rulings 90–94, 98) — a dynamic list is a search,
     a static list is people added by hand, Exclude onto a static exclusion
