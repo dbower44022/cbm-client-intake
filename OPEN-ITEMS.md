@@ -991,30 +991,6 @@ found; move resolved items to the bottom with the resolution date.
     `/setup` refuses every secret. Nothing is stored encrypted there, so it can
     be replaced with a valid key without loss.
 
-33. **Production's `APP_ENCRYPTION_KEY` was published in plain text** (found
-    2026-09-23, preparing the v0.231.1 cut). `11e1fed` (09-14, v0.229.1)
-    committed `.do/app.prod-crm.yaml.bak-20260914-0100`, a backup of the
-    production overlay carrying the key in plain text on web and worker, and
-    the repository is public. `.gitignore` covered only the two live overlays.
-    The key alone does not open anything: it decrypts the secrets `/setup`
-    stores in production's database, so it matters together with a copy of that
-    database. **Ruled 2026-09-23 (Doug, option A): replace the key and re-enter
-    every `/setup`-stored secret.** **Changed 11-04-26 to option B** (Doug):
-    rotate with a two-key hand-over instead — v0.303.1 lets
-    `APP_ENCRYPTION_KEY` hold `NEW,OLD`, `scripts/rotate_encryption_key.sh`
-    re-locks every stored secret in the container, and
-    `scripts/encryption_key_spec.py` builds the settings from the LIVE spec
-    (the overlay below is stale and half-edited). Step page:
-    https://claude.ai/artifact/GZu3xFpZ9mV77HLtZKEA27 — **owed: Doug runs it**.
-    Done in the repository: the three `.bak`
-    files untracked (kept locally) and `.do/*.bak*` ignored. **Owed, Doug's
-    hands:** generate a new key, set it on production's web and worker and in
-    the local `.do/app.prod-crm.yaml` (or the next `doctl apps update` puts the
-    old one back), redeploy, then re-enter each secret listed at `/setup`. The
-    old key stays in public history by choice (history was not rewritten); once
-    replaced it is worthless. The other two backups held only DigitalOcean
-    `EV[…]` values.
-
 31. **A settings-store test reads the developer's own `.env`** (found
     2026-09-13). `tests/test_settings_store_pg.py::test_override_round_trip_and_
     history` asserts the override history is exactly `["30", "25"]`; with a real
@@ -2320,6 +2296,35 @@ toggle.
     over the fix on 2026-10-07, so the fix is still owed.
 
 ## Resolved
+
+33. **Production's `APP_ENCRYPTION_KEY` was published in plain text** —
+    **RESOLVED 11-04-26**: production runs a new key alone (fingerprint
+    `4afed768`, checked in its web console 11-04-26); the published key
+    (`f3b17d64`) opens nothing — production had stored no encrypted secret
+    under it (0 rows in `app_setting`, `app_config`, `mailing_connection`),
+    so the hand-over (part B) was skipped. Found
+    2026-09-23, preparing the v0.231.1 cut). `11e1fed` (09-14, v0.229.1)
+    committed `.do/app.prod-crm.yaml.bak-20260914-0100`, a backup of the
+    production overlay carrying the key in plain text on web and worker, and
+    the repository is public. `.gitignore` covered only the two live overlays.
+    The key alone does not open anything: it decrypts the secrets `/setup`
+    stores in production's database, so it matters together with a copy of that
+    database. **Ruled 2026-09-23 (Doug, option A): replace the key and re-enter
+    every `/setup`-stored secret.** **Changed 11-04-26 to option B** (Doug):
+    rotate with a two-key hand-over instead — v0.303.1 lets
+    `APP_ENCRYPTION_KEY` hold `NEW,OLD`, `scripts/rotate_encryption_key.sh`
+    re-locks every stored secret in the container, and
+    `scripts/encryption_key_spec.py` builds the settings from the LIVE spec
+    (the overlay below is stale and half-edited). Step page:
+    https://claude.ai/artifact/GZu3xFpZ9mV77HLtZKEA27 — **owed: Doug runs it**.
+    Done in the repository: the three `.bak`
+    files untracked (kept locally) and `.do/*.bak*` ignored. **Owed, Doug's
+    hands:** generate a new key, set it on production's web and worker and in
+    the local `.do/app.prod-crm.yaml` (or the next `doctl apps update` puts the
+    old one back), redeploy, then re-enter each secret listed at `/setup`. The
+    old key stays in public history by choice (history was not rewritten); once
+    replaced it is worthless. The other two backups held only DigitalOcean
+    `EV[…]` values.
 
 63. **The email composer's company question** (v0.302.0 and v0.302.1,
     2026-10-30) — **RESOLVED 10-31-26**. Live pass on crm-test as Partner
