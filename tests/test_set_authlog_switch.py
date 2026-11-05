@@ -28,6 +28,9 @@ return [
     'level' => 'WARNING'
   ],
   'isInstalled' => true,
+  'apiSecretKeys' => (object) [
+    'k1' => 'v1'
+  ],
   'cryptKey' => 'abc\\'def'
 ];
 """

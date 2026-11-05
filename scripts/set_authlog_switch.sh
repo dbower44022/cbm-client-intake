@@ -150,9 +150,11 @@ VERIFY_PHP=$(cat <<'PHP'
 $a = include $live; $b = include $cand;
 if (!is_array($a) || !is_array($b)) { fwrite(STDERR, "not an array\n"); exit(1); }
 $a['authApiUserLogDisabled'] = ($want === 'true');
-if ($a !== $b) {
+// serialize(), not !==: a stored object (apiSecretKeys is a stdClass on
+// crm-test) is a new instance on each include, and !== compares instances.
+if (serialize($a) !== serialize($b)) {
     $diff = array_keys(array_diff_key($a, $b) + array_diff_key($b, $a));
-    foreach ($a as $k => $v) { if (array_key_exists($k, $b) && $b[$k] !== $v) { $diff[] = $k; } }
+    foreach ($a as $k => $v) { if (array_key_exists($k, $b) && serialize($b[$k]) !== serialize($v)) { $diff[] = $k; } }
     fwrite(STDERR, "candidate differs from the live file beyond the one key: " . implode(', ', array_unique($diff)) . "\n");
     exit(1);
 }
