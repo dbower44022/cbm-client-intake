@@ -51,7 +51,11 @@ found; move resolved items to the bottom with the resolution date.
     `mentor-tracked-fields-crm-handoff.md`,
     `system-management-team-crm-handoff.md`,
     `personal-admin-logins-crm-handoff.md`; (3) the build, six steps
-    (plan § 5), and the read-only checks C1–C8 (plan § 7).
+    (plan § 5), and the read-only checks C1–C8 (plan § 7) — **checks done
+    11-05-26**, results in plan § 7; (4) **before step 6**: the "System
+    Management Team" name beside production's existing System
+    Administration Team (2 members, an internal event audience) — reuse,
+    rename or a new team, Doug's ruling.
 
 65. **The email composer's new-contact row — three smaller faults**
     (2026-10-31, found on the #63 live pass). (1) ~~The row's Company

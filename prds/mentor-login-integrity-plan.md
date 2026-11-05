@@ -1,6 +1,6 @@
 # Mentor login integrity — prevention, detection and history — Plan
 
-Last Updated: 11-05-26 12:08 · Revision 1.1 — see change log at the end.
+Last Updated: 11-05-26 12:20 · Revision 1.2 — see change log at the end.
 
 **Status:** Approved by Doug 11-05-26 ("approved"). Not built.
 **Kickoff that produced it:** `prompts/mentor-login-integrity-design-prompt-v0.2.md`.
@@ -259,7 +259,10 @@ which is now Doug's.
 1. In the CRM's own screens, on David Weissman's mentor profile
    (`6a62ca9f5188b9656`), in **one** save: set Assigned Users to David's
    login (`david.weissman@cbmentors.org`, User `6a67ae6deca84d2a0`) and the
-   CBM email field to `david.weissman@cbmentors.org`.
+   CBM email field to `david.weissman@cbmentors.org`. (C5, production,
+   11-05-26: the field reads `Doug.Bower@cbmentors.org` with capitals —
+   letter case is ignored, so the trap stands; David's own link to the
+   profile is soft-deleted, not missing, and is re-added by this save.)
 2. On David Weissman's Contact, remove Doug's login
    (`doug.bower@cbmentors.org`) from Assigned Users.
 3. Check: Doug's Client Management no longer shows the two-profile notice;
@@ -278,6 +281,36 @@ which is now Doug's.
 | C7 | A "Data Integrity Team" already exists in the CRM, with its own role (open item #30). Confirm the System Management Team does not duplicate it. | production, read-only |
 | C8 | Whether any mentor role can read `CActionLog` (staff notes plan, Mentor Status-Admin). | crm-test and production |
 
+**Results, 11-05-26** (crm-test and production read-only; Boston for C6):
+
+- **C1** — the application's key-based account reads every login with
+  every field the seven conditions need (User read all, both CRMs). The
+  check runs in the worker under the key; no administrator needed.
+- **C2** — Action History and the sign-in log are readable through the
+  programming interface as an administrator only (the key reads only its
+  own history; the sign-in log is administrator-only). The administrator
+  account is on the web component only, so the direct-use report runs from
+  web or the worker gains that account — decided at step 4c. People in
+  the CRM's screens and people in the applications both sign in as
+  `Espo`; only the network address separates them, as in the prototype.
+  The configuration account's own reads must be excluded too. Speed of the
+  read on production's sign-in log not measured.
+- **C3** — production tracks none of the nine fields; all nine exist under
+  the handoff's names; `mentorStatusNotes` not yet renamed.
+- **C4** — Sharon Rose's two User changes: 10-23-26 Event Manager Role
+  given to Gwen Howze; 11-01-26 Sue Marrone moved off Client and Mentor
+  Administration. Unrelated to this fault.
+- **C5** — David Weissman's profile is Approved, Doug Bower's Active, both
+  carrying Doug's login. The narrowed guess picks Doug's (the only Active
+  one, its CBM email matching), so Doug's screens keep working.
+- **C6** — Boston's database 709 MB; Action History 0.7 MB.
+- **C7** — the Data Integrity Team is empty and its role attached to
+  nothing. Production also has a **System Administration Team** (2
+  members, no role, used as an internal event audience): the System
+  Management Team name is put to Doug before step 6.
+- **C8** — no mentor, partner or funder role reads `CActionLog` on either
+  CRM; only the key's role (and an unattached intake role) does.
+
 ## 8. CRM handoffs
 
 - `crm-history-settings-crm-handoff.md` — Action History 30 days; the
@@ -291,5 +324,6 @@ which is now Doug's.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 11-05-26 12:20 | Claude (Claude Code) | Checks C1–C8 done; results under § 7; two facts added to the § 6 repair procedure. No ruling changed. |
 | 1.1 | 11-05-26 12:08 | Claude (Claude Code) | Build kickoff pointer moved to revision 0.2 of the prompt. No ruling changed. |
 | 1.0 | 11-05-26 11:04 | Claude (Claude Code) | First issue, from the design session of 11-02-26 to 11-05-26. Approved by Doug 11-05-26. |
