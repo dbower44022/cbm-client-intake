@@ -1,6 +1,6 @@
 # CRM handoff — history settings: Action History 30 days, and the sign-in log
 
-Last Updated: 11-05-26 17:12 · Revision 1.2 — see change log at the end.
+Last Updated: 11-05-26 17:09 · Revision 1.2 — see change log at the end.
 
 Two CRM settings from the mentor login integrity plan
 (`prds/mentor-login-integrity-plan.md`, § 4.6; Doug's rulings Q5.1 and 5b,
@@ -118,6 +118,6 @@ than this line.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
-| 1.2 | 11-05-26 17:12 | Claude (Claude Code) | Applied on crm-test. |
+| 1.2 | 11-05-26 17:09 | Claude (Claude Code) | Applied on crm-test. |
 | 1.1 | 11-05-26 13:20 | Claude (Claude Code) | Both scripts built (step 0). The sign-in log switch goes in `data/config-internal.php`, not `data/config.php`. The `--production` guard and the rollback command added. |
 | 1.0 | 11-05-26 11:04 | Claude (Claude Code) | First issue, from the mentor login integrity design session. |

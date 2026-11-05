@@ -1,6 +1,6 @@
 # CRM handoff — tracked fields on mentor, partner and funder profiles
 
-Last Updated: 11-05-26 17:12 · Revision 1.2 — see change log at the end.
+Last Updated: 11-05-26 17:09 · Revision 1.2 — see change log at the end.
 
 Nine fields become tracked fields (EspoCRM's **Audited** checkbox), so each
 change leaves a dated, signed note on the record whoever makes it, in the
@@ -99,6 +99,6 @@ Administration → Rebuild.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
-| 1.2 | 11-05-26 17:12 | Claude (Claude Code) | Applied on crm-test. |
+| 1.2 | 11-05-26 17:09 | Claude (Claude Code) | Applied on crm-test. |
 | 1.1 | 11-05-26 13:20 | Claude (Claude Code) | Automated path built (step 0): the plan file and the applier command. Production check C3: none tracked, all nine exist. Label check added. |
 | 1.0 | 11-05-26 11:04 | Claude (Claude Code) | First issue, from the mentor login integrity design session. |
