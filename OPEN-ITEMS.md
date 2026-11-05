@@ -55,7 +55,10 @@ found; move resolved items to the bottom with the resolution date.
     11-05-26**, results in plan § 7; (4) **before step 6**: the "System
     Management Team" name beside production's existing System
     Administration Team (2 members, an internal event audience) — reuse,
-    rename or a new team, Doug's ruling.
+    rename or a new team, Doug's ruling; (5) **step 0 done 11-05-26** —
+    the three CRM scripts built; history settings and the nine tracked
+    fields **applied on crm-test**; production and Boston owed after the
+    next-day sign-in log check and a non-administrator stream check.
 
 65. **The email composer's new-contact row — three smaller faults**
     (2026-10-31, found on the #63 live pass). (1) ~~The row's Company

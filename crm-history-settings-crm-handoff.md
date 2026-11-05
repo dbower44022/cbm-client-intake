@@ -1,6 +1,6 @@
 # CRM handoff — history settings: Action History 30 days, and the sign-in log
 
-Last Updated: 11-05-26 13:20 · Revision 1.1 — see change log at the end.
+Last Updated: 11-05-26 17:12 · Revision 1.2 — see change log at the end.
 
 Two CRM settings from the mentor login integrity plan
 (`prds/mentor-login-integrity-plan.md`, § 4.6; Doug's rulings Q5.1 and 5b,
@@ -16,7 +16,7 @@ Two CRM settings from the mentor login integrity plan
 
 | CRM | State | Evidence |
 |---|---|---|
-| crm-test | **Owed.** `cleanupActionHistoryPeriod` is `'15 days'`, set explicitly in `data/config.php` (line 266). `authApiUserLogDisabled` is not set (default: logging on). | Read 11-04-26 and 11-05-26: `GET /Settings` as the configuration administrator; `data/config.php` on the droplet. |
+| crm-test | **Applied 11-05-26 17:09.** `cleanupActionHistoryPeriod` `'30 days'` (read back); `authApiUserLogDisabled` true in `data/config-internal.php` (backup `config-internal.php.bak-authlog-20261105-220914`). Three key-based reads afterwards wrote no sign-in log row; the application's `/healthz` ok. Owed: the next-day `crm_signin_report.sh` check. | `set_crm_setting.py --apply`; `set_authlog_switch.sh --apply`. |
 | Production | **Owed.** Action History's oldest row was 10-17-26 01:04:55 on 11-04-26; 0.89 GB. The sign-in log is 6.6 GB of 8.4 GB; the key-based account wrote 4,257,677 rows in the 7 days to 11-04-26, people 124. | `scripts/crm_table_sizes.sh` and `scripts/crm_signin_report.sh`, run by Doug 11-04-26. *Not read:* the settings themselves — assumed default, like crm-test. |
 | Boston | **Owed**, after its sizes are read (plan check C6). EspoCRM 10.0.10: confirm both setting names still exist before applying. | — |
 
@@ -118,5 +118,6 @@ than this line.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 11-05-26 17:12 | Claude (Claude Code) | Applied on crm-test. |
 | 1.1 | 11-05-26 13:20 | Claude (Claude Code) | Both scripts built (step 0). The sign-in log switch goes in `data/config-internal.php`, not `data/config.php`. The `--production` guard and the rollback command added. |
 | 1.0 | 11-05-26 11:04 | Claude (Claude Code) | First issue, from the mentor login integrity design session. |
