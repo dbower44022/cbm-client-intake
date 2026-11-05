@@ -28,7 +28,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional
 
-from core import action_log
+from core import action_log, login_guard
 from core.config import Settings
 from core.espo import EspoClient, EspoError
 
@@ -162,12 +162,36 @@ async def ensure_user_on_record(
 # 403s the mentor's own profile save. Same drift causes as the engagement
 # class; healed by the same merge-only rule (profile links = truth).
 
-_PROFILE_SELECT = ("id,name,mentorStatus,contactRecordId,contactRecordName,"
+_PROFILE_SELECT = ("id,name,mentorStatus,cbmEmail,contactRecordId,contactRecordName,"
                    "assignedUserId,assignedUsersIds,assignedUsersNames")
 
 #: Who the action history names for each background job (plan § 4.1).
 JOB_PHASE_A = action_log.SYSTEM_ACTOR_PREFIX + "nightly clean-up, mentor Contacts"
 JOB_TEAMS = action_log.SYSTEM_ACTOR_PREFIX + "nightly clean-up, partner and funder teams"
+
+
+async def _phase_a_refusal(
+    client: Any, prof: dict[str, Any], uid: str, contact_id: str,
+    holders: dict[str, list[str]], names: dict[str, Optional[str]],
+) -> Optional[str]:
+    """Why Phase A must not copy ``uid`` onto the Contact, or None. Asks only
+    when a write would happen (the Contact lacks the login), so a settled
+    roster costs one Contact read per profile and no User reads."""
+    contact = await client.get(CONTACT, contact_id, select="assignedUserId,assignedUsersIds")
+    if uid in login_guard.login_ids(contact):
+        return None  # nothing to copy
+    on = holders.get(uid, [])
+    if on != [prof["id"]]:
+        return f"the login is on {len(on)} mentor profiles"
+    if uid not in names:
+        try:
+            names[uid] = await login_guard.user_name(client, uid)
+        except EspoError as exc:
+            return f"the login could not be read: {exc}"
+    if not login_guard.same_address(names[uid], prof.get("cbmEmail")):
+        return (f"the login {names[uid] or '?'} does not match the CBM email "
+                f"{prof.get('cbmEmail') or '(blank)'}")
+    return None
 
 
 async def _log_job(job: str, *, category: str, action: str, parent_type: str,
@@ -363,19 +387,36 @@ async def run_stamp_reconciliation(
         "audited": 0, "engagementsHealed": 0, "recordsHealed": 0,
         "profilesWithoutUser": 0, "errors": 0,
         "mentorProfiles": 0, "mentorContactsHealed": 0,
-        "teamRecords": 0, "teamHealed": 0,
+        "teamRecords": 0, "teamHealed": 0, "loginConflicts": 0,
     }
 
     # Phase A — mentor personnel: every profile's linked Contact must carry the
     # profile's own User (the /mentorprofile own-save class, 2026-07-20).
     try:
-        for prof in await all_mentor_profiles(client):
+        profiles = await all_mentor_profiles(client)
+        # LOGIN_REPAIR_GUARDS (plan § 4.3): copy a profile's login onto its
+        # Contact only when that login is on this one profile and matches its
+        # CBM email. Read once per pass: which profiles carry each login.
+        guarded = login_guard.enabled()
+        holders: dict[str, list[str]] = {}
+        for p in profiles:
+            for u in login_guard.login_ids(p):
+                holders.setdefault(u, []).append(p["id"])
+        names: dict[str, Optional[str]] = {}
+        for prof in profiles:
             uid = assigned_user_id(prof)
             contact_id = prof.get("contactRecordId")
             if not uid or not contact_id:
                 continue
             summary["mentorProfiles"] += 1
             try:
+                if guarded:
+                    why = await _phase_a_refusal(client, prof, uid, contact_id, holders, names)
+                    if why:
+                        summary["loginConflicts"] += 1
+                        login_guard.fault("profile-to-contact copy refused (nightly)",
+                                          profile=prof["id"], contact=contact_id, reason=why)
+                        continue
                 if await ensure_user_on_record(client, CONTACT, contact_id, uid):
                     summary["mentorContactsHealed"] += 1
                     log.info(

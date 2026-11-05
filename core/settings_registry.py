@@ -445,6 +445,16 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("record_quick_add", GROUP_FEATURES, "Add partners & funders in-app", kind="bool",
        help="The '+ Add partner' / '+ Add funder' button on those grids. Creates the "
             "company, primary contact and profile as the signed-in user."),
+    _s("login_repair_guards", GROUP_FEATURES, "Stop login repairs on disagreement", kind="bool",
+       component="both",
+       help="The nightly clean-up, a Mentor Administration save, Update Mentor Status "
+            "and provisioning copy a mentor's login only when the login data agrees "
+            "(one profile, its CBM email matching). Otherwise they leave it and log a "
+            "fault."),
+    _s("manager_profile_strict", GROUP_FEATURES, "Strict mentor profile choice", kind="bool",
+       help="A login on several mentor profiles opens only the one Active profile whose "
+            "CBM email matches the login. Otherwise Client Management and My Mentor "
+            "Profile show no records and say why."),
     _s("portal_calendar", GROUP_FEATURES, "Events on the portal home page", kind="bool",
        help="The rail of upcoming events beside the portal's tiles, and the member "
             "page each one opens. Members see Internal events (to their teams, if "

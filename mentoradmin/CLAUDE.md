@@ -1,6 +1,6 @@
 # mentoradmin/ — Mentor Administration
 
-Last Updated: 11-05-26 17:24 · Revision 1.2
+Last Updated: 11-05-26 17:41 · Revision 1.3
 
 Detail for the Mentor Administration application (`/mentoradmin`): the roster, the editable mentor record, completeness, provisioning and the status sweep.
 
@@ -87,12 +87,18 @@ detail screen that edits any whitelisted field on `CMentorProfile`.
   the values or a file name — a mentor reads their own profile's stream;
   before and after go only to `CActionLog`. `reconcile_user_links` returns
   what it wrote so the login links it changes are visible.
+- **`LOGIN_REPAIR_GUARDS`** (v0.305.0, step 2, off by default): every path
+  that copies a login between a mentor profile and its Contact goes
+  through `core/login_guard.py` — `reconcile_user_links`, provisioning's
+  login reuse, the nightly clean-up's Phase A and My Mentor Profile's
+  heal-on-access. A new path that copies a login must use it too.
 - Functional reference for staff: `mentor-administration.md`.
 
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 11-05-26 17:41 | Claude (Claude Code) | The login repair guards (v0.305.0). |
 | 1.2 | 11-05-26 17:24 | Claude (Claude Code) | Every change in the action history (v0.304.0). |
 | 1.1 | 10-28-26 20:45 | Claude (Claude Code) | The three grids on the shared grid (v0.297.0). |
 | 1.0 | 10-20-26 17:30 | Claude (Claude Code) | Created from the root `CLAUDE.md` section, word for word (Doug's approval 10-20-26). |

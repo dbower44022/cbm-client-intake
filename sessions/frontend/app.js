@@ -488,6 +488,12 @@
     var el = $("profileNotice");
     if (!el) return;
     if (!choice || !choice.candidates || choice.candidates.length < 2) { hide(el); return; }
+    if (choice.blocked) {
+      // MANAGER_PROFILE_STRICT would not guess which profile is this login's.
+      el.textContent = "Your login is linked to more than one mentor profile — staff have been told.";
+      show(el);
+      return;
+    }
     var chosen = choice.candidates.filter(function (c) { return c.id === choice.chosenId; })[0];
     var names = choice.candidates.map(function (c) {
       return c.name + (c.status ? " (" + c.status + ")" : "");

@@ -5,6 +5,49 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.305.0] — 2026-11-05
+
+**feat: login repairs stop when the login data disagrees; a stricter
+mentor profile choice** (mentor login integrity plan, step 2 —
+`prds/mentor-login-integrity-plan.md` § 4.3; `OPEN-ITEMS.md` #66). Two new
+switches, both **off by default**, both at `/setup` → Features. No
+migration; no CRM change.
+
+- **`LOGIN_REPAIR_GUARDS`** — the three places that copy a login between a
+  mentor profile and its Contact act only when the data agrees, and
+  otherwise leave it and log a fault (a WARNING starting
+  `login-integrity:` in the runtime log; the daily check of step 4 will
+  carry it to staff):
+  - the **nightly clean-up's Phase A** copies a profile's login onto its
+    Contact only when that login is on that one profile and matches its
+    CBM email (ignoring case). Its summary line gains `loginConflicts`.
+    This is the job that spread the 10-16-26 fault the next night.
+  - **`reconcile_user_links`** (every Mentor Administration save and
+    Update Mentor Status) applies the same rule in that direction, and
+    fills an empty profile login from the Contact only when the Contact
+    carries exactly one login, no other profile carries it, and it
+    matches the CBM email. A check that cannot run refuses.
+  - **provisioning** links an existing login found by the CBM email only
+    when no other mentor profile carries it; otherwise the status window
+    says so and nothing is linked or created.
+  - **My Mentor Profile's heal-on-access** (a fourth path, found in
+    review) copies the signed-in login onto the profile's Contact under
+    the same rule as Phase A.
+  - With the switch on but no key-based account to check with, nothing is
+    copied.
+  The guard reads run under the application's key-based account (staff
+  roles cannot read logins; the key reads them all — check C1).
+- **`MANAGER_PROFILE_STRICT`** — a login on several mentor profiles opens
+  only the one Active profile whose CBM email matches the login. Otherwise
+  Client Management and My Mentor Profile show no records and the plan's
+  message, "Your login is linked to more than one mentor profile — staff
+  have been told." The login's user name is read with the key-based
+  account; the fault is logged at most once an hour per login. Every
+  other caller of the profile choice (My Email,
+  calendar, templates, events) follows the same rule. With production's
+  data as it stands, Doug's own login still resolves to his profile (C5).
+
+
 ## [0.304.0] — 2026-11-05
 
 **feat: Mentor Administration records every change in the action history**

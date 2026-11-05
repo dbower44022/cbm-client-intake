@@ -30,7 +30,7 @@ from assignments.service import (
     assigned_user_id,
     is_assigned_to,
 )
-from core import inline_images
+from core import inline_images, login_guard
 from core.config import get_settings
 from core.crm_upsert import (
     COMPANY_SELECT, conflicting_website, create_dropping_invalid, fill_company_website,
@@ -268,32 +268,75 @@ async def resolve_manager_profiles(client: SessionClient, user_id: str) -> list[
     while True:
         data = await client.list(
             MENTOR_PROFILE,
-            select="id,name,mentorStatus,assignedUserId,assignedUsersIds",
+            select="id,name,mentorStatus,cbmEmail,assignedUserId,assignedUsersIds",
             max_size=_PAGE,
             offset=offset,
         )
         rows = data.get("list", [])
         for r in rows:
             if is_assigned_to(r, user_id):
-                found.append({"id": r["id"], "name": r.get("name") or "", "mentorStatus": r.get("mentorStatus") or ""})
+                found.append({"id": r["id"], "name": r.get("name") or "",
+                              "mentorStatus": r.get("mentorStatus") or "",
+                              "cbmEmail": r.get("cbmEmail") or ""})
         if len(rows) < _PAGE:
             return found
         offset += _PAGE
 
 
-def choose_manager_profile(candidates: list[dict[str, Any]]) -> Optional[str]:
+def choose_manager_profile(
+    candidates: list[dict[str, Any]], *, strict: bool = False,
+    user_name: Optional[str] = None,
+) -> Optional[str]:
     """The one profile id to act as, out of the login's matching profiles.
 
     One candidate is the answer. Several: the first whose ``mentorStatus`` is
     Active, else the first in CRM order (today's behaviour, kept so a CRM
     whose profiles carry no status still resolves). None when there are none.
+
+    ``strict`` (``MANAGER_PROFILE_STRICT``, mentor login integrity plan
+    § 4.3): several candidates resolve only when exactly one is Active AND
+    its CBM email matches the login's ``user_name`` (ignoring case);
+    otherwise None — the page shows no records rather than someone else's.
     """
     if not candidates:
+        return None
+    if strict and len(candidates) > 1:
+        active = [c for c in candidates if c.get("mentorStatus") == ACTIVE_MENTOR_STATUS]
+        if len(active) == 1 and login_guard.same_address(active[0].get("cbmEmail"), user_name):
+            return active[0]["id"]
         return None
     for c in candidates:
         if c.get("mentorStatus") == ACTIVE_MENTOR_STATUS:
             return c["id"]
     return candidates[0]["id"]
+
+
+async def resolve_manager_profile_detail(
+    client: SessionClient, user_id: str
+) -> tuple[Optional[str], list[dict[str, Any]]]:
+    """(chosen profile id or None, every candidate). Under
+    ``MANAGER_PROFILE_STRICT`` a login on several profiles reads its own
+    user name (a user may read their own User record) and resolves only by
+    :func:`choose_manager_profile`'s strict rule; a refusal is a logged fault."""
+    candidates = await resolve_manager_profiles(client, user_id)
+    strict = bool(get_settings().manager_profile_strict) and len(candidates) > 1
+    user_name = None
+    if strict:
+        # The key-based account reads every login (check C1); a person's own
+        # token may not be allowed to read their User record.
+        try:
+            reader = login_guard.reader() or client
+            user_name = (await reader.get("User", user_id, select="userName")).get("userName")
+        except Exception as exc:  # noqa: BLE001 — no name, no match: refuse
+            log.warning("manager profile: could not read user %s's login: %s", user_id, exc)
+    chosen = choose_manager_profile(candidates, strict=strict, user_name=user_name)
+    if strict and chosen is None:
+        login_guard.fault(
+            "ambiguous login, no profile chosen", once=f"ambiguous:{user_id}",
+            user=user_id, login=user_name,
+            candidates=[(c["id"], c["name"], c["mentorStatus"]) for c in candidates],
+        )
+    return chosen, candidates
 
 
 async def resolve_manager_profile(client: SessionClient, user_id: str) -> Optional[str]:
@@ -304,8 +347,7 @@ async def resolve_manager_profile(client: SessionClient, user_id: str) -> Option
     :func:`choose_manager_profile`) with a WARNING naming the others; the
     grid route reports them to the person too (``list_records``).
     """
-    candidates = await resolve_manager_profiles(client, user_id)
-    chosen = choose_manager_profile(candidates)
+    chosen, candidates = await resolve_manager_profile_detail(client, user_id)
     if len(candidates) > 1:
         log.warning(
             "manager profile ambiguous: user=%s chosen=%s candidates=%s",
@@ -513,8 +555,14 @@ async def list_records(
                 break
             offset += _PAGE
     else:
-        candidates = await resolve_manager_profiles(client, user["userId"])
-        profile_id = choose_manager_profile(candidates)
+        profile_id, candidates = await resolve_manager_profile_detail(client, user["userId"])
+        if not profile_id and len(candidates) > 1:
+            # MANAGER_PROFILE_STRICT refused to guess: no records, and say why.
+            return {"records": [], "profileFound": True, "profileChoice": {
+                "chosenId": None, "blocked": True,
+                "candidates": [{"id": c["id"], "name": c["name"], "status": c["mentorStatus"]}
+                               for c in candidates],
+            }}
         if not profile_id:
             return {"records": [], "profileFound": False}
         links = [cfg.manager_owned_link]

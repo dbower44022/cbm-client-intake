@@ -63,6 +63,10 @@ found; move resolved items to the bottom with the resolution date.
     flag; after the push, check on crm-test as a real non-administrator on
     the Mentor Administration Team that a save, a teams change and a
     document upload each leave a `CActionLog` row and a value-free note.
+    (7) **step 2 built 11-05-26 (v0.305.0)**, committed, not pushed — two
+    switches, both off: `LOGIN_REPAIR_GUARDS` (safe for production at
+    once) and `MANAGER_PROFILE_STRICT` (its message says "staff have been
+    told", true only once step 4b ships — enable after it).
 
 65. **The email composer's new-contact row — three smaller faults**
     (2026-10-31, found on the #63 live pass). (1) ~~The row's Company

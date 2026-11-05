@@ -286,6 +286,17 @@ class Settings(BaseSettings):
     # the signed-in user. Off by default — build dark, review on crm-test, then
     # enable on prod. Read per request (never at boot), so /setup can toggle it.
     record_quick_add: bool = False
+    # Mentor login integrity (prds/mentor-login-integrity-plan.md § 4.3),
+    # step 2. LOGIN_REPAIR_GUARDS: the three repair paths that copy a login
+    # between a mentor profile and its Contact (the nightly clean-up's Phase A,
+    # reconcile_user_links on a save or the status sweep, and provisioning's
+    # login reuse) stop and log a fault when the login data disagrees, instead
+    # of spreading it. MANAGER_PROFILE_STRICT: a login on several mentor
+    # profiles resolves only to the one Active profile whose CBM email matches
+    # the login; otherwise Client Management and My Mentor Profile show no
+    # records. Both off by default; read per request (and per worker pass).
+    login_repair_guards: bool = False
+    manager_profile_strict: bool = False
     # Grants (prds/grant-management-plan.md): the Grants tab on a funder record,
     # its grant popup and the deliverables inside it. Off by default — build
     # dark, review on crm-test, then enable on prod. Read PER REQUEST (never at

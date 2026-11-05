@@ -1,6 +1,6 @@
 # sessions/ — Client, Partner and Funder Management
 
-Last Updated: 11-01-26 18:55 · Revision 1.6
+Last Updated: 11-05-26 17:41 · Revision 1.7
 
 Detail for the session engine behind Client Management (`/mentorsessions`), Partner Management (`/partnersessions`) and Funder Management (`/sponsorsessions`): the grids, every record tab, quick add, managers and co-mentors, and the traps of this package.
 
@@ -38,7 +38,11 @@ one shared frontend that derives its domain from the first segment of its URL.
   `choose_manager_profile`; a mass Assigned Users edit on Lakeside put Jordan
   Mentor's login on three, and the grid read the first, an empty one). The
   grid's response then carries `profileChoice` and the page names every
-  profile and the repair; the other callers get the same choice silently.
+  profile and the repair; the other callers get the same choice silently. **Under
+  `MANAGER_PROFILE_STRICT`** (v0.305.0, off by default) several profiles
+  resolve only to the one Active profile whose CBM email matches the
+  login; otherwise None everywhere, and the grid's `profileChoice` carries
+  `blocked: true` (`resolve_manager_profile_detail`).
 - **Partner and Funder grids list ALL records** (`DomainConfig.list_all`), not
   just owned ones — the user's CRM ACL is the gate. This also means those
   domains never read `CMentorProfile` for the list, which is what fixed the
@@ -304,6 +308,7 @@ Watch for these when touching this package:
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.7 | 11-05-26 17:41 | Claude (Claude Code) | The strict profile choice (v0.305.0). |
 | 1.6 | 11-01-26 18:55 | Claude (Claude Code) | A company typed but never picked asks first, in the add dialog and the composer row; the composer's chosen company reaches the contact (v0.301.1–v0.302.4). |
 | 1.5 | 10-30-26 01:03 | Claude (Claude Code) | Who attended, by company (v0.301.0). |
 | 1.4 | 10-28-26 21:28 | Claude (Claude Code) | Every grid on the shared grid (v0.298.0). |

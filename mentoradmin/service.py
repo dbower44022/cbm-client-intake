@@ -15,6 +15,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, AsyncIterator, Awaitable, Callable, Optional, Protocol
 
+from core import login_guard
 from core.config import get_settings
 from core.espo import EspoError
 from core.phone import to_e164
@@ -530,6 +531,19 @@ async def update_mentor(
     return result
 
 
+async def _refused(kind: str, mentor_id: str, contact_id: Optional[str], check: Awaitable[Optional[str]]) -> bool:
+    """Await a login guard check; True (and a logged fault) when it refuses.
+    A failed check refuses too: copying a login on a guess is the fault."""
+    try:
+        why = await check
+    except Exception as exc:  # noqa: BLE001 — fail closed
+        why = f"the check could not run: {exc}"
+    if why:
+        login_guard.fault(f"{kind} copy refused", profile=mentor_id, contact=contact_id, reason=why)
+        return True
+    return False
+
+
 async def reconcile_user_links(client: MentorClient, mentor_id: str) -> dict[str, Any]:
     """Assign the mentor's User to both the CBM member record (CMentorProfile)
     and its Contact. The mentor's User is the member's ``assignedUser`` (or the
@@ -543,28 +557,48 @@ async def reconcile_user_links(client: MentorClient, mentor_id: str) -> dict[str
     """
     prof = await client.get(
         MENTOR_PROFILE, mentor_id,
-        select="assignedUserId,assignedUsersIds,assignedUsersNames,contactRecordId",
+        select="assignedUserId,assignedUsersIds,assignedUsersNames,contactRecordId,cbmEmail",
     )
     member_user = assigned_user_id(prof)
     contact_id = prof.get("contactRecordId")
     contact_user = None
     contact_users: list[str] = []
+    contact_logins: list[str] = []  # every login on the Contact, for the guard
     if contact_id:
         contact = await client.get(
             "Contact", contact_id, select="assignedUserId,assignedUsersIds"
         )
         contact_users = list(contact.get("assignedUsersIds") or [])
         contact_user = contact.get("assignedUserId") or next(iter(contact_users), None)
+        contact_logins = login_guard.login_ids(contact)
 
     user = member_user or contact_user
     changed: dict[str, Any] = {}
     if not user:
         return changed  # no User to assign anywhere
+    # LOGIN_REPAIR_GUARDS (plan § 4.3): copy a login only when the data agrees.
+    guard = login_guard.reader() if login_guard.enabled() else None
+    if login_guard.enabled() and guard is None:
+        # The switch is on but nothing can check: copying on a guess is the fault.
+        if member_user != user or (contact_id and user not in contact_logins):
+            login_guard.fault("copy refused, no reader for the check", profile=mentor_id)
+        return changed
+    profile = {"id": mentor_id, **prof}
     if member_user != user:
+        if guard is not None and await _refused(
+            "contact-to-profile", mentor_id, contact_id,
+            login_guard.refuse_contact_to_profile(guard, profile, contact_logins),
+        ):
+            return changed
         # CMentorProfile uses assignedUsers (collaborators) on prod — write both.
         await client.update(MENTOR_PROFILE, mentor_id, assigned_user_payload(MENTOR_PROFILE, user))
         changed["profileLogin"] = {"from": member_user, "to": user}
     if contact_id and user != contact_user and user not in contact_users:
+        if guard is not None and await _refused(
+            "profile-to-contact", mentor_id, contact_id,
+            login_guard.refuse_profile_to_contact(guard, profile, user),
+        ):
+            return changed
         # Contact uses assignedUsers (collaborators) since 2026-07-16 — write both
         # shapes, MERGING into the multi list (co-mentors stamped by the session
         # tools must keep their access; the disabled single field is ignored).
@@ -1071,6 +1105,27 @@ async def provision_mentor_user_steps(
             existing_user = await admin_client.find_one("User", "userName", cbm, select="id")
         except Exception:
             existing_user = None  # fall through to create on a lookup failure
+
+    # LOGIN_REPAIR_GUARDS (plan § 4.3): never link a login another mentor
+    # profile already carries — that is how one login ends up on two people.
+    # Nothing is linked and nothing is created (a new suffixed login would only
+    # hide the conflict); staff decide whose login it is.
+    if existing_user and login_guard.enabled():
+        try:
+            other = await login_guard.refuse_login_reuse(
+                admin_client, mentor_id, existing_user["id"])
+        except Exception as exc:  # noqa: BLE001 — fail closed
+            other = {"name": f"(the check could not run: {exc})"}
+        if other:
+            login_guard.fault("login reuse refused", profile=mentor_id, login=cbm,
+                              other_profile=other.get("id"), other_name=other.get("name"))
+            yield _step(
+                "login", "error",
+                f"The login {cbm} is already linked to another mentor profile "
+                f"({other.get('name') or 'unnamed'}). Nothing was linked or created: "
+                f"staff need to decide which mentor this login belongs to.",
+            )
+            return
 
     reused = bool(existing_user)
     try:

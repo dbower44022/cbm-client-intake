@@ -20,12 +20,13 @@ from core.branding import abbr
 import logging
 from typing import Any, Optional, Protocol
 
-from core import inline_images
+from core import inline_images, login_guard
 from core.phone import to_e164
 from sessions.service import (
     MEETING_LINK_FIELD,
     MEETING_PROVIDER_FIELD,
     resolve_manager_profile,
+    resolve_manager_profile_detail,
 )
 
 log = logging.getLogger("cbm_intake.mentorprofile.service")
@@ -183,7 +184,7 @@ async def field_spec_live(client: ProfileClient) -> list[dict[str, Any]]:
 
 
 async def heal_own_contact_stamp(
-    settings: Any, contact_id: str, user_id: str
+    settings: Any, contact_id: str, user_id: str, profile_id: Optional[str] = None
 ) -> None:
     """Merge the signed-in mentor's own User onto their linked Contact when it
     is missing (heal-on-access, 2026-07-20: an unstamped own-Contact 403s the
@@ -192,14 +193,34 @@ async def heal_own_contact_stamp(
     themselves CAN'T fix it (that's the whole problem); tightly scoped — only
     the caller's own server-resolved contact, only their own user id, merge-
     only. Best-effort: any failure just logs (the nightly reconciliation is
-    the backstop)."""
+    the backstop).
+
+    Under ``LOGIN_REPAIR_GUARDS`` (mentor login integrity plan § 4.3) this is
+    a fourth repair path and follows the same rule as the nightly clean-up:
+    the login is copied only when it is on this one profile and matches its
+    CBM email. A refusal, or a check that cannot run, leaves the Contact."""
     if settings is None or settings.espo_dry_run or not settings.espo_api_key:
         return
     from assignments import stamps  # lazy — keeps import graphs simple
 
     try:
+        system = stamps.system_client(settings)
+        if login_guard.enabled():
+            contact = await system.get(CONTACT_ENTITY, contact_id,
+                                       select="assignedUserId,assignedUsersIds")
+            if user_id in login_guard.login_ids(contact):
+                return  # nothing to heal
+            why = "no profile to check against"
+            if profile_id:
+                profile = await system.get(MENTOR_PROFILE, profile_id, select="id,cbmEmail")
+                why = await login_guard.refuse_profile_to_contact(
+                    system, {**profile, "id": profile_id}, user_id)
+            if why:
+                login_guard.fault("own-contact heal refused", profile=profile_id,
+                                  contact=contact_id, user=user_id, reason=why)
+                return
         if await stamps.ensure_user_on_record(
-            stamps.system_client(settings), CONTACT_ENTITY, contact_id, user_id
+            system, CONTACT_ENTITY, contact_id, user_id
         ):
             log.info(
                 "healed own-contact stamp: merged User/%s onto Contact/%s",
@@ -221,9 +242,11 @@ async def get_own_profile(
     login has no linked ``CMentorProfile``. With ``settings``, an own-Contact
     missing the user's stamp is healed on the way (see
     :func:`heal_own_contact_stamp`), so the later save just works."""
-    profile_id = await resolve_manager_profile(client, user_id)
+    profile_id, candidates = await resolve_manager_profile_detail(client, user_id)
     if not profile_id:
-        return {"profileFound": False}
+        # ambiguous: MANAGER_PROFILE_STRICT found several profiles and would
+        # not guess (mentor login integrity plan § 4.3) — the page says so.
+        return {"profileFound": False, **({"ambiguous": True} if len(candidates) > 1 else {})}
     select = _DETAIL_SELECT
     gated = await gated_fields_present(client)
     if gated:
@@ -231,7 +254,7 @@ async def get_own_profile(
     rec = await client.get(MENTOR_PROFILE, profile_id, select=select)
     contact_id = rec.get("contactRecordId")
     if contact_id:
-        await heal_own_contact_stamp(settings, contact_id, user_id)
+        await heal_own_contact_stamp(settings, contact_id, user_id, profile_id)
         try:
             contact = await client.get(CONTACT_ENTITY, contact_id, select=_CONTACT_SELECT)
             for name in CONTACT_NAMES:
@@ -325,7 +348,7 @@ async def update_own_profile(
             contact_payload["phoneNumber"] = to_e164(phone)
         # Heal-on-save: an own-Contact missing this user's stamp would 403 the
         # write below under the Mentor Role's own-scope Contact edit.
-        await heal_own_contact_stamp(settings, contact_id, user_id)
+        await heal_own_contact_stamp(settings, contact_id, user_id, profile_id)
 
     if payload:
         await client.update(MENTOR_PROFILE, profile_id, payload)

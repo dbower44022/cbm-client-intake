@@ -101,7 +101,9 @@
       fieldSpec = f.fields || []; fieldOptions = f.options || {}; requiredNames = f.required || [];
       var result = await api("/profile");
       if (!result.profileFound) {
-        showMessage("We couldn't find a mentor profile linked to your login. Please contact {{abbr}} staff to have your profile connected.");
+        showMessage(result.ambiguous
+          ? "Your login is linked to more than one mentor profile — staff have been told."
+          : "We couldn't find a mentor profile linked to your login. Please contact {{abbr}} staff to have your profile connected.");
         return;
       }
       record = result.record || {};
