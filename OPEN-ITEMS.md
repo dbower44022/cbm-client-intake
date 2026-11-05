@@ -6,6 +6,32 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+71. **Training on the CRM's own screens, and the block revisited**
+    (2026-11-05, Doug's ruling Q6.1). Ten-odd staff work in the CRM's own
+    screens (`scripts/crm_direct_use_report.sh`, production, 11-04-26).
+    No block for now: train them to use the applications; the integrity
+    digest's direct-use report (plan § 4.2) shows whether it worked.
+    Revisit a block only if direct edits continue.
+
+70. **No path to change a mentor's CBM email once they have a login**
+    (2026-11-05, Doug's ruling Q4). The field locks with a login. A
+    surname change needs an administrator to change the login, the Google
+    mailbox and the field together, outside the application. Not designed.
+
+69. **Two jobs only the CRM's own screens can do** (2026-11-05, found by
+    the direct-use report). (1) **Reports**: Sharon Rose builds reports in
+    the CRM's report builder; Analytics does not replace it. (2) **Email
+    templates**: Andrew Ciszczon writes them in the CRM; the applications
+    use templates but cannot edit them. Ordinary requests, not designed.
+
+68. **Staff notes on mentors, and the page-space work** (2026-11-03,
+    Doug's rulings 8b and 8c). Mentor Assignment Preferences, Mentor
+    Status-Admin and Mentor Discussion in a preview panel on Mentor
+    Administration's roster and Client Administration's Available Mentors
+    chooser; Mentor Administration's 1,480-pixel page cap removed with a
+    guard test; a page-by-page space review. Kickoff:
+    `prompts/mentor-staff-notes-prompt-v0.1.md`. Not started.
+
 66. **One login on two mentor profiles — David Weissman's record, and
     hardening** (2026-11-02, production). On 10-16-26 15:18 (CRM time) a
     staff member replaced David Weissman's login with Doug Bower's under
@@ -14,13 +40,18 @@ found; move resolved items to the bottom with the resolution date.
     `Doug.Bower@cbmentors.org`. The nightly repair then copied Doug's
     login onto David's Contact (10-17-26 04:05). David's own login is
     linked to no profile, so he sees no clients. Owed: (1) **the data
-    repair** — David back on his profile's Assigned Users, his CBM email
-    back to `david.weissman@cbmentors.org`, Doug's login off his Contact;
-    **waiting on Doug's confirmation from the staff involved, do not
-    repair before it**; (2) **the design session** — prevention, logging
-    and alerting, kickoff `prompts/mentor-login-integrity-design-prompt-v0.1.md`;
-    (3) the CRM's Action History was already purged for 10-16 when read
-    on 11-02, so the retention setting is part of (2).
+    repair** — **follow the repair procedure in
+    `prds/mentor-login-integrity-plan.md` § 6, never Mentor
+    Administration** (a Mentor Administration save would put Doug's login
+    back; verified 11-02-26); **waiting on Doug's confirmation from the
+    staff involved, do not repair before it**; (2) ~~the design session~~
+    — **done 11-05-26**: plan `prds/mentor-login-integrity-plan.md`, build
+    kickoff `prompts/mentor-login-integrity-build-prompt-v0.1.md`, CRM
+    handoffs `crm-history-settings-crm-handoff.md`,
+    `mentor-tracked-fields-crm-handoff.md`,
+    `system-management-team-crm-handoff.md`,
+    `personal-admin-logins-crm-handoff.md`; (3) the build, six steps
+    (plan § 5), and the read-only checks C1–C8 (plan § 7).
 
 65. **The email composer's new-contact row — three smaller faults**
     (2026-10-31, found on the #63 live pass). (1) ~~The row's Company
