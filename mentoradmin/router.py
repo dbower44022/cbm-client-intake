@@ -317,6 +317,14 @@ async def mentor_detail(mentor_id: str, request: Request) -> dict:
         rec["recordStatus"] = await service.sync_record_status(
             client, mentor_id, rec, rec["completeness"]["status"]
         )
+        try:
+            lock = await service.cbm_email_lock(client, mentor_id)
+        except Exception as exc:  # noqa: BLE001 — the record still opens
+            log.warning("mentor %s: CBM email lock state unavailable: %s", mentor_id, exc)
+            # Fail closed: the switch is on, so do not offer an editable field.
+            lock = {"locked": True, "login": None}
+        if lock is not None:
+            rec["cbmEmailLock"] = lock
         return rec
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not load mentor")
@@ -728,6 +736,13 @@ async def mentor_update(mentor_id: str, body: UpdateIn, request: Request) -> dic
         except Exception as exc:  # noqa: BLE001 — the save already succeeded
             log.warning("mentor %s: could not record the save: %s", mentor_id, exc)
         result.pop("loginLinksReconciled", None)
+        try:
+            lock = await service.cbm_email_lock(client, mentor_id)
+        except Exception as exc:  # noqa: BLE001 — the save stands; the page re-reads
+            log.warning("mentor %s: lock state after save unavailable: %s", mentor_id, exc)
+            lock = None
+        if lock is not None:
+            result["cbmEmailLock"] = lock
         return result
     except service.MentorAdminError as exc:
         # e.g. contact fields saved on a mentor with no linked Contact record —

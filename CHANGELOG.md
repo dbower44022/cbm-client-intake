@@ -5,6 +5,30 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.306.0] — 2026-11-05
+
+**feat: the mentor CBM email locks once a login exists, and is checked
+before then** (mentor login integrity plan, step 3 —
+`prds/mentor-login-integrity-plan.md` § 4.4; `OPEN-ITEMS.md` #66). New
+switch `CBM_EMAIL_LOCK`, **off by default**, at `/setup` → Features. No
+migration; no CRM change.
+
+- **With a login**, Mentor Administration shows the CBM email as the
+  login's user name, read-only, with a line saying why: "Locked: this
+  mentor has a login (…). An administrator changes the login, the Google
+  mailbox and this field together." The server refuses a change too, before
+  anything is written. On 10-16-26 someone typed Doug's address into David
+  Weissman's profile; this is that field.
+- **Before a login exists**, a typed address is saved only when it is on
+  the chapter's mail domain (`MENTOR_EMAIL_DOMAIN`), is no login's user
+  name, and is no other mentor profile's CBM email — and it is saved in
+  lower case. A lookup that fails stores nothing. The checks are the ones
+  `_reserve_cbm_email` already makes for provisioning; the login lookup
+  runs under the key-based account.
+- A surname change still has no path in the application (plan § 4.4: an
+  administrator changes the login, the mailbox and the field together).
+
+
 ## [0.305.0] — 2026-11-05
 
 **feat: login repairs stop when the login data disagrees; a stricter

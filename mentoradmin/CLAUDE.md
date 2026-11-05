@@ -1,6 +1,6 @@
 # mentoradmin/ — Mentor Administration
 
-Last Updated: 11-05-26 17:41 · Revision 1.3
+Last Updated: 11-05-26 18:05 · Revision 1.4
 
 Detail for the Mentor Administration application (`/mentoradmin`): the roster, the editable mentor record, completeness, provisioning and the status sweep.
 
@@ -92,12 +92,17 @@ detail screen that edits any whitelisted field on `CMentorProfile`.
   through `core/login_guard.py` — `reconcile_user_links`, provisioning's
   login reuse, the nightly clean-up's Phase A and My Mentor Profile's
   heal-on-access. A new path that copies a login must use it too.
+- **`CBM_EMAIL_LOCK`** (v0.306.0, step 3, off by default): with a login the
+  CBM email field shows the login's user name, read-only; the server refuses
+  a change before any write. Before a login, `_check_cbm_email_change`
+  accepts only a free address on the chapter's domain, in lower case.
 - Functional reference for staff: `mentor-administration.md`.
 
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.4 | 11-05-26 18:05 | Claude (Claude Code) | The CBM email lock (v0.306.0). |
 | 1.3 | 11-05-26 17:41 | Claude (Claude Code) | The login repair guards (v0.305.0). |
 | 1.2 | 11-05-26 17:24 | Claude (Claude Code) | Every change in the action history (v0.304.0). |
 | 1.1 | 10-28-26 20:45 | Claude (Claude Code) | The three grids on the shared grid (v0.297.0). |

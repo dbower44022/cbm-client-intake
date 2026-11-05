@@ -389,6 +389,73 @@ async def _sanitize_enum_changes(
     return warnings
 
 
+def cbm_email_lock_on() -> bool:
+    """``CBM_EMAIL_LOCK`` (plan § 4.4), read per request."""
+    return bool(get_settings().cbm_email_lock)
+
+
+async def cbm_email_lock(client: MentorClient, mentor_id: str) -> Optional[dict[str, Any]]:
+    """The CBM email field's lock state for the detail form, or None when the
+    switch is off: ``{"locked": True, "login": <user name>}`` once the mentor
+    has a login, else ``{"locked": False}``. The user name is read with the
+    key-based account (staff cannot read logins); unreadable, it is None and
+    the page says the field is locked without naming the login."""
+    if not cbm_email_lock_on():
+        return None
+    prof = await client.get(MENTOR_PROFILE, mentor_id,
+                            select="assignedUserId,assignedUsersIds")
+    uid = assigned_user_id(prof)
+    if not uid:
+        return {"locked": False}
+    name = None
+    reader = login_guard.reader()
+    if reader is not None:
+        try:
+            name = await login_guard.user_name(reader, uid)
+        except Exception as exc:  # noqa: BLE001 — the lock holds without the name
+            log.warning("cbm email lock: could not read the login of %s: %s", mentor_id, exc)
+    return {"locked": True, "login": name}
+
+
+async def _check_cbm_email_change(client: MentorClient, mentor_id: str, value: Any) -> str:
+    """Validate a typed CBM email under ``CBM_EMAIL_LOCK``; return it in lower
+    case, or raise :class:`MentorAdminError` naming the reason. Nothing has
+    been written when it raises."""
+    prof = await client.get(MENTOR_PROFILE, mentor_id,
+                            select="assignedUserId,assignedUsersIds")
+    if assigned_user_id(prof):
+        raise MentorAdminError(
+            f"The {abbr()} email can't be changed here: this mentor has a login. "
+            "An administrator changes the login, the Google mailbox and this "
+            "field together."
+        )
+    address = (value or "").strip().lower()
+    if not address:
+        return ""
+    domain = cbm_email_domain()
+    if not re.fullmatch(r"[a-z0-9._%+-]+@" + re.escape(domain), address):
+        raise MentorAdminError(
+            f"The {abbr()} email must be an address on @{domain}.")
+    reader = login_guard.reader() or client
+    try:
+        if await reader.find_one("User", "userName", address, select="id"):
+            raise MentorAdminError(
+                f"{address} is already a login. Pick another address, or ask an "
+                "administrator whose login it is.")
+        other = await reader.find_one(MENTOR_PROFILE, "cbmEmail", address, select="id,name")
+    except MentorAdminError:
+        raise
+    except Exception as exc:  # noqa: BLE001 — never store an address we could not check
+        log.warning("cbm email check failed for %s (%s): %s", mentor_id, address, exc)
+        raise MentorAdminError(
+            f"Couldn't check that {address} is free — nothing was saved. Try again.")
+    if other and other.get("id") != mentor_id:
+        raise MentorAdminError(
+            f"{address} is already the {abbr()} email of another mentor profile "
+            f"({other.get('name') or 'unnamed'}).")
+    return address
+
+
 async def update_mentor(
     client: MentorClient,
     mentor_id: str,
@@ -429,6 +496,8 @@ async def update_mentor(
     """
     payload = {k: v for k, v in changes.items() if k in PROFILE_EDIT_NAMES}
     contact_payload = {k: v for k, v in changes.items() if k in CONTACT_NAMES}
+    if "cbmEmail" in payload and cbm_email_lock_on():  # plan § 4.4, before any write
+        payload["cbmEmail"] = await _check_cbm_email_change(client, mentor_id, payload["cbmEmail"])
     warnings = await _sanitize_enum_changes(client, payload)
     warnings += await _sanitize_enum_changes(client, contact_payload)
 

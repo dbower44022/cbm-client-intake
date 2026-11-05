@@ -67,6 +67,9 @@ found; move resolved items to the bottom with the resolution date.
     switches, both off: `LOGIN_REPAIR_GUARDS` (safe for production at
     once) and `MANAGER_PROFILE_STRICT` (its message says "staff have been
     told", true only once step 4b ships — enable after it).
+    Steps 1 and 2 **pushed 11-05-26, live on crm-test and production at
+    v0.305.0**, both switches off. (8) **step 3 built 11-05-26
+    (v0.306.0)**, committed, not pushed — `CBM_EMAIL_LOCK`, off.
 
 65. **The email composer's new-contact row — three smaller faults**
     (2026-10-31, found on the #63 live pass). (1) ~~The row's Company

@@ -455,6 +455,11 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="A login on several mentor profiles opens only the one Active profile whose "
             "CBM email matches the login. Otherwise Client Management and My Mentor "
             "Profile show no records and say why."),
+    _s("cbm_email_lock", GROUP_FEATURES, "Lock the mentor CBM email", kind="bool",
+       help="In Mentor Administration the CBM email can't be edited once the mentor "
+            "has a login; it shows the login's user name. Before then a typed address "
+            "must be on the chapter's mail domain and not already a login or another "
+            "mentor's address."),
     _s("portal_calendar", GROUP_FEATURES, "Events on the portal home page", kind="bool",
        help="The rail of upcoming events beside the portal's tiles, and the member "
             "page each one opens. Members see Internal events (to their teams, if "

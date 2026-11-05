@@ -1145,7 +1145,15 @@
   function buildField(f, value) {
     var wrap = document.createElement("div"); wrap.className = "cbm-field field-" + f.type;
     var label = document.createElement("label"); label.textContent = f.label; label.setAttribute("for", "f_" + f.name);
+    // CBM_EMAIL_LOCK (mentor login integrity plan § 4.4): once the mentor has
+    // a login the field shows the login's user name and cannot be edited.
+    var lock = f.name === "cbmEmail" && current && current.cbmEmailLock;
+    if (lock && lock.locked && lock.login) value = lock.login;
     var input = makeInput(f, value); input.id = "f_" + f.name; input.dataset.field = f.name; input.dataset.type = f.type;
+    if (lock && lock.locked) {
+      input.readOnly = true;
+      input.classList.add("is-locked");
+    }
     // Snapshot the initial (normalized) value so Save can send only changed
     // fields — re-sending an unchanged value that has drifted out of its CRM
     // enum options would 400 the whole update.
@@ -1155,7 +1163,15 @@
       var lab = document.createElement("label"); lab.appendChild(input); lab.appendChild(document.createTextNode(" " + f.label));
       wrap.appendChild(lab); return wrap;
     }
-    wrap.appendChild(label); wrap.appendChild(input); return wrap;
+    wrap.appendChild(label); wrap.appendChild(input);
+    if (lock && lock.locked) {
+      var why = document.createElement("p"); why.className = "field-note";
+      why.textContent = "Locked: this mentor has a login" +
+        (lock.login ? " (" + lock.login + ")" : "") +
+        ". An administrator changes the login, the Google mailbox and this field together.";
+      wrap.appendChild(why);
+    }
+    return wrap;
   }
 
   // --- WYSIWYG editor (contenteditable + minimal toolbar; no external deps) ---
@@ -1268,6 +1284,9 @@
     Array.prototype.forEach.call($("editForm").querySelectorAll("[data-field]"), function (el) {
       v[el.dataset.field] = readField(el);
     });
+    // A locked CBM email shows the login's user name, not the stored value;
+    // completeness judges what is stored, as the server's badge does.
+    if (current && current.cbmEmailLock && current.cbmEmailLock.locked) v.cbmEmail = current.cbmEmail;
     return v;
   }
   // Completeness issues the staffer must address before saving. Excludes the

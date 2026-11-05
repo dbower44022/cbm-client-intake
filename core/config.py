@@ -297,6 +297,12 @@ class Settings(BaseSettings):
     # records. Both off by default; read per request (and per worker pass).
     login_repair_guards: bool = False
     manager_profile_strict: bool = False
+    # Step 3 (plan § 4.4): CBM_EMAIL_LOCK — in Mentor Administration the CBM
+    # email is read-only once the mentor has a login (it shows the login's
+    # user name), and before then a typed address must be on the chapter's
+    # mail domain and held by no login and no other mentor profile; saved in
+    # lower case. Off by default; read per request.
+    cbm_email_lock: bool = False
     # Grants (prds/grant-management-plan.md): the Grants tab on a funder record,
     # its grant popup and the deliverables inside it. Off by default — build
     # dark, review on crm-test, then enable on prod. Read PER REQUEST (never at

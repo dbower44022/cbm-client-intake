@@ -258,3 +258,7 @@
 .ma__docview-fallback p { margin: 0 0 1rem; }
 .ma__muted { color: var(--cbm-slate-700, #667); font-size: 0.9rem; }
 .ma__sm { padding: 0.25rem 0.6rem; font-size: 0.85rem; }
+
+/* CBM_EMAIL_LOCK (mentor login integrity plan § 4.4): the locked CBM email. */
+.cbm-field input.is-locked { background: var(--cbm-surface); color: var(--cbm-slate-700); cursor: not-allowed; }
+.cbm-field .field-note { margin: 0.25rem 0 0; font-size: var(--cbm-text-sm); color: var(--cbm-slate-700); }
