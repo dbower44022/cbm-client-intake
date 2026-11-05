@@ -1,10 +1,10 @@
 # Mentor login integrity — prevention, detection and history — Plan
 
-Last Updated: 11-05-26 11:04 · Revision 1.0 — see change log at the end.
+Last Updated: 11-05-26 12:08 · Revision 1.1 — see change log at the end.
 
 **Status:** Approved by Doug 11-05-26 ("approved"). Not built.
 **Kickoff that produced it:** `prompts/mentor-login-integrity-design-prompt-v0.2.md`.
-**Build kickoff:** `prompts/mentor-login-integrity-build-prompt-v0.1.md`.
+**Build kickoff:** `prompts/mentor-login-integrity-build-prompt-v0.2.md` (steps 0–3; steps 4–6 follow in revision 0.3).
 **Sibling plan:** staff notes on mentors and the page-space work are a
 separate arc, started from `prompts/mentor-staff-notes-prompt-v0.1.md`.
 
@@ -291,4 +291,5 @@ which is now Doug's.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 11-05-26 12:08 | Claude (Claude Code) | Build kickoff pointer moved to revision 0.2 of the prompt. No ruling changed. |
 | 1.0 | 11-05-26 11:04 | Claude (Claude Code) | First issue, from the design session of 11-02-26 to 11-05-26. Approved by Doug 11-05-26. |

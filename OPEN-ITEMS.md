@@ -46,7 +46,7 @@ found; move resolved items to the bottom with the resolution date.
     back; verified 11-02-26); **waiting on Doug's confirmation from the
     staff involved, do not repair before it**; (2) ~~the design session~~
     — **done 11-05-26**: plan `prds/mentor-login-integrity-plan.md`, build
-    kickoff `prompts/mentor-login-integrity-build-prompt-v0.1.md`, CRM
+    kickoff `prompts/mentor-login-integrity-build-prompt-v0.2.md` (steps 0–3), CRM
     handoffs `crm-history-settings-crm-handoff.md`,
     `mentor-tracked-fields-crm-handoff.md`,
     `system-management-team-crm-handoff.md`,
