@@ -73,6 +73,21 @@ def _show(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
+_SECRET_WORDS = ("pass", "secret", "key", "token")
+
+
+def _shown(name: str, value: Any) -> str:
+    """:func:`_show`, but masked for a setting whose name says it is a secret."""
+    if value not in (None, "") and any(w in name.lower() for w in _SECRET_WORDS):
+        return "(set, not shown)"
+    return _show(value)
+
+
+def _same(a: Any, b: Any) -> bool:
+    """Equal AND the same JSON type: ``1`` is not ``true``, ``"1"`` is not ``1``."""
+    return type(a) is type(b) and a == b
+
+
 async def read_settings(client: Any) -> dict[str, Any]:
     resp = await client._request(
         "GET", f"{client._base}/Settings", op="read Settings"
@@ -103,14 +118,14 @@ async def set_setting(client: Any, name: str, value: Any, *, apply: bool) -> int
 
     current = settings[name]
     print(f"Setting: {name}")
-    print(f"Current: {_show(current)}")
-    print(f"Wanted:  {_show(value)}")
-    if current == value:
+    print(f"Current: {_shown(name, current)}")
+    print(f"Wanted:  {_shown(name, value)}")
+    if _same(current, value):
         print("\nAlready set. Nothing to do; nothing was written.")
         return 0
 
     if not apply:
-        print(f"\nPlan: PUT /Settings {{{_show(name)}: {_show(value)}}}")
+        print(f"\nPlan: PUT /Settings {{{_show(name)}: {_shown(name, value)}}}")
         print("Dry run — nothing was written. Add --apply to make the change.")
         return 0
 
@@ -123,10 +138,10 @@ async def set_setting(client: Any, name: str, value: Any, *, apply: bool) -> int
               "Reading back to see what stands.", file=sys.stderr)
 
     after = (await read_settings(client)).get(name)
-    print(f"Read back: {_show(after)}")
-    if after != value:
-        print(f"\nMISMATCH: wrote {_show(value)}, the CRM now holds "
-              f"{_show(after)}.\nCheck the value's format (a PHP date phrase "
+    print(f"Read back: {_shown(name, after)}")
+    if not _same(after, value):
+        print(f"\nMISMATCH: wrote {_shown(name, value)}, the CRM now holds "
+              f"{_shown(name, after)}.\nCheck the value's format (a PHP date phrase "
               "for the clean-up periods).", file=sys.stderr)
         return 1
     print("\nDone: the read-back matches.")

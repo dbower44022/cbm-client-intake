@@ -12,6 +12,8 @@ import copy
 import importlib.util
 import json
 import sys
+
+import pytest
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -325,3 +327,33 @@ def test_moved_keys_reads_absent_and_null_alike():
     assert applier._moved_keys({"a": 1}, {"a": 1, "b": None}, set()) == set()
     assert applier._moved_keys({"a": 1, "d": None}, {"a": 1}, set()) == set()
     assert applier._moved_keys({"a": 1}, {"a": 2, "x": True}, {"x"}) == {"a"}
+
+
+def test_tracked_fields_refuses_a_fieldmanager_read_that_disagrees_with_metadata():
+    # Review finding 11-05-26: the body is built from the fieldManager read, so
+    # a read missing part of the definition must never be written back.
+    class _Partial(_TrackedCrm):
+        async def _request(self, method, url, op="", params=None, json_body=None):
+            resp = await super()._request(method, url, op, params, json_body)
+            if method == "GET" and url.endswith("Admin/fieldManager/CMentorProfile/mentorStatus"):
+                body = resp.json()
+                body.pop("options")
+                return _Resp(200, body)
+            return resp
+    crm = _Partial()
+    app = applier.Applier(crm, _tracked_plan(), apply=True)
+    asyncio.run(app.run())
+    assert any("CMentorProfile.mentorStatus: the fieldManager read differs" in f
+               and "options" in f for f in app.failed)
+    assert "CMentorProfile.mentorStatus" not in [n for n, _ in crm.puts]
+
+
+def test_a_forbidden_field_read_is_an_error_not_a_missing_field():
+    class _Denied(_TrackedCrm):
+        async def _request(self, method, url, op="", params=None, json_body=None):
+            if "Admin/fieldManager/" in url and method == "GET":
+                return _Resp(403)
+            return await super()._request(method, url, op, params, json_body)
+    app = applier.Applier(_Denied(), _tracked_plan(), apply=False)
+    with pytest.raises(applier.EspoError):
+        asyncio.run(app.run())

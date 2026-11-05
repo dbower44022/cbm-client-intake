@@ -144,3 +144,24 @@ def test_unparsable_file_is_refused_and_left_alone(crm):
     assert r.returncode == 1
     assert (data / "config-internal.php").read_text() == broken
     assert not list(data.glob("config-internal.php.bak-*"))
+
+
+def test_an_override_file_that_wins_fails_the_apply(crm):
+    # Review finding 11-05-26: the apply must not report success when an
+    # override file sets the key the other way.
+    put, run, php, owner, data = crm
+    (data / "config-internal-override.php").write_text(
+        "<?php\nreturn [\n  'authApiUserLogDisabled' => false,\n];\n")
+    put(SAMPLE)
+    r = run("--apply")
+    assert r.returncode == 1
+    assert "NOT in force" in r.stderr
+
+
+def test_a_file_not_owned_by_www_data_is_refused(crm):
+    put, run, php, owner, data = crm
+    put(SAMPLE, owner="0:0")
+    r = run("--apply")
+    assert r.returncode == 1
+    assert "not www-data" in r.stderr
+    assert "authApiUserLogDisabled" not in (data / "config-internal.php").read_text()

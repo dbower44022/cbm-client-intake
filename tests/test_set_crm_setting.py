@@ -112,3 +112,21 @@ def test_json_values_compare_by_type():
     crm = _FakeCrm()
     assert _run(crm, "outboundEmailIsShared", True, True) == 0
     assert crm.writes[0][2] == {"outboundEmailIsShared": True}
+
+
+def test_a_number_is_not_a_boolean():
+    # Review finding 11-05-26: 1 == True in Python; the CRM's true is not 1.
+    crm = _FakeCrm()
+    crm.settings["outboundEmailIsShared"] = True
+    # A stored true does not count as "already 1": the apply writes.
+    assert _run(crm, "outboundEmailIsShared", 1, True) == 0
+    assert crm.writes == [("PUT", f"{crm._base}/Settings", {"outboundEmailIsShared": 1})]
+
+
+def test_a_secret_setting_is_never_printed(capsys):
+    crm = _FakeCrm()
+    crm.settings["smtpPassword"] = "hunter2"
+    _run(crm, "smtpPassword", "other", False)
+    out = capsys.readouterr().out
+    assert "hunter2" not in out and "other" not in out
+    assert "(set, not shown)" in out

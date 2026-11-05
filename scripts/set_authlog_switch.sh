@@ -35,10 +35,16 @@
 #   2. `php -l` on the candidate, and proves it holds exactly the old
 #      settings plus this one — on any failure the live file is untouched,
 #   3. backs the live file up beside itself (cp -p: owner and mode kept),
-#   4. writes the candidate INTO the live file (same inode, so the owner,
-#      uid 33, and the mode stay as they were),
-#   5. `php -l` on the live file; a failure puts the backup back, exit 1,
-#   6. reads the effective value back through PHP and prints the backup path.
+#   4. gives the candidate the live file's mode and moves it over the live
+#      file in one step (`mv` in the same folder: no moment when EspoCRM can
+#      read a half-written file). Refused unless the live file is owned by
+#      www-data, so the owner (uid 33) stays as it was. Refused, too, if
+#      the live file changed since the candidate was built (EspoCRM rewrites
+#      it itself), so an edit of EspoCRM's is never overwritten,
+#   5. `php -l` on the live file; a failure moves a copy of the backup back,
+#      exit 1,
+#   6. reads the effective value back through PHP and fails (exit 1) unless
+#      it is the wanted value — an override file can win over this one.
 # Restarts nothing. PHP reads the configuration files on each request.
 #
 # UNDO. `--off` — the same guarded edit, setting the value to false. Chosen
@@ -46,7 +52,8 @@
 # (for example when a secret is regenerated), so an old backup can undo
 # more than this one line. The backup is there for a broken file only.
 #
-# Exit: 0 done or nothing to do, 1 edit refused or rolled back, 64 usage.
+# Exit: 0 done or nothing to do, 1 edit refused, rolled back or not in
+# force, 64 usage.
 set -eu
 
 CONTAINER="${CONTAINER:-espocrm}"
@@ -98,6 +105,11 @@ foreach ($files as $f) {
 foreach ($keys as $k) {
     echo "  effective $k: ", array_key_exists($k, $eff) ? var_export($eff[$k], true) : 'not set (false)', "\n";
 }
+$want = getenv('AUTHLOG_WANT');
+if ($want !== false && $want !== '') {
+    $got = !empty($eff['authApiUserLogDisabled']);
+    if ($got !== ($want === 'true')) { echo "  !! effective authApiUserLogDisabled is not $want\n"; exit(6); }
+}
 exit(!empty($eff['authLogDisabled']) ? 5 : 0);
 PHP
 )
@@ -148,10 +160,12 @@ exit(0);
 PHP
 )
 
-report() {
+report() {  # report [wanted value]: exit 6 when the effective value differs
   local rc=0
-  in_crm php -r "$READ_PHP" || rc=$?
-  if [ "$rc" = 5 ]; then
+  docker exec -u www-data -w "$WORKDIR" -e AUTHLOG_WANT="${1:-}" "$CONTAINER" php -r "$READ_PHP" || rc=$?
+  if [ "$rc" = 6 ]; then
+    return 6
+  elif [ "$rc" = 5 ]; then
     echo "!!!! WARNING: authLogDisabled is TRUE — ALL sign-in logging is off, people included."
     echo "!!!! That is the wrong key. Nobody's sign-ins are being recorded. Tell Doug."
   elif [ "$rc" != 0 ]; then
@@ -171,6 +185,13 @@ report
 echo "== $mode: $KEY => $want in $FILE"
 cand="$FILE.candidate-authlog-$STAMP"
 backup="$FILE.bak-authlog-$STAMP"
+restore="$FILE.restore-authlog-$STAMP"
+owner="$(in_crm stat -c '%u' "$FILE")"
+me="$(in_crm id -u)"
+if [ "$owner" != "$me" ]; then
+  echo "RESULT: refused; $FILE is owned by uid $owner, not www-data ($me); nothing written" >&2; exit 1
+fi
+sum_before="$(in_crm sha256sum "$FILE" | cut -d' ' -f1)"
 rc=0
 in_crm php -r "$EDIT_PHP" "$FILE" "$want" "$cand" || rc=$?
 if [ "$rc" = 3 ]; then echo "RESULT: unchanged"; exit 0; fi
@@ -182,18 +203,36 @@ if ! in_crm php -l "$cand" >/dev/null || ! in_crm php -r "$VERIFY_PHP" "$FILE" "
 fi
 
 in_crm cp -p "$FILE" "$backup"
-in_crm sh -c 'cat "$1" > "$2"' sh "$cand" "$FILE"
-in_crm rm -f "$cand"
+in_crm chmod --reference="$FILE" "$cand"
+# Last look: EspoCRM may have rewritten the file since the candidate was built.
+if [ "$(in_crm sha256sum "$FILE" | cut -d' ' -f1)" != "$sum_before" ]; then
+  in_crm rm -f "$cand"
+  echo "RESULT: $FILE changed while the edit was prepared; nothing written. Run it again." >&2; exit 1
+fi
+if ! in_crm mv -f "$cand" "$FILE"; then
+  in_crm rm -f "$cand" || true
+  echo "RESULT: could not move the candidate into place; the live file is as it was" >&2; exit 1
+fi
 
 if ! in_crm php -l "$FILE" >/dev/null; then
-  in_crm sh -c 'cat "$1" > "$2"' sh "$backup" "$FILE"
-  echo "RESULT: php -l failed on the live file; the backup was put back: $backup" >&2
+  if in_crm cp -p "$backup" "$restore" && in_crm mv -f "$restore" "$FILE"; then
+    echo "RESULT: php -l failed on the live file; the backup was put back: $backup" >&2
+  else
+    echo "!!!! RESULT: php -l failed AND the restore failed. Restore by hand NOW:" >&2
+    echo "!!!! docker exec -u www-data -w $WORKDIR $CONTAINER cp -p $backup $FILE" >&2
+  fi
   in_crm php -l "$FILE" >&2 || true
   exit 1
 fi
 
 echo "Read back:"
-report
+rc=0
+report "$want" || rc=$?
 echo "  $FILE $(in_crm stat -c '%u:%g %a' "$FILE")"
 echo "Backup: $WORKDIR/$backup (inside the $CONTAINER container)"
+if [ "$rc" = 6 ]; then
+  echo "RESULT: written, but NOT in force — an override file sets $KEY the other way (see above)" >&2; exit 1
+elif [ "$rc" != 0 ]; then
+  echo "RESULT: written, but the read-back failed (exit $rc)" >&2; exit 1
+fi
 echo "RESULT: $KEY is now $want"

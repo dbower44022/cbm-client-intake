@@ -239,9 +239,10 @@ class Applier:
         writes — a Read-only field is a global ACL restriction that silently
         drops every API write (``Acl/GlobalRestriction``). Since 11-05-26 it
         also carries the tracked-field change (``{"audited": true}``,
-        ``plans/mentor-tracked-fields.json``), so it refuses to send a body that
-        differs from the definition read anywhere but the named parameters, and
-        verify() fails if any other part of the definition moved.
+        ``plans/mentor-tracked-fields.json``), so it refuses to send a body
+        built from a fieldManager read that disagrees with the metadata
+        definition (``label`` aside), and verify() fails if any other part of
+        the definition moved.
 
         ``GET Admin/fieldManager/{Entity}/{field}`` answers the metadata
         definition plus ``label`` (crm-test, 11-05-26), and HTTP 500 — not
@@ -269,12 +270,15 @@ class Applier:
             # § 2), and an options-only body is a 500 (2026-09-29).
             body = {k: v for k, v in existing.items() if k not in ("name", "isCustom")}
             body.update(params)
-            stray = sorted(k for k in set(body) | set(existing)
-                           if k not in params and k not in ("name", "isCustom")
-                           and body.get(k) != existing.get(k))
+            # The body is built from the fieldManager read; refuse it unless
+            # that read agrees with the metadata definition (bar ``label``,
+            # which only fieldManager carries). A partial or odd read would
+            # otherwise be written back as the whole definition.
+            stray = sorted(_moved_keys(self._before[(entity, stored)], existing,
+                                       {"label", "name", "isCustom"}))
             if stray:
-                self.failed.append(f"field {entity}.{stored}: the body to send differs from "
-                                   f"the definition read in {stray} — nothing sent")
+                self.failed.append(f"field {entity}.{stored}: the fieldManager read differs from "
+                                   f"the metadata definition in {stray} — nothing sent")
                 continue
             shown = ", ".join(f"{k}: {existing.get(k)!r} -> {v!r}" for k, v in sorted(differ.items()))
             await self._write("PUT", f"Admin/fieldManager/{entity}/{stored}", body,
@@ -293,7 +297,11 @@ class Applier:
             "GET", f"{self.c._base}/Admin/fieldManager/{entity}/{stored}",
             op=f"read field {entity}.{stored}",
         )
-        return resp.json() if resp.status_code == 200 else None
+        if resp.status_code == 200:
+            return resp.json()
+        if resp.status_code in (404, 500):  # 500 is EspoCRM's answer for a missing field
+            return None
+        raise EspoError(f"read field {entity}.{stored}: HTTP {resp.status_code}")
 
     async def do_links(self) -> None:
         for spec in self.plan.get("links", []):
