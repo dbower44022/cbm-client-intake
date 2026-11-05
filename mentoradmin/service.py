@@ -492,8 +492,9 @@ async def update_mentor(
     # On every save, make sure the mentor's User is assigned to BOTH the CBM
     # member record and its Contact (provisioning sets it only on the member, and
     # this self-heals records assigned on only one side). Best-effort.
+    reconciled: dict[str, Any] = {}
     try:
-        await reconcile_user_links(client, mentor_id)
+        reconciled = await reconcile_user_links(client, mentor_id) or {}
     except Exception as exc:  # noqa: BLE001 — best-effort, but visibly so
         log.warning(
             "reconcile_user_links failed for CMentorProfile/%s — a one-sided "
@@ -501,6 +502,8 @@ async def update_mentor(
         )
 
     result = await get_mentor(client, mentor_id)
+    if reconciled:
+        result["loginLinksReconciled"] = reconciled
     if warnings:
         result["warnings"] = warnings
     if provision is not None:
@@ -527,11 +530,16 @@ async def update_mentor(
     return result
 
 
-async def reconcile_user_links(client: MentorClient, mentor_id: str) -> None:
+async def reconcile_user_links(client: MentorClient, mentor_id: str) -> dict[str, Any]:
     """Assign the mentor's User to both the CBM member record (CMentorProfile)
     and its Contact. The mentor's User is the member's ``assignedUser`` (or the
     Contact's, if only that side has one). Idempotent — a no-op when there is no
     User or both sides already match. Run on every save.
+
+    Returns what it wrote, for the action history (plan
+    ``prds/mentor-login-integrity-plan.md`` § 4.1): ``profileLogin`` when it
+    set the profile's login, ``contactLoginAdded`` when it added the login to
+    the Contact, each with the User id; empty when nothing was written.
     """
     prof = await client.get(
         MENTOR_PROFILE, mentor_id,
@@ -549,11 +557,13 @@ async def reconcile_user_links(client: MentorClient, mentor_id: str) -> None:
         contact_user = contact.get("assignedUserId") or next(iter(contact_users), None)
 
     user = member_user or contact_user
+    changed: dict[str, Any] = {}
     if not user:
-        return  # no User to assign anywhere
+        return changed  # no User to assign anywhere
     if member_user != user:
         # CMentorProfile uses assignedUsers (collaborators) on prod — write both.
         await client.update(MENTOR_PROFILE, mentor_id, assigned_user_payload(MENTOR_PROFILE, user))
+        changed["profileLogin"] = {"from": member_user, "to": user}
     if contact_id and user != contact_user and user not in contact_users:
         # Contact uses assignedUsers (collaborators) since 2026-07-16 — write both
         # shapes, MERGING into the multi list (co-mentors stamped by the session
@@ -562,6 +572,8 @@ async def reconcile_user_links(client: MentorClient, mentor_id: str) -> None:
             "Contact", contact_id,
             {"assignedUserId": user, "assignedUsersIds": contact_users + [user]},
         )
+        changed["contactLoginAdded"] = {"contactId": contact_id, "userId": user}
+    return changed
 
 
 def cbm_email_for(first: str, last: str) -> str:
@@ -1220,16 +1232,23 @@ async def verify_mentor_status(
     # assignment — e.g. the 2026-07-16 CRM switch of Contact to Multiple
     # Assigned Users, which hid every previously-stored single assignedUser.
     # Best-effort: a rejected write still leaves the status computed honestly.
+    reconciled: dict[str, Any] = {}
     try:
-        await reconcile_user_links(client, mentor_id)
+        reconciled = await reconcile_user_links(client, mentor_id) or {}
     except Exception as exc:
         log.warning("status sweep: reconcile_user_links failed for %s: %s", mentor_id, exc)
 
     rec = await get_mentor(client, mentor_id, metrics=metrics)
     completeness = await check_completeness(client, rec)
+    stored_status = rec.get("recordStatus")
     record_status = await sync_record_status(
         client, mentor_id, rec, completeness["status"]
     )
+    # What this sweep wrote on this mentor, for the action history (one entry
+    # per mentor it changed — plan § 4.1). Absent when it wrote nothing.
+    changed: dict[str, Any] = dict(reconciled)
+    if record_status != stored_status:
+        changed["recordStatus"] = {"from": stored_status, "to": record_status}
 
     user_id = assigned_user_id(rec)
     if not user_id:
@@ -1316,6 +1335,7 @@ async def verify_mentor_status(
             mentor_status == STATUS_ACCEPTED_PROVISIONAL
             and mailbox.get("status") != MailboxStatus.EXISTS.value
         ),
+        **({"changed": changed} if changed else {}),
     }
 
 
@@ -1454,8 +1474,8 @@ async def set_mentor_teams(
     user_id = await _mentor_login_user_id(client, mentor_id)
     if not user_id:
         raise MentorAdminError(NO_LOGIN_TEAM_MESSAGE)
-    valid = {t["id"] for t in await list_permission_teams(admin_client)}
-    chosen = [tid for tid in team_ids if tid in valid]
+    names = {t["id"]: t["name"] for t in await list_permission_teams(admin_client)}
+    chosen = [tid for tid in team_ids if tid in names]
 
     current = await admin_client.get("User", user_id, select="teamsIds,defaultTeamId")
     payload: dict[str, Any] = {"teamsIds": chosen}
@@ -1465,4 +1485,7 @@ async def set_mentor_teams(
     elif not chosen:
         payload["defaultTeamId"] = None
     await admin_client.update("User", user_id, payload)
-    return {"assignedTeamIds": chosen}
+    # previousTeamIds + teamNames feed the action history (plan § 4.1).
+    return {"assignedTeamIds": chosen,
+            "previousTeamIds": list(current.get("teamsIds") or []),
+            "teamNames": names}

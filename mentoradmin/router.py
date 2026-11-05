@@ -120,6 +120,80 @@ def _crm_failure(request: Request, exc: EspoError, message: str) -> HTTPExceptio
     return HTTPException(status_code=502, detail=f"{message}: {exc}")
 
 
+# --- Action history (plan prds/mentor-login-integrity-plan.md § 4.1) --------
+# Every mutating endpoint records what it changed: a stream note on the mentor
+# profile naming WHAT changed (never the values — a mentor can read their own
+# profile's stream) and a CActionLog row carrying the before and after values
+# (read only by the application's key-based role). Best-effort throughout.
+
+
+def _field_label(name: str) -> str:
+    for f in service.EDITABLE_FIELDS:
+        if f["name"] == name:
+            return render_text(f["label"])
+    return name
+
+
+def _same_value(a: Any, b: Any) -> bool:
+    """A CRM value reads back normalised: an empty string as null, a list in
+    any order (root CLAUDE.md, "A CRM text value does not read back")."""
+    def norm(v: Any) -> Any:
+        if v in ("", None, []):
+            return None
+        if isinstance(v, list):
+            return sorted(map(str, v))
+        if isinstance(v, str):
+            return v.strip()
+        return v
+    return norm(a) == norm(b)
+
+
+async def _record(
+    client: Any, user: dict, mentor_id: str, *, category: str, action: str,
+    summary: str, details: dict[str, Any] | None = None, outcome: str = "Success",
+    note_summary: str | None = None,
+) -> None:
+    """``note_summary`` replaces ``summary`` in the stream note when the
+    summary carries a value a mentor must not read there (a file name)."""
+    try:
+        note = None
+        if note_summary is not None:
+            note = action_log._default_note(  # the standard line, other words
+                action_log.APP_MENTOR_ADMIN, note_summary, user.get("name", ""))
+        await action_log.record_action(
+            client, app=action_log.APP_MENTOR_ADMIN, category=category, action=action,
+            parent_type=service.MENTOR_PROFILE, parent_id=mentor_id, summary=summary,
+            actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+            details=details, outcome=outcome, note=note,
+        )
+    except Exception as exc:  # noqa: BLE001 — history must never break the action
+        log.warning("could not record %s for mentor %s: %s", action, mentor_id, exc)
+
+
+def _links_sentence(links: dict[str, Any]) -> str:
+    parts = []
+    if "profileLogin" in links:
+        parts.append("login set on the mentor profile from its Contact")
+    if "contactLoginAdded" in links:
+        parts.append("login added to the mentor's Contact")
+    return "; ".join(parts)
+
+
+def _sweep_entry(row: dict[str, Any]) -> tuple[str, str, dict[str, Any]]:
+    """(action, summary, details) for one mentor the status sweep changed."""
+    changed = row["changed"]
+    parts = []
+    links = _links_sentence(changed)
+    if links:
+        parts.append(links)
+    rs = changed.get("recordStatus")
+    if rs:
+        parts.append(f"record status {rs.get('from') or 'blank'} → {rs.get('to') or 'blank'}")
+    action = (action_log.ACT_USER_LINKS_RECONCILED if links
+              else action_log.ACT_RECORD_STATUS_SYNCED)
+    return action, "Update Mentor Status: " + "; ".join(parts) + ".", changed
+
+
 @router.post("/logout")
 async def logout(request: Request) -> dict:
     clear_session(request)
@@ -198,6 +272,17 @@ async def mentor_status_check(request: Request) -> dict:
         )
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not verify mentor statuses")
+    for row in rows:
+        changed = row.pop("changed", None)  # history only; never sent to the page
+        if not changed:
+            continue
+        try:
+            action, summary, details = _sweep_entry({**row, "changed": changed})
+        except Exception as exc:  # noqa: BLE001 — history never breaks the sweep
+            log.warning("status sweep: could not describe the change on %s: %s", row.get("id"), exc)
+            continue
+        await _record(client, user, row["id"], category=action_log.CAT_RECORD_EDIT,
+                      action=action, summary=summary, details=details)
     return {
         "mentors": rows,
         "mailboxCheckEnabled": directory is not None,
@@ -297,6 +382,21 @@ async def mentor_teams_put(mentor_id: str, body: TeamsIn, request: Request) -> d
             "mentor CMentorProfile/%s teams set by %s (%d team(s))",
             mentor_id, user["userName"], len(result.get("assignedTeamIds") or []),
         )
+        names = result.pop("teamNames", None) or {}
+        before = result.pop("previousTeamIds", None) or []
+        after = result.get("assignedTeamIds") or []
+        added = [names.get(t, t) for t in after if t not in before]
+        removed = [names.get(t, t) for t in before if t not in after]
+        if added or removed:
+            parts = ([f"added {', '.join(added)}"] if added else []) + \
+                    ([f"removed {', '.join(removed)}"] if removed else [])
+            await _record(
+                client, user, mentor_id, category=action_log.CAT_PROVISIONING,
+                action=action_log.ACT_TEAMS_CHANGED,
+                summary=f"Teams changed: {'; '.join(parts)}.",
+                details={"from": [names.get(t, t) for t in before],
+                         "to": [names.get(t, t) for t in after]},
+            )
         return {"status": "ok", **result}
     except service.MentorAdminError as exc:
         # No login User yet — nothing to assign teams to (Doug's message).
@@ -400,6 +500,15 @@ async def mentor_upload_document(
         # sync — which for Mentors/ (Contact) folders enforces the rule that
         # they are granted to NO ONE (application-only). Best-effort.
         await docs_service.post_upload_hooks(settings, drive, "Contact", contact_id, row)
+        kind = f" ({docType})" if docType else ""
+        await _record(
+            client, user, mentor_id, category=action_log.CAT_DOCUMENT,
+            action=action_log.ACT_DOCUMENT_UPLOADED,
+            summary=f"Document uploaded: {row.get('filename') or filename}{kind}.",
+            note_summary=f"Document uploaded{kind}.",
+            details={"filename": row.get("filename") or filename, "docType": docType,
+                     "bytes": len(data)},
+        )
         return {"status": "ok", "document": row}
     except docs_service.DocsError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
@@ -515,6 +624,15 @@ async def _mentor_document_lifecycle(
             else docs_service.restore_document
         )
         row = await fn(store, drive, "Contact", contact_id, doc_id)
+        name = (row or {}).get("filename") or "a document"
+        await _record(
+            client, user, mentor_id, category=action_log.CAT_DOCUMENT,
+            action=(action_log.ACT_DOCUMENT_ARCHIVED if archive
+                    else action_log.ACT_DOCUMENT_RESTORED),
+            summary=f"Document {'archived' if archive else 'restored'}: {name}.",
+            note_summary=f"Document {'archived' if archive else 'restored'}.",
+            details={"filename": name},
+        )
         return {"status": "ok", "document": row}
     except docs_service.DocsNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc))
@@ -584,6 +702,13 @@ async def mentor_update(mentor_id: str, body: UpdateIn, request: Request) -> dic
     # mailbox (directory=None) — the browser drives the full check+create flow via
     # the streaming /provision endpoint, so the common path leaves PUT cheap.
     factory = _provision_factory(settings) if body.provision else None
+    # The record as it stood, so the action history can say what moved.
+    # Best-effort: an unreadable record still saves, logged without "from".
+    try:
+        before: dict[str, Any] = await service.get_mentor(client, mentor_id, metrics=None)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("mentor %s: pre-save read for the action history failed: %s", mentor_id, exc)
+        before = {}
     try:
         result = await service.update_mentor(
             client, mentor_id, body.changes,
@@ -598,6 +723,11 @@ async def mentor_update(mentor_id: str, body: UpdateIn, request: Request) -> dic
             "mentor CMentorProfile/%s saved by %s (fields: %s)",
             mentor_id, user["userName"], ", ".join(sorted(body.changes)) or "-",
         )
+        try:
+            await _log_save(client, user, mentor_id, body.changes, before, result)
+        except Exception as exc:  # noqa: BLE001 — the save already succeeded
+            log.warning("mentor %s: could not record the save: %s", mentor_id, exc)
+        result.pop("loginLinksReconciled", None)
         return result
     except service.MentorAdminError as exc:
         # e.g. contact fields saved on a mentor with no linked Contact record —
@@ -605,6 +735,44 @@ async def mentor_update(mentor_id: str, body: UpdateIn, request: Request) -> dic
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not save mentor")
+
+
+async def _log_save(
+    client: Any, user: dict, mentor_id: str, changes: dict[str, Any],
+    before: dict[str, Any], after: dict[str, Any],
+) -> None:
+    """One action-history entry for a save: the fields whose stored value
+    moved (from, to), the login links the save's reconcile wrote, and an
+    inline provisioning outcome. Nothing moved, nothing recorded."""
+    moved = {
+        k: {"from": before.get(k), "to": after.get(k)}
+        for k in changes
+        if not _same_value(before.get(k), after.get(k)) or not before
+    }
+    links = after.get("loginLinksReconciled") or {}
+    provision = dict(after.get("provision") or {})
+    provision.pop("tempPassword", None)
+    if not (moved or links or (provision and not provision.get("disabled"))):
+        return
+    parts = []
+    if moved:
+        parts.append("Saved " + ", ".join(_field_label(k) for k in moved))
+    if links:
+        parts.append(_links_sentence(links))
+    if provision and not provision.get("disabled"):
+        parts.append("login provisioning " + ("done" if provision.get("ok") else "did not complete"))
+    action = (action_log.ACT_STATUS_CHANGED if "mentorStatus" in moved
+              else action_log.ACT_RECORD_EDITED)
+    category = action_log.CAT_STATUS if "mentorStatus" in moved else action_log.CAT_RECORD_EDIT
+    details: dict[str, Any] = {"fields": moved}
+    if links:
+        details["loginLinks"] = links
+    if provision:
+        details["provision"] = provision
+    await _record(client, user, mentor_id, category=category, action=action,
+                  summary="; ".join(parts) + ".", details=details,
+                  outcome="Partial" if provision and not provision.get("ok")
+                  and not provision.get("disabled") else "Success")
 
 
 def _sse(event: dict[str, Any]) -> str:
@@ -651,7 +819,7 @@ async def _log_provision(
             parent_type=service.MENTOR_PROFILE, parent_id=mentor_id,
             summary=summary,
             actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
-            details=result, outcome="Failure" if error else "Success",
+            details=result, outcome="Failed" if error else "Success",
         )
     except Exception as exc:  # noqa: BLE001 — history must never break the stream
         log.warning("could not record the provisioning action for %s: %s", mentor_id, exc)

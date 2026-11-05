@@ -5,6 +5,36 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.304.0] — 2026-11-05
+
+**feat: Mentor Administration records every change in the action history**
+(mentor login integrity plan, step 1 — `prds/mentor-login-integrity-plan.md`
+§ 4.1; `OPEN-ITEMS.md` #66). No switch: it rides the existing `CActionLog`
+feature detection. No migration; no CRM change.
+
+- **Every mutating Mentor Administration action** writes an action history
+  entry: the save (each field that moved, before and after), the teams
+  change (teams added and removed, by name), document upload, archive and
+  restore, and **Update Mentor Status** (one entry per mentor it changed:
+  a login link it wrote, or a record status it updated). Before this, only
+  provisioning was recorded.
+- **The stream note names what changed, never the values** (nor a
+  document's file name) — a mentor can read their own profile's stream. The values go only to `CActionLog`,
+  which no mentor, partner or funder role reads (check C8, both CRMs).
+- **The login links a save or the sweep writes are now reported**
+  (`service.reconcile_user_links` returns what it wrote). This is the path
+  that spread the 10-16-26 fault; it is now visible.
+- **Two background jobs record their writes**, as "System: nightly
+  clean-up, …": Phase A (a login added to a mentor's Contact, on the mentor
+  profile) and the partner and funder team reconciliation (one entry per
+  record it healed). No stream note: nobody acted.
+- **Fix:** a failed provisioning run was logged with outcome `Failure`,
+  which is not one of the CRM's options (`Success` / `Partial` / `Failed`,
+  both CRMs), so the CRM refused every such row. It now sends `Failed`.
+- A save reads the record once more first, to know what moved (two CRM
+  reads). Nothing moved, nothing recorded.
+
+
 ## [0.303.5] — 2026-11-04
 
 **fix: closing the CRM connection pool no longer touches a dead event

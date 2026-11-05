@@ -284,3 +284,56 @@ async def test_team_reconciliation_one_record_failure_never_stops_the_pass():
     # …and the partner domain still ran
     assert summary["teamRecords"] == 2
 
+
+
+# --- action history for the background jobs (mentor login integrity § 4.1) ---
+
+def _capture_jobs(monkeypatch):
+    rows: list[dict] = []
+
+    async def fake_log_action(**kw):
+        rows.append(kw)
+        return True
+
+    monkeypatch.setattr(stamps.action_log, "log_action", fake_log_action)
+    return rows
+
+
+async def test_phase_a_records_each_contact_it_stamps(monkeypatch):
+    rows = _capture_jobs(monkeypatch)
+    espo = FakeEspo(
+        profiles=[
+            {"id": "MP1", "name": "Jane", "assignedUserId": "uJ", "contactRecordId": "cJ",
+             "contactRecordName": "Jane Doe", "assignedUsersNames": {"uJ": "jane.doe@cbmentors.org"}},
+            {"id": "MP2", "name": "Ok", "assignedUserId": "uO", "contactRecordId": "cO"},
+        ],
+        engagements=[],
+        records={("Contact", "cJ"): {"assignedUsersIds": []},
+                 ("Contact", "cO"): {"assignedUsersIds": ["uO"]}},
+    )
+    await stamps.run_stamp_reconciliation(_settings(), client=espo)
+    phase_a = [r for r in rows if r["actor_name"] == stamps.JOB_PHASE_A]
+    assert len(phase_a) == 1                       # only the profile it changed
+    row = phase_a[0]
+    assert (row["parent_type"], row["parent_id"]) == ("CMentorProfile", "MP1")
+    assert row["app"] == "System"
+    assert row["summary"] == "Login jane.doe@cbmentors.org added to the mentor's Contact Jane Doe."
+    assert row["details"] == {"contactId": "cJ", "userId": "uJ", "login": "jane.doe@cbmentors.org"}
+
+
+async def test_team_reconciliation_records_one_entry_per_healed_record(monkeypatch):
+    rows = _capture_jobs(monkeypatch)
+    await stamps.run_stamp_reconciliation(_settings(), client=_team_fake())
+    teams = [r for r in rows if r["actor_name"] == stamps.JOB_TEAMS]
+    assert len(teams) == 1                          # the partner was already in
+    row = teams[0]
+    assert (row["parent_type"], row["parent_id"]) == ("CSponsorProfile", "S1")
+    assert row["summary"] == "Sponsor Management Team added to the record, its company, 1 contact."
+
+
+async def test_a_failed_history_write_never_stops_the_job(monkeypatch):
+    async def broken(**kw):
+        raise RuntimeError("CRM down")
+    monkeypatch.setattr(stamps.action_log, "log_action", broken)
+    summary = await stamps.run_stamp_reconciliation(_settings(), client=_team_fake())
+    assert summary["teamHealed"] == 1 and summary["errors"] == 0

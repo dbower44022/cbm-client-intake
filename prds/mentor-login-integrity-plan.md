@@ -1,6 +1,6 @@
 # Mentor login integrity — prevention, detection and history — Plan
 
-Last Updated: 11-05-26 12:20 · Revision 1.2 — see change log at the end.
+Last Updated: 11-05-26 17:24 · Revision 1.3 — see change log at the end.
 
 **Status:** Approved by Doug 11-05-26 ("approved"). Not built.
 **Kickoff that produced it:** `prompts/mentor-login-integrity-design-prompt-v0.2.md`.
@@ -324,6 +324,7 @@ which is now Doug's.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 11-05-26 17:24 | Claude (Claude Code) | Step 0 applied on crm-test; step 1 built (v0.304.0), committed, not pushed. No ruling changed. |
 | 1.2 | 11-05-26 12:20 | Claude (Claude Code) | Checks C1–C8 done; results under § 7; two facts added to the § 6 repair procedure. No ruling changed. |
 | 1.1 | 11-05-26 12:08 | Claude (Claude Code) | Build kickoff pointer moved to revision 0.2 of the prompt. No ruling changed. |
 | 1.0 | 11-05-26 11:04 | Claude (Claude Code) | First issue, from the design session of 11-02-26 to 11-05-26. Approved by Doug 11-05-26. |

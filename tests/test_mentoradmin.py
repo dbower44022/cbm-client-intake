@@ -1992,3 +1992,163 @@ def test_teams_put_no_login_returns_400(monkeypatch):
         r = c.put("/mentoradmin/api/mentors/m1/teams", json={"teamIds": ["t1"]})
     assert r.status_code == 400
     assert r.json()["detail"] == service.NO_LOGIN_TEAM_MESSAGE
+
+
+# --- action history for every Mentor Administration change (login integrity § 4.1) ---
+
+def _capture_history(monkeypatch):
+    rows: list[dict] = []
+
+    async def fake_record_action(client, **kw):
+        rows.append(kw)
+
+    monkeypatch.setattr("mentoradmin.router.action_log.record_action", fake_record_action)
+    return rows
+
+
+@pytest.mark.asyncio
+async def test_reconcile_reports_what_it_wrote():
+    c = ProvisionClient(profile={"id": "m1", "name": "Jane", "mentorStatus": "Active",
+                                 "assignedUserId": "u1", "cbmEmail": "", "contactRecordId": "c1"})
+    assert await service.reconcile_user_links(c, "m1") == {
+        "contactLoginAdded": {"contactId": "c1", "userId": "u1"}}
+    c.contact["assignedUsersIds"] = ["u1"]  # the fake does not store Contact writes
+    assert await service.reconcile_user_links(c, "m1") == {}   # second run: nothing to write
+
+
+def _save_stubs(monkeypatch, before, after):
+    _authed(monkeypatch)
+    monkeypatch.setattr("mentoradmin.router._provision_factory", lambda settings: None)
+
+    async def get_mentor(client, mentor_id, metrics=None):
+        return dict(before)
+
+    async def update_mentor(client, mentor_id, changes, **kw):
+        return dict(after)
+
+    async def completeness(client, rec):
+        return {"status": "Complete", "issues": []}
+
+    async def sync(client, mentor_id, rec, status):
+        return status
+
+    monkeypatch.setattr("mentoradmin.router.service.get_mentor", get_mentor)
+    monkeypatch.setattr("mentoradmin.router.service.update_mentor", update_mentor)
+    monkeypatch.setattr("mentoradmin.router.service.check_completeness", completeness)
+    monkeypatch.setattr("mentoradmin.router.service.sync_record_status", sync)
+
+
+def test_save_records_each_field_that_moved_with_before_and_after(monkeypatch):
+    rows = _capture_history(monkeypatch)
+    _save_stubs(monkeypatch,
+                before={"mentorStatus": "Approved", "acceptingNewClients": False, "mentorStatusNotes": ""},
+                after={"mentorStatus": "Active", "acceptingNewClients": True, "mentorStatusNotes": None,
+                       "loginLinksReconciled": {"contactLoginAdded": {"contactId": "c1", "userId": "u1"}}})
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.put("/mentoradmin/api/mentors/m1", json={"changes": {
+            "mentorStatus": "Active", "acceptingNewClients": True, "mentorStatusNotes": ""}})
+    assert r.status_code == 200
+    assert "loginLinksReconciled" not in r.json()        # internal, never sent to the page
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["action"] == "Status Changed" and row["category"] == "Status Change"
+    assert row["parent_type"] == "CMentorProfile" and row["parent_id"] == "m1"
+    assert row["details"]["fields"] == {
+        "mentorStatus": {"from": "Approved", "to": "Active"},
+        "acceptingNewClients": {"from": False, "to": True},
+    }                                                     # "" -> None is not a change
+    assert row["details"]["loginLinks"] == {"contactLoginAdded": {"contactId": "c1", "userId": "u1"}}
+    # The summary (and so the stream note a mentor can read) names fields, never values.
+    assert "Approved" not in row["summary"] and "Active" not in row["summary"]
+    assert row["summary"].startswith("Saved Status, ")
+    assert "login added to the mentor's Contact" in row["summary"]
+
+
+def test_save_that_moved_nothing_records_nothing(monkeypatch):
+    rows = _capture_history(monkeypatch)
+    _save_stubs(monkeypatch, before={"mentorType": "Mentor"}, after={"mentorType": "Mentor"})
+    with TestClient(_app(monkeypatch)) as c:
+        assert c.put("/mentoradmin/api/mentors/m1",
+                     json={"changes": {"mentorType": "Mentor"}}).status_code == 200
+    assert rows == []
+
+
+def test_teams_change_records_names_added_and_removed(monkeypatch):
+    rows = _capture_history(monkeypatch)
+    _authed(monkeypatch)
+    _team_factory(monkeypatch)
+
+    async def fake_set(client, admin_client, mentor_id, team_ids):
+        return {"assignedTeamIds": ["t1", "t3"], "previousTeamIds": ["t1", "t2"],
+                "teamNames": {"t1": "Mentor Team", "t2": "Client Administration Team",
+                              "t3": "Mentor Administration Team"}}
+
+    monkeypatch.setattr("mentoradmin.router.service.set_mentor_teams", fake_set)
+    with TestClient(_app(monkeypatch)) as c:
+        body = c.put("/mentoradmin/api/mentors/m1/teams", json={"teamIds": ["t1", "t3"]}).json()
+    assert set(body) == {"status", "assignedTeamIds"}
+    assert rows[0]["action"] == "Teams Changed"
+    assert rows[0]["summary"] == ("Teams changed: added Mentor Administration Team; "
+                                  "removed Client Administration Team.")
+    assert rows[0]["details"]["to"] == ["Mentor Team", "Mentor Administration Team"]
+
+
+def test_status_sweep_records_one_entry_per_mentor_it_changed(monkeypatch):
+    rows = _capture_history(monkeypatch)
+    _authed(monkeypatch)
+    monkeypatch.setattr("mentoradmin.router._provision_factory", lambda settings: None)
+
+    async def fake_verify(client, *, user_client=None, directory=None, members_group=""):
+        return [
+            {"id": "m1", "name": "A", "changed": {"recordStatus": {"from": "Incomplete", "to": "Complete"}}},
+            {"id": "m2", "name": "B"},
+            {"id": "m3", "name": "C", "changed": {"profileLogin": {"from": None, "to": "u3"}}},
+        ]
+
+    monkeypatch.setattr("mentoradmin.router.service.verify_all_mentor_statuses", fake_verify)
+    with TestClient(_app(monkeypatch)) as c:
+        resp = c.post("/mentoradmin/api/mentors/status-check")
+        assert resp.status_code == 200
+        assert not any("changed" in m for m in resp.json()["mentors"])  # history only
+    assert [(r["parent_id"], r["action"]) for r in rows] == [
+        ("m1", "Record Status Updated"), ("m3", "User Links Reconciled")]
+    assert rows[0]["summary"] == "Update Mentor Status: record status Incomplete → Complete."
+
+
+@pytest.mark.asyncio
+async def test_sweep_row_reports_its_writes():
+    c = ProvisionClient(profile={"id": "m1", "name": "Jane", "mentorStatus": "Active",
+                                 "assignedUserId": "u1", "cbmEmail": "", "contactRecordId": "c1"})
+    row = await service.verify_mentor_status(c, "m1", metrics=None)
+    assert row["changed"]["contactLoginAdded"] == {"contactId": "c1", "userId": "u1"}
+    c.contact["assignedUsersIds"] = ["u1"]  # the fake does not store Contact writes
+    row = await service.verify_mentor_status(c, "m1", metrics=None)
+    assert "contactLoginAdded" not in row.get("changed", {})
+
+
+def test_provision_failure_uses_the_crm_outcome_value():
+    import inspect
+    from mentoradmin import router as r
+    # CActionLog.outcome is an enum of Success / Partial / Failed on both CRMs;
+    # "Failure" made the CRM refuse every failed-provisioning row.
+    assert 'outcome="Failed" if error' in inspect.getsource(r._log_provision)
+
+
+def test_document_note_never_names_the_file(monkeypatch):
+    """The CActionLog summary names the file; the stream note, which a mentor
+    can read on their own profile, does not."""
+    import asyncio
+    from mentoradmin import router as r
+    seen = {}
+
+    async def fake_record_action(client, **kw):
+        seen.update(kw)
+
+    monkeypatch.setattr("mentoradmin.router.action_log.record_action", fake_record_action)
+    asyncio.run(r._record(object(), {"name": "Staff Person"}, "m1",
+                          category="Document", action="Document Uploaded",
+                          summary="Document uploaded: Jane Doe agreement.pdf (Agreement).",
+                          note_summary="Document uploaded (Agreement)."))
+    assert "Jane Doe" in seen["summary"]
+    assert "Jane Doe" not in seen["note"]
+    assert seen["note"] == "[Mentor Administration] Document uploaded (Agreement). · by Staff Person"

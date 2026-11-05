@@ -28,6 +28,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional
 
+from core import action_log
 from core.config import Settings
 from core.espo import EspoClient, EspoError
 
@@ -161,7 +162,26 @@ async def ensure_user_on_record(
 # 403s the mentor's own profile save. Same drift causes as the engagement
 # class; healed by the same merge-only rule (profile links = truth).
 
-_PROFILE_SELECT = "id,name,mentorStatus,contactRecordId,assignedUserId,assignedUsersIds"
+_PROFILE_SELECT = ("id,name,mentorStatus,contactRecordId,contactRecordName,"
+                   "assignedUserId,assignedUsersIds,assignedUsersNames")
+
+#: Who the action history names for each background job (plan § 4.1).
+JOB_PHASE_A = action_log.SYSTEM_ACTOR_PREFIX + "nightly clean-up, mentor Contacts"
+JOB_TEAMS = action_log.SYSTEM_ACTOR_PREFIX + "nightly clean-up, partner and funder teams"
+
+
+async def _log_job(job: str, *, category: str, action: str, parent_type: str,
+                   parent_id: str, summary: str, details: dict[str, Any]) -> None:
+    """One action-history row for a background job's write. No stream note:
+    nobody acted, and the job runs nightly. Best-effort, never raises."""
+    try:
+        await action_log.log_action(
+            app=action_log.APP_SYSTEM, category=category, action=action,
+            parent_type=parent_type, parent_id=parent_id, summary=summary,
+            actor_name=job, details=details,
+        )
+    except Exception as exc:  # noqa: BLE001
+        log.warning("could not record %s on %s/%s: %s", action, parent_type, parent_id, exc)
 
 
 async def all_mentor_profiles(client: Any) -> list[dict[str, Any]]:
@@ -273,14 +293,17 @@ async def run_team_reconciliation(
         for rec in records:
             summary["teamRecords"] += 1
             healed_here = False
+            joined: list[str] = []
             try:
                 if await ensure_team_on_record(client, entity, rec["id"], team_id, rec.get("teamsIds") or []):
                     healed_here = True
+                    joined.append("the record")
                     log.info("team reconciliation: %s/%s %r joined %r",
                              entity, rec["id"], rec.get("name"), team_name)
                 company_id = rec.get(company_fk)
                 if company_id and await ensure_team_on_record(client, ACCOUNT, company_id, team_id):
                     healed_here = True
+                    joined.append("its company")
                     log.info("team reconciliation: company Account/%s of %r joined %r",
                              company_id, rec.get("name"), team_name)
                 contacts = await client.list_related(
@@ -289,6 +312,7 @@ async def run_team_reconciliation(
                 for ct in contacts.get("list", []):
                     if await ensure_team_on_record(client, CONTACT, ct["id"], team_id, ct.get("teamsIds") or []):
                         healed_here = True
+                        joined.append(f"Contact {ct['id']}")
                         log.info("team reconciliation: Contact/%s of %r joined %r",
                                  ct["id"], rec.get("name"), team_name)
             except EspoError as exc:
@@ -298,6 +322,17 @@ async def run_team_reconciliation(
                 continue
             if healed_here:
                 summary["teamHealed"] += 1
+                contacts_n = sum(1 for j in joined if j.startswith("Contact "))
+                said = [j for j in joined if not j.startswith("Contact ")]
+                if contacts_n:
+                    said.append(f"{contacts_n} contact{'s' if contacts_n != 1 else ''}")
+                await _log_job(
+                    JOB_TEAMS, category=action_log.CAT_RECORD_EDIT,
+                    action=action_log.ACT_TEAM_STAMPED, parent_type=entity,
+                    parent_id=rec["id"],
+                    summary=f"{team_name} added to {', '.join(said)}.",
+                    details={"team": team_name, "joined": joined},
+                )
 
 
 def system_client(settings: Settings) -> EspoClient:
@@ -346,6 +381,15 @@ async def run_stamp_reconciliation(
                     log.info(
                         "stamp reconciliation: merged %r's User onto their own "
                         "Contact/%s", prof.get("name"), contact_id,
+                    )
+                    login = (prof.get("assignedUsersNames") or {}).get(uid) or uid
+                    await _log_job(
+                        JOB_PHASE_A, category=action_log.CAT_RECORD_EDIT,
+                        action=action_log.ACT_USER_LINKS_RECONCILED,
+                        parent_type=MENTOR_PROFILE, parent_id=prof["id"],
+                        summary=(f"Login {login} added to the mentor's Contact "
+                                 f"{prof.get('contactRecordName') or contact_id}."),
+                        details={"contactId": contact_id, "userId": uid, "login": login},
                     )
             except EspoError as exc:
                 summary["errors"] += 1

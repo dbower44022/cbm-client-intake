@@ -58,7 +58,11 @@ found; move resolved items to the bottom with the resolution date.
     rename or a new team, Doug's ruling; (5) **step 0 done 11-05-26** —
     the three CRM scripts built; history settings and the nine tracked
     fields **applied on crm-test**; production and Boston owed after the
-    next-day sign-in log check and a non-administrator stream check.
+    next-day sign-in log check and a non-administrator stream check;
+    (6) **step 1 built 11-05-26 (v0.304.0)**, committed, not pushed — no
+    flag; after the push, check on crm-test as a real non-administrator on
+    the Mentor Administration Team that a save, a teams change and a
+    document upload each leave a `CActionLog` row and a value-free note.
 
 65. **The email composer's new-contact row — three smaller faults**
     (2026-10-31, found on the #63 live pass). (1) ~~The row's Company

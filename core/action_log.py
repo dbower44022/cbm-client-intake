@@ -52,6 +52,10 @@ APP_COMMUNICATIONS = "Communications"
 APP_INTAKE = "Intake"
 APP_ANALYTICS = "Analytics"
 APP_SETUP = "System Settings"
+# Background jobs (no person acted): the actor is "System: <job>", and the
+# app names where the job lives (plan prds/mentor-login-integrity-plan.md § 4.1).
+APP_SYSTEM = "System"
+SYSTEM_ACTOR_PREFIX = "System: "
 
 # --- categories (the `category` enum — small + stable) ----------------------
 CAT_ASSIGNMENT = "Assignment"
@@ -99,6 +103,9 @@ ACT_MENTOR_APPROVED = "Mentor Approved"
 ACT_LOGIN_PROVISIONED = "Login Provisioned"
 ACT_MAILBOX_PROVISIONED = "Mailbox Provisioned"
 ACT_USER_LINKS_RECONCILED = "User Links Reconciled"
+ACT_TEAMS_CHANGED = "Teams Changed"
+ACT_RECORD_STATUS_SYNCED = "Record Status Updated"
+ACT_TEAM_STAMPED = "Team Added"
 ACT_CONTRIBUTION_RECORDED = "Contribution Recorded"
 ACT_CONTRIBUTION_EDITED = "Contribution Edited"
 ACT_CONTRIBUTION_CANCELLED = "Contribution Cancelled"
