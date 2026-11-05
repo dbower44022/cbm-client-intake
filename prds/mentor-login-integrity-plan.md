@@ -4,7 +4,7 @@ Last Updated: 11-05-26 18:05 · Revision 1.5 — see change log at the end.
 
 **Status:** Approved by Doug 11-05-26 ("approved"). Not built.
 **Kickoff that produced it:** `prompts/mentor-login-integrity-design-prompt-v0.2.md`.
-**Build kickoff:** `prompts/mentor-login-integrity-build-prompt-v0.2.md` (steps 0–3; steps 4–6 follow in revision 0.3).
+**Build kickoff:** `prompts/mentor-login-integrity-build-prompt-v0.3.md` (steps 4–6; steps 0–3 built 11-05-26 from revision 0.2).
 **Sibling plan:** staff notes on mentors and the page-space work are a
 separate arc, started from `prompts/mentor-staff-notes-prompt-v0.1.md`.
 
