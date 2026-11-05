@@ -96,6 +96,18 @@ def stored_entity_name(name: str) -> str:
     return "C" + name
 
 
+def _moved_keys(before: dict[str, Any] | None, after: dict[str, Any] | None,
+                allowed: set[str]) -> set[str]:
+    """Keys of a field definition that changed, other than ``allowed``.
+
+    An absent key and a key holding ``None`` read the same everywhere in
+    EspoCRM, so one turning into the other is not a change. Anything else
+    that appeared, vanished or changed value is."""
+    before, after = before or {}, after or {}
+    return {key for key in set(before) | set(after)
+            if key not in allowed and before.get(key) != after.get(key)}
+
+
 class Applier:
     def __init__(self, client: EspoClient, plan: dict[str, Any], apply: bool) -> None:
         self.c = client
@@ -105,6 +117,8 @@ class Applier:
         self.skipped: list[str] = []      # already correct
         self.failed: list[str] = []
         self._custom: dict[str, bool] = {}
+        # fieldParams: each field's metadata definition before any write.
+        self._before: dict[tuple[str, str], dict[str, Any] | None] = {}
         self._new_entities = {
             stored_entity_name(e["name"]) for e in plan.get("entities", [])
         }
@@ -223,7 +237,15 @@ class Applier:
         compared and written; the field's other settings are sent back as they
         are. Added 10-18-26 to clear ``readOnly`` on fields the application
         writes — a Read-only field is a global ACL restriction that silently
-        drops every API write (``Acl/GlobalRestriction``)."""
+        drops every API write (``Acl/GlobalRestriction``). Since 11-05-26 it
+        also carries the tracked-field change (``{"audited": true}``,
+        ``plans/mentor-tracked-fields.json``), so it refuses to send a body that
+        differs from the definition read anywhere but the named parameters, and
+        verify() fails if any other part of the definition moved.
+
+        ``GET Admin/fieldManager/{Entity}/{field}`` answers the metadata
+        definition plus ``label`` (crm-test, 11-05-26), and HTTP 500 — not
+        404 — for a field that does not exist; both are read as "no field"."""
         for spec in self.plan.get("fieldParams", []):
             entity, given, params = spec["entity"], spec["name"], dict(spec.get("params") or {})
             if not await self._exists(entity):
@@ -234,15 +256,37 @@ class Applier:
             if existing is None:
                 self.failed.append(f"field {entity}.{stored} does not exist — cannot change it")
                 continue
+            # The definition as the metadata holds it, kept so verify() can
+            # prove nothing but the named parameters moved.
+            self._before[(entity, stored)] = await self._meta_field(entity, stored)
             differ = {k: v for k, v in params.items() if existing.get(k, None if v is not False else False) != v}
             if not differ:
                 self.skipped.append(f"field {entity}.{stored} already has {params}")
                 continue
+            # The WHOLE definition goes back with only the named parameters
+            # changed. A PUT carrying just {"audited": true} may replace the
+            # definition with that one key (mentor-tracked-fields-crm-handoff.md
+            # § 2), and an options-only body is a 500 (2026-09-29).
             body = {k: v for k, v in existing.items() if k not in ("name", "isCustom")}
             body.update(params)
+            stray = sorted(k for k in set(body) | set(existing)
+                           if k not in params and k not in ("name", "isCustom")
+                           and body.get(k) != existing.get(k))
+            if stray:
+                self.failed.append(f"field {entity}.{stored}: the body to send differs from "
+                                   f"the definition read in {stray} — nothing sent")
+                continue
             shown = ", ".join(f"{k}: {existing.get(k)!r} -> {v!r}" for k, v in sorted(differ.items()))
             await self._write("PUT", f"Admin/fieldManager/{entity}/{stored}", body,
                               f"change field {entity}.{stored} ({shown})")
+
+    async def _meta_field(self, entity: str, stored: str) -> dict[str, Any] | None:
+        """One field's definition from ``GET /Metadata``. Read through the
+        enclosing ``fields`` dict: a scalar key comes back as a bare unquoted
+        string, never JSON (root ``CLAUDE.md``, Gotchas)."""
+        defs = await self._meta(f"entityDefs.{entity}.fields") or {}
+        have = defs.get(stored) if isinstance(defs, dict) else None
+        return have if isinstance(have, dict) else None
 
     async def _read_field(self, entity: str, stored: str) -> dict[str, Any] | None:
         resp = await self.c._request(
@@ -354,14 +398,20 @@ class Applier:
         for spec in self.plan.get("fieldParams", []):
             entity = spec["entity"]
             stored = await self.stored_field(entity, spec["name"])
-            defs = await self._meta(f"entityDefs.{entity}.fields") or {}
-            have = defs.get(stored) if isinstance(defs, dict) else None
-            wrong = {k: (have or {}).get(k) for k, v in (spec.get("params") or {}).items()
+            params = spec.get("params") or {}
+            have = await self._meta_field(entity, stored)
+            wrong = {k: (have or {}).get(k) for k, v in params.items()
                      if (have or {}).get(k, None if v is not False else False) != v}
+            before = self._before.get((entity, stored))
+            moved = sorted(_moved_keys(before, have, set(params))) if before is not None else []
             if have is None:
                 self.failed.append(f"VERIFY field {entity}.{stored} is not present")
             elif wrong:
                 self.failed.append(f"VERIFY field {entity}.{stored} still reads {wrong}")
+            elif moved:
+                self.failed.append(
+                    f"VERIFY field {entity}.{stored} changed beyond the plan: "
+                    + ", ".join(f"{k}: {before.get(k)!r} -> {have.get(k)!r}" for k in moved))
             else:
                 self.actions.append(f"verified field {entity}.{stored} params")
 

@@ -8,6 +8,7 @@ last two on crm-test 10-14-26."""
 from __future__ import annotations
 
 import asyncio
+import copy
 import importlib.util
 import json
 import sys
@@ -159,3 +160,168 @@ def test_outreach_entities_plan_dry_run_fingerprint_on_a_crm_without_them():
         for pair in ((l["entity"], l["link"]), (l["entityForeign"], l["linkForeign"])):
             assert pair not in seen, f"duplicate link name {pair}"
             seen.add(pair)
+
+
+# --- the tracked-field change (fieldParams {"audited": true}), 11-05-26 ------
+
+_TRACKED = {
+    "CMentorProfile": {
+        "cbmEmail": {"isCustom": True, "type": "varchar"},
+        "mentorStatus": {"type": "enum", "default": None, "isCustom": True, "maxLength": 100,
+                         "options": ["", "Prospect", "Active", "Resigned"],
+                         "style": {"": None, "Prospect": None, "Active": None, "Resigned": None}},
+        "mentorType": {"type": "enum", "isCustom": True, "options": ["", "Mentor", "Co-Mentor"]},
+        "acceptingNewClients": {"isCustom": True, "type": "bool"},
+        "maximumClientCapacity": {"isCustom": True, "required": False, "type": "int"},
+        "mentorStatusNotes": {"cutHeight": 500, "isCustom": True, "rowsMin": 2, "type": "text"},
+        "departureDate": {"isCustom": True, "type": "date"},
+    },
+    "CPartnerProfile": {
+        "partnershipStatus": {"type": "enum", "isCustom": True, "maxLength": 100,
+                              "options": ["", "Meetings Held", "Inactive", "Candidate"]},
+    },
+    "CSponsorProfile": {
+        "funderStatus": {"type": "enum", "isCustom": True, "maxLength": 100,
+                         "options": ["", "Prospective", "Active", "Lapsed", "Ended"]},
+    },
+}
+
+
+class _TrackedCrm:
+    """crm-test's three profile entities as read on 11-05-26: fieldManager GET
+    answers the metadata definition plus ``label``, and HTTP 500 for a field
+    that does not exist. ``on_put`` lets a test make the CRM misbehave."""
+
+    _base = "https://crm-test.example/api/v1"
+
+    def __init__(self, defs=None, on_put=None):
+        self.defs = copy.deepcopy(defs or _TRACKED)
+        self.puts: list[tuple[str, dict]] = []
+        self.posts: list[str] = []
+        self.on_put = on_put
+
+    async def _request(self, method, url, op="", params=None, json_body=None):
+        path = url[len(self._base) + 1:]
+        if method == "PUT":
+            entity, field = path.split("/")[-2:]
+            self.puts.append((f"{entity}.{field}", copy.deepcopy(json_body)))
+            stored = {k: v for k, v in json_body.items() if k != "label"}
+            stored["isCustom"] = True
+            if self.on_put:
+                stored = self.on_put(entity, field, stored)
+            self.defs[entity][field] = stored
+            return _Resp(200, {})
+        if method == "POST":
+            self.posts.append(path)
+            return _Resp(200, {})
+        if path.startswith("Admin/fieldManager/"):
+            entity, field = path.split("/")[-2:]
+            have = self.defs.get(entity, {}).get(field)
+            if have is None:
+                return _Resp(500)
+            return _Resp(200, {**have, "label": field.title()})
+        key = (params or {}).get("key", "")
+        if key.startswith("scopes."):
+            if key[len("scopes."):] in self.defs:
+                return _Resp(200, {"isCustom": True, "entity": True})
+            return _Resp(200)
+        if key.startswith("entityDefs.") and key.endswith(".fields"):
+            entity = key.split(".")[1]
+            return _Resp(200, self.defs[entity]) if entity in self.defs else _Resp(200)
+        return _Resp(200)
+
+
+def _tracked_plan():
+    return json.loads((ROOT / "scripts/plans/mentor-tracked-fields.json").read_text())
+
+
+def test_tracked_fields_plan_names_the_nine_handoff_fields():
+    plan = _tracked_plan()
+    assert set(plan) == {"name", "description", "fieldParams"}
+    named = [(s["entity"], s["name"]) for s in plan["fieldParams"]]
+    assert named == [(e, f) for e, fs in _TRACKED.items() for f in fs]
+    assert all(s["params"] == {"audited": True} for s in plan["fieldParams"])
+
+
+def test_tracked_fields_dry_run_writes_nothing():
+    crm = _TrackedCrm()
+    app = applier.Applier(crm, _tracked_plan(), apply=False)
+    asyncio.run(app.run())
+    assert not app.failed
+    assert crm.puts == [] and crm.posts == []
+    assert len(app.actions) == 9
+    assert "change field CMentorProfile.cbmEmail (audited: None -> True)" in app.actions
+    # A CRM where none of the nine is tracked yet (crm-test and production,
+    # 11-05-26) prints this fingerprint on the dry run.
+    assert app.fingerprint() == "e85b46a1a6e0"
+
+
+def test_tracked_fields_apply_sends_the_whole_definition_with_only_audited_changed():
+    crm = _TrackedCrm()
+    app = applier.Applier(crm, _tracked_plan(), apply=True)
+    asyncio.run(app.run())
+    assert not app.failed, app.failed
+    assert len(crm.puts) == 9
+    for name, body in crm.puts:
+        entity, field = name.split(".")
+        expected = {k: v for k, v in _TRACKED[entity][field].items() if k != "isCustom"}
+        expected.update(label=field.title(), audited=True)
+        assert body == expected
+    assert crm.posts == ["Admin/rebuild"]
+    assert len([a for a in app.actions if a.startswith("verified field")]) == 9
+
+
+def test_tracked_fields_already_audited_are_skipped():
+    defs = copy.deepcopy(_TRACKED)
+    defs["CMentorProfile"]["mentorStatus"]["audited"] = True
+    crm = _TrackedCrm(defs)
+    app = applier.Applier(crm, _tracked_plan(), apply=True)
+    asyncio.run(app.run())
+    assert not app.failed
+    assert "CMentorProfile.mentorStatus" not in [n for n, _ in crm.puts]
+    assert len(crm.puts) == 8
+    assert any("CMentorProfile.mentorStatus already has" in s for s in app.skipped)
+
+
+def test_tracked_fields_refuses_a_field_that_does_not_exist():
+    defs = copy.deepcopy(_TRACKED)
+    del defs["CMentorProfile"]["mentorStatusNotes"]
+    crm = _TrackedCrm(defs)
+    app = applier.Applier(crm, _tracked_plan(), apply=False)
+    asyncio.run(app.run())
+    assert app.failed == [
+        "field CMentorProfile.mentorStatusNotes does not exist — cannot change it"]
+    assert crm.puts == []
+
+
+def test_tracked_fields_read_back_fails_when_the_definition_was_replaced():
+    # The trap in the handoff: the CRM keeps audited but loses the rest of the
+    # definition. The read-back must catch it even though audited is true.
+    def clobber(entity, field, stored):
+        return {k: v for k, v in stored.items() if k != "options"}
+
+    crm = _TrackedCrm(on_put=clobber)
+    app = applier.Applier(crm, _tracked_plan(), apply=True)
+    asyncio.run(app.run())
+    moved = [f for f in app.failed if "changed beyond the plan" in f]
+    assert len(moved) == 4    # the four enums lost their options
+    assert ("VERIFY field CMentorProfile.mentorStatus changed beyond the plan: "
+            "options: ['', 'Prospect', 'Active', 'Resigned'] -> None") in moved
+
+
+def test_tracked_fields_read_back_fails_when_audited_did_not_stick():
+    def drop(entity, field, stored):
+        if field == "cbmEmail":
+            stored.pop("audited", None)
+        return stored
+
+    crm = _TrackedCrm(on_put=drop)
+    app = applier.Applier(crm, _tracked_plan(), apply=True)
+    asyncio.run(app.run())
+    assert app.failed == ["VERIFY field CMentorProfile.cbmEmail still reads {'audited': None}"]
+
+
+def test_moved_keys_reads_absent_and_null_alike():
+    assert applier._moved_keys({"a": 1}, {"a": 1, "b": None}, set()) == set()
+    assert applier._moved_keys({"a": 1, "d": None}, {"a": 1}, set()) == set()
+    assert applier._moved_keys({"a": 1}, {"a": 2, "x": True}, {"x"}) == {"a"}

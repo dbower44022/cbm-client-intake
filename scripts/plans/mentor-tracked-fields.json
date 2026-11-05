@@ -1,0 +1,15 @@
+{
+  "name": "mentor-tracked-fields",
+  "description": "Mentor login integrity, step 0 (prds/mentor-login-integrity-plan.md section 4.6; Doug's ruling Q5.2, 11-04-26): nine fields become tracked fields (Entity Manager's Audited box), so each change leaves a dated, signed note on the record. Handoff: mentor-tracked-fields-crm-handoff.md. Each field's whole definition is read and sent back with only audited changed. Production check C3 (11-05-26): all nine exist under these names, none audited. mentorStatusNotes is due to be renamed by the staff notes plan - read which name exists before applying.",
+  "fieldParams": [
+    {"entity": "CMentorProfile", "name": "cbmEmail", "params": {"audited": true}},
+    {"entity": "CMentorProfile", "name": "mentorStatus", "params": {"audited": true}},
+    {"entity": "CMentorProfile", "name": "mentorType", "params": {"audited": true}},
+    {"entity": "CMentorProfile", "name": "acceptingNewClients", "params": {"audited": true}},
+    {"entity": "CMentorProfile", "name": "maximumClientCapacity", "params": {"audited": true}},
+    {"entity": "CMentorProfile", "name": "mentorStatusNotes", "params": {"audited": true}},
+    {"entity": "CMentorProfile", "name": "departureDate", "params": {"audited": true}},
+    {"entity": "CPartnerProfile", "name": "partnershipStatus", "params": {"audited": true}},
+    {"entity": "CSponsorProfile", "name": "funderStatus", "params": {"audited": true}}
+  ]
+}
