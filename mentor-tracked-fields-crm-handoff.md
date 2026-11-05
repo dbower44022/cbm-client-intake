@@ -1,6 +1,6 @@
 # CRM handoff — tracked fields on mentor, partner and funder profiles
 
-Last Updated: 11-05-26 11:04 · Revision 1.0 — see change log at the end.
+Last Updated: 11-05-26 13:20 · Revision 1.1 — see change log at the end.
 
 Nine fields become tracked fields (EspoCRM's **Audited** checkbox), so each
 change leaves a dated, signed note on the record whoever makes it, in the
@@ -25,7 +25,7 @@ plan (`prds/mentor-login-integrity-plan.md`, § 4.6; Doug's ruling Q5.2,
 | CRM | State | Evidence |
 |---|---|---|
 | crm-test | **Owed.** `CMentorProfile` tracks no fields; `CPartnerProfile` and `CSponsorProfile` track none. | `GET /Metadata` as the configuration administrator, 11-04-26. |
-| Production | **Owed; not read.** Plan check C3 reads it first, so only missing fields are added. | — |
+| Production | **Owed.** None of the nine tracked; all nine exist under these names. | Plan check C3, `scripts/check_login_integrity_prod.sh`, 11-05-26. |
 | Boston | **Owed.** EspoCRM 10.0.10. | — |
 
 **Verified:** these five entities keep a stream (`scopes.<Entity>.stream`
@@ -49,11 +49,28 @@ never from a label.
 ## 2. Automated path (preferred)
 
 Altering a field is `PUT Admin/fieldManager/{Entity}/{field}` with the
-field's full definition plus `"audited": true` (capability map: "answers",
-not yet exercised on a real CRM). The build adds an `audited` change type to
-`scripts/apply_crm_plan.py`, or a small `scripts/set_audited_fields.py`
-that reads each definition, sets `audited`, writes it back, rebuilds, and
-reads every field back. Dry run first, crm-test first.
+field's full definition plus `"audited": true`. The plan is
+`scripts/plans/mentor-tracked-fields.json`, applied by
+`scripts/apply_crm_plan.py` (its `fieldParams` change type): it reads each
+whole definition, refuses to send anything but `audited` changed, rebuilds,
+and fails if any other key moved on read-back. Dry run first, crm-test
+first:
+
+```
+PYTHONPATH=. uv run python scripts/run_with_admin.py scripts/apply_crm_plan.py scripts/plans/mentor-tracked-fields.json
+```
+
+Then the same command with `--apply --expect <fingerprint>` (the dry run
+prints it; e85b46a1a6e0 on crm-test, 11-05-26). Boston adds
+`--env ~/.config/cbm-boston/boston.env` after `run_with_admin.py` and
+`--production`; production runs from inside the web container (the
+applier's header). If `mentorStatusNotes` has been renamed by the staff
+notes work, the applier refuses that field: update the plan first.
+
+**Check after the crm-test apply:** the option labels of `mentorStatus`
+and `mentorType` still read as before (the PUT carries no
+`translatedOptions`; whether EspoCRM keeps the translations is not
+verified, and the read-back cannot see it).
 
 **Trap.** A `PUT` that sends only `{"audited": true}` may replace the field
 definition with that one key. Send the whole definition read from
@@ -82,4 +99,5 @@ Administration → Rebuild.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 11-05-26 13:20 | Claude (Claude Code) | Automated path built (step 0): the plan file and the applier command. Production check C3: none tracked, all nine exist. Label check added. |
 | 1.0 | 11-05-26 11:04 | Claude (Claude Code) | First issue, from the mentor login integrity design session. |

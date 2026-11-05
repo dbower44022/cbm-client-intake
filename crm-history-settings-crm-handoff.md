@@ -1,6 +1,6 @@
 # CRM handoff — history settings: Action History 30 days, and the sign-in log
 
-Last Updated: 11-05-26 11:04 · Revision 1.0 — see change log at the end.
+Last Updated: 11-05-26 13:20 · Revision 1.1 — see change log at the end.
 
 Two CRM settings from the mentor login integrity plan
 (`prds/mentor-login-integrity-plan.md`, § 4.6; Doug's rulings Q5.1 and 5b,
@@ -44,10 +44,11 @@ the repository root:
 PYTHONPATH=. uv run python scripts/run_with_admin.py scripts/set_crm_setting.py cleanupActionHistoryPeriod "30 days"
 ```
 
-`scripts/set_crm_setting.py` does not exist yet; it is part of the build
-(prompt `prompts/mentor-login-integrity-build-prompt-v0.1.md`). It reads the
-value, writes it with `PUT /Settings`, and reads it back. Until it exists,
-use the hand path.
+That is the dry run: it reads the value and prints the planned change.
+Add `--apply` to write it with `PUT /Settings` and read it back. On any CRM
+but crm-test, `--apply` also needs `--production` (the same guard as
+`scripts/apply_crm_plan.py`). Boston: put
+`--env ~/.config/cbm-boston/boston.env` after `run_with_admin.py`.
 
 **Hand path.** In the CRM, signed in as an Administrator-type login:
 Administration → Settings. Find the field for Action History clean-up
@@ -70,17 +71,34 @@ This is a server change. Doug runs it; it restarts nothing.
 **Before you start:** a terminal in `~/Dropbox/Projects/cbm-client-intake`;
 the droplet scripts reach each CRM through `scripts/on_crm.sh`.
 
-**The change.** In the CRM container's `data/config.php`, inside the
-returned array, add the line:
+**The change.** In the CRM container's `data/config-internal.php` (not
+`data/config.php`: the setting is a system item, and EspoCRM writes and
+reads system items from the internal file — source read on 9.3.10 and
+10.0.10, 11-05-26), inside the returned array, add the line:
 
 ```
 'authApiUserLogDisabled' => true,
 ```
 
-The build writes `scripts/set_authlog_switch.sh` to do this safely (back up
-the file, add the line only if absent, check PHP syntax with `php -l`, print
-the result). Until then, do not hand-edit the file: a syntax error in it
-stops the whole CRM.
+`scripts/set_authlog_switch.sh` does this safely: it builds a candidate,
+checks it with `php -l`, backs the file up beside itself, writes it in
+place as `www-data` (owner and mode kept), checks again and restores on
+failure. Never hand-edit the file: a syntax error in it stops the whole
+CRM. Read the state first (writes nothing):
+
+```
+scripts/on_crm.sh test scripts/set_authlog_switch.sh
+```
+
+Then apply:
+
+```
+scripts/on_crm.sh test scripts/set_authlog_switch.sh --apply
+```
+
+Use `production` or `boston` in place of `test` for the other CRMs. The
+crm-test nightly reset restores the database only, so the switch survives
+it.
 
 **Trap.** `authLogDisabled` (without `ApiUser`) switches off **all**
 sign-in logging, people included. That would destroy the evidence this plan
@@ -91,10 +109,14 @@ relies on. The setting is `authApiUserLogDisabled`.
 before. Sign in through the application once as a non-administrator and
 confirm the application still works: the setting changes logging only.
 
-**Rollback.** Remove the line (or set it to `false`). Nothing else changes.
+**Rollback.** `scripts/on_crm.sh <chapter> scripts/set_authlog_switch.sh --off`
+sets it to `false`. Nothing else changes. Prefer it to restoring the backup:
+EspoCRM rewrites the internal file itself, so an old backup may undo more
+than this line.
 
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 11-05-26 13:20 | Claude (Claude Code) | Both scripts built (step 0). The sign-in log switch goes in `data/config-internal.php`, not `data/config.php`. The `--production` guard and the rollback command added. |
 | 1.0 | 11-05-26 11:04 | Claude (Claude Code) | First issue, from the mentor login integrity design session. |
