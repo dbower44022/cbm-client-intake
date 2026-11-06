@@ -148,3 +148,79 @@ def test_the_digest_lists_conditions_8_and_9():
     _, text = digest.digest_body(Settings(), rows, acknowledged=0, fixed=0)
     assert "Edited in the CRM's own screens (1)" in text
     assert "Shared account signed in to the CRM (1)" in text
+
+
+async def test_with_no_application_address_known_nothing_is_reported():
+    class Quiet(Crm):
+        async def list(self, entity, **kw):
+            data = await super().list(entity, **kw)
+            if entity == "AuthLogRecord" and any(c["type"] == "equals" for c in kw.get("where") or []):
+                return {"list": []}  # the key's sign-ins are no longer logged
+            if entity == "ActionHistoryRecord":
+                return {"list": [r for r in data["list"] if r["userId"] != "uKey"]}
+            return data
+
+    store = Store()
+    assert await crm_use.run_crm_use_report(_s(), Quiet(), Quiet(), store, now=NOW) is None
+    assert store.keys == set()
+    # Listing the application's address is enough to run.
+    out = await crm_use.run_crm_use_report(_s(integrity_app_addresses=APP), Quiet(), Quiet(),
+                                           store, now=NOW)
+    assert out["c8"] == 1
+
+
+async def test_three_staff_behind_one_office_address_are_still_reported():
+    class Office(Crm):
+        async def list(self, entity, **kw):
+            data = await super().list(entity, **kw)
+            if entity == "AuthLogRecord" and not any(
+                    c["type"] == "equals" for c in kw.get("where") or []):
+                data = {"list": data["list"] + [
+                    {"username": "a@x", "ipAddress": OFFICE, "isDenied": False},
+                    {"username": "b@x", "ipAddress": OFFICE, "isDenied": False}]}
+            return data
+
+    store = Store()
+    out = await crm_use.run_crm_use_report(_s(), Office(), Office(), store, now=NOW)
+    assert out["c8"] == 1 and out["c9"] == 1
+
+
+async def test_a_failing_administrator_sign_in_is_retried_once_then_waits_a_day(monkeypatch):
+    from datetime import timedelta
+
+    from integrity import web_loop
+
+    clock = [NOW]
+    calls = []
+
+    class Clock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return clock[0]
+
+    async def failing(settings):
+        calls.append(clock[0])
+        raise RuntimeError("login refused")
+
+    ticks = []
+
+    async def sleep(seconds):
+        ticks.append(seconds)
+        clock[0] = clock[0] + timedelta(seconds=seconds)
+        if len(ticks) > 6 * 30:  # thirty hours of ten-minute ticks
+            raise asyncio.CancelledError
+
+    import asyncio
+
+    monkeypatch.setattr(web_loop, "datetime", Clock)
+    monkeypatch.setattr(web_loop, "run_once", failing)
+    monkeypatch.setattr(web_loop.asyncio, "sleep", sleep)
+    monkeypatch.setattr(web_loop, "get_settings", lambda: Settings(
+        integrity_crm_use_report=True, login_integrity_hour=7,
+        login_integrity_tz="America/New_York"))
+    with pytest.raises(asyncio.CancelledError):
+        await web_loop.crm_use_loop()
+    # 06:00 Eastern on 11-06 (11:00 UTC), its one retry, then 06:00 the next day and its retry.
+    assert len(calls) == 4
+    assert calls[1] - calls[0] <= timedelta(minutes=40)
+    assert calls[2] - calls[0] >= timedelta(hours=23)

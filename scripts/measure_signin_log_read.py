@@ -66,12 +66,20 @@ async def main() -> int:
         if env is not None:
             print(f"   rows: {env.get('total')}")
 
+    # The sign-in log the way the report pages it (by id), at the start and
+    # 2,000 rows in, so a slow deep page shows.
+    for offset in (0, 2000):
+        await _timed(f"sign-in log page at offset {offset}", admin.list(
+            "AuthLogRecord", where=day, max_size=_PAGE, offset=offset,
+            select="id,username,ipAddress,isDenied,createdAt", order_by="id", order="asc"))
+
     # One full day of Action History, page by page, as the report would read it.
     rows, offset, t = 0, 0, time.monotonic()
     while True:
         env = await _timed(f"page at offset {offset}", admin.list(
             "ActionHistoryRecord", where=day, max_size=_PAGE, offset=offset,
-            select="id,userId,action,targetType,ipAddress,createdAt"))
+            select="id,userId,action,targetType,ipAddress,createdAt",
+            order_by="id", order="asc"))
         if env is None:
             break
         page = env.get("list", [])

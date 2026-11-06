@@ -14,9 +14,14 @@ administrator (only an administrator can read them, check C2) and records:
 
 **Screens versus applications.** Both sign in as ``Espo``; only the network
 address separates them (check C2, and ``scripts/crm_direct_use_report.sh``).
-An address is the *application's* when the key-based account used it, when
-three or more logins used it in the window (the prototype's rule), or when it
-is listed in ``INTEGRITY_APP_ADDRESSES``. Everything else is the screens.
+An address is the *application's* when the key-based account used it in the
+window or when ``INTEGRITY_APP_ADDRESSES`` lists it. Everything else is the
+screens. The prototype's "three or more logins on one address" rule is NOT
+used: three staff behind one office connection would hide the very use this
+reports (review of v0.310.0). With no application address known at all, the
+run reports nothing and says why, rather than report every edit made
+through the applications. The addresses it treats as the application's are
+logged (they are servers, not people).
 
 The configuration account (``crm.config``), the provisioning account and the
 key-based account are never reported under condition 8.
@@ -42,8 +47,6 @@ _PAGE = 200
 #: The most rows one report reads from one list; past it the run fails.
 MAX_ROWS = 20_000
 WRITE_ACTIONS = ("create", "update", "delete")
-#: Logins used by this many people or more in the window are the application's.
-SHARED_ADDRESS_LOGINS = 3
 
 
 class TooMuchToRead(RuntimeError):
@@ -66,18 +69,21 @@ def excluded_logins(settings: Settings, key_user: str) -> set[str]:
     return out
 
 
-async def _rows(admin: Any, entity: str, where: list[dict[str, Any]], select: str) -> list[dict]:
+async def _rows(admin: Any, entity: str, where: list[dict[str, Any]], select: str,
+                max_rows: int = MAX_ROWS) -> list[dict]:
     out: list[dict] = []
     offset = 0
     while True:
+        # By id: unique, so a page boundary never repeats or skips a row the
+        # way many rows sharing one createdAt second can.
         data = await admin.list(entity, where=where, select=select, max_size=_PAGE,
-                                offset=offset, order_by="createdAt", order="asc")
+                                offset=offset, order_by="id", order="asc")
         page = data.get("list", [])
         out.extend(page)
         if len(page) < _PAGE:
             return out
         offset += _PAGE
-        if offset >= MAX_ROWS:
+        if offset >= max_rows:
             raise TooMuchToRead(f"more than {MAX_ROWS} {entity} rows in one day")
 
 
@@ -94,10 +100,13 @@ async def read_window(admin: Any, key: Any, settings: Settings, now: datetime) -
         admin, "AuthLogRecord",
         window + [{"type": "notEquals", "attribute": "username", "value": key_user}],
         "id,username,ipAddress,isDenied,createdAt")
-    key_signins = (await admin.list(
-        "AuthLogRecord", where=window + [{"type": "equals", "attribute": "username",
-                                           "value": key_user}],
-        select="ipAddress", max_size=_PAGE)).get("list", [])
+    try:  # the key's own sign-ins (where still logged): every address it used
+        key_signins = await _rows(
+            admin, "AuthLogRecord",
+            window + [{"type": "equals", "attribute": "username", "value": key_user}],
+            "id,ipAddress", max_rows=MAX_ROWS)
+    except TooMuchToRead:
+        key_signins = []  # a busy key: its history rows still name its addresses
     history = await _rows(
         admin, "ActionHistoryRecord",
         window + [{"type": "in", "attribute": "action", "value": list(WRITE_ACTIONS)}],
@@ -111,11 +120,6 @@ def app_addresses(data: dict[str, Any], settings: Settings) -> set[str]:
     addrs |= {r.get("ipAddress") for r in data["keySignins"] if r.get("ipAddress")}
     addrs |= {r.get("ipAddress") for r in data["history"]
               if r.get("userId") == data["keyId"] and r.get("ipAddress")}
-    by_addr: dict[str, set[str]] = defaultdict(set)
-    for r in data["signins"]:
-        if r.get("ipAddress") and r.get("username"):
-            by_addr[r["ipAddress"]].add(r["username"].lower())
-    addrs |= {a for a, names in by_addr.items() if len(names) >= SHARED_ADDRESS_LOGINS}
     return addrs
 
 
@@ -173,6 +177,14 @@ async def run_crm_use_report(settings: Settings, admin: Any, key: Any, store: An
     except Exception as exc:  # noqa: BLE001 — a partial read reports nothing
         log.warning("integrity CRM-use report: the read failed, nothing recorded: %s", exc)
         return None
+    app = app_addresses(data, settings)
+    if not app:
+        log.warning("integrity CRM-use report: no address of this application is known "
+                    "(the key made no change and no logged sign-in today, and "
+                    "INTEGRITY_APP_ADDRESSES is empty) — nothing reported, rather than "
+                    "report every edit made through the applications")
+        return None
+    log.info("integrity CRM-use report: treating %s as this application", ", ".join(sorted(app)))
     faults = find_use(data, settings, _day(settings, now))
     recorded = [f for f in faults if await store.record_event(f, now=now)]
     out = {"c8": sum(1 for f in faults if f["condition"] == 8),

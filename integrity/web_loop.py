@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from core.config import Settings, get_settings
 
@@ -32,7 +32,8 @@ def next_report_time(settings: Settings, after: datetime) -> datetime:
     return when
 
 
-async def run_once(settings: Settings) -> None:
+async def run_once(settings: Settings) -> bool:
+    """True when the report ran to the end."""
     from core.admin_client import admin_client_factory
     from core.login_guard import reader
 
@@ -44,15 +45,26 @@ async def run_once(settings: Settings) -> None:
     if factory is None or key is None or store is None:
         log.warning("integrity CRM-use report: needs the administrator account "
                     "(ESPO_PROVISION_*), the API key and a database — not run")
-        return
-    await run_crm_use_report(settings, await factory(), key, store)
+        return False
+    return await run_crm_use_report(settings, await factory(), key, store) is not None
+
+
+#: One retry, this long after a failed run; never more (an administrator
+#: sign-in retried all day would lock the provisioning account out).
+RETRY_AFTER = timedelta(minutes=30)
 
 
 async def crm_use_loop() -> None:
-    settings = get_settings()
-    sched = (settings.login_integrity_hour, settings.login_integrity_tz)
-    next_at = next_report_time(settings, datetime.now(timezone.utc))
+    try:
+        settings = get_settings()
+        sched = (settings.login_integrity_hour, settings.login_integrity_tz)
+        next_at = next_report_time(settings, datetime.now(timezone.utc))
+    except Exception:  # noqa: BLE001 — say so rather than die unseen
+        log.exception("integrity CRM-use report: could not schedule; the report is off "
+                      "until the next restart")
+        return
     was_on = False
+    retried = False
     while True:
         try:
             settings = get_settings()
@@ -66,8 +78,19 @@ async def crm_use_loop() -> None:
                              "enabled" if on else "disabled", next_at)
                 was_on = on
             if on and now >= next_at:
-                await run_once(settings)
-                next_at = next_report_time(settings, datetime.now(timezone.utc))
+                ok = False
+                try:
+                    ok = await run_once(settings)
+                except Exception:  # noqa: BLE001 — e.g. the administrator sign-in
+                    log.exception("integrity CRM-use report failed")
+                finally:
+                    if not ok and not retried:
+                        retried = True
+                        next_at = datetime.now(timezone.utc) + RETRY_AFTER
+                        log.warning("integrity CRM-use report: one retry at %s UTC", next_at)
+                    else:
+                        retried = False
+                        next_at = next_report_time(settings, datetime.now(timezone.utc))
         except Exception:  # noqa: BLE001 — the loop must survive
-            log.exception("integrity CRM-use report failed")
+            log.exception("integrity CRM-use report loop error")
         await asyncio.sleep(TICK_SECONDS)

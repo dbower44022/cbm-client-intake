@@ -30,6 +30,16 @@ at `/setup` → Features, and three settings at `/setup` → Email:
   the window, or when `INTEGRITY_APP_ADDRESSES` lists it. Summaries never
   print an address. The configuration, provisioning and key-based
   accounts are never reported for edits.
+- **From the release review:** the "three or more logins on one address"
+  rule is not used — three staff behind one office connection would hide
+  the use this reports. With no application address known (the key made
+  no change and no logged sign-in that day, and the setting is empty) the
+  run reports nothing and says why. A failed run — the administrator
+  sign-in refused, say — is retried once, 30 minutes later, then waits a
+  day: a sign-in retried all day would lock the provisioning account out.
+  Lists are paged by id, so rows sharing one second are never skipped.
+  Before switching on in production, set `INTEGRITY_APP_ADDRESSES` to
+  production's outgoing addresses if the key alone does not reveal them.
 - **Once a day without a separate guard**: each finding's key carries the
   day, so a restart or a second web copy records nothing twice, and a
   restart past the hour waits for tomorrow. The next daily check closes the
