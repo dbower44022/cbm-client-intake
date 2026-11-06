@@ -93,7 +93,11 @@ found; move resolved items to the bottom with the resolution date.
     old rows are gone; it would fail safely (one retry, nothing
     recorded) but uselessly. **Production's backlog, the same run:** 39
     mentor profiles, 4 faults, all David Weissman's known case (conditions
-    1, 3, 5 and 6) — nothing else; condition 6 showed no stamp noise. Next session: `prompts/mentor-login-integrity-build-prompt-v0.5.md`.
+    1, 3, 5 and 6) — nothing else; condition 6 showed no stamp noise. **`LOGIN_INTEGRITY_CHECK` switched ON on crm-test and
+    production 11-06-26 ~01:20 Eastern** (System Settings); both workers
+    logged it, first run 12:00 UTC 11-06-26. Owed: read that run's
+    worker log line and `scripts/integrity_report.py` on production, then
+    `INTEGRITY_DIGEST` on crm-test for the non-administrator review. Next session: `prompts/mentor-login-integrity-build-prompt-v0.5.md`.
 
 65. **The email composer's new-contact row — three smaller faults**
     (2026-10-31, found on the #63 live pass). (1) ~~The row's Company
