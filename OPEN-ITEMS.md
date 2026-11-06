@@ -59,20 +59,33 @@ found; move resolved items to the bottom with the resolution date.
     the three CRM scripts built; history settings and the nine tracked
     fields **applied on crm-test**; production and Boston owed after the
     next-day sign-in log check and a non-administrator stream check;
-    (6) **step 1 built 11-05-26 (v0.304.0)**, committed, not pushed — no
-    flag; after the push, check on crm-test as a real non-administrator on
+    (6) **step 1 built 11-05-26 (v0.304.0)**, pushed and live — no
+    flag; check on crm-test as a real non-administrator on
     the Mentor Administration Team that a save, a teams change and a
     document upload each leave a `CActionLog` row and a value-free note.
-    (7) **step 2 built 11-05-26 (v0.305.0)**, committed, not pushed — two
+    (7) **step 2 built 11-05-26 (v0.305.0)**, pushed and live — two
     switches, both off: `LOGIN_REPAIR_GUARDS` (safe for production at
     once) and `MANAGER_PROFILE_STRICT` (its message says "staff have been
-    told", true only once step 4b ships — enable after it).
-    Steps 1 and 2 **pushed 11-05-26, live on crm-test and production at
-    v0.305.0**, both switches off. (8) **step 3 built 11-05-26
-    (v0.306.0)**, **pushed 11-05-26, live on crm-test and production at
-    v0.306.0** — `CBM_EMAIL_LOCK`, off. Next: step 4 (4a–4c) from
-    `prompts/mentor-login-integrity-build-prompt-v0.4.md`; steps 5–6 follow
-    in revision 0.5, which that session writes.
+    told", true only once `INTEGRITY_DIGEST` is on — enable after it).
+    (8) **step 3 built 11-05-26 (v0.306.0)**, **pushed 11-05-26, live on
+    crm-test and production** — `CBM_EMAIL_LOCK`, off. (9) **step 4
+    built 11-05-26, committed, not pushed**, each release reviewed:
+    v0.307.0 (4a, `LOGIN_INTEGRITY_CHECK`, migration 0041), v0.308.0
+    (4b, `INTEGRITY_DIGEST` and `INTEGRITY_DIGEST_TO`), v0.309.0 (4c's
+    condition 7, `INTEGRITY_SIGNIN_ALERT`); all off. Owed after the
+    push, per instance: run `python scripts/integrity_report.py --live`
+    in the container and read the backlog (condition 6 may report stamps
+    the application puts on a mentor's Contact on purpose — judge that
+    before calling them faults); switch on `LOGIN_INTEGRITY_CHECK`; read
+    the next morning's log line and `scripts/integrity_report.py`; only
+    then `INTEGRITY_DIGEST`, reviewed on crm-test as a real
+    non-administrator on the Mentor Administration Team (the list, the
+    badge, Acknowledge, a digest link); then `MANAGER_PROFILE_STRICT`
+    and `INTEGRITY_SIGNIN_ALERT`. (10) **The C2 ruling** — where the
+    direct-use and shared-account reports run (web, or give the worker
+    the administrator account) — owed by Doug; measure first with
+    `python scripts/measure_signin_log_read.py` in production's web
+    container. Next session: `prompts/mentor-login-integrity-build-prompt-v0.5.md`.
 
 65. **The email composer's new-contact row — three smaller faults**
     (2026-10-31, found on the #63 live pass). (1) ~~The row's Company

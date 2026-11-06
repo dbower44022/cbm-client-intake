@@ -1,6 +1,6 @@
 # mentoradmin/ — Mentor Administration
 
-Last Updated: 11-05-26 18:05 · Revision 1.4
+Last Updated: 11-05-26 22:49 · Revision 1.5
 
 Detail for the Mentor Administration application (`/mentoradmin`): the roster, the editable mentor record, completeness, provisioning and the status sweep.
 
@@ -96,12 +96,20 @@ detail screen that edits any whitelisted field on `CMentorProfile`.
   CBM email field shows the login's user name, read-only; the server refuses
   a change before any write. Before a login, `_check_cbm_email_change`
   accepts only a free address on the chapter's domain, in lower case.
+- **Login faults** (v0.307.0–v0.309.0, step 4): the daily check lives in
+  `integrity/` (the worker runs it; `scripts/integrity_report.py` reads
+  it). With `INTEGRITY_DIGEST` on, this app shows the **Login faults**
+  list (`/integrity/faults`, Acknowledge with a required note, recorded
+  in `CActionLog` only — never a stream note) and answers the digest's
+  deep links `?mentor=<id>` and `?faults=1`. Do not repair a fault here
+  that the plan's § 6 says to repair in the CRM.
 - Functional reference for staff: `mentor-administration.md`.
 
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.5 | 11-05-26 22:49 | Claude (Claude Code) | The login fault list (v0.308.0). |
 | 1.4 | 11-05-26 18:05 | Claude (Claude Code) | The CBM email lock (v0.306.0). |
 | 1.3 | 11-05-26 17:41 | Claude (Claude Code) | The login repair guards (v0.305.0). |
 | 1.2 | 11-05-26 17:24 | Claude (Claude Code) | Every change in the action history (v0.304.0). |

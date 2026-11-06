@@ -1,10 +1,10 @@
 # Mentor login integrity — prevention, detection and history — Plan
 
-Last Updated: 11-05-26 22:21 · Revision 1.6 — see change log at the end.
+Last Updated: 11-05-26 22:49 · Revision 1.7 — see change log at the end.
 
 **Status:** Approved by Doug 11-05-26 ("approved"). Not built.
 **Kickoff that produced it:** `prompts/mentor-login-integrity-design-prompt-v0.2.md`.
-**Build kickoff:** `prompts/mentor-login-integrity-build-prompt-v0.3.md` (steps 4–6; steps 0–3 built 11-05-26 from revision 0.2).
+**Build kickoff:** `prompts/mentor-login-integrity-build-prompt-v0.5.md` (the rest of step 4c, then steps 5–6; steps 0–3 built 11-05-26 from revision 0.2, step 4a, 4b and condition 7 from revision 0.4).
 **Sibling plan:** staff notes on mentors and the page-space work are a
 separate arc, started from `prompts/mentor-staff-notes-prompt-v0.1.md`.
 
@@ -324,6 +324,7 @@ which is now Doug's.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.7 | 11-05-26 22:49 | Claude (Claude Code) | Step 4 built 11-05-26, committed, not pushed: 4a v0.307.0 (`LOGIN_INTEGRITY_CHECK`), 4b v0.308.0 (`INTEGRITY_DIGEST`, `INTEGRITY_DIGEST_TO`), 4c's condition 7 v0.309.0 (`INTEGRITY_SIGNIN_ALERT`); all off. "First run reports only" is met by the digest being its own switch. The direct-use and shared-account reports (§ 4.2 items 8–9) wait on the C2 ruling. Build kickoff pointer moved to revision 0.5. No ruling changed. |
 | 1.6 | 11-05-26 22:21 | Claude (Claude Code) | Step 3 pushed and live (v0.306.0, switch off). Build kickoff pointer moved to revision 0.4 of the prompt, which covers step 4 only; steps 5–6 follow in revision 0.5. No ruling changed. |
 | 1.5 | 11-05-26 18:05 | Claude (Claude Code) | Steps 1 and 2 pushed and live (v0.305.0, switches off); step 3 built (v0.306.0), committed, not pushed. No ruling changed. |
 | 1.4 | 11-05-26 17:41 | Claude (Claude Code) | Step 2 built (v0.305.0), committed, not pushed; review found a fourth repair path (My Mentor Profile's heal-on-access), now guarded too. No ruling changed. |
