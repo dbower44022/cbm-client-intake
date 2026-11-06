@@ -91,6 +91,10 @@ RESET_TABLES: tuple[str, ...] = (
     # the leads they map onto; the reset puts the one demo template back
     # (campaigns/sandbox_demo.py) straight after emptying the table.
     "import_template",
+    # The login integrity check's faults (mentor login integrity plan § 4.2):
+    # they point at CRM records the restore puts back, so every fault reads as
+    # new each morning on the sandbox. That is expected.
+    "login_integrity_fault",
 )
 
 #: Configuration, authored artefacts and instance bookkeeping: never touched.

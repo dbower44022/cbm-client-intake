@@ -5,6 +5,44 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.307.0] — 2026-11-05
+
+**feat: the daily login integrity check, report only** (mentor login
+integrity plan, step 4a — `prds/mentor-login-integrity-plan.md` § 4.2;
+`OPEN-ITEMS.md` #66). New switch `LOGIN_INTEGRITY_CHECK`, **off by
+default**, at `/setup` → Features (worker). **Migration
+`0041_login_integrity_fault`**; no CRM change. **Sends no email of any
+kind.**
+
+- **Once a day** the worker reads every mentor profile, every login and
+  every mentor's own Contact under the key-based account (check C1) and
+  records six conditions as faults: one login on several mentor profiles;
+  a CBM email that differs from its login; one CBM email on several mentor
+  profiles; an Approved or Active mentor with no login; an active login on
+  the Mentor, Partner Management or Sponsor Management team linked to no
+  mentor profile; a mentor's own Contact carrying a login that is not its
+  profile's. Address comparisons ignore case.
+- **When:** `LOGIN_INTEGRITY_HOUR` (default 7) in `LOGIN_INTEGRITY_TZ`
+  (default America/New_York), both at `/setup` → Email. On crm-test a time
+  between 04:00 and 06:00 UTC moves to 06:00 UTC: the CRM is restored at
+  04:00 and the application's database at 05:00, and between the two the
+  data disagrees by design. The switch and the hour are read on every
+  pass; switching on waits for the next scheduled hour.
+- **Fault state lives in the application's database**
+  (`login_integrity_fault`), so a deploy resends nothing, a fault the check
+  no longer finds closes itself, and a fault that comes back is a new row.
+  A CRM read that fails part-way changes nothing. On crm-test the table is
+  emptied by the nightly reset (`RESET_TABLES`), so every fault reads as
+  new each morning; that is expected.
+- **How to read it:** one line in the worker log per run —
+  `login integrity check: N open (c1=… c6=… c7=…), N new, N closed; read …`
+  — and `scripts/integrity_report.py`, read-only, run inside the container:
+  without arguments it prints the open faults; with `--live` it runs the
+  six conditions against the CRM now and records nothing, which is how a
+  production or Boston backlog is read before the switch is on.
+- David Weissman's record (§ 6) is found under conditions 1, 3, 5 and 6.
+  That is correct; it is not repaired by this release.
+
 ## [0.306.0] — 2026-11-05
 
 **feat: the mentor CBM email locks once a login exists, and is checked

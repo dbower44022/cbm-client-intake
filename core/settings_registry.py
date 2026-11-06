@@ -460,6 +460,21 @@ SETTINGS: tuple[SettingSpec, ...] = (
             "has a login; it shows the login's user name. Before then a typed address "
             "must be on the chapter's mail domain and not already a login or another "
             "mentor's address."),
+    _s("login_integrity_check", GROUP_FEATURES, "Daily login integrity check", kind="bool",
+       component="worker",
+       help="Once a day the worker checks every mentor profile, login and mentor "
+            "Contact for the six login faults and records what it finds. Report only: "
+            "a log line and scripts/integrity_report.py. Sends no email."),
+    _s("integrity_digest", GROUP_FEATURES, "Tell staff about login faults", kind="bool",
+       component="both",
+       help="The integrity digest: one email a day listing every open login fault, "
+            "new ones marked. Also the fault list and the badge in Mentor "
+            "Administration. Turn on only after reading this instance's first report."),
+    _s("integrity_signin_alert", GROUP_FEATURES, "Alert when a login has no mentor profile",
+       kind="bool",
+       help="When a login with no mentor profile opens Client Management or My Mentor "
+            "Profile, record it and (with the integrity digest on) email at once, at "
+            "most once per login per day."),
     _s("portal_calendar", GROUP_FEATURES, "Events on the portal home page", kind="bool",
        help="The rail of upcoming events beside the portal's tiles, and the member "
             "page each one opens. Members see Internal events (to their teams, if "
@@ -556,6 +571,15 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("gmail_backfill", GROUP_EMAIL, "Initial sync window", component="worker"),
     _s("gmail_dead_letter_passes", GROUP_EMAIL, "Dead-letter after", kind="int",
        unit="passes", component="worker"),
+    _s("integrity_digest_to", GROUP_EMAIL, "Login fault recipients", kind="csv",
+       component="both",
+       help="Who receives the integrity digest and the no-profile sign-in alert. "
+            "Empty uses the alert recipients."),
+    _s("login_integrity_hour", GROUP_EMAIL, "Integrity check hour", kind="int",
+       component="worker",
+       help="Local hour of the daily login integrity check; the digest follows it. "
+            "On the training sandbox a time between 04:00 and 06:00 UTC moves to 06:00 UTC."),
+    _s("login_integrity_tz", GROUP_EMAIL, "Integrity check timezone", component="worker"),
     _s("comms_digest_hour", GROUP_EMAIL, "Digest hour", kind="int", component="worker"),
     _s("comms_digest_tz", GROUP_EMAIL, "Digest timezone", component="worker"),
     _s("comms_digest_seconds", GROUP_EMAIL, "Digest re-check", kind="int", unit="s",

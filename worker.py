@@ -373,6 +373,16 @@ async def main() -> None:
             settings.comms_digest_hour, settings.comms_digest_tz, next_digest,
         )
 
+    # Login integrity check (mentor login integrity plan § 4.2, step 4): once
+    # a day at LOGIN_INTEGRITY_HOUR local time. The switch, the hour and the
+    # timezone are read on every pass, so System Settings reaches the worker
+    # without a restart; a changed hour reschedules.
+    from integrity.run import next_run_time as _next_integrity
+
+    integrity_sched = (settings.login_integrity_hour, settings.login_integrity_tz)
+    next_integrity = _next_integrity(settings, datetime.now(timezone.utc), _next_local_hour)
+    integrity_was_on = False
+
     # Training-sandbox reset (crm-test only): empty the app's own record tables
     # so they match the CRM the droplet restored an hour earlier. Refuses on any
     # deployment whose CRM base URL is not crm-test, whatever the flag says.
@@ -827,6 +837,30 @@ async def main() -> None:
             except Exception as exc:  # noqa: BLE001 — never crashes delivery
                 log.warning("daily digest cycle failed: %s", exc)
             next_digest = _next_digest_time(settings, datetime.now(timezone.utc))
+
+        if (settings.login_integrity_hour, settings.login_integrity_tz) != integrity_sched:
+            integrity_sched = (settings.login_integrity_hour, settings.login_integrity_tz)
+            next_integrity = _next_integrity(settings, datetime.now(timezone.utc),
+                                             _next_local_hour)
+        integrity_on = bool(settings.login_integrity_check) and not settings.espo_dry_run
+        if integrity_on != integrity_was_on:
+            # Switched on: wait for the next scheduled hour rather than run at
+            # once (on the sandbox, "at once" may be inside the restore window).
+            next_integrity = _next_integrity(settings, datetime.now(timezone.utc),
+                                             _next_local_hour)
+            log.info("login integrity check %s (next %s UTC)",
+                     "enabled" if integrity_on else "disabled", next_integrity)
+            integrity_was_on = integrity_on
+        if integrity_on and now >= next_integrity:
+            try:
+                from integrity.run import run_integrity_check
+                from integrity.store import get_store as _integrity_store
+
+                await run_integrity_check(settings, _client(settings), _integrity_store(settings))
+            except Exception as exc:  # noqa: BLE001 — never crashes delivery
+                log.warning("login integrity check failed: %s", exc)
+            next_integrity = _next_integrity(settings, datetime.now(timezone.utc),
+                                             _next_local_hour)
 
         if claimed == 0 and not stop.is_set():
             # Sleep until the poll interval elapses OR SIGTERM arrives, so a

@@ -303,6 +303,29 @@ class Settings(BaseSettings):
     # mail domain and held by no login and no other mentor profile; saved in
     # lower case. Off by default; read per request.
     cbm_email_lock: bool = False
+    # Step 4 (plan § 4.2), the integrity check. LOGIN_INTEGRITY_CHECK (4a):
+    # once a day, at LOGIN_INTEGRITY_HOUR in LOGIN_INTEGRITY_TZ, the worker
+    # reads every mentor profile, login and mentor Contact under the key-based
+    # account and records conditions 1-6 as faults in the application's
+    # database (integrity/). Report only: a log line and a read-only script,
+    # never an email. On crm-test the run never lands between 04:00 and 06:00
+    # UTC, while the nightly restore leaves the CRM and the app disagreeing.
+    login_integrity_check: bool = False
+    login_integrity_hour: int = 7
+    login_integrity_tz: str = "America/New_York"
+    # 4b, telling people. INTEGRITY_DIGEST: the integrity digest (one email a
+    # day after the check, listing every open fault not acknowledged), the
+    # fault list and acknowledging in Mentor Administration, and the badge on
+    # its portal tile. Its own switch so an instance emails only after Doug has
+    # read its 4a report. INTEGRITY_DIGEST_TO: this chapter's recipients; empty
+    # falls back to ALERT_EMAIL_TO.
+    integrity_digest: bool = False
+    integrity_digest_to: str = ""
+    # 4c. INTEGRITY_SIGNIN_ALERT (web): a login with no mentor profile opens
+    # Client Management or My Mentor Profile — condition 7, recorded at once
+    # and emailed at once (only while INTEGRITY_DIGEST is on), at most once
+    # per login per day.
+    integrity_signin_alert: bool = False
     # Grants (prds/grant-management-plan.md): the Grants tab on a funder record,
     # its grant popup and the deliverables inside it. Off by default — build
     # dark, review on crm-test, then enable on prod. Read PER REQUEST (never at
@@ -898,6 +921,13 @@ class Settings(BaseSettings):
     @property
     def alert_email_to_list(self) -> list[str]:
         return [a.strip() for a in self.alert_email_to.split(",") if a.strip()]
+
+    @property
+    def integrity_recipients(self) -> list[str]:
+        """Who the integrity digest and the sign-in alert go to: this chapter's
+        own list, else the alert recipients."""
+        own = [a.strip() for a in self.integrity_digest_to.split(",") if a.strip()]
+        return own or self.alert_email_to_list
 
     @property
     def assign_allowed_teams_list(self) -> list[str]:
