@@ -40,6 +40,12 @@ kind.**
   without arguments it prints the open faults; with `--live` it runs the
   six conditions against the CRM now and records nothing, which is how a
   production or Boston backlog is read before the switch is on.
+- **A short read fails the run** (from the release review): a login, a
+  Contact or a team the CRM's list left out — a narrowed grant, a renamed
+  team — makes the run change nothing and log why, rather than close faults
+  it did not see or report every mentor's login as missing. A login or
+  Contact that answers 404 on its own is really gone and is reported as such.
+  A team gate naming a team this CRM lacks fails every run until corrected.
 - David Weissman's record (§ 6) is found under conditions 1, 3, 5 and 6.
   That is correct; it is not repaired by this release.
 

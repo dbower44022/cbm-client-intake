@@ -29,6 +29,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from core.config import Settings
+from core.espo import is_not_found
 from core.login_guard import MENTOR_PROFILE, login_ids, same_address
 
 log = logging.getLogger("cbm_intake.integrity")
@@ -89,12 +90,42 @@ def team_names(settings: Settings) -> list[str]:
     return names
 
 
+class IncompleteRead(RuntimeError):
+    """The CRM answered, but with less than everything (a grant narrowed, a
+    team renamed). The run must change nothing rather than close faults it
+    simply did not see, or invent faults for records it could not read."""
+
+
+async def _confirm_gone(client: Any, entity: str, ids: list[str]) -> set[str]:
+    """Of ``ids`` missing from a list, the ones that are really gone (404).
+    One that reads fine means the list was short: raise."""
+    gone: set[str] = set()
+    for rid in ids:
+        try:
+            rec = await client.get(entity, rid, select="id,deleted")
+            if rec.get("deleted"):  # an admin reads a soft-deleted row (CLAUDE.md)
+                gone.add(rid)
+                continue
+        except Exception as exc:  # noqa: BLE001
+            if is_not_found(exc):
+                gone.add(rid)
+                continue
+            raise
+        raise IncompleteRead(f"the {entity} list left out {rid}, which reads fine on its own")
+    return gone
+
+
 async def read_crm(client: Any, settings: Settings) -> CrmSnapshot:
-    """Everything the six conditions need, under the key-based account."""
+    """Everything the six conditions need, under the key-based account.
+    Raises :class:`IncompleteRead` when the CRM's answer is short."""
     profiles = await _all(
         client, MENTOR_PROFILE,
         "id,name,cbmEmail,mentorStatus,contactRecordId,assignedUserId,assignedUsersIds")
     users = {u["id"]: u for u in await _all(client, "User", "id,userName,name,isActive,type")}
+    if profiles and not any(login_ids(p) for p in profiles):
+        raise IncompleteRead("no mentor profile carries a login — the assigned users were not read")
+    missing = sorted({uid for p in profiles for uid in login_ids(p)} - set(users))
+    await _confirm_gone(client, "User", missing)  # gone logins stay out of ``users``
 
     team_members: dict[str, set[str]] = {}
     teams = await _all(client, "Team", "id,name")
@@ -102,8 +133,8 @@ async def read_crm(client: Any, settings: Settings) -> CrmSnapshot:
     for name in team_names(settings):
         team_id = by_name.get(name)
         if not team_id:
-            log.info("integrity check: no team named %r in this CRM", name)
-            continue
+            raise IncompleteRead(f"no team named {name!r} in this CRM (renamed, or "
+                                 "the key cannot read it) — check the team gate settings")
         rows = await _all(client, "User", "id",
                           where=[{"type": "linkedWith", "attribute": "teams",
                                   "value": [team_id]}])
@@ -118,6 +149,7 @@ async def read_crm(client: Any, settings: Settings) -> CrmSnapshot:
             where=[{"type": "in", "attribute": "id", "value": chunk}])
         for c in data.get("list", []):
             contacts[c["id"]] = login_ids(c)
+    await _confirm_gone(client, CONTACT, [c for c in contact_ids if c not in contacts])
     return CrmSnapshot(profiles, users, team_members, contacts)
 
 

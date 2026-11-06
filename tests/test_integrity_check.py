@@ -127,6 +127,10 @@ def test_keys_are_stable_between_runs():
 
 # --- the read, under the key ---------------------------------------------------
 
+TEAMS = {"Mentor Team": "T1", "Partner Management Team": "T2",
+         "Sponsor Management Team": "T3"}
+
+
 class FakeCrm:
     def __init__(self, snap: CrmSnapshot, teams: dict[str, str], fail: str = ""):
         self.snap, self.teams, self.fail = snap, teams, fail
@@ -144,7 +148,8 @@ class FakeCrm:
             rows = [{"id": i, "name": n} for n, i in self.teams.items()]
         elif entity == "User" and where:
             team = {i: n for n, i in self.teams.items()}[where[0]["value"][0]]
-            rows = [{"id": u} for u in sorted(self.snap.team_members.get(team, set()))]
+            rows = [{"id": u} for u in sorted(self.snap.team_members.get(team, set()))
+                    if u not in self.hidden]
         elif entity == "User":
             rows = list(self.snap.users.values())
         elif entity == "Contact":
@@ -153,14 +158,23 @@ class FakeCrm:
                     for c in ids if c in self.snap.contacts]
         else:
             rows = []
-        return {"list": rows[offset:offset + max_size]}
+        return {"list": [r for r in rows if r.get("id") not in self.hidden][offset:offset + max_size]}
+
+    hidden: set = set()  # ids a short list leaves out
+    existing: set = set()  # of those, ids a get still reads
+
+    async def get(self, entity, rid, select=None):
+        if rid in self.existing:
+            return {"id": rid}
+        raise RuntimeError(f"EspoCRM GET {entity}/{rid} failed: HTTP 404 Not Found")
 
 
 async def test_read_crm_reads_every_team_by_its_gate_name():
     snap = _snap(team_members={"Mentor Team": {"uDW"}, "Sponsor Management Team": {"uJ"}})
-    crm = FakeCrm(snap, {"Mentor Team": "T1", "Sponsor Management Team": "T3"})
+    crm = FakeCrm(snap, TEAMS)
     got = await read_crm(crm, Settings())
-    assert got.team_members == {"Mentor Team": {"uDW"}, "Sponsor Management Team": {"uJ"}}
+    assert got.team_members == {"Mentor Team": {"uDW"}, "Partner Management Team": set(),
+                                "Sponsor Management Team": {"uJ"}}
     assert set(got.contacts) == {"C-DW", "C-DB", "C-J"}
     assert len(got.profiles) == 3 and set(got.users) == {"uD", "uJ", "uDW"}
     linked = [w for e, w in crm.calls if e == "User" and w]
@@ -203,7 +217,7 @@ class FakeStore:
 
 
 async def test_a_run_records_logs_and_sends_nothing(caplog):
-    crm = FakeCrm(_snap(), {"Mentor Team": "T1"})
+    crm = FakeCrm(_snap(), TEAMS)
     store, sent = FakeStore(), []
 
     async def send(*a, **k):
@@ -221,17 +235,17 @@ async def test_a_run_records_logs_and_sends_nothing(caplog):
         profiles=[dict(_snap().profiles[0], cbmEmail="david.weissman@cbmentors.org",
                        assignedUsersIds=["uDW"]), *_snap().profiles[1:]],
         contacts={"C-DW": ["uDW"], "C-DB": ["uD"], "C-J": ["uJ"]})
-    result = await run.run_integrity_check(Settings(), FakeCrm(fixed, {"Mentor Team": "T1"}), store)
+    result = await run.run_integrity_check(Settings(), FakeCrm(fixed, TEAMS), store)
     assert result["open"] == [] and len(result["closed"]) == 4
 
 
 async def test_a_failed_read_changes_nothing(caplog):
     store = FakeStore()
-    await run.run_integrity_check(Settings(), FakeCrm(_snap(), {"Mentor Team": "T1"}), store)
+    await run.run_integrity_check(Settings(), FakeCrm(_snap(), TEAMS), store)
     before = [dict(r) for r in store.rows]
     with caplog.at_level(logging.WARNING, logger="cbm_intake.integrity"):
         got = await run.run_integrity_check(
-            Settings(), FakeCrm(_snap(), {"Mentor Team": "T1"}, fail="Contact"), store)
+            Settings(), FakeCrm(_snap(), TEAMS, fail="Contact"), store)
     assert got is None and store.rows == before
     assert any("nothing changed" in r.message for r in caplog.records)
 
@@ -296,7 +310,7 @@ async def test_the_live_report_prints_and_records_nothing(monkeypatch, capsys):
         "integrity_report", Path(__file__).parents[1] / "scripts" / "integrity_report.py")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    crm = FakeCrm(_snap(), {"Mentor Team": "T1"})
+    crm = FakeCrm(_snap(), TEAMS)
     monkeypatch.setattr(mod, "get_settings", lambda: Settings(
         espo_base_url="https://crm.example.org", espo_api_key="k", espo_dry_run=False))
     monkeypatch.setattr(mod, "EspoClient", lambda *a, **k: crm)
@@ -305,3 +319,30 @@ async def test_the_live_report_prints_and_records_nothing(monkeypatch, capsys):
     assert "4 login fault(s)" in out and "Nothing recorded" in out
     assert "== 1. One login on several mentor profiles" in out
     assert all(e != "Contact" or w for e, w in crm.calls)
+
+
+# --- a short read changes nothing (review of 4a) ---------------------------------
+
+async def test_a_short_user_list_fails_the_read_but_a_deleted_login_does_not():
+    crm = FakeCrm(_snap(), TEAMS)
+    crm.hidden, crm.existing = {"uJ"}, {"uJ"}  # the list left uJ out; uJ still exists
+    with pytest.raises(check.IncompleteRead):
+        await read_crm(crm, Settings())
+    crm.existing = set()  # uJ really is gone: condition 4 may say so
+    snap = await read_crm(crm, Settings())
+    assert "uJ" not in snap.users
+
+
+async def test_a_missing_team_or_contact_fails_the_read():
+    with pytest.raises(check.IncompleteRead, match="no team named"):
+        await read_crm(FakeCrm(_snap(), {"Partner Team": "T9"}), Settings())
+    crm = FakeCrm(_snap(), TEAMS)
+    crm.hidden, crm.existing = {"C-J"}, {"C-J"}
+    with pytest.raises(check.IncompleteRead):
+        await read_crm(crm, Settings())
+
+
+async def test_profiles_with_no_logins_at_all_mean_the_logins_were_not_read():
+    snap = _snap(profiles=[dict(p, assignedUsersIds=[]) for p in _snap().profiles])
+    with pytest.raises(check.IncompleteRead, match="no mentor profile carries a login"):
+        await read_crm(FakeCrm(snap, TEAMS), Settings())
