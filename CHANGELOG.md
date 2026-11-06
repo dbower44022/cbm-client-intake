@@ -18,6 +18,12 @@ Features (web). No migration; no CRM change.
   integrity recipients at once. At most once per login per day (in
   `LOGIN_INTEGRITY_TZ`); the event shows in the Login faults list and the
   next daily run closes it.
+- **Only a login on a mentor team** (Mentor, Partner Management or
+  Sponsor Management — the teams condition 5 reads) is reported; an
+  administrator or staff member with no profile opens the page freely.
+  Each process reads the CRM for a given login once a day at most, however
+  often the page reloads. An event closes at the first daily run of a
+  later day.
 - **Confirmed under the key first**: the page read the profiles as the
   person; a profile the key-based account can see is no fault. Runs after
   the response, so the page never waits; a failure only logs. A login on

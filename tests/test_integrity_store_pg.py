@@ -79,3 +79,13 @@ async def test_mark_notified(store):
     r = await store.apply_run([_f("1:a")], now=T0)
     await store.mark_notified([r["new"][0]["id"]], now=T0)
     assert (await store.get(r["new"][0]["id"]))["notified_at"] == T0
+
+
+async def test_with_a_local_day_every_earlier_days_event_closes(store):
+    late = _f("7:u1:2026-11-05", 7)
+    await store.record_event(late, now=T0 - timedelta(hours=2))  # 23:00 the evening before
+    r = await store.apply_run([], now=T0, today="2026-11-06")
+    assert r["open"] == [] and r["closed"][0]["fault_key"] == "7:u1:2026-11-05"
+    await store.record_event(_f("7:u1:2026-11-06", 7), now=T0)
+    r = await store.apply_run([], now=T0, today="2026-11-06")
+    assert [o["fault_key"] for o in r["open"]] == ["7:u1:2026-11-06"]

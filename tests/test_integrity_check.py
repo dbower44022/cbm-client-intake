@@ -190,7 +190,7 @@ class FakeStore:
     def __init__(self):
         self.rows: list[dict] = []
 
-    async def apply_run(self, found, now=None):
+    async def apply_run(self, found, now=None, today=None):
         now = now or datetime.now(timezone.utc)
         keys = {f["key"]: f for f in found}
         open_rows = {r["fault_key"]: r for r in self.rows if r["closed_at"] is None}

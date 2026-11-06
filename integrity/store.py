@@ -71,9 +71,12 @@ class IntegrityStore:
         await self._engine.dispose()
 
     async def apply_run(self, found: list[dict[str, Any]],
-                        now: Optional[datetime] = None) -> dict[str, Any]:
+                        now: Optional[datetime] = None,
+                        today: Optional[str] = None) -> dict[str, Any]:
         """Bring the open faults in line with one complete run of the daily
         conditions: insert the new, refresh the known, close the gone.
+        ``today`` (ISO date, local) closes every condition-7 event from an
+        earlier day; without it, an event closes by age.
         Returns ``{"new": [...], "closed": [...], "open": [...]}``."""
         now = now or _now()
         t = login_integrity_fault
@@ -86,9 +89,12 @@ class IntegrityStore:
             )).mappings().all()
             known = {r["fault_key"]: r for r in open_rows}
             for r in open_rows:
-                gone = (r["condition"] in DAILY and r["fault_key"] not in by_key) or (
-                    r["condition"] not in DAILY
-                    and r["first_seen"] <= now - SIGNIN_EVENT_LIFE)
+                if r["condition"] in DAILY:
+                    gone = r["fault_key"] not in by_key
+                elif today:
+                    gone = r["fault_key"].rsplit(":", 1)[-1] < today
+                else:
+                    gone = r["first_seen"] <= now - SIGNIN_EVENT_LIFE
                 if gone:
                     await conn.execute(update(t).where(t.c.id == r["id"]).values(closed_at=now))
                     closed.append(dict(r))

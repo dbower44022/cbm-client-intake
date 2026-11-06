@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from core.config import Settings
@@ -66,7 +66,10 @@ async def run_integrity_check(settings: Settings, client: Any, store: Any, *,
         log.warning("login integrity check: the CRM read failed, nothing changed: %s", exc)
         return None
     found = find_faults(snap)
-    result = await store.apply_run(found, now=now)
+    from .signin import _day
+
+    when = now or datetime.now(timezone.utc)
+    result = await store.apply_run(found, now=now, today=_day(settings, when))
     counts = {"profiles": len(snap.profiles), "users": len(snap.users),
               "contacts": len(snap.contacts)}
     log.info(summary_line(result, counts, time.monotonic() - started))

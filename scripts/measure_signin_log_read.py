@@ -6,7 +6,10 @@ The direct-use and shared-account reports would read these two lists once a
 day as an administrator. Production's sign-in log was 6.6 GB before the
 key-based account stopped being logged, so before deciding where the reports
 run, this measures what one day's read costs. It writes nothing anywhere and
-prints counts and timings only — never an address, a name or a row.
+prints counts and timings only — never an address, a name or a row. (Its
+own administrator sign-in, when no token is cached, adds one row to the
+sign-in log, as any sign-in does. It does not count the whole log: on a
+6.6 GB table that count alone would load the database.)
 
 Run inside the deployed WEB container (the administrator account is on web
 only), from the application folder:
@@ -54,7 +57,6 @@ async def main() -> int:
     print(f"CRM: {settings.espo_base_url}; window: the last 24 hours (since {since} UTC)\n")
 
     for entity, where, label in (
-        ("AuthLogRecord", None, "sign-in log, all time"),
         ("AuthLogRecord", day, "sign-in log, last 24h"),
         ("AuthLogRecord", people, "sign-in log, last 24h, not denied"),
         ("ActionHistoryRecord", day, "Action History, last 24h"),

@@ -7,11 +7,21 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+import pytest
+
 from core.config import Settings
 from integrity import signin
 
 T0 = datetime(2026, 11, 6, 14, 0, tzinfo=timezone.utc)
-USER = {"userId": "uX", "userName": "new.mentor@cbmentors.org", "name": "New Mentor"}
+USER = {"userId": "uX", "userName": "new.mentor@cbmentors.org", "name": "New Mentor",
+        "teams": ["Mentor Team"]}
+
+
+@pytest.fixture(autouse=True)
+def _fresh():
+    signin._handled.clear()
+    yield
+    signin._handled.clear()
 
 
 class Reader:
@@ -80,6 +90,27 @@ async def test_a_profile_the_key_sees_is_no_fault_and_the_switch_off_does_nothin
     assert await signin.report_no_profile(USER, "x", settings=_settings(
         integrity_signin_alert=False), reader=Reader(), store=store, now=T0) is None
     assert store.keys == set()
+
+
+async def test_staff_off_the_mentor_teams_are_not_reported_and_a_repeat_skips_the_read():
+    store = Store()
+    staff = dict(USER, teams=["Mentor Administration Team"], isAdmin=True)
+    assert await signin.report_no_profile(staff, "x", settings=_settings(), reader=Reader(),
+                                          store=store, now=T0) is None
+    assert store.keys == set()
+
+    class Counting(Reader):
+        reads = 0
+
+        async def list(self, entity, **kw):
+            Counting.reads += 1
+            return await super().list(entity, **kw)
+
+    r = Counting()
+    for _ in range(3):
+        await signin.report_no_profile(USER, "x", settings=_settings(integrity_digest=False),
+                                       reader=r, store=store, now=T0)
+    assert Counting.reads == 1  # one CRM read a day per process, however often the page loads
 
 
 async def test_a_failure_never_raises():

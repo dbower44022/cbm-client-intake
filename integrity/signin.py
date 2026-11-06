@@ -31,6 +31,11 @@ log = logging.getLogger("cbm_intake.integrity")
 APP_CLIENT_MANAGEMENT = "Client Management"
 APP_MY_MENTOR_PROFILE = "My Mentor Profile"
 
+#: (login id, day) pairs this process has already handled — checked before
+#: the CRM read, so an unlinked login reloading the page all day costs one
+#: read a day per process. The store's open-key index covers other processes.
+_handled: set[tuple[str, str]] = set()
+
 
 def _day(settings: Settings, now: datetime) -> str:
     try:
@@ -59,12 +64,22 @@ async def report_no_profile(user: dict[str, Any], app: str, *,
         uid = user.get("userId") or ""
         if store is None or reader is None or not uid:
             return None
+        # Only a login on a mentor team is expected to have a mentor profile;
+        # an administrator or staff member without one opens the page freely.
+        from .check import team_names
+
+        if not set(user.get("teams") or []) & set(team_names(settings)):
+            return None
+        now = now or datetime.now(timezone.utc)
+        day = _day(settings, now)
+        if (uid, day) in _handled:
+            return None
+        _handled.add((uid, day))  # before the read: a failing read is not retried per load
         if await login_guard.profiles_carrying(reader, uid):
             return None  # the person's role hides it; the key sees a profile
-        now = now or datetime.now(timezone.utc)
         login = user.get("userName") or uid
         row = await store.record_event({
-            "key": f"7:{uid}:{_day(settings, now)}", "condition": 7, "mentors": [],
+            "key": f"7:{uid}:{day}", "condition": 7, "mentors": [],
             "login": {"id": uid, "userName": login},
             "summary": f"{user.get('name') or login} ({login}) opened {app}, but no "
                        f"mentor profile carries this login.",
