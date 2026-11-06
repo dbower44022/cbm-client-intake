@@ -69,7 +69,7 @@ found; move resolved items to the bottom with the resolution date.
     told", true only once `INTEGRITY_DIGEST` is on — enable after it).
     (8) **step 3 built 11-05-26 (v0.306.0)**, **pushed 11-05-26, live on
     crm-test and production** — `CBM_EMAIL_LOCK`, off. (9) **step 4
-    built 11-05-26, committed, not pushed**, each release reviewed:
+    built 11-05-26, pushed, live on both deployments**, each release reviewed:
     v0.307.0 (4a, `LOGIN_INTEGRITY_CHECK`, migration 0041), v0.308.0
     (4b, `INTEGRITY_DIGEST` and `INTEGRITY_DIGEST_TO`), v0.309.0 (4c's
     condition 7, `INTEGRITY_SIGNIN_ALERT`); all off. Owed after the
@@ -83,8 +83,7 @@ found; move resolved items to the bottom with the resolution date.
     badge, Acknowledge, a digest link); then `MANAGER_PROFILE_STRICT`
     and `INTEGRITY_SIGNIN_ALERT`. (10) **C2 ruled 11-05-26 by Doug: the
     direct-use and shared-account reports run on the web component** —
-    built as v0.310.0 (`INTEGRITY_CRM_USE_REPORT`, off), committed, not
-    pushed — **live since 11-06-26 01:05**. **Measured 11-06-26 01:11
+    built as v0.310.0 (`INTEGRITY_CRM_USE_REPORT`, off) — **live since 11-06-26 01:05**. **Measured 11-06-26 01:11
     on production** (`scripts/c2_reads.sh`): every sign-in log read
     timed out at 20 seconds, even a one-day count, and one page of
     Action History took 19 seconds, the next timing out. **Do not switch
@@ -97,7 +96,7 @@ found; move resolved items to the bottom with the resolution date.
     production 11-06-26 ~01:20 Eastern** (System Settings); both workers
     logged it, first run 12:00 UTC 11-06-26. Owed: read that run's
     worker log line and `scripts/integrity_report.py` on production, then
-    `INTEGRITY_DIGEST` on crm-test for the non-administrator review. Next session: `prompts/mentor-login-integrity-build-prompt-v0.5.md`.
+    `INTEGRITY_DIGEST` on crm-test for the non-administrator review. (11) **Ruling Q5.4, 11-06-26 (option A):** step 5 records old and new values in every History-tab application. Next session: `prompts/mentor-login-integrity-build-prompt-v0.6.md` (steps 5–6).
 
 65. **The email composer's new-contact row — three smaller faults**
     (2026-10-31, found on the #63 live pass). (1) ~~The row's Company

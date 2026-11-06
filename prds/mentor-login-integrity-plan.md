@@ -1,10 +1,10 @@
 # Mentor login integrity — prevention, detection and history — Plan
 
-Last Updated: 11-05-26 23:52 · Revision 1.8 — see change log at the end.
+Last Updated: 11-06-26 01:35 · Revision 1.9 — see change log at the end.
 
 **Status:** Approved by Doug 11-05-26 ("approved"). Not built.
 **Kickoff that produced it:** `prompts/mentor-login-integrity-design-prompt-v0.2.md`.
-**Build kickoff:** `prompts/mentor-login-integrity-build-prompt-v0.5.md` (the rest of step 4c, then steps 5–6; steps 0–3 built 11-05-26 from revision 0.2, step 4a, 4b and condition 7 from revision 0.4).
+**Build kickoff:** `prompts/mentor-login-integrity-build-prompt-v0.6.md` (steps 5–6; step 4c's last part built from revision 0.5; steps 0–3 built 11-05-26 from revision 0.2, step 4a, 4b and condition 7 from revision 0.4).
 **Sibling plan:** staff notes on mentors and the page-space work are a
 separate arc, started from `prompts/mentor-staff-notes-prompt-v0.1.md`.
 
@@ -53,6 +53,7 @@ design session.
 | Q5.2 | 11-04-26 | Nine fields become tracked fields (§ 4.6). |
 | Q5.3 | 11-04-26 | The History tab is for each application's own team, never mentors; the activity page is gated by a new **System Management Team**. |
 | Issue 5b | 11-04-26 | The CRM stops writing a sign-in log row for every request by the application's key-based account. |
+| Q5.4 | 11-06-26 | Every application on the History tab records old and new values in its action history, as Mentor Administration does (option A); values appear from the day step 5b ships. |
 | Q6.1 | 11-05-26 | No block on the CRM's own screens for now; training, plus the direct-use report in the daily digest; revisit if direct edits continue. Doug: "This is primarily a training issue, and we may be making it more complex than necessary. Complexity leads to errors." |
 | Q6.2 | 11-05-26 | Staff roles keep the right to change a mentor profile's login. |
 | Q6.3 | 11-05-26 | Personal Administrator-type logins replace the shared ones for people (§ 4.8). |
@@ -325,6 +326,7 @@ which is now Doug's.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.9 | 11-06-26 01:35 | Claude (Claude Code) | Ruling Q5.4 (Doug, 11-06-26, option A): old and new values recorded in every History-tab application. Build kickoff pointer moved to revision 0.6. |
 | 1.8 | 11-05-26 23:52 | Claude (Claude Code) | C2 ruled by Doug: the direct-use and shared-account reports run on the web component; built as v0.310.0 (`INTEGRITY_CRM_USE_REPORT`, off). Step 4 complete. |
 | 1.7 | 11-05-26 22:49 | Claude (Claude Code) | Step 4 built 11-05-26, committed, not pushed: 4a v0.307.0 (`LOGIN_INTEGRITY_CHECK`), 4b v0.308.0 (`INTEGRITY_DIGEST`, `INTEGRITY_DIGEST_TO`), 4c's condition 7 v0.309.0 (`INTEGRITY_SIGNIN_ALERT`); all off. "First run reports only" is met by the digest being its own switch. The direct-use and shared-account reports (§ 4.2 items 8–9) wait on the C2 ruling. Build kickoff pointer moved to revision 0.5. No ruling changed. |
 | 1.6 | 11-05-26 22:21 | Claude (Claude Code) | Step 3 pushed and live (v0.306.0, switch off). Build kickoff pointer moved to revision 0.4 of the prompt, which covers step 4 only; steps 5–6 follow in revision 0.5. No ruling changed. |

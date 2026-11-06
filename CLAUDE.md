@@ -1196,12 +1196,13 @@ the strength of it.
   `CBM_EMAIL_LOCK`, all three switches off). The crm-test review, the
   production switch-on and steps 4–6 are in `OPEN-ITEMS.md` #66, and the
   kickoff is `prompts/mentor-login-integrity-build-prompt-v0.4.md` (step 4; steps 5–6 follow in revision 0.5).
-- **v0.307.0–v0.309.0 (2026-11-05) are live on both deployments, v0.310.0 committed, not pushed**: mentor
+- **v0.307.0–v0.310.0 (2026-11-05) are live on both deployments**: mentor
   login integrity step 4 — the daily check (`LOGIN_INTEGRITY_CHECK`,
   migration 0041, package `integrity/`), the integrity digest and the
   Login faults list (`INTEGRITY_DIGEST`), the no-profile sign-in alert
   (`INTEGRITY_SIGNIN_ALERT`), and in v0.310.0 the report on work in the
   CRM's own screens, run on web by Doug's C2 ruling
-  (`INTEGRITY_CRM_USE_REPORT`); all off (`OPEN-ITEMS.md` #66);
-  next kickoff `prompts/mentor-login-integrity-build-prompt-v0.5.md`.
+  (`INTEGRITY_CRM_USE_REPORT`); all off but `LOGIN_INTEGRITY_CHECK`, on since
+  11-06-26 (`OPEN-ITEMS.md` #66); next kickoff
+  `prompts/mentor-login-integrity-build-prompt-v0.6.md` (steps 5–6).
 Everything else still owed is in `OPEN-ITEMS.md`.
