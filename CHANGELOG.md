@@ -5,6 +5,39 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.313.1] — 2026-11-06
+
+**fix: the activity page, from the independent review of v0.313.0**
+(mentor login integrity step 6).
+
+- **An application action's changes to linked records read as "In the
+  CRM directly".** An Assign merges the mentor onto the engagement's
+  contacts, client profile and company as the signed-in person, and each
+  of those records' Assign notes stood alone. A CRM note by the same person
+  within the minute of an application action is now credited to that
+  application, keeping its own record.
+- **A person's System Settings changes were missing**: that page records
+  the login name, not the display name. The action history is now asked
+  for the person's name, login name and email address.
+- **"System" with the application's account unidentified** would have
+  listed everybody's CRM changes; it now lists none and says why.
+- **The two sources are cut to the span both cover** when either stops at
+  its 1,000-row cap, so no note loses the row it folds into.
+- **The CRM-notes read keeps the pages it had** when its 12 seconds run
+  out, and says so in words for staff — one notice, not two.
+- Notes on email, conversations, intake receipts, the action log, logins
+  and notes are left out in the query itself (their names are subjects or
+  submitters, and they used up the row cap).
+- The person asked about must be a login id; an unknown one is a 400 in
+  words, and nothing else reaches the CRM's address.
+- The branding guard now scans `activity/`; the `/setup` gate is labelled
+  "System Management"; `scripts/measure_note_read.py` times the page's own
+  read, every page.
+
+Not changed, for Doug: the page's address answers while the switch is off
+(the data does not), as Marketing Management's does; user ids ride in the
+person list's values, never shown.
+
 ## [0.313.0] — 2026-11-06
 
 **feat: the activity page** (mentor login integrity plan, step 6 — § 4.5;

@@ -39,8 +39,7 @@ ROOT = Path(__file__).resolve().parent.parent
 #: ``events/frontend/preview*.css`` are deliberately absent — they are verbatim
 #: copies of a specific WordPress site and are retired by plan phase 4, not
 #: parameterized (plan § *Phase 0*, item 8).
-APP_FRONTEND_ROOTS = (
-    "analytics", "assignments", "campaigns", "directory", "events", "forms", "mentoradmin",
+APP_FRONTEND_ROOTS = ("activity", "analytics", "assignments", "campaigns", "directory", "events", "forms", "mentoradmin",
     "mentorprofile", "myemail", "ops", "portal", "sessions", "setup",
     "frontend/shared",
 )

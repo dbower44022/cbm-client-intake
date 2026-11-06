@@ -705,8 +705,8 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("assign_allowed_roles", GROUP_GATES, "Client Administration (roles)", kind="csv",
        help="A regular user's token cannot read its own roles — prefer teams."),
     _s("mentor_admin_allowed_teams", GROUP_GATES, "Mentor Administration", kind="csv"),
-    _s("system_management_allowed_teams", GROUP_GATES, "Activity page", kind="csv",
-       help="The team whose members see the activity page. Copy the team's name "
+    _s("system_management_allowed_teams", GROUP_GATES, "System Management", kind="csv",
+       help="The team whose members see the activity page (and later System Management functions). Copy the team's name "
             "exactly; administrators always pass."),
     _s("mentor_profile_allowed_teams", GROUP_GATES, "My Mentor Profile", kind="csv"),
     _s("ops_allowed_teams", GROUP_GATES, "Submission Admin", kind="csv"),

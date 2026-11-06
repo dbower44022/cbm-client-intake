@@ -238,7 +238,7 @@
         state.lines = body.lines || [];
         state.loaded = true;
         if (body.actionHistory === false) notice("The applications' own history could not be read just now, so only the CRM's own record changes are listed.");
-        if (body.crmNotes === false) notice("The CRM's own record changes could not be read just now, so only the applications' history is listed.");
+        if (body.crmNotes === false && !body.notice) notice("The CRM's own record changes could not be read just now, so only the applications' history is listed.");
         if (body.tracked === false && !withRecord) notice("Changes made in the CRM's own screens are listed only for fields the CRM tracks, and this record type has none yet.");
         if (body.truncated) notice("Only the most recent changes are listed; narrow the dates to see older ones.");
         if (body.notice) notice(body.notice);

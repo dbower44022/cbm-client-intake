@@ -4,8 +4,8 @@
 The activity page lists the CRM's Create, Update and Assign notes across
 every record by author and date, under the application's key-based account,
 and gives up after 12 seconds (``activity.service.NOTE_READ_SECONDS``). This
-times that read for the busiest author of the last 30 days and for a 7-day
-range with no author. It writes nothing and prints counts and timings only —
+times that read — every page, the page's own filters and budget — for 7
+and 30 days with no author, for the busiest person, and for System. It writes nothing and prints counts and timings only —
 never a name or a row.
 
 Run inside a deployed container, from the application folder (/app):
@@ -24,28 +24,27 @@ from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from activity.service import NOTE_READ_SECONDS, key_client  # noqa: E402
+from activity.service import NOTE_READ_SECONDS, SYSTEM_PERSON, _note_rows, key_client  # noqa: E402
+from core.history import _key_user_id  # noqa: E402
 from core.config import get_settings  # noqa: E402
-
-TYPES = {"type": "in", "attribute": "type", "value": ["Create", "Update", "Assign"]}
-
 
 def _since(days: int) -> str:
     return (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
 
 
-async def _timed(label: str, key, where):
+async def _timed(label: str, key, uid: str, key_user: str, since: str):
+    """The page's own read: every page, its filters, its 12-second budget."""
     t = time.monotonic()
     try:
-        page = await key.list("Note", where=where, max_size=200, order_by="createdAt",
-                              order="desc", select="id,createdById")
+        rows, truncated, slow = await _note_rows(key, uid, key_user, since, "")
         took = time.monotonic() - t
-        verdict = "OK" if took < NOTE_READ_SECONDS else "TOO SLOW for the page"
-        print(f"{label}: {took:.2f}s, total {page.get('total')} — {verdict}")
-        return page
+        verdict = ("TOO SLOW — the page would stop early" if slow
+                   else "OK" + (" (stopped at the row cap)" if truncated else ""))
+        print(f"{label}: {took:.2f}s, {len(rows)} rows — {verdict}")
+        return rows
     except Exception as exc:  # noqa: BLE001
         print(f"{label}: FAILED after {time.monotonic() - t:.2f}s — {str(exc)[:200]}")
-        return None
+        return []
 
 
 async def main() -> int:
@@ -54,16 +53,16 @@ async def main() -> int:
     if key is None:
         print("No CRM key on this server.")
         return 2
+    key_user = await _key_user_id(key, settings)
     print(f"CRM: {settings.espo_base_url}; the page gives up after {NOTE_READ_SECONDS:.0f}s\n")
-    month = await _timed("30 days, any author, first page", key,
-                         [TYPES, {"type": "after", "attribute": "createdAt", "value": _since(30)}])
-    await _timed("7 days, any author, first page", key,
-                 [TYPES, {"type": "after", "attribute": "createdAt", "value": _since(7)}])
-    authors = Counter(r.get("createdById") for r in (month or {}).get("list") or [])
+    week = await _timed("7 days, anyone", key, "", key_user, _since(7))
+    await _timed("30 days, anyone", key, "", key_user, _since(30))
+    authors = Counter(r.get("createdById") for r in week if r.get("createdById") != key_user)
     if authors:
-        busiest = authors.most_common(1)[0][0]
-        await _timed("one author, no date range", key,
-                     [TYPES, {"type": "equals", "attribute": "createdById", "value": busiest}])
+        await _timed("30 days, the busiest person", key, authors.most_common(1)[0][0],
+                     key_user, _since(30))
+    if key_user:
+        await _timed("30 days, System", key, SYSTEM_PERSON, key_user, _since(30))
     return 0
 
 
