@@ -240,6 +240,28 @@ save still succeeds and the reason is shown.
 
 ---
 
+## History and login safeguards
+
+Added 11-05-26 (v0.304.0 to v0.306.0), from the mentor login integrity plan
+(`prds/mentor-login-integrity-plan.md`).
+
+- **Every change is recorded.** A save records each field that changed, with
+  its old and new value. So do a teams change, a document upload, archive or
+  restore, and every mentor that Update Mentor Status changes. The values go
+  to the action history (`CActionLog`). The note on the mentor profile names
+  only what changed, because a mentor can read their own profile's notes.
+- **Login repairs stop when the data disagrees** (switch
+  `LOGIN_REPAIR_GUARDS`, off until reviewed). A save, Update Mentor Status,
+  provisioning and the nightly clean-up copy a mentor's login only when the
+  login is on that one profile and matches its CBM email. Otherwise they
+  leave it and log a fault, and provisioning says so in the status window.
+- **The CBM email locks once a login exists** (switch `CBM_EMAIL_LOCK`, off
+  until reviewed). The field then shows the login's user name and can't be
+  edited. An administrator changes the login, the Google mailbox and the
+  field together. Before a login exists, a typed address must be on the
+  chapter's mail domain and not already a login or another mentor's
+  address. It is saved in lower case.
+
 ## Record Status
 
 `CMentorProfile.recordStatus` is an enum with values **Incomplete**, **Complete**,

@@ -1189,4 +1189,11 @@ the strength of it.
   (personal outreach from the lead's page) are both live-passed and ON in
   production since 11-04-26; v0.303.4 and v0.303.5 were small fixes. The
   Marketing Management switches still off are listed in `OPEN-ITEMS.md` #57.
+- **v0.306.0 (2026-11-05) is the latest, deployed on both deployments**
+  (`/healthz` read 11-05-26 22:21). It holds mentor login integrity steps 1
+  to 3 (v0.304.0 action history everywhere, live; v0.305.0
+  `LOGIN_REPAIR_GUARDS` and `MANAGER_PROFILE_STRICT`, v0.306.0
+  `CBM_EMAIL_LOCK`, all three switches off). The crm-test review, the
+  production switch-on and steps 4–6 are in `OPEN-ITEMS.md` #66, and the
+  kickoff is `prompts/mentor-login-integrity-build-prompt-v0.4.md` (step 4; steps 5–6 follow in revision 0.5).
 Everything else still owed is in `OPEN-ITEMS.md`.
