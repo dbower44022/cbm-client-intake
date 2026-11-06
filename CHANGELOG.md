@@ -5,6 +5,45 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.308.0] — 2026-11-05
+
+**feat: the integrity digest, the login fault list, acknowledging and the
+badge** (mentor login integrity plan, step 4b — § 4.2; `OPEN-ITEMS.md`
+#66). New switch `INTEGRITY_DIGEST`, **off by default**, at `/setup` →
+Features, and the recipients setting `INTEGRITY_DIGEST_TO` (*Login fault
+recipients*, `/setup` → Email; empty falls back to `ALERT_EMAIL_TO`). No
+migration; no CRM change.
+
+- **Emailing is its own switch.** `LOGIN_INTEGRITY_CHECK` (4a) records;
+  `INTEGRITY_DIGEST` tells people. This is how "the first run on
+  production and Boston reports only" is met: Doug turns the digest on for
+  an instance after reading its 4a report. No code decides what a first
+  run is — an empty fault table would make every crm-test night a first
+  run, and crm-test would never email.
+- **The integrity digest** (named so beside the existing daily email
+  digest): straight after each daily check, one email listing every open
+  fault nobody has acknowledged, grouped by condition, new ones marked
+  `NEW`, each with a link to its mentor in Mentor Administration
+  (`/mentoradmin/?mentor=<id>`), plus counts of acknowledged and fixed
+  faults and a link to the list (`/mentoradmin/?faults=1`). It repeats
+  each day while any fault is open and unacknowledged; nothing open, no
+  email. Sent through the alert mailer as "Login Integrity".
+- **The fault list** in Mentor Administration (**Login faults** on the
+  roster's toolbar, red with a count when any is unacknowledged): each
+  open fault, its mentor linked, when first found, and **Acknowledge** —
+  a note is required ("known — being handled"). The acknowledgement stays
+  in the list (who, when, the note), leaves the email, and is recorded in
+  the action history as *Login Fault Acknowledged* (`CActionLog` only —
+  no note on the mentor's own stream, which the mentor can read).
+- **The badge**: a red second badge on the portal's Mentor Administration
+  tile counts open, unacknowledged faults, beside the tile's own
+  new-applications count, for the Mentor Administration Team.
+- **"Staff have been told" is now true.** `MANAGER_PROFILE_STRICT`'s
+  message (v0.305.0) says so. Step 2's guards report a refused repair as a
+  log line only; condition 1 finds the same fault at the next daily run,
+  so with the digest on, staff are told the next morning. Turn
+  `MANAGER_PROFILE_STRICT` on in production only after `INTEGRITY_DIGEST`.
+
 ## [0.307.0] — 2026-11-05
 
 **feat: the daily login integrity check, report only** (mentor login

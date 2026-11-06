@@ -240,6 +240,9 @@ main.portal.cbm-container {
   font-weight: 700;
   text-align: center;
 }
+/* Login faults (mentor login integrity step 4b): red, beside the tile's own badge. */
+.portal__tile-badge--fault { background: var(--cbm-danger, #D9534F); }
+.portal__tile-badge + .portal__tile-badge { margin-left: 0.3rem; }
 
 /* --- Upcoming events rail (F5) ------------------------------------------- */
 /* Desktop: a 22rem rail on the left, the tiles filling the rest. */

@@ -60,10 +60,15 @@ async def send_alert(settings: Settings, text: str) -> None:
         log.warning("ALERT (no delivery channel configured/working): %s", text)
 
 
-async def _email_alert(settings: Settings, text: str) -> None:
+async def _email_alert(
+    settings: Settings, text: str, *, to: Optional[list[str]] = None,
+    subject: Optional[str] = None, sender_name: Optional[str] = None,
+) -> None:
     """One alert as a plain-text email, sent via the Gmail service-account
     delegation AS ``alert_email_from`` (a real @cbmentors.org mailbox;
-    OPS_MAILBOX is the fallback sender) TO the ``alert_email_to`` list."""
+    OPS_MAILBOX is the fallback sender) TO the ``alert_email_to`` list.
+    ``to`` / ``subject`` / ``sender_name`` override those for a caller with
+    its own recipients (the login integrity digest)."""
     # Lazy imports: comms.sync imports this module (its failure alerts), and
     # comms.service imports comms.sync — a top-level import here would cycle.
     from comms.service import get_service_account
@@ -82,9 +87,9 @@ async def _email_alert(settings: Settings, text: str) -> None:
     first_line = text.strip().splitlines()[0][:120] if text.strip() else "alert"
     mime = build_mime(
         sender=sender,
-        sender_name=f"{abbr()} Intake Alerts",
-        to=settings.alert_email_to_list,
-        subject=f"[{abbr()} Intake — {settings.environment}] {first_line}",
+        sender_name=sender_name or f"{abbr()} Intake Alerts",
+        to=to or settings.alert_email_to_list,
+        subject=subject or f"[{abbr()} Intake — {settings.environment}] {first_line}",
         body_text=text,
     )
     gmail = GmailClient(sa_info, sender, settings.request_timeout_seconds)

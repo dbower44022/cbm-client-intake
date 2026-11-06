@@ -32,6 +32,7 @@
       <div class="ma__toolbar">
         <span class="ma__who">Signed in as <strong id="whoName"></strong></span>
         <span class="ma__actions">
+          <button type="button" class="cbm-button cbm-button--secondary ma__faults-btn" id="faultsBtn" hidden>Login faults</button>
           <button type="button" class="cbm-button" id="verifyBtn">Update Mentor Status</button>
           <button type="button" class="cbm-button cbm-button--secondary" id="setupBtn" hidden>Email Setup</button>
           <button type="button" class="cbm-button cbm-button--secondary" id="refreshBtn">Refresh</button>
@@ -81,6 +82,34 @@
       <form id="editForm" class="ma__form"></form>
     </section>
 
+    <!-- Login faults (mentor login integrity step 4b) -->
+    <section class="ma__faults" id="faultsView" hidden>
+      <div class="ma__toolbar">
+        <button type="button" class="cbm-button cbm-button--secondary" id="faultsBackBtn">← Back to list</button>
+        <span class="ma__actions">
+          <button type="button" class="cbm-button cbm-button--secondary" id="faultsRefreshBtn">Refresh</button>
+        </span>
+      </div>
+      <h2 class="ma__detail-name">Login faults</h2>
+      <p class="cbm-help">
+        A daily check compares every mentor profile with its login and its Contact. Each row is
+        something that disagrees. Fix it, or acknowledge it — "known, being handled" — with a note
+        saying how. An acknowledged fault leaves the daily email and stays here. A fault the check
+        no longer finds disappears on its own the next morning.
+      </p>
+      <p class="ma__notice" id="faultsNotice" role="status" hidden></p>
+      <table class="ma__table" id="faultsTable" hidden>
+        <thead><tr>
+          <th scope="col">Fault</th>
+          <th scope="col">What is wrong</th>
+          <th scope="col">Mentor</th>
+          <th scope="col">First found</th>
+          <th scope="col" data-sortable="false">Acknowledged</th>
+        </tr></thead>
+        <tbody id="faultsBody"></tbody>
+      </table>
+      <p class="ma__empty" id="faultsEmpty" hidden>No open login faults.</p>
+    </section>
     <!-- Email Setup (admin only) -->
     <section class="ma__setup" id="setupView" hidden>
       <div class="ma__toolbar">

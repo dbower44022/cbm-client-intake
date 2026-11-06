@@ -108,12 +108,16 @@
 
   // Tile count badge — no badge for a zero count, and never a second badge on
   // a tile that already has one.
-  function badgeTile(url, n, title) {
+  // ``kind`` "fault" is a second, differently coloured badge (login faults on
+  // the Mentor Administration tile), so it never hides the tile's own count.
+  function badgeTile(url, n, title, kind) {
     if (!n) return;
     var tile = document.querySelector('.portal__tile[data-url="' + url + '"]');
-    if (!tile || tile.querySelector(".portal__tile-badge")) return;
+    var cls = kind === "fault" ? "portal__tile-badge portal__tile-badge--fault" : "portal__tile-badge";
+    var sel = kind === "fault" ? ".portal__tile-badge--fault" : ".portal__tile-badge:not(.portal__tile-badge--fault)";
+    if (!tile || tile.querySelector(sel)) return;
     var b = document.createElement("span");
-    b.className = "portal__tile-badge";
+    b.className = cls;
     b.textContent = n > 99 ? "99+" : String(n);
     if (title) b.title = title;
     tile.appendChild(b);
@@ -142,7 +146,7 @@
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         ((d && d.items) || []).forEach(function (it) {
-          badgeTile(it.url, it.count, (it.label || "Items awaiting processing") + ": " + it.count);
+          badgeTile(it.url, it.count, (it.label || "Items awaiting processing") + ": " + it.count, it.kind);
         });
       })
       .catch(function () {});

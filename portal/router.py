@@ -319,6 +319,22 @@ async def attention(request: Request) -> dict:
 
         items.extend(r for r in await asyncio.gather(*(one(t) for t in wanted)) if r)
 
+    # Login faults (mentor login integrity plan § 4.2, step 4b): open faults
+    # nobody has acknowledged, as a second badge on the Mentor Administration
+    # tile beside its new-applications count.
+    if settings.integrity_digest and is_member(user, settings.mentor_admin_allowed_teams_list):
+        try:
+            from integrity.store import get_store as integrity_store
+
+            fstore = integrity_store(settings)
+            if fstore is not None:
+                items.append({"url": attn.MENTORS.app_url, "kind": "fault",
+                              "count": await fstore.open_count(),
+                              "label": "Login faults to look at"})
+        except Exception as exc:  # noqa: BLE001 — a badge never breaks the portal
+            log.warning("attention count failed (login faults) for %s: %s",
+                        user.get("userName"), exc)
+
     store = getattr(request.app.state, "submission_store", None)
     if store is not None and is_member(user, settings.ops_allowed_teams_list):
         try:

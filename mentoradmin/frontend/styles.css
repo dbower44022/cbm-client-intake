@@ -262,3 +262,8 @@
 /* CBM_EMAIL_LOCK (mentor login integrity plan § 4.4): the locked CBM email. */
 .cbm-field input.is-locked { background: var(--cbm-surface); color: var(--cbm-slate-700); cursor: not-allowed; }
 .cbm-field .field-note { margin: 0.25rem 0 0; font-size: var(--cbm-text-sm); color: var(--cbm-slate-700); }
+
+/* Login faults (mentor login integrity step 4b). */
+.ma__faults-btn.is-alert { border-color: var(--cbm-danger, #D9534F); color: var(--cbm-danger, #D9534F); }
+.ma__new-tag { display: inline-block; padding: 0 0.4rem; border-radius: 999px; background: var(--cbm-danger, #D9534F); color: #fff; font-size: 0.75rem; font-weight: 700; }
+.ma__ack-note { width: 100%; min-width: 14rem; margin-bottom: 0.3rem; }

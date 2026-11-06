@@ -213,6 +213,8 @@ async def session(request: Request) -> dict:
         # True => show the Analytics tab (record-scoped analytics for this mentor,
         # served by the analytics app; Phase C). Only when analytics is enabled.
         "analyticsEnabled": get_settings().analytics_active,
+        # True => the Login faults list (mentor login integrity step 4b).
+        "integrityFaults": _integrity_on(),
     }
 
 
@@ -289,6 +291,90 @@ async def mentor_status_check(request: Request) -> dict:
         "groupCheckEnabled": bool(directory is not None and google.members_group),
         "membersGroup": google.members_group,
     }
+
+
+# --- Login faults (mentor login integrity plan § 4.2, step 4b) -------------
+# The daily check's open faults, and acknowledging one ("known — being
+# handled", with a note). Shown only with INTEGRITY_DIGEST on: the list, the
+# badge and the email are one switch, turned on for an instance after its
+# report-only backlog has been read.
+
+
+class AcknowledgeIn(BaseModel):
+    note: str = ""
+
+
+def _integrity_on() -> bool:
+    settings = get_settings()
+    return bool(settings.integrity_digest and settings.database_url)
+
+
+def _integrity_store():
+    from integrity.store import get_store
+
+    store = get_store(get_settings())
+    if not _integrity_on() or store is None:
+        raise HTTPException(
+            status_code=404,
+            detail="The login fault list is switched off on this instance "
+                   "(INTEGRITY_DIGEST at System Settings).")
+    return store
+
+
+def _fault_out(r: dict[str, Any]) -> dict[str, Any]:
+    from integrity.check import CONDITIONS
+
+    def stamp(v: Any) -> Any:
+        return v.isoformat() if v is not None else None
+
+    return {
+        "id": r["id"], "condition": r["condition"],
+        "conditionLabel": CONDITIONS.get(r["condition"], ""),
+        "summary": r["summary"], "mentors": r.get("mentors") or [],
+        "login": (r.get("login") or {}).get("userName"),
+        "firstSeen": stamp(r.get("first_seen")), "lastSeen": stamp(r.get("last_seen")),
+        "isNew": r.get("notified_at") is None,
+        "acknowledged": ({"by": r.get("ack_by"), "at": stamp(r.get("ack_at")),
+                          "note": r.get("ack_note") or ""} if r.get("ack_at") else None),
+    }
+
+
+@router.get("/integrity/faults")
+async def integrity_faults(request: Request) -> dict:
+    _require_user(request)
+    store = _integrity_store()
+    return {"faults": [_fault_out(r) for r in await store.open_faults()]}
+
+
+@router.post("/integrity/faults/{fault_id}/acknowledge")
+async def acknowledge_fault(fault_id: str, body: AcknowledgeIn, request: Request) -> dict:
+    user = _require_user(request)
+    store = _integrity_store()
+    note = (body.note or "").strip()
+    if not note:
+        raise HTTPException(status_code=400, detail=(
+            "Write a note saying how this fault is being handled — the note is "
+            "what the next person reading the list sees."))
+    row = await store.acknowledge(fault_id, by_id=user.get("userId", ""),
+                                  by=user.get("name") or user.get("userName", ""), note=note[:2000])
+    if row is None:
+        raise HTTPException(status_code=404, detail=(
+            "That fault is no longer open — the daily check stopped finding it. "
+            "Refresh the list."))
+    mentors = row.get("mentors") or []
+    # CActionLog only, never a stream note: the mentor reads their own
+    # profile's stream, and a fault names other people's logins.
+    await action_log.log_action(
+        app=action_log.APP_MENTOR_ADMIN, category=action_log.CAT_PROVISIONING,
+        action=action_log.ACT_LOGIN_FAULT_ACKNOWLEDGED,
+        parent_type=service.MENTOR_PROFILE if mentors else "",
+        parent_id=mentors[0]["id"] if mentors else "",
+        summary=f"Login fault acknowledged: {row['summary']} Note: {note[:500]}",
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+        details={"faultId": row["id"], "condition": row["condition"],
+                 "mentors": [m["id"] for m in mentors], "note": note[:2000]},
+    )
+    return {"fault": _fault_out(row)}
 
 
 @router.get("/fields")

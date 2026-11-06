@@ -12,6 +12,7 @@
   var isAdmin = false;     // gates the Email Setup screen
   var docsEnabled = false; // GDRIVE_DOCS server-side: shows the Documents tab
   var analyticsEnabled = false; // ANALYTICS_ENABLED: shows the Analytics tab
+  var integrityFaults = false; // INTEGRITY_DIGEST: shows the Login faults list
   var filter = { q: "", status: "", record: "", type: "" };
 
   // Permission-team assignment (Status tab). teamState = the current mentor's
@@ -63,7 +64,7 @@
     if (e && e.status === 403) { showMessage(e.message); return; }
     showMessage("The server isn't responding right now. Please try again in a moment.");
   }
-  function hideAll() { hide($("msgView")); hide($("listView")); hide($("detailView")); hide($("setupView")); }
+  function hideAll() { hide($("msgView")); hide($("listView")); hide($("detailView")); hide($("setupView")); hide($("faultsView")); }
   function showList() { hideAll(); show($("listView")); }
   function showDetail() { hideAll(); show($("detailView")); }
   function showSetup() { hideAll(); show($("setupView")); }
@@ -74,6 +75,8 @@
     docsEnabled = !!user.docsEnabled;
     analyticsEnabled = !!user.analyticsEnabled;
     $("setupBtn").hidden = !isAdmin;
+    integrityFaults = !!user.integrityFaults;
+    $("faultsBtn").hidden = !integrityFaults;
   }
 
   function notice(elId, text, kind) {
@@ -105,6 +108,9 @@
   $("recordFilter").addEventListener("change", function () { filter.record = this.value; renderTable(); });
   $("typeFilter").addEventListener("change", function () { filter.type = this.value; renderTable(); });
   $("setupBtn").addEventListener("click", function () { openSetup(); });
+  $("faultsBtn").addEventListener("click", function () { openFaults(); });
+  $("faultsBackBtn").addEventListener("click", function () { showList(); });
+  $("faultsRefreshBtn").addEventListener("click", function () { loadFaults(); });
   $("setupBackBtn").addEventListener("click", function () { showList(); });
   $("setupSaveBtn").addEventListener("click", function () { saveSetup(); });
   $("setupTestBtn").addEventListener("click", function () { testSetup(); });
@@ -1634,9 +1640,119 @@
     else doSave(changes);
   });
 
+  // --- login faults (mentor login integrity plan § 4.2, step 4b) ---
+  var faultsGrid = null;
+  function fmtDay(iso) {
+    if (!iso) return "";
+    var d = new Date(iso);
+    return isNaN(d) ? "" : d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  }
+  function faultBadge(n) {
+    var b = $("faultsBtn");
+    b.textContent = n ? "Login faults (" + n + ")" : "Login faults";
+    b.classList.toggle("is-alert", !!n);
+  }
+  async function refreshFaultCount() {
+    if (!integrityFaults) return;
+    try {
+      var r = await api("/integrity/faults");
+      faultBadge((r.faults || []).filter(function (f) { return !f.acknowledged; }).length);
+    } catch (e) {}
+  }
+  function openFaults() { hideAll(); show($("faultsView")); loadFaults(); }
+  async function loadFaults() {
+    hide($("faultsNotice"));
+    try {
+      var r = await busyOver($("faultsView"), api("/integrity/faults"));
+      renderFaults(r.faults || []);
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice("faultsNotice", "Could not load the login faults: " + e.message, "error");
+    }
+  }
+  function renderFaults(faults) {
+    var body = $("faultsBody"); body.innerHTML = "";
+    faultBadge(faults.filter(function (f) { return !f.acknowledged; }).length);
+    $("faultsTable").hidden = !faults.length;
+    $("faultsEmpty").hidden = !!faults.length;
+    faults.forEach(function (f) {
+      var tr = document.createElement("tr");
+      var c1 = document.createElement("td");
+      c1.textContent = f.conditionLabel;
+      c1.setAttribute("data-sort", String(f.condition));
+      if (f.isNew) { var tag = document.createElement("span"); tag.className = "ma__new-tag"; tag.textContent = "New"; c1.appendChild(document.createTextNode(" ")); c1.appendChild(tag); }
+      var c2 = document.createElement("td"); c2.textContent = f.summary;
+      var c3 = document.createElement("td");
+      (f.mentors || []).forEach(function (m, i) {
+        if (i) c3.appendChild(document.createTextNode(", "));
+        var a = document.createElement("a"); a.href = "?mentor=" + encodeURIComponent(m.id); a.textContent = m.name;
+        a.addEventListener("click", function (ev) { ev.preventDefault(); openMentor(m.id); });
+        c3.appendChild(a);
+      });
+      if (!(f.mentors || []).length) c3.textContent = f.login || "";
+      var c4 = document.createElement("td"); c4.textContent = fmtDay(f.firstSeen);
+      c4.setAttribute("data-sort", f.firstSeen || "");
+      var c5 = document.createElement("td");
+      renderAck(c5, f);
+      [c1, c2, c3, c4, c5].forEach(function (td) { tr.appendChild(td); });
+      body.appendChild(tr);
+    });
+    if (!faultsGrid && window.CBMGrid) faultsGrid = CBMGrid.enhance($("faultsTable"), { key: "mentoradmin.faults" });
+  }
+  function renderAck(cell, f) {
+    cell.innerHTML = "";
+    if (f.acknowledged) {
+      var who = document.createElement("div");
+      who.textContent = (f.acknowledged.by || "Someone") + ", " + fmtDay(f.acknowledged.at);
+      var note = document.createElement("div"); note.className = "ma__muted"; note.textContent = f.acknowledged.note;
+      cell.appendChild(who); cell.appendChild(note);
+      return;
+    }
+    var btn = document.createElement("button");
+    btn.type = "button"; btn.className = "cbm-button cbm-button--secondary ma__sm"; btn.textContent = "Acknowledge";
+    btn.addEventListener("click", function () { ackForm(cell, f); });
+    cell.appendChild(btn);
+  }
+  function ackForm(cell, f) {
+    cell.innerHTML = "";
+    var ta = document.createElement("textarea");
+    ta.rows = 2; ta.className = "ma__ack-note"; ta.placeholder = "How is this being handled?";
+    ta.setAttribute("aria-label", "Acknowledgement note");
+    var err = document.createElement("p"); err.className = "form-error"; err.hidden = true;
+    var save = document.createElement("button");
+    save.type = "button"; save.className = "cbm-button ma__sm"; save.textContent = "Acknowledge";
+    var cancel = document.createElement("button");
+    cancel.type = "button"; cancel.className = "cbm-button cbm-button--secondary ma__sm"; cancel.textContent = "Cancel";
+    cancel.addEventListener("click", function () { renderAck(cell, f); });
+    save.addEventListener("click", async function () {
+      err.hidden = true;
+      if (!ta.value.trim()) { err.textContent = "Write a note saying how this fault is being handled."; err.hidden = false; ta.focus(); return; }
+      try {
+        var r = await api("/integrity/faults/" + encodeURIComponent(f.id) + "/acknowledge",
+          { method: "POST", body: JSON.stringify({ note: ta.value }) });
+        Object.assign(f, r.fault);
+        renderAck(cell, f);
+        refreshFaultCount();
+      } catch (e) {
+        if (e.status === 401) { showLogin(); return; }
+        err.textContent = e.message; err.hidden = false;
+      }
+    });
+    cell.appendChild(ta); cell.appendChild(err); cell.appendChild(save); cell.appendChild(cancel);
+    ta.focus();
+  }
+
   // --- boot ---
+  // Deep links from the integrity digest: ?mentor=<id> opens that mentor,
+  // ?faults=1 opens the Login faults list.
   (async function init() {
-    try { var u = await api("/session"); setUser(u); await bootList(); }
+    try {
+      var u = await api("/session"); setUser(u); await bootList();
+      refreshFaultCount();
+      var q = new URLSearchParams(location.search);
+      if (q.get("mentor")) openMentor(q.get("mentor"));
+      else if (q.get("faults") && integrityFaults) openFaults();
+    }
     catch (e) { bootFail(e); }
   })();
 })();

@@ -261,6 +261,24 @@ Added 11-05-26 (v0.304.0 to v0.306.0), from the mentor login integrity plan
   field together. Before a login exists, a typed address must be on the
   chapter's mail domain and not already a login or another mentor's
   address. It is saved in lower case.
+- **A daily check finds login faults** (v0.307.0, switch
+  `LOGIN_INTEGRITY_CHECK`, off until reviewed). Once a day it compares
+  every mentor profile with its login and its Contact, and records six
+  kinds of fault: one login on several profiles; a CBM email that differs
+  from the login; one CBM email on several profiles; an Approved or Active
+  mentor with no login; a mentor-team login with no profile; and a mentor's
+  Contact carrying someone else's login. A fault the check no longer finds
+  closes itself the next morning.
+- **Login faults list and email** (v0.308.0, switch `INTEGRITY_DIGEST`, off
+  until an instance's first report has been read). The **Login faults**
+  button on the roster opens the open faults, each naming its mentor with a
+  link to the record. **Acknowledge** marks one "known, being handled",
+  with a note saying how: it stays in the list with who, when and the note,
+  leaves the daily email, and is recorded in the action history. The
+  integrity digest emails the open, unacknowledged faults each morning,
+  new ones marked, to the addresses in *Login fault recipients* at System
+  Settings (empty uses the alert recipients). A red badge on the portal's
+  Mentor Administration tile counts them.
 
 ## Record Status
 
