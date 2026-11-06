@@ -53,7 +53,8 @@
   // Not signed in: hand off to the portal, which brings the user back here
   // after login (single sign-on — this app has no login form of its own).
   function showLogin() {
-    location.href = "/?next=" + encodeURIComponent("/mentoradmin/");
+    // Keep a digest deep link (?mentor= / ?faults=1) through the sign-in.
+    location.href = "/?next=" + encodeURIComponent("/mentoradmin/" + location.search);
   }
   function showMessage(text) { hideAll(); $("msgText").textContent = text; show($("msgView")); }
   // On boot: 401 = not signed in (go sign in at the portal); 403 = signed in

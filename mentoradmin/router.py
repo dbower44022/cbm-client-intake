@@ -333,7 +333,7 @@ def _fault_out(r: dict[str, Any]) -> dict[str, Any]:
         "summary": r["summary"], "mentors": r.get("mentors") or [],
         "login": (r.get("login") or {}).get("userName"),
         "firstSeen": stamp(r.get("first_seen")), "lastSeen": stamp(r.get("last_seen")),
-        "isNew": r.get("notified_at") is None,
+        "isNew": r.get("notified_at") is None and r.get("ack_at") is None,
         "acknowledged": ({"by": r.get("ack_by"), "at": stamp(r.get("ack_at")),
                           "note": r.get("ack_note") or ""} if r.get("ack_at") else None),
     }

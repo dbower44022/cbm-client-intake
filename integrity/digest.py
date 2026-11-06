@@ -109,7 +109,11 @@ async def send_integrity_digest(settings: Settings, store: Any, result: dict[str
                                 fixed=fixed)
     send = send or await _default_send(settings)
     await send(to, subject, text)
-    await store.mark_notified([r["id"] for r in rows if not r.get("notified_at")])
+    try:
+        await store.mark_notified([r["id"] for r in rows if not r.get("notified_at")])
+    except Exception as exc:  # noqa: BLE001 — the email did go; say so
+        log.warning("integrity digest sent, but its faults could not be marked as "
+                    "emailed (tomorrow's digest will call them new again): %s", exc)
     log.info("integrity digest sent to %s: %d open, %d new", ", ".join(to), len(rows),
              sum(1 for r in rows if not r.get("notified_at")))
     return True

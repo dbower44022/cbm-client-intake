@@ -474,7 +474,10 @@
   function nextTarget(data) {
     var next = new URLSearchParams(location.search).get("next");
     if (!next) return null;
-    var ok = (data.apps || []).some(function (a) { return a.url === next; })
+    // An entitled app's own page may carry a query (the integrity digest's
+    // /mentoradmin/?mentor=<id>); the path is what is checked.
+    var path = next.split("?")[0];
+    var ok = (data.apps || []).some(function (a) { return a.url === path; })
       || (data.directories || []).some(function (d) { return d.url === next; })
       || (data.forms || []).some(function (f) { return f.url === next; })
       // A member page for one event (F5-1): this app's own same-origin path,
