@@ -15,7 +15,7 @@ import logging
 import time
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
@@ -473,13 +473,19 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         )
 
     @router.get("/records")
-    async def records(request: Request) -> dict:
+    async def records(request: Request, background: BackgroundTasks) -> dict:
         user = _require_user(request)
         client = client_for(get_settings(), user)
         try:
-            return await service.list_records(cfg, client, user)
+            result = await service.list_records(cfg, client, user)
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not load records")
+        if cfg.slug == "mentorsessions" and result.get("profileFound") is False:
+            # Condition 7 (mentor login integrity § 4.2): after the response.
+            from integrity.signin import APP_CLIENT_MANAGEMENT, report_no_profile
+
+            background.add_task(report_no_profile, dict(user), APP_CLIENT_MANAGEMENT)
+        return result
 
     @router.get("/fields")
     async def fields(request: Request) -> dict:

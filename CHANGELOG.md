@@ -5,6 +5,29 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.309.0] — 2026-11-05
+
+**feat: the no-profile sign-in alert (condition 7)** (mentor login
+integrity plan, step 4c, first part — § 4.2; `OPEN-ITEMS.md` #66). New
+switch `INTEGRITY_SIGNIN_ALERT`, **off by default**, at `/setup` →
+Features (web). No migration; no CRM change.
+
+- When a login with no mentor profile opens **Client Management** or **My
+  Mentor Profile**, the web component records it as a condition-7 fault
+  and, while `INTEGRITY_DIGEST` (the emailing switch) is on, emails the
+  integrity recipients at once. At most once per login per day (in
+  `LOGIN_INTEGRITY_TZ`); the event shows in the Login faults list and the
+  next daily run closes it.
+- **Confirmed under the key first**: the page read the profiles as the
+  person; a profile the key-based account can see is no fault. Runs after
+  the response, so the page never waits; a failure only logs. A login on
+  several profiles (the strict choice refusing) is condition 1's job, not
+  this one; Partner and Funder Management do not trigger it.
+- **Owed, waiting on Doug's ruling (check C2):** the direct-use report and
+  the shared-account report. `scripts/measure_signin_log_read.py`,
+  read-only, times one day's read of the sign-in log and Action History as
+  the administrator, in the web container, to inform that ruling.
+
 ## [0.308.0] — 2026-11-05
 
 **feat: the integrity digest, the login fault list, acknowledging and the

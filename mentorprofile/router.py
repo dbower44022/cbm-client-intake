@@ -12,7 +12,7 @@ from core.branding import abbr
 
 import logging
 
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from assignments.auth import clear_session, current_user, is_member, session_expired
@@ -119,13 +119,19 @@ async def fields(request: Request) -> dict:
 
 
 @router.get("/profile")
-async def profile(request: Request) -> dict:
+async def profile(request: Request, background: BackgroundTasks) -> dict:
     user = _require_user(request)
     client = client_for(get_settings(), user)
     try:
-        return await service.get_own_profile(client, user["userId"], get_settings())
+        result = await service.get_own_profile(client, user["userId"], get_settings())
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not load your profile")
+    if result.get("profileFound") is False and not result.get("ambiguous"):
+        # Condition 7 (mentor login integrity § 4.2): after the response.
+        from integrity.signin import APP_MY_MENTOR_PROFILE, report_no_profile
+
+        background.add_task(report_no_profile, dict(user), APP_MY_MENTOR_PROFILE)
+    return result
 
 
 @router.put("/profile")
