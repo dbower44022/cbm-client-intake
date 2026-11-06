@@ -2,7 +2,7 @@
 
 Last Updated: 11-06-26 15:36 · Revision 2.1 — see change log at the end.
 
-**Status:** Approved by Doug 11-05-26 ("approved"). Steps 0–4 built and live; steps 5–6 built 11-06-26 (v0.311.0–v0.313.2), committed, not pushed, switches off.
+**Status:** Approved by Doug 11-05-26 ("approved"). Steps 0–4 built and live; steps 5–6 built 11-06-26 (v0.311.0–v0.313.2), live on both deployments since 11-06-26, switches off.
 **Kickoff that produced it:** `prompts/mentor-login-integrity-design-prompt-v0.2.md`.
 **Build kickoff:** `prompts/mentor-login-integrity-build-prompt-v0.6.md` (steps 5–6; step 4c's last part built from revision 0.5; steps 0–3 built 11-05-26 from revision 0.2, step 4a, 4b and condition 7 from revision 0.4).
 **Sibling plan:** staff notes on mentors and the page-space work are a

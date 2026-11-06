@@ -1222,7 +1222,8 @@ the strength of it.
   (`INTEGRITY_CRM_USE_REPORT`); all off but `LOGIN_INTEGRITY_CHECK`, on since
   11-06-26 (`OPEN-ITEMS.md` #66); next kickoff
   `prompts/mentor-login-integrity-build-prompt-v0.6.md` (steps 5–6).
-- **v0.311.0–v0.313.2 (2026-11-06) are committed, not pushed**: steps 5
+- **v0.311.0–v0.313.2 (2026-11-06) are live on both deployments**
+  (pushed 11-06-26, `/healthz` read 16:15): steps 5
   and 6 — the History tab in five applications (`RECORD_HISTORY_TAB`),
   old and new values recorded (ruling Q5.4) and the activity page
   (`ACTIVITY_PAGE`); all off. Owed: `OPEN-ITEMS.md` #66 item 12.
