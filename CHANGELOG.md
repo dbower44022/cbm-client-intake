@@ -5,6 +5,39 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.312.1] — 2026-11-06
+
+**fix: the History engine, from the independent review of v0.311.0**
+(mentor login integrity step 5a). The review checked the merge rule
+against real notes on crm-test (Matt Mentor's training record, changed and
+put back): an ordinary Mentor Administration save shows once, labelled
+Mentor Administration, with old and new values; a direct change shows as
+"In the CRM directly" under the right person; Posts are excluded; no id
+reaches the browser. It found nine faults, all fixed:
+
+- **Provisioning, a save that repaired the login link, and the status
+  sweep's login fix showed their CRM notes as "In the CRM directly".** A
+  Provisioning row now explains the Update and Assign notes it caused; a
+  row that moved a login link explains an Assign note.
+- **A direct edit made within the minute could hide inside an application
+  line** when it shared one field. A note folds only when every field it
+  carries is one the row moved.
+- **The values table inside a line was a nested table**, whose headings
+  the shared grid took for its own (sorting by "Old value", resizing over
+  closed lines). It is a grid of cells now.
+- A 200 with an unreadable body from either source now degrades to the
+  other source instead of failing the tab.
+- A failed read of the key-based account is no longer cached for an hour.
+- A recorded sentence is cleaned of record ids and quoted CRM error bodies.
+- A status change whose field the note also lists no longer reads "set to
+  blank", and a status change is always kind Status Change.
+- An Assign line no longer shows an empty values table; the panel sends a
+  signed-out person to the portal; two quick clicks cannot draw the older
+  answer.
+
+Still owed from the review: the stream read as a real non-administrator on
+the Mentor Administration Team (no such login was available).
+
 ## [0.312.0] — 2026-11-06
 
 **feat: the History tab in Client Administration, Partner and Funder

@@ -21,7 +21,7 @@
 .cbm-hist__outcome { display: inline-block; margin-right: .4rem; padding: 0 .4rem; border-radius: 3px; background: #FDECEA; color: #8C1D18; font-size: .78rem; font-weight: 600; }
 .cbm-hist__changes { margin: .4rem 0 .2rem; }
 .cbm-hist__note { margin: 0 0 .3rem; font-size: .84rem; color: #4B5563; font-style: italic; }
-.cbm-hist__vals { border-collapse: collapse; font-size: .86rem; }
-.cbm-hist__vals th, .cbm-hist__vals td { padding: .2rem .7rem .2rem 0; border: 0; background: none !important; text-align: left; vertical-align: top; }
-.cbm-hist__vals th { color: #4B5563; font-weight: 600; }
+.cbm-hist__vals { display: grid; grid-template-columns: max-content minmax(8rem, 1fr) minmax(8rem, 1fr); gap: .15rem 1rem; font-size: .86rem; }
+.cbm-hist__vrow { display: contents; }
+.cbm-hist__vhead { color: #4B5563; font-weight: 600; }
 .cbm-hist__blank { color: #6B7280; font-style: italic; }

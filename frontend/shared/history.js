@@ -99,24 +99,28 @@
       wrap.appendChild(el("p", "cbm-hist__note",
         "Old and new values were not recorded for this change — only which fields changed."));
     }
-    var t = el("table", "cbm-hist__vals");
-    var hr = el("tr");
-    ["Field", "Old value", "New value"].forEach(function (h) {
-      var th = el("th", null, h); th.scope = "col"; hr.appendChild(th);
-    });
-    var thead = el("thead"); thead.appendChild(hr); t.appendChild(thead);
-    var tb = el("tbody");
+    // Not a nested <table>: the shared grid would take its headings and
+    // rows for its own (review 5a). A three-column CSS grid of cells.
+    var t = el("div", "cbm-hist__vals"); t.setAttribute("role", "table");
+    function row(cells, head) {
+      var r = el("div", "cbm-hist__vrow"); r.setAttribute("role", "row");
+      cells.forEach(function (c) {
+        var d = el("div", (head ? "cbm-hist__vhead" : "") + (c[1] ? " " + c[1] : ""), c[0]);
+        d.setAttribute("role", head ? "columnheader" : "cell");
+        r.appendChild(d);
+      });
+      t.appendChild(r);
+    }
+    row([["Field"], ["Old value"], ["New value"]], true);
     ln.changes.forEach(function (c) {
-      var tr = el("tr");
-      tr.appendChild(el("td", null, c.field));
       var known = "to" in c;
-      tr.appendChild(el("td", known && c.from === "" ? "cbm-hist__blank" : null,
-        !known || !c.hasFrom ? "—" : (c.from === "" ? "blank" : c.from)));
-      tr.appendChild(el("td", known && c.to === "" ? "cbm-hist__blank" : null,
-        !known ? "—" : (c.to === "" ? "blank" : c.to)));
-      tb.appendChild(tr);
+      row([
+        [c.field],
+        [!known || !c.hasFrom ? "—" : (c.from === "" ? "blank" : c.from), known && c.hasFrom && c.from === "" ? "cbm-hist__blank" : ""],
+        [!known ? "—" : (c.to === "" ? "blank" : c.to), known && c.to === "" ? "cbm-hist__blank" : ""],
+      ], false);
     });
-    t.appendChild(tb); wrap.appendChild(t);
+    wrap.appendChild(t);
     return wrap;
   }
 
@@ -214,8 +218,10 @@
       fFrom.value = ""; fTo.value = ""; fWho.value = ""; fKind.value = ""; render();
     });
 
+    var ticket = 0;  // only the latest load may draw (two quick clicks)
     async function load(url, force) {
       if (!force && url === state.url && state.loaded) return;
+      var mine = ++ticket;
       state.url = url; state.loaded = false; state.lines = [];
       notes.innerHTML = ""; msg.textContent = "Loading…"; table.hidden = true; count.textContent = "";
       try {
@@ -223,6 +229,11 @@
         if (root.CBMBusy && root.CBMBusy.loading) root.CBMBusy.loading(panel, p);
         var r = await p;
         var body = await r.json().catch(function () { return {}; });
+        if (mine !== ticket) return;
+        if (r.status === 401) {  // the portal signs in and comes back
+          root.location.href = "/?next=" + encodeURIComponent(root.location.pathname + root.location.search);
+          return;
+        }
         if (!r.ok) throw new Error((body && body.detail) || ("Could not load the history (" + r.status + ")."));
         state.lines = body.lines || [];
         state.loaded = true;
@@ -235,6 +246,7 @@
         fillSelect(fKind, distinct(state.lines, function (l) { return l.kind; }), "Every kind");
         render();
       } catch (e) {
+        if (mine !== ticket) return;
         state.loaded = false; state.url = null;
         msg.textContent = e.message;
       }

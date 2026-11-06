@@ -295,3 +295,64 @@ def test_filters_and_csv():
     assert rows[0].startswith("When (UTC),Who,Where,Record,What")
     assert rows[1].endswith("Mentor Status,A,B")
     assert ",'=cmd," in rows[2], "a formula is defused"
+
+
+# --- the 5a review's findings ---------------------------------------------------------
+
+
+def test_provisioning_explains_the_notes_it_caused():
+    rows = [_row(category=action_log.CAT_PROVISIONING, actionType=action_log.ACT_LOGIN_PROVISIONED,
+                 summary="CRM login created.", details=json.dumps({"reused": False}))]
+    upd = _update(["cbmEmail"], {"cbmEmail": None}, {"cbmEmail": "a@b.org"}, value="Provisional")
+    assign = {"type": "Assign", "createdById": "u1", "createdByName": "Jane Staff",
+              "createdAt": "2026-11-06 12:00:10",
+              "data": {"addedAssignedUsers": [{"id": "x", "name": "New Mentor"}]}}
+    lines = history.merge(rows, [upd, assign], labels=LABELS, key_user=KEY,
+                          status_field="mentorStatus")
+    assert [ln["where"] for ln in lines] == ["Mentor Administration"]
+
+
+def test_a_save_that_repaired_the_login_explains_its_assign_note():
+    rows = [_row(details=json.dumps({"fields": {"mentorType": {"from": "A", "to": "B"}},
+                                     "loginLinks": {"profileLogin": "x"}}))]
+    assign = {"type": "Assign", "createdById": "u1", "createdByName": "Jane Staff",
+              "createdAt": "2026-11-06 12:00:03",
+              "data": {"addedAssignedUsers": [{"id": "x", "name": "New Mentor"}]}}
+    assert len(history.merge(rows, [assign], labels={}, key_user=KEY)) == 1
+
+
+def test_a_direct_edit_never_hides_inside_an_application_line():
+    rows = [_row(details=json.dumps({"fields": {"acceptingNewClients": {"from": True, "to": False}}}))]
+    direct = _update(["acceptingNewClients", "maximumClientCapacity"],
+                     {"acceptingNewClients": False, "maximumClientCapacity": 4},
+                     {"acceptingNewClients": True, "maximumClientCapacity": 9})
+    lines = history.merge(rows, [direct], labels={}, key_user=KEY)
+    assert sorted(ln["where"] for ln in lines) == ["In the CRM directly", "Mentor Administration"]
+
+
+def test_the_status_value_fills_a_listed_status_field_and_is_a_status_change():
+    note = _update(["mentorStatus"], {}, {}, value="Active", by="Sharon Rose")
+    [ln] = history.merge([], [note], labels=LABELS, key_user=KEY, status_field="mentorStatus")
+    assert ln["changes"][0]["to"] == "Active" and ln["kind"] == action_log.CAT_STATUS
+
+
+def test_what_never_carries_an_id_or_a_raw_error_body():
+    rows = [_row(summary='CRM login x — did not complete: create User failed: HTTP 400 '
+                         '{"messageTranslation": {"data": {"id": "6a87e4b8c23c4542d"}}}')]
+    [ln] = history.merge(rows, [], labels={}, key_user=KEY)
+    assert "6a87e4b8c23c4542d" not in ln["what"] and "{" not in ln["what"]
+
+
+async def test_a_bad_body_degrades_rather_than_failing_the_tab():
+    class Broken(FakeCrm):
+        async def list(self, entity, **kw):
+            raise ValueError("Expecting value: line 1 column 1")
+    action_log._exists_cache.clear()
+    out = await history.record_history(FakeCrm(), "CMentorProfile", "m1", viewer={},
+                                       key_client=Broken(), settings=Settings())
+    assert out["actionHistory"] is False and out["crmNotes"] is True
+
+
+def test_the_values_table_is_not_a_nested_table():
+    js = (SHARED / "history.js").read_text()
+    assert 'el("table", "cbm-hist__vals")' not in js, "the shared grid would take its headings"

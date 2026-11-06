@@ -196,7 +196,7 @@ def _key_client(settings: Settings) -> Optional[EspoClient]:
 
 async def _key_user_id(key: EspoClient, settings: Settings) -> str:
     """The key-based account's user id (cached an hour), so its notes read
-    as "System"."""
+    as "System". A failed read is not cached: the next request tries again."""
     hit = _key_user_cache.get(settings.espo_base_url)
     if hit and time.monotonic() - hit[0] < 3600:
         return hit[1]
@@ -206,7 +206,8 @@ async def _key_user_id(key: EspoClient, settings: Settings) -> str:
     except Exception as exc:  # noqa: BLE001 — the tab still opens
         log.warning("history: could not read the key-based account: %s", exc)
         return ""
-    _key_user_cache[settings.espo_base_url] = (time.monotonic(), uid)
+    if uid:
+        _key_user_cache[settings.espo_base_url] = (time.monotonic(), uid)
     return uid
 
 
@@ -407,13 +408,21 @@ def _note_fields(
         was = dict(attrs.get("was") or {}) if isinstance(attrs.get("was"), dict) else {}
         became = dict(attrs.get("became") or {}) if isinstance(attrs.get("became"), dict) else {}
         field = data.get("field") or status_field
-        if data.get("value") is not None and field and field not in names:
-            names.append(field)
+        if data.get("value") is not None and field:
+            if field not in names:
+                names.append(field)
             became.setdefault(field, data.get("value"))
         return names, was, became
     if kind == "Assign":
         return ["assignedUsers"], {}, {}
     return [], {}, {}
+
+
+def _note_kind(note: dict[str, Any]) -> str:
+    """A status change is a Status Change, however the CRM wrote it (review 5a)."""
+    if note.get("type") == "Update" and _note_data(note).get("value") is not None:
+        return action_log.CAT_STATUS
+    return _NOTE_KIND.get(str(note.get("type")), action_log.CAT_RECORD_EDIT)
 
 
 def _note_value(attrs: dict[str, Any], name: str) -> Any:
@@ -427,6 +436,8 @@ def _note_value(attrs: dict[str, Any], name: str) -> Any:
 
 
 def _note_changes(note: dict[str, Any], labels: dict[str, str], status_field: str = "") -> list[dict]:
+    if note.get("type") == "Assign":
+        return []  # who was added and removed is the sentence itself
     names, was, became = _note_fields(note, status_field)
     out = []
     for name in names:
@@ -490,6 +501,18 @@ def _visible(row: dict[str, Any], viewer: dict[str, Any], settings: Settings) ->
     return bool(set(viewer.get("teams") or []) & allowed)
 
 
+_RAW_RE = re.compile(r"[\[{].*$", re.DOTALL)
+_ID_ANYWHERE = re.compile(r"\b[0-9a-f]{17}\b")
+
+
+def clean_sentence(text: str) -> str:
+    """A recorded sentence as staff may read it: no record id, no raw data
+    (a CRM error body quoted after "did not complete"), clipped."""
+    text = _ID_ANYWHERE.sub("…", str(text or ""))
+    text = _RAW_RE.sub("…", text).strip()
+    return text if len(text) <= _VALUE_MAX else text[: _VALUE_MAX - 1] + "…"
+
+
 def _app_line(row: dict[str, Any], labels: dict[str, str]) -> dict[str, Any]:
     who, job = _who(str(row.get("actorName") or ""))
     changes, recorded, _ = _row_changes(row, labels)
@@ -497,7 +520,7 @@ def _app_line(row: dict[str, Any], labels: dict[str, str]) -> dict[str, Any]:
         "at": _iso(row.get("createdAt")),
         "who": who, "job": job,
         "where": str(row.get("app") or "") or "The application",
-        "what": str(row.get("summary") or row.get("name") or ""),
+        "what": clean_sentence(str(row.get("summary") or row.get("name") or "")),
         "kind": str(row.get("category") or ""),
         "outcome": str(row.get("outcome") or "Success"),
         "changes": changes,
@@ -537,15 +560,25 @@ def _fold_target(
             continue
         _, _, row_names = _row_changes(row, {})
         category = row.get("category")
+        details = _details(row)
+        # A row that moved a login link (a save's reconcile, the status
+        # sweep) explains an Assign note; provisioning explains any note it
+        # caused — the status, the CBM email and the login link (review 5a).
+        moves_login = bool(details.get("loginLinks")) or any(
+            k in details for k in ("profileLogin", "contactLoginAdded"))
         if kind == "Create":
             ok = "creat" in str(row.get("actionType") or "").lower()
+        elif category == action_log.CAT_PROVISIONING and kind in ("Update", "Status", "Assign"):
+            ok = True
+        elif kind == "Assign":
+            ok = category == action_log.CAT_ASSIGNMENT or moves_login
         elif row_names:
-            ok = bool(set(note_names) & row_names) or (
-                kind == "Assign" and category == action_log.CAT_ASSIGNMENT)
+            # Every field the note carries must be one the row says it moved:
+            # sharing one field is not enough, or a direct edit made in the
+            # same minute would hide inside the application's line.
+            ok = bool(note_names) and set(note_names) <= row_names
         else:
-            ok = (kind == "Assign" and category == action_log.CAT_ASSIGNMENT) or (
-                kind in ("Update", "Status") and category in (action_log.CAT_RECORD_EDIT,
-                                                               action_log.CAT_STATUS))
+            ok = category in (action_log.CAT_RECORD_EDIT, action_log.CAT_STATUS)
         if ok and (best is None or dt < best[0]):
             best = (dt, i)
     return best[1] if best else None
@@ -588,10 +621,10 @@ def merge(
             "job": None,
             "where": "The application" if system else CRM_DIRECT,
             "what": _note_sentence(note, changes),
-            "kind": _NOTE_KIND.get(str(note.get("type")), action_log.CAT_RECORD_EDIT),
+            "kind": _note_kind(note),
             "outcome": "Success",
             "changes": changes,
-            "valuesRecorded": bool(changes) and all("to" in c for c in changes),
+            "valuesRecorded": all("to" in c for c in changes),
             "source": "crm",
         })
     for line in lines:
@@ -617,7 +650,7 @@ async def record_history(
         try:
             rows, trunc = await _action_rows(key, entity, record_id)
             return rows, trunc, True
-        except EspoError as exc:
+        except Exception as exc:  # noqa: BLE001 — a bad body (200, not JSON) too
             log.warning("history: action history of %s/%s unreadable: %s", entity, record_id, exc)
             return [], False, False
 
@@ -629,7 +662,7 @@ async def record_history(
         try:
             got, trunc = await _stream_notes(user_client, entity, record_id)
             return got, trunc, True
-        except EspoError as exc:
+        except Exception as exc:  # noqa: BLE001 — a bad body (200, not JSON) too
             log.warning("history: CRM notes of %s/%s unreadable: %s", entity, record_id, exc)
             return [], False, False
 
