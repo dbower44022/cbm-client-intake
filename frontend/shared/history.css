@@ -1,0 +1,27 @@
+/* The History panel (frontend/shared/history.js). Full width, never capped;
+   colours from the CBM tokens, with fallbacks. */
+.cbm-hist { display: block; }
+.cbm-hist__filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .5rem 1rem; margin: .25rem 0 .75rem; }
+.cbm-hist__f { display: flex; flex-direction: column; gap: .2rem; font-size: .85rem; color: #4B5563; }
+.cbm-hist__f input, .cbm-hist__f select { font: inherit; font-size: .9rem; padding: .3rem .45rem; border: 1px solid #C9D3DE; border-radius: 4px; background: #fff; min-width: 9rem; }
+.cbm-hist__clear, .cbm-hist__export { font: inherit; font-size: .9rem; padding: .35rem .8rem; border: 1px solid var(--cbm-navy, #173B60); border-radius: 4px; background: #fff; color: var(--cbm-navy, #173B60); cursor: pointer; }
+.cbm-hist__export { background: var(--cbm-navy, #173B60); color: #fff; }
+.cbm-hist__notices:empty { display: none; }
+.cbm-hist__notice { margin: .25rem 0; padding: .45rem .7rem; border-left: 3px solid var(--cbm-gold, #C99A2E); background: #FFF8E6; font-size: .88rem; }
+.cbm-hist__msg:empty, .cbm-hist__count:empty { display: none; }
+.cbm-hist__msg { color: #4B5563; }
+.cbm-hist__count { margin: .25rem 0; font-size: .85rem; color: #4B5563; }
+.cbm-hist__table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.cbm-hist__table th, .cbm-hist__table td { text-align: left; vertical-align: top; padding: .45rem .6rem; border-bottom: 1px solid #E5EAF0; }
+.cbm-hist__table th { background: #F0F4F8; font-weight: 600; }
+.cbm-hist__when { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cbm-hist__crm { color: #8A4B00; font-weight: 500; }
+.cbm-hist__what summary { cursor: pointer; color: var(--cbm-blue-dark, #045CB4); }
+.cbm-hist__what summary:focus-visible { outline: 2px solid var(--cbm-navy, #173B60); outline-offset: 2px; }
+.cbm-hist__outcome { display: inline-block; margin-right: .4rem; padding: 0 .4rem; border-radius: 3px; background: #FDECEA; color: #8C1D18; font-size: .78rem; font-weight: 600; }
+.cbm-hist__changes { margin: .4rem 0 .2rem; }
+.cbm-hist__note { margin: 0 0 .3rem; font-size: .84rem; color: #4B5563; font-style: italic; }
+.cbm-hist__vals { border-collapse: collapse; font-size: .86rem; }
+.cbm-hist__vals th, .cbm-hist__vals td { padding: .2rem .7rem .2rem 0; border: 0; background: none !important; text-align: left; vertical-align: top; }
+.cbm-hist__vals th { color: #4B5563; font-weight: 600; }
+.cbm-hist__blank { color: #6B7280; font-style: italic; }

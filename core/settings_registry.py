@@ -470,6 +470,12 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="The integrity digest: one email a day listing every open login fault, "
             "new ones marked. Also the fault list and the badge in Mentor "
             "Administration. Turn on only after reading this instance's first report."),
+    _s("record_history_tab", GROUP_FEATURES, "History tab on records", kind="bool",
+       help="A History tab on a mentor profile (Mentor Administration), an engagement "
+            "(Client Administration), a partner or funder (Partner and Funder "
+            "Management) and an event (Event Administration). It lists the "
+            "applications' recorded actions and the CRM's own record changes, newest "
+            "first, with old and new values. Never shown in Client Management."),
     _s("integrity_crm_use_report", GROUP_FEATURES, "Report work in the CRM's own screens",
        kind="bool",
        help="Once a day the web component reads the CRM's Action History and sign-in log "

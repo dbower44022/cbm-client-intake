@@ -25,7 +25,7 @@ from assignments.auth import (
     session_expired,
 )
 from assignments.espo_user import client_for
-from core import action_log
+from core import action_log, history
 from core.admin_client import admin_client_factory
 from core.app_config import make_app_config_store
 from core.config import Settings, get_settings
@@ -134,18 +134,8 @@ def _field_label(name: str) -> str:
     return name
 
 
-def _same_value(a: Any, b: Any) -> bool:
-    """A CRM value reads back normalised: an empty string as null, a list in
-    any order (root CLAUDE.md, "A CRM text value does not read back")."""
-    def norm(v: Any) -> Any:
-        if v in ("", None, []):
-            return None
-        if isinstance(v, list):
-            return sorted(map(str, v))
-        if isinstance(v, str):
-            return v.strip()
-        return v
-    return norm(a) == norm(b)
+# One normalising rule for every History-tab application (ruling Q5.4).
+_same_value = history.same_value
 
 
 async def _record(
@@ -215,6 +205,8 @@ async def session(request: Request) -> dict:
         "analyticsEnabled": get_settings().analytics_active,
         # True => the Login faults list (mentor login integrity step 4b).
         "integrityFaults": _integrity_on(),
+        # True => the History tab (mentor login integrity step 5, plan § 4.5).
+        "historyEnabled": history.history_on(),
     }
 
 
@@ -375,6 +367,21 @@ async def acknowledge_fault(fault_id: str, body: AcknowledgeIn, request: Request
                  "mentors": [m["id"] for m in mentors], "note": note[:2000]},
     )
     return {"fault": _fault_out(row)}
+
+
+@router.get("/mentors/{mentor_id}/history")
+async def mentor_history(mentor_id: str, request: Request) -> dict:
+    """The History tab (plan § 4.5): the mentor profile's action history
+    merged with the CRM's own notes. The signed-in person's own read of the
+    profile gates it; the action history is read under the key."""
+    user = _require_user(request)
+    if not history.history_on():
+        raise HTTPException(status_code=404, detail="The History tab is not switched on.")
+    client = client_for(get_settings(), user)
+    try:
+        return await history.record_history(client, service.MENTOR_PROFILE, mentor_id, viewer=user)
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not load the history")
 
 
 @router.get("/fields")

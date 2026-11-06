@@ -5,6 +5,46 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.311.0] — 2026-11-06
+
+**feat: the History tab in Mentor Administration** (mentor login integrity
+plan, step 5a — § 4.5; `OPEN-ITEMS.md` #66). New switch
+`RECORD_HISTORY_TAB`, **off by default**, at `/setup` → Features. No
+migration; no CRM change.
+
+- **A History tab on each mentor profile** lists what changed, newest
+  first: when (in the reader's local time), who (a person, or "System" and
+  the job), where (which application, or "In the CRM directly") and what,
+  in one sentence. Opening a line shows each field's old and new value.
+  Filters: date range, person, kind of change.
+- **Two sources, one rule** (`core/history.py`). The application's action
+  history (`CActionLog`, read under the key-based account — no staff or
+  mentor role reads it) is the authority for application actions. From
+  the CRM's own record notes, read as the signed-in person, only Create,
+  Update and Assign notes are taken, never a Post. An Update note with the
+  same person, overlapping fields and within 90 seconds of an action
+  history row is folded into that row, so an application save shows once
+  and supplies the values the row lacks. A change by the key-based account
+  is "System". The person is matched by name: `CActionLog` keeps no actor
+  id (read on crm-test 11-06-26).
+- **The signed-in person's own read of the profile gates the tab.** Every
+  read is paged at 200 and stops at 1,000 rows per source, saying so.
+- **Never shown:** record ids (a value that looks like one is blanked),
+  raw data, markup, passwords or keys. Lines recorded before values were
+  kept say that only the field names are known.
+- **Tracked fields are detected** from the CRM's own definitions; a record
+  type with none (production, until the tracked-fields handoff) still shows
+  the action history and says why the CRM's changes are missing.
+- **Mentor Status-Admin entries** (the staff-notes plan, not built yet)
+  are shown only to the Mentor Administration and Client Administration
+  teams: `history.RESTRICTED_ACTIONS`, keyed on the action type
+  `Mentor Status-Admin`.
+- **Shared parts for the next releases:** `frontend/shared/history.js` and
+  `history.css` (the panel, on the shared grid, with a CSV writer for the
+  activity page) and `core.history.value_changes` / `same_value`, the
+  one normalising rule ruling Q5.4's value recording uses. Mentor
+  Administration's `_same_value` is now that rule.
+
 ## [0.310.0] — 2026-11-05
 
 **feat: the report on work in the CRM's own screens, and shared-account

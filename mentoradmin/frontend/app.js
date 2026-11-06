@@ -13,6 +13,8 @@
   var docsEnabled = false; // GDRIVE_DOCS server-side: shows the Documents tab
   var analyticsEnabled = false; // ANALYTICS_ENABLED: shows the Analytics tab
   var integrityFaults = false; // INTEGRITY_DIGEST: shows the Login faults list
+  var historyEnabled = false; // RECORD_HISTORY_TAB: shows the History tab
+  var historyPanel = null;    // the CBMHistory panel for the open mentor
   var filter = { q: "", status: "", record: "", type: "" };
 
   // Permission-team assignment (Status tab). teamState = the current mentor's
@@ -75,6 +77,7 @@
     isAdmin = !!user.isAdmin;
     docsEnabled = !!user.docsEnabled;
     analyticsEnabled = !!user.analyticsEnabled;
+    historyEnabled = !!user.historyEnabled && !!window.CBMHistory;
     $("setupBtn").hidden = !isAdmin;
     integrityFaults = !!user.integrityFaults;
     $("faultsBtn").hidden = !integrityFaults;
@@ -577,11 +580,31 @@
       tabs.appendChild(abtn);
       form.appendChild(buildAnalyticsPanel());
     }
+    // History (mentor login integrity step 5) — a non-field tab: what changed
+    // on this mentor profile, in the applications and in the CRM directly.
+    if (historyEnabled) {
+      var hbtn = document.createElement("button");
+      hbtn.type = "button"; hbtn.className = "ma__tab"; hbtn.textContent = "History";
+      hbtn.dataset.tab = "__history"; hbtn.setAttribute("role", "tab");
+      hbtn.addEventListener("click", function () { activateTab("__history"); loadMentorHistory(); });
+      tabs.appendChild(hbtn);
+      var hpanel = document.createElement("div");
+      hpanel.className = "tab-panel"; hpanel.dataset.panel = "__history";
+      form.appendChild(hpanel);
+      historyPanel = CBMHistory.mount(hpanel, { key: "mentoradmin.history",
+        emptyText: "No changes recorded for this mentor yet." });
+    }
     // Paste a whole address into Street and it splits across City/State/ZIP.
     // These are the linked Contact's fields; `addressStreet` is a textarea, so
     // a unit ("Suite 200") becomes its second line the way the CRM stores it.
     if (window.CBMAddress) window.CBMAddress.attachByFields(form, "address");
     if (order.length) activateTab(order[0]);
+  }
+
+  // --- History tab ----------------------------------------------------------
+  function loadMentorHistory() {
+    if (!current || !historyPanel) return;
+    historyPanel.load("/mentoradmin/api/mentors/" + encodeURIComponent(current.id) + "/history", true);
   }
 
   // --- Analytics tab (record-scoped analytics for this mentor) ---------------

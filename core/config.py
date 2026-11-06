@@ -335,6 +335,13 @@ class Settings(BaseSettings):
     # the mail domain. INTEGRITY_EXCLUDED_LOGINS: never reported under 8 (the
     # provisioning and key-based accounts are added automatically).
     # INTEGRITY_APP_ADDRESSES: network addresses known to be this application.
+    # Step 5 (plan § 4.5): RECORD_HISTORY_TAB — the History tab on a mentor
+    # profile (Mentor Administration), an engagement (Client Administration),
+    # a partner or funder (Partner and Funder Management) and an event (Event
+    # Administration): the application's action history merged with the CRM's
+    # own record notes (core/history.py). Never in Client Management. Off by
+    # default; read per request.
+    record_history_tab: bool = False
     integrity_crm_use_report: bool = False
     integrity_shared_accounts: str = ""
     integrity_excluded_logins: str = "crm.config"

@@ -106,6 +106,10 @@ ACT_USER_LINKS_RECONCILED = "User Links Reconciled"
 ACT_TEAMS_CHANGED = "Teams Changed"
 ACT_RECORD_STATUS_SYNCED = "Record Status Updated"
 ACT_LOGIN_FAULT_ACKNOWLEDGED = "Login Fault Acknowledged"
+# Written by the staff-notes build (not yet built); the History tab shows it
+# only to the Mentor Administration and Client Administration teams
+# (core/history.RESTRICTED_ACTIONS, plan § 4.5).
+ACT_MENTOR_STATUS_ADMIN = "Mentor Status-Admin"
 ACT_TEAM_STAMPED = "Team Added"
 ACT_CONTRIBUTION_RECORDED = "Contribution Recorded"
 ACT_CONTRIBUTION_EDITED = "Contribution Edited"
