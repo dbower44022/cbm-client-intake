@@ -467,6 +467,17 @@ ENGAGEMENT_EDIT_FIELDS: tuple[dict[str, Any], ...] = (
 
 _EDIT_FIELDS_BY_NAME = {f["name"]: f for f in ENGAGEMENT_EDIT_FIELDS}
 
+
+def edit_attributes(changes: dict[str, Any]) -> list[str]:
+    """The CRM attributes an Edit-mode save of ``changes`` writes — a link
+    field by its ``Id`` — for the before-and-after record (ruling Q5.4)."""
+    out = []
+    for name in changes:
+        spec = _EDIT_FIELDS_BY_NAME.get(name)
+        if spec is not None:
+            out.append(f"{name}Id" if spec["type"] == "link" else name)
+    return out
+
 # EspoCRM refuses a page larger than `recordListMaxSizeLimit` (200) with a 403
 # rather than truncating, so link-picker options are PAGED, never asked for in
 # one big page — the defect that emptied every curated picker in production

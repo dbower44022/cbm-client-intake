@@ -16,6 +16,8 @@
   <script src="/shared/busy.js"></script>
   <link rel="stylesheet" href="/shared/grid.css" />
   <script src="/shared/grid.js"></script>
+  <script src="/shared/history.js"></script>
+  <link rel="stylesheet" href="/shared/history.css" />
 </head>
 <body>
   <main class="ev">
@@ -139,6 +141,7 @@
         <button type="button" class="ev__tab" data-tab="checkin">Check-in</button>
         <button type="button" class="ev__tab" data-tab="followups">Follow-up</button>
         <button type="button" class="ev__tab" data-tab="campaigns" id="campaignsTabBtn" hidden>Campaigns</button>
+        <button type="button" class="ev__tab" data-tab="history" id="historyTabBtn" hidden>History</button>
       </nav>
 
       <!-- The Overview is the WHOLE record, read-only, so staff can check an
@@ -212,6 +215,9 @@
         <p class="ev__fu-note" id="fuNote"></p>
         <div class="ev__fu-cards" id="fuCards"></div>
       </div>
+
+      <!-- History (mentor login integrity step 5b): frontend/shared/history.js -->
+      <div class="ev__tabpanel" data-panel="history" id="eventHistory" hidden></div>
 
       <!-- Campaigns (M10): one row per campaign that promoted this
            event — linked to it, or credited on a registration — and the

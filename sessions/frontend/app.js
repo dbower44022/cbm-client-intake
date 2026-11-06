@@ -270,6 +270,7 @@
       b.addEventListener("click", function () { activateDetailTab(t.key); });
       nav.appendChild(b);
       if (t.placeholder) ensurePlaceholderPanel(t);
+      if (t.key === "history") ensureHistoryPanel();
     });
   }
 
@@ -303,6 +304,23 @@
     if (tab === "communications") renderComms();
     if (tab === "documents") renderDocuments();
     if (tab === "analytics") renderAnalytics();
+    if (tab === "history") renderHistory();
+  }
+
+  // The History tab (partner and funder only; mentor login integrity step
+  // 5b). The server refuses it for Client Management as well.
+  var historyPanel = null;
+  function ensureHistoryPanel() {
+    if (document.querySelector('[data-dpanel="history"]') || !window.CBMHistory) return;
+    var div = document.createElement("div");
+    div.className = "sx__dpanel"; div.dataset.dpanel = "history"; div.hidden = true;
+    $("detailView").appendChild(div);
+    historyPanel = CBMHistory.mount(div, { key: (config && config.domain || "sessions") + ".history",
+      emptyText: "No changes recorded for this " + ((config && config.parentLabel) || "record").toLowerCase() + " yet." });
+  }
+  function renderHistory() {
+    if (!historyPanel || !currentDetail) return;
+    historyPanel.load(API + "/records/" + encodeURIComponent(currentDetail.id) + "/history", true);
   }
 
   // Draggable splitters on the Overview grid: the facts rail (--ov-left, wider

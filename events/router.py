@@ -27,6 +27,7 @@ from pydantic import BaseModel
 from assignments.auth import current_user, is_member
 from assignments.espo_user import client_for
 from core.action_log import CAT_COMMUNICATION, CAT_RECORD_EDIT, CAT_STATUS, record_action
+from core import history
 from core.admin_client import admin_client_factory
 from core.config import get_settings
 from core.espo import EspoError, forbidden_hint, is_forbidden, validation_failure
@@ -170,7 +171,22 @@ async def session(request: Request) -> dict[str, Any]:
         "websiteLive": settings.events_public_api,
         # M10: the Promote button and the Campaigns tab (ruling 97).
         "promote": promote_mod.is_on(settings),
+        # The History tab (mentor login integrity step 5b, plan § 4.5).
+        "historyEnabled": history.history_on(settings),
     }
+
+
+@api_router.get("/events/{event_id}/history")
+async def event_history(event_id: str, request: Request) -> dict[str, Any]:
+    """The event's History tab: its action history merged with the CRM's own
+    notes. The signed-in person's own read of the event gates it."""
+    user, client = await _actor(request)
+    if not history.history_on():
+        raise HTTPException(status_code=404, detail="The History tab is not switched on.")
+    try:
+        return await history.record_history(client, cfg.EVENT, event_id, viewer=user)
+    except EspoError as exc:
+        raise _crm_failure(exc, "load the event's history") from exc
 
 
 @api_router.get("/fields")
@@ -318,6 +334,9 @@ async def update_event(
 ) -> dict[str, Any]:
     user, client = await _actor(request)
     settings = get_settings()
+    # The changed fields as they stood, for the action history (Q5.4).
+    attrs = history.link_attrs(payload.changes)
+    was = await history.snapshot(client, cfg.EVENT, event_id, attrs)
     try:
         before = await client.get(cfg.EVENT, event_id, select=cfg.PUBLIC_SELECT)
         event = await service.update_event(
@@ -333,12 +352,14 @@ async def update_event(
     zoom = await sync_event_webinar(settings, client, event, previous=before)
 
     changed = sorted(payload.changes.keys())
+    now = await history.snapshot(client, cfg.EVENT, event_id, attrs)
     await record_action(
         client, app=APP_EVENTS, category=CAT_RECORD_EDIT, action="Event Updated",
         parent_type=cfg.EVENT, parent_id=event_id,
         summary=f"Updated {', '.join(changed) or 'the event'}",
         actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
-        details={"fields": changed, "zoom": zoom.get("action")},
+        details={"fields": history.field_details(was, now, changed) if now else changed,
+                 "zoom": zoom.get("action")},
     )
     return {"event": service.public_event_detail(event), "raw": event, "zoom": zoom,
             "warnings": visibility.save_warnings(event)}

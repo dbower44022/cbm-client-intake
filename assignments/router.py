@@ -9,7 +9,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
 
-from core import action_log
+from core import action_log, history
 from core.config import get_settings
 from core.espo import EspoError, forbidden_hint, is_forbidden, validation_message
 
@@ -117,7 +117,28 @@ async def logout(request: Request) -> dict:
 @router.get("/session")
 async def session(request: Request) -> dict:
     user = _require_user(request)
-    return {"userName": user["userName"], "name": user["name"], "isAdmin": user["isAdmin"]}
+    return {"userName": user["userName"], "name": user["name"], "isAdmin": user["isAdmin"],
+            # The History tab on the engagement popup (plan § 4.5, step 5b).
+            "historyEnabled": history.history_on()}
+
+
+@router.get("/engagements/{engagement_id}/history")
+async def engagement_history(engagement_id: str, request: Request) -> dict:
+    """The engagement's History tab: its action history merged with the
+    CRM's own notes. The signed-in person's own read of the engagement gates
+    it; the action history is read under the key."""
+    user = _require_user(request)
+    if not history.history_on():
+        raise HTTPException(status_code=404, detail="The History tab is not switched on.")
+    client = client_for(get_settings(), user)
+    try:
+        return await history.record_history(client, service.ENGAGEMENT, engagement_id, viewer=user)
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not load the history")
+
+
+# The attributes a mentor assignment moves (ruling Q5.4: old and new values).
+_ASSIGN_ATTRS = ["mentorProfileId", "mentorProfileName", "engagementStatus"]
 
 
 @router.get("/engagements")
@@ -192,11 +213,25 @@ async def update_notes(engagement_id: str, body: NotesIn, request: Request) -> d
     """Save the grid's internal process notes (``CEngagement.description``)."""
     user = _require_user(request)
     client = client_for(get_settings(), user)
+    before = await history.snapshot(client, service.ENGAGEMENT, engagement_id, ["description"])
     try:
         result = await service.update_engagement_notes(client, engagement_id, body.notes)
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not save notes")
     log.info("notes saved on CEngagement/%s by %s", engagement_id, user["userName"])
+    after = await history.snapshot(client, service.ENGAGEMENT, engagement_id, ["description"])
+    moved = history.field_details(before, after, ["description"])
+    if moved:
+        # Action history only, no stream note: these notes are staff-internal
+        # and a mentor reads the engagement's stream.
+        await action_log.log_action(
+            app=action_log.APP_CLIENT_ADMIN, category=action_log.CAT_RECORD_EDIT,
+            action=action_log.ACT_NOTES_EDITED,
+            parent_type=service.ENGAGEMENT, parent_id=engagement_id,
+            summary="Internal notes edited.",
+            actor_id=user["userId"], actor_name=user["name"],
+            details={"fields": moved},
+        )
     return result
 
 
@@ -262,6 +297,9 @@ async def update_engagement(
     """Save the Edit-mode changes and return the refreshed detail payload."""
     user = _require_user(request)
     client = client_for(get_settings(), user)
+    attrs = service.edit_attributes(body.changes)
+    before = await history.snapshot(client, service.ENGAGEMENT, engagement_id,
+                                    history.link_attrs(attrs))
     try:
         result = await service.update_engagement(client, engagement_id, body.changes)
     except service.AssignError as exc:
@@ -274,13 +312,16 @@ async def update_engagement(
     )
     # A staff edit to a CRM record is indistinguishable from a hand edit in
     # EspoCRM's own history, so the action log is what says the app did it.
+    # The note names the fields; CActionLog also carries the values (Q5.4).
+    after = await history.snapshot(client, service.ENGAGEMENT, engagement_id,
+                                   history.link_attrs(attrs))
     await action_log.record_action(
         client, app=action_log.APP_CLIENT_ADMIN, category=action_log.CAT_RECORD_EDIT,
         action=action_log.ACT_RECORD_EDITED,
         parent_type=service.ENGAGEMENT, parent_id=engagement_id,
         summary="Engagement edited: " + ", ".join(result["changedFields"]) + ".",
         actor_id=user["userId"], actor_name=user["name"],
-        details=result,
+        details={**result, "fields": history.field_details(before, after, attrs)},
         outcome="Partial" if result["droppedValues"] else "Success",
     )
     try:
@@ -296,6 +337,7 @@ async def update_engagement(
 async def assign(engagement_id: str, body: AssignIn, request: Request) -> dict:
     user = _require_user(request)
     client = client_for(get_settings(), user)
+    before = await history.snapshot(client, service.ENGAGEMENT, engagement_id, _ASSIGN_ATTRS)
     try:
         result = await service.assign_engagement(client, engagement_id, body.mentorProfileId)
     except service.AssignError as exc:
@@ -325,7 +367,10 @@ async def assign(engagement_id: str, body: AssignIn, request: Request) -> dict:
         action=action_log.ACT_ASSIGNMENT_REPAIRED if repaired else action_log.ACT_MENTOR_ASSIGNED,
         parent_type=service.ENGAGEMENT, parent_id=engagement_id,
         summary=_summary, actor_id=user["userId"], actor_name=user["name"],
-        details=result, outcome="Partial" if errs else "Success",
+        details={**result, "fields": history.field_details(
+            before, await history.snapshot(client, service.ENGAGEMENT, engagement_id, _ASSIGN_ATTRS),
+            ["mentorProfileId", "engagementStatus"])},
+        outcome="Partial" if errs else "Success",
     )
     # DOC-09: the assigned mentor gains the engagement folder's Drive Commenter
     # grant in the same action that grants the entitlement (no-op until the
@@ -346,6 +391,7 @@ async def reassign(engagement_id: str, body: AssignIn, request: Request) -> dict
     user NAME'."""
     user = _require_user(request)
     client = client_for(get_settings(), user)
+    before = await history.snapshot(client, service.ENGAGEMENT, engagement_id, _ASSIGN_ATTRS)
     try:
         result = await service.reassign_engagement(
             client, engagement_id, body.mentorProfileId, actor=user.get("name")
@@ -369,7 +415,10 @@ async def reassign(engagement_id: str, body: AssignIn, request: Request) -> dict
             + (f"; {len(_errs)} record(s) could not be re-homed" if _errs else "") + "."
         ),
         actor_id=user["userId"], actor_name=user["name"],
-        details=result, outcome="Partial" if _errs else "Success",
+        details={**result, "fields": history.field_details(
+            before, await history.snapshot(client, service.ENGAGEMENT, engagement_id, _ASSIGN_ATTRS),
+            ["mentorProfileId", "engagementStatus"])},
+        outcome="Partial" if _errs else "Success",
     )
     # DOC-09: re-derive the engagement folder's Drive grants (new mentor gains,
     # the replaced mentor loses). Best-effort, like the assign path.

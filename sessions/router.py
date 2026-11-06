@@ -21,7 +21,7 @@ from pydantic import BaseModel
 
 from assignments.auth import clear_session, current_user, is_member, session_expired
 from assignments.espo_user import client_for
-from core import action_log
+from core import action_log, history
 from core.admin_client import admin_client_factory
 from comms import service as comms_service
 from comms import templates as comms_templates
@@ -297,6 +297,9 @@ def _detail_tabs(
         tabs.insert(comms, {"key": "sponsoredCampaigns", "label": "Campaigns"})
     if analytics:
         tabs.append({"key": "analytics", "label": "Analytics"})
+    # Last of all: a review surface for the domain's own team (plan § 4.5).
+    if cfg.history_tab and history.history_on():
+        tabs.append({"key": "history", "label": "History"})
     return tabs
 
 
@@ -570,6 +573,12 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             # 404 (not 403) so probing can't confirm which entity names exist.
             raise HTTPException(status_code=404, detail="Not found")
         client = client_for(get_settings(), user)
+        # Partner and Funder Management record every Details save with its
+        # old and new values (ruling Q5.4). Client Management does not: it
+        # has no History tab, and its saves are a mentor's own (open item 66).
+        recorded = cfg.history_tab
+        attrs = history.link_attrs(body.changes) if recorded else []
+        before = await history.snapshot(client, entity, record_id, attrs) if recorded else {}
         try:
             result = await details_svc.save_details(client, entity, record_id, body.changes)
         except EspoError as exc:
@@ -579,7 +588,39 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             "details saved %s/%s by %s (fields: %s)",
             entity, record_id, user["userName"], ", ".join(sorted(body.changes)) or "-",
         )
+        saved = list(result.get("saved") or [])
+        if recorded and saved:
+            after = await history.snapshot(client, entity, record_id, history.link_attrs(saved))
+            moved = history.field_details(before, after, saved)
+            if moved:
+                labels = await history.field_labels(client, entity)
+                names = moved if isinstance(moved, list) else list(moved)
+                await action_log.record_action(
+                    client, app=cfg.title, category=action_log.CAT_RECORD_EDIT,
+                    action=action_log.ACT_RECORD_EDITED,
+                    parent_type=entity, parent_id=record_id,
+                    summary="Saved " + ", ".join(
+                        labels.get(n) or n for n in names) + ".",
+                    actor_id=user["userId"], actor_name=user["name"],
+                    details={"fields": moved},
+                )
         return result
+
+    @router.get("/records/{parent_id}/history")
+    async def record_history(parent_id: str, request: Request) -> dict:
+        """The record's History tab (plan § 4.5). Refused on the server for a
+        domain without one — Client Management (mentors) never has it, even
+        though this router factory serves it too."""
+        user = _require_user(request)
+        if not cfg.history_tab:
+            raise HTTPException(status_code=404, detail="Not found")
+        if not history.history_on():
+            raise HTTPException(status_code=404, detail="The History tab is not switched on.")
+        client = client_for(get_settings(), user)
+        try:
+            return await history.record_history(client, cfg.parent_entity, parent_id, viewer=user)
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not load the history")
 
     @router.get("/contacts")
     async def contacts_search(request: Request, q: str = "") -> dict:
@@ -763,6 +804,8 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             """Designate a related contact as this record's primary contact."""
             user = _require_user(request)
             client = client_for(get_settings(), user)
+            pc_attrs = history.link_attrs([cfg.primary_contact_id_attr])
+            before = await history.snapshot(client, cfg.parent_entity, parent_id, pc_attrs)
             try:
                 result = await service.set_primary_contact(
                     cfg, client, parent_id, body.contactId,
@@ -778,7 +821,10 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                     action=action_log.ACT_PRIMARY_CONTACT_SET,
                     parent_type=cfg.parent_entity, parent_id=parent_id,
                     summary=f"Primary contact set to {result.get('contactName')}.",
-                    actor_id=user["userId"], actor_name=user["name"], details=result,
+                    actor_id=user["userId"], actor_name=user["name"],
+                    details={**result, "fields": history.field_details(
+                        before, await history.snapshot(client, cfg.parent_entity, parent_id, pc_attrs),
+                        [cfg.primary_contact_id_attr])},
                 )
             return result
 
@@ -936,7 +982,9 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                     action=action_log.ACT_STATUS_CHANGED,
                     parent_type=cfg.parent_entity, parent_id=parent_id,
                     summary=f"Status changed: {result.get('from')} → {result.get('to')}.",
-                    actor_id=user["userId"], actor_name=user["name"], details=result,
+                    actor_id=user["userId"], actor_name=user["name"],
+                    details={**result, "fields": {cfg.status_edit_attr: {
+                        "from": result.get("from"), "to": result.get("to")}}},
                 )
             return result
 

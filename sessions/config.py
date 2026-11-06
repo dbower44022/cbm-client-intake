@@ -374,6 +374,11 @@ class DomainConfig:
     # NEVER written to the CRM. Gates BOTH the endpoint registration and the
     # frontend pane (like ``contributions_link`` gates the contributions routes).
     discussion_enabled: bool = False
+    # The History tab (mentor login integrity step 5b, plan § 4.5): the
+    # partner and funder domains only. Never Client Management — its
+    # endpoint refuses the mentor domain on the server, not only by hiding
+    # the tab, because the same router factory serves it.
+    history_tab: bool = False
 
     # --- Quick add (Doug's request 2026-08-12). See :class:`CreateSpec`. The
     # mentor domain deliberately has none: a client engagement arrives through
@@ -836,6 +841,7 @@ PARTNER = DomainConfig(
     # partner, so they vanished and read as missing features). The rail is now a
     # stable shape — an empty fact renders "—".
     status_edit_attr="partnershipStatus",
+    history_tab=True,
     overview_items=(
         OverviewItem("Partnership status", "partnershipStatus", "badge", section="key", always=True),
         OverviewItem("Partnership type", "partnershipType", section="key", always=True),
@@ -983,6 +989,7 @@ SPONSOR = DomainConfig(
     # Ruling 67: the funder status, a picker on the Overview like the
     # engagement's and the partner's; read and shown only once the CRM has it.
     status_edit_attr="funderStatus",
+    history_tab=True,
     detail_optional_select=("funderStatus",),
     overview_items=(
         OverviewItem("Funder status", "funderStatus", "badge", section="key", always=True),

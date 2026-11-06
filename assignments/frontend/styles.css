@@ -653,3 +653,9 @@ body { display: flex; flex-direction: column; }
   background: none; border: 0; padding: 0; margin: 0.5rem 0 0; font: inherit;
   color: var(--cbm-blue); cursor: pointer; text-decoration: underline; display: block;
 }
+
+/* Details | History tabs on the engagement popup (mentor login integrity step 5b). */
+.modal__tabs:not([hidden]) { display: flex; gap: .25rem; padding: 0 1.8rem; border-bottom: 1px solid var(--cbm-slate-200, #E2E8F0); flex: 0 0 auto; }
+.modal__tab { font: inherit; font-size: var(--cbm-text-sm, .9rem); padding: .45rem .95rem; border: 0; border-bottom: 3px solid transparent; background: none; color: var(--cbm-slate-700, #334155); cursor: pointer; }
+.modal__tab.is-active { border-bottom-color: var(--cbm-navy, #173B60); color: var(--cbm-navy, #173B60); font-weight: 600; }
+.modal__tab:focus-visible { outline: 2px solid var(--cbm-navy, #173B60); outline-offset: -2px; }

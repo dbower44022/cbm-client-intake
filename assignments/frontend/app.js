@@ -110,7 +110,11 @@
     showMessage("The server isn't responding right now. Please try again in a moment.");
   }
 
+  var historyEnabled = false;  // RECORD_HISTORY_TAB: the popup's History tab
+  var historyPanel = null;
+
   function showDashboard(user) {
+    historyEnabled = !!user.historyEnabled && !!window.CBMHistory;
     hide($("msgView"));
     $("whoName").textContent = user.name || user.userName;
     show($("userChip"));
@@ -645,6 +649,27 @@
   // --- engagement detail modal ---
   var currentDetailId = null;   // the engagement the popup is showing
 
+  // Details | History. History hides the read view and the Edit button;
+  // Details brings them back. Editing always starts from Details.
+  function showModalTab(which) {
+    var history = which === "history";
+    Array.prototype.forEach.call(document.querySelectorAll("#modalTabs [data-mtab]"), function (b) {
+      var on = b.dataset.mtab === which;
+      b.classList.toggle("is-active", on); b.setAttribute("aria-selected", on ? "true" : "false");
+    });
+    $("modalHistory").hidden = !history;
+    $("modalView").hidden = history;
+    $("modalViewActions").hidden = history;
+    if (history && currentDetailId) {
+      if (!historyPanel) historyPanel = CBMHistory.mount($("modalHistory"), { key: "assignments.history",
+        emptyText: "No changes recorded for this engagement yet." });
+      historyPanel.load(API + "/engagements/" + encodeURIComponent(currentDetailId) + "/history", true);
+    }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("#modalTabs [data-mtab]"), function (b) {
+    b.addEventListener("click", function () { showModalTab(b.dataset.mtab); });
+  });
+
   // `force` skips the unsaved-changes guard (used after a successful save).
   function closeModal(force) {
     if (!force && inEditMode() && editDirty()) {
@@ -878,6 +903,8 @@
   async function openDetail(id) {
     currentDetailId = id;
     exitEditMode();
+    $("modalTabs").hidden = !historyEnabled;
+    showModalTab("view");
     $("modalTitle").textContent = "Loading…";
     $("modalStatus").hidden = true;
     setReferralBand(null, true);
@@ -934,6 +961,8 @@
   function inEditMode() { return !!editState; }
 
   function setEditMode(on) {
+    if (on && historyEnabled) showModalTab("view");
+    if (historyEnabled) $("modalTabs").hidden = on;
     $("modalView").hidden = on;
     $("modalEdit").hidden = !on;
     $("modalViewActions").hidden = on;

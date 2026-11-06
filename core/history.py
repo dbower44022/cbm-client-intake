@@ -34,6 +34,7 @@ rule every mutating endpoint uses to say what moved.
 from __future__ import annotations
 
 import asyncio
+import copy
 import html
 import json
 import logging
@@ -142,6 +143,43 @@ def value_changes(
             continue
         out[label] = {"to": new} if not before else {"from": old, "to": new}
     return out
+
+
+async def snapshot(client: Any, entity: str, record_id: str, attrs: Iterable[str]) -> dict[str, Any]:
+    """The record's ``attrs`` as they stand, for a before-and-after record.
+    Best-effort: an unreadable record returns ``{}`` and the action is still
+    recorded, by field name only."""
+    try:
+        got = await client.get(entity, record_id, select=",".join(sorted(set(attrs))))
+        # A copy: a client that hands back a live object (a cache, a fake)
+        # must not let the write change what "before" says.
+        return copy.deepcopy(got) if isinstance(got, dict) else {}
+    except Exception as exc:  # noqa: BLE001 — history must never break the action
+        log.warning("history: could not read %s/%s for its before-and-after: %s",
+                    entity, record_id, exc)
+        return {}
+
+
+def link_attrs(fields: Iterable[str]) -> list[str]:
+    """The attributes a snapshot reads for ``fields`` — a link field ``x``
+    (or ``xId``) by its ``xId`` and ``xName``."""
+    out: list[str] = []
+    for f in fields:
+        base = f[:-2] if f.endswith("Id") else f
+        out += [f, base + "Id", base + "Name"] if f.endswith("Id") else [f]
+    return out
+
+
+def field_details(
+    before: dict[str, Any], after: dict[str, Any], fields: Iterable[str],
+) -> Any:
+    """What ``CActionLog.details["fields"]`` holds for one save: the old and
+    new values (ruling Q5.4) when the record was read after the write, else
+    the field names alone — never a guess."""
+    fields = [f for f in fields if not secret_field(f)]
+    if not after:
+        return sorted(f[:-2] if f.endswith("Id") else f for f in fields)
+    return value_changes(before, after, fields)
 
 
 # --- the engine ---------------------------------------------------------------

@@ -275,6 +275,18 @@
     Array.prototype.forEach.call(document.querySelectorAll(".ev__tabpanel"), function (p) {
       p.hidden = p.dataset.panel !== name;
     });
+    if (name === "history") renderEventHistory();
+  }
+
+  /* ---------- History tab (mentor login integrity step 5b) ---------- */
+  var eventHistoryPanel = null;
+  function historyOn() { return !!(state.session && state.session.historyEnabled && window.CBMHistory); }
+  function renderEventHistory() {
+    var raw = state.current && state.current.event && state.current.event.raw;
+    if (!historyOn() || !raw || !raw.id) return;
+    if (!eventHistoryPanel) eventHistoryPanel = CBMHistory.mount($("eventHistory"), {
+      key: "events.history", emptyText: "No changes recorded for this event yet." });
+    eventHistoryPanel.load(API + "/events/" + encodeURIComponent(raw.id) + "/history", true);
   }
 
   /* ---------- overview: the whole record, read-only ----------
@@ -2018,6 +2030,7 @@
       $("userCorner").hidden = false;
       $("promoteBtn").hidden = !promoteOn();
       $("campaignsTabBtn").hidden = !promoteOn();
+      $("historyTabBtn").hidden = !historyOn();
       var fieldData = await api("/fields");
       state.fields = fieldData.fields || [];
       state.links = fieldData.links || [];

@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="/shared/vendor/jodit/jodit.min.css" />
   <link rel="stylesheet" href="/shared/enrichment.css" />
   <link rel="stylesheet" href="/shared/grid.css" />
+  <link rel="stylesheet" href="/shared/history.css" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -160,7 +161,16 @@
           <p class="modal__referral" id="modalReferral" hidden></p>
         </div>
 
+        <!-- Details | History (mentor login integrity step 5b). Shown only
+             with RECORD_HISTORY_TAB on; hidden while editing. -->
+        <div class="modal__tabs" id="modalTabs" role="tablist" hidden>
+          <button type="button" class="modal__tab is-active" data-mtab="view" role="tab" aria-selected="true">Details</button>
+          <button type="button" class="modal__tab" data-mtab="history" role="tab" aria-selected="false">History</button>
+        </div>
+
         <div class="modal__body">
+          <!-- History (frontend/shared/history.js) -->
+          <div id="modalHistory" hidden></div>
           <!-- Read view -->
           <div id="modalView">
             <div class="modal__contact" id="modalContact"></div>
@@ -212,6 +222,7 @@
        other script can start a request. -->
   <script src="/shared/busy.js"></script>
   <script src="/shared/grid.js"></script>
+  <script src="/shared/history.js"></script>
   <script src="/shared/phone-format.js"></script>
   <script src="/shared/vendor/jodit/jodit.min.js"></script>
   <script src="/shared/richtext.js"></script>

@@ -5,6 +5,42 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.312.0] — 2026-11-06
+
+**feat: the History tab in Client Administration, Partner and Funder
+Management and Event Administration, and old and new values everywhere**
+(mentor login integrity plan, step 5b — § 4.5; ruling Q5.4;
+`OPEN-ITEMS.md` #66). Same switch as v0.311.0, `RECORD_HISTORY_TAB`,
+**off by default**. No migration; no CRM change.
+
+- **Client Administration:** the engagement popup gains Details | History
+  tabs (hidden while editing). `GET /assignments/api/engagements/{id}/history`.
+- **Partner and Funder Management** (one code path, `DomainConfig.history_tab`):
+  a History tab last in the tab bar.
+  `GET /{partnersessions|sponsorsessions}/api/records/{id}/history`.
+  **Never Client Management:** the same router factory serves it, and its
+  endpoint answers 404 on the server whatever the switch says.
+- **Event Administration:** a History tab beside Campaigns.
+  `GET /events/api/events/{id}/history`.
+- **Ruling Q5.4 (Doug, 11-06-26, option A): old and new values.** Each
+  endpoint reads the fields it writes before and after the write
+  (`core.history.snapshot`, best-effort) and records only what moved in
+  `CActionLog.details["fields"]`, with `same_value`'s normalising rule; a
+  link by its name, never its id; never a password or a key. The stream
+  note stays value-free. Where the read after the write fails, the field
+  names alone are recorded — never a guess.
+  - Client Administration: the Edit-mode save, the Internal notes cell
+    (now recorded at all — in `CActionLog` only, no stream note, because a
+    mentor reads the engagement's stream), Assign and Reassign (the mentor
+    and the status).
+  - Partner and Funder Management: the Details tab save of the profile,
+    its company and its contacts (each recorded on the record saved — it
+    was not recorded at all before), the status picker, the primary
+    contact. The status picker records values in all three domains.
+  - Event Administration: the event save.
+- Values appear from this release on; older lines show field names only
+  and say so.
+
 ## [0.311.0] — 2026-11-06
 
 **feat: the History tab in Mentor Administration** (mentor login integrity
