@@ -1,6 +1,6 @@
 # CRM handoff — the System Management Team
 
-Last Updated: 11-06-26 15:36 · Revision 1.1 — see change log at the end.
+Last Updated: 11-06-26 16:10 · Revision 1.2 — see change log at the end.
 
 A new team, **System Management Team**, that gates the activity page — every
 change by one person or in one date range, across all records — and later
@@ -18,7 +18,7 @@ regardless.
 
 | CRM | State | Evidence |
 |---|---|---|
-| crm-test | **Owed.** | Read 11-06-26: no team by that name (`scripts/create_system_management_team.py` dry run). |
+| crm-test | **Done 11-06-26 16:10.** No roles, no members. | `scripts/create_system_management_team.py --apply`: created and read back; a second run reports it present. |
 | Production | **Owed.** | — |
 | Boston | **Owed.** | — |
 
@@ -63,5 +63,6 @@ administrators. Copy the name.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 11-06-26 16:10 | Claude (Claude Code) | Applied on crm-test (Doug's go-ahead). |
 | 1.1 | 11-06-26 15:36 | Claude (Claude Code) | Doug's ruling (new team); the script; crm-test read. |
 | 1.0 | 11-05-26 11:04 | Claude (Claude Code) | First issue, from the mentor login integrity design session. |
