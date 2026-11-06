@@ -64,6 +64,7 @@ SESSIONS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "sessions" / "f
 # (/directory/{companies,contacts,mentors}); the JS reads the kind from its URL.
 DIRECTORY_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "directory" / "frontend"
 MYEMAIL_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "myemail" / "frontend"
+ACTIVITY_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "activity" / "frontend"
 EVENTS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "events" / "frontend"
 CAMPAIGNS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "campaigns" / "frontend"
 CAMPAIGNS_LANDING_DIR = Path(__file__).resolve().parent.parent / "campaigns" / "landing_frontend"
@@ -1008,7 +1009,12 @@ def create_app(
         from sessions import DOMAINS as SESSION_DOMAINS
         from sessions import make_router as make_sessions_router
 
+        from activity import api_router as activity_router
+
         app.include_router(myemail_router)
+        # The activity page (mentor login integrity step 6). Always mounted;
+        # ACTIVITY_PAGE is read per request, so /setup switches it live.
+        app.include_router(activity_router)
         app.include_router(assignments_router)
         app.include_router(ops_router)
         app.include_router(mentoradmin_router)
@@ -1305,6 +1311,12 @@ def create_app(
             "/mentorprofile",
             BrandedStaticFiles(directory=str(MENTORPROFILE_FRONTEND_DIR), html=True),
             name="mentorprofile-frontend",
+        )
+    if settings.assignments_active and ACTIVITY_FRONTEND_DIR.is_dir():
+        app.mount(
+            "/activity",
+            BrandedStaticFiles(directory=str(ACTIVITY_FRONTEND_DIR), html=True),
+            name="activity-frontend",
         )
     if settings.assignments_active and MYEMAIL_FRONTEND_DIR.is_dir():
         app.mount(

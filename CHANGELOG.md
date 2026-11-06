@@ -5,6 +5,35 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.313.0] — 2026-11-06
+
+**feat: the activity page** (mentor login integrity plan, step 6 — § 4.5;
+`OPEN-ITEMS.md` #66). New switch `ACTIVITY_PAGE`, **off by default**, at
+`/setup` → Features, and its team gate `SYSTEM_MANAGEMENT_ALLOWED_TEAMS`
+(default `System Management Team`) at `/setup` → Gates. No migration; no
+CRM change. **The team does not exist yet on any CRM**, and its name waits
+on Doug's ruling (reuse, rename or a new team); administrators pass
+regardless, so the page can be reviewed before the team exists.
+
+- **`/activity/`** (portal tile "Activity"): choose a person — any login,
+  active or not, or "System" for the application's own jobs — or a date
+  range, or both, and see every change found, newest first, in the History
+  tab's line format plus a **Record** column ("Mentor: Matt Mentor"; never
+  an id). The History panel's date, person and kind filters then narrow
+  it, and **Export CSV** writes what they show, one row per field change
+  (a cell starting with `=`, `+`, `-` or `@` is defused for spreadsheets).
+- **Both sources, under the key-based account:** `CActionLog` by the
+  person's name (or every `System: …` actor) and date, and the CRM's own
+  Create, Update and Assign notes across record types by author and date
+  (crm-test, 11-06-26: 120–160 ms). Each record's lines are merged with the
+  History tab's rule, so an application save folds its CRM note there too.
+  Notes on the action log itself, on logins and on notes are left out.
+- **When the CRM-notes read takes over 12 seconds** — production, until
+  step 0's production half lands — the page lists the application history
+  alone and says so. `scripts/note_reads.sh` (read-only, production's web
+  container) times that read once this release is deployed.
+- Mentor Status-Admin entries keep their two-team restriction here too.
+
 ## [0.312.1] — 2026-11-06
 
 **fix: the History engine, from the independent review of v0.311.0**

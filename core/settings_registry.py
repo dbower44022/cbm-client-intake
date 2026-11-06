@@ -476,6 +476,10 @@ SETTINGS: tuple[SettingSpec, ...] = (
             "Management) and an event (Event Administration). It lists the "
             "applications' recorded actions and the CRM's own record changes, newest "
             "first, with old and new values. Never shown in Client Management."),
+    _s("activity_page", GROUP_FEATURES, "Activity page", kind="bool",
+       help="A page listing every change by one person, or in a date range, across "
+            "every record, with a CSV export. For the System Management Team; "
+            "administrators always see it."),
     _s("integrity_crm_use_report", GROUP_FEATURES, "Report work in the CRM's own screens",
        kind="bool",
        help="Once a day the web component reads the CRM's Action History and sign-in log "
@@ -701,6 +705,9 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("assign_allowed_roles", GROUP_GATES, "Client Administration (roles)", kind="csv",
        help="A regular user's token cannot read its own roles — prefer teams."),
     _s("mentor_admin_allowed_teams", GROUP_GATES, "Mentor Administration", kind="csv"),
+    _s("system_management_allowed_teams", GROUP_GATES, "Activity page", kind="csv",
+       help="The team whose members see the activity page. Copy the team's name "
+            "exactly; administrators always pass."),
     _s("mentor_profile_allowed_teams", GROUP_GATES, "My Mentor Profile", kind="csv"),
     _s("ops_allowed_teams", GROUP_GATES, "Submission Admin", kind="csv"),
     _s("session_mentor_allowed_teams", GROUP_GATES, "Client Management", kind="csv"),

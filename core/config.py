@@ -342,6 +342,12 @@ class Settings(BaseSettings):
     # own record notes (core/history.py). Never in Client Management. Off by
     # default; read per request.
     record_history_tab: bool = False
+    # Step 6: ACTIVITY_PAGE — the activity page (/activity/): every change by
+    # one person, or in a date range, across every record, with a CSV export.
+    # Gated to SYSTEM_MANAGEMENT_ALLOWED_TEAMS (administrators always pass).
+    # Off by default; read per request.
+    activity_page: bool = False
+    system_management_allowed_teams: str = "System Management Team"
     integrity_crm_use_report: bool = False
     integrity_shared_accounts: str = ""
     integrity_excluded_logins: str = "crm.config"
@@ -956,6 +962,10 @@ class Settings(BaseSettings):
     @property
     def assign_allowed_roles_list(self) -> list[str]:
         return [r.strip() for r in self.assign_allowed_roles.split(",") if r.strip()]
+
+    @property
+    def system_management_allowed_teams_list(self) -> list[str]:
+        return [t.strip() for t in self.system_management_allowed_teams.split(",") if t.strip()]
 
     @property
     def mentor_admin_allowed_teams_list(self) -> list[str]:

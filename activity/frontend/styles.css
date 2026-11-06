@@ -1,0 +1,17 @@
+/* The activity page. Full width (the no-page-width-caps ruling); tokens from
+   /shared/tokens.css; the list itself is the shared History panel. */
+.ac { padding: 1.2rem 1.6rem 2rem; max-width: none; }
+.ac__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.ac__header h1 { margin: 0; }
+.ac__sub { margin: .2rem 0 0; color: var(--cbm-slate-700, #667); }
+.ac__header-user { display: inline-flex; align-items: center; gap: .6rem; white-space: nowrap; }
+.ac__who { color: var(--cbm-slate-700, #667); font-size: .9rem; }
+.ac__sm { padding: .35rem .7rem; font-size: .85rem; }
+.ac__ask { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .6rem 1rem; margin: 1rem 0 .6rem; padding: .8rem 1rem; border: 1px solid var(--cbm-border, #d7dce2); border-radius: 8px; background: #F8FAFC; }
+.ac__f { display: flex; flex-direction: column; gap: .2rem; font-size: .85rem; color: var(--cbm-slate-700, #4B5563); }
+.ac__f select, .ac__f input { font: inherit; font-size: .92rem; padding: .35rem .5rem; border: 1px solid #C9D3DE; border-radius: 4px; background: #fff; min-width: 10rem; }
+.ac__f select { min-width: 18rem; }
+.ac__hint { flex-basis: 100%; margin: 0; font-size: .84rem; color: var(--cbm-slate-700, #4B5563); }
+.ac__notice { margin: .4rem 0; padding: .5rem .8rem; border-radius: 8px; background: #fdecec; border: 1px solid #e3a5a5; color: #8f1f1f; }
+.ac__notice[hidden] { display: none; }
+@media (max-width: 640px) { .ac { padding: 1rem; } .ac__f select { min-width: 0; width: 100%; } }

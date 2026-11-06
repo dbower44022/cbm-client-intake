@@ -136,6 +136,10 @@ def _apps_for(user: dict[str, Any], settings: Settings) -> list[dict[str, str]]:
     # applied inside the app on top of this).
     if settings.analytics_active and is_member(user, settings.analytics_view_allowed_teams_list):
         apps.append({"title": "Analytics", "url": "/analytics/", "target": "cbm-analytics"})
+    # The activity page — every change by a person or in a date range
+    # (mentor login integrity step 6). Read per request.
+    if settings.activity_page and is_member(user, settings.system_management_allowed_teams_list):
+        apps.append({"title": "Activity", "url": "/activity/", "target": "cbm-activity"})
     # System Settings — EspoCRM administrators only (ruling 1). Not team-gated:
     # this page can reconfigure the platform, so the smallest audience wins.
     if settings.setup_active and user.get("isAdmin"):
