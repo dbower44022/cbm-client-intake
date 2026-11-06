@@ -326,6 +326,19 @@ class Settings(BaseSettings):
     # and emailed at once (only while INTEGRITY_DIGEST is on), at most once
     # per login per day.
     integrity_signin_alert: bool = False
+    # 4c, items 8 and 9 (Doug's C2 ruling 11-05-26: on the web component,
+    # which holds the administrator account). INTEGRITY_CRM_USE_REPORT: once a
+    # day, an hour before the check, read the last 24 hours of Action History
+    # and the sign-in log as the administrator and record who edited records
+    # in the CRM's own screens (8) and any screen sign-in by a shared account
+    # (9). INTEGRITY_SHARED_ACCOUNTS: empty = admin, admin@ and mentoradmin@
+    # the mail domain. INTEGRITY_EXCLUDED_LOGINS: never reported under 8 (the
+    # provisioning and key-based accounts are added automatically).
+    # INTEGRITY_APP_ADDRESSES: network addresses known to be this application.
+    integrity_crm_use_report: bool = False
+    integrity_shared_accounts: str = ""
+    integrity_excluded_logins: str = "crm.config"
+    integrity_app_addresses: str = ""
     # Grants (prds/grant-management-plan.md): the Grants tab on a funder record,
     # its grant popup and the deliverables inside it. Off by default — build
     # dark, review on crm-test, then enable on prod. Read PER REQUEST (never at

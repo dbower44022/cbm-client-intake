@@ -1,6 +1,6 @@
-# Kickoff prompt — Mentor login integrity: the build, the rest of step 4c, then steps 5 and 6
+# Kickoff prompt — Mentor login integrity: the build, steps 5 and 6
 
-Last Updated: 11-05-26 22:50 · Revision 0.5 — see change log at the end.
+Last Updated: 11-05-26 23:53 · Revision 0.5 — see change log at the end.
 
 Paste everything below the line into a fresh Claude Code session rooted in
 `~/Dropbox/Projects/cbm-client-intake`.
@@ -42,26 +42,21 @@ Open every reply with the local time from `date`.
     how "the first run reports only" is met), `INTEGRITY_DIGEST_TO`, the
     Login faults list with Acknowledge, the portal badge, deep links.
   - **4c, part one, v0.309.0** — `INTEGRITY_SIGNIN_ALERT`: condition 7.
-- **Owed from step 4:** the direct-use report and the shared-account
-  report (plan § 4.2 items 8 and 9), waiting on Doug's **C2 ruling**:
-  run them on the web component (which has the administrator account), or
-  give the worker that account. `scripts/measure_signin_log_read.py`,
-  read-only, times one day's read in production's web container; Doug
-  runs it. If the ruling is recorded in `OPEN-ITEMS.md` #66 by the time
-  this session starts, build those two reports first, as v0.310.0, behind
-  their own switch, excluding the configuration account (`crm.config`)
-  and the provisioning account. People in the CRM's screens and in the
-  applications both sign in as `Espo`; only the network address separates
-  them, as in `scripts/crm_direct_use_report.sh`.
+  - **4c, part two, v0.310.0** — `INTEGRITY_CRM_USE_REPORT`: the
+    direct-use and shared-account reports (conditions 8 and 9), on the web
+    component by Doug's C2 ruling of 11-05-26.
+- **Owed from step 4** (not this session's build): the production
+  measurement and backlog read, `scripts/c2_reads.sh` run by Doug with
+  `!`; then the switches, instance by instance, in the order
+  `OPEN-ITEMS.md` #66 item 9 gives.
 
 ## Scope of this session
 
-1. The rest of step 4c, if C2 is ruled (above). Otherwise skip it.
-2. **Step 5 — the History tab** (plan § 4.5), in Mentor Administration
+1. **Step 5 — the History tab** (plan § 4.5), in Mentor Administration
    first, then Client Administration, Partner and Funder Management (one
    code path, `DomainConfig`), Event Administration. Never in Client
    Management.
-3. **Step 6 — the activity page** and its team.
+2. **Step 6 — the activity page** and its team.
 
 End by updating the plan's change log and `OPEN-ITEMS.md` #66.
 
@@ -126,7 +121,7 @@ Stage and commit atomically and audit with `git show --stat`.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
-| 0.5 | 11-05-26 22:50 | Claude (Claude Code) | Step 4 built (v0.307.0–v0.309.0); the C2 reports carried as the session's first item if ruled; steps 5 and 6 with the two notes revision 0.4 asked for. |
+| 0.5 | 11-05-26 23:53 | Claude (Claude Code) | Step 4 built (v0.307.0–v0.310.0, C2 ruled on web 11-05-26); steps 5 and 6 with the two notes revision 0.4 asked for. |
 | 0.4 | 11-05-26 22:21 | Claude (Claude Code) | Scope narrowed to step 4; see that revision. |
 | 0.3 | 11-05-26 18:05 | Claude (Claude Code) | Steps 4–6. |
 | 0.2 | 11-05-26 12:08 | Claude (Claude Code) | Steps 0–3; orchestration with subagents. |

@@ -604,9 +604,22 @@ def create_app(
                 "crmConfig probe enabled (refresh every %ss)",
                 settings.crm_config_refresh_seconds,
             )
+        # Mentor login integrity, items 8 and 9 (Doug's C2 ruling 11-05-26):
+        # the report on the CRM's own screens runs here, where the
+        # administrator account is. The switch is read on every pass; a
+        # restart past the hour waits for tomorrow.
+        crm_use_task = None
+        if store is not None and not settings.espo_dry_run:
+            import asyncio as _asyncio
+
+            from integrity.web_loop import crm_use_loop
+
+            crm_use_task = _asyncio.create_task(crm_use_loop())
         try:
             yield
         finally:
+            if crm_use_task is not None:
+                crm_use_task.cancel()
             if crm_config_task is not None:
                 crm_config_task.cancel()
             if liveness_task is not None:

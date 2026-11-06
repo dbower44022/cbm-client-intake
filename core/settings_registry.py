@@ -470,6 +470,12 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="The integrity digest: one email a day listing every open login fault, "
             "new ones marked. Also the fault list and the badge in Mentor "
             "Administration. Turn on only after reading this instance's first report."),
+    _s("integrity_crm_use_report", GROUP_FEATURES, "Report work in the CRM's own screens",
+       kind="bool",
+       help="Once a day the web component reads the CRM's Action History and sign-in log "
+            "as the administrator and records who created, changed or deleted records in "
+            "the CRM's own screens, and any screen sign-in by a shared account. Listed in "
+            "the login fault list and the integrity digest."),
     _s("integrity_signin_alert", GROUP_FEATURES, "Alert when a login has no mentor profile",
        kind="bool",
        help="When a login with no mentor profile opens Client Management or My Mentor "
@@ -576,10 +582,22 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="Who receives the integrity digest and the no-profile sign-in alert. "
             "Empty uses the alert recipients."),
     _s("login_integrity_hour", GROUP_EMAIL, "Integrity check hour", kind="int",
-       component="worker",
-       help="Local hour of the daily login integrity check; the digest follows it. "
+       component="both",
+       help="Local hour of the daily login integrity check; the digest follows it, and "
+            "the report on the CRM's own screens runs an hour before. "
             "On the training sandbox a time between 04:00 and 06:00 UTC moves to 06:00 UTC."),
-    _s("login_integrity_tz", GROUP_EMAIL, "Integrity check timezone", component="worker"),
+    _s("login_integrity_tz", GROUP_EMAIL, "Integrity check timezone", component="both"),
+    _s("integrity_shared_accounts", GROUP_EMAIL, "Shared CRM accounts", kind="csv",
+       help="Logins whose sign-in to the CRM's own screens is reported. Empty means admin, "
+            "and admin@ and mentoradmin@ the mentor email domain."),
+    _s("integrity_excluded_logins", GROUP_EMAIL, "Logins not reported for CRM edits",
+       kind="csv",
+       help="Never reported for editing in the CRM's own screens. The provisioning and "
+            "key-based accounts are left out automatically."),
+    _s("integrity_app_addresses", GROUP_EMAIL, "This application's network addresses",
+       kind="csv",
+       help="Addresses known to be this application, so its traffic is never counted as "
+            "use of the CRM's own screens. Usually found automatically; empty is normal."),
     _s("comms_digest_hour", GROUP_EMAIL, "Digest hour", kind="int", component="worker"),
     _s("comms_digest_tz", GROUP_EMAIL, "Digest timezone", component="worker"),
     _s("comms_digest_seconds", GROUP_EMAIL, "Digest re-check", kind="int", unit="s",

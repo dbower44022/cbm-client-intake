@@ -227,7 +227,7 @@ async def test_a_run_records_logs_and_sends_nothing(caplog):
         result = await run.run_integrity_check(Settings(), crm, store, send=send)
     assert len(result["new"]) == 4 and not result["closed"]
     line = [r.message for r in caplog.records if r.message.startswith("login integrity check:")]
-    assert line and "4 open (c1=1 c2=0 c3=1 c4=0 c5=1 c6=1 c7=0), 4 new, 0 closed" in line[0]
+    assert line and "4 open (c1=1 c2=0 c3=1 c4=0 c5=1 c6=1 c7=0 c8=0 c9=0), 4 new, 0 closed" in line[0]
     assert sent == []  # 4a: the digest switch is off, so no email of any kind
 
     # Next day: David's record repaired — the faults close themselves.

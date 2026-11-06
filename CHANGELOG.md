@@ -5,7 +5,39 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
-## [0.309.0] — 2026-11-05
+## [0.310.0] — 2026-11-05
+
+**feat: the report on work in the CRM's own screens, and shared-account
+sign-ins** (mentor login integrity plan, step 4c, items 8 and 9 — § 4.2;
+`OPEN-ITEMS.md` #66). **Doug's C2 ruling, 11-05-26: they run on the web
+component**, which already holds the administrator account; the worker is
+not given it. New switch `INTEGRITY_CRM_USE_REPORT`, **off by default**,
+at `/setup` → Features, and three settings at `/setup` → Email:
+`INTEGRITY_SHARED_ACCOUNTS`, `INTEGRITY_EXCLUDED_LOGINS` (default
+`crm.config`), `INTEGRITY_APP_ADDRESSES`. No migration; no CRM change.
+
+- **Once a day, an hour before the check**, the web component reads the
+  last 24 hours of the CRM's Action History (creates, changes, deletes)
+  and sign-in log as the administrator, and records two new conditions in
+  the login fault list and the integrity digest: **8** — a person who
+  created, changed or deleted records in the CRM's own screens, with
+  counts per record type; **9** — a sign-in to the CRM's own screens by a
+  shared account (`admin`, and `admin@` and `mentoradmin@` the mentor
+  email domain, unless the setting names others).
+- **Screens versus this application** is told by network address, as in
+  `scripts/crm_direct_use_report.sh`: an address is the application's
+  when the key-based account used it, when three or more logins used it in
+  the window, or when `INTEGRITY_APP_ADDRESSES` lists it. Summaries never
+  print an address. The configuration, provisioning and key-based
+  accounts are never reported for edits.
+- **Once a day without a separate guard**: each finding's key carries the
+  day, so a restart or a second web copy records nothing twice, and a
+  restart past the hour waits for tomorrow. The next daily check closes the
+  previous day's findings. A day with more than 20,000 rows in either list
+  fails the run and records nothing; production's sign-in log measurement
+  (`scripts/c2_reads.sh`) is owed before the switch goes on there.
+
+
 
 **feat: the no-profile sign-in alert (condition 7)** (mentor login
 integrity plan, step 4c, first part — § 4.2; `OPEN-ITEMS.md` #66). New

@@ -49,6 +49,8 @@ CONDITIONS: dict[int, str] = {
     5: "Team login with no mentor profile",
     6: "Mentor's Contact carries another login",
     7: "Signed in with no mentor profile",
+    8: "Edited in the CRM's own screens",
+    9: "Shared account signed in to the CRM",
 }
 DAILY = (1, 2, 3, 4, 5, 6)
 

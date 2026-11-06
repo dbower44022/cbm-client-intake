@@ -59,7 +59,7 @@ def digest_body(settings: Settings, rows: list[dict[str, Any]], *, acknowledged:
         "it off this email. A fault the daily check no longer finds closes itself.",
         "",
     ]
-    for cond in (*DAILY, 7):
+    for cond in sorted(CONDITIONS):
         group = [r for r in rows if r["condition"] == cond]
         if not group:
             continue

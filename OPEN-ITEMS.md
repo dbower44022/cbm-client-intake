@@ -81,11 +81,12 @@ found; move resolved items to the bottom with the resolution date.
     then `INTEGRITY_DIGEST`, reviewed on crm-test as a real
     non-administrator on the Mentor Administration Team (the list, the
     badge, Acknowledge, a digest link); then `MANAGER_PROFILE_STRICT`
-    and `INTEGRITY_SIGNIN_ALERT`. (10) **The C2 ruling** — where the
-    direct-use and shared-account reports run (web, or give the worker
-    the administrator account) — owed by Doug; measure first with
-    `.venv/bin/python scripts/measure_signin_log_read.py` in production's web
-    container. Next session: `prompts/mentor-login-integrity-build-prompt-v0.5.md`.
+    and `INTEGRITY_SIGNIN_ALERT`. (10) **C2 ruled 11-05-26 by Doug: the
+    direct-use and shared-account reports run on the web component** —
+    built as v0.310.0 (`INTEGRITY_CRM_USE_REPORT`, off), committed, not
+    pushed. Owed before switching it on in production: the measurement,
+    `scripts/c2_reads.sh` run with `!` from Claude Code (it also prints
+    production's login-fault backlog). Next session: `prompts/mentor-login-integrity-build-prompt-v0.5.md`.
 
 65. **The email composer's new-contact row — three smaller faults**
     (2026-10-31, found on the #63 live pass). (1) ~~The row's Company

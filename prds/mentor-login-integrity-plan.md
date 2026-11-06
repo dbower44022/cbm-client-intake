@@ -1,6 +1,6 @@
 # Mentor login integrity — prevention, detection and history — Plan
 
-Last Updated: 11-05-26 22:49 · Revision 1.7 — see change log at the end.
+Last Updated: 11-05-26 23:52 · Revision 1.8 — see change log at the end.
 
 **Status:** Approved by Doug 11-05-26 ("approved"). Not built.
 **Kickoff that produced it:** `prompts/mentor-login-integrity-design-prompt-v0.2.md`.
@@ -290,7 +290,8 @@ which is now Doug's.
   programming interface as an administrator only (the key reads only its
   own history; the sign-in log is administrator-only). The administrator
   account is on the web component only, so the direct-use report runs from
-  web or the worker gains that account — decided at step 4c. People in
+  web or the worker gains that account — **ruled 11-05-26 by Doug: on
+  the web component** (v0.310.0). People in
   the CRM's screens and people in the applications both sign in as
   `Espo`; only the network address separates them, as in the prototype.
   The configuration account's own reads must be excluded too. Speed of the
@@ -324,6 +325,7 @@ which is now Doug's.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.8 | 11-05-26 23:52 | Claude (Claude Code) | C2 ruled by Doug: the direct-use and shared-account reports run on the web component; built as v0.310.0 (`INTEGRITY_CRM_USE_REPORT`, off). Step 4 complete. |
 | 1.7 | 11-05-26 22:49 | Claude (Claude Code) | Step 4 built 11-05-26, committed, not pushed: 4a v0.307.0 (`LOGIN_INTEGRITY_CHECK`), 4b v0.308.0 (`INTEGRITY_DIGEST`, `INTEGRITY_DIGEST_TO`), 4c's condition 7 v0.309.0 (`INTEGRITY_SIGNIN_ALERT`); all off. "First run reports only" is met by the digest being its own switch. The direct-use and shared-account reports (§ 4.2 items 8–9) wait on the C2 ruling. Build kickoff pointer moved to revision 0.5. No ruling changed. |
 | 1.6 | 11-05-26 22:21 | Claude (Claude Code) | Step 3 pushed and live (v0.306.0, switch off). Build kickoff pointer moved to revision 0.4 of the prompt, which covers step 4 only; steps 5–6 follow in revision 0.5. No ruling changed. |
 | 1.5 | 11-05-26 18:05 | Claude (Claude Code) | Steps 1 and 2 pushed and live (v0.305.0, switches off); step 3 built (v0.306.0), committed, not pushed. No ruling changed. |

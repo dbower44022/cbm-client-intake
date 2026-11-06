@@ -16,7 +16,7 @@ from typing import Any, Optional
 from core.config import Settings
 from core.sandbox_reset import SANDBOX_URL_MARKER
 
-from .check import DAILY, find_faults, read_crm
+from .check import CONDITIONS, find_faults, read_crm
 
 log = logging.getLogger("cbm_intake.integrity")
 
@@ -47,7 +47,7 @@ def next_run_time(settings: Settings, after: datetime, next_local_hour) -> datet
 def summary_line(result: dict[str, Any], counts: dict[str, int], seconds: float) -> str:
     open_rows = result["open"]
     per = " ".join(
-        f"c{c}={sum(1 for r in open_rows if r['condition'] == c)}" for c in (*DAILY, 7))
+        f"c{c}={sum(1 for r in open_rows if r['condition'] == c)}" for c in sorted(CONDITIONS))
     return (f"login integrity check: {len(open_rows)} open ({per}), "
             f"{len(result['new'])} new, {len(result['closed'])} closed; read "
             f"{counts['profiles']} mentor profiles, {counts['users']} logins, "
