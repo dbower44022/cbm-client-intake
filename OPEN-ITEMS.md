@@ -84,9 +84,16 @@ found; move resolved items to the bottom with the resolution date.
     and `INTEGRITY_SIGNIN_ALERT`. (10) **C2 ruled 11-05-26 by Doug: the
     direct-use and shared-account reports run on the web component** —
     built as v0.310.0 (`INTEGRITY_CRM_USE_REPORT`, off), committed, not
-    pushed. Owed before switching it on in production: the measurement,
-    `scripts/c2_reads.sh` run with `!` from Claude Code (it also prints
-    production's login-fault backlog). Next session: `prompts/mentor-login-integrity-build-prompt-v0.5.md`.
+    pushed — **live since 11-06-26 01:05**. **Measured 11-06-26 01:11
+    on production** (`scripts/c2_reads.sh`): every sign-in log read
+    timed out at 20 seconds, even a one-day count, and one page of
+    Action History took 19 seconds, the next timing out. **Do not switch
+    `INTEGRITY_CRM_USE_REPORT` on in production** until step 0's
+    production half stops the key-based account's sign-in rows and the
+    old rows are gone; it would fail safely (one retry, nothing
+    recorded) but uselessly. **Production's backlog, the same run:** 39
+    mentor profiles, 4 faults, all David Weissman's known case (conditions
+    1, 3, 5 and 6) — nothing else; condition 6 showed no stamp noise. Next session: `prompts/mentor-login-integrity-build-prompt-v0.5.md`.
 
 65. **The email composer's new-contact row — three smaller faults**
     (2026-10-31, found on the #63 live pass). (1) ~~The row's Company
