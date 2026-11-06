@@ -73,7 +73,7 @@ found; move resolved items to the bottom with the resolution date.
     v0.307.0 (4a, `LOGIN_INTEGRITY_CHECK`, migration 0041), v0.308.0
     (4b, `INTEGRITY_DIGEST` and `INTEGRITY_DIGEST_TO`), v0.309.0 (4c's
     condition 7, `INTEGRITY_SIGNIN_ALERT`); all off. Owed after the
-    push, per instance: run `python scripts/integrity_report.py --live`
+    push, per instance: run `.venv/bin/python scripts/integrity_report.py --live`
     in the container and read the backlog (condition 6 may report stamps
     the application puts on a mentor's Contact on purpose — judge that
     before calling them faults); switch on `LOGIN_INTEGRITY_CHECK`; read
@@ -84,7 +84,7 @@ found; move resolved items to the bottom with the resolution date.
     and `INTEGRITY_SIGNIN_ALERT`. (10) **The C2 ruling** — where the
     direct-use and shared-account reports run (web, or give the worker
     the administrator account) — owed by Doug; measure first with
-    `python scripts/measure_signin_log_read.py` in production's web
+    `.venv/bin/python scripts/measure_signin_log_read.py` in production's web
     container. Next session: `prompts/mentor-login-integrity-build-prompt-v0.5.md`.
 
 65. **The email composer's new-contact row — three smaller faults**

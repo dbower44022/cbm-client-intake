@@ -13,10 +13,10 @@ Two modes:
   Useful before ``LOGIN_INTEGRITY_CHECK`` is switched on.
 
 Run inside the deployed web or worker container (the do-app-console-scripting
-memory), from the application folder:
+memory), from the application folder (/app):
 
-    python scripts/integrity_report.py
-    python scripts/integrity_report.py --live
+    .venv/bin/python scripts/integrity_report.py
+    .venv/bin/python scripts/integrity_report.py --live
 """
 
 from __future__ import annotations

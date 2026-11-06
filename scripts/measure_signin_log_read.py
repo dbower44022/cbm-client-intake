@@ -12,9 +12,9 @@ sign-in log, as any sign-in does. It does not count the whole log: on a
 6.6 GB table that count alone would load the database.)
 
 Run inside the deployed WEB container (the administrator account is on web
-only), from the application folder:
+only), from the application folder (/app):
 
-    python scripts/measure_signin_log_read.py
+    .venv/bin/python scripts/measure_signin_log_read.py
 """
 
 from __future__ import annotations
