@@ -1,8 +1,8 @@
 # Mentor login integrity — prevention, detection and history — Plan
 
-Last Updated: 11-06-26 01:35 · Revision 1.9 — see change log at the end.
+Last Updated: 11-06-26 02:29 · Revision 2.0 — see change log at the end.
 
-**Status:** Approved by Doug 11-05-26 ("approved"). Not built.
+**Status:** Approved by Doug 11-05-26 ("approved"). Steps 0–4 built and live; steps 5–6 built 11-06-26 (v0.311.0–v0.313.2), committed, not pushed, switches off.
 **Kickoff that produced it:** `prompts/mentor-login-integrity-design-prompt-v0.2.md`.
 **Build kickoff:** `prompts/mentor-login-integrity-build-prompt-v0.6.md` (steps 5–6; step 4c's last part built from revision 0.5; steps 0–3 built 11-05-26 from revision 0.2, step 4a, 4b and condition 7 from revision 0.4).
 **Sibling plan:** staff notes on mentors and the page-space work are a
@@ -326,6 +326,7 @@ which is now Doug's.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 2.0 | 11-06-26 02:29 | Claude (Claude Code) | Steps 5 and 6 built from build prompt revision 0.6: 5a v0.311.0 (`RECORD_HISTORY_TAB`, Mentor Administration), 5b v0.312.0 (Client Administration, Partner and Funder Management — refused for Client Management on the server — Event Administration, and ruling Q5.4's values), 6 v0.313.0 (`ACTIVITY_PAGE`, `SYSTEM_MANAGEMENT_ALLOWED_TEAMS`), each independently reviewed and fixed (v0.312.1, v0.313.1, v0.313.2). Facts read on crm-test: `CActionLog` keeps no actor id, so the merge matches people by name; a status change is an Update note carrying only the new value; the key may list `Note` by author and date in 120–160 ms. No ruling changed; the team question (#66 item 4) is still Doug's. |
 | 1.9 | 11-06-26 01:35 | Claude (Claude Code) | Ruling Q5.4 (Doug, 11-06-26, option A): old and new values recorded in every History-tab application. Build kickoff pointer moved to revision 0.6. |
 | 1.8 | 11-05-26 23:52 | Claude (Claude Code) | C2 ruled by Doug: the direct-use and shared-account reports run on the web component; built as v0.310.0 (`INTEGRITY_CRM_USE_REPORT`, off). Step 4 complete. |
 | 1.7 | 11-05-26 22:49 | Claude (Claude Code) | Step 4 built 11-05-26, committed, not pushed: 4a v0.307.0 (`LOGIN_INTEGRITY_CHECK`), 4b v0.308.0 (`INTEGRITY_DIGEST`, `INTEGRITY_DIGEST_TO`), 4c's condition 7 v0.309.0 (`INTEGRITY_SIGNIN_ALERT`); all off. "First run reports only" is met by the digest being its own switch. The direct-use and shared-account reports (§ 4.2 items 8–9) wait on the C2 ruling. Build kickoff pointer moved to revision 0.5. No ruling changed. |

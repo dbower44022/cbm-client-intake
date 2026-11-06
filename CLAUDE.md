@@ -379,7 +379,8 @@ enforces their ACL and records them as modifier. The dev app (no
 Partner Management Team · `SESSION_SPONSOR_ALLOWED_TEAMS` = Sponsor Management
 Team · `OPS_ALLOWED_TEAMS` = Marketing Admin Team · `WORKSPACE_ALLOWED_TEAMS` =
 Mentor Team · `ANALYTICS_VIEW_ALLOWED_TEAMS` / `ANALYTICS_ADMIN_ALLOWED_TEAMS` =
-Analytics Admin Team.
+Analytics Admin Team · `SYSTEM_MANAGEMENT_ALLOWED_TEAMS` = System Management
+Team (the activity page; the team's name awaits Doug's ruling, #66).
 
 ## The applications
 
@@ -493,6 +494,22 @@ durable store. **Detail: `ops/CLAUDE.md`.** Rules other packages rely on:
 **only ONE info@ poller may run** — setting `OPS_MAILBOX` on both
 environments double-captures; sends go as `OPS_MAILBOX`; machine words like
 `pending`/`needs_attention` never render.
+
+### History tab and activity page — `core/history.py`, `/activity`
+
+Mentor login integrity steps 5–6 (`RECORD_HISTORY_TAB`, `ACTIVITY_PAGE`,
+both off). One engine, `core/history.py`, and one panel,
+`frontend/shared/history.js`, serve the History tab in Mentor
+Administration, Client Administration, Partner and Funder Management and
+Event Administration, and the cross-record activity page. **Never in
+Client Management** — the sessions endpoint refuses the mentor domain on
+the server. `CActionLog` is the authority for application actions; the
+CRM's own Create/Update/Assign notes fold into a row with the same person,
+minute and fields. **Every write in those applications records old and new
+values in `CActionLog.details["fields"]`** (ruling Q5.4, via
+`history.snapshot` / `field_details`); stream notes stay value-free. A new
+write there must do the same, or its CRM note shows as "In the CRM
+directly". Detail: `mentoradmin/CLAUDE.md`.
 
 ### Workspace Directories — `/directory`
 
@@ -1205,4 +1222,8 @@ the strength of it.
   (`INTEGRITY_CRM_USE_REPORT`); all off but `LOGIN_INTEGRITY_CHECK`, on since
   11-06-26 (`OPEN-ITEMS.md` #66); next kickoff
   `prompts/mentor-login-integrity-build-prompt-v0.6.md` (steps 5–6).
+- **v0.311.0–v0.313.2 (2026-11-06) are committed, not pushed**: steps 5
+  and 6 — the History tab in five applications (`RECORD_HISTORY_TAB`),
+  old and new values recorded (ruling Q5.4) and the activity page
+  (`ACTIVITY_PAGE`); all off. Owed: `OPEN-ITEMS.md` #66 item 12.
 Everything else still owed is in `OPEN-ITEMS.md`.

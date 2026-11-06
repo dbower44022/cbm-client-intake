@@ -1,6 +1,6 @@
 # sessions/ — Client, Partner and Funder Management
 
-Last Updated: 11-05-26 17:41 · Revision 1.7
+Last Updated: 11-06-26 02:16 · Revision 1.8
 
 Detail for the session engine behind Client Management (`/mentorsessions`), Partner Management (`/partnersessions`) and Funder Management (`/sponsorsessions`): the grids, every record tab, quick add, managers and co-mentors, and the traps of this package.
 
@@ -303,11 +303,24 @@ Watch for these when touching this package:
   place calls `gridRefresh(id)` after it paints. The record list's heading
   is rebuilt only when the domain's columns change. The Contacts tables
   never sort (their edit row follows the contact).
+- **The History tab — Partner and Funder Management only** (v0.312.0,
+  mentor login integrity step 5b, `RECORD_HISTORY_TAB`):
+  `DomainConfig.history_tab` adds it last in the tab bar, and
+  `GET /records/{id}/history` **answers 404 for the mentor domain on the
+  server** — this factory serves Client Management too, and mentors never
+  get a History tab (Q5.3). Partner and Funder Management record every
+  Details save (profile, company, contact — each on the record saved), the
+  status picker and the primary contact with old and new values in
+  `CActionLog` (ruling Q5.4) — the Details save in `CActionLog` only, with
+  no stream note (it posted none before, v0.313.2); the status picker does
+  so in all three domains. **Client Management's Details save is not recorded** (open item
+  66 asks Doug).
 
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.8 | 11-06-26 02:16 | Claude (Claude Code) | The History tab, partner and funder only, and old-and-new values (v0.312.0). |
 | 1.7 | 11-05-26 17:41 | Claude (Claude Code) | The strict profile choice (v0.305.0). |
 | 1.6 | 11-01-26 18:55 | Claude (Claude Code) | A company typed but never picked asks first, in the add dialog and the composer row; the composer's chosen company reaches the contact (v0.301.1–v0.302.4). |
 | 1.5 | 10-30-26 01:03 | Claude (Claude Code) | Who attended, by company (v0.301.0). |

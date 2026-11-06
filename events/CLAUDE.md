@@ -1,6 +1,6 @@
 # events/ — Events, Webinars and the public pages
 
-Last Updated: 11-03-26 23:59 · Revision 1.1
+Last Updated: 11-06-26 02:16 · Revision 1.2
 
 Detail for Event Administration (`/events`), the public programme pages (`/webinars/`), presenters, topics, attendance, follow-ups, reporting and the portal events rail.
 
@@ -38,6 +38,12 @@ and **6** are built. **Phase 4 — the WordPress plugin — was STRUCK on
 this app serves rather than embed or reimplement one. What stops the lead leak
 now is one redirect, plus two things owed before it (`OPEN-ITEMS.md` 19d
 consent, 19f the per-event duplicate hold).
+
+**The History tab** (v0.312.0, mentor login integrity step 5b,
+`RECORD_HISTORY_TAB`): a tab beside Campaigns, `GET /events/{id}/history`
+over `core/history.py`. The event save records old and new values in
+`CActionLog` (ruling Q5.4); the sponsors, recording and Zoom actions still
+record what they did in words, not values.
 
 ## The PUBLIC pages — `/webinars/` and `/webinars/{slug}` (v0.222.0)
 
@@ -315,5 +321,6 @@ would be indistinguishable from a slug.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 11-06-26 02:16 | Claude (Claude Code) | The History tab (v0.312.0). |
 | 1.1 | 11-03-26 23:59 | Claude (Claude Code) | Promote this event and the Campaigns tab (v0.303.0, M10). |
 | 1.0 | 10-20-26 17:30 | Claude (Claude Code) | Created from the root `CLAUDE.md` section, word for word (Doug's approval 10-20-26). |

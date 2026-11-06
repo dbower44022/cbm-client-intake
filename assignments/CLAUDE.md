@@ -1,6 +1,6 @@
 # assignments/ — Client Administration
 
-Last Updated: 10-20-26 17:30 · Revision 1.0
+Last Updated: 11-06-26 02:16 · Revision 1.1
 
 Detail for the Client Administration application (`/assignments`): the engagement grid, Assign and Reassign, the mentor roster and the editable engagement popup.
 
@@ -100,9 +100,20 @@ full-height grid with a status multi-select, and assigns each to a mentor.
   the swapped body; no partner, no band. **The assigned mentor is deliberately not an editable field** —
   swapping `mentorProfile` re-homes contacts, client profile, company and
   sessions, so the row hands off to Assign/Reassign instead.
+- **The History tab** (v0.312.0, mentor login integrity step 5b,
+  `RECORD_HISTORY_TAB`): the popup's Details | History tabs, hidden while
+  editing; `GET /engagements/{id}/history` over `core/history.py`. **Every
+  write records old and new values** (ruling Q5.4): the Edit-mode save,
+  Assign and Reassign (mentor and status) read the written attributes
+  before and after through `history.snapshot` and put what moved in
+  `CActionLog.details["fields"]`; the stream note stays value-free. The
+  Internal notes cell is recorded in `CActionLog` only — no stream note,
+  because a mentor reads the engagement's stream. A new write here does
+  the same.
 
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 11-06-26 02:16 | Claude (Claude Code) | The History tab and old-and-new values (v0.312.0). |
 | 1.0 | 10-20-26 17:30 | Claude (Claude Code) | Created from the root `CLAUDE.md` section, word for word (Doug's approval 10-20-26). |
