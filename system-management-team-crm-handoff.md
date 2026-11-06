@@ -1,6 +1,6 @@
 # CRM handoff — the System Management Team
 
-Last Updated: 11-05-26 11:04 · Revision 1.0 — see change log at the end.
+Last Updated: 11-06-26 15:36 · Revision 1.1 — see change log at the end.
 
 A new team, **System Management Team**, that gates the activity page — every
 change by one person or in one date range, across all records — and later
@@ -18,7 +18,7 @@ regardless.
 
 | CRM | State | Evidence |
 |---|---|---|
-| crm-test | **Owed.** | The name is not used in this repository (checked 11-04-26). Not read in the CRM. |
+| crm-test | **Owed.** | Read 11-06-26: no team by that name (`scripts/create_system_management_team.py` dry run). |
 | Production | **Owed.** | — |
 | Boston | **Owed.** | — |
 
@@ -27,12 +27,20 @@ the CRM, with its own role, which production attaches to no team (open item
 #30). Read its members and its role before creating the new team, and tell
 Doug if it already serves this purpose.
 
+**Ruled 11-06-26 by Doug (Q5.5, option 1): a new team.** Production's
+System Administration Team (2 members, an internal event audience) is not
+reused and the empty Data Integrity Team is not renamed.
+
 ## 1. Automated path (preferred)
 
-Teams answer through the API for an administrator (capability map). The
-build adds the team to the plan applier or a short script: create `Team`
-with `name = "System Management Team"` if none exists by that name, then
-read it back. Dry run first, crm-test first.
+`scripts/create_system_management_team.py` creates `Team` with
+`name = "System Management Team"` if none exists by that name, then reads it
+back. Dry run by default, `--apply` to write; crm-test first:
+
+    PYTHONPATH=. uv run python scripts/run_with_admin.py scripts/create_system_management_team.py --apply
+
+Production and Boston: the same script, run where their administrator
+credentials are (`run_with_admin.py --env <file>`, or the web container).
 
 ## 2. Hand path
 
@@ -55,4 +63,5 @@ administrators. Copy the name.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 11-06-26 15:36 | Claude (Claude Code) | Doug's ruling (new team); the script; crm-test read. |
 | 1.0 | 11-05-26 11:04 | Claude (Claude Code) | First issue, from the mentor login integrity design session. |
