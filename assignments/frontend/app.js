@@ -659,7 +659,6 @@
     });
     $("modalHistory").hidden = !history;
     $("modalView").hidden = history;
-    $("modalViewActions").hidden = history;
     if (history && currentDetailId) {
       if (!historyPanel) historyPanel = CBMHistory.mount($("modalHistory"), { key: "assignments.history",
         emptyText: "No changes recorded for this engagement yet." });

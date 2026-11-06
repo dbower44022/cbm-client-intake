@@ -127,6 +127,11 @@ def value_changes(
         key = label = name
         if name.endswith("Id") and (name[:-2] + "Name") in after:
             key, label = name[:-2] + "Name", name[:-2]  # a link: its name, never the id
+        elif name.endswith("Id") and name in after:
+            # A link whose name did not come back: which field, never the id.
+            if not before or not same_value(before.get(name), after.get(name)):
+                out[name[:-2]] = {}
+            continue
         elif name.endswith("Ids"):
             names_key = name[:-3] + "Names"
             if names_key in after:
@@ -141,8 +146,20 @@ def value_changes(
         old, new = before.get(key), after.get(key)
         if before and same_value(old, new):
             continue
-        out[label] = {"to": new} if not before else {"from": old, "to": new}
+        out[label] = {"to": _clip_value(new)} if not before else {
+            "from": _clip_value(old), "to": _clip_value(new)}
     return out
+
+
+_RECORD_MAX = 2000
+
+
+def _clip_value(v: Any) -> Any:
+    """A long text (a rich-text note) is recorded clipped: the History line
+    shows 300 characters, and a huge row could fail its create (review 5b)."""
+    if isinstance(v, str) and len(v) > _RECORD_MAX:
+        return v[: _RECORD_MAX - 1] + "…"
+    return v
 
 
 async def snapshot(client: Any, entity: str, record_id: str, attrs: Iterable[str]) -> dict[str, Any]:
@@ -177,7 +194,9 @@ def field_details(
     new values (ruling Q5.4) when the record was read after the write, else
     the field names alone — never a guess."""
     fields = [f for f in fields if not secret_field(f)]
-    if not after:
+    if not after or not before:
+        # Without both reads, which fields were sent is all that is known —
+        # never a guess that every field changed (review 5b).
         return sorted(f[:-2] if f.endswith("Id") else f for f in fields)
     return value_changes(before, after, fields)
 
@@ -355,15 +374,20 @@ def _row_changes(row: dict[str, Any], labels: dict[str, str]) -> tuple[list[dict
     changes: list[dict] = []
     names: set[str] = set()
     if isinstance(fields, dict):
+        recorded = True
         for name, v in fields.items():
             if secret_field(name) or not isinstance(v, dict):
                 continue
             names.add(name)
+            if "to" not in v:  # a link whose name did not come back
+                changes.append({"name": name, "field": _label(labels, name)})
+                recorded = False
+                continue
             changes.append({"name": name, "field": _label(labels, name),
                             "from": display_value(v.get("from")),
                             "to": display_value(v.get("to")),
                             "hasFrom": "from" in v})
-        return changes, True, names
+        return changes, recorded, names
     if isinstance(fields, list):
         for name in fields:
             if not isinstance(name, str) or secret_field(name):

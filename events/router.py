@@ -334,11 +334,9 @@ async def update_event(
 ) -> dict[str, Any]:
     user, client = await _actor(request)
     settings = get_settings()
-    # The changed fields as they stood, for the action history (Q5.4).
-    attrs = history.link_attrs(payload.changes)
-    was = await history.snapshot(client, cfg.EVENT, event_id, attrs)
     try:
-        before = await client.get(cfg.EVENT, event_id, select=cfg.PUBLIC_SELECT)
+        # A copy, so "before" still says what it said once the save is done.
+        before = dict(await client.get(cfg.EVENT, event_id, select=cfg.PUBLIC_SELECT) or {})
         event = await service.update_event(
             client, event_id, payload.changes, chapter_key=settings.chapter_key
         )
@@ -352,14 +350,16 @@ async def update_event(
     zoom = await sync_event_webinar(settings, client, event, previous=before)
 
     changed = sorted(payload.changes.keys())
-    now = await history.snapshot(client, cfg.EVENT, event_id, attrs)
+    # Old and new values (Q5.4): the record as read before the save and as
+    # the save returned it — before Zoom's own writes, which are not the
+    # person's. The form sends every field; only what moved is recorded.
+    moved = history.field_details(before or {}, event or {}, changed)
     await record_action(
         client, app=APP_EVENTS, category=CAT_RECORD_EDIT, action="Event Updated",
         parent_type=cfg.EVENT, parent_id=event_id,
         summary=f"Updated {', '.join(changed) or 'the event'}",
         actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
-        details={"fields": history.field_details(was, now, changed) if now else changed,
-                 "zoom": zoom.get("action")},
+        details={"fields": moved, "zoom": zoom.get("action")},
     )
     return {"event": service.public_event_detail(event), "raw": event, "zoom": zoom,
             "warnings": visibility.save_warnings(event)}

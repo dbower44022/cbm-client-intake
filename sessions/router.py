@@ -595,12 +595,15 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             if moved:
                 labels = await history.field_labels(client, entity)
                 names = moved if isinstance(moved, list) else list(moved)
-                await action_log.record_action(
-                    client, app=cfg.title, category=action_log.CAT_RECORD_EDIT,
+                # The action history only — no stream note: this save posted
+                # none before, and a new note on a contact a mentor also reads
+                # is a visible change no switch would gate (review 5b).
+                await action_log.log_action(
+                    app=cfg.title, category=action_log.CAT_RECORD_EDIT,
                     action=action_log.ACT_RECORD_EDITED,
                     parent_type=entity, parent_id=record_id,
                     summary="Saved " + ", ".join(
-                        labels.get(n) or n for n in names) + ".",
+                        history._label(labels, n) for n in names) + ".",
                     actor_id=user["userId"], actor_name=user["name"],
                     details={"fields": moved},
                 )

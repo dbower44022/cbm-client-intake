@@ -4,6 +4,8 @@ values (mentor login integrity step 5b; build prompt v0.6)."""
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -79,8 +81,9 @@ def test_field_details_values_when_read_back_else_names():
 # --- Partner and Funder Management; never Client Management ----------------------
 
 
-def test_the_tab_is_on_partner_and_funder_only():
-    assert "history" not in [t["key"] for t in _detail_tabs(PARTNER)]
+def test_no_tab_anywhere_while_the_switch_is_off():
+    for cfg in (PARTNER, SPONSOR, MENTOR):
+        assert "history" not in [t["key"] for t in _detail_tabs(cfg)]
 
 
 def test_the_tab_when_switched_on(monkeypatch):
@@ -127,7 +130,8 @@ def test_a_partner_details_save_records_old_and_new_values(monkeypatch):
         await client.update(entity, record_id, changes)
         return {"entity": entity, "id": record_id, "saved": list(changes)}
     monkeypatch.setattr("sessions.router.details_svc.save_details", save)
-    logged = _capture(monkeypatch, "sessions.router.action_log.record_action")
+    logged = _capture(monkeypatch, "sessions.router.action_log.log_action")
+    noted = _capture(monkeypatch, "sessions.router.action_log.record_action")
     with TestClient(_sessions_app(monkeypatch, crm)) as c:
         r = c.put("/partnersessions/api/details/CPartnerProfile/P1",
                   json={"changes": {"partnershipStatus": "Active"}})
@@ -136,6 +140,7 @@ def test_a_partner_details_save_records_old_and_new_values(monkeypatch):
     assert kw["details"] == {"fields": {"partnershipStatus": {"from": "Prospect", "to": "Active"}}}
     assert kw["summary"] == "Saved Partnership Status."
     assert kw["app"] == "Partner Management"
+    assert noted == [], "no stream note: the save posted none before (review 5b)"
 
 
 def test_a_client_management_details_save_is_not_recorded(monkeypatch):
@@ -144,7 +149,7 @@ def test_a_client_management_details_save_is_not_recorded(monkeypatch):
     async def save(client, entity, record_id, changes):
         return {"entity": entity, "id": record_id, "saved": list(changes)}
     monkeypatch.setattr("sessions.router.details_svc.save_details", save)
-    logged = _capture(monkeypatch, "sessions.router.action_log.record_action")
+    logged = _capture(monkeypatch, "sessions.router.action_log.log_action")
     with TestClient(_sessions_app(monkeypatch, crm)) as c:
         c.put("/mentorsessions/api/details/CEngagement/E1", json={"changes": {"meetingCadence": "Monthly"}})
     assert logged == []
@@ -225,6 +230,39 @@ def test_event_administration_tab_and_values(monkeypatch):
     with TestClient(app) as c:
         assert c.get("/events/api/session").json()["historyEnabled"] is False
         assert c.get("/events/api/events/ev1/history").status_code == 404
-        r = c.put("/events/api/events/ev1", json={"changes": {"name": "New title"}})
+        # The real form sends every field; only what moved is recorded.
+        r = c.put("/events/api/events/ev1", json={"changes": {
+            "name": "New title", "description": "Demystifying the dollar signs."}})
     assert r.status_code == 200, r.text
     assert logged[-1]["details"]["fields"] == {"name": {"from": "Old title", "to": "New title"}}
+
+
+# --- the 5b review's findings ---------------------------------------------------------
+
+
+def test_without_the_read_before_only_the_field_names_are_recorded():
+    after = {"name": "x", "description": "y"}
+    assert history.field_details({}, after, ["name", "description"]) == ["description", "name"]
+
+
+def test_a_link_without_its_name_is_recorded_by_field_never_by_id():
+    moved = history.value_changes({"referringPartnerId": "6a87e738294d32aac"},
+                                  {"referringPartnerId": "6a87e738294d32aad"},
+                                  ["referringPartnerId"])
+    assert moved == {"referringPartner": {}}
+    from core import action_log
+    row = {"createdAt": "2026-11-06 12:00:00", "actorName": "A", "summary": "s",
+           "category": action_log.CAT_RECORD_EDIT, "details": {"fields": moved}}
+    [ln] = history.merge([row], [], labels={}, key_user="")
+    assert ln["valuesRecorded"] is False and ln["changes"] == [{"field": "Referring Partner"}]
+
+
+def test_long_text_is_clipped_when_recorded():
+    moved = history.value_changes({"notes": "a"}, {"notes": "b" * 5000}, ["notes"])
+    assert len(moved["notes"]["to"]) == 2000
+
+
+def test_the_edit_button_stays_on_the_history_tab():
+    js = (Path(__file__).resolve().parent.parent / "assignments" / "frontend" / "app.js").read_text()
+    body = js[js.index("function showModalTab"):js.index("function showModalTab") + 900]
+    assert "modalViewActions" not in body, "action buttons are never hidden"

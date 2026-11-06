@@ -5,6 +5,34 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.313.2] — 2026-11-06
+
+**fix: old-and-new values, from the independent review of v0.312.0**
+(mentor login integrity step 5b). The review found no way to reach a
+History tab in Client Management.
+
+- **The Partner and Funder Details save posted a new stream note on every
+  save in production, whatever `RECORD_HISTORY_TAB` said** — on the
+  partner, its company or its contact, which a mentor may also read. It now
+  writes the action history only (`log_action`), as this save posted no
+  note before.
+- **The event save could record every field as changed**: the form sends
+  every field, and a failed read before the save made all of them look
+  new. It now compares the read it already made with the record the save
+  returns — before Zoom's own writes, so a Zoom join link is never
+  recorded as the person's change — and two extra reads are gone.
+  Generally, without both reads only the field names are recorded.
+- A link whose name does not come back is recorded by field, never by id;
+  long text is clipped to 2,000 characters when recorded; an unlabelled
+  field reads humanised in the summary.
+- The engagement popup's Edit button no longer hides on the History tab.
+
+Not changed, for Doug: Company and Contact edits made from a partner's
+Details tab are recorded on the company or contact, which have no History
+tab; and the ruling's "each mutating endpoint" is not yet met by presenter
+edits, contributions, grants and deliverables, co-manager changes and the
+close-date stamp (`OPEN-ITEMS.md` #66).
+
 ## [0.313.1] — 2026-11-06
 
 **fix: the activity page, from the independent review of v0.313.0**
