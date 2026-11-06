@@ -69,8 +69,10 @@ found; move resolved items to the bottom with the resolution date.
     told", true only once step 4b ships — enable after it).
     Steps 1 and 2 **pushed 11-05-26, live on crm-test and production at
     v0.305.0**, both switches off. (8) **step 3 built 11-05-26
-    (v0.306.0)**, committed, not pushed — `CBM_EMAIL_LOCK`, off. Next: steps 4–6 from
-    `prompts/mentor-login-integrity-build-prompt-v0.3.md`.
+    (v0.306.0)**, **pushed 11-05-26, live on crm-test and production at
+    v0.306.0** — `CBM_EMAIL_LOCK`, off. Next: step 4 (4a–4c) from
+    `prompts/mentor-login-integrity-build-prompt-v0.4.md`; steps 5–6 follow
+    in revision 0.5, which that session writes.
 
 65. **The email composer's new-contact row — three smaller faults**
     (2026-10-31, found on the #63 live pass). (1) ~~The row's Company
