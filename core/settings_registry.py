@@ -27,6 +27,7 @@ exists because "the flag is on but nothing happens" is usually this.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Literal, Optional
 
@@ -40,6 +41,10 @@ GROUP_EMAIL = "Email"
 GROUP_RELIABILITY = "Reliability"
 GROUP_GATES = "Team gates"
 GROUP_PRESENTATION = "Presentation"
+# The chapter website (prds/chapter-website-plan.md, decision 4.2): the values
+# the website shows, each set once. The chapter-wide values moved here from
+# Presentation under their existing keys, so nothing that reads them changed.
+GROUP_WEBSITE = "Website"
 # Read once while the process starts, so a change waits for a restart. Grouped
 # together rather than scattered, because the thing they share — "saving this
 # does not take effect yet" — is the thing a reader most needs told.
@@ -58,6 +63,7 @@ GROUP_ORDER = [
     GROUP_RELIABILITY,
     GROUP_GATES,
     GROUP_PRESENTATION,
+    GROUP_WEBSITE,
     GROUP_RESTART,
     GROUP_CONNECTION,
     GROUP_SECURITY,
@@ -226,6 +232,10 @@ SETTINGS: tuple[SettingSpec, ...] = (
        component="worker",
        help="The only time-driven follow-up. Needs the EventReminder template in "
             "the CRM; every send refuses by name until it exists."),
+    _s("website_api", GROUP_FEATURES, "Chapter website connection", kind="bool",
+       help="Serves the Website group's values, images and key pages to the "
+            "chapter website at /api/website/…. Public and unauthenticated by "
+            "design; off, those addresses answer 404. Read per request."),
     _s("campaigns_enabled", GROUP_FEATURES, "Marketing Management", kind="bool",
        component="both",
        help="The Marketing Management tile, the Prospects grid and import, the "
@@ -724,16 +734,16 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("sponsor_team_name", GROUP_GATES, "Funder team stamp"),
 
     # --- Presentation ------------------------------------------------------
-    _s("organization_name", GROUP_PRESENTATION, "Organisation name", component="both",
+    _s("organization_name", GROUP_WEBSITE, "Organisation name", component="both",
        help="The name every page carries — title, footer and the public forms' prose. "
             "Substituted server-side as it is served, so a change here takes effect on "
             "the next page load with no redeploy."),
-    _s("organization_abbreviation", GROUP_PRESENTATION, "Chapter acronym", component="both",
+    _s("organization_abbreviation", GROUP_WEBSITE, "Chapter acronym", component="both",
        help="The short form of the name, CBM for Cleveland. Every page, message and "
             "email that used to say CBM says this instead — \"ask CBM staff\", the "
             "\"CBM contacts\" table, the daily digest subject. Substituted as pages "
             "are served, so a change takes effect on the next page load."),
-    _s("chapter_postal_address", GROUP_PRESENTATION, "Chapter postal address", kind="text", component="web",
+    _s("chapter_postal_address", GROUP_WEBSITE, "Chapter postal address", kind="text", component="web",
        help="The chapter's mailing address, one or more lines. Every personal email a lead receives "
             "ends with the sentence offering a way to say no AND this address (the server appends "
             "both when the message lacks them). Empty, personal email is refused and the refusal "
@@ -742,17 +752,19 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="This chapter's short label in the chapter list of the CRM standard — "
             "cleveland, boston. Every public event's reach includes it. It must be "
             "one of the options of the event Chapters field, or the reach is left alone."),
-    _s("organization_logo_url", GROUP_PRESENTATION, "Organisation logo URL",
+    _s("organization_logo_url", GROUP_WEBSITE, "Organisation logo URL",
        help="A publicly-hosted https image (typically on the org's own website). "
             "Powers the email-signature editor's Insert-logo button — signature "
-            "images must be reachable without a login, which uploaded images are not."),
+            "images must be reachable without a login. The website uses the logo "
+            "uploaded under Website images below, and this address only when none "
+            "is uploaded."),
     _s("policy_client_conduct_url", GROUP_PRESENTATION, "Client code of conduct URL",
        help="Linked from the consent checkbox on the public forms."),
     _s("policy_mentor_ethics_url", GROUP_PRESENTATION, "Mentor code of ethics URL",
        help="The volunteer form's Code of Conduct link — a different document."),
     _s("policy_terms_url", GROUP_PRESENTATION, "Terms of use URL"),
     _s("policy_privacy_url", GROUP_PRESENTATION, "Privacy policy URL"),
-    _s("chapter_tokens_url", GROUP_PRESENTATION, "Chapter design-token override",
+    _s("chapter_tokens_url", GROUP_WEBSITE, "Chapter design-token override",
        help="URL of a stylesheet redefining --cbm-* custom properties on :root. "
             "Loaded after the base tokens; custom properties only, never selectors."),
     _s("env_label", GROUP_PRESENTATION, "Environment label",
@@ -768,10 +780,10 @@ SETTINGS: tuple[SettingSpec, ...] = (
     # v0.223.0 WITHOUT being registered here, so they landed in the catch-all
     # group and were read-only — a page's whole visible wording editable only by
     # an overlay edit, which is exactly what the 2026-08-28 ruling forbids.
-    _s("organization_website_url", GROUP_PRESENTATION, "Organisation website",
+    _s("organization_website_url", GROUP_WEBSITE, "Organisation website",
        help="The public site. Every /webinars/ page links back to it, and it is "
             "the base the menu below resolves its paths against."),
-    _s("organization_site_nav", GROUP_PRESENTATION, "Website menu",
+    _s("organization_site_nav", GROUP_WEBSITE, "Website menu",
        help="Reproduced across the top of the public pages so a visitor is not "
             "stranded. \"Label|path\" pairs, comma separated; a leading / is "
             "resolved against the website above. Empty renders no menu."),
@@ -790,6 +802,66 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="Who the \"Interested in Presenting or Hosting?\" panel writes to. "
             "Empty falls back to the shared mailbox; with both empty the panel "
             "carries no address rather than a dead link."),
+
+    # --- Website (prds/chapter-website-plan.md, piece A) -------------------
+    # What the Association's chapter connector reads from /api/website/settings.
+    # The name, acronym, postal address, logo address, website address, menu
+    # and token override above are part of this group too (decision 4.2).
+    _s("website_origins", GROUP_WEBSITE, "Chapter website addresses", kind="csv",
+       help="The chapter website's own addresses, such as https://example.org — "
+            "scheme and host only, comma separated. Only these may fetch the "
+            "website's content from a visitor's browser (the mentor search). "
+            "Separate from Allowed origins, which covers every address of this app."),
+    _s("website_color_base", GROUP_WEBSITE, "Colour — background",
+       help="The page background. A colour written #RRGGBB."),
+    _s("website_color_contrast", GROUP_WEBSITE, "Colour — text",
+       help="Body text and headings. A colour written #RRGGBB."),
+    _s("website_color_accent_1", GROUP_WEBSITE, "Colour — main brand",
+       help="Links, headings and the main buttons. A colour written #RRGGBB."),
+    _s("website_color_accent_2", GROUP_WEBSITE, "Colour — light brand tint",
+       help="A pale version of the main brand colour, for soft panels. #RRGGBB."),
+    _s("website_color_accent_3", GROUP_WEBSITE, "Colour — highlight",
+       help="The second brand colour: call-to-action buttons and key accents. #RRGGBB."),
+    _s("website_color_accent_4", GROUP_WEBSITE, "Colour — muted text",
+       help="Secondary text such as captions and dates. #RRGGBB."),
+    _s("website_color_accent_5", GROUP_WEBSITE, "Colour — light section background",
+       help="Bands and cards that sit on the page background. #RRGGBB."),
+    _s("website_color_accent_6", GROUP_WEBSITE, "Colour — borders",
+       help="Lines and borders. #RRGGBB."),
+    _s("website_font_heading", GROUP_WEBSITE, "Font — headings",
+       help="A font list as a stylesheet writes it, such as Georgia, serif. "
+            "Letters, digits, spaces, commas, quotes and hyphens only."),
+    _s("website_font_body", GROUP_WEBSITE, "Font — body text",
+       help="As for the heading font."),
+    _s("chapter_email", GROUP_WEBSITE, "Chapter contact email",
+       help="The one public contact address the website shows, in its footer and "
+            "on its Contact page."),
+    _s("chapter_phone", GROUP_WEBSITE, "Chapter telephone"),
+    _s("chapter_ein", GROUP_WEBSITE, "Employer identification number",
+       help="Shown in the website footer beside the 501(c)(3) statement. "
+            "Written 12-3456789."),
+    _s("chapter_payment_url", GROUP_WEBSITE, "Donation payment page",
+       help="The hosted payment page the website's Donate button opens, such as "
+            "a Stripe Payment Link. An https address."),
+    _s("chapter_social_links", GROUP_WEBSITE, "Social media addresses", kind="csv",
+       help="\"Label|https://…\" pairs, comma separated, such as "
+            "LinkedIn|https://www.linkedin.com/company/example."),
+    _s("website_page_mentors", GROUP_WEBSITE, "Key page — Find a Mentor", kind="bool",
+       help="Shows the mentor directory and profiles on the website, with their "
+            "menu entry. Refused until this release can serve the page."),
+    _s("website_page_events", GROUP_WEBSITE, "Key page — Workshops and Events", kind="bool",
+       help="Refused until this release can serve the page."),
+    _s("website_page_recordings", GROUP_WEBSITE, "Key page — Recordings", kind="bool",
+       help="Refused until this release can serve the page."),
+    _s("website_page_partners", GROUP_WEBSITE, "Key page — Our Partners", kind="bool",
+       help="Refused: partners on the website is a feature request owed to the "
+            "Association's committee."),
+    _s("website_page_sponsors", GROUP_WEBSITE, "Key page — Our Sponsors", kind="bool",
+       help="Refused: sponsors on the website is a feature request owed to the "
+            "Association's committee."),
+    _s("website_page_stories", GROUP_WEBSITE, "Key page — Client Stories", kind="bool",
+       help="Refused: client stories need recorded consent, a feature request "
+            "owed to the Association's committee."),
 
     # Integration credentials. A wrong one disables that integration and nothing
     # else, so the pre-flight check is the whole safety net. None is ever shown
@@ -954,6 +1026,78 @@ SETTINGS: tuple[SettingSpec, ...] = (
 )
 
 BY_KEY: dict[str, SettingSpec] = {s.key: s for s in SETTINGS}
+
+
+# --- the Website group's own rules (prds/chapter-website-plan.md) ------------
+
+#: Each key page's switch, by the page key the chapter connector uses.
+WEBSITE_PAGE_SWITCHES: dict[str, str] = {
+    "mentors": "website_page_mentors",
+    "events": "website_page_events",
+    "recordings": "website_page_recordings",
+    "partners": "website_page_partners",
+    "sponsors": "website_page_sponsors",
+    "stories": "website_page_stories",
+}
+
+#: The key pages this release can serve. WT-10: System Settings refuses to
+#: switch on any other, and the website is told it is off whatever is stored,
+#: so a menu never leads to "page not found". Piece B adds mentors, events and
+#: recordings. Partners, sponsors and stories are committee feature requests.
+WEBSITE_PAGES_SERVED: frozenset[str] = frozenset()
+
+_WEBSITE_PAGE_REFUSALS: dict[str, str] = {
+    "partners": "partners on the website is a feature request owed to the Association's committee",
+    "sponsors": "sponsors on the website is a feature request owed to the Association's committee",
+    "stories": "client stories need recorded consent, a feature request owed to the Association's committee",
+}
+
+_HEX = re.compile(r"^#[0-9A-Fa-f]{6}$")
+_FONT = re.compile(r"""^[A-Za-z0-9 ,'"\-]{1,200}$""")
+_EIN = re.compile(r"^\d{2}-\d{7}$")
+_EMAIL = re.compile(r"^[^@\s,;<>]+@[^@\s,;<>]+\.[^@\s,;<>]+$")
+_ORIGIN = re.compile(r"^https?://[A-Za-z0-9.-]+(:\d{1,5})?/?$")
+_TRUE = {"1", "true", "yes", "on"}
+
+
+def website_value_problem(key: str, value: str) -> Optional[str]:
+    """Why ``value`` is not acceptable for a Website key, or None.
+
+    Used on save (``settings_store.validate_value``) and again when the
+    settings are served, so a bad value in the deployment's own configuration
+    is dropped rather than handed to the website. Never raises."""
+    v = (value or "").strip()
+    page = next((p for p, k in WEBSITE_PAGE_SWITCHES.items() if k == key), None)
+    if page is not None:
+        if v.lower() in _TRUE and page not in WEBSITE_PAGES_SERVED:
+            return _WEBSITE_PAGE_REFUSALS.get(
+                page, "this release of the applications cannot serve that page yet")
+        return None
+    if not v:
+        return None
+    if key.startswith("website_color_"):
+        return None if _HEX.match(v) else "a colour is written #RRGGBB, such as #173B60"
+    if key.startswith("website_font_"):
+        return None if _FONT.match(v) else (
+            "a font list may hold letters, digits, spaces, commas, quotes and hyphens only")
+    if key == "chapter_ein":
+        return None if _EIN.match(v) else "an employer identification number is written 12-3456789"
+    if key == "chapter_email":
+        return None if _EMAIL.match(v) else "that is not an email address"
+    if key == "chapter_payment_url":
+        return None if v.startswith("https://") and " " not in v else "the payment page must be an https address"
+    if key == "website_origins":
+        bad = [o for o in (x.strip() for x in v.split(",")) if o and not _ORIGIN.match(o)]
+        return f"not a website address (scheme and host only): {', '.join(bad)}" if bad else None
+    if key == "chapter_social_links":
+        for pair in (x.strip() for x in v.split(",")):
+            if not pair:
+                continue
+            label, _, url = pair.partition("|")
+            if not label.strip() or not url.strip().startswith("https://"):
+                return f"each entry is Label|https://…, and this one is not: {pair}"
+        return None
+    return None
 
 
 def spec_for(key: str) -> Optional[SettingSpec]:

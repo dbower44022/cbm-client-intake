@@ -301,6 +301,99 @@ async def get_history(
     return {"history": await store.history(key, limit)}
 
 
+# --- Website images (prds/chapter-website-plan.md, decision 4.3) -------------
+# The logo and header graphic the chapter website shows. Uploaded here, stored
+# in the application database, served publicly at /api/website/images/{name}
+# while WEBSITE_API is on. The preview below is admin-only and works with the
+# switch off, so the images can be set before the website is connected.
+
+
+class ImageIn(BaseModel):
+    # A base64 string or a data: address. About 2.7 MB of text for a 2 MB file.
+    data: str = Field(default="", max_length=3_000_000)
+    reason: str = Field(default="", max_length=2000)
+
+
+def _website_store(request: Request):
+    return getattr(request.app.state, "website_store", None)
+
+
+async def _images_payload(request: Request) -> dict:
+    from website.images import IMAGE_NAMES
+
+    store = _website_store(request)
+    meta = await store.image_meta() if store is not None else {}
+    return {
+        "available": store is not None,
+        "images": [
+            {"name": name, "label": label, "set": name in meta, **(meta.get(name) or {})}
+            for name, label in IMAGE_NAMES.items()
+        ],
+    }
+
+
+def _image_name(name: str) -> str:
+    from website.images import IMAGE_NAMES
+
+    if name not in IMAGE_NAMES:
+        raise HTTPException(status_code=404, detail=f"There is no Website image called '{name}'.")
+    return name
+
+
+@router.get("/website/images")
+async def get_website_images(request: Request) -> dict:
+    _require_admin(request)
+    return await _images_payload(request)
+
+
+@router.get("/website/images/{name}")
+async def preview_website_image(name: str, request: Request) -> Response:
+    _require_admin(request)
+    store = _website_store(request)
+    image = await store.get_image(_image_name(name)) if store is not None else None
+    if image is None:
+        raise HTTPException(status_code=404, detail="No image has been uploaded.")
+    return Response(content=image["data"], media_type=image["contentType"],
+                    headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
+
+
+@router.put("/website/images/{name}")
+async def put_website_image(name: str, body: ImageIn, request: Request) -> dict:
+    from website.images import IMAGE_NAMES, ImageError, decode
+
+    user = _require_admin(request)
+    name = _image_name(name)
+    store = _website_store(request)
+    if store is None:
+        raise HTTPException(status_code=409, detail="Images need a database, and this deployment has none.")
+    try:
+        data, content_type = decode(body.data)
+    except ImageError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    meta = await store.put_image(name, data, content_type, actor=_actor(user))
+    await _log(user, "Website image uploaded",
+               f"{IMAGE_NAMES[name]} uploaded for the chapter website",
+               {"image": name, "contentType": content_type, "size": meta["size"],
+                "sha256": meta["sha256"], "reason": body.reason})
+    return await _images_payload(request)
+
+
+@router.delete("/website/images/{name}")
+async def delete_website_image(name: str, request: Request, body: Optional[ClearIn] = None) -> dict:
+    from website.images import IMAGE_NAMES
+
+    user = _require_admin(request)
+    name = _image_name(name)
+    store = _website_store(request)
+    if store is None:
+        raise HTTPException(status_code=409, detail="Images need a database, and this deployment has none.")
+    if await store.delete_image(name):
+        await _log(user, "Website image removed",
+                   f"{IMAGE_NAMES[name]} removed from the chapter website",
+                   {"image": name, "reason": (body.reason if body else "")})
+    return await _images_payload(request)
+
+
 @router.get("/readiness")
 async def get_readiness(request: Request) -> dict:
     _require_admin(request)

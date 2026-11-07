@@ -95,6 +95,46 @@ class Settings(BaseSettings):
     # Empty (the default) injects nothing at all.
     chapter_tokens_url: str = ""
 
+    # --- The chapter website (prds/chapter-website-plan.md, piece A) --------
+    # Read by the Association's chapter connector from GET /api/website/settings
+    # (Association rulings 32 and 45). WEBSITE_API switches the public
+    # addresses on, per request; off, they answer 404 as if absent.
+    website_api: bool = False
+    # The chapter website's own addresses (scheme + host, comma separated).
+    # Only these may fetch /api/website/* from a browser. Deliberately NOT
+    # `allowed_origins`, which applies to every address of the application.
+    website_origins: str = ""
+    # The website's eight colours, by the slugs the template's theme uses.
+    # The defaults are Cleveland's brand tokens (frontend/shared/tokens.css),
+    # like every other presentation default. Checked as #RRGGBB on save.
+    website_color_base: str = "#FFFFFF"
+    website_color_contrast: str = "#1E293B"
+    website_color_accent_1: str = "#173B60"
+    website_color_accent_2: str = "#E8EEF5"
+    website_color_accent_3: str = "#CB963B"
+    website_color_accent_4: str = "#7A7A7A"
+    website_color_accent_5: str = "#F0F5FA"
+    website_color_accent_6: str = "#D1D5DB"
+    website_font_heading: str = "Roboto, system-ui, -apple-system, sans-serif"
+    website_font_body: str = "Roboto, system-ui, -apple-system, sans-serif"
+    # The chapter-wide values of ruling 45 that no other setting already holds.
+    # The name, acronym and postal address are the settings above.
+    chapter_email: str = ""
+    chapter_phone: str = ""
+    chapter_ein: str = ""
+    chapter_payment_url: str = ""
+    # "Label|https://…" pairs, comma separated, like the website menu.
+    chapter_social_links: str = ""
+    # One switch per key page (ruling 32). Switching on a page the
+    # applications cannot yet serve is refused (WT-10,
+    # settings_registry.WEBSITE_PAGES_SERVED).
+    website_page_mentors: bool = False
+    website_page_events: bool = False
+    website_page_recordings: bool = False
+    website_page_partners: bool = False
+    website_page_sponsors: bool = False
+    website_page_stories: bool = False
+
     # The policy documents the consent checkbox links to on the public forms
     # (client-intake, volunteer, partner, sponsor). Substituted into
     # frontend/shared/legal-links.js as tokens, so a chapter points at its own
@@ -943,6 +983,11 @@ class Settings(BaseSettings):
     @property
     def allowed_origins_list(self) -> list[str]:
         return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
+
+    @property
+    def website_origins_list(self) -> list[str]:
+        """The chapter website's addresses, without a trailing slash."""
+        return [o.strip().rstrip("/") for o in self.website_origins.split(",") if o.strip()]
 
     @property
     def alert_email_to_list(self) -> list[str]:

@@ -69,7 +69,7 @@ Non-admins get a 403 that says so, and the portal tile does not appear for them.
 ### Settings tab
 
 Curated groups — Features, Integrations, Email, Reliability, Team gates,
-Presentation — with everything else visible read-only behind **Show all**.
+Presentation, Website — with everything else visible read-only behind **Show all**.
 
 Each row shows where its value came from:
 
@@ -98,6 +98,34 @@ reload the page, and it is there. Changing it back works the same way.
 Treat the policy URLs with more care than the rest — they are the documents a
 member of the public is told they are agreeing to, so a typo points consent at
 nothing.
+
+Since v0.314.0 the organisation name, the acronym, the postal address, the
+logo address, the website address and menu, and the design-token override sit
+in the **Website** group instead. Their setting keys did not change.
+
+### Website — what the chapter website shows
+
+The **Website** group (v0.314.0, `prds/chapter-website-plan.md`) holds every
+value the Association's chapter connector reads from
+`GET /api/website/settings`, each set once: the chapter-wide values above, the
+website's eight colours and two fonts, the contact email, telephone, employer
+identification number, donation payment page and social media addresses, and
+one switch per key page. Below the group's table, **Website images** uploads
+the logo and the header graphic (PNG, JPEG or WebP, up to 2 MB; SVG is refused
+because it can carry a script).
+
+- **Nothing is served until `Chapter website connection` (`WEBSITE_API`, in
+  Features) is on.** Off, every `/api/website/…` address answers 404. It is
+  read per request, so no restart.
+- **`Chapter website addresses` (`WEBSITE_ORIGINS`) names the website** that
+  may read these addresses from a visitor's browser. It is separate from
+  Allowed origins, which covers every address of the application.
+- **A key page this release cannot serve is refused** with the reason (WT-10).
+  Partners, sponsors and client stories are committee feature requests;
+  mentors, events and recordings arrive with the key pages themselves.
+- Each value is checked on save: colours as `#RRGGBB`, the employer
+  identification number as `12-3456789`, the payment page and social media
+  addresses as https.
 
 ### What this page cannot switch on
 

@@ -1,6 +1,6 @@
 # Changing a chapter's colours
 
-Last Updated: 10-07-26 03:48 · Revision 1.0 — see the change log at the end.
+Last Updated: 11-07-26 11:41 · Revision 1.1 — see the change log at the end.
 
 A deployment's colours come from one small stylesheet, called **the colour
 file**, that the chapter hosts on the web. The setting `CHAPTER_TOKENS_URL`
@@ -147,7 +147,7 @@ change on crm-test survives the nightly reset. The deployment addresses are:
    organization exactly what you see.
 2. On the Settings tab of the System Settings page, click the **Filter
    settings…** box and type `design-token`. You should see one row, **Chapter
-   design-token override**, under the heading Presentation, with the chip
+   design-token override**, under the heading Website, with the chip
    **Default**.
 3. On that row, click the name **Chapter design-token override**. You should
    see a dialog titled **Change setting**.
@@ -219,7 +219,8 @@ makes every browser fetch the new colours at once.
   after the `/shared/tokens.css` link on every served page. A page that does
   not load the design tokens gets no link.
 - The setting is `chapter_tokens_url` (`core/config.py`), editable at `/setup`
-  in the Presentation group (`core/settings_registry.py`). It is read per
+  in the Website group (`core/settings_registry.py`; it moved there from
+  Presentation in v0.314.0, key unchanged). It is read per
   request, so no restart is needed.
 - `core/branding.brand_key` includes the address, so changing the address
   drops the rendered-page cache and its ETags. Changing the *contents* of the
@@ -236,4 +237,5 @@ makes every browser fetch the new colours at once.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 11-07-26 11:41 | Claude (Claude Code) | The setting is now in the Website group of System Settings, not Presentation (v0.314.0, plan decision 4.2). |
 | 1.0 | 10-07-26 03:48 | Claude (Claude Code) | First version, from the colour sweep of 09-29-26 against v0.232.0. Chosen by Doug over a tokens.css fix for the second-rank hover colour, which is still owed. |

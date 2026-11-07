@@ -40,6 +40,7 @@
   }
 
   var RESTART_GROUP = "Restart required";
+  var WEBSITE_GROUP = "Website";
 
   function showMessage(msg) {
     $("bodyView").hidden = true;
@@ -189,9 +190,12 @@
       html += '<section class="su__group"><h2 class="su__h2">' + esc(group.name) + "</h2>"
             + groupNote(group.name)
             + '<table class="su__table su__table--settings">' + SETTINGS_HEAD + "<tbody>"
-            + rows.map(settingRow).join("") + "</tbody></table></section>";
+            + rows.map(settingRow).join("") + "</tbody></table>"
+            + (group.name === WEBSITE_GROUP ? '<div id="websiteImages" class="su__images"></div>' : "")
+            + "</section>";
     });
     $("groups").innerHTML = html || '<p class="su__hint">Nothing matches that filter.</p>';
+    renderWebsiteImages();
     Array.prototype.forEach.call($("groups").querySelectorAll("table"), function (t) {
       fitGrid(t, "setup.settings");
     });
@@ -768,6 +772,108 @@
     if (name === "history") loadHistory().catch(function () {});
   }
 
+  /* ---------- Website images (prds/chapter-website-plan.md, decision 4.3) ----------
+   * The logo and header graphic the chapter website shows. Each has an Upload
+   * and a Remove button, never disabled: a click with nothing to act on says
+   * why. The preview is admin-only and works before the website is connected. */
+  var websiteImages = null;
+  var websiteImagesNote = {};
+
+  function imageCard(img) {
+    var note = websiteImagesNote[img.name];
+    var preview = img.set
+      ? '<img class="su__imgpreview" alt="' + esc(img.label) + '" src="' + API + "/website/images/"
+        + encodeURIComponent(img.name) + "?v=" + esc((img.sha256 || "").slice(0, 12)) + '">'
+      : '<div class="su__imgempty">No image uploaded</div>';
+    var facts = img.set
+      ? esc(img.contentType) + " \u00b7 " + Math.ceil((img.size || 0) / 1024) + " KB"
+        + (img.updatedBy ? " \u00b7 by " + esc(img.updatedBy) : "")
+      : "PNG, JPEG or WebP, up to 2 MB.";
+    return '<div class="su__imgcard">'
+      + '<div class="su__imgname">' + esc(img.label) + "</div>" + preview
+      + '<div class="su__hint">' + facts + "</div>"
+      + '<div class="su__imgactions">'
+      + '<button type="button" class="cbm-button cbm-button--secondary" data-img-upload="' + esc(img.name) + '">Upload\u2026</button> '
+      + '<button type="button" class="cbm-button cbm-button--secondary" data-img-remove="' + esc(img.name) + '">Remove</button>'
+      + "</div>"
+      + (note ? '<p class="' + (note.error ? "form-error" : "su__hint") + '">' + esc(note.text) + "</p>" : "")
+      + '<input type="file" accept="image/png,image/jpeg,image/webp" hidden data-img-file="' + esc(img.name) + '">'
+      + "</div>";
+  }
+
+  function renderWebsiteImages() {
+    var box = $("websiteImages");
+    if (!box) return;
+    if (!websiteImages) { box.innerHTML = '<p class="su__hint">Loading the website images\u2026</p>'; return; }
+    if (websiteImagesNote._all) {
+      box.innerHTML = '<p class="form-error">The website images could not be read: ' + esc(websiteImagesNote._all.text) + "</p>";
+      return;
+    }
+    if (!websiteImages.available) {
+      box.innerHTML = '<p class="su__note">Website images need a database, and this deployment has none.</p>';
+      return;
+    }
+    box.innerHTML = '<h3 class="su__h3">Website images</h3>'
+      + '<p class="su__note">The logo appears beside the website\u2019s name; the header graphic '
+      + "under its header \u2014 tall on the home page, a narrow strip on other pages.</p>"
+      + '<div class="su__imggrid">' + websiteImages.images.map(imageCard).join("") + "</div>";
+  }
+
+  async function loadWebsiteImages() {
+    try {
+      websiteImages = await api("/website/images");
+      delete websiteImagesNote._all;
+    } catch (e) {
+      websiteImages = { available: true, images: [] };
+      websiteImagesNote._all = { error: true, text: e.message };
+    }
+    renderWebsiteImages();
+  }
+
+  function findImage(name) {
+    return ((websiteImages && websiteImages.images) || []).filter(function (i) { return i.name === name; })[0];
+  }
+
+  function uploadImage(input) {
+    var name = input.dataset.imgFile;
+    var file = input.files && input.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      websiteImagesNote[name] = { error: true, text: "That file is larger than 2 MB. Save it smaller and try again." };
+      renderWebsiteImages();
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = async function () {
+      try {
+        websiteImages = await api("/website/images/" + encodeURIComponent(name), {
+          method: "PUT", body: JSON.stringify({ data: reader.result }),
+        });
+        websiteImagesNote[name] = { error: false, text: "Uploaded. The website shows it within a few minutes." };
+      } catch (e) {
+        websiteImagesNote[name] = { error: true, text: e.message };
+      }
+      renderWebsiteImages();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function removeImage(name) {
+    var img = findImage(name);
+    if (!img || !img.set) {
+      websiteImagesNote[name] = { error: true, text: "There is no image to remove." };
+      renderWebsiteImages();
+      return;
+    }
+    try {
+      websiteImages = await api("/website/images/" + encodeURIComponent(name), { method: "DELETE" });
+      websiteImagesNote[name] = { error: false, text: "Removed." };
+    } catch (e) {
+      websiteImagesNote[name] = { error: true, text: e.message };
+    }
+    renderWebsiteImages();
+  }
+
   async function boot() {
     try {
       var page = await busyOver($("bodyView").hidden ? null : $("bodyView"), api("/settings"));
@@ -783,6 +889,7 @@
       "This deployment: " + state.page.environment
       + (state.page.writable ? "" : " · read-only (no database attached)"));
     renderAll();
+    loadWebsiteImages();
     if (announceMailingOutcome() || window.location.hash === "#readiness") selectTab("readiness");
   }
 
@@ -796,10 +903,19 @@
     if (t.dataset && t.dataset.copy) { copyText(t.dataset.copy, t); return; }
     if (t.dataset && t.dataset.mailingDisconnect) { disconnectMailing(t); return; }
     if (t.dataset && t.dataset.mailingConnect) { connectMailing(ev); return; }
+    if (t.dataset && t.dataset.imgUpload) {
+      var input = document.querySelector('input[data-img-file="' + t.dataset.imgUpload + '"]');
+      if (input) { input.value = ""; input.click(); }
+      return;
+    }
+    if (t.dataset && t.dataset.imgRemove) { removeImage(t.dataset.imgRemove); return; }
     if (t.classList && t.classList.contains("su__tab")) { selectTab(t.dataset.tab); return; }
   });
 
   document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("change", function (ev) {
+      if (ev.target && ev.target.dataset && ev.target.dataset.imgFile) uploadImage(ev.target);
+    });
     $("filterBox").addEventListener("input", renderSettings);
     $("onlyOverridden").addEventListener("change", renderSettings);
     $("reloadBtn").addEventListener("click", boot);

@@ -1,10 +1,10 @@
 # Chapter website — the applications' side
 
 **Document:** Plan for the chapter applications' side of the chapter website
-**Version:** 0.2
-**Status:** Decisions answered — awaiting Doug's approval of the plan and its stopping points (section 6)
+**Version:** 0.3
+**Status:** Approved 11-07-26; piece A built, at Stop 2
 **Owner:** Doug Bower
-**Last Updated:** 11-07-26 11:28
+**Last Updated:** 11-07-26 11:41
 
 ---
 
@@ -97,7 +97,7 @@ Recommended: **A**, because ruling 33 and WT-44 require every class to start wit
 
 Each piece has its own feature flag, off by default and read per request.
 
-**A. The Website group and its settings address.** Flag `WEBSITE_API`.
+**A. The Website group and its settings address.** Flag `WEBSITE_API`. **Built in v0.314.0 (11-07-26), awaiting review at Stop 2.**
 `GET /api/website/settings` returns the stand-in's shape: `version`, `colors`, `fonts`, the logo, `chapter` (name, abbreviation, email, phone, address, employer identification number, social media addresses, payment link), `headerImage` and `pages`. The `version` field is the contract version. It goes up only when a field changes meaning or is removed. New fields are added without a version change, and the chapter connector ignores fields it does not know. System Settings refuses to switch on `partners`, `sponsors` and `stories` (finding 6). A new setting, `WEBSITE_ORIGINS`, names the chapter website's addresses. It is used for CORS on `/api/website/*` only, and for the framing allow-list in piece C.
 
 **B. The key page content.** Flag `WEBSITE_API`.
@@ -113,6 +113,7 @@ Each piece has its own feature flag, off by default and read per request.
 - The frame-sizing script inside every public form, posting only to the website addresses named in `WEBSITE_ORIGINS` (the prototype's script posts to every address).
 - Embed styles, used when the form is opened with `?embed=1`: the form's `--cbm-*` colour and font variables mapped to the Website settings, and the form's own heading, footer and background hidden (WT-56b).
 - A link that opens the same form full-screen (WT-58).
+- The `--cbm-*` stylesheet built from the Website colours (decision 4.2). It applies to framed forms first; applying it to the applications' own pages would change Cleveland's production colours, so that waits for its own switch.
 
 **D. Campaigns through the website.** Flag `WEBSITE_CAMPAIGNS`.
 - A campaign link may name a website page as its destination. The page must be under an address in `WEBSITE_ORIGINS`, so the link cannot send a visitor to an arbitrary website. The redirect adds the campaign tag decided in 4.1.
@@ -160,5 +161,6 @@ Work pauses for Doug's go-ahead at each stop. Between two stops it proceeds with
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.3 | 11-07-26 11:41 | Claude (Claude Code) | Doug approved the plan. Piece A built (v0.314.0). The Website colours reach the applications' own pages only through piece C, so Cleveland's production colours do not change. |
 | 0.2 | 11-07-26 11:28 | Claude (Claude Code) | Doug answered decisions 4.1 to 4.5, each option A: the campaign link token, the Website group takes over the chapter-wide values, logo and header graphic uploaded in System Settings, button placement on the lead record, fresh `cmw-` mentor content. Stop 1 complete. |
 | 0.1 | 11-07-26 11:25 | Claude (Claude Code) | First draft, from the kickoff prompt version 1.2 and a reading of this repository, the Association repository and the prototype. |

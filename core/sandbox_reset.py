@@ -117,6 +117,9 @@ KEEP_TABLES: frozenset[str] = frozenset(
         # The mailing service's OAuth2 connection (Phase C). A connection lost
         # every night would be no connection; the tokens are ciphertext.
         "mailing_connection",
+        # The chapter website's logo and header graphic, uploaded in System
+        # Settings — configuration like the settings beside them.
+        "website_image",
     }
 )
 

@@ -1145,7 +1145,7 @@ ordered do-this-next list for the grant build on crm-test.
   (public website) and the email signature (email recipients) — their
   audiences can't reach the proxy. The signature's sanctioned alternative is
   the **Insert-logo button** (`opts.logo`), which places the publicly-hosted
-  `ORGANIZATION_LOGO_URL` image (per-chapter, `/setup` → Presentation); with
+  `ORGANIZATION_LOGO_URL` image (per-chapter, `/setup` → Website); with
   the setting empty the button stays visible and explains itself.
 - **Every postal-address form wires the shared paste-parser**
   (`frontend/shared/address-paste.js` + `.css`): paste a whole address into the

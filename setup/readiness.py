@@ -45,6 +45,13 @@ class Feature:
 
 FEATURES: tuple[Feature, ...] = (
     Feature(
+        key="website", name="Chapter website connection", flag="website_api", component="web",
+        requires=("website_origins",),
+        note="Public by design: serves the Website group, its images and the key pages at "
+             "/api/website/…. Chapter website addresses decides which website may run the "
+             "mentor search from a visitor's browser. Images need a database.",
+    ),
+    Feature(
         key="analytics", name="Analytics", flag="analytics_enabled", component="both",
         note="Mount-time — a change needs a redeploy. Cached results need a database.",
     ),

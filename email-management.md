@@ -249,7 +249,7 @@ arrive as a broken picture) and instead offers an **Insert logo** button — the
 picture icon at the right end of its toolbar. One click places the official
 logo, which is hosted on the public website; an administrator points the app
 at it once with **Organisation logo URL** on the System Settings page
-(`/setup` → Presentation). Some mail programs hide remote images until the
+(`/setup` → Website). Some mail programs hide remote images until the
 reader clicks "show images" — that is normal for every URL-based logo, not
 something specific to ours.
 

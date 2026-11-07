@@ -5,6 +5,44 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.314.0] — 2026-11-07
+
+**feat: the chapter website's settings — piece A of `prds/chapter-website-plan.md`.**
+Built dark: `WEBSITE_API` is off by default, and while it is off every new
+public address answers 404.
+
+- **A Website group in System Settings** (decision 4.2). The organisation
+  name, acronym, postal address, logo address, website address, website menu
+  and design-token override moved there from Presentation. Their keys did not
+  change, so nothing that reads them changed. The group adds:
+  - the website's eight colours and two fonts;
+  - the chapter's contact email, telephone, employer identification number,
+    donation payment page and social media addresses;
+  - one switch per key page.
+
+  Each value is checked on save.
+- **A key page this release cannot serve is refused on save**, with the reason
+  (WT-10). In this release that is every page. It also reads off in what the
+  website receives, whatever is stored.
+- **`GET /api/website/settings`** answers in the shape the Association's chapter
+  connector already reads (contract version 1). A value that fails its check
+  is left out rather than passed on.
+- **The logo and header graphic are uploaded in System Settings** (decision 4.3),
+  stored in the new `website_image` table (migration 0042, kept by the sandbox
+  reset) and served at `/api/website/images/{logo|header}`. Only PNG, JPEG and
+  WebP up to 2 MB are accepted, checked by the file's own bytes. SVG is refused,
+  because it can carry a script. When no logo is uploaded, the hosted
+  Organisation logo URL is used instead.
+- **`WEBSITE_ORIGINS`** names the chapter website. Only that website may read
+  `/api/website/…` from a visitor's browser. The website is never added to
+  `allowed_origins`, which covers every address of the application.
+- A Feature readiness row for the connection.
+
+Not in this release: applying the Website colours to the applications' own
+pages and forms. Doing that now would change Cleveland's production colours,
+so it comes with the framed forms (piece C), behind that piece's switch.
+
+
 ## [0.313.2] — 2026-11-06
 
 **fix: old-and-new values, from the independent review of v0.312.0**

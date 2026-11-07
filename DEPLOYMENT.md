@@ -390,7 +390,7 @@ existing deployment needs no action; a deployment for anyone else sets these:
 | `POLICY_PRIVACY_URL` | `…/privacy-policy/` | Consent checkbox link |
 | `OPS_MAILBOX_NAME` | *(empty ⇒ `ORGANIZATION_NAME`)* | From display name on shared-identity sends |
 
-All are on **`/setup`** (Presentation group), so they can be set without an
+All are on **`/setup`** (the policy addresses in the Presentation group, the name and acronym in the Website group), so they can be set without an
 overlay edit, and all take effect on the **next page load** — the substitution
 happens as the page is served and re-reads settings per request.
 

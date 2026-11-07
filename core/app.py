@@ -674,6 +674,10 @@ def create_app(
     from core.mailing import make_connection_store
 
     app.state.mailing_store = make_connection_store(settings)
+    # The chapter website's logo and header graphic (prds/chapter-website-plan.md).
+    from website.store import make_website_store
+
+    app.state.website_store = make_website_store(settings)
     if settings.setup_active:
         from setup.jobs import make_job_store
 
@@ -1111,6 +1115,11 @@ def create_app(
     from campaigns.public import public_router as campaigns_public_router
 
     app.include_router(campaigns_public_router)
+    # The chapter website's public addresses (/api/website/…). Always included;
+    # each answers 404 per request while WEBSITE_API is off.
+    from website import public_router as website_public_router
+
+    app.include_router(website_public_router)
     # The postcard landing page /p/{token} and its response, over the same
     # durable pipeline as every form (the card's token comes from the URL).
     # Both answer 404 per request until CAMPAIGNS_LANDING_PUBLIC is on.

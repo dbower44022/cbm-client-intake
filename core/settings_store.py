@@ -44,7 +44,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from . import config as config_module
 from .config import Settings
-from .settings_registry import DENYLIST, is_editable
+from .settings_registry import DENYLIST, is_editable, website_value_problem
 from .store import make_async_engine, metadata
 
 log = logging.getLogger("cbm_intake.settings")
@@ -192,6 +192,9 @@ def validate_value(key: str, value: str) -> None:
         )
     if not is_editable(key):
         raise SettingsError(f"'{key}' is not an editable setting.")
+    problem = website_value_problem(key, value)
+    if problem:
+        raise SettingsError(f"'{value}' is not a valid value for {key}: {problem}.")
     try:
         Settings(**{**config_module.env_values(), key: value})
     except Exception as exc:  # noqa: BLE001 — surfaced to the user verbatim
