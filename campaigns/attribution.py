@@ -162,8 +162,12 @@ async def valid_campaign(client: EspoApi, campaign_id: Optional[str], *, entity:
     None, with the reason logged. Never raises."""
     if not campaign_id:
         return None
-    if not await link_available(client, entity, CAMPAIGN_LINK):
-        log.warning("campaign %r dropped: %s has no %s link on this CRM", campaign_id, entity, CAMPAIGN_LINK)
+    # On Contact and Account — native entities — the CRM stores the link with
+    # the c prefix. The newsletter form is the first whose only record is a
+    # Contact (v0.317.1: checking the unprefixed name dropped every campaign).
+    link = NATIVE_CAMPAIGN_LINK if entity in ("Contact", "Account") else CAMPAIGN_LINK
+    if not await link_available(client, entity, link):
+        log.warning("campaign %r dropped: %s has no %s link on this CRM", campaign_id, entity, link)
         return None
     try:
         row = await client.get(cfg.CAMPAIGN, campaign_id, select="id,name,campaignStatus")

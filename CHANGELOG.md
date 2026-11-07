@@ -5,6 +5,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.317.1] — 2026-11-07
+
+**fix: a newsletter signup lost its campaign.** Found on crm-test at Stop 5 of
+`prds/chapter-website-plan.md`. The capture lookup worked: the link token
+arrived at delivery as the right campaign. Delivery then checked Contact for
+the campaign link under its custom-entity name, `outreachCampaign`, but on
+Contact and Account the CRM stores it as `cOutreachCampaign`. So it dropped
+the campaign, logging "Contact has no outreachCampaign link". The newsletter
+form is the first public form whose only record is a Contact.
+`attribution.valid_campaign` now checks the prefixed name on native entities.
+A new test covers this.
+
+
 ## [0.317.0] — 2026-11-07
 
 **feat: campaigns through the chapter website, and the newsletter signup form —

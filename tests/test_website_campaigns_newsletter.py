@@ -232,6 +232,15 @@ async def test_a_new_subscriber_is_a_prospect_with_consent():
 
 
 @pytest.mark.asyncio
+async def test_a_new_subscriber_carries_the_campaign():
+    """Found on crm-test at Stop 5 (11-07-26): the delivery checked Contact for
+    the unprefixed campaign link and dropped every campaign."""
+    crm = _crm()
+    await submit_signup(_signup(campaign_id="camp-1"), crm)
+    assert crm.created("Contact")[0]["cOutreachCampaignId"] == "camp-1"
+
+
+@pytest.mark.asyncio
 async def test_a_known_person_gains_consent_and_keeps_their_details():
     crm = _crm()
     crm.add("Contact", {"id": "c-9", "emailAddress": "ada@example.org", "firstName": "Augusta",
