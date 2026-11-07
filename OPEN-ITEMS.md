@@ -6,6 +6,22 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+72. **The chapter website: what is owed outside this repository, and before
+    production** (2026-11-07, `prds/chapter-website-plan.md`). (1) **Before
+    `FORM_FRAMING` is switched on in production**, Cleveland's website must
+    be in `WEBSITE_ORIGINS`: it frames three production forms today
+    (`/contact/` the information request form, `/request-mentor/` and
+    `/qr-code-marketing/` the client intake form, all at
+    `cbm-client-intake-prod-a9li7.ondigitalocean.app`). Without it those pages
+    go blank. (2) **The chapter connector needs two one-line changes** in
+    `~/Dropbox/Projects/chapter-website-prototype`: carry the campaign as
+    `link=` (decision 4.1) and add `embed=1` to every frame's address.
+    (3) **Event registration is not framed yet**: the events key page sends a
+    visitor to the applications' own `/webinars/` page (ruling 42 asks for a
+    frame). (4) **crm-test's settings carry the review switches**
+    (`WEBSITE_API`, three `WEBSITE_PAGE_*`, `WEBSITE_ORIGINS=http://localhost:8080`);
+    remove `WEBSITE_ORIGINS`'s local address once the test website is live.
+
 71. **Training on the CRM's own screens, and the block revisited**
     (2026-11-05, Doug's ruling Q6.1). Ten-odd staff work in the CRM's own
     screens (`scripts/crm_direct_use_report.sh`, production, 11-04-26).

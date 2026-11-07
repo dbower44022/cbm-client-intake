@@ -45,6 +45,12 @@ class Feature:
 
 FEATURES: tuple[Feature, ...] = (
     Feature(
+        key="form_framing", name="Forms in website frames", flag="form_framing", component="web",
+        requires=("website_origins",),
+        note="Every website that frames a form must be in Chapter website addresses "
+             "first, or its forms go blank. Cleveland's website frames three forms.",
+    ),
+    Feature(
         key="website", name="Chapter website connection", flag="website_api", component="web",
         requires=("website_origins",),
         note="Public by design: serves the Website group, its images and the key pages at "

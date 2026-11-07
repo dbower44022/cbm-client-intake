@@ -92,3 +92,38 @@ def settings_payload(settings: Settings, images: dict[str, dict[str, Any]], base
             for page, key in WEBSITE_PAGE_SWITCHES.items()
         },
     }
+
+
+def embed_css(settings: Settings) -> str:
+    """The styles a form opened with ``?embed=1`` takes (WT-56b, decision 4.2):
+    the form's ``--cbm-*`` colours and fonts set from the Website group, and
+    its own heading, footer and background dropped, because the website page
+    supplies them. The mapping is the prototype's, proven against the real
+    forms. Values that fail their check are left out, so the form keeps its
+    own colour for that slot rather than receiving a broken one."""
+    c = {slug: _clean(settings, key) for slug, key in COLOR_SLUGS.items()}
+    heading = _clean(settings, "website_font_heading")
+    body = _clean(settings, "website_font_body")
+    pairs = [
+        ("--cbm-navy", c["accent-1"]), ("--cbm-blue", c["accent-1"]),
+        ("--cbm-blue-dark", c["contrast"]), ("--cbm-gold", c["accent-3"]),
+        ("--cbm-surface", c["accent-5"]), ("--cbm-border", c["accent-6"]),
+        ("--cbm-text", c["accent-4"]), ("--cbm-slate-900", c["contrast"]),
+        ("--cbm-ink", c["contrast"]),
+        ("--cbm-font-heading", heading), ("--cbm-font-serif", heading),
+        ("--cbm-font-body", body), ("--cbm-font-button", body),
+    ]
+    tokens = " ".join(f"{name}: {value};" for name, value in pairs if value)
+    return (
+        "/* Embedded form styles, built from System Settings → Website. */\n"
+        f":root {{ {tokens} }}\n"
+        "html, body { background: transparent !important; }\n"
+        "body { padding: 0 !important; overflow: hidden; }\n"
+        ".cbm-container { max-width: none !important; margin: 0 !important; "
+        "padding-left: 0 !important; padding-right: 0 !important; }\n"
+        ".intake { padding-top: 0 !important; }\n"
+        ".intake__header h1 { display: none; }\n"
+        ".intake__header { text-align: left !important; }\n"
+        ".intake__sub { margin-left: 0 !important; }\n"
+        ".cbm-footer { display: none; }\n"
+    )

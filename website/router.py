@@ -12,6 +12,7 @@ which would open every staff address to the chapter website (plan finding 5).
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 from pathlib import Path
@@ -25,7 +26,7 @@ from core.espo import EspoError
 
 from . import content
 from .images import IMAGE_NAMES
-from .service import settings_payload
+from .service import embed_css, settings_payload
 
 log = logging.getLogger("cbm_intake.website")
 
@@ -255,3 +256,29 @@ async def search_js(request: Request) -> FileResponse:
     _active(request)
     return FileResponse(_STATIC / "search.js", media_type="text/javascript",
                         headers={"Cache-Control": f"public, max-age={IMAGE_MAX_AGE}"})
+
+
+# --- forms in frames (plan piece C) ----------------------------------------------
+# Loaded by every public form page, whatever the switches say, so each answers
+# 200 with nothing in it while FORM_FRAMING is off — never a 404 in the
+# visitor's console.
+
+_FRAME_JS = (_STATIC / "frame.js").read_text(encoding="utf-8")
+
+
+@assets_router.get("/frame.js")
+async def frame_js() -> Response:
+    settings = get_settings()
+    body = "/* Forms in website frames is off. */\n"
+    if settings.form_framing:
+        body = _FRAME_JS.replace("__ORIGINS__", json.dumps(settings.website_origins_list))
+    return Response(content=body, media_type="text/javascript",
+                    headers={"Cache-Control": f"public, max-age={SETTINGS_MAX_AGE}"})
+
+
+@assets_router.get("/embed.css")
+async def embed_stylesheet() -> Response:
+    settings = get_settings()
+    body = embed_css(settings) if settings.form_framing else "/* Forms in website frames is off. */\n"
+    return Response(content=body, media_type="text/css",
+                    headers={"Cache-Control": f"public, max-age={SETTINGS_MAX_AGE}"})

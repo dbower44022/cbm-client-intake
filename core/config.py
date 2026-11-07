@@ -100,6 +100,10 @@ class Settings(BaseSettings):
     # (Association rulings 32 and 45). WEBSITE_API switches the public
     # addresses on, per request; off, they answer 404 as if absent.
     website_api: bool = False
+    # Forms in frames (piece C, ruling 42): the frame allow-list on the public
+    # form pages, the frame-sizing script and the embed styles. Off, nothing
+    # changes for any site that frames a form today. Read per request.
+    form_framing: bool = False
     # The chapter website's own addresses (scheme + host, comma separated).
     # Only these may fetch /api/website/* from a browser. Deliberately NOT
     # `allowed_origins`, which applies to every address of the application.

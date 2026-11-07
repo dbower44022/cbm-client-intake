@@ -83,6 +83,19 @@
         sel.appendChild(o);
       });
       field.hidden = false;
+      // A website's "Request <mentor> as your mentor" button (chapter website
+      // plan, piece C) arrives as ?mentor=<the mentor's page name, or id>.
+      // Preselect that mentor when they are on the roster; an unknown or
+      // stale value leaves the dropdown unselected, never an error.
+      const wanted = (function () {
+        try { return (new URLSearchParams(window.location.search).get("mentor") || "").trim().toLowerCase(); }
+        catch (e) { return ""; }
+      })();
+      if (wanted) {
+        const pageName = (name) => String(name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+        const match = mentors.find((m) => String(m.id).toLowerCase() === wanted || pageName(m.name) === wanted);
+        if (match) sel.value = match.id;
+      }
     })
     .catch(() => {
       /* roster unavailable — the field stays hidden, the form works as before */

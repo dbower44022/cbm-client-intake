@@ -1,10 +1,10 @@
 # Chapter website — the applications' side
 
 **Document:** Plan for the chapter applications' side of the chapter website
-**Version:** 0.4
-**Status:** Approved 11-07-26; piece A reviewed; piece B built, at Stop 3
+**Version:** 0.5
+**Status:** Approved 11-07-26; pieces A and B reviewed; piece C built, at Stop 4
 **Owner:** Doug Bower
-**Last Updated:** 11-07-26 12:35
+**Last Updated:** 11-07-26 14:06
 
 ---
 
@@ -100,7 +100,7 @@ Each piece has its own feature flag, off by default and read per request.
 **A. The Website group and its settings address.** Flag `WEBSITE_API`. **Built in v0.314.0; passed Stop 2 on crm-test 11-07-26.**
 `GET /api/website/settings` returns the stand-in's shape: `version`, `colors`, `fonts`, the logo, `chapter` (name, abbreviation, email, phone, address, employer identification number, social media addresses, payment link), `headerImage` and `pages`. The `version` field is the contract version. It goes up only when a field changes meaning or is removed. New fields are added without a version change, and the chapter connector ignores fields it does not know. System Settings refuses to switch on `partners`, `sponsors` and `stories` (finding 6). A new setting, `WEBSITE_ORIGINS`, names the chapter website's addresses. It is used for CORS on `/api/website/*` only, and for the framing allow-list in piece C.
 
-**B. The key page content.** Flag `WEBSITE_API`, plus each page's own switch. **Built in v0.315.0 (11-07-26), at Stop 3.** The search filters a cached roster, so it needs no rate limit (finding 10). `?mentor=<slug>` on the request button is not yet read by the intake form; that belongs with piece C.
+**B. The key page content.** Flag `WEBSITE_API`, plus each page's own switch. **Built in v0.315.0; passed Stop 3 through the local prototype 11-07-26.** The search filters a cached roster, so it needs no rate limit (finding 10). `?mentor=<slug>` on the request button is not yet read by the intake form; that belongs with piece C.
 - `GET /api/website/pages/{mentors,events,recordings}` and `GET /api/website/pages/mentors/{slug}`, each `{title, description, html}`; `404` for an unknown or hidden mentor.
 - `GET /api/website/sitemap` and `GET /api/website/mentors.json?q=`.
 - `GET /assets/website.css` and `GET /assets/search.js`.
@@ -108,11 +108,10 @@ Each piece has its own feature flag, off by default and read per request.
 - An automated test fails on any class name in this content that does not start with `cmw-` (WT-44).
 - Every address reads through a server-side cache.
 
-**C. Forms in frames.** Flag `FORM_FRAMING`.
+**C. Forms in frames.** Flag `FORM_FRAMING`. **Built in v0.316.0 (11-07-26), at Stop 4.** Finding 4 checked 11-07-26: Cleveland's website frames three production forms (`OPEN-ITEMS.md` #72). The full-screen link (WT-58) is the chapter connector's, outside the frame. The chapter connector must add `embed=1` to each frame's address.
 - A `frame-ancestors` header naming `WEBSITE_ORIGINS`.
 - The frame-sizing script inside every public form, posting only to the website addresses named in `WEBSITE_ORIGINS` (the prototype's script posts to every address).
 - Embed styles, used when the form is opened with `?embed=1`: the form's `--cbm-*` colour and font variables mapped to the Website settings, and the form's own heading, footer and background hidden (WT-56b).
-- A link that opens the same form full-screen (WT-58).
 - The `--cbm-*` stylesheet built from the Website colours (decision 4.2). It applies to framed forms first; applying it to the applications' own pages would change Cleveland's production colours, so that waits for its own switch.
 
 **D. Campaigns through the website.** Flag `WEBSITE_CAMPAIGNS`.
@@ -161,6 +160,7 @@ Work pauses for Doug's go-ahead at each stop. Between two stops it proceeds with
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.5 | 11-07-26 14:06 | Claude (Claude Code) | Piece B passed Stop 3. Piece C built (v0.316.0); Cleveland's three framed production forms recorded; the full-screen link belongs to the chapter connector. |
 | 0.4 | 11-07-26 12:35 | Claude (Claude Code) | Piece A passed Stop 2 on crm-test. Piece B built (v0.315.0). |
 | 0.3 | 11-07-26 11:41 | Claude (Claude Code) | Doug approved the plan. Piece A built (v0.314.0). The Website colours reach the applications' own pages only through piece C, so Cleveland's production colours do not change. |
 | 0.2 | 11-07-26 11:28 | Claude (Claude Code) | Doug answered decisions 4.1 to 4.5, each option A: the campaign link token, the Website group takes over the chapter-wide values, logo and header graphic uploaded in System Settings, button placement on the lead record, fresh `cmw-` mentor content. Stop 1 complete. |

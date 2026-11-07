@@ -909,6 +909,25 @@ def create_app(
             response.headers["Cache-Control"] = "no-cache"
         return response
 
+    # Forms in frames (prds/chapter-website-plan.md, piece C; Association ruling
+    # 42). With FORM_FRAMING on, a public form page names who may frame it:
+    # this application and the chapter website addresses. Off (the default),
+    # no header is sent and any site may frame the forms, exactly as before —
+    # Cleveland's own website frames three production forms today, so its
+    # address must be in WEBSITE_ORIGINS before production switches this on.
+    _form_pages = {f"/{spec.slug}/" for spec in forms} | {f"/{spec.slug}" for spec in forms} \
+        | {f"/{spec.slug}/index.html" for spec in forms}
+
+    @app.middleware("http")
+    async def _frame_ancestors(request: Request, call_next):
+        response = await call_next(request)
+        live = get_settings()
+        if live.form_framing and request.url.path in _form_pages \
+                and response.headers.get("content-type", "").startswith("text/html"):
+            allowed = " ".join(["'self'", *live.website_origins_list])
+            response.headers["Content-Security-Policy"] = f"frame-ancestors {allowed}"
+        return response
+
     # Idempotency cache shared across forms (Technical Design §4 wants a durable store).
     processed: dict[str, dict] = {}
 

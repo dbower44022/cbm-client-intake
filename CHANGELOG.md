@@ -5,6 +5,40 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.316.0] — 2026-11-07
+
+**feat: forms in website frames — piece C of `prds/chapter-website-plan.md`.**
+Built dark: `FORM_FRAMING` is off by default. While it is off, nothing changes
+for any site that frames a form today.
+
+- **With `FORM_FRAMING` on, the frame allow-list applies.** Each public form
+  page sends `Content-Security-Policy: frame-ancestors 'self'` followed by the
+  chapter website addresses (`WEBSITE_ORIGINS`), so only the chapter website
+  may show a form in a frame.
+  **Cleveland's website frames three production forms today** (the contact
+  page, request a mentor, and the QR code page). It must be in
+  `WEBSITE_ORIGINS` before production switches this on (`OPEN-ITEMS.md` #72).
+- **Every public form loads `/assets/frame.js`.** Inside a frame, the form
+  reports its height so the frame fits it with no scroll bar of its own. The
+  height is sent only to the chapter website's addresses; the prototype sent
+  it to any website. While the switch is off, the script is empty.
+- **A form opened with `?embed=1` loads `/assets/embed.css`.** That stylesheet
+  is built from the Website colours and fonts, and drops the form's own
+  heading, footer and background (WT-56b, decision 4.2). A colour that fails
+  its check is left out.
+- **The intake form reads `?mentor=`.** It takes either the mentor's page name
+  or the mentor's CRM id, and preselects that mentor when they are on the
+  roster. An unknown value leaves the dropdown unselected.
+- A Feature readiness row for the switch.
+
+Checked in a browser: a page on another port framed the intake form. The frame
+took the form's height (692 pixels), the form's own heading and footer were
+gone, and the test colour applied.
+
+The full-screen link for a frame that fails (WT-58) is the chapter
+connector's job; the prototype already shows one.
+
+
 ## [0.315.0] — 2026-11-07
 
 **feat: the chapter website's key pages — piece B of `prds/chapter-website-plan.md`.**

@@ -236,6 +236,12 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="Serves the Website group's values, images and key pages to the "
             "chapter website at /api/website/…. Public and unauthenticated by "
             "design; off, those addresses answer 404. Read per request."),
+    _s("form_framing", GROUP_FEATURES, "Forms in website frames", kind="bool",
+       help="Only the Chapter website addresses (and this app) may show the public "
+            "forms in a frame, the forms report their height to that website, and a "
+            "form opened with ?embed=1 takes the Website colours and drops its own "
+            "heading and footer. Before switching on, put EVERY website that frames "
+            "a form today into Chapter website addresses, or its forms go blank."),
     _s("campaigns_enabled", GROUP_FEATURES, "Marketing Management", kind="bool",
        component="both",
        help="The Marketing Management tile, the Prospects grid and import, the "
