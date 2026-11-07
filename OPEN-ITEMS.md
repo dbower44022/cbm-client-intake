@@ -13,13 +13,13 @@ found; move resolved items to the bottom with the resolution date.
     (`/contact/` the information request form, `/request-mentor/` and
     `/qr-code-marketing/` the client intake form, all at
     `cbm-client-intake-prod-a9li7.ondigitalocean.app`). Without it those pages
-    go blank. (2) **The chapter connector needs two one-line changes** in
-    `~/Dropbox/Projects/chapter-website-prototype`: carry the campaign as
-    `link=` (decision 4.1) and add `embed=1` to every frame's address.
+    go blank. (2) ~~The chapter connector needs `link=` and `embed=1`~~ — done in the
+    prototype's connector 0.2.1, 11-07-26.
     (3) **Event registration is not framed yet**: the events key page sends a
     visitor to the applications' own `/webinars/` page (ruling 42 asks for a
     frame). (4) **crm-test's settings carry the review switches**
-    (`WEBSITE_API`, three `WEBSITE_PAGE_*`, `WEBSITE_ORIGINS=http://localhost:8080`);
+    (`WEBSITE_API`, `FORM_FRAMING`, three `WEBSITE_PAGE_*`,
+    `WEBSITE_ORIGINS=http://localhost:8080`);
     remove `WEBSITE_ORIGINS`'s local address once the test website is live.
 
 71. **Training on the CRM's own screens, and the block revisited**

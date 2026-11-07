@@ -1,10 +1,10 @@
 # Chapter website — the applications' side
 
 **Document:** Plan for the chapter applications' side of the chapter website
-**Version:** 0.5
+**Version:** 0.6
 **Status:** Approved 11-07-26; pieces A and B reviewed; piece C built, at Stop 4
 **Owner:** Doug Bower
-**Last Updated:** 11-07-26 14:06
+**Last Updated:** 11-07-26 14:37
 
 ---
 
@@ -108,7 +108,7 @@ Each piece has its own feature flag, off by default and read per request.
 - An automated test fails on any class name in this content that does not start with `cmw-` (WT-44).
 - Every address reads through a server-side cache.
 
-**C. Forms in frames.** Flag `FORM_FRAMING`. **Built in v0.316.0 (11-07-26), at Stop 4.** Finding 4 checked 11-07-26: Cleveland's website frames three production forms (`OPEN-ITEMS.md` #72). The full-screen link (WT-58) is the chapter connector's, outside the frame. The chapter connector must add `embed=1` to each frame's address.
+**C. Forms in frames.** Flag `FORM_FRAMING`. **Built in v0.316.0 (11-07-26), at Stop 4.** Finding 4 checked 11-07-26: Cleveland's website frames three production forms (`OPEN-ITEMS.md` #72). The full-screen link (WT-58) is the chapter connector's, outside the frame. The chapter connector adds `embed=1` to each frame's address and passes the campaign as `link=` since prototype connector 0.2.1 (11-07-26, Doug's approval). Framing switched on for crm-test 11-07-26.
 - A `frame-ancestors` header naming `WEBSITE_ORIGINS`.
 - The frame-sizing script inside every public form, posting only to the website addresses named in `WEBSITE_ORIGINS` (the prototype's script posts to every address).
 - Embed styles, used when the form is opened with `?embed=1`: the form's `--cbm-*` colour and font variables mapped to the Website settings, and the form's own heading, footer and background hidden (WT-56b).
@@ -160,6 +160,7 @@ Work pauses for Doug's go-ahead at each stop. Between two stops it proceeds with
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.6 | 11-07-26 14:37 | Claude (Claude Code) | The prototype's chapter connector gained `embed=1` and `link=` (0.2.1), with Doug's approval. `FORM_FRAMING` on for crm-test. |
 | 0.5 | 11-07-26 14:06 | Claude (Claude Code) | Piece B passed Stop 3. Piece C built (v0.316.0); Cleveland's three framed production forms recorded; the full-screen link belongs to the chapter connector. |
 | 0.4 | 11-07-26 12:35 | Claude (Claude Code) | Piece A passed Stop 2 on crm-test. Piece B built (v0.315.0). |
 | 0.3 | 11-07-26 11:41 | Claude (Claude Code) | Doug approved the plan. Piece A built (v0.314.0). The Website colours reach the applications' own pages only through piece C, so Cleveland's production colours do not change. |
