@@ -1,7 +1,7 @@
 # Stage 6 — Build the chapter's public website
 
-**Version:** 0.5  
-**Last Updated:** 09-23-26 20:40  
+**Version:** 0.6  
+**Last Updated:** 11-07-26 15:21  
 **Generated from** `steps/stage-06.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -10,7 +10,7 @@
 
 The public website is the chapter's own marketing site. The software does not build it, but it needs four things from it. The policy documents need addresses on it. The chapter's colour file needs a place to live on it. The public application forms need a link from it. And visitors need to be sent from it to the events page the applications serve. This stage makes sure the site can do all four, and that someone at the chapter can change it.
 
-**Who:** The chapter. The central support organization writes the colour file and helps with the help documentation decision.  
+**Who:** The chapter. The Association writes the colour file and helps with the help documentation decision.  
 **Time:** Not known. A chapter that already has a website finishes in an hour; building a new site can take weeks.  
 **When this stage is done:** The policy documents (stage 7) can be published on the site, and the chapter information form (stage 8) can be filled in with the site's addresses.
 
@@ -41,7 +41,7 @@ The public website is the chapter's own marketing site. The software does not bu
 
 - step 3.4 Register and pay for the domain names
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -62,7 +62,7 @@ The public website is the chapter's own marketing site. The software does not bu
 
 **How to check:** The platform and the person's name are on the chapter's account list.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Nobody named to maintain it. A website built by a volunteer who then leaves is a website nobody can change.
 
@@ -78,7 +78,7 @@ The public website is the chapter's own marketing site. The software does not bu
 
 - step 6.1 Choose the website platform
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -94,7 +94,7 @@ The public website is the chapter's own marketing site. The software does not bu
 
 **How to check:** The site opens in a private browser window at https:// and the chapter's domain, with no security warning.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A certificate that is not renewed. The site then shows a security warning to every visitor.
 
@@ -110,7 +110,7 @@ The public website is the chapter's own marketing site. The software does not bu
 
 - step 6.2 Publish the website
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -135,7 +135,7 @@ The public website is the chapter's own marketing site. The software does not bu
 
 **How to check:** The test address lands on the other site's page.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A website platform that cannot redirect one address without a paid plan. Find out now, not at stage 13.
 
@@ -151,7 +151,7 @@ The public website is the chapter's own marketing site. The software does not bu
 
 - step 6.2 Publish the website
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -166,7 +166,7 @@ The public website is the chapter's own marketing site. The software does not bu
 
 **How to check:** The change appeared on the public site.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** The only sign-in belongs to the person or company who built the site.
 
@@ -176,13 +176,13 @@ The public website is the chapter's own marketing site. The software does not bu
 
 **Why:** Colours are the only visual difference between chapters in the software, so a chapter that skips this looks exactly like Cleveland.
 
-**Who:** The chapter and the central support organization — the chapter chooses the colours, the central support organization writes the file
+**Who:** The chapter and the Association — the chapter chooses the colours, the Association writes the file
 
 **Finish first:**
 
 - step 6.2 Publish the website
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -191,7 +191,7 @@ The public website is the chapter's own marketing site. The software does not bu
    - Button colour. Cleveland: #CB963B (gold).
    - Button colour when the mouse is over it, about ten per cent darker. Cleveland: #b8842f.
    - Body text colour. Cleveland: #7A7A7A (grey).
-2. The central support organization writes a file named chapter-tokens.css containing exactly these lines, with the chapter's four colour codes in place of the capitalised words. The values-file writer in step 8.10 produces this file from the page's answers, as prds/chapter-network/chapters/SHORT-LABEL-chapter-tokens.css:
+2. The Association writes a file named chapter-tokens.css containing exactly these lines, with the chapter's four colour codes in place of the capitalised words. The values-file writer in step 8.10 produces this file from the page's answers, as prds/chapter-network/chapters/SHORT-LABEL-chapter-tokens.css:
    - :root {
    - --cbm-navy: PRIMARY-COLOUR;
    - --cbm-gold: BUTTON-COLOUR;
@@ -199,7 +199,7 @@ The public website is the chapter's own marketing site. The software does not bu
    - --cbm-text: BODY-TEXT-COLOUR;
    - }
 3. Add nothing else to the file. It may only set names that start --cbm-, and only inside :root. Every name it leaves out keeps Cleveland's value from frontend/shared/tokens.css, where the full list of names is.
-4. Publish the file so it has its own address, for example https://WEBSITE-DOMAIN/chapter-tokens.css. Whether the chapter's platform can serve a .css file has not been checked for any platform. If it cannot, the central support organization hosts the file elsewhere.
+4. Publish the file so it has its own address, for example https://WEBSITE-DOMAIN/chapter-tokens.css. Whether the chapter's platform can serve a .css file has not been checked for any platform. If it cannot, the Association hosts the file elsewhere.
 5. In a terminal, run exactly:
    - curl -sI https://WEBSITE-DOMAIN/chapter-tokens.css
 
@@ -219,7 +219,7 @@ The public website is the chapter's own marketing site. The software does not bu
 
 **How to check:** The file's address shows the stylesheet's text in a browser. Once the applications are deployed, the public forms show the chapter's colours. chapter-colours.md section 4 is the check.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Three things. The file sets something other than a colour name, which the rule forbids so a chapter's file cannot break the pages. Some website platforms refuse to host a stylesheet, or serve it as a download; this has not been checked for any platform. And the colour file changes only the applications - the CRM keeps its own look, and on the public events page only the hero, band and menu follow the colours; the calendar and recorded-library panels keep the marketing website's fixed colours (work list item 11).
 
@@ -235,7 +235,7 @@ The public website is the chapter's own marketing site. The software does not bu
 
 - step 1.1 Choose the chapter's name
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -248,7 +248,7 @@ The public website is the chapter's own marketing site. The software does not bu
 
 **How to check:** The file exists and opens.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A chapter that expects its logo on the application pages. The applications carry no logo and no browser tab icon, by a ruling of 26 August 2026. Tell the chapter this before it asks.
 
@@ -258,13 +258,13 @@ The public website is the chapter's own marketing site. The software does not bu
 
 **Why:** The applications' portal and the CRM's navigation bar both link to the help documentation, and leaving it undecided sends the chapter's staff to Cleveland's.
 
-**Who:** The chapter and the central support organization — the chapter, with the central support organization
+**Who:** The chapter and the Association — the chapter, with the Association
 
 **Finish first:**
 
 - step 6.2 Publish the website
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -283,7 +283,7 @@ The public website is the chapter's own marketing site. The software does not bu
 
 **How to check:** The form carries an address or "none yet".
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Leaving the setting DOCS_SITE_URL at its default. The chapter's staff are then sent to Cleveland's documentation, which names Cleveland throughout.
 
@@ -293,6 +293,7 @@ The public website is the chapter's own marketing site. The software does not bu
 
 | Version | Date | Change |
 |---|---|---|
+| 0.6 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". |
 | 0.5 | 09-23-26 20:40 | References to stage 9 follow its renumbering from twenty steps to nine (stage 9 version 0.11). |
 | 0.4 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. |
 | 0.3 | 09-23-26 12:49 | Step 6.5: the chapter enters its four colours on the chapter information page, and the values-file writer produces the colour file from them (Doug, 09-23-26). |

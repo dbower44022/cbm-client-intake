@@ -91,7 +91,7 @@ details[open] summary{margin-bottom:6px}
 <div class="wrap">
   <header>
     <h1>{{TITLE}}</h1>
-    <p class="lede">The chapter information form for <strong>{{CHAPTER}}</strong>. Every question below says what it means, where to find the answer, and what goes wrong if the answer is wrong. Your answers are saved in this browser as you type. When you are done, or want to hand over, press <strong>Copy all answers</strong> and paste the result into an email to the central support organization.</p>
+    <p class="lede">The chapter information form for <strong>{{CHAPTER}}</strong>. Every question below says what it means, where to find the answer, and what goes wrong if the answer is wrong. Your answers are saved in this browser as you type. When you are done, or want to hand over, press <strong>Copy all answers</strong> and paste the result into an email to the Association.</p>
   </header>
 
   <div class="top">
@@ -101,7 +101,7 @@ details[open] summary{margin-bottom:6px}
     </div>
     <div class="panel">
       <h3>How this page works</h3>
-      <p>Questions marked <span class="badge b-chapter">For the chapter</span> are yours. Questions marked <span class="badge b-central">For central support</span> are answered by the central support organization.</p>
+      <p>Questions marked <span class="badge b-chapter">For the chapter</span> are yours. Questions marked <span class="badge b-central">For the Association</span> are answered by the Association.</p>
       <p>Answers stay in this browser only. On another computer or browser, use <strong>Copy all answers</strong> here and <strong>Load answers</strong> there.</p>
       <p class="tag" id="storageNote"></p>
     </div>
@@ -111,7 +111,7 @@ details[open] summary{margin-bottom:6px}
     <div class="seg" role="group" aria-label="Show questions">
       <button type="button" data-filter="all" aria-pressed="true">All</button>
       <button type="button" data-filter="chapter" aria-pressed="false">For the chapter</button>
-      <button type="button" data-filter="central" aria-pressed="false">For central support</button>
+      <button type="button" data-filter="central" aria-pressed="false">For the Association</button>
       <button type="button" data-filter="open" aria-pressed="false">Still to answer</button>
     </div>
     <span class="spacer"></span>
@@ -143,7 +143,7 @@ details[open] summary{margin-bottom:6px}
 
   <section class="step" id="signSec">
     <div class="stephead"><span class="num">Step 8.9</span><h2>Sign-off</h2></div>
-    <div class="note">When every question is answered, the chapter's setup contact and someone from the central support organization read the whole form together. Then each types their own name and presses Sign off.</div>
+    <div class="note">When every question is answered, the chapter's setup contact and someone from the Association read the whole form together. Then each types their own name and presses Sign off.</div>
     <div class="panel">
       <div class="row2"><input type="text" id="signName" aria-label="Your name" placeholder="Your full name"><button type="button" class="btn" id="signBtn">Sign off</button></div>
       <p class="msg" id="signMsg" role="status"></p>
@@ -158,7 +158,7 @@ details[open] summary{margin-bottom:6px}
   var D = JSON.parse(document.getElementById('data').textContent);
   var FIELDS = [];
   D.sections.forEach(function(s){ s.fields.forEach(function(f){ f.step = s.id; FIELDS.push(f); }); });
-  var BYLABEL = {chapter:'For the chapter', central:'For central support'};
+  var BYLABEL = {chapter:'For the chapter', central:'For the Association'};
   var filter = 'all';
   var storeOk = true;
 
@@ -276,7 +276,7 @@ details[open] summary{margin-bottom:6px}
         all.addEventListener('click', function(){
           var n = 0;
           s.fields.forEach(function(f){ var a = state.answers[f.key]; if (f.by === 'central' && f.default !== undefined && (!a || a.value === undefined || a.value === null || a.value === '')) { setAnswer(f.key, {value:f.default, notYet:false}); n++; } });
-          rerender(); flash('Saved the recommended answer on ' + n + ' switch' + (n === 1 ? '' : 'es') + ' marked For central support.');
+          rerender(); flash('Saved the recommended answer on ' + n + ' switch' + (n === 1 ? '' : 'es') + ' marked For the Association.');
         });
         bar.appendChild(all); bar.appendChild(m); sec.appendChild(bar);
       }
@@ -305,7 +305,7 @@ details[open] summary{margin-bottom:6px}
       if (!p && touched) {
         st.className = 'status ok';
         st.textContent = a.notYet ? (f.required && !f.later ? 'Marked not known yet. Saved in this browser. It will be needed by ' + (f.needed_by || D.neededBy[f.key.split('.')[0]]) + '.' : 'Marked not known yet. Saved in this browser.') : 'Saved in this browser.';
-        if (f.key === 'chapter.timezone' && a.value && a.value !== 'America/New_York') { st.className = 'status warn'; st.textContent = 'Saved. The software supports only Eastern time today: tell the central support organization before stage 9.'; }
+        if (f.key === 'chapter.timezone' && a.value && a.value !== 'America/New_York') { st.className = 'status warn'; st.textContent = 'Saved. The software supports only Eastern time today: tell the Association before stage 9.'; }
       } else if (p && touched && !(a.value === '' || a.value == null)) { st.className = 'status bad'; st.textContent = p; }
       else if (f.later && !a.value) { st.className = 'status idle'; st.textContent = 'Answered at step ' + f.later + '.'; }
       else { st.className = 'status idle'; st.textContent = 'Not answered yet.'; }
@@ -347,9 +347,9 @@ details[open] summary{margin-bottom:6px}
     var tail = open ? ' ' + open + ' question' + (open === 1 ? ' is' : 's are') + ' still to answer; that is fine for a hand-over.' : '';
     function selectAll(){ ta.focus(); ta.select(); }
     try {
-      navigator.clipboard.writeText(text).then(function(){ msg.textContent = 'Copied. Paste it into an email to the central support organization.' + tail; },
-        function(){ selectAll(); msg.textContent = 'Select all the text below and copy it, then paste it into an email to the central support organization.' + tail; });
-    } catch (e) { selectAll(); msg.textContent = 'Select all the text below and copy it, then paste it into an email to the central support organization.' + tail; }
+      navigator.clipboard.writeText(text).then(function(){ msg.textContent = 'Copied. Paste it into an email to the Association.' + tail; },
+        function(){ selectAll(); msg.textContent = 'Select all the text below and copy it, then paste it into an email to the Association.' + tail; });
+    } catch (e) { selectAll(); msg.textContent = 'Select all the text below and copy it, then paste it into an email to the Association.' + tail; }
   });
   document.getElementById('loadBtn').addEventListener('click', function(){
     document.getElementById('loadPanel').classList.remove('hide'); document.getElementById('copyPanel').classList.add('hide');
@@ -384,7 +384,7 @@ details[open] summary{margin-bottom:6px}
     if (open.length) { msg.className = 'msg bad'; msg.textContent = 'Not yet: ' + open.length + ' question' + (open.length === 1 ? ' is' : 's are') + ' still to answer. Choose Still to answer at the top to see ' + (open.length === 1 ? 'it' : 'them') + '.'; return; }
     state.signoffs.push({name:name, date:today()}); persist(); renderSign();
     document.getElementById('signName').value = '';
-    msg.className = 'msg ok'; msg.textContent = state.signoffs.length >= 2 ? 'Signed off by two people. Press Copy all answers and send the block to the central support organization.' : 'Signed off. A second person now signs off too.';
+    msg.className = 'msg ok'; msg.textContent = state.signoffs.length >= 2 ? 'Signed off by two people. Press Copy all answers and send the block to the Association.' : 'Signed off. A second person now signs off too.';
   });
 
   var sl = document.getElementById('secretList');

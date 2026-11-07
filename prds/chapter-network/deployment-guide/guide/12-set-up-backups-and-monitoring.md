@@ -1,7 +1,7 @@
 # Stage 12 — Set up backups and monitoring
 
-**Version:** 0.4  
-**Last Updated:** 09-23-26 20:40  
+**Version:** 0.5  
+**Last Updated:** 11-07-26 15:21  
 **Generated from** `steps/stage-12.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -10,7 +10,7 @@
 
 This stage makes sure the chapter's records can be got back after a mistake or a failure, and that a person finds out when the system stops working. It comes before any real records are loaded, because a backup taken afterwards is too late for whatever went wrong before it.
 
-**Who:** The central support organization, working inside the chapter's hosting account. The chapter names who reads the alerts.  
+**Who:** The Association, working inside the chapter's hosting account. The chapter names who reads the alerts.  
 **Time:** About two hours, most of it waiting for a restored copy to be built.  
 **When this stage is done:** The chapter's pages can go on its website (stage 13), and real records can be loaded (stage 15).
 
@@ -35,13 +35,13 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 **Why:** A backup of the whole server holds the CRM's database, its uploaded files and its configuration together, so one restore brings back all three.
 
-**Who:** The central support organization inside the chapter's hosting account
+**Who:** The Association inside the chapter's hosting account
 
 **Finish first:**
 
 - step 9.3 Run CRMBuilder's deploy wizard
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -66,7 +66,7 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 **How to check:** The next morning, the Backups tab lists a backup taken overnight.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Two things. Seven days is short: a mistake nobody notices for eight days cannot be undone from these backups. And backups cost extra and are easy to leave off, because the deployment wizard does not switch them on.
 
@@ -76,13 +76,13 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 **Why:** Submissions that have arrived but not yet reached the CRM exist only in this database, so losing it loses them.
 
-**Who:** The central support organization inside the chapter's hosting account
+**Who:** The Association inside the chapter's hosting account
 
 **Finish first:**
 
 - step 11.4 Create the database
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -104,7 +104,7 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 **How to check:** The database's Backups tab lists a backup taken in the last day.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A development database that nobody notices. Everything works, no error appears, and there are no backups. The trial chapter's database is in this state.
 
@@ -114,14 +114,14 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 **Why:** A backup nobody has restored is only a hope, so each kind is restored once into a separate copy and checked.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
 - step 12.1 Back up the CRM server on a schedule
 - step 12.2 Back up the application database on a schedule
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -153,7 +153,7 @@ This stage makes sure the chapter's records can be got back after a mistake or a
    - doctl compute droplet create restore-test-SHORT-LABEL --image BACKUP-IMAGE-ID --region REGION --size SIZE --wait
 
    *You should see:* A new server with its own public address, NEW-SERVER-IP.
-9. Open https://NEW-SERVER-IP in a browser. The certificate warning is expected, because the certificate is for the CRM's real address. Sign in as the central support organization's administrator and open one record changed recently.
+9. Open https://NEW-SERVER-IP in a browser. The certificate warning is expected, because the certificate is for the CRM's real address. Sign in as the Association's administrator and open one record changed recently.
    *You should see:* The record, as it was at the time of the backup.
 10. Delete the new server:
     - doctl compute droplet delete restore-test-SHORT-LABEL --force
@@ -166,7 +166,7 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 **How to check:** Both copies started and held the expected records, and the test is written down.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A restore with no date given rebuilds the database to the latest moment it can, not to the last daily backup. That is better, but it means the two are the same command. Also, the restored copy holds real personal details, so it is printed as counts and dates only and deleted the same hour.
 
@@ -176,14 +176,14 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 **Why:** When the system stops working or submissions pile up, somebody has to be told, and an alert nobody reads is the same as no alert.
 
-**Who:** The chapter and the central support organization — the central support organization sets it up; the chapter names who reads the alerts
+**Who:** The chapter and the Association — the Association sets it up; the chapter names who reads the alerts
 
 **Finish first:**
 
 - step 4.9 Decide who receives the system's warning messages
 - step 11.15 Confirm outgoing mail
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -228,9 +228,9 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 ## 12.5 Add the chapter to the list of systems being watched
 
-**Why:** The central support organization supports every chapter, and needs one place saying where each chapter's systems are and when they were last checked.
+**Why:** The Association supports every chapter, and needs one place saying where each chapter's systems are and when they were last checked.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
@@ -239,7 +239,7 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 - step 12.3 Restore from a backup once
 - step 12.4 Confirm alerts reach a person
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -255,11 +255,11 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
    *You should see:* Every line filled in. No password or key appears anywhere in the file.
 
-**Done when:** The central support organization's list of systems includes this chapter's CRM and application.
+**Done when:** The Association's list of systems includes this chapter's CRM and application.
 
 **How to check:** The chapter is on the list, with every column filled in.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** The list drifting from the truth. An old restore test date on the list is a chapter whose backups nobody has checked lately.
 
@@ -269,6 +269,7 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 | Version | Date | Change |
 |---|---|---|
+| 0.5 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". |
 | 0.4 | 09-23-26 20:40 | References to stage 9 follow its renumbering from twenty steps to nine (stage 9 version 0.11). |
 | 0.3 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. |
 | 0.2 | 09-19-26 00:15 | Every action made precise (Doug, 09-19-26): exact doctl commands with named placeholders for backups, the restore test and the uptime and database alerts, flags checked against doctl's own help, and the restore copy's password never printed. |

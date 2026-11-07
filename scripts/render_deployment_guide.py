@@ -19,8 +19,8 @@ ROOT = Path(__file__).resolve().parents[1] / "prds" / "chapter-network" / "deplo
 STEPS = ROOT / "steps"
 GUIDE = ROOT / "guide"
 
-WHO = {"chapter": "The chapter", "central": "The central support organization", "both": "The chapter and the central support organization"}
-DEFAULT_IF_NOT = "Stop, and ask the central support organization before going on."
+WHO = {"chapter": "The chapter", "central": "The Association", "both": "The chapter and the Association"}
+DEFAULT_IF_NOT = "Stop, and ask the Association before going on."
 
 
 def _who(text: str) -> str:
@@ -78,7 +78,7 @@ def render_stage(stage: dict) -> str:
             out.extend(f"- step {f} {NAMES.get(str(f), '')}".rstrip() for f in first)
             out.append("")
         if not str(s.get("status", "")).startswith("done-for-real"):
-            out.append("> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.\n")
+            out.append("> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.\n")
         out.append("**Do this:**\n")
         for n, a in enumerate(s.get("actions") or [], 1):
             # Nested lines must be indented to the width of the number ("10. " is
@@ -141,7 +141,7 @@ def render_stage(stage: dict) -> str:
     return "\n".join(out)
 
 
-BY = {"chapter": "the chapter", "central": "the central support organization"}
+BY = {"chapter": "the chapter", "central": "the Association"}
 
 
 def render_field(f: dict) -> list[str]:

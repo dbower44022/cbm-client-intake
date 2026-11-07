@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — The Step List
 
 **Document:** The bare list of steps, with no methods yet
-**Version:** 0.22
+**Version:** 0.23
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-24-26 00:39
+**Last Updated:** 11-07-26 15:21
 
 ---
 
@@ -64,9 +64,9 @@ setup, with authority to open accounts and grant access to others.
 
 ---
 
-## Stage 2 — Sign the agreement with the central support organization
+## Stage 2 — Sign the agreement with the Association
 
-**2.1 Agree what the central support organization does.**
+**2.1 Agree what the Association does.**
 Done when:
 
 - The chapter has in writing the list of what is provided.
@@ -77,14 +77,14 @@ Done when:
 Done when: the fee is agreed in writing, and it is clear which costs the chapter
 pays directly to other companies rather than through the fee.
 
-**2.3 Accept the identical-software rule.**
-Done when: the chapter's board has been told in writing that no chapter gets its
-own custom fields, form questions or list choices, and has been shown how to ask
-for a change that would apply to every chapter.
+**2.3 Accept the one-application rule.**
+Done when: the chapter's board has been told in writing that the chapter runs the
+application as the Association designs it and does not change it, that it may differ
+only through optional settings and its own processes, and has been shown how to ask
+for a change through a feature request.
 
-**2.4 Agree the access the central support organization will hold.**
-Done when: it is written down which of the chapter's accounts the central support
-organization will administer, and that the chapter may withdraw that access at any
+**2.4 Agree the access the Association will hold.**
+Done when: it is written down which of the chapter's accounts the Association will administer, and that the chapter may withdraw that access at any
 time.
 
 **2.5 Agree the leaving terms.**
@@ -99,7 +99,7 @@ Done when: both sides have signed and each holds a copy.
 
 **2.7 Set up the chapter's password vault.**
 Done when: the chapter owns a Proton Pass business organization with at least two
-chapter owners, and at least two named people from the central support organization
+chapter owners, and at least two named people from the Association
 are members of its shared operations vault (ruled 09-18-26).
 
 ---
@@ -112,8 +112,9 @@ address that will create the first accounts, and it is understood that this is
 temporary.
 
 **3.2 Decide how many domain names the chapter needs, and choose them.**
-Done when: the names are chosen and confirmed available. See the open question in
-the plan document about whether a chapter needs one domain name or two.
+Done when: the names are chosen and confirmed available. The Association recommends
+two domain names, one for the website and a shorter one for email; the chapter may
+choose one.
 
 **3.3 Create the domain registrar account.**
 Done when:
@@ -140,7 +141,7 @@ Done when:
 - Each domain name is a zone in a Cloudflare account the chapter owns, or, with manual DNS, is hosted in a DNS provider account the chapter owns.
 - The registrar points at Cloudflare's name servers, or, with manual DNS, at the chapter's DNS provider's.
 - Two-step sign-in is on.
-- The central support organization's named people are members.
+- The Association's named people are members.
 - The sign-in and recovery codes are in the chapter's vault.
 
 Note: CRMBuilder writes DNS records only into Cloudflare. With manual DNS it shows each record, and a person adds it at the chapter's DNS provider (ruled 09-23-26).
@@ -153,7 +154,7 @@ Note: CRMBuilder writes DNS records only into Cloudflare. With manual DNS it sho
 Done when: the board has recorded that the chapter will hold its own Google Workspace,
 in its own name and on its own domain.
 
-Note: Ruled 09-18-26: every chapter hosts its own email on its own Google Workspace. The central support organization does not provide Google Workspace.
+Note: Ruled 09-18-26: every chapter hosts its own email on its own Google Workspace. The Association does not provide Google Workspace.
 
 **4.2 Create the Google Workspace account.**
 Done when: the account exists on the chapter's email domain and the first
@@ -170,8 +171,8 @@ Google mailbox.
 Done when: a named person at the chapter holds a Google Workspace administrator
 account on a chapter address.
 
-**4.6 Create the central support organization's administrator account.**
-Done when: the central support organization holds its own named administrator
+**4.6 Create the Association's administrator account.**
+Done when: the Association holds its own named administrator
 account, separate from the chapter's.
 
 **4.7 Create the shared operations mailbox.**
@@ -212,7 +213,7 @@ Done when:
 
 ---
 
-## Stage 5 — Open the hosting and video meeting accounts
+## Stage 5 — Open the chapter's service accounts
 
 **5.1 Create the server hosting account.**
 Done when: the account exists in the chapter's name, using a chapter mailbox.
@@ -224,8 +225,8 @@ mailbox.
 **5.3 Apply for the nonprofit hosting credits.**
 Done when: the application is submitted and the expected answer date is recorded.
 
-**5.4 Grant the central support organization access to the hosting account.**
-Done when: the central support organization can create and manage servers in the
+**5.4 Grant the Association access to the hosting account.**
+Done when: the Association can create and manage servers in the
 account under its own named sign-in, and the chapter can remove that access itself.
 
 **5.5 Create the video meeting account, or record that it is not needed.**
@@ -253,6 +254,39 @@ Done when:
 - Both tokens are entered in CRMBuilder as the chapter's provider credentials.
 
 Note: CRMBuilder builds the chapter's CRM with the chapter's own accounts, never its own (ruled 09-18-26).
+
+**5.9 Link the hosting account to the code repository.**
+Done when:
+
+- The chapter's DigitalOcean team is authorized to read the code repository on GitHub.
+- The repository's release branch is offered on the chapter's Create App screen.
+- No application was created.
+
+Note: Today the link runs through one personal GitHub account, the repository owner's. Once the Association has its own GitHub organization, the repository moves there and this link is made by that organization's account instead.
+
+**5.10 Open the website host account.**
+Done when:
+
+- The website host account exists in the chapter's name, signed in with the shared operations mailbox.
+- It is paid with the chapter's own card.
+- Two-step sign-in is on, and the sign-in and codes are in the chapter's vault.
+- The Association's named person is a team member.
+
+**5.11 Open the Constant Contact account and its developer application.**
+Done when:
+
+- The Constant Contact account exists in the chapter's name, signed in with the shared operations mailbox.
+- Its developer application exists, with the applications' callback address as its redirect address.
+- The API key and client secret are in the chapter's vault.
+
+Note: A developer application is private to the Constant Contact user who created it, so the account the software connects to must be the one that created it.
+
+**5.12 Open the Stripe account and create the donation link.**
+Done when:
+
+- The Stripe account exists in the chapter's name, signed in with the shared operations mailbox.
+- Two-step sign-in is on, and the sign-in and codes are in the chapter's vault.
+- A donation Payment Link exists, and its address is in the vault.
 
 ---
 
@@ -390,8 +424,8 @@ Done when:
 Done when: two people have read the whole form together in one sitting and both
 have signed it off.
 
-**8.10 Store the form where the central support organization can reach it.**
-Done when: the form is in the agreed place and the central support organization has
+**8.10 Store the form where the Association can reach it.**
+Done when: the form is in the agreed place and the Association has
 confirmed it can open it.
 
 ---
@@ -598,7 +632,7 @@ Done when: a test alert arrives at an address somebody reads, and it is recorded
 who reads it.
 
 **12.5 Add the chapter to the list of systems being watched.**
-Done when: the central support organization's list of systems includes this
+Done when: the Association's list of systems includes this
 chapter's CRM and application.
 
 ---
@@ -642,9 +676,10 @@ Note: Mentors are not on this list. Their accounts are created from their mentor
 **14.2 Create the staff accounts.**
 Done when: every person on the list has an account in the CRM on the right team.
 
-**14.3 Confirm nobody at the chapter holds an administrator account.**
-Done when: the only administrator accounts belong to the central support
-organization. Chapter staff hold ordinary accounts.
+**14.3 Confirm the administrator accounts are the agreed ones.**
+Done when: the administrator accounts are the agreed ones: the chapter's own technical
+person's, the Association's own, and the account the applications use to create
+logins. Chapter staff hold ordinary accounts.
 
 **14.4 Confirm every member of staff has signed in.**
 Done when: each member of staff has signed in at least once and set their own
@@ -724,7 +759,7 @@ live.
 
 **16.5 Name the chapter's own first point of contact.**
 Done when: one person at the chapter is named as the person colleagues ask first,
-before contacting the central support organization.
+before contacting the Association.
 
 **16.6 Change the training account passwords.**
 Done when:
@@ -796,7 +831,7 @@ Done when:
 - The chapter knows who decides.
 - The chapter knows how often those decisions are made.
 
-Note: The central committee decides, every two weeks (ruled 09-18-26).
+Note: The central technical committee decides, every two weeks (ruled 09-18-26).
 
 **18.3 Explain the release schedule.**
 Done when:
@@ -813,7 +848,7 @@ Done when:
 - The list says who else has access.
 - A named chapter officer can reach every one of them.
 
-**18.5 Confirm the chapter can get in without the central support organization.**
+**18.5 Confirm the chapter can get in without the Association.**
 Done when:
 
 - A named chapter officer has demonstrated, not merely been told, that they can reach the server on their own.
@@ -836,6 +871,7 @@ Done when: a date is booked to review how the first months have gone.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.23 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan `association-setup-plan.md`, approved by Doug 11-07-26). "The central support organization" is now "the Association" throughout, and "the central committee" is "the central technical committee". Step 2.3 becomes "Accept the one-application rule" (Association ruling 3) and step 14.3 "Confirm the administrator accounts are the agreed ones" (Association ruling 1: the chapter holds its own administrator accounts). Step 3.2 states the Association's recommendation of two domain names (Association ruling 25). Stage 5 is renamed "Open the chapter's service accounts" and gains steps 5.10 (website host, Association ruling 29), 5.11 (Constant Contact) and 5.12 (Stripe donation link, Association ruling 30). Step 5.9, added to the stage data on 09-23-26 but never to this list, is added. No existing step number changed. |
 | 0.22 | 09-24-26 00:39 | The chapter decides when it takes a release (Doug, 09-24-26, CRMBuilder decision DEC-1156): it may take each release automatically, decline one, or schedule the upgrade for a time of its own after trying it on the demo/test deployment. Step 11.8 is renamed "Set the update policy the chapter chose" and its finishing test names that policy; step 18.3's first condition no longer says updates arrive automatically for every chapter. The stage data (stages 8, 11 and 18) carries the same change. |
 | 0.21 | 09-23-26 22:55 | Step 9.7 gains a condition: the logo, the site address and the documentation tab are set. The script sets none of them (open work G1 item 2), so the step sets them by hand. |
 | 0.20 | 09-23-26 20:40 | Stage 9 renumbered from twenty steps to nine (Doug, 09-23-26, amending the rule that step numbers never change). Old to new: 9.1 → 9.1; 9.2 → 9.2 and 9.3; 9.3 to 9.6 → 9.4; 9.7 → 9.5; 9.8 and 9.9 → 9.6; 9.10 to 9.15, 9.17 and 9.18 → 9.7; 9.19 → 9.8; 9.20 → 9.9. Step 9.16 became a note at the head of the stage: it cannot be done until work list item 3 is decided. Finishing tests rewritten to match; references elsewhere in the guide follow. The method notes keep the old numbers. |

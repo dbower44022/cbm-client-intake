@@ -1,7 +1,7 @@
 # Stage 11 — Deploy the chapter's applications
 
-**Version:** 0.12  
-**Last Updated:** 09-25-26 13:00  
+**Version:** 0.13  
+**Last Updated:** 11-07-26 15:21  
 **Generated from** `steps/stage-11.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -10,7 +10,7 @@
 
 In this stage we put the chapter's applications on its own hosting account and prove they work. We generate the deployment settings from the reviewed chapter information form, create the application's three parts and its database, set the update policy the chapter chose, give the application the chapter's own web address, and read its health page. Then we prove each Google connection in turn: incoming mail, outgoing mail, the calendar, the shared drive and a new mentor's mailbox. The applications are what the chapter's staff, mentors and the public actually use, and this stage is where they first run for this chapter. The Google checks come last, one at a time and in an order where each depends on the one before, because each fails in a way that names nothing useful.
 
-**Who:** The central support organization, inside the chapter's hosting account.  
+**Who:** The Association, inside the chapter's hosting account.  
 **Time:** About an hour for the deployment itself; the August build was active on the first attempt in seven minutes. The Google checks at the end are not timed yet.  
 **When this stage is done:** Backups and monitoring can be set up (stage 12), and the chapter's website pages can be connected (stage 13).
 
@@ -49,7 +49,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 
 **Summary:** The settings generator in step 11.2 creates a session secret for this chapter: a random value that signs every sign-in the applications issue. We copy it into the vault so it can be restored if the deployment is ever rebuilt. Each chapter has its own, because a secret shared between chapters would let a sign-in from one chapter's applications be accepted by another's.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
@@ -69,7 +69,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 - In Proton Pass, open the chapter's Operations vault. The item named Session secret holds the same value, character for character: compare the first six and the last six characters against the file.
 - Open another chapter's Session secret item beside it, Cleveland's or the trial chapter's. The two values differ. The same value in two vaults means one was copied, and both chapters must be given fresh ones.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Copying another chapter's.
 
@@ -79,7 +79,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 
 **Summary:** We run the settings generator, which reads the filled-in chapter information form and the chapter's secrets file and writes the settings file the hosting platform builds the applications from. Every value comes from the reviewed form rather than from memory, so what the chapter approved in stage 8 is what gets deployed. On its first run the generator also creates the stored-data encryption key, which we copy into the vault at once, because it can never change afterwards without destroying the data it protects.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
@@ -128,7 +128,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 
 **Summary:** The settings file from step 11.2 carries every secret into the deployment when the application is created in step 11.5, and the hosting platform keeps them scrambled so they cannot be read back. Our part is the other half: once the deployment holds them, check the vault holds every one, then delete the settings file, the Google key file and the secrets file from the computer. A secret readable in a file on a laptop is a secret leaked, and this is the weakest point in the stage.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
@@ -160,7 +160,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 - In a terminal, type ls ~/.config/cbm-SHORT-LABEL/ and press Enter. The listing shows no file ending -app.yaml, no google-key.json and no file ending .env. Anything still listed holds secrets in plain text.
 - The application starts: the first deployment in step 11.6 reaches ACTIVE. A secret loaded under a wrong name shows up as a start-up failure in that deployment's log, not here.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** The settings file with plain-text secrets left on a laptop or committed. Getting the settings back from the platform afterwards does not help: the platform hands the secrets back scrambled into an unreadable form.
 
@@ -170,7 +170,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 
 **Summary:** The application keeps its own database, and every submission is saved there before anything reaches the CRM; that is what stops a submission being lost when the CRM is down. Step 11.5 creates the database with the application, but the trial settings ask for a development database, which takes no backups. So straight afterwards we convert it to a managed database on the smallest plan. The platform redeploys the application by itself, and the connection details do not change.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
@@ -201,7 +201,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 - Open https://APP-ADDRESS/healthz. The database field reads ok and durableStore reads true. This proves the application reached the database, whichever kind it is.
 - Nobody holds the connection details: the settings file from step 11.2 has no line beginning DATABASE_URL, and the vault has no item for it. The platform supplies it to the application directly.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Leaving it as a development database. Nothing reports an error, and there are no backups. The trial chapter's database is in this state. Also, the hosting platform adds an instruction to the connection details that the application's database library rejects; the software strips it, so it only looks broken.
 
@@ -211,7 +211,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 
 **Summary:** We create the application in the chapter's hosting account from the settings file, using the command-line tool signed in to the chapter's account under its own named context. The application is three parts: the web part people use, the background worker that delivers submissions and sends mail and finishes unfinished work, and the setup job that prepares the database before each start. All three come from the one settings file, so creating the application creates them together. A web part on its own looks fine and quietly does nothing.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
@@ -260,7 +260,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 
 **Summary:** The migrate job runs before the application starts and creates or updates the tables in the application's database. Nothing is run by hand: we read the first deployment's result to confirm the job ran and the application came up. A deployment that ends in ERROR is nearly always this job or the build, and its log says which.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
@@ -282,7 +282,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 - At cloud.digitalocean.com, open Apps, then SHORT-LABEL-intake, then the deployments list, and open the top deployment. Its steps show the migrate job completed before the web and delivery-worker parts started, and the job's log ends without an error.
 - Open the health page at the platform's address (https://APP-ADDRESS/healthz only after step 11.10). database reads ok. An application that came up against a database with missing tables fails here, not at deployment.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 ---
 
@@ -290,7 +290,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 
 **Summary:** The application takes its software from the release branch, which holds only cut releases, so the first build already runs the current release. We read the health page to confirm the version it reports is that release and that it carries the release tag. Every chapter runs the same named release, so a support question never has to begin by asking which version a chapter is on.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
@@ -313,7 +313,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 - Find the current release to compare against. In a terminal, in the folder ~/Dropbox/Projects/cbm-client-intake, type git tag --sort=-v:refname and press Enter. The first line is the newest release, and it matches the health page's releaseTag.
 - A releaseTag of null is the honest answer that the application is not on a cut release: either it follows the development branch, which step 11.9 catches, or the release branch has moved past the last cut. Neither is fixed here; report it.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** releaseTag reads null. That means the application follows the development branch rather than the release branch. It is the honest answer, not a fault.
 
@@ -323,7 +323,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 
 **Summary:** The chapter chose in step 8.6 whether its applications take each release automatically or only when it asks. We apply that choice with one script that sets all three parts of the application at once, then read it back. Each part carries its own setting, and the platform gives no warning when one is set and the others are not, which is why one script does all three and the status option is the check.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
@@ -352,7 +352,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 - Type doctl --context SHORT-LABEL apps list-deployments APP-ID and press Enter. The top row is a new deployment, later than the one from step 11.6, started by the --deploy option, and its Phase reaches ACTIVE. Without that option the application keeps running the commit it already had.
 - At cloud.digitalocean.com, open Apps, then SHORT-LABEL-intake, then Settings, then each of the three components in turn. Under Source, each names the release branch and shows automatic deployment on or off in line with the policy. Three components checked, not one.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Setting one part and not the others. Nothing on the platform tells you that you have half-updated it.
 
@@ -362,7 +362,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 
 **Summary:** We read the update policy back once more, looking only at the branch. The development branch delivers untested software, and an application following it with automatic deployment on would take every change the moment it is pushed. The release branch with automatic deployment on is safe, because the release stamp travels inside the software. The danger was never automatic deployment; it is automatic deployment from the development branch.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
@@ -387,7 +387,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 - At cloud.digitalocean.com, open Apps, then SHORT-LABEL-intake, then Settings, and open each of the three components. Under Source, the branch reads release on each. This is the platform's own view, and it must agree with the script's.
 - Open https://APP-ADDRESS/healthz. releaseTag is not null. An application on the development branch reports null there, so a value is a third, independent confirmation.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 ---
 
@@ -395,7 +395,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 
 **Summary:** We give the application the chapter's own address, for example apps.CHAPTER-DOMAIN, by adding one CNAME record at the chapter's DNS provider that points the name at the platform's address, and by telling the hosting platform that name is its primary domain. The platform then issues the certificate for it. The record has to be DNS only: a proxy in front of it stops the platform issuing or renewing the certificate.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
@@ -427,7 +427,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 - Type doctl --context SHORT-LABEL apps get APP-ID -o json and press Enter, and find the domains section. APP-ADDRESS is listed with phase ACTIVE. PENDING within the first hour is normal (Boston took under an hour); PENDING for longer means the record is wrong or proxied.
 - At cloud.digitalocean.com, open Apps, then SHORT-LABEL-intake, then Settings, then Domains. APP-ADDRESS is listed as the primary domain with a status of Active.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** The proxy switched on, an orange cloud. The hosting platform then cannot issue or renew the certificate. Also, straight after the record is created, some resolvers keep an earlier "no such address" answer for a while; wait rather than changing the record.
 
@@ -437,7 +437,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 
 **Summary:** Nothing to build here: once the domain is active, the hosting platform issues the security certificate and renews it by itself. We confirm the applications answer at the chapter's own address over a secure connection with no warning, because every sign-in and every form submission travels over that connection.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
@@ -458,7 +458,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 - Open https://APP-ADDRESS/healthz, at the chapter's address rather than the platform's. It answers status: ok. This shows the name reaches the same application, not merely that a certificate exists.
 - Open http://APP-ADDRESS, without the s. The browser is sent on to the https address. A page that stays on http is a domain the platform has not taken over.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 ---
 
@@ -466,7 +466,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 
 **Summary:** The health page is the one place that shows, at a glance, that the application runs, knows which chapter it belongs to, reaches its database and has a live background worker. We read it once, field by field, before any check that depends on those things. A page read too soon after a deployment shows a failure that is not real, so wait a minute and read it again before reporting one.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
@@ -512,7 +512,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 
 **Summary:** We sign in to the applications with the CRM administrator account and open one screen that lists CRM records. A permission missed in stage 9 does not show as an error inside the applications; it shows as an empty screen, or as a refusal naming the entity. So this is the one check that reads the CRM through the application itself rather than through the health page.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
@@ -544,14 +544,14 @@ In this stage we put the chapter's applications on its own hosting account and p
 
 **Summary:** This is the first Google connection, and everything after it depends on it. The background worker signs in to Google as the machine account, acts as the shared operations mailbox, and captures each new message into Submission Admin. We confirm the settings reached the deployment, that the worker names the right mailbox in its log, and that a real message arrives. Only one deployment may read a given mailbox: two would each take roughly half the messages, and neither would look broken.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
 - step 10.3 Enter the permission grant
 - step 10.4 Name the mailbox the software acts as
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -592,13 +592,13 @@ In this stage we put the chapter's applications on its own hosting account and p
 
 **Summary:** Staff and mentors send email from records, and the worker sends alerts, both through Google as the machine account acting as a chapter mailbox. We confirm the alert addresses reached the deployment, then send one message from a record to an outside address we can read. The alert sending address must be a real licensed mailbox, for the same reason as in step 10.4: a group or an alias is refused, and the refusal reads as though the machine account is not allowed at all.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
 - step 11.14 Confirm incoming mail
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -617,7 +617,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 - In the outside mailbox, the message arrives within a few minutes. The From line shows the chapter's own name, and the address is one of the chapter's mailboxes, never Cleveland's. A message that never arrives, with no error in the application, is a send Google refused: search the delivery-worker runtime log for unauthorized_client.
 - Back in the application, the record's Communications tab lists the message you sent, with the time it went. That is the application's own record of the send, written after Google accepted it.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** The address the software sends warnings from must also be a real licensed mailbox. A group or alias is refused, and the refusal reads as though the machine account is not allowed at all.
 
@@ -627,13 +627,13 @@ In this stage we put the chapter's applications on its own hosting account and p
 
 **Summary:** Sessions a mentor schedules in the applications are put on that mentor's Google calendar, with the client's contacts invited and a Meet link attached, by the machine account acting as the mentor. This needs a mentor with a login and an assigned client, and neither exists until stage 15, so the check creates the test mentor and client from stage 17 and removes them afterwards. The calendar permission is the one most often missed in the grant, because working mail makes everything look fine.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
 - step 11.14 Confirm incoming mail
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -654,7 +654,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 - If nothing appears on the calendar and the session saved without complaint, read the web component's runtime log in the hosting account (the calendar runs in the web part, not the worker) and search for calendar. A line reading unauthorized_client is the calendar permission missing from step 10.3.
 - Change the session's start time in the application and save again. The calendar event moves to the new time; a second event appearing is a fault to report. Then set the session to Cancelled: the event is cancelled on the calendar.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** The calendar permission is a separate entry in the grant from step 10.3, and the one most often missed, because working mail makes everything look fine.
 
@@ -664,14 +664,14 @@ In this stage we put the chapter's applications on its own hosting account and p
 
 **Summary:** Record documents are filed on the chapter's shared drive, in a folder per record, by the machine account as a member of the drive. We confirm the drive identifier and the two Drive settings reached the deployment, then upload one small file to a client's Documents tab and look for it on the drive. Both known failures, the machine account not being a member and a wrong identifier, give silence rather than an error, so the file on the drive is the only proof.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
 - step 10.5 Create the shared drive and add the machine account
 - step 11.14 Confirm incoming mail
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -691,7 +691,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 - At drive.google.com, signed in as the chapter's Google administrator, open Shared drives, then CHAPTER-NAME Documents. There is a top-level folder for clients, inside it a folder named for the client with its record identifier in brackets, and inside that (or inside a folder for the engagement) the file you uploaded.
 - If the file is on the Documents tab but not on the drive, or the upload fails with no message, read the web component's runtime log and search for drive. A message that the drive was not found is a wrong identifier; one that access was refused is a machine account that is not a member of the drive.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** The service account is not a member of the shared drive, or the drive's identifier on the form is wrong. Both give silence, not an error.
 
@@ -701,14 +701,14 @@ In this stage we put the chapter's applications on its own hosting account and p
 
 **Summary:** This last check exercises the most. When a mentor is set to Accepted-Provisional in Mentor Administration, the application creates a Google Workspace mailbox for them on the mentor email domain, adds it to the members group, and advances the record to Provisional. It does this as the machine account acting as the chapter's Google administrator, so it needs both directory permissions, reading and changing; a grant with only the reading one gets all the way here before failing. It is what every new mentor will depend on. The step ends by pointing the command-line tool back at the account used for Cleveland.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
 - step 10.3 Enter the permission grant
 - step 11.14 Confirm incoming mail
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -739,7 +739,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 - In Mentor Administration, choose Update Mentor Status. The sweep reports the test mentor's mailbox found, and nobody stranded at Accepted-Provisional.
 - After the clean-up, the test user is gone from Directory then Users at admin.google.com, and the test mentor and its contact are gone from the CRM. Then type doctl auth list and press Enter: the context marked current is the one used for Cleveland, not SHORT-LABEL.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Two directory permissions are needed, reading and changing. A grant with only the reading one gets all the way to this step before failing. And the mentor email domain is a setting somebody has to fill in; a chapter whose mentor addresses are on a different domain from its staff addresses has to say so.
 
@@ -749,6 +749,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 
 | Version | Date | Change |
 |---|---|---|
+| 0.13 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". |
 | 0.12 | 09-25-26 13:00 | Rewritten for the reader, as stage 10 was (Doug, 09-25-26): the stage and every step open with a Summary, what is done and why in a few plain sentences, in place of the one-line Why. Every How to check is now a list of concrete checks naming where to look and what must be seen, one per line: the secret compared against the vault and against another chapter's, the settings file searched for Cleveland's values and for the branch lines, the hosting account's own view of the three parts and their branches beside the script's, the certificate's issuer and expiry, each health-page field and what each crmConfig state points at, the worker log searched for unauthorized_client, and for each Google check the place on Google's side where the result must appear. Actions are unchanged. |
 | 0.11 | 09-24-26 23:08 | Corrections from Boston's build on 09-24-26. Step 11.5 checks whose token the context holds before creating, because DigitalOcean ties its GitHub link to a sign-in and a token made under the chapter's own sign-in fails with GitHub user not authenticated. Every doctl command names the chapter's context and every script runs with DIGITALOCEAN_CONTEXT, in place of doctl auth switch, which changed this computer's default for Cleveland's commands too. Step 11.10 repeats the host-name trap for manual DNS and records the timing. Statuses updated: 11.4 managed, 11.10 and 11.11 done for real. |
 | 0.10 | 09-24-26 00:39 | The chapter decides when its applications take a release (Doug, 09-24-26, CRMBuilder decision DEC-1156): a chapter may decline a release or schedule the upgrade for a time of its own. Step 11.8 sets the policy the chapter chose in step 8.6, latest-stable or on-demand, in place of Latest Stable for every chapter; step 11.9 reads the policy back by name. The stage no longer says every chapter takes each weekly release by itself. |

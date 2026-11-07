@@ -8,13 +8,13 @@ The guide takes a new chapter from nothing to a running system. Work through the
 
 1. [Set up the chapter as a legal organization](01-set-up-the-chapter-as-a-legal-organization.md)
    The chapter has to exist in law before it can own accounts, sign an agreement or claim nonprofit discounts.
-2. [Sign the agreement with the central support organization](02-sign-the-agreement-with-the-central-support-organization.md)
+2. [Sign the agreement with the Association](02-sign-the-agreement-with-the-association.md)
    Everything after this stage involves one organization spending money and holding administrative access inside another organization's accounts.
 3. [Register the chapter's domain names](03-register-the-chapter-s-domain-names.md)
    Every address the chapter uses hangs off its domain names: its email, its website, its CRM and its applications.
 4. [Set up Google Workspace and the chapter's email](04-set-up-google-workspace-and-the-chapter-s-email.md)
    Google Workspace is Google's paid service for an organization's email, calendars and documents.
-5. [Open the hosting and video meeting accounts](05-open-the-hosting-and-video-meeting-accounts.md)
+5. [Open the chapter's service accounts](05-open-the-chapter-s-service-accounts.md)
    The chapter's CRM server, its applications and their database all run in a hosting account, and the public webinar programme runs through a video meeting account.
 6. [Build the chapter's public website](06-build-the-chapter-s-public-website.md)
    The public website is the chapter's own marketing site.

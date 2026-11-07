@@ -1,9 +1,9 @@
 # The deployment guide as data
 
-**Version:** 0.5
+**Version:** 0.6
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-25-26 12:50
+**Last Updated:** 11-07-26 15:21
 
 ---
 
@@ -52,7 +52,7 @@ steps: [...]
 | `name` | The step's name, unchanged from the step list. |
 | `summary` | Two to four plain sentences: what the step does and why it matters, in the reader's terms. Printed as **Summary** at the top of the step. A step has this or `why`, not both; `summary` is the form new and rewritten stages use (Doug, 09-25-26, for stage 10). |
 | `why` | The older form: one sentence, why this step exists. Printed as **Why** when the step has no `summary`. |
-| `who` | `chapter`, `central` (the central support organization) or `both`, then any detail. |
+| `who` | `chapter`, `central` (the Association) or `both`, then any detail. |
 | `first` | Step ids that must be finished first. |
 | `needs` | Values from the chapter information form, or secrets, this step uses. |
 | `produces` | Values or secrets this step creates. These include the chapter information form's values and the working values the build passes between steps (an account list, a duplicate rule). Every value is produced by exactly one step and needed by at least one: that is the plan's information check, and the renderer runs it every time. A step that only records a value created earlier (stage 8, filling in the form) lists it under `needs`, not `produces`. |
@@ -61,7 +61,7 @@ steps: [...]
 | `done_when` | The finishing test, word for word from the step list. A test with several conditions is a list, one condition per item, rendered as "Done when all of these are true". Only conditions go in it. |
 | `note` | A sentence that explains the finishing test without being a condition, such as "There are two sets, not one." Printed after the conditions, and kept word for word with the step list's Note line. |
 | `check` | `how`: how a person confirms it — a sentence, or a list with one concrete check per item, each naming where to look and what must be seen. `probe`: what the app would check automatically, in plain words, or `none`. |
-| `if_not` | What to do when the check fails: a sentence, or a list with one failure case per item, each naming how to recognise it. Default: stop and ask the central support organization. |
+| `if_not` | What to do when the check fails: a sentence, or a list with one failure case per item, each naming how to recognise it. Default: stop and ask the Association. |
 | `goes_wrong` | The known failure and how to recognise it, or `nothing known yet`. |
 | `later` | The automation that will replace a manual method, or `unchanged`. |
 | `status` | `done-for-real` or `not-yet-tried`, plus a short note. |
@@ -98,6 +98,7 @@ screen is not known, say so in the action.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.6 | 11-07-26 15:21 | `central` in `who` and `by` now prints as the Association, the Business Mentors Association, in place of the central support organization. The data value keeps its spelling. |
 | 0.5 | 09-25-26 12:50 | A stage or a step may carry `summary`, what is done and why in a few sentences, printed as Summary in place of Why (Doug, 09-25-26, for stage 10). `check.how` may be a list, one concrete check per item. |
 | 0.4 | 09-23-26 20:40 | Step numbers may change by ruling, with every reference following (Doug, 09-23-26, for stage 9). A stage may carry an `owed` list, printed as Not possible yet. `if_not` may be a list, one failure case per item. The renderer indents an action's lines to the width of its number, so Markdown no longer breaks the list at action 10. |
 | 0.3 | 09-23-26 14:27 | `placeholders.yaml` added: the shared words in capitals, printed on the guide's index page. CHAPTER-SLUG renamed SHORT-LABEL, the form's own name (Doug, 09-23-26). |

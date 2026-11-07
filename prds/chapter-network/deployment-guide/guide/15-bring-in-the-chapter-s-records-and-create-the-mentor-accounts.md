@@ -1,7 +1,7 @@
 # Stage 15 — Bring in the chapter's records and create the mentor accounts
 
-**Version:** 0.4  
-**Last Updated:** 09-23-26 20:40  
+**Version:** 0.5  
+**Last Updated:** 11-07-26 15:21  
 **Generated from** `steps/stage-15.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -10,7 +10,7 @@
 
 A chapter arrives with clients, companies, partners, funders and mentors it already knows about. This stage moves those records into the CRM without duplicates, then gives every mentor an account created from their mentor record. A chapter starting from nothing skips the load but still enters its mentors.
 
-**Who:** The chapter provides and checks the records; the central support organization does the load. The chapter's mentor administrator creates the mentor accounts.  
+**Who:** The chapter provides and checks the records; the Association does the load. The chapter's mentor administrator creates the mentor accounts.  
 **Time:** Not known yet. It depends on how many records the chapter has and how clean they are. No chapter's records have ever been loaded.  
 **When this stage is done:** Staff can be trained (stage 16), and the final checks can run against the chapter's real records (stage 17).
 
@@ -39,13 +39,13 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **Why:** A record source nobody mentions before go-live turns up later as missing history.
 
-**Who:** The chapter decides; the central support organization records it
+**Who:** The chapter decides; the Association records it
 
 **Finish first:**
 
 - step 9.9 Run the checking tool
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -65,7 +65,7 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **How to check:** A written list of sources, or a written note that there are none.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A source nobody mentions until after go-live.
 
@@ -81,7 +81,7 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 - step 15.1 Decide whether there are records to bring in
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -95,7 +95,7 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **How to check:** One file per source per kind of record, each with its row count written down.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** An export that silently drops columns or rows.
 
@@ -105,13 +105,13 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **Why:** Every old column has to land in the right CRM field, or be left out on purpose, so nothing is lost by accident.
 
-**Who:** The central support organization with someone from the chapter who knows the old records
+**Who:** The Association with someone from the chapter who knows the old records
 
 **Finish first:**
 
 - step 15.2 Export the existing records
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -134,7 +134,7 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **How to check:** No column in any file is left without a line in the table.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A choice-list value mapped by guesswork. It is refused at load time, or the software drops it to save the rest of the record and stores nothing. Also, phone numbers with fewer than ten or more than fifteen digits are dropped.
 
@@ -144,14 +144,14 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **Why:** A trial on a copy of the chapter's own CRM proves what the real load will do, without touching the live system.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
 - step 15.3 Map the old fields to the CRM's fields
 - step 15.5 Resolve duplicates
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -164,7 +164,7 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
    - Engagements.
    - Mentor profiles, each linked to its contact.
    - Partner and sponsor profiles.
-3. There is no loading tool yet (work list item 12). For each kind of record, use the CRM's own import: open the record's list, then the menu, then Import, and upload the file. The exact menu label has not been checked on the chapter's version. Engagements need links the import screen may not set; if so, stop and ask the central support organization, which will write a script for this chapter.
+3. There is no loading tool yet (work list item 12). For each kind of record, use the CRM's own import: open the record's list, then the menu, then Import, and upload the file. The exact menu label has not been checked on the chapter's version. Engagements need links the import screen may not set; if so, stop and ask the Association, which will write a script for this chapter.
 4. In the copy, open each kind of record's list and read its total.
    *You should see:* The same counts as step 15.2, with any difference explained.
 5. Open five records of each kind and compare them with the file.
@@ -175,7 +175,7 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **How to check:** The counts in the copy match the export, with any difference explained.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** The trial copy holds real personal details. Never run the trial on the shared training system, which holds Cleveland's records, or on the trial chapter.
 
@@ -185,13 +185,13 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **Why:** Two records for one person or company split their history, and a mentor assigned to the wrong duplicate cannot see their client.
 
-**Who:** The central support organization proposes the rule; the chapter approves it
+**Who:** The Association proposes the rule; the chapter approves it
 
 **Finish first:**
 
 - step 15.2 Export the existing records
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -207,7 +207,7 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **How to check:** No two contacts share an email address and no two companies share a name, unless the chapter decided otherwise.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Two records for one mentor. An engagement assigned to the wrong one is invisible to the mentor. The CRM's own duplicate checking has never been examined (work list item 3).
 
@@ -217,14 +217,14 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **Why:** This puts the chapter's history into its live CRM, exactly as the trial proved it.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
 - step 15.4 Do a trial load on a copy
 - step 15.5 Resolve duplicates
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -243,7 +243,7 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **How to check:** The counts in the CRM match the export, with any difference explained in writing.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A list read with a page size over 200. The CRM refuses it rather than returning fewer rows, and inside a step that tolerates errors the refusal reads as "no records". A loading script must read in pages of 200 or fewer.
 
@@ -259,7 +259,7 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 - step 15.6 Do the real load
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -279,7 +279,7 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **How to check:** A written list of checked records, each marked right or corrected.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Checking only the records that were easy to load.
 
@@ -296,7 +296,7 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 - step 14.2 Create the staff accounts
 - step 15.7 Check a sample
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -309,7 +309,7 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **How to check:** The Mentor Administration list holds every current mentor, each with a linked contact.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** The same mentor entered twice, once by the load and once by hand. Assignments then go to the wrong one, and the mentor sees no clients.
 
@@ -319,13 +319,13 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **Why:** Creating a mentor's account from their record links the two and sends the sign-in details, and an account made by hand turns into a duplicate.
 
-**Who:** The chapter — the mentor administrator, with the central support organization present for the first few
+**Who:** The chapter — the mentor administrator, with the Association present for the first few
 
 **Finish first:**
 
 - step 15.8 Enter every mentor the load did not bring in
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -343,7 +343,7 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **How to check:** Each mentor shows as complete in the Mentor Administration list.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** An account created by hand before the mentor record has its chapter email address. The software then creates a second account with a number added to the address, and sends a second welcome email.
 
@@ -353,13 +353,13 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **Why:** An account nobody has signed in to is a mentor who has not started, or a welcome email lost in spam.
 
-**Who:** The chapter — the mentor administrator chases; the central support organization checks
+**Who:** The chapter — the mentor administrator chases; the Association checks
 
 **Finish first:**
 
 - step 15.9 Create the mentor accounts
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -372,7 +372,7 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **How to check:** No mentor's account has a blank last sign-in date.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** The welcome email lands in spam, because the chapter's sending address is new.
 
@@ -382,6 +382,7 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 | Version | Date | Change |
 |---|---|---|
+| 0.5 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". |
 | 0.4 | 09-23-26 20:40 | References to stage 9 follow its renumbering from twenty steps to nine (stage 9 version 0.11). |
 | 0.3 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. |
 | 0.2 | 09-19-26 00:15 | Every action made precise (Doug, 09-19-26): exact file naming, the mapping table's columns, the load order, the restore-copy commands, the audit script run inside the application's web part, and exact addresses for Mentor Administration and the volunteer form. |

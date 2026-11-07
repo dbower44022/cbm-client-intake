@@ -1,14 +1,15 @@
 stage: 18
 name: Hand over and start normal support
-version: "0.4"
-updated: "09-24-26 00:39"
+version: "0.5"
+updated: "11-07-26 15:21"
 why: >-
   This stage moves the chapter from being set up to being supported, and proves the
-  chapter can reach everything it owns without help. The central support
-  organization holds the only administrator accounts, so asking for help has to
-  work well, or chapters start asking for administrator accounts of their own.
+  chapter can reach everything it owns without help. The chapter holds its own
+  administrator accounts and its own technical person goes first; the Association
+  supports that person (Association ruling 1). Asking for help has to work well,
+  or chapters start changing their systems themselves.
 who: >-
-  The central support organization, with the chapter's officers.
+  The Association, with the chapter's officers.
 time: >-
   About two hours of meetings, plus the review three months later.
 before_you_start:
@@ -27,13 +28,13 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: "Invite the chapter's first point of contact to the ClickUp system the support team uses for requests, at their chapter email address. The address of that ClickUp space, and how a chapter's people are given access to it, are not settled yet (work list item 8). The central support organization supplies both."
+      - do: "Invite the chapter's first point of contact to the ClickUp system the support team uses for requests, at their chapter email address. The address of that ClickUp space, and how a chapter's people are given access to it, are not settled yet (work list item 8). The Association supplies both."
         see: The first point of contact signed in to ClickUp and able to see the chapter's requests.
       - do: "Show them the three kinds of request, and how to raise each one in ClickUp:"
         items:
           - "Support request: an everyday task needing an administrator, such as adding a person, changing someone's team or resetting a password. Handled by the support team as it arrives."
           - "Defect report: something that worked and has stopped, or does the wrong thing. Include the page address, what was expected, what happened, and the version number from the page footer."
-          - "New feature request: anything that would change the software. Reviewed by the central committee every two weeks."
+          - "New feature request: anything that would change the software. Reviewed by the central technical committee every two weeks."
       - do: Have them raise one test support request, titled "Test request from CHAPTER-NAME — please close", and watch it to its answer.
         see: The request acknowledged and closed by the support team.
       - do: "Send the chapter's first point of contact an email, and keep a copy, saying:"
@@ -72,13 +73,13 @@ steps:
       - do: Show them how to raise a new feature request in ClickUp, as in step 18.1.
       - do: "Explain what happens to it:"
         items:
-          - "The central committee reviews and schedules features and defects every two weeks."
+          - "The central technical committee reviews and schedules features and defects every two weeks."
           - "An accepted request goes into a weekly release (step 18.3)."
     done_when:
       - "The chapter knows where to send a request that would change the software for everyone."
       - "The chapter knows who decides."
       - "The chapter knows how often those decisions are made."
-    note: "The central committee decides, every two weeks (ruled 09-18-26)."
+    note: "The central technical committee decides, every two weeks (ruled 09-18-26)."
     check:
       how: The chapter can say, without looking it up, that a change is for everyone or not at all.
       probe: none
@@ -165,15 +166,15 @@ steps:
     source: 11-Methods-Handover.md#18.4
 
   - id: "18.5"
-    name: Confirm the chapter can get in without the central support organization
+    name: Confirm the chapter can get in without the Association
     why: The promise that neither side can lock the other out is only real once a chapter officer has done it.
-    who: both — the chapter officer does it; the central support organization watches
+    who: both — the chapter officer does it; the Association watches
     first: ["18.4"]
     needs: []
     produces: []
     mode: guided
     actions:
-      - do: "With someone from the central support organization watching, the chapter officer signs in with their own sign-in, not a shared one, to each of these:"
+      - do: "With someone from the Association watching, the chapter officer signs in with their own sign-in, not a shared one, to each of these:"
         items:
           - "The hosting account, at https://cloud.digitalocean.com"
           - "The Google Workspace admin console, at https://admin.google.com"
@@ -181,7 +182,7 @@ steps:
         see: Each account's home page, under the officer's own name.
       - do: "In the hosting account, the officer opens the CRM server's page and opens its web console. The exact label of the console action is not verified."
         see: A command prompt on the CRM server.
-      - do: "What the officer does once inside the server, to regain the CRM without the central support organization, is not written yet (work list item 5). Until it is, record this part as blocked."
+      - do: "What the officer does once inside the server, to regain the CRM without the Association, is not written yet (work list item 5). Until it is, record this part as blocked."
       - do: Add the date and the officer's name to the chapter's entry in the list of watched systems (step 12.5).
     done_when:
       - "A named chapter officer has demonstrated, not merely been told, that they can reach the server on their own."
@@ -212,7 +213,7 @@ steps:
       - do: "Walk the chapter through the four parts of the leaving kit, and who produces each:"
         items:
           - "The CRM. Already on the chapter's own server, so nobody needs to produce it."
-          - "An export of the application's own database. Produced by the central support organization. No script produces it yet (work list item 9)."
+          - "An export of the application's own database. Produced by the Association. No script produces it yet (work list item 9)."
           - "The shared drive documents. Already in the chapter's own Google Workspace."
           - "A licence to the last version of the software received. Written in the agreement."
       - do: "Explain what only the application's database holds, so keeping the CRM is not keeping all the data:"
@@ -247,7 +248,7 @@ steps:
         items:
           - "The chapter's first point of contact"
           - "The chapter officer named in step 18.4"
-          - "One member of the central committee"
+          - "One member of the central technical committee"
           - "One member of the support team"
         see: The meeting in both organizations' calendars.
       - do: "Put this agenda in the invitation:"
@@ -267,6 +268,10 @@ steps:
     source: 11-Methods-Handover.md#18.7
 
 changes:
+  - version: "0.5"
+    date: "11-07-26 15:21"
+    change: >-
+      Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". The stage summary no longer says the Association holds the only administrator accounts (Association ruling 1).
   - version: "0.4"
     date: "09-24-26 00:39"
     change: >-

@@ -1,7 +1,7 @@
 # Stage 17 — Check everything works before going live
 
-**Version:** 0.5  
-**Last Updated:** 09-23-26 20:40  
+**Version:** 0.6  
+**Last Updated:** 11-07-26 15:21  
 **Generated from** `steps/stage-17.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -10,7 +10,7 @@
 
 This stage proves the chapter's system works end to end before any real client uses it: each team reaches its own pages and nobody else's, and a public application travels from the website through assignment to a mentor. Every check is done as an ordinary user. An administrator skips every permission check, so a check done as an administrator proves nothing, and several of Cleveland's permission faults stayed hidden for weeks for exactly that reason.
 
-**Who:** The central support organization, signed in as test users; the chapter for the website check.  
+**Who:** The Association, signed in as test users; the chapter for the website check.  
 **Time:** About two hours. Most of the checks can be run by a script.  
 **When this stage is done:** The handover to normal support (stage 18). The chapter can take real clients.
 
@@ -38,7 +38,7 @@ This stage proves the chapter's system works end to end before any real client u
 
 **Why:** Each team's permissions can only be proven by someone who holds that team and nothing else.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
@@ -48,7 +48,7 @@ This stage proves the chapter's system works end to end before any real client u
 **Do this:**
 
 1. In these steps, CRM-ADDRESS is the chapter's CRM address, APP-ADDRESS is the chapter's application address, and SHORT-LABEL is the chapter's short label, all from the chapter information form.
-2. Sign in to CRM-ADDRESS as the central support organization's administrator. Open Administration, then Users, and create these six accounts. The exact labels on the create-user screen are not verified. Use these values:
+2. Sign in to CRM-ADDRESS as the Association's administrator. Open Administration, then Users, and create these six accounts. The exact labels on the create-user screen are not verified. Use these values:
    - User name SHORT-LABEL.test.clientadmin, team Client Administration Team
    - User name SHORT-LABEL.test.mentoradmin, team Mentor Administration Team
    - User name SHORT-LABEL.test.partner, team Partner Management Team
@@ -72,7 +72,7 @@ This stage proves the chapter's system works end to end before any real client u
 
 **How to check:** Each test user signs in at APP-ADDRESS/, and the portal shows tiles for exactly one team.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Giving test users a second team "to make testing easier". The check then proves nothing about the single-team case real staff are in.
 
@@ -82,7 +82,7 @@ This stage proves the chapter's system works end to end before any real client u
 
 **Why:** A permission gap either locks staff out of their work or shows them records they must not see, and only a per-team test finds it.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
@@ -122,7 +122,7 @@ This stage proves the chapter's system works end to end before any real client u
 
 **How to check:** The pattern written down matches the list above for every test user.
 
-**If it didn't work:** A "Not Found" answer is not a refusal. It means the page is switched off or the address is wrong. Find out which before calling it a pass. Any other difference from the table: stop, and ask the central support organization.
+**If it didn't work:** A "Not Found" answer is not a refusal. It means the page is switched off or the address is wrong. Find out which before calling it a pass. Any other difference from the table: stop, and ask the Association.
 
 **What usually goes wrong:** Reading "not found" as "refused". In August the settings page answered "not found" to every test user, and the record cannot say why.
 
@@ -132,7 +132,7 @@ This stage proves the chapter's system works end to end before any real client u
 
 **Why:** The public form is how clients arrive, so it is tested from the chapter's own website the way a client would use it.
 
-**Who:** The chapter and the central support organization — the central support organization, or anyone at the chapter
+**Who:** The chapter and the Association — the Association, or anyone at the chapter
 
 **Finish first:**
 
@@ -157,7 +157,7 @@ This stage proves the chapter's system works end to end before any real client u
 
 **How to check:** The submission appears in Submission Admin at APP-ADDRESS/ops/, under its reference number.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A broken policy link on the consent box.
 
@@ -167,7 +167,7 @@ This stage proves the chapter's system works end to end before any real client u
 
 **Why:** Assigning a new client to a mentor is the client administrator's main task, and it depends on several permissions at once.
 
-**Who:** The central support organization signed in as the Client Administration Team test user
+**Who:** The Association signed in as the Client Administration Team test user
 
 **Finish first:**
 
@@ -189,7 +189,7 @@ This stage proves the chapter's system works end to end before any real client u
 
 **How to check:** The engagement shows Test Mentor SHORT-LABEL and the status Pending Acceptance.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Two known failures. An empty mentor list: a mentor appears only when Active, accepting new clients and linked to an account. And a refusal about users: the client administration role needs permission to read users; Cleveland's role lacked it, and production still needs the fix.
 
@@ -199,7 +199,7 @@ This stage proves the chapter's system works end to end before any real client u
 
 **Why:** The assignment only matters if the mentor can find the client and work with them.
 
-**Who:** The central support organization signed in as the Mentor Team test user
+**Who:** The Association signed in as the Mentor Team test user
 
 **Finish first:**
 
@@ -216,7 +216,7 @@ This stage proves the chapter's system works end to end before any real client u
 
 **How to check:** The engagement opens, and the profile page shows the mentor's own details.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Client Management is empty. Nearly always the mentor record is not linked to the account, or the engagement was assigned to a duplicate mentor record with the same name. Check the link first.
 
@@ -226,7 +226,7 @@ This stage proves the chapter's system works end to end before any real client u
 
 **Why:** A submission that never reaches Completed means the background worker is not delivering to the CRM.
 
-**Who:** The central support organization signed in as the Marketing Admin Team test user
+**Who:** The Association signed in as the Marketing Admin Team test user
 
 **Finish first:**
 
@@ -254,7 +254,7 @@ This stage proves the chapter's system works end to end before any real client u
 
 **Why:** Staff also use the CRM directly, and a missing screen file shows an ordinary user a blank page.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
@@ -269,7 +269,7 @@ This stage proves the chapter's system works end to end before any real client u
 
 **How to check:** The home screen and navigation bar appear.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A blank page. The CRM's screen code folder was not copied (step 9.6). The trial chapter hit exactly this.
 
@@ -285,7 +285,7 @@ This stage proves the chapter's system works end to end before any real client u
 
 - step 13.2 Send the events address to the events programme page
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -301,7 +301,7 @@ This stage proves the chapter's system works end to end before any real client u
 
 **How to check:** Each page shows the chapter's own content and name, on a computer and a phone.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A page with no styling at all, when the page and its stylesheet disagree. Cleveland shipped exactly this for an hour. Also, the public mentor directory page is not built yet (step 13.1).
 
@@ -311,7 +311,7 @@ This stage proves the chapter's system works end to end before any real client u
 
 **Why:** Test records left behind turn up in the chapter's reports and lists.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
@@ -323,11 +323,11 @@ This stage proves the chapter's system works end to end before any real client u
 - step 17.7 Confirm the CRM's own screen works for an ordinary user
 - step 17.8 Confirm the website pages work for a member of the public
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
-1. Sign in to CRM-ADDRESS as the central support organization's administrator and delete these records, in this order:
+1. Sign in to CRM-ADDRESS as the Association's administrator and delete these records, in this order:
    - The engagement for Test Bakery DELETE-ME
    - The client profile for Test Bakery DELETE-ME
    - The contact Test Applicant DELETE-ME
@@ -354,7 +354,7 @@ This stage proves the chapter's system works end to end before any real client u
 
 **How to check:** A CRM search for DELETE-ME finds nothing, and each of the seven test users is refused at sign-in.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A test record left behind turns up in the chapter's reports. The analytics pages count every engagement.
 
@@ -364,6 +364,7 @@ This stage proves the chapter's system works end to end before any real client u
 
 | Version | Date | Change |
 |---|---|---|
+| 0.6 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". |
 | 0.5 | 09-23-26 20:40 | References to stage 9 follow its renumbering from twenty steps to nine (stage 9 version 0.11). |
 | 0.4 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG (and SLUG) is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. |
 | 0.3 | 09-23-26 00:55 | Three corrections from the review before the first real chapter. Step 17.1 sets the test mentor to accepting new clients, without which the Assign list in step 17.4 is empty, and step 17.9 deletes any Google mailbox that created. Step 17.2 no longer points at a record whose settings-page answer the next action calls wrong. Step 17.3 no longer waits on stage 13: the website link is checked once it exists, and the rest of the form check runs without it. |

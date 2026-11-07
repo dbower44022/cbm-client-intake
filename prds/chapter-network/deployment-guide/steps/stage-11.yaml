@@ -1,7 +1,7 @@
 stage: 11
 name: Deploy the chapter's applications
-version: "0.12"
-updated: "09-25-26 13:00"
+version: "0.13"
+updated: "11-07-26 15:21"
 summary: >-
   In this stage we put the chapter's applications on its own hosting account and
   prove they work. We generate the deployment settings from the reviewed chapter
@@ -15,7 +15,7 @@ summary: >-
   depends on the one before, because each fails in a way that names nothing
   useful.
 who: >-
-  The central support organization, inside the chapter's hosting account.
+  The Association, inside the chapter's hosting account.
 time: >-
   About an hour for the deployment itself; the August build was active on the
   first attempt in seven minutes. The Google checks at the end are not timed yet.
@@ -1089,6 +1089,10 @@ steps:
     source: 3-Methods-CRM-Google-Applications.md#11.18
 
 changes:
+  - version: "0.13"
+    date: "11-07-26 15:21"
+    change: >-
+      Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee".
   - version: "0.12"
     date: "09-25-26 13:00"
     change: >-

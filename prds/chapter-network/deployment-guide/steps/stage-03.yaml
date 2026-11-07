@@ -1,7 +1,7 @@
 stage: 3
 name: Register the chapter's domain names
-version: "0.3"
-updated: "09-23-26 13:51"
+version: "0.4"
+updated: "11-07-26 15:21"
 why: >-
   Every address the chapter uses hangs off its domain names: its email, its
   website, its CRM and its applications. This stage buys them in the chapter's
@@ -11,7 +11,7 @@ why: >-
   3.7). Losing the account that holds the domain names loses the chapter's email
   and website together.
 who: >-
-  The chapter's setup contact, with the central support organization for the
+  The chapter's setup contact, with the Association for the
   Cloudflare step.
 time: >-
   About an hour of work. A change of name servers can take up to a day to be seen
@@ -56,16 +56,17 @@ steps:
   - id: "3.2"
     name: Decide how many domain names the chapter needs, and choose them
     why: The email domain name becomes part of every mentor's address for good, so it has to be chosen deliberately.
-    who: chapter, advised by the central support organization
+    who: chapter, advised by the Association
     first: ["1.1"]
     needs: [chapter_name]
     produces: [primary_domain, website_domain, mentor_email_domain]
     mode: guided
     actions:
-      - do: "Explain the two choices to the chapter's board. Whether a chapter needs one domain name or two is an open question in the plan:"
+      - do: "Explain the Association's recommendation to the chapter's board: two domain names, as the Association itself has (Association ruling 25) and as Cleveland has:"
         items:
-          - "Two domain names, as Cleveland has: one for the public website (clevelandbusinessmentors.org) and a second, shorter one for email and mentor logins (cbmentors.org). Mentors' addresses are short, but there are two names to renew."
-          - "One domain name for everything. Simpler and cheaper, but the email addresses are tied to the website's name for good."
+          - "One for the public website, for example businessmentorsassociation.org or clevelandbusinessmentors.org."
+          - "A second, shorter one for email and mentor sign-ins, for example mentorsassociation.org or cbmentors.org. Every mentor's address ends in it, so a short name gives short addresses."
+      - do: "Tell the board the other choice, which is the chapter's to make: one domain name for everything. It is simpler and there is one name fewer to renew, but the email addresses are tied to the website's name for good."
       - do: "Write down the choice as three values:"
         items:
           - "The website domain name, for example akronbusinessmentors.org."
@@ -78,15 +79,16 @@ steps:
       - do: Search the registrar the chapter will use for each domain name chosen.
         see: Each name shown as available to register.
     done_when: >-
-      The names are chosen and confirmed available. See the open question in the
-      plan document about whether a chapter needs one domain name or two.
+      The names are chosen and confirmed available. The Association recommends two
+      domain names, one for the website and a shorter one for email; the chapter may
+      choose one.
     check:
       how: The chosen names are written down, and a registrar's search shows each one available.
       probe: The app checks that each chosen name is still unregistered.
     goes_wrong: >-
       A long email domain name. Every mentor's address is their first and last name at
       that domain name, so a long domain name makes long addresses.
-    later: The plan's open question is ruled, and this step states the answer.
+    later: unchanged
     status: not-yet-tried
     source: 8-Methods-Organization-Domains-Google.md#3.2
 
@@ -212,7 +214,7 @@ steps:
   - id: "3.7"
     name: Move the domain names' DNS to the chapter's Cloudflare account
     why: CRMBuilder writes the CRM's address into Cloudflare itself, so the chapter's domain names must live in a Cloudflare account the chapter owns.
-    who: both — the chapter's setup contact, with the central support organization
+    who: both — the chapter's setup contact, with the Association
     first: ["3.4", "3.6", "2.7"]
     needs: [primary_domain, website_domain, chapter_vault]
     produces: [cloudflare_account]
@@ -222,7 +224,7 @@ steps:
         items:
           - "dig +short NS DOMAIN"
         see: "Two or more name servers. Names ending in ns.cloudflare.com mean the DNS is already at Cloudflare. Any other names, such as nsc1.squarespacedns.com, mean another DNS provider hosts it."
-      - do: "Decide with the central support organization whether the DNS moves to Cloudflare or stays where it is. A chapter whose email and website already run on its domain may keep its DNS provider; this is called manual DNS (ruled 09-23-26). Moving costs two to three hours and touches the chapter's live email and website. Keeping it means every DNS record in this guide is added by hand at the chapter's DNS provider."
+      - do: "Decide with the Association whether the DNS moves to Cloudflare or stays where it is. A chapter whose email and website already run on its domain may keep its DNS provider; this is called manual DNS (ruled 09-23-26). Moving costs two to three hours and touches the chapter's live email and website. Keeping it means every DNS record in this guide is added by hand at the chapter's DNS provider."
         see: "One answer, agreed by both: Cloudflare, or manual DNS at the named provider."
       - do: "Manual DNS only: do the next three actions, then skip every Cloudflare action in this step."
       - do: "Manual DNS only: in the Operations vault, create an item titled DNS provider, holding:"
@@ -230,8 +232,8 @@ steps:
           - "The words Manual DNS, and the provider's name."
           - The provider's sign-in address.
           - The sign-in email and the password. If the registrar from step 3.3 hosts the DNS, name the registrar's item instead.
-      - do: "Manual DNS only: give the central support organization's named people the ability to add DNS records at the provider. Use the provider's own team or member feature if it has one; otherwise they use the sign-in held in the vault. Providers name this feature differently, and this guide does not give the labels."
-        see: A named person from the central support organization able to open the domain's DNS records.
+      - do: "Manual DNS only: give the Association's named people the ability to add DNS records at the provider. Use the provider's own team or member feature if it has one; otherwise they use the sign-in held in the vault. Providers name this feature differently, and this guide does not give the labels."
+        see: A named person from the Association able to open the domain's DNS records.
       - do: "Manual DNS only: check that two-step sign-in is on for the DNS provider account, with its codes in the DNS provider item. Leave DNSSEC as it is: it only matters when the name servers change, and manual DNS does not change them."
       - do: "Open https://dash.cloudflare.com/sign-up and create the account with:"
         items:
@@ -243,7 +245,7 @@ steps:
       - do: "Compare Cloudflare's list of records with the registrar's. Any record missing from Cloudflare's list, add in Cloudflare now, or it stops working when the name servers change."
       - do: "In the registrar account, open the domain's name server settings (at Porkbun, the domain's name server details; the exact label has not been checked). Delete the registrar's name servers and enter Cloudflare's two, exactly as Cloudflare shows them."
       - do: "In Cloudflare, open your profile's authentication settings and turn on two-step sign-in with an authenticator code, stored in the \"Cloudflare\" item in the vault. Save Cloudflare's backup codes into the same item."
-      - do: "In Cloudflare, open the account's members page and invite each of the central support organization's named people by email, with the Administrator role. The exact page and role names have not been checked."
+      - do: "In Cloudflare, open the account's members page and invite each of the Association's named people by email, with the Administrator role. The exact page and role names have not been checked."
         see: Each invited person listed as a member once they accept.
       - do: "Wait for Cloudflare to report each domain name as active. It can take up to a day. From a terminal, this command shows the name servers the world sees; put the domain name in place of DOMAIN:"
         items:
@@ -253,11 +255,11 @@ steps:
       - "Each domain name is a zone in a Cloudflare account the chapter owns, or, with manual DNS, is hosted in a DNS provider account the chapter owns."
       - "The registrar points at Cloudflare's name servers, or, with manual DNS, at the chapter's DNS provider's."
       - "Two-step sign-in is on."
-      - "The central support organization's named people are members."
+      - "The Association's named people are members."
       - "The sign-in and recovery codes are in the chapter's vault."
     note: "CRMBuilder writes DNS records only into Cloudflare. With manual DNS it shows each record, and a person adds it at the chapter's DNS provider (ruled 09-23-26)."
     check:
-      how: Cloudflare shows each domain name as active, and a name-server lookup on each domain name returns Cloudflare's two servers. With manual DNS, the lookup returns the chapter's DNS provider's servers, and a person from the central support organization can open the domain's DNS records there.
+      how: Cloudflare shows each domain name as active, and a name-server lookup on each domain name returns Cloudflare's two servers. With manual DNS, the lookup returns the chapter's DNS provider's servers, and a person from the Association can open the domain's DNS records there.
       probe: The app looks up each domain name's name servers and confirms they are Cloudflare's, or, with manual DNS, the provider named in the vault.
     goes_wrong: >-
       From now on every DNS record is made in Cloudflare, not at the registrar. And
@@ -269,6 +271,10 @@ steps:
     source: 8-Methods-Organization-Domains-Google.md#3.7
 
 changes:
+  - version: "0.4"
+    date: "11-07-26 15:21"
+    change: >-
+      Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". Step 3.2 states the Association's recommendation, two domain names, one for the website and a shorter one for email (Association ruling 25); the chapter may still choose one.
   - version: "0.3"
     date: "09-23-26 13:51"
     change: >-

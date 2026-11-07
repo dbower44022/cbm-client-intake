@@ -1,14 +1,14 @@
 stage: 13
 name: Put the chapter's pages on its website
-version: "0.2"
-updated: "09-19-26 00:15"
+version: "0.3"
+updated: "11-07-26 15:21"
 why: >-
   The public learns about the chapter through its website. This stage connects
   that website to the pages the software serves: the events programme now, and the
   mentor directory once it is built. The events page is reached by a redirect from
   the website, not shown inside it (ruled 09-11-26).
 who: >-
-  The chapter makes the website change; the central support organization sets up
+  The chapter makes the website change; the Association sets up
   the application side.
 time: >-
   About an hour for the events page. The mentor directory cannot be done yet.
@@ -47,13 +47,13 @@ steps:
   - id: "13.2"
     name: Send the events address to the events programme page
     why: The chapter's website sends visitors to the events page the application serves, so every registration reaches the chapter's CRM.
-    who: both — the chapter for the website change; the central support organization for the application settings
+    who: both — the chapter for the website change; the Association for the application settings
     first: ["6.2", "6.3"]
     needs: [website_base_url, app_base_url, events_public_base_url]
     produces: []
     mode: guided
     actions:
-      - do: "Open https://APP-ADDRESS/setup/ and sign in as the central support organization's administrator. Set these settings, one at a time, and save each:"
+      - do: "Open https://APP-ADDRESS/setup/ and sign in as the Association's administrator. Set these settings, one at a time, and save each:"
         items:
           - "ORGANIZATION_WEBSITE_URL: the chapter's website address, for example https://WEBSITE-DOMAIN"
           - "ORGANIZATION_SITE_NAV: the website's menu, as Label|path pairs separated by commas, for example Home|/,About|/about/,Webinars|/webinars/,Contact|/contact/"
@@ -152,7 +152,7 @@ steps:
   - id: "13.5"
     name: Confirm the public pages read properly on a computer and a phone
     why: Most visitors arrive on a phone, and a page that scrolls sideways or cuts off text loses them.
-    who: chapter, checked by the central support organization
+    who: chapter, checked by the Association
     first: ["13.2"]
     needs: [events_public_base_url]
     produces: []
@@ -181,6 +181,10 @@ steps:
     source: 10-Methods-Website-Pages-Records.md#13.5
 
 changes:
+  - version: "0.3"
+    date: "11-07-26 15:21"
+    change: >-
+      Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee".
   - version: "0.2"
     date: "09-19-26 00:15"
     change: >-

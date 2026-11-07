@@ -1,7 +1,7 @@
 stage: 7
 name: Write and publish the policy documents
-version: "0.2"
-updated: "09-19-26 00:05"
+version: "0.3"
+updated: "11-07-26 15:21"
 why: >-
   Every public form carries one required consent box that links to four
   documents. Two are codes: the code of conduct, and the mentor code of ethics.
@@ -10,7 +10,7 @@ why: >-
   The chapter writes the documents with its own legal adviser; this stage covers
   only what the software needs from them.
 who: >-
-  The chapter, with its own legal adviser. The central support organization
+  The chapter, with its own legal adviser. The Association
   supplies the list of what personal information the software collects, and gives
   no legal advice.
 time: >-
@@ -114,13 +114,13 @@ steps:
   - id: "7.4"
     name: Write and publish the privacy policy
     why: The consent box on every public form links to it, and it must describe what this chapter's system collects, under this chapter's name.
-    who: both — the chapter writes it, the central support organization says what the software collects
+    who: both — the chapter writes it, the Association says what the software collects
     first: ["6.4"]
     needs: [website_base_url]
     produces: [policy_privacy_url]
     mode: offline
     actions:
-      - do: "The central support organization gives the chapter's adviser a plain list of what personal information the software collects and where it is kept. There is no finished list yet (work list item 13). Until there is, give this outline:"
+      - do: "The Association gives the chapter's adviser a plain list of what personal information the software collects and where it is kept. There is no finished list yet (work list item 13). Until there is, give this outline:"
         items:
           - "Names, contact details and business details from the public forms, kept in the chapter's CRM."
           - "Every form submission, also held in the application's own database."
@@ -145,7 +145,7 @@ steps:
     goes_wrong: >-
       Starting from another chapter's policy and missing a name. The finishing test
       for this step exists for that reason.
-    later: The central support organization keeps a standing description of what the software collects, updated with each release that changes it.
+    later: The Association keeps a standing description of what the software collects, updated with each release that changes it.
     status: not-yet-tried — the plain list of what the software collects does not exist as one document yet.
     source: 9-Methods-Hosting-Website-Policies.md#7.4
 
@@ -161,7 +161,7 @@ steps:
       - do: Send the chapter's legal adviser the four addresses from steps 7.1 to 7.4.
       - do: The adviser reads all four and replies in writing that they may be published, naming each document.
         see: A written reply naming all four documents.
-      - do: Save the reply in the chapter's shared drive, in a folder named Legal, with the date in its file name. The central support organization plays no part in this review.
+      - do: Save the reply in the chapter's shared drive, in a folder named Legal, with the date in its file name. The Association plays no part in this review.
     done_when: >-
       Whoever advises the chapter on legal matters has read all four and confirmed
       they may be published.
@@ -178,7 +178,7 @@ steps:
   - id: "7.6"
     name: Record the four web addresses
     why: The software's four policy settings are filled from these addresses, and every one defaults to Cleveland's documents.
-    who: chapter, checked by the central support organization
+    who: chapter, checked by the Association
     first: ["7.5"]
     needs: [policy_client_conduct_url, policy_mentor_ethics_url, policy_terms_url, policy_privacy_url]
     produces: []
@@ -210,6 +210,10 @@ steps:
     source: 9-Methods-Hosting-Website-Policies.md#7.6
 
 changes:
+  - version: "0.3"
+    date: "11-07-26 15:21"
+    change: >-
+      Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee".
   - version: "0.2"
     date: "09-19-26 00:05"
     change: >-

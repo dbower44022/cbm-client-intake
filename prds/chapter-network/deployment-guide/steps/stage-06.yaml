@@ -1,7 +1,7 @@
 stage: 6
 name: Build the chapter's public website
-version: "0.5"
-updated: "09-23-26 20:40"
+version: "0.6"
+updated: "11-07-26 15:21"
 why: >-
   The public website is the chapter's own marketing site. The software does not
   build it, but it needs four things from it. The policy documents need addresses
@@ -10,7 +10,7 @@ why: >-
   the events page the applications serve. This stage makes sure the site can do
   all four, and that someone at the chapter can change it.
 who: >-
-  The chapter. The central support organization writes the colour file and helps
+  The chapter. The Association writes the colour file and helps
   with the help documentation decision.
 time: >-
   Not known. A chapter that already has a website finishes in an hour; building a
@@ -152,7 +152,7 @@ steps:
   - id: "6.5"
     name: Choose the chapter's colours and publish the colour file
     why: Colours are the only visual difference between chapters in the software, so a chapter that skips this looks exactly like Cleveland.
-    who: both — the chapter chooses the colours, the central support organization writes the file
+    who: both — the chapter chooses the colours, the Association writes the file
     first: ["6.2"]
     needs: [website_base_url]
     produces: [chapter_tokens_url]
@@ -164,7 +164,7 @@ steps:
           - "Button colour. Cleveland: #CB963B (gold)."
           - "Button colour when the mouse is over it, about ten per cent darker. Cleveland: #b8842f."
           - "Body text colour. Cleveland: #7A7A7A (grey)."
-      - do: "The central support organization writes a file named chapter-tokens.css containing exactly these lines, with the chapter's four colour codes in place of the capitalised words. The values-file writer in step 8.10 produces this file from the page's answers, as prds/chapter-network/chapters/SHORT-LABEL-chapter-tokens.css:"
+      - do: "The Association writes a file named chapter-tokens.css containing exactly these lines, with the chapter's four colour codes in place of the capitalised words. The values-file writer in step 8.10 produces this file from the page's answers, as prds/chapter-network/chapters/SHORT-LABEL-chapter-tokens.css:"
         items:
           - ":root {"
           - "  --cbm-navy: PRIMARY-COLOUR;"
@@ -173,7 +173,7 @@ steps:
           - "  --cbm-text: BODY-TEXT-COLOUR;"
           - "}"
       - do: Add nothing else to the file. It may only set names that start --cbm-, and only inside :root. Every name it leaves out keeps Cleveland's value from frontend/shared/tokens.css, where the full list of names is.
-      - do: Publish the file so it has its own address, for example https://WEBSITE-DOMAIN/chapter-tokens.css. Whether the chapter's platform can serve a .css file has not been checked for any platform. If it cannot, the central support organization hosts the file elsewhere.
+      - do: Publish the file so it has its own address, for example https://WEBSITE-DOMAIN/chapter-tokens.css. Whether the chapter's platform can serve a .css file has not been checked for any platform. If it cannot, the Association hosts the file elsewhere.
       - do: "In a terminal, run exactly:"
         items:
           - "curl -sI https://WEBSITE-DOMAIN/chapter-tokens.css"
@@ -232,7 +232,7 @@ steps:
   - id: "6.7"
     name: Decide where the chapter's help documentation lives
     why: The applications' portal and the CRM's navigation bar both link to the help documentation, and leaving it undecided sends the chapter's staff to Cleveland's.
-    who: both — the chapter, with the central support organization
+    who: both — the chapter, with the Association
     first: ["6.2"]
     needs: []
     produces: [docs_site_url]
@@ -263,6 +263,10 @@ steps:
     source: 9-Methods-Hosting-Website-Policies.md#6.7
 
 changes:
+  - version: "0.6"
+    date: "11-07-26 15:21"
+    change: >-
+      Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee".
   - version: "0.5"
     date: "09-23-26 20:40"
     change: >-

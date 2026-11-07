@@ -1,7 +1,7 @@
 stage: 9
 name: Build the CRM system
-version: "0.15"
-updated: "09-24-26 23:13"
+version: "0.16"
+updated: "11-07-26 15:21"
 why: >-
   The CRM is the chapter's system of record. Every client, mentor, partner,
   funder and meeting lives in it, and every application reads and writes it.
@@ -9,12 +9,12 @@ why: >-
   it identical to every other chapter's CRM, so that one release of the software
   works for all of them.
 who: >-
-  The central support organization, working inside the chapter's accounts.
+  The Association, working inside the chapter's accounts.
 time: >-
   About half a day when nothing goes wrong.
 before_you_start:
   - The chapter information form, complete and reviewed, saved as the chapter's values file (step 8.10)
-  - The chapter's hosting account, with the central support organization's access (steps 5.1 and 5.4)
+  - The chapter's hosting account, with the Association's access (steps 5.1 and 5.4)
   - The chapter's domain names in its Cloudflare account, or at its own DNS provider with manual DNS (step 3.7)
   - The chapter's own DigitalOcean token, and its Cloudflare token unless it uses manual DNS, entered in CRMBuilder (step 5.8)
   - The chapter's vault in Proton Pass, for every secret this stage creates (step 2.7)
@@ -70,7 +70,7 @@ steps:
     produces: [crm_ssh_key]
     mode: guided
     actions:
-      - do: "Work at the build computer. The build computer is the central support organization's own computer, the one with CRMBuilder installed. Every command in this stage is typed in a terminal window on the build computer. Two folders on it are used:"
+      - do: "Work at the build computer. The build computer is the Association's own computer, the one with CRMBuilder installed. Every command in this stage is typed in a terminal window on the build computer. Two folders on it are used:"
         items:
           - "CRMBuilder's folder: ~/Dropbox/Projects/crmbuilder"
           - "The client intake software's folder: ~/Dropbox/Projects/cbm-client-intake"
@@ -511,6 +511,10 @@ steps:
     source: 3-Methods-CRM-Google-Applications.md#9.20
 
 changes:
+  - version: "0.16"
+    date: "11-07-26 15:21"
+    change: >-
+      Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee".
   - version: "0.15"
     date: "09-24-26 23:13"
     change: >-

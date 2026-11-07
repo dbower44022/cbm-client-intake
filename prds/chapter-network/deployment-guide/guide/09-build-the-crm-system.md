@@ -1,7 +1,7 @@
 # Stage 9 — Build the CRM system
 
-**Version:** 0.15  
-**Last Updated:** 09-24-26 23:13  
+**Version:** 0.16  
+**Last Updated:** 11-07-26 15:21  
 **Generated from** `steps/stage-09.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -10,14 +10,14 @@
 
 The CRM is the chapter's system of record. Every client, mentor, partner, funder and meeting lives in it, and every application reads and writes it. This stage builds the chapter's own CRM on the chapter's own server, and makes it identical to every other chapter's CRM, so that one release of the software works for all of them.
 
-**Who:** The central support organization, working inside the chapter's accounts.  
+**Who:** The Association, working inside the chapter's accounts.  
 **Time:** About half a day when nothing goes wrong.  
 **When this stage is done:** The Google permissions (stage 10) and the applications (stage 11) can start. The applications need the CRM key that step 9.7 creates.
 
 **Before you start:**
 
 - The chapter information form, complete and reviewed, saved as the chapter's values file (step 8.10)
-- The chapter's hosting account, with the central support organization's access (steps 5.1 and 5.4)
+- The chapter's hosting account, with the Association's access (steps 5.1 and 5.4)
 - The chapter's domain names in its Cloudflare account, or at its own DNS provider with manual DNS (step 3.7)
 - The chapter's own DigitalOcean token, and its Cloudflare token unless it uses manual DNS, entered in CRMBuilder (step 5.8)
 - The chapter's vault in Proton Pass, for every secret this stage creates (step 2.7)
@@ -46,11 +46,11 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 
 **Why:** Two paid add-on products and one release of the standard configuration go onto the CRM, and later steps check against their version numbers.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:** nothing.
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -83,18 +83,18 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 
 **Why:** The deploy wizard in step 9.3 needs a sign-in key and an administrator password that already exist, and the scripts in later steps need a settings file.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
 - step 2.7 Set up the chapter's password vault
-- step 8.10 Store the form where the central support organization can reach it
+- step 8.10 Store the form where the Association can reach it
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
-1. Work at the build computer. The build computer is the central support organization's own computer, the one with CRMBuilder installed. Every command in this stage is typed in a terminal window on the build computer. Two folders on it are used:
+1. Work at the build computer. The build computer is the Association's own computer, the one with CRMBuilder installed. Every command in this stage is typed in a terminal window on the build computer. Two folders on it are used:
    - CRMBuilder's folder: ~/Dropbox/Projects/crmbuilder
    - The client intake software's folder: ~/Dropbox/Projects/cbm-client-intake
 2. Create the server sign-in key. This is an SSH key: a pair of files that lets a person open a command line on the server. Type the line below and press Enter. Then press Enter twice more, to leave the key without a passphrase:
@@ -136,11 +136,11 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 
 **Why:** The wizard creates the server in the chapter's hosting account, installs the CRM on it, and gives the CRM its web address.
 
-**Who:** The central support organization inside the chapter's hosting account
+**Who:** The Association inside the chapter's hosting account
 
 **Finish first:**
 
-- step 5.4 Grant the central support organization access to the hosting account
+- step 5.4 Grant the Association access to the hosting account
 - step 5.8 Create the two tokens CRMBuilder builds with
 - step 3.7 Move the domain names' DNS to the chapter's Cloudflare account
 - step 9.2 Prepare the build computer
@@ -229,7 +229,7 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 
 **Why:** Before anything is copied onto the server, four things must be true. You can open a command line on it, its web address leads to it, its certificate renews by itself, and its CRM version is recorded.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
@@ -298,14 +298,14 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 
 **Why:** The standard permission roles refer to features inside these two products, and the CRM refuses a whole role that names a missing feature.
 
-**Who:** The central support organization with the chapter paying for the licences
+**Who:** The Association with the chapter paying for the licences
 
 **Finish first:**
 
 - step 9.1 Write down the versions to build with
 - step 9.4 Confirm the server works
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -333,7 +333,7 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 
 **Why:** The standard's record types, fields, links, screen layouts and rules arrive as two folders of files, copied from Cleveland's test system, and the CRM must be rebuilt to take them in.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
@@ -396,7 +396,7 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 
 **Why:** One script creates the teams, the permission roles, the email templates, the CRM's own settings and two accounts, and reads each one back to prove it.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
@@ -478,7 +478,7 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 
 **Why:** The applications report which version of the standard their CRM holds, and they read it from a record this step creates.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
@@ -509,7 +509,7 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 
 **Why:** This is the proof that the chapter's CRM matches the standard, and so that the next release of the software will work on it.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
@@ -543,6 +543,7 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 
 | Version | Date | Change |
 |---|---|---|
+| 0.16 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". |
 | 0.15 | 09-24-26 23:13 | Step 9.7's permission line no longer needs PYTHONPATH=. in front: the script now puts the application's folder on its own path, like its siblings. The failure case names an out-of-date copy instead. |
 | 0.14 | 09-24-26 23:08 | Corrections from Boston's build on 09-24-26. Step 9.3: a second run after a failed one waits on a DNS record still pointing at the first run's server. Step 9.4: the certbot container shows as Exited on this installer and the renewal is a nightly crontab line, so the check reads both; and CRMBuilder's certificate job cannot install the certificate from its schedule (the installer needs a terminal), which took Boston's CRM off the air until it was recovered by hand — the recovery is written into If it didn't work. Step 9.5: running 9.7 first is recoverable by a re-run. Step 9.7: the permission line needs PYTHONPATH=. in front. Step 9.8: on a CRM built from the copied files, no version record is written and the applications report unstamped. Statuses updated for Boston. |
 | 0.13 | 09-24-26 00:50 | Step 9.6 corrected from Boston's build: a new server has no screen code folder, so the search finds one folder, not two, and the old instruction to stop was wrong. The step names the folder to create (persistent/custom-client/src) and creates it before copying. |

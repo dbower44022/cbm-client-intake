@@ -1,7 +1,7 @@
 # Stage 13 — Put the chapter's pages on its website
 
-**Version:** 0.2  
-**Last Updated:** 09-19-26 00:15  
+**Version:** 0.3  
+**Last Updated:** 11-07-26 15:21  
 **Generated from** `steps/stage-13.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -10,7 +10,7 @@
 
 The public learns about the chapter through its website. This stage connects that website to the pages the software serves: the events programme now, and the mentor directory once it is built. The events page is reached by a redirect from the website, not shown inside it (ruled 09-11-26).
 
-**Who:** The chapter makes the website change; the central support organization sets up the application side.  
+**Who:** The chapter makes the website change; the Association sets up the application side.  
 **Time:** About an hour for the events page. The mentor directory cannot be done yet.  
 **When this stage is done:** The final checks before going live can include the website (step 17.8).
 
@@ -35,13 +35,13 @@ The public learns about the chapter through its website. This stage connects tha
 
 **Why:** Visitors to the chapter's website should be able to find the chapter's own mentors.
 
-**Who:** The central support organization then the chapter for the website change
+**Who:** The Association then the chapter for the website change
 
 **Finish first:**
 
 - step 6.2 Publish the website
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -60,18 +60,18 @@ The public learns about the chapter through its website. This stage connects tha
 
 **Why:** The chapter's website sends visitors to the events page the application serves, so every registration reaches the chapter's CRM.
 
-**Who:** The chapter and the central support organization — the chapter for the website change; the central support organization for the application settings
+**Who:** The chapter and the Association — the chapter for the website change; the Association for the application settings
 
 **Finish first:**
 
 - step 6.2 Publish the website
 - step 6.3 Confirm the website can redirect an address to another site
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
-1. Open https://APP-ADDRESS/setup/ and sign in as the central support organization's administrator. Set these settings, one at a time, and save each:
+1. Open https://APP-ADDRESS/setup/ and sign in as the Association's administrator. Set these settings, one at a time, and save each:
    - ORGANIZATION_WEBSITE_URL: the chapter's website address, for example https://WEBSITE-DOMAIN
    - ORGANIZATION_SITE_NAV: the website's menu, as Label|path pairs separated by commas, for example Home|/,About|/about/,Webinars|/webinars/,Contact|/contact/
    - EVENTS_CONTACT_EMAIL: the address presenters write to; empty uses the shared operations mailbox
@@ -112,14 +112,14 @@ The public learns about the chapter through its website. This stage connects tha
 
 **Why:** An embedded page should appear only inside the chapter's own website, never someone else's.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
 - step 13.1 Display the mentor directory page
 - step 13.2 Send the events address to the events programme page
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -138,13 +138,13 @@ The public learns about the chapter through its website. This stage connects tha
 
 **Why:** People share links to one mentor, and a shared link must land on that mentor.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
 - step 13.1 Display the mentor directory page
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -158,7 +158,7 @@ The public learns about the chapter through its website. This stage connects tha
 
 **How to check:** A copied address opens the same mentor, or the same event, in a private window.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** An unpublished event answers "not found". That is deliberate: a page that showed nothing would still reveal the event exists.
 
@@ -168,13 +168,13 @@ The public learns about the chapter through its website. This stage connects tha
 
 **Why:** Most visitors arrive on a phone, and a page that scrolls sideways or cuts off text loses them.
 
-**Who:** The chapter checked by the central support organization
+**Who:** The chapter checked by the Association
 
 **Finish first:**
 
 - step 13.2 Send the events address to the events programme page
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -192,7 +192,7 @@ The public learns about the chapter through its website. This stage connects tha
 
 **How to check:** On a phone, the events page shows one column with nothing cut off.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A page with no styling at all. The events page depends on class names in its copied stylesheet, and a mismatch shows unstyled panels with no error. Cleveland shipped exactly this for an hour on 09-11-26.
 
@@ -202,5 +202,6 @@ The public learns about the chapter through its website. This stage connects tha
 
 | Version | Date | Change |
 |---|---|---|
+| 0.3 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". |
 | 0.2 | 09-19-26 00:15 | Every action made precise (Doug, 09-19-26): the exact settings to set on the settings page, the exact addresses, the redirect's exact from, to and type, and the ZZTEST registration check, from EVENTS-SETUP.md section 6b. |
 | 0.1 | 09-18-26 17:30 | First version as data, converted from the methods for putting the chapter's pages on its website (10-Methods-Website-Pages-Records.md, version 0.2) with the step list's finishing tests. |

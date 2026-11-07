@@ -1,7 +1,7 @@
 # Stage 10 — Set up the Google permissions the software needs
 
-**Version:** 0.4  
-**Last Updated:** 09-25-26 12:50  
+**Version:** 0.5  
+**Last Updated:** 11-07-26 15:21  
 **Generated from** `steps/stage-10.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -10,7 +10,7 @@
 
 In this stage we give the applications a way to act inside the chapter's Google account. We create one account made for a program rather than a person, store its key in the chapter's vault, and have the chapter's own Google administrator grant that account an exact list of permissions. We also confirm the mailbox the applications will act as, and create the shared drive where every record's documents will be filed. The applications read and send the chapter's email, keep calendars in step, file documents and create mentor mailboxes, and every one of those goes through this single account. It comes before stage 11 because the applications need the key and the shared drive the moment they are deployed.
 
-**Who:** The central support organization, inside the chapter's Google account, with the chapter's own Google administrator at the keyboard for the permission grant.  
+**Who:** The Association, inside the chapter's Google account, with the chapter's own Google administrator at the keyboard for the permission grant.  
 **Time:** Not known yet. This stage has never been done on a new chapter. Book an hour with the chapter's Google administrator for step 10.3.  
 **When this stage is done:** The applications can be deployed with their Google key (stage 11), and the Google checks at the end of stage 11 can run.
 
@@ -33,13 +33,13 @@ In this stage we give the applications a way to act inside the chapter's Google 
 
 **Summary:** We create a Google Cloud project for the chapter and, inside it, a service account: an account made for a program rather than a person. The applications sign in to Google as this account, so nobody's personal sign-in is ever involved and nothing stops working when a person leaves. In the same project we switch on the five Google services the applications call, because Google refuses a call to a service that has not been switched on for the project. The account's Unique ID is the number the chapter's Google administrator will grant permission to in step 10.3.
 
-**Who:** The central support organization inside the chapter's Google account
+**Who:** The Association inside the chapter's Google account
 
 **Finish first:**
 
 - step 4.5 Create the chapter's own administrator account
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -74,7 +74,7 @@ In this stage we give the applications a way to act inside the chapter's Google 
 - Open that account. Its details page shows a Unique ID of about twenty digits. Open the note named Google machine account client ID in the chapter's Operations vault beside it and compare the two numbers digit by digit. They must be the same number: a wrong digit here means step 10.3 grants permission to an account that does not exist.
 - Open APIs and services, then Enabled APIs and services. The list includes Admin SDK API, Gmail API, Google Calendar API and Google Drive API, and Google Meet REST API if meeting transcripts will be switched on. A service missing here is refused later with a message saying the API has not been used in this project or is disabled.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** The project is created under the wrong organization, or under no organization at all, because the person signed in with a personal Google account rather than the chapter's administrator account. The project picker names the organization beside each project; if it does not name the chapter's domain, sign out, sign in as the administrator from step 4.5 and start again.
 
@@ -84,14 +84,14 @@ In this stage we give the applications a way to act inside the chapter's Google 
 
 **Summary:** We create a key for the service account and put the key file in the chapter's vault. The key is how the applications prove to Google that they are this account. It is the whole of the chapter's Google access in one file, and anyone who holds the file can use it, so it goes into the vault and nowhere else, and the copy the browser downloaded is deleted straight afterwards. Stage 11 takes the key from the vault when the applications are deployed.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
 - step 10.1 Create the machine account
 - step 2.7 Set up the chapter's password vault
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -110,11 +110,11 @@ In this stage we give the applications a way to act inside the chapter's Google 
 **How to check:**
 
 - In Proton Pass, open the chapter's Operations vault. An item named Google machine account key is there with one attachment, a file ending .json. Open the attachment. It is plain text that starts with a curly bracket and contains a line beginning "client_email" whose value ends @SHORT-LABEL-apps.iam.gserviceaccount.com, and a line beginning "client_id" whose value is the Unique ID from step 10.1. A file naming a different account is the key to the wrong project.
-- A second named person at the central support organization opens the same item and sees the attachment. One person holding the only copy is the failure this vault exists to prevent.
+- A second named person at the Association opens the same item and sees the attachment. One person holding the only copy is the failure this vault exists to prevent.
 - On the computer that did the download, search the Downloads folder for .json. It finds nothing. Then open the bin: it is empty. Also check the browser's own downloads list, which keeps a link to the file until it is cleared.
 - At console.cloud.google.com, open the service account's Keys tab. Exactly one key is listed, dated today. If two are listed, the download was run twice: keep the one whose Key ID matches the "private_key_id" line in the file in the vault, and delete the other, so no key exists that the vault does not hold.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** The file stays in a downloads folder. It is not password-protected, and it gives whoever holds it the chapter's Google access.
 
@@ -122,15 +122,15 @@ In this stage we give the applications a way to act inside the chapter's Google 
 
 ## 10.3 Enter the permission grant
 
-**Summary:** The chapter's Google administrator tells Google that the service account may act on behalf of the chapter's users, for an exact list of permissions (Google calls the mechanism domain-wide delegation). Without this grant the account exists but can do nothing. The list has to be exact, because a permission missed here does not fail here: it fails weeks later, in a message that does not say which permission is missing. Only the chapter's own administrator can enter the grant, which is why this step is booked in advance and why the central support organization reads the list aloud while the administrator types.
+**Summary:** The chapter's Google administrator tells Google that the service account may act on behalf of the chapter's users, for an exact list of permissions (Google calls the mechanism domain-wide delegation). Without this grant the account exists but can do nothing. The list has to be exact, because a permission missed here does not fail here: it fails weeks later, in a message that does not say which permission is missing. Only the chapter's own administrator can enter the grant, which is why this step is booked in advance and why the Association reads the list aloud while the administrator types.
 
-**Who:** The chapter and the central support organization — the chapter's Google administrator types; the central support organization reads out the list
+**Who:** The chapter and the Association — the chapter's Google administrator types; the Association reads out the list
 
 **Finish first:**
 
 - step 10.1 Create the machine account
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -172,13 +172,13 @@ In this stage we give the applications a way to act inside the chapter's Google 
 
 **Summary:** We confirm that the shared operations mailbox from stage 4 is a real mailbox with its own licence, and write its address on the chapter information form. The applications read and send the chapter's shared mail as this mailbox, and Google lets the service account act only as a real licensed user. A group address or a forwarding alias looks the same in an address book, but Google refuses it, with a message that names nothing useful. This check has cost the project time before, so it is done here rather than discovered in stage 11.
 
-**Who:** The chapter and the central support organization
+**Who:** The chapter and the Association
 
 **Finish first:**
 
 - step 4.7 Create the shared operations mailbox
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -195,7 +195,7 @@ In this stage we give the applications a way to act inside the chapter's Google 
 - Open Directory, then Groups, and search for the same address. It must not appear there. An address that is a group appears here and not under Users.
 - Signing in at mail.google.com as the address, with its own password from step 4.7, opens an inbox. A group or an alias has no password and no inbox to open.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A group address or a forwarding alias. Both look like email addresses and neither works, and the refusal names nothing useful. If the address has no licence, it is not a mailbox.
 
@@ -205,13 +205,13 @@ In this stage we give the applications a way to act inside the chapter's Google 
 
 **Summary:** We create the shared drive that will hold every record's documents, and add the service account to it as a Manager. The applications file documents there as the service account, and give each person access to the folders for their own records, which is what the Manager role allows. A shared drive belongs to the chapter rather than to a person, so it survives staff changes; a folder in someone's own drive goes with them when they leave. Its identifier goes on the chapter information form, and stage 11 gives it to the applications.
 
-**Who:** The central support organization inside the chapter's Google account
+**Who:** The Association inside the chapter's Google account
 
 **Finish first:**
 
 - step 10.1 Create the machine account
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -236,7 +236,7 @@ In this stage we give the applications a way to act inside the chapter's Google 
 - The rest of the member list is the chapter's Google administrator who created the drive, and nobody else. People are given access to single folders later, by the applications, never to the whole drive.
 - With the drive itself open (not a folder inside it), the browser's address bar ends /drive/folders/ followed by the identifier. The value on the chapter information form matches it character for character. It is about nineteen characters and usually begins 0A; a much longer value was copied from inside a folder and points at that folder, not the drive.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** An ordinary folder in somebody's personal drive instead of a shared drive. It works until that person leaves.
 
@@ -246,6 +246,7 @@ In this stage we give the applications a way to act inside the chapter's Google 
 
 | Version | Date | Change |
 |---|---|---|
+| 0.5 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". |
 | 0.4 | 09-25-26 12:50 | Rewritten for the reader (Doug, 09-25-26): the stage and every step open with a Summary, what is done and why in a few plain sentences, in place of the one-line Why. Every How to check is now a list of concrete checks naming where to look and what must be seen: the Unique ID compared digit by digit, the key file's own contents and the Keys tab, the single delegation row and its scope count, the primary address against the alias list, and the shared drive's place in the left-hand list and the length of its identifier. Two more known failures added: a project made under a personal account (10.1) and a second delegation row for the same Client ID (10.3). |
 | 0.3 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. |
 | 0.2 | 09-19-26 00:07 | Every action made exact (Doug, 09-19-26: sweep every step): the Google Cloud project, the five APIs, the service account, the JSON key (including the organization policy that blocks keys by default), the domain-wide delegation entry with the exact scope list read from the software's code, one per line and as one pasteable line, and the shared drive with the Manager role Cleveland's own service account holds. |

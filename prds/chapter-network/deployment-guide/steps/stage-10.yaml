@@ -1,7 +1,7 @@
 stage: 10
 name: Set up the Google permissions the software needs
-version: "0.4"
-updated: "09-25-26 12:50"
+version: "0.5"
+updated: "11-07-26 15:21"
 summary: >-
   In this stage we give the applications a way to act inside the chapter's
   Google account. We create one account made for a program rather than a person,
@@ -14,7 +14,7 @@ summary: >-
   before stage 11 because the applications need the key and the shared drive
   the moment they are deployed.
 who: >-
-  The central support organization, inside the chapter's Google account, with the
+  The Association, inside the chapter's Google account, with the
   chapter's own Google administrator at the keyboard for the permission grant.
 time: >-
   Not known yet. This stage has never been done on a new chapter. Book an hour
@@ -136,7 +136,7 @@ steps:
           "client_id" whose value is the Unique ID from step 10.1. A file naming a
           different account is the key to the wrong project.
         - >-
-          A second named person at the central support organization opens the same
+          A second named person at the Association opens the same
           item and sees the attachment. One person holding the only copy is the
           failure this vault exists to prevent.
         - >-
@@ -168,9 +168,9 @@ steps:
       permission missed here does not fail here: it fails weeks later, in a message
       that does not say which permission is missing. Only the chapter's own
       administrator can enter the grant, which is why this step is booked in
-      advance and why the central support organization reads the list aloud
+      advance and why the Association reads the list aloud
       while the administrator types.
-    who: both — the chapter's Google administrator types; the central support organization reads out the list
+    who: both — the chapter's Google administrator types; the Association reads out the list
     first: ["10.1"]
     needs: [google_service_account_client_id]
     produces: []
@@ -355,6 +355,10 @@ steps:
     source: 3-Methods-CRM-Google-Applications.md#10.5
 
 changes:
+  - version: "0.5"
+    date: "11-07-26 15:21"
+    change: >-
+      Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee".
   - version: "0.4"
     date: "09-25-26 12:50"
     change: >-

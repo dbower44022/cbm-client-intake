@@ -1,24 +1,24 @@
-# Stage 5 — Open the hosting and video meeting accounts
+# Stage 5 — Open the chapter's service accounts
 
-**Version:** 0.10  
-**Last Updated:** 09-24-26 23:08  
+**Version:** 0.11  
+**Last Updated:** 11-07-26 15:21  
 **Generated from** `steps/stage-05.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
 
 ## Why this stage
 
-The chapter's CRM server, its applications and their database all run in a hosting account, and the public webinar programme runs through a video meeting account. This stage opens both in the chapter's own name, so the chapter owns its system and can withdraw access at any time. It ends with the two tokens CRMBuilder needs to build the CRM inside the chapter's accounts, and with the hosting account linked to the code repository the applications are built from.
+The chapter's CRM server, its applications and their database all run in a hosting account, and the public webinar programme runs through a video meeting account. This stage opens both in the chapter's own name, so the chapter owns its system and can withdraw access at any time. It makes the two tokens CRMBuilder needs to build the CRM inside the chapter's accounts, and links the hosting account to the code repository the applications are built from. Its last three steps open the other services a chapter runs: the website host, the mailing service and the payment service for donations.
 
-**Who:** The chapter opens and pays for the accounts. The central support organization is invited in, and creates the two tokens.  
+**Who:** The chapter opens and pays for the accounts. The Association is invited in, and creates the two tokens.  
 **Time:** About two hours of work. The nonprofit hosting credits can take weeks to be answered, but nothing waits on them.  
-**When this stage is done:** Building the CRM (stage 9) can start once the chapter information form is complete, because CRMBuilder now holds the chapter's own tokens.
+**When this stage is done:** Building the CRM (stage 9) can start once the chapter information form is complete, because CRMBuilder now holds the chapter's own tokens. The website (stage 6) is built in the website host account opened in step 5.10.
 
 **Before you start:**
 
 - The chapter's mailboxes on its own domain (stage 4)
 - The chapter's bank account (step 1.6)
-- The agreement on what access the central support organization holds (step 2.4)
+- The agreement on what access the Association holds (step 2.4)
 - The chapter's vault (step 2.7)
 - The chapter's domain names in its Cloudflare account, or at its own DNS provider with manual DNS (step 3.7)
 
@@ -27,12 +27,15 @@ The chapter's CRM server, its applications and their database all run in a hosti
 - 5.1 Create the server hosting account
 - 5.2 Set up billing on the hosting account
 - 5.3 Apply for the nonprofit hosting credits
-- 5.4 Grant the central support organization access to the hosting account
+- 5.4 Grant the Association access to the hosting account
 - 5.5 Create the video meeting account, or record that it is not needed
 - 5.6 Turn on two-step sign-in for both accounts
 - 5.7 Write down every account the chapter now owns
 - 5.8 Create the two tokens CRMBuilder builds with
 - 5.9 Link the hosting account to the code repository
+- 5.10 Open the website host account
+- 5.11 Open the Constant Contact account and its developer application
+- 5.12 Open the Stripe account and create the donation link
 
 ---
 
@@ -46,7 +49,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 - step 4.7 Create the shared operations mailbox
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -61,7 +64,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **How to check:** The chapter's setup contact signs in, and the account's profile shows the chapter's name and the chapter mailbox.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Signing up with a founder's personal email address. The account then belongs, in practice, to whoever reads that inbox.
 
@@ -78,7 +81,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 - step 5.1 Create the server hosting account
 - step 1.6 Open a bank account
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -93,7 +96,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **How to check:** The billing settings show the chapter's payment method and the chapter mailbox.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A volunteer's personal card on the account. When that person leaves, the bills stop being paid and the hosting provider eventually switches the chapter's system off.
 
@@ -103,18 +106,18 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Why:** Nonprofit credits lower the chapter's hosting bill, and they belong to the chapter only if the chapter applies in its own name.
 
-**Who:** The chapter with the central support organization's help
+**Who:** The chapter with the Association's help
 
 **Finish first:**
 
 - step 5.2 Set up billing on the hosting account
 - step 1.5 Obtain nonprofit tax status, or a sponsorship arrangement
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
-1. Find the current nonprofit route for DigitalOcean credits. Two are known: DigitalOcean's own programme for nonprofits, and the DigitalOcean offer on TechSoup (https://www.techsoup.org). Neither has been checked for this guide, and the terms change. Ask the central support organization which is open now.
+1. Find the current nonprofit route for DigitalOcean credits. Two are known: DigitalOcean's own programme for nonprofits, and the DigitalOcean offer on TechSoup (https://www.techsoup.org). Neither has been checked for this guide, and the terms change. Ask the Association which is open now.
 2. Apply in the chapter's own name, with the employer identification number from step 1.3 and the determination letter from step 1.5. Use info@EMAIL-DOMAIN as the contact.
 3. Write on the chapter's account list (step 5.7):
    - The route used
@@ -127,42 +130,42 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **How to check:** The confirmation of the application and the answer date are on the chapter's account list.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A chapter under a sponsoring nonprofit has no nonprofit status of its own to apply with. That case is an open question. Until it is answered, such a chapter should budget for the full price.
 
 ---
 
-## 5.4 Grant the central support organization access to the hosting account
+## 5.4 Grant the Association access to the hosting account
 
-**Why:** The central support organization builds and runs the chapter's servers, and must do it under its own named sign-in so the chapter can see who did what and remove access.
+**Why:** The Association builds and runs the chapter's servers, and must do it under its own named sign-in so the chapter can see who did what and remove access.
 
-**Who:** The chapter and the central support organization — the chapter grants, the central support organization accepts
+**Who:** The chapter and the Association — the chapter grants, the Association accepts
 
 **Finish first:**
 
 - step 5.1 Create the server hosting account
-- step 2.4 Agree the access the central support organization will hold
+- step 2.4 Agree the access the Association will hold
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
-1. The central support organization's named person first creates their own DigitalOcean sign-in, at https://cloud.digitalocean.com/registrations/new, with their own work address, and turns on two-step sign-in for it.
+1. The Association's named person first creates their own DigitalOcean sign-in, at https://cloud.digitalocean.com/registrations/new, with their own work address, and turns on two-step sign-in for it.
 2. The chapter signs in at https://cloud.digitalocean.com as info@EMAIL-DOMAIN, opens the team's settings, and chooses to invite a member. The exact wording of DigitalOcean's screens has not been checked for this guide.
-3. Enter the central support person's own address, and give them a role that can create and manage servers, databases, applications, domains and tokens. DigitalOcean's role names have changed over time; choose the role that manages every resource but is not Owner, and write its name on the chapter's account list.
+3. Enter the Association's support person's own address, and give them a role that can create and manage servers, databases, applications, domains and tokens. DigitalOcean's role names have changed over time; choose the role that manages every resource but is not Owner, and write its name on the chapter's account list.
    *You should see:* The invitation listed as pending.
 4. Keep the Owner role with the chapter's own sign-in, info@EMAIL-DOMAIN.
 5. The invited person accepts from the message DigitalOcean sends, and switches to the chapter's team from their own sign-in.
    *You should see:* The chapter's team, reached from the invited person's own sign-in.
 6. The chapter opens the team's member list.
-   *You should see:* The central support person listed, with a remove option beside them. Do not press it.
+   *You should see:* The Association's support person listed, with a remove option beside them. Do not press it.
 
-**Done when:** The central support organization can create and manage servers in the account under its own named sign-in, and the chapter can remove that access itself.
+**Done when:** The Association can create and manage servers in the account under its own named sign-in, and the chapter can remove that access itself.
 
-**How to check:** The central support organization's named person sees the chapter's account, and the chapter's owner can see the remove button beside that person's name. There is no need to press it.
+**How to check:** The Association's named person sees the chapter's account, and the chapter's owner can see the remove button beside that person's name. There is no need to press it.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Sharing the chapter's own sign-in instead of inviting a named person. Nobody can tell who did what, and the chapter cannot withdraw access without changing its own password.
 
@@ -172,20 +175,20 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Why:** The public webinar programme schedules its meetings through the chapter's own Zoom account; mentoring sessions never use it.
 
-**Who:** The chapter and the central support organization — the chapter decides, the central support organization sets up the connection
+**Who:** The chapter and the Association — the chapter decides, the Association sets up the connection
 
 **Finish first:**
 
 - step 4.7 Create the shared operations mailbox
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
 1. Decide whether the chapter will run public webinars through the software. If not, write "No public webinars through Zoom" on the chapter's account list (step 5.7) and stop here. Mentoring sessions never need this account.
 2. Create a licensed user for the webinar host in the chapter's Google Workspace, exactly as in step 4.7, with Last name Webinars and Primary email webinars@EMAIL-DOMAIN. Zoom will send its host mail there.
 3. In a browser, go to https://zoom.us/signup and create a Zoom account with webinars@EMAIL-DOMAIN. Put the password in the chapter's Operations vault.
-4. Buy a paid Zoom plan with a Zoom Webinars licence, and assign that licence to webinars@EMAIL-DOMAIN. Automatic attendance also needs the plan to allow webinar reports. Which plan the chapter needs has not been checked for this guide; the central support organization confirms it.
+4. Buy a paid Zoom plan with a Zoom Webinars licence, and assign that licence to webinars@EMAIL-DOMAIN. Automatic attendance also needs the plan to allow webinar reports. Which plan the chapter needs, and its price, is not decided yet: write it as ZOOM-PLAN on the chapter's account list (step 5.7) until the Association confirms it.
 5. Signed in to Zoom as webinars@EMAIL-DOMAIN, go to https://marketplace.zoom.us and open Develop, then Build App. Choose Server-to-Server OAuth and name the app after the chapter, for example Akron Business Mentors Webinars.
 6. On the app's Information page, fill in the company name (the chapter's name) and a developer contact (info@EMAIL-DOMAIN).
 7. On the Scopes page, add the scopes the software uses:
@@ -194,7 +197,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
    - Reports: read
    - Users: read
 
-   *You should see:* Four groups of scopes added. Zoom's exact scope names have changed over time; pick the ones matching these four descriptions, and the central support organization checks them later with scripts/probe_zoom.py, which names any missing scope.
+   *You should see:* Four groups of scopes added. Zoom's exact scope names have changed over time; pick the ones matching these four descriptions, and the Association checks them later with scripts/probe_zoom.py, which names any missing scope.
 8. On the Activation page, activate the app.
    *You should see:* The app shown as activated.
 9. From the app's App Credentials page, copy three values:
@@ -208,7 +211,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **How to check:** The chapter's host mailbox signs in to Zoom, and the three values are recorded. The connection itself cannot be checked until the applications are deployed.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** The host address setting in the software defaults to Cleveland's. A chapter that forgets to change it would create its webinars under Cleveland's Zoom host. The Zoom connection has never been run against a real Zoom account.
 
@@ -225,7 +228,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 - step 5.1 Create the server hosting account
 - step 5.5 Create the video meeting account, or record that it is not needed
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -243,7 +246,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **How to check:** Signing in to each account asks for the second step, and a second named person confirms they can reach the recovery codes.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Recovery codes kept only on the phone of the person who turned two-step sign-in on. When that phone is lost, so is the account.
 
@@ -253,29 +256,33 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Why:** Every account must be findable by a second person, so no account depends on the one who opened it.
 
-**Who:** The chapter checked by the central support organization
+**Who:** The chapter checked by the Association
 
 **Finish first:**
 
 - step 5.1 Create the server hosting account
 - step 5.2 Set up billing on the hosting account
 - step 5.3 Apply for the nonprofit hosting credits
-- step 5.4 Grant the central support organization access to the hosting account
+- step 5.4 Grant the Association access to the hosting account
 - step 5.5 Create the video meeting account, or record that it is not needed
 - step 5.6 Turn on two-step sign-in for both accounts
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
-1. Make one list, held by the chapter in its Operations vault as a secure note, where the central support organization's named members can read it, with one line per account:
+1. Make one list, held by the chapter in its Operations vault as a secure note, where the Association's named members can read it, with one line per account:
    - The domain registrar
    - Cloudflare, or with manual DNS the chapter's DNS provider
    - Google Workspace
    - The Proton Pass vault itself
    - The hosting account
    - The Zoom account, if there is one
-2. On each line write:
+   - The website host account (step 5.10)
+   - The Constant Contact account (step 5.11)
+   - The Stripe account (step 5.12)
+2. Steps 5.10 to 5.12 open their accounts after this list is made. Leave a line for each, and each of those steps fills its line in.
+3. On each line write:
    - The web address to sign in at
    - Who holds the top-level sign-in
    - Who else has access
@@ -293,7 +300,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **How to check:** A second person at the chapter finds every account on the list without asking anyone.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** The list goes stale. It is handed over again at the end (step 18.4), and that is the moment to check it.
 
@@ -303,14 +310,14 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Why:** CRMBuilder creates the chapter's CRM server and its web address itself, and must do it inside the chapter's own accounts so the chapter can revoke access and keep everything.
 
-**Who:** The central support organization inside the chapter's accounts
+**Who:** The Association inside the chapter's accounts
 
 **Finish first:**
 
-- step 5.4 Grant the central support organization access to the hosting account
+- step 5.4 Grant the Association access to the hosting account
 - step 3.7 Move the domain names' DNS to the chapter's Cloudflare account
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -335,7 +342,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 7. Choose to continue to the summary, then create the token.
    *You should see:* A new token, shown once only, covering only the chapter's zones.
 8. Copy the Cloudflare token straight into the chapter's Operations vault, named Cloudflare DNS token for CRMBuilder.
-9. Work at the build computer: the central support organization's own computer, the one with CRMBuilder installed. Open a terminal window on it, type the line below and press Enter:
+9. Work at the build computer: the Association's own computer, the one with CRMBuilder installed. Open a terminal window on it, type the line below and press Enter:
    - cd ~/Dropbox/Projects/crmbuilder
 10. Start CRMBuilder. Type the line below and press Enter:
     - ./start-v2.sh
@@ -366,9 +373,9 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **How to check:** CRMBuilder's provider credentials screen shows both configured for the chapter's engagement, and lists the chapter's Cloudflare zones. With manual DNS, only the DigitalOcean line needs to be configured.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
-**What usually goes wrong:** A Cloudflare token with more permission than it needs, or one covering every zone in the account. Also, leaving the engagement on CRMBuilder's own tokens by mistake. The server then appears in the wrong hosting account, and nothing says so until someone looks. And a DigitalOcean token made under the chapter's own sign-in: it builds the CRM server, but step 11.5 fails with GitHub user not authenticated, because the GitHub link from step 5.9 belongs to the central support person's sign-in (Boston, 09-24-26).
+**What usually goes wrong:** A Cloudflare token with more permission than it needs, or one covering every zone in the account. Also, leaving the engagement on CRMBuilder's own tokens by mistake. The server then appears in the wrong hosting account, and nothing says so until someone looks. And a DigitalOcean token made under the chapter's own sign-in: it builds the CRM server, but step 11.5 fails with GitHub user not authenticated, because the GitHub link from step 5.9 belongs to the Association's support person's sign-in (Boston, 09-24-26).
 
 ---
 
@@ -376,11 +383,11 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Why:** The applications are built from the code repository on GitHub, and the hosting account can fetch it, and take each weekly release by itself, only after GitHub has given it access.
 
-**Who:** The central support organization inside the chapter's hosting account, signed in to GitHub as the repository's owner
+**Who:** The Association inside the chapter's hosting account, signed in to GitHub as the repository's owner
 
 **Finish first:**
 
-- step 5.4 Grant the central support organization access to the hosting account
+- step 5.4 Grant the Association access to the hosting account
 
 **Do this:**
 
@@ -413,13 +420,140 @@ The chapter's CRM server, its applications and their database all run in a hosti
 - The repository's release branch is offered on the chapter's Create App screen.
 - No application was created.
 
-**Note:** Today the link runs through one personal GitHub account, the repository owner's. Once the central support organization has its own GitHub organization, the repository moves there and this link is made by that organization's account instead.
+**Note:** Today the link runs through one personal GitHub account, the repository owner's. Once the Association has its own GitHub organization, the repository moves there and this link is made by that organization's account instead.
 
 **How to check:** The release branch appears in the Branch list on the chapter's Create App screen.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
-**What usually goes wrong:** Skipping this step. Nothing complains until step 11.5, where creating the application fails in the middle of the build. Also, every chapter's builds then depend on the GitHub account that made the link: if that account revokes DigitalOcean's access, the chapter's running application keeps working but stops building and stops taking weekly releases. Until the repository moves to the central support organization's own GitHub organization, that account is one person's.
+**What usually goes wrong:** Skipping this step. Nothing complains until step 11.5, where creating the application fails in the middle of the build. Also, every chapter's builds then depend on the GitHub account that made the link: if that account revokes DigitalOcean's access, the chapter's running application keeps working but stops building and stops taking weekly releases. Until the repository moves to the Association's own GitHub organization, that account is one person's.
+
+---
+
+## 5.10 Open the website host account
+
+**Summary:** The chapter's WordPress website runs on Cloudways, a lightly managed host on DigitalOcean that keeps the server's operating system and PHP up to date, takes backups, provides the security certificate and a staging copy (Association ruling 29). This step opens the account in the chapter's own name; stage 6 builds the website in it. The website never shares a server with the CRM.
+
+**Who:** The chapter with the Association invited in
+
+**Finish first:**
+
+- step 4.7 Create the shared operations mailbox
+- step 2.4 Agree the access the Association will hold
+- step 2.7 Set up the chapter's password vault
+
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
+
+**Do this:**
+
+1. In a browser, go to https://platform.cloudways.com/signup and sign up with email, not with a Google or GitHub sign-in. Use info@EMAIL-DOMAIN, the shared operations mailbox from step 4.7. The exact wording of Cloudways's screens has not been checked for this guide.
+2. Set a new random password generated by Proton Pass, and save it in the chapter's Operations vault in an item titled Website host (Cloudways), with the sign-in address https://platform.cloudways.com.
+3. Open the confirmation message Cloudways sends to info@EMAIL-DOMAIN and confirm the address.
+   *You should see:* The Cloudways dashboard, signed in as info@EMAIL-DOMAIN.
+4. Open the account's billing settings and add the chapter's own payment card from step 1.6. Never a volunteer's personal card.
+5. Open the account's security settings and turn on two-factor authentication with an authenticator code. Add the code to the Website host (Cloudways) item in the vault, and save any recovery codes there too.
+   *You should see:* Signing in now asks for a six-digit code, and the vault item shows the same code.
+6. Open the account's team settings and invite the Association's named person by their own email address, with a role that can manage servers and applications. Cloudways's role names have not been checked for this guide.
+   *You should see:* The Association's named person listed as a team member once they accept.
+7. Do not create a server yet. Stage 6 creates it, on DigitalOcean, and names it.
+8. Fill in the website host line on the chapter's account list (step 5.7).
+
+**Done when all of these are true:**
+
+- The website host account exists in the chapter's name, signed in with the shared operations mailbox.
+- It is paid with the chapter's own card.
+- Two-step sign-in is on, and the sign-in and codes are in the chapter's vault.
+- The Association's named person is a team member.
+
+**How to check:** A second person at the chapter signs in to Cloudways from the vault item, and the team page lists the Association's named person.
+
+**If it didn't work:** Stop, and ask the Association before going on.
+
+**What usually goes wrong:** A server created now, before stage 6 has chosen its size and region, starts billing at once. Leave the account empty until stage 6.
+
+---
+
+## 5.11 Open the Constant Contact account and its developer application
+
+**Summary:** Constant Contact is the mailing service the applications keep in step with the CRM: a newsletter subscriber lands in the CRM first, and the applications pass them on. This step opens the chapter's own account and registers the developer application the software connects through. The connection itself is made later, from System Settings, once the applications are running (MAILING-SETUP.md at the repository root, sections 2 and 3).
+
+**Who:** The chapter — the account must be opened by the Constant Contact user who will later connect the software
+
+**Finish first:**
+
+- step 4.7 Create the shared operations mailbox
+- step 2.7 Set up the chapter's password vault
+
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
+
+**Do this:**
+
+1. In a browser, go to https://www.constantcontact.com and sign up with info@EMAIL-DOMAIN. Choose the plan the Association names; which plan, and its price, is not decided yet, so write it as MAILING-PLAN on the account list until it is. The exact wording of the sign-up screens has not been checked for this guide.
+2. Set a new random password generated by Proton Pass, and save it in the chapter's Operations vault in an item titled Constant Contact.
+3. Add the chapter's own payment card from step 1.6, and turn on two-step sign-in in the account's security settings, with the codes in the Constant Contact item.
+4. Signed in as info@EMAIL-DOMAIN, open https://app.constantcontact.com/pages/dma/portal.
+   *You should see:* A page headed My Applications, with a New Application button.
+5. Click New Application, name it after the chapter, for example Akron Business Mentors applications, select Authorization Code Flow and Implicit Flow, select Rotating Refresh Tokens, and click Create.
+   *You should see:* The new application listed under Applications.
+6. Next to the new application, click edit. Copy the API Key into the Constant Contact item in the vault, labelled API key.
+7. In the Redirect URI box, replace what is there with the address below, putting the applications' web address in place of APP-ADDRESS. It is apps. followed by the website domain name chosen in step 3.2, for example apps.akronbusinessmentors.org:
+   - https://APP-ADDRESS/api/setup/mailing/callback
+
+   *You should see:* Exactly that address, with https at the start and callback at the end.
+8. Click Generate Client Secret and copy the secret straight into the Constant Contact item in the vault, labelled client secret. It is shown only once.
+9. Click Save, and fill in the Constant Contact line on the chapter's account list (step 5.7).
+
+**Done when all of these are true:**
+
+- The Constant Contact account exists in the chapter's name, signed in with the shared operations mailbox.
+- Its developer application exists, with the applications' callback address as its redirect address.
+- The API key and client secret are in the chapter's vault.
+
+**Note:** A developer application is private to the Constant Contact user who created it, so the account the software connects to must be the one that created it.
+
+**How to check:** The application's details page shows the redirect address ending in /api/setup/mailing/callback, and the vault item holds both values.
+
+**If it didn't work:** Stop, and ask the Association before going on.
+
+**What usually goes wrong:** An application created under a volunteer's own Constant Contact sign-in. Only that person can then connect the software, and the connection stops when they leave. Every other service that sends mail as the chapter's domain must be in its sender records too; Constant Contact's own sending address setup is not covered by this guide yet.
+
+---
+
+## 5.12 Open the Stripe account and create the donation link
+
+**Summary:** A chapter takes online donations through a Stripe Payment Link in its own Stripe account (Association ruling 30). The website's Donate button opens the link; card details stay with Stripe. This step opens the account and creates the link. The link's address is later entered in the Website group of System Settings, which supplies it to the website.
+
+**Who:** The chapter — the treasurer, or the person the board names
+
+**Finish first:**
+
+- step 4.7 Create the shared operations mailbox
+- step 1.6 Open a bank account
+- step 2.7 Set up the chapter's password vault
+
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
+
+**Do this:**
+
+1. In a browser, go to https://dashboard.stripe.com/register and create the account with info@EMAIL-DOMAIN. The exact wording of Stripe's screens has not been checked for this guide.
+2. Set a new random password generated by Proton Pass, and save it in the chapter's Operations vault in an item titled Stripe.
+3. Turn on two-step sign-in in the account's security settings, with the codes in the Stripe item.
+4. Complete Stripe's business details with the chapter's legal name, its employer identification number from step 1.3 and the chapter's bank account from step 1.6 for payouts. A chapter that is not yet able to take real payments stays in test mode and skips this action.
+5. Open Payment Links and create a new link for donations, letting the donor choose the amount. Name it Donation to CHAPTER-NAME.
+   *You should see:* A link address beginning https://buy.stripe.com/. In test mode Stripe marks the link as a test link.
+6. Copy the link's address into the Stripe item in the vault, labelled Donation link, and fill in the Stripe line on the chapter's account list (step 5.7).
+
+**Done when all of these are true:**
+
+- The Stripe account exists in the chapter's name, signed in with the shared operations mailbox.
+- Two-step sign-in is on, and the sign-in and codes are in the chapter's vault.
+- A donation Payment Link exists, and its address is in the vault.
+
+**How to check:** Opening the link's address in a private browser window shows Stripe's payment page with the chapter's name.
+
+**If it didn't work:** Stop, and ask the Association before going on.
+
+**What usually goes wrong:** Payouts to a volunteer's personal bank account. Stripe pays out to the account entered here, so it must be the chapter's own (step 1.6). Until the chapter applications record gifts automatically, staff enter each gift by hand and the chapter sends donors' tax acknowledgments itself (Association ruling 30).
 
 ---
 
@@ -427,6 +561,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 | Version | Date | Change |
 |---|---|---|
+| 0.11 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". The stage is renamed "Open the chapter's service accounts" and gains steps 5.10 (the website host account, Association ruling 29), 5.11 (the Constant Contact account and its developer application) and 5.12 (the Stripe account and donation link, Association ruling 30). Step 5.5 writes the Zoom plan as ZOOM-PLAN until it is decided. Step 5.7's account list names the three new accounts. |
 | 0.10 | 09-24-26 23:08 | From Boston's build (09-24-26): the DigitalOcean token in step 5.8 must be made under the central support person's own sign-in with the chapter's team chosen, because DigitalOcean ties its GitHub authorization to a sign-in and step 11.5 fails with GitHub user not authenticated on a token made under the chapter's own sign-in. Boston's first token was made that way and had to be replaced. |
 | 0.9 | 09-23-26 20:40 | References to stage 9 follow its renumbering from twenty steps to nine (stage 9 version 0.11). |
 | 0.8 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. The engagement code is described as the short label in capital letters. |

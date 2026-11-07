@@ -1,7 +1,7 @@
 stage: 8
 name: Fill in the chapter information form
-version: "0.16"
-updated: "09-24-26 23:08"
+version: "0.17"
+updated: "11-07-26 15:21"
 why: >-
   The chapter information form holds the roughly forty answers that differ from
   one chapter to the next: its name, its addresses, its Google details and its
@@ -12,7 +12,7 @@ why: >-
   typed.
 who: >-
   The chapter's setup contact answers the questions about the chapter. The
-  central support organization answers the technical ones. Both work in the same
+  the Association answers the technical ones. Both work in the same
   page, and each can see what is still waiting for the other.
 time: >-
   About an hour of answering, once the website, the policy documents and Google
@@ -28,13 +28,13 @@ steps:
   - id: "8.1"
     name: Obtain the blank form
     why: Everyone works from one page, built from this guide, so the questions can never fall behind the software.
-    who: both — the central support organization publishes the page; the chapter's setup contact opens it
+    who: both — the Association publishes the page; the chapter's setup contact opens it
     first: ["2.6"]
     needs: []
     produces: []
     mode: automated
     actions:
-      - do: "The central support organization: in a Claude Code session in the folder ~/Dropbox/Projects/cbm-client-intake, type this request, with the chapter's name in place of CHAPTER-NAME:"
+      - do: "The Association: in a Claude Code session in the folder ~/Dropbox/Projects/cbm-client-intake, type this request, with the chapter's name in place of CHAPTER-NAME:"
         items:
           - "Build and publish the chapter information page for CHAPTER-NAME with scripts/chapter_form/build_page.py."
         see: A link to a page titled with the chapter's short name followed by Chapter Information.
@@ -44,13 +44,13 @@ steps:
         see: The page itself, not a sign-in page.
       - do: Send the link to the chapter's setup contact, with this guide's stage 8 page.
       - do: "The chapter's setup contact: open the link."
-        see: The page, with a line at the top reading how many questions are answered, and each question marked either For the chapter or For central support.
+        see: The page, with a line at the top reading how many questions are answered, and each question marked either For the chapter or For the Association.
     done_when: >-
       The chapter has the current blank form and knows who fills in each part.
     check:
       how: The setup contact opens the page, types an answer into one question, reloads the page, and the answer is still there, marked saved in this browser.
       probe: The page reports on screen when the browser is not keeping answers.
-    if_not: If the setup contact sees a sign-in page, the page is still private; change its access in the Share menu. If the page says the browser is not keeping answers, the setup contact uses Copy all answers before closing it, or answers on a call with the central support organization typing.
+    if_not: If the setup contact sees a sign-in page, the page is still private; change its access in the Share menu. If the page says the browser is not keeping answers, the setup contact uses Copy all answers before closing it, or answers on a call with the Association typing.
     goes_wrong: >-
       Leaving the page private. It looks fine to the person who published it,
       because they are signed in, and every one else sees a sign-in page. The
@@ -109,7 +109,7 @@ steps:
         example: America/New_York
         meaning: The time zone the chapter works in. America/New_York is Eastern time.
         source: Where the chapter operates.
-        wrong: Dates on birthday greetings, mentor assignments and the public events page come out a day off. The software supports only Eastern time today (work list item 17), so any other choice must be raised with the central support organization before stage 9.
+        wrong: Dates on birthday greetings, mentor assignments and the public events page come out a day off. The software supports only Eastern time today (work list item 17), so any other choice must be raised with the Association before stage 9.
       - key: chapter.currency
         label: Currency
         by: chapter
@@ -151,7 +151,7 @@ steps:
   - id: "8.3"
     name: Fill in the web addresses
     why: The software links to the website, the help documentation and the four policy documents, and a broken link on the consent box is a legal problem.
-    who: chapter, checked by the central support organization
+    who: chapter, checked by the Association
     first: ["6.2", "6.7", "7.6", "8.1"]
     needs: [website_base_url, docs_site_url, chapter_tokens_url, policy_client_conduct_url, policy_mentor_ethics_url, policy_terms_url, policy_privacy_url]
     produces: [app_base_url, events_public_base_url]
@@ -159,7 +159,7 @@ steps:
     actions:
       - do: Answer every question in the section "Fill in the web addresses" on the page. Copy each address from a browser's address bar rather than typing it.
         see: Every question in the section marked as saved, or marked not known yet.
-      - do: "The central support organization: in a terminal, run the line below once for each address in the section except the applications' address, with the address in place of ADDRESS:"
+      - do: "The Association: in a terminal, run the line below once for each address in the section except the applications' address, with the address in place of ADDRESS:"
         items:
           - "curl -sI ADDRESS"
         see: A first line of HTTP/2 200 for every one.
@@ -180,7 +180,7 @@ steps:
         required: true
         example: https://apps.yourchapter.org
         meaning: The web address where the chapter's staff tools and public forms will be. It does not open yet; it starts working at step 11.10.
-        source: https://apps. followed by the chapter's domain, unless the chapter and the central support organization agree another name.
+        source: https://apps. followed by the chapter's domain, unless the chapter and the Association agree another name.
         wrong: Links in emails the software sends point to the wrong place, and signing in can fail because the software only trusts its own address.
       - key: web.docs_site_url
         label: Web address (URL) of your help documentation site
@@ -274,7 +274,7 @@ steps:
         required: false
         example: https://www.yourchapter.org/chapter-tokens.css
         meaning: The web address of the small file that carries the four colours above into the applications' pages. The software loads it on every page after its standard colours.
-        source: The central support organization writes the file from the four colours above and publishes it (step 6.5). The values-file writer produces the file itself, as prds/chapter-network/chapters/SHORT-LABEL-chapter-tokens.css. Mark not known yet until it is published.
+        source: The Association writes the file from the four colours above and publishes it (step 6.5). The values-file writer produces the file itself, as prds/chapter-network/chapters/SHORT-LABEL-chapter-tokens.css. Mark not known yet until it is published.
         wrong: The applications keep Cleveland's colours. Nothing breaks.
     done_when:
       - "The application address is filled in."
@@ -298,7 +298,7 @@ steps:
   - id: "8.4"
     name: Fill in the Google details
     why: Mail, calendars, documents and mentor mailboxes all run through the chapter's Google Workspace, and each needs an exact address.
-    who: chapter, checked by the central support organization
+    who: chapter, checked by the Association
     first: ["4.1", "4.7", "4.8", "4.9", "4.10", "8.1"]
     needs: [primary_domain, mentor_email_domain, ops_mailbox, alert_email_from, alert_email_to, members_group, zoom_host_email, zoom_account_id, zoom_client_id]
     produces: []
@@ -306,7 +306,7 @@ steps:
     actions:
       - do: Answer every question in the section "Fill in the Google details" on the page, copying each address from the Google Workspace admin console at admin.google.com. The Zoom questions appear only once the webinar question in step 8.6 is answered yes.
         see: Every question in the section marked as saved, apart from the shared drive, which step 10.5 answers.
-      - do: "The central support organization: in the Google Workspace admin console, open Users and find the shared operations mailbox and the alert sending mailbox."
+      - do: "The Association: in the Google Workspace admin console, open Users and find the shared operations mailbox and the alert sending mailbox."
         see: Both listed as users with a licence. Neither is a group.
     fields:
       - key: google.primary_domain
@@ -502,7 +502,7 @@ steps:
   - id: "8.6"
     name: Decide every feature switch
     why: Each switch turns a part of the software on or off, and a switch left blank gives a chapter behaviour nobody chose.
-    who: both — the chapter answers the four questions about what it will do; the central support organization confirms the rest
+    who: both — the chapter answers the four questions about what it will do; the Association confirms the rest
     first: ["8.2", "8.3", "8.4", "8.5"]
     needs: []
     produces: [flags]
@@ -510,7 +510,7 @@ steps:
     actions:
       - do: "The chapter's setup contact: answer the four switch questions marked For the chapter."
         see: The three marked as saved.
-      - do: "The central support organization: check the recommended answer on each remaining switch, change any that should differ, and save each one. The page's button Use recommended answers gives every switch marked For central support that is not yet answered its recommended answer; it never changes a switch already answered or one marked For the chapter."
+      - do: "The Association: check the recommended answer on each remaining switch, change any that should differ, and save each one. The page's button Use recommended answers gives every switch marked For the Association that is not yet answered its recommended answer; it never changes a switch already answered or one marked For the chapter."
         see: Every switch marked as saved. None left blank.
     fields:
       - key: flags.events_public_api
@@ -630,7 +630,7 @@ steps:
         default: true
         meaning: The administrators' page for changing the applications' settings without a redeployment.
         source: On for every chapter.
-        wrong: Switched off, every settings change needs the central support organization to redeploy.
+        wrong: Switched off, every settings change needs the Association to redeploy.
       - key: flags.async_delivery
         label: Deliver submissions in the background
         by: central
@@ -741,7 +741,7 @@ steps:
   - id: "8.9"
     name: Review the completed form
     why: A wrong value becomes a fault in every later stage, and a second reader catches what the first misses.
-    who: both — the chapter's setup contact and someone from the central support organization
+    who: both — the chapter's setup contact and someone from the Association
     first: ["8.2", "8.3", "8.4", "8.5", "8.6", "8.7"]
     needs: []
     produces: []
@@ -750,11 +750,11 @@ steps:
       - do: Meet, in person or on a call, with the page open on both screens.
       - do: Read every question and its answer aloud, section by section.
         see: The line at the top of the page reading that every question is answered, apart from the shared drive identifier.
-      - do: "The central support organization: run the curl check from step 8.3 on every address again:"
+      - do: "The Association: run the curl check from step 8.3 on every address again:"
         items:
           - "curl -sI ADDRESS"
         see: A first line of HTTP/2 200 for every address except the applications' address and the CRM address, which do not exist yet.
-      - do: "At the bottom of the setup contact's page, in the section Sign-off, sign off both people: each name typed and Sign off clicked. Both go on the setup contact's page, because the answers are kept in that browser only. On a call, the setup contact types the central support person's name as they say it."
+      - do: "At the bottom of the setup contact's page, in the section Sign-off, sign off both people: each name typed and Sign off clicked. Both go on the setup contact's page, because the answers are kept in that browser only. On a call, the setup contact types the Association's support person's name as they say it."
         see: Both names listed with the date, on the setup contact's page.
     done_when: >-
       Two people have read the whole form together in one sitting and both have
@@ -768,7 +768,7 @@ steps:
     source: 5-Methods-Form-Accounts-Checks.md#8.9
 
   - id: "8.10"
-    name: Store the form where the central support organization can reach it
+    name: Store the form where the Association can reach it
     why: Stages 9 to 12 are built from the form, so the people building them have to be able to open it.
     who: central
     first: ["8.9"]
@@ -776,9 +776,9 @@ steps:
     produces: []
     mode: automated
     actions:
-      - do: "The chapter's setup contact: on the page, press Copy all answers, paste the result into an email, and send it to the central support organization."
-        see: "An email whose text starts with the line CHAPTER-INFORMATION-ANSWERS v1. The page keeps answers only in the setup contact's browser, so this email is the only way they reach the central support organization."
-      - do: "The central support organization, at the build computer: copy the email's text, from the line CHAPTER-INFORMATION-ANSWERS v1 to the end of the block, into a plain text file named ~/Downloads/SHORT-LABEL-answers.txt."
+      - do: "The chapter's setup contact: on the page, press Copy all answers, paste the result into an email, and send it to the Association."
+        see: "An email whose text starts with the line CHAPTER-INFORMATION-ANSWERS v1. The page keeps answers only in the setup contact's browser, so this email is the only way they reach the Association."
+      - do: "The Association, at the build computer: copy the email's text, from the line CHAPTER-INFORMATION-ANSWERS v1 to the end of the block, into a plain text file named ~/Downloads/SHORT-LABEL-answers.txt."
       - do: "In a terminal window, go to the application's folder. Type the line below and press Enter:"
         items:
           - "cd ~/Dropbox/Projects/cbm-client-intake"
@@ -792,14 +792,14 @@ steps:
         see: "A message naming the file written, prds/chapter-network/chapters/SHORT-LABEL-values.yaml."
       - do: Open the file and check it holds no secret value. Every line under secrets must be a name only.
       - do: 'Commit it with the message "docs(chapter-network): SHORT-LABEL chapter information form", and push it.'
-      - do: Ask a second person at the central support organization to open the file from the remote repository.
+      - do: Ask a second person at the Association to open the file from the remote repository.
         see: The file opens, with both reviewers' names at the top.
       - do: Delete ~/Downloads/SHORT-LABEL-answers.txt from the build computer. The committed file is now the copy the build uses.
     done_when: >-
-      The form is in the agreed place and the central support organization has
+      The form is in the agreed place and the Association has
       confirmed it can open it.
     check:
-      how: A second person at the central support organization opens it.
+      how: A second person at the Association opens it.
       probe: The values file is written by a script that runs the settings generator's own checks and refuses any secret value.
     if_not: If an answer changes after the file is written, the setup contact changes it on the page and emails a new block, and this step is done again from it. The setup contact's page is the record; the file is always produced from it.
     note: "An answer typed into the file by hand, and not on the page, is lost the next time the file is written from the page. Boston's switches were answered in the file on 09-24-26 because the settings generator in step 11.2 refuses to run while any switch reads not known yet; ask the setup contact to enter the same answers on the page before the file is ever written again."
@@ -813,6 +813,10 @@ steps:
     source: 5-Methods-Form-Accounts-Checks.md#8.10
 
 changes:
+  - version: "0.17"
+    date: "11-07-26 15:21"
+    change: >-
+      Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". The form page's label For central support is now For the Association.
   - version: "0.16"
     date: "09-24-26 23:08"
     change: >-

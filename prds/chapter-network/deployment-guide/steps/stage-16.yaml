@@ -1,14 +1,14 @@
 stage: 16
 name: Train the chapter's staff
-version: "0.3"
-updated: "09-23-26 13:35"
+version: "0.4"
+updated: "11-07-26 15:21"
 why: >-
   Staff learn the system on invented records before they touch real ones. Training
   happens on Cleveland's shared training system, which clears itself every night,
   signed in as the six generic training users Cleveland's own trainers use (ruled
   09-14-26 and 09-23-26).
 who: >-
-  The chapter's trainer runs the sessions; the central support organization hands
+  The chapter's trainer runs the sessions; the Association hands
   over the training users' sign-in details and the guides.
 time: >-
   One session per role. The mentor session is the longest, at 30 to 40 minutes.
@@ -62,7 +62,7 @@ steps:
   - id: "16.2"
     name: Explain how the practice system behaves
     why: Trainees who do not know the system resets, or that it shows Cleveland's name, lose work and lose trust in what they see.
-    who: both — the chapter's trainer, or the central support organization's
+    who: both — the chapter's trainer, or the Association's
     first: ["16.1"]
     needs: []
     produces: []
@@ -76,7 +76,7 @@ steps:
           - "\"Every page says Cleveland, because this is Cleveland's training system. Our own system will show our own name.\""
       - do: Check every trainee is signed in as one of the six training users, never with their own chapter account. Only the training users' addresses lead nowhere.
         see: Every trainee's portal showing a training user's name.
-      - do: "If a session must run over two days, ask the central support organization, before the first evening, to pause that night's reset. They run:"
+      - do: "If a session must run over two days, ask the Association, before the first evening, to pause that night's reset. They run:"
         items:
           - "ssh root@104.131.45.208 'touch /var/www/espocrm/.sandbox-hold'"
           - "and the next day, to resume: ssh root@104.131.45.208 'rm /var/www/espocrm/.sandbox-hold'"
@@ -102,14 +102,14 @@ steps:
   - id: "16.3"
     name: Train each role
     why: Each person should have done their own main task once before doing it for real.
-    who: chapter — the trainer, with the central support organization available
+    who: chapter — the trainer, with the Association available
     first: ["16.2"]
     needs: []
     produces: []
     mode: offline
     actions:
       - do: "Before any session, sign in at https://cbm-client-intake-svxs3.ondigitalocean.app/ as the training user Joe Mentor and open Client Management."
-        see: Seven invented clients. If the list is empty or short, stop and ask the central support organization.
+        see: Seven invented clients. If the list is empty or short, stop and ask the Association.
       - do: "Mentors, 30 to 40 minutes, signed in as the training user Joe Mentor:"
         items:
           - "Open Client Management (the address ending /mentorsessions/) and show the status filter and the search box."
@@ -140,7 +140,7 @@ steps:
         items:
           - "Open Submission Admin (the address ending /ops/)."
           - "Have the trainee open one submission and read its two status columns."
-        see: Submissions in the queue. The queue is empty unless the central support organization filled it before the session; ask for that at least a day ahead.
+        see: Submissions in the queue. The queue is empty unless the Association filled it before the session; ask for that at least a day ahead.
       - do: "Analytics: skip it. None of the six training users is in the Analytics Admin Team, so none can open the Analytics page."
     done_when: >-
       Every person has been shown the parts of the system their own team uses, and
@@ -190,19 +190,19 @@ steps:
 
   - id: "16.5"
     name: Name the chapter's own first point of contact
-    why: Colleagues need one person to ask first, before raising a request with the central support organization.
+    why: Colleagues need one person to ask first, before raising a request with the Association.
     who: chapter
     first: ["16.3"]
     needs: []
     produces: [first_point_of_contact]
     mode: offline
     actions:
-      - do: "The chapter emails the central support organization one line: FIRST-POINT-OF-CONTACT-NAME, FIRST-POINT-OF-CONTACT-CHAPTER-EMAIL, is our first point of contact. Choose someone who was in the training."
-      - do: The central support organization adds the name and address to the chapter's entry in the list of watched systems (step 12.5).
+      - do: "The chapter emails the Association one line: FIRST-POINT-OF-CONTACT-NAME, FIRST-POINT-OF-CONTACT-CHAPTER-EMAIL, is our first point of contact. Choose someone who was in the training."
+      - do: The Association adds the name and address to the chapter's entry in the list of watched systems (step 12.5).
         see: The chapter's entry showing the name and chapter email address.
     done_when: >-
       One person at the chapter is named as the person colleagues ask first, before
-      contacting the central support organization.
+      contacting the Association.
     check:
       how: The name is on the list of watched systems.
       probe: The app shows the named person on the chapter's record.
@@ -239,6 +239,10 @@ steps:
     source: 7-Methods-Training.md#16.6
 
 changes:
+  - version: "0.4"
+    date: "11-07-26 15:21"
+    change: >-
+      Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee".
   - version: "0.3"
     date: "09-23-26 13:35"
     change: >-

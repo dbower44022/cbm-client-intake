@@ -1,12 +1,12 @@
 stage: 1
 name: Set up the chapter as a legal organization
-version: "0.2"
-updated: "09-19-26 00:15"
+version: "0.3"
+updated: "11-07-26 15:21"
 why: >-
   The chapter has to exist in law before it can own accounts, sign an agreement or
   claim nonprofit discounts. This stage creates the organization, names who can act
   for it, and starts the nonprofit application, which is the longest wait in the
-  whole guide. The central support organization does not do this work; the chapter
+  whole guide. The Association does not do this work; the chapter
   gets legal, tax and banking advice elsewhere.
 who: >-
   The chapter's founding group and board, with their own legal and accounting
@@ -18,7 +18,7 @@ time: >-
 before_you_start:
   - A founding group that has agreed to form the chapter
 unlocks: >-
-  The agreement with the central support organization (stage 2) can be signed.
+  The agreement with the Association (stage 2) can be signed.
   The nonprofit evidence from this stage is needed later for the Google Workspace
   discount (step 4.13) and the hosting credits (step 5.3).
 steps:
@@ -140,7 +140,7 @@ steps:
 
   - id: "1.4"
     name: Appoint a board and adopt bylaws
-    why: The bank and the central support organization will both ask which officers may sign for the chapter.
+    why: The bank and the Association will both ask which officers may sign for the chapter.
     who: chapter, with its own legal advice
     first: ["1.2"]
     needs: []
@@ -200,7 +200,7 @@ steps:
       - do: "File within 27 months of the date the articles were filed. Recognition then counts from the date of incorporation. The chapter's own adviser confirms this."
       - do: Wait for the determination letter.
         see: A determination letter from the Internal Revenue Service. Typically weeks to a few months on the short form, and several months or longer on the full form.
-      - do: "For route two, tell the central support organization before choosing it. See what usually goes wrong, below. Then sign a fiscal sponsorship agreement with the sponsoring charity, naming it."
+      - do: "For route two, tell the Association before choosing it. See what usually goes wrong, below. Then sign a fiscal sponsorship agreement with the sponsoring charity, naming it."
         see: A signed sponsorship agreement naming the sponsoring nonprofit.
     done_when: >-
       Either the determination letter from the tax authority has arrived, or a
@@ -263,14 +263,14 @@ steps:
         items:
           - "NAME is appointed the chapter's setup contact."
           - "NAME may open accounts in the chapter's name with the domain registrar, Cloudflare, Google Workspace, DigitalOcean, Proton Pass and Zoom."
-          - "NAME may grant the central support organization's named people access to those accounts."
-      - do: Email a copy of the signed minute to the central support organization.
-        see: The central support organization replies confirming it holds the copy.
+          - "NAME may grant the Association's named people access to those accounts."
+      - do: Email a copy of the signed minute to the Association.
+        see: The Association replies confirming it holds the copy.
     done_when: >-
       One named person is recorded as the chapter's main contact for the whole
       setup, with authority to open accounts and grant access to others.
     check:
-      how: The minute exists, and the central support organization has a copy.
+      how: The minute exists, and the Association has a copy.
       probe: The app records the setup contact's name as the chapter's first contact.
     goes_wrong: >-
       A setup contact who is also the only person holding the accounts. Stages 3 and
@@ -281,6 +281,10 @@ steps:
     source: 8-Methods-Organization-Domains-Google.md#1.7
 
 changes:
+  - version: "0.3"
+    date: "11-07-26 15:21"
+    change: >-
+      Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee".
   - version: "0.2"
     date: "09-19-26 00:15"
     change: >-

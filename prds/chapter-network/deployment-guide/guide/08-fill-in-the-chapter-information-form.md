@@ -1,7 +1,7 @@
 # Stage 8 — Fill in the chapter information form
 
-**Version:** 0.16  
-**Last Updated:** 09-24-26 23:08  
+**Version:** 0.17  
+**Last Updated:** 11-07-26 15:21  
 **Generated from** `steps/stage-08.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -10,7 +10,7 @@
 
 The chapter information form holds the roughly forty answers that differ from one chapter to the next: its name, its addresses, its Google details and its feature switches. Everything after this stage is built from the form, so a wrong or missing answer here becomes a fault in every later stage. The form is a web page: each question says what it means, where to find the answer and what goes wrong if the answer is wrong, and the answers are saved as they are typed.
 
-**Who:** The chapter's setup contact answers the questions about the chapter. The central support organization answers the technical ones. Both work in the same page, and each can see what is still waiting for the other.  
+**Who:** The chapter's setup contact answers the questions about the chapter. The the Association answers the technical ones. Both work in the same page, and each can see what is still waiting for the other.  
 **Time:** About an hour of answering, once the website, the policy documents and Google Workspace exist. It does not have to be done in one sitting.  
 **When this stage is done:** Building the CRM (stage 9). Nothing after this stage can start until the form is complete and reviewed, and everything after it becomes routine once it is.
 
@@ -31,7 +31,7 @@ The chapter information form holds the roughly forty answers that differ from on
 - 8.7 List the secrets by name
 - 8.8 Put the chapter's secrets into the store
 - 8.9 Review the completed form
-- 8.10 Store the form where the central support organization can reach it
+- 8.10 Store the form where the Association can reach it
 
 ---
 
@@ -39,7 +39,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 **Why:** Everyone works from one page, built from this guide, so the questions can never fall behind the software.
 
-**Who:** The chapter and the central support organization — the central support organization publishes the page; the chapter's setup contact opens it
+**Who:** The chapter and the Association — the Association publishes the page; the chapter's setup contact opens it
 
 **Finish first:**
 
@@ -47,7 +47,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 **Do this:**
 
-1. The central support organization: in a Claude Code session in the folder ~/Dropbox/Projects/cbm-client-intake, type this request, with the chapter's name in place of CHAPTER-NAME:
+1. The Association: in a Claude Code session in the folder ~/Dropbox/Projects/cbm-client-intake, type this request, with the chapter's name in place of CHAPTER-NAME:
    - Build and publish the chapter information page for CHAPTER-NAME with scripts/chapter_form/build_page.py.
 
    *You should see:* A link to a page titled with the chapter's short name followed by Chapter Information.
@@ -57,13 +57,13 @@ The chapter information form holds the roughly forty answers that differ from on
    *You should see:* The page itself, not a sign-in page.
 4. Send the link to the chapter's setup contact, with this guide's stage 8 page.
 5. The chapter's setup contact: open the link.
-   *You should see:* The page, with a line at the top reading how many questions are answered, and each question marked either For the chapter or For central support.
+   *You should see:* The page, with a line at the top reading how many questions are answered, and each question marked either For the chapter or For the Association.
 
 **Done when:** The chapter has the current blank form and knows who fills in each part.
 
 **How to check:** The setup contact opens the page, types an answer into one question, reloads the page, and the answer is still there, marked saved in this browser.
 
-**If it didn't work:** If the setup contact sees a sign-in page, the page is still private; change its access in the Share menu. If the page says the browser is not keeping answers, the setup contact uses Copy all answers before closing it, or answers on a call with the central support organization typing.
+**If it didn't work:** If the setup contact sees a sign-in page, the page is still private; change its access in the Share menu. If the page says the browser is not keeping answers, the setup contact uses Copy all answers before closing it, or answers on a call with the Association typing.
 
 **What usually goes wrong:** Leaving the page private. It looks fine to the person who published it, because they are signed in, and every one else sees a sign-in page. The setup contact needs no claude.ai account once the page is open to anyone with the link (confirmed 09-23-26).
 
@@ -105,7 +105,7 @@ The chapter information form holds the roughly forty answers that differ from on
 - **Time zone** (`chapter.timezone`) — answered by the chapter; required.
   - *What it is:* The time zone the chapter works in. America/New_York is Eastern time.
   - *Where to find it:* Where the chapter operates.
-  - *If it is wrong:* Dates on birthday greetings, mentor assignments and the public events page come out a day off. The software supports only Eastern time today (work list item 17), so any other choice must be raised with the central support organization before stage 9.
+  - *If it is wrong:* Dates on birthday greetings, mentor assignments and the public events page come out a day off. The software supports only Eastern time today (work list item 17), so any other choice must be raised with the Association before stage 9.
   - *Recommended:* America/New_York
 - **Currency** (`chapter.currency`) — answered by the chapter; required.
   - *What it is:* The currency of every money amount in the CRM, such as grants and contributions.
@@ -129,7 +129,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 **How to check:** The name matches the legal name, or the trading name the board chose, letter for letter.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** The time zone. A chapter outside the Eastern United States gets wrong dates on birthday greetings, assignment dates and the public events page, and nothing reports an error.
 
@@ -139,7 +139,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 **Why:** The software links to the website, the help documentation and the four policy documents, and a broken link on the consent box is a legal problem.
 
-**Who:** The chapter checked by the central support organization
+**Who:** The chapter checked by the Association
 
 **Finish first:**
 
@@ -152,7 +152,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 1. Answer every question in the section "Fill in the web addresses" on the page. Copy each address from a browser's address bar rather than typing it.
    *You should see:* Every question in the section marked as saved, or marked not known yet.
-2. The central support organization: in a terminal, run the line below once for each address in the section except the applications' address, with the address in place of ADDRESS:
+2. The Association: in a terminal, run the line below once for each address in the section except the applications' address, with the address in place of ADDRESS:
    - curl -sI ADDRESS
 
    *You should see:* A first line of HTTP/2 200 for every one.
@@ -164,9 +164,9 @@ The chapter information form holds the roughly forty answers that differ from on
   - *Where to find it:* Open your website's home page in a browser and copy the web address from the address bar (step 6.2).
   - *If it is wrong:* The link back to the website and the website menu on the software's public pages point somewhere else.
   - *Example:* https://www.yourchapter.org
-- **Web address (URL) the applications will use** (`web.app_base_url`) — answered by the central support organization; required.
+- **Web address (URL) the applications will use** (`web.app_base_url`) — answered by the Association; required.
   - *What it is:* The web address where the chapter's staff tools and public forms will be. It does not open yet; it starts working at step 11.10.
-  - *Where to find it:* https://apps. followed by the chapter's domain, unless the chapter and the central support organization agree another name.
+  - *Where to find it:* https://apps. followed by the chapter's domain, unless the chapter and the Association agree another name.
   - *If it is wrong:* Links in emails the software sends point to the wrong place, and signing in can fail because the software only trusts its own address.
   - *Example:* https://apps.yourchapter.org
 - **Web address (URL) of your help documentation site** (`web.docs_site_url`) — answered by the chapter; optional.
@@ -218,9 +218,9 @@ The chapter information form holds the roughly forty answers that differ from on
   - *Where to find it:* Your chapter's brand colours, from your logo or website designer. A colour picker on any computer shows a colour's code. If you are not sure, mark this not known yet.
   - *If it is wrong:* The applications show a colour that does not match your chapter. Marked not known yet, Cleveland's colour is used, and it can be changed later.
   - *Example:* #7A7A7A
-- **Web address (URL) of the colour file** (`web.chapter_tokens_url`) — answered by the central support organization; optional.
+- **Web address (URL) of the colour file** (`web.chapter_tokens_url`) — answered by the Association; optional.
   - *What it is:* The web address of the small file that carries the four colours above into the applications' pages. The software loads it on every page after its standard colours.
-  - *Where to find it:* The central support organization writes the file from the four colours above and publishes it (step 6.5). The values-file writer produces the file itself, as prds/chapter-network/chapters/SHORT-LABEL-chapter-tokens.css. Mark not known yet until it is published.
+  - *Where to find it:* The Association writes the file from the four colours above and publishes it (step 6.5). The values-file writer produces the file itself, as prds/chapter-network/chapters/SHORT-LABEL-chapter-tokens.css. Mark not known yet until it is published.
   - *If it is wrong:* The applications keep Cleveland's colours. Nothing breaks.
   - *Example:* https://www.yourchapter.org/chapter-tokens.css
 
@@ -238,7 +238,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 **How to check:** Every address, opened in a private browser window, shows the right page.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A policy address that does not load. The public application form links to all four policies from its consent box.
 
@@ -248,7 +248,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 **Why:** Mail, calendars, documents and mentor mailboxes all run through the chapter's Google Workspace, and each needs an exact address.
 
-**Who:** The chapter checked by the central support organization
+**Who:** The chapter checked by the Association
 
 **Finish first:**
 
@@ -259,13 +259,13 @@ The chapter information form holds the roughly forty answers that differ from on
 - step 4.10 Create the members group
 - step 8.1 Obtain the blank form
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
 1. Answer every question in the section "Fill in the Google details" on the page, copying each address from the Google Workspace admin console at admin.google.com. The Zoom questions appear only once the webinar question in step 8.6 is answered yes.
    *You should see:* Every question in the section marked as saved, apart from the shared drive, which step 10.5 answers.
-2. The central support organization: in the Google Workspace admin console, open Users and find the shared operations mailbox and the alert sending mailbox.
+2. The Association: in the Google Workspace admin console, open Users and find the shared operations mailbox and the alert sending mailbox.
    *You should see:* Both listed as users with a licence. Neither is a group.
 
 **The questions in this step:**
@@ -305,7 +305,7 @@ The chapter information form holds the roughly forty answers that differ from on
   - *Where to find it:* The chapter's own administrator account from step 4.5.
   - *If it is wrong:* Checking and creating mentors' mailboxes fails, so new mentors are left without one.
   - *Example:* admin@yourchapter.org
-- **Shared drive identifier** (`google.shared_drive_id`) — answered by the central support organization; optional; filled in at step 10.5.
+- **Shared drive identifier** (`google.shared_drive_id`) — answered by the Association; optional; filled in at step 10.5.
   - *What it is:* The identifier of the shared drive where the software files each record's documents.
   - *Where to find it:* Step 10.5 creates the drive and writes its identifier here. It is the part of the drive's web address after /drive/folders/. Leave it until then.
   - *If it is wrong:* Documents cannot be filed. The settings generator refuses to switch document filing on without it.
@@ -314,11 +314,11 @@ The chapter information form holds the roughly forty answers that differ from on
   - *Where to find it:* The Zoom account set up in step 5.5.
   - *If it is wrong:* Webinars are created under Cleveland's host, which the chapter's Zoom app cannot reach.
   - *Example:* webinars@yourchapter.org
-- **Zoom app account identifier** (`zoom.account_id`) — answered by the central support organization; required; asked only for a chapter that runs Zoom webinars.
+- **Zoom app account identifier** (`zoom.account_id`) — answered by the Association; required; asked only for a chapter that runs Zoom webinars.
   - *What it is:* The account identifier of the chapter's Zoom app, which the software uses to create webinars.
   - *Where to find it:* The Zoom app created in step 5.5, on its App Credentials screen.
   - *If it is wrong:* Creating webinars fails.
-- **Zoom app client identifier** (`zoom.client_id`) — answered by the central support organization; required; asked only for a chapter that runs Zoom webinars.
+- **Zoom app client identifier** (`zoom.client_id`) — answered by the Association; required; asked only for a chapter that runs Zoom webinars.
   - *What it is:* The client identifier of the chapter's Zoom app. Its secret is never typed here; it goes in the vault.
   - *Where to find it:* The Zoom app created in step 5.5, on its App Credentials screen.
   - *If it is wrong:* Creating webinars fails.
@@ -336,7 +336,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 **How to check:** Each mailbox named on the form is listed as a mailbox, with a licence, in the Google Workspace admin console.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Writing a group where a mailbox is needed. The alert sending address and the shared operations mailbox must both be real licensed mailboxes. A group fails later, with an error that does not name the cause.
 
@@ -346,7 +346,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 **Why:** The CRM has its own name, sending name, sending address and logo, and anything it sends directly carries them.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
@@ -360,27 +360,27 @@ The chapter information form holds the roughly forty answers that differ from on
 
 **The questions in this step:**
 
-- **Web address (URL) the CRM will use** (`crm.base_url`) — answered by the central support organization; required.
+- **Web address (URL) the CRM will use** (`crm.base_url`) — answered by the Association; required.
   - *What it is:* The web address of the chapter's CRM, the system that holds every client, mentor and meeting. It does not open yet; it starts working at step 9.3.
   - *Where to find it:* https://crm. followed by the chapter's domain, unless agreed otherwise.
   - *If it is wrong:* The applications cannot reach the CRM, and nothing works.
   - *Example:* https://crm.yourchapter.org
-- **Name shown inside the CRM** (`crm.application_name`) — answered by the central support organization; required.
+- **Name shown inside the CRM** (`crm.application_name`) — answered by the Association; required.
   - *What it is:* The name the CRM shows at the top of its own screens.
   - *Where to find it:* Usually the chapter name from step 8.2.
   - *If it is wrong:* The CRM's screens show the wrong name.
   - *Example:* Lakeside Business Mentors
-- **Sending name for the CRM's own emails** (`crm.outbound_from_name`) — answered by the central support organization; required.
+- **Sending name for the CRM's own emails** (`crm.outbound_from_name`) — answered by the Association; required.
   - *What it is:* The sender name on email the CRM sends by itself, such as password resets.
   - *Where to find it:* Usually the chapter name from step 8.2.
   - *If it is wrong:* Those emails arrive under the wrong name.
   - *Example:* Lakeside Business Mentors
-- **Sending address for the CRM's own emails** (`crm.outbound_from_address`) — answered by the central support organization; required.
+- **Sending address for the CRM's own emails** (`crm.outbound_from_address`) — answered by the Association; required.
   - *What it is:* The address email the CRM sends by itself comes from.
   - *Where to find it:* Usually the shared operations mailbox from step 8.4.
   - *If it is wrong:* Password resets and other CRM emails bounce or land in spam.
   - *Example:* info@yourchapter.org
-- **Logo file name** (`crm.logo_file`) — answered by the central support organization; optional.
+- **Logo file name** (`crm.logo_file`) — answered by the Association; optional.
   - *What it is:* The file name of the chapter's logo, shown on the CRM's sign-in screen and menu.
   - *Where to find it:* The logo from step 6.6. No build script sets the logo yet (work list G1, item 2); it is uploaded by hand in the CRM.
   - *If it is wrong:* The CRM shows no logo. Nothing else is affected.
@@ -396,7 +396,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 **How to check:** The section is complete, and the sending address is a real mailbox.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 ---
 
@@ -404,7 +404,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 **Why:** Each switch turns a part of the software on or off, and a switch left blank gives a chapter behaviour nobody chose.
 
-**Who:** The chapter and the central support organization — the chapter answers the four questions about what it will do; the central support organization confirms the rest
+**Who:** The chapter and the Association — the chapter answers the four questions about what it will do; the Association confirms the rest
 
 **Finish first:**
 
@@ -417,7 +417,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 1. The chapter's setup contact: answer the four switch questions marked For the chapter.
    *You should see:* The three marked as saved.
-2. The central support organization: check the recommended answer on each remaining switch, change any that should differ, and save each one. The page's button Use recommended answers gives every switch marked For central support that is not yet answered its recommended answer; it never changes a switch already answered or one marked For the chapter.
+2. The Association: check the recommended answer on each remaining switch, change any that should differ, and save each one. The page's button Use recommended answers gives every switch marked For the Association that is not yet answered its recommended answer; it never changes a switch already answered or one marked For the chapter.
    *You should see:* Every switch marked as saved. None left blank.
 
 **The questions in this step:**
@@ -437,62 +437,62 @@ The chapter information form holds the roughly forty answers that differ from on
   - *Where to find it:* The chapter's own decision about licence costs.
   - *If it is wrong:* Switched off, someone creates each mentor's mailbox by hand before the mentor can be given a CRM sign-in.
   - *Recommended:* yes
-- **Read and file email** (`flags.gmail_sync`) — answered by the central support organization; required.
+- **Read and file email** (`flags.gmail_sync`) — answered by the Association; required.
   - *What it is:* The software reads the shared operations mailbox and mentors' mail, and files messages on the right records.
   - *Where to find it:* On for every chapter, because every chapter has its own Google Workspace. It needs stage 10 finished before step 11.2; the settings generator refuses otherwise.
   - *If it is wrong:* Switched off, enquiries sent to the shared mailbox never appear in the software.
   - *Recommended:* yes
-- **Put mentoring sessions on Google calendars** (`flags.gcal_events`) — answered by the central support organization; required.
+- **Put mentoring sessions on Google calendars** (`flags.gcal_events`) — answered by the Association; required.
   - *What it is:* A scheduled session is put on the mentor's Google calendar with the client invited.
   - *Where to find it:* On for every chapter.
   - *If it is wrong:* Switched off, mentors add every session to their calendars by hand.
   - *Recommended:* yes
-- **File documents on the shared drive** (`flags.gdrive_docs`) — answered by the central support organization; required.
+- **File documents on the shared drive** (`flags.gdrive_docs`) — answered by the Association; required.
   - *What it is:* Documents attached to records are kept on the chapter's shared drive.
   - *Where to find it:* On for every chapter. It needs the shared drive identifier from step 10.5.
   - *If it is wrong:* Switched off, the Documents tab on records cannot store anything.
   - *Recommended:* yes
-- **Account the shared drive is used as** (`flags.gdrive_identity`) — answered by the central support organization; required.
+- **Account the shared drive is used as** (`flags.gdrive_identity`) — answered by the Association; required.
   - *What it is:* The software uses the shared drive as its own machine account, never as a person.
   - *Where to find it:* Always service.
   - *If it is wrong:* Nothing else is supported.
   - *Recommended:* service
-- **Check a mentor's mailbox exists before creating their sign-in** (`flags.google_directory_check`) — answered by the central support organization; required.
+- **Check a mentor's mailbox exists before creating their sign-in** (`flags.google_directory_check`) — answered by the Association; required.
   - *What it is:* Before a mentor gets a CRM sign-in, the software confirms their Google mailbox exists, so the welcome email does not bounce.
   - *Where to find it:* On for every chapter. Creating mailboxes automatically needs it on.
   - *If it is wrong:* Switched off, a mentor can be given a sign-in whose welcome email bounces.
   - *Recommended:* yes
-- **Create mentors' CRM sign-ins** (`flags.mentor_provision_users`) — answered by the central support organization; required.
+- **Create mentors' CRM sign-ins** (`flags.mentor_provision_users`) — answered by the Association; required.
   - *What it is:* The software creates a CRM sign-in when a mentor is approved.
   - *Where to find it:* On for every chapter.
   - *If it is wrong:* Switched off, every mentor's sign-in is created by hand.
   - *Recommended:* yes
-- **Analytics pages** (`flags.analytics_enabled`) — answered by the central support organization; required.
+- **Analytics pages** (`flags.analytics_enabled`) — answered by the Association; required.
   - *What it is:* The reporting dashboards in the applications.
   - *Where to find it:* On for every chapter.
   - *If it is wrong:* Switched off, the dashboards are missing.
   - *Recommended:* yes
-- **Events page for staff** (`flags.events_enabled`) — answered by the central support organization; required.
+- **Events page for staff** (`flags.events_enabled`) — answered by the Association; required.
   - *What it is:* The staff page for creating and managing workshops and webinars.
   - *Where to find it:* On for every chapter.
   - *If it is wrong:* Switched off, events cannot be managed.
   - *Recommended:* yes
-- **Quick add for partners and funders** (`flags.record_quick_add`) — answered by the central support organization; required.
+- **Quick add for partners and funders** (`flags.record_quick_add`) — answered by the Association; required.
   - *What it is:* Staff can add a partner or funder from its list, without the public form.
   - *Where to find it:* On for every chapter.
   - *If it is wrong:* Switched off, partners and funders arrive only through the public forms.
   - *Recommended:* yes
-- **System Settings page** (`flags.setup_enabled`) — answered by the central support organization; required.
+- **System Settings page** (`flags.setup_enabled`) — answered by the Association; required.
   - *What it is:* The administrators' page for changing the applications' settings without a redeployment.
   - *Where to find it:* On for every chapter.
-  - *If it is wrong:* Switched off, every settings change needs the central support organization to redeploy.
+  - *If it is wrong:* Switched off, every settings change needs the Association to redeploy.
   - *Recommended:* yes
-- **Deliver submissions in the background** (`flags.async_delivery`) — answered by the central support organization; required.
+- **Deliver submissions in the background** (`flags.async_delivery`) — answered by the Association; required.
   - *What it is:* A public form is answered at once, and the background worker delivers it to the CRM, retrying if the CRM is down.
   - *Where to find it:* On for every chapter.
   - *If it is wrong:* Switched off, a CRM outage loses the applicant's wait time and can show them an error.
   - *Recommended:* yes
-- **Practice mode with no CRM** (`flags.espo_dry_run`) — answered by the central support organization; required.
+- **Practice mode with no CRM** (`flags.espo_dry_run`) — answered by the Association; required.
   - *What it is:* Runs the applications without writing to any CRM. Only for the development copy.
   - *Where to find it:* Always off for a chapter.
   - *If it is wrong:* Switched on, nothing a chapter does is saved in its CRM.
@@ -509,7 +509,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 **How to check:** No switch on the page is blank.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A switch in the software that the form does not list. Until 09-18-26 the blank form was missing five switches the trial chapter needed, and it can fall behind again whenever the software gains one.
 
@@ -519,7 +519,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 **Why:** Each secret needs a named holder before it exists, so that none is ever held by one person alone.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
@@ -549,7 +549,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 **How to check:** The page lists seven names, or eight for a webinar chapter, and no values.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Listing six and missing the encryption key. Changing that key later makes every stored secret permanently unreadable.
 
@@ -559,14 +559,14 @@ The chapter information form holds the roughly forty answers that differ from on
 
 **Why:** A secret that exists only in a file on one computer is lost when that person or that computer is.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
 - step 8.7 List the secrets by name
 - step 2.7 Set up the chapter's password vault
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -584,7 +584,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 **How to check:** A second named person opens each secret without help.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Treating a file on one laptop as good enough. Regenerating the deployment settings from the hosting provider scrambles the passwords inside them. Cleveland has lost working passwords that way.
 
@@ -594,7 +594,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 **Why:** A wrong value becomes a fault in every later stage, and a second reader catches what the first misses.
 
-**Who:** The chapter and the central support organization — the chapter's setup contact and someone from the central support organization
+**Who:** The chapter and the Association — the chapter's setup contact and someone from the Association
 
 **Finish first:**
 
@@ -605,45 +605,45 @@ The chapter information form holds the roughly forty answers that differ from on
 - step 8.6 Decide every feature switch
 - step 8.7 List the secrets by name
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
 1. Meet, in person or on a call, with the page open on both screens.
 2. Read every question and its answer aloud, section by section.
    *You should see:* The line at the top of the page reading that every question is answered, apart from the shared drive identifier.
-3. The central support organization: run the curl check from step 8.3 on every address again:
+3. The Association: run the curl check from step 8.3 on every address again:
    - curl -sI ADDRESS
 
    *You should see:* A first line of HTTP/2 200 for every address except the applications' address and the CRM address, which do not exist yet.
-4. At the bottom of the setup contact's page, in the section Sign-off, sign off both people: each name typed and Sign off clicked. Both go on the setup contact's page, because the answers are kept in that browser only. On a call, the setup contact types the central support person's name as they say it.
+4. At the bottom of the setup contact's page, in the section Sign-off, sign off both people: each name typed and Sign off clicked. Both go on the setup contact's page, because the answers are kept in that browser only. On a call, the setup contact types the Association's support person's name as they say it.
    *You should see:* Both names listed with the date, on the setup contact's page.
 
 **Done when:** Two people have read the whole form together in one sitting and both have signed it off.
 
 **How to check:** Both names and the date are in the page's Sign-off section.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 ---
 
-## 8.10 Store the form where the central support organization can reach it
+## 8.10 Store the form where the Association can reach it
 
 **Why:** Stages 9 to 12 are built from the form, so the people building them have to be able to open it.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
 - step 8.9 Review the completed form
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
-1. The chapter's setup contact: on the page, press Copy all answers, paste the result into an email, and send it to the central support organization.
-   *You should see:* An email whose text starts with the line CHAPTER-INFORMATION-ANSWERS v1. The page keeps answers only in the setup contact's browser, so this email is the only way they reach the central support organization.
-2. The central support organization, at the build computer: copy the email's text, from the line CHAPTER-INFORMATION-ANSWERS v1 to the end of the block, into a plain text file named ~/Downloads/SHORT-LABEL-answers.txt.
+1. The chapter's setup contact: on the page, press Copy all answers, paste the result into an email, and send it to the Association.
+   *You should see:* An email whose text starts with the line CHAPTER-INFORMATION-ANSWERS v1. The page keeps answers only in the setup contact's browser, so this email is the only way they reach the Association.
+2. The Association, at the build computer: copy the email's text, from the line CHAPTER-INFORMATION-ANSWERS v1 to the end of the block, into a plain text file named ~/Downloads/SHORT-LABEL-answers.txt.
 3. In a terminal window, go to the application's folder. Type the line below and press Enter:
    - cd ~/Dropbox/Projects/cbm-client-intake
 4. Check the answers without writing anything. Type the line below and press Enter:
@@ -656,15 +656,15 @@ The chapter information form holds the roughly forty answers that differ from on
    *You should see:* A message naming the file written, prds/chapter-network/chapters/SHORT-LABEL-values.yaml.
 6. Open the file and check it holds no secret value. Every line under secrets must be a name only.
 7. Commit it with the message "docs(chapter-network): SHORT-LABEL chapter information form", and push it.
-8. Ask a second person at the central support organization to open the file from the remote repository.
+8. Ask a second person at the Association to open the file from the remote repository.
    *You should see:* The file opens, with both reviewers' names at the top.
 9. Delete ~/Downloads/SHORT-LABEL-answers.txt from the build computer. The committed file is now the copy the build uses.
 
-**Done when:** The form is in the agreed place and the central support organization has confirmed it can open it.
+**Done when:** The form is in the agreed place and the Association has confirmed it can open it.
 
 **Note:** An answer typed into the file by hand, and not on the page, is lost the next time the file is written from the page. Boston's switches were answered in the file on 09-24-26 because the settings generator in step 11.2 refuses to run while any switch reads not known yet; ask the setup contact to enter the same answers on the page before the file is ever written again.
 
-**How to check:** A second person at the central support organization opens it.
+**How to check:** A second person at the Association opens it.
 
 **If it didn't work:** If an answer changes after the file is written, the setup contact changes it on the page and emails a new block, and this step is done again from it. The setup contact's page is the record; the file is always produced from it.
 
@@ -676,6 +676,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 | Version | Date | Change |
 |---|---|---|
+| 0.17 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". The form page's label For central support is now For the Association. |
 | 0.16 | 09-24-26 23:08 | Step 8.10 warns that a switch answered in the values file by hand is lost the next time the file is written from the page. Boston's fourteen switches were answered in the file by ruling on 09-24-26, because the settings generator refuses to run while any switch reads not known yet; the page still shows them unanswered until the setup contact updates it. |
 | 0.15 | 09-24-26 00:39 | The switch Take each release automatically? is now the chapter's question, not the central support organization's (Doug, 09-24-26, CRMBuilder decision DEC-1156): a chapter may take each release as it is cut, decline one, or schedule the upgrade for a time of its own after trying it on the demo/test deployment. Step 8.6 now has four chapter questions. |
 | 0.14 | 09-23-26 20:40 | References to stage 9 follow its renumbering from twenty steps to nine (stage 9 version 0.11). |

@@ -1,7 +1,7 @@
 stage: 17
 name: Check everything works before going live
-version: "0.5"
-updated: "09-23-26 20:40"
+version: "0.6"
+updated: "11-07-26 15:21"
 why: >-
   This stage proves the chapter's system works end to end before any real client
   uses it: each team reaches its own pages and nobody else's, and a public
@@ -10,7 +10,7 @@ why: >-
   check, so a check done as an administrator proves nothing, and several of
   Cleveland's permission faults stayed hidden for weeks for exactly that reason.
 who: >-
-  The central support organization, signed in as test users; the chapter for the
+  The Association, signed in as test users; the chapter for the
   website check.
 time: >-
   About two hours. Most of the checks can be run by a script.
@@ -31,7 +31,7 @@ steps:
     mode: automated
     actions:
       - do: "In these steps, CRM-ADDRESS is the chapter's CRM address, APP-ADDRESS is the chapter's application address, and SHORT-LABEL is the chapter's short label, all from the chapter information form."
-      - do: "Sign in to CRM-ADDRESS as the central support organization's administrator. Open Administration, then Users, and create these six accounts. The exact labels on the create-user screen are not verified. Use these values:"
+      - do: "Sign in to CRM-ADDRESS as the Association's administrator. Open Administration, then Users, and create these six accounts. The exact labels on the create-user screen are not verified. Use these values:"
         items:
           - "User name SHORT-LABEL.test.clientadmin, team Client Administration Team"
           - "User name SHORT-LABEL.test.mentoradmin, team Mentor Administration Team"
@@ -110,7 +110,7 @@ steps:
     if_not: >-
       A "Not Found" answer is not a refusal. It means the page is switched off or the
       address is wrong. Find out which before calling it a pass. Any other difference
-      from the table: stop, and ask the central support organization.
+      from the table: stop, and ask the Association.
     goes_wrong: >-
       Reading "not found" as "refused". In August the settings page answered "not
       found" to every test user, and the record cannot say why.
@@ -121,7 +121,7 @@ steps:
   - id: "17.3"
     name: Submit the public application form
     why: The public form is how clients arrive, so it is tested from the chapter's own website the way a client would use it.
-    who: both — the central support organization, or anyone at the chapter
+    who: both — the Association, or anyone at the chapter
     first: ["17.2"]
     needs: [website_base_url]
     produces: [test_submission]
@@ -300,7 +300,7 @@ steps:
     produces: []
     mode: automated
     actions:
-      - do: "Sign in to CRM-ADDRESS as the central support organization's administrator and delete these records, in this order:"
+      - do: "Sign in to CRM-ADDRESS as the Association's administrator and delete these records, in this order:"
         items:
           - "The engagement for Test Bakery DELETE-ME"
           - "The client profile for Test Bakery DELETE-ME"
@@ -335,6 +335,10 @@ steps:
     source: 5-Methods-Form-Accounts-Checks.md#17.9
 
 changes:
+  - version: "0.6"
+    date: "11-07-26 15:21"
+    change: >-
+      Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee".
   - version: "0.5"
     date: "09-23-26 20:40"
     change: >-

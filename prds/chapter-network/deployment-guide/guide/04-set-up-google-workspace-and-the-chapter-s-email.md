@@ -1,7 +1,7 @@
 # Stage 4 — Set up Google Workspace and the chapter's email
 
-**Version:** 0.4  
-**Last Updated:** 09-23-26 13:54  
+**Version:** 0.5  
+**Last Updated:** 11-07-26 15:21  
 **Generated from** `steps/stage-04.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -10,7 +10,7 @@
 
 Google Workspace is Google's paid service for an organization's email, calendars and documents. The software reads and sends the chapter's mail, creates calendar events and stores documents through it, so several of the mailboxes made here are used by the software and have rules of their own. This stage also takes the domain registrar account off the founder's personal email.
 
-**Who:** The chapter's setup contact and its Google Workspace administrator, with the central support organization.  
+**Who:** The chapter's setup contact and its Google Workspace administrator, with the the Association.  
 **Time:** Most of a day, spread over two or three days while DNS records are seen and the nonprofit application is answered.  
 **When this stage is done:** The hosting and video meeting accounts can be opened with chapter addresses (stage 5). The Google permissions the software needs (stage 10) depend on the accounts made here.
 
@@ -27,7 +27,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 - 4.3 Verify the domain
 - 4.4 Switch mail delivery to Google
 - 4.5 Create the chapter's own administrator account
-- 4.6 Create the central support organization's administrator account
+- 4.6 Create the Association's administrator account
 - 4.7 Create the shared operations mailbox
 - 4.8 Create the alert sending mailbox
 - 4.9 Decide who receives the system's warning messages
@@ -43,13 +43,13 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Why:** Every chapter hosts its own email on its own Google Workspace, so the chapter has to take on that account and its cost before anything is set up.
 
-**Who:** chapter's board, advised by the central support organization
+**Who:** chapter's board, advised by the Association
 
 **Finish first:**
 
 - step 2.6 Sign the agreement
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -57,16 +57,16 @@ Google Workspace is Google's paid service for an organization's email, calendars
    - The account is in the chapter's own name, on the chapter's own domain.
    - The chapter pays for it, with the nonprofit discount once it is granted (step 4.13).
    - The chapter's mail, documents and calendars stay with the chapter if it ever leaves.
-   - The central support organization works inside it only by the chapter's grant.
+   - The Association works inside it only by the chapter's grant.
 2. The board records that the chapter will hold its own Google Workspace.
 
 **Done when:** The board has recorded that the chapter will hold its own Google Workspace, in its own name and on its own domain.
 
-**Note:** Ruled 09-18-26: every chapter hosts its own email on its own Google Workspace. The central support organization does not provide Google Workspace.
+**Note:** Ruled 09-18-26: every chapter hosts its own email on its own Google Workspace. The Association does not provide Google Workspace.
 
 **How to check:** The board minutes record it.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 ---
 
@@ -81,7 +81,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 - step 4.1 Confirm the chapter will hold its own Google Workspace
 - step 3.4 Register and pay for the domain names
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -107,7 +107,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **How to check:** The setup contact signs in to the Google Workspace admin console.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Signing up with the website domain name when the chapter chose a separate email domain name. The mailboxes then land on the wrong domain name.
 
@@ -117,14 +117,14 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Why:** Google will not deliver mail for a domain until the chapter proves it owns it.
 
-**Who:** The chapter and the central support organization — the chapter's setup contact, with the central support organization's help
+**Who:** The chapter and the Association — the chapter's setup contact, with the Association's help
 
 **Finish first:**
 
 - step 4.2 Create the Google Workspace account
 - step 3.7 Move the domain names' DNS to the chapter's Cloudflare account
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -145,7 +145,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **How to check:** The admin console shows the domain as verified.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Impatience. A new DNS record can take from minutes to a day to be seen. Wait before assuming the record is wrong.
 
@@ -155,13 +155,13 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Why:** Mail sent to the chapter's addresses must reach Google, and mail the chapter sends must prove it is genuine or it lands in spam folders.
 
-**Who:** The chapter and the central support organization — the chapter's setup contact, with the central support organization's help
+**Who:** The chapter and the Association — the chapter's setup contact, with the Association's help
 
 **Finish first:**
 
 - step 4.3 Verify the domain
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -218,15 +218,15 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **How to check:** The outside message arrives, and the reply shows SPF, DKIM and DMARC all passing.
 
-**If it didn't work:** Do not change the records again straight away. A changed record can take up to a day to be seen everywhere. Check the four records against the values above, character by character, then ask the central support organization.
+**If it didn't work:** Do not change the records again straight away. A changed record can take up to a day to be seen everywhere. Check the four records against the values above, character by character, then ask the Association.
 
-**What usually goes wrong:** Three things. Leaving an old MX record from a previous mail provider: some mail then goes to the old provider and is never seen. Adding a second SPF record instead of editing the first: receivers then treat SPF as broken. And skipping DKIM or DMARC: everything seems to work, but the software's welcome emails to new mentors land in spam folders. Any other service that will send mail as the chapter's domain, such as a newsletter service or the website's contact form, must be added to the SPF record too; ask the central support organization.
+**What usually goes wrong:** Three things. Leaving an old MX record from a previous mail provider: some mail then goes to the old provider and is never seen. Adding a second SPF record instead of editing the first: receivers then treat SPF as broken. And skipping DKIM or DMARC: everything seems to work, but the software's welcome emails to new mentors land in spam folders. Any other service that will send mail as the chapter's domain, such as a newsletter service or the website's contact form, must be added to the SPF record too; ask the Association.
 
 ---
 
 ## 4.5 Create the chapter's own administrator account
 
-**Why:** The chapter must always be able to run its own Google Workspace, whatever happens to the central support organization.
+**Why:** The chapter must always be able to run its own Google Workspace, whatever happens to the Association.
 
 **Who:** The chapter
 
@@ -234,7 +234,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 - step 4.2 Create the Google Workspace account
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -251,43 +251,43 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **How to check:** The named person signs in to the admin console with their chapter address.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
-**What usually goes wrong:** The chapter's only administrator being the central support organization. That breaks the rule that the chapter can always withdraw the central support organization's access.
+**What usually goes wrong:** The chapter's only administrator being the Association. That breaks the rule that the chapter can always withdraw the Association's access.
 
 ---
 
-## 4.6 Create the central support organization's administrator account
+## 4.6 Create the Association's administrator account
 
-**Why:** The central support organization needs its own named administrator account to enter the software's permission grant in step 10.3.
+**Why:** The Association supports the chapter's own technical person and works on the chapter's system directly only when that person is unavailable (Association ruling 1). It needs its own named administrator account for that, and to enter the software's permission grant in step 10.3.
 
-**Who:** The chapter and the central support organization — the chapter's administrator creates it; the central support organization uses it
+**Who:** The chapter and the Association — the chapter's administrator creates it; the Association uses it
 
 **Finish first:**
 
 - step 4.5 Create the chapter's own administrator account
-- step 2.4 Agree the access the central support organization will hold
+- step 2.4 Agree the access the Association will hold
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
 1. Sign in to https://admin.google.com as the chapter's administrator.
 2. Open Directory, then Users, and choose Add new user. Enter:
-   - First name: the central support person's first name
-   - Last name: the central support person's last name
-   - Primary email: FIRSTNAME.LASTNAME@EMAIL-DOMAIN, using the central support person's own name, never a shared name such as support
-3. Let Google generate the password. Copy it straight into the chapter's Operations vault, and tell the central support person privately where to find it. Never email it.
+   - First name: the Association's support person's first name
+   - Last name: the Association's support person's last name
+   - Primary email: FIRSTNAME.LASTNAME@EMAIL-DOMAIN, using the Association's support person's own name, never a shared name such as support
+3. Let Google generate the password. Copy it straight into the chapter's Operations vault, and tell the Association's support person privately where to find it. Never email it.
 4. Open the new user's page, open Admin roles and privileges, and assign Super Admin. Entering the software's permission grant in step 10.3 needs it.
-   *You should see:* Super Admin listed for the central support person's account.
-5. The central support person signs in at https://admin.google.com with the new address, sets their own password, and turns on two-step sign-in straight away.
+   *You should see:* Super Admin listed for the Association's support person's account.
+5. The Association's support person signs in at https://admin.google.com with the new address, sets their own password, and turns on two-step sign-in straight away.
    *You should see:* The chapter's admin console, reached from their own account.
 
-**Done when:** The central support organization holds its own named administrator account, separate from the chapter's.
+**Done when:** The Association holds its own named administrator account, separate from the chapter's.
 
-**How to check:** The central support organization signs in to the chapter's admin console with its own account.
+**How to check:** The Association signs in to the chapter's admin console with its own account.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** The account uses a paid licence, like any user. Budget for it in the cost agreement (step 2.2).
 
@@ -303,7 +303,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 - step 4.5 Create the chapter's own administrator account
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -321,7 +321,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **How to check:** The address appears in the admin console as a user with a licence.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Creating the address as a group or an alias. The software can only act as a real mailbox, and it fails later with an error that does not name the cause. Cleveland learned this when its administrator address turned out to be a group. Also, only one deployment may ever read a given shared operations mailbox.
 
@@ -337,7 +337,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 - step 4.5 Create the chapter's own administrator account
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -350,7 +350,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **How to check:** The address appears in the admin console as a user with a licence.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A group or an alias. It is refused, the same as in step 4.7.
 
@@ -360,13 +360,13 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Why:** A warning nobody reads changes nothing, so the receiving address must reach named people.
 
-**Who:** The chapter and the central support organization
+**Who:** The chapter and the Association
 
 **Finish first:**
 
 - step 4.5 Create the chapter's own administrator account
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -377,7 +377,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 2. In the group's access settings, let people outside the organization post to the group. The hosting provider's alerts come from outside the chapter. The setting's exact wording has not been checked for this guide.
 3. Add these members to the group:
    - At least one named officer of the chapter
-   - At least one named person from the central support organization, by their own address
+   - At least one named person from the Association, by their own address
 4. Write admin@EMAIL-DOMAIN on the chapter information form as the alert receiving address. The software reads it as ALERT_EMAIL_TO. Write the members' names beside it on the chapter's account list (step 5.7).
 5. From a personal account outside the chapter, send a test message to admin@EMAIL-DOMAIN.
    *You should see:* The test message arrives with every member of the group.
@@ -386,7 +386,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **How to check:** The named people are written down beside the address. The real test is step 12.4, once the software can send.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** An address nobody reads. The warnings then arrive and change nothing.
 
@@ -402,7 +402,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 - step 4.5 Create the chapter's own administrator account
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -419,7 +419,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **How to check:** The group appears in the admin console, and the administrator adds and removes a test member.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Adding members to the group needs one more permission in the software's grant than the rest. Step 10.3 lists it.
 
@@ -435,7 +435,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 - step 4.5 Create the chapter's own administrator account
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -453,7 +453,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **How to check:** Every name on the staff list (step 14.1) has a mailbox.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A mentor's mailbox created by hand. The software may then pick a different address for that mentor. Also, a staff member's personal address used in the software causes duplicate calendar invitations.
 
@@ -468,14 +468,14 @@ Google Workspace is Google's paid service for an organization's email, calendars
 **Finish first:**
 
 - step 4.5 Create the chapter's own administrator account
-- step 4.6 Create the central support organization's administrator account
+- step 4.6 Create the Association's administrator account
 - step 4.7 Create the shared operations mailbox
 - step 4.8 Create the alert sending mailbox
 - step 4.9 Decide who receives the system's warning messages
 - step 4.10 Create the members group
 - step 4.11 Create the staff mailboxes
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -496,7 +496,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **How to check:** The admin console reports two-step sign-in as enforced, each user enrolled, and the shared mailboxes' recovery codes are in the vault.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A shared mailbox whose second step is one person's phone. When that person is away, nobody can sign in to it.
 
@@ -513,7 +513,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 - step 1.5 Obtain nonprofit tax status, or a sponsorship arrangement
 - step 4.2 Create the Google Workspace account
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -528,7 +528,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **How to check:** The application is submitted, and the answer date is written down.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A chapter under a sponsoring nonprofit has no status of its own to apply with. See step 1.5 and the open question in the plan.
 
@@ -544,7 +544,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 - step 4.4 Switch mail delivery to Google
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -564,7 +564,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **How to check:** The password reset message arrives in the chapter mailbox.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A loop. If the chapter's email is ever down because of a domain name problem, the registrar's password reset goes to that same broken email. Keep the registrar's recovery codes from step 3.6 safe for this case.
 
@@ -574,6 +574,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 | Version | Date | Change |
 |---|---|---|
+| 0.5 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". Step 4.6's reason now names Association ruling 1: the account is for support when the chapter's own technical person is unavailable, and for the permission grant in step 10.3. |
 | 0.4 | 09-23-26 13:54 | Manual DNS added (Doug, 09-23-26): steps 4.3 and 4.4 say that a chapter keeping its own DNS provider adds the same records there, and step 4.14 moves that provider account's email too. |
 | 0.3 | 09-19-26 00:05 | Every action outside steps 4.3 and 4.4 made precise (Doug, 09-19-26): the web addresses to open, the admin console paths, the exact user and group names to create (info@, admin@, allmembers@), the fields to fill in, the two-step sign-in settings, and the nonprofit application route. Screen wording not checked on screen is marked as such. |
 | 0.2 | 09-19-26 00:20 | Steps 4.3 and 4.4 rewritten with the exact DNS records to add in Cloudflare, field by field: the verification record, and the MX, SPF, DKIM and DMARC records, with a header check that all three pass (Doug, 09-19-26). Values read from Cleveland's live email domain. |

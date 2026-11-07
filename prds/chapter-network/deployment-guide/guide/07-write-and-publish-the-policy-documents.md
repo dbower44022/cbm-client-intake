@@ -1,7 +1,7 @@
 # Stage 7 — Write and publish the policy documents
 
-**Version:** 0.2  
-**Last Updated:** 09-19-26 00:05  
+**Version:** 0.3  
+**Last Updated:** 11-07-26 15:21  
 **Generated from** `steps/stage-07.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -10,7 +10,7 @@
 
 Every public form carries one required consent box that links to four documents. Two are codes: the code of conduct, and the mentor code of ethics. Two are legal: the terms of use, and the privacy policy. The links must lead to this chapter's own documents, because showing one city's applicants another city's privacy policy is a legal problem. The chapter writes the documents with its own legal adviser; this stage covers only what the software needs from them.
 
-**Who:** The chapter, with its own legal adviser. The central support organization supplies the list of what personal information the software collects, and gives no legal advice.  
+**Who:** The chapter, with its own legal adviser. The Association supplies the list of what personal information the software collects, and gives no legal advice.  
 **Time:** Not known. It depends on the chapter's legal adviser.  
 **When this stage is done:** The four addresses go on the chapter information form (stage 8), and from there into the consent box on every public form.
 
@@ -41,7 +41,7 @@ Every public form carries one required consent box that links to four documents.
 - step 6.2 Publish the website
 - step 6.4 Confirm someone at the chapter can edit the website
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -59,7 +59,7 @@ Every public form carries one required consent box that links to four documents.
 
 **How to check:** The page opens in a private browser window.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A page published as a draft, or behind a sign-in. It opens for the person who wrote it and for nobody else. The private window is what catches this.
 
@@ -75,7 +75,7 @@ Every public form carries one required consent box that links to four documents.
 
 - step 6.4 Confirm someone at the chapter can edit the website
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -93,7 +93,7 @@ Every public form carries one required consent box that links to four documents.
 
 **How to check:** The page opens in a private browser window.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Publishing one code for both. The software links two different addresses, and a mentor applicant would then agree to the client code of conduct.
 
@@ -109,7 +109,7 @@ Every public form carries one required consent box that links to four documents.
 
 - step 6.4 Confirm someone at the chapter can edit the website
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -127,7 +127,7 @@ Every public form carries one required consent box that links to four documents.
 
 **How to check:** The page opens in a private browser window.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 ---
 
@@ -135,17 +135,17 @@ Every public form carries one required consent box that links to four documents.
 
 **Why:** The consent box on every public form links to it, and it must describe what this chapter's system collects, under this chapter's name.
 
-**Who:** The chapter and the central support organization — the chapter writes it, the central support organization says what the software collects
+**Who:** The chapter and the Association — the chapter writes it, the Association says what the software collects
 
 **Finish first:**
 
 - step 6.4 Confirm someone at the chapter can edit the website
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
-1. The central support organization gives the chapter's adviser a plain list of what personal information the software collects and where it is kept. There is no finished list yet (work list item 13). Until there is, give this outline:
+1. The Association gives the chapter's adviser a plain list of what personal information the software collects and where it is kept. There is no finished list yet (work list item 13). Until there is, give this outline:
    - Names, contact details and business details from the public forms, kept in the chapter's CRM.
    - Every form submission, also held in the application's own database.
    - Email between mentors and clients, copied onto the client's record in the CRM.
@@ -168,7 +168,7 @@ Every public form carries one required consent box that links to four documents.
 
 **How to check:** The page opens in a private browser window, and the organization it names is this chapter.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Starting from another chapter's policy and missing a name. The finishing test for this step exists for that reason.
 
@@ -187,20 +187,20 @@ Every public form carries one required consent box that links to four documents.
 - step 7.3 Write and publish the terms
 - step 7.4 Write and publish the privacy policy
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
 1. Send the chapter's legal adviser the four addresses from steps 7.1 to 7.4.
 2. The adviser reads all four and replies in writing that they may be published, naming each document.
    *You should see:* A written reply naming all four documents.
-3. Save the reply in the chapter's shared drive, in a folder named Legal, with the date in its file name. The central support organization plays no part in this review.
+3. Save the reply in the chapter's shared drive, in a folder named Legal, with the date in its file name. The Association plays no part in this review.
 
 **Done when:** Whoever advises the chapter on legal matters has read all four and confirmed they may be published.
 
 **How to check:** The written confirmation is kept with the chapter's records.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Publishing first and reviewing later. The documents are live as soon as they are published.
 
@@ -210,13 +210,13 @@ Every public form carries one required consent box that links to four documents.
 
 **Why:** The software's four policy settings are filled from these addresses, and every one defaults to Cleveland's documents.
 
-**Who:** The chapter checked by the central support organization
+**Who:** The chapter checked by the Association
 
 **Finish first:**
 
 - step 7.5 Have the four documents reviewed
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -235,7 +235,7 @@ Every public form carries one required consent box that links to four documents.
 
 **How to check:** All four open from the form.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A changed address later. If the chapter moves a document on its website, the consent box links break silently. Moving a policy document needs a change request (step 18.2), so the setting is changed at the same time.
 
@@ -245,5 +245,6 @@ Every public form carries one required consent box that links to four documents.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.3 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". |
 | 0.2 | 09-19-26 00:05 | Every action made precise (Doug, 09-19-26): the title each document must carry to match the consent box's link text, the exact address to publish it at (Cleveland's paths), a curl check that it is public, a check that the privacy policy no longer names Cleveland, and the form key and setting each address goes into. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for the policy documents (9-Methods-Hosting-Website-Policies.md, version 0.4) with the step list's finishing tests. |

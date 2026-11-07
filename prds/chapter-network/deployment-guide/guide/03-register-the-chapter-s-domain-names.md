@@ -1,7 +1,7 @@
 # Stage 3 — Register the chapter's domain names
 
-**Version:** 0.3  
-**Last Updated:** 09-23-26 13:51  
+**Version:** 0.4  
+**Last Updated:** 11-07-26 15:21  
 **Generated from** `steps/stage-03.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -10,7 +10,7 @@
 
 Every address the chapter uses hangs off its domain names: its email, its website, its CRM and its applications. This stage buys them in the chapter's name, protects the account that holds them, and moves their DNS to Cloudflare, the DNS provider CRMBuilder writes records into itself. A chapter that already has its DNS at another provider may keep it there instead (manual DNS, step 3.7). Losing the account that holds the domain names loses the chapter's email and website together.
 
-**Who:** The chapter's setup contact, with the central support organization for the Cloudflare step.  
+**Who:** The chapter's setup contact, with the Association for the Cloudflare step.  
 **Time:** About an hour of work. A change of name servers can take up to a day to be seen everywhere.  
 **When this stage is done:** Google Workspace and the chapter's email can be set up on the domain (stage 4).
 
@@ -42,7 +42,7 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 
 - step 1.7 Name the person who acts for the chapter during setup
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -58,7 +58,7 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 
 **How to check:** The address and the person's name are written down, marked temporary.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Forgetting the address is temporary. The domain names then stay tied to one volunteer's personal email for years.
 
@@ -68,34 +68,35 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 
 **Why:** The email domain name becomes part of every mentor's address for good, so it has to be chosen deliberately.
 
-**Who:** The chapter advised by the central support organization
+**Who:** The chapter advised by the Association
 
 **Finish first:**
 
 - step 1.1 Choose the chapter's name
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
-1. Explain the two choices to the chapter's board. Whether a chapter needs one domain name or two is an open question in the plan:
-   - Two domain names, as Cleveland has: one for the public website (clevelandbusinessmentors.org) and a second, shorter one for email and mentor logins (cbmentors.org). Mentors' addresses are short, but there are two names to renew.
-   - One domain name for everything. Simpler and cheaper, but the email addresses are tied to the website's name for good.
-2. Write down the choice as three values:
+1. Explain the Association's recommendation to the chapter's board: two domain names, as the Association itself has (Association ruling 25) and as Cleveland has:
+   - One for the public website, for example businessmentorsassociation.org or clevelandbusinessmentors.org.
+   - A second, shorter one for email and mentor sign-ins, for example mentorsassociation.org or cbmentors.org. Every mentor's address ends in it, so a short name gives short addresses.
+2. Tell the board the other choice, which is the chapter's to make: one domain name for everything. It is simpler and there is one name fewer to renew, but the email addresses are tied to the website's name for good.
+3. Write down the choice as three values:
    - The website domain name, for example akronbusinessmentors.org.
    - The email domain name, for example akronmentors.org. With one domain name, it is the same as the website domain name.
    - The mentor email domain name. For every chapter so far it is the same as the email domain name.
-3. Do not buy separate domain names for the CRM or the applications. They get names under the email or website domain name, created in later steps:
+4. Do not buy separate domain names for the CRM or the applications. They get names under the email or website domain name, created in later steps:
    - crm. for the CRM, for example crm.akronbusinessmentors.org.
    - apps. for the applications, for example apps.akronbusinessmentors.org.
-4. Search the registrar the chapter will use for each domain name chosen.
+5. Search the registrar the chapter will use for each domain name chosen.
    *You should see:* Each name shown as available to register.
 
-**Done when:** The names are chosen and confirmed available. See the open question in the plan document about whether a chapter needs one domain name or two.
+**Done when:** The names are chosen and confirmed available. The Association recommends two domain names, one for the website and a shorter one for email; the chapter may choose one.
 
 **How to check:** The chosen names are written down, and a registrar's search shows each one available.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A long email domain name. Every mentor's address is their first and last name at that domain name, so a long domain name makes long addresses.
 
@@ -112,7 +113,7 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 - step 3.1 Choose the founding email address used for setup
 - step 3.2 Decide how many domain names the chapter needs, and choose them
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -135,7 +136,7 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 
 **How to check:** The registrar's account page shows the chapter's legal name.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** An account in a person's own name. If that person leaves, the registrar may refuse to hand the domain names to the chapter.
 
@@ -152,7 +153,7 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 - step 3.3 Create the domain registrar account
 - step 1.6 Open a bank account
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -170,7 +171,7 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 
 **How to check:** An ownership lookup, or the registrar's account page, shows the chapter as registrant and an expiry date at least a year ahead.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Paying with a personal card. When that card expires, the renewal fails, and nobody at the chapter is told.
 
@@ -186,7 +187,7 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 
 - step 3.4 Register and pay for the domain names
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -199,7 +200,7 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 
 **How to check:** Each domain name shows automatic renewal as on, and the card on file is in date.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A lapsed domain name. The chapter's email and website stop together, and so do the CRM and the applications, whose addresses are under that domain name.
 
@@ -215,7 +216,7 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 
 - step 3.3 Create the domain registrar account
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -228,7 +229,7 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 
 **How to check:** Signing in asks for the second step, and a second officer can open the recovery codes in the vault.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** The second step tied to one person's phone, and the recovery codes held by the same person.
 
@@ -238,7 +239,7 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 
 **Why:** CRMBuilder writes the CRM's address into Cloudflare itself, so the chapter's domain names must live in a Cloudflare account the chapter owns.
 
-**Who:** The chapter and the central support organization — the chapter's setup contact, with the central support organization
+**Who:** The chapter and the Association — the chapter's setup contact, with the Association
 
 **Finish first:**
 
@@ -246,7 +247,7 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 - step 3.6 Turn on two-step sign-in for the registrar account
 - step 2.7 Set up the chapter's password vault
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -254,15 +255,15 @@ Every address the chapter uses hangs off its domain names: its email, its websit
    - dig +short NS DOMAIN
 
    *You should see:* Two or more name servers. Names ending in ns.cloudflare.com mean the DNS is already at Cloudflare. Any other names, such as nsc1.squarespacedns.com, mean another DNS provider hosts it.
-2. Decide with the central support organization whether the DNS moves to Cloudflare or stays where it is. A chapter whose email and website already run on its domain may keep its DNS provider; this is called manual DNS (ruled 09-23-26). Moving costs two to three hours and touches the chapter's live email and website. Keeping it means every DNS record in this guide is added by hand at the chapter's DNS provider.
+2. Decide with the Association whether the DNS moves to Cloudflare or stays where it is. A chapter whose email and website already run on its domain may keep its DNS provider; this is called manual DNS (ruled 09-23-26). Moving costs two to three hours and touches the chapter's live email and website. Keeping it means every DNS record in this guide is added by hand at the chapter's DNS provider.
    *You should see:* One answer, agreed by both: Cloudflare, or manual DNS at the named provider.
 3. Manual DNS only: do the next three actions, then skip every Cloudflare action in this step.
 4. Manual DNS only: in the Operations vault, create an item titled DNS provider, holding:
    - The words Manual DNS, and the provider's name.
    - The provider's sign-in address.
    - The sign-in email and the password. If the registrar from step 3.3 hosts the DNS, name the registrar's item instead.
-5. Manual DNS only: give the central support organization's named people the ability to add DNS records at the provider. Use the provider's own team or member feature if it has one; otherwise they use the sign-in held in the vault. Providers name this feature differently, and this guide does not give the labels.
-   *You should see:* A named person from the central support organization able to open the domain's DNS records.
+5. Manual DNS only: give the Association's named people the ability to add DNS records at the provider. Use the provider's own team or member feature if it has one; otherwise they use the sign-in held in the vault. Providers name this feature differently, and this guide does not give the labels.
+   *You should see:* A named person from the Association able to open the domain's DNS records.
 6. Manual DNS only: check that two-step sign-in is on for the DNS provider account, with its codes in the DNS provider item. Leave DNSSEC as it is: it only matters when the name servers change, and manual DNS does not change them.
 7. Open https://dash.cloudflare.com/sign-up and create the account with:
    - Email: the founding email address from step 3.1. Step 4.14 changes it to a chapter mailbox.
@@ -273,7 +274,7 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 10. Compare Cloudflare's list of records with the registrar's. Any record missing from Cloudflare's list, add in Cloudflare now, or it stops working when the name servers change.
 11. In the registrar account, open the domain's name server settings (at Porkbun, the domain's name server details; the exact label has not been checked). Delete the registrar's name servers and enter Cloudflare's two, exactly as Cloudflare shows them.
 12. In Cloudflare, open your profile's authentication settings and turn on two-step sign-in with an authenticator code, stored in the "Cloudflare" item in the vault. Save Cloudflare's backup codes into the same item.
-13. In Cloudflare, open the account's members page and invite each of the central support organization's named people by email, with the Administrator role. The exact page and role names have not been checked.
+13. In Cloudflare, open the account's members page and invite each of the Association's named people by email, with the Administrator role. The exact page and role names have not been checked.
     *You should see:* Each invited person listed as a member once they accept.
 14. Wait for Cloudflare to report each domain name as active. It can take up to a day. From a terminal, this command shows the name servers the world sees; put the domain name in place of DOMAIN:
     - dig +short NS DOMAIN
@@ -285,14 +286,14 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 - Each domain name is a zone in a Cloudflare account the chapter owns, or, with manual DNS, is hosted in a DNS provider account the chapter owns.
 - The registrar points at Cloudflare's name servers, or, with manual DNS, at the chapter's DNS provider's.
 - Two-step sign-in is on.
-- The central support organization's named people are members.
+- The Association's named people are members.
 - The sign-in and recovery codes are in the chapter's vault.
 
 **Note:** CRMBuilder writes DNS records only into Cloudflare. With manual DNS it shows each record, and a person adds it at the chapter's DNS provider (ruled 09-23-26).
 
-**How to check:** Cloudflare shows each domain name as active, and a name-server lookup on each domain name returns Cloudflare's two servers. With manual DNS, the lookup returns the chapter's DNS provider's servers, and a person from the central support organization can open the domain's DNS records there.
+**How to check:** Cloudflare shows each domain name as active, and a name-server lookup on each domain name returns Cloudflare's two servers. With manual DNS, the lookup returns the chapter's DNS provider's servers, and a person from the Association can open the domain's DNS records there.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** From now on every DNS record is made in Cloudflare, not at the registrar. And Cloudflare's proxy must stay off for the CRM and the applications: both addresses are "DNS only", with the grey cloud, or their certificates fail to issue or renew. The public website can use the proxy; Cleveland's does.
 
@@ -302,6 +303,7 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 
 | Version | Date | Change |
 |---|---|---|
+| 0.4 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". Step 3.2 states the Association's recommendation, two domain names, one for the website and a shorter one for email (Association ruling 25); the chapter may still choose one. |
 | 0.3 | 09-23-26 13:51 | Manual DNS added (Doug, 09-23-26, amending the 09-18-26 Cloudflare ruling): step 3.7 first looks up where each domain's DNS is hosted, then either moves it to Cloudflare as before or keeps it at the chapter's existing provider, with the provider's sign-in in the vault and the central support organization able to add records there. The finishing test and note changed with the step list (version 0.19). Boston is the first chapter on manual DNS, at Squarespace Domains. |
 | 0.2 | 09-19-26 00:35 | Every action made precise (Doug, 09-19-26): what goes in the vault for each account and under what title; the registrar account's fields, with Porkbun as the worked example (Cleveland's registrar, checked by lookup on 09-19-26); the registration settings; an authenticator code held in Proton Pass for two-step sign-in; the Cloudflare sign-up, plan, record check, name server change and member invitation; and the command that confirms the name servers. Registrar and Cloudflare screen labels are not checked, and the steps say so. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for registering the domain names (8-Methods-Organization-Domains-Google.md, version 0.5) with the step list's finishing tests. Step 3.7 now signs up to Cloudflare with the founding address, because the chapter has no mailbox until stage 4. |

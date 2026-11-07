@@ -1,16 +1,16 @@
 # Stage 18 — Hand over and start normal support
 
-**Version:** 0.4  
-**Last Updated:** 09-24-26 00:39  
+**Version:** 0.5  
+**Last Updated:** 11-07-26 15:21  
 **Generated from** `steps/stage-18.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
 
 ## Why this stage
 
-This stage moves the chapter from being set up to being supported, and proves the chapter can reach everything it owns without help. The central support organization holds the only administrator accounts, so asking for help has to work well, or chapters start asking for administrator accounts of their own.
+This stage moves the chapter from being set up to being supported, and proves the chapter can reach everything it owns without help. The chapter holds its own administrator accounts and its own technical person goes first; the Association supports that person (Association ruling 1). Asking for help has to work well, or chapters start changing their systems themselves.
 
-**Who:** The central support organization, with the chapter's officers.  
+**Who:** The Association, with the chapter's officers.  
 **Time:** About two hours of meetings, plus the review three months later.  
 **When this stage is done:** Normal support. The chapter is live.
 
@@ -26,7 +26,7 @@ This stage moves the chapter from being set up to being supported, and proves th
 - 18.2 Explain how to ask for a change
 - 18.3 Explain the release schedule
 - 18.4 Hand over the account and access list
-- 18.5 Confirm the chapter can get in without the central support organization
+- 18.5 Confirm the chapter can get in without the Association
 - 18.6 Confirm the leaving terms in practice
 - 18.7 Set the first review date
 
@@ -36,23 +36,23 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 **Why:** The chapter needs to know where every request goes and what to expect, so nobody waits in silence.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
 - step 2.6 Sign the agreement
 - step 16.5 Name the chapter's own first point of contact
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
-1. Invite the chapter's first point of contact to the ClickUp system the support team uses for requests, at their chapter email address. The address of that ClickUp space, and how a chapter's people are given access to it, are not settled yet (work list item 8). The central support organization supplies both.
+1. Invite the chapter's first point of contact to the ClickUp system the support team uses for requests, at their chapter email address. The address of that ClickUp space, and how a chapter's people are given access to it, are not settled yet (work list item 8). The Association supplies both.
    *You should see:* The first point of contact signed in to ClickUp and able to see the chapter's requests.
 2. Show them the three kinds of request, and how to raise each one in ClickUp:
    - Support request: an everyday task needing an administrator, such as adding a person, changing someone's team or resetting a password. Handled by the support team as it arrives.
    - Defect report: something that worked and has stopped, or does the wrong thing. Include the page address, what was expected, what happened, and the version number from the page footer.
-   - New feature request: anything that would change the software. Reviewed by the central committee every two weeks.
+   - New feature request: anything that would change the software. Reviewed by the central technical committee every two weeks.
 3. Have them raise one test support request, titled "Test request from CHAPTER-NAME — please close", and watch it to its answer.
    *You should see:* The request acknowledged and closed by the support team.
 4. Send the chapter's first point of contact an email, and keep a copy, saying:
@@ -71,7 +71,7 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 **How to check:** The first point of contact's test request was acknowledged and closed, and the email is sent.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Everyday requests held for the committee. A new volunteer who waits weeks for an account is how a chapter starts asking for an administrator account of its own.
 
@@ -81,20 +81,20 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 **Why:** Every chapter runs the same software, so a change is made for everyone or not at all, and the chapter needs to know who decides.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
 - step 18.1 Publish how to get help
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
 1. Say the rule in these words: "Every chapter runs the same software. A change you ask for is made for every chapter, or it is not made. There is no third answer."
 2. Show them how to raise a new feature request in ClickUp, as in step 18.1.
 3. Explain what happens to it:
-   - The central committee reviews and schedules features and defects every two weeks.
+   - The central technical committee reviews and schedules features and defects every two weeks.
    - An accepted request goes into a weekly release (step 18.3).
 
 **Done when all of these are true:**
@@ -103,11 +103,11 @@ This stage moves the chapter from being set up to being supported, and proves th
 - The chapter knows who decides.
 - The chapter knows how often those decisions are made.
 
-**Note:** The central committee decides, every two weeks (ruled 09-18-26).
+**Note:** The central technical committee decides, every two weeks (ruled 09-18-26).
 
 **How to check:** The chapter can say, without looking it up, that a change is for everyone or not at all.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A request that is "only for us". Granting one exception is how the rule ends.
 
@@ -117,13 +117,13 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 **Why:** Software changes arrive without anyone at the chapter doing anything, so they need to know when, and what to do if something looks wrong.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
 - step 11.8 Set the update policy the chapter chose
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -145,7 +145,7 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 **How to check:** The first point of contact finds the version number in the footer without help.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A missed weekly slot. It has happened. A late release is harmless, but a chapter told "every Sunday" that sees nothing change should be told why.
 
@@ -155,13 +155,13 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 **Why:** The chapter owns its accounts, and must know every one of them, who holds it, and how to reach it.
 
-**Who:** The central support organization prepares it; the chapter keeps it
+**Who:** The Association prepares it; the chapter keeps it
 
 **Finish first:**
 
 - step 5.7 Write down every account the chapter now owns
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -192,27 +192,27 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 **How to check:** The named officer reads the list and confirms every account is one they recognise.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** An account whose top-level sign-in is a volunteer's personal email address. When that volunteer leaves, the chapter loses the account.
 
 ---
 
-## 18.5 Confirm the chapter can get in without the central support organization
+## 18.5 Confirm the chapter can get in without the Association
 
 **Why:** The promise that neither side can lock the other out is only real once a chapter officer has done it.
 
-**Who:** The chapter and the central support organization — the chapter officer does it; the central support organization watches
+**Who:** The chapter and the Association — the chapter officer does it; the Association watches
 
 **Finish first:**
 
 - step 18.4 Hand over the account and access list
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
-1. With someone from the central support organization watching, the chapter officer signs in with their own sign-in, not a shared one, to each of these:
+1. With someone from the Association watching, the chapter officer signs in with their own sign-in, not a shared one, to each of these:
    - The hosting account, at https://cloud.digitalocean.com
    - The Google Workspace admin console, at https://admin.google.com
    - The domain registrar account, at the registrar's own sign-in address
@@ -220,7 +220,7 @@ This stage moves the chapter from being set up to being supported, and proves th
    *You should see:* Each account's home page, under the officer's own name.
 2. In the hosting account, the officer opens the CRM server's page and opens its web console. The exact label of the console action is not verified.
    *You should see:* A command prompt on the CRM server.
-3. What the officer does once inside the server, to regain the CRM without the central support organization, is not written yet (work list item 5). Until it is, record this part as blocked.
+3. What the officer does once inside the server, to regain the CRM without the Association, is not written yet (work list item 5). Until it is, record this part as blocked.
 4. Add the date and the officer's name to the chapter's entry in the list of watched systems (step 12.5).
 
 **Done when all of these are true:**
@@ -244,19 +244,19 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 **Why:** A chapter should know exactly what it keeps if it leaves, before it ever needs to.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
 - step 2.5 Agree the leaving terms
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
 1. Walk the chapter through the four parts of the leaving kit, and who produces each:
    - The CRM. Already on the chapter's own server, so nobody needs to produce it.
-   - An export of the application's own database. Produced by the central support organization. No script produces it yet (work list item 9).
+   - An export of the application's own database. Produced by the Association. No script produces it yet (work list item 9).
    - The shared drive documents. Already in the chapter's own Google Workspace.
    - A licence to the last version of the software received. Written in the agreement.
 2. Explain what only the application's database holds, so keeping the CRM is not keeping all the data:
@@ -269,7 +269,7 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 **How to check:** The chapter can list the four parts of the leaving kit.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Forgetting the application's own database. Keeping the CRM is not keeping all the data.
 
@@ -279,7 +279,7 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 **Why:** The first months show what the guide and the support route got wrong, and a booked review makes sure someone looks.
 
-**Who:** The chapter and the central support organization
+**Who:** The chapter and the Association
 
 **Finish first:**
 
@@ -287,17 +287,17 @@ This stage moves the chapter from being set up to being supported, and proves th
 - step 18.2 Explain how to ask for a change
 - step 18.3 Explain the release schedule
 - step 18.4 Hand over the account and access list
-- step 18.5 Confirm the chapter can get in without the central support organization
+- step 18.5 Confirm the chapter can get in without the Association
 - step 18.6 Confirm the leaving terms in practice
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
 1. Book a one-hour meeting 90 days after the chapter's go-live date, titled "CHAPTER-NAME: first review", and invite:
    - The chapter's first point of contact
    - The chapter officer named in step 18.4
-   - One member of the central committee
+   - One member of the central technical committee
    - One member of the support team
 
    *You should see:* The meeting in both organizations' calendars.
@@ -311,7 +311,7 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 **How to check:** The meeting is in both calendars, with the agenda.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 ---
 
@@ -319,6 +319,7 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 | Version | Date | Change |
 |---|---|---|
+| 0.5 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". The stage summary no longer says the Association holds the only administrator accounts (Association ruling 1). |
 | 0.4 | 09-24-26 00:39 | Step 18.3 follows the ruling that the chapter decides when it takes a release (Doug, 09-24-26, CRMBuilder decision DEC-1156): a chapter may decline a release or schedule the upgrade for a time of its own, so chapters may run different releases at the same time. The step no longer tells the chapter that every chapter moves together or that updates arrive automatically. |
 | 0.3 | 09-23-26 13:54 | Manual DNS added (Doug, 09-23-26): the handover account list names the chapter's own DNS provider when it kept one. |
 | 0.2 | 09-19-26 00:04 | Actions made precise (Doug, 09-19-26): the three kinds of ClickUp request and what each contains, a test request, the exact wording to send, the release time in Eastern time and the health address, each account's sign-in address, the server console check, the four parts of the leaving kit with who produces each, and the review meeting's invitees and agenda. The ClickUp space address and how chapters get access to it are not settled, and step 18.1 says so. |

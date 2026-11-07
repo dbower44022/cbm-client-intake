@@ -1,18 +1,18 @@
 # Stage 1 — Set up the chapter as a legal organization
 
-**Version:** 0.2  
-**Last Updated:** 09-19-26 00:15  
+**Version:** 0.3  
+**Last Updated:** 11-07-26 15:21  
 **Generated from** `steps/stage-01.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
 
 ## Why this stage
 
-The chapter has to exist in law before it can own accounts, sign an agreement or claim nonprofit discounts. This stage creates the organization, names who can act for it, and starts the nonprofit application, which is the longest wait in the whole guide. The central support organization does not do this work; the chapter gets legal, tax and banking advice elsewhere.
+The chapter has to exist in law before it can own accounts, sign an agreement or claim nonprofit discounts. This stage creates the organization, names who can act for it, and starts the nonprofit application, which is the longest wait in the whole guide. The Association does not do this work; the chapter gets legal, tax and banking advice elsewhere.
 
 **Who:** The chapter's founding group and board, with their own legal and accounting advice.  
 **Time:** Weeks to months. Incorporation and the employer identification number are quick. Nonprofit tax status typically takes weeks to a few months on the short federal form, and several months or longer on the full form.  
-**When this stage is done:** The agreement with the central support organization (stage 2) can be signed. The nonprofit evidence from this stage is needed later for the Google Workspace discount (step 4.13) and the hosting credits (step 5.3).
+**When this stage is done:** The agreement with the Association (stage 2) can be signed. The nonprofit evidence from this stage is needed later for the Google Workspace discount (step 4.13) and the hosting credits (step 5.3).
 
 **Before you start:**
 
@@ -38,7 +38,7 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 **Finish first:** nothing.
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -87,7 +87,7 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 - step 1.1 Choose the chapter's name
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -108,7 +108,7 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 **How to check:** The stamped articles are in the chapter's files, with the state's entity number.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Articles written without the purpose and dissolution clauses the Internal Revenue Service expects. Fixing them means filing an amendment, which delays step 1.5.
 
@@ -124,7 +124,7 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 - step 1.2 Incorporate the chapter
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -144,7 +144,7 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 **How to check:** The confirmation letter from the Internal Revenue Service is in the chapter's files.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Paying a third-party website to apply. Several charge a fee for a free service. Also, the online tool issues only one number per responsible party per day.
 
@@ -152,7 +152,7 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 ## 1.4 Appoint a board and adopt bylaws
 
-**Why:** The bank and the central support organization will both ask which officers may sign for the chapter.
+**Why:** The bank and the Association will both ask which officers may sign for the chapter.
 
 **Who:** The chapter with its own legal advice
 
@@ -160,7 +160,7 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 - step 1.2 Incorporate the chapter
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -186,7 +186,7 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 **How to check:** Signed minutes of the first meeting are in the chapter's files, naming who may sign.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Minutes that do not name who may sign. The bank (step 1.6) and the agreement (step 2.6) both need that minute.
 
@@ -203,7 +203,7 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 - step 1.3 Get a federal employer identification number
 - step 1.4 Appoint a board and adopt bylaws
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -221,14 +221,14 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 4. File within 27 months of the date the articles were filed. Recognition then counts from the date of incorporation. The chapter's own adviser confirms this.
 5. Wait for the determination letter.
    *You should see:* A determination letter from the Internal Revenue Service. Typically weeks to a few months on the short form, and several months or longer on the full form.
-6. For route two, tell the central support organization before choosing it. See what usually goes wrong, below. Then sign a fiscal sponsorship agreement with the sponsoring charity, naming it.
+6. For route two, tell the Association before choosing it. See what usually goes wrong, below. Then sign a fiscal sponsorship agreement with the sponsoring charity, naming it.
    *You should see:* A signed sponsorship agreement naming the sponsoring nonprofit.
 
 **Done when:** Either the determination letter from the tax authority has arrived, or a signed sponsorship agreement is in place naming the sponsoring nonprofit.
 
 **How to check:** The determination letter or the signed sponsorship agreement is in the chapter's files.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Choosing sponsorship without seeing what it does to the accounts. The nonprofit discounts (steps 4.13 and 5.3) are claimed against a nonprofit's own status, so a sponsored chapter's accounts may have to sit under the sponsor. That cuts against the rule that each chapter owns its own accounts. It is an open question in the plan, and nothing yet says how to handle it.
 
@@ -245,7 +245,7 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 - step 1.3 Get a federal employer identification number
 - step 1.4 Appoint a board and adopt bylaws
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -264,7 +264,7 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 **How to check:** Two officers can each see and approve a payment.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** One person as the only signer. If that person leaves, nobody can pay the domain name renewal, the Google Workspace bill or the hosting bill.
 
@@ -280,22 +280,22 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 - step 1.4 Appoint a board and adopt bylaws
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
 1. Put a resolution in the board minutes, in words like these:
    - NAME is appointed the chapter's setup contact.
    - NAME may open accounts in the chapter's name with the domain registrar, Cloudflare, Google Workspace, DigitalOcean, Proton Pass and Zoom.
-   - NAME may grant the central support organization's named people access to those accounts.
-2. Email a copy of the signed minute to the central support organization.
-   *You should see:* The central support organization replies confirming it holds the copy.
+   - NAME may grant the Association's named people access to those accounts.
+2. Email a copy of the signed minute to the Association.
+   *You should see:* The Association replies confirming it holds the copy.
 
 **Done when:** One named person is recorded as the chapter's main contact for the whole setup, with authority to open accounts and grant access to others.
 
-**How to check:** The minute exists, and the central support organization has a copy.
+**How to check:** The minute exists, and the Association has a copy.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A setup contact who is also the only person holding the accounts. Stages 3 and 4 each end with a step that removes the founder's personal hold on an account, for this reason.
 
@@ -305,5 +305,6 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 | Version | Date | Change |
 |---|---|---|
+| 0.3 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". |
 | 0.2 | 09-19-26 00:15 | Every action made precise (Doug, 09-19-26): the official web addresses for the trademark search, the Internal Revenue Service's online application for the employer identification number and Form 1023-EZ, and Pay.gov; the two clauses the articles need; the questions each application asks; the documents a bank asks for; and the wording of the setup contact resolution. The web addresses and the application's hours were checked on 09-19-26. Where a state's own forms differ, the step says the chapter's own adviser confirms. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for setting up the legal organization (8-Methods-Organization-Domains-Google.md, version 0.5) with the step list's finishing tests. |

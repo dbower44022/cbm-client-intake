@@ -1,16 +1,16 @@
 # Stage 14 — Create the staff accounts
 
-**Version:** 0.3  
-**Last Updated:** 09-23-26 20:40  
+**Version:** 0.4  
+**Last Updated:** 11-07-26 15:21  
 **Generated from** `steps/stage-14.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
 
 ## Why this stage
 
-Each member of the chapter's staff needs their own account to use the applications, on the team that opens the pages their job needs. Only an administrator can create an account, and nobody at the chapter is an administrator, so the central support organization does this from a list the chapter approves. Mentors are not created here: their accounts come from their mentor records at the end of the records stage (step 15.9).
+Each member of the chapter's staff needs their own account to use the applications, on the team that opens the pages their job needs. Only an administrator can create an account. During setup the Association does this from a list the chapter approves; afterwards the chapter's own technical person can, with the administrator account step 14.3 gives them. Mentors are not created here: their accounts come from their mentor records at the end of the records stage (step 15.9).
 
-**Who:** The central support organization, from a list the chapter writes and approves.  
+**Who:** The Association, from a list the chapter writes and approves.  
 **Time:** About an hour for a dozen staff, plus the time it takes everyone to sign in.  
 **When this stage is done:** Bringing in the chapter's records and creating the mentor accounts (stage 15). The mentor administrator's account, created here, is what creates the mentor accounts.
 
@@ -24,7 +24,7 @@ Each member of the chapter's staff needs their own account to use the applicatio
 
 - 14.1 Agree which staff get an account and which team they are on
 - 14.2 Create the staff accounts
-- 14.3 Confirm nobody at the chapter holds an administrator account
+- 14.3 Confirm the administrator accounts are the agreed ones
 - 14.4 Confirm every member of staff has signed in
 
 ---
@@ -33,7 +33,7 @@ Each member of the chapter's staff needs their own account to use the applicatio
 
 **Why:** A person's team decides which pages they can open, so the list has to be right before any account exists.
 
-**Who:** The chapter and the central support organization — the chapter writes the list; the central support organization checks it
+**Who:** The chapter and the Association — the chapter writes the list; the Association checks it
 
 **Finish first:**
 
@@ -67,7 +67,7 @@ Each member of the chapter's staff needs their own account to use the applicatio
 
 **How to check:** Every person on the list has a chapter email address and at least one team.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A personal email address on the list. Members of the chapter are addressed at their chapter address only. A personal address causes duplicate calendar invitations and mail going to the wrong place.
 
@@ -77,7 +77,7 @@ Each member of the chapter's staff needs their own account to use the applicatio
 
 **Why:** Each person needs an ordinary account on the right team before they can use the applications.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
@@ -85,7 +85,7 @@ Each member of the chapter's staff needs their own account to use the applicatio
 
 **Do this:**
 
-1. Sign in to the CRM at https://CRM-ADDRESS as the central support organization's administrator, and open Administration, then Users.
+1. Sign in to the CRM at https://CRM-ADDRESS as the Association's administrator, and open Administration, then Users.
 2. For each person on the list, choose Create User and fill in:
    - User Name: their chapter email address
    - Type: Regular. Never Admin.
@@ -105,39 +105,43 @@ Each member of the chapter's staff needs their own account to use the applicatio
 
 **How to check:** Each person signs in to the applications and sees a tile for each of their teams, and no others.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Two known failures. A team with no role attached gives its members no access at all; check step 9.7 before blaming the account. And a partner or funder manager with no mentor profile cannot be chosen as a manager, because the pages that choose one list mentor profiles, not accounts.
 
 ---
 
-## 14.3 Confirm nobody at the chapter holds an administrator account
+## 14.3 Confirm the administrator accounts are the agreed ones
 
-**Why:** An administrator can change the CRM's setup, which would end the rule that every chapter runs the same software.
+**Why:** The chapter holds ultimate authority over its own technology (Association ruling 1), so its own technical person needs an administrator account, and nobody else should hold one who is not on the agreed list.
 
-**Who:** The central support organization
+**Who:** The chapter and the Association — the Association creates the chapter's administrator account; the chapter's technical person signs in with it
 
 **Finish first:**
 
 - step 14.2 Create the staff accounts
+- step 2.4 Agree the access the Association will hold
+
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
 1. In the CRM, open Administration, then Users, and filter the list by Type equal to Admin.
    *You should see:*
 
-   - Exactly two accounts
-   - The central support organization's own administrator account (step 9.7)
+   - The Association's own administrator account (step 9.7)
    - The account the applications use to create logins
-2. If any other account is an administrator, change its Type to Regular and tell the chapter why.
+2. If the chapter's technical person has no administrator account yet, create one the same way as the staff accounts in step 14.2, with their chapter address, and set Type to Admin. The exact label of the Type list has not been checked for this guide.
+3. The chapter's technical person signs in with the new account and sets their own password.
+4. If any other account is an administrator and is not on the access schedule agreed in step 2.4, ask the chapter whether it should be. Change it to Regular only if the chapter says so.
 
-**Done when:** The only administrator accounts belong to the central support organization. Chapter staff hold ordinary accounts.
+**Done when:** The administrator accounts are the agreed ones: the chapter's own technical person's, the Association's own, and the account the applications use to create logins. Chapter staff hold ordinary accounts.
 
-**How to check:** The list of administrators holds those two and nothing else.
+**How to check:** The list of administrators holds those three and nothing the chapter has not agreed.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
-**What usually goes wrong:** A chapter asks for administrator access "just to fix one thing". Refuse it, and route the request through the support system (step 18.1).
+**What usually goes wrong:** A field or a role changed directly in the CRM with an administrator account. It breaks the one-application rule (step 2.3); the next release may undo it, and the conformance check reports it. The change goes through a feature request instead.
 
 ---
 
@@ -145,7 +149,7 @@ Each member of the chapter's staff needs their own account to use the applicatio
 
 **Why:** An account nobody has used is an account with a password somebody else may still know.
 
-**Who:** The chapter and the central support organization — the chapter chases; the central support organization checks
+**Who:** The chapter and the Association — the chapter chases; the Association checks
 
 **Finish first:**
 
@@ -162,7 +166,7 @@ Each member of the chapter's staff needs their own account to use the applicatio
 
 **How to check:** No account on the list has a blank last sign-in date.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** The welcome email going to spam, because the chapter's sending address is new. Ask each person to check spam before re-sending.
 
@@ -172,6 +176,7 @@ Each member of the chapter's staff needs their own account to use the applicatio
 
 | Version | Date | Change |
 |---|---|---|
+| 0.4 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". Step 14.3 becomes "Confirm the administrator accounts are the agreed ones" (Association ruling 1): the chapter's own technical person holds an administrator account. The stage summary follows. |
 | 0.3 | 09-23-26 20:40 | References to stage 9 follow its renumbering from twenty steps to nine (stage 9 version 0.11). |
 | 0.2 | 09-19-26 00:15 | Every action made precise (Doug, 09-19-26): the seven team names as written, the exact user fields to fill in, the administrator filter, and the Auth Log check. Unchecked EspoCRM labels are marked as unchecked. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for creating the staff accounts (5-Methods-Form-Accounts-Checks.md, version 0.4) with the step list's finishing tests. |

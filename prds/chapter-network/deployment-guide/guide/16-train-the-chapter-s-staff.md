@@ -1,7 +1,7 @@
 # Stage 16 — Train the chapter's staff
 
-**Version:** 0.3  
-**Last Updated:** 09-23-26 13:35  
+**Version:** 0.4  
+**Last Updated:** 11-07-26 15:21  
 **Generated from** `steps/stage-16.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -10,7 +10,7 @@
 
 Staff learn the system on invented records before they touch real ones. Training happens on Cleveland's shared training system, which clears itself every night, signed in as the six generic training users Cleveland's own trainers use (ruled 09-14-26 and 09-23-26).
 
-**Who:** The chapter's trainer runs the sessions; the central support organization hands over the training users' sign-in details and the guides.  
+**Who:** The chapter's trainer runs the sessions; the Association hands over the training users' sign-in details and the guides.  
 **Time:** One session per role. The mentor session is the longest, at 30 to 40 minutes.  
 **When this stage is done:** The final checks before going live (stage 17), with staff who know what they are checking.
 
@@ -34,13 +34,13 @@ Staff learn the system on invented records before they touch real ones. Training
 
 **Why:** Trainees need working sign-ins to a system that holds only invented records.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
 - step 14.2 Create the staff accounts
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -68,7 +68,7 @@ Staff learn the system on invented records before they touch real ones. Training
 
 **How to check:** Someone from the chapter signs in as a training user, and the footer reads "(Test)".
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** A trainee signs in with their own chapter account instead of a training user. Their own account's email address is real, so a practice email could reach a real person.
 
@@ -78,13 +78,13 @@ Staff learn the system on invented records before they touch real ones. Training
 
 **Why:** Trainees who do not know the system resets, or that it shows Cleveland's name, lose work and lose trust in what they see.
 
-**Who:** The chapter and the central support organization — the chapter's trainer, or the central support organization's
+**Who:** The chapter and the Association — the chapter's trainer, or the Association's
 
 **Finish first:**
 
 - step 16.1 Get the chapter's staff onto the shared practice system
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -95,7 +95,7 @@ Staff learn the system on invented records before they touch real ones. Training
    - "Every page says Cleveland, because this is Cleveland's training system. Our own system will show our own name."
 2. Check every trainee is signed in as one of the six training users, never with their own chapter account. Only the training users' addresses lead nowhere.
    *You should see:* Every trainee's portal showing a training user's name.
-3. If a session must run over two days, ask the central support organization, before the first evening, to pause that night's reset. They run:
+3. If a session must run over two days, ask the Association, before the first evening, to pause that night's reset. They run:
    - ssh root@104.131.45.208 'touch /var/www/espocrm/.sandbox-hold'
    - and the next day, to resume: ssh root@104.131.45.208 'rm /var/www/espocrm/.sandbox-hold'
 
@@ -113,18 +113,18 @@ Staff learn the system on invented records before they touch real ones. Training
 
 **Why:** Each person should have done their own main task once before doing it for real.
 
-**Who:** The chapter — the trainer, with the central support organization available
+**Who:** The chapter — the trainer, with the Association available
 
 **Finish first:**
 
 - step 16.2 Explain how the practice system behaves
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
 1. Before any session, sign in at https://cbm-client-intake-svxs3.ondigitalocean.app/ as the training user Joe Mentor and open Client Management.
-   *You should see:* Seven invented clients. If the list is empty or short, stop and ask the central support organization.
+   *You should see:* Seven invented clients. If the list is empty or short, stop and ask the Association.
 2. Mentors, 30 to 40 minutes, signed in as the training user Joe Mentor:
    - Open Client Management (the address ending /mentorsessions/) and show the status filter and the search box.
    - Open the first client in the list and land on its Overview tab.
@@ -150,14 +150,14 @@ Staff learn the system on invented records before they touch real ones. Training
    - Open Submission Admin (the address ending /ops/).
    - Have the trainee open one submission and read its two status columns.
 
-   *You should see:* Submissions in the queue. The queue is empty unless the central support organization filled it before the session; ask for that at least a day ahead.
+   *You should see:* Submissions in the queue. The queue is empty unless the Association filled it before the session; ask for that at least a day ahead.
 8. Analytics: skip it. None of the six training users is in the Analytics Admin Team, so none can open the Analytics page.
 
 **Done when:** Every person has been shown the parts of the system their own team uses, and has done each main task once themselves.
 
 **How to check:** Each trainee has done their main task once, and says so.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Two gaps in the walkthroughs. The Submission Admin queue is empty unless filled beforehand. And there is no analytics training, because no training user can open the Analytics page.
 
@@ -167,13 +167,13 @@ Staff learn the system on invented records before they touch real ones. Training
 
 **Why:** After training, people need something to look things up in.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
 - step 6.7 Decide where the chapter's help documentation lives
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -191,7 +191,7 @@ Staff learn the system on invented records before they touch real ones. Training
 
 **How to check:** The chapter's first point of contact opens the guide for one role without help.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** The guides name Cleveland throughout, until the help documentation question is settled. Which of the six are also on a documentation site the chapter can reach is not settled either.
 
@@ -199,7 +199,7 @@ Staff learn the system on invented records before they touch real ones. Training
 
 ## 16.5 Name the chapter's own first point of contact
 
-**Why:** Colleagues need one person to ask first, before raising a request with the central support organization.
+**Why:** Colleagues need one person to ask first, before raising a request with the Association.
 
 **Who:** The chapter
 
@@ -207,19 +207,19 @@ Staff learn the system on invented records before they touch real ones. Training
 
 - step 16.3 Train each role
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
-1. The chapter emails the central support organization one line: FIRST-POINT-OF-CONTACT-NAME, FIRST-POINT-OF-CONTACT-CHAPTER-EMAIL, is our first point of contact. Choose someone who was in the training.
-2. The central support organization adds the name and address to the chapter's entry in the list of watched systems (step 12.5).
+1. The chapter emails the Association one line: FIRST-POINT-OF-CONTACT-NAME, FIRST-POINT-OF-CONTACT-CHAPTER-EMAIL, is our first point of contact. Choose someone who was in the training.
+2. The Association adds the name and address to the chapter's entry in the list of watched systems (step 12.5).
    *You should see:* The chapter's entry showing the name and chapter email address.
 
-**Done when:** One person at the chapter is named as the person colleagues ask first, before contacting the central support organization.
+**Done when:** One person at the chapter is named as the person colleagues ask first, before contacting the Association.
 
 **How to check:** The name is on the list of watched systems.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 **What usually goes wrong:** Naming someone who was not in the training.
 
@@ -229,13 +229,13 @@ Staff learn the system on invented records before they touch real ones. Training
 
 **Why:** The training users' passwords stay unchanged after a chapter trains, so a written record of who holds them is the only account of it.
 
-**Who:** The central support organization
+**Who:** The Association
 
 **Finish first:**
 
 - step 16.3 Train each role
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -251,7 +251,7 @@ Staff learn the system on invented records before they touch real ones. Training
 
 **How to check:** The chapter's entry in the list of watched systems shows the date.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Stop, and ask the Association before going on.
 
 ---
 
@@ -259,6 +259,7 @@ Staff learn the system on invented records before they touch real ones. Training
 
 | Version | Date | Change |
 |---|---|---|
+| 0.4 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". |
 | 0.3 | 09-23-26 13:35 | Chapters train as the six generic training users Cleveland's trainers use, and the passwords are not changed for each chapter (Doug, 09-23-26), reversing the 09-18-26 ruling for separate chapter training accounts. Step 16.1 now hands over the six existing sign-ins; step 16.6 records that training ended instead of changing passwords; the walkthroughs name the training users; analytics is skipped, because no training user can open it. |
 | 0.2 | 09-19-26 00:04 | Actions made precise (Doug, 09-19-26): the shared training system's exact addresses, the exact commands to refresh the training data, re-capture and check the fixed copy, and to pause and resume the reset; the words to say to the room; a page and task per role; the file name of each written guide. The training account user names are not known until work list item 6 builds them, and step 16.1 says so. |
 | 0.1 | 09-18-26 17:30 | First version as data, converted from the methods for training the chapter's staff (7-Methods-Training.md, version 0.1) with the step list's finishing tests. |

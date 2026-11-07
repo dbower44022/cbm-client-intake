@@ -1,16 +1,16 @@
 stage: 14
 name: Create the staff accounts
-version: "0.3"
-updated: "09-23-26 20:40"
+version: "0.4"
+updated: "11-07-26 15:21"
 why: >-
   Each member of the chapter's staff needs their own account to use the
   applications, on the team that opens the pages their job needs. Only an
-  administrator can create an account, and nobody at the chapter is an
-  administrator, so the central support organization does this from a list the
-  chapter approves. Mentors are not created here: their accounts come from their
+  administrator can create an account. During setup the Association does this
+  from a list the chapter approves; afterwards the chapter's own technical person
+  can, with the administrator account step 14.3 gives them. Mentors are not created here: their accounts come from their
   mentor records at the end of the records stage (step 15.9).
 who: >-
-  The central support organization, from a list the chapter writes and approves.
+  The Association, from a list the chapter writes and approves.
 time: >-
   About an hour for a dozen staff, plus the time it takes everyone to sign in.
 before_you_start:
@@ -25,7 +25,7 @@ steps:
   - id: "14.1"
     name: Agree which staff get an account and which team they are on
     why: A person's team decides which pages they can open, so the list has to be right before any account exists.
-    who: both — the chapter writes the list; the central support organization checks it
+    who: both — the chapter writes the list; the Association checks it
     first: ["9.7"]
     needs: []
     produces: [staff_list]
@@ -73,7 +73,7 @@ steps:
     produces: []
     mode: automated
     actions:
-      - do: "Sign in to the CRM at https://CRM-ADDRESS as the central support organization's administrator, and open Administration, then Users."
+      - do: "Sign in to the CRM at https://CRM-ADDRESS as the Association's administrator, and open Administration, then Users."
       - do: "For each person on the list, choose Create User and fill in:"
         items:
           - "User Name: their chapter email address"
@@ -103,37 +103,41 @@ steps:
     source: 5-Methods-Form-Accounts-Checks.md#14.2
 
   - id: "14.3"
-    name: Confirm nobody at the chapter holds an administrator account
-    why: An administrator can change the CRM's setup, which would end the rule that every chapter runs the same software.
-    who: central
-    first: ["14.2"]
+    name: Confirm the administrator accounts are the agreed ones
+    why: The chapter holds ultimate authority over its own technology (Association ruling 1), so its own technical person needs an administrator account, and nobody else should hold one who is not on the agreed list.
+    who: both — the Association creates the chapter's administrator account; the chapter's technical person signs in with it
+    first: ["14.2", "2.4"]
     needs: []
     produces: []
-    mode: automated
+    mode: guided
     actions:
       - do: "In the CRM, open Administration, then Users, and filter the list by Type equal to Admin."
         see:
-          - Exactly two accounts
-          - The central support organization's own administrator account (step 9.7)
+          - The Association's own administrator account (step 9.7)
           - The account the applications use to create logins
-      - do: If any other account is an administrator, change its Type to Regular and tell the chapter why.
+      - do: "If the chapter's technical person has no administrator account yet, create one the same way as the staff accounts in step 14.2, with their chapter address, and set Type to Admin. The exact label of the Type list has not been checked for this guide."
+      - do: "The chapter's technical person signs in with the new account and sets their own password."
+      - do: "If any other account is an administrator and is not on the access schedule agreed in step 2.4, ask the chapter whether it should be. Change it to Regular only if the chapter says so."
     done_when: >-
-      The only administrator accounts belong to the central support organization.
-      Chapter staff hold ordinary accounts.
+      The administrator accounts are the agreed ones: the chapter's own technical
+      person's, the Association's own, and the account the applications use to
+      create logins. Chapter staff hold ordinary accounts.
     check:
-      how: The list of administrators holds those two and nothing else.
-      probe: The app lists every administrator account in the CRM and flags any not on the central support organization's list.
+      how: The list of administrators holds those three and nothing the chapter has not agreed.
+      probe: The app lists every administrator account in the CRM and flags any not on the agreed list.
     goes_wrong: >-
-      A chapter asks for administrator access "just to fix one thing". Refuse it, and
-      route the request through the support system (step 18.1).
+      A field or a role changed directly in the CRM with an administrator account.
+      It breaks the one-application rule (step 2.3); the next release may undo it, and
+      the conformance check reports it. The change goes through a feature request
+      instead.
     later: The conformance check reports administrator accounts as part of its run.
-    status: done-for-real
+    status: not-yet-tried — rewritten 11-07-26 for Association ruling 1. The older step, which allowed no administrator at the chapter, was done for real.
     source: 5-Methods-Form-Accounts-Checks.md#14.3
 
   - id: "14.4"
     name: Confirm every member of staff has signed in
     why: An account nobody has used is an account with a password somebody else may still know.
-    who: both — the chapter chases; the central support organization checks
+    who: both — the chapter chases; the Association checks
     first: ["14.2"]
     needs: []
     produces: []
@@ -156,6 +160,10 @@ steps:
     source: 5-Methods-Form-Accounts-Checks.md#14.4
 
 changes:
+  - version: "0.4"
+    date: "11-07-26 15:21"
+    change: >-
+      Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". Step 14.3 becomes "Confirm the administrator accounts are the agreed ones" (Association ruling 1): the chapter's own technical person holds an administrator account. The stage summary follows.
   - version: "0.3"
     date: "09-23-26 20:40"
     change: >-

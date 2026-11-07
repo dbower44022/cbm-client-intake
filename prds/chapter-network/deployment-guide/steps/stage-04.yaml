@@ -1,7 +1,7 @@
 stage: 4
 name: Set up Google Workspace and the chapter's email
-version: "0.4"
-updated: "09-23-26 13:54"
+version: "0.5"
+updated: "11-07-26 15:21"
 why: >-
   Google Workspace is Google's paid service for an organization's email, calendars
   and documents. The software reads and sends the chapter's mail, creates calendar
@@ -10,7 +10,7 @@ why: >-
   domain registrar account off the founder's personal email.
 who: >-
   The chapter's setup contact and its Google Workspace administrator, with the
-  central support organization.
+  the Association.
 time: >-
   Most of a day, spread over two or three days while DNS records are seen and
   the nonprofit application is answered.
@@ -26,7 +26,7 @@ steps:
   - id: "4.1"
     name: Confirm the chapter will hold its own Google Workspace
     why: Every chapter hosts its own email on its own Google Workspace, so the chapter has to take on that account and its cost before anything is set up.
-    who: chapter's board, advised by the central support organization
+    who: chapter's board, advised by the Association
     first: ["2.6"]
     needs: []
     produces: []
@@ -37,12 +37,12 @@ steps:
           - The account is in the chapter's own name, on the chapter's own domain.
           - The chapter pays for it, with the nonprofit discount once it is granted (step 4.13).
           - The chapter's mail, documents and calendars stay with the chapter if it ever leaves.
-          - The central support organization works inside it only by the chapter's grant.
+          - The Association works inside it only by the chapter's grant.
       - do: The board records that the chapter will hold its own Google Workspace.
     done_when: >-
       The board has recorded that the chapter will hold its own Google Workspace,
       in its own name and on its own domain.
-    note: "Ruled 09-18-26: every chapter hosts its own email on its own Google Workspace. The central support organization does not provide Google Workspace."
+    note: "Ruled 09-18-26: every chapter hosts its own email on its own Google Workspace. The Association does not provide Google Workspace."
     check:
       how: The board minutes record it.
       probe: none
@@ -94,7 +94,7 @@ steps:
   - id: "4.3"
     name: Verify the domain
     why: Google will not deliver mail for a domain until the chapter proves it owns it.
-    who: both — the chapter's setup contact, with the central support organization's help
+    who: both — the chapter's setup contact, with the Association's help
     first: ["4.2", "3.7"]
     needs: [primary_domain]
     produces: []
@@ -127,7 +127,7 @@ steps:
   - id: "4.4"
     name: Switch mail delivery to Google
     why: Mail sent to the chapter's addresses must reach Google, and mail the chapter sends must prove it is genuine or it lands in spam folders.
-    who: both — the chapter's setup contact, with the central support organization's help
+    who: both — the chapter's setup contact, with the Association's help
     first: ["4.3"]
     needs: [primary_domain]
     produces: []
@@ -188,7 +188,7 @@ steps:
     check:
       how: The outside message arrives, and the reply shows SPF, DKIM and DMARC all passing.
       probe: "The app looks up four records on the email domain and confirms each: the MX record is smtp.google.com; exactly one SPF record, including _spf.google.com; a TXT record at google._domainkey beginning v=DKIM1; and a TXT record at _dmarc beginning v=DMARC1."
-    if_not: Do not change the records again straight away. A changed record can take up to a day to be seen everywhere. Check the four records against the values above, character by character, then ask the central support organization.
+    if_not: Do not change the records again straight away. A changed record can take up to a day to be seen everywhere. Check the four records against the values above, character by character, then ask the Association.
     goes_wrong: >-
       Three things. Leaving an old MX record from a previous mail provider: some mail
       then goes to the old provider and is never seen. Adding a second SPF record
@@ -196,14 +196,14 @@ steps:
       DKIM or DMARC: everything seems to work, but the software's welcome emails to
       new mentors land in spam folders. Any other service that will send mail as the
       chapter's domain, such as a newsletter service or the website's contact form,
-      must be added to the SPF record too; ask the central support organization.
+      must be added to the SPF record too; ask the Association.
     later: The app writes the MX, SPF and DMARC records into Cloudflare with the chapter's token, and then only asks a person to generate the DKIM key. With manual DNS, a person still adds all four.
     status: not-yet-tried — the record values are Cleveland's own, read from its live email domain on 09-19-26.
     source: 8-Methods-Organization-Domains-Google.md#4.4
 
   - id: "4.5"
     name: Create the chapter's own administrator account
-    why: The chapter must always be able to run its own Google Workspace, whatever happens to the central support organization.
+    why: The chapter must always be able to run its own Google Workspace, whatever happens to the Association.
     who: chapter
     first: ["4.2"]
     needs: []
@@ -225,17 +225,16 @@ steps:
       how: The named person signs in to the admin console with their chapter address.
       probe: none
     goes_wrong: >-
-      The chapter's only administrator being the central support organization. That
-      breaks the rule that the chapter can always withdraw the central support
-      organization's access.
+      The chapter's only administrator being the Association. That
+      breaks the rule that the chapter can always withdraw the Association's access.
     later: unchanged
     status: not-yet-tried
     source: 8-Methods-Organization-Domains-Google.md#4.5
 
   - id: "4.6"
-    name: Create the central support organization's administrator account
-    why: The central support organization needs its own named administrator account to enter the software's permission grant in step 10.3.
-    who: both — the chapter's administrator creates it; the central support organization uses it
+    name: Create the Association's administrator account
+    why: The Association supports the chapter's own technical person and works on the chapter's system directly only when that person is unavailable (Association ruling 1). It needs its own named administrator account for that, and to enter the software's permission grant in step 10.3.
+    who: both — the chapter's administrator creates it; the Association uses it
     first: ["4.5", "2.4"]
     needs: []
     produces: []
@@ -244,19 +243,19 @@ steps:
       - do: "Sign in to https://admin.google.com as the chapter's administrator."
       - do: "Open Directory, then Users, and choose Add new user. Enter:"
         items:
-          - "First name: the central support person's first name"
-          - "Last name: the central support person's last name"
-          - "Primary email: FIRSTNAME.LASTNAME@EMAIL-DOMAIN, using the central support person's own name, never a shared name such as support"
-      - do: "Let Google generate the password. Copy it straight into the chapter's Operations vault, and tell the central support person privately where to find it. Never email it."
+          - "First name: the Association's support person's first name"
+          - "Last name: the Association's support person's last name"
+          - "Primary email: FIRSTNAME.LASTNAME@EMAIL-DOMAIN, using the Association's support person's own name, never a shared name such as support"
+      - do: "Let Google generate the password. Copy it straight into the chapter's Operations vault, and tell the Association's support person privately where to find it. Never email it."
       - do: "Open the new user's page, open Admin roles and privileges, and assign Super Admin. Entering the software's permission grant in step 10.3 needs it."
-        see: "Super Admin listed for the central support person's account."
-      - do: "The central support person signs in at https://admin.google.com with the new address, sets their own password, and turns on two-step sign-in straight away."
+        see: "Super Admin listed for the Association's support person's account."
+      - do: "The Association's support person signs in at https://admin.google.com with the new address, sets their own password, and turns on two-step sign-in straight away."
         see: "The chapter's admin console, reached from their own account."
     done_when: >-
-      The central support organization holds its own named administrator account,
+      The Association holds its own named administrator account,
       separate from the chapter's.
     check:
-      how: The central support organization signs in to the chapter's admin console with its own account.
+      how: The Association signs in to the chapter's admin console with its own account.
       probe: none
     goes_wrong: >-
       The account uses a paid licence, like any user. Budget for it in the cost
@@ -342,7 +341,7 @@ steps:
       - do: "Add these members to the group:"
         items:
           - "At least one named officer of the chapter"
-          - "At least one named person from the central support organization, by their own address"
+          - "At least one named person from the Association, by their own address"
       - do: "Write admin@EMAIL-DOMAIN on the chapter information form as the alert receiving address. The software reads it as ALERT_EMAIL_TO. Write the members' names beside it on the chapter's account list (step 5.7)."
       - do: "From a personal account outside the chapter, send a test message to admin@EMAIL-DOMAIN."
         see: "The test message arrives with every member of the group."
@@ -517,6 +516,10 @@ steps:
     source: 8-Methods-Organization-Domains-Google.md#4.14
 
 changes:
+  - version: "0.5"
+    date: "11-07-26 15:21"
+    change: >-
+      Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". Step 4.6's reason now names Association ruling 1: the account is for support when the chapter's own technical person is unavailable, and for the permission grant in step 10.3.
   - version: "0.4"
     date: "09-23-26 13:54"
     change: >-

@@ -1,14 +1,14 @@
 stage: 15
 name: Bring in the chapter's records and create the mentor accounts
-version: "0.4"
-updated: "09-23-26 20:40"
+version: "0.5"
+updated: "11-07-26 15:21"
 why: >-
   A chapter arrives with clients, companies, partners, funders and mentors it
   already knows about. This stage moves those records into the CRM without
   duplicates, then gives every mentor an account created from their mentor record.
   A chapter starting from nothing skips the load but still enters its mentors.
 who: >-
-  The chapter provides and checks the records; the central support organization
+  The chapter provides and checks the records; the Association
   does the load. The chapter's mentor administrator creates the mentor accounts.
 time: >-
   Not known yet. It depends on how many records the chapter has and how clean they
@@ -24,7 +24,7 @@ steps:
   - id: "15.1"
     name: Decide whether there are records to bring in
     why: A record source nobody mentions before go-live turns up later as missing history.
-    who: chapter decides; the central support organization records it
+    who: chapter decides; the Association records it
     first: ["9.9"]
     needs: []
     produces: [record_sources]
@@ -139,7 +139,7 @@ steps:
           - Engagements.
           - Mentor profiles, each linked to its contact.
           - Partner and sponsor profiles.
-      - do: "There is no loading tool yet (work list item 12). For each kind of record, use the CRM's own import: open the record's list, then the menu, then Import, and upload the file. The exact menu label has not been checked on the chapter's version. Engagements need links the import screen may not set; if so, stop and ask the central support organization, which will write a script for this chapter."
+      - do: "There is no loading tool yet (work list item 12). For each kind of record, use the CRM's own import: open the record's list, then the menu, then Import, and upload the file. The exact menu label has not been checked on the chapter's version. Engagements need links the import screen may not set; if so, stop and ask the Association, which will write a script for this chapter."
       - do: "In the copy, open each kind of record's list and read its total."
         see: The same counts as step 15.2, with any difference explained.
       - do: Open five records of each kind and compare them with the file.
@@ -286,7 +286,7 @@ steps:
   - id: "15.9"
     name: Create the mentor accounts
     why: Creating a mentor's account from their record links the two and sends the sign-in details, and an account made by hand turns into a duplicate.
-    who: chapter — the mentor administrator, with the central support organization present for the first few
+    who: chapter — the mentor administrator, with the Association present for the first few
     first: ["15.8"]
     needs: [mentor_email_domain]
     produces: []
@@ -317,7 +317,7 @@ steps:
   - id: "15.10"
     name: Confirm every mentor has signed in
     why: An account nobody has signed in to is a mentor who has not started, or a welcome email lost in spam.
-    who: chapter — the mentor administrator chases; the central support organization checks
+    who: chapter — the mentor administrator chases; the Association checks
     first: ["15.9"]
     needs: []
     produces: []
@@ -339,6 +339,10 @@ steps:
     source: 5-Methods-Form-Accounts-Checks.md#15.10
 
 changes:
+  - version: "0.5"
+    date: "11-07-26 15:21"
+    change: >-
+      Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee".
   - version: "0.4"
     date: "09-23-26 20:40"
     change: >-

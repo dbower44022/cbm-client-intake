@@ -1,14 +1,14 @@
 stage: 12
 name: Set up backups and monitoring
-version: "0.4"
-updated: "09-23-26 20:40"
+version: "0.5"
+updated: "11-07-26 15:21"
 why: >-
   This stage makes sure the chapter's records can be got back after a mistake or a
   failure, and that a person finds out when the system stops working. It comes
   before any real records are loaded, because a backup taken afterwards is too late
   for whatever went wrong before it.
 who: >-
-  The central support organization, working inside the chapter's hosting account.
+  The Association, working inside the chapter's hosting account.
   The chapter names who reads the alerts.
 time: >-
   About two hours, most of it waiting for a restored copy to be built.
@@ -136,7 +136,7 @@ steps:
         items:
           - "doctl compute droplet create restore-test-SHORT-LABEL --image BACKUP-IMAGE-ID --region REGION --size SIZE --wait"
         see: A new server with its own public address, NEW-SERVER-IP.
-      - do: "Open https://NEW-SERVER-IP in a browser. The certificate warning is expected, because the certificate is for the CRM's real address. Sign in as the central support organization's administrator and open one record changed recently."
+      - do: "Open https://NEW-SERVER-IP in a browser. The certificate warning is expected, because the certificate is for the CRM's real address. Sign in as the Association's administrator and open one record changed recently."
         see: The record, as it was at the time of the backup.
       - do: "Delete the new server:"
         items:
@@ -164,7 +164,7 @@ steps:
   - id: "12.4"
     name: Confirm alerts reach a person
     why: When the system stops working or submissions pile up, somebody has to be told, and an alert nobody reads is the same as no alert.
-    who: both — the central support organization sets it up; the chapter names who reads the alerts
+    who: both — the Association sets it up; the chapter names who reads the alerts
     first: ["4.9", "11.15"]
     needs: [alert_email_from, alert_email_to, app_base_url, crm_base_url]
     produces: []
@@ -219,7 +219,7 @@ steps:
 
   - id: "12.5"
     name: Add the chapter to the list of systems being watched
-    why: The central support organization supports every chapter, and needs one place saying where each chapter's systems are and when they were last checked.
+    why: The Association supports every chapter, and needs one place saying where each chapter's systems are and when they were last checked.
     who: central
     first: ["12.1", "12.2", "12.3", "12.4"]
     needs: [crm_base_url, app_base_url, chapter_slug]
@@ -238,7 +238,7 @@ steps:
           - "Last restore test: the date from step 12.3"
         see: Every line filled in. No password or key appears anywhere in the file.
     done_when: >-
-      The central support organization's list of systems includes this chapter's
+      The Association's list of systems includes this chapter's
       CRM and application.
     check:
       how: The chapter is on the list, with every column filled in.
@@ -251,6 +251,10 @@ steps:
     source: 6-Methods-Backups-Monitoring.md#12.5
 
 changes:
+  - version: "0.5"
+    date: "11-07-26 15:21"
+    change: >-
+      Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee".
   - version: "0.4"
     date: "09-23-26 20:40"
     change: >-
