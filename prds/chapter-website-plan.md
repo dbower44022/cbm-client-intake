@@ -1,10 +1,10 @@
 # Chapter website — the applications' side
 
 **Document:** Plan for the chapter applications' side of the chapter website
-**Version:** 0.1
-**Status:** Draft — awaiting Doug's answers to section 4 and approval of the stopping points in section 6
+**Version:** 0.2
+**Status:** Decisions answered — awaiting Doug's approval of the plan and its stopping points (section 6)
 **Owner:** Doug Bower
-**Last Updated:** 11-07-26 11:25
+**Last Updated:** 11-07-26 11:28
 
 ---
 
@@ -53,6 +53,8 @@ The chapter connector remembers a campaign for the visit and passes it into ever
 
 Recommended: **A**, because it keeps the per-link credit the campaign reports already show, and the chapter connector change is one line.
 
+**Answered by Doug 11-07-26: A.** The website carries the campaign link token. The chapter connector passes it into each form as `link=`.
+
 ### 4.2 Which group holds the chapter-wide values
 
 - **A. The Website group takes them over.** The name, acronym, postal address, logo and colours move from Presentation into Website, under the same setting keys, so nothing that reads them changes. Presentation keeps the application-only settings. One place for an administrator to look. Costs a move in `core/settings_registry.py` and an update to `SYSTEM-SETTINGS-SETUP.md` and `chapter-colours.md`.
@@ -62,12 +64,16 @@ Recommended: **A**, because WT-11 asks for each value set once in one place, and
 
 The colours follow the same choice. Today `CHAPTER_TOKENS_URL` points at a stylesheet of `--cbm-*` colour variables. The Website group holds eight colour values (`base`, `contrast`, `accent-1` to `accent-6`). Recommended: the applications build their own `--cbm-*` stylesheet from those eight values, and `CHAPTER_TOKENS_URL` stays as an override for a chapter that already has one.
 
+**Answered by Doug 11-07-26: A.** The chapter-wide values move from Presentation into the Website group under their existing setting keys. The applications build their `--cbm-*` colour stylesheet from the eight Website colours; `CHAPTER_TOKENS_URL` stays as an override.
+
 ### 4.3 How the logo and header graphic are stored and served
 
 - **A. Uploaded in System Settings, stored in the application database, served at `/assets/logo` and `/assets/header`.** The chapter needs no other hosting. Costs an upload control in System Settings, which has none today.
 - **B. An address of an image hosted elsewhere, as `ORGANIZATION_LOGO_URL` is today.** No new storage. The chapter must host the image somewhere public, and a moved image breaks the website.
 
 Recommended: **A**, because a chapter on the template has no other obvious place to host an image.
+
+**Answered by Doug 11-07-26: A.** The logo and header graphic are uploaded in System Settings, stored in the application database and served from the applications address. This is System Settings' first upload control; it checks file type and size.
 
 ### 4.4 Where the button placement is written
 
@@ -76,12 +82,16 @@ Recommended: **A**, because a chapter on the template has no other obvious place
 
 Recommended: **A**, because "which button brings clients" is a question about new arrivals, which is what leads record. In both options the button placement is also kept in the captured submission.
 
+**Answered by Doug 11-07-26: A.** The button placement is written on the lead record (`CProspect`), one new field, feature-detected; a repeat submitter's button placement is kept only in the captured submission.
+
 ### 4.5 How the mentor page content is built
 
 - **A. Fresh `cmw-` markup, using the field mapping and publish-readiness rules of `prds/public-mentor-pages-plan.md`.** The `mentorprofile/` preview is a copy of Cleveland's Elementor page, with Cleveland's class names. Costs writing the markup.
 - **B. Adapt the `mentorprofile/` template, renaming its classes.** Starts from a proven look. Costs carrying Elementor's structure into every chapter, and the preview and the public page drift apart the first time either changes.
 
 Recommended: **A**, because ruling 33 and WT-44 require every class to start with `cmw-`, and the template is Cleveland's design rather than the Association's.
+
+**Answered by Doug 11-07-26: A.** Mentor page content is written fresh with `cmw-` class names, using the field mapping and publish-readiness rules of `prds/public-mentor-pages-plan.md`.
 
 ## 5. What is built
 
@@ -150,4 +160,5 @@ Work pauses for Doug's go-ahead at each stop. Between two stops it proceeds with
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.2 | 11-07-26 11:28 | Claude (Claude Code) | Doug answered decisions 4.1 to 4.5, each option A: the campaign link token, the Website group takes over the chapter-wide values, logo and header graphic uploaded in System Settings, button placement on the lead record, fresh `cmw-` mentor content. Stop 1 complete. |
 | 0.1 | 11-07-26 11:25 | Claude (Claude Code) | First draft, from the kickoff prompt version 1.2 and a reading of this repository, the Association repository and the prototype. |
