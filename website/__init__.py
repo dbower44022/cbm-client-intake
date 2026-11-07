@@ -6,6 +6,6 @@ Settings, the logo and header graphic, and (piece B) the key pages. Plan:
 by design, and answers 404 while ``WEBSITE_API`` is off.
 """
 
-from .router import public_router
+from .router import assets_router, public_router
 
-__all__ = ["public_router"]
+__all__ = ["assets_router", "public_router"]

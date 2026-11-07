@@ -1,0 +1,64 @@
+/* Styles for content the chapter applications place into a chapter website.
+   Copied from chapter-website-prototype/mock-apps/website.css (11-07-26).
+   Every class starts with cmw- (ruling 33). Colours and fonts come from the
+   website's own presets, which the chapter connector sets from System
+   Settings, so this content always matches the site. */
+.cmw-root { --cmw-accent: var(--wp--preset--color--accent-1, #0b6e4f); --cmw-soft: var(--wp--preset--color--accent-2, #eef); --cmw-text: var(--wp--preset--color--contrast, #222); --cmw-muted: var(--wp--preset--color--accent-4, #555); color: var(--cmw-text); }
+.cmw-lead { font-size: 1.15rem; margin: 0 0 1.25rem; }
+.cmw-p { margin: .5rem 0; }
+.cmw-h { font-size: 1.1rem; margin: 1.5rem 0 .5rem; }
+.cmw-search { display: block; margin: 0 0 1.5rem; }
+.cmw-search__label { display: block; font-weight: 600; margin-bottom: .35rem; }
+.cmw-search__input { width: 100%; max-width: 32rem; padding: .6rem .75rem; font: inherit; border: 2px solid var(--cmw-muted); border-radius: 6px; }
+.cmw-search__input:focus { outline: 3px solid var(--cmw-accent); outline-offset: 2px; }
+.cmw-grid { list-style: none; padding: 0; margin: 0; display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.cmw-card { background: var(--cmw-soft); border-radius: 10px; padding: 1rem; display: flex; flex-direction: column; }
+.cmw-card[hidden] { display: none; }
+.cmw-card__link { color: inherit; text-decoration: none; display: flex; flex-direction: column; gap: .5rem; }
+.cmw-card__link:hover .cmw-card__name, .cmw-card__link:focus .cmw-card__name { text-decoration: underline; }
+.cmw-card__photo { width: 100%; height: auto; border-radius: 8px; }
+.cmw-card__name { font-weight: 700; font-size: 1.2rem; color: var(--cmw-accent); }
+.cmw-card__title { font-weight: 600; font-size: .95rem; }
+.cmw-card__summary { margin: .5rem 0; font-size: .95rem; }
+.cmw-card__meta { margin: auto 0 0; color: var(--cmw-muted); font-size: .9rem; }
+.cmw-cta { margin: 1.5rem 0; }
+.cmw-button { display: inline-block; background: var(--cmw-accent); color: #fff; padding: .7rem 1.2rem; border-radius: 6px; text-decoration: none; font-weight: 600; }
+.cmw-button:hover, .cmw-button:focus { filter: brightness(1.1); color: #fff; }
+.cmw-button--small { padding: .45rem .9rem; font-size: .95rem; }
+.cmw-profile { display: grid; gap: 2rem; grid-template-columns: minmax(160px, 240px) 1fr; align-items: start; }
+@media (max-width: 640px) { .cmw-profile { grid-template-columns: 1fr; } }
+.cmw-profile__photo { width: 100%; height: auto; border-radius: 10px; }
+.cmw-profile__title { font-weight: 600; font-size: 1.15rem; margin-top: 0; }
+.cmw-tags { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: .5rem; }
+.cmw-tag { background: var(--cmw-soft); padding: .3rem .7rem; border-radius: 999px; }
+.cmw-event-list, .cmw-rec-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 1rem; }
+.cmw-event { display: flex; gap: 1rem; background: var(--cmw-soft); border-radius: 10px; padding: 1rem; }
+.cmw-event__date { flex: 0 0 4.5rem; text-align: center; background: var(--cmw-accent); color: #fff; border-radius: 8px; padding: .5rem; display: flex; flex-direction: column; justify-content: center; }
+.cmw-event__month { text-transform: uppercase; font-size: .85rem; }
+.cmw-event__day { font-size: 1.8rem; font-weight: 700; }
+.cmw-event__info { display: flex; flex-direction: column; gap: .25rem; }
+.cmw-event__time { color: var(--cmw-muted); }
+.cmw-event__title { font-weight: 700; font-size: 1.15rem; }
+.cmw-badge { align-self: flex-start; font-size: .8rem; border: 1px solid var(--cmw-accent); color: var(--cmw-accent); padding: .1rem .5rem; border-radius: 999px; }
+.cmw-rec { background: var(--cmw-soft); border-radius: 10px; padding: 1rem; display: flex; flex-direction: column; gap: .25rem; }
+.cmw-rec__date, .cmw-rec__topics { color: var(--cmw-muted); font-size: .9rem; }
+.cmw-rec__title { font-weight: 700; }
+
+.cmw-frame-fallback { font-size: .9rem; }
+.cmw-logo-wall { list-style: none; padding: 0; margin: 0 0 1rem; display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.cmw-logo-link { display: flex; flex-direction: column; gap: .5rem; color: inherit; text-decoration: none; text-align: center; }
+.cmw-logo-img { width: 100%; height: auto; }
+.cmw-logo-name { font-size: .95rem; }
+.cmw-banner { margin: 0; line-height: 0; }
+.cmw-banner__img { display: block; width: 100%; height: 160px; object-fit: cover; }
+.cmw-banner--home .cmw-banner__img { height: 340px; }
+@media (max-width: 640px) { .cmw-banner--home .cmw-banner__img { height: 200px; } .cmw-banner__img { height: 100px; } }
+.cmw-frame { display: block; width: 100%; border: 0; height: 600px; overflow: hidden; }
+
+/* Added with the real key pages (cbm-client-intake v0.315.0). */
+.cmw-profile__about p { margin: 0 0 .75rem; }
+.cmw-profile__about ul, .cmw-profile__about ol { margin: 0 0 .75rem 1.25rem; }
+.cmw-note { color: var(--cmw-muted); margin: .5rem 0; }
+.cmw-empty { color: var(--cmw-muted); }
+.cmw-card__photo--none, .cmw-profile__photo--none { aspect-ratio: 1; background: var(--cmw-soft); }
+.cmw-rec__link { color: var(--cmw-accent); }

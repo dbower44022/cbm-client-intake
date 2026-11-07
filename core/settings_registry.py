@@ -846,13 +846,17 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("chapter_social_links", GROUP_WEBSITE, "Social media addresses", kind="csv",
        help="\"Label|https://…\" pairs, comma separated, such as "
             "LinkedIn|https://www.linkedin.com/company/example."),
+    _s("website_cache_seconds", GROUP_WEBSITE, "Key page refresh", kind="int", unit="s",
+       help="How long the key pages keep what they read from the CRM. A change in "
+            "the CRM reaches the website within this time plus the website's own "
+            "few minutes. The mentor search uses the kept list, never the CRM."),
     _s("website_page_mentors", GROUP_WEBSITE, "Key page — Find a Mentor", kind="bool",
        help="Shows the mentor directory and profiles on the website, with their "
-            "menu entry. Refused until this release can serve the page."),
+            "menu entry. A mentor appears when Active and Public profile is ticked."),
     _s("website_page_events", GROUP_WEBSITE, "Key page — Workshops and Events", kind="bool",
-       help="Refused until this release can serve the page."),
+       help="The upcoming published events, by the same rule as the public programme page."),
     _s("website_page_recordings", GROUP_WEBSITE, "Key page — Recordings", kind="bool",
-       help="Refused until this release can serve the page."),
+       help="The published recorded webinars."),
     _s("website_page_partners", GROUP_WEBSITE, "Key page — Our Partners", kind="bool",
        help="Refused: partners on the website is a feature request owed to the "
             "Association's committee."),
@@ -1042,9 +1046,9 @@ WEBSITE_PAGE_SWITCHES: dict[str, str] = {
 
 #: The key pages this release can serve. WT-10: System Settings refuses to
 #: switch on any other, and the website is told it is off whatever is stored,
-#: so a menu never leads to "page not found". Piece B adds mentors, events and
-#: recordings. Partners, sponsors and stories are committee feature requests.
-WEBSITE_PAGES_SERVED: frozenset[str] = frozenset()
+#: so a menu never leads to "page not found". Partners, sponsors and stories
+#: are committee feature requests.
+WEBSITE_PAGES_SERVED: frozenset[str] = frozenset({"mentors", "events", "recordings"})
 
 _WEBSITE_PAGE_REFUSALS: dict[str, str] = {
     "partners": "partners on the website is a feature request owed to the Association's committee",

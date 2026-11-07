@@ -1117,9 +1117,11 @@ def create_app(
     app.include_router(campaigns_public_router)
     # The chapter website's public addresses (/api/website/…). Always included;
     # each answers 404 per request while WEBSITE_API is off.
+    from website import assets_router as website_assets_router
     from website import public_router as website_public_router
 
     app.include_router(website_public_router)
+    app.include_router(website_assets_router)
     # The postcard landing page /p/{token} and its response, over the same
     # durable pipeline as every form (the card's token comes from the URL).
     # Both answer 404 per request until CAMPAIGNS_LANDING_PUBLIC is on.

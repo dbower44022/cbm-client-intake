@@ -5,6 +5,40 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.315.0] — 2026-11-07
+
+**feat: the chapter website's key pages — piece B of `prds/chapter-website-plan.md`.**
+Still behind `WEBSITE_API`, and each page also needs its own switch in the
+Website group.
+
+- **Mentors, events and recordings can now be switched on.** Partners, sponsors
+  and client stories are still refused.
+- **`GET /api/website/pages/{mentors|events|recordings}` and
+  `/pages/mentors/{slug}`** answer `{title, description, html}`. This is the
+  content the chapter connector places into the website's pages.
+  - A mentor appears when Active and Public profile is ticked.
+  - A mentor not taking clients still appears. Their button explains why it
+    leads to the general request form.
+  - The mentor's About text is cleaned: no scripts, no styles, no class names,
+    and only http, https and mailto links.
+  - Events and recordings reuse the public programme's own reads and
+    visibility rule.
+- **`/api/website/sitemap`, `/api/website/mentors.json?q=` and
+  `/api/website/mentors/{slug}/photo`** serve the sitemap, the mentor search and
+  the mentor photographs.
+- **`/assets/website.css` and `/assets/search.js`** are the prototype's styles
+  and search script, copied in.
+- **Every class name starts with `cmw-`.** A test now checks every page and the
+  stylesheet (ruling 33, WT-44).
+- **The CRM is read at most once per `WEBSITE_CACHE_SECONDS`** (300 by default,
+  a new setting in the Website group). The search filters that copy, so a
+  visitor typing never reaches the CRM. When the CRM cannot be reached, the last
+  copy is served; with no copy at all, the address answers 503.
+
+Checked read-only against crm-test's real data: 2 mentors appear, their
+photographs load, and the search works.
+
+
 ## [0.314.0] — 2026-11-07
 
 **feat: the chapter website's settings — piece A of `prds/chapter-website-plan.md`.**

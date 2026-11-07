@@ -1,10 +1,10 @@
 # Chapter website — the applications' side
 
 **Document:** Plan for the chapter applications' side of the chapter website
-**Version:** 0.3
-**Status:** Approved 11-07-26; piece A built, at Stop 2
+**Version:** 0.4
+**Status:** Approved 11-07-26; piece A reviewed; piece B built, at Stop 3
 **Owner:** Doug Bower
-**Last Updated:** 11-07-26 11:41
+**Last Updated:** 11-07-26 12:35
 
 ---
 
@@ -97,10 +97,10 @@ Recommended: **A**, because ruling 33 and WT-44 require every class to start wit
 
 Each piece has its own feature flag, off by default and read per request.
 
-**A. The Website group and its settings address.** Flag `WEBSITE_API`. **Built in v0.314.0 (11-07-26), awaiting review at Stop 2.**
+**A. The Website group and its settings address.** Flag `WEBSITE_API`. **Built in v0.314.0; passed Stop 2 on crm-test 11-07-26.**
 `GET /api/website/settings` returns the stand-in's shape: `version`, `colors`, `fonts`, the logo, `chapter` (name, abbreviation, email, phone, address, employer identification number, social media addresses, payment link), `headerImage` and `pages`. The `version` field is the contract version. It goes up only when a field changes meaning or is removed. New fields are added without a version change, and the chapter connector ignores fields it does not know. System Settings refuses to switch on `partners`, `sponsors` and `stories` (finding 6). A new setting, `WEBSITE_ORIGINS`, names the chapter website's addresses. It is used for CORS on `/api/website/*` only, and for the framing allow-list in piece C.
 
-**B. The key page content.** Flag `WEBSITE_API`.
+**B. The key page content.** Flag `WEBSITE_API`, plus each page's own switch. **Built in v0.315.0 (11-07-26), at Stop 3.** The search filters a cached roster, so it needs no rate limit (finding 10). `?mentor=<slug>` on the request button is not yet read by the intake form; that belongs with piece C.
 - `GET /api/website/pages/{mentors,events,recordings}` and `GET /api/website/pages/mentors/{slug}`, each `{title, description, html}`; `404` for an unknown or hidden mentor.
 - `GET /api/website/sitemap` and `GET /api/website/mentors.json?q=`.
 - `GET /assets/website.css` and `GET /assets/search.js`.
@@ -161,6 +161,7 @@ Work pauses for Doug's go-ahead at each stop. Between two stops it proceeds with
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.4 | 11-07-26 12:35 | Claude (Claude Code) | Piece A passed Stop 2 on crm-test. Piece B built (v0.315.0). |
 | 0.3 | 11-07-26 11:41 | Claude (Claude Code) | Doug approved the plan. Piece A built (v0.314.0). The Website colours reach the applications' own pages only through piece C, so Cleveland's production colours do not change. |
 | 0.2 | 11-07-26 11:28 | Claude (Claude Code) | Doug answered decisions 4.1 to 4.5, each option A: the campaign link token, the Website group takes over the chapter-wide values, logo and header graphic uploaded in System Settings, button placement on the lead record, fresh `cmw-` mentor content. Stop 1 complete. |
 | 0.1 | 11-07-26 11:25 | Claude (Claude Code) | First draft, from the kickoff prompt version 1.2 and a reading of this repository, the Association repository and the prototype. |

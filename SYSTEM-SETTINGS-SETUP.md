@@ -121,8 +121,10 @@ because it can carry a script).
   may read these addresses from a visitor's browser. It is separate from
   Allowed origins, which covers every address of the application.
 - **A key page this release cannot serve is refused** with the reason (WT-10).
-  Partners, sponsors and client stories are committee feature requests;
-  mentors, events and recordings arrive with the key pages themselves.
+  Mentors, events and recordings can be switched on (v0.315.0); partners,
+  sponsors and client stories are committee feature requests.
+- **`Key page refresh` (`WEBSITE_CACHE_SECONDS`, 300)** is how long the key
+  pages keep what they read from the CRM.
 - Each value is checked on save: colours as `#RRGGBB`, the employer
   identification number as `12-3456789`, the payment page and social media
   addresses as https.

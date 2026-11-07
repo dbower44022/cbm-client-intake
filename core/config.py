@@ -134,6 +134,10 @@ class Settings(BaseSettings):
     website_page_partners: bool = False
     website_page_sponsors: bool = False
     website_page_stories: bool = False
+    # How long the key pages' CRM reads are kept (plan piece B). The mentor
+    # search filters the kept roster, so a visitor typing never reaches the
+    # CRM. WT-45: a CRM change reaches the website within a few minutes.
+    website_cache_seconds: int = 300
 
     # The policy documents the consent checkbox links to on the public forms
     # (client-intake, volunteer, partner, sponsor). Substituted into
