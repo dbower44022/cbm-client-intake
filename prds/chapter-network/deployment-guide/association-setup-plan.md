@@ -1,10 +1,10 @@
 # Correcting the guide while the Association is set up as a chapter — plan
 
 **Document:** Plan for correcting the New Chapter Deployment Guide stage by stage while the Business Mentors Association is set up as a chapter (Association rulings 71 and 72)
-**Version:** 1.2
+**Version:** 1.3
 **Status:** Approved by Doug 11-07-26 15:17, with the four recommendations of section 5 and both of section 6
 **Owner:** Doug Bower
-**Last Updated:** 11-07-26 15:28
+**Last Updated:** 11-07-26 15:34
 
 ---
 
@@ -99,6 +99,10 @@ These are recommendations, not decisions.
 
 **Stop 2, first answer, 11-07-26 15:28:** Doug chose admin@, the administrators group, as the sign-in address for every account a chapter opens. Applied to steps 3.7, 4.9, 4.14, 5.1, 5.2, 5.4, 5.6 and 5.10 to 5.12. Because every member of the group receives every account's password resets, step 4.9 now asks for at least two chapter officers, and adds a person from the Association only if the access schedule of step 2.4 says so (Association ruling 1). Decision D4 is next.
 
+**Stop 2, decision D4, 11-07-26 15:34:** Doug chose a Zoom Pro seat without the Webinars add-on, and Constant Contact Lite paid monthly, about $25 to $30 a month together (prices from third-party guides, not checked on the vendors' pages). Webinars and attendance stay untested until the add-on is bought; if Lite does not allow the developer application, the fallback is Standard. The guide keeps ZOOM-PLAN and MAILING-PLAN, because each chapter chooses its own plans; the Association's choice goes into its stage 5 runbook. D4 is recorded in the Association's repository at the end of the session.
+
+**Batch 2 started:** the stage 3 runbook for the Association is published at https://claude.ai/artifact/CVYeUihJjLicGJgkxQMPM3 (version 1.0, built from guide stage 3 version 0.5). A public lookup on 11-07-26 15:31 showed both domains registered at GoDaddy that morning, still on GoDaddy's name servers. Stages 4 and 5 follow.
+
 ## 8. At the end of the session
 
 The closing reply reports what changed in the guide, which stages are ready for Doug to follow, and which open decisions blocked a step. Work still owed is recorded in `OPEN-ITEMS.md`.
@@ -109,6 +113,7 @@ The closing reply reports what changed in the guide, which stages are ready for 
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 11-07-26 15:34 | Claude (Claude Code) | Decision D4 and the stage 3 runbook recorded in section 7. |
 | 1.2 | 11-07-26 15:28 | Claude (Claude Code) | Doug's answer on the sign-in address recorded in section 7. |
 | 1.1 | 11-07-26 15:21 | Claude (Claude Code) | Section 7, progress: batch 1 done, with the four differences from the plan. |
 | 1.0 | 11-07-26 15:17 | Claude (Claude Code) | Approved by Doug as written. |
