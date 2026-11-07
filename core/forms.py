@@ -38,6 +38,12 @@ class BaseSubmission(BaseModel):
     # link carries instead of a CRM id. ``prospect_id`` stays for one release so
     # a submission captured before the change still delivers.
     lead_code: Optional[str] = Field(default=None, max_length=16)
+    # Which website button the visitor pressed (Association ruling 35;
+    # prds/chapter-website-plan.md, decision 4.4), such as "mentor-profile" or
+    # "home-header". Read from ?placement= by frontend/shared/campaign-link.js
+    # and written on the lead. Called "button placement" here because
+    # "placement" already names the qualification ladder.
+    button_placement: Optional[str] = Field(default=None, max_length=64)
 
 
 # An orchestrator turns a validated submission into created EspoCRM record ids.
@@ -72,3 +78,8 @@ class FormSpec:
     # the website so the name match reuses the company; "Different company"
     # replaces the name so a new one is created (company-website-hold-plan.md).
     company_keys: Optional[tuple[str, str]] = None
+    # A setting that must be true for this form to be public, or None for a
+    # form that is always public. Read per request: while it is false the
+    # form's page and its intake address answer 404, as if absent. A new
+    # public form is built dark this way (prds/chapter-website-plan.md, E).
+    enabled_flag: Optional[str] = None

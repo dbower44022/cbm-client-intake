@@ -242,6 +242,10 @@ SETTINGS: tuple[SettingSpec, ...] = (
             "form opened with ?embed=1 takes the Website colours and drops its own "
             "heading and footer. Before switching on, put EVERY website that frames "
             "a form today into Chapter website addresses, or its forms go blank."),
+    _s("newsletter_form", GROUP_FEATURES, "Newsletter signup form", kind="bool",
+       help="The public form at /newsletter/: a subscriber becomes a Contact with "
+            "marketing consent, which the mailing-list sync passes to the mailing "
+            "service. Off, the form answers 404."),
     _s("campaigns_enabled", GROUP_FEATURES, "Marketing Management", kind="bool",
        component="both",
        help="The Marketing Management tile, the Prospects grid and import, the "

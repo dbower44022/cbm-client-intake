@@ -372,6 +372,7 @@
       referring_partner_id: strOrNull("referring_partner_id"),
       campaign_id: strOrNull("campaign_id"),
       campaign_link: strOrNull("campaign_link"),
+      button_placement: strOrNull("button_placement"),
       prospect_id: strOrNull("prospect_id"),
       lead_code: strOrNull("lead_code"),
       sms_consent: document.getElementById("sms_consent").checked,

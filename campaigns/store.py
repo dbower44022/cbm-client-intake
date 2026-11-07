@@ -12,6 +12,7 @@ id (ruling 27); the link is one level finer and stays here.
 from __future__ import annotations
 
 import hashlib
+import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
@@ -38,6 +39,8 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from core.config import Settings
 from core.store import make_async_engine, metadata, submission
+
+log = logging.getLogger("cbm_intake.campaigns")
 
 from . import config as cfg
 from .audience_store import AudienceStoreMixin, STATE_IN, audience_list_member
@@ -694,3 +697,32 @@ def make_campaign_store(settings: Settings) -> Optional[CampaignStore]:
     if not settings.store_enabled:
         return None
     return CampaignStore(settings.database_url)
+
+
+# --- the link token at capture (prds/chapter-website-plan.md, decision 4.1) -----
+# A visitor who reaches a form through a page on the chapter website carries the
+# campaign LINK'S TOKEN only (?link=), never the campaign's id. Capture asks the
+# links table which campaign the token belongs to, so the campaign is credited
+# exactly as if the link had opened the form itself. The application's own
+# database only — never the CRM (ruling 31). create_app registers its one store.
+
+_capture_store: Optional[CampaignStore] = None
+
+
+def set_capture_store(store: Optional[CampaignStore]) -> None:
+    global _capture_store
+    _capture_store = store
+
+
+async def campaign_for_link(token: Optional[str]) -> Optional[str]:
+    """The campaign id a link token belongs to, or None. Never raises: an
+    unknown token, or no database, credits nothing — the submission itself is
+    never at stake."""
+    if not token or _capture_store is None:
+        return None
+    try:
+        link = await _capture_store.get_link_by_token(token)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("campaign link %s not resolved at capture: %s", token, exc)
+        return None
+    return (link or {}).get("campaign_id") or None

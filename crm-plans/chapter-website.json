@@ -1,0 +1,15 @@
+{
+  "name": "chapter-website",
+  "description": "The chapter website's CRM change (prds/chapter-website-plan.md, pieces D and E; chapter-website-crm-handoff.md). The lead's button placement field, and the newsletter signup as a lead source and a receipt form value. Additive only.",
+  "fields": [
+    {"entity": "CProspect", "name": "buttonPlacement", "type": "varchar",
+     "maxLength": 64, "label": "Website button",
+     "tooltipText": "Which button on the chapter website brought this person, such as mentor-profile or home-header. Written by the public forms; never edited by hand."}
+  ],
+  "enumOptions": [
+    {"entity": "CProspect", "field": "leadSource",
+     "add": ["Newsletter signup"], "labels": {"Newsletter signup": "Newsletter signup"}},
+    {"entity": "CIntakeSubmission", "field": "form",
+     "add": ["Newsletter"], "labels": {"Newsletter": "Newsletter"}}
+  ]
+}

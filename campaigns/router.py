@@ -882,7 +882,27 @@ def _validate_destination(kind: str, target: Optional[str]) -> tuple[str, Option
         if not target:
             raise HTTPException(status_code=400, detail="Choose the event the link opens.")
         return kind, target
-    raise HTTPException(status_code=400, detail="A link opens a public form, the programme page or one event.")
+    if kind == cfg.DEST_WEBSITE:
+        # Built dark with the rest of the chapter website (plan piece D): a new
+        # website link needs the Chapter website connection switched on. A link
+        # made earlier keeps opening whatever the switch says.
+        if not get_settings().website_api:
+            raise HTTPException(status_code=400, detail=(
+                "Links to the chapter website are not switched on for this deployment. An "
+                "administrator switches on Chapter website connection in System Settings → Features."))
+        path = (target or "").strip()
+        if path and not path.startswith("/"):
+            path = "/" + path
+        if not cfg.WEBSITE_PATH.match(path):
+            raise HTTPException(status_code=400, detail=(
+                "Give the page's path on the chapter website, such as /mentors/ — letters, digits, "
+                "hyphens and slashes only, without the website's address."))
+        if not (get_settings().organization_website_url or "").strip().startswith("https://"):
+            raise HTTPException(status_code=400, detail=(
+                "The chapter website's address is not set. An administrator sets Organisation "
+                "website (an https address) in System Settings → Website."))
+        return kind, path
+    raise HTTPException(status_code=400, detail="A link opens a public form, the programme page, one event or a page on the chapter website.")
 
 
 @api_router.post("/campaigns/{campaign_id}/links")

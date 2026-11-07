@@ -80,6 +80,7 @@ _FORM_VALUES = {
     "info-email": "Email",
     "event-registration": "Event Registration",
     "prospect-response": "Prospect Response",
+    "newsletter": "Newsletter",
 }
 
 # Oversized payload strings (base64 resume uploads, mainly) are summarized so

@@ -9,6 +9,7 @@ from . import (
     event_registration,
     info_email,
     info_request,
+    newsletter,
     partner,
     prospect_response,
     sponsor,
@@ -21,6 +22,7 @@ ALL_SPECS = [
     info_request.SPEC,
     partner.SPEC,
     sponsor.SPEC,
+    newsletter.SPEC,
 ]
 
 # Delivered by the worker but NEVER mounted as a public form/endpoint: these

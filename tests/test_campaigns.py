@@ -769,7 +769,10 @@ def test_every_submission_model_carries_the_campaign_fields_and_sms_tick():
     for slug, spec in SPECS_BY_SLUG.items():
         fields = spec.submission_model.model_fields
         assert {"campaign_id", "campaign_link", "prospect_id"} <= set(fields), slug
-        if slug not in ("info-email",):
+        # The newsletter form collects no phone number, so a text-message tick
+        # would consent to nothing (prds/chapter-website-plan.md, piece E;
+        # put to Doug at Stop 5 rather than decided here).
+        if slug not in ("info-email", "newsletter"):
             assert "sms_consent" in fields or slug == "info-request", slug
 
 

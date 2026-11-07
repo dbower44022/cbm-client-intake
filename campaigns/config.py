@@ -8,6 +8,8 @@ house pattern; enum options are read live from CRM metadata, never copied here.
 
 from __future__ import annotations
 
+import re
+
 from dataclasses import dataclass
 from typing import Optional
 
@@ -153,6 +155,8 @@ SOURCE_PARTNER_APPLICATION = "Partner application"
 SOURCE_FUNDER_APPLICATION = "Funder application"
 SOURCE_EVENT_REGISTRATION = "Event registration"
 SOURCE_EMAIL = "Email"
+#: The newsletter signup form (Association ruling 43; crm-plans/chapter-website.json).
+SOURCE_NEWSLETTER = "Newsletter signup"
 
 #: The reasons a lead stops being worked (``sideExit``, ruling 50).
 #: Disqualified is a status, not a reason.
@@ -243,6 +247,15 @@ DEST_FORM = "form"
 DEST_PROGRAMME = "programme"
 DEST_EVENT = "event"
 DEST_LANDING = "landing"
+#: A page on the chapter website (Association ruling 35; prds/chapter-website-plan.md,
+#: piece D). The target is a path only; the website is ORGANIZATION_WEBSITE_URL,
+#: so a link can never send a visitor to anyone else's site.
+DEST_WEBSITE = "website"
+WEBSITE_PATH = re.compile(r"^/[A-Za-z0-9/_.~-]{0,199}$")
+#: The lead's field for which website button brought the person (plan
+#: decision 4.4). Feature-detected; called "button placement" in this
+#: repository, because "placement" already means the qualification ladder.
+BUTTON_PLACEMENT_FIELD = "buttonPlacement"
 #: The five public forms a link may open. Validated against the live form
 #: registry at creation, so a renamed form cannot be targeted.
 FORM_DESTINATIONS = ("client-intake", "info-request", "volunteer", "partner", "sponsor")

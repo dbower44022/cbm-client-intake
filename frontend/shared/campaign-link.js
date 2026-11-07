@@ -42,6 +42,10 @@
   if (TOKEN.test(link)) set("campaign_link", link); else link = "";
   if (ID.test(prospect)) set("prospect_id", prospect); else prospect = "";
   if (TOKEN.test(lead)) set("lead_code", lead); else lead = "";
+  // Which website button brought the visitor (Association ruling 35), such as
+  // "mentor-profile". Courtesy data: anything that is not a plain tag is ignored.
+  var placement = (params.get("placement") || "").trim().toLowerCase();
+  if (/^[a-z0-9-]{1,64}$/.test(placement)) set("button_placement", placement);
 
   if (campaign) {
     fetch("/api/campaigns/public/" + encodeURIComponent(campaign), { headers: { Accept: "application/json" } })

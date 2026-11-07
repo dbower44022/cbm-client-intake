@@ -349,6 +349,11 @@ async def record_lead(client: EspoApi, attr: Attribution, *, source: str,
             "promotedCompanyId": company_id if company_new else None,
             "promotedContactId": contact_id if contact_new else None,
         }
+        # Which website button brought the person (decision 4.4). Feature-detected:
+        # a CRM without the field simply does not record it.
+        placement = (v.get("buttonPlacement") or "").strip()
+        if placement and await _prospect_has(client, cfg.BUTTON_PLACEMENT_FIELD):
+            payload[cfg.BUTTON_PLACEMENT_FIELD] = placement[:64]
         created = await client.create(cfg.PROSPECT, {k: val for k, val in payload.items() if val})
         attr.written["leadId"] = created.get("id")
     except EspoError as exc:
@@ -367,7 +372,16 @@ def lead_values(sub: Any) -> dict[str, Any]:
         return ""
     return {"businessName": g("business_name", "company"), "website": g("business_website", "website"),
             "firstName": g("first_name"), "lastName": g("last_name"), "email": g("email"),
-            "phone": g("phone")}
+            "phone": g("phone"), "buttonPlacement": g("button_placement")}
+
+
+async def _prospect_has(client: EspoApi, field: str) -> bool:
+    try:
+        fields = await client.metadata(f"entityDefs.{cfg.PROSPECT}.fields")
+    except Exception as exc:  # noqa: BLE001 — a missing field only skips the write
+        log.warning("could not read %s fields (%s) — %s not written", cfg.PROSPECT, field, exc)
+        return False
+    return isinstance(fields, dict) and field in fields
 
 
 def _now_crm() -> str:

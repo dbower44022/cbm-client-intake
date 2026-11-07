@@ -96,7 +96,23 @@ def destination_path(link: dict[str, Any], *, scan_token: Optional[str] = None) 
         if not scan_token:
             return None
         return f"/p/{scan_token}?{urlencode({'link': link['token']})}"
+    if kind == cfg.DEST_WEBSITE:
+        # Association ruling 35 and plan decision 4.1: the website remembers the
+        # link token for the visit (?cmp=) and hands it to every form as link=;
+        # capture resolves it to the campaign. A person's lead code does not
+        # travel through the website.
+        return website_destination(link)
     return None
+
+
+def website_destination(link: dict[str, Any]) -> Optional[str]:
+    """The chapter website page a website link opens, or None when the website
+    address is not an https address or the stored path is not a plain path."""
+    base = (get_settings().organization_website_url or "").strip().rstrip("/")
+    path = link.get("destination_target") or ""
+    if not base.startswith("https://") or not cfg.WEBSITE_PATH.match(path):
+        return None
+    return f"{base}{path}?{urlencode({'cmp': link['token']})}"
 
 
 def _client_address(request: Request) -> str:

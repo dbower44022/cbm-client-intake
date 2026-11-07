@@ -216,6 +216,17 @@ async def _process_submission(
             status_code=422, content={"detail": detail, "errors": errors}
         )
 
+    # A form reached through a page on the chapter website carries the campaign
+    # link's token and no campaign id (decision 4.1): credit the link's campaign
+    # before capture, so the captured payload holds both, exactly as if the link
+    # had opened the form. The application database only; never fails the form.
+    if getattr(submission, "campaign_link", None) and not getattr(submission, "campaign_id", None):
+        from campaigns.store import campaign_for_link
+
+        linked = await campaign_for_link(submission.campaign_link)
+        if linked:
+            submission.campaign_id = linked
+
     client = _make_client(settings)
     is_honeypot = bool(submission.company_url.strip())
 
@@ -651,6 +662,11 @@ def create_app(
     from campaigns.store import make_campaign_store
 
     app.state.campaign_store = make_campaign_store(settings)
+    # A submission carrying only a link token is credited to its campaign at
+    # capture (prds/chapter-website-plan.md, decision 4.1).
+    from campaigns.store import set_capture_store
+
+    set_capture_store(app.state.campaign_store)
     # Lead enrichment phase 2: the AI research runs and the month's spend.
     from enrichment.store import make_enrichment_store
 
@@ -917,6 +933,19 @@ def create_app(
     # address must be in WEBSITE_ORIGINS before production switches this on.
     _form_pages = {f"/{spec.slug}/" for spec in forms} | {f"/{spec.slug}" for spec in forms} \
         | {f"/{spec.slug}/index.html" for spec in forms}
+
+    # A form built dark (FormSpec.enabled_flag) is absent while its switch is
+    # off: its page, its files and its intake address all answer 404.
+    _gated_forms = [(spec.slug, spec.enabled_flag) for spec in forms if spec.enabled_flag]
+
+    @app.middleware("http")
+    async def _dark_forms(request: Request, call_next):
+        path = request.url.path
+        for slug, flag in _gated_forms:
+            if (path == f"/{slug}" or path.startswith(f"/{slug}/") or path.startswith(f"/api/{slug}/")) \
+                    and not getattr(get_settings(), flag, False):
+                return JSONResponse(status_code=404, content={"detail": "Not Found"})
+        return await call_next(request)
 
     @app.middleware("http")
     async def _frame_ancestors(request: Request, call_next):

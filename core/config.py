@@ -104,6 +104,9 @@ class Settings(BaseSettings):
     # form pages, the frame-sizing script and the embed styles. Off, nothing
     # changes for any site that frames a form today. Read per request.
     form_framing: bool = False
+    # The newsletter signup form at /newsletter/ (piece E, ruling 43). Off, the
+    # page and its intake address answer 404. Read per request.
+    newsletter_form: bool = False
     # The chapter website's own addresses (scheme + host, comma separated).
     # Only these may fetch /api/website/* from a browser. Deliberately NOT
     # `allowed_origins`, which applies to every address of the application.

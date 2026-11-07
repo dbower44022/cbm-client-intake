@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="cbm-org" content="{{org}}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{org}} — Newsletter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="/shared/wizard.css" />
+</head>
+<body>
+  <main class="cbm-container cbm-container--narrow intake">
+    <header class="intake__header">
+      <h1>Get our newsletter</h1>
+      <p class="intake__sub">News, free workshops and stories from {{org}}, by email.</p>
+    </header>
+
+    <form id="intakeForm" novalidate>
+      <p class="intake__referral" id="campaign_banner" hidden>You arrived through <strong id="campaign_banner_name"></strong>.</p>
+      <!-- Campaign attribution and the website button, filled from the address by
+           /shared/campaign-link.js. -->
+      <input type="hidden" id="campaign_id" name="campaign_id" />
+      <input type="hidden" id="campaign_link" name="campaign_link" />
+      <input type="hidden" id="button_placement" name="button_placement" />
+      <input type="hidden" id="prospect_id" name="prospect_id" />
+      <input type="hidden" id="lead_code" name="lead_code" />
+      <div class="hp" aria-hidden="true">
+        <label>Leave this field empty <input type="text" name="xtra_note" id="xtra_note" tabindex="-1" autocomplete="off" /></label>
+      </div>
+
+      <section class="step" data-step="1">
+        <div class="grid-2">
+          <div class="cbm-field">
+            <label for="first_name">First Name <span class="cbm-required">*</span></label>
+            <input type="text" id="first_name" autocomplete="given-name" required />
+          </div>
+          <div class="cbm-field">
+            <label for="last_name">Last Name <span class="cbm-required">*</span></label>
+            <input type="text" id="last_name" autocomplete="family-name" required />
+          </div>
+        </div>
+        <div class="cbm-field">
+          <label for="email">Email <span class="cbm-required">*</span></label>
+          <input type="email" id="email" autocomplete="email" required />
+        </div>
+        <div class="cbm-field">
+          <label><input type="checkbox" id="marketing_consent" name="marketing_consent" required /> Yes, send me the {{org}} newsletter by email. I can unsubscribe at any time. <span class="cbm-required">*</span></label>
+        </div>
+      </section>
+
+      <p class="form-error" id="formError" role="alert" hidden></p>
+
+      <div class="wizard__nav">
+        <button type="button" class="cbm-button cbm-button--secondary" id="backBtn" hidden>Back</button>
+        <button type="button" class="cbm-button" id="nextBtn">Next</button>
+        <button type="submit" class="cbm-button" id="submitBtn" hidden>Sign up</button>
+      </div>
+    </form>
+
+    <section class="confirmation" id="confirmation" hidden>
+      <h2>You're signed up</h2>
+      <p>Thank you. The next {{org}} newsletter will reach you by email.</p>
+    </section>
+
+    <footer class="cbm-footer">
+      <p>&copy; <span data-cbm-year>2026</span> {{org}}. All rights reserved.<span class="cbm-footer__version" data-cbm-version></span></p>
+    </footer>
+  </main>
+
+  <!-- busy.js first: it wraps fetch/XHR, so it must be in place before any
+       other script can start a request. -->
+  <script src="/shared/busy.js"></script>
+  <!-- Forms in website frames: sizing and embed styles (prds/chapter-website-plan.md). -->
+  <script src="/assets/frame.js" defer></script>
+  <script src="/shared/wizard.js"></script>
+  <script src="/shared/campaign-link.js"></script>
+  <script src="app.js"></script>
+  <script src="/shared/footer.js"></script>
+</body>
+</html>

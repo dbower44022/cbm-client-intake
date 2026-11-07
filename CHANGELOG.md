@@ -5,6 +5,46 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.317.0] — 2026-11-07
+
+**feat: campaigns through the chapter website, and the newsletter signup form —
+pieces D and E of `prds/chapter-website-plan.md`.**
+
+- **A campaign link can now open a page on the chapter website** (Association
+  ruling 35), on a deployment with `WEBSITE_API` on. The Links tab has a new choice, *A page on the chapter website*,
+  where staff type the page's path, such as `/mentors/`. The link sends the
+  visitor to that path on **Organisation website** with `?cmp=<link token>`.
+  The website address comes from the setting, never from what staff type, so a
+  link can never send anyone to another site. A person's lead code does not
+  travel through the website.
+- **A link token alone now credits its campaign** (decision 4.1). Before this,
+  a form arriving with `link=` and no `campaign=` saved the token and credited
+  nothing. Capture now looks the token up in the applications' own database
+  (never the CRM) and fills in the campaign. An unknown token credits nothing,
+  and the submission is never at stake.
+- **The website button that brought a visitor is written on the lead**
+  (decision 4.4). The forms read `?placement=` into the payload's
+  `button_placement`, and a new lead records it in `CProspect.buttonPlacement`
+  when the CRM has that field.
+- **The newsletter signup form at `/newsletter/`** (Association ruling 43),
+  behind the new switch `NEWSLETTER_FORM`. While the switch is off, its page
+  and its intake address answer 404 (the new `FormSpec.enabled_flag`).
+  - A new subscriber becomes a Prospect Contact with `cMarketingOptIn` set, so
+    the existing mailing-list sync passes them on.
+  - A known person gains the consent and has an empty first or last name
+    filled in; nothing else about them changes.
+  - The consent tick is required.
+  - The lead source is *Newsletter signup*.
+- **The CRM change** (`crm-plans/chapter-website.json`,
+  `chapter-website-crm-handoff.md`) adds the `buttonPlacement` field, the
+  *Newsletter signup* lead source and the *Newsletter* receipt form value.
+  Applied through the API on crm-test; production and Boston are owed.
+
+The newsletter form has no SMS tick, because it asks for no phone number. The
+guard test that requires one on every public form now exempts it, with the
+reason; the question is open for Doug.
+
+
 ## [0.316.0] — 2026-11-07
 
 **feat: forms in website frames — piece C of `prds/chapter-website-plan.md`.**

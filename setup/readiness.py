@@ -45,6 +45,13 @@ class Feature:
 
 FEATURES: tuple[Feature, ...] = (
     Feature(
+        key="newsletter_form", name="Newsletter signup form", flag="newsletter_form", component="web",
+        crm_fields=(("Contact", "cMarketingOptIn"),),
+        note="A subscriber is a Contact with marketing consent; the mailing-list sync "
+             "passes them on. The lead source Newsletter signup and the receipt form "
+             "value Newsletter come from crm-plans/chapter-website.json.",
+    ),
+    Feature(
         key="form_framing", name="Forms in website frames", flag="form_framing", component="web",
         requires=("website_origins",),
         note="Every website that frames a form must be in Chapter website addresses "

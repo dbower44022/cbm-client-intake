@@ -1,10 +1,10 @@
 # Chapter website — the applications' side
 
 **Document:** Plan for the chapter applications' side of the chapter website
-**Version:** 0.6
-**Status:** Approved 11-07-26; pieces A and B reviewed; piece C built, at Stop 4
+**Version:** 0.7
+**Status:** Approved 11-07-26; pieces A to C reviewed; pieces D and E built, at Stop 5
 **Owner:** Doug Bower
-**Last Updated:** 11-07-26 14:37
+**Last Updated:** 11-07-26 15:05
 
 ---
 
@@ -108,17 +108,17 @@ Each piece has its own feature flag, off by default and read per request.
 - An automated test fails on any class name in this content that does not start with `cmw-` (WT-44).
 - Every address reads through a server-side cache.
 
-**C. Forms in frames.** Flag `FORM_FRAMING`. **Built in v0.316.0 (11-07-26), at Stop 4.** Finding 4 checked 11-07-26: Cleveland's website frames three production forms (`OPEN-ITEMS.md` #72). The full-screen link (WT-58) is the chapter connector's, outside the frame. The chapter connector adds `embed=1` to each frame's address and passes the campaign as `link=` since prototype connector 0.2.1 (11-07-26, Doug's approval). Framing switched on for crm-test 11-07-26.
+**C. Forms in frames.** Flag `FORM_FRAMING`. **Built in v0.316.0; passed Stop 4 through the local prototype 11-07-26.** Finding 4 checked 11-07-26: Cleveland's website frames three production forms (`OPEN-ITEMS.md` #72). The full-screen link (WT-58) is the chapter connector's, outside the frame. The chapter connector adds `embed=1` to each frame's address and passes the campaign as `link=` since prototype connector 0.2.1 (11-07-26, Doug's approval). Framing switched on for crm-test 11-07-26.
 - A `frame-ancestors` header naming `WEBSITE_ORIGINS`.
 - The frame-sizing script inside every public form, posting only to the website addresses named in `WEBSITE_ORIGINS` (the prototype's script posts to every address).
 - Embed styles, used when the form is opened with `?embed=1`: the form's `--cbm-*` colour and font variables mapped to the Website settings, and the form's own heading, footer and background hidden (WT-56b).
 - The `--cbm-*` stylesheet built from the Website colours (decision 4.2). It applies to framed forms first; applying it to the applications' own pages would change Cleveland's production colours, so that waits for its own switch.
 
-**D. Campaigns through the website.** Flag `WEBSITE_CAMPAIGNS`.
+**D. Campaigns through the website.** **Built in v0.317.0 (11-07-26), at Stop 5.** Making a website link needs `WEBSITE_API` on (no separate flag); the token lookup and the button placement are additive and need none. Decision 4.1 corrected 11-07-26: a link token credited nothing on its own, so capture now looks up its campaign (Doug chose A again on the corrected facts). Association ruling 35 extends marketing ruling 26, which said a link opens a standard form; not yet cross-referenced in `prds/prospect-marketing/rulings.md`.
 - A campaign link may name a website page as its destination. The page must be under an address in `WEBSITE_ORIGINS`, so the link cannot send a visitor to an arbitrary website. The redirect adds the campaign tag decided in 4.1.
 - The forms read `placement` from their address and write the button placement where 4.4 decides. The field is declared on `core/forms.BaseSubmission`, because capture drops an undeclared key.
 
-**E. The newsletter signup form.** Flag `NEWSLETTER_FORM`.
+**E. The newsletter signup form.** Flag `NEWSLETTER_FORM`. **Built in v0.317.0 (11-07-26), at Stop 5.** The consent field is `Contact.cMarketingOptIn` (read from `core/mailing_sync.py`). No SMS tick: the form asks for no phone number.
 A sixth public form creating a Contact with marketing consent set (ruling 43), a lead per ruling 48, and the campaign and button placement like every public form. The existing Constant Contact synchronisation passes the contact on. Before building, check which Contact field the synchronisation reads as consent.
 
 **F. The test website.** Not code in this repository.
@@ -160,6 +160,7 @@ Work pauses for Doug's go-ahead at each stop. Between two stops it proceeds with
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.7 | 11-07-26 15:05 | Claude (Claude Code) | Piece C passed Stop 4. Decision 4.1 corrected and re-answered A. Pieces D and E built (v0.317.0); the CRM change applied on crm-test. |
 | 0.6 | 11-07-26 14:37 | Claude (Claude Code) | The prototype's chapter connector gained `embed=1` and `link=` (0.2.1), with Doug's approval. `FORM_FRAMING` on for crm-test. |
 | 0.5 | 11-07-26 14:06 | Claude (Claude Code) | Piece B passed Stop 3. Piece C built (v0.316.0); Cleveland's three framed production forms recorded; the full-screen link belongs to the chapter connector. |
 | 0.4 | 11-07-26 12:35 | Claude (Claude Code) | Piece A passed Stop 2 on crm-test. Piece B built (v0.315.0). |

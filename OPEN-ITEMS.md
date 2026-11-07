@@ -21,6 +21,9 @@ found; move resolved items to the bottom with the resolution date.
     (`WEBSITE_API`, `FORM_FRAMING`, three `WEBSITE_PAGE_*`,
     `WEBSITE_ORIGINS=http://localhost:8080`);
     remove `WEBSITE_ORIGINS`'s local address once the test website is live.
+    (5) **The CRM change `crm-plans/chapter-website.json`**
+    (`chapter-website-crm-handoff.md`) is applied on crm-test only;
+    production and Boston are owed.
 
 71. **Training on the CRM's own screens, and the block revisited**
     (2026-11-05, Doug's ruling Q6.1). Ten-odd staff work in the CRM's own

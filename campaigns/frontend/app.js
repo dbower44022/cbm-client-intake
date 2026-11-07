@@ -1138,6 +1138,7 @@
     if (l.destination_kind === "programme") return "Workshops and webinars page";
     if (l.destination_kind === "event") return "Event: " + (l.destinationName || l.destination_slug || l.destination_target);
     if (l.destination_kind === "landing") return "Postcard landing page (each card adds its own token)";
+    if (l.destination_kind === "website") return "Chapter website page " + (l.destination_target || "");
     return l.destination_kind;
   }
 
@@ -1213,9 +1214,14 @@
     var nameF = el("div", "cm__field cm__field--wide"); var nl = el("label", null, "Name"); nl.htmlFor = "lk_name"; var nameIn = el("input"); nameIn.type = "text"; nameIn.id = "lk_name"; nameIn.maxLength = 200;
     nameIn.value = existing ? existing.name : ""; nameIn.disabled = !!existing; nameF.appendChild(nl); nameF.appendChild(nameIn); body.appendChild(nameF);
     var kindF = el("div", "cm__field"); var kl = el("label", null, "Opens"); kl.htmlFor = "lk_kind"; var kind = el("select"); kind.id = "lk_kind";
-    [["form", "A public form"], ["programme", "The workshops and webinars page"], ["event", "One event's page"]].forEach(function (o) { var opt = el("option", null, o[1]); opt.value = o[0]; kind.appendChild(opt); });
+    [["form", "A public form"], ["programme", "The workshops and webinars page"], ["event", "One event's page"], ["website", "A page on the chapter website"]].forEach(function (o) { var opt = el("option", null, o[1]); opt.value = o[0]; kind.appendChild(opt); });
     kindF.appendChild(kl); kindF.appendChild(kind); body.appendChild(kindF);
     var tgtF = el("div", "cm__field"); var tl = el("label", null, "Which"); tl.htmlFor = "lk_target"; var target = el("select"); target.id = "lk_target"; tgtF.appendChild(tl); tgtF.appendChild(target); body.appendChild(tgtF);
+    // A chapter website page is typed as its path (prds/chapter-website-plan.md, piece D); the
+    // server checks it and joins it to the Organisation website setting.
+    var pathF = el("div", "cm__field cm__field--wide"); var pl = el("label", null, "Page on the chapter website (its path, such as /mentors/)"); pl.htmlFor = "lk_path";
+    var pathIn = el("input"); pathIn.type = "text"; pathIn.id = "lk_path"; pathIn.maxLength = 200; pathIn.placeholder = "/mentors/";
+    pathF.appendChild(pl); pathF.appendChild(pathIn); body.appendChild(pathF);
     function fillTarget() {
       target.innerHTML = "";
       if (kind.value === "form") (s.formDestinations || []).forEach(function (d) { var o = el("option", null, d.title); o.value = d.slug; target.appendChild(o); });
@@ -1223,14 +1229,19 @@
         if (!f.eventOptions) { var o = el("option", null, "Your role cannot list events"); o.value = ""; target.appendChild(o); }
         else f.eventOptions.forEach(function (e) { var o2 = el("option", null, e.name); o2.value = e.id; target.appendChild(o2); });
       }
-      tgtF.hidden = kind.value === "programme";
+      tgtF.hidden = kind.value === "programme" || kind.value === "website";
+      pathF.hidden = kind.value !== "website";
     }
     kind.addEventListener("change", fillTarget);
     kind.value = existing ? existing.destination_kind : "form"; fillTarget();
-    if (existing && existing.destination_target) target.value = existing.destination_target;
+    if (existing && existing.destination_target) {
+      if (existing.destination_kind === "website") pathIn.value = existing.destination_target;
+      else target.value = existing.destination_target;
+    }
     openModal(existing ? "Correct where \"" + existing.name + "\" goes" : "New link", body, async function () {
       if (!existing && !nameIn.value.trim()) { modalMsg("Name the link for where it will be posted.", "error"); return; }
-      var payload = { kind: kind.value, target: kind.value === "programme" ? null : target.value };
+      var payload = { kind: kind.value, target: kind.value === "programme" ? null : (kind.value === "website" ? pathIn.value.trim() : target.value) };
+      if (kind.value === "website" && !payload.target) { modalMsg("Give the page's path on the chapter website, such as /mentors/.", "error"); return; }
       if (kind.value !== "programme" && !payload.target) { modalMsg("Choose where the link opens.", "error"); return; }
       if (existing) await api("/campaigns/" + encodeURIComponent(RECORD_ID) + "/links/" + encodeURIComponent(existing.id), { method: "PUT", body: payload });
       else await api("/campaigns/" + encodeURIComponent(RECORD_ID) + "/links", { method: "POST", body: Object.assign({ name: nameIn.value.trim() }, payload) });
