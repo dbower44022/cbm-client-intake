@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — The Step List
 
 **Document:** The bare list of steps, with no methods yet
-**Version:** 0.23
+**Version:** 0.24
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 11-07-26 15:21
+**Last Updated:** 11-07-26 15:28
 
 ---
 
@@ -204,19 +204,19 @@ without one person.
 Done when: the application has been submitted with the chapter's nonprofit
 evidence, and the expected answer date is recorded.
 
-**4.14 Move control of the registrar account to a chapter mailbox.**
+**4.14 Move control of the registrar account to the chapter's administrators group.**
 Done when:
 
-- The registrar account's contact address is a chapter mailbox.
+- The registrar account's contact address is the chapter's administrators group.
 - The founder's personal address has been removed.
-- A password reset test lands in the chapter mailbox.
+- A password reset test reaches every member of the group.
 
 ---
 
 ## Stage 5 — Open the chapter's service accounts
 
 **5.1 Create the server hosting account.**
-Done when: the account exists in the chapter's name, using a chapter mailbox.
+Done when: the account exists in the chapter's name, signed in with the chapter's administrators group.
 
 **5.2 Set up billing on the hosting account.**
 Done when: a chapter payment method is on file and the billing contact is a chapter
@@ -267,7 +267,7 @@ Note: Today the link runs through one personal GitHub account, the repository ow
 **5.10 Open the website host account.**
 Done when:
 
-- The website host account exists in the chapter's name, signed in with the shared operations mailbox.
+- The website host account exists in the chapter's name, signed in with the chapter's administrators group.
 - It is paid with the chapter's own card.
 - Two-step sign-in is on, and the sign-in and codes are in the chapter's vault.
 - The Association's named person is a team member.
@@ -275,7 +275,7 @@ Done when:
 **5.11 Open the Constant Contact account and its developer application.**
 Done when:
 
-- The Constant Contact account exists in the chapter's name, signed in with the shared operations mailbox.
+- The Constant Contact account exists in the chapter's name, signed in with the chapter's administrators group.
 - Its developer application exists, with the applications' callback address as its redirect address.
 - The API key and client secret are in the chapter's vault.
 
@@ -284,7 +284,7 @@ Note: A developer application is private to the Constant Contact user who create
 **5.12 Open the Stripe account and create the donation link.**
 Done when:
 
-- The Stripe account exists in the chapter's name, signed in with the shared operations mailbox.
+- The Stripe account exists in the chapter's name, signed in with the chapter's administrators group.
 - Two-step sign-in is on, and the sign-in and codes are in the chapter's vault.
 - A donation Payment Link exists, and its address is in the vault.
 
@@ -871,6 +871,7 @@ Done when: a date is booked to review how the first months have gone.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.24 | 11-07-26 15:28 | Every account the chapter opens signs in with admin@, the chapter's administrators group from step 4.9, so every password reset reaches the chapter's two owners (Doug, 11-07-26, following Association ruling 18). Step 4.14 is renamed "Move control of the registrar account to the chapter's administrators group"; steps 4.14, 5.1 and 5.10 to 5.12 change their finishing tests to match. |
 | 0.23 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan `association-setup-plan.md`, approved by Doug 11-07-26). "The central support organization" is now "the Association" throughout, and "the central committee" is "the central technical committee". Step 2.3 becomes "Accept the one-application rule" (Association ruling 3) and step 14.3 "Confirm the administrator accounts are the agreed ones" (Association ruling 1: the chapter holds its own administrator accounts). Step 3.2 states the Association's recommendation of two domain names (Association ruling 25). Stage 5 is renamed "Open the chapter's service accounts" and gains steps 5.10 (website host, Association ruling 29), 5.11 (Constant Contact) and 5.12 (Stripe donation link, Association ruling 30). Step 5.9, added to the stage data on 09-23-26 but never to this list, is added. No existing step number changed. |
 | 0.22 | 09-24-26 00:39 | The chapter decides when it takes a release (Doug, 09-24-26, CRMBuilder decision DEC-1156): it may take each release automatically, decline one, or schedule the upgrade for a time of its own after trying it on the demo/test deployment. Step 11.8 is renamed "Set the update policy the chapter chose" and its finishing test names that policy; step 18.3's first condition no longer says updates arrive automatically for every chapter. The stage data (stages 8, 11 and 18) carries the same change. |
 | 0.21 | 09-23-26 22:55 | Step 9.7 gains a condition: the logo, the site address and the documentation tab are set. The script sets none of them (open work G1 item 2), so the step sets them by hand. |

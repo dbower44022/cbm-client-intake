@@ -1,7 +1,7 @@
 # Stage 5 — Open the chapter's service accounts
 
-**Version:** 0.11  
-**Last Updated:** 11-07-26 15:21  
+**Version:** 0.12  
+**Last Updated:** 11-07-26 15:28  
 **Generated from** `steps/stage-05.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -47,22 +47,22 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Finish first:**
 
-- step 4.7 Create the shared operations mailbox
+- step 4.9 Decide who receives the system's warning messages
 
 > This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
-1. In a browser, go to https://cloud.digitalocean.com/registrations/new and sign up with email, not with a Google or GitHub sign-in. Use info@EMAIL-DOMAIN, the shared operations mailbox from step 4.7. Never use a personal address. The exact wording of DigitalOcean's screens has not been checked for this guide.
+1. In a browser, go to https://cloud.digitalocean.com/registrations/new and sign up with email, not with a Google or GitHub sign-in. Use admin@EMAIL-DOMAIN, the chapter's administrators group from step 4.9, so every password reset reaches the chapter's two owners. Never use a personal address. The exact wording of DigitalOcean's screens has not been checked for this guide.
 2. Set a new password, and put it in the chapter's Operations vault straight away.
-3. Open the confirmation message DigitalOcean sends to info@EMAIL-DOMAIN and confirm the address.
+3. Open the confirmation message DigitalOcean sends to admin@EMAIL-DOMAIN and confirm the address.
 4. When DigitalOcean asks for a team name, enter the chapter's name exactly as chosen in step 1.1.
    *You should see:* A new, empty DigitalOcean account named after the chapter.
-5. Write the account on the chapter's account list (step 5.7): https://cloud.digitalocean.com, signed in as info@EMAIL-DOMAIN.
+5. Write the account on the chapter's account list (step 5.7): https://cloud.digitalocean.com, signed in as admin@EMAIL-DOMAIN.
 
-**Done when:** The account exists in the chapter's name, using a chapter mailbox.
+**Done when:** The account exists in the chapter's name, signed in with the chapter's administrators group.
 
-**How to check:** The chapter's setup contact signs in, and the account's profile shows the chapter's name and the chapter mailbox.
+**How to check:** The chapter's setup contact signs in, and the account's profile shows the chapter's name and admin@EMAIL-DOMAIN.
 
 **If it didn't work:** Stop, and ask the Association before going on.
 
@@ -85,10 +85,10 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Do this:**
 
-1. Sign in at https://cloud.digitalocean.com as info@EMAIL-DOMAIN and open Billing. The exact wording of DigitalOcean's screens has not been checked for this guide.
+1. Sign in at https://cloud.digitalocean.com as admin@EMAIL-DOMAIN and open Billing. The exact wording of DigitalOcean's screens has not been checked for this guide.
 2. Add a payment method: the chapter's own card, or its bank account, from step 1.6. Never a volunteer's personal card.
    *You should see:* The chapter's payment method listed as the default.
-3. Set the billing email to an address the chapter's treasurer reads, such as info@EMAIL-DOMAIN or the treasurer's own chapter address.
+3. Set the billing email to an address the chapter's treasurer reads, such as admin@EMAIL-DOMAIN or the treasurer's own chapter address.
    *You should see:* The chapter address shown as the billing contact.
 4. Set a billing alert, so the chapter hears when a month's spend passes a set amount. Use the amount the cost agreement names (step 2.2).
 
@@ -152,10 +152,10 @@ The chapter's CRM server, its applications and their database all run in a hosti
 **Do this:**
 
 1. The Association's named person first creates their own DigitalOcean sign-in, at https://cloud.digitalocean.com/registrations/new, with their own work address, and turns on two-step sign-in for it.
-2. The chapter signs in at https://cloud.digitalocean.com as info@EMAIL-DOMAIN, opens the team's settings, and chooses to invite a member. The exact wording of DigitalOcean's screens has not been checked for this guide.
+2. The chapter signs in at https://cloud.digitalocean.com as admin@EMAIL-DOMAIN, opens the team's settings, and chooses to invite a member. The exact wording of DigitalOcean's screens has not been checked for this guide.
 3. Enter the Association's support person's own address, and give them a role that can create and manage servers, databases, applications, domains and tokens. DigitalOcean's role names have changed over time; choose the role that manages every resource but is not Owner, and write its name on the chapter's account list.
    *You should see:* The invitation listed as pending.
-4. Keep the Owner role with the chapter's own sign-in, info@EMAIL-DOMAIN.
+4. Keep the Owner role with the chapter's own sign-in, admin@EMAIL-DOMAIN.
 5. The invited person accepts from the message DigitalOcean sends, and switches to the chapter's team from their own sign-in.
    *You should see:* The chapter's team, reached from the invited person's own sign-in.
 6. The chapter opens the team's member list.
@@ -232,7 +232,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Do this:**
 
-1. In DigitalOcean, signed in as info@EMAIL-DOMAIN, open the account's security settings and turn on two-factor authentication with an authenticator app. The exact wording of DigitalOcean's screens has not been checked for this guide.
+1. In DigitalOcean, signed in as admin@EMAIL-DOMAIN, open the account's security settings and turn on two-factor authentication with an authenticator app. The exact wording of DigitalOcean's screens has not been checked for this guide.
    *You should see:* Signing in now asks for a code.
 2. Save DigitalOcean's recovery codes straight into the chapter's Operations vault.
 3. Set up the same authenticator on a second named person's device, from the same set-up code, so one lost phone does not lock the chapter out. Or store the set-up code itself in the vault.
@@ -438,7 +438,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Finish first:**
 
-- step 4.7 Create the shared operations mailbox
+- step 4.9 Decide who receives the system's warning messages
 - step 2.4 Agree the access the Association will hold
 - step 2.7 Set up the chapter's password vault
 
@@ -446,10 +446,10 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Do this:**
 
-1. In a browser, go to https://platform.cloudways.com/signup and sign up with email, not with a Google or GitHub sign-in. Use info@EMAIL-DOMAIN, the shared operations mailbox from step 4.7. The exact wording of Cloudways's screens has not been checked for this guide.
+1. In a browser, go to https://platform.cloudways.com/signup and sign up with email, not with a Google or GitHub sign-in. Use admin@EMAIL-DOMAIN, the chapter's administrators group from step 4.9, so every password reset reaches the chapter's two owners. The exact wording of Cloudways's screens has not been checked for this guide.
 2. Set a new random password generated by Proton Pass, and save it in the chapter's Operations vault in an item titled Website host (Cloudways), with the sign-in address https://platform.cloudways.com.
-3. Open the confirmation message Cloudways sends to info@EMAIL-DOMAIN and confirm the address.
-   *You should see:* The Cloudways dashboard, signed in as info@EMAIL-DOMAIN.
+3. Open the confirmation message Cloudways sends to admin@EMAIL-DOMAIN and confirm the address.
+   *You should see:* The Cloudways dashboard, signed in as admin@EMAIL-DOMAIN.
 4. Open the account's billing settings and add the chapter's own payment card from step 1.6. Never a volunteer's personal card.
 5. Open the account's security settings and turn on two-factor authentication with an authenticator code. Add the code to the Website host (Cloudways) item in the vault, and save any recovery codes there too.
    *You should see:* Signing in now asks for a six-digit code, and the vault item shows the same code.
@@ -460,7 +460,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Done when all of these are true:**
 
-- The website host account exists in the chapter's name, signed in with the shared operations mailbox.
+- The website host account exists in the chapter's name, signed in with the chapter's administrators group.
 - It is paid with the chapter's own card.
 - Two-step sign-in is on, and the sign-in and codes are in the chapter's vault.
 - The Association's named person is a team member.
@@ -481,17 +481,17 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Finish first:**
 
-- step 4.7 Create the shared operations mailbox
+- step 4.9 Decide who receives the system's warning messages
 - step 2.7 Set up the chapter's password vault
 
 > This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
-1. In a browser, go to https://www.constantcontact.com and sign up with info@EMAIL-DOMAIN. Choose the plan the Association names; which plan, and its price, is not decided yet, so write it as MAILING-PLAN on the account list until it is. The exact wording of the sign-up screens has not been checked for this guide.
+1. In a browser, go to https://www.constantcontact.com and sign up with admin@EMAIL-DOMAIN, the chapter's administrators group from step 4.9. Choose the plan the Association names; which plan, and its price, is not decided yet, so write it as MAILING-PLAN on the account list until it is. The exact wording of the sign-up screens has not been checked for this guide.
 2. Set a new random password generated by Proton Pass, and save it in the chapter's Operations vault in an item titled Constant Contact.
 3. Add the chapter's own payment card from step 1.6, and turn on two-step sign-in in the account's security settings, with the codes in the Constant Contact item.
-4. Signed in as info@EMAIL-DOMAIN, open https://app.constantcontact.com/pages/dma/portal.
+4. Signed in as admin@EMAIL-DOMAIN, open https://app.constantcontact.com/pages/dma/portal.
    *You should see:* A page headed My Applications, with a New Application button.
 5. Click New Application, name it after the chapter, for example Akron Business Mentors applications, select Authorization Code Flow and Implicit Flow, select Rotating Refresh Tokens, and click Create.
    *You should see:* The new application listed under Applications.
@@ -505,7 +505,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Done when all of these are true:**
 
-- The Constant Contact account exists in the chapter's name, signed in with the shared operations mailbox.
+- The Constant Contact account exists in the chapter's name, signed in with the chapter's administrators group.
 - Its developer application exists, with the applications' callback address as its redirect address.
 - The API key and client secret are in the chapter's vault.
 
@@ -527,7 +527,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Finish first:**
 
-- step 4.7 Create the shared operations mailbox
+- step 4.9 Decide who receives the system's warning messages
 - step 1.6 Open a bank account
 - step 2.7 Set up the chapter's password vault
 
@@ -535,7 +535,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Do this:**
 
-1. In a browser, go to https://dashboard.stripe.com/register and create the account with info@EMAIL-DOMAIN. The exact wording of Stripe's screens has not been checked for this guide.
+1. In a browser, go to https://dashboard.stripe.com/register and create the account with admin@EMAIL-DOMAIN, the chapter's administrators group from step 4.9. The exact wording of Stripe's screens has not been checked for this guide.
 2. Set a new random password generated by Proton Pass, and save it in the chapter's Operations vault in an item titled Stripe.
 3. Turn on two-step sign-in in the account's security settings, with the codes in the Stripe item.
 4. Complete Stripe's business details with the chapter's legal name, its employer identification number from step 1.3 and the chapter's bank account from step 1.6 for payouts. A chapter that is not yet able to take real payments stays in test mode and skips this action.
@@ -545,7 +545,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Done when all of these are true:**
 
-- The Stripe account exists in the chapter's name, signed in with the shared operations mailbox.
+- The Stripe account exists in the chapter's name, signed in with the chapter's administrators group.
 - Two-step sign-in is on, and the sign-in and codes are in the chapter's vault.
 - A donation Payment Link exists, and its address is in the vault.
 
@@ -561,6 +561,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 | Version | Date | Change |
 |---|---|---|
+| 0.12 | 11-07-26 15:28 | Every account this stage opens signs in with admin@, the chapter's administrators group from step 4.9, instead of info@, the shared operations mailbox (Doug, 11-07-26, following Association ruling 18): steps 5.1, 5.2, 5.4, 5.6 and 5.10 to 5.12. Contact addresses given to a provider (steps 5.3 and 5.5) stay info@. |
 | 0.11 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". The stage is renamed "Open the chapter's service accounts" and gains steps 5.10 (the website host account, Association ruling 29), 5.11 (the Constant Contact account and its developer application) and 5.12 (the Stripe account and donation link, Association ruling 30). Step 5.5 writes the Zoom plan as ZOOM-PLAN until it is decided. Step 5.7's account list names the three new accounts. |
 | 0.10 | 09-24-26 23:08 | From Boston's build (09-24-26): the DigitalOcean token in step 5.8 must be made under the central support person's own sign-in with the chapter's team chosen, because DigitalOcean ties its GitHub authorization to a sign-in and step 11.5 fails with GitHub user not authenticated on a token made under the chapter's own sign-in. Boston's first token was made that way and had to be replaced. |
 | 0.9 | 09-23-26 20:40 | References to stage 9 follow its renumbering from twenty steps to nine (stage 9 version 0.11). |

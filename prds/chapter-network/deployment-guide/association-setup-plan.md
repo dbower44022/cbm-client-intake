@@ -1,10 +1,10 @@
 # Correcting the guide while the Association is set up as a chapter — plan
 
 **Document:** Plan for correcting the New Chapter Deployment Guide stage by stage while the Business Mentors Association is set up as a chapter (Association rulings 71 and 72)
-**Version:** 1.1
+**Version:** 1.2
 **Status:** Approved by Doug 11-07-26 15:17, with the four recommendations of section 5 and both of section 6
 **Owner:** Doug Bower
-**Last Updated:** 11-07-26 15:21
+**Last Updated:** 11-07-26 15:28
 
 ---
 
@@ -97,6 +97,8 @@ These are recommendations, not decisions.
 - Steps 5.10 to 5.12 each turn on two-step sign-in and fill in their own line on the account list, instead of steps 5.6 and 5.7 covering them, because those two steps come first. Step 5.7 now names the three accounts and leaves a line for each.
 - Step 5.9 was in the stage data but missing from the step list; it was added.
 
+**Stop 2, first answer, 11-07-26 15:28:** Doug chose admin@, the administrators group, as the sign-in address for every account a chapter opens. Applied to steps 3.7, 4.9, 4.14, 5.1, 5.2, 5.4, 5.6 and 5.10 to 5.12. Because every member of the group receives every account's password resets, step 4.9 now asks for at least two chapter officers, and adds a person from the Association only if the access schedule of step 2.4 says so (Association ruling 1). Decision D4 is next.
+
 ## 8. At the end of the session
 
 The closing reply reports what changed in the guide, which stages are ready for Doug to follow, and which open decisions blocked a step. Work still owed is recorded in `OPEN-ITEMS.md`.
@@ -107,6 +109,7 @@ The closing reply reports what changed in the guide, which stages are ready for 
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 11-07-26 15:28 | Claude (Claude Code) | Doug's answer on the sign-in address recorded in section 7. |
 | 1.1 | 11-07-26 15:21 | Claude (Claude Code) | Section 7, progress: batch 1 done, with the four differences from the plan. |
 | 1.0 | 11-07-26 15:17 | Claude (Claude Code) | Approved by Doug as written. |
 | 0.1 | 11-07-26 15:06 | Claude (Claude Code) | First draft, from the kickoff prompt version 1.2. |

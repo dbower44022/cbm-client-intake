@@ -1,7 +1,7 @@
 # Stage 4 — Set up Google Workspace and the chapter's email
 
-**Version:** 0.5  
-**Last Updated:** 11-07-26 15:21  
+**Version:** 0.6  
+**Last Updated:** 11-07-26 15:28  
 **Generated from** `steps/stage-04.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -35,7 +35,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 - 4.11 Create the staff mailboxes
 - 4.12 Require two-step sign-in
 - 4.13 Apply for the nonprofit discount
-- 4.14 Move control of the registrar account to a chapter mailbox
+- 4.14 Move control of the registrar account to the chapter's administrators group
 
 ---
 
@@ -373,11 +373,11 @@ Google Workspace is Google's paid service for an organization's email, calendars
 1. Sign in to https://admin.google.com. Open Directory, then Groups, and choose Create group. Enter:
    - Name: System Administrators
    - Group email: admin@EMAIL-DOMAIN
-   - Description: Receives the system's warning messages
+   - Description: Receives the system's warning messages, and the sign-in mail of every account the chapter opens
 2. In the group's access settings, let people outside the organization post to the group. The hosting provider's alerts come from outside the chapter. The setting's exact wording has not been checked for this guide.
 3. Add these members to the group:
-   - At least one named officer of the chapter
-   - At least one named person from the Association, by their own address
+   - At least two named officers of the chapter, the owners of the chapter's accounts
+   - A named person from the Association, by their own address, only if the access schedule agreed in step 2.4 says so. Every member receives the password resets of every account that signs in with this address
 4. Write admin@EMAIL-DOMAIN on the chapter information form as the alert receiving address. The software reads it as ALERT_EMAIL_TO. Write the members' names beside it on the chapter's account list (step 5.7).
 5. From a personal account outside the chapter, send a test message to admin@EMAIL-DOMAIN.
    *You should see:* The test message arrives with every member of the group.
@@ -388,7 +388,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **If it didn't work:** Stop, and ask the Association before going on.
 
-**What usually goes wrong:** An address nobody reads. The warnings then arrive and change nothing.
+**What usually goes wrong:** An address nobody reads. The warnings then arrive and change nothing. And a group that rejects outside mail: the hosting provider's alerts and every account's password resets are then silently refused.
 
 ---
 
@@ -534,7 +534,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 ---
 
-## 4.14 Move control of the registrar account to a chapter mailbox
+## 4.14 Move control of the registrar account to the chapter's administrators group
 
 **Why:** The domain names must not stay tied to one volunteer's personal email.
 
@@ -543,26 +543,27 @@ Google Workspace is Google's paid service for an organization's email, calendars
 **Finish first:**
 
 - step 4.4 Switch mail delivery to Google
+- step 4.9 Decide who receives the system's warning messages
 
 > This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
 1. Sign in to the registrar account from step 3.3. Open its account profile or contact settings. Registrars name this page differently; if it cannot be found, search the registrar's help pages for how to change the account email.
-2. Change the account's sign-in and contact email to info@EMAIL-DOMAIN, and confirm the change from the message sent there.
+2. Change the account's sign-in and contact email to admin@EMAIL-DOMAIN, the group from step 4.9, and confirm the change from the message sent there.
 3. Delete the founding email address from step 3.1 from every contact field on the account.
-4. Sign in to Cloudflare, open My Profile, and change the email address to info@EMAIL-DOMAIN. Confirm the change from the message sent there. With manual DNS, do the same in the chapter's DNS provider account, unless the registrar hosts the DNS.
-   *You should see:* Both accounts show info@EMAIL-DOMAIN.
-5. Sign out of the registrar and use its forgotten-password link with info@EMAIL-DOMAIN.
-   *You should see:* The password reset message arrives in info@EMAIL-DOMAIN. Do not complete the reset unless you mean to; if you do, put the new password in the chapter's vault.
+4. Sign in to Cloudflare, open My Profile, and change the email address to admin@EMAIL-DOMAIN. Confirm the change from the message sent there. With manual DNS, do the same in the chapter's DNS provider account, unless the registrar hosts the DNS.
+   *You should see:* Both accounts show admin@EMAIL-DOMAIN.
+5. Sign out of the registrar and use its forgotten-password link with admin@EMAIL-DOMAIN.
+   *You should see:* The password reset message arrives with every member of admin@EMAIL-DOMAIN. Do not complete the reset unless you mean to; if you do, put the new password in the chapter's vault.
 
 **Done when all of these are true:**
 
-- The registrar account's contact address is a chapter mailbox.
+- The registrar account's contact address is the chapter's administrators group.
 - The founder's personal address has been removed.
-- A password reset test lands in the chapter mailbox.
+- A password reset test reaches every member of the group.
 
-**How to check:** The password reset message arrives in the chapter mailbox.
+**How to check:** The password reset message arrives with every member of the group.
 
 **If it didn't work:** Stop, and ask the Association before going on.
 
@@ -574,6 +575,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 | Version | Date | Change |
 |---|---|---|
+| 0.6 | 11-07-26 15:28 | Every account the chapter opens signs in with admin@, the administrators group from step 4.9, so every password reset reaches the chapter's two owners (Doug, 11-07-26, following Association ruling 18). Step 4.9's group now has at least two chapter officers, and a person from the Association only if the access schedule of step 2.4 says so, because every member receives every account's password resets. Step 4.14 moves the registrar and Cloudflare to that group and is renamed to say so. |
 | 0.5 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". Step 4.6's reason now names Association ruling 1: the account is for support when the chapter's own technical person is unavailable, and for the permission grant in step 10.3. |
 | 0.4 | 09-23-26 13:54 | Manual DNS added (Doug, 09-23-26): steps 4.3 and 4.4 say that a chapter keeping its own DNS provider adds the same records there, and step 4.14 moves that provider account's email too. |
 | 0.3 | 09-19-26 00:05 | Every action outside steps 4.3 and 4.4 made precise (Doug, 09-19-26): the web addresses to open, the admin console paths, the exact user and group names to create (info@, admin@, allmembers@), the fields to fill in, the two-step sign-in settings, and the nonprofit application route. Screen wording not checked on screen is marked as such. |
