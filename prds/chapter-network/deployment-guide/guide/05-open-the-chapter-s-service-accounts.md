@@ -1,7 +1,7 @@
 # Stage 5 — Open the chapter's service accounts
 
-**Version:** 0.12  
-**Last Updated:** 11-07-26 15:28  
+**Version:** 0.13  
+**Last Updated:** 11-08-26 01:33  
 **Generated from** `steps/stage-05.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -56,7 +56,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 1. In a browser, go to https://cloud.digitalocean.com/registrations/new and sign up with email, not with a Google or GitHub sign-in. Use admin@EMAIL-DOMAIN, the chapter's administrators group from step 4.9, so every password reset reaches the chapter's two owners. Never use a personal address. The exact wording of DigitalOcean's screens has not been checked for this guide.
 2. Set a new password, and put it in the chapter's Operations vault straight away.
 3. Open the confirmation message DigitalOcean sends to admin@EMAIL-DOMAIN and confirm the address.
-4. When DigitalOcean asks for a team name, enter the chapter's name exactly as chosen in step 1.1.
+4. DigitalOcean does not ask for a team name at sign-up; it names the team My Team (seen 11-08-26). Open https://cloud.digitalocean.com/account/team, click Edit beside Team Name, enter the chapter's name exactly as chosen in step 1.1, and click Update.
    *You should see:* A new, empty DigitalOcean account named after the chapter.
 5. Write the account on the chapter's account list (step 5.7): https://cloud.digitalocean.com, signed in as admin@EMAIL-DOMAIN.
 
@@ -90,7 +90,8 @@ The chapter's CRM server, its applications and their database all run in a hosti
    *You should see:* The chapter's payment method listed as the default.
 3. Set the billing email to an address the chapter's treasurer reads, such as admin@EMAIL-DOMAIN or the treasurer's own chapter address.
    *You should see:* The chapter address shown as the billing contact.
-4. Set a billing alert, so the chapter hears when a month's spend passes a set amount. Use the amount the cost agreement names (step 2.2).
+4. Open Billing, then the Spend alerts tab, and click Create alert. Enter Alert name Monthly budget and the monthly budget amount the cost agreement names (step 2.2); leave the thresholds at 50, 75 and 100 percent, and click Create alert. The Association set $75 on 11-08-26.
+   *You should see:* The alert listed with its monthly budget and the three thresholds. Alerts go to the team's owners until billing contacts are added.
 
 **Done when:** A chapter payment method is on file and the billing contact is a chapter mailbox.
 
@@ -561,6 +562,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 | Version | Date | Change |
 |---|---|---|
+| 0.13 | 11-08-26 01:33 | Steps 5.1 and 5.2 from the Association's own DigitalOcean account, opened 11-08-26: the team is named My Team at sign-up and renamed afterwards; the billing alert is a spend alert with a monthly budget and thresholds. |
 | 0.12 | 11-07-26 15:28 | Every account this stage opens signs in with admin@, the chapter's administrators group from step 4.9, instead of info@, the shared operations mailbox (Doug, 11-07-26, following Association ruling 18): steps 5.1, 5.2, 5.4, 5.6 and 5.10 to 5.12. Contact addresses given to a provider (steps 5.3 and 5.5) stay info@. |
 | 0.11 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". The stage is renamed "Open the chapter's service accounts" and gains steps 5.10 (the website host account, Association ruling 29), 5.11 (the Constant Contact account and its developer application) and 5.12 (the Stripe account and donation link, Association ruling 30). Step 5.5 writes the Zoom plan as ZOOM-PLAN until it is decided. Step 5.7's account list names the three new accounts. |
 | 0.10 | 09-24-26 23:08 | From Boston's build (09-24-26): the DigitalOcean token in step 5.8 must be made under the central support person's own sign-in with the chapter's team chosen, because DigitalOcean ties its GitHub authorization to a sign-in and step 11.5 fails with GitHub user not authenticated on a token made under the chapter's own sign-in. Boston's first token was made that way and had to be replaced. |
