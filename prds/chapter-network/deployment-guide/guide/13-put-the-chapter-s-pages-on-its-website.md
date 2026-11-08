@@ -65,7 +65,7 @@ The public learns about the chapter through its website. This stage connects tha
 **Finish first:**
 
 - step 6.2 Publish the website
-- step 6.3 Confirm the website can redirect an address to another site
+- step 6.3 Install the template and the chapter connector
 
 > This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 

@@ -1,7 +1,7 @@
 # Stage 5 — Open the chapter's service accounts
 
-**Version:** 0.14  
-**Last Updated:** 11-08-26 09:31  
+**Version:** 0.15  
+**Last Updated:** 11-08-26 10:06  
 **Generated from** `steps/stage-05.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -471,7 +471,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **If it didn't work:** Stop, and ask the Association before going on.
 
-**What usually goes wrong:** A server created now, before stage 6 has chosen its size and region, starts billing at once. Leave the account empty until stage 6.
+**What usually goes wrong:** A server created now, before stage 6 has chosen its size and region, starts billing at once. Leave the account empty until stage 6. A new account may also be held for a manual check before it can be used ("Your account activation is pending", 11-08-26): email the address Cloudways gives, and allow a day.
 
 ---
 
@@ -563,6 +563,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 | Version | Date | Change |
 |---|---|---|
+| 0.15 | 11-08-26 10:06 | Step 5.10: a new Cloudways account may be held for a manual activation check (the Association's, 11-08-26). |
 | 0.14 | 11-08-26 09:31 | Steps 5.5, 5.10, 5.11 and 5.12 from the Association's own accounts, opened 11-08-26: Zoom's two sets of terms, its Build app path, Information fields, granular scopes (webinar scopes only with a Webinars licence) and Activate your app; Cloudways's email code and phone verification; Constant Contact's free-trial sign-up, its demand for two-step sign-in before a developer application, and the locked Redirect URI; Stripe's Sandbox, its Payment Link page and the donate.stripe.com address. |
 | 0.13 | 11-08-26 01:33 | Steps 5.1 and 5.2 from the Association's own DigitalOcean account, opened 11-08-26: the team is named My Team at sign-up and renamed afterwards; the billing alert is a spend alert with a monthly budget and thresholds. |
 | 0.12 | 11-07-26 15:28 | Every account this stage opens signs in with admin@, the chapter's administrators group from step 4.9, instead of info@, the shared operations mailbox (Doug, 11-07-26, following Association ruling 18): steps 5.1, 5.2, 5.4, 5.6 and 5.10 to 5.12. Contact addresses given to a provider (steps 5.3 and 5.5) stay info@. |

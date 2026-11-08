@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — The Step List
 
 **Document:** The bare list of steps, with no methods yet
-**Version:** 0.24
+**Version:** 0.25
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 11-07-26 15:28
+**Last Updated:** 11-08-26 10:06
 
 ---
 
@@ -298,32 +298,34 @@ Done when: the choice is made and someone is named to build and maintain the sit
 **6.2 Publish the website.**
 Done when: the site loads at the chapter's website domain over a secure connection.
 
-**6.3 Confirm the website can redirect an address to another site.**
-Done when: a test address on the site sends the visitor to a page on another site,
-by a temporary redirect. (Checking that the site can embed a page returns once the
-public mentor directory page is built and its method is decided.)
+**6.3 Install the template and the chapter connector.**
+Done when:
+
+- The chapter connector is installed and active.
+- The template's pages, header and footer are installed.
+- The chapter connector names the chapter's applications address, or the shared test system's.
 
 **6.4 Confirm someone at the chapter can edit the website.**
 Done when: a named person at the chapter has signed in and made a change.
 
-**6.5 Choose the chapter's colours and publish the colour file.**
+**6.5 Choose the chapter's colours, fonts and header graphic.**
 Done when:
 
-- The chapter's colours are chosen.
-- The colours are written into a small stylesheet.
-- The stylesheet is published at a web address the software can load.
-
-Note: Colours are the only visual difference between chapters in the software, so a chapter that skips this looks exactly like Cleveland.
+- The chapter's eight colours and two fonts are chosen and written down.
+- The header graphic exists.
 
 **6.6 Produce the chapter's logo image.**
-Done when: an image file of the chapter's logo exists in a form the CRM system
-accepts. The applications carry no logo; the CRM system does, and it is the only
-per-chapter image in the whole system.
+Done when: an image file of the chapter's logo exists in a form the CRM system and
+the Website group accept.
 
 **6.7 Decide where the chapter's help documentation lives.**
 Done when: either the chapter has its own documentation site published at its own
 address, or it is recorded that the chapter points at a shared one. Two later steps
 link to this address, so it cannot be left undecided.
+
+**6.8 Turn on visitor statistics without cookies.**
+Done when: Cloudflare Web Analytics counts the website's visits, and the site sets no
+tracking cookie.
 
 ---
 
@@ -871,6 +873,7 @@ Done when: a date is booked to review how the first months have gone.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.25 | 11-08-26 10:06 | Stage 6 rewritten for the Association's website rulings (WordPress template on Cloudways with the chapter connector, or the embed code on another platform). Step 6.3 becomes "Install the template and the chapter connector"; step 6.5 becomes "Choose the chapter's colours, fonts and header graphic"; step 6.6's test names the Website group; new step 6.8, visitor statistics without cookies. No step number changed. |
 | 0.24 | 11-07-26 15:28 | Every account the chapter opens signs in with admin@, the chapter's administrators group from step 4.9, so every password reset reaches the chapter's two owners (Doug, 11-07-26, following Association ruling 18). Step 4.14 is renamed "Move control of the registrar account to the chapter's administrators group"; steps 4.14, 5.1 and 5.10 to 5.12 change their finishing tests to match. |
 | 0.23 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan `association-setup-plan.md`, approved by Doug 11-07-26). "The central support organization" is now "the Association" throughout, and "the central committee" is "the central technical committee". Step 2.3 becomes "Accept the one-application rule" (Association ruling 3) and step 14.3 "Confirm the administrator accounts are the agreed ones" (Association ruling 1: the chapter holds its own administrator accounts). Step 3.2 states the Association's recommendation of two domain names (Association ruling 25). Stage 5 is renamed "Open the chapter's service accounts" and gains steps 5.10 (website host, Association ruling 29), 5.11 (Constant Contact) and 5.12 (Stripe donation link, Association ruling 30). Step 5.9, added to the stage data on 09-23-26 but never to this list, is added. No existing step number changed. |
 | 0.22 | 09-24-26 00:39 | The chapter decides when it takes a release (Doug, 09-24-26, CRMBuilder decision DEC-1156): it may take each release automatically, decline one, or schedule the upgrade for a time of its own after trying it on the demo/test deployment. Step 11.8 is renamed "Set the update policy the chapter chose" and its finishing test names that policy; step 18.3's first condition no longer says updates arrive automatically for every chapter. The stage data (stages 8, 11 and 18) carries the same change. |

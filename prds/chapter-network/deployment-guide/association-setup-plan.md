@@ -1,10 +1,10 @@
 # Correcting the guide while the Association is set up as a chapter — plan
 
 **Document:** Plan for correcting the New Chapter Deployment Guide stage by stage while the Business Mentors Association is set up as a chapter (Association rulings 71 and 72)
-**Version:** 1.5
+**Version:** 1.6
 **Status:** Approved by Doug 11-07-26 15:17, with the four recommendations of section 5 and both of section 6
 **Owner:** Doug Bower
-**Last Updated:** 11-08-26 09:32
+**Last Updated:** 11-08-26 09:57
 
 ---
 
@@ -131,6 +131,14 @@ These are recommendations, not decisions.
 
 **Owed from stage 5:** two-step sign-in on DigitalOcean, Zoom, Stripe and Cloudways (Constant Contact's is on); Constant Contact Lite before the trial ends; Stripe's email moved to admin@; the Zoom Webinars add-on and its scopes when webinars are tested; the admin@ group's spam handling (it holds suspicious messages for approval; Claude was not permitted to change it); the account list in Proton Pass (step 5.7).
 
+### Batch 3 plan — stage 6, the website (drafted 11-08-26 09:57, awaiting Doug)
+
+Stage 6 in the guide predates the website rulings (review finding 1). It still has a colour file (6.5), a logo held only in the CRM (6.6) and a redirect check for an events page (6.3). Under Association rulings 26 to 70 a chapter's website is WordPress on Cloudways (rulings 28 and 29), built from the template, with the chapter connector applying the colours, fonts, logo and key pages set in the Website group of System Settings (ruling 34), forms in frames (ruling 44) and Cloudflare Web Analytics (ruling 63). Track 1's test website runbook (`business-mentors-association/docs/runbooks/test-website-runbook.html`) already covers the Cloudways server, the DNS record and the chapter connector for the Association's test site; batch 3 folds it into the guide and runs it in the Association's own Cloudways account.
+
+1. **Rewrite guide stage 6** for any chapter: choose WordPress or keep another platform (ruling 27's basic path); in the Cloudways account from step 5.10, launch the server and WordPress; point the address at it in Cloudflare (DNS only); attach the domain and its certificate; install the template and the chapter connector; name a website editor; Cloudflare Web Analytics; where the help documentation lives. The colours, logo and header graphic move to the Website group (stage 13). Step numbers 6.1 to 6.7 keep their numbers where the step survives; a step whose subject disappears is renamed, and new steps are appended, so no ruling is needed.
+2. **Do stage 6 for the Association**, in Doug's browser. Doug's part: a yes before the server (about $14 a month, from memory), the DNS record and the certificate step (Claude's permissions block DNS changes), and anything needing a password. Claude's part: the Cloudways screens, WordPress, the chapter connector settings, and correcting the guide from what the screens show.
+3. **Stop 4 of this plan:** Doug opens the website and reviews it; the guide's stage 6 is committed locally.
+
 ## 8. At the end of the session
 
 The closing reply reports what changed in the guide, which stages are ready for Doug to follow, and which open decisions blocked a step. Work still owed is recorded in `OPEN-ITEMS.md`.
@@ -141,6 +149,7 @@ The closing reply reports what changed in the guide, which stages are ready for 
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.6 | 11-08-26 09:57 | Claude (Claude Code) | Batch 3 plan, stage 6, drafted for Doug's approval. |
 | 1.5 | 11-08-26 09:32 | Claude (Claude Code) | Stage 5 recorded as done, with what is owed. |
 | 1.4 | 11-08-26 01:24 | Claude (Claude Code) | Stages 3 and 4 recorded as done, the change of working method, and what is owed. |
 | 1.3 | 11-07-26 15:34 | Claude (Claude Code) | Decision D4 and the stage 3 runbook recorded in section 7. |

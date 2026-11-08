@@ -1,7 +1,7 @@
 stage: 5
 name: Open the chapter's service accounts
-version: "0.14"
-updated: "11-08-26 09:31"
+version: "0.15"
+updated: "11-08-26 10:06"
 why: >-
   The chapter's CRM server, its applications and their database all run in a
   hosting account, and the public webinar programme runs through a video meeting
@@ -429,7 +429,10 @@ steps:
       probe: none
     goes_wrong: >-
       A server created now, before stage 6 has chosen its size and region, starts
-      billing at once. Leave the account empty until stage 6.
+      billing at once. Leave the account empty until stage 6. A new account may
+      also be held for a manual check before it can be used ("Your account
+      activation is pending", 11-08-26): email the address Cloudways gives, and
+      allow a day.
     later: unchanged
     status: not-yet-tried — added 11-07-26 for Association ruling 29; first followed for the Association itself.
     source: Association rulings 29 and 33 (business-mentors-association, DECISIONS.md)
@@ -519,6 +522,10 @@ steps:
     source: Association ruling 30 (business-mentors-association, DECISIONS.md)
 
 changes:
+  - version: "0.15"
+    date: "11-08-26 10:06"
+    change: >-
+      Step 5.10: a new Cloudways account may be held for a manual activation check (the Association's, 11-08-26).
   - version: "0.14"
     date: "11-08-26 09:31"
     change: >-
