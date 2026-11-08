@@ -6,6 +6,18 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+73. **The Business Mentors Association set up as a chapter: what is owed after stages 3 to 5**
+    (11-08-26, `prds/chapter-network/deployment-guide/association-setup-plan.md` § 7). Stages 3 to 5
+    are done for the Association; stages 1 and 2 wait on its legal formation. Owed: (1) a second
+    owner (ruling 18), then a second Google Super Admin and membership of admin@, Cloudflare,
+    Proton Pass and the other accounts; (2) two-step sign-in on doug.bower@, info@, DigitalOcean,
+    Zoom, Stripe and Cloudways, then compulsory two-step sign-in for the Workspace; (3) GoDaddy
+    auto-renew on both domains (they expire 11-07-27) and GoDaddy two-step sign-in; (4) Constant
+    Contact Lite before its trial ends; (5) Stripe's email moved to admin@; (6) DMARC from p=none
+    to p=quarantine on or after 12-06-26; (7) the admin@ group's spam handling; (8) the Zoom
+    Webinars add-on and its scopes, when webinars are tested; (9) guide step 2.7: where Proton's
+    organization members are managed was not found. Next: stage 6, the website, after its plan.
+
 72. **The chapter website: what is owed outside this repository, and before
     production** (2026-11-07, `prds/chapter-website-plan.md`). (1) **Before
     `FORM_FRAMING` is switched on in production**, Cleveland's website must

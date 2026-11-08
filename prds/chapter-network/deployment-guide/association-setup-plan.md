@@ -1,10 +1,10 @@
 # Correcting the guide while the Association is set up as a chapter — plan
 
 **Document:** Plan for correcting the New Chapter Deployment Guide stage by stage while the Business Mentors Association is set up as a chapter (Association rulings 71 and 72)
-**Version:** 1.4
+**Version:** 1.5
 **Status:** Approved by Doug 11-07-26 15:17, with the four recommendations of section 5 and both of section 6
 **Owner:** Doug Bower
-**Last Updated:** 11-08-26 01:24
+**Last Updated:** 11-08-26 09:32
 
 ---
 
@@ -120,6 +120,17 @@ These are recommendations, not decisions.
 - DMARC from p=none to p=quarantine on or after 12-06-26, once the reports show only the Association's own mail.
 - Guide step 2.7: where Proton's organization members are managed was not found (Doug, 11-07-26).
 
+**Stage 5 done, 11-08-26 09:32** (Stop 3 of this plan; Stop C of the demo chapter plan). Every account signs in with admin@mentorsassociation.org unless noted:
+- DigitalOcean: team Business Mentors Association; spend alert at $75 a month (50, 75 and 100 percent).
+- Zoom Pro, without the Webinars add-on (decision D4). Server-to-Server OAuth app Business Mentors Association Webinars, active, with only user:read:user:admin and report:read:list_webinar_participants:admin: the webinar scopes need the Webinars licence. Zoom signs in with admin@ rather than the guide's webinars@ mailbox, because there is no webinar host yet.
+- Constant Contact, free trial, Lite to be bought before it ends (decision D4). Developer application Business Mentors Association applications (API key 37d80aac-bf3d-4428-85a2-75334d4cf443), redirect https://apps.businessmentorsassociation.org/api/setup/mailing/callback, to change if stage 8 picks another applications address.
+- Stripe, Sandbox (test mode). Donation link https://donate.stripe.com/test_fZu3cvcvZ4gxe1R7t3ds400. Signs in with doug.bower@mentorsassociation.org: the sign-up had admin@ misspelled.
+- Cloudways, the Association's own account (Doug, 11-08-26, superseding ruling 70's "in Doug's own account for now" for the account itself). No server yet: stage 6 builds it.
+- Not applicable to the Association: 5.3 (nonprofit credits: not formed), 5.4 (the Association is the chapter). Not yet done: 5.8 and 5.9 (CRMBuilder tokens and the GitHub link), which belong with stage 9.
+- Guide stage 5 corrected from the real screens (version 0.14).
+
+**Owed from stage 5:** two-step sign-in on DigitalOcean, Zoom, Stripe and Cloudways (Constant Contact's is on); Constant Contact Lite before the trial ends; Stripe's email moved to admin@; the Zoom Webinars add-on and its scopes when webinars are tested; the admin@ group's spam handling (it holds suspicious messages for approval; Claude was not permitted to change it); the account list in Proton Pass (step 5.7).
+
 ## 8. At the end of the session
 
 The closing reply reports what changed in the guide, which stages are ready for Doug to follow, and which open decisions blocked a step. Work still owed is recorded in `OPEN-ITEMS.md`.
@@ -130,6 +141,7 @@ The closing reply reports what changed in the guide, which stages are ready for 
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.5 | 11-08-26 09:32 | Claude (Claude Code) | Stage 5 recorded as done, with what is owed. |
 | 1.4 | 11-08-26 01:24 | Claude (Claude Code) | Stages 3 and 4 recorded as done, the change of working method, and what is owed. |
 | 1.3 | 11-07-26 15:34 | Claude (Claude Code) | Decision D4 and the stage 3 runbook recorded in section 7. |
 | 1.2 | 11-07-26 15:28 | Claude (Claude Code) | Doug's answer on the sign-in address recorded in section 7. |
