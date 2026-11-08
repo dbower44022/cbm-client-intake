@@ -1,0 +1,71 @@
+# Chapter information form — WRITTEN FROM THE CHAPTER INFORMATION PAGE. Do not edit by hand:
+# change the answer on the page and write this file again (deployment guide step 8.10).
+# written: 11-08-26 13:54
+# reviewed by: Doug Bower
+# reviewed on: 11-08-26
+# No secret values: the secrets section lists names only.
+chapter:
+  name: Business Mentors Association
+  abbreviation: BMA
+  slug: bma
+  timezone: America/New_York
+  currency: USD
+  locale: en_US
+web:
+  website_base_url: https://chapter-demo.mentorsassociation.org/
+  app_base_url: https://apps.businessmentorsassociation.org/
+  docs_site_url: ''
+  policy_client_conduct_url: https://chapter-demo.mentorsassociation.org/client-code-of-conduct/
+  policy_mentor_ethics_url: https://chapter-demo.mentorsassociation.org/mentor-code-of-ethics/
+  policy_terms_url: https://chapter-demo.mentorsassociation.org/legal-notices/
+  policy_privacy_url: https://chapter-demo.mentorsassociation.org/privacy-policy/
+  colour_primary: ''
+  colour_button: ''
+  colour_button_hover: ''
+  colour_text: ''
+  chapter_tokens_url: ''
+  events_public_base_url: ''
+google:
+  primary_domain: mentorsassociation.org
+  ops_mailbox: info@mentorsassociation.org
+  alert_email_from: info@mentorsassociation.org
+  alert_email_to: admin@mentorsassociation.org
+  members_group: allmembers@mentorsassociation.org
+  mentor_email_domain: mentorsassociation.org
+  delegated_admin: doug.bower@mentorsassociation.org
+  shared_drive_id: ''
+  zoom_host_email: ''
+zoom:
+  account_id: ''
+  client_id: ''
+crm:
+  base_url: https://crm.businessmentorsassociation.org/
+  application_name: Business Mentors Association
+  outbound_from_name: Business Mentors Association
+  outbound_from_address: info@mentorsassociation.org
+  logo_file: ''
+secrets:
+- ESPO_API_KEY
+- ESPO_PROVISION_USERNAME
+- ESPO_PROVISION_PASSWORD
+- DATABASE_URL
+- SESSION_SECRET
+- APP_ENCRYPTION_KEY
+- GOOGLE_SERVICE_ACCOUNT_JSON
+flags:
+  events_public_api: true
+  zoom_events: false
+  google_create_mailbox: false
+  gmail_sync: true
+  gcal_events: true
+  gdrive_docs: true
+  gdrive_identity: service
+  google_directory_check: true
+  mentor_provision_users: true
+  analytics_enabled: true
+  events_enabled: true
+  record_quick_add: true
+  setup_enabled: true
+  async_delivery: true
+  espo_dry_run: false
+  deploy_on_push: true
