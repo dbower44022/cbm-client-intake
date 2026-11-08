@@ -1,7 +1,7 @@
 stage: 4
 name: Set up Google Workspace and the chapter's email
-version: "0.6"
-updated: "11-07-26 15:28"
+version: "0.7"
+updated: "11-08-26 00:50"
 why: >-
   Google Workspace is Google's paid service for an organization's email, calendars
   and documents. The software reads and sends the chapter's mail, creates calendar
@@ -72,10 +72,18 @@ steps:
       - do: "When Google asks for the first user, enter the setup contact's own details:"
         items:
           - "First name and last name: the setup contact's own name, not a role such as Admin"
-          - "Username: FIRSTNAME.LASTNAME, so the address is FIRSTNAME.LASTNAME@EMAIL-DOMAIN"
+          - "Username: FIRSTNAME.LASTNAME, so the address is FIRSTNAME.LASTNAME@EMAIL-DOMAIN. Never admin or another role name: admin@EMAIL-DOMAIN is the group of step 4.9, and a user already holding the address blocks the group. The Association's first user was created as admin@ on 11-07-26 and had to be renamed"
           - "Password: a new password, stored straight away in the chapter's Board vault (step 2.7)"
         see: "An account created, with this user as its first administrator. It becomes the chapter's own administrator account in step 4.5."
       - do: "Choose the Business Starter plan, or the plan the cost agreement names (step 2.2), and pay with the chapter's own card (step 1.6). The nonprofit discount is applied for later, in step 4.13."
+      - do: "Check the plan Google actually started. On 11-07-26 Google started the Association on a 14-day free trial of Business Plus, at $26.40 per user a month after a first-quarter discount, with no plan choice offered at sign-up. In the admin console, open https://admin.google.com/ac/billing/subscriptions."
+        see: "The subscription's name: Google Workspace Business Starter. If it names Business Plus or Business Standard, do the next four actions; otherwise skip them."
+      - do: "Click the subscription's Details, then More, then Downgrade. On the page that names one edition, click Explore other editions."
+        see: "All upgrade options, with a Downgrade button under Business Starter ($8.40 per user a month on the Flexible plan, 11-07-26)."
+      - do: "Under Business Starter click Downgrade, then Continue to downgrade. Choose Flexible plan, click Checkout, check the summary reads Google Workspace Business Starter, Flexible plan, and click Place order."
+        see: "The subscription list shows Google Workspace Business Starter, with 0 assigned."
+      - do: "The downgrade leaves every user without a licence. Open the first administrator's user page in Directory, then Users, open Licenses, turn on Google Workspace Business Starter, and click Save."
+        see: "License changes were saved. Business Starter shown as assigned."
       - do: "In a new browser window, go to https://admin.google.com and sign in as FIRSTNAME.LASTNAME@EMAIL-DOMAIN."
         see: "The Google admin console's home page. Google will ask to verify the domain; that is step 4.3."
     done_when: >-
@@ -139,7 +147,7 @@ steps:
           - "One SPF record, which lists who may send mail as the domain."
           - "One DKIM record, which lets receivers check a message's signature."
           - "One DMARC record, which tells receivers what to do with mail that fails the other two."
-      - do: "Delete every existing MX record on the domain. Then choose Add record and enter exactly:"
+      - do: "Delete every existing MX record on the domain, and any A, CNAME or _dmarc record the registrar left behind. Cloudflare's quick scan copies the registrar's defaults (at GoDaddy: two parking A records, www, _domainconnect and a _dmarc record sending reports to GoDaddy), and Google's automatic Cloudflare setup adds five older MX records (aspmx.l.google.com and four alt servers). Only the one MX record below may remain. Then choose Add record and enter exactly:"
         items:
           - "Type: MX"
           - "Name: @ (the domain itself)"
@@ -159,7 +167,7 @@ steps:
           - "Key length: 2048"
           - "Prefix selector: google"
         see: "A record name, google._domainkey, and a long value beginning v=DKIM1; k=rsa; p=."
-      - do: "In Cloudflare, choose Add record and enter exactly:"
+      - do: "In Cloudflare, check there is no google._domainkey record already; if Google's automatic setup or an earlier attempt added one, delete it. Then choose Add record and enter exactly:"
         items:
           - "Type: TXT"
           - "Name: google._domainkey"
@@ -273,13 +281,14 @@ steps:
     produces: [ops_mailbox]
     mode: guided
     actions:
-      - do: "Sign in to https://admin.google.com as the chapter's administrator. Open Directory, then Users, and choose Add new user."
+      - do: "Sign in to https://admin.google.com as the chapter's administrator. Open Directory, then Users, and choose Add new user. The page Add new users is a table of three empty rows; fill in the first row only."
       - do: "Enter exactly:"
         items:
           - "First name: the chapter's name, for example Akron Business Mentors"
           - "Last name: Info"
           - "Primary email: info@EMAIL-DOMAIN"
-      - do: "Let Google generate the password and copy it straight into the chapter's Operations vault."
+      - do: "Click Continue. The page Adding Users shows the new address and a hidden password with a copy button beside it. Copy the password straight into the chapter's Operations vault before leaving the page, then click Dismiss. Do not send sign-in instructions."
+        see: "The password saved in the vault. If the page was left first, reset the password from the user's page and copy the new one."
       - do: "Open Directory, then Users, and find info@EMAIL-DOMAIN."
         see: "info@EMAIL-DOMAIN listed as a user with a Google Workspace licence. It must not appear under Directory, then Groups."
       - do: "Write info@EMAIL-DOMAIN on the chapter information form as the shared operations mailbox. The software reads it as OPS_MAILBOX."
@@ -337,7 +346,9 @@ steps:
           - "Name: System Administrators"
           - "Group email: admin@EMAIL-DOMAIN"
           - "Description: Receives the system's warning messages, and the sign-in mail of every account the chapter opens"
-      - do: "In the group's access settings, let people outside the organization post to the group. The hosting provider's alerts come from outside the chapter. The setting's exact wording has not been checked for this guide."
+      - do: "In the same form, in Group owners, type the chapter administrator's address and pick it from the list, then click Next."
+      - do: "On the access settings page, under Access type choose Restricted, then in the row Who can post tick External. The access type changes to Custom by itself. Under Who can join the group choose Only invited users. Click Create group."
+        see: "Who can view conversations: owners, managers and members only. Who can post: everyone, External included. The group listed with access type Custom. Without External, the hosting provider's alerts and every account's password resets are refused (read from the admin console, 11-07-26)."
       - do: "Add these members to the group:"
         items:
           - "At least two named officers of the chapter, the owners of the chapter's accounts"
@@ -518,6 +529,10 @@ steps:
     source: 8-Methods-Organization-Domains-Google.md#4.14
 
 changes:
+  - version: "0.7"
+    date: "11-08-26 00:50"
+    change: >-
+      From the Association's own stage 4, done in the admin console by Claude with Doug on 11-07-26 and 11-08-26. Step 4.2: the first user must never be admin@; Google started a Business Plus trial with no plan choice, so four actions downgrade to Business Starter (Flexible plan) and re-assign the first administrator's licence, which the downgrade removes. Step 4.4: the registrar's scanned records and the five older Google MX records are deleted, and a stale DKIM record is removed before adding the current one. Step 4.7: the Add new users table and the Adding Users page, where the password is copied before Dismiss. Step 4.9: the group's exact settings, Restricted with External allowed to post, and Only invited users.
   - version: "0.6"
     date: "11-07-26 15:28"
     change: >-

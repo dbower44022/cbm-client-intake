@@ -1,7 +1,7 @@
 # Stage 4 — Set up Google Workspace and the chapter's email
 
-**Version:** 0.6  
-**Last Updated:** 11-07-26 15:28  
+**Version:** 0.7  
+**Last Updated:** 11-08-26 00:50  
 **Generated from** `steps/stage-04.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -95,13 +95,21 @@ Google Workspace is Google's paid service for an organization's email, calendars
    - Does the business have a domain: yes, and enter EMAIL-DOMAIN
 4. When Google asks for the first user, enter the setup contact's own details:
    - First name and last name: the setup contact's own name, not a role such as Admin
-   - Username: FIRSTNAME.LASTNAME, so the address is FIRSTNAME.LASTNAME@EMAIL-DOMAIN
+   - Username: FIRSTNAME.LASTNAME, so the address is FIRSTNAME.LASTNAME@EMAIL-DOMAIN. Never admin or another role name: admin@EMAIL-DOMAIN is the group of step 4.9, and a user already holding the address blocks the group. The Association's first user was created as admin@ on 11-07-26 and had to be renamed
    - Password: a new password, stored straight away in the chapter's Board vault (step 2.7)
 
    *You should see:* An account created, with this user as its first administrator. It becomes the chapter's own administrator account in step 4.5.
 5. Choose the Business Starter plan, or the plan the cost agreement names (step 2.2), and pay with the chapter's own card (step 1.6). The nonprofit discount is applied for later, in step 4.13.
-6. In a new browser window, go to https://admin.google.com and sign in as FIRSTNAME.LASTNAME@EMAIL-DOMAIN.
-   *You should see:* The Google admin console's home page. Google will ask to verify the domain; that is step 4.3.
+6. Check the plan Google actually started. On 11-07-26 Google started the Association on a 14-day free trial of Business Plus, at $26.40 per user a month after a first-quarter discount, with no plan choice offered at sign-up. In the admin console, open https://admin.google.com/ac/billing/subscriptions.
+   *You should see:* The subscription's name: Google Workspace Business Starter. If it names Business Plus or Business Standard, do the next four actions; otherwise skip them.
+7. Click the subscription's Details, then More, then Downgrade. On the page that names one edition, click Explore other editions.
+   *You should see:* All upgrade options, with a Downgrade button under Business Starter ($8.40 per user a month on the Flexible plan, 11-07-26).
+8. Under Business Starter click Downgrade, then Continue to downgrade. Choose Flexible plan, click Checkout, check the summary reads Google Workspace Business Starter, Flexible plan, and click Place order.
+   *You should see:* The subscription list shows Google Workspace Business Starter, with 0 assigned.
+9. The downgrade leaves every user without a licence. Open the first administrator's user page in Directory, then Users, open Licenses, turn on Google Workspace Business Starter, and click Save.
+   *You should see:* License changes were saved. Business Starter shown as assigned.
+10. In a new browser window, go to https://admin.google.com and sign in as FIRSTNAME.LASTNAME@EMAIL-DOMAIN.
+    *You should see:* The Google admin console's home page. Google will ask to verify the domain; that is step 4.3.
 
 **Done when:** The account exists on the chapter's email domain and the first administrator can sign in.
 
@@ -170,7 +178,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
    - One SPF record, which lists who may send mail as the domain.
    - One DKIM record, which lets receivers check a message's signature.
    - One DMARC record, which tells receivers what to do with mail that fails the other two.
-2. Delete every existing MX record on the domain. Then choose Add record and enter exactly:
+2. Delete every existing MX record on the domain, and any A, CNAME or _dmarc record the registrar left behind. Cloudflare's quick scan copies the registrar's defaults (at GoDaddy: two parking A records, www, _domainconnect and a _dmarc record sending reports to GoDaddy), and Google's automatic Cloudflare setup adds five older MX records (aspmx.l.google.com and four alt servers). Only the one MX record below may remain. Then choose Add record and enter exactly:
    - Type: MX
    - Name: @ (the domain itself)
    - Mail server: smtp.google.com
@@ -190,7 +198,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
    - Prefix selector: google
 
    *You should see:* A record name, google._domainkey, and a long value beginning v=DKIM1; k=rsa; p=.
-5. In Cloudflare, choose Add record and enter exactly:
+5. In Cloudflare, check there is no google._domainkey record already; if Google's automatic setup or an earlier attempt added one, delete it. Then choose Add record and enter exactly:
    - Type: TXT
    - Name: google._domainkey
    - Content: the whole value from the admin console, beginning v=DKIM1
@@ -307,12 +315,13 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Do this:**
 
-1. Sign in to https://admin.google.com as the chapter's administrator. Open Directory, then Users, and choose Add new user.
+1. Sign in to https://admin.google.com as the chapter's administrator. Open Directory, then Users, and choose Add new user. The page Add new users is a table of three empty rows; fill in the first row only.
 2. Enter exactly:
    - First name: the chapter's name, for example Akron Business Mentors
    - Last name: Info
    - Primary email: info@EMAIL-DOMAIN
-3. Let Google generate the password and copy it straight into the chapter's Operations vault.
+3. Click Continue. The page Adding Users shows the new address and a hidden password with a copy button beside it. Copy the password straight into the chapter's Operations vault before leaving the page, then click Dismiss. Do not send sign-in instructions.
+   *You should see:* The password saved in the vault. If the page was left first, reset the password from the user's page and copy the new one.
 4. Open Directory, then Users, and find info@EMAIL-DOMAIN.
    *You should see:* info@EMAIL-DOMAIN listed as a user with a Google Workspace licence. It must not appear under Directory, then Groups.
 5. Write info@EMAIL-DOMAIN on the chapter information form as the shared operations mailbox. The software reads it as OPS_MAILBOX.
@@ -374,12 +383,14 @@ Google Workspace is Google's paid service for an organization's email, calendars
    - Name: System Administrators
    - Group email: admin@EMAIL-DOMAIN
    - Description: Receives the system's warning messages, and the sign-in mail of every account the chapter opens
-2. In the group's access settings, let people outside the organization post to the group. The hosting provider's alerts come from outside the chapter. The setting's exact wording has not been checked for this guide.
-3. Add these members to the group:
+2. In the same form, in Group owners, type the chapter administrator's address and pick it from the list, then click Next.
+3. On the access settings page, under Access type choose Restricted, then in the row Who can post tick External. The access type changes to Custom by itself. Under Who can join the group choose Only invited users. Click Create group.
+   *You should see:* Who can view conversations: owners, managers and members only. Who can post: everyone, External included. The group listed with access type Custom. Without External, the hosting provider's alerts and every account's password resets are refused (read from the admin console, 11-07-26).
+4. Add these members to the group:
    - At least two named officers of the chapter, the owners of the chapter's accounts
    - A named person from the Association, by their own address, only if the access schedule agreed in step 2.4 says so. Every member receives the password resets of every account that signs in with this address
-4. Write admin@EMAIL-DOMAIN on the chapter information form as the alert receiving address. The software reads it as ALERT_EMAIL_TO. Write the members' names beside it on the chapter's account list (step 5.7).
-5. From a personal account outside the chapter, send a test message to admin@EMAIL-DOMAIN.
+5. Write admin@EMAIL-DOMAIN on the chapter information form as the alert receiving address. The software reads it as ALERT_EMAIL_TO. Write the members' names beside it on the chapter's account list (step 5.7).
+6. From a personal account outside the chapter, send a test message to admin@EMAIL-DOMAIN.
    *You should see:* The test message arrives with every member of the group.
 
 **Done when:** The receiving address is decided and it reaches a person who reads it during the working week, not an unattended mailbox.
@@ -575,6 +586,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 | Version | Date | Change |
 |---|---|---|
+| 0.7 | 11-08-26 00:50 | From the Association's own stage 4, done in the admin console by Claude with Doug on 11-07-26 and 11-08-26. Step 4.2: the first user must never be admin@; Google started a Business Plus trial with no plan choice, so four actions downgrade to Business Starter (Flexible plan) and re-assign the first administrator's licence, which the downgrade removes. Step 4.4: the registrar's scanned records and the five older Google MX records are deleted, and a stale DKIM record is removed before adding the current one. Step 4.7: the Add new users table and the Adding Users page, where the password is copied before Dismiss. Step 4.9: the group's exact settings, Restricted with External allowed to post, and Only invited users. |
 | 0.6 | 11-07-26 15:28 | Every account the chapter opens signs in with admin@, the administrators group from step 4.9, so every password reset reaches the chapter's two owners (Doug, 11-07-26, following Association ruling 18). Step 4.9's group now has at least two chapter officers, and a person from the Association only if the access schedule of step 2.4 says so, because every member receives every account's password resets. Step 4.14 moves the registrar and Cloudflare to that group and is renamed to say so. |
 | 0.5 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". Step 4.6's reason now names Association ruling 1: the account is for support when the chapter's own technical person is unavailable, and for the permission grant in step 10.3. |
 | 0.4 | 09-23-26 13:54 | Manual DNS added (Doug, 09-23-26): steps 4.3 and 4.4 say that a chapter keeping its own DNS provider adds the same records there, and step 4.14 moves that provider account's email too. |
