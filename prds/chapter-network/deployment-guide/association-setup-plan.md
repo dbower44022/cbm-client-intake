@@ -1,10 +1,10 @@
 # Correcting the guide while the Association is set up as a chapter — plan
 
 **Document:** Plan for correcting the New Chapter Deployment Guide stage by stage while the Business Mentors Association is set up as a chapter (Association rulings 71 and 72)
-**Version:** 1.6
+**Version:** 1.7
 **Status:** Approved by Doug 11-07-26 15:17, with the four recommendations of section 5 and both of section 6
 **Owner:** Doug Bower
-**Last Updated:** 11-08-26 09:57
+**Last Updated:** 11-08-26 10:06
 
 ---
 
@@ -139,6 +139,8 @@ Stage 6 in the guide predates the website rulings (review finding 1). It still h
 2. **Do stage 6 for the Association**, in Doug's browser. Doug's part: a yes before the server (about $14 a month, from memory), the DNS record and the certificate step (Claude's permissions block DNS changes), and anything needing a password. Claude's part: the Cloudways screens, WordPress, the chapter connector settings, and correcting the guide from what the screens show.
 3. **Stop 4 of this plan:** Doug opens the website and reviews it; the guide's stage 6 is committed locally.
 
+**Batch 3 approved, 11-08-26 10:00:** Doug chose `chapter-demo.mentorsassociation.org` for the website, as ruling 70 says; D1a stays open until stage 13. The Association's Cloudways account is held for Cloudways' manual activation check; Doug emailed av@cloudways.com 11-08-26. **Guide stage 6 rewritten 11-08-26 10:06** (version 0.7, committed locally); the Association's stage 6 waits on Cloudways. Owed with it: the chapter connector's zip in the prototype repository is still 0.2.0 while its source is 0.2.1; guide stage 13 still names the old redirect step 6.3 in its Before you start, to be corrected with stage 13.
+
 ## 8. At the end of the session
 
 The closing reply reports what changed in the guide, which stages are ready for Doug to follow, and which open decisions blocked a step. Work still owed is recorded in `OPEN-ITEMS.md`.
@@ -149,6 +151,7 @@ The closing reply reports what changed in the guide, which stages are ready for 
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.7 | 11-08-26 10:06 | Claude (Claude Code) | Batch 3 approved with the website address; guide stage 6 rewritten; Cloudways activation pending. |
 | 1.6 | 11-08-26 09:57 | Claude (Claude Code) | Batch 3 plan, stage 6, drafted for Doug's approval. |
 | 1.5 | 11-08-26 09:32 | Claude (Claude Code) | Stage 5 recorded as done, with what is owed. |
 | 1.4 | 11-08-26 01:24 | Claude (Claude Code) | Stages 3 and 4 recorded as done, the change of working method, and what is owed. |
