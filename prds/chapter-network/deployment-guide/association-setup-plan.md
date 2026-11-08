@@ -1,10 +1,10 @@
 # Correcting the guide while the Association is set up as a chapter — plan
 
 **Document:** Plan for correcting the New Chapter Deployment Guide stage by stage while the Business Mentors Association is set up as a chapter (Association rulings 71 and 72)
-**Version:** 1.9
+**Version:** 1.10
 **Status:** Approved by Doug 11-07-26 15:17, with the four recommendations of section 5 and both of section 6
 **Owner:** Doug Bower
-**Last Updated:** 11-08-26 12:25
+**Last Updated:** 11-08-26 14:19
 
 ---
 
@@ -145,6 +145,12 @@ Stage 6 in the guide predates the website rulings (review finding 1). It still h
 
 **While Cloudways is held, 11-08-26 12:25:** guide stage 7 updated and the four model policy drafts written (Association repository, `docs/policy-drafts/`). In the prototype repository: the connector's zip rebuilt; a clean install from it rehearsed locally against crm-test; connector 0.2.2 fixes the dead Privacy Policy link and the footer's stray punctuation, and publishes all four policy pages (Association ruling 73, Doug 11-08-26); a WCAG 2.2 AA scan found only colour contrast from the applications' side, logged in `OPEN-ITEMS.md` item 72 (5). The Cloudways install in stage 6 uses `chapter-connector-0.2.2.zip`.
 
+**Stage 8 done, 11-08-26 13:54** (Stop D): `prds/chapter-network/chapters/bma-values.yaml`, reviewed by Doug. Short label `bma`; mentor mailbox creation and Zoom webinars off for the test system. Owed: guide stage 8 still asks the four old colour questions; correct it to match stage 6.5.
+
+**Doug, 11-08-26:** the CRM and applications go ahead without waiting for Cloudways or the website; the CRM is built without the two paid add-ons first (Association ruling 74, amending ruling 71's wording); the Zoom loop is tested at stage 11, not on crm-test.
+
+**Stage 9 blocked, 11-08-26 14:19:** step 5.8's tokens are made and in Proton Pass, but CRMBuilder's deploy wizard saves tokens at application scope for a deployment that does not exist yet, which would replace Cleveland's credential on ENG-002 (found reading CRMBuilder's code). Doug chose to have CRMBuilder fixed first (option A): kickoff `prompts/crmbuilder-deployment-credentials-kickoff.md`. Guide step 5.8 also still describes engagements, not clients, applications and deployments.
+
 ## 8. At the end of the session
 
 The closing reply reports what changed in the guide, which stages are ready for Doug to follow, and which open decisions blocked a step. Work still owed is recorded in `OPEN-ITEMS.md`.
@@ -155,6 +161,7 @@ The closing reply reports what changed in the guide, which stages are ready for 
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.10 | 11-08-26 14:19 | Claude (Claude Code) | Stage 8 done; stage 9 blocked on CRMBuilder's deployment credentials. |
 | 1.9 | 11-08-26 12:25 | Claude (Claude Code) | Work while Cloudways is held: stage 7, policy drafts, connector 0.2.2, accessibility findings. |
 | 1.8 | 11-08-26 10:11 | Claude (Claude Code) | Owed items deferred by Doug. |
 | 1.7 | 11-08-26 10:06 | Claude (Claude Code) | Batch 3 approved with the website address; guide stage 6 rewritten; Cloudways activation pending. |

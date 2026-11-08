@@ -17,6 +17,12 @@ found; move resolved items to the bottom with the resolution date.
     to p=quarantine on or after 12-06-26; (7) the admin@ group's spam handling; (8) the Zoom
     Webinars add-on and its scopes, when webinars are tested; (9) guide step 2.7: where Proton's
     organization members are managed was not found. Next: stage 6, the website, after its plan.
+    **Update 11-08-26 14:19:** stage 8 done (`chapters/bma-values.yaml`). Stage 9 blocked: CRMBuilder's
+    deploy wizard would save the Association's tokens on application ENG-002, replacing
+    Cleveland's credential; Doug chose to fix CRMBuilder first —
+    `prompts/crmbuilder-deployment-credentials-kickoff.md`. The website (stage 6) waits on
+    Cloudways' activation check. Guide owed: stage 8's colour questions, step 5.8's
+    CRMBuilder screens.
 
 72. **The chapter website: what is owed outside this repository, and before
     production** (2026-11-07, `prds/chapter-website-plan.md`). (1) **Before
