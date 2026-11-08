@@ -1,10 +1,10 @@
 # Correcting the guide while the Association is set up as a chapter — plan
 
 **Document:** Plan for correcting the New Chapter Deployment Guide stage by stage while the Business Mentors Association is set up as a chapter (Association rulings 71 and 72)
-**Version:** 1.3
+**Version:** 1.4
 **Status:** Approved by Doug 11-07-26 15:17, with the four recommendations of section 5 and both of section 6
 **Owner:** Doug Bower
-**Last Updated:** 11-07-26 15:34
+**Last Updated:** 11-08-26 01:24
 
 ---
 
@@ -103,6 +103,23 @@ These are recommendations, not decisions.
 
 **Batch 2 started:** the stage 3 runbook for the Association is published at https://claude.ai/artifact/CVYeUihJjLicGJgkxQMPM3 (version 1.0, built from guide stage 3 version 0.5). A public lookup on 11-07-26 15:31 showed both domains registered at GoDaddy that morning, still on GoDaddy's name servers. Stages 4 and 5 follow.
 
+**Stage 3 done, 11-07-26:** both domains moved from GoDaddy's name servers to Cloudflare (pablo and penny.ns.cloudflare.com). Doug skipped the GoDaddy account section: its steps did not match GoDaddy's screens and the organization name was not worth the time. Guide step 3.7 was corrected three times from his run.
+
+**Working method changed, 11-08-26:** Doug found the stage 4 runbook's steps unclear and wrong against Google's screens, and asked Claude to do the work in his browser instead. From then on Claude works in Chrome and hands Doug only passwords, payments, two-step codes, and a yes before each change that costs money or cannot easily be undone. The stage 4 runbook (https://claude.ai/artifact/4npGt6PfSSgzw7ynCBZYxp) is superseded by the corrected guide stage 4.
+
+**Stage 4 done, 11-08-26 01:24:**
+- Google Workspace on mentorsassociation.org, Business Starter, Flexible plan ($8.40 per mailbox a month from 11-21-26; Google had started a Business Plus trial). Two mailboxes: doug.bower@ (Super Admin; created as admin@ and renamed) and info@. Groups admin@ (System Administrators; outside senders allowed, members only read, invitation only) and allmembers@.
+- Mail records clean in Cloudflare: one MX, SPF, the current DKIM key, DMARC p=none reporting to admin@, Google's verification. Eleven stray records removed (GoDaddy's defaults and older Google records). Tested both ways: outside mail reaches admin@; a reply passes SPF, DKIM and DMARC.
+- Cloudflare's account email moved to admin@ (step 4.14). GoDaddy stays on businessmentors@dougbower.com by Doug's decision (11-08-26).
+- Guide stage 4 corrected from the real screens (version 0.7).
+
+**Owed from stages 3 and 4:**
+- The second owner (ruling 18): not named. Then: a second Super Admin in Google, a member of admin@, a Cloudflare member, a Proton Pass administrator.
+- GoDaddy auto-renew on both domains (they expire 11-07-27) and GoDaddy two-step sign-in.
+- Two-step sign-in on doug.bower@ and info@, then compulsory two-step sign-in for the Workspace (Doug: not yet, 11-08-26).
+- DMARC from p=none to p=quarantine on or after 12-06-26, once the reports show only the Association's own mail.
+- Guide step 2.7: where Proton's organization members are managed was not found (Doug, 11-07-26).
+
 ## 8. At the end of the session
 
 The closing reply reports what changed in the guide, which stages are ready for Doug to follow, and which open decisions blocked a step. Work still owed is recorded in `OPEN-ITEMS.md`.
@@ -113,6 +130,7 @@ The closing reply reports what changed in the guide, which stages are ready for 
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.4 | 11-08-26 01:24 | Claude (Claude Code) | Stages 3 and 4 recorded as done, the change of working method, and what is owed. |
 | 1.3 | 11-07-26 15:34 | Claude (Claude Code) | Decision D4 and the stage 3 runbook recorded in section 7. |
 | 1.2 | 11-07-26 15:28 | Claude (Claude Code) | Doug's answer on the sign-in address recorded in section 7. |
 | 1.1 | 11-07-26 15:21 | Claude (Claude Code) | Section 7, progress: batch 1 done, with the four differences from the plan. |
