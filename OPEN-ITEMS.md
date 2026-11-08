@@ -6,7 +6,7 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
-73. **The Business Mentors Association set up as a chapter: what is owed after stages 3 to 5**
+73. **The Business Mentors Association set up as a chapter: what is owed after stages 3 to 5** *Deferred by Doug 11-08-26: not a priority while these are test systems.*
     (11-08-26, `prds/chapter-network/deployment-guide/association-setup-plan.md` § 7). Stages 3 to 5
     are done for the Association; stages 1 and 2 wait on its legal formation. Owed: (1) a second
     owner (ruling 18), then a second Google Super Admin and membership of admin@, Cloudflare,

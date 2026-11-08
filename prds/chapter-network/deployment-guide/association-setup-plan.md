@@ -1,10 +1,10 @@
 # Correcting the guide while the Association is set up as a chapter — plan
 
 **Document:** Plan for correcting the New Chapter Deployment Guide stage by stage while the Business Mentors Association is set up as a chapter (Association rulings 71 and 72)
-**Version:** 1.7
+**Version:** 1.8
 **Status:** Approved by Doug 11-07-26 15:17, with the four recommendations of section 5 and both of section 6
 **Owner:** Doug Bower
-**Last Updated:** 11-08-26 10:06
+**Last Updated:** 11-08-26 10:11
 
 ---
 
@@ -129,6 +129,8 @@ These are recommendations, not decisions.
 - Not applicable to the Association: 5.3 (nonprofit credits: not formed), 5.4 (the Association is the chapter). Not yet done: 5.8 and 5.9 (CRMBuilder tokens and the GitHub link), which belong with stage 9.
 - Guide stage 5 corrected from the real screens (version 0.14).
 
+**Deferred by Doug, 11-08-26 10:11:** the owed items of stages 3 to 5 (two-step sign-in, GoDaddy auto-renew, the second owner, the admin@ spam setting and the rest) are not a priority while these are test systems. They stay listed here and in `OPEN-ITEMS.md` item 73.
+
 **Owed from stage 5:** two-step sign-in on DigitalOcean, Zoom, Stripe and Cloudways (Constant Contact's is on); Constant Contact Lite before the trial ends; Stripe's email moved to admin@; the Zoom Webinars add-on and its scopes when webinars are tested; the admin@ group's spam handling (it holds suspicious messages for approval; Claude was not permitted to change it); the account list in Proton Pass (step 5.7).
 
 ### Batch 3 plan — stage 6, the website (drafted 11-08-26 09:57, awaiting Doug)
@@ -151,6 +153,7 @@ The closing reply reports what changed in the guide, which stages are ready for 
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.8 | 11-08-26 10:11 | Claude (Claude Code) | Owed items deferred by Doug. |
 | 1.7 | 11-08-26 10:06 | Claude (Claude Code) | Batch 3 approved with the website address; guide stage 6 rewritten; Cloudways activation pending. |
 | 1.6 | 11-08-26 09:57 | Claude (Claude Code) | Batch 3 plan, stage 6, drafted for Doug's approval. |
 | 1.5 | 11-08-26 09:32 | Claude (Claude Code) | Stage 5 recorded as done, with what is owed. |
