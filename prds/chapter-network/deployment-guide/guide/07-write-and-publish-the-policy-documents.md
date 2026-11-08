@@ -1,14 +1,14 @@
 # Stage 7 — Write and publish the policy documents
 
-**Version:** 0.3  
-**Last Updated:** 11-07-26 15:21  
+**Version:** 0.4  
+**Last Updated:** 11-08-26 10:14  
 **Generated from** `steps/stage-07.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
 
 ## Why this stage
 
-Every public form carries one required consent box that links to four documents. Two are codes: the code of conduct, and the mentor code of ethics. Two are legal: the terms of use, and the privacy policy. The links must lead to this chapter's own documents, because showing one city's applicants another city's privacy policy is a legal problem. The chapter writes the documents with its own legal adviser; this stage covers only what the software needs from them.
+Every public form carries one required consent box that links to four documents. Two are codes: the code of conduct, and the mentor code of ethics. Two are legal: the terms of use, and the privacy policy. The links must lead to this chapter's own documents, because showing one city's applicants another city's privacy policy is a legal problem. The chapter writes the documents with its own legal adviser; this stage covers only what the software needs from them. The Association's website template ships all four as drafts, each marked for review by the chapter's own attorney (Association ruling 49), and the Association keeps model drafts a chapter may start from; the Privacy Policy is published at launch because the website's forms collect personal details.
 
 **Who:** The chapter, with its own legal adviser. The Association supplies the list of what personal information the software collects, and gives no legal advice.  
 **Time:** Not known. It depends on the chapter's legal adviser.  
@@ -45,7 +45,7 @@ Every public form carries one required consent box that links to four documents.
 
 **Do this:**
 
-1. Write the document with the chapter's legal adviser. Give it the title "Client Code of Conduct". The client, partner and funder forms link to it from the words Client Code of Conduct or Code of Conduct, depending on the form.
+1. Start from the template's draft page, or the Association's model draft, and edit it with the chapter's legal adviser. Give it the title "Client Code of Conduct". The client, partner and funder forms link to it from the words Client Code of Conduct or Code of Conduct, depending on the form.
 2. Publish it as a public page on the chapter's website at exactly this address, the same path Cleveland uses: https://WEBSITE-DOMAIN/client-code-of-conduct/
 3. In a terminal, run exactly:
    - curl -sI https://WEBSITE-DOMAIN/client-code-of-conduct/
@@ -79,7 +79,7 @@ Every public form carries one required consent box that links to four documents.
 
 **Do this:**
 
-1. Write the document with the chapter's legal adviser. Give it the title "Mentor Code of Ethics". It is a separate document from the client code of conduct. The volunteer form's link reads Code of Conduct and leads here.
+1. Start from the template's draft page, or the Association's model draft, and edit it with the chapter's legal adviser. Give it the title "Mentor Code of Ethics". It is a separate document from the client code of conduct. The volunteer form's link reads Code of Conduct and leads here.
 2. Publish it as a public page on the chapter's website at exactly this address, the same path Cleveland uses: https://WEBSITE-DOMAIN/mentor-code-of-ethics/
 3. In a terminal, run exactly:
    - curl -sI https://WEBSITE-DOMAIN/mentor-code-of-ethics/
@@ -113,7 +113,7 @@ Every public form carries one required consent box that links to four documents.
 
 **Do this:**
 
-1. Write the document with the chapter's legal adviser. Give it the title "Terms of Use". Every public form's link reads Terms of Use.
+1. Start from the template's draft page, or the Association's model draft, and edit it with the chapter's legal adviser. Give it the title "Terms of Use". Every public form's link reads Terms of Use.
 2. Publish it as a public page on the chapter's website at exactly this address, the same path Cleveland uses: https://WEBSITE-DOMAIN/legal-notices/
 3. In a terminal, run exactly:
    - curl -sI https://WEBSITE-DOMAIN/legal-notices/
@@ -150,7 +150,12 @@ Every public form carries one required consent box that links to four documents.
    - Every form submission, also held in the application's own database.
    - Email between mentors and clients, copied onto the client's record in the CRM.
    - Documents, kept in the chapter's Google shared drive.
-2. The chapter writes the policy with its legal adviser. Give it the title "Privacy Policy". Every public form's link reads Privacy Policy.
+   - Webinar registrations and attendance, kept by Zoom and copied into the CRM.
+   - Newsletter subscribers, passed from the CRM to Constant Contact.
+   - Donations, taken by Stripe; card details stay with Stripe.
+   - Visitor statistics from Cloudflare Web Analytics, which sets no cookies (Association ruling 63).
+   - A small marker in the visitor's browser tab that remembers a campaign for the visit, holds nothing personal and is gone when the tab closes (Association ruling 37).
+2. The chapter writes the policy with its legal adviser, starting from the template's draft or the Association's model draft. Give it the title "Privacy Policy". Every public form's link reads Privacy Policy.
 3. Publish it as a public page at exactly this address, the same path Cleveland uses: https://WEBSITE-DOMAIN/privacy-policy/
 4. In a terminal, run exactly:
    - curl -s https://WEBSITE-DOMAIN/privacy-policy/ | grep -c -i cleveland
@@ -245,6 +250,7 @@ Every public form carries one required consent box that links to four documents.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.4 | 11-08-26 10:14 | The template ships the four documents as drafts for the chapter's attorney (Association ruling 49), and the Association keeps model drafts; each document starts from one of them. The privacy policy's outline adds Zoom, Constant Contact, Stripe, Cloudflare Web Analytics and the campaign marker (Association rulings 30, 37 and 63). Batch 3 of association-setup-plan.md. |
 | 0.3 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". |
 | 0.2 | 09-19-26 00:05 | Every action made precise (Doug, 09-19-26): the title each document must carry to match the consent box's link text, the exact address to publish it at (Cleveland's paths), a curl check that it is public, a check that the privacy policy no longer names Cleveland, and the form key and setting each address goes into. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for the policy documents (9-Methods-Hosting-Website-Policies.md, version 0.4) with the step list's finishing tests. |
