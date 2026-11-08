@@ -1,10 +1,10 @@
 # Correcting the guide while the Association is set up as a chapter — plan
 
 **Document:** Plan for correcting the New Chapter Deployment Guide stage by stage while the Business Mentors Association is set up as a chapter (Association rulings 71 and 72)
-**Version:** 1.8
+**Version:** 1.9
 **Status:** Approved by Doug 11-07-26 15:17, with the four recommendations of section 5 and both of section 6
 **Owner:** Doug Bower
-**Last Updated:** 11-08-26 10:11
+**Last Updated:** 11-08-26 12:25
 
 ---
 
@@ -143,6 +143,8 @@ Stage 6 in the guide predates the website rulings (review finding 1). It still h
 
 **Batch 3 approved, 11-08-26 10:00:** Doug chose `chapter-demo.mentorsassociation.org` for the website, as ruling 70 says; D1a stays open until stage 13. The Association's Cloudways account is held for Cloudways' manual activation check; Doug emailed av@cloudways.com 11-08-26. **Guide stage 6 rewritten 11-08-26 10:06** (version 0.7, committed locally); the Association's stage 6 waits on Cloudways. Owed with it: the chapter connector's zip in the prototype repository is still 0.2.0 while its source is 0.2.1; guide stage 13 still names the old redirect step 6.3 in its Before you start, to be corrected with stage 13.
 
+**While Cloudways is held, 11-08-26 12:25:** guide stage 7 updated and the four model policy drafts written (Association repository, `docs/policy-drafts/`). In the prototype repository: the connector's zip rebuilt; a clean install from it rehearsed locally against crm-test; connector 0.2.2 fixes the dead Privacy Policy link and the footer's stray punctuation, and publishes all four policy pages (Association ruling 73, Doug 11-08-26); a WCAG 2.2 AA scan found only colour contrast from the applications' side, logged in `OPEN-ITEMS.md` item 72 (5). The Cloudways install in stage 6 uses `chapter-connector-0.2.2.zip`.
+
 ## 8. At the end of the session
 
 The closing reply reports what changed in the guide, which stages are ready for Doug to follow, and which open decisions blocked a step. Work still owed is recorded in `OPEN-ITEMS.md`.
@@ -153,6 +155,7 @@ The closing reply reports what changed in the guide, which stages are ready for 
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.9 | 11-08-26 12:25 | Claude (Claude Code) | Work while Cloudways is held: stage 7, policy drafts, connector 0.2.2, accessibility findings. |
 | 1.8 | 11-08-26 10:11 | Claude (Claude Code) | Owed items deferred by Doug. |
 | 1.7 | 11-08-26 10:06 | Claude (Claude Code) | Batch 3 approved with the website address; guide stage 6 rewritten; Cloudways activation pending. |
 | 1.6 | 11-08-26 09:57 | Claude (Claude Code) | Batch 3 plan, stage 6, drafted for Doug's approval. |

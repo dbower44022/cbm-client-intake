@@ -33,6 +33,14 @@ found; move resolved items to the bottom with the resolution date.
     (`WEBSITE_API`, `FORM_FRAMING`, three `WEBSITE_PAGE_*`,
     `WEBSITE_ORIGINS=http://localhost:8080`);
     remove `WEBSITE_ORIGINS`'s local address once the test website is live.
+    (5) **Found 11-08-26 by a clean install of connector 0.2.2 against crm-test and a WCAG
+    2.2 AA scan (axe-core)** — the applications' side, for the website session:
+    a mentor with no photo gets a large empty grey box on the directory card and the
+    profile (the `cmw-` mentor markup needs a fallback, such as initials); the forms'
+    later step labels are #D1D5DB on white, 1.47:1 (needs 4.5:1); muted text in the
+    forms, the mentor cards and the events empty state uses #7A7A7A, 4.29:1 on white and
+    3.67:1 on the card background. The grey is crm-test's accent-4 Website colour, so
+    the Website group should also warn when a chosen colour fails contrast (ruling 64).
     (5) **The CRM change `crm-plans/chapter-website.json`**
     (`chapter-website-crm-handoff.md`) is applied on crm-test only;
     production and Boston are owed.
