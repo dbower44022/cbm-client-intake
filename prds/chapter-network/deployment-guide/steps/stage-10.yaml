@@ -1,7 +1,7 @@
 stage: 10
 name: Set up the Google permissions the software needs
-version: "0.7"
-updated: "11-08-26 23:41"
+version: "0.8"
+updated: "11-08-26 23:44"
 summary: >-
   In this stage we give the applications a way to act inside the chapter's
   Google account. We create one account made for a program rather than a person,
@@ -161,7 +161,7 @@ steps:
       The file stays in a downloads folder. It is not password-protected, and it
       gives whoever holds it the chapter's Google access.
     later: unchanged
-    status: not-yet-tried
+    status: done-for-real — the Business Mentors Association, 11-08-26, after lifting the key block on the project; one key, stored in Proton Pass.
     source: 3-Methods-CRM-Google-Applications.md#10.2
 
   - id: "10.3"
@@ -362,6 +362,10 @@ steps:
     source: 3-Methods-CRM-Google-Applications.md#10.5
 
 changes:
+  - version: "0.8"
+    date: "11-08-26 23:44"
+    change: >-
+      Step 10.2 done on the Business Mentors Association: stage 10 complete.
   - version: "0.7"
     date: "11-08-26 23:41"
     change: >-

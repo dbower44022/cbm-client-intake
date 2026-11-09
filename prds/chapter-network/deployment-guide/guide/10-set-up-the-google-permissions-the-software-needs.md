@@ -1,7 +1,7 @@
 # Stage 10 — Set up the Google permissions the software needs
 
-**Version:** 0.7  
-**Last Updated:** 11-08-26 23:41  
+**Version:** 0.8  
+**Last Updated:** 11-08-26 23:44  
 **Generated from** `steps/stage-10.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -87,8 +87,6 @@ In this stage we give the applications a way to act inside the chapter's Google 
 
 - step 10.1 Create the machine account
 - step 2.7 Set up the chapter's password vault
-
-> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
 **Do this:**
 
@@ -245,6 +243,7 @@ In this stage we give the applications a way to act inside the chapter's Google 
 
 | Version | Date | Change |
 |---|---|---|
+| 0.8 | 11-08-26 23:44 | Step 10.2 done on the Business Mentors Association: stage 10 complete. |
 | 0.7 | 11-08-26 23:41 | Step 10.2: the Association's new organization did block keys after all. The fix written out from the real screens: grant Organization Policy Administrator, override the block on the project only, check the older rule, and take the role back off. |
 | 0.6 | 11-08-26 21:43 | Steps 10.1 and 10.3 to 10.5 done on the Business Mentors Association and rewritten from the real screens: a direct address for every page, the project ID's added number (PROJECT-ID) and the service account's real address, the Enable click that needs a wait, the OAuth 2 Client ID column, the Add a new client ID box, the role menu that starts at Content manager, the Share anyway warning, and /folders/ in the drive's address. Step 10.2 notes that the Association's new organization did not block keys. |
 | 0.5 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". |
