@@ -1024,6 +1024,7 @@ publishing refused.
 | `DEPLOYMENT.md` | Engineer deploy runbook, env vars, reliability ops, backups |
 | `STAFF-DEPLOYMENT-GUIDE.md` | Console-only companion for CBM staff |
 | `SYSTEM-ADMIN-TROUBLESHOOTING.md` | **Verify + troubleshoot the whole platform without an engineer** — health check, weekly sweep, symptom index, the safe-remediation toolkit and its off-limits list. Audience: EspoCRM Admin + DO console, no CLI |
+| `CHAPTER-WEBSITE-SETUP.md` | Runbook: connecting a chapter website — the Website group, the images, the switches, a campaign link to a website page, and switching it all off. Plan: `prds/chapter-website-plan.md` |
 | `SYSTEM-SETTINGS-SETUP.md` | `/setup` activation + use: the override model, the denylist, temporary and scoped changes, the environment diff, the ops jobs, break-glass |
 | `intake-processing-overview.md` | Plain-language capture → worker → CRM pipeline, per-form records, where each intake kind gets worked |
 | `data-model.md` | **ERD reference** — the CRM entity model, the 18 Postgres tables, the soft key that joins them, and the cardinality rulings. **Published to the docs site** as *Data Model → How the data is structured* — keep the two in sync |

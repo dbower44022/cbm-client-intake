@@ -1,10 +1,10 @@
 # Chapter website — the applications' side
 
 **Document:** Plan for the chapter applications' side of the chapter website
-**Version:** 0.8
+**Version:** 0.9
 **Status:** Approved 11-07-26; pieces A to E reviewed; next, the runbooks and the test website (step 10, Stop 6)
 **Owner:** Doug Bower
-**Last Updated:** 11-09-26 11:56
+**Last Updated:** 11-09-26 11:59
 
 ---
 
@@ -124,7 +124,7 @@ A sixth public form creating a Contact with marketing consent set (ruling 43), a
 **F. The test website.** Not code in this repository.
 The chapter connector installed on Cloudways at `chapter-demo.mentorsassociation.org`, pointed at crm-test, with noindex set. Built from the Association's own setup runbook (`docs/setup-runbook.md` and `docs/runbooks/` in the Association repository). This repository adds the crm-test half.
 
-**Runbooks** (in this repository, one per piece, published to the documentation site only with Doug's agreement):
+**Runbooks** (in this repository, published to the documentation site only with Doug's agreement). **Written 11-09-26 as one runbook, `CHAPTER-WEBSITE-SETUP.md`, a section per task:**
 - switching each flag on;
 - filling in the Website group;
 - naming the website in `WEBSITE_ORIGINS`;
@@ -160,6 +160,7 @@ Work pauses for Doug's go-ahead at each stop. Between two stops it proceeds with
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.9 | 11-09-26 11:59 | Claude (Claude Code) | Step 10's runbook written: `CHAPTER-WEBSITE-SETUP.md`. |
 | 0.8 | 11-09-26 11:56 | Claude (Claude Code) | Stop 5 on crm-test: the first run found the newsletter delivery dropping the campaign (fixed in v0.317.1); the re-run passed every check. |
 | 0.7 | 11-07-26 15:05 | Claude (Claude Code) | Piece C passed Stop 4. Decision 4.1 corrected and re-answered A. Pieces D and E built (v0.317.0); the CRM change applied on crm-test. |
 | 0.6 | 11-07-26 14:37 | Claude (Claude Code) | The prototype's chapter connector gained `embed=1` and `link=` (0.2.1), with Doug's approval. `FORM_FRAMING` on for crm-test. |

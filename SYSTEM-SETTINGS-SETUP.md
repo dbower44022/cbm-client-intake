@@ -105,6 +105,8 @@ in the **Website** group instead. Their setting keys did not change.
 
 ### Website — what the chapter website shows
 
+Step by step, for a chapter connecting its website: `CHAPTER-WEBSITE-SETUP.md`.
+
 The **Website** group (v0.314.0, `prds/chapter-website-plan.md`) holds every
 value the Association's chapter connector reads from
 `GET /api/website/settings`, each set once: the chapter-wide values above, the
