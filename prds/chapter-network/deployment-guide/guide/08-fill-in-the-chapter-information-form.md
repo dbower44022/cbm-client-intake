@@ -1,7 +1,7 @@
 # Stage 8 — Fill in the chapter information form
 
-**Version:** 0.17  
-**Last Updated:** 11-07-26 15:21  
+**Version:** 0.18  
+**Last Updated:** 11-09-26 01:19  
 **Generated from** `steps/stage-08.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -200,28 +200,28 @@ The chapter information form holds the roughly forty answers that differ from on
   - *Example:* https://www.yourchapter.org/privacy-policy/
 - **Main colour, used for headings** (`web.colour_primary`) — answered by the chapter; optional.
   - *What it is:* The colour of headings and the top bar on the applications' pages. Written as a six-character colour code starting with #. Cleveland's is #173B60 (navy).
-  - *Where to find it:* Your chapter's brand colours, from your logo or website designer. A colour picker on any computer shows a colour's code. If you are not sure, mark this not known yet.
-  - *If it is wrong:* The applications show a colour that does not match your chapter. Marked not known yet, Cleveland's colour is used, and it can be changed later.
+  - *Where to find it:* Leave this empty: mark it not known yet. Since Association ruling 34 the chapter's colours are chosen at step 6.5 and entered in the Website group of System Settings at stage 13, and the applications build their colours from there. Fill this in only for a chapter that already has its own colour file and wants the applications to use it.
+  - *If it is wrong:* Nothing breaks. Left empty, the applications take their colours from the Website group once stage 13 fills it in.
   - *Example:* #173B60
 - **Button colour** (`web.colour_button`) — answered by the chapter; optional.
   - *What it is:* The colour of the buttons people press, such as Submit. Written as a six-character colour code starting with #. Cleveland's is #CB963B (gold).
-  - *Where to find it:* Your chapter's brand colours, from your logo or website designer. A colour picker on any computer shows a colour's code. If you are not sure, mark this not known yet.
-  - *If it is wrong:* The applications show a colour that does not match your chapter. Marked not known yet, Cleveland's colour is used, and it can be changed later.
+  - *Where to find it:* Leave this empty: mark it not known yet. Since Association ruling 34 the chapter's colours are chosen at step 6.5 and entered in the Website group of System Settings at stage 13, and the applications build their colours from there. Fill this in only for a chapter that already has its own colour file and wants the applications to use it.
+  - *If it is wrong:* Nothing breaks. Left empty, the applications take their colours from the Website group once stage 13 fills it in.
   - *Example:* #CB963B
 - **Button colour when the mouse is over it** (`web.colour_button_hover`) — answered by the chapter; optional.
   - *What it is:* The colour a button turns while the mouse is over it. Usually the button colour made about ten per cent darker. Written as a six-character colour code starting with #. Cleveland's is #b8842f.
-  - *Where to find it:* Your chapter's brand colours, from your logo or website designer. A colour picker on any computer shows a colour's code. If you are not sure, mark this not known yet.
-  - *If it is wrong:* The applications show a colour that does not match your chapter. Marked not known yet, Cleveland's colour is used, and it can be changed later.
+  - *Where to find it:* Leave this empty: mark it not known yet. Since Association ruling 34 the chapter's colours are chosen at step 6.5 and entered in the Website group of System Settings at stage 13, and the applications build their colours from there. Fill this in only for a chapter that already has its own colour file and wants the applications to use it.
+  - *If it is wrong:* Nothing breaks. Left empty, the applications take their colours from the Website group once stage 13 fills it in.
   - *Example:* #b8842f
 - **Text colour** (`web.colour_text`) — answered by the chapter; optional.
   - *What it is:* The colour of ordinary paragraph text. Written as a six-character colour code starting with #. Cleveland's is #7A7A7A (grey).
-  - *Where to find it:* Your chapter's brand colours, from your logo or website designer. A colour picker on any computer shows a colour's code. If you are not sure, mark this not known yet.
-  - *If it is wrong:* The applications show a colour that does not match your chapter. Marked not known yet, Cleveland's colour is used, and it can be changed later.
+  - *Where to find it:* Leave this empty: mark it not known yet. Since Association ruling 34 the chapter's colours are chosen at step 6.5 and entered in the Website group of System Settings at stage 13, and the applications build their colours from there. Fill this in only for a chapter that already has its own colour file and wants the applications to use it.
+  - *If it is wrong:* Nothing breaks. Left empty, the applications take their colours from the Website group once stage 13 fills it in.
   - *Example:* #7A7A7A
 - **Web address (URL) of the colour file** (`web.chapter_tokens_url`) — answered by the Association; optional.
-  - *What it is:* The web address of the small file that carries the four colours above into the applications' pages. The software loads it on every page after its standard colours.
-  - *Where to find it:* The Association writes the file from the four colours above and publishes it (step 6.5). The values-file writer produces the file itself, as prds/chapter-network/chapters/SHORT-LABEL-chapter-tokens.css. Mark not known yet until it is published.
-  - *If it is wrong:* The applications keep Cleveland's colours. Nothing breaks.
+  - *What it is:* The web address of a small file that overrides the applications' colours. It is an override only (Association ruling 34): the applications build their colours from the Website group of System Settings. The software loads this file on every page after those colours.
+  - *Where to find it:* Leave this empty: mark it not known yet. Fill it in only for a chapter that already publishes its own colour file. If the four colours above are filled in, the values-file writer produces such a file as prds/chapter-network/chapters/SHORT-LABEL-chapter-tokens.css, which the Association would then publish.
+  - *If it is wrong:* Nothing breaks. Left empty, the applications use the Website group's colours.
   - *Example:* https://www.yourchapter.org/chapter-tokens.css
 
 **Done when all of these are true:**
@@ -230,11 +230,10 @@ The chapter information form holds the roughly forty answers that differ from on
 - The website address is filled in.
 - The events page address is left empty, so the software uses its own events page.
 - The documentation address is filled in.
-- The four colours are filled in, or marked not known yet.
-- The colour file address is filled in, or marked not known yet.
+- The four colours and the colour file address are left empty, unless the chapter already has its own colour file (step 6.5).
 - The four policy addresses are filled in, or marked not known yet and listed as owed.
 
-**Note:** The events page address is not asked. Left empty, it means the applications' own events page, APP-ADDRESS/webinars/, which is what every chapter now uses. The documentation and colour file addresses count as filled in when they are marked not known yet.
+**Note:** The events page address is not asked. Left empty, it means the applications' own events page, APP-ADDRESS/webinars/, which is what every chapter now uses. The documentation address counts as filled in when it is marked not known yet. The colours are entered in the Website group at stage 13, not here.
 
 **How to check:** Every address, opened in a private browser window, shows the right page.
 
@@ -676,6 +675,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 | Version | Date | Change |
 |---|---|---|
+| 0.18 | 11-09-26 01:19 | Step 8.3 brought in line with step 6.5 and Association ruling 34: the four colour questions and the colour file address are now an optional override, left empty by default, because the chapter's colours are entered in the Website group at stage 13. The questions stay on the form, unchanged in key, so the form and the values-file writer need no code change; removing them is listed in OPEN-ITEMS.md. |
 | 0.17 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". The form page's label For central support is now For the Association. |
 | 0.16 | 09-24-26 23:08 | Step 8.10 warns that a switch answered in the values file by hand is lost the next time the file is written from the page. Boston's fourteen switches were answered in the file by ruling on 09-24-26, because the settings generator refuses to run while any switch reads not known yet; the page still shows them unanswered until the setup contact updates it. |
 | 0.15 | 09-24-26 00:39 | The switch Take each release automatically? is now the chapter's question, not the central support organization's (Doug, 09-24-26, CRMBuilder decision DEC-1156): a chapter may take each release as it is cut, decline one, or schedule the upgrade for a time of its own after trying it on the demo/test deployment. Step 8.6 now has four chapter questions. |

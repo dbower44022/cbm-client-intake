@@ -6,6 +6,8 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+74. **The chapter information form still asks four colour questions that nothing needs** (found 11-09-26). Since Association ruling 34 and the website plan's answer of 11-07-26, a chapter's colours are entered in the Website group of System Settings at stage 13, and `CHAPTER_TOKENS_URL` is only an override. Guide step 8.3 (stage 8, version 0.18) now tells chapters to leave `web.colour_primary`, `web.colour_button`, `web.colour_button_hover`, `web.colour_text` and `web.chapter_tokens_url` empty. Still owed, as a code change through this repository's own process: remove the four questions from `stage-08.yaml`, the colour-file writer (`COLOUR_TOKENS` and `tokens_css` in `scripts/chapter_form/to_values.py`) and the test that checks Boston's colour file; or keep them as the override path, deliberately. Until then the questions are harmless: left empty, no colour file is written.
+
 73. **The Business Mentors Association set up as a chapter: what is owed after stages 3 to 5** *Deferred by Doug 11-08-26: not a priority while these are test systems.*
     (11-08-26, `prds/chapter-network/deployment-guide/association-setup-plan.md` § 7). Stages 3 to 5
     are done for the Association; stages 1 and 2 wait on its legal formation. Owed: (1) a second

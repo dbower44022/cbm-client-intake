@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — The Step List
 
 **Document:** The bare list of steps, with no methods yet
-**Version:** 0.25
+**Version:** 0.26
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 11-08-26 10:06
+**Last Updated:** 11-09-26 01:19
 
 ---
 
@@ -379,7 +379,7 @@ Done when:
 - The website address is filled in.
 - The events page address is left empty, so the software uses its own events page.
 - The documentation address is filled in.
-- The colour file address is filled in.
+- The colour file address is left empty, unless the chapter already has its own colour file.
 - The four policy addresses are filled in.
 
 **8.4 Fill in the Google details.**
@@ -873,6 +873,7 @@ Done when: a date is booked to review how the first months have gone.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.26 | 11-09-26 01:19 | Step 8.3: the colour file address is left empty unless the chapter already has its own colour file (step 6.5, Association ruling 34). |
 | 0.25 | 11-08-26 10:06 | Stage 6 rewritten for the Association's website rulings (WordPress template on Cloudways with the chapter connector, or the embed code on another platform). Step 6.3 becomes "Install the template and the chapter connector"; step 6.5 becomes "Choose the chapter's colours, fonts and header graphic"; step 6.6's test names the Website group; new step 6.8, visitor statistics without cookies. No step number changed. |
 | 0.24 | 11-07-26 15:28 | Every account the chapter opens signs in with admin@, the chapter's administrators group from step 4.9, so every password reset reaches the chapter's two owners (Doug, 11-07-26, following Association ruling 18). Step 4.14 is renamed "Move control of the registrar account to the chapter's administrators group"; steps 4.14, 5.1 and 5.10 to 5.12 change their finishing tests to match. |
 | 0.23 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan `association-setup-plan.md`, approved by Doug 11-07-26). "The central support organization" is now "the Association" throughout, and "the central committee" is "the central technical committee". Step 2.3 becomes "Accept the one-application rule" (Association ruling 3) and step 14.3 "Confirm the administrator accounts are the agreed ones" (Association ruling 1: the chapter holds its own administrator accounts). Step 3.2 states the Association's recommendation of two domain names (Association ruling 25). Stage 5 is renamed "Open the chapter's service accounts" and gains steps 5.10 (website host, Association ruling 29), 5.11 (Constant Contact) and 5.12 (Stripe donation link, Association ruling 30). Step 5.9, added to the stage data on 09-23-26 but never to this list, is added. No existing step number changed. |
