@@ -1,7 +1,7 @@
 stage: 10
 name: Set up the Google permissions the software needs
-version: "0.6"
-updated: "11-08-26 21:43"
+version: "0.7"
+updated: "11-08-26 23:41"
 summary: >-
   In this stage we give the applications a way to act inside the chapter's
   Google account. We create one account made for a program rather than a person,
@@ -116,7 +116,14 @@ steps:
         items:
           - "Key type: JSON"
         see: One file ending .json downloaded to the computer.
-      - do: "If Google refuses to create the key, the organization has the policy that blocks service account keys switched on. Google made that the default for organizations created since 2024, but the Association's organization, created 11-08-26, did not block keys: Add key was offered. The chapter's Google administrator must allow keys for this one project: open IAM and admin, then Organization policies, find Disable service account key creation, and override it for project SHORT-LABEL-apps only. Then create the key again."
+      - do: "If Google says An Organization Policy that blocks service accounts key creation has been enforced on your organization, the block is on. Google switches it on for every organization created since 2024, and the Association's, created 11-08-26, had it. Being a Super Admin is not enough to lift it: first give yourself the role that can. Go to https://console.cloud.google.com/cloud-resource-manager and note the number beside the domain's name (the organization ID). Then go to https://console.cloud.google.com/iam-admin/iam?organizationId=ORGANIZATION-ID , click the pencil beside your own address, click Add another role, type the role below into the search box, choose it, and click Save."
+        items:
+          - "Organization Policy Administrator"
+        see: Your row lists Organization Administrator and Organization Policy Administrator.
+      - do: "Go to https://console.cloud.google.com/iam-admin/orgpolicies/iam-managed-disableServiceAccountKeyCreation/edit?project=PROJECT-ID . Check that Applies to reads Project SHORT-LABEL-apps, not the organization. Choose Override parent's policy, click Add a rule, leave Enforcement on Off, click Done, then Set policy. Google asks Save and set policy changes without testing?: click Set policy."
+        see: "The policy page shows Policy source Override parent's policy and Status Not enforced. The older rule, at https://console.cloud.google.com/iam-admin/orgpolicies/iam-disableServiceAccountKeyCreation?project=PROJECT-ID , must also read Not enforced; it did on the Association's."
+      - do: "Take the role back off: at the same organization access page, click the pencil beside your address, click the bin beside Organization Policy Administrator only, and click Save. Then create the key again. A change can take a few minutes to reach the key page."
+        see: Your row lists Organization Administrator alone.
       - do: In Proton Pass, open the chapter's Operations vault and add a new item named Google machine account key. Attach the downloaded .json file to it.
         see: The item in the Operations vault with the file attached, and a second named person able to open it.
       - do: Delete the downloaded .json file from the computer, and empty the computer's bin.
@@ -355,6 +362,10 @@ steps:
     source: 3-Methods-CRM-Google-Applications.md#10.5
 
 changes:
+  - version: "0.7"
+    date: "11-08-26 23:41"
+    change: >-
+      Step 10.2: the Association's new organization did block keys after all. The fix written out from the real screens: grant Organization Policy Administrator, override the block on the project only, check the older rule, and take the role back off.
   - version: "0.6"
     date: "11-08-26 21:43"
     change: >-

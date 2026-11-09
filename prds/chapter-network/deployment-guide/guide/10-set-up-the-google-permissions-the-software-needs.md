@@ -1,7 +1,7 @@
 # Stage 10 — Set up the Google permissions the software needs
 
-**Version:** 0.6  
-**Last Updated:** 11-08-26 21:43  
+**Version:** 0.7  
+**Last Updated:** 11-08-26 23:41  
 **Generated from** `steps/stage-10.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -96,10 +96,17 @@ In this stage we give the applications a way to act inside the chapter's Google 
    - Key type: JSON
 
    *You should see:* One file ending .json downloaded to the computer.
-2. If Google refuses to create the key, the organization has the policy that blocks service account keys switched on. Google made that the default for organizations created since 2024, but the Association's organization, created 11-08-26, did not block keys: Add key was offered. The chapter's Google administrator must allow keys for this one project: open IAM and admin, then Organization policies, find Disable service account key creation, and override it for project SHORT-LABEL-apps only. Then create the key again.
-3. In Proton Pass, open the chapter's Operations vault and add a new item named Google machine account key. Attach the downloaded .json file to it.
+2. If Google says An Organization Policy that blocks service accounts key creation has been enforced on your organization, the block is on. Google switches it on for every organization created since 2024, and the Association's, created 11-08-26, had it. Being a Super Admin is not enough to lift it: first give yourself the role that can. Go to https://console.cloud.google.com/cloud-resource-manager and note the number beside the domain's name (the organization ID). Then go to https://console.cloud.google.com/iam-admin/iam?organizationId=ORGANIZATION-ID , click the pencil beside your own address, click Add another role, type the role below into the search box, choose it, and click Save.
+   - Organization Policy Administrator
+
+   *You should see:* Your row lists Organization Administrator and Organization Policy Administrator.
+3. Go to https://console.cloud.google.com/iam-admin/orgpolicies/iam-managed-disableServiceAccountKeyCreation/edit?project=PROJECT-ID . Check that Applies to reads Project SHORT-LABEL-apps, not the organization. Choose Override parent's policy, click Add a rule, leave Enforcement on Off, click Done, then Set policy. Google asks Save and set policy changes without testing?: click Set policy.
+   *You should see:* The policy page shows Policy source Override parent's policy and Status Not enforced. The older rule, at https://console.cloud.google.com/iam-admin/orgpolicies/iam-disableServiceAccountKeyCreation?project=PROJECT-ID , must also read Not enforced; it did on the Association's.
+4. Take the role back off: at the same organization access page, click the pencil beside your address, click the bin beside Organization Policy Administrator only, and click Save. Then create the key again. A change can take a few minutes to reach the key page.
+   *You should see:* Your row lists Organization Administrator alone.
+5. In Proton Pass, open the chapter's Operations vault and add a new item named Google machine account key. Attach the downloaded .json file to it.
    *You should see:* The item in the Operations vault with the file attached, and a second named person able to open it.
-4. Delete the downloaded .json file from the computer, and empty the computer's bin.
+6. Delete the downloaded .json file from the computer, and empty the computer's bin.
    *You should see:* A search of the downloads folder for .json finds nothing.
 
 **Done when:** The key file is stored as a secret and is not left on anyone's laptop or in email.
@@ -238,6 +245,7 @@ In this stage we give the applications a way to act inside the chapter's Google 
 
 | Version | Date | Change |
 |---|---|---|
+| 0.7 | 11-08-26 23:41 | Step 10.2: the Association's new organization did block keys after all. The fix written out from the real screens: grant Organization Policy Administrator, override the block on the project only, check the older rule, and take the role back off. |
 | 0.6 | 11-08-26 21:43 | Steps 10.1 and 10.3 to 10.5 done on the Business Mentors Association and rewritten from the real screens: a direct address for every page, the project ID's added number (PROJECT-ID) and the service account's real address, the Enable click that needs a wait, the OAuth 2 Client ID column, the Add a new client ID box, the role menu that starts at Content manager, the Share anyway warning, and /folders/ in the drive's address. Step 10.2 notes that the Association's new organization did not block keys. |
 | 0.5 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". |
 | 0.4 | 09-25-26 12:50 | Rewritten for the reader (Doug, 09-25-26): the stage and every step open with a Summary, what is done and why in a few plain sentences, in place of the one-line Why. Every How to check is now a list of concrete checks naming where to look and what must be seen: the Unique ID compared digit by digit, the key file's own contents and the Keys tab, the single delegation row and its scope count, the primary address against the alias list, and the shared drive's place in the left-hand list and the length of its identifier. Two more known failures added: a project made under a personal account (10.1) and a second delegation row for the same Client ID (10.3). |

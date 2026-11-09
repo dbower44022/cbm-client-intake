@@ -1,10 +1,10 @@
 # Correcting the guide while the Association is set up as a chapter — plan
 
 **Document:** Plan for correcting the New Chapter Deployment Guide stage by stage while the Business Mentors Association is set up as a chapter (Association rulings 71 and 72)
-**Version:** 1.11
+**Version:** 1.12
 **Status:** Approved by Doug 11-07-26 15:17, with the four recommendations of section 5 and both of section 6
 **Owner:** Doug Bower
-**Last Updated:** 11-08-26 21:43
+**Last Updated:** 11-08-26 23:41
 
 ---
 
@@ -151,7 +151,7 @@ Stage 6 in the guide predates the website rulings (review finding 1). It still h
 
 **Stage 9 blocked, 11-08-26 14:19:** step 5.8's tokens are made and in Proton Pass, but CRMBuilder's deploy wizard saves tokens at application scope for a deployment that does not exist yet, which would replace Cleveland's credential on ENG-002 (found reading CRMBuilder's code). Doug chose to have CRMBuilder fixed first (option A): kickoff `prompts/crmbuilder-deployment-credentials-kickoff.md`. Guide step 5.8 also still describes engagements, not clients, applications and deployments.
 
-**Stage 10 done in Google, 11-08-26 21:43** (Doug: "do 1"; Claude worked in his browser). Project bma-apps, ID bma-apps-514121, under the mentorsassociation.org organization that Google Cloud created on first sign-in. Admin SDK, Gmail, Google Calendar and Google Drive switched on; Meet left off (no transcripts). Service account bma-apps@bma-apps-514121.iam.gserviceaccount.com, no roles, OAuth 2 Client ID 108770828571041806288. Domain-wide delegation granted for that ID with the seven scopes, after Doug's yes. info@ confirmed an active user with a mailbox. Shared drive Business Mentors Association Documents, ID 0AFSWscbGrTLQUk9PVA, with the service account as Manager, notification off; written to `bma-values.yaml` through the chapter information form. Owed: the JSON key, which Doug creates and stores in Proton Pass as Google machine account key (step 10.2; the organization did not block keys). Guide stage 10 corrected from the real screens (version 0.6).
+**Stage 10 done in Google, 11-08-26 21:43** (Doug: "do 1"; Claude worked in his browser). Project bma-apps, ID bma-apps-514121, under the mentorsassociation.org organization that Google Cloud created on first sign-in. Admin SDK, Gmail, Google Calendar and Google Drive switched on; Meet left off (no transcripts). Service account bma-apps@bma-apps-514121.iam.gserviceaccount.com, no roles, OAuth 2 Client ID 108770828571041806288. Domain-wide delegation granted for that ID with the seven scopes, after Doug's yes. info@ confirmed an active user with a mailbox. Shared drive Business Mentors Association Documents, ID 0AFSWscbGrTLQUk9PVA, with the service account as Manager, notification off; written to `bma-values.yaml` through the chapter information form. Owed: the JSON key, which Doug creates and stores in Proton Pass as Google machine account key (step 10.2). The organization blocked keys: with Doug's yes, Claude gave doug.bower@ Organization Policy Administrator, overrode the block on project bma-apps only, and removed the role again (11-08-26 23:41). Guide stage 10 corrected from the real screens (version 0.6).
 
 ## 8. At the end of the session
 
@@ -163,6 +163,7 @@ The closing reply reports what changed in the guide, which stages are ready for 
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.12 | 11-08-26 23:41 | Claude (Claude Code) | Key block lifted on project bma-apps only. |
 | 1.11 | 11-08-26 21:43 | Claude (Claude Code) | Stage 10 done in Google except the key download; guide stage 10 corrected. |
 | 1.10 | 11-08-26 14:19 | Claude (Claude Code) | Stage 8 done; stage 9 blocked on CRMBuilder's deployment credentials. |
 | 1.9 | 11-08-26 12:25 | Claude (Claude Code) | Work while Cloudways is held: stage 7, policy drafts, connector 0.2.2, accessibility findings. |
