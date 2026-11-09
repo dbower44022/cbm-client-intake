@@ -1,7 +1,7 @@
 # Stage 6 — Build the chapter's public website
 
-**Version:** 0.8  
-**Last Updated:** 11-09-26 15:57  
+**Version:** 0.9  
+**Last Updated:** 11-09-26 16:18  
 **Generated from** `steps/stage-06.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -111,9 +111,11 @@ The chapter's public website is a WordPress site built from the Association's te
    *You should see:* The record listed as DNS only.
 10. In Cloudways, open Applications, then SHORT-LABEL-site, then Domain Management. Click Add Domain, enter WEBSITE-DOMAIN, tick Make primary if offered, and save.
     *You should see:* WEBSITE-DOMAIN listed as the primary domain.
-11. In the same application, open SSL Certificate, choose Let's Encrypt, enter admin@EMAIL-DOMAIN as the contact and WEBSITE-DOMAIN as the domain, and click Install Certificate. Then switch on HTTPS Redirection if offered.
-    *You should see:* After a minute or two, a message that the certificate is installed.
-12. Open https://WEBSITE-DOMAIN/ in a private browser window.
+11. In the same application, open SSL Certificate (the page is headed SSL Management), choose Let's Encrypt, enter admin@EMAIL-DOMAIN as the contact and WEBSITE-DOMAIN as the domain, and click Install Certificate.
+    *You should see:* After a minute or two, a message that the certificate is installed. The page then shows Auto Renewal switched on, with Renew Now and Revoke buttons.
+12. In the same application, open Application Settings, General tab, and check that HTTPS Redirection is switched on; switch it on if not.
+    *You should see:* HTTPS Redirection switched on (it was on for the Association's site, 11-09-26).
+13. Open https://WEBSITE-DOMAIN/ in a private browser window.
     *You should see:* A plain WordPress site with a padlock and no security warning.
 
 **Done when:** The site loads at the chapter's website domain over a secure connection.
@@ -167,7 +169,7 @@ The chapter's public website is a WordPress site built from the Association's te
 
 **If it didn't work:** Stop, and ask the Association before going on.
 
-**What usually goes wrong:** A cache that still shows the plain theme after installing: in Cloudways, open the application and purge its cache (Varnish), then reload. And the chapter's applications not yet naming the website among their allowed addresses: the framed forms then stay empty until stage 13 adds it.
+**What usually goes wrong:** A cache that still shows the plain theme after installing (it did on the Association's site): in Cloudways, open the application, then Application Settings, General tab, and click Purge under Purge site cache (Varnish), then reload. And the chapter's applications not yet naming the website among their allowed addresses: the framed forms then stay empty until stage 13 adds it.
 
 ---
 
@@ -332,6 +334,7 @@ The chapter's public website is a WordPress site built from the Association's te
 
 | Version | Date | Change |
 |---|---|---|
+| 0.9 | 11-09-26 16:18 | Steps 6.2 and 6.3 done for the Association and corrected from the screens: HTTPS Redirection is in Application Settings, General tab, not on the certificate page; the cache Purge button is in the same place; Cloudways now runs at unified.cloudways.com. |
 | 0.8 | 11-09-26 15:57 | Step 6.2's Cloudways actions rewritten from the Association's own account (11-09-26): the four-step Deploy your First Server and Application form, Standard 1 GB at $11 a month, 2 GB advised for a live site. The stage summary, step 6.1 and step 6.2's summary follow Association ruling 75, which replaces ruling 29: the host is the one the chapter chose at step 5.10, and the actions are written for Cloudways, the host the Association tests. |
 | 0.7 | 11-08-26 10:05 | Rewritten for the Association's website rulings (review finding 1; plan association-setup-plan.md, batch 3, approved by Doug 11-08-26). The site is WordPress from the Association's template on Cloudways, with the chapter connector, or the chapter's own platform with the embed code (Association rulings 26 to 29 and 34). Step 6.2 launches the Cloudways server, the DNS record and the certificate. Step 6.3, formerly the redirect check, now installs the template and the chapter connector: the events page is a key page the chapter connector serves. Step 6.4 adds the editor's own WordPress user. Step 6.5, formerly the colour file, now chooses the eight colours, two fonts and header graphic the Website group of System Settings will hold; the colour file becomes an optional override. Step 6.6 notes the logo is also uploaded to the Website group. New step 6.8 turns on Cloudflare Web Analytics (Association ruling 63). No step number changed. |
 | 0.6 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". |

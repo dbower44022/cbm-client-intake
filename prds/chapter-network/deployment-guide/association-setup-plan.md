@@ -1,10 +1,10 @@
 # Correcting the guide while the Association is set up as a chapter — plan
 
 **Document:** Plan for correcting the New Chapter Deployment Guide stage by stage while the Business Mentors Association is set up as a chapter (Association rulings 71 and 72)
-**Version:** 1.14
+**Version:** 1.15
 **Status:** Approved by Doug 11-07-26 15:17, with the four recommendations of section 5 and both of section 6
 **Owner:** Doug Bower
-**Last Updated:** 11-09-26 01:20
+**Last Updated:** 11-09-26 16:18
 
 ---
 
@@ -153,6 +153,8 @@ Stage 6 in the guide predates the website rulings (review finding 1). It still h
 
 **Stage 10 done in Google, 11-08-26 21:43** (Doug: "do 1"; Claude worked in his browser). Project bma-apps, ID bma-apps-514121, under the mentorsassociation.org organization that Google Cloud created on first sign-in. Admin SDK, Gmail, Google Calendar and Google Drive switched on; Meet left off (no transcripts). Service account bma-apps@bma-apps-514121.iam.gserviceaccount.com, no roles, OAuth 2 Client ID 108770828571041806288. Domain-wide delegation granted for that ID with the seven scopes, after Doug's yes. info@ confirmed an active user with a mailbox. Shared drive Business Mentors Association Documents, ID 0AFSWscbGrTLQUk9PVA, with the service account as Manager, notification off; written to `bma-values.yaml` through the chapter information form. The JSON key, created by Doug and stored in Proton Pass as Google machine account key (11-08-26 23:44; one key on the Keys tab, ID beginning f71dc5b3), completes stage 10. The organization blocked keys: with Doug's yes, Claude gave doug.bower@ Organization Policy Administrator, overrode the block on project bma-apps only, and removed the role again (11-08-26 23:41). Guide stage 10 corrected from the real screens (version 0.6).
 
+**Stage 6, steps 6.2 and 6.3 done, 11-09-26 16:18** (Doug: plan approved 11-09-26 15:58; Claude worked in his browser after he signed in to WordPress). Cloudways server bma-web (1 GB Standard, New York, 138.197.72.66) and application bma-site, on the Flexible free trial, which ends about 11-14-26: keeping the server past it needs a payment method, Doug's decision. chapter-demo.mentorsassociation.org points at the server, its Let's Encrypt certificate is installed and HTTPS Redirection is on. Chapter connector 0.2.2 installed, pointed at crm-test (connected; Find a Mentor, Workshops and Events and Recorded Webinars switched on); the template's pages, header and footer installed; Site Title set to Business Mentors Association; search engines discouraged; the server cache purged. The site's page title reads Cleveland Business Mentors, the applications' name on crm-test, as expected while it reads crm-test. Association ruling 75 (11-09-26) replaced ruling 29: a chapter chooses its own host; guide step 5.10 and stage 6 follow it. Steps 6.4 to 6.8 remain; Stop 4 is Doug's review of the site.
+
 ## 8. At the end of the session
 
 The closing reply reports what changed in the guide, which stages are ready for Doug to follow, and which open decisions blocked a step. Work still owed is recorded in `OPEN-ITEMS.md`.
@@ -163,6 +165,7 @@ The closing reply reports what changed in the guide, which stages are ready for 
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.15 | 11-09-26 16:18 | Claude (Claude Code) | Stage 6, steps 6.2 and 6.3 done for the Association; ruling 75 noted. |
 | 1.14 | 11-09-26 01:20 | Claude (Claude Code) | Stage 8 colour questions corrected. |
 | 1.13 | 11-08-26 23:44 | Claude (Claude Code) | Stage 10 complete. |
 | 1.12 | 11-08-26 23:41 | Claude (Claude Code) | Key block lifted on project bma-apps only. |

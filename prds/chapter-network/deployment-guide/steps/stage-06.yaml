@@ -1,7 +1,7 @@
 stage: 6
 name: Build the chapter's public website
-version: "0.8"
-updated: "11-09-26 15:57"
+version: "0.9"
+updated: "11-09-26 16:18"
 summary: >-
   The chapter's public website is a WordPress site built from the Association's
   template, on the host the chapter chose at step 5.10, with the Association's
@@ -115,8 +115,10 @@ steps:
         see: "The record listed as DNS only."
       - do: "In Cloudways, open Applications, then SHORT-LABEL-site, then Domain Management. Click Add Domain, enter WEBSITE-DOMAIN, tick Make primary if offered, and save."
         see: "WEBSITE-DOMAIN listed as the primary domain."
-      - do: "In the same application, open SSL Certificate, choose Let's Encrypt, enter admin@EMAIL-DOMAIN as the contact and WEBSITE-DOMAIN as the domain, and click Install Certificate. Then switch on HTTPS Redirection if offered."
-        see: "After a minute or two, a message that the certificate is installed."
+      - do: "In the same application, open SSL Certificate (the page is headed SSL Management), choose Let's Encrypt, enter admin@EMAIL-DOMAIN as the contact and WEBSITE-DOMAIN as the domain, and click Install Certificate."
+        see: "After a minute or two, a message that the certificate is installed. The page then shows Auto Renewal switched on, with Renew Now and Revoke buttons."
+      - do: "In the same application, open Application Settings, General tab, and check that HTTPS Redirection is switched on; switch it on if not."
+        see: "HTTPS Redirection switched on (it was on for the Association's site, 11-09-26)."
       - do: "Open https://WEBSITE-DOMAIN/ in a private browser window."
         see: "A plain WordPress site with a padlock and no security warning."
     done_when: >-
@@ -134,7 +136,7 @@ steps:
       engines: switch on WordPress's Discourage search engines setting (Settings,
       then Reading) on any test site.
     later: The onboarding app launches the server through the Cloudways interface and writes the DNS record with the chapter's Cloudflare token.
-    status: not-yet-tried — rewritten 11-08-26; the Cloudways screens are from the Association's test website runbook, not yet walked through.
+    status: done for the Association 11-09-26 (server bma-web, 1 GB Standard, New York; application bma-site), in Cloudways' current interface at unified.cloudways.com, where platform.cloudways.com now leads.
     source: business-mentors-association, docs/runbooks/test-website-runbook.html
 
   - id: "6.3"
@@ -172,12 +174,13 @@ steps:
       how: The home page shows the template, and the Chapter connector screen shows the applications address.
       probe: The app fetches the website's home page and checks for the chapter connector's marker.
     goes_wrong: >-
-      A cache that still shows the plain theme after installing: in Cloudways, open
-      the application and purge its cache (Varnish), then reload. And the chapter's
+      A cache that still shows the plain theme after installing (it did on the
+      Association's site): in Cloudways, open the application, then Application
+      Settings, General tab, and click Purge under Purge site cache (Varnish), then reload. And the chapter's
       applications not yet naming the website among their allowed addresses: the
       framed forms then stay empty until stage 13 adds it.
     later: The chapter connector installed from WordPress's add-on directory, with updates the chapter chooses to take automatically or not (Association ruling 36).
-    status: not-yet-tried — this step replaced the redirect check on 11-08-26, because the events page is now a key page the chapter connector serves (Association rulings 34 and 35). The template install was rehearsed on a plain WordPress on 11-07-26.
+    status: done for the Association 11-09-26, with chapter-connector-0.2.2.zip uploaded and pointed at crm-test, which answered at once (connected; three key pages switched on). The page title then showed the applications' organisation name, Cleveland Business Mentors, not the WordPress Site Title, which is expected while the site reads crm-test. This step replaced the redirect check on 11-08-26, because the events page is now a key page the chapter connector serves (Association rulings 34 and 35).
     source: business-mentors-association, docs/runbooks/test-website-runbook.html
 
   - id: "6.4"
@@ -328,6 +331,10 @@ steps:
     source: Association ruling 63 (business-mentors-association, DECISIONS.md)
 
 changes:
+  - version: "0.9"
+    date: "11-09-26 16:18"
+    change: >-
+      Steps 6.2 and 6.3 done for the Association and corrected from the screens: HTTPS Redirection is in Application Settings, General tab, not on the certificate page; the cache Purge button is in the same place; Cloudways now runs at unified.cloudways.com.
   - version: "0.8"
     date: "11-09-26 15:57"
     change: >-
