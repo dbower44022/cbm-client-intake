@@ -1,10 +1,10 @@
 # Correcting the guide while the Association is set up as a chapter — plan
 
 **Document:** Plan for correcting the New Chapter Deployment Guide stage by stage while the Business Mentors Association is set up as a chapter (Association rulings 71 and 72)
-**Version:** 1.16
+**Version:** 1.17
 **Status:** Approved by Doug 11-07-26 15:17, with the four recommendations of section 5 and both of section 6
 **Owner:** Doug Bower
-**Last Updated:** 11-09-26 17:33
+**Last Updated:** 11-09-26 17:39
 
 ---
 
@@ -157,6 +157,8 @@ Stage 6 in the guide predates the website rulings (review finding 1). It still h
 
 **Stage 6, steps 6.4 to 6.8 worked, 11-09-26 17:33** (Doug: plan approved 11-09-26 17:27, "use my address"; payment method added to Cloudways, so the server outlives the trial). 6.4: WordPress Editor user doug.bower@mentorsassociation.org created; Doug's own sign-in and one-word change owed. 6.5: template defaults kept, written in the Google Doc Website look for stage 13 in the shared drive. 6.6: the logo is owed from Doug (bma-logo.png). 6.7: none yet, which the values file cannot express (`OPEN-ITEMS.md` item 75). 6.8: chapter-demo.mentorsassociation.org added to Cloudflare Web Analytics, snippet in the template footer, server cache purged, beacon served on every page and no cookie set; the visit count is checked after 18:32. Stop 4, Doug's review of the site, follows.
 
+**Stop 4 passed, 11-09-26 17:39** (Doug: "site looks good"). Stage 6 still owes Doug's own sign-in at 6.4, the logo at 6.6 and the visit count at 6.8.
+
 ## 8. At the end of the session
 
 The closing reply reports what changed in the guide, which stages are ready for Doug to follow, and which open decisions blocked a step. Work still owed is recorded in `OPEN-ITEMS.md`.
@@ -167,6 +169,7 @@ The closing reply reports what changed in the guide, which stages are ready for 
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.17 | 11-09-26 17:39 | Claude (Claude Code) | Stop 4 passed. |
 | 1.16 | 11-09-26 17:33 | Claude (Claude Code) | Stage 6, steps 6.4 to 6.8 worked for the Association. |
 | 1.15 | 11-09-26 16:18 | Claude (Claude Code) | Stage 6, steps 6.2 and 6.3 done for the Association; ruling 75 noted. |
 | 1.14 | 11-09-26 01:20 | Claude (Claude Code) | Stage 8 colour questions corrected. |
