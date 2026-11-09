@@ -17,7 +17,7 @@ The guide takes a new chapter from nothing to a running system. Work through the
 5. [Open the chapter's service accounts](05-open-the-chapter-s-service-accounts.md)
    The chapter's CRM server, its applications and their database all run in a hosting account, and the public webinar programme runs through a video meeting account.
 6. [Build the chapter's public website](06-build-the-chapter-s-public-website.md)
-   The chapter's public website is a WordPress site built from the Association's template, on a lightly managed host on DigitalOcean (Cloudways), with the Association's WordPress add-on, the chapter connector (Association rulings 28, 29 and 34).
+   The chapter's public website is a WordPress site built from the Association's template, on the host the chapter chose at step 5.10, with the Association's WordPress add-on, the chapter connector (Association rulings 28, 34 and 75).
 7. [Write and publish the policy documents](07-write-and-publish-the-policy-documents.md)
    Every public form carries one required consent box that links to four documents.
 8. [Fill in the chapter information form](08-fill-in-the-chapter-information-form.md)

@@ -1,14 +1,14 @@
 # Stage 6 — Build the chapter's public website
 
-**Version:** 0.7  
-**Last Updated:** 11-08-26 10:05  
+**Version:** 0.8  
+**Last Updated:** 11-09-26 15:57  
 **Generated from** `steps/stage-06.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
 
 ## Summary
 
-The chapter's public website is a WordPress site built from the Association's template, on a lightly managed host on DigitalOcean (Cloudways), with the Association's WordPress add-on, the chapter connector (Association rulings 28, 29 and 34). The chapter owns the site, its pages and its words. The chapter connector fetches the parts that come from the CRM system: the colours, fonts, logo and header graphic set in the Website group of System Settings, the key pages such as the mentor directory and events, and the framed forms. This stage publishes the site, installs the template and the chapter connector, names the person who edits it, gathers the colours and images the Website group will hold, and turns on visitor statistics without cookies. A chapter that keeps another platform, such as Squarespace, uses the embed code instead (Association ruling 27), and steps 6.2 and 6.3 differ for it.
+The chapter's public website is a WordPress site built from the Association's template, on the host the chapter chose at step 5.10, with the Association's WordPress add-on, the chapter connector (Association rulings 28, 34 and 75). The actions are written for Cloudways, a lightly managed host on DigitalOcean, the host the Association uses and tests; on another host, follow that host's own screens to the same result. The chapter owns the site, its pages and its words. The chapter connector fetches the parts that come from the CRM system: the colours, fonts, logo and header graphic set in the Website group of System Settings, the key pages such as the mentor directory and events, and the framed forms. This stage publishes the site, installs the template and the chapter connector, names the person who edits it, gathers the colours and images the Website group will hold, and turns on visitor statistics without cookies. A chapter that keeps another platform, such as Squarespace, uses the embed code instead (Association ruling 27), and steps 6.2 and 6.3 differ for it.
 
 **Who:** The chapter. The Association helps on request (Association ruling 33).  
 **Time:** About two hours for a new WordPress site on the template, plus up to a day for a new address to be seen everywhere. The chapter's own pages and words take as long as the chapter wants.  
@@ -48,7 +48,7 @@ The chapter's public website is a WordPress site built from the Association's te
 **Do this:**
 
 1. Decide one of two answers with the chapter's board:
-   - The Association's WordPress template, on Cloudways (the full path). Steps 6.2 and 6.3 build it.
+   - The Association's WordPress template, on the host chosen at step 5.10 (the full path). Steps 6.2 and 6.3 build it, with actions written for Cloudways, the host the Association tests (Association ruling 75).
    - The chapter's existing website platform (the basic path). The site stays where it is, and the CRM's parts are added with the embed code at stage 13.
 2. Name the person who builds and maintains the site, and write on the chapter's account list (step 5.7): the platform, the address the editors sign in at, and that person's name.
    *You should see:* The website on the account list, with a named person.
@@ -65,7 +65,7 @@ The chapter's public website is a WordPress site built from the Association's te
 
 ## 6.2 Publish the website
 
-**Summary:** On the full path, a small Cloudways server on DigitalOcean runs WordPress at the chapter's website domain, with a free security certificate. On the basic path, the chapter's existing site only needs to load securely at its domain.
+**Summary:** On the full path, a small server at the chapter's host runs WordPress at the chapter's website domain, with a free security certificate. The actions are for Cloudways on DigitalOcean (Association ruling 75); on another host, follow its own screens to the same result. On the basic path, the chapter's existing site only needs to load securely at its domain.
 
 **Who:** The chapter
 
@@ -80,33 +80,41 @@ The chapter's public website is a WordPress site built from the Association's te
 **Do this:**
 
 1. Basic path only: open https://WEBSITE-DOMAIN/ in a private browser window, check it shows with no security warning, and skip to step 6.4.
-2. In Cloudways (https://platform.cloudways.com), signed in as admin@EMAIL-DOMAIN, open Servers and click Launch (or Add Server).
-   *You should see:* A form with an application list, three name fields, a list of cloud providers, a server size and a location.
-3. Fill the launch form with these values:
-   - Application: WordPress, the plain one (not WooCommerce, Multisite or Clean)
-   - Application name: SHORT-LABEL-site
-   - Server name: SHORT-LABEL-web
-   - Project: the chapter's name
+2. In Cloudways (https://platform.cloudways.com), signed in as admin@EMAIL-DOMAIN, click Add Application on the home page (or Add Server on the Servers page). Screens checked on the Association's account on 11-09-26: a four-step form headed Deploy your First Server and Application.
+3. Step 1 of 4, Choose your Application Type. Set these, then click Choose Server:
+   - Application type: WordPress
+   - Additional Configuration: Basic (plain WordPress; Optimized adds Cloudways' own plugins)
+   - Application Stack: Lightning Stack (the recommended one)
+4. Step 2 of 4, Choose Your Cloud Provider. Set these, then click Choose Server Size:
    - Cloud provider: DigitalOcean
-   - Server size: the smallest offered, 1 GB
-   - Location: the one nearest the chapter
-4. Read the monthly price Cloudways shows beside the size, then click Launch Now.
-   *You should see:* A message that the server is being prepared. It takes 7 to 10 minutes; the server then shows a green mark on the Servers page.
-5. In Cloudways, open the server, then Master Credentials, and copy the Public IP.
+   - Region: the one nearest the chapter (New York for Ohio)
+5. Step 3 of 4, Configure your Server. Set these, then click Review & Launch:
+   - Database: MariaDB (the recommended one)
+   - Server Type: Basic
+   - Server Size: click Standard at the right of the slider (it starts on Premium), then drag the slider's handle to the far left, 1 GB. The handle does not move on a click; drag it. Cloudways warns that 1 GB is for staging or low-traffic sites: use 2 GB for a live chapter site.
+
+   *You should see:* The price at the bottom right: on the Association's account, $0 during the 5-day free trial and $11.00 a month after it (1 GB Standard, 11-09-26).
+6. Step 4 of 4, Review and Launch Application. Replace the three names Cloudways fills in (My First App, My First Server, My First Project):
+   - Application Name: SHORT-LABEL-site
+   - Server Name: SHORT-LABEL-web
+   - Project Name: CHAPTER-NAME
+7. Read the monthly price at the bottom right, then click Launch Now.
+   *You should see:* The Servers page, with the server marked Adding Server. It took about ten minutes on the Association's account; the server then shows as running.
+8. In Cloudways, open the server, then Master Credentials, and copy the Public IP.
    *You should see:* Four numbers separated by dots.
-6. In Cloudflare, open the website domain, then DNS, then Records, and add a record with these values, then Save:
+9. In Cloudflare, open the website domain, then DNS, then Records, and add a record with these values, then Save:
    - Type: A
    - Name: @ for the domain itself, or the part before the domain for an address under it
    - IPv4 address: the Public IP from Cloudways
    - Proxy status: DNS only (grey cloud), so the certificate in the next action can be issued
 
    *You should see:* The record listed as DNS only.
-7. In Cloudways, open Applications, then SHORT-LABEL-site, then Domain Management. Click Add Domain, enter WEBSITE-DOMAIN, tick Make primary if offered, and save.
-   *You should see:* WEBSITE-DOMAIN listed as the primary domain.
-8. In the same application, open SSL Certificate, choose Let's Encrypt, enter admin@EMAIL-DOMAIN as the contact and WEBSITE-DOMAIN as the domain, and click Install Certificate. Then switch on HTTPS Redirection if offered.
-   *You should see:* After a minute or two, a message that the certificate is installed.
-9. Open https://WEBSITE-DOMAIN/ in a private browser window.
-   *You should see:* A plain WordPress site with a padlock and no security warning.
+10. In Cloudways, open Applications, then SHORT-LABEL-site, then Domain Management. Click Add Domain, enter WEBSITE-DOMAIN, tick Make primary if offered, and save.
+    *You should see:* WEBSITE-DOMAIN listed as the primary domain.
+11. In the same application, open SSL Certificate, choose Let's Encrypt, enter admin@EMAIL-DOMAIN as the contact and WEBSITE-DOMAIN as the domain, and click Install Certificate. Then switch on HTTPS Redirection if offered.
+    *You should see:* After a minute or two, a message that the certificate is installed.
+12. Open https://WEBSITE-DOMAIN/ in a private browser window.
+    *You should see:* A plain WordPress site with a padlock and no security warning.
 
 **Done when:** The site loads at the chapter's website domain over a secure connection.
 
@@ -324,6 +332,7 @@ The chapter's public website is a WordPress site built from the Association's te
 
 | Version | Date | Change |
 |---|---|---|
+| 0.8 | 11-09-26 15:57 | Step 6.2's Cloudways actions rewritten from the Association's own account (11-09-26): the four-step Deploy your First Server and Application form, Standard 1 GB at $11 a month, 2 GB advised for a live site. The stage summary, step 6.1 and step 6.2's summary follow Association ruling 75, which replaces ruling 29: the host is the one the chapter chose at step 5.10, and the actions are written for Cloudways, the host the Association tests. |
 | 0.7 | 11-08-26 10:05 | Rewritten for the Association's website rulings (review finding 1; plan association-setup-plan.md, batch 3, approved by Doug 11-08-26). The site is WordPress from the Association's template on Cloudways, with the chapter connector, or the chapter's own platform with the embed code (Association rulings 26 to 29 and 34). Step 6.2 launches the Cloudways server, the DNS record and the certificate. Step 6.3, formerly the redirect check, now installs the template and the chapter connector: the events page is a key page the chapter connector serves. Step 6.4 adds the editor's own WordPress user. Step 6.5, formerly the colour file, now chooses the eight colours, two fonts and header graphic the Website group of System Settings will hold; the colour file becomes an optional override. Step 6.6 notes the logo is also uploaded to the Website group. New step 6.8 turns on Cloudflare Web Analytics (Association ruling 63). No step number changed. |
 | 0.6 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". |
 | 0.5 | 09-23-26 20:40 | References to stage 9 follow its renumbering from twenty steps to nine (stage 9 version 0.11). |
