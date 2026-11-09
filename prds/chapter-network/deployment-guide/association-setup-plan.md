@@ -1,10 +1,10 @@
 # Correcting the guide while the Association is set up as a chapter — plan
 
 **Document:** Plan for correcting the New Chapter Deployment Guide stage by stage while the Business Mentors Association is set up as a chapter (Association rulings 71 and 72)
-**Version:** 1.13
+**Version:** 1.14
 **Status:** Approved by Doug 11-07-26 15:17, with the four recommendations of section 5 and both of section 6
 **Owner:** Doug Bower
-**Last Updated:** 11-08-26 23:44
+**Last Updated:** 11-09-26 01:20
 
 ---
 
@@ -145,7 +145,7 @@ Stage 6 in the guide predates the website rulings (review finding 1). It still h
 
 **While Cloudways is held, 11-08-26 12:25:** guide stage 7 updated and the four model policy drafts written (Association repository, `docs/policy-drafts/`). In the prototype repository: the connector's zip rebuilt; a clean install from it rehearsed locally against crm-test; connector 0.2.2 fixes the dead Privacy Policy link and the footer's stray punctuation, and publishes all four policy pages (Association ruling 73, Doug 11-08-26); a WCAG 2.2 AA scan found only colour contrast from the applications' side, logged in `OPEN-ITEMS.md` item 72 (5). The Cloudways install in stage 6 uses `chapter-connector-0.2.2.zip`.
 
-**Stage 8 done, 11-08-26 13:54** (Stop D): `prds/chapter-network/chapters/bma-values.yaml`, reviewed by Doug. Short label `bma`; mentor mailbox creation and Zoom webinars off for the test system. Owed: guide stage 8 still asks the four old colour questions; correct it to match stage 6.5.
+**Stage 8 done, 11-08-26 13:54** (Stop D): `prds/chapter-network/chapters/bma-values.yaml`, reviewed by Doug. Short label `bma`; mentor mailbox creation and Zoom webinars off for the test system. Guide stage 8 corrected 11-09-26 01:20: the four colour questions are now an optional override, left empty (version 0.18); removing them from the form is `OPEN-ITEMS.md` item 74.
 
 **Doug, 11-08-26:** the CRM and applications go ahead without waiting for Cloudways or the website; the CRM is built without the two paid add-ons first (Association ruling 74, amending ruling 71's wording); the Zoom loop is tested at stage 11, not on crm-test.
 
@@ -163,6 +163,7 @@ The closing reply reports what changed in the guide, which stages are ready for 
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.14 | 11-09-26 01:20 | Claude (Claude Code) | Stage 8 colour questions corrected. |
 | 1.13 | 11-08-26 23:44 | Claude (Claude Code) | Stage 10 complete. |
 | 1.12 | 11-08-26 23:41 | Claude (Claude Code) | Key block lifted on project bma-apps only. |
 | 1.11 | 11-08-26 21:43 | Claude (Claude Code) | Stage 10 done in Google except the key download; guide stage 10 corrected. |
