@@ -1,7 +1,7 @@
 # Stage 10 — Set up the Google permissions the software needs
 
 **Version:** 0.6  
-**Last Updated:** 11-08-26 21:50  
+**Last Updated:** 11-08-26 21:43  
 **Generated from** `steps/stage-10.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -238,7 +238,7 @@ In this stage we give the applications a way to act inside the chapter's Google 
 
 | Version | Date | Change |
 |---|---|---|
-| 0.6 | 11-08-26 21:50 | Steps 10.1 and 10.3 to 10.5 done on the Business Mentors Association and rewritten from the real screens: a direct address for every page, the project ID's added number (PROJECT-ID) and the service account's real address, the Enable click that needs a wait, the OAuth 2 Client ID column, the Add a new client ID box, the role menu that starts at Content manager, the Share anyway warning, and /folders/ in the drive's address. Step 10.2 notes that the Association's new organization did not block keys. |
+| 0.6 | 11-08-26 21:43 | Steps 10.1 and 10.3 to 10.5 done on the Business Mentors Association and rewritten from the real screens: a direct address for every page, the project ID's added number (PROJECT-ID) and the service account's real address, the Enable click that needs a wait, the OAuth 2 Client ID column, the Add a new client ID box, the role menu that starts at Content manager, the Share anyway warning, and /folders/ in the drive's address. Step 10.2 notes that the Association's new organization did not block keys. |
 | 0.5 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". |
 | 0.4 | 09-25-26 12:50 | Rewritten for the reader (Doug, 09-25-26): the stage and every step open with a Summary, what is done and why in a few plain sentences, in place of the one-line Why. Every How to check is now a list of concrete checks naming where to look and what must be seen: the Unique ID compared digit by digit, the key file's own contents and the Keys tab, the single delegation row and its scope count, the primary address against the alias list, and the shared drive's place in the left-hand list and the length of its identifier. Two more known failures added: a project made under a personal account (10.1) and a second delegation row for the same Client ID (10.3). |
 | 0.3 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. |
