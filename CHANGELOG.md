@@ -5,6 +5,18 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.317.2] — 2026-11-09
+
+**fix: the mentor request's review step names the chosen mentor.** Found on
+crm-test at Stop 6 of `prds/chapter-website-plan.md`. A visitor sent from a
+mentor's profile on the chapter website arrives with that mentor already
+selected on step 2, but Review & Submit did not list them, so the visitor
+could not see the choice still stood. The review now shows **Requested
+mentor**, by name, or "—" when none is chosen. The row appears only when the
+mentor list was offered on the form. Display only; what is submitted is
+unchanged.
+
+
 ## [0.317.1] — 2026-11-07
 
 **fix: a newsletter signup lost its campaign.** Found on crm-test at Stop 5 of

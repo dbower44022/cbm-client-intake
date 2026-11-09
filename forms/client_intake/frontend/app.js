@@ -313,7 +313,17 @@
     if (referredBy && referredBy.textContent) rows.push(["Referred by", referredBy.textContent]);
     rows.push(
       ["Areas of mentoring", areas.length ? areas.join(", ") : "—"],
-      ["Needs", val("mentoring_needs_description")],
+      ["Needs", val("mentoring_needs_description")]
+    );
+    // The chosen mentor, by name, whenever the mentor list was offered — a
+    // visitor sent from a mentor's profile sees the choice is still made.
+    const mentorSel = document.getElementById("requested_mentor_id");
+    const mentorField = document.getElementById("requested_mentor_field");
+    if (mentorSel && mentorField && !mentorField.hidden) {
+      const opt = mentorSel.selectedOptions && mentorSel.selectedOptions[0];
+      rows.push(["Requested mentor", mentorSel.value && opt ? opt.textContent : "—"]);
+    }
+    rows.push(
       ["Meeting preference", val("meeting_preference")],
       ["Notification preference", val("notification_preference")],
       ["Business stage", val("business_stage")]
