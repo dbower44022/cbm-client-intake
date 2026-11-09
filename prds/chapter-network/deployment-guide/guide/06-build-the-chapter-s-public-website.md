@@ -1,7 +1,7 @@
 # Stage 6 — Build the chapter's public website
 
-**Version:** 0.10  
-**Last Updated:** 11-09-26 17:23  
+**Version:** 0.11  
+**Last Updated:** 11-09-26 17:33  
 **Generated from** `steps/stage-06.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -316,9 +316,16 @@ The chapter's public website is a WordPress site built from the Association's te
 
 **Do this:**
 
-1. In Cloudflare, open Analytics, then Web analytics, and add the website's domain. For a site whose address is proxied through Cloudflare, choose the automatic setup; for a DNS only address, choose the JavaScript snippet. The exact labels have not been checked for this guide.
-2. If Cloudflare gives a snippet, paste it into the site: on WordPress, in the chapter connector's settings if it offers a box for it, otherwise in the footer of the template through Appearance, then Editor. On another platform, in its place for code in the page footer.
-3. Open the website in a private browser window, then wait an hour and open Web analytics in Cloudflare.
+1. In Cloudflare, signed in to the chapter's account, open Analytics & logs, then Analytics, then Web analytics, and click Add a site.
+2. In Set up hostname, type the website's full address without https://, for example chapter-demo.mentorsassociation.org. For a DNS only address, choose the line that reads Click here to use "…" which does not belong to Cloudflare websites, then click Done. An automatic setup already listed for the parent domain does not cover a DNS only address.
+   *You should see:* A page showing a snippet that begins <!-- Cloudflare Web Analytics -->.
+3. Paste the snippet into the site's footer: on WordPress, open Appearance, then Editor, then Patterns, then Footer, add a Custom HTML block at the end of the footer, paste the snippet into it and click Save. The chapter connector has no box for it yet. On another platform, use its place for code in the page footer.
+4. On Cloudways, purge the server cache: open the application, then Application Settings, the General tab, and click Purge under Purge Site Cache. Without this, visitors keep getting the cached pages without the snippet.
+5. In a terminal, run exactly:
+   - curl -s https://WEBSITE-DOMAIN/ | grep -c cloudflareinsights
+
+   *You should see:* 1
+6. Open the website in a private browser window, then wait an hour and open Web analytics in Cloudflare.
    *You should see:* At least one visit counted.
 
 **Done when:** Cloudflare Web Analytics counts the website's visits, and the site sets no tracking cookie.
@@ -335,6 +342,7 @@ The chapter's public website is a WordPress site built from the Association's te
 
 | Version | Date | Change |
 |---|---|---|
+| 0.11 | 11-09-26 17:33 | Step 6.8 worked for the Association and its actions rewritten from the screens: the Cloudflare menu path and the Add a site choice for an address Cloudflare does not proxy; the parent domain's automatic setup does not cover it; the snippet goes in the footer as a Custom HTML block; the Cloudways server cache must be purged afterwards; a curl check added. |
 | 0.10 | 11-09-26 17:23 | Steps 6.4, 6.5 and 6.7 worked for the Association. Step 6.4: the Username and Email boxes both take the address, and Send User Notification gives the person their own password link; a step added for that email. Step 6.5 done with the template's defaults. Step 6.7: the chapter information form has no question for docs_site_url, and an empty answer leaves Cleveland's documentation as the default, so "none yet" cannot be expressed yet (OPEN-ITEMS.md item 75). |
 | 0.9 | 11-09-26 16:18 | Steps 6.2 and 6.3 done for the Association and corrected from the screens: HTTPS Redirection is in Application Settings, General tab, not on the certificate page; the cache Purge button is in the same place; Cloudways now runs at unified.cloudways.com. |
 | 0.8 | 11-09-26 15:57 | Step 6.2's Cloudways actions rewritten from the Association's own account (11-09-26): the four-step Deploy your First Server and Application form, Standard 1 GB at $11 a month, 2 GB advised for a live site. The stage summary, step 6.1 and step 6.2's summary follow Association ruling 75, which replaces ruling 29: the host is the one the chapter chose at step 5.10, and the actions are written for Cloudways, the host the Association tests. |

@@ -1,7 +1,7 @@
 stage: 6
 name: Build the chapter's public website
-version: "0.10"
-updated: "11-09-26 17:23"
+version: "0.11"
+updated: "11-09-26 17:33"
 summary: >-
   The chapter's public website is a WordPress site built from the Association's
   template, on the host the chapter chose at step 5.10, with the Association's
@@ -316,8 +316,15 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: "In Cloudflare, open Analytics, then Web analytics, and add the website's domain. For a site whose address is proxied through Cloudflare, choose the automatic setup; for a DNS only address, choose the JavaScript snippet. The exact labels have not been checked for this guide."
-      - do: "If Cloudflare gives a snippet, paste it into the site: on WordPress, in the chapter connector's settings if it offers a box for it, otherwise in the footer of the template through Appearance, then Editor. On another platform, in its place for code in the page footer."
+      - do: "In Cloudflare, signed in to the chapter's account, open Analytics & logs, then Analytics, then Web analytics, and click Add a site."
+      - do: "In Set up hostname, type the website's full address without https://, for example chapter-demo.mentorsassociation.org. For a DNS only address, choose the line that reads Click here to use \"…\" which does not belong to Cloudflare websites, then click Done. An automatic setup already listed for the parent domain does not cover a DNS only address."
+        see: "A page showing a snippet that begins <!-- Cloudflare Web Analytics -->."
+      - do: "Paste the snippet into the site's footer: on WordPress, open Appearance, then Editor, then Patterns, then Footer, add a Custom HTML block at the end of the footer, paste the snippet into it and click Save. The chapter connector has no box for it yet. On another platform, use its place for code in the page footer."
+      - do: "On Cloudways, purge the server cache: open the application, then Application Settings, the General tab, and click Purge under Purge Site Cache. Without this, visitors keep getting the cached pages without the snippet."
+      - do: "In a terminal, run exactly:"
+        items:
+          - "curl -s https://WEBSITE-DOMAIN/ | grep -c cloudflareinsights"
+        see: "1"
       - do: "Open the website in a private browser window, then wait an hour and open Web analytics in Cloudflare."
         see: "At least one visit counted."
     done_when: >-
@@ -330,10 +337,14 @@ steps:
       A second statistics service, such as Google Analytics, added as well. It sets
       cookies, and the site then needs a consent banner after all.
     later: The chapter connector adds the snippet itself from a Website group setting.
-    status: not-yet-tried — added 11-08-26 for Association ruling 63.
+    status: in progress for the Association — site added and snippet live 11-09-26 17:32; the visit count is checked an hour later.
     source: Association ruling 63 (business-mentors-association, DECISIONS.md)
 
 changes:
+  - version: "0.11"
+    date: "11-09-26 17:33"
+    change: >-
+      Step 6.8 worked for the Association and its actions rewritten from the screens: the Cloudflare menu path and the Add a site choice for an address Cloudflare does not proxy; the parent domain's automatic setup does not cover it; the snippet goes in the footer as a Custom HTML block; the Cloudways server cache must be purged afterwards; a curl check added.
   - version: "0.10"
     date: "11-09-26 17:23"
     change: >-
