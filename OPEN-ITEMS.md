@@ -55,6 +55,15 @@ found; move resolved items to the bottom with the resolution date.
     (5) **The CRM change `crm-plans/chapter-website.json`**
     (`chapter-website-crm-handoff.md`) is applied on crm-test only;
     production and Boston are owed.
+    (6) **Found 11-09-26 by Stop 6 on `chapter-demo.mentorsassociation.org`**
+    — the website's side: the site has no newsletter signup anywhere, though
+    Association ruling 47 puts one on every page. The newsletter form itself
+    works (Stop 5, crm-test). Adding it to the template is the website
+    add-on's work, in the Association's hands.
+    (7) **Same test, the applications' side, minor**: the client intake
+    form's Review & Submit step does not list the chosen mentor, so a visitor
+    who came from a mentor's profile cannot see Joe is still selected. The
+    request carried him (`requestedMentor` on the engagement).
 
 71. **Training on the CRM's own screens, and the block revisited**
     (2026-11-05, Doug's ruling Q6.1). Ten-odd staff work in the CRM's own

@@ -1,10 +1,10 @@
 # Chapter website — the applications' side
 
 **Document:** Plan for the chapter applications' side of the chapter website
-**Version:** 0.10
-**Status:** Approved 11-07-26; pieces A to E reviewed; next, the runbooks and the test website (step 10, Stop 6)
+**Version:** 0.11
+**Status:** Approved 11-07-26; pieces A to E reviewed; Stop 6 passed on the test website 11-09-26 except the newsletter signup, which the website lacks (`OPEN-ITEMS.md` #72)
 **Owner:** Doug Bower
-**Last Updated:** 11-09-26 14:40
+**Last Updated:** 11-09-26 17:06
 
 ---
 
@@ -145,6 +145,7 @@ Work pauses for Doug's go-ahead at each stop. Between two stops it proceeds with
 9. **Stop 5 — review pieces D and E** on crm-test.
 10. Write the runbooks. Doug sets up the test site from them (piece F).
 11. **Stop 6 — the end-to-end test** on `chapter-demo.mentorsassociation.org`: settings, key pages, mentor search, a framed form, a campaign link followed to a page and then to a submission, and a newsletter signup. Findings go to `OPEN-ITEMS.md`.
+    **11-09-26: passed, but for the newsletter signup.** Read-only half: crm-test's logo and colour on every page, Joe and Matt on Find a Mentor, the search ("spanish") from the website, Request a Mentor framed at 696 pixels with `embed=1`, `mentor` and `placement`, and `noindex`. Write half: link `knfbdr2g` ("LinkedIn — Spring workshops", page `/mentors/`) followed into Joe's profile, then the framed form filled and submitted inside the frame (reference `17ddd3ad`). Read back from crm-test: the engagement carries the campaign and Joe as the requested mentor, and the lead reads `mentor-profile`, Converted. The site has no newsletter signup (#72 (6)).
 
 ## 7. Out of scope this round
 
@@ -160,6 +161,7 @@ Work pauses for Doug's go-ahead at each stop. Between two stops it proceeds with
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.11 | 11-09-26 17:06 | Claude (Claude Code) | Stop 6 run: passed but for the newsletter signup the website lacks; findings in `OPEN-ITEMS.md` #72 (6) and (7). |
 | 0.10 | 11-09-26 14:40 | Claude (Claude Code) | Piece F: the test website is built by the deployment-guide session's stage 6; crm-test names it. |
 | 0.9 | 11-09-26 11:59 | Claude (Claude Code) | Step 10's runbook written: `CHAPTER-WEBSITE-SETUP.md`. |
 | 0.8 | 11-09-26 11:56 | Claude (Claude Code) | Stop 5 on crm-test: the first run found the newsletter delivery dropping the campaign (fixed in v0.317.1); the re-run passed every check. |
