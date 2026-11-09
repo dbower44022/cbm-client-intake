@@ -1,7 +1,7 @@
 # Stage 6 — Build the chapter's public website
 
-**Version:** 0.9  
-**Last Updated:** 11-09-26 16:18  
+**Version:** 0.10  
+**Last Updated:** 11-09-26 17:23  
 **Generated from** `steps/stage-06.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -187,11 +187,12 @@ The chapter's public website is a WordPress site built from the Association's te
 
 **Do this:**
 
-1. On WordPress, signed in as the administrator from step 6.3, open Users, then Add New User, and create a user for the named person from step 6.1 with their own chapter address and the Editor role (Administrator if they also maintain WordPress). On another platform, use its own way of adding an editor.
-2. The named person signs in with their own sign-in, changes one word on the home page and publishes it.
-3. They open https://WEBSITE-DOMAIN/ in a private browser window.
+1. On WordPress, signed in as the administrator from step 6.3, open Users, then Add New User, and create a user for the named person from step 6.1 with their own chapter address and the Editor role (Administrator if they also maintain WordPress). Type the address in both Username and Email, and leave Send User Notification ticked: WordPress emails the person a link to set their own password, so nobody else handles it. On another platform, use its own way of adding an editor.
+2. The named person opens the email from WordPress, sets their password from its link, and signs in at https://WEBSITE-DOMAIN/wp-admin/ with their own address.
+3. They change one word on the home page and publish it.
+4. They open https://WEBSITE-DOMAIN/ in a private browser window.
    *You should see:* The changed word.
-4. They change the word back, publish, and reload the private window.
+5. They change the word back, publish, and reload the private window.
    *You should see:* The original word again.
 
 **Done when:** A named person at the chapter has signed in and made a change.
@@ -280,7 +281,7 @@ The chapter's public website is a WordPress site built from the Association's te
 
 **Do this:**
 
-1. Decide one of two answers, then write it on the chapter information form under web: docs_site_url:
+1. Decide one of two answers, then write it on the chapter information form under web: docs_site_url. The form has no question for it yet, so the answer is written into the values file directly (OPEN-ITEMS.md item 75):
    - The chapter's own documentation site's full address, beginning https://.
    - none yet — until the open question of shared or per-chapter documentation is settled.
 
@@ -297,7 +298,7 @@ The chapter's public website is a WordPress site built from the Association's te
 
 **If it didn't work:** Stop, and ask the Association before going on.
 
-**What usually goes wrong:** Leaving the setting DOCS_SITE_URL at its default. The chapter's staff are then sent to Cleveland's documentation, which names Cleveland throughout.
+**What usually goes wrong:** Leaving the setting DOCS_SITE_URL at its default. The chapter's staff are then sent to Cleveland's documentation, which names Cleveland throughout. Today "none yet" leads there too: an empty docs_site_url leaves the setting out of the deployment, and the default is Cleveland's (OPEN-ITEMS.md item 75).
 
 ---
 
@@ -334,6 +335,7 @@ The chapter's public website is a WordPress site built from the Association's te
 
 | Version | Date | Change |
 |---|---|---|
+| 0.10 | 11-09-26 17:23 | Steps 6.4, 6.5 and 6.7 worked for the Association. Step 6.4: the Username and Email boxes both take the address, and Send User Notification gives the person their own password link; a step added for that email. Step 6.5 done with the template's defaults. Step 6.7: the chapter information form has no question for docs_site_url, and an empty answer leaves Cleveland's documentation as the default, so "none yet" cannot be expressed yet (OPEN-ITEMS.md item 75). |
 | 0.9 | 11-09-26 16:18 | Steps 6.2 and 6.3 done for the Association and corrected from the screens: HTTPS Redirection is in Application Settings, General tab, not on the certificate page; the cache Purge button is in the same place; Cloudways now runs at unified.cloudways.com. |
 | 0.8 | 11-09-26 15:57 | Step 6.2's Cloudways actions rewritten from the Association's own account (11-09-26): the four-step Deploy your First Server and Application form, Standard 1 GB at $11 a month, 2 GB advised for a live site. The stage summary, step 6.1 and step 6.2's summary follow Association ruling 75, which replaces ruling 29: the host is the one the chapter chose at step 5.10, and the actions are written for Cloudways, the host the Association tests. |
 | 0.7 | 11-08-26 10:05 | Rewritten for the Association's website rulings (review finding 1; plan association-setup-plan.md, batch 3, approved by Doug 11-08-26). The site is WordPress from the Association's template on Cloudways, with the chapter connector, or the chapter's own platform with the embed code (Association rulings 26 to 29 and 34). Step 6.2 launches the Cloudways server, the DNS record and the certificate. Step 6.3, formerly the redirect check, now installs the template and the chapter connector: the events page is a key page the chapter connector serves. Step 6.4 adds the editor's own WordPress user. Step 6.5, formerly the colour file, now chooses the eight colours, two fonts and header graphic the Website group of System Settings will hold; the colour file becomes an optional override. Step 6.6 notes the logo is also uploaded to the Website group. New step 6.8 turns on Cloudflare Web Analytics (Association ruling 63). No step number changed. |

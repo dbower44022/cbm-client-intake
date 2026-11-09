@@ -1,7 +1,7 @@
 stage: 6
 name: Build the chapter's public website
-version: "0.9"
-updated: "11-09-26 16:18"
+version: "0.10"
+updated: "11-09-26 17:23"
 summary: >-
   The chapter's public website is a WordPress site built from the Association's
   template, on the host the chapter chose at step 5.10, with the Association's
@@ -192,8 +192,9 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: "On WordPress, signed in as the administrator from step 6.3, open Users, then Add New User, and create a user for the named person from step 6.1 with their own chapter address and the Editor role (Administrator if they also maintain WordPress). On another platform, use its own way of adding an editor."
-      - do: The named person signs in with their own sign-in, changes one word on the home page and publishes it.
+      - do: "On WordPress, signed in as the administrator from step 6.3, open Users, then Add New User, and create a user for the named person from step 6.1 with their own chapter address and the Editor role (Administrator if they also maintain WordPress). Type the address in both Username and Email, and leave Send User Notification ticked: WordPress emails the person a link to set their own password, so nobody else handles it. On another platform, use its own way of adding an editor."
+      - do: The named person opens the email from WordPress, sets their password from its link, and signs in at https://WEBSITE-DOMAIN/wp-admin/ with their own address.
+      - do: They change one word on the home page and publish it.
       - do: They open https://WEBSITE-DOMAIN/ in a private browser window.
         see: The changed word.
       - do: They change the word back, publish, and reload the private window.
@@ -206,7 +207,7 @@ steps:
     goes_wrong: >-
       The only sign-in belongs to the person or company who built the site.
     later: unchanged
-    status: not-yet-tried
+    status: in progress for the Association — Editor user doug.bower@ created 11-09-26 17:15; the sign-in and one-word change are owed.
     source: 9-Methods-Hosting-Website-Policies.md#6.4
 
   - id: "6.5"
@@ -239,7 +240,7 @@ steps:
       Accessibility Guidelines (WCAG) version 2.2 at level AA (Association ruling
       64), so text on its background must stay readable.
     later: The colours entered straight into the Website group, without the note.
-    status: not-yet-tried — rewritten 11-08-26; the Website group of System Settings was built in v0.314.0.
+    status: done for the Association 11-09-26 — template defaults kept for the test site (Doug), written in the note Website look for stage 13 in the shared drive.
     source: prds/chapter-website-plan.md, decision 4.2
 
   - id: "6.6"
@@ -277,7 +278,7 @@ steps:
     produces: [docs_site_url]
     mode: guided
     actions:
-      - do: "Decide one of two answers, then write it on the chapter information form under web: docs_site_url:"
+      - do: "Decide one of two answers, then write it on the chapter information form under web: docs_site_url. The form has no question for it yet, so the answer is written into the values file directly (OPEN-ITEMS.md item 75):"
         items:
           - "The chapter's own documentation site's full address, beginning https://."
           - "none yet — until the open question of shared or per-chapter documentation is settled."
@@ -296,9 +297,11 @@ steps:
       probe: If an address is given, the app fetches it and checks it answers.
     goes_wrong: >-
       Leaving the setting DOCS_SITE_URL at its default. The chapter's staff are then
-      sent to Cleveland's documentation, which names Cleveland throughout.
+      sent to Cleveland's documentation, which names Cleveland throughout. Today
+      "none yet" leads there too: an empty docs_site_url leaves the setting out of
+      the deployment, and the default is Cleveland's (OPEN-ITEMS.md item 75).
     later: Depends on the answer to the open question.
-    status: not-yet-tried
+    status: decided for the Association 11-09-26 — none yet (Doug); the values file cannot express it yet (item 75).
     source: 9-Methods-Hosting-Website-Policies.md#6.7
 
   - id: "6.8"
@@ -331,6 +334,10 @@ steps:
     source: Association ruling 63 (business-mentors-association, DECISIONS.md)
 
 changes:
+  - version: "0.10"
+    date: "11-09-26 17:23"
+    change: >-
+      Steps 6.4, 6.5 and 6.7 worked for the Association. Step 6.4: the Username and Email boxes both take the address, and Send User Notification gives the person their own password link; a step added for that email. Step 6.5 done with the template's defaults. Step 6.7: the chapter information form has no question for docs_site_url, and an empty answer leaves Cleveland's documentation as the default, so "none yet" cannot be expressed yet (OPEN-ITEMS.md item 75).
   - version: "0.9"
     date: "11-09-26 16:18"
     change: >-
