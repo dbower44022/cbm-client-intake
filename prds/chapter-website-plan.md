@@ -1,10 +1,10 @@
 # Chapter website — the applications' side
 
 **Document:** Plan for the chapter applications' side of the chapter website
-**Version:** 0.9
+**Version:** 0.10
 **Status:** Approved 11-07-26; pieces A to E reviewed; next, the runbooks and the test website (step 10, Stop 6)
 **Owner:** Doug Bower
-**Last Updated:** 11-09-26 11:59
+**Last Updated:** 11-09-26 14:40
 
 ---
 
@@ -121,7 +121,7 @@ Each piece has its own feature flag, off by default and read per request.
 **E. The newsletter signup form.** Flag `NEWSLETTER_FORM`. **Built in v0.317.0; passed Stop 5 on crm-test 11-09-26** (a signup through a website link carried its campaign, the Website button `home-footer`, the consent, and a Newsletter receipt). The consent field is `Contact.cMarketingOptIn` (read from `core/mailing_sync.py`). No SMS tick: the form asks for no phone number.
 A sixth public form creating a Contact with marketing consent set (ruling 43), a lead per ruling 48, and the campaign and button placement like every public form. The existing Constant Contact synchronisation passes the contact on. Before building, check which Contact field the synchronisation reads as consent.
 
-**F. The test website.** Not code in this repository.
+**F. The test website.** Not code in this repository. **11-09-26:** built by the deployment-guide session as stage 6 of `prds/chapter-network/deployment-guide/association-setup-plan.md`, in the Association's own Cloudways account (Cloudways activated the account 11-09-26); crm-test already names `https://chapter-demo.mentorsassociation.org` among its chapter website addresses. Stop 6 waits on that site.
 The chapter connector installed on Cloudways at `chapter-demo.mentorsassociation.org`, pointed at crm-test, with noindex set. Built from the Association's own setup runbook (`docs/setup-runbook.md` and `docs/runbooks/` in the Association repository). This repository adds the crm-test half.
 
 **Runbooks** (in this repository, published to the documentation site only with Doug's agreement). **Written 11-09-26 as one runbook, `CHAPTER-WEBSITE-SETUP.md`, a section per task:**
@@ -160,6 +160,7 @@ Work pauses for Doug's go-ahead at each stop. Between two stops it proceeds with
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.10 | 11-09-26 14:40 | Claude (Claude Code) | Piece F: the test website is built by the deployment-guide session's stage 6; crm-test names it. |
 | 0.9 | 11-09-26 11:59 | Claude (Claude Code) | Step 10's runbook written: `CHAPTER-WEBSITE-SETUP.md`. |
 | 0.8 | 11-09-26 11:56 | Claude (Claude Code) | Stop 5 on crm-test: the first run found the newsletter delivery dropping the campaign (fixed in v0.317.1); the re-run passed every check. |
 | 0.7 | 11-07-26 15:05 | Claude (Claude Code) | Piece C passed Stop 4. Decision 4.1 corrected and re-answered A. Pieces D and E built (v0.317.0); the CRM change applied on crm-test. |

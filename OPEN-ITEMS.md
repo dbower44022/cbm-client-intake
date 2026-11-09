@@ -39,8 +39,11 @@ found; move resolved items to the bottom with the resolution date.
     visitor to the applications' own `/webinars/` page (ruling 42 asks for a
     frame). (4) **crm-test's settings carry the review switches**
     (`WEBSITE_API`, `FORM_FRAMING`, three `WEBSITE_PAGE_*`,
-    `WEBSITE_ORIGINS=http://localhost:8080`);
-    remove `WEBSITE_ORIGINS`'s local address once the test website is live.
+    `WEBSITE_ORIGINS=https://chapter-demo.mentorsassociation.org,http://localhost:8080`
+    since 11-09-26, plus `NEWSLETTER_FORM`); remove the local address once
+    the test website is live, and switch the local prototype back to its
+    stand-in (it still reads crm-test, through a settings file outside its
+    repository).
     (5) **Found 11-08-26 by a clean install of connector 0.2.2 against crm-test and a WCAG
     2.2 AA scan (axe-core)** — the applications' side, for the website session:
     a mentor with no photo gets a large empty grey box on the directory card and the
