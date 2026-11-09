@@ -1,7 +1,7 @@
 stage: 10
 name: Set up the Google permissions the software needs
-version: "0.5"
-updated: "11-07-26 15:21"
+version: "0.6"
+updated: "11-08-26 21:50"
 summary: >-
   In this stage we give the applications a way to act inside the chapter's
   Google account. We create one account made for a program rather than a person,
@@ -43,28 +43,27 @@ steps:
     produces: [google_service_account_client_id]
     mode: guided
     actions:
-      - do: "In a browser, go to console.cloud.google.com and sign in as the chapter's Google administrator (the account from step 4.5). Labels below are Google Cloud's wording as of 2026, not checked on screen for this guide; if one differs, use the search box at the top of the console."
+      - do: "In a browser, go to console.cloud.google.com and sign in as a Google administrator of the chapter's domain (stage 4). Screens below were checked on the Association's own account on 11-08-26. The first sign-in creates the domain's Google Cloud organization by itself, and the console then offers a free-trial banner across the top: dismiss it, the stage costs nothing."
       - do: "Open the project picker at the top of the page and choose New project. Enter:"
         items:
           - "Project name: SHORT-LABEL-apps"
           - "Organization: the chapter's own domain"
-        see: The new project selected in the project picker.
-      - do: "Open APIs and services, then Library. Search for each of these and choose Enable on each:"
+        see: "The new project selected in the project picker. Google adds a number to the project's ID, for example bma-apps-514121; write the full project ID down, because every address below uses it. Below it is written PROJECT-ID."
+      - do: "Switch on each service by opening its page below and clicking the blue Enable button under its name. The console is slow: wait until the button is drawn before clicking, and wait about ten seconds after. A click that took moves the page to the service's details page, whose address ends /metrics. If it stays on the page with the Enable button, click again."
         items:
-          - "Admin SDK API"
-          - "Gmail API"
-          - "Google Calendar API"
-          - "Google Drive API"
-          - "Google Meet REST API (only if meeting transcripts will be switched on)"
-        see: Each API shown as enabled under APIs and services, then Enabled APIs and services.
-      - do: "Open IAM and admin, then Service accounts, and choose Create service account. Enter:"
+          - "https://console.cloud.google.com/apis/library/admin.googleapis.com?project=PROJECT-ID"
+          - "https://console.cloud.google.com/apis/library/gmail.googleapis.com?project=PROJECT-ID"
+          - "https://console.cloud.google.com/apis/library/calendar-json.googleapis.com?project=PROJECT-ID"
+          - "https://console.cloud.google.com/apis/library/drive.googleapis.com?project=PROJECT-ID"
+          - "https://console.cloud.google.com/apis/library/meet.googleapis.com?project=PROJECT-ID (only if meeting transcripts will be switched on)"
+        see: "At https://console.cloud.google.com/apis/dashboard?project=PROJECT-ID, the list headed Enabled APIs and services includes Admin SDK API, Gmail API, Google Calendar API and Google Drive API, among about twenty services Google switches on for every project."
+      - do: "Go to https://console.cloud.google.com/iam-admin/serviceaccounts/create?project=PROJECT-ID . The page is headed Create service account. Fill in the two fields below; Service account ID fills itself in from the name. Leave Permissions (optional) and Principals with access (optional) closed, and click Create and close."
         items:
           - "Service account name: SHORT-LABEL-apps"
-          - "Service account ID: SHORT-LABEL-apps (filled in for you)"
-          - "Roles: none. Skip the optional steps and choose Done."
-        see: "The service account listed, with an email address ending @SHORT-LABEL-apps.iam.gserviceaccount.com."
-      - do: Open the service account. Copy its Unique ID, a number of about twenty digits, into the chapter's Operations vault as a note named Google machine account client ID. Step 10.3 needs it.
-        see: The Unique ID on the service account's details page.
+          - "Service account description: Machine account for the chapter applications: sends mail, books calendars, files documents"
+        see: "The Service accounts list, with one account whose email is SHORT-LABEL-apps@PROJECT-ID.iam.gserviceaccount.com, status Enabled, and a number of about twenty digits in the column headed OAuth 2 Client ID."
+      - do: Copy that OAuth 2 Client ID number into the chapter's Operations vault as a note named Google machine account client ID. It is the same number the account's Details tab calls Unique ID. Step 10.3 needs it.
+        see: The note in the vault, holding the same digits as the list.
     done_when: >-
       The account the software will use exists in the chapter's Google account.
     check:
@@ -73,7 +72,7 @@ steps:
           At console.cloud.google.com, with SHORT-LABEL-apps showing in the project
           picker at the top of the page, open IAM and admin, then Service accounts.
           The list shows one account named SHORT-LABEL-apps, with an email address
-          ending @SHORT-LABEL-apps.iam.gserviceaccount.com and a status of Enabled.
+          ending @PROJECT-ID.iam.gserviceaccount.com and a status of Enabled.
         - >-
           Open that account. Its details page shows a Unique ID of about twenty
           digits. Open the note named Google machine account client ID in the
@@ -94,7 +93,7 @@ steps:
       names the organization beside each project; if it does not name the chapter's
       domain, sign out, sign in as the administrator from step 4.5 and start again.
     later: unchanged
-    status: not-yet-tried — ruled 09-15-26 that the Google stage will not be rehearsed; the first real chapter is the rehearsal.
+    status: done-for-real — the Business Mentors Association, 11-08-26, project bma-apps-514121.
     source: 3-Methods-CRM-Google-Applications.md#10.1
 
   - id: "10.2"
@@ -113,11 +112,11 @@ steps:
     produces: [GOOGLE_SERVICE_ACCOUNT_JSON]
     mode: guided
     actions:
-      - do: "In the same service account, open the Keys tab, choose Add key, then Create new key. Choose:"
+      - do: "Go to https://console.cloud.google.com/iam-admin/serviceaccounts?project=PROJECT-ID , click the account's email, and open the Keys tab. Under a yellow warning about key risks, click Add key, then Create new key. Choose:"
         items:
           - "Key type: JSON"
         see: One file ending .json downloaded to the computer.
-      - do: "If Google refuses to create the key, the organization has the policy that blocks service account keys switched on. That is the default for Google Cloud organizations created since 2024. The chapter's Google administrator must allow keys for this one project: open IAM and admin, then Organization policies, find Disable service account key creation, and override it for project SHORT-LABEL-apps only. Then create the key again."
+      - do: "If Google refuses to create the key, the organization has the policy that blocks service account keys switched on. Google made that the default for organizations created since 2024, but the Association's organization, created 11-08-26, did not block keys: Add key was offered. The chapter's Google administrator must allow keys for this one project: open IAM and admin, then Organization policies, find Disable service account key creation, and override it for project SHORT-LABEL-apps only. Then create the key again."
       - do: In Proton Pass, open the chapter's Operations vault and add a new item named Google machine account key. Attach the downloaded .json file to it.
         see: The item in the Operations vault with the file attached, and a second named person able to open it.
       - do: Delete the downloaded .json file from the computer, and empty the computer's bin.
@@ -132,7 +131,7 @@ steps:
           machine account key is there with one attachment, a file ending .json.
           Open the attachment. It is plain text that starts with a curly bracket
           and contains a line beginning "client_email" whose value ends
-          @SHORT-LABEL-apps.iam.gserviceaccount.com, and a line beginning
+          @PROJECT-ID.iam.gserviceaccount.com, and a line beginning
           "client_id" whose value is the Unique ID from step 10.1. A file naming a
           different account is the key to the wrong project.
         - >-
@@ -177,9 +176,10 @@ steps:
     mode: guided
     actions:
       - do: The chapter's Google administrator signs in at admin.google.com. Nobody else can do this step.
-      - do: "Open Security, then Access and data control, then API controls, then Manage domain-wide delegation, and choose Add new. The menu names are Google's wording as of 2026, not checked on screen for this guide; if they differ, search the admin console for domain-wide delegation."
-      - do: "In Client ID, paste the Unique ID from step 10.1 (it is in the Operations vault)."
-      - do: "In OAuth scopes, paste these scopes, separated by commas with no spaces. They are exactly the scopes the software requests, read from its code (core/gmail.py, core/gcalendar.py, core/gdrive.py, core/google_directory.py, core/gmeet.py):"
+      - do: "Go to https://admin.google.com/ac/owl/domainwidedelegation . The page is headed by the trail Security, API Controls, Domain-wide Delegation, with a list headed API clients. Click Add new beside that heading."
+        see: A box headed Add a new client ID, with a Client ID field, a tick box Overwrite existing client ID, and a field OAuth scopes (comma-delimited).
+      - do: "In Client ID, paste the OAuth 2 Client ID from step 10.1 (it is in the Operations vault). Leave Overwrite existing client ID unticked."
+      - do: "In OAuth scopes (comma-delimited), paste these scopes, separated by commas with no spaces. They are exactly the scopes the software requests, read from its code (core/gmail.py, core/gcalendar.py, core/gdrive.py, core/google_directory.py, core/gmeet.py):"
         items:
           - "https://www.googleapis.com/auth/gmail.readonly"
           - "https://www.googleapis.com/auth/gmail.send"
@@ -194,8 +194,8 @@ steps:
           - "https://www.googleapis.com/auth/gmail.readonly,https://www.googleapis.com/auth/gmail.send,https://www.googleapis.com/auth/calendar.events,https://www.googleapis.com/auth/drive,https://www.googleapis.com/auth/admin.directory.user.readonly,https://www.googleapis.com/auth/admin.directory.user,https://www.googleapis.com/auth/admin.directory.group,https://www.googleapis.com/auth/meetings.space.created"
       - do: Read each scope back against the list above, one at a time, aloud, before saving. Look for a space after a comma, a trailing full stop, or http instead of https; each silently breaks one scope.
         see: Every scope on the list, spelled exactly, and nothing missing.
-      - do: Choose Authorize.
-        see: The client ID listed on the domain-wide delegation page, with the scopes beside it.
+      - do: Click AUTHORIZE.
+        see: "A row in API clients: the Name is the service account's email address, the Client ID is the number, and Scopes shows the first two scopes then +5 More (or +6 More with the meeting scope)."
     done_when: >-
       The grant is entered in the chapter's own Google admin console with the exact
       list of permissions, and the list has been checked item by item against the
@@ -204,9 +204,8 @@ steps:
     check:
       how:
         - >-
-          At admin.google.com, signed in as the chapter's Google administrator,
-          open Security, then Access and data control, then API controls, then
-          Manage domain-wide delegation. One row shows the Client ID from step
+          At https://admin.google.com/ac/owl/domainwidedelegation , signed in as
+          the chapter's Google administrator, one row shows the Client ID from step
           10.1. Open the note named Google machine account client ID in the
           chapter's Operations vault beside it and compare digit by digit. A row
           for a different number is a grant to an account that does not exist.
@@ -237,7 +236,7 @@ steps:
       added for the same Client ID instead of editing the first: the two rows
       conflict rather than combine.
     later: unchanged — this cannot be automated, because it happens inside the chapter's own Google account.
-    status: not-yet-tried
+    status: done-for-real — the Business Mentors Association, 11-08-26, seven scopes, no meeting scope.
     source: 3-Methods-CRM-Google-Applications.md#10.3
 
   - id: "10.4"
@@ -257,8 +256,8 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: "At admin.google.com, open Directory, then Users, and search for the shared operations mailbox address (for example info@CHAPTER-DOMAIN)."
-        see: The address listed as a user, with a Google Workspace licence shown against it. If it is not in the users list at all, it is a group or an alias, and cannot be used.
+      - do: "Go to https://admin.google.com/ac/users , the list headed Users, and search for the shared operations mailbox address (for example info@CHAPTER-DOMAIN)."
+        see: "The address listed as a user with Status Active and an Email usage figure. The list does not show licences: click the name to see the licence on the user's own page. If it is not in the users list at all, it is a group or an alias, and cannot be used."
       - do: Write the address on the chapter information form as the shared operations mailbox.
     done_when: >-
       The mailbox is named, and it is a real licensed mailbox rather than a group or
@@ -290,7 +289,7 @@ steps:
       neither works, and the refusal names nothing useful. If the address has no
       licence, it is not a mailbox.
     later: unchanged
-    status: not-yet-tried
+    status: done-for-real — the Business Mentors Association, 11-08-26, info@mentorsassociation.org.
     source: 3-Methods-CRM-Google-Applications.md#10.4
 
   - id: "10.5"
@@ -310,16 +309,17 @@ steps:
     produces: [shared_drive_id]
     mode: guided
     actions:
-      - do: "Sign in at drive.google.com as the chapter's Google administrator. Open Shared drives and choose New. Enter:"
+      - do: "Signed in as the chapter's Google administrator, go to https://drive.google.com/drive/shared-drives . On a domain with none yet, the page shows A place for teamwork and a blue button Create a shared drive; otherwise click New at top left. Either opens a box headed New shared drive. Replace the name in it with the one below and click Create."
         items:
-          - "Name: CHAPTER-NAME Documents"
-        see: The new shared drive open, and empty.
-      - do: "Open the shared drive's menu, choose Manage members, and add the service account's email address from step 10.1 (ending @SHORT-LABEL-apps.iam.gserviceaccount.com). Choose:"
+          - "CHAPTER-NAME Documents"
+        see: The new shared drive open and empty, its name at the top with 1 person under it.
+      - do: "Click Manage members at the top right of the drive. In Add people and groups, type the service account's email address from step 10.1 and press Enter, which turns it into a chip. Then set:"
         items:
-          - "Access: Manager (Cleveland's service account is a Manager of its shared drive, because it grants people access to folders)"
-          - "Notify people: off (the service account has no mailbox)"
-        see: The service account in the member list as Manager.
-      - do: "Copy the shared drive's identifier from the browser's address bar: the characters after /drive/folders/ . Write it on the chapter information form as the shared drive."
+          - "Role menu beside the address (it starts at Content manager): Manager. Cleveland's service account is a Manager of its shared drive, because it grants people access to folders."
+          - "Notify people: untick it. The service account has no mailbox. The blue button then reads Share instead of Send."
+      - do: "Click Share. Google then shows a box headed Share? saying the address is external to the organization. That is expected: every service account is outside the domain. Click Share anyway."
+        see: The drive's heading now says 2 people.
+      - do: "Copy the shared drive's identifier from the browser's address bar: the characters after /folders/ (the address reads /drive/u/0/folders/ or similar). Write it on the chapter information form as the shared drive."
         see: A string of about nineteen letters and numbers, often starting 0A.
     done_when: >-
       The shared drive exists and the machine account is a member of it.
@@ -333,7 +333,7 @@ steps:
         - >-
           Open the drive, click its name at the top of the page and choose Manage
           members. The service account's address, ending
-          @SHORT-LABEL-apps.iam.gserviceaccount.com, is in the list with the role
+          @PROJECT-ID.iam.gserviceaccount.com, is in the list with the role
           Manager. Any other role lets the applications file documents but not
           give people access to their folders.
         - >-
@@ -342,7 +342,7 @@ steps:
           folders later, by the applications, never to the whole drive.
         - >-
           With the drive itself open (not a folder inside it), the browser's
-          address bar ends /drive/folders/ followed by the identifier. The value on
+          address bar ends /folders/ followed by the identifier. The value on
           the chapter information form matches it character for character. It is
           about nineteen characters and usually begins 0A; a much longer value was
           copied from inside a folder and points at that folder, not the drive.
@@ -351,10 +351,14 @@ steps:
       An ordinary folder in somebody's personal drive instead of a shared drive. It
       works until that person leaves.
     later: unchanged
-    status: not-yet-tried
+    status: done-for-real — the Business Mentors Association, 11-08-26, drive 0AFSWscbGrTLQUk9PVA.
     source: 3-Methods-CRM-Google-Applications.md#10.5
 
 changes:
+  - version: "0.6"
+    date: "11-08-26 21:50"
+    change: >-
+      Steps 10.1 and 10.3 to 10.5 done on the Business Mentors Association and rewritten from the real screens: a direct address for every page, the project ID's added number (PROJECT-ID) and the service account's real address, the Enable click that needs a wait, the OAuth 2 Client ID column, the Add a new client ID box, the role menu that starts at Content manager, the Share anyway warning, and /folders/ in the drive's address. Step 10.2 notes that the Association's new organization did not block keys.
   - version: "0.5"
     date: "11-07-26 15:21"
     change: >-
