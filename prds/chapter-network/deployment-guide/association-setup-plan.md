@@ -1,10 +1,10 @@
 # Correcting the guide while the Association is set up as a chapter — plan
 
 **Document:** Plan for correcting the New Chapter Deployment Guide stage by stage while the Business Mentors Association is set up as a chapter (Association rulings 71 and 72)
-**Version:** 1.22
+**Version:** 1.23
 **Status:** Approved by Doug 11-07-26 15:17, with the four recommendations of section 5 and both of section 6
 **Owner:** Doug Bower
-**Last Updated:** 11-10-26 01:57
+**Last Updated:** 11-10-26 10:41
 
 ---
 
@@ -169,6 +169,8 @@ Stage 6 in the guide predates the website rulings (review finding 1). It still h
 
 **The test website moved to the Association's own CRM, 11-10-26 01:57** (Doug: cut the release now, option B). Release v0.317.2 cut and pushed out of turn; the Association's and Boston's applications both healthy on it. Website settings set on the Association's application, the connector pointed at it, the cache purged; every page now names apps.businessmentorsassociation.org (`OPEN-ITEMS.md` item 72 (8)).
 
+**Zoom credentials checked, 11-10-26 10:41** (Doug: option 2 of three, plan approved; at Stop B, option 1). The Business Mentors Association Webinars app's Account ID is AbWHhcFJQqaWBk4jODcJFA and its Client ID TcvoNRFgRDeZBxefXHaN9g; the Client Secret stays in Doug's vault. The host address is admin@mentorsassociation.org. Doug ran `scripts/probe_zoom.py`, read-only: token issued, host found and licensed, webinar listing refused for want of the webinar scopes, as expected without the Webinars add-on. Nothing was put into the Association's applications: the chapter information form asks the Zoom answers only when Zoom webinars is answered yes, and Doug chose not to keep a second copy of them outside `bma-values.yaml`. They go in through the form when the add-on is bought. Guide stage 5 version 0.18.
+
 ## 8. At the end of the session
 
 The closing reply reports what changed in the guide, which stages are ready for Doug to follow, and which open decisions blocked a step. Work still owed is recorded in `OPEN-ITEMS.md`.
@@ -179,6 +181,7 @@ The closing reply reports what changed in the guide, which stages are ready for 
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.23 | 11-10-26 10:41 | Claude (Claude Code) | Zoom credentials checked; nothing put into the applications. |
 | 1.22 | 11-10-26 01:57 | Claude (Claude Code) | Test website moved to the Association's CRM. |
 | 1.21 | 11-09-26 23:59 | Claude (Claude Code) | Stage 11, steps 11.14 to 11.18. |
 | 1.20 | 11-09-26 23:46 | Claude (Claude Code) | Stage 11 through 11.13 done for the Association. |

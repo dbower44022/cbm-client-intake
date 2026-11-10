@@ -1,7 +1,7 @@
 stage: 5
 name: Open the chapter's service accounts
-version: "0.17"
-updated: "11-09-26 17:42"
+version: "0.18"
+updated: "11-10-26 10:41"
 why: >-
   The chapter's CRM server, its applications and their database all run in a
   hosting account, and the public webinar programme runs through a video meeting
@@ -191,9 +191,13 @@ steps:
     goes_wrong: >-
       The host address setting in the software defaults to Cleveland's. A chapter
       that forgets to change it would create its webinars under Cleveland's Zoom
-      host. The Zoom connection has never been run against a real Zoom account.
+      host. The webinar part of the Zoom connection has never been run against a
+      real Zoom account. The chapter information form asks the three Zoom answers
+      only when Zoom webinars is answered yes, so a chapter that checks its
+      credentials before buying the Webinars licence records them in its setup
+      notes until then.
     later: unchanged
-    status: not-yet-tried
+    status: not-yet-tried — credentials checked for the Business Mentors Association, 11-10-26, with scripts/probe_zoom.py, read-only. The token was issued and the host admin@mentorsassociation.org found, licensed. Listing webinars was refused for want of the webinar scopes, as expected on Zoom Pro without the Webinars add-on. Webinars themselves are untested.
     source: 9-Methods-Hosting-Website-Policies.md#5.5
 
   - id: "5.6"
@@ -509,6 +513,10 @@ steps:
     source: Association ruling 30 (business-mentors-association, DECISIONS.md)
 
 changes:
+  - version: "0.18"
+    date: "11-10-26 10:41"
+    change: >-
+      Step 5.5's status records the read-only credentials check for the Business Mentors Association (11-10-26): token issued, host found, webinar listing refused for want of the Webinars licence. Its goes wrong note says the form asks the Zoom answers only when webinars are switched on.
   - version: "0.17"
     date: "11-09-26 17:42"
     change: >-

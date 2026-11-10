@@ -21,7 +21,9 @@ found; move resolved items to the bottom with the resolution date.
     auto-renew on both domains (they expire 11-07-27) and GoDaddy two-step sign-in; (4) Constant
     Contact Lite before its trial ends; (5) Stripe's email moved to admin@; (6) DMARC from p=none
     to p=quarantine on or after 12-06-26; (7) the admin@ group's spam handling; (8) the Zoom
-    Webinars add-on and its scopes, when webinars are tested; (9) guide step 2.7: where Proton's
+    Webinars add-on and its scopes, when webinars are tested (credentials checked read-only
+    11-10-26, token and host fine; when the add-on is bought, add the webinar scopes of guide step
+    5.5, answer Zoom webinars yes on the form and give the three Zoom answers there); (9) guide step 2.7: where Proton's
     organization members are managed was not found. Next: stage 6, the website, after its plan.
     **Update 11-08-26 14:19:** stage 8 done (`chapters/bma-values.yaml`). Stage 9 blocked: CRMBuilder's
     deploy wizard would save the Association's tokens on application ENG-002, replacing

@@ -1,7 +1,7 @@
 # Stage 5 — Open the chapter's service accounts
 
-**Version:** 0.17  
-**Last Updated:** 11-09-26 17:42  
+**Version:** 0.18  
+**Last Updated:** 11-10-26 10:41  
 **Generated from** `steps/stage-05.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -215,7 +215,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **If it didn't work:** Stop, and ask the Association before going on.
 
-**What usually goes wrong:** The host address setting in the software defaults to Cleveland's. A chapter that forgets to change it would create its webinars under Cleveland's Zoom host. The Zoom connection has never been run against a real Zoom account.
+**What usually goes wrong:** The host address setting in the software defaults to Cleveland's. A chapter that forgets to change it would create its webinars under Cleveland's Zoom host. The webinar part of the Zoom connection has never been run against a real Zoom account. The chapter information form asks the three Zoom answers only when Zoom webinars is answered yes, so a chapter that checks its credentials before buying the Webinars licence records them in its setup notes until then.
 
 ---
 
@@ -552,6 +552,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 | Version | Date | Change |
 |---|---|---|
+| 0.18 | 11-10-26 10:41 | Step 5.5's status records the read-only credentials check for the Business Mentors Association (11-10-26): token issued, host found, webinar listing refused for want of the Webinars licence. Its goes wrong note says the form asks the Zoom answers only when webinars are switched on. |
 | 0.17 | 11-09-26 17:42 | Step 5.8 follows CRMBuilder's new deploy wizard (PI-600, accepted 11-09-26): it makes the two tokens and puts them in the vault, and nothing more. The engagement it used to create and the Provider credentials window are gone; the tokens are entered inside the wizard in step 9.3. Applied from CRMBuilder's handoff of 11-09-26. |
 | 0.16 | 11-09-26 14:21 | Step 5.10 follows Association ruling 75, which replaces ruling 29: the chapter chooses its website host, any host must do five things, and the Cloudways actions are the path the Association tests. |
 | 0.15 | 11-08-26 10:06 | Step 5.10: a new Cloudways account may be held for a manual activation check (the Association's, 11-08-26). |
