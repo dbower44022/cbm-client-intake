@@ -1,7 +1,7 @@
 # Stage 11 — Deploy the chapter's applications
 
-**Version:** 0.13  
-**Last Updated:** 11-07-26 15:21  
+**Version:** 0.14  
+**Last Updated:** 11-09-26 23:46  
 **Generated from** `steps/stage-11.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -749,6 +749,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 
 | Version | Date | Change |
 |---|---|---|
+| 0.14 | 11-09-26 23:46 | Steps 11.2 to 11.13 followed for the Business Mentors Association (11-09-26); each step's status records what happened, chiefly that the doctl token's user must also do step 5.9 in the chapter's team. |
 | 0.13 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". |
 | 0.12 | 09-25-26 13:00 | Rewritten for the reader, as stage 10 was (Doug, 09-25-26): the stage and every step open with a Summary, what is done and why in a few plain sentences, in place of the one-line Why. Every How to check is now a list of concrete checks naming where to look and what must be seen, one per line: the secret compared against the vault and against another chapter's, the settings file searched for Cleveland's values and for the branch lines, the hosting account's own view of the three parts and their branches beside the script's, the certificate's issuer and expiry, each health-page field and what each crmConfig state points at, the worker log searched for unauthorized_client, and for each Google check the place on Google's side where the result must appear. Actions are unchanged. |
 | 0.11 | 09-24-26 23:08 | Corrections from Boston's build on 09-24-26. Step 11.5 checks whose token the context holds before creating, because DigitalOcean ties its GitHub link to a sign-in and a token made under the chapter's own sign-in fails with GitHub user not authenticated. Every doctl command names the chapter's context and every script runs with DIGITALOCEAN_CONTEXT, in place of doctl auth switch, which changed this computer's default for Cleveland's commands too. Step 11.10 repeats the host-name trap for manual DNS and records the timing. Statuses updated: 11.4 managed, 11.10 and 11.11 done for real. |

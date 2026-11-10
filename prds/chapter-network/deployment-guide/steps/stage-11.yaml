@@ -1,7 +1,7 @@
 stage: 11
 name: Deploy the chapter's applications
-version: "0.13"
-updated: "11-07-26 15:21"
+version: "0.14"
+updated: "11-09-26 23:46"
 summary: >-
   In this stage we put the chapter's applications on its own hosting account and
   prove they work. We generate the deployment settings from the reviewed chapter
@@ -149,7 +149,7 @@ steps:
       left out of the settings, so the software's own default applies until the
       field is filled in and the settings are generated again.
     later: The settings generator (work list item 16) reads the form and the vault and writes no file.
-    status: done-for-real — with the trial script, not a finished generator.
+    status: "done-for-real — with the trial script, not a finished generator. Business Mentors Association 11-09-26: 24 shared and 19 web-only settings, all four checks passed. The Google key stored as text in the vault was pasted into google-key.json with its label line, which the generator cannot read; the file must hold the JSON alone."
     source: 3-Methods-CRM-Google-Applications.md#11.2
 
   - id: "11.3"
@@ -341,7 +341,7 @@ steps:
       Creating only the web part. Without the background worker the system looks
       fine and quietly does nothing.
     later: unchanged for now
-    status: done-for-real — active on the first attempt, in seven minutes, on Lakeside and again on Boston (09-24-26).
+    status: "done-for-real — active on the first attempt, in seven minutes, on Lakeside and again on Boston (09-24-26). Business Mentors Association 11-09-26: the token belonged to doug@dougbower.com, invited into the Association's team, but the create failed with GitHub user not authenticated until that user did step 5.9 in that team. GitHub's DigitalOcean installation already existed, so GitHub showed Configure, not Authorize; going through Create, App Platform, Connect GitHub account as that user was enough. App bma-intake, 1944c6a4-ac65-4982-bad1-d3f637d91fb5."
     source: 3-Methods-CRM-Google-Applications.md#11.5
 
   - id: "11.6"
@@ -384,7 +384,7 @@ steps:
       probe: The app reads the deployment's status for the setup job.
     goes_wrong: nothing known yet
     later: unchanged
-    status: done-for-real
+    status: "done-for-real Business Mentors Association 11-09-26: the first deployment reached ACTIVE with 13 of 13 steps."
     source: 3-Methods-CRM-Google-Applications.md#11.6
 
   - id: "11.7"
@@ -492,7 +492,7 @@ steps:
       Setting one part and not the others. Nothing on the platform tells you that
       you have half-updated it.
     later: CRMBuilder holds the policy on the deployment record, and its Update button applies a release on request or at the time the chapter scheduled (DEC-1156).
-    status: done-for-real
+    status: "done-for-real Business Mentors Association 11-09-26: latest-stable; only the migrate job needed deploy_on_push set."
     source: 3-Methods-CRM-Google-Applications.md#11.8
 
   - id: "11.9"
@@ -537,7 +537,7 @@ steps:
       probe: The app reads the branch of every part of every chapter's application and flags any on main.
     goes_wrong: nothing known yet
     later: The fleet view reports any deployment following the wrong branch.
-    status: done-for-real
+    status: "done-for-real Business Mentors Association 11-09-26: all three parts on release."
     source: 3-Methods-CRM-Google-Applications.md#11.9
 
   - id: "11.10"
@@ -603,7 +603,7 @@ steps:
       resolvers keep an earlier "no such address" answer for a while; wait rather
       than changing the record.
     later: unchanged
-    status: done-for-real — Boston (09-24-26), with manual DNS at Squarespace.
+    status: "done-for-real — Boston (09-24-26), with manual DNS at Squarespace. Business Mentors Association 11-09-26: CNAME apps to bma-intake-i2yaj.ondigitalocean.app, DNS only, added in Cloudflare; the domain added to the application through its spec."
     source: 3-Methods-CRM-Google-Applications.md#11.10
 
   - id: "11.11"
@@ -649,7 +649,7 @@ steps:
       probe: The app reads the certificate's expiry date and warns under thirty days.
     goes_wrong: nothing known yet
     later: unchanged
-    status: "done-for-real — Boston (09-24-26): the sign-in page and the health report answer at the chapter's address with the platform's certificate."
+    status: "done-for-real — Boston (09-24-26): the sign-in page and the health report answer at the chapter's address with the platform's certificate. Business Mentors Association 11-09-26: the certificate was issued within minutes."
     source: 3-Methods-CRM-Google-Applications.md#11.11
 
   - id: "11.12"
@@ -713,7 +713,7 @@ steps:
       failure that is not real. And Cleveland's name where the chapter's should be,
       which means the chapter name setting was not applied.
     later: The fleet view reads it for every chapter at once.
-    status: done-for-real
+    status: "done-for-real Business Mentors Association 11-09-26: status ok, organization Business Mentors Association, release v0.302.4, database ok, worker heartbeat 5 seconds, crmConfig unstamped (expected after 9.8's Nothing to do)."
     source: 3-Methods-CRM-Google-Applications.md#11.12
 
   - id: "11.13"
@@ -763,7 +763,7 @@ steps:
       than trimmed, and inside the software that refusal reads as "there are no
       records". This once emptied every selection list on Cleveland's live system.
     later: unchanged
-    status: done-for-real
+    status: "done-for-real Business Mentors Association 11-09-26: signed in as admin and opened Client Administration. The documentation address was then blanked at /setup (key docs_site_url, OPEN-ITEMS.md item 75)."
     source: 3-Methods-CRM-Google-Applications.md#11.13
 
   - id: "11.14"
@@ -1089,6 +1089,10 @@ steps:
     source: 3-Methods-CRM-Google-Applications.md#11.18
 
 changes:
+  - version: "0.14"
+    date: "11-09-26 23:46"
+    change: >-
+      Steps 11.2 to 11.13 followed for the Business Mentors Association (11-09-26); each step's status records what happened, chiefly that the doctl token's user must also do step 5.9 in the chapter's team.
   - version: "0.13"
     date: "11-07-26 15:21"
     change: >-

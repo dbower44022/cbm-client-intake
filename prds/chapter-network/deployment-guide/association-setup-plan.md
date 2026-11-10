@@ -1,10 +1,10 @@
 # Correcting the guide while the Association is set up as a chapter — plan
 
 **Document:** Plan for correcting the New Chapter Deployment Guide stage by stage while the Business Mentors Association is set up as a chapter (Association rulings 71 and 72)
-**Version:** 1.19
+**Version:** 1.20
 **Status:** Approved by Doug 11-07-26 15:17, with the four recommendations of section 5 and both of section 6
 **Owner:** Doug Bower
-**Last Updated:** 11-09-26 22:27
+**Last Updated:** 11-09-26 23:46
 
 ---
 
@@ -163,6 +163,8 @@ Stage 6 in the guide predates the website rulings (review finding 1). It still h
 
 **Stage 9 done for the Association, 11-09-26 22:27** (Doug: orchestrate stage 9, option A for PI-602, server approved). The SSH key crm-bma added to the Association's DigitalOcean account; deploy run DEP-005 built crm.businessmentorsassociation.org at 104.131.180.52 (EspoCRM 10.0.12, deployment DPL-009, instance INST-007) after one Try again; the standard copied (9.6) and applied (9.7); the stamp reported Nothing to do (9.8); the checking tool leaves only the five event templates, once the System Management Team was created by hand. Findings in `OPEN-ITEMS.md` item 76. Doug's vault entries (runbook sections C and D) and the logo (6.6) are owed. Stage 10 is done; stage 11, the applications, is next.
 
+**Stage 11 through step 11.13 done for the Association, 11-09-26 23:46** (Doug: plan approved, Stop A yes). doug@dougbower.com invited into the Association's DigitalOcean team as Member and connected as doctl context bma; step 5.9 done by that user; application bma-intake (1944c6a4-ac65-4982-bad1-d3f637d91fb5, about $17 a month with the development database) live at https://apps.businessmentorsassociation.org on release v0.302.4, following release automatically; documentation address blanked at /setup. Owed: steps 11.14 to 11.18 (mail, calendar, shared drive, mailbox), their own plan; the vault items Session secret and Stored-data encryption key; then deleting bma-app.yaml and google-key.json (step 11.3).
+
 ## 8. At the end of the session
 
 The closing reply reports what changed in the guide, which stages are ready for Doug to follow, and which open decisions blocked a step. Work still owed is recorded in `OPEN-ITEMS.md`.
@@ -173,6 +175,7 @@ The closing reply reports what changed in the guide, which stages are ready for 
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.20 | 11-09-26 23:46 | Claude (Claude Code) | Stage 11 through 11.13 done for the Association. |
 | 1.19 | 11-09-26 22:27 | Claude (Claude Code) | Stage 9 done for the Association. |
 | 1.18 | 11-09-26 17:44 | Claude (Claude Code) | Stage 9 block cleared by CRMBuilder's PI-600; guide steps 5.8 and 9.3 rewritten. |
 | 1.17 | 11-09-26 17:39 | Claude (Claude Code) | Stop 4 passed. |
