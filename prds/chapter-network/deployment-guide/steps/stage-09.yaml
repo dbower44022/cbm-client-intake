@@ -1,7 +1,7 @@
 stage: 9
 name: Build the CRM system
-version: "0.18"
-updated: "11-09-26 22:27"
+version: "0.19"
+updated: "11-10-26 01:10"
 why: >-
   The CRM is the chapter's system of record. Every client, mentor, partner,
   funder and meeting lives in it, and every application reads and writes it.
@@ -19,6 +19,7 @@ before_you_start:
   - The chapter's own DigitalOcean token, and its Cloudflare token unless it uses manual DNS, in the chapter's vault (step 5.8)
   - The chapter's vault in Proton Pass, for every secret this stage creates (step 2.7)
 owed:
+  - "The CRM's outgoing mail. No step sets it. Cleveland's CRM sends through a Group Email Account for info@ on smtp.gmail.com, port 465, SSL, with a Google app password; a new DigitalOcean account blocks ports 465 and 587 until support lifts it (Business Mentors Association, 11-10-26 01:10, OPEN-ITEMS.md item 76 (6)). Until then, password resets fail."
   - "Duplicate checking, saved views and automated rules. The standard does not yet say what these are, because nobody has examined them on Cleveland's systems (work list item 3). A chapter's CRM is built without them for now."
   - "Five event email templates. They exist on no system yet (work list item 18), so the checking tool in step 9.9 reports them missing. That result is expected."
   - "The server size. Step 9.3 uses 2 processors and 4 GB of memory. That is a recommendation, not yet ruled."
@@ -546,6 +547,10 @@ steps:
     source: 3-Methods-CRM-Google-Applications.md#9.20
 
 changes:
+  - version: "0.19"
+    date: "11-10-26 01:10"
+    change: >-
+      Owed list: the CRM's outgoing mail, found missing on the Business Mentors Association's CRM, with Cleveland's method and DigitalOcean's SMTP block.
   - version: "0.18"
     date: "11-09-26 22:27"
     change: >-

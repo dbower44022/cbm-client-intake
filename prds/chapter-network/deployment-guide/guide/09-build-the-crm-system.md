@@ -1,7 +1,7 @@
 # Stage 9 — Build the CRM system
 
-**Version:** 0.18  
-**Last Updated:** 11-09-26 22:27  
+**Version:** 0.19  
+**Last Updated:** 11-10-26 01:10  
 **Generated from** `steps/stage-09.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -24,6 +24,7 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 
 **Not possible yet:** the build goes ahead without these.
 
+- The CRM's outgoing mail. No step sets it. Cleveland's CRM sends through a Group Email Account for info@ on smtp.gmail.com, port 465, SSL, with a Google app password; a new DigitalOcean account blocks ports 465 and 587 until support lifts it (Business Mentors Association, 11-10-26 01:10, OPEN-ITEMS.md item 76 (6)). Until then, password resets fail.
 - Duplicate checking, saved views and automated rules. The standard does not yet say what these are, because nobody has examined them on Cleveland's systems (work list item 3). A chapter's CRM is built without them for now.
 - Five event email templates. They exist on no system yet (work list item 18), so the checking tool in step 9.9 reports them missing. That result is expected.
 - The server size. Step 9.3 uses 2 processors and 4 GB of memory. That is a recommendation, not yet ruled.
@@ -576,6 +577,7 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 
 | Version | Date | Change |
 |---|---|---|
+| 0.19 | 11-10-26 01:10 | Owed list: the CRM's outgoing mail, found missing on the Business Mentors Association's CRM, with Cleveland's method and DigitalOcean's SMTP block. |
 | 0.18 | 11-09-26 22:27 | Steps 9.3 to 9.9 followed for the Business Mentors Association (11-09-26); each step's status records what happened, including the 422 retry at 9.3, the EspoCRM 10 folders at 9.6 and the missing System Management Team at 9.9. |
 | 0.17 | 11-09-26 17:42 | Step 9.3 rewritten for CRMBuilder's new deploy wizard (PI-600, accepted 11-09-26), from CRMBuilder's handoff of 11-09-26: the chapter is recorded as a client with a deployment grant, the tokens are entered on the wizard's first page, the wizard runs in one sitting, and an abandoned deployment is removed. Until PI-602 is rolled out, the operator checks by hand that the DigitalOcean line reads (this deployment's own) before clicking Next. Step 9.3 also opens by confirming the SSH key is in the chapter's DigitalOcean account. The stage's Before you start names the tokens in the chapter's vault, no longer entered in CRMBuilder. |
 | 0.16 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". |
