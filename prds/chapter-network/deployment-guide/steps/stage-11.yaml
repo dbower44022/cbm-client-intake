@@ -1,7 +1,7 @@
 stage: 11
 name: Deploy the chapter's applications
-version: "0.14"
-updated: "11-09-26 23:46"
+version: "0.15"
+updated: "11-09-26 23:59"
 summary: >-
   In this stage we put the chapter's applications on its own hosting account and
   prove they work. We generate the deployment settings from the reviewed chapter
@@ -831,7 +831,7 @@ steps:
       Two deployments reading the same mailbox. Each takes roughly half the
       messages, and neither is obviously broken.
     later: unchanged
-    status: not-yet-tried
+    status: "not-yet-tried Business Mentors Association 11-10-26: all Google settings correct; the worker log reads gmail access as info@mentorsassociation.org; a message from an outside address appeared in Submission Admin within one pass."
     source: 3-Methods-CRM-Google-Applications.md#11.14
 
   - id: "11.15"
@@ -886,7 +886,7 @@ steps:
       mailbox. A group or alias is refused, and the refusal reads as though the
       machine account is not allowed at all.
     later: unchanged
-    status: not-yet-tried
+    status: "not-yet-tried Business Mentors Association 11-10-26: the reply from Submission Admin was sent (Gmail accepted it as info@mentorsassociation.org) but had not reached the outside address ten minutes later, spam included; not yet confirmed (OPEN-ITEMS.md item 76)."
     source: 3-Methods-CRM-Google-Applications.md#11.15
 
   - id: "11.16"
@@ -946,7 +946,7 @@ steps:
       The calendar permission is a separate entry in the grant from step 10.3, and
       the one most often missed, because working mail makes everything look fine.
     later: unchanged
-    status: not-yet-tried
+    status: "not-yet-tried Business Mentors Association 11-10-26: test mentor and test client made through the public forms (DELETE-ME), the mentor's Association email set to an existing mailbox because mailbox creation is off; saving the status Active created its CRM login at once. The CRM had no outgoing mail server, so the password-reset email failed and the administrator set the password in the CRM. A Scheduled session saved with a Google Calendar event and a Meet link."
     source: 3-Methods-CRM-Google-Applications.md#11.16
 
   - id: "11.17"
@@ -1003,7 +1003,7 @@ steps:
       The service account is not a member of the shared drive, or the drive's
       identifier on the form is wrong. Both give silence, not an error.
     later: unchanged
-    status: not-yet-tried
+    status: "not-yet-tried Business Mentors Association 11-10-26: a test file uploaded as the mentor landed on the client's Documents tab and in a client folder on the shared drive. The upload needs a document type."
     source: 3-Methods-CRM-Google-Applications.md#11.17
 
   - id: "11.18"
@@ -1085,10 +1085,14 @@ steps:
       email domain is a setting somebody has to fill in; a chapter whose mentor
       addresses are on a different domain from its staff addresses has to say so.
     later: unchanged
-    status: not-yet-tried
+    status: "not-yet-tried Business Mentors Association 11-10-26: skipped, because mailbox creation was ruled off for this test system at stage 8; the settings read as ruled. Every doctl command used --context bma, so the computer's default never changed."
     source: 3-Methods-CRM-Google-Applications.md#11.18
 
 changes:
+  - version: "0.15"
+    date: "11-09-26 23:59"
+    change: >-
+      Steps 11.14 to 11.18 followed for the Business Mentors Association; outgoing mail (11.15) not yet confirmed, mailbox creation (11.18) skipped by ruling.
   - version: "0.14"
     date: "11-09-26 23:46"
     change: >-

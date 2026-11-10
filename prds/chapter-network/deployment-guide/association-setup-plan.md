@@ -1,10 +1,10 @@
 # Correcting the guide while the Association is set up as a chapter — plan
 
 **Document:** Plan for correcting the New Chapter Deployment Guide stage by stage while the Business Mentors Association is set up as a chapter (Association rulings 71 and 72)
-**Version:** 1.20
+**Version:** 1.21
 **Status:** Approved by Doug 11-07-26 15:17, with the four recommendations of section 5 and both of section 6
 **Owner:** Doug Bower
-**Last Updated:** 11-09-26 23:46
+**Last Updated:** 11-09-26 23:59
 
 ---
 
@@ -165,6 +165,8 @@ Stage 6 in the guide predates the website rulings (review finding 1). It still h
 
 **Stage 11 through step 11.13 done for the Association, 11-09-26 23:46** (Doug: plan approved, Stop A yes). doug@dougbower.com invited into the Association's DigitalOcean team as Member and connected as doctl context bma; step 5.9 done by that user; application bma-intake (1944c6a4-ac65-4982-bad1-d3f637d91fb5, about $17 a month with the development database) live at https://apps.businessmentorsassociation.org on release v0.302.4, following release automatically; documentation address blanked at /setup. Owed: steps 11.14 to 11.18 (mail, calendar, shared drive, mailbox), their own plan; the vault items Session secret and Stored-data encryption key; then deleting bma-app.yaml and google-key.json (step 11.3).
 
+**Stage 11, steps 11.14 to 11.18, 11-09-26 23:59** (Doug: plan approved, option A, the test mentor uses doug.bower@mentorsassociation.org). 11.14 passed; 11.15 sent but not yet confirmed received; 11.16 passed (calendar event with Meet link); 11.17 passed (file in the client's shared-drive folder); 11.18 skipped by ruling. Test mentor Test Mentor BMA DELETE-ME and test client Test Bakery DELETE-ME stay for stage 17, which removes them at step 17.9. Findings in `OPEN-ITEMS.md` item 76 (5) to (7).
+
 ## 8. At the end of the session
 
 The closing reply reports what changed in the guide, which stages are ready for Doug to follow, and which open decisions blocked a step. Work still owed is recorded in `OPEN-ITEMS.md`.
@@ -175,6 +177,7 @@ The closing reply reports what changed in the guide, which stages are ready for 
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.21 | 11-09-26 23:59 | Claude (Claude Code) | Stage 11, steps 11.14 to 11.18. |
 | 1.20 | 11-09-26 23:46 | Claude (Claude Code) | Stage 11 through 11.13 done for the Association. |
 | 1.19 | 11-09-26 22:27 | Claude (Claude Code) | Stage 9 done for the Association. |
 | 1.18 | 11-09-26 17:44 | Claude (Claude Code) | Stage 9 block cleared by CRMBuilder's PI-600; guide steps 5.8 and 9.3 rewritten. |
