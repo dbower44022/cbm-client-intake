@@ -3,10 +3,10 @@
 **Document:** The written-out steps for three stages — building the CRM system
 (stage 9), setting up the Google permissions (stage 10), and deploying the
 chapter's applications (stage 11)
-**Version:** 0.5
+**Version:** 0.6
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 14:45
+**Last Updated:** 11-09-26 22:32
 
 ---
 
@@ -79,7 +79,8 @@ central support organization can reach it.
 **Who:** central support organization, inside the chapter's account.
 
 **First:** the hosting account and its access grant (steps 5.1 and 5.4), and the
-chapter's tokens entered in CRMBuilder (step 5.8).
+chapter's tokens in its vault (step 5.8); they are entered inside the deploy wizard
+(CRMBuilder PI-600).
 
 **How to do it today:** use CRMBuilder's deployment wizard. It creates the server in
 the chapter's hosting account, writes the CRM's address into the chapter's
@@ -1218,6 +1219,7 @@ clothes.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.6 | 11-09-26 22:32 | Step 9.2's First: the chapter's tokens are in its vault and entered inside the deploy wizard (CRMBuilder PI-600, handoff of 11-09-26). |
 | 0.5 | 09-18-26 14:45 | Cloudflare written in (Doug, 09-18-26): step 9.2 uses CRMBuilder's wizard with the chapter's own tokens, step 9.5 becomes a check of the record the wizard writes, and step 11.10 is a DNS-only CNAME in the chapter's Cloudflare zone. |
 | 0.4 | 09-18-26 14:30 | Step 11.3: secrets will be read from the chapter's Proton Pass vault (Doug, 09-18-26). |
 | 0.3 | 09-18-26 01:18 | Step 11.4 corrected: the application database must be a managed database, because a development database takes no backups. The trial chapter's database is a development database. Found while writing the methods for backups and monitoring. |

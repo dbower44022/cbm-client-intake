@@ -1,7 +1,7 @@
 stage: 9
 name: Build the CRM system
-version: "0.16"
-updated: "11-07-26 15:21"
+version: "0.18"
+updated: "11-09-26 22:27"
 why: >-
   The CRM is the chapter's system of record. Every client, mentor, partner,
   funder and meeting lives in it, and every application reads and writes it.
@@ -16,7 +16,7 @@ before_you_start:
   - The chapter information form, complete and reviewed, saved as the chapter's values file (step 8.10)
   - The chapter's hosting account, with the Association's access (steps 5.1 and 5.4)
   - The chapter's domain names in its Cloudflare account, or at its own DNS provider with manual DNS (step 3.7)
-  - The chapter's own DigitalOcean token, and its Cloudflare token unless it uses manual DNS, entered in CRMBuilder (step 5.8)
+  - The chapter's own DigitalOcean token, and its Cloudflare token unless it uses manual DNS, in the chapter's vault (step 5.8)
   - The chapter's vault in Proton Pass, for every secret this stage creates (step 2.7)
 owed:
   - "Duplicate checking, saved views and automated rules. The standard does not yet say what these are, because nobody has examined them on Cleveland's systems (work list item 3). A chapter's CRM is built without them for now."
@@ -120,51 +120,81 @@ steps:
     produces: [crm_server_ip]
     mode: automated
     actions:
+      - do: "Confirm the server sign-in key is in the chapter's DigitalOcean account. Sign in to the chapter's DigitalOcean account, open Settings, then Security."
+        see: "The key crm-SHORT-LABEL in the account's list of SSH keys. If it is not there, do step 9.2's DigitalOcean action first. The wizard reads this list from the chapter's account, and a wizard stopped halfway to add the key has to be removed and run again."
       - do: "Start CRMBuilder. Type each line below and press Enter:"
         items:
           - "cd ~/Dropbox/Projects/crmbuilder"
           - "./start-v2.sh"
         see: "CRMBuilder's main window. If a window titled Cloud backend not configured appears instead, the build computer is not connected to CRMBuilder's online service. Connect it before going on."
-      - do: "Choose the chapter. Click the strip across the top of the window, which names the current engagement, and choose the chapter's engagement."
-        see: The chapter's engagement named in the strip. If it is not in the list, step 5.8 is not finished.
-      - do: "Open the deploy wizard. Click the tab 11 · CRM Deployment, then Instances in the side bar, then Deploy new… on the toolbar. Do not use New Instance: it only records a CRM that already exists."
-        see: A window titled Deploy a new CRM instance, at Step 1 of 5 — Providers.
-      - do: "Screen 1, Providers. In the DNS list, choose the entry that matches the DNS provider item in the chapter's Operations vault:"
+      - do: "Find the chapter among CRMBuilder's clients. In the side bar group Operate CRMBuilder, click Clients."
+        see: "The list of clients. If the chapter is listed, select it. If its section Deployment grants lists ENG-002 — Cleveland Business Mentoring (CBM) — defined by CLI-001, the chapter is already recorded: skip to the action that begins Choose the application. If it is listed without that grant, skip to the action that begins Give the chapter its deployment grant."
+      - do: "Only if the chapter is not listed: click New Client."
+        see: A window titled New client, with the fields Name, Notes and Status, and a Save button.
+      - do: "Fill in the fields, then click Save:"
         items:
-          - "Cloudflare — the run creates the record. Choose this when the chapter's DNS is at Cloudflare."
-          - "Manual DNS — I add the record at the domain's own DNS provider. Choose this when the chapter kept its own DNS provider."
-        see: The entry that matches the vault.
-      - do: "Screen 1, Providers. Check the token lines, then click Next:"
+          - "Name: the chapter's full name from step 8.2"
+          - "Notes: leave empty"
+          - "Status: leave as the window sets it"
+        see: The chapter in the list of clients.
+      - do: "Give the chapter its deployment grant. Select the chapter. In its section Deployment grants, choose the entry below in the list, then click Add application:"
         items:
-          - "DigitalOcean must read: ✓ Configured — crmbuilder-SHORT-LABEL"
-          - "Cloudflare must read: ✓ Configured — crmbuilder-SHORT-LABEL. With manual DNS it may read Not set."
-        see: "The labels exactly as above. Any other label means the server would be built in someone else's account: click Set credentials… and do step 5.8 again."
-      - do: "Screen 2, Server. Fill in each box, then click Next. The lists take a moment to fill."
+          - "ENG-002 — Cleveland Business Mentoring (adds a deployment grant)"
+        see: "The section Deployment grants lists ENG-002 — Cleveland Business Mentoring (CBM) — defined by CLI-001."
+      - do: "Choose the application. In the strip across the top of the window, choose Cleveland Business Mentoring (CBM). The chapter does not get an engagement of its own."
+        see: Cleveland Business Mentoring (CBM) named in the strip.
+      - do: "Run the rest of this step in one sitting. From the moment Set credentials… is pressed, CRMBuilder records the deployment. A wizard cancelled after that leaves a deployment marked active — not yet run, which has to be removed, and its tokens entered again in a fresh wizard (see If it didn't work)."
+      - do: "Open the deploy wizard. Click the tab 11 · CRM Deployment, then Deployments in the side bar, then New deployment…."
+        see: A window titled Deploy a new CRM, at Step 1 of 6 — Before you start.
+      - do: "Step 1, Before you start. Under Who is this deployment for?, fill in each field:"
         items:
-          - "Instance name: SHORT-LABEL CRM"
-          - "Region: the region nearest the chapter. For Boston, New York."
-          - "Size: s-2vcpu-4gb (2 vCPU, 4096 MB)"
-          - "Image: the newest Ubuntu LTS release in the list"
-          - "Extra SSH keys: tick crm-SHORT-LABEL"
-        see: crm-SHORT-LABEL ticked. Without it, nobody can open a command line on the server, and steps 9.4 and 9.6 cannot be done.
-      - do: "Screen 3, Domain, when you chose Cloudflare. Fill in each box, then click Next:"
+          - "Client: the chapter, shown as the chapter's full name followed by — holds a deployment grant"
+          - "Purpose: Client's own"
+          - "What should CRMBuilder call this deployment?: SHORT-LABEL CRM"
+        see: "Under This deployment's hosting accounts, two lines, DigitalOcean (required) and Cloudflare (optional), each reading Not set — this deployment needs its own token."
+      - do: "Click Set credentials…."
+        see: "A window titled Hosting credentials for deployment DPL-NNN — SHORT-LABEL CRM, with one box for DigitalOcean and one for Cloudflare."
+      - do: "In the DigitalOcean box, fill in each field, then click Save token:"
         items:
-          - "Cloudflare zone: the chapter's domain that the CRM's address ends in"
-          - "Subdomain: the CRM's address up to the first dot. For crm.example.org, crm."
-          - "Let's Encrypt email: ALERT-ADDRESS"
-        see: Instance address showing CRM-ADDRESS exactly.
-      - do: "Screen 3, Domain, when you chose manual DNS. Fill in each box, then click Next:"
+          - "Token: paste it from the vault item DigitalOcean token for CRMBuilder (step 5.8)"
+          - "Label: crmbuilder-SHORT-LABEL"
+        see: "The DigitalOcean box reading ✓ Configured — crmbuilder-SHORT-LABEL (this deployment). The token itself is never shown again."
+      - do: "With manual DNS (step 3.7), skip this action. In the Cloudflare box, fill in each field, then click Save token:"
         items:
-          - "CRM address: CRM-ADDRESS. For Boston, crm.bbmentors.org."
-          - "Let's Encrypt email: ALERT-ADDRESS"
-        see: A note saying the run will show the record to add at the domain's DNS provider.
-      - do: "Screen 4, Accounts. Fill in each box, then click Next:"
+          - "Token: paste it from the vault item Cloudflare DNS token for CRMBuilder (step 5.8)"
+          - "Label: crmbuilder-SHORT-LABEL"
+        see: "The Cloudflare box reading ✓ Configured — crmbuilder-SHORT-LABEL (this deployment)."
+      - do: "Click Close."
+        see: Step 1 again.
+      - do: "Check the two lines under This deployment's hosting accounts before clicking anything else. Until CRMBuilder enforces this itself (PI-602, not yet rolled out), the check is done by hand:"
+        items:
+          - "DigitalOcean (required) must read exactly: ✓ Configured — crmbuilder-SHORT-LABEL (this deployment's own)"
+          - "Cloudflare (optional) must read: ✓ Configured — crmbuilder-SHORT-LABEL (this deployment's own). With manual DNS it reads Not set — this deployment needs its own token."
+        see: "Both lines exactly as above. Any other wording on the DigitalOcean line, such as another label or no (this deployment's own), means the server could be built in someone else's account. Do not click Next. Click Set credentials… and enter the chapter's DigitalOcean token again. If the line still reads differently, stop and ask."
+      - do: "Click Next."
+        see: Step 2 of 6 — Web address.
+      - do: "Web address. In the box What web address should the CRM use?, type CRM-ADDRESS. For Boston, crm.bbmentors.org. Click Check this address."
+        see: "The address accepted. If the page reports a problem with it, stop and ask. Then click Next."
+      - do: "DNS. Choose the entry that matches the DNS provider item in the chapter's Operations vault, then click Next:"
+        items:
+          - "CRMBuilder creates it in Cloudflare. Choose this when the chapter's DNS is at Cloudflare. Its note begins Available."
+          - "It is created by hand at the domain's DNS host (manual DNS). Choose this when the chapter kept its own DNS provider."
+        see: "The entry that matches the vault. If the chapter's DNS is at Cloudflare but the Cloudflare entry's note does not begin Available, the chapter's Cloudflare token is missing or does not cover the zone. Stop and ask."
+      - do: "Server. Fill in each field, then click Next. The lists take a moment to fill."
+        items:
+          - "How large a server?: 2 vCPU and 4 GB of memory (s-2vcpu-4gb). If it is not listed, click Show every size."
+          - "Where should the server be?: the region nearest the chapter. For Boston, New York."
+          - "Operating system: fixed; leave it"
+          - "Extra SSH keys (optional): tick crm-SHORT-LABEL"
+        see: "crm-SHORT-LABEL ticked. Without it, nobody can open a command line on the server, and steps 9.4 and 9.6 cannot be done. If crm-SHORT-LABEL is not in the list, the key is not in the chapter's DigitalOcean account: stop and ask."
+      - do: "Administrator. Fill in each field, then click Next:"
         items:
           - "Administrator username: admin"
           - "Administrator email: ALERT-ADDRESS"
-          - "Administrator password: paste it from the CRM administrator item in the vault"
+          - "Administrator password: paste it from the CRM administrator item in the vault. Do not click Generate."
+          - "Email for certificate notices: ALERT-ADDRESS"
           - "Generate database passwords automatically (recommended): leave ticked"
-      - do: "Screen 5, Review. Check that Extra SSH keys reads crm-SHORT-LABEL, not (generated key only). Then click Deploy."
+      - do: "Review. Read the page through. If anything on it differs from what was entered, click Back and correct it. Then click Deploy."
         see: A window titled Deploy run DEP-NNN, with a progress bar and a log.
       - do: "Manual DNS only: add the CRM's record while the run waits. When the status line reads Waiting for DNS, it shows the record to add. The log shows the same line. In the chapter's DNS provider account, add a record with exactly:"
         items:
@@ -181,9 +211,12 @@ steps:
       - "The run reads Deployment complete."
       - "The server's address is in the vault."
     check:
-      how: The new instance is listed on CRMBuilder's Instances page, with the same address under Droplet IP.
+      how: "The deployment SHORT-LABEL CRM is listed under Deployments in the tab 11 · CRM Deployment, and is no longer marked active — not yet run."
       probe: The app lists the chapter's hosting account through its token and finds the new server.
     if_not:
+      - "Next on step 1 explains: This client deploys into its own accounts, so this deployment needs its own DigitalOcean token: press Set credentials…. No DigitalOcean token was saved for the deployment. Click Set credentials… and enter it."
+      - "The wizard was cancelled after Set credentials… was pressed: the deployment stays under Deployments with Status active — not yet run. Select it and click Remove. At Remove DPL-NNN — SHORT-LABEL CRM?, which says its own DigitalOcean and Cloudflare tokens are deleted, click Yes. Then open a fresh wizard and enter the tokens again from the vault."
+      - "Remove says DPL-NNN — SHORT-LABEL CRM has run, so it cannot be removed, with only an OK button: the deployment ran, so it is not an abandoned one. Click OK, and stop and ask."
       - "The run names the stage that failed and keeps what it built. Do not delete anything. The server is billed until the run finishes or the server is deleted."
       - "Failed at Preparing server, and the log mentions Could not get lock: the new server was still setting itself up. Wait five minutes and click Retry. Retry starts again at the stage that failed."
       - "Manual DNS, failed at Waiting for DNS: the record was not seen within 30 minutes. Compare the record at the DNS provider with the status line, character by character, then click Retry."
@@ -192,16 +225,18 @@ steps:
       - "Deployment complete with verification gaps: the CRM is installed but a check failed. Read the log, and do not go on until the failed check is understood."
       - "Any other failure: click Retry once. If it fails again, stop the build and keep the log."
     goes_wrong: >-
-      Not ticking crm-SHORT-LABEL under Extra SSH keys. CRMBuilder's own key never
-      leaves its online service, so without the tick nobody can open a command line
-      on the server. Also, a run left on CRMBuilder's own tokens builds the server in
-      CRMBuilder's hosting account, and nothing says so until someone looks. With
-      manual DNS, typing the full address as the record's host: the provider adds the
-      domain again, the name the run waits for never appears, and the run fails at
-      Waiting for DNS after 30 minutes. Boston's first run did this at Squarespace
-      (09-23-26).
+      Not ticking crm-SHORT-LABEL under Extra SSH keys (optional). CRMBuilder's own
+      key never leaves its online service, so without the tick nobody can open a
+      command line on the server. Also, clicking Next on step 1 without reading the
+      DigitalOcean line. CRMBuilder is to refuse any deployment for a chapter that
+      lacks its own token (PI-602), but until that is rolled out a deployment could
+      use CRMBuilder's own token and build the server in CRMBuilder's hosting
+      account, and nothing says so until someone looks. With manual DNS, typing the
+      full address as the record's host: the provider adds the domain again, the
+      name the run waits for never appears, and the run fails at Waiting for DNS
+      after 30 minutes. Boston's first run did this at Squarespace (09-23-26).
     later: unchanged
-    status: done-for-real — the August build ran the wizard. The screen labels were read from CRMBuilder's code on 09-23-26 and have not all been seen on screen.
+    status: "done-for-real — the August build ran the wizard. Rewritten 11-09-26 for CRMBuilder's new deploy wizard (PI-600) from the labels in CRMBuilder's handoff; the new screens have not yet been followed for a chapter. The Association's run is the first. Followed for the Business Mentors Association 11-09-26 (deploy run DEP-005): the labels held. The first try failed at create_droplet with HTTP 422 '<id> are invalid key identifiers' for the key CRMBuilder had uploaded seconds before; Try again in the run's window resumed and finished."
     source: 3-Methods-CRM-Google-Applications.md#9.2
 
   - id: "9.4"
@@ -270,7 +305,7 @@ steps:
       current CRM installer (open work G1 item 21). Boston's CRM was off the air
       for an hour until it was recovered by hand.
     later: The deployment tool writes the key to the chapter's vault itself.
-    status: done-for-real — except storing the key in a vault, which did not exist in August.
+    status: "done-for-real — except storing the key in a vault, which did not exist in August. Business Mentors Association 11-09-26: all checks passed, EspoCRM 10.0.12, image tag fpm not yet pinned (OPEN-ITEMS.md item 76)."
     source: 3-Methods-CRM-Google-Applications.md#9.3 to #9.6
 
   - id: "9.5"
@@ -364,7 +399,7 @@ steps:
       applications, so two chapters built a week apart can get different
       configurations until the standard is versioned (work list item 15).
     later: The configuration is packaged, versioned and applied by the applier (work list item 15) rather than copied.
-    status: done-for-real
+    status: "done-for-real Business Mentors Association 11-09-26, onto EspoCRM 10: the target folders are /var/www/espocrm/data/espocrm/persistent/custom/Espo/Custom and persistent/custom-client/src (the second does not exist until made); 1058 configuration files and 1 screen-code file copied."
     source: 3-Methods-CRM-Google-Applications.md#9.8 and #9.9
 
   - id: "9.7"
@@ -445,7 +480,7 @@ steps:
       nothing. Neither shows an error: the feature behind it just shows nothing.
       The email templates carry no chapter name on purpose and stay identical.
     later: The same work moves inside the applier, with the same checks.
-    status: "done-for-real — on Boston, 09-24-26, including the Client Assignment Role permission. The logo and the documentation tab were not set there: the form gives neither."
+    status: "done-for-real — on Boston, 09-24-26, including the Client Assignment Role permission. The logo and the documentation tab were not set there: the form gives neither. Business Mentors Association 11-09-26: 35 applied, 73 unappliable lines (71 for the add-ons skipped by ruling 74, 2 known stale); the site address was already right."
     source: 3-Methods-CRM-Google-Applications.md#9.10 to #9.18
 
   - id: "9.8"
@@ -475,7 +510,7 @@ steps:
       not hold is worse than one claiming nothing. Also, running the script without
       --env-file: it then falls back to the settings of Cleveland's test system.
     later: The applier writes the record itself, and only after a completely successful run.
-    status: done-for-real — Boston (09-24-26) reported Nothing to do and holds no version record.
+    status: "done-for-real — Boston (09-24-26) reported Nothing to do and holds no version record. Business Mentors Association 11-09-26: Nothing to do, as Boston."
     source: 3-Methods-CRM-Google-Applications.md#9.19
 
   - id: "9.9"
@@ -507,10 +542,18 @@ steps:
       Running the tool without --env-file. It then checks Cleveland's test system
       instead of the chapter's CRM, and reports on the wrong system.
     later: The same check runs before every release and refuses a CRM that does not match.
-    status: done-for-real — with the event template difference, on Lakeside and on Boston (09-24-26).
+    status: "done-for-real — with the event template difference, on Lakeside and on Boston (09-24-26). Business Mentors Association 11-09-26: the event templates, and the System Management Team, which the applier does not create (OPEN-ITEMS.md item 76); the team was created by hand, leaving the templates only."
     source: 3-Methods-CRM-Google-Applications.md#9.20
 
 changes:
+  - version: "0.18"
+    date: "11-09-26 22:27"
+    change: >-
+      Steps 9.3 to 9.9 followed for the Business Mentors Association (11-09-26); each step's status records what happened, including the 422 retry at 9.3, the EspoCRM 10 folders at 9.6 and the missing System Management Team at 9.9.
+  - version: "0.17"
+    date: "11-09-26 17:42"
+    change: >-
+      Step 9.3 rewritten for CRMBuilder's new deploy wizard (PI-600, accepted 11-09-26), from CRMBuilder's handoff of 11-09-26: the chapter is recorded as a client with a deployment grant, the tokens are entered on the wizard's first page, the wizard runs in one sitting, and an abandoned deployment is removed. Until PI-602 is rolled out, the operator checks by hand that the DigitalOcean line reads (this deployment's own) before clicking Next. Step 9.3 also opens by confirming the SSH key is in the chapter's DigitalOcean account. The stage's Before you start names the tokens in the chapter's vault, no longer entered in CRMBuilder.
   - version: "0.16"
     date: "11-07-26 15:21"
     change: >-

@@ -6,6 +6,8 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+76. **What the Business Mentors Association's CRM build found** (11-09-26 22:27, guide stage 9, deploy run DEP-005). (1) **The applier does not create the System Management Team** (Doug's ruling Q5.5, 11-06-26, #66), because `scripts/rehearsal/apply_api_half.py` builds teams from the 31 August capture of crm-test; the checking tool now requires the team. Created by hand on the Association's CRM (Doug, option A). Owed, under this repository's process: the applier creates it, so the next chapter does not hit the gap. (2) **The Association's CRM runs the unpinned `espocrm/espocrm:fpm` tag** (EspoCRM 10.0.12), which upgrades EspoCRM whenever the container restarts; Cleveland, Boston and Lakeside are pinned. Owed: pin it to `10.0.12-fpm` on the server, a change Doug runs. (3) **CRMBuilder's first create_droplet failed** with HTTP 422 for the key it had just uploaded; Try again succeeded. For a CRMBuilder session, under its own process. (4) `scripts/rehearsal/api-half-result.json`, the applier's result file, is not ignored by git; never commit it.
+
 75. **A chapter cannot say "no documentation site yet"** (found 11-09-26, guide step 6.7, for the Business Mentors Association). The step tells a chapter to write `none yet` under `web.docs_site_url`, but the chapter information form has no question for it, and `scripts/rehearsal/render_spec.py` leaves `DOCS_SITE_URL` out of the deployment when the value is empty. The application's default is then `https://docs.clevelandbusinessmentors.org`, so the portal's Documentation link sends the chapter's staff to Cleveland's site, the very thing the step warns against. Owed, as a code change through this repository's own process: a form question, and an explicit empty `DOCS_SITE_URL` for "none yet" (the portal already hides the link when the setting is empty). Until then, set `DOCS_SITE_URL` to empty at `/setup` on the chapter's deployment.
 
 74. **The chapter information form still asks four colour questions that nothing needs** (found 11-09-26). Since Association ruling 34 and the website plan's answer of 11-07-26, a chapter's colours are entered in the Website group of System Settings at stage 13, and `CHAPTER_TOKENS_URL` is only an override. Guide step 8.3 (stage 8, version 0.18) now tells chapters to leave `web.colour_primary`, `web.colour_button`, `web.colour_button_hover`, `web.colour_text` and `web.chapter_tokens_url` empty. Still owed, as a code change through this repository's own process: remove the four questions from `stage-08.yaml`, the colour-file writer (`COLOUR_TOKENS` and `tokens_css` in `scripts/chapter_form/to_values.py`) and the test that checks Boston's colour file; or keep them as the override path, deliberately. Until then the questions are harmless: left empty, no colour file is written.
@@ -27,6 +29,16 @@ found; move resolved items to the bottom with the resolution date.
     `prompts/crmbuilder-deployment-credentials-kickoff.md`. The website (stage 6) waits on
     Cloudways' activation check. Guide owed: stage 8's colour questions, step 5.8's
     CRMBuilder screens.
+    **Update 11-09-26 17:44:** the CRMBuilder gap that blocked the Association's first deploy
+    run is closed by PI-600 (accepted 11-09-26): a chapter is a client holding a deployment
+    grant on ENG-002, and its tokens belong to its own deployment, entered inside the wizard.
+    PI-602 (no fallback to the application's tokens) is in review, not rolled out, so guide
+    step 9.3 has the operator check the DigitalOcean line by hand. Guide steps 5.8, 9.3 and
+    stage 9's Before you start were rewritten for the new wizard (stage 5 and stage 9 version
+    0.17; methods file 9 version 0.5). Still owed for the Association: the SSH key
+    crm-SHORT-LABEL in its DigitalOcean account (step 9.2; it had none on 11-09-26), then the
+    first deploy run (step 9.3). **Both done 11-09-26 22:27**: key crm-bma added, deploy run
+    DEP-005 finished; stage 9's findings are item 76.
 
 72. **The chapter website: what is owed outside this repository, and before
     production** (2026-11-07, `prds/chapter-website-plan.md`). (1) **Before

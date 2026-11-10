@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — The Step List
 
 **Document:** The bare list of steps, with no methods yet
-**Version:** 0.27
+**Version:** 0.28
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 11-09-26 14:21
+**Last Updated:** 11-09-26 22:32
 
 ---
 
@@ -251,7 +251,7 @@ Done when:
 - A DigitalOcean API token from the chapter's hosting account exists.
 - A Cloudflare API token limited to editing DNS in the chapter's zones exists, unless the chapter uses manual DNS.
 - Both tokens are in the chapter's vault.
-- Both tokens are entered in CRMBuilder as the chapter's provider credentials.
+- Neither token is entered in CRMBuilder yet: both are entered inside its deploy wizard at step 9.3, as the chapter's deployment's own credentials (CRMBuilder PI-600).
 
 Note: CRMBuilder builds the chapter's CRM with the chapter's own accounts, never its own (ruled 09-18-26).
 
@@ -874,6 +874,7 @@ Done when: a date is booked to review how the first months have gone.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.28 | 11-09-26 22:32 | Step 5.8: the tokens are entered in CRMBuilder's deploy wizard at step 9.3, not at 5.8 (CRMBuilder PI-600, handoff of 11-09-26). |
 | 0.27 | 11-09-26 14:21 | Step 5.10: the chapter chooses its website host (Association ruling 75, replacing ruling 29); a new finishing test, that the host does the five things any host must do. |
 | 0.26 | 11-09-26 01:19 | Step 8.3: the colour file address is left empty unless the chapter already has its own colour file (step 6.5, Association ruling 34). |
 | 0.25 | 11-08-26 10:06 | Stage 6 rewritten for the Association's website rulings (WordPress template on Cloudways with the chapter connector, or the embed code on another platform). Step 6.3 becomes "Install the template and the chapter connector"; step 6.5 becomes "Choose the chapter's colours, fonts and header graphic"; step 6.6's test names the Website group; new step 6.8, visitor statistics without cookies. No step number changed. |

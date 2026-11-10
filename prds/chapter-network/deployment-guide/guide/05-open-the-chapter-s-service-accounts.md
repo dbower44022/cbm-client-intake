@@ -1,7 +1,7 @@
 # Stage 5 — Open the chapter's service accounts
 
-**Version:** 0.16  
-**Last Updated:** 11-09-26 14:21  
+**Version:** 0.17  
+**Last Updated:** 11-09-26 17:42  
 **Generated from** `steps/stage-05.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -332,7 +332,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
    *You should see:* A new token, shown once only.
 3. Copy the DigitalOcean token straight into the chapter's Operations vault, named DigitalOcean token for CRMBuilder.
-4. With manual DNS (step 3.7), skip every Cloudflare action below: there is no Cloudflare token to make, and the Cloudflare box in CRMBuilder stays empty. Go on to the action that begins Work at the build computer.
+4. With manual DNS (step 3.7), skip every Cloudflare action below: there is no Cloudflare token to make. Go on to the last action of this step.
 5. In Cloudflare, open My Profile, then API Tokens, and choose Create Token. Use the Edit zone DNS template.
 6. Set exactly:
    - Token name: crmbuilder-SHORT-LABEL
@@ -344,40 +344,21 @@ The chapter's CRM server, its applications and their database all run in a hosti
 7. Choose to continue to the summary, then create the token.
    *You should see:* A new token, shown once only, covering only the chapter's zones.
 8. Copy the Cloudflare token straight into the chapter's Operations vault, named Cloudflare DNS token for CRMBuilder.
-9. Work at the build computer: the Association's own computer, the one with CRMBuilder installed. Open a terminal window on it, type the line below and press Enter:
-   - cd ~/Dropbox/Projects/crmbuilder
-10. Start CRMBuilder. Type the line below and press Enter:
-    - ./start-v2.sh
-
-    *You should see:* CRMBuilder's main window. If a window titled Cloud backend not configured appears instead, the build computer is not connected to CRMBuilder's online service: stop and ask.
-11. Create the chapter's engagement, which holds the two tokens. Click the strip across the top of the window, which names the current engagement, then Manage engagements… at the bottom of the list. On the Engagements page, click New Engagement.
-    *You should see:* A window titled New engagement, with four boxes.
-12. Fill in each box, then save:
-    - Code: the chapter's short label from step 8.2, in capital letters: for Boston, BOSTON. Two to ten capital letters and digits, starting with a letter. It cannot be changed later.
-    - Name: the chapter's full name from step 8.2
-    - Purpose: Build and run the chapter's CRM and applications.
-    - Status: active
-
-    *You should see:* The new engagement listed with an identifier of the form ENG-NNN, and named in the strip across the top of the window. If another engagement is named there, click the strip and choose the chapter's.
-13. Open the tab 11 · CRM Deployment, click Instances in the side bar, then Deploy new…, and on Step 1 of 5 — Providers click Set credentials….
-    *You should see:* A window titled Provider credentials, with one box for DigitalOcean and one for Cloudflare.
-14. In each box, paste the token into Token, type crmbuilder-SHORT-LABEL into Label, and click Save token. Then click Close, and click Cancel to leave the deploy window; step 9.3 runs it.
-    *You should see:* Step 1 reading DigitalOcean: ✓ Configured — crmbuilder-SHORT-LABEL, and the same for Cloudflare. The token itself is never shown again.
+9. Stop here. The two tokens are entered in CRMBuilder in step 9.3, inside its deploy wizard, and nowhere else. Do not create an engagement for the chapter: in CRMBuilder a chapter is a client holding a deployment grant, and step 9.3 records it.
 
 **Done when all of these are true:**
 
 - A DigitalOcean API token from the chapter's hosting account exists.
 - A Cloudflare API token limited to editing DNS in the chapter's zones exists, unless the chapter uses manual DNS.
 - Both tokens are in the chapter's vault.
-- Both tokens are entered in CRMBuilder as the chapter's provider credentials.
 
 **Note:** CRMBuilder builds the chapter's CRM with the chapter's own accounts, never its own (ruled 09-18-26).
 
-**How to check:** CRMBuilder's provider credentials screen shows both configured for the chapter's engagement, and lists the chapter's Cloudflare zones. With manual DNS, only the DigitalOcean line needs to be configured.
+**How to check:** The chapter's Operations vault holds DigitalOcean token for CRMBuilder and, unless the chapter uses manual DNS, Cloudflare DNS token for CRMBuilder. Step 9.3 proves they work, when the deploy wizard's first page reads ✓ Configured — crmbuilder-SHORT-LABEL (this deployment's own) for each.
 
 **If it didn't work:** Stop, and ask the Association before going on.
 
-**What usually goes wrong:** A Cloudflare token with more permission than it needs, or one covering every zone in the account. Also, leaving the engagement on CRMBuilder's own tokens by mistake. The server then appears in the wrong hosting account, and nothing says so until someone looks. And a DigitalOcean token made under the chapter's own sign-in: it builds the CRM server, but step 11.5 fails with GitHub user not authenticated, because the GitHub link from step 5.9 belongs to the Association's support person's sign-in (Boston, 09-24-26).
+**What usually goes wrong:** A Cloudflare token with more permission than it needs, or one covering every zone in the account. And a DigitalOcean token made under the chapter's own sign-in: it builds the CRM server, but step 11.5 fails with GitHub user not authenticated, because the GitHub link from step 5.9 belongs to the Association's support person's sign-in (Boston, 09-24-26).
 
 ---
 
@@ -571,6 +552,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 | Version | Date | Change |
 |---|---|---|
+| 0.17 | 11-09-26 17:42 | Step 5.8 follows CRMBuilder's new deploy wizard (PI-600, accepted 11-09-26): it makes the two tokens and puts them in the vault, and nothing more. The engagement it used to create and the Provider credentials window are gone; the tokens are entered inside the wizard in step 9.3. Applied from CRMBuilder's handoff of 11-09-26. |
 | 0.16 | 11-09-26 14:21 | Step 5.10 follows Association ruling 75, which replaces ruling 29: the chapter chooses its website host, any host must do five things, and the Cloudways actions are the path the Association tests. |
 | 0.15 | 11-08-26 10:06 | Step 5.10: a new Cloudways account may be held for a manual activation check (the Association's, 11-08-26). |
 | 0.14 | 11-08-26 09:31 | Steps 5.5, 5.10, 5.11 and 5.12 from the Association's own accounts, opened 11-08-26: Zoom's two sets of terms, its Build app path, Information fields, granular scopes (webinar scopes only with a Webinars licence) and Activate your app; Cloudways's email code and phone verification; Constant Contact's free-trial sign-up, its demand for two-step sign-in before a developer application, and the locked Redirect URI; Stripe's Sandbox, its Payment Link page and the donate.stripe.com address. |
