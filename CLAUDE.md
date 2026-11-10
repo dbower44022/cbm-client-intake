@@ -1202,30 +1202,18 @@ holds anything still owed.*
 push that had not happened, and a session shipped a feature to production on
 the strength of it.
 
-- **v0.303.5 (2026-11-04) is the latest, deployed and verified on both
-  deployments.** M10 (Promote this event, the Calls side panel) and M5
-  (personal outreach from the lead's page) are both live-passed and ON in
-  production since 11-04-26; v0.303.4 and v0.303.5 were small fixes. The
-  Marketing Management switches still off are listed in `OPEN-ITEMS.md` #57.
-- **v0.306.0 (2026-11-05) is the latest, deployed on both deployments**
-  (`/healthz` read 11-05-26 22:21). It holds mentor login integrity steps 1
-  to 3 (v0.304.0 action history everywhere, live; v0.305.0
-  `LOGIN_REPAIR_GUARDS` and `MANAGER_PROFILE_STRICT`, v0.306.0
-  `CBM_EMAIL_LOCK`, all three switches off). The crm-test review, the
-  production switch-on and steps 4–6 are in `OPEN-ITEMS.md` #66, and the
-  kickoff is `prompts/mentor-login-integrity-build-prompt-v0.4.md` (step 4; steps 5–6 follow in revision 0.5).
-- **v0.307.0–v0.310.0 (2026-11-05) are live on both deployments**: mentor
-  login integrity step 4 — the daily check (`LOGIN_INTEGRITY_CHECK`,
-  migration 0041, package `integrity/`), the integrity digest and the
-  Login faults list (`INTEGRITY_DIGEST`), the no-profile sign-in alert
-  (`INTEGRITY_SIGNIN_ALERT`), and in v0.310.0 the report on work in the
-  CRM's own screens, run on web by Doug's C2 ruling
-  (`INTEGRITY_CRM_USE_REPORT`); all off but `LOGIN_INTEGRITY_CHECK`, on since
-  11-06-26 (`OPEN-ITEMS.md` #66); next kickoff
-  `prompts/mentor-login-integrity-build-prompt-v0.6.md` (steps 5–6).
 - **v0.311.0–v0.313.2 (2026-11-06) are live on both deployments**
   (pushed 11-06-26, `/healthz` read 16:15): steps 5
   and 6 — the History tab in five applications (`RECORD_HISTORY_TAB`),
   old and new values recorded (ruling Q5.4) and the activity page
   (`ACTIVITY_PAGE`); all off. Owed: `OPEN-ITEMS.md` #66 item 12.
+- **v0.314.0–v0.317.2 (2026-11-07 to 11-09) are live on both deployments**:
+  the chapter website's pieces A to E (`WEBSITE_API`, `FORM_FRAMING`,
+  `NEWSLETTER_FORM`, the Website group at `/setup`; all off in production)
+  and the mentor request's review step naming the chosen mentor. **Release
+  v0.317.2 was cut out of turn on 11-10-26** (Doug), so the chapters
+  (Boston, Lakeside, the Business Mentors Association) run it too; the next
+  regular train is Sunday 11-15. The Association's build state is
+  `prds/chapter-network/deployment-guide/association-setup-plan.md` and
+  `OPEN-ITEMS.md` items 72 and 76.
 Everything else still owed is in `OPEN-ITEMS.md`.
