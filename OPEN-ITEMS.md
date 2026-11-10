@@ -76,6 +76,17 @@ found; move resolved items to the bottom with the resolution date.
     add-on's work, in the Association's hands.
     (7) ~~The client intake form's Review & Submit step does not list the
     chosen mentor~~ — fixed in v0.317.2, 11-09-26.
+    (8) **11-10-26 01:57: the test website now reads the Association's own CRM.** Release v0.317.2
+    was cut out of turn (Doug's choice, 11-10-26) so the Association's application had the
+    website features; Boston's production application took it too and came up healthy.
+    On the Association's application, System Settings now holds `website_origins` and
+    `organization_website_url` = `https://chapter-demo.mentorsassociation.org`, with
+    `website_api`, the three key pages, `form_framing` and `newsletter_form` on. The
+    connector points at `https://apps.businessmentorsassociation.org` (connected), and the
+    Cloudways cache was purged. Find a Mentor shows its empty state until a mentor is
+    published. The logo and header graphic are not uploaded yet (step 6.6). crm-test's
+    `WEBSITE_ORIGINS` still names the test website; remove it when crm-test no longer
+    needs to serve it.
 
 71. **Training on the CRM's own screens, and the block revisited**
     (2026-11-05, Doug's ruling Q6.1). Ten-odd staff work in the CRM's own
