@@ -1216,4 +1216,9 @@ the strength of it.
   regular train is Sunday 11-15. The Association's build state is
   `prds/chapter-network/deployment-guide/association-setup-plan.md` and
   `OPEN-ITEMS.md` items 72 and 76.
+- **v0.318.0 (2026-11-10) is live on both deployments and verified**
+  (pushed 11-10-26, `/healthz` read 20:48, checked on crm-test by Doug): the
+  Last Contact Date column in Client Administration, and wider column-resize
+  handles on every grid. Nothing owed. The chapters get it on the Sunday
+  11-15 train.
 Everything else still owed is in `OPEN-ITEMS.md`.
