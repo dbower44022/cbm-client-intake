@@ -215,7 +215,7 @@ async def list_engagements(
                 "engagementClientName,engagementClientId,"
                 "clientOrganizationName,clientOrganizationId,"
                 "mentorProfileId,mentorProfileName,"
-                "engagementAssignedDate,description"
+                "engagementAssignedDate,lastContactDate,description"
             ),
             max_size=_ENGAGEMENT_PAGE,
             offset=offset,
@@ -248,6 +248,9 @@ async def list_engagements(
             # When the mentor was assigned (stamped by assign_engagement; null on
             # pre-0.27.0 assignments and unassigned rows).
             "assignedDate": r.get("engagementAssignedDate"),
+            # The last time anyone contacted the client (CEngagement.lastContactDate,
+            # advanced by Client Management). Display only; null when never set.
+            "lastContactDate": r.get("lastContactDate"),
             # Internal process notes (the grid's click-to-edit Notes column) —
             # see update_engagement_notes.
             "notes": r.get("description") or "",

@@ -301,6 +301,7 @@
     return [
       e.name, e.status, e.clientName, e.companyName, e.contactName, e.mentorName, e.notes,
       (e.createdAt || "").slice(0, 10), (e.assignedDate || "").slice(0, 10),
+      (e.lastContactDate || "").slice(0, 10),
     ].join(" ").toLowerCase();
   }
 
@@ -314,6 +315,7 @@
   // notes editor). A blank returns null or "" so it sorts last either way.
   function engSortVal(e, k) {
     if (k === "assignedDate") return e.assignedDate || "";   // a UTC CRM stamp
+    if (k === "lastContactDate") return e.lastContactDate || "";
     if (k === "daysPending") return daysPending(e);            // a number, or null
     if (k === "notes") return notesPreviewText(e.notes || "");
     return e[k] == null ? "" : String(e[k]);
@@ -419,6 +421,7 @@
       tdAssign.appendChild(assigned);
       tr.appendChild(tdAssign);
       tr.appendChild(buildAssignedDateCell(eng));
+    tr.appendChild(buildLastContactCell(eng));
       tr.appendChild(buildDaysCell(eng));
       tr.appendChild(buildNotesCell(eng));
       return tr;
@@ -464,6 +467,7 @@
     tdAssign.appendChild(cell);
     tr.appendChild(tdAssign);
     tr.appendChild(buildAssignedDateCell(eng));
+    tr.appendChild(buildLastContactCell(eng));
     tr.appendChild(buildDaysCell(eng));
     tr.appendChild(buildNotesCell(eng));
     return tr;
@@ -501,6 +505,15 @@
     var td = document.createElement("td");
     td.className = "assigned-date-cell";
     td.textContent = formatDate(eng.assignedDate) || "—";
+    return td;
+  }
+
+  // The last contact with the client (CEngagement.lastContactDate, a date
+  // field kept current by Client Management); — when never recorded.
+  function buildLastContactCell(eng) {
+    var td = document.createElement("td");
+    td.className = "assigned-date-cell";
+    td.textContent = formatDate(eng.lastContactDate) || "—";
     return td;
   }
 

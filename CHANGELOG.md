@@ -5,6 +5,26 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.318.0] — 2026-11-10
+
+**feat: Client Administration shows the Last Contact Date; column edges are
+easier to grab on every grid.** Doug's request 11-10-26.
+
+- **Last Contact Date column** in the engagement grid, between Assigned Date
+  and Days Pending. It reads `CEngagement.lastContactDate`, the field Client
+  Management keeps current. It is sortable and searchable, and shows "—" when
+  no contact is recorded. Display only.
+- **Resize handles (shared grid, `frontend/shared/grid.css` and `grid.js`).**
+  A pinned heading is drawn as its own layer, so the 9px handle that hung 4px
+  over the next heading lost that half under it, leaving a 5px target on
+  Client Administration, Submission Admin and Marketing Management. The handle
+  now sits wholly inside its own heading, 12px wide, with a full-height line
+  on the column edge. Dragging keeps the resize cursor and selects no text.
+  The last column's edge now resizes too; before, that column always took the
+  leftover room, so dragging its edge did nothing. Reset columns restores the
+  fill.
+
+
 ## [0.317.2] — 2026-11-09
 
 **fix: the mentor request's review step names the chosen mentor.** Found on

@@ -192,6 +192,7 @@ body { display: flex; flex-direction: column; }
 .assign__table td.status-cell { white-space: nowrap; }
 .assign__table td.company-cell { color: var(--cbm-slate-700); }
 .assign__table th.col-assigned { width: 8.5rem; }
+.assign__table th.col-lastcontact { width: 8.5rem; }
 .assign__table th.col-days { width: 7rem; }
 .assigned-date-cell { white-space: nowrap; color: var(--cbm-slate-700); }
 /* td selector needed: the generic `.assign__table td { text-align: left }`

@@ -1,6 +1,6 @@
 # assignments/ — Client Administration
 
-Last Updated: 11-06-26 02:16 · Revision 1.1
+Last Updated: 11-10-26 20:25 · Revision 1.2
 
 Detail for the Client Administration application (`/assignments`): the engagement grid, Assign and Reassign, the mentor roster and the editable engagement popup.
 
@@ -40,6 +40,9 @@ full-height grid with a status multi-select, and assigns each to a mentor.
   from an engagement's Assign/Reassign card ("Browse the full mentor list…");
   unscoped it explains itself on click. View-only by ruling — editing stays in
   Mentor Administration.
+- **Last Contact Date** (v0.318.0) is a display-only grid column reading
+  `CEngagement.lastContactDate`. Client Administration never writes it; Client
+  Management advances it.
 - **Assign** (`service.assign_engagement`) sets `mentorProfile` +
   `engagementStatus="Pending Acceptance"`, stamps `engagementAssignedDate`, and
   re-homes assigned users across every related Contact, the CClientProfile and
@@ -115,5 +118,6 @@ full-height grid with a status multi-select, and assigns each to a mentor.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 11-10-26 20:25 | Claude (Claude Code) | The Last Contact Date column (v0.318.0). |
 | 1.1 | 11-06-26 02:16 | Claude (Claude Code) | The History tab and old-and-new values (v0.312.0). |
 | 1.0 | 10-20-26 17:30 | Claude (Claude Code) | Created from the root `CLAUDE.md` section, word for word (Doug's approval 10-20-26). |

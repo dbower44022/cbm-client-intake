@@ -130,7 +130,7 @@
     cssDone = true;
     var tag = root.document.createElement("style");
     tag.setAttribute("data-cbm-grid", "1");
-    tag.textContent = ".cbm-grid th{position:relative}.cbm-grid__handle{position:absolute;top:0;right:-4px;width:9px;height:100%;cursor:col-resize;z-index:2}";
+    tag.textContent = ".cbm-grid th{position:relative}.cbm-grid__handle{position:absolute;top:0;right:0;width:12px;height:100%;cursor:col-resize;z-index:2}";
     (root.document.head || root.document.documentElement).appendChild(tag);
   }
 
@@ -241,7 +241,10 @@
         sum += state.widths[col];
       });
       table.style.tableLayout = "fixed";
-      table.style.width = "100%";
+      // A last column someone sized keeps that width, so its own edge moves
+      // too; otherwise the last column fills the room that is left.
+      var lastSized = !!state.widths[colOf(hs[hs.length - 1], hs.length - 1)];
+      table.style.width = lastSized ? Math.round(sum) + "px" : "100%";
       table.style.minWidth = Math.round(sum) + "px";
     }
 
@@ -303,10 +306,12 @@
           e.preventDefault(); e.stopPropagation();
           var startX = e.clientX, startW = th.getBoundingClientRect().width;
           h.classList.add("is-dragging");
+          doc.documentElement.classList.add("cbm-grid-resizing");
           if (h.setPointerCapture) { try { h.setPointerCapture(e.pointerId); } catch (_) {} }
           function move(ev) { setWidth(th, col, startW + (ev.clientX - startX)); }
           function up() {
             h.classList.remove("is-dragging");
+            doc.documentElement.classList.remove("cbm-grid-resizing");
             h.removeEventListener("pointermove", move);
             h.removeEventListener("pointerup", up);
             h.removeEventListener("pointercancel", up);
