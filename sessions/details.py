@@ -643,12 +643,34 @@ async def _stamp_mentor_team(
         )
 
 
+def _refuse_cbm_member(contact: dict[str, Any]) -> None:
+    """Raise when the contact is a CBM member: members belong on the CBM
+    contacts card, never as a record contact. Attached as one, a member's
+    Contact used to gain the client's company (production, 11-06-26)."""
+    types = contact.get("cContactType") or []
+    if isinstance(types, str):
+        types = [types]
+    if "Mentor" in types:
+        raise SessionError(
+            f"{contact.get('name') or 'This person'} is a {abbr()} member. "
+            f"Add them on the {abbr()} contacts card instead."
+        )
+
+
 async def link_contact(cfg: DomainConfig, client: SessionClient, parent_id: str, contact_id: str) -> None:
     """Attach an EXISTING contact to this record via the domain's contacts link
     (``CEngagement.engagementContacts`` / ``CPartnerProfile.contacts`` /
     ``CSponsorProfile.sponsorContacts`` — the relation the Details tab lists), then
     backfill its company affiliation (see :func:`_backfill_company`) and stamp
-    the mentor team onto it (see :func:`_stamp_mentor_team`)."""
+    the mentor team onto it (see :func:`_stamp_mentor_team`). A CBM member is
+    refused before anything is written (see :func:`_refuse_cbm_member`)."""
+    contact = await client.get(CONTACT, contact_id, select="name,cContactType")
+    _refuse_cbm_member(contact)
+    await _attach_contact(cfg, client, parent_id, contact_id)
+
+
+async def _attach_contact(cfg: DomainConfig, client: SessionClient, parent_id: str, contact_id: str) -> None:
+    """The writes of :func:`link_contact`, for a contact already checked."""
     await client.relate(cfg.parent_entity, parent_id, cfg.parent_contacts_link, contact_id)
     await _backfill_company(cfg, client, parent_id, contact_id)
     await _stamp_mentor_team(cfg, client, parent_id, contact_id)
@@ -747,15 +769,8 @@ async def _reuse_contact(
     """Link a matched contact and null-fill its empty fields (see
     :func:`create_contact`). The null-fill runs as the user and is
     best-effort: a role that cannot edit the contact still gets it linked."""
-    types = existing.get("cContactType") or []
-    if isinstance(types, str):
-        types = [types]
-    if "Mentor" in types:
-        raise SessionError(
-            f"{existing.get('name') or 'This person'} is a {abbr()} member. "
-            f"Add them on the {abbr()} contacts card instead."
-        )
-    fill = {k: payload[k] for k in fill_keys
+    _refuse_cbm_member(existing)
+    fill ={k: payload[k] for k in fill_keys
             if payload.get(k) not in (None, "", []) and existing.get(k) in (None, "", [])}
     if fill:
         try:
@@ -763,7 +778,7 @@ async def _reuse_contact(
         except EspoError as exc:
             log.warning("could not null-fill matched contact %s: %s", existing["id"], exc)
             fill = {}
-    await link_contact(cfg, client, parent_id, existing["id"])
+    await _attach_contact(cfg, client, parent_id, existing["id"])
     return {"id": existing["id"], "matched": True, "name": existing.get("name"),
             "filled": sorted(fill)}
 

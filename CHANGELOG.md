@@ -5,6 +5,21 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.318.1] — 2026-11-11
+
+**fix: a CBM member can no longer be attached as a client record's contact.**
+Doug's report 11-11-26 (`OPEN-ITEMS.md` #77). On production a mentor attached
+Doug's own Contact to a client engagement with the Contacts tab's "add
+existing contact" picker, then removed it. The attach had copied the
+engagement's company onto the Contact, and removing it leaves the company by
+design, so every CBM contacts card showed Doug with that client's company.
+Creating a contact already refused a member's email; attaching one did not.
+Both paths now give the same refusal ("… is a CBM member. Add them on the CBM
+contacts card instead.") before anything is written (`sessions/details.py`,
+`_refuse_cbm_member`). The production Contact was repaired by hand the same
+day.
+
+
 ## [0.318.0] — 2026-11-10
 
 **feat: Client Administration shows the Last Contact Date; column edges are

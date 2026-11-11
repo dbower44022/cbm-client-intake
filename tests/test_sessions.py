@@ -1229,6 +1229,21 @@ async def test_link_contact_never_overwrites_existing_company():
 
 
 @pytest.mark.asyncio
+async def test_link_contact_refuses_a_cbm_member():
+    """A member's Contact attached to a client engagement took the client's
+    company (production, 11-06-26). The attach now refuses before any write."""
+    fake = Fake(records={
+        ("CEngagement", "E1"): {"clientOrganizationId": "acct1"},
+        ("Contact", "c9"): {"name": "Douglas Bower", "accountId": None,
+                            "cContactType": ["Mentor"]},
+    })
+    with pytest.raises(service.SessionError, match="contacts card"):
+        await details.link_contact(MENTOR, fake, "E1", "c9")
+    assert fake.relates == []
+    assert fake.updates == []
+
+
+@pytest.mark.asyncio
 async def test_unlink_contact_unrelates_only():
     # remove = the relation only; the Contact record itself is never touched
     fake = Fake()
