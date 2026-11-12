@@ -4395,7 +4395,7 @@
       repaintDetails(cardKey);
     });
     wrap.appendChild(btn);
-    if (detailsAdd === menuKey) {
+    if (detailsAdd === menuKey && menuKey === side + "-menu") {
       var menu = document.createElement("div"); menu.className = "sxd__menu";
       if (side === "client") {
         menu.appendChild(menuItem("Select existing contact…", function () { detailsAdd = "client-existing"; repaintDetails(cardKey); }));

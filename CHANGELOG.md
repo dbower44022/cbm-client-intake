@@ -5,6 +5,14 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.318.3] — 2026-11-11
+
+**fix: Add Co-Mentors opens the picker alone.** Found on crm-test checking
+v0.318.2: the open co-mentor picker also drew the old one-item menu under the
+button, because the menu was drawn whenever the button's open state matched.
+The menu is now drawn only for the menu state (`sessions/frontend/app.js`).
+
+
 ## [0.318.2] — 2026-11-11
 
 **feat: Client Management's add buttons say what they add.** Doug's request

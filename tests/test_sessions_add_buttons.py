@@ -19,3 +19,9 @@ def test_co_mentor_button_skips_the_menu():
 def test_other_domains_keep_plus_add():
     assert 'btn.textContent = "+ Add";' in APP_JS
     assert 'var engagement = SLUG === "mentorsessions";' in APP_JS
+
+
+def test_co_mentor_picker_draws_no_menu():
+    # Found on crm-test 11-11-26: the open picker also drew the old one-item
+    # menu, because the menu was drawn whenever the open state matched.
+    assert 'if (detailsAdd === menuKey && menuKey === side + "-menu") {' in APP_JS
