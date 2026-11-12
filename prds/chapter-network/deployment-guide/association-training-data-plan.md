@@ -139,6 +139,14 @@ Recommendation: A, because the Association is both a real chapter and the traini
 - The applications' CRM role, `CustomAppAPIRole`, on both systems: the Association's lacks six record types crm-test's has — leads, campaigns, campaign touches, event presenters, partner associations and enrichment findings. Every other scope matches, bar the stream setting on information requests.
 - **Found:** on crm-test the same role may read event presenters but not create them, so `enrich_training_data.py` stopped at its first presenter and skipped everything after it (inferred from its dry run, which still lists the presenters, links, topics, notes and referrals). Fixed locally (`a6461452`): a refused presenter is reported and the run goes on. Presenters stay absent on both systems unless added in Event Administration.
 
+**Stop 3 passed, 11-12-26 00:55** (Doug: "all three").
+
+**Work 3, 11-12-26 01:01.**
+- Sandbox address domain set to `sandbox.mentorsassociation.org` at the Association's System Settings, read back.
+- `CustomAppAPIRole` on the Association's CRM given the six record types, by `scripts/migrate_api_role_newer_entities.py` (crm-test reports nothing to do); read back, rebuilt, and the applications' key now reads all six. Item 76, part 5, done for the Association; Boston still to check.
+- **The twelve sign-ins were created through the API, not the Users screen** (`scripts/sandbox/training_logins.py`), with no password. Section 5's plan had Claude fill in the screen while Doug typed passwords; the CRM asked for a sign-in in the browser first, and an API create with passwords set by Doug through a keyboard prompt keeps every password away from Claude. Cost: guide step 14.2's four unchecked screen labels were not checked. Doug sets the passwords with `~/.config/cbm-bma/set-training-passwords.sh`.
+- Every script run without `--apply`: the seed would create 26 mentor profiles, 32 companies, 58 contacts, 18 client profiles, 18 engagements, 8 partners and 6 funders, and its sessions; all ten mentor sign-ins found; every address on `sandbox.mentorsassociation.org`; no Cleveland domain, name or address in any output. The later scripts' warnings are all "not created yet", because a dry run of a later script cannot see what an earlier one would create. The containment check's one failure is the stage 11 test mentor, `doug.bower@mentorsassociation.org`, which stage 17 removes.
+
 ---
 
 ## Change log
