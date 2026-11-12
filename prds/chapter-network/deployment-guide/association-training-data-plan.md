@@ -1,10 +1,10 @@
 # Loading the training data into the Association's system — plan
 
 **Document:** Plan for loading crm-test's invented training data into the Business Mentors Association's customer relationship management system, under Association ruling 77 (guide stage 15, with the training sign-ins of stage 14)
-**Version:** 1.1
+**Version:** 1.3
 **Status:** Approved by Doug 11-12-26 00:33, with option A of section 9
 **Owner:** Doug Bower
-**Last Updated:** 11-12-26 00:46
+**Last Updated:** 11-12-26 01:28
 
 ---
 
@@ -147,12 +147,18 @@ Recommendation: A, because the Association is both a real chapter and the traini
 - **The twelve sign-ins were created through the API, not the Users screen** (`scripts/sandbox/training_logins.py`), with no password. Section 5's plan had Claude fill in the screen while Doug typed passwords; the CRM asked for a sign-in in the browser first, and an API create with passwords set by Doug through a keyboard prompt keeps every password away from Claude. Cost: guide step 14.2's four unchecked screen labels were not checked. Doug sets the passwords with `~/.config/cbm-bma/set-training-passwords.sh`.
 - Every script run without `--apply`: the seed would create 26 mentor profiles, 32 companies, 58 contacts, 18 client profiles, 18 engagements, 8 partners and 6 funders, and its sessions; all ten mentor sign-ins found; every address on `sandbox.mentorsassociation.org`; no Cleveland domain, name or address in any output. The later scripts' warnings are all "not created yet", because a dry run of a later script cannot see what an earlier one would create. The containment check's one failure is the stage 11 test mentor, `doug.bower@mentorsassociation.org`, which stage 17 removes.
 
+**Stop 4 passed, 11-12-26 01:05** (Doug: "yes").
+
+**Work 4 done, 11-12-26 01:28.** The load ran in section 3's order on the Association's system. The enrichment script first failed on a name clash of its own (a local variable hid the new module), leaving one thread's conversation without messages; fixed and rerun, it completed the thread. Its presenter step was refused by the applications' role, as section 2 inferred, and the run went on. The demo links, lead codes and import template were made through System Settings → Operations. Section 8's counts: every scripted record type equals crm-test's, plus the stage 11 test records; the audit reads 197 of 207 fields and 70 of 95 relationships (crm-test 69). The containment check's only failure is the stage 11 test mentor. The sign-in checks wait for Doug's passwords. Guide stage 15 is version 0.6 (step 15.4 no longer says the training system holds Cleveland's records); stage 14 needed no change from this work. `SANDBOX-RESET.md` revision 1.4. Owed work: `OPEN-ITEMS.md` item 81.
+
 ---
 
 ## Change log
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 11-12-26 01:28 | Claude (Claude Code) | Stop 4 and Work 4: the load done. |
+| 1.2 | 11-12-26 01:02 | Claude (Claude Code) | Stops 2 and 3, Works 2 and 3. |
 | 1.1 | 11-12-26 00:46 | Claude (Claude Code) | Section 11, progress: Stop 1 and Work 1. |
 | 1.0 | 11-12-26 00:33 | Claude (Claude Code) | Approved by Doug, option A. |
 | 0.1 | 11-12-26 00:31 | Claude (Claude Code) | First draft, from kickoff prompt version 1.1, with the read-only counts of 11-12-26. |

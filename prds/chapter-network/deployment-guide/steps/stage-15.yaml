@@ -1,7 +1,7 @@
 stage: 15
 name: Bring in the chapter's records and create the mentor accounts
 version: "0.6"
-updated: "11-12-26 01:30"
+updated: "11-12-26 01:27"
 why: >-
   A chapter arrives with clients, companies, partners, funders and mentors it
   already knows about. This stage moves those records into the CRM without
@@ -342,7 +342,7 @@ steps:
 
 changes:
   - version: "0.6"
-    date: "11-12-26 01:30"
+    date: "11-12-26 01:27"
     change: >-
       Step 15.4's warning no longer says the shared training system holds Cleveland's records. Under Association rulings 15 and 77 it is the Association's system, holding the invented training data loaded from crm-test's scripts on 11-12-26.
   - version: "0.5"

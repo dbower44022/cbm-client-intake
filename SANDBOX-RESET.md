@@ -1,6 +1,6 @@
 # The training sandbox — nightly reset runbook
 
-Last Updated: 10-25-26 19:30 · Revision 1.3 — change log at the end.
+Last Updated: 11-12-26 01:28 · Revision 1.4 — change log at the end.
 
 crm-test does three jobs now: it is the **pre-production review gate**, the
 **training sandbox**, and the **release-test environment**. This document is
@@ -303,6 +303,43 @@ What changes when it lands, so this is a job rather than a rediscovery:
 The one thing that does **not** change is the reset itself: none of the above
 touches the golden baseline or either half of the nightly restore.
 
+## A second training system: the Association's
+
+Association rulings 15 and 77 make the Business Mentors Association's system
+(crm.businessmentorsassociation.org) the shared training system for every
+chapter. It was loaded on 11-12-26 with the same seeders, which accept exactly
+two CRM systems, crm-test and this one (`scripts/sandbox/targets.py`), and
+refuse every other. Its invented addresses sit on
+`sandbox.mentorsassociation.org`, a domain with no mailboxes.
+
+**It is contained differently.** It is a real chapter too, so its shared
+mailbox, Drive and members group stay on. The applications' setting **Sandbox
+address domain** (System Settings → Email) is what keeps the invented
+addresses in: nothing is sent to, shared with, added to a group as, or put on
+a mailing list as an address on that domain. It must read
+`sandbox.mentorsassociation.org`; the containment check reminds you.
+
+**The same run, against it** — every script takes the Association's
+credential file:
+
+```bash
+E=~/.config/cbm-bma/bma.env
+uv run python scripts/sandbox/training_logins.py --env-file $E          # the 12 sign-ins (--apply; --set-passwords)
+uv run python scripts/sandbox/seed_training_data.py --env-file $E --apply
+uv run python scripts/sandbox/enrich_training_data.py --env-file $E --apply
+uv run python scripts/sandbox/deepen_showcase_records.py --env-file $E --apply
+uv run python scripts/sandbox/seed_outreach_data.py --env-file $E --apply
+uv run python scripts/sandbox/audit_showcase_records.py --env-file $E
+uv run python scripts/sandbox/check_containment.py --env-file $E
+```
+
+Then System Settings → Operations → *Sandbox demo campaign links*, dry run
+then apply, for the demo links and the import template.
+
+**Its nightly restore is not armed** (11-12-26). Both halves still refuse
+everything but crm-test, and no baseline has been captured. Arming it is
+`OPEN-ITEMS.md` item 81.
+
 ## Containment — assume somebody saves
 
 Doug's ruling 2026-08-21: nobody is supposed to save anything during training,
@@ -364,6 +401,7 @@ than by default.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.4 | 11-12-26 01:28 | Claude (Claude Code) | A second training system: the Association's, loaded 11-12-26 under Association ruling 77 — the commands, its sandbox address domain, and its restore not yet armed. |
 | 1.3 | 10-25-26 19:30 | Claude (Claude Code) | The fifth seeder (`seed_import_templates.py`, the import tool's demo template) and why it runs where the application database is reachable; the worker and the Operations job restore the template too. |
 | 1.2 | 10-20-26 01:05 | Claude (Claude Code) | The baseline recaptured on 10-20-26. |
 | 1.1 | 10-20-26 00:21 | Claude (Claude Code) | The fourth seeder (`seed_outreach_data.py`) in the re-baseline sitting, and the demo campaign links the worker restores after every reset. Revision control added. |

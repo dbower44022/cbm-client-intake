@@ -1230,5 +1230,12 @@ the strength of it.
   attached as a record contact (#77, closed); Client Management's *Add
   Client Contacts* and *Add Co-Mentors* buttons (#78); one database pool
   per process (#79). #78 closed 11-12-26. Owed: #79's soak and connection
-  count. Chapters on the 11-15 train.
+  count. **Chapters got them early with release v0.319.0 (11-12-26).**
+- **v0.319.0 (2026-11-12) is live everywhere** (pushed and released
+  out of turn 11-12-26 by Doug, `/healthz` read 00:53 on the Association,
+  Boston, crm-test and production): the **Sandbox address domain** guard
+  (`core/sandbox_addresses.py`, empty = no effect; set only on the
+  Association's system) and the sandbox scripts' two training systems
+  (`scripts/sandbox/targets.py`). The Association's system holds the
+  training data since 11-12-26; owed in #81.
 Everything else still owed is in `OPEN-ITEMS.md`.
