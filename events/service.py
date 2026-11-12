@@ -596,6 +596,9 @@ def public_event(
         "status": event.get("status") or "",
         "seatsRemaining": seats_left,
         "registrationOpen": registration_open(event, now=now, seats_left=seats_left),
+        # D3-4: an Outside host's link. When set, the Register button sends the
+        # visitor there and our own sign-up is not offered. "" otherwise.
+        "hostUrl": visibility.host_url(event),
         "recordingUrl": event.get("recordingUrl") or "",
         "videoId": video_id or "",
         "thumbnailUrl": thumbnail_url(video_id) if video_id else "",
@@ -936,10 +939,11 @@ def _writable(
     A conditionally editable app-managed field (``EVENT_CONDITIONAL_EDITS``)
     is accepted only when the record AS SAVED meets its condition — the value
     in this very change set if it carries the deciding field, else the stored
-    one in ``current``. The Join URL is the case: typed for an Internal event,
-    Zoom's for a Public one, and a Public event's posted-back value is dropped
-    here rather than overwriting what Zoom wrote. A CRM without the deciding
-    field unlocks nothing.
+    one in ``current``. The Join URL is the case: typed for an Internal event
+    or an Outside host (D3-3), Zoom's for a CBM Zoom webinar, whose posted-back
+    value is dropped here rather than overwriting what Zoom wrote. Any one of a
+    field's rules unlocks it; a rule whose deciding field the CRM lacks
+    unlocks nothing.
     """
     allowed = set(cfg.EVENT_WRITABLE_NAMES if allow_managed else cfg.EVENT_EDIT_NAMES)
     allowed -= set(cfg.DETECTED_FIELDS) - set(available)
@@ -949,12 +953,14 @@ def _writable(
     if not allow_managed:
         present = set(available)
         stored = current or {}
-        for name, (decider, values) in cfg.EVENT_CONDITIONAL_EDITS.items():
-            if decider in cfg.DETECTED_FIELDS and decider not in present:
-                continue
-            value = changes[decider] if decider in changes else stored.get(decider)
-            if value in values:
-                allowed.add(name)
+        for name, rules in cfg.EVENT_CONDITIONAL_EDITS.items():
+            for decider, values in rules:
+                if decider in cfg.DETECTED_FIELDS and decider not in present:
+                    continue
+                value = changes[decider] if decider in changes else stored.get(decider)
+                if value in values:
+                    allowed.add(name)
+                    break
     return {k: v for k, v in changes.items() if k in allowed}
 
 
@@ -1036,6 +1042,7 @@ async def create_event(
     payload["slug"] = unique_slug(name, await existing_slugs(client))
     payload.setdefault("status", cfg.STATUS_PLANNED)
     payload.setdefault(cfg.SHOW_FIELD, False)
+    _check_host_link(payload, {})
     if cfg.AUDIENCE_FIELD in available and not payload.get(cfg.AUDIENCE_FIELD):
         payload[cfg.AUDIENCE_FIELD] = cfg.AUDIENCE_PUBLIC
     if cfg.REACH_FIELD in available and not payload.get(cfg.REACH_FIELD):
@@ -1072,6 +1079,45 @@ def _blank_enums_to_null(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _check_host_link(payload: dict[str, Any], current: dict[str, Any]) -> None:
+    """D3-3: an Outside host's link must be a web address a visitor's browser
+    can open safely. Checked only for an event that is, as saved, run by an
+    outside host; an Internal event's typed link keeps its old rules."""
+    after = {**current, **payload}
+    if not visibility.hosted_outside(after):
+        return
+    link = (payload.get("virtualMeetingUrl") or "").strip()
+    if link and not link.lower().startswith("https://"):
+        raise EventError(
+            "The host's link must start with https:// — paste the full address "
+            "of the host's join or registration page."
+        )
+
+
+async def _refuse_outside_host_with_registrants(
+    client: EspoApi, event_id: str, payload: dict[str, Any], current: dict[str, Any]
+) -> None:
+    """D3-3 (approved 11-12-26): switching an event to Outside host while
+    people are registered with us would leave them holding our join links for
+    a webinar that is then cancelled. Refused, naming how many."""
+    before = visibility.hosted_outside(current)
+    after = visibility.hosted_outside({**current, **payload})
+    if before or not after:
+        return
+    rows = await list_registrations(client, event_id)
+    live = [r for r in rows
+            if r.get("attendanceStatus") in (cfg.REG_REGISTERED, cfg.REG_WAITLISTED)]
+    if live:
+        count = len(live)
+        people = "1 person is" if count == 1 else f"{count} people are"
+        raise EventError(
+            f"{people} registered for this event with us. Switching it to Outside "
+            "host would cancel our webinar and leave them with a link that no "
+            "longer works. Cancel their registrations on the Registrants tab "
+            "first, or keep CBM Zoom."
+        )
+
+
 async def update_event(
     client: EspoApi, event_id: str, changes: dict[str, Any], *, chapter_key: str = ""
 ) -> dict[str, Any]:
@@ -1083,6 +1129,8 @@ async def update_event(
     )
     if "name" in payload and not (payload["name"] or "").strip():
         raise EventError("An event needs a title.")
+    _check_host_link(payload, current)
+    await _refuse_outside_host_with_registrants(client, event_id, payload, current)
     await _clean_multi_enums(client, payload)
     await _include_own_chapter(client, payload, current, available=available,
                                chapter_key=chapter_key)

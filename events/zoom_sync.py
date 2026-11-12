@@ -13,6 +13,8 @@ in-person                    skip — nothing to provision
 audience Internal, no id     skip — webinars are for Public events (ruling D2)
 not shown                    skip, unless the staff action forces it
 already-linked id supplied   adopt it (EV-23) rather than creating a second
+outside host (D3-3), has id  **cancel** it, keeping the host's link
+outside host, no id          skip — the host runs it
 ===========================  ==========================================
 
 **Best-effort by design** (the gcal / mentoradmin-provision precedent): this
@@ -94,6 +96,13 @@ def decide(
         # otherwise - cancel it so registrants aren't sent to a dead room.
         return ("cancel", "the event is no longer online") if webinar_id else (
             "skip", "in-person events have no webinar")
+
+    # D3-3: an event run by an outside host is never ours to provision. A
+    # webinar we made before the switch is cancelled (the editor refuses the
+    # switch while anyone is registered); otherwise there is nothing to do.
+    if visibility.hosted_outside(event):
+        return ("cancel", "the event is run by an outside host") if webinar_id else (
+            "skip", "the event is run by an outside host")
 
     if not event.get("dateStart"):
         return "skip", "the event has no start time yet"
@@ -237,8 +246,11 @@ async def _cancel(
     webinar_id = event["zoomWebinarId"]
     await api.delete_webinar(webinar_id, notify_registrants=True)
     # Clear our side so a later re-publish creates a fresh webinar rather than
-    # patching one Zoom has already forgotten.
+    # patching one Zoom has already forgotten. An Outside host's link is the
+    # host's, saved a moment ago by the same edit: never ours to clear (D3-3).
     updates = {"zoomWebinarId": "", "virtualMeetingUrl": "", "registrationUrl": ""}
+    if visibility.hosted_outside(event):
+        del updates["virtualMeetingUrl"]
     try:
         await client.update(cfg.EVENT, event["id"], updates)
         event.update(updates)

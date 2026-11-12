@@ -225,14 +225,16 @@ async def fields(request: Request) -> dict[str, Any]:
                 "name": f.name, "label": f.label, "type": f.type,
                 "group": f.group, "big": f.big, "help": f.help,
                 "appManaged": f.app_managed, "hidden": f.hidden,
-                "showWhen": (
-                    {"field": f.show_when[0], "values": list(f.show_when[1])}
-                    if f.show_when else None
-                ),
-                "editableWhen": (
-                    {"field": f.editable_when[0], "values": list(f.editable_when[1])}
-                    if f.editable_when else None
-                ),
+                # Each a list of {field, values}: showWhen when ALL hold,
+                # editableWhen when ANY does. None when the field has none.
+                "showWhen": [
+                    {"field": name, "values": list(values)}
+                    for name, values in cfg.rules_of(f.show_when)
+                ] or None,
+                "editableWhen": [
+                    {"field": name, "values": list(values)}
+                    for name, values in cfg.rules_of(f.editable_when)
+                ] or None,
             }
             # F2/F3 fields appear only once the CRM has them (feature-detected).
             for f in service.editor_fields(available)
@@ -300,6 +302,9 @@ async def get_event(event_id: str, request: Request) -> dict[str, Any]:
             "visibility": {
                 "audience": visibility.effective_audience(raw),
                 "state": visibility.staff_state(raw),
+                # D3-3: the Registrants and Follow-up tabs say registrations
+                # are taken on the host's site.
+                "outsideHost": visibility.hosted_outside(raw),
             },
         },
         "counts": counts,

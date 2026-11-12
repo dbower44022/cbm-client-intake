@@ -479,3 +479,19 @@ async def test_adopting_a_bad_id_fails_loudly_and_writes_nothing():
         Settings(), crm, make_event(zoomWebinarId=""), "nope", zoom=zoom)
     assert result["ok"] is False
     assert crm.updates == []
+
+
+async def test_cancelling_for_an_outside_host_keeps_the_hosts_link():
+    """D3-3: the save wrote the host's link a moment before Zoom ran; clearing
+    our webinar must not wipe it."""
+    crm, zoom = FakeCrm(), FakeZoom()
+    link = "https://partner.example/webinar"
+    event = make_event(id="ev1", zoomWebinarId="123", audience="Public",
+                       hostedBy="Outside host", virtualMeetingUrl=link)
+    result = await zoom_sync.sync_event_webinar(Settings(), crm, event, zoom=zoom)
+    assert result["action"] == "cancelled"
+    assert ("delete", "123") == zoom.calls[-1][:2]
+    payload = crm.updates[0][2]
+    assert payload["zoomWebinarId"] == ""
+    assert "virtualMeetingUrl" not in payload
+    assert event["virtualMeetingUrl"] == link

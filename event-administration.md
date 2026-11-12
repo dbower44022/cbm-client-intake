@@ -134,6 +134,26 @@ join (Google Meet, your own Zoom room, Teams), and the member page shows it as
 — Zoom owns that link and would write over anything you typed. An event that
 already has a webinar keeps it if you change it to Internal.
 
+**An event run by an outside host.** Sometimes a partner runs an online event
+that CBM promotes, on their own Zoom or another platform we cannot create in.
+On a Public event that is Virtual or Hybrid, the form shows **Hosted by** under
+Place & capacity. Choose **Outside host**, and a box labelled **Host's link
+(join or registration page)** appears: paste the address the host gave you,
+starting with `https://`. Then:
+
+- the event shows on the website once the link is in; until then Event
+  Administration lists it as *Awaiting join link*;
+- the website's button reads **Register with the host** and opens the host's
+  page in a new tab;
+- CBM takes no registrations for it, sends no confirmation or follow-up email,
+  and records no attendance;
+- no CBM Zoom webinar is created. If the event already had one, saving it as
+  Outside host cancels that webinar, and keeps the host's link.
+
+You cannot switch an event to Outside host while people are registered for it
+with us: the save says how many, so you can cancel their registrations on the
+Registrants tab first, or leave it on **CBM Zoom**.
+
 **About the form itself.** It opens as a large window sized to your screen, and
 you can drag the **bottom-right corner** to make it whatever size suits you. The
 **Save** and **Cancel** buttons are pinned to the bottom and stay put — long

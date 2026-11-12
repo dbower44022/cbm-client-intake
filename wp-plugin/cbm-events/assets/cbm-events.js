@@ -202,11 +202,18 @@
       if (item.registrationOpen === false) {
         button.textContent = "Registration closed";
         button.disabled = true;
+      } else if (item.hostUrl) {
+        // Run by an outside host (D3-4): register on the host's own site.
+        button.textContent = "Register with the host";
       } else if (typeof item.seatsRemaining === "number" && item.seatsRemaining === 0) {
         // Full is not closed: the app puts these people on the waitlist.
         button.textContent = "Join the waitlist";
       }
       button.addEventListener("click", function () {
+        if (item.hostUrl) {
+          window.open(item.hostUrl, "_blank", "noopener");
+          return;
+        }
         if (handlers && handlers.onSignUp) handlers.onSignUp(item);
       });
       info.appendChild(button);

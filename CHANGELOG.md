@@ -5,6 +5,38 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.320.0] — 2026-11-12
+
+**feat: an event run by an outside host.** Rulings D3-3 and D3-4 (Doug,
+11-12-26, `prds/events/CBM_Events_Finalization_Plan.md` row D3, amending
+D3-1): a partner may host an event CBM promotes on a platform we cannot create
+in our Zoom. Found on crm-test: "AI for Small Business", Public and Hybrid,
+was on no page because it had no Join URL. `OPEN-ITEMS.md` #80.
+
+- **New CRM field `CEvent.hostedBy`** (CBM Zoom / Outside host,
+  `cevent-hostedby-crm-handoff.md`, plan `scripts/plans/cevent-hostedby.json`;
+  on crm-test since 11-12-26). Feature-detected: a CRM without it behaves
+  exactly as before. Empty reads as CBM Zoom.
+- **Event Administration** offers *Hosted by* on a Public Virtual or Hybrid
+  event. Chosen Outside host, the Join URL box opens as *Host's link (join or
+  registration page)*, `https://` required. Switching to Outside host is
+  refused while anyone is Registered or Waitlisted with us, naming how many.
+  The grid shows *Public, outside host*; the Registrants and Follow-up tabs
+  say registrations are taken on the host's site.
+- **Zoom webinar provisioning stands down**: it never creates a webinar for
+  such an event, cancels one the event already had, and keeps the host's link
+  when it does (the cancel used to clear the Join URL).
+- **The public pages**: the payload carries `hostUrl`; the calendar card and
+  the event page read *Register with the host* and open the link in a new
+  tab; the event page hides our sign-up form. The register endpoint refuses
+  with the link. No registrations, confirmations or attendance for such an
+  event (D3-4, "for now").
+- **One rule**: `events/visibility.hosted_outside`, counted only on a Public
+  online event. A spec field may now carry several conditions
+  (`cfg.rules_of`): `show_when` all of them, `editable_when` any;
+  `/events/api/fields` sends both as lists.
+- Staff guide: `event-administration.md`, *An event run by an outside host*.
+
 ## [0.319.0] — 2026-11-12
 
 **feat: invented training addresses never leave the system; the training-data

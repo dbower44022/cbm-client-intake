@@ -120,6 +120,12 @@ async def check_open(client: EspoApi, slug: str) -> dict[str, Any]:
         raise RegistrationRefused("That event could not be found.")
     if event.get("status") == cfg.STATUS_CANCELLED:
         raise RegistrationRefused("That event has been cancelled.")
+    if visibility.hosted_outside(event):
+        # D3-4: we take no registration for an event an outside host runs.
+        raise RegistrationRefused(
+            "This event is run by an outside host. Please register on their "
+            "site: " + visibility.host_url(event)
+        )
     if not events_service.registration_open(event):
         raise RegistrationRefused(
             "Registration for that event has closed. Please check the calendar "

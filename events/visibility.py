@@ -75,14 +75,37 @@ def display_time_passed(event: dict[str, Any], now: Optional[datetime] = None) -
 def needs_join_link(event: dict[str, Any]) -> bool:
     """D3-1 (Doug, 10-22-26): a Public ONLINE event is never offered to the
     public without its webinar. True while such an event has no Join URL —
-    Zoom fills it at publish once Track C is on; nothing is pasted by hand on
-    a Public event. Internal events are exempt (their link is typed by staff,
-    and a meeting without one is an ordinary calendar entry)."""
+    Zoom fills it at publish once Track C is on. Internal events are exempt
+    (their link is typed by staff, and a meeting without one is an ordinary
+    calendar entry). An Outside host event (D3-3) is held by the same rule
+    until staff type the host's link."""
     return (
         effective_audience(event) == cfg.AUDIENCE_PUBLIC
         and (event.get("format") or "") in cfg.ONLINE_FORMATS
         and not (event.get("virtualMeetingUrl") or "").strip()
     )
+
+
+def hosted_outside(event: dict[str, Any]) -> bool:
+    """D3-3 (Doug, 11-12-26): a Public online event run by someone else on
+    their own platform. Its Join URL is the host's link, typed by staff; Zoom
+    webinar provisioning stands down; and the Register button goes straight
+    to the host (D3-4). The choice counts only where it is offered — a Public
+    event in an online format — so a stale value on an Internal or in-person
+    event changes nothing. Empty, or a CRM without the field, is CBM Zoom."""
+    return (
+        (event.get(cfg.HOSTED_BY_FIELD) or "") == cfg.HOSTED_OUTSIDE
+        and effective_audience(event) == cfg.AUDIENCE_PUBLIC
+        and (event.get("format") or "") in cfg.ONLINE_FORMATS
+    )
+
+
+def host_url(event: dict[str, Any]) -> str:
+    """The Outside host's link for the Register button, or "" when the event
+    is ours to register for."""
+    if not hosted_outside(event):
+        return ""
+    return (event.get("virtualMeetingUrl") or "").strip()
 
 
 def team_limit(event: dict[str, Any]) -> list[str]:
@@ -191,6 +214,8 @@ def staff_state(event: dict[str, Any], now: Optional[datetime] = None) -> dict[s
                 "label": "Appears " + (when.strftime("%Y-%m-%d") if when else "")}
     if needs_join_link(event):
         return {"key": "awaiting_link", "label": "Awaiting join link"}
+    if hosted_outside(event):
+        return {"key": "public", "label": "Public, outside host"}
     if effective_audience(event) == cfg.AUDIENCE_PUBLIC:
         return {"key": "public", "label": "Public"}
     if team_limit(event):
@@ -216,7 +241,12 @@ def save_warnings(event: dict[str, Any], now: Optional[datetime] = None) -> list
             "The display time is after the event starts, so nobody will see it "
             "or be able to register before it begins."
         )
-    if is_ticked(event) and needs_join_link(event):
+    if is_ticked(event) and needs_join_link(event) and hosted_outside(event):
+        warnings.append(
+            "This event is run by an outside host and has no host's link yet, so "
+            "it is not shown until the link is filled in."
+        )
+    elif is_ticked(event) and needs_join_link(event):
         warnings.append(
             "This is an online public event with no join link yet, so it is not "
             "shown and takes no registrations until its Zoom webinar exists."

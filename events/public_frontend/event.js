@@ -73,6 +73,18 @@
       $("registerBtn").addEventListener("click", function () {
         window.location.href = "/webinars/";
       });
+    } else if (event.hostUrl) {
+      // Run by an outside host (D3-4): no form here, the host takes it.
+      $("signupSub").textContent =
+        "This session is run by an outside host. Register on their site.";
+      Array.prototype.forEach.call(
+        document.querySelectorAll(".pub__signupgrid, .pub__consent"),
+        function (node) { node.hidden = true; }
+      );
+      $("registerBtn").textContent = "Register with the host";
+      $("registerBtn").addEventListener("click", function () {
+        window.open(event.hostUrl, "_blank", "noopener");
+      });
     } else {
       $("registerBtn").addEventListener("click", submit);
     }

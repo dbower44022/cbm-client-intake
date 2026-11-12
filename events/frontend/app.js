@@ -521,7 +521,14 @@
     return window.CBMGrid ? CBMGrid.sortBy(rows, gridKeys(regGrid), registrantSortValue) : rows;
   }
 
+  /* D3-3/D3-4: an Outside host event takes no registrations with us. */
+  function outsideHost() {
+    var v = state.current && state.current.event && state.current.event.visibility;
+    return !!(v && v.outsideHost);
+  }
+
   function renderRegistrants() {
+    $("regHostNote").hidden = !outsideHost();
     var rows = registrantRows();
     var body = $("regRows");
     body.innerHTML = "";
@@ -598,6 +605,9 @@
     parts.push(conf.enabled
       ? "Registration confirmations are on: each registrant received theirs when they registered (the Emails column on the Registrants tab)."
       : "Registration confirmations are off (System Settings → Registration confirmation emails).");
+    if (outsideHost()) {
+      parts.unshift("This event is run by an outside host: registrations are taken on the host's site, so there is nobody here to email.");
+    }
     $("fuNote").textContent = parts.join(" ");
     (cat.kinds || []).forEach(function (kind) { host.appendChild(followUpCard(kind)); });
   }
@@ -1265,7 +1275,9 @@
         }
         var control = field(section, spec.name, spec.label, spec.type, value,
                             state.options[spec.name], spec.help, { big: spec.big });
-        var rule = spec.showWhen || spec.editableWhen;
+        // showWhen: every rule must hold; editableWhen: any one unlocks it.
+        var rule = spec.showWhen ? { all: spec.showWhen }
+          : (spec.editableWhen ? { any: spec.editableWhen } : null);
         if (rule) control.closest(".ev__field").dataset.showWhen = JSON.stringify(rule);
       });
       host.appendChild(section);
@@ -1395,22 +1407,37 @@
 
   /* Conditional fields (F2/F3): Reach only for a Public event, Chapters only
      for a Selected reach, the team limit and Takes registrations only for an
-     Internal one. A field is shown when the field it depends on is itself shown
-     and holds one of the listed values — so Chapters disappears with Reach when
-     the event turns Internal. Hidden controls keep their values and are still
-     posted; the server applies the rules. */
+     Internal one; Hosted by only for a Public online event, and the Join URL
+     for an Internal event or an Outside host (D3-3). A rule holds when the
+     field it depends on is itself shown and holds one of the listed values —
+     so Chapters disappears with Reach when the event turns Internal. A field
+     is shown when ALL its show rules hold, or ANY of its unlock rules. Hidden
+     controls keep their values and are still posted; the server applies the
+     rules. */
   function applyShowWhen(host) {
     var wraps = Array.prototype.slice.call(host.querySelectorAll("[data-show-when]"));
     function controlOf(name) { return host.querySelector('[name="' + name + '"]'); }
-    function isShown(wrap) {
-      var rule = JSON.parse(wrap.dataset.showWhen);
+    function holds(rule) {
       var parent = controlOf(rule.field);
       if (!parent) return false;
       var parentWrap = parent.closest(".ev__field");
       if (parentWrap && parentWrap.dataset.showWhen && !isShown(parentWrap)) return false;
       return rule.values.indexOf(parent.value) !== -1;
     }
+    function isShown(wrap) {
+      var rule = JSON.parse(wrap.dataset.showWhen);
+      return rule.all ? rule.all.every(holds) : (rule.any || []).some(holds);
+    }
     wraps.forEach(function (wrap) { wrap.hidden = !isShown(wrap); });
+    // D3-3: on an Outside host event the Join URL is the host's link.
+    var join = controlOf("virtualMeetingUrl");
+    var hosted = controlOf("hostedBy");
+    if (join) {
+      var caption = join.closest(".ev__field").querySelector("span");
+      var outside = !!hosted && hosted.value === "Outside host"
+        && !hosted.closest(".ev__field").hidden;
+      if (caption) caption.textContent = outside ? "Host's link (join or registration page)" : "Join URL";
+    }
   }
 
   function collectForm() {

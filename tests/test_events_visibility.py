@@ -304,3 +304,64 @@ def test_nothing_reads_the_tick_for_itself():
                 if pattern.search(line):
                     offenders.append(f"{path.relative_to(ROOT)}:{number}")
     assert offenders == [], offenders
+
+
+# --- An event run by an outside host (rulings D3-3 and D3-4) ------------------
+
+HOST_LINK = "https://partner.example/webinar/register"
+
+
+def outside(**over):
+    base = dict(audience="Public", format=cfg.FORMAT_VIRTUAL, hostedBy="Outside host",
+                virtualMeetingUrl=HOST_LINK, zoomWebinarId="")
+    base.update(over)
+    return make_event(**base)
+
+
+def test_hosted_outside_counts_only_where_the_choice_is_offered():
+    assert visibility.hosted_outside(outside())
+    assert visibility.hosted_outside(outside(format=cfg.FORMAT_HYBRID))
+    # A stale value on an Internal or in-person event changes nothing.
+    assert not visibility.hosted_outside(outside(audience="Internal"))
+    assert not visibility.hosted_outside(outside(format=cfg.FORMAT_IN_PERSON))
+    # Empty, or a CRM without the field, is CBM Zoom.
+    assert not visibility.hosted_outside(outside(hostedBy=None))
+    assert not visibility.hosted_outside(outside(hostedBy="CBM Zoom"))
+
+
+def test_an_outside_host_event_shows_once_its_link_is_typed():
+    assert visibility.is_shown(outside(), visibility.SURFACE_PUBLIC)
+    assert not visibility.is_shown(outside(virtualMeetingUrl=""), visibility.SURFACE_PUBLIC)
+
+
+def test_host_url_is_the_link_for_an_outside_host_only():
+    assert visibility.host_url(outside()) == HOST_LINK
+    assert visibility.host_url(outside(hostedBy="CBM Zoom")) == ""
+    assert service.public_event(outside())["hostUrl"] == HOST_LINK
+    assert service.public_event(make_event())["hostUrl"] == ""
+
+
+def test_staff_state_and_warning_name_the_outside_host():
+    assert visibility.staff_state(outside())["label"] == "Public, outside host"
+    waiting = outside(virtualMeetingUrl="")
+    assert visibility.staff_state(waiting)["key"] == "awaiting_link"
+    warnings = visibility.save_warnings(waiting)
+    assert any("outside host" in w and "host's link" in w for w in warnings)
+    assert not any("Zoom webinar exists" in w for w in warnings)
+
+
+def test_zoom_never_creates_for_an_outside_host_even_forced():
+    assert zoom_sync.decide(outside())[0] == "skip"
+    assert zoom_sync.decide(outside(), force=True)[0] == "skip"
+
+
+def test_zoom_cancels_our_webinar_when_an_event_moves_to_an_outside_host():
+    action, reason = zoom_sync.decide(outside(zoomWebinarId="123"))
+    assert action == "cancel" and "outside host" in reason
+
+
+async def test_registration_sends_the_visitor_to_the_host():
+    crm = MetaEspo([outside()], fields=cfg.AUDIENCE_FIELDS + cfg.HOSTING_FIELDS)
+    with pytest.raises(RegistrationRefused, match="outside host") as caught:
+        await check_open(crm, "grant-writing-basics")
+    assert HOST_LINK in str(caught.value)

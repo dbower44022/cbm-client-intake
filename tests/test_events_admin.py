@@ -376,9 +376,11 @@ MEET = "https://meet.google.com/abc-defg-hij"
 def test_join_url_is_app_managed_but_unlocked_for_internal_events():
     spec = next(f for f in cfg.EVENT_FIELDS if f.name == "virtualMeetingUrl")
     assert spec.app_managed
-    assert spec.editable_when == ("audience", ("Internal",))
+    assert cfg.rules_of(spec.editable_when) == (
+        ("audience", ("Internal",)), ("hostedBy", ("Outside host",)))
     assert "virtualMeetingUrl" not in cfg.EVENT_EDIT_NAMES
-    assert cfg.EVENT_CONDITIONAL_EDITS == {"virtualMeetingUrl": ("audience", ("Internal",))}
+    assert cfg.EVENT_CONDITIONAL_EDITS == {"virtualMeetingUrl": (
+        ("audience", ("Internal",)), ("hostedBy", ("Outside host",)))}
 
 
 async def test_internal_event_takes_a_typed_join_url():
@@ -430,8 +432,13 @@ def test_session_payload_carries_the_unlock_rule(monkeypatch):
     client = build(monkeypatch, user=MARKETING, crm=MetaEspo([]))
     fields = {f["name"]: f for f in client.get("/events/api/fields").json()["fields"]}
     assert fields["virtualMeetingUrl"]["appManaged"] is True
-    assert fields["virtualMeetingUrl"]["editableWhen"] == {
-        "field": "audience", "values": ["Internal"]}
+    # The CRM fake lacks hostedBy, but the rule rides along; the server
+    # ignores a rule whose field the CRM does not have.
+    assert fields["virtualMeetingUrl"]["editableWhen"] == [
+        {"field": "audience", "values": ["Internal"]},
+        {"field": "hostedBy", "values": ["Outside host"]}]
+    assert fields["publicReach"]["showWhen"] == [
+        {"field": "audience", "values": ["Public"]}]
 
 
 def test_editor_renders_a_conditionally_editable_field():
@@ -439,4 +446,120 @@ def test_editor_renders_a_conditionally_editable_field():
     a control, shown under its rule."""
     source = (ROOT / "events" / "frontend" / "app.js").read_text()
     assert "!spec.editableWhen" in source
-    assert "spec.showWhen || spec.editableWhen" in source
+    assert "spec.showWhen ? { all: spec.showWhen }" in source
+    assert "{ any: spec.editableWhen }" in source
+
+
+# --- An event run by an outside host (rulings D3-3 and D3-4, OPEN-ITEMS #80) --
+
+HOSTED = cfg.AUDIENCE_FIELDS + cfg.HOSTING_FIELDS
+HOST_LINK = "https://partner.example/webinar/register"
+
+
+class HostedEspo(EditEspo):
+    """EditEspo on a CRM with ``hostedBy``, whose registrations can be set."""
+
+    def __init__(self, events, registrations=()):
+        super().__init__(events, fields=HOSTED)
+        self.registrations = list(registrations)
+
+    async def list(self, entity, *, where=None, select=None, max_size=50,
+                   offset=0, order_by=None, order=None):
+        if entity == cfg.REGISTRATION:
+            return {"total": len(self.registrations), "list": self.registrations}
+        return await super().list(entity, where=where, select=select,
+                                  max_size=max_size, offset=offset,
+                                  order_by=order_by, order=order)
+
+
+def public_online(**over):
+    base = dict(id="ev1", audience="Public", format=cfg.FORMAT_HYBRID,
+                virtualMeetingUrl="")
+    base.update(over)
+    return make_event(**base)
+
+
+async def test_outside_host_takes_a_typed_link():
+    crm = HostedEspo([public_online()])
+    await service.update_event(crm, "ev1", {"hostedBy": "Outside host",
+                                            "virtualMeetingUrl": HOST_LINK})
+    assert crm.updated[-1]["virtualMeetingUrl"] == HOST_LINK
+    assert crm.updated[-1]["hostedBy"] == "Outside host"
+
+
+async def test_cbm_zoom_event_still_drops_a_typed_link():
+    crm = HostedEspo([public_online(hostedBy="CBM Zoom")])
+    await service.update_event(crm, "ev1", {"name": "Renamed",
+                                            "virtualMeetingUrl": HOST_LINK})
+    assert "virtualMeetingUrl" not in crm.updated[-1]
+
+
+async def test_a_crm_without_hosted_by_ignores_the_choice():
+    """Before the CRM change, the choice is dropped and the link stays Zoom's."""
+    crm = EditEspo([public_online()])
+    await service.update_event(crm, "ev1", {"name": "Renamed",
+                                            "hostedBy": "Outside host",
+                                            "virtualMeetingUrl": HOST_LINK})
+    assert "hostedBy" not in crm.updated[-1]
+    assert "virtualMeetingUrl" not in crm.updated[-1]
+
+
+async def test_the_host_link_must_be_https():
+    crm = HostedEspo([public_online()])
+    with pytest.raises(service.EventError, match="https://"):
+        await service.update_event(crm, "ev1", {"hostedBy": "Outside host",
+                                                "virtualMeetingUrl": "partner.example/x"})
+    assert crm.updated == []
+
+
+async def test_create_accepts_an_outside_host_link():
+    crm = HostedEspo([])
+    await service.create_event(crm, {"name": "Partner Webinar", "audience": "Public",
+                                     "format": cfg.FORMAT_VIRTUAL,
+                                     "hostedBy": "Outside host",
+                                     "virtualMeetingUrl": HOST_LINK},
+                               chapter_key="cleveland")
+    assert crm.created[-1]["virtualMeetingUrl"] == HOST_LINK
+
+
+async def test_switching_to_outside_host_is_refused_while_people_are_registered():
+    crm = HostedEspo([public_online(virtualMeetingUrl="https://zoom.us/j/1",
+                                    zoomWebinarId="1")],
+                     registrations=[{"attendanceStatus": "Registered"},
+                                    {"attendanceStatus": "Waitlisted"},
+                                    {"attendanceStatus": "Cancelled"}])
+    with pytest.raises(service.EventError, match="2 people are registered"):
+        await service.update_event(crm, "ev1", {"hostedBy": "Outside host",
+                                                "virtualMeetingUrl": HOST_LINK})
+    assert crm.updated == []
+
+
+async def test_switching_with_only_cancelled_registrations_goes_through():
+    crm = HostedEspo([public_online(zoomWebinarId="1")],
+                     registrations=[{"attendanceStatus": "Cancelled"}])
+    await service.update_event(crm, "ev1", {"hostedBy": "Outside host",
+                                            "virtualMeetingUrl": HOST_LINK})
+    assert crm.updated[-1]["hostedBy"] == "Outside host"
+
+
+async def test_an_outside_host_event_already_switched_is_not_refused_again():
+    crm = HostedEspo([public_online(hostedBy="Outside host", virtualMeetingUrl=HOST_LINK)],
+                     registrations=[{"attendanceStatus": "Registered"}])
+    await service.update_event(crm, "ev1", {"name": "Renamed"})
+    assert crm.updated[-1]["name"] == "Renamed"
+
+
+def test_editor_offers_hosted_by_for_public_online_events_only():
+    spec = next(f for f in cfg.EVENT_FIELDS if f.name == "hostedBy")
+    assert spec.type == "enum"
+    assert cfg.rules_of(spec.show_when) == (
+        ("audience", ("Public",)), ("format", cfg.ONLINE_FORMATS))
+    assert "hostedBy" in cfg.DETECTED_FIELDS
+    assert "hostedBy" in cfg.PUBLIC_SELECT.split(",")
+
+
+def test_registrants_tab_says_the_host_takes_registrations():
+    html = (ROOT / "events" / "frontend" / "index.html").read_text()
+    source = (ROOT / "events" / "frontend" / "app.js").read_text()
+    assert 'id="regHostNote"' in html
+    assert "outsideHost()" in source

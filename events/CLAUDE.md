@@ -1,6 +1,6 @@
 # events/ — Events, Webinars and the public pages
 
-Last Updated: 11-06-26 02:16 · Revision 1.2
+Last Updated: 11-12-26 01:26 · Revision 1.3
 
 Detail for Event Administration (`/events`), the public programme pages (`/webinars/`), presenters, topics, attendance, follow-ups, reporting and the portal events rail.
 
@@ -206,6 +206,20 @@ would be indistinguishable from a slug.
   EspoCRM's render in the three sends AND the five follow-ups. Calendar file:
   `events/ics.py`. Templates: `scripts/seed_event_templates.py` seeds all
   eight once (crm-test done 10-22-26 13:32). Dark behind `EVENTS_CONFIRMATIONS`.
+- **An event run by an outside host** (rulings D3-3 and D3-4, 11-12-26,
+  amending D3-1; `OPEN-ITEMS.md` #80). `CEvent.hostedBy` (CBM Zoom / Outside
+  host, feature-detected, empty = CBM Zoom) is offered on Public Virtual or
+  Hybrid events; **`visibility.hosted_outside`** is the one rule, and counts
+  the value only there. On such an event staff type the host's link in the
+  Join URL (`editable_when` now takes several rules, ANY unlocking; `show_when`
+  several, ALL required — `cfg.rules_of`), `https://` required; Zoom
+  provisioning never creates for it and cancels a webinar it already had,
+  **keeping the host's link** (`_cancel`); the switch is refused while anyone
+  is Registered or Waitlisted with us. The public payload carries **`hostUrl`**,
+  and the calendar card and event page turn Register into *Register with the
+  host*; the register endpoint refuses with the link. No registrations, no
+  confirmations, no attendance (D3-4, "for now"). CRM:
+  `cevent-hostedby-crm-handoff.md`.
 - **Phase 6c reporting** (`events/reporting.py`): the engagement **Events tab**
   (attendance rolled up across all of a client's contacts, deduplicated by
   event), the contact **Events tab** in the directory, and programme + conversion
@@ -321,6 +335,7 @@ would be indistinguishable from a slug.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 11-12-26 01:26 | Claude (Claude Code) | An event run by an outside host (D3-3, D3-4). |
 | 1.2 | 11-06-26 02:16 | Claude (Claude Code) | The History tab (v0.312.0). |
 | 1.1 | 11-03-26 23:59 | Claude (Claude Code) | Promote this event and the Campaigns tab (v0.303.0, M10). |
 | 1.0 | 10-20-26 17:30 | Claude (Claude Code) | Created from the root `CLAUDE.md` section, word for word (Doug's approval 10-20-26). |

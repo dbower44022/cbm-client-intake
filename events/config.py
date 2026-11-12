@@ -92,6 +92,21 @@ AUDIENCE_FIELDS: tuple[str, ...] = (
     TAKES_REGISTRATIONS_FIELD, DISPLAY_FROM_FIELD,
 )
 
+# --- Who hosts an online event (rulings D3-3 and D3-4, 11-12-26) -------------
+# A partner may host an event CBM promotes, on a platform we cannot create in
+# our Zoom. ``hostedBy`` says so explicitly: chosen Outside host, staff type the
+# host's link in the Join URL on a Public online event, Zoom webinar
+# provisioning stands down, and the Register button sends visitors straight to
+# the host — we take no registration (D3-4, for now). Built by
+# ``scripts/plans/cevent-hostedby.json``; handoff
+# ``cevent-hostedby-crm-handoff.md``. Feature-detected: a CRM without the field
+# behaves exactly as before. Empty reads as CBM Zoom. Every rule that reads it
+# lives in events/visibility.py (``hosted_outside``).
+HOSTED_BY_FIELD = "hostedBy"
+HOSTED_CBM_ZOOM = "CBM Zoom"
+HOSTED_OUTSIDE = "Outside host"
+HOSTING_FIELDS: tuple[str, ...] = (HOSTED_BY_FIELD,)
+
 # --- Presenters (Track F, F4) -----------------------------------------------
 # One ``CEventPresenter`` record per presenter per event (F4-1): the biography,
 # title, company and photo are COPIES made when the presenter is added and never
@@ -131,7 +146,9 @@ TOPIC_FIELDS: tuple[str, ...] = (TOPICS_FIELD,)
 
 #: Every feature-detected CEvent field: present in the editor and the write
 #: whitelist only when the live CRM has it.
-DETECTED_FIELDS: tuple[str, ...] = AUDIENCE_FIELDS + PRESENTER_FIELDS + TOPIC_FIELDS
+DETECTED_FIELDS: tuple[str, ...] = (
+    AUDIENCE_FIELDS + PRESENTER_FIELDS + TOPIC_FIELDS + HOSTING_FIELDS
+)
 
 #: Statuses that occupy a seat.
 SEAT_TAKING = (REG_REGISTERED, REG_ATTENDED, REG_NO_SHOW)
@@ -166,6 +183,8 @@ PUBLIC_SELECT = ",".join([
     # list or null); a row from one that does not has no key — which is how
     # ``service.event_topics`` tells the two apart.
     "topics",
+    # D3-3. Same rule.
+    "hostedBy",
 ])
 
 # --- event graphic (EV-05b) -------------------------------------------------
@@ -193,6 +212,21 @@ REGISTRATION_SELECT = ",".join([
 
 # --- Field spec ------------------------------------------------------------
 
+#: One condition: another field holds one of these values —
+#: ``("audience", ("Public",))``.
+Rule = tuple[str, tuple[str, ...]]
+
+
+def rules_of(value: Optional[tuple]) -> tuple[Rule, ...]:
+    """A spec's condition as a tuple of rules. A field may give one rule
+    (``("audience", ("Public",))``) or several (``(rule, rule)``); this is the
+    one place that tells the two apart."""
+    if not value:
+        return ()
+    if isinstance(value[0], str):
+        return (value,)  # type: ignore[return-value]
+    return tuple(value)
+
 
 @dataclass(frozen=True)
 class EventField:
@@ -219,15 +253,18 @@ class EventField:
     #: Duration select and sends the recomputed dateEnd.
     hidden: bool = False
     #: Show the control only while another field holds one of these values —
-    #: ``("audience", ("Public",))``. The value is still posted when hidden.
-    show_when: Optional[tuple[str, tuple[str, ...]]] = None
+    #: ``("audience", ("Public",))``. Several rules must ALL hold. The value is
+    #: still posted when hidden.
+    show_when: Optional[tuple] = None
     #: An app-managed field that staff MAY edit while another field holds one
     #: of these values — ``("audience", ("Internal",))``. The editor offers the
     #: control under that condition (as a show-when rule) and the update path
     #: accepts the value only when the saved record meets it; otherwise the
     #: field stays the app's, exactly as ``app_managed`` alone would make it.
-    #: Decides nothing when the condition's field is absent from the live CRM.
-    editable_when: Optional[tuple[str, tuple[str, ...]]] = None
+    #: Several rules unlock it when ANY holds (the Join URL: an Internal
+    #: event, or an Outside host). A rule decides nothing when its field is
+    #: absent from the live CRM.
+    editable_when: Optional[tuple] = None
     #: The feature-detected field that SUPERSEDES this one: once the live CRM
     #: has it, this field leaves the editor and the write whitelist. The single
     #: ``topic`` is the case, retired by ``topics`` (F1).
@@ -287,16 +324,29 @@ EVENT_FIELDS: list[EventField] = [
     # Place & capacity
     EventField("location", "Location", "text", "Place & capacity",
                help="Venue for in-person and hybrid events."),
+    # D3-3: who runs an online Public event. Shown only for one, because an
+    # Internal event's link is typed anyway and an in-person event has none.
+    EventField(HOSTED_BY_FIELD, "Hosted by", "enum", "Place & capacity",
+               show_when=(("audience", (AUDIENCE_PUBLIC,)), ("format", ONLINE_FORMATS)),
+               help="CBM Zoom: the webinar is created for you and visitors register "
+                    "with us. Outside host: a partner runs it on their own platform. "
+                    "Paste their link below; the Register button sends visitors "
+                    "there, and we do not take registrations or record attendance."),
     # Zoom fills this for Public webinars and owns it there. An Internal event
     # never gets a webinar (F2/F3 design D2), so for one the staff member types
     # the meeting link themselves and the member page shows it as "Join online"
     # under the F5 join-link rule (Portal Calendar design D3, Doug 10-07-26).
+    # An Outside host event (D3-3) takes the host's link here too.
     EventField("virtualMeetingUrl", "Join URL", "url", "Place & capacity",
-               app_managed=True, editable_when=("audience", ("Internal",)),
-               help="Internal events only: paste the meeting link members should "
-                    "join (Google Meet, Zoom, Teams). Public webinars get theirs "
-                    "from Zoom. Shown to everyone when the event takes no "
-                    "registrations, and only to registered members when it does."),
+               app_managed=True,
+               editable_when=(("audience", (AUDIENCE_INTERNAL,)),
+                              (HOSTED_BY_FIELD, (HOSTED_OUTSIDE,))),
+               help="Internal events: paste the meeting link members should join "
+                    "(Google Meet, Zoom, Teams); shown to everyone when the event "
+                    "takes no registrations, and only to registered members when "
+                    "it does. Outside host: paste the host's link, either the join "
+                    "link or their registration page. CBM Zoom webinars get theirs "
+                    "from Zoom."),
     EventField("venueCapacity", "Capacity", "int", "Place & capacity",
                help="Seat cap. Leave empty or 0 for unlimited."),
 
@@ -387,10 +437,10 @@ EVENT_EDIT_NAMES: frozenset[str] = frozenset(
 EVENT_WRITABLE_NAMES: frozenset[str] = frozenset(f.name for f in EVENT_FIELDS)
 
 #: App-managed fields the editor accepts under a condition — field name to the
-#: ``(other field, values)`` rule that unlocks it. Today: the Join URL, for
-#: Internal events only.
-EVENT_CONDITIONAL_EDITS: dict[str, tuple[str, tuple[str, ...]]] = {
-    f.name: f.editable_when for f in EVENT_FIELDS if f.editable_when
+#: rules that unlock it, ANY of which suffices. Today: the Join URL, for an
+#: Internal event or an Outside host (D3-3).
+EVENT_CONDITIONAL_EDITS: dict[str, tuple[Rule, ...]] = {
+    f.name: rules_of(f.editable_when) for f in EVENT_FIELDS if f.editable_when
 }
 
 #: Field name to the feature-detected field that retires it. Today: ``topic``
