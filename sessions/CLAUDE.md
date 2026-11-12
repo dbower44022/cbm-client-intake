@@ -1,6 +1,6 @@
 # sessions/ — Client, Partner and Funder Management
 
-Last Updated: 11-06-26 02:16 · Revision 1.8
+Last Updated: 11-11-26 23:30 · Revision 1.9
 
 Detail for the session engine behind Client Management (`/mentorsessions`), Partner Management (`/partnersessions`) and Funder Management (`/sponsorsessions`): the grids, every record tab, quick add, managers and co-mentors, and the traps of this package.
 
@@ -201,7 +201,16 @@ one shared frontend that derives its domain from the first segment of its URL.
   read the company. Null-fills and creates still run as the user.
 - **A new contact on the Contacts tab reuses a known email** (v0.264.2, the
   staff screens are bound like the public forms): matched under the intake API client, linked,
-  null-filled as the user; a CBM member is refused.
+  null-filled as the user; a CBM member is refused. **Attaching an existing
+  contact refuses a CBM member too** (v0.318.1, `_refuse_cbm_member`): the
+  attach copies the record's company onto a contact that has none, and
+  unlinking leaves it, so a mentor attached to a client engagement kept that
+  client's company (production, 11-06-26, OPEN-ITEMS #77). Members go on the
+  CBM contacts card.
+- **Client Management's add buttons say what they add** (v0.318.2–v0.318.3,
+  Doug 11-11-26): *Add Client Contacts* (select existing or create new) and
+  *Add Co-Mentors*, which opens the co-mentor picker directly. Partner and
+  Funder Management keep "+ Add" (`addMenuEl`, keyed on `SLUG`).
 - **Contacts tables are per-domain**: mentor shows Role chips and an Agreements
   badge; partner/funder show neither (every contact has the same relationship to
   CBM, and the consent bools are a client-intake concept) but offer **Make
@@ -320,6 +329,7 @@ Watch for these when touching this package:
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.9 | 11-11-26 23:30 | Claude (Claude Code) | Attaching a CBM member refused; Client Management's named add buttons (v0.318.1–v0.318.3). |
 | 1.8 | 11-06-26 02:16 | Claude (Claude Code) | The History tab, partner and funder only, and old-and-new values (v0.312.0). |
 | 1.7 | 11-05-26 17:41 | Claude (Claude Code) | The strict profile choice (v0.305.0). |
 | 1.6 | 11-01-26 18:55 | Claude (Claude Code) | A company typed but never picked asks first, in the add dialog and the composer row; the composer's chosen company reaches the contact (v0.301.1–v0.302.4). |

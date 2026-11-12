@@ -1225,4 +1225,10 @@ the strength of it.
   Last Contact Date column in Client Administration, and wider column-resize
   handles on every grid. Nothing owed. The chapters get it on the Sunday
   11-15 train.
+- **v0.318.1–v0.318.4 (2026-11-11) are live on both deployments**
+  (pushed 11-11-26, `/healthz` read 23:17): a CBM member can no longer be
+  attached as a record contact (#77, closed); Client Management's *Add
+  Client Contacts* and *Add Co-Mentors* buttons (#78); one database pool
+  per process (#79). Owed: #78's last crm-test look (the picker opens with
+  no menu) and #79's soak and connection count. Chapters on the 11-15 train.
 Everything else still owed is in `OPEN-ITEMS.md`.
