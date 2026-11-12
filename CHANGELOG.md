@@ -5,6 +5,18 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.318.2] — 2026-11-11
+
+**feat: Client Management's add buttons say what they add.** Doug's request
+11-11-26 (`OPEN-ITEMS.md` #78). On an engagement's Details tab the Client
+Contacts card's "+ Add" now reads **Add Client Contacts** and still offers
+*Select existing contact* or *Create new contact*. The CBM Contacts card's
+"+ Add" now reads **Add Co-Mentors** and opens the co-mentor picker at once;
+its one-item menu is gone, and the picker is titled "Add a co-mentor". Partner
+and Funder Management are unchanged (`sessions/frontend/app.js`, one shared
+frontend keyed by the page's address).
+
+
 ## [0.318.1] — 2026-11-11
 
 **fix: a CBM member can no longer be attached as a client record's contact.**

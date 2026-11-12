@@ -4383,6 +4383,12 @@
     var wrap = document.createElement("span"); wrap.className = "sxd__addwrap";
     var btn = document.createElement("button"); btn.type = "button"; btn.className = "sxd__btn"; btn.textContent = "+ Add";
     var menuKey = side + "-menu", cardKey = side === "client" ? "clientContacts" : "cbmContacts";
+    // Client Management names what each button adds, and its CBM card has
+    // one choice only, so that button opens the co-mentor picker directly
+    // (Doug's request 11-11-26). Partner and Funder Management keep "+ Add".
+    var engagement = SLUG === "mentorsessions";
+    if (engagement) btn.textContent = side === "client" ? "Add Client Contacts" : "Add Co-Mentors";
+    if (engagement && side === "cbm") menuKey = "cbm-pick";
     btn.addEventListener("click", function (e) {
       e.stopPropagation();
       detailsAdd = detailsAdd === menuKey ? null : menuKey;
@@ -4536,7 +4542,7 @@
   // Add a CBM contact: pick an existing mentor profile (attached via the
   // engagement's additionalMentors relation).
   function cbmPickPanel() {
-    var panel = addPanelShell("Add a {{abbr}} contact");
+    var panel = addPanelShell(SLUG === "mentorsessions" ? "Add a co-mentor" : "Add a {{abbr}} contact");
     var row = document.createElement("div"); row.className = "sx__inline";
     var sel = document.createElement("select"); sel.className = "sxd__addselect";
     sel.setAttribute("aria-label", "Choose a {{abbr}} contact");
