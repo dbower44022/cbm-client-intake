@@ -1,0 +1,18 @@
+{
+  "name": "cevent-hostedby",
+  "description": "Rulings D3-3 and D3-4 of prds/events/CBM_Events_Finalization_Plan.md (11-12-26): an event hosted by someone else carries an explicit Hosted by choice. Outside host: staff type the host's link on a Public online event, Zoom webinar provisioning stands down, and Register goes straight to the host. One enum on CEvent, stored as typed (custom entity, no prefix). Existing events read null, which the application treats as CBM Zoom. Handoff: cevent-hostedby-crm-handoff.md. OPEN-ITEMS #80.",
+  "entities": [],
+  "fields": [
+    {
+      "entity": "CEvent",
+      "name": "hostedBy",
+      "type": "enum",
+      "label": "Hosted by",
+      "options": ["CBM Zoom", "Outside host"],
+      "default": "CBM Zoom",
+      "tooltipText": "Who runs an online event. CBM Zoom: the application creates the webinar and takes registrations. Outside host: a partner runs it on their own platform; type the host's link in the Join URL, and the Register button sends visitors there. Attendance is not captured for an outside host."
+    }
+  ],
+  "links": [],
+  "enumOptions": []
+}
