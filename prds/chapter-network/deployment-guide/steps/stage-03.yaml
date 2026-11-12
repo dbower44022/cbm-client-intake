@@ -1,7 +1,7 @@
 stage: 3
 name: Register the chapter's domain names
-version: "0.7"
-updated: "11-07-26 23:37"
+version: "0.8"
+updated: "11-11-26 23:06"
 why: >-
   Every address the chapter uses hangs off its domain names: its email, its
   website, its CRM and its applications. This stage buys them in the chapter's
@@ -62,7 +62,7 @@ steps:
     produces: [primary_domain, website_domain, mentor_email_domain]
     mode: guided
     actions:
-      - do: "Explain the Association's recommendation to the chapter's board: two domain names, as the Association itself has (Association ruling 25) and as Cleveland has:"
+      - do: "Explain the Association's recommendation to the chapter's board: two domain names (Association ruling 76), as the Association itself has (Association ruling 25) and as Cleveland has:"
         items:
           - "One for the public website, for example businessmentorsassociation.org or clevelandbusinessmentors.org."
           - "A second, shorter one for email and mentor sign-ins, for example mentorsassociation.org or cbmentors.org. Every mentor's address ends in it, so a short name gives short addresses."
@@ -277,6 +277,10 @@ steps:
     source: 8-Methods-Organization-Domains-Google.md#3.7
 
 changes:
+  - version: "0.8"
+    date: "11-11-26 23:06"
+    change: >-
+      Step 3.2 cites Association ruling 76 (11-11-26): the Association recommends two domain names to every chapter. One domain name stays the chapter's own choice.
   - version: "0.7"
     date: "11-07-26 23:37"
     change: >-

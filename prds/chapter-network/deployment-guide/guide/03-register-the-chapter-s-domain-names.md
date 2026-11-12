@@ -1,7 +1,7 @@
 # Stage 3 — Register the chapter's domain names
 
-**Version:** 0.7  
-**Last Updated:** 11-07-26 23:37  
+**Version:** 0.8  
+**Last Updated:** 11-11-26 23:06  
 **Generated from** `steps/stage-03.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -78,7 +78,7 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 
 **Do this:**
 
-1. Explain the Association's recommendation to the chapter's board: two domain names, as the Association itself has (Association ruling 25) and as Cleveland has:
+1. Explain the Association's recommendation to the chapter's board: two domain names (Association ruling 76), as the Association itself has (Association ruling 25) and as Cleveland has:
    - One for the public website, for example businessmentorsassociation.org or clevelandbusinessmentors.org.
    - A second, shorter one for email and mentor sign-ins, for example mentorsassociation.org or cbmentors.org. Every mentor's address ends in it, so a short name gives short addresses.
 2. Tell the board the other choice, which is the chapter's to make: one domain name for everything. It is simpler and there is one name fewer to renew, but the email addresses are tied to the website's name for good.
@@ -307,6 +307,7 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 
 | Version | Date | Change |
 |---|---|---|
+| 0.8 | 11-11-26 23:06 | Step 3.2 cites Association ruling 76 (11-11-26): the Association recommends two domain names to every chapter. One domain name stays the chapter's own choice. |
 | 0.7 | 11-07-26 23:37 | Step 3.7 follows Cloudflare's screens as Doug met them setting up the Association (11-07-26): the Connect a domain page with its quick scan and Continue; the plan page; Continue to activation after the record check; the Update your nameservers page; a DNSSEC check at the registrar before the name server change; and I updated my nameservers. |
 | 0.6 | 11-07-26 23:11 | Step 3.7: Cloudflare's Add a domain offers three options, Connect a domain, Transfer a domain and Buy a domain; the step says to choose Connect a domain (Doug, 11-07-26, following the Association's stage 3). |
 | 0.5 | 11-07-26 15:28 | Step 3.7 says step 4.14 moves Cloudflare to admin@, the chapter's administrators group, which every account now signs in with (Doug, 11-07-26). |

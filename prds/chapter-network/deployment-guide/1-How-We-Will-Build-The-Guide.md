@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — How We Will Build It
 
 **Document:** The plan for writing the New Chapter Deployment Guide
-**Version:** 1.4
+**Version:** 1.5
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-19-26 00:10
+**Last Updated:** 11-11-26 23:06
 
 ---
 
@@ -159,7 +159,8 @@ another organization's accounts.
 **3. Register the chapter's domain names.** A founder's existing email address is
 used to register the domain name or names at an ordinary domain registrar, and to
 create the account that holds them. Whether a chapter needs one domain name or two
-is an open question — see section 10.
+was an open question (section 11). Answered 11-11-26 by Association ruling 76: the
+Association recommends two.
 
 **4. Set up Google Workspace and the chapter's email.** The Google Workspace
 account is created on the chapter's domain, the domain is verified, email starts
@@ -361,7 +362,7 @@ which to watch.
 These do not block writing the list of steps. They do have to be answered before
 the stages they touch can be written out in detail.
 
-**One domain name or two?** Cleveland uses two: one for the public website, and a
+**One domain name or two?** *Answered 11-11-26 by Association ruling 76: the Association recommends two domain names to every chapter, one for the website and one for email, and a chapter's cost estimate counts both. One domain name remains the chapter's own choice (guide step 3.2). The question as first written follows.* Cleveland uses two: one for the public website, and a
 second, shorter one for email addresses, mentor logins and the address the CRM
 system sends from. A new chapter could copy that, or use a single domain name for
 everything. Two is more to explain and more to pay for. One is simpler but ties the
@@ -455,6 +456,7 @@ visible.
 
 | Version | Date | Change |
 |---|---|---|
+| 1.5 | 11-11-26 23:06 | Open question "One domain name or two?" marked answered by Association ruling 76 (11-11-26); the question kept as first written. Stage 3's pointer corrected from section 10 to section 11. |
 | 1.4 | 09-19-26 00:10 | Stage 4: the choice of a centrally provided Google Workspace removed. Every chapter hosts its own (Doug, 09-18-26). |
 | 1.3 | 09-18-26 17:50 | The guide is now structured data with a generated readable guide, and the specification of a CRMBuilder onboarding app (Doug, 09-18-26). The information check is automated in the renderer. |
 | 1.2 | 09-18-26 14:30 | The chapter's vault added to the names we use: a chapter-owned Proton Pass organization with central support members (Doug, 09-18-26). |
