@@ -129,12 +129,16 @@ found; move resolved items to the bottom with the resolution date.
     almost certainly in the CRM's own interface; its CBM email reads
     `Doug.Bower@cbmentors.org`. The nightly repair then copied Doug's
     login onto David's Contact (10-17-26 04:05). David's own login is
-    linked to no profile, so he sees no clients. Owed: (1) **the data
-    repair** — **follow the repair procedure in
-    `prds/mentor-login-integrity-plan.md` § 6, never Mentor
-    Administration** (a Mentor Administration save would put Doug's login
-    back; verified 11-02-26); **waiting on Doug's confirmation from the
-    staff involved, do not repair before it**; (2) ~~the design session~~
+    linked to no profile, so he sees no clients. Owed: (1) ~~the data
+    repair~~ — **done 11-12-26 22:52 UTC** at Doug's request (plan § 6,
+    through the CRM's own session as admin@cbmentors.org, never Mentor
+    Administration): the profile's Assigned Users is David's login only,
+    and Doug's login is off David's Contact; read back in the database.
+    sharon.rose had already set the CBM email field to
+    `david.weissman@cbmentors.org` at 19:08 UTC the same day. David has no
+    engagements, so nothing else carried Doug's login. Still owed: § 6
+    step 3 — Doug's Client Management shows no two-profile notice, and
+    David signs in and sees his profile; (2) ~~the design session~~
     — **done 11-05-26**: plan `prds/mentor-login-integrity-plan.md`, build
     kickoff `prompts/mentor-login-integrity-build-prompt-v0.2.md` (steps 0–3), CRM
     handoffs `crm-history-settings-crm-handoff.md`,
