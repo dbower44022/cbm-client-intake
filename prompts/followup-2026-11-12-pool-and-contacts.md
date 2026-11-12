@@ -1,6 +1,6 @@
 # Kickoff — follow-up on v0.318.1–v0.318.4
 
-Last Updated: 11-11-26 23:31 · Revision 1.0
+Last Updated: 11-11-26 23:25 · Revision 1.0
 
 Operating mode: DETAIL.
 
@@ -24,4 +24,4 @@ Never `git stash` in this working copy to test old code: parallel sessions share
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
-| 1.0 | 11-11-26 23:31 | Claude (Claude Code) | Created at the close of the 11-11-26 session. |
+| 1.0 | 11-11-26 23:25 | Claude (Claude Code) | Created at the close of the 11-11-26 session. |
