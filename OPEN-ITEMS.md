@@ -136,9 +136,8 @@ found; move resolved items to the bottom with the resolution date.
     and Doug's login is off David's Contact; read back in the database.
     sharon.rose had already set the CBM email field to
     `david.weissman@cbmentors.org` at 19:08 UTC the same day. David has no
-    engagements, so nothing else carried Doug's login. Still owed: § 6
-    step 3 — Doug's Client Management shows no two-profile notice, and
-    David signs in and sees his profile; (2) ~~the design session~~
+    engagements, so nothing else carried Doug's login. **Closed 11-12-26
+    by Doug**; (2) ~~the design session~~
     — **done 11-05-26**: plan `prds/mentor-login-integrity-plan.md`, build
     kickoff `prompts/mentor-login-integrity-build-prompt-v0.2.md` (steps 0–3), CRM
     handoffs `crm-history-settings-crm-handoff.md`,

@@ -1,6 +1,6 @@
 # Mentor login integrity — prevention, detection and history — Plan
 
-Last Updated: 11-06-26 15:36 · Revision 2.1 — see change log at the end.
+Last Updated: 11-12-26 18:15 · Revision 2.2 — see change log at the end.
 
 **Status:** Approved by Doug 11-05-26 ("approved"). Steps 0–4 built and live; steps 5–6 built 11-06-26 (v0.311.0–v0.313.2), live on both deployments since 11-06-26, switches off.
 **Kickoff that produced it:** `prompts/mentor-login-integrity-design-prompt-v0.2.md`.
@@ -139,9 +139,9 @@ and act normally when it agrees:
 acts only when exactly one candidate is Active **and** its CBM email matches
 the login's user name. Otherwise Client Management and My Mentor Profile
 show "Your login is linked to more than one mentor profile — staff have
-been told" and no records. A fault is raised either way. Note: until David
-Weissman's record is repaired, Doug's own two screens may stop under this
-rule (David's status is unchecked, C5).
+been told" and no records. A fault is raised either way. (David
+Weissman's record was repaired 11-12-26, § 6, so Doug's own screens no
+longer meet this case.)
 
 ### 4.4 The CBM email field (Q4)
 
@@ -249,6 +249,13 @@ something to show.
 
 ## 6. Repair procedure — not part of the build
 
+**Done 11-12-26 22:52 UTC on production, and closed.** Doug asked for it.
+The edits went through the CRM's own session as admin@cbmentors.org.
+Sharon Rose had already corrected the CBM email field at 19:08 UTC.
+Steps 1 and 2 were applied as written and read back in the database.
+David has no engagements, so no other record carried Doug's login. The
+procedure is kept below as the record of what was done.
+
 For David Weissman's record, once Milt Sierra and the others have confirmed.
 **Do not use Mentor Administration on this mentor profile until step 2 of
 the build ships.** Two traps, both verified: a Mentor Administration save
@@ -327,6 +334,7 @@ which is now Doug's.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 2.2 | 11-12-26 18:15 | Claude (Claude Code) | § 6 repair done on production 11-12-26 and closed; § 4.3's note about Doug's screens updated. No ruling changed. |
 | 2.1 | 11-06-26 15:36 | Claude (Claude Code) | Ruling Q5.5 (Doug, 11-06-26, option 1): a new System Management Team. |
 | 2.0 | 11-06-26 02:29 | Claude (Claude Code) | Steps 5 and 6 built from build prompt revision 0.6: 5a v0.311.0 (`RECORD_HISTORY_TAB`, Mentor Administration), 5b v0.312.0 (Client Administration, Partner and Funder Management — refused for Client Management on the server — Event Administration, and ruling Q5.4's values), 6 v0.313.0 (`ACTIVITY_PAGE`, `SYSTEM_MANAGEMENT_ALLOWED_TEAMS`), each independently reviewed and fixed (v0.312.1, v0.313.1, v0.313.2). Facts read on crm-test: `CActionLog` keeps no actor id, so the merge matches people by name; a status change is an Update note carrying only the new value; the key may list `Note` by author and date in 120–160 ms. No ruling changed; the team question (#66 item 4) is still Doug's. |
 | 1.9 | 11-06-26 01:35 | Claude (Claude Code) | Ruling Q5.4 (Doug, 11-06-26, option A): old and new values recorded in every History-tab application. Build kickoff pointer moved to revision 0.6. |
