@@ -132,6 +132,13 @@ Recommendation: A, because the Association is both a real chapter and the traini
 
 **Work 1 done, 11-12-26 00:46, committed locally as v0.319.0, not pushed.** The guard of section 9 option A, named `SANDBOX_ADDRESS_DOMAIN` (System Settings → Email → Sandbox address domain), in the four places; the demo-links job allowed where it is set; `scripts/sandbox/targets.py` and every sandbox script pointed at it, with `--env-file`. Two differences from section 4: the application's address in the draft text campaign's message is localised too (crm-test's own address was written into it), and `check_containment.py`'s deployment half stays crm-test's, telling the operator to confirm the setting at `/setup` on the Association's system. All 3,592 tests pass; crm-test's dry runs are unchanged. Next: Stop 2.
 
+**Stop 2 passed, 11-12-26 00:47** (Doug: push, and release now). `main` pushed; release v0.319.0 cut and pushed out of turn. By 00:53 the Association, Boston, crm-test and production all reported 0.319.0 and healthy.
+
+**Work 2, 11-12-26 00:53.** Read, nothing changed:
+- The Association's System Settings: shared mailbox `info@`, Gmail sync, calendar events, Drive documents, the Google directory check and `allmembers@` all on from the deployment settings; mailing sync off, Marketing Management off, the nightly wipe off, the sandbox address domain empty.
+- The applications' CRM role, `CustomAppAPIRole`, on both systems: the Association's lacks six record types crm-test's has — leads, campaigns, campaign touches, event presenters, partner associations and enrichment findings. Every other scope matches, bar the stream setting on information requests.
+- **Found:** on crm-test the same role may read event presenters but not create them, so `enrich_training_data.py` stopped at its first presenter and skipped everything after it (inferred from its dry run, which still lists the presenters, links, topics, notes and referrals). Fixed locally (`a6461452`): a refused presenter is reported and the run goes on. Presenters stay absent on both systems unless added in Event Administration.
+
 ---
 
 ## Change log
