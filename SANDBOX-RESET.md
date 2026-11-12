@@ -1,6 +1,6 @@
 # The training sandbox — nightly reset runbook
 
-Last Updated: 11-12-26 01:28 · Revision 1.4 — change log at the end.
+Last Updated: 11-12-26 11:16 · Revision 1.5 — change log at the end.
 
 crm-test does three jobs now: it is the **pre-production review gate**, the
 **training sandbox**, and the **release-test environment**. This document is
@@ -336,9 +336,17 @@ uv run python scripts/sandbox/check_containment.py --env-file $E
 Then System Settings → Operations → *Sandbox demo campaign links*, dry run
 then apply, for the demo links and the import template.
 
-**Its nightly restore is not armed** (11-12-26). Both halves still refuse
-everything but crm-test, and no baseline has been captured. Arming it is
-`OPEN-ITEMS.md` item 81.
+**Its restore is on demand, not nightly** (11-12-26). The CRM half accepts
+it (`ALLOWED_SITE_HOSTS` in `reset_crm_sandbox.py`, installed at
+`/usr/local/sbin/` on 104.131.180.52, key `~/.ssh/crm-bma`); it reads the
+attachment folder from the compose file, because that server keeps it at
+`data/espocrm/persistent/data`. A baseline was captured 11-12-26 16:15 UTC,
+after the training load and the twelve passwords. Doug's helper
+`~/.config/cbm-bma/sandbox.sh status|baseline|check|restore` runs each step
+in one line. No cron entry, and the application half still refuses everything
+but crm-test, so a restore leaves the applications' own database (the
+Submission Admin queue, discussion comments, the Drive index) and anything
+filed in Drive as it is. Arming it nightly is `OPEN-ITEMS.md` item 81.
 
 ## Containment — assume somebody saves
 
@@ -401,6 +409,7 @@ than by default.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.5 | 11-12-26 11:16 | Claude (Claude Code) | The Association's baseline captured; its restore on demand. |
 | 1.4 | 11-12-26 01:28 | Claude (Claude Code) | A second training system: the Association's, loaded 11-12-26 under Association ruling 77 — the commands, its sandbox address domain, and its restore not yet armed. |
 | 1.3 | 10-25-26 19:30 | Claude (Claude Code) | The fifth seeder (`seed_import_templates.py`, the import tool's demo template) and why it runs where the application database is reachable; the worker and the Operations job restore the template too. |
 | 1.2 | 10-20-26 01:05 | Claude (Claude Code) | The baseline recaptured on 10-20-26. |

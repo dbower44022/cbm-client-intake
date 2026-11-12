@@ -1,10 +1,10 @@
 # Loading the training data into the Association's system — plan
 
 **Document:** Plan for loading crm-test's invented training data into the Business Mentors Association's customer relationship management system, under Association ruling 77 (guide stage 15, with the training sign-ins of stage 14)
-**Version:** 1.3
+**Version:** 1.4
 **Status:** Approved by Doug 11-12-26 00:33, with option A of section 9
 **Owner:** Doug Bower
-**Last Updated:** 11-12-26 01:28
+**Last Updated:** 11-12-26 11:16
 
 ---
 
@@ -151,12 +151,15 @@ Recommendation: A, because the Association is both a real chapter and the traini
 
 **Work 4 done, 11-12-26 01:28.** The load ran in section 3's order on the Association's system. The enrichment script first failed on a name clash of its own (a local variable hid the new module), leaving one thread's conversation without messages; fixed and rerun, it completed the thread. Its presenter step was refused by the applications' role, as section 2 inferred, and the run went on. The demo links, lead codes and import template were made through System Settings → Operations. Section 8's counts: every scripted record type equals crm-test's, plus the stage 11 test records; the audit reads 197 of 207 fields and 70 of 95 relationships (crm-test 69). The containment check's only failure is the stage 11 test mentor. The sign-in checks wait for Doug's passwords. Guide stage 15 is version 0.6 (step 15.4 no longer says the training system holds Cleveland's records); stage 14 needed no change from this work. `SANDBOX-RESET.md` revision 1.4. Owed work: `OPEN-ITEMS.md` item 81.
 
+**Baseline for a day of testing, 11-12-26 11:15** (Doug: test on the Association's system with records kept out of a baseline; "baseline first"). The CRM restore script accepts the Association (exact host) and reads the attachment folder from the compose file; installed on 104.131.180.52 by Claude; Doug set the twelve passwords and captured the baseline (`~/.config/cbm-bma/sandbox.sh baseline`; 112 record tables, the one attachment). A restore dry run is clean. The capture itself was refused to Claude by the permission classifier.
+
 ---
 
 ## Change log
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.4 | 11-12-26 11:16 | Claude (Claude Code) | The baseline for a day of testing. |
 | 1.3 | 11-12-26 01:28 | Claude (Claude Code) | Stop 4 and Work 4: the load done. |
 | 1.2 | 11-12-26 01:02 | Claude (Claude Code) | Stops 2 and 3, Works 2 and 3. |
 | 1.1 | 11-12-26 00:46 | Claude (Claude Code) | Section 11, progress: Stop 1 and Work 1. |
