@@ -40,7 +40,7 @@ from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from core.espo import EspoClient, EspoError  # noqa: E402
+from core.espo import EspoClient, EspoError, is_forbidden  # noqa: E402
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import targets  # noqa: E402
@@ -433,6 +433,17 @@ async def add_event_showcase(e: Enricher) -> None:
                         await events_service.add_presenter(e.client, event_id, **kwargs)
                     except events_service.DuplicatePresenter:
                         pass
+                    except EspoError as exc:
+                        # The applications' CRM key reads presenters but may not
+                        # create one (the roles standard: Event Administration adds
+                        # them as the signed-in user). Report it and go on, so the
+                        # links, topics, notes and referrals after it still land.
+                        if not is_forbidden(exc):
+                            raise
+                        await e.note(f"! presenters refused by this CRM key ({exc}) — "
+                                     "add them in Event Administration")
+                        presenters_ok = False
+                        break
 
         for link_name, wanted, entity in (("partnerProfiles", partners, "CPartnerProfile"),
                                           ("sponsorProfiles", funders, "CSponsorProfile")):
