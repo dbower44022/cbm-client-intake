@@ -199,3 +199,34 @@ def test_restored_uploads_take_the_data_directory_owner(tmp_path):
 
 def test_no_hard_coded_owner_in_the_reset_script():
     assert '"1000:1000"' not in SCRIPT.read_text(encoding="utf-8")
+
+
+# --- the second training CRM (Association ruling 77, 11-12-26) --------------
+
+
+def test_it_allows_the_association_and_nothing_like_it(tmp_path, monkeypatch):
+    monkeypatch.setattr(sandbox, "HOME", _fake_home(tmp_path, "https://crm.businessmentorsassociation.org"))
+    sandbox.guard_not_production()  # does not raise
+    for url in ("https://crm.bbmentors.org", "https://crm.businessmentorsassociation.org.evil.com"):
+        monkeypatch.setattr(sandbox, "HOME", _fake_home(tmp_path, url))
+        with pytest.raises(SystemExit):
+            sandbox.guard_not_production()
+
+
+def _compose_with(tmp_path: Path, volume: str) -> Path:
+    (tmp_path / "docker-compose.yml").write_text(
+        "services:\n  espocrm:\n    volumes:\n"
+        f"      - {volume}\n      - ./data/espocrm/persistent/custom:/var/www/html/custom\n",
+        encoding="utf-8",
+    )
+    return tmp_path
+
+
+def test_the_data_folder_is_read_from_the_compose_file(tmp_path, monkeypatch):
+    # crm-test: the whole web root is mounted.
+    monkeypatch.setattr(sandbox, "HOME", _compose_with(tmp_path, "./data/espocrm:/var/www/html"))
+    assert sandbox.data_dir() == tmp_path / "data" / "espocrm" / "data"
+    # The Association's server (CRMBuilder, EspoCRM 10): data is its own volume.
+    monkeypatch.setattr(sandbox, "HOME",
+                        _compose_with(tmp_path, "./data/espocrm/persistent/data:/var/www/html/data"))
+    assert sandbox.data_dir() == tmp_path / "data" / "espocrm" / "persistent" / "data"

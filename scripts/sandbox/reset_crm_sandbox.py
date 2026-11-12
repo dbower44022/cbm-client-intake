@@ -1,4 +1,4 @@
-"""Restore the crm-test EspoCRM instance to its golden training baseline.
+"""Restore a training CRM (crm-test, or the Association's) to its golden baseline.
 
 crm-test doubles as CBM's training sandbox, so it has to come back pristine
 every morning WITHOUT throwing away the two other jobs that instance does:
@@ -32,7 +32,10 @@ keeps that logic in the repo where migrations can evolve it.  See
 ``SANDBOX-RESET.md``.
 
 Runs ON THE DROPLET (stdlib only, Python 3.10, no venv).  Refuses to run
-against anything whose site URL is not crm-test.
+against anything whose site URL is not crm-test or the Business Mentors
+Association's CRM (Association rulings 15 and 77; ``ALLOWED_SITE_HOSTS``).
+The attachment folder is read from the server's own ``docker-compose.yml``,
+because the two servers mount it differently (``data_dir``).
 
     python3 reset_crm_sandbox.py status
     python3 reset_crm_sandbox.py baseline --apply    # capture the golden state
@@ -67,6 +70,9 @@ DB_NAME = "espocrm"
 
 # Guard: this script must never be pointed at production.
 REQUIRED_SITE_URL_MARKER = "crm-test"
+#: The other training CRM, matched by exact host name (Association ruling 77:
+#: it holds invented training data; 11-12-26).
+ALLOWED_SITE_HOSTS = frozenset({"crm.businessmentorsassociation.org"})
 
 #: Runtime noise: never captured into the baseline, TRUNCATED on every reset.
 #: Distinct from KEEP_TABLES, which is left untouched — these are emptied.
@@ -180,13 +186,38 @@ def live_tables() -> set[str]:
 
 
 def guard_not_production() -> None:
-    """Refuse to run anywhere the site URL is not crm-test."""
+    """Refuse to run anywhere the site URL is not a training CRM."""
+    from urllib.parse import urlparse
+
     site_url = compose_value("ESPOCRM_CONFIG_SITE_URL")
-    if REQUIRED_SITE_URL_MARKER not in site_url:
+    host = (urlparse(site_url).hostname or "").lower()
+    if REQUIRED_SITE_URL_MARKER not in site_url and host not in ALLOWED_SITE_HOSTS:
         raise SystemExit(
-            f"REFUSING: site URL {site_url!r} does not contain "
-            f"{REQUIRED_SITE_URL_MARKER!r}. This script only resets the sandbox."
+            f"REFUSING: site URL {site_url!r} is not a training CRM (crm-test or "
+            f"{', '.join(sorted(ALLOWED_SITE_HOSTS))}). This script only resets those."
         )
+
+
+def data_dir() -> Path:
+    """The host folder EspoCRM's ``data`` lives in, read from the compose file.
+
+    crm-test mounts ``./data/espocrm`` on ``/var/www/html``; the Association's
+    server (built by CRMBuilder, EspoCRM 10) mounts
+    ``./data/espocrm/persistent/data`` on ``/var/www/html/data``. A hard-coded
+    path would archive an empty folder there and restore no attachments.
+    """
+    html = None
+    for raw in (HOME / "docker-compose.yml").read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line.startswith("- ./"):
+            continue
+        host_side, _, container_side = line[2:].partition(":")
+        container_side = container_side.split(":")[0].rstrip("/")
+        if container_side == "/var/www/html/data":
+            return HOME / host_side[2:]
+        if container_side == "/var/www/html" and html is None:
+            html = HOME / host_side[2:] / "data"
+    return html or HOME / "data" / "espocrm" / "data"
 
 
 # --------------------------------------------------------------------------
@@ -205,7 +236,7 @@ def cmd_baseline(apply: bool) -> int:
     records = sorted(tables - KEEP_TABLES - RUNTIME_TABLES)
     config = sorted(tables & KEEP_TABLES)
     runtime = sorted(tables & RUNTIME_TABLES)
-    upload = HOME / "data" / "espocrm" / "data" / "upload"
+    upload = data_dir() / "upload"
 
     log(f"baseline: {len(records)} record tables, {len(config)} config tables, "
         f"{len(runtime)} runtime tables excluded")
@@ -360,10 +391,10 @@ def _restore_uploads() -> None:
     if not archive.exists():
         log("reset: no golden upload archive — attachment files left as they are")
         return
-    data_dir = HOME / "data" / "espocrm" / "data"
-    live = data_dir / "upload"
+    folder = data_dir()
+    live = folder / "upload"
     with tarfile.open(archive, "r:gz") as tar:
-        tar.extractall(data_dir)          # writes data/upload
+        tar.extractall(folder)            # writes data/upload
     # tar wrote straight over the live dir; make ownership match the container.
     # The owner is whoever owns the parent data directory — www-data (33) in
     # the official image — NEVER a hard-coded id. This line used to say
@@ -371,7 +402,7 @@ def _restore_uploads() -> None:
     # went live (2026-08-22) EspoCRM could read every attachment and write
     # none: every upload on crm-test failed with "Permission denied for
     # data/upload/<id>" (found through the event graphic, 2026-09-16).
-    owner = upload_owner(data_dir)
+    owner = upload_owner(folder)
     subprocess.run(["chown", "-R", owner, str(live)], check=False)
 
 
