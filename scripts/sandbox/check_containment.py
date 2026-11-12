@@ -27,6 +27,7 @@ Read-only: reads the two App Platform specs via ``doctl`` and the mentor roster
 over the CRM API.  Prints no secret values.
 
     uv run python scripts/sandbox/check_containment.py
+    uv run python scripts/sandbox/check_containment.py --env-file ~/.config/cbm-bma/bma.env
 """
 
 from __future__ import annotations
@@ -39,12 +40,15 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from core.config import get_settings  # noqa: E402
 from core.espo import EspoClient, EspoError  # noqa: E402
 
-#: Every training identity's cbmEmail must sit on this domain, which has no
-#: Workspace mailboxes. An address anywhere else can genuinely send mail and
-#: raise calendar invites, so it is a containment breach, not a warning.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import targets  # noqa: E402
+
+#: Every training identity's cbmEmail must sit on the training system's own
+#: mailbox-less domain (``targets.py``; crm-test's is below). An address
+#: anywhere else can genuinely send mail and raise calendar invites, so it is a
+#: containment breach, not a warning.
 SANDBOX_EMAIL_DOMAIN = "sandbox.cbmentors.org"
 
 SANDBOX_APP = "509b4370-b9ca-42c7-b251-04d6820fe88e"
@@ -122,7 +126,19 @@ def check_deployment() -> list[tuple[str, str]]:
     return findings
 
 
-async def check_identities() -> list[tuple[str, str]]:
+def check_other_deployment(target: targets.Target) -> list[tuple[str, str]]:
+    """A training system other than crm-test is a real chapter as well
+    (Association ruling 72), so its shared mailbox, Drive and group stay on and
+    the applications' sandbox-address guard keeps the invented addresses in.
+    Its settings live at /setup, which this script cannot read."""
+    return [(WARN, f"{target.label}: confirm at {target.app_url}/setup → Email that "
+                   f"Sandbox address domain reads {target.email_domain}. Without it, "
+                   "a send as the shared mailbox, a Drive share or a group membership "
+                   "can reach an invented address.")]
+
+
+async def check_identities(base: str = "", api_key: str = "", timeout: int = 30,
+                           domain: str = SANDBOX_EMAIL_DOMAIN) -> list[tuple[str, str]]:
     """List the cbmEmail every sandbox login would send and invite as.
 
     This cannot prove a mailbox does not exist without Directory access, so it
@@ -130,11 +146,9 @@ async def check_identities() -> list[tuple[str, str]]:
     catch is a training profile carrying a REAL @cbmentors.org address that
     someone copied from production.
     """
-    settings = get_settings()
-    if "crm-test" not in (settings.espo_base_url or "").lower():
-        return [(BAD, f"ESPO_BASE_URL is {settings.espo_base_url!r}, not crm-test — skipped")]
-    client = EspoClient(settings.espo_base_url, settings.espo_api_key,
-                        settings.request_timeout_seconds)
+    if targets.resolve(base) is None:
+        return [(BAD, f"{base!r} is not a training system — skipped")]
+    client = EspoClient(base, api_key, timeout)
     try:
         # 200 is EspoCRM's recordListMaxSizeLimit — asking for more is a 403,
         # not a truncation. The sandbox roster is well inside one page.
@@ -150,31 +164,43 @@ async def check_identities() -> list[tuple[str, str]]:
 
     offdomain = [r for r in addressed
                  if not (r.get("cbmEmail") or "").strip().lower()
-                 .endswith("@" + SANDBOX_EMAIL_DOMAIN)]
+                 .endswith("@" + domain)]
     if offdomain:
         for row in sorted(offdomain, key=lambda r: (r.get("cbmEmail") or "").lower()):
             findings.append(
                 (BAD, f"{row.get('cbmEmail')} ({row.get('name')}) is NOT on "
-                      f"@{SANDBOX_EMAIL_DOMAIN} — it can send mail and raise "
+                      f"@{domain} — it can send mail and raise "
                       "calendar invites if somebody saves")
             )
     else:
         findings.append(
-            (OK, f"every cbmEmail is on @{SANDBOX_EMAIL_DOMAIN}, which has no "
+            (OK, f"every cbmEmail is on @{domain}, which has no "
                  "mailboxes — an accidental Save cannot reach anyone")
         )
     return findings
 
 
 async def main() -> int:
-    print("\nSandbox containment — what an accidental Save could reach\n")
-    findings = check_deployment()
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    targets.add_env_file_argument(parser)
+    args = parser.parse_args()
+    base, api_key, timeout = targets.api_connection(args.env_file)
+    target = targets.resolve(base)
+    if target is None:
+        print(targets.refusal(base))
+        return 2
+
+    print(f"\nSandbox containment on {target.label} — what an accidental Save could reach\n")
+    findings = (check_deployment() if target is targets.TARGETS[0]
+                else check_other_deployment(target))
     print("Deployment configuration")
     for mark, line in findings:
         print(f"[{mark}] {line}")
 
     print("\nSending identities")
-    identity_findings = await check_identities()
+    identity_findings = await check_identities(base, api_key, timeout, target.email_domain)
     for mark, line in identity_findings:
         print(f"[{mark}] {line}" if mark.strip() else line)
 

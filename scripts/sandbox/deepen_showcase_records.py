@@ -37,9 +37,13 @@ from datetime import datetime, timedelta, timezone
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from core.espo import EspoClient, EspoError  # noqa: E402
-from core.config import get_settings  # noqa: E402
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import targets  # noqa: E402
 
 CRM_FMT = "%Y-%m-%d %H:%M:%S"
+#: The training system's invented-address domain; :func:`main` sets it from
+#: ``targets.py`` (``sandbox.cbmentors.org`` on crm-test).
 DOMAIN = "sandbox.cbmentors.org"
 
 ENGAGEMENT = "Brightline Bakehouse — Mentoring"
@@ -499,15 +503,18 @@ _PORTRAIT_PNG = (
 async def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--apply", action="store_true")
+    targets.add_env_file_argument(parser)
     args = parser.parse_args()
 
-    settings = get_settings()
-    base = settings.espo_base_url or ""
-    if "crm-test" not in base.lower():
-        print(f"REFUSING: ESPO_BASE_URL is {base!r}, not the crm-test sandbox.")
+    global DOMAIN
+    base, api_key, timeout = targets.api_connection(args.env_file)
+    target = targets.resolve(base)
+    if target is None:
+        print(targets.refusal(base))
         return 2
+    DOMAIN = target.email_domain
 
-    client = EspoClient(base, settings.espo_api_key, settings.request_timeout_seconds)
+    client = EspoClient(base, api_key, timeout)
     d = Deepener(client, apply=args.apply)
     await d.load()
     now = datetime.now(timezone.utc)

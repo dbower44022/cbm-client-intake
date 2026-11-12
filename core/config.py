@@ -250,6 +250,11 @@ class Settings(BaseSettings):
     sandbox_nightly_reset: bool = False
     sandbox_reset_hour: int = 1             # local hour (0-23); CRM half runs at 00:00
     sandbox_reset_tz: str = "America/New_York"
+    # The domain this deployment's INVENTED training addresses sit on
+    # (core/sandbox_addresses.py; Association ruling 77). Set, the app never
+    # sends mail to, shares a Drive folder with, adds to a Google group, or
+    # pushes to the mailing service an address on it. EMPTY = no effect.
+    sandbox_address_domain: str = ""
     alert_check_seconds: int = 300          # how often the worker evaluates thresholds
     # WEB-side worker-liveness watch (2026-07-23): the web process checks the
     # worker's heartbeat row and alerts (email/webhook, same channels) when it

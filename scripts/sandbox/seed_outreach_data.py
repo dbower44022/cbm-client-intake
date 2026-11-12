@@ -34,7 +34,8 @@ Every field is checked against the live CRM's metadata first; an absent field
 or a value outside its options is reported and dropped, never sent.
 
 Idempotent by name. Never removes or overwrites a value a record already holds.
-Read-only unless ``--apply``. Refuses any CRM but crm-test.
+Read-only unless ``--apply``. Refuses any CRM but the two training systems
+(``targets.py``; ``--env-file`` names the Association's credentials).
 
     uv run python scripts/sandbox/seed_outreach_data.py
     uv run python scripts/sandbox/seed_outreach_data.py --apply
@@ -56,6 +57,9 @@ sys.path.insert(0, os.path.join(ROOT, "scripts"))
 from campaigns import config as cfg  # noqa: E402
 from campaigns import sandbox_demo as demo  # noqa: E402
 from core.espo import EspoError  # noqa: E402
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import targets  # noqa: E402
 
 CRM_FMT = "%Y-%m-%d %H:%M:%S"
 NOTE = "Sandbox training data."
@@ -544,15 +548,19 @@ async def run(client, *, apply: bool, now: Optional[datetime] = None) -> Outreac
 async def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--apply", action="store_true", help="actually write")
+    targets.add_env_file_argument(parser)
     args = parser.parse_args()
 
-    from espo_admin import connect, credentials, load_env
+    from espo_admin import connect, credentials
 
-    env = load_env()
+    env = targets.load_env_file(args.env_file)
     base = credentials(env)[0]
-    if "crm-test" not in base.lower():
-        print(f"REFUSING: ESPO_ADMIN_BASE is {base!r}, not the crm-test sandbox.")
+    target = targets.resolve(base)
+    if target is None:
+        print(targets.refusal(base))
         return 2
+    # Written in crm-test's terms; the target's own domain, name and address.
+    targets.localise_names(globals(), ("LEADS", "CONVERSIONS", "CAMPAIGNS"), target)
     client, _ = await connect(env)
 
     print(f"\nSeeding leads and campaigns on {base}")

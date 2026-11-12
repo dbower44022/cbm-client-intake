@@ -615,6 +615,12 @@ class DriveClient:
         because the address has no Google account — the one 400 the suppressed
         notification causes, and the one a caller may reasonably treat as "not
         possible" rather than "failed"."""
+        from .sandbox_addresses import is_sandbox_address, refusal
+
+        if is_sandbox_address(email):
+            # The grant engine reads this as "not possible", never "failed",
+            # so an invented training address neither retries nor alerts.
+            raise DriveNoAccountError("Not shared: " + refusal(email))
         url = f"{_BASE}/files/{file_id}/permissions"
         resp = await self._send(
             "POST",

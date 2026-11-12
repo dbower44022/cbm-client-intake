@@ -18,7 +18,8 @@ a link names a campaign the seeder does not make. A demo campaign the CRM does
 not hold (before the seeder has run, or a trainee renamed it) is skipped and
 reported, never an error.
 
-Refuses to run anywhere but crm-test, by the same CRM-address check as the reset.
+Refuses to run anywhere but crm-test, by the same CRM-address check as the reset,
+or a deployment that sets ``SANDBOX_ADDRESS_DOMAIN`` (it holds invented data too).
 """
 
 from __future__ import annotations
@@ -230,11 +231,17 @@ def _parts(settings: Settings):
     # worker setting, and the /setup job runs in the web process. Creating six
     # links is not the destructive half — the address alone keeps it off any
     # CRM but the sandbox, read straight from the URL as the reset reads it.
+    # A deployment that names a sandbox address domain holds invented
+    # training data too (the Association's system, ruling 77), so the demo
+    # links are allowed there. The destructive reset still is not.
+    from core.sandbox_addresses import sandbox_domain
     from core.sandbox_reset import SANDBOX_URL_MARKER, SandboxResetRefused
 
-    if SANDBOX_URL_MARKER not in (settings.espo_base_url or "").lower():
+    if SANDBOX_URL_MARKER not in (settings.espo_base_url or "").lower() \
+            and not sandbox_domain(settings):
         raise SandboxResetRefused(
-            f"CRM base URL is not the sandbox ({settings.espo_base_url!r}) — refusing")
+            f"CRM base URL is not the sandbox ({settings.espo_base_url!r}) and no "
+            "sandbox address domain is set — refusing")
     if settings.espo_dry_run or not settings.espo_api_key:
         raise RuntimeError("This deployment has no CRM credential (dry-run mode or no API key).")
     from core.espo import EspoClient

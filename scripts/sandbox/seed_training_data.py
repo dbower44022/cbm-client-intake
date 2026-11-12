@@ -1,4 +1,4 @@
-"""Seed the crm-test sandbox with fictional training data.
+"""Seed a training system (crm-test or the Association's) with fictional training data.
 
 Run once against an empty sandbox (see ``purge_crm_records.py``), then capture
 the golden baseline the nightly reset restores.  Everything here is invented:
@@ -21,7 +21,9 @@ read-rich, not write-heavy):
 * **Partners and funders** for those two management tools.
 
 **Containment.**  Every seeded ``cbmEmail`` goes on ``--email-domain``
-(default ``sandbox.cbmentors.org``), a domain with no Workspace mailboxes.
+(default: the training system's own, from ``targets.py`` — ``sandbox.cbmentors.org``
+on crm-test, ``sandbox.mentorsassociation.org`` on the Association's system), a
+domain with no Workspace mailboxes.
 Outbound mail and calendar invites both impersonate that address by delegation,
 so an accidental Save fails harmlessly instead of reaching a real person.  It
 also makes the sandbox visually obvious on every screen that shows an address.
@@ -29,8 +31,12 @@ Do NOT change this to ``cbmentors.org``: the addresses would look real, and one
 of them becoming real later would break containment silently.
 
 **Logins are not created here.**  EspoCRM makes user creation admin-only, so
-this attaches profiles to the fictional logins that already exist on crm-test
-(``joe.mentor@``, ``matt.mentor@`` ...).  ``--check`` lists what it found.
+this attaches profiles to the fictional logins that already exist on the
+training system (``joe.mentor@``, ``matt.mentor@`` ...).  ``--check`` lists what it found.
+
+**Which system.**  crm-test, or with ``--env-file ~/.config/cbm-bma/bma.env``
+the Business Mentors Association's (Association ruling 77). Any other CRM is
+refused (``targets.py``).
 
 Idempotent: every record is matched by name first, so a re-run tops up rather
 than duplicating.  Read-only unless ``--apply``.
@@ -53,24 +59,30 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 from core.espo import EspoClient, EspoError  # noqa: E402
 from core.config import get_settings  # noqa: E402
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import targets  # noqa: E402
+
 CRM_FMT = "%Y-%m-%d %H:%M:%S"
 
 #: The mentor a trainee is shown the system as. Its login must already exist.
 TRAINING_MENTOR = "Joe Mentor"
 
 #: Profiles wired to a real login, so someone can actually sign in as them.
-#: (display name, existing userName, mentorStatus, role note)
+#: (display name, the sign-in's user name before the @, mentorStatus). The part
+#: after the @ is the training system's login domain (``targets.py``):
+#: ``joe.mentor@cbmentors.org`` on crm-test, ``joe.mentor@sandbox.mentorsassociation.org``
+#: on the Association's system.
 MENTORS_WITH_LOGINS: tuple[tuple[str, str, str], ...] = (
-    ("Joe Mentor", "joe.mentor@cbmentors.org", "Active"),
-    ("Matt Mentor", "matt.mentor@cbmentors.org", "Active"),
-    ("Tony Tiger", "tony.tiger@cbmentors.org", "Active"),
-    ("Wally Walrus", "wally.walrus@cbmentors.org", "Active"),
-    ("Kitty Cat", "kitty.cat@cbmentors.org", "Active"),
-    ("Tom Gold", "tom.gold@cbmentors.org", "Active"),
-    ("Jim Beem", "jim.beem@cbmentors.org", "Approved"),
-    ("Tommy Tranell", "tt@cbmentors.org", "Active"),
-    ("Partner Manager", "partner.manager@cbmentors.org", "Active"),
-    ("Sally Sponsor", "sally.sponsor@cbmentors.org", "Active"),
+    ("Joe Mentor", "joe.mentor", "Active"),
+    ("Matt Mentor", "matt.mentor", "Active"),
+    ("Tony Tiger", "tony.tiger", "Active"),
+    ("Wally Walrus", "wally.walrus", "Active"),
+    ("Kitty Cat", "kitty.cat", "Active"),
+    ("Tom Gold", "tom.gold", "Active"),
+    ("Jim Beem", "jim.beem", "Approved"),
+    ("Tommy Tranell", "tt", "Active"),
+    ("Partner Manager", "partner.manager", "Active"),
+    ("Sally Sponsor", "sally.sponsor", "Active"),
 )
 
 #: Roster volume — no login needed. These fill the directory, the assignment
@@ -192,9 +204,11 @@ FUNDERS: tuple[tuple[str, str, str], ...] = (
 # --------------------------------------------------------------------------
 
 class Seeder:
-    def __init__(self, client: EspoClient, *, domain: str, apply: bool) -> None:
+    def __init__(self, client: EspoClient, *, domain: str, apply: bool,
+                 login_domain: str = "cbmentors.org") -> None:
         self.client = client
         self.domain = domain
+        self.login_domain = login_domain.lower()
         self.apply = apply
         self.created: dict[str, int] = {}
         self.reused: dict[str, int] = {}
@@ -231,8 +245,15 @@ class Seeder:
         return f"{first.strip().lower()}.{last.strip().lower()}@{self.domain}"
 
     async def user_ids(self) -> dict[str, str]:
+        """Sign-ins on the training system's login domain, keyed by the part
+        before the @ — the form ``MENTORS_WITH_LOGINS`` names them in."""
         data = await self.client.list("User", select="userName", max_size=200)
-        return {r.get("userName"): r["id"] for r in data.get("list", []) if r.get("userName")}
+        suffix = "@" + self.login_domain
+        return {
+            r["userName"][: -len(suffix)]: r["id"]
+            for r in data.get("list", [])
+            if (r.get("userName") or "").lower().endswith(suffix)
+        }
 
 
 # --------------------------------------------------------------------------
@@ -742,32 +763,37 @@ async def main() -> int:
     parser.add_argument("--apply", action="store_true", help="actually create records")
     parser.add_argument("--check", action="store_true",
                         help="report the logins available and exit")
-    parser.add_argument("--email-domain", default="sandbox.cbmentors.org",
-                        help="domain for every seeded address (must have NO mailboxes)")
+    parser.add_argument("--email-domain", default=None,
+                        help="domain for every seeded address (must have NO mailboxes); "
+                             "default: the training system's own")
+    targets.add_env_file_argument(parser)
     args = parser.parse_args()
 
-    settings = get_settings()
-    base = settings.espo_base_url or ""
-    if "crm-test" not in base.lower():
-        print(f"REFUSING: ESPO_BASE_URL is {base!r}, not the crm-test sandbox.")
+    base, api_key, timeout = targets.api_connection(args.env_file)
+    target = targets.resolve(base)
+    if target is None:
+        print(targets.refusal(base))
         return 2
-    if args.email_domain.strip().lower() == "cbmentors.org":
-        print("REFUSING: seeding real @cbmentors.org addresses would break containment.")
+    email_domain = (args.email_domain or target.email_domain).strip().lower()
+    if email_domain not in {t.email_domain for t in targets.TARGETS}:
+        print(f"REFUSING: {email_domain!r} is not a mailbox-less training domain; "
+              "real-looking addresses would break containment.")
         return 2
 
-    client = EspoClient(base, settings.espo_api_key, settings.request_timeout_seconds)
-    seeder = Seeder(client, domain=args.email_domain, apply=args.apply)
+    client = EspoClient(base, api_key, timeout)
+    seeder = Seeder(client, domain=email_domain, apply=args.apply,
+                    login_domain=target.login_domain)
     users = await seeder.user_ids()
 
     if args.check:
-        print(f"\n{len(users)} logins on {base}\n")
+        print(f"\n{len(users)} training logins on {base}\n")
         for name, username, _ in MENTORS_WITH_LOGINS:
             mark = "ok  " if username in users else "MISSING"
-            print(f"  [{mark}] {name:20} {username}")
+            print(f"  [{mark}] {name:20} {username}@{target.login_domain}")
         return 0
 
     print(f"\nSeeding {base}")
-    print(f"addresses on @{args.email_domain}")
+    print(f"addresses on @{email_domain}")
     print("APPLY — records will be created\n" if args.apply
           else "DRY RUN — nothing will be created\n")
 

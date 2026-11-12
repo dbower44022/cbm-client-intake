@@ -5,6 +5,41 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.319.0] — 2026-11-12
+
+**feat: invented training addresses never leave the system; the training-data
+scripts can load the Association's system.** Association ruling 77 (11-12-26)
+loads crm-test's training data into the Business Mentors Association's system,
+which is a real chapter as well as the training system, so its shared mailbox,
+Drive and members group stay switched on. Plan:
+`prds/chapter-network/deployment-guide/association-training-data-plan.md`
+(Doug chose option A, 11-12-26).
+
+- **New setting `SANDBOX_ADDRESS_DOMAIN`** (System Settings → Email → *Sandbox
+  address domain*, read per call, **empty by default, so nothing changes until
+  it is set**). Set, the applications never send mail to (`core/gmail.py`,
+  refused before Google is called; a compose shows the reason, not "try
+  again"), share a Drive folder with (`core/gdrive.py`, recorded as "not
+  possible", so no retry and no alert), add to a Google group
+  (`core/google_directory.py`) or push to the mailing service
+  (`core/mailing_sync.py`; one already on a list is removed) an address on that
+  domain or its subdomains. One module, `core/sandbox_addresses.py`.
+- **The demo campaign links job** (`campaigns/sandbox_demo.py`) also runs on a
+  deployment that sets the sandbox address domain. The nightly reset itself
+  still refuses everything but crm-test.
+- **The sandbox scripts name the two training systems and refuse every other
+  CRM** (`scripts/sandbox/targets.py`: crm-test and
+  crm.businessmentorsassociation.org, matched by exact host name — the old
+  test only looked for "crm-test" anywhere in the address). Each takes
+  `--env-file` for the Association's credentials (read with a parser; its
+  values win). Records are written in crm-test's terms and localised: the
+  address domain, the organization's name and the application's address
+  become the target's. crm-test's dry runs are unchanged. The training
+  sign-ins are named before the @, and the domain after it comes from the
+  target (`cbmentors.org` on crm-test, `sandbox.mentorsassociation.org` on the
+  Association's system).
+
+
 ## [0.318.4] — 2026-11-11
 
 **fix: one database connection pool per process.** `OPEN-ITEMS.md` #79,

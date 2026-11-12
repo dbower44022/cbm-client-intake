@@ -588,6 +588,11 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="Submission Admin sends and reads as this. Must be a REAL mailbox, not a "
             "group. Only ONE environment may poll it — setting it on both double-captures."),
     _s("ops_mailbox_name", GROUP_EMAIL, "Shared mailbox display name", component="both"),
+    _s("sandbox_address_domain", GROUP_EMAIL, "Sandbox address domain", component="both",
+       help="The domain this system's invented training addresses sit on, such as "
+            "sandbox.mentorsassociation.org. Nothing is ever sent to, shared with, "
+            "added to a group as, or put on a mailing list as an address on it. "
+            "Blank on a system with no training data."),
     _s("ops_reply_template", GROUP_EMAIL, "Canned reply template"),
     _s("ops_inbound_seconds", GROUP_EMAIL, "Inbound poll", kind="int", unit="s",
        component="worker", help="0 turns inbound capture off."),

@@ -41,7 +41,13 @@ from datetime import datetime, timedelta, timezone
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from core.espo import EspoClient, EspoError  # noqa: E402
-from core.config import get_settings  # noqa: E402
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import targets  # noqa: E402
+
+#: The training system this run writes to (set in :func:`main`). Records below
+#: are written in crm-test's terms and localised to it (``targets.localise``).
+TARGET = targets.TARGETS[0]
 
 CRM_FMT = "%Y-%m-%d %H:%M:%S"
 
@@ -255,7 +261,7 @@ async def add_threads(e: Enricher, now: datetime) -> None:
                 hour=14, minute=0, second=0, microsecond=0
             )
             outbound = direction == "Outbound"
-            await e.client.create("CCommunication", {
+            await e.client.create("CCommunication", targets.localise({
                 "name": subject[:250],
                 "conversationId": conv["id"],
                 "direction": direction,
@@ -268,7 +274,7 @@ async def add_threads(e: Enricher, now: datetime) -> None:
                 "bodyCleaned": f"<p>{body}</p>",
                 "snippet": body[:100],
                 "sourceMailbox": "joe.mentor@sandbox.cbmentors.org",
-            })
+            }, TARGET))
 
 
 async def add_domain_sessions(e: Enricher, now: datetime) -> None:
@@ -491,15 +497,19 @@ async def add_notes_and_referrals(e: Enricher) -> None:
 async def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--apply", action="store_true", help="actually write")
+    targets.add_env_file_argument(parser)
     args = parser.parse_args()
 
-    settings = get_settings()
-    base = settings.espo_base_url or ""
-    if "crm-test" not in base.lower():
-        print(f"REFUSING: ESPO_BASE_URL is {base!r}, not the crm-test sandbox.")
+    global TARGET
+    base, api_key, timeout = targets.api_connection(args.env_file)
+    target = targets.resolve(base)
+    if target is None:
+        print(targets.refusal(base))
         return 2
+    TARGET = target
+    targets.localise_names(globals(), ("GUEST_PRESENTER", "EVENT_SHOWCASE"), target)
 
-    client = EspoClient(base, settings.espo_api_key, settings.request_timeout_seconds)
+    client = EspoClient(base, api_key, timeout)
     e = Enricher(client, apply=args.apply)
     now = datetime.now(timezone.utc)
 

@@ -16,7 +16,7 @@ leads were made from (an entity name, a charter number, the principal office
 address, the statutory agent's name split into first and last, the agent's
 phone and email, the web site; the filing type ignored), entering Qualified
 on the filing filter's verdict. Idempotent by name. Read-only unless
-``--apply``. Refuses any CRM address but crm-test, by the reset's own check.
+``--apply``. Refuses any CRM address but the two training systems (``targets.py``).
 
     uv run python scripts/sandbox/seed_import_templates.py
     uv run python scripts/sandbox/seed_import_templates.py --apply
@@ -34,8 +34,10 @@ sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 
 from campaigns import sandbox_demo as demo  # noqa: E402
-from core.sandbox_reset import SANDBOX_URL_MARKER  # noqa: E402
 from espo_admin import load_env  # noqa: E402
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import targets  # noqa: E402
 
 
 async def main() -> int:
@@ -43,9 +45,9 @@ async def main() -> int:
     parser.add_argument("--apply", action="store_true", help="actually write")
     args = parser.parse_args()
     env = load_env()
-    base = (env.get("ESPO_BASE_URL") or "").lower()
-    if SANDBOX_URL_MARKER not in base:
-        print(f"REFUSING: ESPO_BASE_URL is not the sandbox ({base!r}).")
+    base = env.get("ESPO_BASE_URL") or ""
+    if targets.resolve(base) is None:
+        print(targets.refusal(base))
         return 2
     database_url = env.get("DATABASE_URL") or ""
     if not database_url:

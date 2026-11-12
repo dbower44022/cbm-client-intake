@@ -32,7 +32,9 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from core.espo import EspoClient, EspoError  # noqa: E402
-from core.config import get_settings  # noqa: E402
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import targets  # noqa: E402
 
 #: (entity, record name, why it is a showcase record)
 SHOWCASE: tuple[tuple[str, str, str], ...] = (
@@ -189,15 +191,15 @@ async def audit(client: EspoClient, entity: str, name: str, defs: dict, verbose:
 async def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--verbose", action="store_true")
+    targets.add_env_file_argument(parser)
     args = parser.parse_args()
 
-    settings = get_settings()
-    base = settings.espo_base_url or ""
-    if "crm-test" not in base.lower():
-        print(f"REFUSING: ESPO_BASE_URL is {base!r}, not the crm-test sandbox.")
+    base, api_key, timeout = targets.api_connection(args.env_file)
+    if targets.resolve(base) is None:
+        print(targets.refusal(base))
         return 2
 
-    client = EspoClient(base, settings.espo_api_key, settings.request_timeout_seconds)
+    client = EspoClient(base, api_key, timeout)
     defs = await client.metadata("entityDefs")
 
     print(f"Showcase-record coverage on {base}")

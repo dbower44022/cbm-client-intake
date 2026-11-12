@@ -43,6 +43,10 @@ class GmailError(Exception):
     """Any Gmail API / auth failure."""
 
 
+class SandboxAddressRefused(GmailError):
+    """A send to an invented training address, refused before reaching Google."""
+
+
 class HistoryExpiredError(GmailError):
     """The stored historyId is too old (Gmail 404) — do a date-window backfill."""
 
@@ -278,8 +282,18 @@ class GmailClient:
     async def send(
         self, mime_message: EmailMessage, thread_id: Optional[str] = None
     ) -> dict[str, Any]:
-        """Send as this mailbox. ``thread_id`` keeps a reply on its Gmail thread."""
-        raw = base64.urlsafe_b64encode(mime_message.as_bytes()).decode()
+        """Send as this mailbox. ``thread_id`` keeps a reply on its Gmail thread.
+
+        Refuses, before any call to Google, a message addressed to an invented
+        training address (:mod:`core.sandbox_addresses`)."""
+        from .sandbox_addresses import refusal, sandbox_recipients
+
+        invented = sandbox_recipients(
+            [v for h in ("To", "Cc", "Bcc") for v in (mime_message.get_all(h) or [])]
+        )
+        if invented:
+            raise SandboxAddressRefused("Not sent: " + refusal(invented[0]))
+        raw =base64.urlsafe_b64encode(mime_message.as_bytes()).decode()
         body: dict[str, Any] = {"raw": raw}
         if thread_id:
             body["threadId"] = thread_id

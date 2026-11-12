@@ -306,7 +306,18 @@ async def build_plan(
     found_id = str(found.get("list_id")) if found else None
     if people is None:
         people = await audience(crm)
-    current = await members(mail, found_id) if found_id else {}
+    # Invented training addresses never reach the mailing service; one
+    # already on the list is removed by the plan like any other non-member.
+    from .sandbox_addresses import is_sandbox_address, sandbox_domain
+
+    invented = sandbox_domain()
+    if invented:
+        kept = {k: p for k, p in people.items() if not is_sandbox_address(p.email or k, invented)}
+        if len(kept) != len(people):
+            log.info("mailing list %r: %d invented training address(es) left out",
+                     list_name, len(people) - len(kept))
+        people = kept
+    current =await members(mail, found_id) if found_id else {}
     if gone is None:
         gone = await vendor_unsubscribed(mail)
     return Plan(list_name, found_id, people, current, gone, code_key=code_key,

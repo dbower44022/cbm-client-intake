@@ -185,3 +185,72 @@ async def test_stamp_management_teams_is_merge_only(monkeypatch):
     assert f["teamsIds"] == [sponsor_team["id"]]
     updates = [w for w in crm.writes if w[0] == "update"]
     assert len(updates) == 2, "B already carried the team and is untouched"
+
+
+# --- which CRM a seeder may write to (targets.py, Association ruling 77) -----
+
+
+def _targets():
+    sys.path.insert(0, str(ROOT / "scripts" / "sandbox"))
+    return _load("targets")
+
+
+@pytest.mark.parametrize("url", [
+    "https://crm-test.clevelandbusinessmentors.org",
+    "https://crm-test.clevelandbusinessmentors.org/",
+    "https://crm.businessmentorsassociation.org",
+])
+def test_the_two_training_systems_are_accepted(url):
+    assert _targets().resolve(url) is not None
+
+
+@pytest.mark.parametrize("url", [
+    "https://crm.clevelandbusinessmentors.org",      # Cleveland's production
+    "https://crm.bbmentors.org",                     # Boston
+    "https://crm-test.clevelandbusinessmentors.org.evil.com",
+    "https://crm-test.example.org",                  # the old substring test passed this
+    "",
+])
+def test_every_other_crm_is_refused(url):
+    t = _targets()
+    assert t.resolve(url) is None
+    assert t.refusal(url).startswith("REFUSING")
+
+
+def test_crm_test_is_written_exactly_as_before_and_the_association_gets_its_own_terms():
+    t = _targets()
+    crm_test, bma = t.TARGETS
+    record = {"email": "dana@sandbox.cbmentors.org",
+              "text": ("Cleveland Business Mentors: see "
+                       "https://cbm-client-intake-svxs3.ondigitalocean.app/c/x"),
+              "nested": ("rosa@sandbox.cbmentors.org", ["Cleveland Orchestra"])}
+    assert t.localise(record, crm_test) == record
+    out = t.localise(record, bma)
+    assert out["email"] == "dana@sandbox.mentorsassociation.org"
+    assert out["text"] == ("Business Mentors Association: see "
+                           "https://apps.businessmentorsassociation.org/c/x")
+    assert out["nested"] == ("rosa@sandbox.mentorsassociation.org", ["Cleveland Orchestra"])
+    # Invented content stays: ruling 77 wants the same records on both systems.
+    assert all(x.email_domain.startswith("sandbox.") for x in t.TARGETS)
+
+
+def test_the_seeder_finds_sign_ins_by_the_target_login_domain():
+    _targets()
+    seed = _load("seed_training_data")
+
+    class Users:
+        async def list(self, entity, **_):
+            return {"list": [
+                {"id": "u1", "userName": "joe.mentor@sandbox.mentorsassociation.org"},
+                {"id": "u2", "userName": "joe.mentor@cbmentors.org"},
+                {"id": "u3", "userName": "admin"},
+            ]}
+
+    import asyncio
+
+    bma = seed.Seeder(Users(), domain="sandbox.mentorsassociation.org", apply=False,
+                      login_domain="sandbox.mentorsassociation.org")
+    assert asyncio.run(bma.user_ids()) == {"joe.mentor": "u1"}
+    cle = seed.Seeder(Users(), domain="sandbox.cbmentors.org", apply=False)
+    assert asyncio.run(cle.user_ids()) == {"joe.mentor": "u2"}
+    assert all("@" not in login for _, login, _ in seed.MENTORS_WITH_LOGINS)

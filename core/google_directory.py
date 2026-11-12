@@ -200,8 +200,15 @@ class GoogleDirectory:
         else — including a 404, which means the GROUP address is wrong and must
         never read as "added". Callers treat the failure as non-fatal (the
         mailbox itself is what matters) but must surface the message.
+
+        An invented training address (:mod:`core.sandbox_addresses`) is refused
+        before any call to Google.
         """
-        token = await self._access_token(scopes=[DIRECTORY_GROUP_SCOPE])
+        from .sandbox_addresses import is_sandbox_address, refusal
+
+        if is_sandbox_address(member_email):
+            raise GoogleDirectoryError("Not added: " + refusal(member_email))
+        token =await self._access_token(scopes=[DIRECTORY_GROUP_SCOPE])
         if not token:
             raise GoogleDirectoryError(
                 "could not authenticate to Google Workspace to update the group — "

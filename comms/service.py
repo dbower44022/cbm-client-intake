@@ -16,7 +16,7 @@ from typing import Any, Optional
 
 from core.config import Settings, get_settings
 from core.espo import EspoError
-from core.gmail import GmailClient, build_mime, parse_message
+from core.gmail import GmailClient, SandboxAddressRefused, build_mime, parse_message
 
 from . import crm
 from .store import ACTION_EXCLUDE, ACTION_INCLUDE, CommsStore, make_comms_store
@@ -1051,7 +1051,11 @@ async def send_message(
         references=references,
         attachments=mime_attachments,
     )
-    sent = await gmail.send(mime, thread_id=thread_id)
+    try:
+        sent = await gmail.send(mime, thread_id=thread_id)
+    except SandboxAddressRefused as exc:
+        # Not a mailbox fault: say why, never "try again".
+        raise CommsError(str(exc)) from exc
 
     # A confirmed send to non-contacts established this conversation manually.
     # Persist the include override BEFORE the best-effort write-through (P1-5
@@ -1221,7 +1225,11 @@ async def send_quick_message(
         in_reply_to=in_reply_to,
         references=references,
     )
-    sent = await gmail.send(mime, thread_id=thread_id)
+    try:
+        sent = await gmail.send(mime, thread_id=thread_id)
+    except SandboxAddressRefused as exc:
+        # Not a mailbox fault: say why, never "try again".
+        raise CommsError(str(exc)) from exc
 
     write_back: dict[str, Any] = {"ok": True, "emailId": ""}
     if user_client is not None:
