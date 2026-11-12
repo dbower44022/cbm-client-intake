@@ -267,7 +267,9 @@ JOBS: tuple[JobSpec, ...] = (
             "fixed codes, and the import tool's demo template when it is "
             "missing. The nightly reset does the same straight after it "
             "empties the links table; run this after seeding, so you need not "
-            "wait for the night. Refused on any CRM but crm-test."
+            "wait for the night. Refused on any CRM but crm-test, unless this "
+            "deployment names a Sandbox address domain (it holds invented "
+            "training data too)."
         ),
         mutating=True,
         dry_run=_sandbox_links_dry,

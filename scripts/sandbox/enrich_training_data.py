@@ -43,11 +43,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 from core.espo import EspoClient, EspoError, is_forbidden  # noqa: E402
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import targets  # noqa: E402
+import targets as sandbox_targets  # noqa: E402
 
 #: The training system this run writes to (set in :func:`main`). Records below
-#: are written in crm-test's terms and localised to it (``targets.localise``).
-TARGET = targets.TARGETS[0]
+#: are written in crm-test's terms and localised to it (``sandbox_targets.localise``).
+TARGET = sandbox_targets.TARGETS[0]
 
 CRM_FMT = "%Y-%m-%d %H:%M:%S"
 
@@ -261,7 +261,7 @@ async def add_threads(e: Enricher, now: datetime) -> None:
                 hour=14, minute=0, second=0, microsecond=0
             )
             outbound = direction == "Outbound"
-            await e.client.create("CCommunication", targets.localise({
+            await e.client.create("CCommunication", sandbox_targets.localise({
                 "name": subject[:250],
                 "conversationId": conv["id"],
                 "direction": direction,
@@ -508,17 +508,17 @@ async def add_notes_and_referrals(e: Enricher) -> None:
 async def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--apply", action="store_true", help="actually write")
-    targets.add_env_file_argument(parser)
+    sandbox_targets.add_env_file_argument(parser)
     args = parser.parse_args()
 
     global TARGET
-    base, api_key, timeout = targets.api_connection(args.env_file)
-    target = targets.resolve(base)
+    base, api_key, timeout = sandbox_targets.api_connection(args.env_file)
+    target = sandbox_targets.resolve(base)
     if target is None:
-        print(targets.refusal(base))
+        print(sandbox_targets.refusal(base))
         return 2
     TARGET = target
-    targets.localise_names(globals(), ("GUEST_PRESENTER", "EVENT_SHOWCASE"), target)
+    sandbox_targets.localise_names(globals(), ("GUEST_PRESENTER", "EVENT_SHOWCASE"), target)
 
     client = EspoClient(base, api_key, timeout)
     e = Enricher(client, apply=args.apply)
