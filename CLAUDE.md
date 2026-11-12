@@ -1238,4 +1238,9 @@ the strength of it.
   Association's system) and the sandbox scripts' two training systems
   (`scripts/sandbox/targets.py`). The Association's system holds the
   training data since 11-12-26; owed in #81.
+- **v0.320.0 (2026-11-12) pushed 11-12-26**, deploys started 15:52 UTC:
+  an event run by an outside host (rulings D3-3, D3-4; `CEvent.hostedBy`,
+  on crm-test's CRM only). Owed: the live check on crm-test the same day
+  (`prompts/followup-2026-11-12-outside-host.md`), then production and
+  Boston CRM (#80).
 Everything else still owed is in `OPEN-ITEMS.md`.
