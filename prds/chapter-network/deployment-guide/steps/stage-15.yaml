@@ -1,7 +1,7 @@
 stage: 15
 name: Bring in the chapter's records and create the mentor accounts
-version: "0.5"
-updated: "11-07-26 15:21"
+version: "0.6"
+updated: "11-12-26 01:30"
 why: >-
   A chapter arrives with clients, companies, partners, funders and mentors it
   already knows about. This stage moves those records into the CRM without
@@ -154,7 +154,9 @@ steps:
       probe: The app counts each kind of record in the copy and compares with the export.
     goes_wrong: >-
       The trial copy holds real personal details. Never run the trial on the shared
-      training system, which holds Cleveland's records, or on the trial chapter.
+      training system, which holds the invented training data every chapter trains
+      on (the Association's system, Association rulings 15 and 77), or on the trial
+      chapter.
     later: A loading tool, built once, that reads the mapping table from step 15.3.
     status: not-yet-tried — no loading tool exists.
     source: 10-Methods-Website-Pages-Records.md#15.4
@@ -339,6 +341,10 @@ steps:
     source: 5-Methods-Form-Accounts-Checks.md#15.10
 
 changes:
+  - version: "0.6"
+    date: "11-12-26 01:30"
+    change: >-
+      Step 15.4's warning no longer says the shared training system holds Cleveland's records. Under Association rulings 15 and 77 it is the Association's system, holding the invented training data loaded from crm-test's scripts on 11-12-26.
   - version: "0.5"
     date: "11-07-26 15:21"
     change: >-

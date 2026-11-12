@@ -1,7 +1,7 @@
 # Stage 15 — Bring in the chapter's records and create the mentor accounts
 
-**Version:** 0.5  
-**Last Updated:** 11-07-26 15:21  
+**Version:** 0.6  
+**Last Updated:** 11-12-26 01:30  
 **Generated from** `steps/stage-15.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -177,7 +177,7 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **If it didn't work:** Stop, and ask the Association before going on.
 
-**What usually goes wrong:** The trial copy holds real personal details. Never run the trial on the shared training system, which holds Cleveland's records, or on the trial chapter.
+**What usually goes wrong:** The trial copy holds real personal details. Never run the trial on the shared training system, which holds the invented training data every chapter trains on (the Association's system, Association rulings 15 and 77), or on the trial chapter.
 
 ---
 
@@ -382,6 +382,7 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 | Version | Date | Change |
 |---|---|---|
+| 0.6 | 11-12-26 01:30 | Step 15.4's warning no longer says the shared training system holds Cleveland's records. Under Association rulings 15 and 77 it is the Association's system, holding the invented training data loaded from crm-test's scripts on 11-12-26. |
 | 0.5 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". |
 | 0.4 | 09-23-26 20:40 | References to stage 9 follow its renumbering from twenty steps to nine (stage 9 version 0.11). |
 | 0.3 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. |
