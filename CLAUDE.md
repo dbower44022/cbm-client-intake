@@ -1229,6 +1229,6 @@ the strength of it.
   (pushed 11-11-26, `/healthz` read 23:17): a CBM member can no longer be
   attached as a record contact (#77, closed); Client Management's *Add
   Client Contacts* and *Add Co-Mentors* buttons (#78); one database pool
-  per process (#79). Owed: #78's last crm-test look (the picker opens with
-  no menu) and #79's soak and connection count. Chapters on the 11-15 train.
+  per process (#79). #78 closed 11-12-26. Owed: #79's soak and connection
+  count. Chapters on the 11-15 train.
 Everything else still owed is in `OPEN-ITEMS.md`.
