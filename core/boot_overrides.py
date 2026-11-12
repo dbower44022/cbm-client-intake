@@ -177,6 +177,11 @@ async def _load(settings) -> BootLoad:
         if store is not None:
             try:
                 await store.dispose()
+                # This read runs on its own event loop: close the shared pool
+                # it opened, or its connection outlives the loop.
+                from .store import dispose_shared_engines
+
+                await dispose_shared_engines()
             except Exception:  # noqa: BLE001 — nothing depends on a clean close here
                 pass
 

@@ -5,6 +5,23 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.318.4] — 2026-11-11
+
+**fix: one database connection pool per process.** `OPEN-ITEMS.md` #79,
+Doug's ruling 11-11-26. Production's deploy of v0.318.2 was rolled back
+because the new container found no free database connection: production's
+database allows 22, and every data store built its own pool (twelve per
+process, in both the web and the worker), each keeping a connection open once
+used. Every store now borrows one engine per database and event loop
+(`core/store.shared_engine`; 5 kept plus 5 overflow). A store's own `dispose`
+no longer closes anything, because several stores are built and disposed per
+request; the lifespan, the worker's exit and the boot-time settings read close
+the shared pool (`dispose_shared_engines`). Measured locally (web plus worker
+on Postgres 17): 4 connections before, 2 after. A guard test fails on a store
+that builds its own engine. Alembic and the scripts keep their own engines;
+they run in their own processes.
+
+
 ## [0.318.3] — 2026-11-11
 
 **fix: Add Co-Mentors opens the picker alone.** Found on crm-test checking

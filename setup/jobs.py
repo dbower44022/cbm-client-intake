@@ -36,7 +36,7 @@ from sqlalchemy import Column, DateTime, Index, String, Table, Text, desc, selec
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from core.config import Settings
-from core.store import make_async_engine, metadata
+from core.store import shared_engine, metadata
 
 log = logging.getLogger("cbm_intake.setup.jobs")
 
@@ -433,7 +433,7 @@ def fingerprint(text: str) -> str:
 
 class JobStore:
     def __init__(self, database_url: str) -> None:
-        self._engine = make_async_engine(database_url)
+        self._engine = shared_engine(database_url)
 
     async def _write(self, values: dict[str, Any]) -> None:
         stmt = (

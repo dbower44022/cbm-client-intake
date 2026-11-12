@@ -12,6 +12,7 @@ thing that turns durable capture on.
 
 from __future__ import annotations
 
+import asyncio
 import ssl
 import uuid
 from dataclasses import dataclass
@@ -509,11 +510,85 @@ def make_async_engine(database_url: str, **kwargs):
     )
 
 
+# --- One connection pool per process (item 79, 11-11-26) ---------------------
+# Every store used to build its own engine, so each process held up to twelve
+# pools, and a pool keeps a connection open once it has used one. Production's
+# database allows 22 application connections; the web and the worker sat near
+# it at rest, and a deploy's new container found none free (11-12-26 02:56 UTC,
+# rolled back). Stores now borrow ONE engine per database and event loop.
+#
+# Per loop, because asyncpg connections belong to the loop that opened them:
+# the boot-time settings read runs on its own loop (core/boot_overrides) and
+# pytest gives every test one. A store's own ``dispose`` leaves the shared pool
+# alone, since several stores are built and disposed per request;
+# ``dispose_shared_engines`` closes it, from the lifespan, the worker's exit
+# and the end of the boot read.
+SHARED_POOL_SIZE = 5
+SHARED_MAX_OVERFLOW = 5
+_shared: dict[str, Any] = {}
+_shared_loop: Any = None
+
+
+def _shared_for(database_url: str):
+    """The shared engine for ``database_url`` on the running loop."""
+    global _shared_loop
+    loop = asyncio.get_running_loop()
+    if _shared_loop is not loop:
+        # Engines of an earlier loop are dropped, not disposed: their
+        # connections belong to that loop (only tests and the boot read,
+        # which disposes its own, ever change loops).
+        _shared.clear()
+        _shared_loop = loop
+    engine = _shared.get(database_url)
+    if engine is None:
+        engine = make_async_engine(
+            database_url, pool_size=SHARED_POOL_SIZE, max_overflow=SHARED_MAX_OVERFLOW
+        )
+        _shared[database_url] = engine
+    return engine
+
+
+class SharedEngine:
+    """What a store holds as ``_engine``: ``begin`` and ``connect`` reach the
+    shared engine for the running loop; ``dispose`` is a no-op."""
+
+    def __init__(self, database_url: str) -> None:
+        self.url = database_url
+
+    def begin(self):
+        return _shared_for(self.url).begin()
+
+    def connect(self):
+        return _shared_for(self.url).connect()
+
+    async def dispose(self) -> None:
+        return None
+
+
+def shared_engine(database_url: str) -> SharedEngine:
+    """The engine a store should hold: one shared pool per process."""
+    return SharedEngine(database_url)
+
+
+async def dispose_shared_engines() -> None:
+    """Close the shared pools of the running loop. Safe when there are none."""
+    global _shared_loop
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return
+    engines = list(_shared.values()) if _shared_loop is loop else []
+    _shared.clear()
+    _shared_loop = None
+    for engine in engines:
+        await engine.dispose()
+
+
 class PostgresStore:
     """Postgres-backed :class:`SubmissionStore`."""
 
     def __init__(self, database_url: str) -> None:
-        self._engine = make_async_engine(database_url)
+        self._engine = shared_engine(database_url)
 
     async def create_all(self) -> None:
         """Create the table if absent. Phase-0 convenience; Phase 1 moves schema

@@ -954,8 +954,12 @@ Conventions. Plan: `prds/action-history-plan.md`;
   connection carries `queued=Ns`. A 5xx timing line is WARNING and a crash
   ERROR. Start any "it didn't save" report there.
 - **Build a store once per process, never per request** (v0.290.1): each
-  owns a connection pool, and v0.290.0 exhausted crm-test's database that
-  way in four requests.
+  owned a connection pool, and v0.290.0 exhausted crm-test's database that
+  way in four requests. **Since v0.318.4 every store borrows ONE pool per
+  process** (`core/store.shared_engine`, per event loop; a store's `dispose`
+  leaves it alone, `dispose_shared_engines` closes it). A new store calls
+  `shared_engine`, never `make_async_engine` — a test fails otherwise.
+  Production's database allows 22 application connections (OPEN-ITEMS #79).
 - **Every API request logs what it cost** (v0.248.0):
   `timing GET /…/api/… 200 812ms crm=9/640ms` in the web log, plus a
   `Server-Timing` header. Start a slowness report there — the CRM-call count

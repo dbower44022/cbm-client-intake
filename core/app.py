@@ -642,6 +642,10 @@ def create_app(
             from .espo import close_shared_http
 
             await close_shared_http()
+            # The stores' shared database pool (core/store.shared_engine).
+            from .store import dispose_shared_engines
+
+            await dispose_shared_engines()
 
     app = FastAPI(
         title=f"{settings.organization_abbreviation} Intake Forms",

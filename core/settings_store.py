@@ -45,7 +45,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from . import config as config_module
 from .config import Settings
 from .settings_registry import DENYLIST, is_editable, website_value_problem
-from .store import make_async_engine, metadata
+from .store import shared_engine, metadata
 
 log = logging.getLogger("cbm_intake.settings")
 
@@ -219,7 +219,7 @@ class SettingsStore:
     """Read/write the override table. One instance per process is fine."""
 
     def __init__(self, database_url: str, cipher: Any = None) -> None:
-        self._engine = make_async_engine(database_url)
+        self._engine = shared_engine(database_url)
         # Secrets may now be stored here (Doug's ruling, 2026-08-28), so the
         # store needs the same Fernet cipher `app_config` uses. Without one,
         # storing a secret is REFUSED rather than written in plain text — the

@@ -14,7 +14,7 @@ from sqlalchemy import Column, DateTime, Integer, LargeBinary, String, Table, de
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from core.config import Settings
-from core.store import make_async_engine, metadata
+from core.store import shared_engine, metadata
 
 website_image = Table(
     "website_image",
@@ -47,7 +47,7 @@ class WebsiteStore:
     """One engine per process, built once in ``create_app``."""
 
     def __init__(self, database_url: str) -> None:
-        self._engine = make_async_engine(database_url)
+        self._engine = shared_engine(database_url)
 
     async def dispose(self) -> None:
         await self._engine.dispose()

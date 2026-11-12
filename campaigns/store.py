@@ -38,7 +38,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from core.config import Settings
-from core.store import make_async_engine, metadata, submission
+from core.store import shared_engine, metadata, submission
 
 log = logging.getLogger("cbm_intake.campaigns")
 
@@ -195,7 +195,7 @@ class CampaignStore(AudienceStoreMixin, ImportTemplateStoreMixin):
     other ``_engine.begin()`` stores in this application."""
 
     def __init__(self, database_url: str) -> None:
-        self._engine = make_async_engine(database_url)
+        self._engine = shared_engine(database_url)
 
     async def dispose(self) -> None:
         await self._engine.dispose()

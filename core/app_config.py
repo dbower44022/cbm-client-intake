@@ -25,7 +25,7 @@ from sqlalchemy import select
 
 from .config import Settings
 from .crypto import CryptoError, SecretCipher
-from .store import make_async_engine, metadata
+from .store import shared_engine, metadata
 
 # The single logical key under which the Google Workspace config blob is stored.
 GOOGLE_CONFIG_KEY = "google_workspace"
@@ -47,7 +47,7 @@ class AppConfigStore:
     """Read/write encrypted config rows. One instance per process is fine."""
 
     def __init__(self, database_url: str, cipher: SecretCipher) -> None:
-        self._engine = make_async_engine(database_url)
+        self._engine = shared_engine(database_url)
         self._cipher = cipher
 
     async def create_all(self) -> None:

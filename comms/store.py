@@ -29,7 +29,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from core.config import Settings
-from core.store import make_async_engine
+from core.store import shared_engine
 
 metadata = MetaData()
 
@@ -170,7 +170,7 @@ class CommsStore:
     """Sync-cursor + override persistence (one engine, like PostgresStore)."""
 
     def __init__(self, database_url: str) -> None:
-        self._engine = make_async_engine(database_url)
+        self._engine = shared_engine(database_url)
 
     async def create_all(self) -> None:
         async with self._engine.begin() as conn:

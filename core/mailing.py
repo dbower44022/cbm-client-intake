@@ -94,7 +94,7 @@ from sqlalchemy import Column, DateTime, String, Table, Text, select, update
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from .store import make_async_engine, metadata
+from .store import shared_engine, metadata
 
 log = logging.getLogger("cbm_intake.mailing")
 
@@ -398,7 +398,7 @@ class ConnectionStore:
     """
 
     def __init__(self, database_url: str, cipher: Any = None) -> None:
-        self._engine = make_async_engine(database_url)
+        self._engine = shared_engine(database_url)
         self._cipher = cipher
 
     # --- plumbing -----------------------------------------------------------

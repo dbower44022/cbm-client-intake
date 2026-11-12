@@ -899,14 +899,17 @@ async def run_gmail_cycle(settings: Settings, comms_store) -> None:
 
 
 async def _run() -> None:
-    """``main`` plus the one thing it must not forget on the way out: the CRM
-    client's shared connection pool (core/espo.shared_http)."""
+    """``main`` plus what it must not forget on the way out: the CRM client's
+    shared connection pool (core/espo.shared_http) and the stores' shared
+    database pool (core/store.shared_engine)."""
     from core.espo import close_shared_http
+    from core.store import dispose_shared_engines
 
     try:
         await main()
     finally:
         await close_shared_http()
+        await dispose_shared_engines()
 
 
 if __name__ == "__main__":
