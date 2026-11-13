@@ -99,3 +99,27 @@ async def test_save_submit_and_delivery(store):
     row = next(r for r in await store.answers_for(link["id"]) if r["survey_key"] == "finance")
     assert row["delivered_at"] and row["attempts"] == 2 and row["delivery_error"] is None
     assert await store.due(T0 + timedelta(days=1)) == []
+
+
+@needs_pg
+async def test_resend_moves_the_answers_and_consent_and_ends_the_old_link(store):
+    old = await _link(store)
+    await store.set_consent(old["id"], T0)
+    await store.save_answers(old["id"], "finance", {"q": 1}, T0)
+    new = await store.replace_link(await store.link_by_id(old["id"]), created_by="t", days=30,
+                                   now=T0 + timedelta(days=1))
+    assert new["token"] != old["token"] and new["round"] == 1 and new["consent_at"] == T0
+    assert (await store.link_by_id(old["id"]))["replaced_at"] == T0 + timedelta(days=1)
+    rows = {r["survey_key"]: r for r in await store.answers_for(new["id"])}
+    assert rows["finance"]["answers"] == {"q": 1}
+    assert await store.answers_for(old["id"]) == []
+    links = await store.links_for_engagement("E1")
+    assert [l["id"] for l in links] == [old["id"], new["id"]]
+
+
+@needs_pg
+async def test_expire_ends_a_link_once(store):
+    link = await _link(store)
+    assert await store.end_link(link["id"], T0) is True
+    assert await store.end_link(link["id"], T0 + timedelta(hours=1)) is False
+    assert (await store.link_by_id(link["id"]))["replaced_at"] == T0

@@ -1,7 +1,8 @@
 """Make a Business Evaluation link for testing (phase 1, step 7).
 
-Phase 2 replaces this with the Send Evaluation button. Given an engagement and
-the evaluation areas, it creates one Business Evaluation record per area in the
+Since phase 2 the Send Evaluation button in Client Management does this for
+mentors; this script runs the same path (``evaluation/sending.send``) for a
+test. Given an engagement and the evaluation areas, it creates one Business Evaluation record per area in the
 CRM (status Sent, the engagement's assigned users, the next round), makes the
 link in the application database, and prints the link's address. Nothing is
 emailed.
@@ -26,11 +27,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from core.config import get_settings  # noqa: E402
 from core.espo import EspoClient, EspoError  # noqa: E402
-from evaluation import service  # noqa: E402
+from evaluation import sending  # noqa: E402
 from evaluation.store import EvaluationStore  # noqa: E402
-from evaluation.surveys import PROFILE_KEY, latest, load_all  # noqa: E402
-
-ENGAGEMENT = "CEngagement"
+from evaluation.surveys import load_all  # noqa: E402
 
 
 async def main() -> int:
@@ -51,68 +50,41 @@ async def main() -> int:
         return 2
 
     surveys = load_all()
-    chosen = []
-    for key in dict.fromkeys(args.areas):
-        survey = latest(surveys, key)
-        if survey is None or key == PROFILE_KEY:
-            known = sorted({s.key for s in surveys.values() if s.key != PROFILE_KEY})
-            print(f"'{key}' is not an evaluation area here. Known: {', '.join(known)}", file=sys.stderr)
-            return 2
-        chosen.append(survey)
-    profile_survey = latest(surveys, PROFILE_KEY)
+    try:
+        chosen = sending.choose_areas(surveys, args.areas)
+    except sending.SendError as exc:
+        print(exc, file=sys.stderr)
+        return 2
 
     client = EspoClient(settings.espo_base_url, settings.espo_api_key, settings.request_timeout_seconds)
+    store = EvaluationStore(settings.database_url)
     try:
-        eng = await client.get(ENGAGEMENT, args.engagement_id,
-                               select="name,engagementClientId,clientOrganizationName,assignedUsersIds")
-        profile_id = eng.get("engagementClientId")
-        if not profile_id:
-            print(f"Engagement {eng.get('name')!r} has no client profile.", file=sys.stderr)
-            return 2
-        prof = await client.get(service.CLIENT_PROFILE, profile_id,
-                                select="name,linkedCompanyName,evaluationProfile")
-        company = (eng.get("clientOrganizationName") or prof.get("linkedCompanyName")
-                   or prof.get("name") or "")
-        earlier = await client.list(service.ENTITY, where=[
-            {"type": "equals", "attribute": "engagementId", "value": args.engagement_id}],
-            select="evaluationRound", max_size=200)
-        round_no = 1 + max([r.get("evaluationRound") or 0 for r in earlier.get("list", [])] or [0])
-        profile_needed = not (prof.get("evaluationProfile") or "").strip()
-
-        print(f"Engagement: {eng.get('name')}  ({company})")
-        print(f"Round {round_no}; business profile {'owed' if profile_needed else 'already answered'}; "
-              f"areas: {', '.join(s.title for s in chosen)}")
         if args.dry_run:
+            ctx = await sending.engagement_context(client, args.engagement_id)
+            round_no = sending.next_round(await sending.list_records(client, args.engagement_id))
+            print(f"Engagement: {ctx['engagement'].get('name')}  ({ctx['company']})")
+            print(f"Round {round_no}; business profile "
+                  f"{'owed' if ctx['profileNeeded'] else 'already answered'}; "
+                  f"areas: {', '.join(s.title for s in chosen)}")
             print("Dry run: nothing written.")
             return 0
-
-        now = service.utcnow()
-        made = []
-        for survey in chosen:
-            rec = await client.create(service.ENTITY, {
-                "name": f"{survey.area} — {company}",
-                "engagementId": args.engagement_id,
-                "clientProfileId": profile_id,
-                "evaluationArea": survey.area,
-                "evaluationRound": round_no,
-                "status": "Sent",
-                "sentAt": service.crm_stamp(now),
-                "surveyVersion": survey.ref,
-                "assignedUsersIds": list(eng.get("assignedUsersIds") or []),
-            })
-            made.append((survey.key, survey.ref, rec["id"]))
-            print(f"  created Business Evaluation {rec['id']} ({survey.area})")
+        result = await sending.send(
+            client, store, engagement_id=args.engagement_id, area_keys=args.areas,
+            surveys=surveys, created_by=args.created_by, days=settings.evaluation_link_days)
+    except sending.SendError as exc:
+        print(exc, file=sys.stderr)
+        return 2
     except EspoError as exc:
         print(f"The CRM refused: {exc}", file=sys.stderr)
         return 1
+    finally:
+        await store.dispose()
 
-    rows = ([(PROFILE_KEY, profile_survey.ref, None)] if profile_needed else []) + made
-    store = EvaluationStore(settings.database_url)
-    link = await store.create_link(
-        engagement_id=args.engagement_id, client_profile_id=profile_id, round_no=round_no,
-        area_keys=[s.key for s in chosen], profile_needed=profile_needed, company_name=company,
-        created_by=args.created_by, days=settings.evaluation_link_days, surveys=rows, now=now)
-    await store.dispose()
+    print(f"Round {result['round']}; business profile "
+          f"{'owed' if result['profileNeeded'] else 'already answered'}")
+    for rec in result["records"]:
+        print(f"  created Business Evaluation {rec['id']} ({rec['area']})")
+    link = result["link"]
     base = (args.base_url or settings.app_base_url or "http://localhost:8000").rstrip("/")
     print(f"\nLink (expires {link['expires_at']:%Y-%m-%d %H:%M} UTC):\n{base}/evaluation/{link['token']}")
     return 0

@@ -1,6 +1,6 @@
 # sessions/ — Client, Partner and Funder Management
 
-Last Updated: 11-11-26 23:25 · Revision 1.9
+Last Updated: 11-13-26 13:55 · Revision 1.10
 
 Detail for the session engine behind Client Management (`/mentorsessions`), Partner Management (`/partnersessions`) and Funder Management (`/sponsorsessions`): the grids, every record tab, quick add, managers and co-mentors, and the traps of this package.
 
@@ -324,11 +324,18 @@ Watch for these when touching this package:
   no stream note (it posted none before, v0.313.2); the status picker does
   so in all three domains. **Client Management's Details save is not recorded** (open item
   66 asks Doug).
+- **The Evaluations tab — Client Management only** (v0.328.0, Business
+  Evaluation phase 2, `BUSINESS_EVALUATION`): `DomainConfig.evaluations_tab`
+  puts it right after Sessions and registers `/records/{id}/evaluations…`;
+  every route answers 404 while the switch is off. The logic is in
+  `evaluation/sending.py`; detail in `evaluation/CLAUDE.md`. The tab
+  refetches on every visit.
 
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.10 | 11-13-26 13:55 | Claude (Claude Code) | The Evaluations tab (v0.328.0). |
 | 1.9 | 11-11-26 23:25 | Claude (Claude Code) | Attaching a CBM member refused; Client Management's named add buttons (v0.318.1–v0.318.3). |
 | 1.8 | 11-06-26 02:16 | Claude (Claude Code) | The History tab, partner and funder only, and old-and-new values (v0.312.0). |
 | 1.7 | 11-05-26 17:41 | Claude (Claude Code) | The strict profile choice (v0.305.0). |

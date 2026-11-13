@@ -127,6 +127,47 @@ class EvaluationStore:
                 select(evaluation_link).where(evaluation_link.c.id == link_id))).mappings().first()
         return dict(row) if row else None
 
+    async def links_for_engagement(self, engagement_id: str) -> list[dict[str, Any]]:
+        """Every link made for one engagement, oldest first (the Evaluations tab)."""
+        async with self._engine.begin() as conn:
+            rows = (await conn.execute(
+                select(evaluation_link).where(evaluation_link.c.engagement_id == engagement_id)
+                .order_by(evaluation_link.c.created_at))).mappings().all()
+        return [dict(r) for r in rows]
+
+    async def end_link(self, link_id: str, at: datetime) -> bool:
+        """End a link (Resend or Expire, ruling BE12): it opens nothing from
+        now on. True when it was still open-ended; an ended link stays ended."""
+        async with self._engine.begin() as conn:
+            result = await conn.execute(update(evaluation_link).where(and_(
+                evaluation_link.c.id == link_id, evaluation_link.c.replaced_at.is_(None)))
+                .values(replaced_at=at))
+        return bool(result.rowcount)
+
+    async def replace_link(self, old: dict[str, Any], *, created_by: str, days: int,
+                           now: Optional[datetime] = None) -> dict[str, Any]:
+        """Resend (ruling BE12): a new link for the same round that ends the
+        old one. The client's saved answers and consent move to the new link
+        (Doug's choice 11-13-26), so the client picks up where they stopped.
+        One transaction."""
+        now = now or _now()
+        link = {
+            "id": str(uuid.uuid4()), "token": new_token(), "engagement_id": old["engagement_id"],
+            "client_profile_id": old["client_profile_id"], "round": old["round"],
+            "area_keys": list(old["area_keys"]), "profile_needed": old["profile_needed"],
+            "company_name": old.get("company_name"), "consent_at": old.get("consent_at"),
+            "created_by": created_by or None, "created_at": now,
+            "expires_at": now + timedelta(days=days), "replaced_at": None,
+        }
+        async with self._engine.begin() as conn:
+            await conn.execute(evaluation_link.insert().values(**link))
+            await conn.execute(update(evaluation_answer).where(
+                evaluation_answer.c.link_id == old["id"]).values(link_id=link["id"]))
+            await conn.execute(update(evaluation_link).where(and_(
+                evaluation_link.c.id == old["id"], evaluation_link.c.replaced_at.is_(None)))
+                .values(replaced_at=now))
+        return link
+
     async def set_consent(self, link_id: str, at: datetime) -> datetime:
         """Records the first consent only; returns the stored time."""
         async with self._engine.begin() as conn:

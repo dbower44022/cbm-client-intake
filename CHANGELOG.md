@@ -5,6 +5,54 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.328.0] — 2026-11-13
+
+**feat: Business Evaluation, phase 2 — the mentor side.** Dark behind
+**`BUSINESS_EVALUATION`** (off in production; on at crm-test's `/setup` since
+phase 1's check). Plan `prds/business-evaluation-plan.md` § 3 steps 1–2,
+rulings BE3, BE5, BE10, BE12, BE14, BE18; `OPEN-ITEMS.md` #83; detail
+`evaluation/CLAUDE.md`. Checked by Doug 11-13-26 on a local run against
+crm-test, signed in as Joe Mentor (a real non-admin) on Brightline Bakehouse:
+every step of the runbook matched.
+
+- **The Mentor Role's grant on `CBusinessEvaluation`**: create, read own,
+  edit own, stream own (`scripts/migrate_evaluation_roles.py`; "own" is the
+  role's level on `CEngagement`, read on crm-test). Applied and read back on
+  crm-test 11-13-26; production and Boston owed with the phase 1 CRM change
+  (`business-evaluation-crm-handoff.md`).
+- **The Evaluations tab** in Client Management, right after Sessions
+  (`DomainConfig.evaluations_tab`, mentor domain only; Partner and Funder
+  Management never register the routes). One row per Business Evaluation
+  record, newest round first: round, area, status, sent, submitted, the
+  link's state. A row opens the client's answers and the business profile,
+  read-only. A CRM without the entity answers `available: false` with the
+  reason. Read as the user, and fetched afresh on every visit.
+- **Send Evaluation** (`evaluation/sending.send`, which
+  `scripts/evaluation_make_link.py` now calls too): the areas from the
+  survey files; two or three advised, a warning above three, and still sent
+  (BE10). One record per area (Sent, the next round, the engagement's
+  assigned users), created as the mentor; only a 403 on the create is
+  retried under the org-wide key, since the Mentor Role's Assignment
+  Permission is `team`.
+- **The email** (`evaluation/email.py`, `invitation.v1`; Doug approved the
+  wording and chose the repository over a CRM template, 11-13-26): the shared
+  composer opens from the mentor's own mailbox, addressed to the
+  engagement's primary contact, with the subject, the body and the link
+  filled in. The mentor edits it there and nothing goes until Send. The link
+  leaves the server only inside this email. `frontend/shared/compose.js`
+  gained `pre.bodyHtml` (a prefilled message that counts as unsent work, the
+  signature below it) and `pre.draftName` (its draft kept apart).
+- **Resend, Expire, Record a decline**, per round: Resend issues a new link,
+  ends the old one and carries the client's saved answers and consent over
+  (Doug's choice 11-13-26), reopening Expired areas; Expire ends the link and
+  sets open areas Expired; Record a decline sets Declined on everything not
+  submitted and ends the link. Each is recorded through
+  `core/action_log.py` with old and new values (ruling Q5.4), under the
+  existing Record Edit and Status Change categories (the category is a CRM
+  enum). Store: `links_for_engagement`, `end_link`, `replace_link`.
+- Tests: `tests/test_evaluation_mentor.py` (32), two more Postgres store tests,
+  and the in-memory store moved to `tests/evaluation_fakes.py`.
+
 ## [0.327.0] — 2026-11-13
 
 **feat: the Integrations tab, phase 6 — the diagnosis agent and fix plans.**

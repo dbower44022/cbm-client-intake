@@ -1,4 +1,4 @@
-"""Role grants for the Business Evaluation, phase 1 — ``CBusinessEvaluation``.
+"""Role grants for the Business Evaluation — ``CBusinessEvaluation``.
 
 prds/business-evaluation-plan.md § 5; business-evaluation-crm-handoff.md:
 
@@ -7,8 +7,12 @@ prds/business-evaluation-plan.md § 5; business-evaluation-crm-handoff.md:
   the client's answers under it (phase 1), and the analysis worker writes the
   draft report under it (phase 3).
 
-The mentor-side grants (the Mentor Role reading and editing the records it is
-assigned to) come with phase 2, when the Evaluations tab exists.
+* **Mentor Role** (phase 2): create, read own, edit own, stream own. A
+  mentor's Send Evaluation creates the records as the mentor; Expire and
+  Record a decline edit their status. "Own" is the level the Mentor Role holds
+  on ``CEngagement`` (read on crm-test 11-13-26), and with Multiple Assigned
+  Users it reaches every record carrying the mentor in ``assignedUsers``,
+  which is how co-mentors and subject matter experts see them (BE18).
 
 Idempotent and merge-only: a level already at or above the wanted one is left
 alone, nothing is lowered or removed. Needs an Admin-type login::
@@ -35,6 +39,7 @@ from core.espo import EspoClient  # noqa: E402
 ENTITY = "CBusinessEvaluation"
 GRANTS: list[tuple[str, dict[str, str]]] = [
     ("CustomAppAPIRole", {"create": "yes", "read": "all", "edit": "all"}),
+    ("Mentor Role", {"create": "yes", "read": "own", "edit": "own", "stream": "own"}),
 ]
 LEVEL_RANK: dict[str, int] = {"no": 0, "not-set": 0, "own": 1, "team": 2, "all": 3, "yes": 3}
 

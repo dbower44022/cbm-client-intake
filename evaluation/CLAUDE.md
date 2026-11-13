@@ -1,6 +1,6 @@
 # evaluation/ — Business Evaluation
 
-Last Updated: 11-13-26 10:40 · Revision 1.0
+Last Updated: 11-13-26 13:55 · Revision 1.1
 
 Detail for the Business Evaluation offering: the survey definitions, the
 evaluation links, and the client's public survey page at `/evaluation/{token}`.
@@ -56,7 +56,38 @@ is `prds/business-evaluation-plan.md` (rulings BE1–BE22, all approved
   (`assignments/stamps.related_records(…, with_evaluations=True)`, read once
   per pass from the CRM's links).
 - **Test links**: `scripts/evaluation_make_link.py <engagement id> finance
-  marketing` until phase 2's Send Evaluation button.
+  marketing`, which since phase 2 runs the same `sending.send` as the button.
+
+## What phase 2 built (v0.328.0)
+
+- **The mentor side is Client Management's Evaluations tab**
+  (`DomainConfig.evaluations_tab`, mentor domain only; the routes live in
+  `sessions/router.py` and answer 404 while the switch is off). The logic is
+  `sending.py`: the tab's rows, the answers view, Send, Resend, Expire and
+  Record a decline. **Reads run as the user**; the Mentor Role holds create,
+  read own, edit own and stream own on `CBusinessEvaluation`.
+- **Records are created as the mentor**, stamped with the engagement's
+  `assignedUsers`. The Mentor Role's Assignment Permission is `team`, so a
+  stamp naming someone outside the mentor's teams is refused: only that 403
+  is retried under the org-wide key.
+- **The link leaves the server only inside the email** (BE12): Send and Resend
+  return the composer's subject and body (`email.py`, `invitation.v1`, wording
+  approved by Doug 11-13-26), never the link on its own. A wording change is a
+  new `VERSION` and a release; the wording lives here, not in a CRM template
+  (Doug's choice). The mentor edits the email in the shared composer
+  (`pre.bodyHtml`) and nothing is sent until they press Send.
+- **Resend carries the client's saved answers and consent to the new link**
+  (Doug's choice 11-13-26; `store.replace_link`, one transaction) and ends the
+  old one; Expired areas reopen, In Progress where the client had begun.
+  **Expire** ends the link and sets Sent and In Progress records to Expired.
+  **Record a decline** sets Declined on everything not submitted and ends the
+  link. A wrong recipient is handled by Expire and a new Send, never Resend.
+- **Every action goes to `core/action_log.py`** with old and new values in
+  `details["fields"]`, under the existing Record Edit and Status Change
+  categories: `CActionLog.category` is a CRM enum, and a new value would be
+  refused.
+- Tests: `tests/test_evaluation_mentor.py`; the in-memory store is
+  `tests/evaluation_fakes.MemoryStore`.
 
 ## The CRM
 
@@ -73,3 +104,4 @@ create).
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
 | 1.0 | 11-13-26 10:40 | Claude (Claude Code) | Created at the close of phase 1 (v0.324.0). |
+| 1.1 | 11-13-26 13:55 | Claude (Claude Code) | Phase 2, the mentor side (v0.328.0). |

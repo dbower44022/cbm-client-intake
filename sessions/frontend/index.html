@@ -198,6 +198,35 @@
         <p class="sx__muted" id="noRcl" hidden>No referred clients.</p>
       </div>
 
+      <!-- Evaluations (Business Evaluation phase 2, Client Management only,
+           behind BUSINESS_EVALUATION): one row per Business Evaluation
+           record, grouped by round, newest round first. A row opens the
+           client's answers, read-only. Send Evaluation picks the areas. -->
+      <div class="sx__dpanel" data-dpanel="evaluations" hidden>
+        <div class="sx__comm-head">
+          <h3>Evaluations</h3>
+          <button type="button" class="cbm-button" id="evlSendBtn">Send Evaluation</button>
+        </div>
+        <p class="sx__notice" id="evlNotice" role="status" hidden></p>
+        <p class="sx__loading" id="evlLoading" hidden>Loading…</p>
+        <p class="sx__muted" id="evlUnavailable" hidden></p>
+        <div class="evl__rounds" id="evlRounds" hidden></div>
+        <table class="sx__table" id="evlTable" hidden>
+          <thead><tr>
+            <th data-col="round" scope="col">Round</th>
+            <th data-col="area" scope="col">Area</th>
+            <th data-col="status" scope="col">Status</th>
+            <th data-col="sentAt" scope="col">Sent</th>
+            <th data-col="submittedAt" scope="col">Submitted</th>
+            <th data-col="linkState" scope="col">Link</th>
+          </tr></thead>
+          <tbody id="evlBody"></tbody>
+        </table>
+        <p class="sx__muted" id="noEvl" hidden>
+          No evaluation has been sent to this client yet. Send Evaluation offers one.
+        </p>
+      </div>
+
       <!-- Events (EV-72, mentor domain only): CBM events attended across ALL
            of this engagement's contacts, deduplicated by event and newest
            first. Three colleagues at one webinar is ONE row — the question is
@@ -618,6 +647,25 @@
   </div>
 
   <!-- Pop-up detail for a contact / company / client link on the Overview -->
+  <!-- Business Evaluation: the Send dialog and the read-only answers view
+       share this shell (sessions/frontend/app.js, "Evaluations tab"). -->
+  <div class="sx__modal" id="evlModal" hidden role="dialog" aria-modal="true" aria-labelledby="evlModalTitle">
+    <div class="sx__modal-backdrop" id="evlBackdrop"></div>
+    <div class="sx__modal-card" role="document">
+      <div class="sx__modal-head">
+        <div>
+          <p class="sx__modal-kind" id="evlModalKind">Business Evaluation</p>
+          <h3 class="sx__modal-name" id="evlModalTitle"></h3>
+        </div>
+        <span class="sx__modal-actions">
+          <button type="button" class="sx__modal-close" id="evlClose" aria-label="Close">×</button>
+        </span>
+      </div>
+      <div class="sx__modal-body" id="evlModalBody"></div>
+      <div class="sx__modal-foot" id="evlModalFoot"></div>
+    </div>
+  </div>
+
   <div class="sx__modal" id="peekModal" hidden role="dialog" aria-modal="true" aria-labelledby="peekName">
     <div class="sx__modal-backdrop" id="peekBackdrop"></div>
     <div class="sx__modal-card" role="document">

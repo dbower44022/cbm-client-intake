@@ -379,6 +379,12 @@ class DomainConfig:
     # endpoint refuses the mentor domain on the server, not only by hiding
     # the tab, because the same router factory serves it.
     history_tab: bool = False
+    #: The Evaluations tab (Business Evaluation phase 2,
+    #: prds/business-evaluation-plan.md): Client Management only. Gates BOTH
+    #: the tab and ``/records/{id}/evaluations…``; both also need the
+    #: ``BUSINESS_EVALUATION`` switch, read per request, and the endpoint
+    #: feature-detects ``CBusinessEvaluation`` on the live CRM.
+    evaluations_tab: bool = False
 
     # --- Quick add (Doug's request 2026-08-12). See :class:`CreateSpec`. The
     # mentor domain deliberately has none: a client engagement arrives through
@@ -660,6 +666,8 @@ MENTOR = DomainConfig(
     parent_contacts_link="engagementContacts",
     # EV-72: the client-side events rollup (Doug's explicit requirement).
     events_tab=True,
+    # Business Evaluation phase 2: the Evaluations tab and Send Evaluation.
+    evaluations_tab=True,
     primary_contact_id_attr="primaryEngagementContactId",
     default_session_type="Client Session",
     list_select=(

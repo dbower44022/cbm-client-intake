@@ -105,6 +105,11 @@ async def _create_token_lock(key: str) -> asyncio.Lock:
         return entry[1]
 
 
+class EvaluationSendIn(BaseModel):
+    """Send Evaluation (Business Evaluation phase 2): the chosen area keys."""
+    areas: list[str] = []
+
+
 class SessionIn(BaseModel):
     changes: dict = {}
     # Contact ids for the session's attendees. None => leave attendees unchanged
@@ -284,6 +289,10 @@ def _detail_tabs(
         tabs.insert(idx + 1, {"key": "referredClients", "label": "Referred Clients"})
     if cfg.events_tab:
         tabs.insert(idx + 1, {"key": "events", "label": "Events"})
+    # Business Evaluation phase 2: right after Sessions, Client Management only,
+    # and only while BUSINESS_EVALUATION is on (read per request).
+    if cfg.evaluations_tab and get_settings().business_evaluation:
+        tabs.insert(idx + 1, {"key": "evaluations", "label": "Evaluations"})
     # Phase B — a partner's / funder's events. Placed just before Communications
     # so it follows whatever money-and-referral tabs the domain carries.
     if cfg.sponsored_events_link:
@@ -1005,6 +1014,197 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 return await service.list_referred_clients(cfg, client, parent_id)
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not load referred clients")
+
+    if cfg.evaluations_tab:
+        # Business Evaluation phase 2 (prds/business-evaluation-plan.md § 3
+        # steps 1–2; evaluation/sending.py). Registered only on Client
+        # Management; every route answers 404 while BUSINESS_EVALUATION is off,
+        # and the tab's read feature-detects CBusinessEvaluation on the CRM.
+        from evaluation import sending as eval_sending
+        from evaluation.router import surveys as eval_surveys
+
+        def _evaluations_on() -> None:
+            if not get_settings().business_evaluation:
+                raise HTTPException(status_code=404, detail="Not found.")
+
+        @router.get("/records/{parent_id}/evaluations")
+        async def record_evaluations(parent_id: str, request: Request) -> dict:
+            _evaluations_on()
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            loaded = eval_surveys() or {}
+            if not await eval_sending.entity_available(client):
+                return {"available": False, "reason": eval_sending.UNAVAILABLE_REASON}
+            store = getattr(request.app.state, "evaluation_store", None)
+            try:
+                rounds = await eval_sending.rounds_view(client, store, parent_id)
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load the evaluations")
+            return {
+                "available": True,
+                "rounds": rounds,
+                "areas": eval_sending.area_choices(loaded),
+                "advisedMax": eval_sending.ADVISED_MAX,
+                "storeReady": store is not None,
+            }
+
+        @router.get("/records/{parent_id}/evaluations/{record_id}")
+        async def record_evaluation_answers(parent_id: str, record_id: str, request: Request) -> dict:
+            _evaluations_on()
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            try:
+                view = await eval_sending.answers_view(client, parent_id, record_id, eval_surveys() or {})
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load the client's answers")
+            if view is None:
+                raise HTTPException(status_code=404, detail="That evaluation is not on this engagement.")
+            return view
+
+        @router.post("/records/{parent_id}/evaluations/send")
+        async def record_evaluation_send(
+            parent_id: str, body: EvaluationSendIn, request: Request
+        ) -> dict:
+            """Send Evaluation: the records, the round and the link. The link's
+            address is returned only inside the email the composer opens with
+            (BE12); the mentor edits it there before it is sent."""
+            _evaluations_on()
+            user = _require_user(request)
+            settings = get_settings()
+            client = client_for(settings, user)
+            loaded = eval_surveys()
+            if not loaded:
+                raise HTTPException(status_code=503, detail=(
+                    "The evaluation surveys could not be loaded on this server, so "
+                    f"nothing was sent. Tell {abbr()} staff."))
+            if not await eval_sending.entity_available(client):
+                raise HTTPException(status_code=409, detail=eval_sending.UNAVAILABLE_REASON)
+            try:
+                result = await eval_sending.send(
+                    client, getattr(request.app.state, "evaluation_store", None),
+                    engagement_id=parent_id, area_keys=body.areas, surveys=loaded,
+                    created_by=user.get("userName") or "", days=settings.evaluation_link_days,
+                    escalate=lambda: _system_client(settings))
+            except eval_sending.SendError as exc:
+                raise HTTPException(status_code=400, detail=str(exc))
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not send the evaluation")
+            areas = [r["area"] for r in result["records"]]
+            await action_log.record_action(
+                client, app=cfg.title, category=action_log.CAT_RECORD_EDIT,
+                action=action_log.ACT_EVALUATION_SENT,
+                parent_type=cfg.parent_entity, parent_id=parent_id,
+                summary=f"Business Evaluation round {result['round']} sent: {', '.join(areas)}.",
+                actor_id=user["userId"], actor_name=user["name"],
+                details={"round": result["round"], "areas": areas,
+                         "records": [r["id"] for r in result["records"]],
+                         "fields": {"status": {"to": eval_sending.STATUS_SENT}}},
+            )
+            return {
+                "round": result["round"],
+                "areas": areas,
+                "warning": result["warning"],
+                "expiresAt": result["link"]["expires_at"].isoformat(),
+                "email": await _evaluation_email(request, client, result["link"],
+                                                 result["contactId"], loaded),
+            }
+
+        async def _evaluation_email(request: Request, client, link: dict,
+                                    contact_id: str, loaded: dict) -> dict:
+            """The composer's opening subject and body, the link inside it
+            (step 4): the only place the link's address leaves the server."""
+            settings = get_settings()
+            base = (settings.app_base_url or "").strip() or str(request.base_url)
+            return await eval_sending.compose_email(
+                client, org=settings.organization_name, base_url=base, link=link,
+                contact_id=contact_id, surveys=loaded)
+
+        async def _round_action(request: Request, parent_id: str, round_no: int, act: str):
+            _evaluations_on()
+            user = _require_user(request)
+            settings = get_settings()
+            client = client_for(settings, user)
+            store = getattr(request.app.state, "evaluation_store", None)
+            try:
+                if act == "resend":
+                    result = await eval_sending.resend(
+                        client, store, engagement_id=parent_id, round_no=round_no,
+                        created_by=user.get("userName") or "", days=settings.evaluation_link_days)
+                elif act == "expire":
+                    result = await eval_sending.expire(
+                        client, store, engagement_id=parent_id, round_no=round_no)
+                else:
+                    result = await eval_sending.decline(
+                        client, store, engagement_id=parent_id, round_no=round_no)
+            except eval_sending.SendError as exc:
+                raise HTTPException(status_code=400, detail=str(exc))
+            except EspoError as exc:
+                raise _crm_failure(request, exc, f"Could not {act} round {round_no}")
+            return user, client, result
+
+        @router.post("/records/{parent_id}/evaluations/rounds/{round_no}/resend")
+        async def record_evaluation_resend(parent_id: str, round_no: int, request: Request) -> dict:
+            """Resend: a new link that ends the old one (BE12), the client's
+            saved answers and consent carried over, and the email again."""
+            user, client, result = await _round_action(request, parent_id, round_no, "resend")
+            new, old = result["link"], result["previousLink"]
+            await action_log.record_action(
+                client, app=cfg.title, category=action_log.CAT_RECORD_EDIT,
+                action=action_log.ACT_EVALUATION_RESENT,
+                parent_type=cfg.parent_entity, parent_id=parent_id,
+                summary=f"Business Evaluation round {round_no} resent with a new link.",
+                actor_id=user["userId"], actor_name=user["name"],
+                details={"round": round_no, "records": result["changed"],
+                         "fields": {"evaluation link": {
+                             "from": f"expires {old['expires_at']:%Y-%m-%d}",
+                             "to": f"expires {new['expires_at']:%Y-%m-%d}"},
+                             **eval_sending.status_fields(result["changed"])}},
+            )
+            # The email goes to the engagement's primary contact as it is now,
+            # which may have changed since the first send.
+            try:
+                ctx = await eval_sending.engagement_context(client, parent_id)
+                contact_id = ctx["contactId"]
+            except (EspoError, eval_sending.SendError):
+                contact_id = ""
+            return {
+                "round": round_no,
+                "expiresAt": new["expires_at"].isoformat(),
+                "email": await _evaluation_email(request, client, new, contact_id,
+                                                 eval_surveys() or {}),
+            }
+
+        @router.post("/records/{parent_id}/evaluations/rounds/{round_no}/expire")
+        async def record_evaluation_expire(parent_id: str, round_no: int, request: Request) -> dict:
+            """Expire: the link ends and the round's open records become Expired."""
+            user, client, result = await _round_action(request, parent_id, round_no, "expire")
+            await action_log.record_action(
+                client, app=cfg.title, category=action_log.CAT_STATUS,
+                action=action_log.ACT_EVALUATION_EXPIRED,
+                parent_type=cfg.parent_entity, parent_id=parent_id,
+                summary=f"Business Evaluation round {round_no} expired.",
+                actor_id=user["userId"], actor_name=user["name"],
+                details={"round": round_no, "linkEnded": result["linkEnded"],
+                         "records": result["changed"],
+                         "fields": eval_sending.status_fields(result["changed"])},
+            )
+            return {"round": round_no, "changed": len(result["changed"])}
+
+        @router.post("/records/{parent_id}/evaluations/rounds/{round_no}/decline")
+        async def record_evaluation_decline(parent_id: str, round_no: int, request: Request) -> dict:
+            """Record a decline (BE14): Declined on what is not yet submitted."""
+            user, client, result = await _round_action(request, parent_id, round_no, "decline")
+            await action_log.record_action(
+                client, app=cfg.title, category=action_log.CAT_STATUS,
+                action=action_log.ACT_EVALUATION_DECLINED,
+                parent_type=cfg.parent_entity, parent_id=parent_id,
+                summary=f"Business Evaluation round {round_no}: the client declined.",
+                actor_id=user["userId"], actor_name=user["name"],
+                details={"round": round_no, "linkEnded": result["linkEnded"],
+                         "records": result["changed"],
+                         "fields": eval_sending.status_fields(result["changed"])},
+            )
+            return {"round": round_no, "changed": len(result["changed"])}
 
     if cfg.events_tab:
         # EV-72 — events attended across ALL of this engagement's contacts,

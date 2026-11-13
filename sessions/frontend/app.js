@@ -251,6 +251,7 @@
     else if (!$("gcalModal").hidden) { hide($("gcalModal")); }
     else if (!$("commModal").hidden) requestCloseComm();
     else if (!$("peekModal").hidden) closePeek();
+    else if ($("evlModal") && !$("evlModal").hidden) closeEvl();
   });
 
   // Build the detail tab bar from config.detailTabs. Built-in keys (overview/
@@ -299,6 +300,7 @@
     if (tab === "grants") renderGrants();
     if (tab === "referredClients") renderReferredClients();
     if (tab === "events") renderEvents();
+    if (tab === "evaluations") renderEvaluations(true);  // always fresh: statuses move as the client answers
     if (tab === "sponsoredEvents") renderSponsoredEvents();
     if (tab === "sponsoredCampaigns") renderSponsoredCampaigns();
     if (tab === "communications") renderComms();
@@ -4867,6 +4869,282 @@
   if ($("evtSearch")) {
     $("evtSearch").addEventListener("input", function () { evt.search = this.value; paintEvt(); });
   }
+
+  // --- Evaluations tab (Business Evaluation phase 2, Client Management only) --
+  // One row per Business Evaluation record, newest round first; a row opens
+  // the client's answers, read-only. The server feature-detects the CRM
+  // entity and answers available:false with the reason. The link's address
+  // never reaches this page except inside the email (ruling BE12).
+  var evl = { forId: null, rows: [], rounds: [], areas: [], advisedMax: 3 };
+  var EVL_LINK_WORDS = { open: "Open", expired: "Expired", ended: "Ended", none: "—" };
+
+  function evlSortVal(r, k) { return r[k] == null ? "" : r[k]; }
+
+  function paintEvl() {
+    var rows = gridOrder("evlTable", evl.rows.slice(), evlSortVal);
+    var body = $("evlBody");
+    body.innerHTML = "";
+    rows.forEach(function (r) {
+      var tr = document.createElement("tr");
+      tr.tabIndex = 0;
+      tr.title = "Open the client's answers";
+      function cell(text) {
+        var td = document.createElement("td");
+        td.textContent = text == null || text === "" ? "—" : text;
+        tr.appendChild(td);
+      }
+      cell("Round " + r.round);
+      cell(r.area);
+      cell(r.status);
+      cell(r.sentAt ? fmtSessionDate(r.sentAt, "short") : "");
+      cell(r.submittedAt ? fmtSessionDate(r.submittedAt, "short") : "");
+      cell(r.linkLabel);
+      tr.addEventListener("click", function () { openEvlAnswers(r); });
+      tr.addEventListener("keydown", function (e) { if (e.key === "Enter") openEvlAnswers(r); });
+      body.appendChild(tr);
+    });
+    if (rows.length) { show($("evlTable")); hide($("noEvl")); }
+    else { hide($("evlTable")); show($("noEvl")); }
+    paintEvlRounds();
+  }
+
+  // One line per round, newest first, with its link and the round's
+  // actions. Every button stays visible; a refusal is named on click.
+  function paintEvlRounds() {
+    var box = $("evlRounds");
+    box.innerHTML = "";
+    evl.rounds.forEach(function (round) {
+      var line = document.createElement("div"); line.className = "evl__round";
+      var label = document.createElement("span"); label.className = "evl__round-label";
+      label.textContent = "Round " + round.round + " · link: " + evlLinkLabel(round.link);
+      line.appendChild(label);
+      line.appendChild(evlButton("Resend", true, function () { evlResend(round.round, this); }));
+      line.appendChild(evlButton("Expire", true, function () {
+        evlConfirm("Expire round " + round.round + "?",
+          "The link stops working, and the areas the client has not submitted become Expired. " +
+          "Resend opens them again with a new link.", "Expire", "expire", round.round);
+      }));
+      line.appendChild(evlButton("Record a decline", true, function () {
+        evlConfirm("Record that the client declined round " + round.round + "?",
+          "Every area the client has not submitted becomes Declined, and the link stops working. " +
+          "Submitted areas are kept.", "Record the decline", "decline", round.round);
+      }));
+      box.appendChild(line);
+    });
+    box.hidden = !evl.rounds.length;
+  }
+
+  function evlRoundPath(round, act) {
+    return "/records/" + encodeURIComponent(currentDetail.id) + "/evaluations/rounds/" +
+      encodeURIComponent(round) + "/" + act;
+  }
+
+  // Opens the shared composer with the evaluation email filled in: the mentor
+  // reads and edits it, and nothing goes until they press Send there.
+  function evlOpenEmail(email, round) {
+    if (!email) return;
+    composeMessage({ to: email.to || "", subject: email.subject || "", bodyHtml: email.bodyHtml || "",
+                     draftName: "evaluation-r" + round + "-" + Date.now() });
+  }
+
+  async function evlResend(round, btn) {
+    var done = window.CBMBusy ? CBMBusy.start(btn) : function () {};
+    try {
+      var res = await api(evlRoundPath(round, "resend"), { method: "POST", body: "{}" });
+      notice("evlNotice", "Round " + round + " has a new link; the old one no longer works. " +
+        "Send the email to give it to the client.", "success");
+      renderEvaluations(true);
+      evlOpenEmail(res.email, round);
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice("evlNotice", e.message, "error");
+    } finally { done(); }
+  }
+
+  function evlConfirm(title, text, label, act, round) {
+    openEvl(title);
+    $("evlModalBody").appendChild(evlPara(text));
+    var err = evlPara("", "sx__notice is-error"); err.hidden = true;
+    $("evlModalBody").appendChild(err);
+    var go = evlButton(label, false, async function () {
+      var done = window.CBMBusy ? CBMBusy.start(go) : function () {};
+      try {
+        var res = await api(evlRoundPath(round, act), { method: "POST", body: "{}" });
+        closeEvl();
+        notice("evlNotice", "Round " + round + ": " + res.changed +
+          (res.changed === 1 ? " area " : " areas ") +
+          (act === "expire" ? "expired." : "recorded as declined."), "success");
+        renderEvaluations(true);
+      } catch (e) {
+        if (e.status === 401) { closeEvl(); showLogin(); return; }
+        err.textContent = e.message; err.hidden = false;
+      } finally { done(); }
+    });
+    $("evlModalFoot").appendChild(go);
+    $("evlModalFoot").appendChild(evlButton("Cancel", true, closeEvl));
+  }
+
+  function evlLinkLabel(link) {
+    if (!link) return "—";
+    var word = EVL_LINK_WORDS[link.state] || "—";
+    if (link.state === "open" && link.expiresAt) return "Open until " + fmtDate(link.expiresAt);
+    if (link.state === "expired" && link.expiresAt) return "Expired " + fmtDate(link.expiresAt);
+    if (link.state === "ended" && link.endedAt) return "Ended " + fmtDate(link.endedAt);
+    return word;
+  }
+
+  async function renderEvaluations(force) {
+    if (!currentDetail || !$("evlBody")) return;
+    if (!force && evl.forId === currentDetail.id) { paintEvl(); return; }
+    evl.forId = currentDetail.id;
+    evl.rows = []; evl.rounds = [];
+    hide($("evlTable")); hide($("noEvl")); hide($("evlUnavailable")); hide($("evlRounds"));
+    if (!force) hide($("evlNotice"));
+    show($("evlLoading"));
+    try {
+      var res = await busyOver("evlTable", api("/records/" + encodeURIComponent(currentDetail.id) + "/evaluations"));
+      if (res.available === false) {
+        evl.forId = null;
+        $("evlUnavailable").textContent = res.reason || "Business Evaluations are not available on this CRM yet.";
+        show($("evlUnavailable"));
+        return;
+      }
+      evl.areas = res.areas || [];
+      evl.advisedMax = res.advisedMax || 3;
+      evl.rounds = res.rounds || [];
+      (res.rounds || []).forEach(function (round) {
+        var label = evlLinkLabel(round.link);
+        (round.records || []).forEach(function (rec) {
+          evl.rows.push({ id: rec.id, round: round.round, area: rec.area, status: rec.status,
+                          sentAt: rec.sentAt, submittedAt: rec.submittedAt,
+                          linkState: round.link && round.link.state, linkLabel: label });
+        });
+      });
+      paintEvl();
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      evl.forId = null;
+      notice("evlNotice", e.message, "error");
+    } finally { hide($("evlLoading")); }
+  }
+
+  fitGrid("evlTable", "evaluations", paintEvl, [{ col: "round", dir: "desc" }, { col: "area", dir: "asc" }]);
+
+  function openEvl(title) {
+    $("evlModalTitle").textContent = title || "";
+    $("evlModalBody").innerHTML = ""; $("evlModalFoot").innerHTML = "";
+    show($("evlModal"));
+  }
+  function closeEvl() { hide($("evlModal")); }
+  if ($("evlClose")) {
+    $("evlClose").addEventListener("click", closeEvl);
+    $("evlBackdrop").addEventListener("click", closeEvl);
+  }
+  function evlPara(text, cls) {
+    var p = document.createElement("p"); if (cls) p.className = cls; p.textContent = text; return p;
+  }
+  function evlButton(text, secondary, onClick) {
+    var b = document.createElement("button"); b.type = "button";
+    b.className = "cbm-button" + (secondary ? " cbm-button--secondary" : "");
+    b.textContent = text; b.addEventListener("click", onClick); return b;
+  }
+
+  // The client's answers, read-only: the area's answers, then the business
+  // profile. Both arrive as the server's question-and-answer HTML, built
+  // from escaped text (evaluation/service.readable_html).
+  async function openEvlAnswers(row) {
+    openEvl(row.area + " — round " + row.round);
+    var body = $("evlModalBody");
+    body.appendChild(evlPara("Loading…", "sx__loading"));
+    $("evlModalFoot").appendChild(evlButton("Close", true, closeEvl));
+    try {
+      var r = await api("/records/" + encodeURIComponent(currentDetail.id) + "/evaluations/" + encodeURIComponent(row.id));
+      body.innerHTML = "";
+      body.appendChild(evlPara("Status: " + (r.status || "—") +
+        (r.submittedAt ? " · submitted " + fmtSessionDate(r.submittedAt, "short") : ""), "sx__muted"));
+      var h1 = document.createElement("h4"); h1.textContent = r.area + " answers"; body.appendChild(h1);
+      if (r.answersHtml) {
+        var a = document.createElement("div"); a.className = "evl__answers";
+        a.innerHTML = sanitizeHtml(String(r.answersHtml));
+        body.appendChild(a);
+      } else {
+        body.appendChild(evlPara("The client has not submitted this survey yet.", "sx__muted"));
+      }
+      var h2 = document.createElement("h4"); h2.textContent = "Business profile"; body.appendChild(h2);
+      if (r.profileHtml) {
+        var b = document.createElement("div"); b.className = "evl__answers";
+        b.innerHTML = sanitizeHtml(String(r.profileHtml));
+        body.appendChild(b);
+      } else {
+        body.appendChild(evlPara(r.profileNote || "No business profile yet.", "sx__muted"));
+      }
+    } catch (e) {
+      if (e.status === 401) { closeEvl(); showLogin(); return; }
+      body.innerHTML = "";
+      body.appendChild(evlPara(e.message, "form-error"));
+    }
+  }
+
+  // Send Evaluation (ruling BE10): any number of areas; two or three are
+  // advised, more than three warns and still sends. The button is never
+  // disabled — choosing nothing is named on click.
+  function openEvlSend() {
+    if (!currentDetail) return;
+    if (!evl.areas.length) {
+      notice("evlNotice", "No evaluation areas are available to send here yet.", "error");
+      return;
+    }
+    openEvl("Send Evaluation");
+    var body = $("evlModalBody");
+    body.appendChild(evlPara("Choose the areas the client wants evaluated. The client gets " +
+      "one email with one link. They answer a short business profile the first time, then " +
+      "one survey for each area."));
+    body.appendChild(evlPara("Two or three areas at a time works best: clients finish them. " +
+      "You can send more areas in a later round.", "sx__muted"));
+    var list = document.createElement("div"); list.className = "evl__areas";
+    evl.areas.forEach(function (a) {
+      var lab = document.createElement("label"); lab.className = "evl__area";
+      var cb = document.createElement("input"); cb.type = "checkbox"; cb.value = a.key;
+      lab.appendChild(cb); lab.appendChild(document.createTextNode(" " + a.title));
+      list.appendChild(lab);
+    });
+    body.appendChild(list);
+    var warn = evlPara("", "sx__notice is-warn"); warn.hidden = true; body.appendChild(warn);
+    var err = evlPara("", "sx__notice is-error"); err.hidden = true; body.appendChild(err);
+    function picked() {
+      return Array.prototype.filter.call(list.querySelectorAll("input"), function (c) { return c.checked; })
+        .map(function (c) { return c.value; });
+    }
+    list.addEventListener("change", function () {
+      var n = picked().length;
+      warn.hidden = n <= evl.advisedMax;
+      warn.textContent = "You chose " + n + " areas. Clients finish two or three at a time " +
+        "far more often than more. You can still send all of them.";
+    });
+    var sending = false;
+    var sendBtn = evlButton("Send", false, async function () {
+      if (sending) return;
+      var areas = picked();
+      if (!areas.length) { err.textContent = "Choose at least one area to send."; err.hidden = false; return; }
+      err.hidden = true; sending = true;
+      var done = window.CBMBusy ? CBMBusy.start(sendBtn) : function () {};
+      try {
+        var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/evaluations/send",
+                            { method: "POST", body: JSON.stringify({ areas: areas }) });
+        closeEvl();
+        notice("evlNotice", "Round " + res.round + " created: " + (res.areas || []).join(", ") +
+          ". The email is open: read it, change anything you like, and press Send.", "success");
+        renderEvaluations(true);
+        evlOpenEmail(res.email, res.round);
+      } catch (e) {
+        if (e.status === 401) { closeEvl(); showLogin(); return; }
+        err.textContent = e.message; err.hidden = false;
+      } finally { sending = false; done(); }
+    });
+    $("evlModalFoot").appendChild(sendBtn);
+    $("evlModalFoot").appendChild(evlButton("Cancel", true, closeEvl));
+  }
+  if ($("evlSendBtn")) $("evlSendBtn").addEventListener("click", openEvlSend);
 
   // --- Events tab (partner + funder domains) ---------------------------------
   // Phase B of prds/mailing-list-and-event-sponsorship-plan.md. The server

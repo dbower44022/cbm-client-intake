@@ -43,7 +43,11 @@
      notice(text, kind)             the page's notice line ("success"/"error")
 
    ``pre`` is what the dialog opens with: {to, subject, replyToId, quote,
-   forward, forwardCommunicationId, backToConv}.
+   forward, forwardCommunicationId, backToConv, bodyHtml, draftName}.
+   ``bodyHtml`` is a message written for the person to edit before sending
+   (the Business Evaluation email): it opens above the signature and counts
+   as unsent work, so closing asks first. ``draftName`` keeps its draft apart
+   from the record's ordinary new-email draft.
 
    The returned ``guard`` is {dirty(), discard(), send(), backConvId}: the host
    wires Escape, the × and the backdrop to its requestClose, and Ctrl+Enter to
@@ -334,7 +338,7 @@
       senderMailbox = mb; senderSignature = sig || "";
       if (host.mailbox && host.mailbox.set) host.mailbox.set(mb, sig || "");
     }
-    var replyKey = pre.replyToId || null;
+    var replyKey = pre.replyToId || pre.draftName || null;
     var draftKeyOf = host.draftKey || function (rk) {
       var seg = window.location.pathname.split("/").filter(Boolean)[0] || "";
       return "cbmDraft:" + seg + ":" + (record.id || "none") + ":" + (rk || "new");
@@ -564,7 +568,17 @@
     var pristineBodies = {};   // every auto-generated body state we've set
     function markPristine(v) { pristineBodies[String(v || "")] = 1; }
     function bodyPristine() { return !!pristineBodies[String(bodyValue() || "")]; }
+    // A prefilled message (pre.bodyHtml) is never "pristine": the person has
+    // not sent it yet. The signature follows it, re-seeded only while the
+    // body is still exactly what was seeded.
+    var prefillHtml = pre.bodyHtml || "";
+    var prefillSeeded = null;
+    function seedPrefill() {
+      setBody(prefillHtml + (senderSignature ? "<p><br></p>" + senderSignature : ""));
+      prefillSeeded = bodyValue();
+    }
     function seedSignature() {
+      if (prefillHtml) { if (bodyValue() === prefillSeeded) seedPrefill(); return; }
       if (!senderSignature) return;
       if (!bodyPristine()) return;  // the user already typed — never overwrite
       setBody("<p><br></p><p><br></p>" + senderSignature +
@@ -693,6 +707,7 @@
       setBody("<p><br></p>" + quoteHtml);
       markPristine(bodyValue());
     }
+    if (prefillHtml) seedPrefill();
     // Cached signature seeds now; a first-ever compose seeds when the
     // mailbox fetch above resolves.
     if (senderSignature) seedSignature();

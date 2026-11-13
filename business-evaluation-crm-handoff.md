@@ -1,16 +1,16 @@
 # CRM handoff — Business Evaluation phase 1: `CBusinessEvaluation`
 
-Last Updated: 11-13-26 01:32 · Revision 0.1 — see change log at the end.
+Last Updated: 11-13-26 13:55 · Revision 0.2 — see change log at the end.
 
 One new record type: one Business Evaluation record per evaluation area per
 engagement, linked to the engagement, the client profile, the approving user
 and the review session. Two new fields on the client profile hold the business
-profile survey's answers. Plus one role grant. Design:
+profile survey's answers. Plus two role grants: the org-wide API key's (phase 1) and the Mentor Role's (phase 2). Design:
 `prds/business-evaluation-plan.md` § 5 (rulings BE7, BE9, BE14, BE17); build
 prompt: `prompts/business-evaluation-phase1-prompt-v0.1.md`, step 5.
 
 **Additive.** One entity, 18 fields on it, 2 fields on `CClientProfile`,
-4 links, Multiple Assigned Users and Collaborators switched on, 1 role grant.
+4 links, Multiple Assigned Users and Collaborators switched on, 2 role grants.
 Nothing removed, renamed or narrowed. Safe ahead of the code: the application
 feature-detects the entity and stays dark behind `BUSINESS_EVALUATION`.
 
@@ -18,7 +18,7 @@ feature-detects the entity and stays dark behind `BUSINESS_EVALUATION`.
 
 | CRM | State | Evidence |
 |---|---|---|
-| crm-test | **Done 11-13-26** by Claude: `scripts/apply_crm_plan.py crm-plans/business-evaluation.json --apply --expect 89d89d28b53b` created and read back the entity, its settings, 20 fields and 4 links; `scripts/migrate_evaluation_roles.py --apply` set and read back the grant and rebuilt (HTTP 200). The org-wide key lists `CBusinessEvaluation` (HTTP 200, total 0); `scopes.CBusinessEvaluation` reads `assignedUsers: true`, `collaborators: true`. The non-admin check comes with phase 2, when mentors first see the records. | The applier's and the role script's output. |
+| crm-test | **Done 11-13-26** by Claude: `scripts/apply_crm_plan.py crm-plans/business-evaluation.json --apply --expect 89d89d28b53b` created and read back the entity, its settings, 20 fields and 4 links; `scripts/migrate_evaluation_roles.py --apply` set and read back the grant and rebuilt (HTTP 200). The org-wide key lists `CBusinessEvaluation` (HTTP 200, total 0); `scopes.CBusinessEvaluation` reads `assignedUsers: true`, `collaborators: true`. **Phase 2, 11-13-26**: the Mentor Role grant applied and read back (`{'create': 'yes', 'read': 'own', 'edit': 'own', 'stream': 'own', 'delete': 'no'}`), rebuild HTTP 200; the non-admin check passed — Doug, signed in as Joe Mentor, sent, read, expired and declined Brightline Bakehouse's evaluation. | The applier's and the role script's output. |
 | Production | **Not applied.** At a Sunday 17:00 UTC slot, after crm-test's live check. | — |
 | Boston | **Owed** with its release. | — |
 
@@ -38,8 +38,11 @@ Decided here, and said so:
   learned that section for this change.
 - **`name` is required by the Base type**, so the application names each
   record "{Area} — {Company}".
-- **Grant:** `CustomAppAPIRole` create, read all, edit all. The Mentor Role's
-  grant comes with phase 2.
+- **Grants:** `CustomAppAPIRole` create, read all, edit all. **Mentor Role**
+  create, read own, edit own, stream own (phase 2): "own" is the role's level
+  on `CEngagement`, read on crm-test, and with Multiple Assigned Users it
+  reaches every record carrying the mentor in `assignedUsers`. Create lets a
+  mentor's Send write the records as the mentor.
 - **No sandbox seeder stage.** Business Evaluation records are made by tests;
   the nightly reset truncating them leaves nothing broken.
 
@@ -72,8 +75,8 @@ PYTHONPATH=. uv run python scripts/run_with_admin.py scripts/migrate_evaluation_
    `entityDefs.User.links` carries `cApprovedBusinessEvaluations`.
 2. `scopes.CBusinessEvaluation`: `assignedUsers` and `collaborators` both true.
 3. As the org-wide key: `GET /CBusinessEvaluation?maxSize=1` answers 200.
-4. A real non-admin pass, with phase 2: a Mentor Team member sees the
-   Business Evaluation records of their own engagement.
+4. A real non-admin pass: a Mentor Team member opens the Evaluations tab on
+   their own engagement and sends an evaluation (done on crm-test 11-13-26).
 
 ## 4. Production and Boston
 
@@ -91,3 +94,4 @@ then the role script against Boston.
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
 | 0.1 | 11-13-26 01:32 | Claude (Claude Code) | Created. Applied and verified on crm-test the same day. |
+| 0.2 | 11-13-26 13:55 | Claude (Claude Code) | Phase 2: the Mentor Role grant, applied on crm-test and checked as a real non-admin. |

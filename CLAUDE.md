@@ -659,6 +659,7 @@ guide `event-administration.md`; activation `EVENTS-SETUP.md`. **Detail:
 
 The free evaluation a mentor offers a new client (`prds/business-evaluation-plan.md`,
 rulings settled), dark behind `BUSINESS_EVALUATION`. **Detail: `evaluation/CLAUDE.md`.**
+The mentor side is Client Management's Evaluations tab (`DomainConfig.evaluations_tab`).
 The link is a random token, never a CRM id; the draft report never reaches the client.
 
 ## Cross-cutting subsystems
@@ -1252,4 +1253,7 @@ the strength of it.
 - **v0.324.0 (2026-11-13) is live on both deployments, switch off**
   (`/healthz` read 0.326.0 at 11:51): Business Evaluation phase 1. CRM change
   on crm-test only. Owed in #83.
+- **v0.328.0 (2026-11-13) committed, not pushed**: Business Evaluation
+  phase 2, the mentor side (`BUSINESS_EVALUATION`, off in production, on at
+  crm-test's `/setup`). Checked locally by Doug as Joe Mentor. Owed in #83.
 Everything else still owed is in `OPEN-ITEMS.md`.
