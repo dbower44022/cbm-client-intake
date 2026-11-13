@@ -5,6 +5,29 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.328.1] — 2026-11-13
+
+**fix: the Integrations tab — three defects found by the first real diagnosis
+on crm-test.** Dark behind **`INTEGRATIONS_TAB`**. `OPEN-ITEMS.md` #82.
+
+The first real diagnosis ran on crm-test 11-13-26 12:23 (Doug, from the
+runbook https://claude.ai/artifact/GpJK8C5zCf27g82BieDqz8): $0.26, under a
+minute, a correct diagnosis — the Zoom account ID, client ID and client secret
+were never set — that also caught the deliberate host change and made the
+client secret a manual step. It found:
+
+- **The setup checklist went stale after a test** ("has not been run yet" for
+  a test that had just failed): the page refreshed the result but not the
+  checklist, which the server works out from the stored runs. The page now
+  reads its data again after Test Integration, when a diagnosis finishes, and
+  after a plan action (`refreshPage` in `setup/frontend/app.js`).
+- **The agent's spend went stale after a diagnosis** ("$0.00 of $25.00"
+  after one costing $0.26). Same fix.
+- **The confidence appeared twice and disagreed**: the agent wrote its own
+  inside the diagnosis. The system prompt now keeps the overall confidence in
+  the confidence field only; the diagnosis may still say which parts are more
+  or less certain.
+
 ## [0.328.0] — 2026-11-13
 
 **feat: Business Evaluation, phase 2 — the mentor side.** Dark behind

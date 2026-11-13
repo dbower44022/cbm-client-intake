@@ -534,6 +534,9 @@
       var result = await api("/integrations/" + encodeURIComponent(key) + "/test", { method: "POST" });
       i.status.tested = result.run;
       renderIntegrations();
+      // The setup checklist and the diagnosis are worked out on the server
+      // from the stored runs: read them again so neither is left stale.
+      await refreshPage();
     } catch (e) {
       err = $("testError");
       if (err) { err.hidden = false; text(err, e.message); }
@@ -560,6 +563,15 @@
     discarded: "Discarded", no_plan: "No plan",
   };
   var diagPoll = null;
+
+  // Reads the whole page payload again (settings, status lines, setup
+  // checklists, fix plans, the agent's spend) and redraws. Never throws.
+  async function refreshPage() {
+    try {
+      state.page = await api("/settings");
+      renderAll();
+    } catch (e) { /* the page keeps what it showed */ }
+  }
 
   function money(n) { return "$" + (Math.round((n || 0) * 100) / 100).toFixed(2); }
 
@@ -659,8 +671,8 @@
       diagPoll = null;
       try {
         var r = await api("/integrations/" + encodeURIComponent(key) + "/fixplan");
-        setPlan(key, r.plan);
-        if (r.plan && r.plan.status === "diagnosing") pollDiagnosis(key);
+        if (r.plan && r.plan.status === "diagnosing") { setPlan(key, r.plan); pollDiagnosis(key); }
+        else { await refreshPage(); setPlan(key, r.plan); }
       } catch (e) { diagError(e.message); }
     }, 5000);
   }
@@ -676,7 +688,7 @@
   async function planAction(path, body) {
     try {
       var r = await api(path, { method: "POST", body: JSON.stringify(body || {}) });
-      if (r.page) state.page = r.page;
+      if (r.page) { state.page = r.page; renderAll(); } else { await refreshPage(); }
       setPlan(r.plan.integration, r.plan);
     } catch (e) { diagError(e.message); }
   }

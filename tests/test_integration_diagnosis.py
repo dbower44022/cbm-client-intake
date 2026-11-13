@@ -504,3 +504,25 @@ def test_the_new_tables_are_cleared_by_the_sandbox_reset_and_follow_the_ticks():
     assert {"integration_fix_plan", "integration_event"} <= set(RESET_TABLES)
     text = (Path(__file__).resolve().parents[1] / "alembic" / "versions" / "0046_integration_fix_plan.py").read_text()
     assert 'down_revision = "0045_integration_checklist_tick"' in text
+
+
+def test_the_overall_confidence_lives_only_in_its_field():
+    """The live check on crm-test (11-13-26) showed the confidence twice, the
+    two disagreeing; the prompt now keeps the overall one in the field."""
+    assert "goes only in the confidence field" in diagnosis.SYSTEM
+    assert "never repeated as a line of its own" in diagnosis.SYSTEM
+
+
+def test_the_page_reads_its_data_again_after_a_test_and_a_diagnosis():
+    """The live check found the setup checklist and the agent's spend stale
+    after a test and after a diagnosis: both are worked out on the server."""
+    from pathlib import Path
+
+    src = (Path(__file__).resolve().parents[1] / "setup" / "frontend" / "app.js").read_text()
+    run_test = src[src.index("async function runTest"):]
+    run_test = run_test[:run_test.index("\n  }\n")]
+    assert "await refreshPage()" in run_test
+    poll = src[src.index("function pollDiagnosis"):]
+    poll = poll[:poll.index("\n  }\n")]
+    assert "refreshPage()" in poll
+    assert 'state.page = await api("/settings")' in src
