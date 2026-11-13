@@ -57,9 +57,13 @@ _GSM7_EXT = set("^{}\\[~]|€")
 class SmsError(Exception):
     """Any texting-service failure. ``permanent`` means: never retry this number."""
 
-    def __init__(self, message: str, *, permanent: bool = False, ambiguous: bool = False):
+    def __init__(self, message: str, *, permanent: bool = False, ambiguous: bool = False,
+                 status_code: Optional[int] = None, code: Any = None):
         super().__init__(message)
         self.permanent = permanent
+        #: The HTTP status and Twilio's own error code, when Twilio answered.
+        self.status_code = status_code
+        self.code = code
         #: The request may have reached the service (a timeout after sending):
         #: the message may or may not have gone out.
         self.ambiguous = ambiguous
@@ -127,6 +131,36 @@ class TwilioSmsClient:
             raise SmsError(f"HTTP {resp.status_code} [{code}] {message}",
                            permanent=code in PERMANENT_ERRORS or resp.status_code in (400, 404))
         return SentMessage(id=str(payload.get("sid") or ""), status=str(payload.get("status") or "queued"))
+
+    # --- reads, for the integration test (never send) -----------------------
+
+    async def _get(self, path: str, params: Optional[dict[str, str]] = None) -> dict[str, Any]:
+        url = f"{TWILIO_BASE_URL}/Accounts/{self._sid}{path}"
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout, transport=self._transport) as http:
+                resp = await http.get(url, params=params, auth=self._auth)
+        except httpx.HTTPError as exc:
+            raise SmsError(f"the texting service could not be reached ({type(exc).__name__})") from exc
+        try:
+            payload = resp.json()
+        except ValueError:
+            payload = {}
+        if resp.status_code >= 400:
+            code = payload.get("code") if isinstance(payload, dict) else None
+            message = (payload.get("message") if isinstance(payload, dict) else "") or resp.text[:200]
+            raise SmsError(f"HTTP {resp.status_code} [{code}] {message}",
+                           status_code=resp.status_code, code=code)
+        return payload if isinstance(payload, dict) else {}
+
+    async def get_account(self) -> dict[str, Any]:
+        """``GET /Accounts/{sid}.json``: ``status`` (active, suspended, closed),
+        ``type`` (Trial, Full), ``friendly_name``."""
+        return await self._get(".json")
+
+    async def find_number(self, phone_number: str) -> dict[str, Any]:
+        """``GET /Accounts/{sid}/IncomingPhoneNumbers.json?PhoneNumber=…``: the
+        raw list answer, whose ``incoming_phone_numbers`` carry ``capabilities``."""
+        return await self._get("/IncomingPhoneNumbers.json", {"PhoneNumber": phone_number})
 
 
 def make_client(settings: Settings) -> SmsClient:

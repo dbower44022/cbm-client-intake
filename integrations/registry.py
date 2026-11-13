@@ -179,6 +179,7 @@ INTEGRATIONS: tuple[Integration, ...] = (
         credentials=("fathom_api_key",),
         features=("fathom",),
         test_phase=3,
+        test_module="integrations.checks.fathom",
     ),
     Integration(
         key="constant_contact", name="Constant Contact",
@@ -194,6 +195,7 @@ INTEGRATIONS: tuple[Integration, ...] = (
         features=("mailing",),
         runbooks=("MAILING-SETUP.md",),
         test_phase=3,
+        test_module="integrations.checks.constant_contact",
     ),
     Integration(
         key="lob", name="Lob", in_use_setting="lob_in_use",
@@ -201,6 +203,7 @@ INTEGRATIONS: tuple[Integration, ...] = (
         used_by=(UsedBy("campaigns_enabled"),),
         credentials=("postal_api_key",),
         test_phase=3,
+        test_module="integrations.checks.lob",
     ),
     Integration(
         key="twilio", name="Twilio", in_use_setting="twilio_in_use",
@@ -208,6 +211,7 @@ INTEGRATIONS: tuple[Integration, ...] = (
         used_by=(UsedBy("campaigns_sms", blocks=True),),
         credentials=("sms_account_sid", "sms_auth_token", "sms_from_number"),
         test_phase=3,
+        test_module="integrations.checks.twilio",
     ),
     Integration(
         key="anthropic", name="Anthropic", in_use_setting="anthropic_in_use",
@@ -215,12 +219,14 @@ INTEGRATIONS: tuple[Integration, ...] = (
         credentials=("anthropic_api_key",),
         features=("ai_research",),
         test_phase=3,
+        test_module="integrations.checks.anthropic_api",
     ),
     Integration(
         key="youtube", name="YouTube", in_use_setting="youtube_in_use",
         credentials=("youtube_api_key",),
         features=("events_library",),
         test_phase=3,
+        test_module="integrations.checks.youtube",
     ),
 )
 

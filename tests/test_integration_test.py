@@ -140,9 +140,8 @@ def test_one_test_at_a_time(monkeypatch):
     assert run(both()) == {"ok": True}
 
 
-def test_only_the_three_phase_2_integrations_are_testable():
-    assert {k for k, i in INTEGRATIONS.items() if i.testable} == {
-        "espocrm", "google_workspace", "zoom"}
+def test_every_integration_is_testable_since_phase_3():
+    assert {k for k, i in INTEGRATIONS.items() if i.testable} == set(INTEGRATIONS)
 
 
 # --- EspoCRM ----------------------------------------------------------------------
@@ -696,7 +695,13 @@ def test_the_endpoints_are_absent_with_the_switch_off(monkeypatch):
     assert client.get("/setup/api/integrations/zoom/test").status_code == 404
 
 
-def test_a_phase_3_integration_says_when_its_test_comes(monkeypatch):
+def test_an_integration_without_a_test_says_when_its_test_comes(monkeypatch):
+    import dataclasses
+
+    import integrations.registry as registry
+
+    untested = dataclasses.replace(registry.BY_KEY["fathom"], test_module="")
+    monkeypatch.setitem(registry.BY_KEY, "fathom", untested)
     client = TestClient(_app(monkeypatch, {"INTEGRATIONS_TAB": "true"}))
     resp = client.post("/setup/api/integrations/fathom/test")
     assert resp.status_code == 409 and "phase 3" in resp.json()["detail"]
@@ -733,7 +738,7 @@ def test_a_run_is_stored_logged_and_read_back(monkeypatch):
     assert zoom_entry["status"]["tested"]["outcome"] == FAILED
     assert zoom_entry["status"]["tested"]["finishedAt"] == "2026-11-13T06:00:02+00:00"
     fathom = next(i for i in page["integrations"] if i["key"] == "fathom")
-    assert fathom["testable"] is False and fathom["status"]["tested"] is None
+    assert fathom["testable"] is True and fathom["status"]["tested"] is None
 
 
 def test_the_page_never_reads_runs_with_the_switch_off(monkeypatch):

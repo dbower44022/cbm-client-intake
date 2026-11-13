@@ -5,6 +5,56 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.323.0] — 2026-11-13
+
+**feat: the Integrations tab, phase 3 — the integration test for Fathom,
+Constant Contact, Lob, Twilio, Anthropic and YouTube.** Still dark behind
+**`INTEGRATIONS_TAB`**. Plan `prds/integrations-tab-plan.md` § 3 part 2; the
+check lists Doug approved 11-13-26 (phase 3 stopping point 1);
+`OPEN-ITEMS.md` #82. All nine sub-tabs now carry the Test Integration button.
+Every call is a read: nothing is sent, mailed, texted or written to any
+outside service.
+
+- **Fathom** (`integrations/checks/fathom.py`): the key; one page of
+  `GET /meetings` for the last 30 days. Facts: meetings seen, who recorded
+  them. Plan § 3's "the account the key belongs to" became "who recorded the
+  meetings it sees": Fathom's reference has no call naming a key's account.
+  `FathomError` gains `status_code`; `FathomClient.meetings_page`.
+- **Constant Contact** (`integrations/checks/constant_contact.py`): the
+  credentials; the stored connection (absent, needing re-authorisation, a
+  missing scope: failed); the account summary; the named list with its
+  `membership_count` (absent is ok: the first push creates it); the lead-code
+  field while list sync is on. **The token is refreshed only when due**
+  (Doug's ruling 11-13-26, option A): the test adds no refresh of its own.
+  `MailingClient.lists(membership_count=)`; `MailingError.status_code`.
+- **Lob** (`integrations/checks/lob.py`): the key; **test or live from the
+  key's `test_`/`live_` prefix**, failed when it disagrees with the test mode
+  setting (a live key with test mode on would really print); `GET
+  /postcards?limit=1`; the webhook secret while Lob is chosen. The address
+  check is never called (billed in live mode). Plan § 3's "account" fact
+  dropped: Lob has no account read. `PostalUnavailable`;
+  `LobPostalClient.list_postcards`.
+- **Twilio** (`integrations/checks/twilio.py`): the settings; the account
+  (`status`, `type`; a 403 says test credentials were entered); the sender
+  number among the account's numbers and its `capabilities.sms`; the sending
+  hours and time zone, checked locally (a typo used to fall back to 9-20 in
+  silence). `TwilioSmsClient.get_account` / `find_number`; `SmsError` keeps
+  `status_code` and `code`.
+- **Anthropic** (`integrations/checks/anthropic_api.py`): the key; the Models
+  API list; each configured model (summary, research) retrieved, failed only
+  while its feature is on. No message is sent, so the test costs nothing.
+- **YouTube** (`integrations/checks/youtube.py`): the key and playlist IDs;
+  one `playlists.list` call for all of them. `quotaExceeded` is unknown, the
+  API not enabled is failed, a missing playlist is failed and named. Facts:
+  each title and video count. `YouTubeClient.playlists`; `YouTubeError`
+  keeps `status_code` and `reason`.
+- **Run for real from a laptop 11-13-26** with the keys in `.env`: Fathom
+  passed (0 meetings in 30 days on that key); **YouTube failed on one of the
+  five configured playlists**, which YouTube does not find (the other four
+  read: 4, 2, 1 and 7 videos).
+- Tests: `tests/test_integration_test_phase3.py` (54); the phase 2 file's
+  "only three testable" and "phase 3 placeholder" tests updated.
+
 ## [0.322.0] — 2026-11-13
 
 **feat: the Integrations tab, phase 2 — the integration test for EspoCRM,

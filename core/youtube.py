@@ -34,7 +34,29 @@ _PATH_PREFIXES = ("/embed/", "/v/", "/live/", "/shorts/")
 
 
 class YouTubeError(RuntimeError):
-    """A YouTube Data API call failed."""
+    """A YouTube Data API call failed. ``status_code`` is the HTTP status when
+    the API answered (None when it could not be reached); ``reason`` is
+    Google's error reason, for example ``quotaExceeded``, when it gave one."""
+
+    def __init__(self, message: str, *, status_code: Optional[int] = None,
+                 reason: str = "") -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.reason = reason
+
+
+def _error_reason(resp: httpx.Response) -> str:
+    """Google's error reason from an error body, or empty. Google puts it in
+    ``error.errors[].reason`` and, on newer answers, ``error.details[].reason``."""
+    try:
+        err = (resp.json() or {}).get("error") or {}
+    except ValueError:
+        return ""
+    for key in ("errors", "details"):
+        for item in err.get(key) or []:
+            if isinstance(item, dict) and item.get("reason"):
+                return str(item["reason"])
+    return str(err.get("status") or "")
 
 
 def video_id_from_url(url: str) -> Optional[str]:
@@ -131,3 +153,28 @@ class YouTubeClient:
                 if not page_token:
                     break
         return items
+
+    async def playlists(self, playlist_ids: list[str]) -> list[dict[str, Any]]:
+        """``playlists.list`` for the given ids (``snippet`` and
+        ``contentDetails``) in one call: each found playlist's raw resource.
+        A playlist that does not exist is simply absent from the answer."""
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as http:
+                resp = await http.get(f"{_API}/playlists", params={
+                    "part": "snippet,contentDetails",
+                    "id": ",".join(playlist_ids),
+                    "maxResults": 50,
+                    "key": self._key,
+                })
+        except httpx.HTTPError as exc:
+            raise YouTubeError(f"YouTube could not be reached ({type(exc).__name__}).") from exc
+        if resp.status_code >= 400:
+            reason = _error_reason(resp)
+            raise YouTubeError(
+                f"playlists failed: HTTP {resp.status_code}" + (f" ({reason})" if reason else ""),
+                status_code=resp.status_code, reason=reason,
+            )
+        data = resp.json()
+        if not isinstance(data, dict) or not isinstance(data.get("items"), list):
+            raise YouTubeError("playlists answered without an items list.", status_code=resp.status_code)
+        return data["items"]

@@ -40,7 +40,12 @@ _sleep = asyncio.sleep
 
 
 class FathomError(Exception):
-    """Any Fathom API / transport failure."""
+    """Any Fathom API / transport failure. ``status_code`` is the HTTP status
+    when Fathom answered, None when it could not be reached."""
+
+    def __init__(self, message: str, *, status_code: Optional[int] = None) -> None:
+        super().__init__(message)
+        self.status_code = status_code
 
 
 class FathomClient:
@@ -84,13 +89,15 @@ class FathomClient:
             if resp.status_code >= 400:
                 raise FathomError(
                     f"Fathom {method} {path}: HTTP {resp.status_code} "
-                    f"{resp.text[:300]}"
+                    f"{resp.text[:300]}",
+                    status_code=resp.status_code,
                 )
             return resp.json() if resp.content else {}
         raise FathomError(
             f"Fathom {method} {path}: HTTP {resp.status_code} after retries"
             if resp is not None
-            else f"Fathom {method} {path}: no response"
+            else f"Fathom {method} {path}: no response",
+            status_code=resp.status_code if resp is not None else None,
         )
 
     async def list_meetings(
@@ -119,6 +126,14 @@ class FathomClient:
             cursor = data.get("next_cursor")
             if not cursor:
                 return meetings
+
+    async def meetings_page(self, created_after: datetime) -> dict[str, Any]:
+        """One page of ``GET /meetings`` since ``created_after``, without
+        summaries or action items — the integration test's read. The raw
+        answer, so the caller can tell an unexpected shape from an empty list."""
+        return await self._request("GET", "/meetings", params={
+            "created_after": created_after.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        })
 
     async def get_transcript(self, recording_id: Any) -> list[dict[str, Any]]:
         """The structured transcript entries of one recording (sync mode —

@@ -56,6 +56,10 @@ class PostalAuthError(PostalError):
     """The key was rejected or is missing — a configuration problem."""
 
 
+class PostalUnavailable(PostalError):
+    """Lob could not be reached, or kept answering 429/5xx — nothing was refused."""
+
+
 class PostalSignatureError(PostalError):
     """An inbound event whose signature does not verify."""
 
@@ -211,7 +215,7 @@ class LobPostalClient:
                 return resp.json()
             except ValueError as exc:
                 raise PostalError("Lob answered with a body that is not JSON.") from exc
-        raise PostalError(f"Lob could not be reached: {last}")
+        raise PostalUnavailable(f"Lob could not be reached: {last}")
 
     async def create_postcard(
         self, *, idempotency_key: str, to: Address, template: str, size: str,
@@ -240,6 +244,11 @@ class LobPostalClient:
             expected_delivery=data.get("expected_delivery_date"),
             preview_url=data.get("url"), raw=data,
         )
+
+    async def list_postcards(self, limit: int = 1) -> dict[str, Any]:
+        """``GET /postcards?limit=…`` — the integration test's read. The raw
+        list answer (``object``, ``data``, ``count``)."""
+        return await self._request("GET", f"/postcards?limit={int(limit)}")
 
     async def verify_address(self, address: Address) -> dict[str, Any]:
         data = await self._request("POST", "/us_verifications", json_body={

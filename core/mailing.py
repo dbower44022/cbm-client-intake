@@ -661,10 +661,12 @@ class MailingClient:
 
         assert resp is not None
         if resp.status_code >= 400:
-            raise MailingError(
+            err = MailingError(
                 f"Mailing service {method} {path} failed: HTTP {resp.status_code} "
                 f"{resp.text[:300]}"
             )
+            err.status_code = resp.status_code
+            raise err
         if resp.status_code == 204 or not resp.content:
             return {}
         try:
@@ -701,9 +703,15 @@ class MailingClient:
 
     # --- lists ----------------------------------------------------------------
 
-    async def lists(self) -> list[dict[str, Any]]:
+    async def lists(self, *, membership_count: bool = False) -> list[dict[str, Any]]:
+        """Every list. ``membership_count`` asks for each list's
+        ``membership_count`` (``include_membership_count=all``, read from the
+        vendor's guide 11-13-26)."""
+        params: dict[str, Any] = {"limit": LISTS_PAGE}
+        if membership_count:
+            params["include_membership_count"] = "all"
         out: list[dict[str, Any]] = []
-        async for item in self._iter_pages("/contact_lists", {"limit": LISTS_PAGE}, key="lists"):
+        async for item in self._iter_pages("/contact_lists", params, key="lists"):
             out.append(item)
         return out
 

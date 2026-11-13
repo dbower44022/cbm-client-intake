@@ -1,6 +1,6 @@
 # Integrations tab — System Settings plan
 
-Last Updated: 11-13-26 01:21 · Revision 0.7
+Last Updated: 11-13-26 01:42 · Revision 0.8
 
 This is the design record for a new top-level **Integrations** tab on the System
 Settings page (`/setup`). It holds Doug's rulings, the contents of each
@@ -331,6 +331,7 @@ phase ends at a **stopping point**: the work pauses for Doug's go-ahead.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.8 | 11-13-26 01:42 | Claude (Claude Code) | Phase 3 built: v0.323.0, the integration test for Fathom, Constant Contact, Lob, Twilio, Anthropic and YouTube (the check lists Doug approved 11-13-26; Constant Contact refreshes only when due, option A). Changed from § 3: Fathom's account fact became the meetings' recorders (no who-am-I call); Lob's account fact dropped (no account read); Twilio gains a local sending-hours check, Constant Contact the lead-code field. Not pushed. |
 | 0.7 | 11-13-26 01:21 | Claude (Claude Code) | Phase 2 built: v0.322.0, the integration test for EspoCRM, Google Workspace and Zoom. § 9's EspoCRM version read is settled: `GET App/user` → `settings.version` (crm-test, 9.3.10). Not pushed. |
 | 0.6 | 11-13-26 00:36 | Claude (Claude Code) | Phase 1 built: v0.321.0 (the registry, the tags, the "in use" settings and refusals, the sub-tab shell, the switch). Not pushed. |
 | 0.5 | 11-13-26 00:30 | Claude (Claude Code) | Phase 1 mapping approved by Doug 11-13-26 with four corrections, recorded as mapping decisions: (1) EspoCRM has no "in use" setting — it is always in use and its warnings are never hidden; (2) Lob's switch is `postal_provider = lob`, not `campaigns_enabled`, and `alert_email_from` blocks nothing; (3) a switch and the settings that only serve it stay together — `comms_digest` stays on the Settings tab with its hour, time zone and re-check, listed under Google's "Used by"; `campaign_send_report_seconds` stays with its switch; every `enrichment_ai_*` setting, the monthly budget and caps included, moves to Anthropic with `enrichment_ai`; Zoom's attendance timers move; (4) the "in use" refusals also cover the "Used by" switches whose feature cannot work at all without the integration: `campaigns_sms` (Twilio); `campaigns_email` and `campaign_send_report` (Constant Contact); `events_confirmations`, `events_reminders`, `lead_outreach` and `mentor_provision_users` (Google). Everything else as proposed. The full mapping is `core/settings_registry.INTEGRATION_TAGS`. |
