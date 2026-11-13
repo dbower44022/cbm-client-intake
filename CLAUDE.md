@@ -1253,7 +1253,9 @@ the strength of it.
 - **v0.324.0 (2026-11-13) is live on both deployments, switch off**
   (`/healthz` read 0.326.0 at 11:51): Business Evaluation phase 1. CRM change
   on crm-test only. Owed in #83.
-- **v0.328.0 (2026-11-13) committed, not pushed**: Business Evaluation
-  phase 2, the mentor side (`BUSINESS_EVALUATION`, off in production, on at
-  crm-test's `/setup`). Checked locally by Doug as Joe Mentor. Owed in #83.
+- **v0.328.0 (2026-11-13) is live on both deployments** (pushed 11-13-26,
+  `/healthz` read 14:07): Business Evaluation phase 2, the mentor side
+  (`BUSINESS_EVALUATION`, off in production, on at crm-test's `/setup`).
+  Checked locally by Doug as Joe Mentor; the real send on crm-test is owed
+  in #83.
 Everything else still owed is in `OPEN-ITEMS.md`.
