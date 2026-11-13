@@ -1029,6 +1029,12 @@ found; move resolved items to the bottom with the resolution date.
     decisions: the five-week series as one event or five; the Holiday Social
     Internal or Public; the presenter title / photo / topic data points.
     Kickoff for the next session: `prompts/events-session-2026-10-26.md`.
+    **Track C started 11-12-26 (Doug configuring Zoom):** step page
+    https://claude.ai/artifact/Rq3SffAdijgpbWvAijspWB (crm-test, sections A to G:
+    the Server-to-Server OAuth app, `scripts/probe_zoom.py`, the `/setup`
+    values, a test webinar created, registered for, moved and cancelled).
+    `EVENTS-SETUP.md` § 5 rewritten to match (revision 1.1). No result
+    reported yet; the six scope names are unconfirmed until the probe passes.
     **THE TEST IS COMPLETE — 10-19-26 00:51.** Every section of the runbook
     (https://claude.ai/artifact/Dkbb1t7MKFb9vnjabpcyMc, rev 2.2) ran on
     production 10-18/19-26 and matched after the corrections below; the

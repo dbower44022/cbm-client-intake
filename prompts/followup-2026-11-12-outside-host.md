@@ -1,6 +1,6 @@
 # Kickoff — live check of v0.320.0, an event run by an outside host
 
-Last Updated: 11-12-26 10:54 · Revision 1.0
+Last Updated: 11-13-26 00:20 · Revision 1.1
 
 Operating mode: DETAIL.
 
@@ -18,10 +18,13 @@ Steps, in order. Stop after each and report to Doug.
 2. **Live check on crm-test, before 04:00 UTC the same day** (the nightly reset empties `hostedBy` and removes events created that day). As a real non-admin in the Marketing Admin Team: Event Administration → "AI for Small Business" (recreate it if the reset took it: Public, Hybrid, Show this event ticked) → Hosted by → Outside host. The box below must read "Host's link (join or registration page)". Type `partner.example/x` first and save: the save must refuse, naming `https://`. Then type `https://example.com/` and save. Check: the grid reads "Public, outside host"; the Website preview shows the event with **Register with the host**, which opens the link in a new tab; the event's own page (`/webinars/<slug>`) shows the same button and no sign-up form; the Registrants tab shows the outside-host note. Then switch it back to CBM Zoom and confirm the box reads "Join URL" again.
 3. **Close the build half of #80** in `OPEN-ITEMS.md`; what stays owed is production and Boston CRM (`cevent-hostedby-crm-handoff.md`, plan fingerprint `6eb4fc2d5940`) at a Sunday slot.
 
+Separately, Doug began connecting Zoom (Track C) on 11-12-26 with the step page https://claude.ai/artifact/Rq3SffAdijgpbWvAijspWB; ask how far he got before starting it again. `EVENTS-SETUP.md` § 5 matches it.
+
 Never `git stash` in this working copy: parallel sessions share it.
 
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 11-13-26 00:20 | Claude (Claude Code) | Zoom step page noted. |
 | 1.0 | 11-12-26 10:54 | Claude (Claude Code) | Created at the close of the 11-12-26 session. |

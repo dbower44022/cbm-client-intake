@@ -1,5 +1,7 @@
 # Events & Webinars — activation and testing runbook
 
+Last Updated: 11-13-26 00:20 · Revision 1.1 — change log at the end.
+
 How to switch the Events feature on and drive it end to end. Written for
 **crm-test first**; production is a separate, later pass.
 
@@ -204,40 +206,70 @@ tidy instance — they're named `TEST`/`Ada Tester` etc.
 
 ## 5. Zoom (when you're ready)
 
-Nothing above needs Zoom. To add it:
+Nothing above needs Zoom. **Follow the step page, not a summary:**
+https://claude.ai/artifact/Rq3SffAdijgpbWvAijspWB (crm-test, 66 steps, written
+11-12-26). This section says what it does and why; the page is what you follow.
 
-1. **Zoom Marketplace → Develop → Build App → Server-to-Server OAuth**, on the
-   account that owns `zweb@cbmentors.org`.
-2. Scopes: webinar read/write, registrant read/write, report read, user read.
-3. Capture **Account ID, Client ID, Client Secret**.
-4. Check it before touching the app:
+1. **The connection.** Zoom App Marketplace → Develop → Build App →
+   **Server-to-Server OAuth App**, on the account that holds
+   `zweb@cbmentors.org`, by an account owner or administrator. Six scopes:
+   `webinar:write:webinar:admin`, `webinar:read:webinar:admin`,
+   `webinar:write:registrant:admin`, `webinar:read:list_registrants:admin`,
+   `report:read:list_webinar_participants:admin`, `user:read:user:admin`.
+   **These names are from Zoom's granular scheme as known on 11-12-26, not yet
+   confirmed against a live account** — the probe in step 2 is what proves them.
+2. **The probe, before touching the application.** `scripts/probe_zoom.py`,
+   read-only: it checks the credentials, the scopes granted, the host's
+   **webinar licence and capacity**, and whether the **participant report** is
+   readable (automatic attendance depends on it; a new connection has no past
+   webinar, so a `[warn]` there is expected). Give it the three values with
+   `read -r` / `read -rs` and `export` so the secret never reaches the command
+   history, and `unset` them afterwards:
 
 ```bash
-ZOOM_ACCOUNT_ID=... ZOOM_CLIENT_ID=... ZOOM_CLIENT_SECRET=... \
 PYTHONPATH=. uv run python scripts/probe_zoom.py
 ```
 
-This verifies the credentials, the host's **webinar licence and capacity**, and
-— most importantly — whether the **participant report** is readable. That last
-one needs a paid plan plus the report scope, and automatic attendance depends
-entirely on it. The probe exits non-zero and names any blocker.
+3. **The settings — in System Settings (`/setup`), not the overlay.** Every
+   Zoom value is editable there and reaches the web process AND the worker
+   (the worker pushes registrants to Zoom at delivery; an overlay entry on the
+   web component alone, as this section used to say, starves it):
 
-5. Then add to the crm-test overlay's **web** component:
+| Setting at `/setup` | Key | Value |
+|---|---|---|
+| Zoom account ID | `zoom_account_id` | from the app's App Credentials |
+| Zoom client ID | `zoom_client_id` | from the app's App Credentials |
+| Zoom client secret | `zoom_client_secret` | from the app's App Credentials — stored encrypted, never shown |
+| Zoom host | `zoom_host_email` | `zweb@cbmentors.org` (the default; check, don't change) |
+| Zoom webinar provisioning | `zoom_events` | On |
+| Registration confirmation emails | `events_confirmations` | On |
 
-| Variable | Value |
-|---|---|
-| `ZOOM_EVENTS` | `true` |
-| `ZOOM_ACCOUNT_ID` | from step 3 |
-| `ZOOM_CLIENT_ID` | from step 3 |
-| `ZOOM_CLIENT_SECRET` | from step 3 — **encrypted secret** |
-| `ZOOM_HOST_EMAIL` | `zweb@cbmentors.org` (the default; only set to override) |
+   The last row matters because of **ruling D3-2 (10-22-26): one email, ours.**
+   `core/zoom.webinar_settings` switches Zoom's own registrant emails off, so
+   with confirmations off a registrant receives nothing and no join link.
+   *Feature readiness → Zoom webinars* then lists nothing missing.
 
-6. Zoom test pass: create a Virtual event → **Create / sync Zoom webinar** →
-   confirm in Zoom that it exists, **registration is on**, and **reminder
-   emails are off**. Register through the API and confirm the person appears as
-   a Zoom registrant and gets the confirmation email with a join link. Edit the
-   time and confirm the webinar moves. Cancel the event and confirm the webinar
-   is cancelled.
+4. **Test pass** (the step page's sections D to G):
+   - A Public, Virtual, shown event → **Create / sync Zoom webinar** → the
+     notice *Zoom webinar created.*; the Overview carries the webinar ID and a
+     zoom.us Join URL. A new event does not provision on save — the create
+     endpoint never calls Zoom; the button (or a later save) does.
+   - In Zoom: the webinar exists under `zweb@`, registration required and
+     auto-approved, **Zoom's confirmation and reminder emails off**.
+   - Register through **Website preview** with a real address: the Registrants
+     tab shows *Registered* and *Confirmed*, the inbox holds **one email from
+     us** with the personal join link, and Zoom lists the registrant.
+   - Move the start time → *Zoom webinar patched.* and Zoom follows.
+   - Event Administration has no Cancel for an event (status is not in the
+     editor), so the clean-up is **Format → In-Person** (and untick Show this
+     event) → *Zoom webinar cancelled.*, and the webinar leaves Zoom.
+   - **Finish the same day, before 04:00 UTC**: the nightly reset deletes an
+     event created that day and would orphan its webinar in Zoom.
+5. **Production** is a separate pass after crm-test succeeds, through the same
+   `/setup` rows on production. The same Zoom app serves both deployments.
+
+An event **run by an outside host** (rulings D3-3, D3-4, v0.320.0) never
+touches Zoom — see `event-administration.md`.
 
 ---
 
@@ -467,3 +499,10 @@ Honest list, so nothing surprises you mid-test:
   returned HTTP 503 during the website preview. The WordPress plugin will
   supply the proxy; the public API returns the direct URL for callers that can
   use it.
+
+## Change log
+
+| Rev | Date (MM-DD-YY HH:MM) | Author | Change |
+|---|---|---|---|
+| 1.1 | 11-13-26 00:20 | Claude (Claude Code) | § 5 Zoom rewritten: settings live in System Settings (both processes), granular scope names (unconfirmed), ruling D3-2's one-email test pass, the In-Person clean-up, the same-day deadline; points to the step page. Revision block added. |
+| 1.0 | 2026-07-26 | Claude (Claude Code) | Original runbook (no revision block until 1.1). |
