@@ -1,6 +1,6 @@
 # Build orchestrator — Business Evaluation
 
-Last Updated: 11-13-26 11:58 · Revision 0.4 — see change log at the end.
+Last Updated: 11-13-26 11:50 · Revision 0.4 — see change log at the end.
 
 This file runs the whole build of the Business Evaluation offering. It names the
 phases, the prompt for each one, the rules that every phase session follows, and
@@ -110,4 +110,4 @@ partner sees or receives, which goes to Doug as a decision.
 | 0.1 | 11-13-26 00:42 | Claude (Cowork) | Created from plan revision 0.1: eight phases, the rules for every phase session, the closing steps. |
 | 0.2 | 11-13-26 00:57 | Claude (Cowork) | Plan approved (revision 0.2): phase 1 state changed to not started. |
 | 0.3 | 11-13-26 10:45 | Claude (Claude Code) | Phase 1 built (v0.324.0); phase 2 draft prompt written. |
-| 0.4 | 11-13-26 11:58 | Claude (Claude Code) | Phase 2 prompt approved by Doug. |
+| 0.4 | 11-13-26 11:50 | Claude (Claude Code) | Phase 2 prompt approved by Doug. |
