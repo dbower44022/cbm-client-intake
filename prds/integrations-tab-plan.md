@@ -1,6 +1,6 @@
 # Integrations tab — System Settings plan
 
-Last Updated: 11-12-26 23:55 · Revision 0.3
+Last Updated: 11-13-26 00:16 · Revision 0.4
 
 This is the design record for a new top-level **Integrations** tab on the System
 Settings page (`/setup`). It holds Doug's rulings, the contents of each
@@ -56,6 +56,7 @@ build prompts are written from this file. Nothing has been built yet.
 | I10 | The application, not the diagnosis agent, carries out an approved fix plan, step by step. If a step fails, the fix plan stops. |
 | I11 | A setup assistant extends the diagnosis agent to setup (option B). It writes a setup plan of setting changes, manual steps and coded actions. It is never given broad administrator credentials for a vendor. |
 | I12 | A setup plan is carried out one step at a time, and every step, automatic or manual, waits for the administrator's confirmation. A fix plan, once approved, runs its automatic steps straight through and waits only at manual steps. |
+| I13 | The application also refuses switching a feature on while its integration is marked not in use. The message says to mark the integration in use first. |
 
 ### Decisions made under those rulings (announced, not separately ruled)
 
@@ -330,6 +331,7 @@ phase ends at a **stopping point**: the work pauses for Doug's go-ahead.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.4 | 11-13-26 00:16 | Claude (Claude Code) | Ruling I13 (Doug, 11-13-26): switching a feature on is refused while its integration is marked not in use. Build orchestrator and phase 1 prompt written. |
 | 0.3 | 11-12-26 23:55 | Claude (Claude Code) | Rulings I11 (setup assistant, option B) and I12 (setup steps each confirmed; fix plans run automatic steps straight through), Doug 11-12-26. Check-on-confirm and the one-step display added; § 6.5 the setup assistant; phase 7 added, documentation becomes phase 8. |
 | 0.2 | 11-12-26 23:52 | Claude (Claude Code) | Ruling I10 (Doug, 11-12-26): the application carries out an approved fix plan; the open item removed. |
 | 0.1 | 11-12-26 23:47 | Claude (Claude Code) | First draft from the 11-12-26 design conversation: rulings I1–I9, the sub-tabs, the setup checklist, the nightly integration test, the diagnosis agent, storage, and seven phases with stopping points. For Doug's review. |
