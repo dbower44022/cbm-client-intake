@@ -1249,6 +1249,7 @@ the strength of it.
   on crm-test's CRM only). Owed: the live check on crm-test the same day
   (`prompts/followup-2026-11-12-outside-host.md`), then production and
   Boston CRM (#80).
-- **v0.324.0 (2026-11-13) committed, not pushed**: Business Evaluation
-  phase 1 (`BUSINESS_EVALUATION`, off). CRM change on crm-test only. Owed in #83.
+- **v0.324.0 (2026-11-13) is live on both deployments, switch off**
+  (`/healthz` read 0.326.0 at 11:51): Business Evaluation phase 1. CRM change
+  on crm-test only. Owed in #83.
 Everything else still owed is in `OPEN-ITEMS.md`.
