@@ -94,6 +94,10 @@ class Integration:
     # The module holding the integration test, imported only when it runs;
     # empty until ``test_phase`` is built.
     test_module: str = ""
+    # The documentation sites the diagnosis agent may search and read (ruling
+    # I9; plan § 6.2, each checked to answer on 11-13-26). Hostnames only;
+    # a hostname covers its subdomains.
+    doc_sites: tuple[str, ...] = ()
 
     @property
     def testable(self) -> bool:
@@ -129,6 +133,7 @@ INTEGRATIONS: tuple[Integration, ...] = (
         features=(),
         test_phase=2,
         test_module="integrations.checks.espocrm",
+        doc_sites=("docs.espocrm.com",),
     ),
     Integration(
         key="google_workspace", name="Google Workspace",
@@ -160,6 +165,7 @@ INTEGRATIONS: tuple[Integration, ...] = (
                   "GMAIL-INTEGRATION-GUIDE.md"),
         test_phase=2,
         test_module="integrations.checks.google",
+        doc_sites=("developers.google.com", "support.google.com", "knowledge.workspace.google.com"),
     ),
     Integration(
         key="zoom", name="Zoom", in_use_setting="zoom_in_use",
@@ -170,6 +176,7 @@ INTEGRATIONS: tuple[Integration, ...] = (
         runbooks=("EVENTS-SETUP.md",),
         test_phase=2,
         test_module="integrations.checks.zoom",
+        doc_sites=("developers.zoom.us",),
     ),
     Integration(
         key="fathom", name="Fathom", in_use_setting="fathom_in_use",
@@ -180,6 +187,7 @@ INTEGRATIONS: tuple[Integration, ...] = (
         features=("fathom",),
         test_phase=3,
         test_module="integrations.checks.fathom",
+        doc_sites=("developers.fathom.ai",),
     ),
     Integration(
         key="constant_contact", name="Constant Contact",
@@ -196,6 +204,7 @@ INTEGRATIONS: tuple[Integration, ...] = (
         runbooks=("MAILING-SETUP.md",),
         test_phase=3,
         test_module="integrations.checks.constant_contact",
+        doc_sites=("developer.constantcontact.com",),
     ),
     Integration(
         key="lob", name="Lob", in_use_setting="lob_in_use",
@@ -204,6 +213,7 @@ INTEGRATIONS: tuple[Integration, ...] = (
         credentials=("postal_api_key",),
         test_phase=3,
         test_module="integrations.checks.lob",
+        doc_sites=("docs.lob.com",),
     ),
     Integration(
         key="twilio", name="Twilio", in_use_setting="twilio_in_use",
@@ -212,6 +222,7 @@ INTEGRATIONS: tuple[Integration, ...] = (
         credentials=("sms_account_sid", "sms_auth_token", "sms_from_number"),
         test_phase=3,
         test_module="integrations.checks.twilio",
+        doc_sites=("twilio.com",),
     ),
     Integration(
         key="anthropic", name="Anthropic", in_use_setting="anthropic_in_use",
@@ -220,6 +231,7 @@ INTEGRATIONS: tuple[Integration, ...] = (
         features=("ai_research",),
         test_phase=3,
         test_module="integrations.checks.anthropic_api",
+        doc_sites=("platform.claude.com",),
     ),
     Integration(
         key="youtube", name="YouTube", in_use_setting="youtube_in_use",
@@ -227,6 +239,7 @@ INTEGRATIONS: tuple[Integration, ...] = (
         features=("events_library",),
         test_phase=3,
         test_module="integrations.checks.youtube",
+        doc_sites=("developers.google.com",),
     ),
 )
 

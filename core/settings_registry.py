@@ -632,6 +632,13 @@ SETTINGS: tuple[SettingSpec, ...] = (
        kind="int", unit="days", component="worker",
        help="Keep inside Google's 30-day transcript retention."),
     _s("summary_model", GROUP_INTEGRATIONS, "Summary model", component="worker"),
+    _s("integration_agent_model", GROUP_INTEGRATIONS, "Integration agent model", component="web",
+       help="The Claude model that diagnoses a failed integration test and writes a fix plan. "
+            "Separate from the summary model."),
+    _s("integration_agent_monthly_budget", GROUP_INTEGRATIONS, "Integration agent monthly budget",
+       kind="float", unit="$", component="web",
+       help="What diagnoses may spend on the Anthropic key in a calendar month. Diagnose with "
+            "Claude is refused once the month's diagnoses reach it."),
     _s("youtube_playlist_id", GROUP_INTEGRATIONS, "YouTube playlists",
        help="The recorded-webinar playlists to import from, comma separated. "
             "{{abbr}} keeps five topic playlists rather than one library. A video in "
@@ -1193,6 +1200,8 @@ INTEGRATION_TAGS: dict[str, tuple[str, str]] = {
     "anthropic_in_use": ("anthropic", ""),
     "anthropic_api_key": ("anthropic", ""),
     "summary_model": ("anthropic", ""),
+    "integration_agent_model": ("anthropic", ""),
+    "integration_agent_monthly_budget": ("anthropic", ""),
     "comms_ai_summary": ("anthropic", ""),
     "enrichment_ai": ("anthropic", ""),
     "enrichment_ai_model": ("anthropic", ""),

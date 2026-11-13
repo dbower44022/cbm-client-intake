@@ -151,6 +151,14 @@ async def run_nightly(
     send = send or (lambda text: send_alert(settings, text))
     runner = runner or _default_runner
     summary: dict[str, Any] = {"outcomes": {}, "alerts": [], "stored": 0}
+    try:  # the recent errors keep 14 days (plan § 6.6)
+        from integrations.events import make_event_store
+
+        events = make_event_store(settings)
+        if events is not None:
+            summary["pruned"] = await events.prune()
+    except Exception as exc:  # noqa: BLE001
+        log.warning("recent integration errors could not be pruned: %s", exc)
     for integ in due(settings):
         try:
             result = await runner(integ, settings)

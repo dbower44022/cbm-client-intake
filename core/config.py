@@ -548,6 +548,10 @@ class Settings(BaseSettings):
     comms_ai_summary: bool = False
     anthropic_api_key: str = ""
     summary_model: str = "claude-opus-4-8"
+    # The diagnosis agent (prds/integrations-tab-plan.md § 6, phase 6): its own
+    # model, separate from the summary model, and what it may spend a month.
+    integration_agent_model: str = "claude-opus-5-5"
+    integration_agent_monthly_budget: float = 25.0
     # Daily email digest (email-quality plan §4.2.4): a once-a-day worker job
     # that emails each manager a summary of their records with unread /
     # awaiting-reply conversations, each a deep link to the record page. Sent

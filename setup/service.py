@@ -41,7 +41,8 @@ log = logging.getLogger("cbm_intake.setup.service")
 #: Settings that only mean anything while the Integrations tab is on: the
 #: nightly integration test's hour and time zone (phase 5). Hidden with the
 #: switch off, like the "in use" settings, so the page is exactly as before.
-TAB_ONLY_KEYS = frozenset({"integration_test_hour", "integration_test_tz"})
+TAB_ONLY_KEYS = frozenset({"integration_test_hour", "integration_test_tz",
+                           "integration_agent_model", "integration_agent_monthly_budget"})
 
 SECRET_MASK = "••••••••"
 
@@ -339,6 +340,13 @@ def _integrations(
                           else {"rows": [], "done": 0, "total": 0,
                                 "error": "The deployment guide's step files could not be read."}),
             "ticksStored": bool(cs.get("ticksStored")),
+            # The diagnosis agent (phase 6): the last fix plan, and what
+            # diagnoses have spent this month against the budget.
+            "fixPlan": (cs.get("fixPlans") or {}).get(integ.key),
+            "agent": {"spent": cs.get("agentSpent"),
+                      "budget": float(settings.integration_agent_monthly_budget or 0),
+                      "keySet": bool((settings.anthropic_api_key or "").strip()),
+                      "stored": cs.get("agentSpent") is not None},
             "settings": top,
             "sections": sections,
             "usedBy": used_by,

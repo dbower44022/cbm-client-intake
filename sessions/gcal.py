@@ -123,6 +123,10 @@ async def sync_session_calendar(
         )
     except Exception as exc:  # noqa: BLE001 — never break the saved session
         log.warning("calendar sync failed for session %s: %s", session.get("id"), exc)
+        # A recent error for the diagnosis agent (integrations plan § 6.6).
+        from integrations.events import record_event
+
+        await record_event(settings, "google_workspace", "calendar sync", f"{type(exc).__name__}: {exc}")
         return {"ok": False, "error": str(exc)}
 
 

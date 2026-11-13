@@ -101,6 +101,10 @@ RESET_TABLES: tuple[str, ...] = (
     # Hand ticks on the setup checklists (plan § 4): the sandbox starts each
     # day with none, like its integration test history.
     "integration_checklist_tick",
+    # The diagnosis agent's fix plans and the integrations' recent errors
+    # (plan § 6): the sandbox starts each day with none.
+    "integration_fix_plan",
+    "integration_event",
     # Business Evaluation (prds/business-evaluation-plan.md): the links and the
     # answers saved as the client goes. They point at CRM records the restore
     # takes away, so a link made on the sandbox lasts until the next reset.

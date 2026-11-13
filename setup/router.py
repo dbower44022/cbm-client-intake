@@ -106,7 +106,14 @@ async def _checklist_state(request: Request) -> dict[str, Any]:
     if not get_settings().integrations_tab:
         return {}
     out: dict[str, Any] = {"ticks": {}, "mailingConnected": None, "storedGoogle": {},
-                           "ticksStored": False}
+                           "ticksStored": False, "fixPlans": {}, "agentSpent": None}
+    plans = getattr(request.app.state, "fix_plan_store", None)
+    if plans is not None:
+        try:
+            out["fixPlans"] = await plans.latest_all()
+            out["agentSpent"] = await plans.spent_this_month()
+        except Exception as exc:  # noqa: BLE001
+            log.warning("fix plans could not be read: %s", exc)
     ticks = _tick_store(request)
     if ticks is not None:
         try:
@@ -214,6 +221,18 @@ async def get_settings_page(request: Request) -> dict:
 @router.put("/settings/{key}")
 async def put_setting(key: str, body: SettingIn, request: Request) -> dict:
     user = _require_admin(request)
+    result = await _checked_save(request, user, key, body)
+    result["page"] = await page_payload(_store(request), await _test_runs(request),
+                                        await _checklist_state(request))
+    return result
+
+
+async def _checked_save(request: Request, user: dict[str, Any], key: str,
+                        body: SettingIn) -> dict[str, Any]:
+    """The checked save path: pre-flight, store, post-apply with its automatic
+    revert, confirm-or-undo, the action log. Every change a person makes on
+    the page and every setting change a fix plan carries out goes through
+    here (the build orchestrator's rule). Raises HTTPException on a refusal."""
     store = _store(request)
     if store is None:
         raise HTTPException(
@@ -318,7 +337,6 @@ async def put_setting(key: str, body: SettingIn, request: Request) -> dict:
         # Set when the change is live but will undo itself unless confirmed.
         "confirmBy": deadline.isoformat() if deadline and reverted is None else None,
         "setting": record.as_dict(),
-        "page": await page_payload(store, await _test_runs(request), await _checklist_state(request)),
     }
 
 
@@ -694,3 +712,279 @@ async def get_snapshot(request: Request, response: Response) -> dict:
     store = getattr(request.app.state, "settings_store", None)
     overrides = await store.load() if store is not None else {}
     return snapshot_mod.build_snapshot(settings, overrides)
+
+
+# --- the diagnosis agent and fix plans (prds/integrations-tab-plan.md § 6) ----
+
+def _plan_store(request: Request):
+    return getattr(request.app.state, "fix_plan_store", None)
+
+
+def _integration_or_404(key: str):
+    from integrations.registry import integration_for
+
+    if not get_settings().integrations_tab:
+        raise HTTPException(status_code=404, detail="Not found")
+    integ = integration_for(key)
+    if integ is None:
+        raise HTTPException(status_code=404, detail=f"There is no integration called '{key}'.")
+    return integ
+
+
+async def _snapshot(request: Request, integ: Any, run: dict[str, Any]):
+    """What the diagnosis agent may read, taken now. No secret value."""
+    from integrations import diagnosis
+    from integrations.events import make_event_store
+    from .readiness import readiness_payload
+
+    page = await page_payload(_store(request), await _test_runs(request),
+                              await _checklist_state(request))
+    entry = next(i for i in page["integrations"] if i["key"] == integ.key)
+    rows = list(entry.get("settings") or [])
+    for sec in entry.get("sections") or []:
+        rows += sec.get("settings") or []
+    readiness: list[dict[str, Any]] = []
+    try:
+        rd = await readiness_payload(get_settings())
+        readiness = [f for f in rd.get("features", []) if f.get("integration") == integ.key]
+    except Exception as exc:  # noqa: BLE001 — the agent works without it
+        log.warning("readiness could not be read for the diagnosis of %s: %s", integ.key, exc)
+    errors: list[dict[str, Any]] = []
+    events = make_event_store(get_settings())
+    if events is not None:
+        try:
+            errors = await events.recent(integ.key)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("recent errors could not be read for %s: %s", integ.key, exc)
+    checklist_rows = [{k: r.get(k) for k in ("id", "name", "state", "reason", "automatic")}
+                      for r in (entry.get("checklist") or {}).get("rows", [])]
+    return diagnosis.Snapshot(
+        integration=integ.key, name=integ.name,
+        test={k: run.get(k) for k in ("outcome", "checks", "facts", "finishedAt", "trigger")},
+        settings=diagnosis.settings_rows(rows), readiness=readiness,
+        checklist=checklist_rows, runbooks=tuple(integ.runbooks), errors=errors,
+        doc_sites=tuple(integ.doc_sites),
+    )
+
+
+async def _run_diagnosis(app: Any, plan_id: str, snap: Any, user: dict[str, Any]) -> None:
+    """In the background: the agent's call, then the plan stored. Never raises."""
+    from integrations import diagnosis, fixplans
+    from integrations.testing import secret_values
+
+    store = app.state.fix_plan_store
+    settings = get_settings()
+    outcome = None
+    try:
+        factory = getattr(app.state, "anthropic_client", None)
+        if factory is None:
+            import anthropic
+
+            client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key,
+                                              timeout=300.0, max_retries=2)
+        else:
+            client = factory()
+        outcome = await diagnosis.diagnose(client, snap, model=settings.integration_agent_model,
+                                           secrets=secret_values(settings))
+        plan = outcome.plan
+        await store.complete(
+            plan_id, status=fixplans.PROPOSED if plan else fixplans.NO_PLAN,
+            diagnosis=(plan or {}).get("diagnosis", ""), confidence=(plan or {}).get("confidence", ""),
+            steps=(plan or {}).get("steps", []), model=outcome.model, cost=outcome.cost,
+            usage=outcome.usage, error=outcome.error)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("diagnosis of %s failed: %s", snap.integration, exc)
+        try:
+            await store.complete(plan_id, status=fixplans.NO_PLAN,
+                                 error=f"The diagnosis could not be completed: {type(exc).__name__}.",
+                                 cost=outcome.cost if outcome else 0.0)
+        except Exception:  # noqa: BLE001
+            pass
+    await _log(user, fixplans.ACT_DIAGNOSED,
+               f"{snap.name}: diagnosed with Claude"
+               + (f" (${outcome.cost:.2f})" if outcome else ""),
+               {"integration": snap.integration, "plan": plan_id,
+                "outcome": "plan" if outcome and outcome.plan else "no plan"})
+
+
+@router.post("/integrations/{key}/diagnose")
+async def diagnose_integration(key: str, request: Request) -> dict:
+    """Start a diagnosis of ``key``'s last failed test (ruling I7). Runs in
+    the background; the page reads the plan when it is ready."""
+    import asyncio
+
+    from integrations import fixplans
+
+    user = _require_admin(request)
+    integ = _integration_or_404(key)
+    settings = get_settings()
+    plans, runs = _plan_store(request), _test_store(request)
+    if plans is None or runs is None:
+        raise HTTPException(status_code=400, detail="No database is attached, so a fix plan cannot be kept.")
+    if not (settings.anthropic_api_key or "").strip() and getattr(request.app.state, "anthropic_client", None) is None:
+        raise HTTPException(status_code=409, detail=(
+            "The Anthropic API key is not set. Set it on the Anthropic sub-tab first."))
+    run = await runs.latest(integ.key)
+    if not run or run.get("outcome") == "ok":
+        raise HTTPException(status_code=409, detail=(
+            f"{integ.name}'s last integration test did not fail, so there is nothing to diagnose. "
+            "Run the test first."))
+    latest = await plans.latest(integ.key)
+    if latest and latest["status"] == fixplans.DIAGNOSING:
+        raise HTTPException(status_code=409, detail=f"A diagnosis of {integ.name} is already running.")
+    spent = await plans.spent_this_month()
+    budget = float(settings.integration_agent_monthly_budget or 0)
+    if spent >= budget:
+        raise HTTPException(status_code=409, detail=(
+            f"Diagnoses have spent ${spent:.2f} this month, which reaches the monthly budget of "
+            f"${budget:.2f}. Raise the Integration agent monthly budget on the Anthropic sub-tab to "
+            "diagnose again."))
+    snap = await _snapshot(request, integ, run)
+    plan = await plans.create(integration=integ.key, test_run_id=run.get("id") or "",
+                              status=fixplans.DIAGNOSING, created_by=_actor(user))
+    tasks = getattr(request.app.state, "diagnosis_tasks", None)
+    if tasks is None:
+        tasks = request.app.state.diagnosis_tasks = set()
+    task = asyncio.create_task(_run_diagnosis(request.app, plan["id"], snap, user))
+    tasks.add(task)
+    task.add_done_callback(tasks.discard)
+    return {"plan": plan}
+
+
+@router.get("/integrations/{key}/fixplan")
+async def get_fix_plan(key: str, request: Request) -> dict:
+    _require_admin(request)
+    integ = _integration_or_404(key)
+    plans = _plan_store(request)
+    return {"plan": await plans.latest(integ.key) if plans is not None else None}
+
+
+class ApplyIn(BaseModel):
+    fingerprint: str
+
+
+async def _carry_out(request: Request, user: dict[str, Any], plan: dict[str, Any]) -> dict[str, Any]:
+    """Carry out the plan's pending steps in order (ruling I10): a setting
+    change through the checked save path as ``user``; a manual step pauses
+    the plan; the first failure stops it; the re-test ends it."""
+    from integrations import fixplans, registry
+    from integrations.store import MANUAL
+    from integrations.testing import run_integration_test as _run
+
+    plans = _plan_store(request)
+    steps = plan["steps"]
+    status = fixplans.APPLYING
+    for step in steps:
+        if step["state"] == "done":
+            continue
+        if step["kind"] == fixplans.MANUAL_STEP:
+            status = fixplans.WAITING
+            break
+        if step["kind"] == fixplans.SETTING_CHANGE:
+            try:
+                res = await _checked_save(request, user, step["key"], SettingIn(
+                    value=step["value"], reason=f"applied from a fix plan ({plan['id'][:8]})"))
+            except HTTPException as exc:
+                step.update(state="failed", detail=str(exc.detail))
+                status = fixplans.STOPPED
+                break
+            if res.get("reverted"):
+                step.update(state="failed", detail=f"Reverted automatically: {res['reverted']}")
+                status = fixplans.STOPPED
+                break
+            step.update(state="done", doneBy=_actor(user), doneAt=datetime.now(timezone.utc).isoformat(),
+                        detail=("Applied. Confirm it within 10 minutes on the Settings tab, or it undoes itself."
+                                if res.get("confirmBy") else "Applied."))
+            continue
+        if step["kind"] == fixplans.RETEST:
+            integ = registry.integration_for(plan["integration"])
+            try:
+                result = await _run(integ, get_settings())
+                runs = _test_store(request)
+                if runs is not None:
+                    await runs.record(result, trigger=MANUAL, run_by_id=str(user.get("userId") or ""),
+                                      run_by=_actor(user))
+                step.update(state="done", outcome=result["outcome"], doneBy=_actor(user),
+                            doneAt=datetime.now(timezone.utc).isoformat(),
+                            detail={"ok": "The integration test passes.",
+                                    "failed": "The integration test still fails. Diagnose again.",
+                                    }.get(result["outcome"], "The integration test could not be completed."))
+            except Exception as exc:  # noqa: BLE001
+                step.update(state="failed", detail=f"The re-test could not run: {exc}")
+                status = fixplans.STOPPED
+                break
+            status = fixplans.APPLIED
+    done = status in (fixplans.APPLIED, fixplans.STOPPED)
+    await plans.update(plan["id"], status=status, steps=steps,
+                       finished_at=datetime.now(timezone.utc) if done else None)
+    return await plans.get(plan["id"])
+
+
+@router.post("/integrations/{key}/fixplan/{plan_id}/apply")
+async def apply_fix_plan(key: str, plan_id: str, body: ApplyIn, request: Request) -> dict:
+    """Approve and apply that exact plan (ruling I7): refused if it changed."""
+    from integrations import fixplans
+
+    user = _require_admin(request)
+    integ = _integration_or_404(key)
+    plans = _plan_store(request)
+    plan = await plans.get(plan_id) if plans is not None else None
+    if plan is None or plan["integration"] != integ.key:
+        raise HTTPException(status_code=404, detail="There is no such fix plan.")
+    if plan["status"] != fixplans.PROPOSED:
+        raise HTTPException(status_code=409, detail=f"This fix plan is {plan['status']}, not waiting for approval.")
+    if body.fingerprint != plan["fingerprint"] or \
+            fixplans.fingerprint(plan["diagnosis"], plan["steps"]) != plan["fingerprint"]:
+        raise HTTPException(status_code=409, detail=(
+            "This fix plan changed after it was shown. Reload the page and read it again."))
+    now = datetime.now(timezone.utc)
+    await plans.update(plan_id, status=fixplans.APPLYING, approved_by=_actor(user), approved_at=now)
+    plan.update(approvedBy=_actor(user))
+    await _log(user, fixplans.ACT_PLAN_APPLIED, f"{integ.name}: fix plan approved and applied",
+               {"integration": key, "plan": plan_id, "steps": len(plan["steps"])})
+    result = await _carry_out(request, user, plan)
+    return {"plan": result, "page": await page_payload(_store(request), await _test_runs(request),
+                                                       await _checklist_state(request))}
+
+
+@router.post("/integrations/{key}/fixplan/{plan_id}/steps/{n}/done")
+async def confirm_fix_plan_step(key: str, plan_id: str, n: int, request: Request) -> dict:
+    """A person confirms the manual step the plan is waiting at; the plan then
+    carries on."""
+    from integrations import fixplans
+
+    user = _require_admin(request)
+    integ = _integration_or_404(key)
+    plans = _plan_store(request)
+    plan = await plans.get(plan_id) if plans is not None else None
+    if plan is None or plan["integration"] != integ.key:
+        raise HTTPException(status_code=404, detail="There is no such fix plan.")
+    if plan["status"] != fixplans.WAITING:
+        raise HTTPException(status_code=409, detail="This fix plan is not waiting at a manual step.")
+    waiting = next((s for s in plan["steps"] if s["state"] != "done"), None)
+    if waiting is None or waiting["n"] != n or waiting["kind"] != fixplans.MANUAL_STEP:
+        raise HTTPException(status_code=409, detail=f"Step {n} is not the step this plan is waiting at.")
+    waiting.update(state="done", doneBy=_actor(user), doneAt=datetime.now(timezone.utc).isoformat())
+    await _log(user, fixplans.ACT_PLAN_STEP, f"{integ.name}: fix plan step {n} confirmed",
+               {"integration": key, "plan": plan_id, "step": n})
+    result = await _carry_out(request, user, plan)
+    return {"plan": result, "page": await page_payload(_store(request), await _test_runs(request),
+                                                       await _checklist_state(request))}
+
+
+@router.post("/integrations/{key}/fixplan/{plan_id}/discard")
+async def discard_fix_plan(key: str, plan_id: str, request: Request) -> dict:
+    from integrations import fixplans
+
+    user = _require_admin(request)
+    integ = _integration_or_404(key)
+    plans = _plan_store(request)
+    plan = await plans.get(plan_id) if plans is not None else None
+    if plan is None or plan["integration"] != integ.key:
+        raise HTTPException(status_code=404, detail="There is no such fix plan.")
+    if plan["status"] not in (fixplans.PROPOSED, fixplans.WAITING):
+        raise HTTPException(status_code=409, detail=f"This fix plan is {plan['status']} and cannot be discarded.")
+    await plans.update(plan_id, status=fixplans.DISCARDED, finished_at=datetime.now(timezone.utc))
+    await _log(user, fixplans.ACT_PLAN_DISCARDED, f"{integ.name}: fix plan discarded",
+               {"integration": key, "plan": plan_id})
+    return {"plan": await plans.get(plan_id)}

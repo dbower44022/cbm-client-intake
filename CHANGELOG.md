@@ -5,6 +5,53 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.327.0] — 2026-11-13
+
+**feat: the Integrations tab, phase 6 — the diagnosis agent and fix plans.**
+Dark behind **`INTEGRATIONS_TAB`**. Plan `prds/integrations-tab-plan.md` § 6
+and § 7, rulings I7, I9, I10 and the fix-plan half of I12; the design Doug
+approved 11-13-26 (the narrowed recent-errors table, a $25 monthly budget);
+`OPEN-ITEMS.md` #82.
+
+- **Diagnose with Claude** on a sub-tab whose last test failed
+  (`integrations/diagnosis.py`). The agent reads a snapshot taken at the
+  start — the failed test, the sub-tab's settings, readiness, the setup
+  checklist and its guide steps, the runbooks, the recent errors — through
+  read-only tools, and Anthropic's web search and fetch held to the
+  integration's documentation sites (ruling I9; `Integration.doc_sites`,
+  each checked 11-13-26; Google's admin help moved to
+  `knowledge.workspace.google.com`). **A secret reaches the Claude API only
+  as set or not set** with when it last changed; every tool result is
+  scrubbed again on the way out. `claude-opus-5-5` (the new
+  `INTEGRATION_AGENT_MODEL`), adaptive thinking, effort high, streaming, the
+  server-side refusal fallback. A manual loop like `enrichment/research.py`,
+  not the SDK's Tool Runner: SDK 0.116's runner does not resume a paused
+  server-tool turn. At most 15 tool calls, 5 searches, 6 fetches, $5 a
+  diagnosis. It runs in the background; the page polls.
+- **The plan is checked when it arrives**: a setting change must name a
+  setting on that sub-tab that is neither secret nor read-only; a refused plan
+  goes back to the agent with the reasons, twice at most. The re-test is
+  appended by the application, never by the agent.
+- **Fix plans** (`integrations/fixplans.py`, migration `0046`): one row per
+  diagnosis with its cost, fingerprinted. **Approve and apply** is refused if
+  the plan changed; the application carries it out (ruling I10): each setting
+  change through the checked save path as the approving administrator, noted
+  "applied from a fix plan" — `put_setting`'s body became `_checked_save` so
+  both take the same path — pausing at each manual step until a person
+  confirms it, stopping at the first failure, ending with the re-test.
+  Discard. Every action recorded.
+- **The monthly budget**: `INTEGRATION_AGENT_MONTHLY_BUDGET` (default $25);
+  Diagnose is refused once the month's diagnoses reach it. The two new
+  settings are on the Anthropic sub-tab and hidden with the switch off.
+- **Recent errors** (§ 6.6, `integrations/events.py`): the top-level error
+  handler of 14 worker jobs and the calendar sync writes one scrubbed line,
+  at most once an hour, kept 14 days (pruned by the nightly run). Mentor
+  provisioning does not write yet.
+- **No real diagnosis was run**: no Anthropic key is held locally. The first
+  one is owed on crm-test once pushed (`OPEN-ITEMS.md` #82).
+- Tests: `tests/test_integration_diagnosis.py` (28), with a fake Anthropic
+  client: nothing sent carries a secret.
+
 ## [0.326.0] — 2026-11-13
 
 **feat: the Integrations tab, phase 5 — the nightly integration test.** Runs

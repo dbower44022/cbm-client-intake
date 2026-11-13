@@ -223,3 +223,19 @@
 .su__setupreason { color: var(--color-text-muted, #4a4a4a); }
 .su__setupstep--open .su__setupreason { color: var(--cbm-warning, #8a5300); }
 .su__setupmeta { color: var(--color-text-muted, #666); font-size: 0.8rem; margin-top: 0.1rem; }
+
+/* The diagnosis and its fix plan on each integration sub-tab (Integrations tab, phase 6). */
+.su__diagstatus { margin: 0.3rem 0; font-size: 0.9rem; }
+.su__diagtext { margin: 0.4rem 0; white-space: pre-wrap; }
+.su__diagmeta { color: var(--color-text-muted, #666); font-size: 0.82rem; }
+.su__diagsteps { list-style: none; margin: 0.4rem 0; padding: 0; }
+.su__diagstep { display: flex; gap: 0.6rem; padding: 0.35rem 0; border-bottom: 1px solid var(--color-border, #eee); font-size: 0.9rem; }
+.su__diagstep.is-current { background: var(--cbm-surface-alt, #f6f8fb); padding: 0.6rem; border-radius: 6px; }
+.su__diagmark { flex: none; width: 1.1rem; font-weight: 700; text-align: center; }
+.su__diagstep--done .su__diagmark { color: var(--cbm-success, #2e7d32); }
+.su__diagstep--failed .su__diagmark { color: var(--cbm-danger, #b3261e); }
+.su__diagn { font-weight: 600; color: var(--color-text-muted, #4a4a4a); }
+.su__diagdetail { color: var(--color-text-muted, #4a4a4a); font-size: 0.85rem; }
+.su__diagwhere { margin: 0.3rem 0; }
+.su__diagcopy { display: flex; align-items: center; gap: 0.5rem; margin: 0.3rem 0; }
+.su__diagcopy code { background: var(--cbm-surface-alt, #f1f3f5); padding: 0.2rem 0.4rem; border-radius: 4px; overflow-wrap: anywhere; }

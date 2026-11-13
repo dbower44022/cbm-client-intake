@@ -65,6 +65,14 @@ def _next_local_hour(hour: int, tz_name: str, after: datetime, *, label: str) ->
     return target.astimezone(timezone.utc)
 
 
+async def _integration_event(settings: Settings, integration: str, source: str, exc: Exception) -> None:
+    """One recent error for the diagnosis agent (plan § 6.6): best-effort,
+    scrubbed, at most once an hour per message. Never raises."""
+    from integrations.events import record_event
+
+    await record_event(settings, integration, source, f"{type(exc).__name__}: {exc}")
+
+
 def _next_digest_time(settings: Settings, after: datetime) -> datetime:
     """The next send time for the daily email digest."""
     return _next_local_hour(
@@ -534,6 +542,7 @@ async def main() -> None:
                 await run_attendance_cycle(settings)
             except Exception as exc:  # noqa: BLE001 — never crashes delivery
                 log.warning("events attendance pull failed: %s", exc)
+                await _integration_event(settings, "zoom", "attendance pull", exc)
             next_attendance = now_cfg + timedelta(
                 seconds=settings.events_attendance_seconds
             )
@@ -560,6 +569,7 @@ async def main() -> None:
                     await run_reminder_cycle(settings)
                 except Exception as exc:  # noqa: BLE001 — never crashes delivery
                     log.warning("event reminder pass failed: %s", exc)
+                    await _integration_event(settings, "google_workspace", "event reminders", exc)
                 next_reminder = now_cfg + timedelta(seconds=settings.events_reminder_seconds)
         campaigns_on = (settings.campaigns_enabled and not settings.espo_dry_run
                         and settings.campaigns_run_seconds > 0 and settings.store_enabled)
@@ -578,6 +588,7 @@ async def main() -> None:
                     await run_email_cycle(settings)
                 except Exception as exc:  # noqa: BLE001 — never crashes delivery
                     log.warning("email campaign pass failed: %s", exc)
+                    await _integration_event(settings, "constant_contact", "email campaigns", exc)
             if settings.campaigns_sms:
                 # Text-message campaigns ride the same timer (rulings 38, 39);
                 # the cycle itself keeps to the texting hours.
@@ -587,6 +598,7 @@ async def main() -> None:
                     await run_sms_cycle(settings, stop=stop)
                 except Exception as exc:  # noqa: BLE001 — never crashes delivery
                     log.warning("text campaign pass failed: %s", exc)
+                    await _integration_event(settings, "twilio", "text campaigns", exc)
             next_campaign_run = now_cfg + timedelta(seconds=settings.campaigns_run_seconds)
         stale_on = (settings.campaigns_enabled and not settings.espo_dry_run
                     and settings.prospect_stale_sweep_seconds > 0)
@@ -627,6 +639,7 @@ async def main() -> None:
                     await run_research_cycle(settings, research_store)
             except Exception as exc:  # noqa: BLE001 — never fatal
                 log.warning("ai research cycle failed: %s", exc)
+                await _integration_event(settings, "anthropic", "AI research", exc)
             next_research = now_cfg + timedelta(seconds=settings.enrichment_ai_poll_seconds)
         import_plan_on = (settings.campaigns_enabled and settings.import_templates and not settings.espo_dry_run
                           and settings.store_enabled and settings.import_plan_poll_seconds > 0)
@@ -664,6 +677,7 @@ async def main() -> None:
                     log.info("send report pass: %d campaign(s) read", len(read))
             except Exception as exc:  # noqa: BLE001 — never fatal
                 log.warning("send report pass failed: %s", exc)
+                await _integration_event(settings, "constant_contact", "send report", exc)
             next_send_report = now_cfg + timedelta(seconds=settings.campaign_send_report_seconds)
         if (settings.campaigns_enabled and settings.campaign_lists and settings.store_enabled
                 and not settings.espo_dry_run and settings.campaign_list_count_seconds > 0
@@ -719,6 +733,7 @@ async def main() -> None:
                             await monitoring.send_alert(settings, text)
             except Exception as exc:  # noqa: BLE001 — never crashes delivery
                 log.warning("mailing push failed: %s", exc)
+                await _integration_event(settings, "constant_contact", "mailing push", exc)
             next_mailing_push = now_cfg + timedelta(seconds=settings.mailing_push_seconds)
         if mailing_on and settings.mailing_pull_seconds > 0 and now_cfg >= next_mailing_pull:
             try:
@@ -730,6 +745,7 @@ async def main() -> None:
                         await monitoring.send_alert(settings, text)
             except Exception as exc:  # noqa: BLE001
                 log.warning("mailing pull failed: %s", exc)
+                await _integration_event(settings, "constant_contact", "mailing pull", exc)
             next_mailing_pull = now_cfg + timedelta(seconds=settings.mailing_pull_seconds)
         if settings_store is not None and now_cfg >= next_review:
             try:
@@ -763,6 +779,7 @@ async def main() -> None:
                 await monitoring.run_schema_drift_check(settings, alert_state)
             except Exception as exc:  # noqa: BLE001
                 log.warning("schema-drift check failed: %s", exc)
+                await _integration_event(settings, "espocrm", "schema-drift check", exc)
             next_schema = now + timedelta(seconds=settings.schema_check_seconds)
         if (
             settings.meet_transcripts or settings.fathom_transcripts
@@ -773,6 +790,7 @@ async def main() -> None:
                 await run_transcript_cycle(settings, _client(settings))
             except Exception as exc:  # noqa: BLE001 — never crashes delivery
                 log.warning("transcript retrieval cycle failed: %s", exc)
+                await _integration_event(settings, "fathom" if settings.fathom_transcripts else "google_workspace", "transcripts", exc)
             next_transcripts = now + timedelta(
                 seconds=settings.meet_transcripts_poll_seconds
             )
@@ -781,6 +799,7 @@ async def main() -> None:
                 await run_gmail_cycle(settings, comms_store)
             except Exception as exc:  # noqa: BLE001 — comms never crashes delivery
                 log.warning("gmail sync cycle failed: %s", exc)
+                await _integration_event(settings, "google_workspace", "Gmail sync", exc)
             next_gmail = now + timedelta(seconds=settings.gmail_sync_seconds)
         if receipts_on and now >= next_receipts:
             try:
@@ -797,6 +816,7 @@ async def main() -> None:
                 await run_inbound_cycle(settings, store)
             except Exception as exc:  # noqa: BLE001 — never crashes delivery
                 log.warning("inbound mailbox poll failed: %s", exc)
+                await _integration_event(settings, "google_workspace", "shared mailbox poll", exc)
             next_inbound = now + timedelta(seconds=settings.ops_inbound_seconds)
         if (
             settings.gdrive_docs
@@ -809,6 +829,7 @@ async def main() -> None:
                 await run_docs_reconciliation(settings)
             except Exception as exc:  # noqa: BLE001 — never crashes delivery
                 log.warning("docs grant reconciliation failed: %s", exc)
+                await _integration_event(settings, "google_workspace", "Drive grants", exc)
             next_docs = now + timedelta(seconds=settings.gdrive_reconcile_seconds)
         if (
             settings.analytics_enabled
@@ -872,6 +893,7 @@ async def main() -> None:
                 await run_digest_cycle(settings, _client(settings), comms_store)
             except Exception as exc:  # noqa: BLE001 — never crashes delivery
                 log.warning("daily digest cycle failed: %s", exc)
+                await _integration_event(settings, "google_workspace", "daily digest", exc)
             next_digest = _next_digest_time(settings, datetime.now(timezone.utc))
 
         if (settings.login_integrity_hour, settings.login_integrity_tz) != integrity_sched:
