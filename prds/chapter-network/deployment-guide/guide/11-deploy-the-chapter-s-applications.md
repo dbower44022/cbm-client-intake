@@ -1,7 +1,7 @@
 # Stage 11 — Deploy the chapter's applications
 
-**Version:** 0.15  
-**Last Updated:** 11-09-26 23:59  
+**Version:** 0.16  
+**Last Updated:** 11-13-26 10:30  
 **Generated from** `steps/stage-11.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -42,6 +42,9 @@ In this stage we put the chapter's applications on its own hosting account and p
 - 11.16 Confirm the calendar
 - 11.17 Confirm the shared drive
 - 11.18 Confirm a new mentor gets a mailbox
+- 11.19 Connect the software to Constant Contact
+- 11.20 Register Lob's delivery webhook
+- 11.21 Point the number's replies at the applications
 
 ---
 
@@ -745,10 +748,108 @@ In this stage we put the chapter's applications on its own hosting account and p
 
 ---
 
+## 11.19 Connect the software to Constant Contact
+
+**Summary:** The applications reach the chapter's Constant Contact account through the developer application from step 5.11, once an administrator has allowed it. This step makes that connection from System Settings. A chapter that recorded no Constant Contact account in step 5.11 skips it.
+
+**Who:** The chapter — signed in to Constant Contact as admin@EMAIL-DOMAIN, the user who created the developer application
+
+**Finish first:**
+
+- step 5.11 Open the Constant Contact account and its developer application
+- step 11.12 Confirm the application is healthy
+
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
+
+**Do this:**
+
+1. Open System Settings, then the Constant Contact sub-tab of the Integrations tab, and set the two settings from the Constant Contact item in the vault:
+   - Mailing service client ID: the API key.
+   - Mailing service client secret: the client secret.
+2. Click Connect. Constant Contact asks to sign in: sign in as admin@EMAIL-DOMAIN and allow the access it asks for.
+   *You should see:* System Settings again, saying the mailing service is connected, with the account's name.
+
+**Done when:** System Settings shows the mailing service connected to the chapter's own Constant Contact account.
+
+**How to check:** The Constant Contact sub-tab shows the connection, and its Test Integration button passes.
+
+**If it didn't work:**
+
+- Constant Contact says the redirect address does not match: correct the redirect address in step 5.11 so it is exactly the applications' callback address.
+- Any other refusal: stop and ask the Association.
+
+**What usually goes wrong:** Signing in to Constant Contact as a different user from the one who created the developer application. The developer application is private to its creator, so the connection is refused.
+
+---
+
+## 11.20 Register Lob's delivery webhook
+
+**Summary:** Lob tells the applications when a postcard is delivered or returned, by calling the applications' own address. The applications refuse any call that does not carry Lob's signature, made with a secret Lob gives when the webhook is created. This step creates the webhook and stores the secret. A chapter that recorded no Lob account in step 5.14 skips it.
+
+**Who:** The chapter — the person the board names for marketing
+
+**Finish first:**
+
+- step 5.14 Open the Lob account and store its keys, or record that it is not needed
+- step 11.12 Confirm the application is healthy
+
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
+
+**Do this:**
+
+1. In Lob's dashboard, open the webhooks page and create a webhook. The exact wording of these screens has not been checked for this guide. Put the applications' web address in place of APP-ADDRESS:
+   - https://APP-ADDRESS/api/campaigns/postal/events
+2. Choose the postcard events for delivered and for returned to sender.
+3. Copy the webhook's secret into the Lob item in the vault, labelled webhook secret.
+4. Open System Settings, then the Lob sub-tab of the Integrations tab, and paste the secret into the setting Mail vendor webhook secret.
+   *You should see:* The Lob sub-tab's integration test reports the webhook secret as set.
+
+**Done when:** The webhook exists in Lob with the applications' address, and its secret is in the vault and set in System Settings.
+
+**How to check:** The Lob sub-tab shows the webhook secret as set, and its Test Integration button passes.
+
+**If it didn't work:** Stop, and ask the Association before going on.
+
+**What usually goes wrong:** A secret that does not match Lob's. Every delivery event is refused, and postcards stay at sent.
+
+---
+
+## 11.21 Point the number's replies at the applications
+
+**Summary:** When someone replies STOP to a text, Twilio passes the reply to the applications, which stop texting that person. Twilio does that only once the number is told where to send replies. This step sets that address. A chapter that recorded no Twilio account in step 5.15 skips it.
+
+**Who:** The chapter — the person the board names for marketing
+
+**Finish first:**
+
+- step 5.15 Open the Twilio account and buy the sender number, or record that it is not needed
+- step 11.12 Confirm the application is healthy
+
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
+
+**Do this:**
+
+1. In Twilio's console, open the number from step 5.15 and its messaging settings. The exact wording of these screens has not been checked for this guide.
+2. Set the address for when a message comes in to the one below, sent as HTTP POST. Put the applications' web address in place of APP-ADDRESS:
+   - https://APP-ADDRESS/api/campaigns/sms/inbound
+3. Save.
+   *You should see:* The address shown on the number's messaging settings.
+
+**Done when:** The number's incoming-message address is the applications' inbound address, sent as HTTP POST.
+
+**How to check:** Twilio's console shows the address on the number. A STOP reply from a test phone marks that person as not to be texted.
+
+**If it didn't work:** Stop, and ask the Association before going on.
+
+**What usually goes wrong:** Replies sent nowhere. A person who replies STOP keeps getting texts from the applications, though Twilio itself also blocks further texts to them.
+
+---
+
 ## Change log
 
 | Version | Date | Change |
 |---|---|---|
+| 0.16 | 11-13-26 10:30 | Steps 11.19 to 11.21 added: connecting Constant Contact from System Settings (step 5.11's 'later' line), Lob's delivery webhook, and the Twilio number's reply address (mapping approved by Doug 11-13-26). No existing step number changed. Steps that belong to an integration carry the new keys integration and check.auto, read by the setup checklist on System Settings' Integrations tab (prds/integrations-tab-plan.md section 4, mapping approved by Doug 11-13-26). |
 | 0.15 | 11-09-26 23:59 | Steps 11.14 to 11.18 followed for the Business Mentors Association; outgoing mail (11.15) not yet confirmed, mailbox creation (11.18) skipped by ruling. |
 | 0.14 | 11-09-26 23:46 | Steps 11.2 to 11.13 followed for the Business Mentors Association (11-09-26); each step's status records what happened, chiefly that the doctl token's user must also do step 5.9 in the chapter's team. |
 | 0.13 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". |

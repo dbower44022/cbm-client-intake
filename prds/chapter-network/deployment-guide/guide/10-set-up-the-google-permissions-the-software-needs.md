@@ -1,7 +1,7 @@
 # Stage 10 — Set up the Google permissions the software needs
 
-**Version:** 0.8  
-**Last Updated:** 11-08-26 23:44  
+**Version:** 0.9  
+**Last Updated:** 11-13-26 10:30  
 **Generated from** `steps/stage-10.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -26,6 +26,7 @@ In this stage we give the applications a way to act inside the chapter's Google 
 - 10.3 Enter the permission grant
 - 10.4 Name the mailbox the software acts as
 - 10.5 Create the shared drive and add the machine account
+- 10.6 Create the YouTube key and list the playlists, or record that they are not needed
 
 ---
 
@@ -239,10 +240,47 @@ In this stage we give the applications a way to act inside the chapter's Google 
 
 ---
 
+## 10.6 Create the YouTube key and list the playlists, or record that they are not needed
+
+**Summary:** The events library brings recorded webinars in from the chapter's YouTube playlists. Reading a playlist needs an API key from the chapter's Google Cloud project, the one step 10.1 created. This step makes the key, limits it to YouTube, and records the playlists. A chapter with no recorded webinars records that instead.
+
+**Who:** The Association inside the chapter's Google account; the chapter names the playlists
+
+**Finish first:**
+
+- step 10.1 Create the machine account
+
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
+
+**Do this:**
+
+1. Decide whether the chapter has recorded webinars on YouTube to bring in. If not, write "No YouTube playlists" on the chapter's account list (step 5.7), mark YouTube not in use on the YouTube sub-tab of System Settings once the applications run, and stop here.
+2. In the Google Cloud console, open the project step 10.1 created, then APIs and services, then Library. Find YouTube Data API v3 and click Enable.
+3. Open APIs and services, then Credentials. Click Create credentials, then API key.
+   *You should see:* A new key, shown in a dialog.
+4. Edit the key, and under its API restrictions allow only YouTube Data API v3. Copy the key into the chapter's Operations vault, in an item titled YouTube, labelled API key.
+5. For each playlist to bring in, open it on YouTube and copy the part of its web address after list=. Write the identifiers in the YouTube item in the vault, one per line.
+6. Once the applications run (stage 11), open System Settings, then the YouTube sub-tab of the Integrations tab, and set two settings:
+   - YouTube API key: the key.
+   - YouTube playlists: the playlist identifiers, separated by commas.
+
+   *You should see:* The YouTube sub-tab's integration test names each playlist with its number of videos.
+
+**Done when:** Either the key is in the vault, limited to YouTube, and set in System Settings with every playlist the chapter wants brought in, or a note records that this chapter has none.
+
+**How to check:** The YouTube sub-tab of System Settings shows both settings as set, and its Test Integration button passes, naming every playlist.
+
+**If it didn't work:** Stop, and ask the Association before going on.
+
+**What usually goes wrong:** A private playlist, or an identifier copied short. YouTube does not find it, and the integration test names it. Cleveland's own list had one such playlist on 11-13-26.
+
+---
+
 ## Change log
 
 | Version | Date | Change |
 |---|---|---|
+| 0.9 | 11-13-26 10:30 | Step 10.6 added: the YouTube key in the chapter's Google Cloud project, and the playlists (mapping approved by Doug 11-13-26). No existing step number changed. Steps that belong to an integration carry the new keys integration and check.auto, read by the setup checklist on System Settings' Integrations tab (prds/integrations-tab-plan.md section 4, mapping approved by Doug 11-13-26). |
 | 0.8 | 11-08-26 23:44 | Step 10.2 done on the Business Mentors Association: stage 10 complete. |
 | 0.7 | 11-08-26 23:41 | Step 10.2: the Association's new organization did block keys after all. The fix written out from the real screens: grant Organization Policy Administrator, override the block on the project only, check the older rule, and take the role back off. |
 | 0.6 | 11-08-26 21:43 | Steps 10.1 and 10.3 to 10.5 done on the Business Mentors Association and rewritten from the real screens: a direct address for every page, the project ID's added number (PROJECT-ID) and the service account's real address, the Enable click that needs a wait, the OAuth 2 Client ID column, the Add a new client ID box, the role menu that starts at Content manager, the Share anyway warning, and /folders/ in the drive's address. Step 10.2 notes that the Association's new organization did not block keys. |

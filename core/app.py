@@ -702,6 +702,9 @@ def create_app(
     from integrations.store import make_test_run_store
 
     app.state.integration_test_store = make_test_run_store(settings)
+    from integrations.ticks import make_tick_store
+
+    app.state.integration_tick_store = make_tick_store(settings)
     # Business Evaluation (prds/business-evaluation-plan.md): the evaluation
     # links and the answers saved as the client goes, and the CRM client the
     # submit writes through (the org-wide key, or the dry run). The survey

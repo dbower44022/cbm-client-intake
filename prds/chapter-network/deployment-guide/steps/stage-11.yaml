@@ -1,7 +1,7 @@
 stage: 11
 name: Deploy the chapter's applications
-version: "0.15"
-updated: "11-09-26 23:59"
+version: "0.16"
+updated: "11-13-26 10:30"
 summary: >-
   In this stage we put the chapter's applications on its own hosting account and
   prove they work. We generate the deployment settings from the reviewed chapter
@@ -729,6 +729,7 @@ steps:
     needs: [ESPO_API_KEY]
     produces: []
     mode: automated
+    integration: [espocrm]
     actions:
       - do: Open https://APP-ADDRESS and sign in with the CRM administrator account the deployment wizard created in step 9.3. Its name and password are in the Operations vault.
       - do: Open Client Administration.
@@ -736,6 +737,7 @@ steps:
     done_when: >-
       A request through the application returns CRM data.
     check:
+      auto: [test_passed:espocrm]
       how:
         - >-
           At https://APP-ADDRESS, sign in with the CRM administrator account
@@ -781,6 +783,7 @@ steps:
     needs: [ops_mailbox, GOOGLE_SERVICE_ACCOUNT_JSON]
     produces: []
     mode: guided
+    integration: [google_workspace]
     actions:
       - do: Confirm no other deployment reads the same shared operations mailbox. Only one deployment may read a given mailbox.
       - do: "Every Google setting in steps 11.14 to 11.18 reached the application from the form in step 11.2. Sign in to https://APP-ADDRESS/setup as a CRM administrator and confirm these show the chapter's values:"
@@ -849,6 +852,7 @@ steps:
     needs: [alert_email_from]
     produces: []
     mode: guided
+    integration: [google_workspace]
     actions:
       - do: "At https://APP-ADDRESS/setup, confirm these show the chapter's values. If not, correct them the way step 11.14 describes:"
         items:
@@ -904,6 +908,7 @@ steps:
     needs: []
     produces: []
     mode: guided
+    integration: [google_workspace]
     actions:
       - do: "At https://APP-ADDRESS/setup, confirm this shows true. If not, correct it the way step 11.14 describes:"
         items:
@@ -964,6 +969,7 @@ steps:
     needs: [shared_drive_id]
     produces: []
     mode: guided
+    integration: [google_workspace]
     actions:
       - do: "At https://APP-ADDRESS/setup, confirm these show the chapter's values. If not, correct them the way step 11.14 describes:"
         items:
@@ -1023,6 +1029,7 @@ steps:
     needs: [primary_domain]
     produces: []
     mode: guided
+    integration: [google_workspace]
     actions:
       - do: "At https://APP-ADDRESS/setup, confirm these show the chapter's values. If not, correct them the way step 11.14 describes:"
         items:
@@ -1088,7 +1095,118 @@ steps:
     status: "not-yet-tried Business Mentors Association 11-10-26: skipped, because mailbox creation was ruled off for this test system at stage 8; the settings read as ruled. Every doctl command used --context bma, so the computer's default never changed."
     source: 3-Methods-CRM-Google-Applications.md#11.18
 
+  - id: "11.19"
+    name: Connect the software to Constant Contact
+    summary: >-
+      The applications reach the chapter's Constant Contact account through the
+      developer application from step 5.11, once an administrator has allowed it.
+      This step makes that connection from System Settings. A chapter that
+      recorded no Constant Contact account in step 5.11 skips it.
+    who: chapter — signed in to Constant Contact as admin@EMAIL-DOMAIN, the user who created the developer application
+    first: ["5.11", "11.12"]
+    needs: []
+    produces: []
+    mode: guided
+    integration: [constant_contact]
+    actions:
+      - do: "Open System Settings, then the Constant Contact sub-tab of the Integrations tab, and set the two settings from the Constant Contact item in the vault:"
+        items:
+          - "Mailing service client ID: the API key."
+          - "Mailing service client secret: the client secret."
+      - do: "Click Connect. Constant Contact asks to sign in: sign in as admin@EMAIL-DOMAIN and allow the access it asks for."
+        see: "System Settings again, saying the mailing service is connected, with the account's name."
+    done_when: >-
+      System Settings shows the mailing service connected to the chapter's own
+      Constant Contact account.
+    check:
+      auto: [mailing_connected]
+      how: The Constant Contact sub-tab shows the connection, and its Test Integration button passes.
+      probe: The app reads the stored connection and the account's summary.
+    if_not:
+      - "Constant Contact says the redirect address does not match: correct the redirect address in step 5.11 so it is exactly the applications' callback address."
+      - "Any other refusal: stop and ask the Association."
+    goes_wrong: >-
+      Signing in to Constant Contact as a different user from the one who created
+      the developer application. The developer application is private to its
+      creator, so the connection is refused.
+    later: unchanged
+    status: not-yet-tried — added 11-13-26 with the Integrations tab's setup checklist (phase 4), from MAILING-SETUP.md sections 2 and 3, which crm-test followed on 10-08-26.
+    source: MAILING-SETUP.md sections 2 and 3
+
+  - id: "11.20"
+    name: Register Lob's delivery webhook
+    summary: >-
+      Lob tells the applications when a postcard is delivered or returned, by
+      calling the applications' own address. The applications refuse any call
+      that does not carry Lob's signature, made with a secret Lob gives when the
+      webhook is created. This step creates the webhook and stores the secret. A
+      chapter that recorded no Lob account in step 5.14 skips it.
+    who: chapter — the person the board names for marketing
+    first: ["5.14", "11.12"]
+    needs: []
+    produces: []
+    mode: guided
+    integration: [lob]
+    actions:
+      - do: "In Lob's dashboard, open the webhooks page and create a webhook. The exact wording of these screens has not been checked for this guide. Put the applications' web address in place of APP-ADDRESS:"
+        items:
+          - "https://APP-ADDRESS/api/campaigns/postal/events"
+      - do: "Choose the postcard events for delivered and for returned to sender."
+      - do: "Copy the webhook's secret into the Lob item in the vault, labelled webhook secret."
+      - do: "Open System Settings, then the Lob sub-tab of the Integrations tab, and paste the secret into the setting Mail vendor webhook secret."
+        see: "The Lob sub-tab's integration test reports the webhook secret as set."
+    done_when: >-
+      The webhook exists in Lob with the applications' address, and its secret is
+      in the vault and set in System Settings.
+    check:
+      auto: [setting_set:postal_webhook_secret]
+      how: The Lob sub-tab shows the webhook secret as set, and its Test Integration button passes.
+      probe: The app checks the secret is set. A real event is the only proof the two agree.
+    goes_wrong: >-
+      A secret that does not match Lob's. Every delivery event is refused, and
+      postcards stay at sent.
+    later: unchanged
+    status: not-yet-tried — added 11-13-26 with the Integrations tab's setup checklist (phase 4).
+    source: core/postal.py; campaigns/public.py
+
+  - id: "11.21"
+    name: Point the number's replies at the applications
+    summary: >-
+      When someone replies STOP to a text, Twilio passes the reply to the
+      applications, which stop texting that person. Twilio does that only once the
+      number is told where to send replies. This step sets that address. A chapter
+      that recorded no Twilio account in step 5.15 skips it.
+    who: chapter — the person the board names for marketing
+    first: ["5.15", "11.12"]
+    needs: []
+    produces: []
+    mode: guided
+    integration: [twilio]
+    actions:
+      - do: "In Twilio's console, open the number from step 5.15 and its messaging settings. The exact wording of these screens has not been checked for this guide."
+      - do: "Set the address for when a message comes in to the one below, sent as HTTP POST. Put the applications' web address in place of APP-ADDRESS:"
+        items:
+          - "https://APP-ADDRESS/api/campaigns/sms/inbound"
+      - do: "Save."
+        see: "The address shown on the number's messaging settings."
+    done_when: >-
+      The number's incoming-message address is the applications' inbound address,
+      sent as HTTP POST.
+    check:
+      how: Twilio's console shows the address on the number. A STOP reply from a test phone marks that person as not to be texted.
+      probe: none — the integration test does not read the number's settings.
+    goes_wrong: >-
+      Replies sent nowhere. A person who replies STOP keeps getting texts from the
+      applications, though Twilio itself also blocks further texts to them.
+    later: unchanged
+    status: not-yet-tried — added 11-13-26 with the Integrations tab's setup checklist (phase 4).
+    source: campaigns/public.py; core/sms.py
+
 changes:
+  - version: "0.16"
+    date: "11-13-26 10:30"
+    change: >-
+      Steps 11.19 to 11.21 added: connecting Constant Contact from System Settings (step 5.11's 'later' line), Lob's delivery webhook, and the Twilio number's reply address (mapping approved by Doug 11-13-26). No existing step number changed. Steps that belong to an integration carry the new keys integration and check.auto, read by the setup checklist on System Settings' Integrations tab (prds/integrations-tab-plan.md section 4, mapping approved by Doug 11-13-26).
   - version: "0.15"
     date: "11-09-26 23:59"
     change: >-

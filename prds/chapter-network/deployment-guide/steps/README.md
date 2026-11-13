@@ -1,9 +1,9 @@
 # The deployment guide as data
 
-**Version:** 0.6
+**Version:** 0.7
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 11-07-26 15:21
+**Last Updated:** 11-13-26 10:30
 
 ---
 
@@ -60,7 +60,8 @@ steps: [...]
 | `actions` | Numbered actions. Each has `do` (one action), `items` when the action involves a list (each item renders on its own line), and, where it helps, `see` (what the person should see — a sentence, or a list when there are several things to see). Click-level where the screens are known; coarser where they are not, and `status` says so. |
 | `done_when` | The finishing test, word for word from the step list. A test with several conditions is a list, one condition per item, rendered as "Done when all of these are true". Only conditions go in it. |
 | `note` | A sentence that explains the finishing test without being a condition, such as "There are two sets, not one." Printed after the conditions, and kept word for word with the step list's Note line. |
-| `check` | `how`: how a person confirms it — a sentence, or a list with one concrete check per item, each naming where to look and what must be seen. `probe`: what the app would check automatically, in plain words, or `none`. |
+| `check` | `how`: how a person confirms it — a sentence, or a list with one concrete check per item, each naming where to look and what must be seen. `probe`: what the app would check automatically, in plain words, or `none`. `auto` (optional): the automatic checks System Settings runs for the step on an integration's setup checklist, as a list of names from `integrations/checklist.py` — `setting_set:<setting>`, `test_passed:<integration>` or `mailing_connected`. All must pass for the box to tick itself, and a step with `auto` can never be ticked by hand. A step without it is ticked by hand. |
+| `integration` | Optional: the sub-tabs of System Settings' Integrations tab whose setup checklist shows the step, as a list of integration keys (`integrations/registry.py`), for example `[zoom]`. A step on two sub-tabs is ticked once for both. |
 | `if_not` | What to do when the check fails: a sentence, or a list with one failure case per item, each naming how to recognise it. Default: stop and ask the Association. |
 | `goes_wrong` | The known failure and how to recognise it, or `nothing known yet`. |
 | `later` | The automation that will replace a manual method, or `unchanged`. |
@@ -70,7 +71,7 @@ steps: [...]
 
 The readable guide shows `summary` (or `why`), `who`, `first`, `actions`, `done_when`,
 `check.how`, `if_not` and `goes_wrong`, plus one line when a step has never been
-done for real. `mode`, `needs`, `produces`, `probe`, `later` and `source` are for
+done for real. `mode`, `needs`, `produces`, `probe`, `auto`, `integration`, `later` and `source` are for
 the app and the people maintaining the guide.
 
 ## Words in capitals
@@ -98,6 +99,7 @@ screen is not known, say so in the action.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.7 | 11-13-26 10:30 | A step may carry `integration` and `check.auto`, which place it on an integration's setup checklist in System Settings and name its automatic checks (prds/integrations-tab-plan.md section 4; the plan's `check:` key became `check.auto`, because `check` already held `how` and `probe`). Neither is printed in the guide. |
 | 0.6 | 11-07-26 15:21 | `central` in `who` and `by` now prints as the Association, the Business Mentors Association, in place of the central support organization. The data value keeps its spelling. |
 | 0.5 | 09-25-26 12:50 | A stage or a step may carry `summary`, what is done and why in a few sentences, printed as Summary in place of Why (Doug, 09-25-26, for stage 10). `check.how` may be a list, one concrete check per item. |
 | 0.4 | 09-23-26 20:40 | Step numbers may change by ruling, with every reference following (Doug, 09-23-26, for stage 9). A stage may carry an `owed` list, printed as Not possible yet. `if_not` may be a list, one failure case per item. The renderer indents an action's lines to the width of its number, so Markdown no longer breaks the list at action 10. |

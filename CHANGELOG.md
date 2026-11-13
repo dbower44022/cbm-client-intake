@@ -5,6 +5,45 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.325.0] — 2026-11-13
+
+**feat: the Integrations tab, phase 4 — the setup checklist.** Still dark
+behind **`INTEGRATIONS_TAB`**. Plan `prds/integrations-tab-plan.md` § 4 and
+§ 7; the mapping Doug approved 11-13-26 (phase 4 stopping point 1);
+`OPEN-ITEMS.md` #82.
+
+- **The steps stay in the deployment guide.** A step joins an integration's
+  checklist through two new keys in its stage file: `integration:` (the
+  sub-tabs that show it) and `check.auto:` (its automatic checks). The plan's
+  `check:` became `check.auto`, because `check` already held `how` and
+  `probe`. Neither key is printed: a test renders every stage with and without
+  them and compares. 32 existing steps tagged; `steps/README.md` 0.7.
+- **Nine new guide steps**, appended so no step number changed: 5.13 Fathom,
+  5.14 Lob, 5.15 and 5.16 Twilio and the carrier registration, 5.17
+  Anthropic, 10.6 YouTube, 11.19 connecting Constant Contact, 11.20 Lob's
+  delivery webhook, 11.21 the Twilio number's replies. Fathom and the
+  Constant Contact connection had no steps either, beyond the four the plan
+  named. Step list 0.29; stages 4, 5, 8, 9, 10, 11 and 12 re-rendered.
+- **The checks** (`integrations/checklist.py`): `setting_set:<key>` (the
+  stored Email Setup counts for the two Google settings it holds),
+  `test_passed:<integration>` and `mailing_connected`. Each checklist opens
+  with "Decide whether this chapter uses …" (ticked once the "in use"
+  setting is deliberately saved or set in the deployment; none for EspoCRM)
+  and ends with "The integration test passes". `crm_field` was dropped: no
+  step needs it. Opening the page reads only the settings, this
+  application's database and the step files.
+- **Hand ticks** (`integrations/ticks.py`, migration `0045`, after the
+  Business Evaluation's `0044`): a log, one row per tick or untick, the
+  latest row the state; one set for the whole deployment, so a step on two
+  sub-tabs is ticked once. `POST /setup/api/integrations/{key}/checklist/{step}`
+  refuses an automatic step (409), records the action through
+  `core/action_log.py`, and the tick joins the History tab as
+  "checklist <step>". In `RESET_TABLES`.
+- **The page**: the checklist section on each sub-tab, "N of M done", folded
+  while the integration is not used by this chapter; a box on each manual
+  step, the state and the reason on each automatic one. The placeholder goes.
+- Tests: `tests/test_integration_checklist.py` (22).
+
 ## [0.324.0] — 2026-11-13
 
 **feat: Business Evaluation, phase 1 — the foundation.** Dark behind

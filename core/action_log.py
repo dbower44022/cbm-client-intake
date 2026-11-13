@@ -132,6 +132,8 @@ ACT_SETTING_CLEARED = "Setting Reset to Default"
 ACT_JOB_DRY_RUN = "Maintenance Job Dry Run"
 ACT_JOB_APPLIED = "Maintenance Job Applied"
 ACT_INTEGRATION_TESTED = "Integration Test Run"
+ACT_CHECKLIST_TICKED = "Setup Checklist Step Ticked"
+ACT_CHECKLIST_UNTICKED = "Setup Checklist Step Unticked"
 
 _NAME_MAX = 250  # CActionLog.name is a varchar — keep the one-liner within it.
 

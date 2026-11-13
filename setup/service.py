@@ -12,6 +12,7 @@ the row only reports whether one is set.
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 from typing import Any, Optional
 
@@ -30,9 +31,12 @@ from core.settings_registry import (
 )
 from core.settings_registry import BY_KEY, INTEGRATION_TAGS
 from core.settings_store import Override, SettingsStore, scoped_overrides
+from integrations import checklist
 from integrations import guard as integration_guard
 from integrations import registry as integration_registry
 from integrations.registry import IN_USE_KEYS, INTEGRATIONS
+
+log = logging.getLogger("cbm_intake.setup.service")
 
 SECRET_MASK = "••••••••"
 
@@ -151,6 +155,7 @@ def _readonly_rows(settings: Settings, env: dict[str, Any]) -> list[dict[str, An
 async def page_payload(
     store: Optional[SettingsStore],
     test_runs: Optional[dict[str, dict[str, Any]]] = None,
+    checklist_state: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     """Everything the page renders in one call. ``test_runs`` is the last
     integration test of each integration (integrations/store.py), read only
@@ -231,7 +236,7 @@ async def page_payload(
     if tab_on:
         payload["integrationsTab"] = True
         payload["integrations"] = _integrations(settings, env, overrides, tagged,
-                                                test_runs or {})
+                                                test_runs or {}, checklist_state or {})
     return payload
 
 
@@ -246,12 +251,24 @@ def _integrations(
     overrides: dict[str, Override],
     tagged: dict[str, dict[str, Any]],
     test_runs: dict[str, dict[str, Any]],
+    checklist_state: Optional[dict[str, Any]] = None,
 ) -> list[dict[str, Any]]:
     """One entry per integration, in registry order: its status line, its
     settings (rendered by the same ``_row`` as the Settings tab) and its
     "Used by" list."""
     order = {key: i for i, key in enumerate(INTEGRATION_TAGS)}
     scoped = scoped_overrides()
+    cs = checklist_state or {}
+    state = checklist.State(
+        settings=settings, overrides=overrides, test_runs=test_runs,
+        ticks=cs.get("ticks") or {}, mailing_connected=cs.get("mailingConnected"),
+        stored_google=cs.get("storedGoogle") or {},
+    )
+    try:
+        steps = checklist.load_steps()
+    except Exception as exc:  # noqa: BLE001 — the rest of the page still renders
+        log.warning("setup checklist steps could not be read: %s", exc)
+        steps = None
     out: list[dict[str, Any]] = []
     for integ in INTEGRATIONS:
         rows = sorted(
@@ -313,6 +330,10 @@ def _integrations(
             "inUseKey": integ.in_use_setting,
             "testable": integ.testable,
             "status": status,
+            "checklist": (checklist.build(integ, state, steps) if steps is not None
+                          else {"rows": [], "done": 0, "total": 0,
+                                "error": "The deployment guide's step files could not be read."}),
+            "ticksStored": bool(cs.get("ticksStored")),
             "settings": top,
             "sections": sections,
             "usedBy": used_by,

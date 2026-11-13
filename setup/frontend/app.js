@@ -546,8 +546,70 @@
     return '<ul class="su__placeholders">'
       + (i.testable ? "" : "<li><strong>Integration test</strong> \u2014 comes with phase " + esc(ph.test) + " of the Integrations tab build.</li>")
       + "<li><strong>Diagnosis</strong> \u2014 comes with phase " + esc(ph.diagnosis) + ".</li>"
-      + "<li><strong>Setup checklist</strong> \u2014 comes with phase " + esc(ph.checklist) + ".</li>"
       + "</ul>";
+  }
+
+  // The setup checklist (plan § 4): the deployment guide's steps for this
+  // integration. An automatic step ticks itself from its check and shows why;
+  // a manual step has a box an administrator ticks. Folded while the
+  // integration is not used by this chapter.
+  var CHECKLIST_ICON = { done: "\u2713", open: "\u25cb", unknown: "?" };
+
+  function checklistBlock(i) {
+    var cl = i.checklist || { rows: [], done: 0, total: 0 };
+    var id = i.key + "/checklist";
+    var unused = i.status && i.status.inUse === false;
+    var open = unused ? state.closed[id] === false : !state.closed[id];
+    var html = '<details class="su__section su__setupcl" data-section="' + esc(id) + '"' + (open ? " open" : "")
+      + '><summary>Setup checklist <span class="su__setupcount">' + esc(cl.done) + " of " + esc(cl.total) + " done"
+      + (unused ? " \u00b7 not used by this chapter" : "") + "</span></summary>";
+    if (cl.error) html += '<p class="su__note su__note--warn">' + esc(cl.error) + "</p>";
+    html += '<p class="form-error" id="tickError" role="alert" hidden></p>';
+    if (!i.ticksStored) {
+      html += '<p class="su__hint">No database is attached, so the boxes ticked by hand cannot be kept.</p>';
+    }
+    html += '<ol class="su__setupsteps">' + cl.rows.map(function (r) {
+      var mark;
+      if (r.automatic) {
+        mark = '<span class="su__setupauto su__setupauto--' + esc(r.state) + '" title="Ticks itself from its check">'
+          + (CHECKLIST_ICON[r.state] || "?") + "</span>";
+      } else {
+        mark = '<input type="checkbox" class="su__setupbox" data-tick="' + esc(i.key + "|" + r.id) + '"'
+          + (r.state === "done" ? " checked" : "") + ' aria-label="' + esc("Step " + r.id + " done") + '" />';
+      }
+      var where = r.stage ? '<span class="su__setupid">' + esc(r.id) + "</span> " : "";
+      var meta = [];
+      if (r.stage) meta.push("Stage " + r.stage + " \u2014 " + (r.stageName || ""));
+      if (r.automatic) meta.push("ticks itself");
+      if (r.tick) meta.push("ticked by " + (r.tick.by || "someone") + " " + stamp(r.tick.at));
+      (r.shared || []).forEach(function (k) {
+        var other = findIntegration(k);
+        meta.push("also on " + (other ? other.name : k));
+      });
+      return '<li class="su__setupstep su__setupstep--' + esc(r.state) + '">' + mark
+        + '<div class="su__setupbody"><strong>' + where + esc(r.name) + "</strong>"
+        + (r.reason ? ' <span class="su__setupreason">' + esc(r.reason) + "</span>" : "")
+        + (meta.length ? '<div class="su__setupmeta">' + meta.map(esc).join(" \u00b7 ") + "</div>" : "")
+        + "</div></li>";
+    }).join("") + "</ol>";
+    return html + '<p class="su__hint">The steps are written in the chapter deployment guide '
+      + "(<code>prds/chapter-network/deployment-guide/</code>), stage by stage.</p></details>";
+  }
+
+  async function tickStep(spec, box) {
+    var parts = spec.split("|");
+    var err = $("tickError");
+    if (err) err.hidden = true;
+    try {
+      var result = await api("/integrations/" + encodeURIComponent(parts[0]) + "/checklist/"
+        + encodeURIComponent(parts[1]), { method: "POST", body: JSON.stringify({ ticked: box.checked }) });
+      state.page = result.page;
+      renderIntegrations();
+    } catch (e) {
+      box.checked = !box.checked;
+      err = $("tickError");
+      if (err) { err.hidden = false; text(err, e.message); }
+    }
   }
 
   function settingsTable(rows) {
@@ -603,6 +665,7 @@
     }
     if (i.testable) html += testBlock(i);
     html += placeholders(i);
+    html += checklistBlock(i);
     html += '<section class="su__group"><h2 class="su__h2">Settings</h2>' + settingsTable(i.settings || []);
     (i.sections || []).forEach(function (s) {
       var id = i.key + "/" + s.key;
@@ -1134,6 +1197,7 @@
     var t = ev.target;
     if (t.dataset && t.dataset.edit) { openEditor(t.dataset.edit); return; }
     if (t.dataset && t.dataset.test) { runTest(t.dataset.test, t); return; }
+    if (t.dataset && t.dataset.tick) { tickStep(t.dataset.tick, t); return; }
     if (t.dataset && t.dataset.subtab) { ev.preventDefault(); selectSubtab(t.dataset.subtab); return; }
     if (t.dataset && t.dataset.goto) { ev.preventDefault(); gotoSetting(t.dataset.goto); return; }
     if (t.dataset && t.dataset.confirm) { confirmSetting(t.dataset.confirm); return; }

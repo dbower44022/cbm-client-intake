@@ -1,7 +1,7 @@
 stage: 10
 name: Set up the Google permissions the software needs
-version: "0.8"
-updated: "11-08-26 23:44"
+version: "0.9"
+updated: "11-13-26 10:30"
 summary: >-
   In this stage we give the applications a way to act inside the chapter's
   Google account. We create one account made for a program rather than a person,
@@ -42,6 +42,7 @@ steps:
     needs: [primary_domain]
     produces: [google_service_account_client_id]
     mode: guided
+    integration: [google_workspace]
     actions:
       - do: "In a browser, go to console.cloud.google.com and sign in as a Google administrator of the chapter's domain (stage 4). Screens below were checked on the Association's own account on 11-08-26. The first sign-in creates the domain's Google Cloud organization by itself, and the console then offers a free-trial banner across the top: dismiss it, the stage costs nothing."
       - do: "Open the project picker at the top of the page and choose New project. Enter:"
@@ -111,6 +112,7 @@ steps:
     needs: []
     produces: [GOOGLE_SERVICE_ACCOUNT_JSON]
     mode: guided
+    integration: [google_workspace]
     actions:
       - do: "Go to https://console.cloud.google.com/iam-admin/serviceaccounts?project=PROJECT-ID , click the account's email, and open the Keys tab. Under a yellow warning about key risks, click Add key, then Create new key. Choose:"
         items:
@@ -132,6 +134,7 @@ steps:
       The key file is stored as a secret and is not left on anyone's laptop or in
       email.
     check:
+      auto: [setting_set:google_service_account_json]
       how:
         - >-
           In Proton Pass, open the chapter's Operations vault. An item named Google
@@ -181,6 +184,7 @@ steps:
     needs: [google_service_account_client_id]
     produces: []
     mode: guided
+    integration: [google_workspace]
     actions:
       - do: The chapter's Google administrator signs in at admin.google.com. Nobody else can do this step.
       - do: "Go to https://admin.google.com/ac/owl/domainwidedelegation . The page is headed by the trail Security, API Controls, Domain-wide Delegation, with a list headed API clients. Click Add new beside that heading."
@@ -209,6 +213,7 @@ steps:
       standard. A missing permission fails later with a message that names nothing
       useful.
     check:
+      auto: [test_passed:google_workspace]
       how:
         - >-
           At https://admin.google.com/ac/owl/domainwidedelegation , signed in as
@@ -262,6 +267,7 @@ steps:
     needs: [ops_mailbox]
     produces: []
     mode: guided
+    integration: [google_workspace]
     actions:
       - do: "Go to https://admin.google.com/ac/users , the list headed Users, and search for the shared operations mailbox address (for example info@CHAPTER-DOMAIN)."
         see: "The address listed as a user with Status Active and an Email usage figure. The list does not show licences: click the name to see the licence on the user's own page. If it is not in the users list at all, it is a group or an alias, and cannot be used."
@@ -270,6 +276,7 @@ steps:
       The mailbox is named, and it is a real licensed mailbox rather than a group or
       an alias. A group or alias is refused.
     check:
+      auto: [setting_set:google_delegated_admin]
       how:
         - >-
           At admin.google.com, open Directory, then Users, and search for the
@@ -315,6 +322,7 @@ steps:
     needs: []
     produces: [shared_drive_id]
     mode: guided
+    integration: [google_workspace]
     actions:
       - do: "Signed in as the chapter's Google administrator, go to https://drive.google.com/drive/shared-drives . On a domain with none yet, the page shows A place for teamwork and a blue button Create a shared drive; otherwise click New at top left. Either opens a box headed New shared drive. Replace the name in it with the one below and click Create."
         items:
@@ -331,6 +339,7 @@ steps:
     done_when: >-
       The shared drive exists and the machine account is a member of it.
     check:
+      auto: [setting_set:gdrive_shared_drive_id]
       how:
         - >-
           At drive.google.com, signed in as the chapter's Google administrator,
@@ -361,7 +370,53 @@ steps:
     status: done-for-real — the Business Mentors Association, 11-08-26, drive 0AFSWscbGrTLQUk9PVA.
     source: 3-Methods-CRM-Google-Applications.md#10.5
 
+  - id: "10.6"
+    name: Create the YouTube key and list the playlists, or record that they are not needed
+    summary: >-
+      The events library brings recorded webinars in from the chapter's YouTube
+      playlists. Reading a playlist needs an API key from the chapter's Google
+      Cloud project, the one step 10.1 created. This step makes the key, limits it
+      to YouTube, and records the playlists. A chapter with no recorded webinars
+      records that instead.
+    who: central, inside the chapter's Google account; the chapter names the playlists
+    first: ["10.1"]
+    needs: []
+    produces: []
+    mode: guided
+    integration: [youtube]
+    actions:
+      - do: "Decide whether the chapter has recorded webinars on YouTube to bring in. If not, write \"No YouTube playlists\" on the chapter's account list (step 5.7), mark YouTube not in use on the YouTube sub-tab of System Settings once the applications run, and stop here."
+      - do: "In the Google Cloud console, open the project step 10.1 created, then APIs and services, then Library. Find YouTube Data API v3 and click Enable."
+      - do: "Open APIs and services, then Credentials. Click Create credentials, then API key."
+        see: "A new key, shown in a dialog."
+      - do: "Edit the key, and under its API restrictions allow only YouTube Data API v3. Copy the key into the chapter's Operations vault, in an item titled YouTube, labelled API key."
+      - do: "For each playlist to bring in, open it on YouTube and copy the part of its web address after list=. Write the identifiers in the YouTube item in the vault, one per line."
+      - do: "Once the applications run (stage 11), open System Settings, then the YouTube sub-tab of the Integrations tab, and set two settings:"
+        items:
+          - "YouTube API key: the key."
+          - "YouTube playlists: the playlist identifiers, separated by commas."
+        see: "The YouTube sub-tab's integration test names each playlist with its number of videos."
+    done_when: >-
+      Either the key is in the vault, limited to YouTube, and set in System
+      Settings with every playlist the chapter wants brought in, or a note records
+      that this chapter has none.
+    check:
+      auto: [setting_set:youtube_api_key, setting_set:youtube_playlist_id]
+      how: The YouTube sub-tab of System Settings shows both settings as set, and its Test Integration button passes, naming every playlist.
+      probe: The app reads every listed playlist in one call.
+    goes_wrong: >-
+      A private playlist, or an identifier copied short. YouTube does not find it,
+      and the integration test names it. Cleveland's own list had one such
+      playlist on 11-13-26.
+    later: unchanged
+    status: not-yet-tried — added 11-13-26 with the Integrations tab's setup checklist (phase 4). Cleveland's key and playlists were set by hand.
+    source: core/youtube.py; scripts/import_youtube_events.py
+
 changes:
+  - version: "0.9"
+    date: "11-13-26 10:30"
+    change: >-
+      Step 10.6 added: the YouTube key in the chapter's Google Cloud project, and the playlists (mapping approved by Doug 11-13-26). No existing step number changed. Steps that belong to an integration carry the new keys integration and check.auto, read by the setup checklist on System Settings' Integrations tab (prds/integrations-tab-plan.md section 4, mapping approved by Doug 11-13-26).
   - version: "0.8"
     date: "11-08-26 23:44"
     change: >-

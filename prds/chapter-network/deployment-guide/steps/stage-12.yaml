@@ -1,7 +1,7 @@
 stage: 12
 name: Set up backups and monitoring
-version: "0.5"
-updated: "11-07-26 15:21"
+version: "0.6"
+updated: "11-13-26 10:30"
 why: >-
   This stage makes sure the chapter's records can be got back after a mistake or a
   failure, and that a person finds out when the system stops working. It comes
@@ -169,6 +169,7 @@ steps:
     needs: [alert_email_from, alert_email_to, app_base_url, crm_base_url]
     produces: []
     mode: guided
+    integration: [google_workspace]
     actions:
       - do: "The alert address must belong to a member of the chapter's DigitalOcean team; DigitalOcean refuses any other. Check it is listed under the chapter's team members in the DigitalOcean web console."
       - do: "Create the uptime check on the application's health page, putting the application's address in place of APP-ADDRESS:"
@@ -251,6 +252,10 @@ steps:
     source: 6-Methods-Backups-Monitoring.md#12.5
 
 changes:
+  - version: "0.6"
+    date: "11-13-26 10:30"
+    change: >-
+      Steps that belong to an integration carry the new keys integration and check.auto, read by the setup checklist on System Settings' Integrations tab (prds/integrations-tab-plan.md section 4, mapping approved by Doug 11-13-26). The rendered guide does not change.
   - version: "0.5"
     date: "11-07-26 15:21"
     change: >-

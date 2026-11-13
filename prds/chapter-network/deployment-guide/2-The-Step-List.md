@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — The Step List
 
 **Document:** The bare list of steps, with no methods yet
-**Version:** 0.28
+**Version:** 0.29
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 11-09-26 22:32
+**Last Updated:** 11-13-26 10:30
 
 ---
 
@@ -289,6 +289,30 @@ Done when:
 - Two-step sign-in is on, and the sign-in and codes are in the chapter's vault.
 - A donation Payment Link exists, and its address is in the vault.
 
+**5.13 Create the Fathom team API key, or record that it is not needed.**
+Done when: either the Fathom API key is stored in the vault and set in System
+Settings, or a note records that this chapter does not use Fathom.
+
+**5.14 Open the Lob account and store its keys, or record that it is not needed.**
+Done when: either both Lob keys are in the vault and the test key is set in
+System Settings, or a note records that this chapter sends no postcards.
+
+Note: Changing to the live key is a separate decision, made when the first real campaign is ready; test mode is switched off at the same moment.
+
+**5.15 Open the Twilio account and buy the sender number, or record that it is not needed.**
+Done when: either the Twilio account is upgraded, the number is bought, and the
+three values are in the vault and set in System Settings, or a note records
+that this chapter sends no texts.
+
+**5.16 Register the sender number with the carriers.**
+Done when: the chapter's brand and campaign are approved, and the sender number
+is attached to the campaign.
+
+**5.17 Create the Anthropic API key, or record that it is not needed.**
+Done when: either the key is in the vault and set in System Settings with a
+monthly spending limit on the account, or a note records that this chapter uses
+no AI features.
+
 ---
 
 ## Stage 6 — Build the chapter's public website
@@ -526,6 +550,11 @@ group or an alias. A group or alias is refused.
 **10.5 Create the shared drive and add the machine account.**
 Done when: the shared drive exists and the machine account is a member of it.
 
+**10.6 Create the YouTube key and list the playlists, or record that they are not needed.**
+Done when: either the key is in the vault, limited to YouTube, and set in System
+Settings with every playlist the chapter wants brought in, or a note records
+that this chapter has none.
+
 ---
 
 ## Stage 11 — Deploy the chapter's applications
@@ -613,6 +642,18 @@ Done when: the application creates a folder on the shared drive and it appears.
 **11.18 Confirm a new mentor gets a mailbox.**
 Done when: a mentor taken through approval ends up with a real working mailbox on
 the chapter's mentor email domain.
+
+**11.19 Connect the software to Constant Contact.**
+Done when: System Settings shows the mailing service connected to the chapter's
+own Constant Contact account.
+
+**11.20 Register Lob's delivery webhook.**
+Done when: the webhook exists in Lob with the applications' address, and its
+secret is in the vault and set in System Settings.
+
+**11.21 Point the number's replies at the applications.**
+Done when: the number's incoming-message address is the applications' inbound
+address, sent as HTTP POST.
 
 ---
 
@@ -874,6 +915,7 @@ Done when: a date is booked to review how the first months have gone.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.29 | 11-13-26 10:30 | Nine steps added for the outside services the applications use and no step set up: 5.13 Fathom, 5.14 Lob, 5.15 and 5.16 Twilio and its carrier registration, 5.17 Anthropic, 10.6 YouTube, and 11.19 to 11.21 for connecting Constant Contact, Lob's delivery webhook and the Twilio number's replies. They feed the setup checklist on System Settings' Integrations tab (mapping approved by Doug 11-13-26). No existing step number changed. |
 | 0.28 | 11-09-26 22:32 | Step 5.8: the tokens are entered in CRMBuilder's deploy wizard at step 9.3, not at 5.8 (CRMBuilder PI-600, handoff of 11-09-26). |
 | 0.27 | 11-09-26 14:21 | Step 5.10: the chapter chooses its website host (Association ruling 75, replacing ruling 29); a new finishing test, that the host does the five things any host must do. |
 | 0.26 | 11-09-26 01:19 | Step 8.3: the colour file address is left empty unless the chapter already has its own colour file (step 6.5, Association ruling 34). |

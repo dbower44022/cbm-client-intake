@@ -1,7 +1,7 @@
 stage: 4
 name: Set up Google Workspace and the chapter's email
-version: "0.7"
-updated: "11-08-26 00:50"
+version: "0.8"
+updated: "11-13-26 10:30"
 why: >-
   Google Workspace is Google's paid service for an organization's email, calendars
   and documents. The software reads and sends the chapter's mail, creates calendar
@@ -59,6 +59,7 @@ steps:
     needs: [primary_domain, founding_email]
     produces: []
     mode: guided
+    integration: [google_workspace]
     actions:
       - do: "Open the chapter's record from step 3.2 and read which domain name is the email domain. Everything below uses that domain name, called EMAIL-DOMAIN."
       - do: "In a browser, go to https://workspace.google.com and choose to get started. The exact wording of Google's screens has not been checked for this guide."
@@ -107,6 +108,7 @@ steps:
     needs: [primary_domain]
     produces: []
     mode: guided
+    integration: [google_workspace]
     actions:
       - do: In the Google Workspace admin console, start domain verification and choose the method that adds a TXT record. Copy the value Google shows.
         see: "A value beginning google-site-verification= followed by a long code. The code is different for every domain."
@@ -140,6 +142,7 @@ steps:
     needs: [primary_domain]
     produces: []
     mode: guided
+    integration: [google_workspace]
     actions:
       - do: "Four DNS records are needed on the chapter's email domain, all added in the chapter's Cloudflare account (open the domain, then DNS, then Records). With manual DNS, add all four in the chapter's DNS provider account instead (step 3.7); its screens differ by provider and are not given here, and the records' values are the same:"
         items:
@@ -217,6 +220,7 @@ steps:
     needs: []
     produces: []
     mode: guided
+    integration: [google_workspace]
     actions:
       - do: "Sign in to https://admin.google.com as the first administrator from step 4.2."
       - do: "Open Account, then Admin roles. Check the first administrator holds the Super Admin role. The menu wording has not been checked for this guide."
@@ -247,6 +251,7 @@ steps:
     needs: []
     produces: []
     mode: guided
+    integration: [google_workspace]
     actions:
       - do: "Sign in to https://admin.google.com as the chapter's administrator."
       - do: "Open Directory, then Users, and choose Add new user. Enter:"
@@ -280,6 +285,7 @@ steps:
     needs: [primary_domain]
     produces: [ops_mailbox]
     mode: guided
+    integration: [google_workspace]
     actions:
       - do: "Sign in to https://admin.google.com as the chapter's administrator. Open Directory, then Users, and choose Add new user. The page Add new users is a table of three empty rows; fill in the first row only."
       - do: "Enter exactly:"
@@ -296,6 +302,7 @@ steps:
       The shared address the software reads and sends from exists as a real licensed
       mailbox, not as an alias or a group. An alias will not work.
     check:
+      auto: [setting_set:ops_mailbox]
       how: The address appears in the admin console as a user with a licence.
       probe: Once stage 10 is done, the app asks Google's directory whether the address is a licensed user and not a group.
     goes_wrong: >-
@@ -315,6 +322,7 @@ steps:
     needs: [ops_mailbox]
     produces: [alert_email_from]
     mode: guided
+    integration: [google_workspace]
     actions:
       - do: "Use the shared operations mailbox from step 4.7 as the sending address. Cleveland does the same, and it saves a licence."
       - do: "On the chapter information form, write info@EMAIL-DOMAIN as the alert sending address, or leave it empty. The software reads it as ALERT_EMAIL_FROM, and when it is empty it sends from OPS_MAILBOX anyway."
@@ -324,6 +332,7 @@ steps:
       The address the software sends its warning messages from exists as a real
       licensed mailbox. An alias or a group will be refused.
     check:
+      auto: [setting_set:alert_email_from]
       how: The address appears in the admin console as a user with a licence.
       probe: Once stage 10 is done, the app asks Google's directory whether the address is a licensed user.
     goes_wrong: >-
@@ -340,6 +349,7 @@ steps:
     needs: []
     produces: [alert_email_to]
     mode: guided
+    integration: [google_workspace]
     actions:
       - do: "Sign in to https://admin.google.com. Open Directory, then Groups, and choose Create group. Enter:"
         items:
@@ -360,6 +370,7 @@ steps:
       The receiving address is decided and it reaches a person who reads it during the
       working week, not an unattended mailbox.
     check:
+      auto: [setting_set:alert_email_to]
       how: The named people are written down beside the address. The real test is step 12.4, once the software can send.
       probe: none
     goes_wrong: >-
@@ -378,6 +389,7 @@ steps:
     needs: [primary_domain]
     produces: [members_group]
     mode: guided
+    integration: [google_workspace]
     actions:
       - do: "Sign in to https://admin.google.com. Open Directory, then Groups, and choose Create group. Enter:"
         items:
@@ -392,6 +404,7 @@ steps:
       The group exists at its own address and the administrator can add and remove
       members.
     check:
+      auto: [setting_set:google_members_group]
       how: The group appears in the admin console, and the administrator adds and removes a test member.
       probe: Once stage 10 is done, the app reads the group through Google's directory.
     goes_wrong: >-
@@ -409,6 +422,7 @@ steps:
     needs: [primary_domain]
     produces: []
     mode: guided
+    integration: [google_workspace]
     actions:
       - do: "Sign in to https://admin.google.com. For each member of staff the chapter names now (the full list is confirmed later, in step 14.1), open Directory, then Users, and choose Add new user. Enter:"
         items:
@@ -443,6 +457,7 @@ steps:
     needs: [chapter_vault]
     produces: []
     mode: guided
+    integration: [google_workspace]
     actions:
       - do: "Sign in to https://admin.google.com. Open Security, then Authentication, then 2-step verification. The menu wording has not been checked for this guide."
       - do: "Set exactly:"
@@ -529,6 +544,10 @@ steps:
     source: 8-Methods-Organization-Domains-Google.md#4.14
 
 changes:
+  - version: "0.8"
+    date: "11-13-26 10:30"
+    change: >-
+      Steps that belong to an integration carry the new keys integration and check.auto, read by the setup checklist on System Settings' Integrations tab (prds/integrations-tab-plan.md section 4, mapping approved by Doug 11-13-26). The rendered guide does not change.
   - version: "0.7"
     date: "11-08-26 00:50"
     change: >-

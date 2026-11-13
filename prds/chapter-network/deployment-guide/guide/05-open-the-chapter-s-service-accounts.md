@@ -1,7 +1,7 @@
 # Stage 5 — Open the chapter's service accounts
 
-**Version:** 0.18  
-**Last Updated:** 11-10-26 10:41  
+**Version:** 0.19  
+**Last Updated:** 11-13-26 10:30  
 **Generated from** `steps/stage-05.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -36,6 +36,11 @@ The chapter's CRM server, its applications and their database all run in a hosti
 - 5.10 Open the website host account
 - 5.11 Open the Constant Contact account and its developer application
 - 5.12 Open the Stripe account and create the donation link
+- 5.13 Create the Fathom team API key, or record that it is not needed
+- 5.14 Open the Lob account and store its keys, or record that it is not needed
+- 5.15 Open the Twilio account and buy the sender number, or record that it is not needed
+- 5.16 Register the sender number with the carriers
+- 5.17 Create the Anthropic API key, or record that it is not needed
 
 ---
 
@@ -548,10 +553,184 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 ---
 
+## 5.13 Create the Fathom team API key, or record that it is not needed
+
+**Summary:** Fathom is the note-taker that records mentoring sessions. The applications read each session's transcript and summary from Fathom with one API key, and a key reads only the meetings its own user recorded or shared with the user's Fathom team. This step makes that key and stores it. A chapter whose mentors do not use Fathom records that instead.
+
+**Who:** The chapter — the person who administers the chapter's Fathom team
+
+**Finish first:**
+
+- step 4.9 Decide who receives the system's warning messages
+- step 2.7 Set up the chapter's password vault
+
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
+
+**Do this:**
+
+1. Decide whether the chapter's mentors will record their sessions with Fathom. If not, write "No Fathom" on the chapter's account list (step 5.7), mark Fathom not in use on the Fathom sub-tab of System Settings once the applications run, and stop here.
+2. In a browser, go to https://fathom.video and create the chapter's Fathom team account with admin@EMAIL-DOMAIN, the chapter's administrators group from step 4.9. Put the password in the chapter's Operations vault, in an item titled Fathom. The exact wording of Fathom's sign-up screens has not been checked for this guide.
+3. In the team's settings, set every new recording to be shared with the team. A mentor's recording that is not shared never reaches the applications.
+4. In Fathom's settings, open the API access page and create an API key. Copy it straight into the Fathom item in the vault, labelled API key. The page's exact name has not been checked for this guide.
+5. Once the applications run (stage 11), open System Settings, then the Fathom sub-tab of the Integrations tab, and paste the key into the setting Fathom API key.
+   *You should see:* The Fathom sub-tab's status line says credentials set.
+
+**Done when:** Either the Fathom API key is stored in the vault and set in System Settings, or a note records that this chapter does not use Fathom.
+
+**How to check:** The Fathom sub-tab of System Settings shows the API key as set, and its Test Integration button passes.
+
+**If it didn't work:** Stop, and ask the Association before going on.
+
+**What usually goes wrong:** A key made by one mentor's own Fathom user reads only that mentor's recordings. Make the key with the team's administrator, and keep team sharing on.
+
+---
+
+## 5.14 Open the Lob account and store its keys, or record that it is not needed
+
+**Summary:** Lob prints and mails the postcards a marketing campaign sends. Lob gives every account two keys: a test key, beginning test_, that prints nothing, and a live key, beginning live_, that prints and mails for real. This step opens the account and stores both keys. The applications start with the test key.
+
+**Who:** The chapter — the person the board names for marketing
+
+**Finish first:**
+
+- step 4.9 Decide who receives the system's warning messages
+- step 1.6 Open a bank account
+- step 2.7 Set up the chapter's password vault
+
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
+
+**Do this:**
+
+1. Decide whether the chapter will send postcards. If not, write "No postcards" on the chapter's account list (step 5.7), mark Lob not in use on the Lob sub-tab of System Settings once the applications run, and stop here.
+2. In a browser, go to https://dashboard.lob.com and sign up with admin@EMAIL-DOMAIN, the chapter's administrators group from step 4.9. Put the password in the chapter's Operations vault, in an item titled Lob, and turn on two-step sign-in. The exact wording of Lob's screens has not been checked for this guide.
+3. In Lob's settings, open the API keys page. Copy two keys into the Lob item in the vault:
+   - The test key, which begins test_, labelled test key.
+   - The live key, which begins live_, labelled live key.
+4. Before any real postcard is sent, add the chapter's own card from step 1.6 as Lob's payment method.
+5. Once the applications run (stage 11), open System Settings, then the Lob sub-tab of the Integrations tab. Paste the test key into the setting Mail vendor API key, and leave Mail vendor test mode on.
+   *You should see:* The Lob sub-tab's integration test reports the key as a test key, and test mode on.
+
+**Done when:** Either both Lob keys are in the vault and the test key is set in System Settings, or a note records that this chapter sends no postcards.
+
+**Note:** Changing to the live key is a separate decision, made when the first real campaign is ready; test mode is switched off at the same moment.
+
+**How to check:** The Lob sub-tab of System Settings shows the key as set, and its Test Integration button passes.
+
+**If it didn't work:** Stop, and ask the Association before going on.
+
+**What usually goes wrong:** A live key entered while test mode is on. Lob decides by the key alone, so the postcards would be printed and mailed. The Lob integration test fails when the key and test mode disagree.
+
+---
+
+## 5.15 Open the Twilio account and buy the sender number, or record that it is not needed
+
+**Summary:** Twilio sends the text messages a marketing campaign sends, from one phone number the chapter buys. This step opens the account, buys the number and stores the three values the applications need. A chapter that sends no texts records that instead.
+
+**Who:** The chapter — the person the board names for marketing
+
+**Finish first:**
+
+- step 4.9 Decide who receives the system's warning messages
+- step 1.6 Open a bank account
+- step 2.7 Set up the chapter's password vault
+
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
+
+**Do this:**
+
+1. Decide whether the chapter will send text messages. If not, write "No texts" on the chapter's account list (step 5.7), mark Twilio not in use on the Twilio sub-tab of System Settings once the applications run, and stop here.
+2. In a browser, go to https://www.twilio.com/try-twilio and sign up with admin@EMAIL-DOMAIN, the chapter's administrators group from step 4.9. Put the password in the chapter's Operations vault, in an item titled Twilio, and turn on two-step sign-in. The exact wording of Twilio's screens has not been checked for this guide.
+3. Upgrade the account from trial with the chapter's own card from step 1.6. A trial account can text only numbers it has verified.
+4. In Twilio's console, buy a local United States number that can send SMS. Write it in the Twilio item in the vault in the form +12165550123.
+5. From the console's Account Info panel, copy two values into the Twilio item in the vault:
+   - The Account SID, which begins AC.
+   - The Auth Token. Copy the live one, never the test credentials.
+6. Once the applications run (stage 11), open System Settings, then the Twilio sub-tab of the Integrations tab, and set three settings:
+   - Texting account SID: the Account SID.
+   - Texting auth token: the Auth Token.
+   - Texting sender number: the number, in the form +12165550123.
+
+   *You should see:* The Twilio sub-tab's integration test finds the account active and the number able to send texts.
+
+**Done when:** Either the Twilio account is upgraded, the number is bought, and the three values are in the vault and set in System Settings, or a note records that this chapter sends no texts.
+
+**How to check:** The Twilio sub-tab of System Settings shows the three values as set, and its Test Integration button passes.
+
+**If it didn't work:** Stop, and ask the Association before going on.
+
+**What usually goes wrong:** The test credentials copied in place of the live ones. Twilio refuses every read with them, and the integration test says so.
+
+---
+
+## 5.16 Register the sender number with the carriers
+
+**Summary:** United States carriers block texts from an ordinary business number that is not registered with them (the registration Twilio calls A2P 10DLC). This step registers the chapter as a brand and its texts as a campaign, and attaches the number from step 5.15. Approval takes days to weeks, so start it early.
+
+**Who:** The chapter — the person the board names for marketing, with the treasurer for the business details
+
+**Finish first:**
+
+- step 5.15 Open the Twilio account and buy the sender number, or record that it is not needed
+- step 1.3 Get a federal employer identification number
+
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
+
+**Do this:**
+
+1. In Twilio's console, open the A2P 10DLC registration pages. The exact wording of these screens has not been checked for this guide.
+2. Register the chapter as a brand with its legal name and its employer identification number from step 1.3.
+3. Register one campaign describing the texts the chapter sends: invitations and reminders to people who asked for them, each telling them to reply STOP to stop.
+4. Attach the number from step 5.15 to the campaign.
+   *You should see:* The campaign's status reads approved. Twilio may take days or weeks.
+
+**Done when:** The chapter's brand and campaign are approved, and the sender number is attached to the campaign.
+
+**How to check:** Twilio's console shows the campaign approved with the number attached.
+
+**If it didn't work:** Stop, and ask the Association before going on.
+
+**What usually goes wrong:** Texts sent before approval are blocked or filtered by the carriers, with no error in the applications.
+
+---
+
+## 5.17 Create the Anthropic API key, or record that it is not needed
+
+**Summary:** Anthropic's Claude writes the summaries of email conversations and the AI research on leads. Both use one API key, paid by the chapter. This step opens the chapter's own account, sets a monthly spending limit and stores the key. A chapter that switches neither feature on records that instead.
+
+**Who:** The chapter — the treasurer, or the person the board names
+
+**Finish first:**
+
+- step 4.9 Decide who receives the system's warning messages
+- step 1.6 Open a bank account
+- step 2.7 Set up the chapter's password vault
+
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
+
+**Do this:**
+
+1. Decide whether the chapter will use the AI features. If not, write "No AI features" on the chapter's account list (step 5.7), mark Anthropic not in use on the Anthropic sub-tab of System Settings once the applications run, and stop here.
+2. In a browser, go to https://platform.claude.com and create the chapter's organization with admin@EMAIL-DOMAIN, the chapter's administrators group from step 4.9. Put the password in the chapter's Operations vault, in an item titled Anthropic. The exact wording of the console's screens has not been checked for this guide.
+3. Add the chapter's own card from step 1.6 for billing, and set a monthly spending limit the board agrees.
+4. Create an API key named after the chapter's applications, and copy it straight into the Anthropic item in the vault, labelled API key. It is shown only once.
+5. Once the applications run (stage 11), open System Settings, then the Anthropic sub-tab of the Integrations tab, and paste the key into the setting Anthropic API key.
+   *You should see:* The Anthropic sub-tab's integration test lists the models and finds each configured model.
+
+**Done when:** Either the key is in the vault and set in System Settings with a monthly spending limit on the account, or a note records that this chapter uses no AI features.
+
+**How to check:** The Anthropic sub-tab of System Settings shows the key as set, and its Test Integration button passes.
+
+**If it didn't work:** Stop, and ask the Association before going on.
+
+**What usually goes wrong:** A key made under a volunteer's own Anthropic account. The chapter cannot see or limit its spending, and the key stops when the volunteer leaves.
+
+---
+
 ## Change log
 
 | Version | Date | Change |
 |---|---|---|
+| 0.19 | 11-13-26 10:30 | Steps 5.13 to 5.17 added, each for an outside service the applications use and no step set up: the Fathom team API key, the Lob account and keys, the Twilio account and number, the carrier registration of the number, and the Anthropic API key (mapping approved by Doug 11-13-26). No existing step number changed. Steps that belong to an integration carry the new keys integration and check.auto, read by the setup checklist on System Settings' Integrations tab (prds/integrations-tab-plan.md section 4, mapping approved by Doug 11-13-26). |
 | 0.18 | 11-10-26 10:41 | Step 5.5's status records the read-only credentials check for the Business Mentors Association (11-10-26): token issued, host found, webinar listing refused for want of the Webinars licence. Its goes wrong note says the form asks the Zoom answers only when webinars are switched on. |
 | 0.17 | 11-09-26 17:42 | Step 5.8 follows CRMBuilder's new deploy wizard (PI-600, accepted 11-09-26): it makes the two tokens and puts them in the vault, and nothing more. The engagement it used to create and the Provider credentials window are gone; the tokens are entered inside the wizard in step 9.3. Applied from CRMBuilder's handoff of 11-09-26. |
 | 0.16 | 11-09-26 14:21 | Step 5.10 follows Association ruling 75, which replaces ruling 29: the chapter chooses its website host, any host must do five things, and the Cloudways actions are the path the Association tests. |

@@ -1,7 +1,7 @@
 stage: 9
 name: Build the CRM system
-version: "0.19"
-updated: "11-10-26 01:10"
+version: "0.20"
+updated: "11-13-26 10:30"
 why: >-
   The CRM is the chapter's system of record. Every client, mentor, partner,
   funder and meeting lives in it, and every application reads and writes it.
@@ -120,6 +120,7 @@ steps:
     needs: [digitalocean_token, cloudflare_token, alert_email_to, crm_ssh_key]
     produces: [crm_server_ip]
     mode: automated
+    integration: [espocrm]
     actions:
       - do: "Confirm the server sign-in key is in the chapter's DigitalOcean account. Sign in to the chapter's DigitalOcean account, open Settings, then Security."
         see: "The key crm-SHORT-LABEL in the account's list of SSH keys. If it is not there, do step 9.2's DigitalOcean action first. The wizard reads this list from the chapter's account, and a wizard stopped halfway to add the key has to be removed and run again."
@@ -248,6 +249,7 @@ steps:
     needs: [crm_ssh_key, crm_server_ip, crm_base_url]
     produces: [crm_version]
     mode: guided
+    integration: [espocrm]
     actions:
       - do: "Open a command line on the server. Type the line below and press Enter:"
         items:
@@ -317,6 +319,7 @@ steps:
     needs: [addon_versions, crm_version]
     produces: []
     mode: guided
+    integration: [espocrm]
     actions:
       - do: "Buy a licence for each product, Advanced Pack and Google Integration, in the chapter's name and paid by the chapter."
       - do: "Download each product's installation file, at the version in the CRM build versions note."
@@ -411,6 +414,7 @@ steps:
     needs: [standard_release, chapter_name, crm_application_name, crm_outbound_from_name, crm_outbound_from_address, crm_base_url, crm_logo_file, timezone, currency, locale, docs_site_url]
     produces: [ESPO_API_KEY, ESPO_PROVISION_USERNAME, ESPO_PROVISION_PASSWORD]
     mode: automated
+    integration: [espocrm]
     actions:
       - do: "Go to the client intake software's folder. Type the line below and press Enter:"
         items:
@@ -467,6 +471,7 @@ steps:
       - "Every team carries a role."
       - "The logo, the site address and the documentation tab are set."
     check:
+      auto: [setting_set:espo_api_key, setting_set:espo_provision_username, setting_set:espo_provision_password]
       how: Each test above showed what it should.
       probe: The conformance check compares teams, roles, templates and settings with the standard, and the app makes one read request with the key.
     if_not:
@@ -522,6 +527,7 @@ steps:
     needs: [ESPO_API_KEY]
     produces: []
     mode: automated
+    integration: [espocrm]
     actions:
       - do: "In the client intake software's folder, run the check and read its report. Type the line below and press Enter:"
         items:
@@ -534,6 +540,7 @@ steps:
       - do: "Write each difference that is allowed on purpose, with its reason, in the chapter's entry in the list of watched systems (step 12.5)."
     done_when: The checking tool reports that the CRM matches the standard, apart from differences that are written down with their reasons.
     check:
+      auto: [test_passed:espocrm]
       how: The report lists nothing that is not written down in the list of watched systems.
       probe: The app runs the conformance check and shows its result.
     if_not:
@@ -547,6 +554,10 @@ steps:
     source: 3-Methods-CRM-Google-Applications.md#9.20
 
 changes:
+  - version: "0.20"
+    date: "11-13-26 10:30"
+    change: >-
+      Steps that belong to an integration carry the new keys integration and check.auto, read by the setup checklist on System Settings' Integrations tab (prds/integrations-tab-plan.md section 4, mapping approved by Doug 11-13-26). The rendered guide does not change.
   - version: "0.19"
     date: "11-10-26 01:10"
     change: >-

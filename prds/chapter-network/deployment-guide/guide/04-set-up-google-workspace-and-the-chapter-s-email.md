@@ -1,7 +1,7 @@
 # Stage 4 — Set up Google Workspace and the chapter's email
 
-**Version:** 0.7  
-**Last Updated:** 11-08-26 00:50  
+**Version:** 0.8  
+**Last Updated:** 11-13-26 10:30  
 **Generated from** `steps/stage-04.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -586,6 +586,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 | Version | Date | Change |
 |---|---|---|
+| 0.8 | 11-13-26 10:30 | Steps that belong to an integration carry the new keys integration and check.auto, read by the setup checklist on System Settings' Integrations tab (prds/integrations-tab-plan.md section 4, mapping approved by Doug 11-13-26). The rendered guide does not change. |
 | 0.7 | 11-08-26 00:50 | From the Association's own stage 4, done in the admin console by Claude with Doug on 11-07-26 and 11-08-26. Step 4.2: the first user must never be admin@; Google started a Business Plus trial with no plan choice, so four actions downgrade to Business Starter (Flexible plan) and re-assign the first administrator's licence, which the downgrade removes. Step 4.4: the registrar's scanned records and the five older Google MX records are deleted, and a stale DKIM record is removed before adding the current one. Step 4.7: the Add new users table and the Adding Users page, where the password is copied before Dismiss. Step 4.9: the group's exact settings, Restricted with External allowed to post, and Only invited users. |
 | 0.6 | 11-07-26 15:28 | Every account the chapter opens signs in with admin@, the administrators group from step 4.9, so every password reset reaches the chapter's two owners (Doug, 11-07-26, following Association ruling 18). Step 4.9's group now has at least two chapter officers, and a person from the Association only if the access schedule of step 2.4 says so, because every member receives every account's password resets. Step 4.14 moves the registrar and Cloudflare to that group and is renamed to say so. |
 | 0.5 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". Step 4.6's reason now names Association ruling 1: the account is for support when the chapter's own technical person is unavailable, and for the permission grant in step 10.3. |

@@ -1,7 +1,7 @@
 # Stage 12 — Set up backups and monitoring
 
-**Version:** 0.5  
-**Last Updated:** 11-07-26 15:21  
+**Version:** 0.6  
+**Last Updated:** 11-13-26 10:30  
 **Generated from** `steps/stage-12.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -269,6 +269,7 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 | Version | Date | Change |
 |---|---|---|
+| 0.6 | 11-13-26 10:30 | Steps that belong to an integration carry the new keys integration and check.auto, read by the setup checklist on System Settings' Integrations tab (prds/integrations-tab-plan.md section 4, mapping approved by Doug 11-13-26). The rendered guide does not change. |
 | 0.5 | 11-07-26 15:21 | Corrected while the Business Mentors Association is set up as a chapter (plan association-setup-plan.md, approved by Doug 11-07-26): "the central support organization" is now "the Association", and "the central committee" is "the central technical committee". |
 | 0.4 | 09-23-26 20:40 | References to stage 9 follow its renumbering from twenty steps to nine (stage 9 version 0.11). |
 | 0.3 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. |

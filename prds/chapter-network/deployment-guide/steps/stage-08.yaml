@@ -1,7 +1,7 @@
 stage: 8
 name: Fill in the chapter information form
-version: "0.18"
-updated: "11-09-26 01:19"
+version: "0.19"
+updated: "11-13-26 10:30"
 why: >-
   The chapter information form holds the roughly forty answers that differ from
   one chapter to the next: its name, its addresses, its Google details and its
@@ -302,6 +302,7 @@ steps:
     needs: [primary_domain, mentor_email_domain, ops_mailbox, alert_email_from, alert_email_to, members_group, zoom_host_email, zoom_account_id, zoom_client_id]
     produces: []
     mode: guided
+    integration: [google_workspace, zoom]
     actions:
       - do: Answer every question in the section "Fill in the Google details" on the page, copying each address from the Google Workspace admin console at admin.google.com. The Zoom questions appear only once the webinar question in step 8.6 is answered yes.
         see: Every question in the section marked as saved, apart from the shared drive, which step 10.5 answers.
@@ -435,6 +436,7 @@ steps:
     needs: [crm_logo_file]
     produces: [crm_base_url, crm_application_name, crm_outbound_from_name, crm_outbound_from_address]
     mode: guided
+    integration: [espocrm]
     actions:
       - do: Answer every question in the section "Fill in the CRM details" on the page.
         see: Every question in the section marked as saved.
@@ -491,6 +493,7 @@ steps:
       - "The sending address is filled in."
       - "The logo file is filled in."
     check:
+      auto: [setting_set:espo_base_url]
       how: The section is complete, and the sending address is a real mailbox.
       probe: The page checks the CRM address begins with https://.
     goes_wrong: nothing known yet
@@ -812,6 +815,10 @@ steps:
     source: 5-Methods-Form-Accounts-Checks.md#8.10
 
 changes:
+  - version: "0.19"
+    date: "11-13-26 10:30"
+    change: >-
+      Steps that belong to an integration carry the new keys integration and check.auto, read by the setup checklist on System Settings' Integrations tab (prds/integrations-tab-plan.md section 4, mapping approved by Doug 11-13-26). The rendered guide does not change.
   - version: "0.18"
     date: "11-09-26 01:19"
     change: >-

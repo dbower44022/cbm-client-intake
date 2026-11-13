@@ -93,6 +93,51 @@ async def _test_runs(request: Request) -> dict[str, dict[str, Any]]:
         return {}
 
 
+def _tick_store(request: Request):
+    return getattr(request.app.state, "integration_tick_store", None)
+
+
+async def _checklist_state(request: Request) -> dict[str, Any]:
+    """What the setup checklists read besides the settings and the last test
+    runs: the hand ticks, the mailing connection and the stored Email Setup —
+    all from this application's database, never an outside service. Read only
+    while the Integrations tab is on; a failure leaves that part unknown or
+    empty rather than failing the page."""
+    if not get_settings().integrations_tab:
+        return {}
+    out: dict[str, Any] = {"ticks": {}, "mailingConnected": None, "storedGoogle": {},
+                           "ticksStored": False}
+    ticks = _tick_store(request)
+    if ticks is not None:
+        try:
+            out["ticks"] = await ticks.current()
+            out["ticksStored"] = True
+        except Exception as exc:  # noqa: BLE001
+            log.warning("setup checklist ticks could not be read: %s", exc)
+    mailing = getattr(request.app.state, "mailing_store", None)
+    if mailing is not None:
+        try:
+            conn = await mailing.get()
+            out["mailingConnected"] = bool(conn and conn.usable)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("mailing connection could not be read for the checklist: %s", exc)
+    else:
+        out["mailingConnected"] = False
+    try:
+        from core.app_config import make_app_config_store
+
+        cfg_store = make_app_config_store(get_settings())
+        stored = (await cfg_store.get_google_config()) if cfg_store is not None else None
+        stored = stored or {}
+        out["storedGoogle"] = {
+            "google_service_account_json": bool(stored.get("service_account_json")),
+            "google_delegated_admin": bool((stored.get("delegated_admin") or "").strip()),
+        }
+    except Exception as exc:  # noqa: BLE001
+        log.warning("stored Email Setup could not be read for the checklist: %s", exc)
+    return out
+
+
 def _actor(user: dict[str, Any]) -> str:
     return str(user.get("userName") or user.get("name") or "")
 
@@ -163,7 +208,7 @@ def _refuse_if_guarded(key: str, value: Any, settings: Any) -> None:
 @router.get("/settings")
 async def get_settings_page(request: Request) -> dict:
     _require_admin(request)
-    return await page_payload(_store(request), await _test_runs(request))
+    return await page_payload(_store(request), await _test_runs(request), await _checklist_state(request))
 
 
 @router.put("/settings/{key}")
@@ -273,7 +318,7 @@ async def put_setting(key: str, body: SettingIn, request: Request) -> dict:
         # Set when the change is live but will undo itself unless confirmed.
         "confirmBy": deadline.isoformat() if deadline and reverted is None else None,
         "setting": record.as_dict(),
-        "page": await page_payload(store, await _test_runs(request)),
+        "page": await page_payload(store, await _test_runs(request), await _checklist_state(request)),
     }
 
 
@@ -297,7 +342,7 @@ async def confirm_setting(key: str, request: Request) -> dict:
         f"{key} confirmed working — the automatic revert is cancelled",
         {"key": key},
     )
-    return {"ok": True, "page": await page_payload(store, await _test_runs(request))}
+    return {"ok": True, "page": await page_payload(store, await _test_runs(request), await _checklist_state(request))}
 
 
 @router.delete("/settings/{key}")
@@ -319,7 +364,7 @@ async def delete_setting(key: str, body: ClearIn, request: Request) -> dict:
         f"{key} reset to its deployment value",
         {"key": key, "reason": body.reason},
     )
-    return {"ok": True, "page": await page_payload(store, await _test_runs(request))}
+    return {"ok": True, "page": await page_payload(store, await _test_runs(request), await _checklist_state(request))}
 
 
 @router.get("/history")
@@ -328,9 +373,28 @@ async def get_history(
 ) -> dict:
     _require_admin(request)
     store = _store(request)
-    if store is None:
-        return {"history": []}
-    return {"history": await store.history(key, limit)}
+    rows = await store.history(key, limit) if store is not None else []
+    # The setup checklists' hand ticks join the History tab (plan § 4), each
+    # with who ticked it and when, under the key "checklist <step>".
+    ticks = _tick_store(request)
+    if ticks is not None and get_settings().integrations_tab and (
+            not key or key.startswith("checklist")):
+        try:
+            for tk in await ticks.history(limit):
+                rows.append({
+                    "key": f"checklist {tk['stepId']}",
+                    "oldValue": None,
+                    "newValue": "ticked" if tk["ticked"] else "not ticked",
+                    "action": "tick" if tk["ticked"] else "untick",
+                    "reason": f"Setup checklist, {tk['integration']} sub-tab",
+                    "actor": tk["by"],
+                    "at": tk["at"],
+                })
+            rows.sort(key=lambda r: r.get("at") or "", reverse=True)
+            rows = rows[:limit]
+        except Exception as exc:  # noqa: BLE001
+            log.warning("setup checklist ticks could not be read for history: %s", exc)
+    return {"history": rows}
 
 
 # --- Website images (prds/chapter-website-plan.md, decision 4.3) -------------
@@ -489,6 +553,50 @@ async def last_integration_test(key: str, request: Request) -> dict:
     if store is None:
         return {"run": None}
     return {"run": await store.latest(integ.key)}
+
+
+class TickIn(BaseModel):
+    ticked: bool = True
+
+
+@router.post("/integrations/{key}/checklist/{step_id}")
+async def tick_checklist_step(key: str, step_id: str, body: TickIn, request: Request) -> dict:
+    """Tick, or untick, a manual step of an integration's setup checklist
+    (plan § 4). An automatic step is refused: it ticks itself from its check."""
+    from integrations import checklist as checklist_mod
+    from integrations.registry import integration_for
+
+    user = _require_admin(request)
+    if not get_settings().integrations_tab:
+        raise HTTPException(status_code=404, detail="Not found")
+    integ = integration_for(key)
+    if integ is None:
+        raise HTTPException(status_code=404, detail=f"There is no integration called '{key}'.")
+    step = next((s for s in checklist_mod.steps_for(key) if s.id == step_id), None)
+    if step is None:
+        if step_id in (checklist_mod.DECIDE_ID, checklist_mod.TEST_ID):
+            raise HTTPException(status_code=409, detail=(
+                "This step ticks itself from its check and cannot be ticked by hand."))
+        raise HTTPException(status_code=404, detail=(
+            f"Step {step_id} is not on {integ.name}'s setup checklist."))
+    if not step.manual:
+        raise HTTPException(status_code=409, detail=(
+            f"Step {step_id} ticks itself from its check and cannot be ticked by hand."))
+    store = _tick_store(request)
+    if store is None:
+        raise HTTPException(status_code=400, detail=(
+            "No database is attached, so a tick cannot be kept."))
+    tick = await store.record(step_id, key, body.ticked,
+                              actor_id=str(user.get("userId") or ""), actor=_actor(user))
+    await _log(
+        user,
+        action_log.ACT_CHECKLIST_TICKED if body.ticked else action_log.ACT_CHECKLIST_UNTICKED,
+        f"{integ.name} setup checklist: step {step_id} {'ticked' if body.ticked else 'unticked'}",
+        {"integration": key, "step": step_id, "ticked": body.ticked},
+    )
+    return {"tick": tick,
+            "page": await page_payload(_store(request), await _test_runs(request),
+                                       await _checklist_state(request))}
 
 
 @router.get("/readiness")
