@@ -698,6 +698,10 @@ def create_app(
     from website.store import make_website_store
 
     app.state.website_store = make_website_store(settings)
+    # Integration test runs (prds/integrations-tab-plan.md § 7).
+    from integrations.store import make_test_run_store
+
+    app.state.integration_test_store = make_test_run_store(settings)
     if settings.setup_active:
         from setup.jobs import make_job_store
 

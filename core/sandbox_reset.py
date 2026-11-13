@@ -95,6 +95,9 @@ RESET_TABLES: tuple[str, ...] = (
     # they point at CRM records the restore puts back, so every fault reads as
     # new each morning on the sandbox. That is expected.
     "login_integrity_fault",
+    # Integration test runs (prds/integrations-tab-plan.md § 5): the history
+    # of integration tests on the sandbox is one day long. That is expected.
+    "integration_test_run",
 )
 
 #: Configuration, authored artefacts and instance bookkeeping: never touched.

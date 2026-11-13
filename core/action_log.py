@@ -131,6 +131,7 @@ ACT_SETTING_CHANGED = "Setting Changed"
 ACT_SETTING_CLEARED = "Setting Reset to Default"
 ACT_JOB_DRY_RUN = "Maintenance Job Dry Run"
 ACT_JOB_APPLIED = "Maintenance Job Applied"
+ACT_INTEGRATION_TESTED = "Integration Test Run"
 
 _NAME_MAX = 250  # CActionLog.name is a varchar — keep the one-liner within it.
 

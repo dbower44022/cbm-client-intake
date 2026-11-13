@@ -1,6 +1,6 @@
 # Integrations tab — System Settings plan
 
-Last Updated: 11-13-26 00:36 · Revision 0.6
+Last Updated: 11-13-26 01:21 · Revision 0.7
 
 This is the design record for a new top-level **Integrations** tab on the System
 Settings page (`/setup`). It holds Doug's rulings, the contents of each
@@ -324,13 +324,14 @@ phase ends at a **stopping point**: the work pauses for Doug's go-ahead.
 - § 6.6: how recent errors reach the diagnosis agent.
 - § 3: each sub-tab's checks and integration facts are proposals. Each one is
   confirmed against the vendor's API during its phase.
-- The EspoCRM version read: the API call that returns it is to be confirmed
-  on crm-test in phase 2.
+- ~~The EspoCRM version read~~: settled in phase 2, `GET App/user` →
+  `settings.version` (9.3.10 on crm-test, 11-13-26).
 
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.7 | 11-13-26 01:21 | Claude (Claude Code) | Phase 2 built: v0.322.0, the integration test for EspoCRM, Google Workspace and Zoom. § 9's EspoCRM version read is settled: `GET App/user` → `settings.version` (crm-test, 9.3.10). Not pushed. |
 | 0.6 | 11-13-26 00:36 | Claude (Claude Code) | Phase 1 built: v0.321.0 (the registry, the tags, the "in use" settings and refusals, the sub-tab shell, the switch). Not pushed. |
 | 0.5 | 11-13-26 00:30 | Claude (Claude Code) | Phase 1 mapping approved by Doug 11-13-26 with four corrections, recorded as mapping decisions: (1) EspoCRM has no "in use" setting — it is always in use and its warnings are never hidden; (2) Lob's switch is `postal_provider = lob`, not `campaigns_enabled`, and `alert_email_from` blocks nothing; (3) a switch and the settings that only serve it stay together — `comms_digest` stays on the Settings tab with its hour, time zone and re-check, listed under Google's "Used by"; `campaign_send_report_seconds` stays with its switch; every `enrichment_ai_*` setting, the monthly budget and caps included, moves to Anthropic with `enrichment_ai`; Zoom's attendance timers move; (4) the "in use" refusals also cover the "Used by" switches whose feature cannot work at all without the integration: `campaigns_sms` (Twilio); `campaigns_email` and `campaign_send_report` (Constant Contact); `events_confirmations`, `events_reminders`, `lead_outreach` and `mentor_provision_users` (Google). Everything else as proposed. The full mapping is `core/settings_registry.INTEGRATION_TAGS`. |
 | 0.4 | 11-13-26 00:16 | Claude (Claude Code) | Ruling I13 (Doug, 11-13-26): switching a feature on is refused while its integration is marked not in use. Build orchestrator and phase 1 prompt written. |

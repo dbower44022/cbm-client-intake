@@ -74,11 +74,21 @@ _sleep = asyncio.sleep
 
 
 class ZoomError(Exception):
-    """Any Zoom API or transport failure."""
+    """Any Zoom API or transport failure.
+
+    ``status_code`` is Zoom's HTTP status when Zoom answered, else None."""
+
+    def __init__(self, message: str = "", *, status_code: Optional[int] = None) -> None:
+        super().__init__(message)
+        self.status_code = status_code
 
 
 class ZoomAuthError(ZoomError):
     """Credentials were rejected — a configuration problem, not a blip."""
+
+
+class ZoomTransportError(ZoomError):
+    """Zoom could not be reached at all (DNS, connect, TLS, timeout)."""
 
 
 def to_zoom_time(value: datetime) -> str:
@@ -144,6 +154,9 @@ class ZoomClient:
         self._timeout = timeout
         self._token: Optional[str] = None
         self._token_expires: float = 0.0
+        # The scopes Zoom granted with the last token (its ``scope`` value),
+        # for the integration test's facts. Never a secret.
+        self.scopes: str = ""
 
     # --- auth --------------------------------------------------------------
 
@@ -164,20 +177,23 @@ class ZoomClient:
                     headers={"Authorization": f"Basic {basic}"},
                 )
         except httpx.HTTPError as exc:
-            raise ZoomError(f"Zoom token request failed: {type(exc).__name__}") from exc
+            raise ZoomTransportError(f"Zoom token request failed: {type(exc).__name__}") from exc
         if resp.status_code in (400, 401):
             # Never echo the response body — it can contain the client id.
             raise ZoomAuthError(
                 f"Zoom rejected the app credentials (HTTP {resp.status_code}). "
-                "Check ZOOM_ACCOUNT_ID / ZOOM_CLIENT_ID / ZOOM_CLIENT_SECRET."
+                "Check ZOOM_ACCOUNT_ID / ZOOM_CLIENT_ID / ZOOM_CLIENT_SECRET.",
+                status_code=resp.status_code,
             )
         if resp.status_code >= 400:
-            raise ZoomError(f"Zoom token request failed: HTTP {resp.status_code}")
+            raise ZoomError(f"Zoom token request failed: HTTP {resp.status_code}",
+                            status_code=resp.status_code)
         data = resp.json()
         token = data.get("access_token")
         if not token:
             raise ZoomAuthError("Zoom returned no access token.")
         self._token = token
+        self.scopes = str(data.get("scope") or "")
         self._token_expires = time.monotonic() + max(
             60, int(data.get("expires_in") or 3600) - _TOKEN_SKEW
         )
@@ -206,7 +222,7 @@ class ZoomClient:
                         headers={"Authorization": f"Bearer {token}"},
                     )
             except httpx.HTTPError as exc:
-                raise ZoomError(
+                raise ZoomTransportError(
                     f"Zoom {method} {path} failed: could not reach Zoom "
                     f"({type(exc).__name__})"
                 ) from exc
@@ -226,7 +242,8 @@ class ZoomClient:
         if resp.status_code >= 400:
             raise ZoomError(
                 f"Zoom {method} {path} failed: HTTP {resp.status_code} "
-                f"{resp.text[:300]}"
+                f"{resp.text[:300]}",
+                status_code=resp.status_code,
             )
         if not expect_body or resp.status_code == 204 or not resp.content:
             return {}
@@ -298,6 +315,22 @@ class ZoomClient:
 
     async def get_webinar(self, webinar_id: str) -> dict[str, Any]:
         return await self._request("GET", f"/webinars/{webinar_id}")
+
+    # --- reads for the integration test (integrations/checks/zoom.py) -------
+
+    async def get_user(self, user: str) -> dict[str, Any]:
+        return await self._request("GET", f"/users/{user}")
+
+    async def get_user_settings(self, user: str) -> dict[str, Any]:
+        return await self._request("GET", f"/users/{user}/settings")
+
+    async def list_webinars(
+        self, user: str, *, kind: str = "scheduled", page_size: int = 1
+    ) -> dict[str, Any]:
+        return await self._request(
+            "GET", f"/users/{user}/webinars",
+            params={"page_size": page_size, "type": kind},
+        )
 
     # --- registrants -------------------------------------------------------
 

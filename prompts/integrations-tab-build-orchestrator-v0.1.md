@@ -1,6 +1,6 @@
 # Build orchestrator — the Integrations tab of System Settings
 
-Last Updated: 11-13-26 00:36 · Revision 0.2 — see change log at the end.
+Last Updated: 11-13-26 01:21 · Revision 0.3 — see change log at the end.
 
 This file runs the whole build of the Integrations tab. It names the phases,
 the prompt for each one, the rules that every phase session follows, and the
@@ -25,8 +25,8 @@ stopping points where the work pauses for Doug. The design is
 | Phase | What it builds | Prompt | State |
 |---|---|---|---|
 | 1 | The framework: the integration registry, the sub-tab shell, the status line, the "in use" settings and their guard, the `INTEGRATIONS_TAB` switch, and moving the settings | `prompts/integrations-tab-phase1-prompt-v0.1.md` | Built v0.321.0, 11-13-26; awaiting Doug's review |
-| 2 | The integration test for EspoCRM, Google Workspace and Zoom | `prompts/integrations-tab-phase2-prompt-v0.1.md` | Draft written 11-13-26; awaiting approval |
-| 3 | The integration test for Fathom, Constant Contact, Lob, Twilio, Anthropic and YouTube | written at the end of phase 2 | — |
+| 2 | The integration test for EspoCRM, Google Workspace and Zoom | `prompts/integrations-tab-phase2-prompt-v0.1.md` | Built v0.322.0, 11-13-26; awaiting Doug's review |
+| 3 | The integration test for Fathom, Constant Contact, Lob, Twilio, Anthropic and YouTube | `prompts/integrations-tab-phase3-prompt-v0.1.md` | Draft written 11-13-26; awaiting approval |
 | 4 | The setup checklist: the step-file keys, the automatic checks, the hand ticks, the missing steps | written at the end of phase 3 | — |
 | 5 | The nightly integration test and its alert | written at the end of phase 4 | — |
 | 6 | The diagnosis agent and fix plans | written at the end of phase 5 | — |
@@ -94,5 +94,6 @@ which goes to Doug as a decision.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.3 | 11-13-26 01:21 | Claude (Claude Code) | State column: phase 2 built (v0.322.0); phase 3 prompt drafted. |
 | 0.2 | 11-13-26 00:36 | Claude (Claude Code) | State column: phase 1 built (v0.321.0); phase 2 prompt drafted. |
 | 0.1 | 11-12-26 23:59 | Claude (Claude Code) | Created from plan revision 0.3: eight phases, the rules for every phase session, the closing steps. |

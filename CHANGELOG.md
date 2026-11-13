@@ -5,6 +5,67 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.322.0] — 2026-11-13
+
+**feat: the Integrations tab, phase 2 — the integration test for EspoCRM,
+Google Workspace and Zoom.** Still dark behind **`INTEGRATIONS_TAB`**. Plan
+`prds/integrations-tab-plan.md` § 3 part 2 and § 7; the check lists Doug
+approved 11-13-26; `OPEN-ITEMS.md` #82.
+
+- **The framework**, `integrations/testing.py`. A check answers **ok**,
+  **failed** or **unknown** with one line of detail and never raises (an
+  exception or a timeout is unknown); a switched-off feature's check shows as
+  "Not checked — switched off" and never counts. 12 seconds per check, 30 for
+  the whole test, one test per integration at a time. Every detail line and
+  fact is **scrubbed of every secret setting's value** (and of a stored
+  service-account key) before it is returned or stored. `Integration` gains
+  `test_module`; EspoCRM, Google Workspace and Zoom have one.
+- **EspoCRM** (`integrations/checks/espocrm.py`): sign in with the API key
+  (`App/user`); conformance, reusing `scripts/preflight_crm.run`; read one
+  record of each entity, plus the Events and Marketing Management entities
+  when those are on; the enum options of `core/schema_contract.py`; the
+  provisioning account is an administrator. Facts: the **EspoCRM version**
+  (`App/user` → `settings.version`, the open point of plan § 9: found on
+  crm-test, 9.3.10), the API user and its roles (`User/{id}`), the entities
+  found. Dropped from plan § 3: the droplet's image tag, which the
+  application cannot see. **Run live against crm-test 11-13-26: passed in
+  5 s**, the provisioning check with the configuration admin.
+- **Google Workspace** (`integrations/checks/google.py`): the key (a token as
+  the service account itself), then **one delegation line per scope a
+  switched-on feature needs**, each a token minted for that scope as the
+  account the feature uses (the shared mailbox as itself), so
+  `unauthorized_client` names the missing scope; then each switched-on
+  feature's read: the shared drive (`drives/{id}`, as the service account in
+  service mode, else as the delegated admin with domain administrator
+  access), the shared mailbox's profile, a day of the delegated admin's
+  calendar, the directory (an administrator; the All Members group when
+  provisioning is on). Meet's token is its whole check. The key is found as
+  the features find it: the stored Email Setup first. Facts: the service
+  account, its client ID, the delegated admin, the shared drive, the shared
+  mailbox, the scopes granted and missing.
+- **Zoom** (`integrations/checks/zoom.py`): settings present; the token
+  (`ZoomClient.scopes` now keeps the token's `scope`); the host user; the
+  webinar licence (`/users/{host}/settings` → `feature.webinar`, failed only
+  while `zoom_events` is on); the host's webinars; the attendance report of
+  the latest past webinar (unknown when there is none). `core/zoom.py` gains
+  `ZoomTransportError`, a `status_code` on `ZoomError`, and three reads.
+- **`integration_test_run`** (migration `0043`, `integrations/store.py`, the
+  shared engine): one row per test, manual now, `nightly` ready for phase 5.
+  In the sandbox's `RESET_TABLES`.
+- **`POST` and `GET /setup/api/integrations/{key}/test`**: admin-only, absent
+  (404) with the switch off, 409 for an integration whose test comes in
+  phase 3. A run is stored and recorded with `core/action_log.py`
+  (`Integration Test Run`, the outcome of each check, no detail).
+- **The page**: on those three sub-tabs, the Test Integration button, the
+  last result as one line per check, and the integration facts. The status
+  line says "last test passed 11-13-26 01:19" (or failed, or could not be
+  completed) instead of "Not tested yet". The other six keep their
+  placeholder, saying phase 3. Opening the page reads the last runs from the
+  application's database only, and only with the switch on.
+- Tests: `tests/test_integration_test.py` (41) and
+  `tests/test_integration_test_store_pg.py` (2, with a database). Suite
+  3,717 passed with the database attached, nothing skipped.
+
 ## [0.321.0] — 2026-11-13
 
 **feat: the Integrations tab of System Settings, phase 1 — the framework.**

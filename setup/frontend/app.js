@@ -464,16 +464,87 @@
     }
     var missing = st.credentialsMissing || [];
     parts.push(missing.length ? "credentials missing: " + missing.join(", ") : "credentials set");
-    parts.push("Not tested yet");
+    parts.push(testedText(st.tested));
     return '<p class="su__status' + (st.inUse === false ? " su__status--unused" : "") + '"><strong>'
       + esc(i.name) + ":</strong> " + parts.map(esc).join(" \u00b7 ") + "</p>";
+  }
+
+  // MM-DD-YY HH:MM, local time.
+  function stamp(iso) {
+    if (!iso) return "";
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    function two(n) { return (n < 10 ? "0" : "") + n; }
+    return two(d.getMonth() + 1) + "-" + two(d.getDate()) + "-" + two(d.getFullYear() % 100)
+      + " " + two(d.getHours()) + ":" + two(d.getMinutes());
+  }
+
+  var OUTCOME_WORDS = {
+    ok: "passed",
+    failed: "failed",
+    unknown: "could not be completed",
+  };
+
+  function testedText(run) {
+    if (!run) return "Not tested yet";
+    return "last test " + (OUTCOME_WORDS[run.outcome] || run.outcome) + " " + stamp(run.finishedAt || run.startedAt);
+  }
+
+  function outcomeIcon(outcome) {
+    if (outcome === "ok") return '<span class="su__ok" title="ok">\u2713</span>';
+    if (outcome === "failed") return '<span class="su__bad" title="failed">\u2717</span>';
+    if (outcome === "skipped") return '<span class="su__muted" title="not checked">\u2013</span>';
+    return '<span class="su__unknown" title="unknown">?</span>';
+  }
+
+  // The integration test (plan § 3, part 2): the button, the last result as
+  // one line per check, and the integration facts.
+  function testBlock(i) {
+    var run = (i.status || {}).tested;
+    var html = '<section class="su__group su__test"><h2 class="su__h2">Integration test</h2>'
+      + '<p class="su__testbar"><button type="button" class="cbm-button" data-test="' + esc(i.key) + '">Test Integration</button> '
+      + '<span class="su__hint">Every check only reads. Nothing is changed in ' + esc(i.name) + ".</span></p>"
+      + '<p class="form-error" id="testError" role="alert" hidden></p>';
+    if (!run) return html + '<p class="su__hint">Not tested yet.</p></section>';
+    html += '<p class="su__testsummary su__testsummary--' + esc(run.outcome) + '"><strong>'
+      + esc(testedText(run).replace(/^last test/, "Last test")) + "</strong>"
+      + (run.runBy ? " \u00b7 run by " + esc(run.runBy) : "")
+      + (run.trigger === "nightly" ? " \u00b7 nightly" : "")
+      + (run.durationMs != null ? " \u00b7 " + (Math.round(run.durationMs / 100) / 10) + " s" : "") + "</p>";
+    html += '<ul class="su__itestchecks">' + (run.checks || []).map(function (c) {
+      return '<li class="su__itestcheck su__itestcheck--' + esc(c.outcome) + '">' + outcomeIcon(c.outcome)
+        + " <strong>" + esc(c.label) + "</strong>"
+        + (c.detail ? ' <span class="su__itestdetail">' + esc(c.detail) + "</span>" : "") + "</li>";
+    }).join("") + "</ul>";
+    var facts = run.facts || [];
+    if (facts.length) {
+      html += '<h3 class="su__h3">Integration facts</h3><dl class="su__facts">' + facts.map(function (f) {
+        return "<dt>" + esc(f.label) + "</dt><dd>" + esc(f.value) + "</dd>";
+      }).join("") + "</dl>";
+    }
+    return html + "</section>";
+  }
+
+  async function runTest(key, btn) {
+    var i = findIntegration(key);
+    if (!i) return;
+    var err = $("testError");
+    if (err) err.hidden = true;
+    try {
+      var result = await api("/integrations/" + encodeURIComponent(key) + "/test", { method: "POST" });
+      i.status.tested = result.run;
+      renderIntegrations();
+    } catch (e) {
+      err = $("testError");
+      if (err) { err.hidden = false; text(err, e.message); }
+    }
   }
 
   function placeholders(i) {
     var ph = i.phases || {};
     // Not buttons: nothing that looks clickable and does nothing.
     return '<ul class="su__placeholders">'
-      + "<li><strong>Integration test</strong> \u2014 comes with phase " + esc(ph.test) + " of the Integrations tab build.</li>"
+      + (i.testable ? "" : "<li><strong>Integration test</strong> \u2014 comes with phase " + esc(ph.test) + " of the Integrations tab build.</li>")
       + "<li><strong>Diagnosis</strong> \u2014 comes with phase " + esc(ph.diagnosis) + ".</li>"
       + "<li><strong>Setup checklist</strong> \u2014 comes with phase " + esc(ph.checklist) + ".</li>"
       + "</ul>";
@@ -530,6 +601,7 @@
         + "Feature readiness, and none of its features can be switched on until it is "
         + "marked in use.</p>";
     }
+    if (i.testable) html += testBlock(i);
     html += placeholders(i);
     html += '<section class="su__group"><h2 class="su__h2">Settings</h2>' + settingsTable(i.settings || []);
     (i.sections || []).forEach(function (s) {
@@ -1061,6 +1133,7 @@
   document.addEventListener("click", function (ev) {
     var t = ev.target;
     if (t.dataset && t.dataset.edit) { openEditor(t.dataset.edit); return; }
+    if (t.dataset && t.dataset.test) { runTest(t.dataset.test, t); return; }
     if (t.dataset && t.dataset.subtab) { ev.preventDefault(); selectSubtab(t.dataset.subtab); return; }
     if (t.dataset && t.dataset.goto) { ev.preventDefault(); gotoSetting(t.dataset.goto); return; }
     if (t.dataset && t.dataset.confirm) { confirmSetting(t.dataset.confirm); return; }

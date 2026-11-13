@@ -148,8 +148,13 @@ def _readonly_rows(settings: Settings, env: dict[str, Any]) -> list[dict[str, An
     return out
 
 
-async def page_payload(store: Optional[SettingsStore]) -> dict[str, Any]:
-    """Everything the page renders in one call."""
+async def page_payload(
+    store: Optional[SettingsStore],
+    test_runs: Optional[dict[str, dict[str, Any]]] = None,
+) -> dict[str, Any]:
+    """Everything the page renders in one call. ``test_runs`` is the last
+    integration test of each integration (integrations/store.py), read only
+    while the Integrations tab is on."""
     settings = get_settings()
     env = config_module.env_values()
     overrides = await store.load() if store is not None else {}
@@ -225,7 +230,8 @@ async def page_payload(store: Optional[SettingsStore]) -> dict[str, Any]:
     }
     if tab_on:
         payload["integrationsTab"] = True
-        payload["integrations"] = _integrations(settings, env, overrides, tagged)
+        payload["integrations"] = _integrations(settings, env, overrides, tagged,
+                                                test_runs or {})
     return payload
 
 
@@ -239,6 +245,7 @@ def _integrations(
     env: dict[str, Any],
     overrides: dict[str, Override],
     tagged: dict[str, dict[str, Any]],
+    test_runs: dict[str, dict[str, Any]],
 ) -> list[dict[str, Any]]:
     """One entry per integration, in registry order: its status line, its
     settings (rendered by the same ``_row`` as the Settings tab) and its
@@ -292,8 +299,8 @@ def _integrations(
                 for k in on_keys
             ],
             "credentialsMissing": missing,
-            # Phase 2 replaces this with the last integration test's result.
-            "tested": None,
+            # The last integration test, or None: "Not tested yet".
+            "tested": test_runs.get(integ.key) if integ.testable else None,
         }
         if integ.key == "espocrm":
             # EspoCRM has no feature switch; what it can be is writing or not.
@@ -304,6 +311,7 @@ def _integrations(
             "key": integ.key,
             "name": integ.name,
             "inUseKey": integ.in_use_setting,
+            "testable": integ.testable,
             "status": status,
             "settings": top,
             "sections": sections,

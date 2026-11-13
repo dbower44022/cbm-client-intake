@@ -22,7 +22,9 @@ credentials, in display order. Each entry says:
 Which settings appear on a sub-tab is NOT held here: each ``SettingSpec``
 carries its own ``integration`` and ``section`` (core/settings_registry.py).
 
-Later phases add the integration test, the allowed documentation sites and the
+Phase 2 adds the integration test: ``test_module`` names the module whose
+``run(settings)`` is the test (integrations/testing.py), empty until the
+integration's phase. Later phases add the allowed documentation sites and the
 coded actions to :class:`Integration`.
 """
 
@@ -89,6 +91,13 @@ class Integration:
     runbooks: tuple[str, ...] = ()
     # The phase that builds this integration's test (phase 2 or 3).
     test_phase: int = 2
+    # The module holding the integration test, imported only when it runs;
+    # empty until ``test_phase`` is built.
+    test_module: str = ""
+
+    @property
+    def testable(self) -> bool:
+        return bool(self.test_module)
 
     @property
     def always_in_use(self) -> bool:
@@ -119,6 +128,7 @@ INTEGRATIONS: tuple[Integration, ...] = (
         credentials=("espo_base_url", "espo_api_key"),
         features=(),
         test_phase=2,
+        test_module="integrations.checks.espocrm",
     ),
     Integration(
         key="google_workspace", name="Google Workspace",
@@ -149,6 +159,7 @@ INTEGRATIONS: tuple[Integration, ...] = (
         runbooks=("GDRIVE-DOCS-SETUP.md", "GCAL-GOOGLE-SETUP.md",
                   "GMAIL-INTEGRATION-GUIDE.md"),
         test_phase=2,
+        test_module="integrations.checks.google",
     ),
     Integration(
         key="zoom", name="Zoom", in_use_setting="zoom_in_use",
@@ -158,6 +169,7 @@ INTEGRATIONS: tuple[Integration, ...] = (
         features=("zoom",),
         runbooks=("EVENTS-SETUP.md",),
         test_phase=2,
+        test_module="integrations.checks.zoom",
     ),
     Integration(
         key="fathom", name="Fathom", in_use_setting="fathom_in_use",

@@ -75,6 +75,24 @@ def _job_store(request: Request):
     return getattr(request.app.state, "job_store", None)
 
 
+def _test_store(request: Request):
+    return getattr(request.app.state, "integration_test_store", None)
+
+
+async def _test_runs(request: Request) -> dict[str, dict[str, Any]]:
+    """The last integration test of each integration, for the status lines.
+    Read only while the Integrations tab is on; a database failure leaves the
+    lines at "Not tested yet" rather than failing the page."""
+    store = _test_store(request)
+    if store is None or not get_settings().integrations_tab:
+        return {}
+    try:
+        return await store.latest_all()
+    except Exception as exc:  # noqa: BLE001
+        log.warning("integration test runs could not be read: %s", exc)
+        return {}
+
+
 def _actor(user: dict[str, Any]) -> str:
     return str(user.get("userName") or user.get("name") or "")
 
@@ -145,7 +163,7 @@ def _refuse_if_guarded(key: str, value: Any, settings: Any) -> None:
 @router.get("/settings")
 async def get_settings_page(request: Request) -> dict:
     _require_admin(request)
-    return await page_payload(_store(request))
+    return await page_payload(_store(request), await _test_runs(request))
 
 
 @router.put("/settings/{key}")
@@ -255,7 +273,7 @@ async def put_setting(key: str, body: SettingIn, request: Request) -> dict:
         # Set when the change is live but will undo itself unless confirmed.
         "confirmBy": deadline.isoformat() if deadline and reverted is None else None,
         "setting": record.as_dict(),
-        "page": await page_payload(store),
+        "page": await page_payload(store, await _test_runs(request)),
     }
 
 
@@ -279,7 +297,7 @@ async def confirm_setting(key: str, request: Request) -> dict:
         f"{key} confirmed working — the automatic revert is cancelled",
         {"key": key},
     )
-    return {"ok": True, "page": await page_payload(store)}
+    return {"ok": True, "page": await page_payload(store, await _test_runs(request))}
 
 
 @router.delete("/settings/{key}")
@@ -301,7 +319,7 @@ async def delete_setting(key: str, body: ClearIn, request: Request) -> dict:
         f"{key} reset to its deployment value",
         {"key": key, "reason": body.reason},
     )
-    return {"ok": True, "page": await page_payload(store)}
+    return {"ok": True, "page": await page_payload(store, await _test_runs(request))}
 
 
 @router.get("/history")
@@ -406,6 +424,71 @@ async def delete_website_image(name: str, request: Request, body: Optional[Clear
                    f"{IMAGE_NAMES[name]} removed from the chapter website",
                    {"image": name, "reason": (body.reason if body else "")})
     return await _images_payload(request)
+
+
+# --- the integration test (prds/integrations-tab-plan.md § 3, part 2) -------
+
+def _testable(key: str):
+    """The integration ``key``, when the tab is on and its test is built."""
+    from integrations.registry import integration_for
+
+    if not get_settings().integrations_tab:
+        # Built dark: with the switch off the endpoints are absent.
+        raise HTTPException(status_code=404, detail="Not Found")
+    integ = integration_for(key)
+    if integ is None:
+        raise HTTPException(status_code=404, detail=f"There is no integration called '{key}'.")
+    if not integ.testable:
+        raise HTTPException(
+            status_code=409,
+            detail=f"{integ.name}'s integration test comes with phase {integ.test_phase} "
+                   "of the Integrations tab build.",
+        )
+    return integ
+
+
+@router.post("/integrations/{key}/test")
+async def run_integration_test(key: str, request: Request) -> dict:
+    """Run one integration's test now. Every call it makes is a read; nothing
+    is written to any outside service. The run is stored and recorded."""
+    from integrations.store import MANUAL
+    from integrations.testing import AlreadyRunning, run_integration_test as _run
+
+    user = _require_admin(request)
+    integ = _testable(key)
+    try:
+        result = await _run(integ, get_settings())
+    except AlreadyRunning as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    run = dict(result, trigger=MANUAL, runBy=_actor(user))
+    stored = False
+    store = _test_store(request)
+    if store is not None:
+        try:
+            run = await store.record(result, trigger=MANUAL,
+                                     run_by_id=str(user.get("userId") or ""),
+                                     run_by=_actor(user))
+            stored = True
+        except Exception as exc:  # noqa: BLE001 — the result is still shown
+            log.warning("integration test of %s could not be stored: %s", key, exc)
+    await _log(
+        user, action_log.ACT_INTEGRATION_TESTED,
+        f"{integ.name} integration test: {result['outcome']}",
+        {"integration": key, "outcome": result["outcome"],
+         "checks": {c["key"]: c["outcome"] for c in result["checks"]}},
+    )
+    return {"run": run, "stored": stored}
+
+
+@router.get("/integrations/{key}/test")
+async def last_integration_test(key: str, request: Request) -> dict:
+    """The last integration test of ``key``, or null."""
+    _require_admin(request)
+    integ = _testable(key)
+    store = _test_store(request)
+    if store is None:
+        return {"run": None}
+    return {"run": await store.latest(integ.key)}
 
 
 @router.get("/readiness")
