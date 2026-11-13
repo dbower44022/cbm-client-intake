@@ -1,11 +1,11 @@
 # Kickoff prompt — Business Evaluation, phase 2: the mentor side
 
-Last Updated: 11-13-26 11:52 · Revision 0.2 — see change log at the end.
+Last Updated: 11-13-26 11:58 · Revision 0.3 — see change log at the end.
 
-**Draft for Doug's approval.** Written at the close of phase 1 (v0.324.0) from
+**Approved by Doug 11-13-26.** Written at the close of phase 1 (v0.324.0) from
 the build orchestrator's rules and what phase 1 actually built. Paste
 everything below the line into a fresh Claude Code session rooted in
-`~/Dropbox/Projects/cbm-client-intake`, after Doug approves it.
+`~/Dropbox/Projects/cbm-client-intake`.
 
 ---
 
@@ -112,3 +112,4 @@ offering (phase 6).
 |---|---|---|---|
 | 0.1 | 11-13-26 10:50 | Claude (Claude Code) | Drafted at the close of phase 1, from the orchestrator and what phase 1 built. |
 | 0.2 | 11-13-26 11:52 | Claude (Claude Code) | Added: read `git log` and `alembic/versions/` before choosing a version or migration number, because another session may work in parallel. |
+| 0.3 | 11-13-26 11:58 | Claude (Claude Code) | Approved by Doug. |
