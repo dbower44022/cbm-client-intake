@@ -157,6 +157,11 @@ class TwilioSmsClient:
         ``type`` (Trial, Full), ``friendly_name``."""
         return await self._get(".json")
 
+    async def list_numbers(self) -> dict[str, Any]:
+        """``GET /Accounts/{sid}/IncomingPhoneNumbers.json``: every number on the
+        account (first 50), each with its ``capabilities``."""
+        return await self._get("/IncomingPhoneNumbers.json", {"PageSize": "50"})
+
     async def find_number(self, phone_number: str) -> dict[str, Any]:
         """``GET /Accounts/{sid}/IncomingPhoneNumbers.json?PhoneNumber=…``: the
         raw list answer, whose ``incoming_phone_numbers`` carry ``capabilities``."""

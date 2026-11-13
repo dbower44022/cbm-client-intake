@@ -577,10 +577,27 @@
 
   function planStepHtml(s, current, plan) {
     var head, body = "";
+    var setup = plan.kind === "setup";
+    var confirmBtn = function (label) {
+      return '<p><button type="button" class="cbm-button" data-plan-step="' + esc(plan.integration + "|" + plan.id + "|" + s.n)
+        + '">' + esc(label) + "</button></p>";
+    };
     if (s.kind === "setting_change") {
       head = "Set <strong>" + esc(s.label || s.key) + "</strong> to <code>" + esc(s.value) + "</code>";
+      if (current && setup) body = confirmBtn("Confirm \u2014 save it");
+    } else if (s.kind === "setting_reset") {
+      head = "Put <strong>" + esc(s.label || s.key) + "</strong> back to the deployment's own value";
+      if (current && setup) body = confirmBtn("Confirm \u2014 reset it");
+    } else if (s.kind === "coded_action") {
+      head = "<strong>" + esc(s.label || s.name) + "</strong>" + (s.input ? " (" + esc(s.input) + ")" : "");
+      if (current) {
+        var dry = s.dryRun || {};
+        body = '<p class="su__diagwhere"><strong>Dry run:</strong> ' + esc(dry.summary || "not run yet") + "</p>"
+          + confirmBtn("Confirm \u2014 run it");
+      }
     } else if (s.kind === "retest") {
       head = "Run the integration test again";
+      if (current && setup) body = confirmBtn("Confirm \u2014 run the test");
     } else {
       head = esc(s.action);
       if (current) {
@@ -590,8 +607,7 @@
               + '</code> <button type="button" class="cbm-button cbm-button--secondary" data-copy="' + copyId + '">Copy</button></div>' : "")
           + (s.expect ? '<p><strong>You should see:</strong> ' + esc(s.expect) + "</p>" : "")
           + (s.ifNot ? '<p><strong>If not:</strong> ' + esc(s.ifNot) + "</p>" : "")
-          + '<p><button type="button" class="cbm-button" data-plan-step="' + esc(plan.integration + "|" + plan.id + "|" + s.n)
-          + '">Done \u2014 continue</button></p>';
+          + confirmBtn(s.checklistStep ? "Done \u2014 check it" : "Done \u2014 continue");
       } else if (s.where) {
         head += ' <span class="su__diagmeta">(' + esc(s.where) + ")</span>";
       }
@@ -651,38 +667,39 @@
     return html + "</section>";
   }
 
-  function diagError(msg) {
-    var err = $("diagError");
+  function diagError(msg, kind) {
+    var err = $(kind === "setup" ? "setupError" : "diagError") || $("diagError");
     if (err) { err.hidden = false; text(err, msg); }
   }
 
   function setPlan(key, plan) {
     var i = findIntegration(key);
-    if (i) i.fixPlan = plan;
+    if (i && plan && plan.kind === "setup") i.setupPlan = plan;
+    else if (i) i.fixPlan = plan;
     renderIntegrations();
     // The step waiting for a person comes to the top of the window (plan § 2).
     var cur = document.querySelector(".su__diagstep.is-current");
     if (cur) cur.scrollIntoView({ block: "start", behavior: "smooth" });
   }
 
-  function pollDiagnosis(key) {
+  function pollDiagnosis(key, kind) {
     if (diagPoll) clearTimeout(diagPoll);
     diagPoll = setTimeout(async function () {
       diagPoll = null;
       try {
-        var r = await api("/integrations/" + encodeURIComponent(key) + "/fixplan");
-        if (r.plan && r.plan.status === "diagnosing") { setPlan(key, r.plan); pollDiagnosis(key); }
+        var r = await api("/integrations/" + encodeURIComponent(key) + (kind === "setup" ? "/setupplan" : "/fixplan"));
+        if (r.plan && r.plan.status === "diagnosing") { setPlan(key, r.plan); pollDiagnosis(key, kind); }
         else { await refreshPage(); setPlan(key, r.plan); }
       } catch (e) { diagError(e.message); }
     }, 5000);
   }
 
-  async function startDiagnosis(key) {
+  async function startDiagnosis(key, kind) {
     try {
-      var r = await api("/integrations/" + encodeURIComponent(key) + "/diagnose", { method: "POST" });
+      var r = await api("/integrations/" + encodeURIComponent(key) + (kind === "setup" ? "/setup" : "/diagnose"), { method: "POST" });
       setPlan(key, r.plan);
-      pollDiagnosis(key);
-    } catch (e) { diagError(e.message); }
+      pollDiagnosis(key, kind);
+    } catch (e) { diagError(e.message, kind); }
   }
 
   async function planAction(path, body) {
@@ -736,8 +753,49 @@
         + (meta.length ? '<div class="su__setupmeta">' + meta.map(esc).join(" \u00b7 ") + "</div>" : "")
         + "</div></li>";
     }).join("") + "</ol>";
+    html += setupBlock(i, cl);
     return html + '<p class="su__hint">The steps are written in the chapter deployment guide '
       + "(<code>prds/chapter-network/deployment-guide/</code>), stage by stage.</p></details>";
+  }
+
+  // The setup assistant (plan § 6.5): Claude writes a setup plan for the open
+  // steps; every step of it waits for a person's confirmation (ruling I12).
+  function setupBlock(i, cl) {
+    var plan = i.setupPlan;
+    var open = cl.rows.some(function (r) { return r.state !== "done"; });
+    var busy = plan && plan.status === "diagnosing";
+    var html = '<div class="su__setupassist">';
+    if (open && !busy) {
+      html += '<p class="su__testbar"><button type="button" class="cbm-button" data-setup-ask="' + esc(i.key)
+        + '">Set up with Claude</button> <span class="su__hint">Claude reads the open steps, the settings (never a '
+        + "secret's value) and " + esc(i.name) + "'s documentation, and writes a setup plan. Every step waits for you.</span></p>";
+    }
+    html += '<p class="form-error" id="setupError" role="alert" hidden></p>';
+    if (!plan || ["superseded", "discarded"].indexOf(plan.status) >= 0) return html + "</div>";
+    var words = plan.status === "waiting" ? "Waiting for you to confirm the next step"
+      : plan.status === "proposed" ? "Ready to start" : (STATUS_WORDS[plan.status] || plan.status);
+    html += '<p class="su__diagstatus"><strong>Setup plan: ' + esc(words) + "</strong>"
+      + (plan.createdAt ? " \u00b7 asked by " + esc(plan.createdBy || "someone") + " " + esc(stamp(plan.createdAt)) : "")
+      + (plan.status !== "diagnosing" ? " \u00b7 cost " + esc(money(plan.cost)) : "") + "</p>";
+    if (busy) return html + '<p class="su__hint">This takes a minute or two. The page updates by itself.</p></div>';
+    if (plan.status === "no_plan") return html + '<p class="su__note su__note--warn">' + esc(plan.error || "Claude finished without a plan.") + "</p></div>";
+    html += '<p class="su__diagtext">' + esc(plan.diagnosis) + "</p>";
+    var steps = plan.steps || [];
+    var current = plan.status === "waiting" ? (steps.filter(function (s) { return s.state !== "done"; })[0] || null) : null;
+    html += '<p class="su__diagmeta">' + steps.filter(function (s) { return s.state === "done"; }).length
+      + " of " + steps.length + " steps done</p>";
+    html += '<ol class="su__diagsteps">' + steps.map(function (s) {
+      return planStepHtml(s, current && current.n === s.n, plan);
+    }).join("") + "</ol>";
+    if (plan.status === "proposed") {
+      html += '<p><button type="button" class="cbm-button" data-plan-apply="' + esc(i.key + "|" + plan.id + "|" + plan.fingerprint)
+        + '">Start this plan</button> <button type="button" class="cbm-button cbm-button--secondary" data-plan-discard="'
+        + esc(i.key + "|" + plan.id) + '">Discard</button> <span class="su__hint">Nothing is changed until you confirm each step.</span></p>';
+    } else if (plan.status === "waiting") {
+      html += '<p><button type="button" class="cbm-button cbm-button--secondary" data-plan-discard="'
+        + esc(i.key + "|" + plan.id) + '">Discard the rest of this plan</button></p>';
+    }
+    return html + "</div>";
   }
 
   async function tickStep(spec, box) {
@@ -810,7 +868,8 @@
     if (i.testable) html += testBlock(i);
     html += placeholders(i);
     html += diagnosisBlock(i);
-    if (i.fixPlan && i.fixPlan.status === "diagnosing" && !diagPoll) pollDiagnosis(i.key);
+    if (i.fixPlan && i.fixPlan.status === "diagnosing" && !diagPoll) pollDiagnosis(i.key, "fix");
+    if (i.setupPlan && i.setupPlan.status === "diagnosing" && !diagPoll) pollDiagnosis(i.key, "setup");
     html += checklistBlock(i);
     html += '<section class="su__group"><h2 class="su__h2">Settings</h2>' + settingsTable(i.settings || []);
     (i.sections || []).forEach(function (s) {
@@ -1344,7 +1403,8 @@
     if (t.dataset && t.dataset.edit) { openEditor(t.dataset.edit); return; }
     if (t.dataset && t.dataset.test) { runTest(t.dataset.test, t); return; }
     if (t.dataset && t.dataset.tick) { tickStep(t.dataset.tick, t); return; }
-    if (t.dataset && t.dataset.diagnose) { startDiagnosis(t.dataset.diagnose); return; }
+    if (t.dataset && t.dataset.diagnose) { startDiagnosis(t.dataset.diagnose, "fix"); return; }
+    if (t.dataset && t.dataset.setupAsk) { startDiagnosis(t.dataset.setupAsk, "setup"); return; }
     if (t.dataset && t.dataset.planApply) {
       var a = t.dataset.planApply.split("|");
       planAction("/integrations/" + encodeURIComponent(a[0]) + "/fixplan/" + a[1] + "/apply", { fingerprint: a[2] });

@@ -1,6 +1,6 @@
 # Build orchestrator — the Integrations tab of System Settings
 
-Last Updated: 11-13-26 12:12 · Revision 0.7 — see change log at the end.
+Last Updated: 11-13-26 17:45 · Revision 0.8 — see change log at the end.
 
 This file runs the whole build of the Integrations tab. It names the phases,
 the prompt for each one, the rules that every phase session follows, and the
@@ -30,8 +30,8 @@ stopping points where the work pauses for Doug. The design is
 | 4 | The setup checklist: the step-file keys, the automatic checks, the hand ticks, the missing steps | `prompts/integrations-tab-phase4-prompt-v0.1.md` | Built v0.325.0, 11-13-26; awaiting Doug's review |
 | 5 | The nightly integration test and its alert | `prompts/integrations-tab-phase5-prompt-v0.1.md` | Built v0.326.0, 11-13-26; awaiting Doug's review |
 | 6 | The diagnosis agent and fix plans | `prompts/integrations-tab-phase6-prompt-v0.1.md` | Built v0.327.0, 11-13-26; awaiting Doug's review |
-| 7 | The setup assistant and setup plans | `prompts/integrations-tab-phase7-prompt-v0.1.md` | Draft written 11-13-26; awaiting approval |
-| 8 | Documentation, and the live review on crm-test | written at the end of phase 7 | — |
+| 7 | The setup assistant and setup plans | `prompts/integrations-tab-phase7-prompt-v0.1.md` | Built v0.329.0, 11-13-26; awaiting Doug's review |
+| 8 | Documentation, and the live review on crm-test | `prompts/integrations-tab-phase8-prompt-v0.1.md` | Draft written 11-13-26; awaiting approval |
 
 The session closing each phase updates the **State** column.
 
@@ -94,6 +94,7 @@ which goes to Doug as a decision.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.8 | 11-13-26 17:45 | Claude (Claude Code) | State column: phase 7 built (v0.329.0); phase 8 prompt drafted. |
 | 0.7 | 11-13-26 12:12 | Claude (Claude Code) | State column: phase 6 built (v0.327.0); phase 7 prompt drafted. |
 | 0.6 | 11-13-26 11:04 | Claude (Claude Code) | State column: phase 5 built (v0.326.0); phase 6 prompt drafted. |
 | 0.5 | 11-13-26 10:30 | Claude (Claude Code) | State column: phase 4 built (v0.325.0); phase 5 prompt drafted. |

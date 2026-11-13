@@ -248,7 +248,7 @@ class FakePlans:
 
     async def create(self, **kw):
         row = fixplans.public({
-            "id": f"p{len(self.rows) + 1}", "integration": kw["integration"], "kind": "fix",
+            "id": f"p{len(self.rows) + 1}", "integration": kw["integration"], "kind": kw.get("kind", "fix"),
             "test_run_id": kw.get("test_run_id"), "status": kw["status"], "diagnosis": kw.get("diagnosis", ""),
             "confidence": "", "steps": kw.get("steps") or [], "fingerprint": None, "model": "", "cost": 0.0,
             "usage": {}, "error": None, "created_by": kw.get("created_by"),
@@ -257,8 +257,8 @@ class FakePlans:
         self.rows[row["id"]] = row
         return dict(row)
 
-    def put(self, steps, status=fixplans.PROPOSED, diagnosis_="The host is wrong."):
-        row = run(self.create(integration="zoom", status=status))
+    def put(self, steps, status=fixplans.PROPOSED, diagnosis_="The host is wrong.", kind="fix"):
+        row = run(self.create(integration="zoom", status=status, kind=kind))
         row.update(diagnosis=diagnosis_, steps=steps, fingerprint=fixplans.fingerprint(diagnosis_, steps))
         self.rows[row["id"]] = row
         return row
@@ -268,11 +268,11 @@ class FakePlans:
         return copy.deepcopy(r) if r else None
 
     async def latest(self, integration, kind="fix"):
-        rows = [r for r in self.rows.values() if r["integration"] == integration]
+        rows = [r for r in self.rows.values() if r["integration"] == integration and r["kind"] == kind]
         return copy.deepcopy(rows[-1]) if rows else None
 
     async def latest_all(self, kind="fix"):
-        return {r["integration"]: r for r in self.rows.values()}
+        return {r["integration"]: r for r in self.rows.values() if r["kind"] == kind}
 
     async def update(self, plan_id, **values):
         names = {"approved_by": "approvedBy", "finished_at": "finishedAt"}
@@ -341,7 +341,7 @@ def test_diagnose_is_refused_without_a_failure_a_key_or_budget(monkeypatch):
 def test_diagnose_starts_one_at_a_time_and_the_snapshot_holds_no_secret(monkeypatch):
     seen = {}
 
-    async def fake_run(app, plan_id, snapshot, user):
+    async def fake_run(app, plan_id, snapshot, user, mode="fix"):
         seen["snap"] = snapshot
 
     monkeypatch.setattr("setup.router._run_diagnosis", fake_run)

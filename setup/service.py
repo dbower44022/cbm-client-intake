@@ -343,6 +343,8 @@ def _integrations(
             # The diagnosis agent (phase 6): the last fix plan, and what
             # diagnoses have spent this month against the budget.
             "fixPlan": (cs.get("fixPlans") or {}).get(integ.key),
+            # The setup assistant (phase 7): the last setup plan.
+            "setupPlan": (cs.get("setupPlans") or {}).get(integ.key),
             "agent": {"spent": cs.get("agentSpent"),
                       "budget": float(settings.integration_agent_monthly_budget or 0),
                       "keySet": bool((settings.anthropic_api_key or "").strip()),

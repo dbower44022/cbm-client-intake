@@ -5,6 +5,42 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.329.0] — 2026-11-13
+
+**feat: the Integrations tab, phase 7 — the setup assistant and setup plans.**
+Dark behind **`INTEGRATIONS_TAB`**. Plan `prds/integrations-tab-plan.md`
+§ 6.5, rulings I11 and I12; the design Doug approved 11-13-26;
+`OPEN-ITEMS.md` #82.
+
+- **Set up with Claude** in the setup checklist of any sub-tab with open
+  steps: the same agent, tools, sites, budget and approval as the diagnosis,
+  asked to plan the open steps (`integrations/diagnosis.py`,
+  `SETUP_SYSTEM` and `submit_setup_plan`; `POST /setup/api/integrations/{key}/setup`).
+  A setup plan is `kind = "setup"` in the fix-plan table.
+- **Four kinds of step**: setting change, **setting reset** (new, in fix
+  plans too — the first live diagnosis saved the deployment's value instead
+  of removing an override), coded action, manual step. A manual step may name
+  the checklist step it completes.
+- **Every setup step waits for confirmation** (ruling I12). A coded action
+  shows its dry run while it waits and runs for real on confirmation; the
+  values it proposes are saved through the checked save path as the
+  confirming administrator. A confirmed manual step linked to an automatic
+  checklist step stays open, with the reason, until that check passes. A
+  failed step stays open; the plan carries on when it succeeds.
+- **The coded actions** (`integrations/actions.py`): create the Google shared
+  drive (find-or-create, a fixed `requestId` per deployment and name, the
+  service account added, its ID saved); look up the Twilio sender number
+  (proposes it when the account has exactly one texting number); confirm the
+  Zoom host (a licensed user). Applying CRM structure from a button was left
+  out (Doug, 11-13-26): it would bypass the crm-test-first runbook. Manual
+  steps confirmed against each vendor's documentation: Google's delegation
+  grant, Zoom's Server-to-Server OAuth app, Constant Contact's developer
+  application, and the Anthropic, Lob and Fathom keys have no API.
+- `put_setting`'s reset became `_checked_reset`, shared with plans.
+  `TwilioSmsClient.list_numbers`.
+- **No real setup plan was run yet**: it runs on crm-test once pushed.
+- Tests: `tests/test_integration_setup.py` (16).
+
 ## [0.328.1] — 2026-11-13
 
 **fix: the Integrations tab — three defects found by the first real diagnosis

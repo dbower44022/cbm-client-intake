@@ -1,6 +1,6 @@
 # Integrations tab — System Settings plan
 
-Last Updated: 11-13-26 12:12 · Revision 0.11
+Last Updated: 11-13-26 17:45 · Revision 0.12
 
 This is the design record for a new top-level **Integrations** tab on the System
 Settings page (`/setup`). It holds Doug's rulings, the contents of each
@@ -331,6 +331,7 @@ phase ends at a **stopping point**: the work pauses for Doug's go-ahead.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.12 | 11-13-26 17:45 | Claude (Claude Code) | Phase 7 built: v0.329.0, the setup assistant. Doug's decisions 11-13-26: three coded actions (the Google shared drive without a folder scheme — folders are made per record already; the Twilio sender number; the Zoom host); applying CRM structure from a button dropped (it would bypass the crm-test-first runbook); a setting-reset step kind for fix and setup plans. § 6.5's inferred manual steps confirmed from each vendor's documentation (the Google Cloud project and key remain inferred). Not pushed. |
 | 0.11 | 11-13-26 12:12 | Claude (Claude Code) | Phase 6 built: v0.327.0, the diagnosis agent and fix plans. Doug's decisions 11-13-26: § 6.6 settled as the narrowed `integration_event` table (only each integration job's top-level handler writes, scrubbed, once an hour, 14 days); a monthly budget setting, default $25; the allowed sites as checked (Google adds `knowledge.workspace.google.com`, Anthropic drops `docs.claude.com`). § 6.1's Tool Runner became a manual loop (SDK 0.116 does not resume a paused server-tool turn). Not pushed. |
 | 0.10 | 11-13-26 11:04 | Claude (Claude Code) | Phase 5 built: v0.326.0, the nightly integration test. Doug's decision 11-13-26, option A: ruling I8 kept (the worker runs it); checks reading a value only the web process is given (the provisioning account, Lob's webhook secret, the All Members group) are skipped at night. § 5's cool-down is the stored runs, not the worker's memory; unknown alerts on the third night. Not pushed. |
 | 0.9 | 11-13-26 10:30 | Claude (Claude Code) | Phase 4 built: v0.325.0, the setup checklist (mapping Doug approved 11-13-26). § 4's `check:` key became `check.auto`, since `check` already held `how` and `probe`; `crm_field` dropped (no step needs it) and `mailing_connected` added; a framing row first ("Decide whether …") and last ("The integration test passes"); Fathom and the Constant Contact connection gained steps beside the four § 4 named. Not pushed. |

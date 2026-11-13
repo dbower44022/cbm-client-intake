@@ -49,8 +49,11 @@ ACT_DIAGNOSED = "Integration Diagnosed"
 ACT_PLAN_APPLIED = "Fix Plan Approved and Applied"
 ACT_PLAN_STEP = "Fix Plan Step Confirmed"
 ACT_PLAN_DISCARDED = "Fix Plan Discarded"
+ACT_SETUP_ASKED = "Setup Plan Written"
 
 SETTING_CHANGE = "setting_change"
+SETTING_RESET = "setting_reset"
+CODED_ACTION = "coded_action"
 MANUAL_STEP = "manual_step"
 RETEST = "retest"
 
