@@ -1,6 +1,6 @@
 # Integrations tab — System Settings plan
 
-Last Updated: 11-12-26 23:52 · Revision 0.2
+Last Updated: 11-12-26 23:55 · Revision 0.3
 
 This is the design record for a new top-level **Integrations** tab on the System
 Settings page (`/setup`). It holds Doug's rulings, the contents of each
@@ -28,6 +28,14 @@ build prompts are written from this file. Nothing has been built yet.
   by an administrator.
 - **Diagnosis agent**: the Claude model, called through the Claude API, that
   reads a failed integration test and writes a fix plan.
+- **Setup assistant**: the same Claude model, asked to set an integration up
+  rather than to diagnose it. It writes a setup plan.
+- **Setup plan**: the setup assistant's numbered list of steps that should take
+  the integration from its current state to a passing integration test.
+- **Coded action**: a step the application can carry out against an outside
+  service, written and tested in code, for example "create the shared drive".
+  The setup assistant can only choose from the list of coded actions; it never
+  writes its own call to an outside service.
 - **Fix plan**: the diagnosis agent's numbered list of steps that should make the
   integration test pass. It has setting changes the application can apply,
   manual steps for a person, and a final re-test.
@@ -46,6 +54,8 @@ build prompts are written from this file. Nothing has been built yet.
 | I8 | The integration tests also run every night in the worker, for each integration in use. A failure sends the existing alert email with a link to the sub-tab. The diagnosis agent never runs on its own. |
 | I9 | The diagnosis agent may search and read the vendor's own documentation on the web, but only on an allowed list of sites for each integration. |
 | I10 | The application, not the diagnosis agent, carries out an approved fix plan, step by step. If a step fails, the fix plan stops. |
+| I11 | A setup assistant extends the diagnosis agent to setup (option B). It writes a setup plan of setting changes, manual steps and coded actions. It is never given broad administrator credentials for a vendor. |
+| I12 | A setup plan is carried out one step at a time, and every step, automatic or manual, waits for the administrator's confirmation. A fix plan, once approved, runs its automatic steps straight through and waits only at manual steps. |
 
 ### Decisions made under those rulings (announced, not separately ruled)
 
@@ -74,6 +84,13 @@ build prompts are written from this file. Nothing has been built yet.
   save path. A change that could lock administrators out keeps its 10-minute
   confirm-or-undo countdown. History records the approving administrator with
   the note "applied from a fix plan".
+- When an administrator confirms a manual step, the application runs that
+  step's check, where one exists, before moving on. A failed check keeps the
+  step open, names what is missing, and offers a diagnosis. This applies to
+  setup plans and fix plans alike.
+- A plan is shown one step at a time, to the Step-by-Step Instructions
+  standard: one step open, a confirmed step collapses and the next comes to the
+  top of the window, and a progress count is shown.
 - The diagnosis agent never carries out a step outside this application. Those
   steps stay as instructions inside the fix plan and wait for a hand tick.
 - The diagnosis agent never sees a secret's value. It sees only whether each
@@ -172,7 +189,7 @@ The diagnosis agent may read only through these read-only tools:
 - the integration's readiness rows;
 - the setup checklist and its tick state;
 - the integration's runbook from this repository;
-- recent errors logged for the integration (see § 6.5, an open point);
+- recent errors logged for the integration (see § 6.6, an open point);
 - web search and web fetch, restricted to the integration's allowed list of
   documentation sites (ruling I9). Proposed lists:
   - EspoCRM: `docs.espocrm.com`
@@ -218,7 +235,31 @@ strict schema:
 - A setting change that fails its pre-flight check stops the fix plan at that
   step, with the check's own error shown.
 
-### 6.5 Open point: recent errors
+### 6.5 The setup assistant (rulings I11, I12)
+
+- "Set up with Claude" appears on a sub-tab whose setup checklist still has
+  open steps. It uses the same model, read-only tools, allowed sites and
+  approval machinery as the diagnosis agent.
+- It reads the setup checklist, the values already entered in the setup fields
+  and the vendor documentation, and writes a setup plan with the
+  `submit_setup_plan` tool. A setup plan has a third step kind beside setting
+  change and manual step: **coded action**, named from the list in code with
+  its inputs.
+- Every manual step arrives with the chapter's own values filled in, for
+  example the delegation grant with the exact client ID and scope list.
+- Steps that stay manual because the vendor offers no API, or would need
+  administrator credentials this application must not hold: creating the Google
+  Cloud project and service account, granting domain-wide delegation, creating
+  the Zoom Server-to-Server app, and creating the Constant Contact developer app.
+  (Inferred from vendor knowledge; each is confirmed during phase 7.)
+- First coded actions, proposed: create the Google shared drive and its folder
+  scheme; apply a feature's CRM fields and relationships (wrapping the existing
+  `scripts/migrate_*_schema.py`); look up the Twilio sender number; confirm the
+  Zoom host user. The list grows one tested action at a time.
+- Every coded action is idempotent and has a dry run, as the Operations tab's
+  jobs do, and runs as the confirming administrator where the CRM is involved.
+
+### 6.6 Open point: recent errors
 
 The web process cannot read the worker's log. Proposal: a small table,
 `integration_event`, that both processes write an integration's errors to, kept
@@ -236,7 +277,10 @@ New tables, added by Alembic migrations:
 - `integration_fix_plan`: the integration, its integration test, the fix plan,
   the fingerprint, the status (proposed, approved, applying, applied, stopped,
   superseded), the approving administrator, and token use.
-- `integration_event`: see § 6.5.
+- `integration_event`: see § 6.6.
+
+The `integration_fix_plan` table also holds setup plans, with a `kind` column
+(fix or setup) and the confirmation of each step.
 
 The "in use" settings are ordinary settings, one for each integration, in the
 settings registry. Each setting gains an `integration=` field, which places
@@ -265,14 +309,18 @@ phase ends at a **stopping point**: the work pauses for Doug's go-ahead.
 6. **The diagnosis agent.** The read-only tools, the allowed sites, the
    `submit_fix_plan` schema, the fix plan table, approval, carrying out the
    steps, and the re-test. **Stop.**
-7. **Documentation and live review.** `SYSTEM-SETTINGS-SETUP.md`,
+7. **The setup assistant.** The `submit_setup_plan` schema, the coded-action
+   list and its first actions, the one-step-at-a-time runner with
+   check-on-confirm, and the manual steps confirmed against each vendor.
+   **Stop.**
+8. **Documentation and live review.** `SYSTEM-SETTINGS-SETUP.md`,
    `setup/CLAUDE.md`, `CHANGELOG.md`, `OPEN-ITEMS.md`. Then switch it on in
    crm-test's overlay and review it live as an administrator. **Stop** before
    production.
 
 ## 9. Open items
 
-- § 6.5: how recent errors reach the diagnosis agent.
+- § 6.6: how recent errors reach the diagnosis agent.
 - § 3: each sub-tab's checks and integration facts are proposals. Each one is
   confirmed against the vendor's API during its phase.
 - The EspoCRM version read: the API call that returns it is to be confirmed
@@ -282,5 +330,6 @@ phase ends at a **stopping point**: the work pauses for Doug's go-ahead.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.3 | 11-12-26 23:55 | Claude (Claude Code) | Rulings I11 (setup assistant, option B) and I12 (setup steps each confirmed; fix plans run automatic steps straight through), Doug 11-12-26. Check-on-confirm and the one-step display added; § 6.5 the setup assistant; phase 7 added, documentation becomes phase 8. |
 | 0.2 | 11-12-26 23:52 | Claude (Claude Code) | Ruling I10 (Doug, 11-12-26): the application carries out an approved fix plan; the open item removed. |
 | 0.1 | 11-12-26 23:47 | Claude (Claude Code) | First draft from the 11-12-26 design conversation: rulings I1–I9, the sub-tabs, the setup checklist, the nightly integration test, the diagnosis agent, storage, and seven phases with stopping points. For Doug's review. |
