@@ -655,6 +655,12 @@ guide `event-administration.md`; activation `EVENTS-SETUP.md`. **Detail:
 - **Event counts on record tabs read under the org-wide key after the user's
   own read gates the tab** — no team role reads `CEventRegistration`.
 
+### Business Evaluation — `/evaluation/{token}`
+
+The free evaluation a mentor offers a new client (`prds/business-evaluation-plan.md`,
+rulings settled), dark behind `BUSINESS_EVALUATION`. **Detail: `evaluation/CLAUDE.md`.**
+The link is a random token, never a CRM id; the draft report never reaches the client.
+
 ## Cross-cutting subsystems
 
 ### Email
@@ -1243,4 +1249,6 @@ the strength of it.
   on crm-test's CRM only). Owed: the live check on crm-test the same day
   (`prompts/followup-2026-11-12-outside-host.md`), then production and
   Boston CRM (#80).
+- **v0.324.0 (2026-11-13) committed, not pushed**: Business Evaluation
+  phase 1 (`BUSINESS_EVALUATION`, off). CRM change on crm-test only. Owed in #83.
 Everything else still owed is in `OPEN-ITEMS.md`.

@@ -337,3 +337,29 @@ async def test_a_failed_history_write_never_stops_the_job(monkeypatch):
     monkeypatch.setattr(stamps.action_log, "log_action", broken)
     summary = await stamps.run_stamp_reconciliation(_settings(), client=_team_fake())
     assert summary["teamHealed"] == 1 and summary["errors"] == 0
+
+
+# --- Business Evaluation records (build orchestrator rule, 11-13-26) ---------
+
+class _EvalEspo(FakeEspo):
+    """A CRM that holds the Business Evaluation entity's engagement link."""
+
+    async def metadata(self, key):
+        return {"businessEvaluations": {"type": "hasMany"}} if key == "entityDefs.CEngagement.links" else None
+
+
+async def test_business_evaluation_records_gain_the_engagement_stamps():
+    base = _fake()
+    espo = _EvalEspo(engagements=base.engagements, records={
+        **base.records, ("CBusinessEvaluation", "BE1"): {"assignedUsersIds": ["uM"]}},
+        related={**base.related,
+                 ("CEngagement", "E1", "businessEvaluations"): [{"id": "BE1"}]})
+    await stamps.run_stamp_reconciliation(_settings(), client=espo)
+    assert set(espo.records[("CBusinessEvaluation", "BE1")]["assignedUsersIds"]) == {"uM", "uC"}
+
+
+async def test_a_crm_without_the_entity_reads_no_evaluations():
+    espo = _fake()   # no metadata read at all, as on a CRM before the change
+    assert await stamps.evaluations_linked(espo) is False
+    await stamps.run_stamp_reconciliation(_settings(), client=espo)
+    assert not [u for u in espo.updates if u[0] == "CBusinessEvaluation"]

@@ -1,12 +1,12 @@
 # Business Evaluation — plan
 
-Last Updated: 11-13-26 00:57 · Revision 0.2 — see change log at the end.
+Last Updated: 11-13-26 10:45 · Revision 0.3 — see change log at the end.
 
 This is the design record for the **Business Evaluation** offering. It holds
 the terms, the flow, the rulings, the CRM data model, and the build phases with
 their stopping points. The build orchestrator
 (`prompts/business-evaluation-build-orchestrator-v0.1.md`) and the per-phase
-build prompts are written from this file. Nothing has been built yet.
+build prompts are written from this file. Phase 1 is built (v0.324.0).
 
 **Status of the rulings.** All rulings, BE1 to BE22, are approved by Doug
 (11-13-26). Rulings BE1 to BE6 restate what Doug described; BE7 to BE22 were
@@ -196,3 +196,4 @@ answers and the analysis job queue. None of it is business data once submitted.
 |---|---|---|---|
 | 0.1 | 11-13-26 00:42 | Claude (Cowork) | Created from Doug's description of 11-13-26: rulings BE1 to BE6 as described, BE7 to BE22 proposed, the CRM data model, eight phases, five open questions. |
 | 0.2 | 11-13-26 00:57 | Claude (Cowork) | Doug approved every ruling, BE1 to BE22, without change. |
+| 0.3 | 11-13-26 10:45 | Claude (Claude Code) | Phase 1 built, v0.324.0. Two departures from § 5, approved by Doug: `draftReport` is not Read-only, and `engagement` and `clientProfile` are required by the application. |

@@ -208,6 +208,38 @@ class Applier:
                 f"{spec.get('type', 'Base')})",
             )
 
+    async def do_entity_params(self) -> None:
+        """Switch entity-level settings (``entityParams``):
+        ``{"entity", "params": {...}}`` with ``entity`` the STORED name.
+
+        Added 11-13-26 for Multiple Assigned Users and Collaborators, which
+        EspoCRM switches on only through ``EntityManager/action/updateEntity``
+        — both are update hooks (``AssignedUsersUpdateHook``,
+        ``CollaboratorsUpdateHook``), so ``createEntity`` ignores them, and
+        they are two separate settings creating two separate fields
+        (``assignedUsers``, ``collaborators``; read from source on crm-test
+        11-13-26). The update merges the named parameters over the entity's
+        current ones, so nothing else is sent or changed. Each parameter is
+        read back from ``scopes.<Entity>``, where both live."""
+        for spec in self.plan.get("entityParams", []):
+            entity, params = spec["entity"], dict(spec.get("params") or {})
+            shown = ", ".join(f"{k}={v!r}" for k, v in sorted(params.items()))
+            if await self._pending(entity):
+                self.actions.append(f"set entity {entity} {shown}")
+                continue
+            scope = await self._scope(entity)
+            if not scope:
+                self.failed.append(f"{entity} does not exist — cannot set {shown}")
+                continue
+            differ = {k: v for k, v in params.items() if scope.get(k, False if v is True else None) != v}
+            if not differ:
+                self.skipped.append(f"entity {entity} already has {shown}")
+                continue
+            await self._write("POST", "EntityManager/action/updateEntity",
+                              {"name": entity, **differ},
+                              f"set entity {entity} "
+                              + ", ".join(f"{k}={v!r}" for k, v in sorted(differ.items())))
+
     async def do_fields(self) -> None:
         for spec in self.plan.get("fields", []):
             spec = dict(spec)
@@ -395,6 +427,15 @@ class Applier:
                     f"VERIFY '{'C' + actual}' also exists — a double prefix, "
                     f"which means a name was supplied already-prefixed somewhere")
 
+        for spec in self.plan.get("entityParams", []):
+            entity, params = spec["entity"], spec.get("params") or {}
+            scope = await self._scope(entity)
+            wrong = {k: scope.get(k) for k, v in params.items() if scope.get(k) != v}
+            if wrong:
+                self.failed.append(f"VERIFY entity {entity} still reads {wrong}")
+            else:
+                self.actions.append(f"verified entity {entity} params")
+
         for spec in self.plan.get("fields", []):
             entity = spec["entity"]
             stored = await self.stored_field(entity, spec["name"])
@@ -453,6 +494,7 @@ class Applier:
             # Fields and links need the entities to be real, and createEntity's
             # metadata is not visible until a rebuild.
             await self.rebuild()
+        await self.do_entity_params()
         await self.do_fields()
         await self.do_field_params()
         await self.do_links()

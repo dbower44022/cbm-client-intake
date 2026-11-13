@@ -41,6 +41,7 @@ CONTACT = "Contact"
 CLIENT_PROFILE = "CClientProfile"
 ACCOUNT = "Account"
 MENTOR_PROFILE = "CMentorProfile"
+BUSINESS_EVALUATION = "CBusinessEvaluation"
 
 # Engagements whose mentors no longer need access — skipped by default.
 TERMINAL_STATUSES = frozenset(
@@ -94,11 +95,28 @@ async def entitled_user_ids(client: Any, eng: dict[str, Any]) -> dict[str, str]:
     return entitled
 
 
-async def related_records(client: Any, eng: dict[str, Any]) -> list[tuple[str, str, str]]:
+async def evaluations_linked(client: Any) -> bool:
+    """True when the CRM holds the Business Evaluation entity's link from the
+    engagement (crm-plans/business-evaluation.json). Read once per pass; a
+    CRM without it reconciles exactly as before."""
+    read = getattr(client, "metadata", None)
+    if read is None:
+        return False
+    try:
+        links = await read(f"entityDefs.{ENGAGEMENT}.links")
+    except EspoError:
+        return False
+    return isinstance(links, dict) and "businessEvaluations" in links
+
+
+async def related_records(client: Any, eng: dict[str, Any], *,
+                          with_evaluations: bool = False) -> list[tuple[str, str, str]]:
     """(entity, id, label) for every record that should carry the stamps: the
-    engagement itself, every related contact, the client profile, and the
+    engagement itself, every related contact, the client profile, the
     company (``clientOrganization`` with the profile's ``linkedCompany``
-    fallback — the resolution the apps use)."""
+    fallback — the resolution the apps use), and with ``with_evaluations``
+    every Business Evaluation record of the engagement (the build
+    orchestrator's rule for that entity)."""
     records: list[tuple[str, str, str]] = [(ENGAGEMENT, eng["id"], "engagement")]
     contact_ids: set[str] = set()
     if eng.get("primaryEngagementContactId"):
@@ -118,6 +136,12 @@ async def related_records(client: Any, eng: dict[str, Any]) -> list[tuple[str, s
             account_id = prof.get("linkedCompanyId")
     if account_id:
         records.append((ACCOUNT, account_id, "company"))
+    if with_evaluations:
+        evals = await client.list_related(
+            ENGAGEMENT, eng["id"], "businessEvaluations", select="id", max_size=200
+        )
+        records += [(BUSINESS_EVALUATION, row["id"], "business evaluation")
+                    for row in evals.get("list", [])]
     return records
 
 
@@ -441,6 +465,7 @@ async def run_stamp_reconciliation(
     except EspoError as exc:
         summary["errors"] += 1
         log.warning("stamp reconciliation: mentor profile listing failed: %s", exc)
+    with_evaluations = await evaluations_linked(client)
     for eng in await all_engagements(client):
         if not eng.get("mentorProfileId"):
             continue
@@ -458,7 +483,8 @@ async def run_stamp_reconciliation(
                 )
                 continue
             healed_here = False
-            for entity, record_id, label in await related_records(client, eng):
+            for entity, record_id, label in await related_records(
+                    client, eng, with_evaluations=with_evaluations):
                 current, missing = await missing_on(client, entity, record_id, entitled)
                 if not missing:
                     continue

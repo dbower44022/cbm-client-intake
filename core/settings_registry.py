@@ -260,6 +260,22 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="The public form at /newsletter/: a subscriber becomes a Contact with "
             "marketing consent, which the mailing-list sync passes to the mailing "
             "service. Off, the form answers 404."),
+    _s("business_evaluation", GROUP_FEATURES, "Business Evaluation", kind="bool",
+       component="both",
+       help="The free business evaluation a mentor offers a new client: the "
+            "public survey pages at /evaluation/… and, in later phases, the "
+            "Evaluations tab. Off, those addresses answer 404 and no existing "
+            "page changes. Read per request. Needs the CBusinessEvaluation "
+            "entity in the CRM (business-evaluation-crm-handoff.md)."),
+    _s("evaluation_link_days", GROUP_FEATURES, "Evaluation link lifetime", kind="int",
+       unit="days",
+       help="Days a Business Evaluation link stays open after it is made. A link "
+            "made earlier keeps the expiry it was given."),
+    _s("evaluation_retry_seconds", GROUP_FEATURES, "Evaluation retry interval", kind="int",
+       component="worker", unit="s",
+       help="Seconds between the worker's passes that send a submitted survey the "
+            "CRM refused at the time. The answers are kept until it succeeds. 0 stops "
+            "the pass."),
     _s("campaigns_enabled", GROUP_FEATURES, "Marketing Management", kind="bool",
        component="both",
        help="The Marketing Management tile, the Prospects grid and import, the "

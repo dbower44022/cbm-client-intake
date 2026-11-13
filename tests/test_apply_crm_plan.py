@@ -357,3 +357,99 @@ def test_a_forbidden_field_read_is_an_error_not_a_missing_field():
     app = applier.Applier(_Denied(), _tracked_plan(), apply=False)
     with pytest.raises(applier.EspoError):
         asyncio.run(app.run())
+
+
+# --- Business Evaluation (crm-plans/business-evaluation.json), 11-13-26 -----
+
+class _FakeEvalCrm(_FakeClient):
+    """crm-test before the Business Evaluation change: the custom entities the
+    links hang on and the native User; no CBusinessEvaluation unless
+    ``scope`` is given, in which case it exists with those entity settings
+    (a dict the fake updates when the applier switches one on, unless
+    ``sticky`` is False)."""
+
+    CUSTOM = {"CEngagement", "CClientProfile", "CSession"}
+
+    def __init__(self, scope=None, sticky=True):
+        super().__init__()
+        self.scope = scope
+        self.sticky = sticky
+        self.bodies: list[tuple[str, dict]] = []
+
+    async def _request(self, method, url, op="", params=None, json_body=None):
+        if method != "GET":
+            self.writes.append((method, url))
+            self.bodies.append((url, json_body))
+            if url.endswith("/EntityManager/action/updateEntity") and self.sticky and self.scope is not None:
+                self.scope.update({k: v for k, v in json_body.items() if k != "name"})
+            return _Resp(200, {})
+        key = (params or {}).get("key", "")
+        if key == "scopes.CBusinessEvaluation":
+            return _Resp(200, None if self.scope is None else {"isCustom": True, "entity": True, **self.scope})
+        if key.startswith("scopes."):
+            entity = key[len("scopes."):]
+            if entity in self.CUSTOM:
+                return _Resp(200, {"isCustom": True, "entity": True})
+            if entity == "User":
+                return _Resp(200, {"entity": True})
+            return _Resp(200)
+        if key.startswith("entityDefs.CBusinessEvaluation.fields"):
+            return _Resp(200, {"stub": {}})
+        if "/Admin/fieldManager/" in url:
+            return _Resp(404)
+        return _Resp(200)
+
+
+def _eval_plan():
+    return json.loads((ROOT / "crm-plans/business-evaluation.json").read_text())
+
+
+def test_business_evaluation_plan_dry_run_on_a_crm_without_it():
+    client = _FakeEvalCrm()
+    app = applier.Applier(client, _eval_plan(), apply=False)
+    asyncio.run(app.run())
+    assert not app.failed
+    assert client.writes == []
+    assert "create entity CBusinessEvaluation (from name 'BusinessEvaluation', type Base)" in app.actions
+    assert "set entity CBusinessEvaluation assignedUsers=True, collaborators=True" in app.actions
+    # User is a native entity: its side of the link gains the c prefix.
+    assert ("create link CBusinessEvaluation.approvedBy -> User.cApprovedBusinessEvaluations "
+            "(manyToOne)") in app.actions
+    assert "create field CClientProfile.evaluationProfile (text)" in app.actions
+    assert len([a for a in app.actions if a.startswith("create field")]) == 20
+    assert len([a for a in app.actions if a.startswith("create link")]) == 4
+
+
+def test_business_evaluation_plan_marks_no_field_read_only():
+    # A Read-only field drops every API write (ruling 40); the application
+    # writes every one of these, the draft report included.
+    assert not [f["name"] for f in _eval_plan()["fields"] if f.get("readOnly")]
+
+
+def test_entity_params_send_only_what_differs_and_read_it_back():
+    plan = {"entityParams": [{"entity": "CBusinessEvaluation",
+                              "params": {"assignedUsers": True, "collaborators": True}}]}
+    client = _FakeEvalCrm(scope={"assignedUsers": True})
+    app = applier.Applier(client, plan, apply=True)
+    asyncio.run(app.run())
+    assert not app.failed
+    sent = [b for u, b in client.bodies if u.endswith("/EntityManager/action/updateEntity")]
+    assert sent == [{"name": "CBusinessEvaluation", "collaborators": True}]
+    assert "verified entity CBusinessEvaluation params" in app.actions
+
+
+def test_entity_params_already_set_are_skipped():
+    plan = {"entityParams": [{"entity": "CBusinessEvaluation", "params": {"collaborators": True}}]}
+    client = _FakeEvalCrm(scope={"collaborators": True})
+    app = applier.Applier(client, plan, apply=False)
+    asyncio.run(app.run())
+    assert app.actions == [] and client.writes == []
+    assert app.skipped == ["entity CBusinessEvaluation already has collaborators=True"]
+
+
+def test_entity_params_read_back_fails_when_the_setting_did_not_stick():
+    plan = {"entityParams": [{"entity": "CBusinessEvaluation", "params": {"assignedUsers": True}}]}
+    client = _FakeEvalCrm(scope={}, sticky=False)
+    app = applier.Applier(client, plan, apply=True)
+    asyncio.run(app.run())
+    assert app.failed == ["VERIFY entity CBusinessEvaluation still reads {'assignedUsers': None}"]

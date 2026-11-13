@@ -1,0 +1,158 @@
+# Business profile survey, version 1 (ruling BE8).
+# Answered once per engagement, before the first area survey. Every analysis
+# receives these answers as context. 14 questions, about 6 minutes.
+# Draft for Doug's review, 11-13-26. Each "# For:" line says what the
+# analysis needs the answer for.
+key: business-profile
+version: 1
+title: About your business
+introduction: >-
+  A few questions about your business as a whole. Your answers give the
+  evaluation its starting point, so you only answer them once. There are no
+  right or wrong answers, and an estimate is fine wherever we ask for a number.
+sections:
+  - title: What you do
+    questions:
+      # For: the plain-language picture every report starts from.
+      - id: what_you_sell
+        label: In a sentence or two, what does your business sell, and to whom?
+        type: long_text
+        required: true
+      # For: comparing against businesses of the same kind (benchmarks differ by industry).
+      - id: industry
+        label: Which of these best describes your business?
+        type: single_choice
+        required: true
+        options:
+          - Retail store or online shop
+          - Restaurant, café or food
+          - Professional services (for example accounting, consulting, design)
+          - Trades and home services (for example plumbing, landscaping, cleaning)
+          - Health, beauty or wellness
+          - Manufacturing or making products
+          - Construction
+          - Technology or software
+          - Child care or education
+          - Nonprofit
+          - Something else
+      # For: whether a business sells to people or to other businesses, which changes most advice.
+      - id: customer_type
+        label: Who are most of your customers?
+        type: single_choice
+        required: true
+        options:
+          - Individuals and households
+          - Other businesses
+          - Government or nonprofits
+          - A mix of these
+      # For: where the business operates, for local versus online advice.
+      - id: where_you_sell
+        label: Where do you sell?
+        help: Choose all that apply.
+        type: multiple_choice
+        required: true
+        options:
+          - From a shop, office or location customers visit
+          - At customers' homes or sites
+          - Online
+          - At markets, events or pop-ups
+          - Through other stores or distributors
+
+  - title: Where the business is today
+    questions:
+      # For: the stage sets what "good" looks like (an idea is judged differently from a 10-year business).
+      - id: stage
+        label: Which best describes where your business is today?
+        type: single_choice
+        required: true
+        options:
+          - Still an idea or getting ready to open
+          - Open less than a year
+          - Open 1 to 3 years
+          - Open more than 3 years and growing
+          - Open more than 3 years and steady
+          - Open more than 3 years and shrinking or struggling
+      # For: size, alongside stage.
+      - id: people
+        label: How many people work in the business, including you?
+        help: Count part-time people as well. An estimate is fine.
+        type: number
+        required: true
+      # For: whether the owner can give the business full attention.
+      - id: owner_time
+        label: Is the business your full-time work?
+        type: single_choice
+        required: true
+        options:
+          - Yes, full time
+          - No, part time alongside another job
+          - No, part time for another reason
+      # For: size in money terms; a range, because most owners will not know the exact figure.
+      - id: revenue_range
+        label: Roughly how much money did the business take in over the last 12 months?
+        help: Before paying any costs. A rough range is fine.
+        type: single_choice
+        required: true
+        options:
+          - Nothing yet
+          - Under $25,000
+          - $25,000 to $100,000
+          - $100,000 to $250,000
+          - $250,000 to $1 million
+          - Over $1 million
+          - I don't know
+      # For: whether the business is paying its owner, a basic health sign.
+      - id: profitable
+        label: Over the last 12 months, did the business make more money than it spent?
+        type: single_choice
+        required: true
+        options:
+          - "Yes"
+          - About even
+          - "No"
+          - I don't know
+          - Too early to say
+
+  - title: Where you want to go
+    questions:
+      # For: the report's action items are judged against these goals.
+      - id: goals
+        label: What do you most want the business to achieve in the next 12 months?
+        help: Choose up to three.
+        type: multiple_choice
+        max: 3
+        required: true
+        options:
+          - Get my first customers
+          - Get more customers
+          - Raise my prices or improve my margins
+          - Get my finances organized
+          - Get a loan or other funding
+          - Hire my first employee or more staff
+          - Launch a new product or service
+          - Open a new location or sell somewhere new
+          - Pay myself a regular wage
+          - Work fewer hours
+          - Prepare to sell or hand on the business
+      # For: the owner's own words on what matters most, which ranks the action items.
+      - id: biggest_challenge
+        label: What is the biggest challenge in your business right now?
+        type: long_text
+        required: true
+      # For: what the owner has already tried, so the report does not repeat it.
+      - id: tried_already
+        label: Is there anything you have already tried to fix that challenge?
+        type: long_text
+      # For: how much time and money the owner can put into the action items.
+      - id: capacity
+        label: How much time could you give each week to working on the business, rather than in it?
+        type: single_choice
+        options:
+          - Less than an hour
+          - 1 to 3 hours
+          - 3 to 6 hours
+          - More than 6 hours
+      # For: anything the questions missed.
+      - id: anything_else
+        label: Is there anything else you would like your mentor to know about your business?
+        type: long_text

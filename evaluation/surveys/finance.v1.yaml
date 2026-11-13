@@ -1,0 +1,196 @@
+# Finance survey, version 1 (ruling BE2, BE22: a pilot area).
+# 17 questions, about 12 minutes. No question needs the books open: figures
+# are ranges or say "an estimate is fine".
+# Draft for Doug's review, 11-13-26. Each "# For:" line says what the
+# analysis needs the answer for.
+key: finance
+version: 1
+area: Finance
+title: Finance
+introduction: >-
+  These questions are about how money comes in and goes out of your business,
+  and how you keep track of it. You do not need to look anything up. Rough
+  answers are fine, and "I don't know" is a useful answer too: it tells your
+  mentor where to start.
+sections:
+  - title: Keeping track
+    questions:
+      # For: the basic record-keeping practice, the foundation of every finance rubric.
+      - id: bookkeeping_method
+        label: How do you keep track of money coming in and going out?
+        type: single_choice
+        required: true
+        options:
+          - Accounting software (for example QuickBooks, Xero, Wave)
+          - A spreadsheet
+          - On paper or in a notebook
+          - My bank statements are my records
+          - A bookkeeper or accountant does it for me
+          - I don't really keep track yet
+      # For: whether business and personal money are mixed, a common and serious gap.
+      - id: separate_account
+        label: Does the business have its own bank account, separate from your personal one?
+        type: yes_no
+        required: true
+      # For: how current the owner's picture of the numbers is.
+      - id: review_frequency
+        label: How often do you look at how much the business has earned and spent?
+        type: single_choice
+        required: true
+        options:
+          - Every week
+          - Every month
+          - Every few months
+          - Once a year, at tax time
+          - Rarely or never
+      # For: whether the owner has professional help, and so what advice is realistic.
+      - id: accountant
+        label: Does an accountant or bookkeeper help you, even once a year?
+        type: single_choice
+        required: true
+        options:
+          - Yes, through the year
+          - Yes, only for taxes
+          - "No"
+      # For: the owner's own confidence, which shapes how the report is pitched.
+      - id: confidence
+        label: How confident are you in understanding your business's numbers?
+        type: scale
+        required: true
+        low: Not at all confident
+        high: Very confident
+
+  - title: Money coming in
+    questions:
+      # For: how concentrated revenue is; one large customer is a risk.
+      - id: top_customer_share
+        label: About how much of your sales comes from your single biggest customer?
+        type: single_choice
+        required: true
+        options:
+          - Less than a tenth
+          - A tenth to a quarter
+          - A quarter to a half
+          - More than half
+          - I don't know
+          - No sales yet
+      # For: how sales move through the year, for cash planning.
+      - id: seasonality
+        label: Do your sales go up and down at certain times of the year?
+        type: single_choice
+        required: true
+        options:
+          - No, they are fairly steady
+          - Yes, a little
+          - Yes, a lot
+          - Too early to say
+      # For: how quickly sales turn into cash; slow payment is a common cash problem, and recurring revenue a strength.
+      - id: paid_when
+        label: When do customers usually pay you?
+        type: single_choice
+        required: true
+        options:
+          - At the time of sale
+          - By subscription or membership, charged every month or year
+          - Within 30 days
+          - Usually later than 30 days
+          - It varies a lot
+      # For: whether prices are set with costs in mind, the root of most margin problems.
+      - id: pricing_basis
+        label: How did you set your prices?
+        type: single_choice
+        required: true
+        options:
+          - I worked out my costs and added a profit
+          - I matched what competitors charge
+          - I picked a price that felt right
+          - A mix of these
+          - Not sure
+      # For: the last price change, a sign of whether prices keep up with costs.
+      - id: last_price_change
+        label: When did you last raise your prices?
+        type: single_choice
+        options:
+          - In the last 12 months
+          - 1 to 3 years ago
+          - More than 3 years ago
+          - Never
+          - Not open yet
+
+  - title: Money going out and cash on hand
+    questions:
+      # For: the largest cost, which is where savings usually are.
+      - id: biggest_costs
+        label: What are your biggest costs?
+        help: Choose up to three.
+        type: multiple_choice
+        max: 3
+        required: true
+        options:
+          - Rent or a place to work
+          - Wages
+          - Materials, stock or ingredients
+          - Equipment or vehicles
+          - Marketing and advertising
+          - Software and subscriptions
+          - Loan or credit card payments
+          - Insurance
+          - Not sure
+      # For: the cash cushion, the single best predictor of surviving a bad month.
+      - id: cash_runway
+        label: If no money came in at all, about how long could the business keep paying its bills?
+        help: An estimate is fine.
+        type: single_choice
+        required: true
+        options:
+          - Less than a month
+          - 1 to 3 months
+          - 3 to 6 months
+          - More than 6 months
+          - I don't know
+      # For: recent cash trouble, a direct sign of a cash flow gap.
+      - id: cash_shortfall
+        label: In the last 12 months, has the business been short of cash to pay a bill on time?
+        type: single_choice
+        required: true
+        options:
+          - Never
+          - Once or twice
+          - Often
+      # For: debt load, which shapes funding and cash advice.
+      - id: debt
+        label: Does the business owe money?
+        help: Choose all that apply.
+        type: multiple_choice
+        required: true
+        options:
+          - No debt
+          - A bank loan
+          - A credit card balance carried month to month
+          - A loan from family or friends
+          - An SBA or other government loan
+          - Money owed to suppliers past their due date
+          - Something else
+      # For: whether the owner pays themselves, a sign of a sustainable business.
+      - id: owner_pay
+        label: Do you pay yourself from the business?
+        type: single_choice
+        required: true
+        options:
+          - Yes, a regular amount
+          - Yes, when there is money left over
+          - Not yet
+      # For: forward planning: a budget or forecast.
+      - id: budget
+        label: Do you have a budget or a plan for what you expect to earn and spend this year?
+        type: single_choice
+        required: true
+        options:
+          - Yes, written down, and I check it
+          - Yes, written down, but I rarely check it
+          - Only in my head
+          - "No"
+      # For: the owner's own view of the finance problem, to rank the action items.
+      - id: finance_worry
+        label: What worries you most about the money side of your business?
+        type: long_text

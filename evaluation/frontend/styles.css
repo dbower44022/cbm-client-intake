@@ -1,0 +1,47 @@
+/* The Business Evaluation survey page, layered on tokens.css and wizard.css. */
+
+.evaluation__org { margin: 0 0 0.25rem; color: var(--cbm-slate-700); font-weight: 600; }
+.evaluation__loading { text-align: center; color: var(--cbm-text); }
+
+.evaluation__list { list-style: none; padding: 0; margin: 1.25rem 0; display: grid; gap: 0.75rem; }
+.evaluation__item {
+  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+  border: 1px solid var(--cbm-border); border-radius: var(--cbm-radius); padding: 0.9rem 1.1rem;
+}
+.evaluation__item-title { flex: 1 1 14rem; font-weight: 600; color: var(--cbm-navy); }
+.evaluation__chip {
+  font-size: var(--cbm-text-sm); font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 999px;
+  background: var(--cbm-surface); color: var(--cbm-slate-700); border: 1px solid var(--cbm-border);
+}
+.evaluation__chip--in_progress { background: color-mix(in srgb, var(--cbm-gold) 18%, #fff); }
+.evaluation__chip--submitted { background: var(--cbm-navy); color: #fff; border-color: var(--cbm-navy); }
+.evaluation__done, .evaluation__submitted {
+  padding: 0.75rem 1rem; border-radius: 6px;
+  background: color-mix(in srgb, var(--cbm-gold) 15%, #fff); color: var(--cbm-text);
+}
+
+.evaluation__section-intro { color: var(--cbm-text); }
+.evaluation__question { border: 0; padding: 0; margin: 0 0 1.5rem; min-width: 0; }
+.evaluation__question legend, .evaluation__question > label {
+  font-weight: 600; color: var(--cbm-slate-900); margin-bottom: 0.35rem; display: block; padding: 0;
+}
+.evaluation__required { color: var(--cbm-danger); margin-left: 0.2rem; }
+.evaluation__help { color: var(--cbm-text); font-size: var(--cbm-text-sm); margin: 0 0 0.4rem; }
+.evaluation__choices { display: grid; gap: 0.35rem; }
+.evaluation__choices label { font-weight: 400; display: flex; gap: 0.5rem; align-items: flex-start; }
+.evaluation__choices input { margin-top: 0.25rem; }
+.evaluation__scale { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.evaluation__scale label { font-weight: 400; display: flex; flex-direction: column; align-items: center; gap: 0.15rem; }
+.evaluation__scale-end { color: var(--cbm-text); font-size: var(--cbm-text-sm); }
+.evaluation__money { display: flex; align-items: center; gap: 0.35rem; }
+.evaluation__question input[type="text"], .evaluation__question textarea { width: 100%; }
+.evaluation__question textarea { min-height: 6rem; }
+.evaluation__question--error input[type="text"], .evaluation__question--error textarea { border-color: var(--cbm-danger); }
+.evaluation__qerror { color: var(--cbm-danger); font-weight: 600; margin: 0.35rem 0 0; }
+.evaluation__answer { margin: 0; white-space: pre-wrap; color: var(--cbm-slate-900); }
+
+/* After a refused submit, Submit shows beside Next on every section. */
+.evaluation #nextBtn:not([hidden]) + #submitBtn { margin-left: 0.75rem; }
+.evaluation__hint { margin-top: 1rem; font-weight: 600; color: var(--cbm-navy); }
+
+.evaluation__saved { text-align: right; color: var(--cbm-text); font-size: var(--cbm-text-sm); min-height: 1.2em; }

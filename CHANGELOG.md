@@ -5,6 +5,55 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.324.0] — 2026-11-13
+
+**feat: Business Evaluation, phase 1 — the foundation.** Dark behind
+**`BUSINESS_EVALUATION`** (off): while it is off, every `/evaluation` address
+answers 404 and no existing page changes. Plan `prds/business-evaluation-plan.md`
+§ 3 step 3 and § 5, rulings BE8, BE9, BE11–BE14; `OPEN-ITEMS.md` #83; detail
+`evaluation/CLAUDE.md`. Live-checked by Doug 11-13-26 on a local run against
+crm-test: the business profile, Finance and Marketing surveys of Halstead Print
+Works submitted and read back from the CRM.
+
+- **The CRM change** (`crm-plans/business-evaluation.json`, handoff
+  `business-evaluation-crm-handoff.md`): `CBusinessEvaluation` with 18 fields,
+  links to the engagement, the client profile, the approving user and the
+  review session, Multiple Assigned Users and Collaborators; on
+  `CClientProfile`, `evaluationProfile` and `evaluationProfileAt`. Applied and
+  read back on crm-test 11-13-26 (fingerprint `89d89d28b53b`), with the
+  application role's grant (`scripts/migrate_evaluation_roles.py`). Production
+  and Boston untouched. No field is Read-only (ruling 40), the draft report
+  included; `engagement` and `clientProfile` are required by the application.
+- **The applier learned `entityParams`** (`scripts/apply_crm_plan.py`): entity
+  settings switched by `EntityManager/action/updateEntity`, sending only what
+  differs and reading each back from `scopes.<Entity>`. EspoCRM switches on
+  Multiple Assigned Users and Collaborators only by an update (both are update
+  hooks; read from the source on crm-test).
+- **Survey definitions** (`evaluation/surveys.py`, `evaluation/surveys/*.yaml`):
+  the format, a loader that refuses an invalid file by name, and the business
+  profile (14 questions), Finance (17) and Marketing (15) drafts Doug approved.
+  Finance's payment question gained a subscription option at Doug's request.
+  PyYAML is now a declared dependency.
+- **The link store** (migration 0044, `evaluation/store.py`): `evaluation_link`
+  and `evaluation_answer` on the shared pool, emptied by the sandbox reset.
+  Settings `EVALUATION_LINK_DAYS` (30) and `EVALUATION_RETRY_SECONDS` (300).
+- **`scripts/evaluation_make_link.py`** makes the records (status Sent, the
+  engagement's assigned users, the next round) and a link, for testing.
+- **The public survey page `/evaluation/{token}`**: one polite page for any
+  link that is no longer valid, never calling the CRM; consent first; answers
+  saved as the client goes; submit checks the answers and writes the CRM under
+  the org-wide key, and a refusal is retried by the worker with the answers
+  kept; a submitted survey can be viewed, not changed; honeypot and submission
+  token; no CRM id in the page or its requests. After a refused submit, every
+  missing answer is marked, the message names the sections, and Submit shows on
+  every section (Doug's choice B).
+- **The nightly assignment reconciliation includes Business Evaluation
+  records** once the CRM holds the entity.
+- Tests: the loader, the link states, saving, submit in dry run, the
+  CRM-failure path and retry, the switch off, the branding guard, the store on
+  real Postgres, the applier's new section, the reconciliation.
+
+
 ## [0.323.0] — 2026-11-13
 
 **feat: the Integrations tab, phase 3 — the integration test for Fathom,

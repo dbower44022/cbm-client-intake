@@ -318,6 +318,8 @@ async def main() -> None:
     # nightly merge-only self-heal of mentor/co-mentor assignedUsers stamps on
     # engagement client records. Inert in dry-run / without an API key.
     next_stamps = datetime.now(timezone.utc)
+    next_evaluation = datetime.now(timezone.utc)
+    evaluation_store = None
 
     # Intake-receipt reconciliation (Doug's 2026-07-27 redesign): converge
     # every row's CIntakeSubmission receipt — the guarantee behind "the CRM is
@@ -815,6 +817,27 @@ async def main() -> None:
             except Exception as exc:  # noqa: BLE001 — never crashes delivery
                 log.warning("assignment stamp reconciliation failed: %s", exc)
             next_stamps = now + timedelta(seconds=settings.assignment_reconcile_seconds)
+        if (
+            settings.business_evaluation
+            and settings.evaluation_retry_seconds > 0
+            and settings.store_enabled
+            and now >= next_evaluation
+        ):
+            # Business Evaluation: a submitted survey the CRM refused at the time
+            # is written again, with backoff (plan § 3 step 3).
+            try:
+                from evaluation.router import surveys as _evaluation_surveys
+                from evaluation.service import run_retry_cycle
+                from evaluation.store import EvaluationStore
+
+                loaded = _evaluation_surveys()
+                if loaded is not None:
+                    if evaluation_store is None:
+                        evaluation_store = EvaluationStore(settings.database_url)
+                    await run_retry_cycle(evaluation_store, _client(settings), loaded)
+            except Exception as exc:  # noqa: BLE001 — never crashes delivery
+                log.warning("evaluation retry pass failed: %s", exc)
+            next_evaluation = now + timedelta(seconds=settings.evaluation_retry_seconds)
         if sandbox_on and now >= next_sandbox:
             try:
                 from core.sandbox_reset import reset_app_tables

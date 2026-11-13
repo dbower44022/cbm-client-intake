@@ -98,6 +98,11 @@ RESET_TABLES: tuple[str, ...] = (
     # Integration test runs (prds/integrations-tab-plan.md § 5): the history
     # of integration tests on the sandbox is one day long. That is expected.
     "integration_test_run",
+    # Business Evaluation (prds/business-evaluation-plan.md): the links and the
+    # answers saved as the client goes. They point at CRM records the restore
+    # takes away, so a link made on the sandbox lasts until the next reset.
+    "evaluation_answer",
+    "evaluation_link",
 )
 
 #: Configuration, authored artefacts and instance bookkeeping: never touched.

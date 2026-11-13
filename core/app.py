@@ -702,6 +702,16 @@ def create_app(
     from integrations.store import make_test_run_store
 
     app.state.integration_test_store = make_test_run_store(settings)
+    # Business Evaluation (prds/business-evaluation-plan.md): the evaluation
+    # links and the answers saved as the client goes, and the CRM client the
+    # submit writes through (the org-wide key, or the dry run). The survey
+    # definitions are read and checked once, here.
+    from evaluation.router import load_surveys as _load_evaluation_surveys
+    from evaluation.store import make_evaluation_store
+
+    app.state.evaluation_store = make_evaluation_store(settings)
+    app.state.evaluation_client = lambda: _make_client(get_settings())
+    _load_evaluation_surveys()
     if settings.setup_active:
         from setup.jobs import make_job_store
 
@@ -759,13 +769,18 @@ def create_app(
         if path.startswith("/api/campaigns/landing/") or path in (
                 "/api/campaigns/postal/events", "/api/campaigns/sms/inbound", "/api/campaigns/sms/status"):
             return settings.intake_max_body_mb * _mb
+        # The Business Evaluation's consent and submit (its saves are PUT and
+        # are capped by the router itself, and not counted against the limit).
+        if path.startswith("/api/evaluation/"):
+            return settings.intake_max_body_mb * _mb
         return None
 
     def _public_get_limited(path: str) -> bool:
         """Public GETs that resolve a token or an id, and so could be probed:
         the campaign link resolve and the campaign-name lookup. Everything else
         the middleware throttles is a POST (build plan § 3.7)."""
-        return path.startswith("/c/") or path.startswith("/api/campaigns/public/")
+        return (path.startswith("/c/") or path.startswith("/api/campaigns/public/")
+                or path.startswith("/evaluation/") or path.startswith("/api/evaluation/"))
 
     @app.middleware("http")
     async def _intake_limits(request: Request, call_next):
@@ -953,6 +968,18 @@ def create_app(
             if (path == f"/{slug}" or path.startswith(f"/{slug}/") or path.startswith(f"/api/{slug}/")) \
                     and not getattr(get_settings(), flag, False):
                 return JSONResponse(status_code=404, content={"detail": "Not Found"})
+        return await call_next(request)
+
+    # Business Evaluation, built dark (BUSINESS_EVALUATION, read per request):
+    # while the switch is off every one of its addresses answers 404.
+    _evaluation_prefixes = ("/evaluation/", "/evaluation-assets/", "/api/evaluation/")
+
+    @app.middleware("http")
+    async def _dark_evaluation(request: Request, call_next):
+        path = request.url.path
+        if (path == "/evaluation" or path.startswith(_evaluation_prefixes)) \
+                and not get_settings().business_evaluation:
+            return JSONResponse(status_code=404, content={"detail": "Not Found"})
         return await call_next(request)
 
     @app.middleware("http")
@@ -1171,6 +1198,12 @@ def create_app(
     from campaigns.public import public_router as campaigns_public_router
 
     app.include_router(campaigns_public_router)
+    # The Business Evaluation's public survey page and its API. Always
+    # included; the middleware above answers 404 while the switch is off.
+    from evaluation.router import FRONTEND_DIR as EVALUATION_FRONTEND_DIR
+    from evaluation.router import router as evaluation_router
+
+    app.include_router(evaluation_router)
     # The chapter website's public addresses (/api/website/…). Always included;
     # each answers 404 per request while WEBSITE_API is off.
     from website import assets_router as website_assets_router
@@ -1344,6 +1377,13 @@ def create_app(
             BrandedStaticFiles(directory=str(CAMPAIGNS_FRONTEND_DIR), html=True),
             name="campaigns-frontend",
         )
+    # The survey page's own CSS and JS, at a separate top-level path because
+    # /evaluation/{token} is a route.
+    app.mount(
+        "/evaluation-assets",
+        BrandedStaticFiles(directory=str(EVALUATION_FRONTEND_DIR)),
+        name="evaluation-assets",
+    )
     if CAMPAIGNS_LANDING_DIR.is_dir():
         # The landing page's own CSS and JS, at a separate top-level path
         # because /p/{token} is a route (the /webinars-assets reasoning).

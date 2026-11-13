@@ -107,6 +107,14 @@ class Settings(BaseSettings):
     # The newsletter signup form at /newsletter/ (piece E, ruling 43). Off, the
     # page and its intake address answer 404. Read per request.
     newsletter_form: bool = False
+    # Business Evaluation (prds/business-evaluation-plan.md). Off, no evaluation
+    # address answers and no existing page changes. Read per request.
+    business_evaluation: bool = False
+    # Days an evaluation link stays open after it is made (ruling BE12).
+    evaluation_link_days: int = 30
+    # Seconds between the worker's passes that retry a submitted survey the
+    # CRM refused (phase 1 step 8). 0 stops the pass.
+    evaluation_retry_seconds: int = 300
     # The chapter website's own addresses (scheme + host, comma separated).
     # Only these may fetch /api/website/* from a browser. Deliberately NOT
     # `allowed_origins`, which applies to every address of the application.

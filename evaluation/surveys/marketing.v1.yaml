@@ -1,0 +1,166 @@
+# Marketing survey, version 1 (ruling BE2, BE22: a pilot area).
+# 16 questions, about 12 minutes.
+# Draft for Doug's review, 11-13-26. Each "# For:" line says what the
+# analysis needs the answer for.
+key: marketing
+version: 1
+area: Marketing
+title: Marketing
+introduction: >-
+  These questions are about how customers find you and why they choose you.
+  Answer in your own words; short answers are fine. If you have not done
+  something yet, say so: that helps your mentor see where to start.
+sections:
+  - title: Your customers
+    questions:
+      # For: whether the owner has a clear ideal customer, the base of every marketing rubric.
+      - id: ideal_customer
+        label: Describe your best kind of customer. Who are they, and what do they need?
+        type: long_text
+        required: true
+      # For: the value proposition in the owner's words.
+      - id: why_choose_you
+        label: Why do customers choose you instead of someone else?
+        type: long_text
+        required: true
+      # For: whether the owner has asked customers, or is guessing.
+      - id: asked_customers
+        label: Have you ever asked customers why they bought from you, or what they would change?
+        type: single_choice
+        required: true
+        options:
+          - Yes, regularly
+          - Yes, once or twice
+          - "No"
+          - No customers yet
+      # For: repeat business, the cheapest sales a business has.
+      - id: repeat_customers
+        label: How many of your customers come back and buy again?
+        help: An estimate is fine.
+        type: single_choice
+        required: true
+        options:
+          - Most of them
+          - About half
+          - A few
+          - Almost none
+          - My product is usually a one-time purchase
+          - I don't know
+
+  - title: How customers find you
+    questions:
+      # For: which channels bring customers now, to find what to do more of.
+      - id: how_found
+        label: How do most new customers find you?
+        help: Choose up to three.
+        type: multiple_choice
+        max: 3
+        required: true
+        options:
+          - Word of mouth or referrals
+          - Walking or driving past
+          - A search on Google or another search engine
+          - Google Maps or my Google Business Profile
+          - Social media
+          - My website
+          - Review sites (for example Yelp, Angi)
+          - Paid advertising
+          - Email or newsletters
+          - Events, markets or networking
+          - Online marketplaces (for example Etsy, Amazon)
+          - I don't know
+      # For: the online presence inventory.
+      - id: online_presence
+        label: Which of these does your business have?
+        help: Choose all that apply.
+        type: multiple_choice
+        required: true
+        options:
+          - A website
+          - A Google Business Profile
+          - A Facebook page
+          - An Instagram account
+          - A LinkedIn page
+          - Another social media account
+          - A listing on a review site
+          - None of these
+      # For: the website's state, if there is one (lets a later phase look at it).
+      - id: website
+        label: If you have a website, what is its address?
+        type: short_text
+      # For: whether the owner keeps the online presence current.
+      - id: posting_frequency
+        label: How often do you post or update anything online about your business?
+        type: single_choice
+        required: true
+        options:
+          - Every week or more
+          - Every month
+          - Now and then
+          - Rarely or never
+      # For: reviews, a strong driver of local trust.
+      - id: reviews
+        label: About how many online reviews does your business have?
+        help: An estimate is fine.
+        type: single_choice
+        required: true
+        options:
+          - None
+          - 1 to 10
+          - 11 to 50
+          - More than 50
+          - I don't know
+      # For: whether the owner keeps in touch with past customers.
+      - id: customer_list
+        label: Do you keep a list of customers' emails or phone numbers to stay in touch?
+        type: single_choice
+        required: true
+        options:
+          - Yes, and I contact them regularly
+          - Yes, but I rarely use it
+          - "No"
+
+  - title: Effort and results
+    questions:
+      # For: the marketing budget, so advice fits what the owner can spend.
+      - id: monthly_spend
+        label: About how much do you spend on marketing and advertising in a typical month?
+        help: An estimate is fine.
+        type: single_choice
+        required: true
+        options:
+          - Nothing
+          - Under $100
+          - $100 to $500
+          - $500 to $2,000
+          - More than $2,000
+      # For: the time the owner gives marketing, the other half of the budget.
+      - id: weekly_hours
+        label: About how many hours a week do you spend on marketing?
+        type: single_choice
+        required: true
+        options:
+          - None
+          - Less than 2
+          - 2 to 5
+          - More than 5
+      # For: whether results are measured, which decides whether spending can be improved.
+      - id: tracks_results
+        label: Do you know which of your marketing brings in customers?
+        type: single_choice
+        required: true
+        options:
+          - Yes, I track it
+          - I have a good idea
+          - Not really
+      # For: the owner's own rating, compared with the evidence above.
+      - id: marketing_confidence
+        label: How well do you think your marketing is working today?
+        type: scale
+        required: true
+        low: Not at all
+        high: Very well
+      # For: the owner's own view of the marketing problem, to rank the action items.
+      - id: marketing_goal
+        label: If your marketing could do one thing better, what would it be?
+        type: long_text
