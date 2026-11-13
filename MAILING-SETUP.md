@@ -1,6 +1,6 @@
 # Mailing list sync — Constant Contact setup and activation runbook
 
-Last Updated: 10-26-26 12:15 · Revision 0.8 — change log at the end.
+Last Updated: 11-13-26 00:24 · Revision 0.9 — change log at the end.
 
 How to register this application with Constant Contact, connect one
 deployment to one Constant Contact account, and switch the audience push on.
@@ -27,6 +27,15 @@ client secret are in Doug's password manager; the details screen reads
 *OAuth Type: Authorization Code/Implicit* and *Rotating Refresh Tokens*
 (read back from the screen 2026-10-08). Section 2 waits on the Phase C
 build. Production's sections 1 to 4 wait on access to the real account.
+
+**The Business Mentors Association (11-13-26):** section 1 is done — the
+application *Business Mentors Association applications* was created
+11-08-26 in the account signed in as `admin@mentorsassociation.org`, API key
+`37d80aac-bf3d-4428-85a2-75334d4cf443`, with the Association's redirect
+address. The developer portal is reached only by its address,
+`https://app.constantcontact.com/pages/dma/portal`, not from Constant
+Contact's menus. Sections 2 to 4 were started by Doug 11-12-26 and are not
+confirmed done (`OPEN-ITEMS.md` item 81).
 
 **Audience:** an EspoCRM administrator who can sign in to the organisation's
 Constant Contact account. No command line is needed.
@@ -61,6 +70,7 @@ developer documentation on 2026-10-07; sources are in plan § 10.
 | production | `https://apps.clevelandbusinessmentors.org/api/setup/mailing/callback` |
 | crm-test | `https://cbm-client-intake-svxs3.ondigitalocean.app/api/setup/mailing/callback` |
 | Boston | `https://apps.bbmentors.org/api/setup/mailing/callback` |
+| Business Mentors Association | `https://apps.businessmentorsassociation.org/api/setup/mailing/callback` |
 
 Once the Settings page panel exists it shows this exact address with a copy
 button, so nobody types it. Until then, copy it from the table.
@@ -422,6 +432,7 @@ name.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.9 | 11-13-26 00:24 | Claude (Claude Code) | The Business Mentors Association's redirect address; its section 1 done 11-08-26 (below the status note). |
 | 0.8 | 10-26-26 12:15 | Claude (Claude Code) | § 4a added: the lead-code custom field and the copies of campaign lists (v0.290.0, M7). |
 | 0.7 | 10-09-26 11:35 | Claude (Claude Code) | Live pass on crm-test: §§ 2–3 passed, § 4 dry run, apply and the vendor's list verified (Doug). § 5 gains the no-manual-unsubscribe row; Temporary Hold withheld as of v0.244.1. |
 | 0.6 | 10-09-26 02:17 | Claude (Claude Code) | § 4 rewritten to the built Operations jobs (Mailing list push / unsubscribe pull, dry run then apply, the plan's exact lines), the Features switch, and the last-push line. Status updated; v0.243.0 deployment recorded. |

@@ -1,10 +1,10 @@
 # Loading the training data into the Association's system — plan
 
 **Document:** Plan for loading crm-test's invented training data into the Business Mentors Association's customer relationship management system, under Association ruling 77 (guide stage 15, with the training sign-ins of stage 14)
-**Version:** 1.4
-**Status:** Approved by Doug 11-12-26 00:33, with option A of section 9
+**Version:** 1.5
+**Status:** Done — approved by Doug 11-12-26 00:33 (option A); closed 11-13-26 00:24, owed work in `OPEN-ITEMS.md` item 81
 **Owner:** Doug Bower
-**Last Updated:** 11-12-26 11:16
+**Last Updated:** 11-13-26 00:24
 
 ---
 
@@ -153,12 +153,15 @@ Recommendation: A, because the Association is both a real chapter and the traini
 
 **Baseline for a day of testing, 11-12-26 11:15** (Doug: test on the Association's system with records kept out of a baseline; "baseline first"). The CRM restore script accepts the Association (exact host) and reads the attachment folder from the compose file; installed on 104.131.180.52 by Claude; Doug set the twelve passwords and captured the baseline (`~/.config/cbm-bma/sandbox.sh baseline`; 112 record tables, the one attachment). A restore dry run is clean. The capture itself was refused to Claude by the permission classifier.
 
+**Session closed, 11-13-26 00:24.** Doug tested on the Association's system 11-12-26 and reported it all works; the restore to the baseline has not been run. He began entering the Zoom and Constant Contact settings at `/setup`; `MAILING-SETUP.md` revision 0.9 now carries the Association's redirect address and where the developer portal is. Everything still owed: `OPEN-ITEMS.md` item 81.
+
 ---
 
 ## Change log
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.5 | 11-13-26 00:24 | Claude (Claude Code) | Closed: testing done, restore not run, Zoom and Constant Contact settings begun. |
 | 1.4 | 11-12-26 11:16 | Claude (Claude Code) | The baseline for a day of testing. |
 | 1.3 | 11-12-26 01:28 | Claude (Claude Code) | Stop 4 and Work 4: the load done. |
 | 1.2 | 11-12-26 01:02 | Claude (Claude Code) | Stops 2 and 3, Works 2 and 3. |
