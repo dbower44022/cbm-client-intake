@@ -214,6 +214,7 @@ async def _provisioning(ctx: Context) -> tuple[str, str]:
     s = ctx.settings
     configured = bool(s.espo_provision_username and s.espo_provision_password)
     if not configured:
+        ctx.web_only("", "the provisioning account")
         if getattr(s, "mentor_provision_users", False):
             return FAILED, ("Mentor provisioning is on, but the provisioning "
                             "account's username or password is not set.")

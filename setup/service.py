@@ -38,6 +38,11 @@ from integrations.registry import IN_USE_KEYS, INTEGRATIONS
 
 log = logging.getLogger("cbm_intake.setup.service")
 
+#: Settings that only mean anything while the Integrations tab is on: the
+#: nightly integration test's hour and time zone (phase 5). Hidden with the
+#: switch off, like the "in use" settings, so the page is exactly as before.
+TAB_ONLY_KEYS = frozenset({"integration_test_hour", "integration_test_tz"})
+
 SECRET_MASK = "••••••••"
 
 SOURCE_DEFAULT = "default"
@@ -173,7 +178,7 @@ async def page_payload(
     groups: dict[str, list[dict[str, Any]]] = {g: [] for g in GROUP_ORDER}
     tagged: dict[str, dict[str, Any]] = {}
     for spec in SETTINGS:
-        if spec.key in IN_USE_KEYS and not tab_on:
+        if (spec.key in IN_USE_KEYS or spec.key in TAB_ONLY_KEYS) and not tab_on:
             continue
         row = _row(spec, settings, env, overrides.get(spec.key))
         if tab_on and spec.integration:

@@ -724,6 +724,13 @@ SETTINGS: tuple[SettingSpec, ...] = (
        kind="int", unit="min", component="worker"),
     _s("alert_cooldown_seconds", GROUP_RELIABILITY, "Alert cooldown", kind="int", unit="s",
        component="worker"),
+    _s("integration_test_hour", GROUP_RELIABILITY, "Nightly integration test hour", kind="int",
+       component="worker",
+       help="Local hour at which the worker runs the integration test of every integration "
+            "in use with a feature switched on, while the Integrations tab is on. A failure "
+            "sends one alert; an unchanged failure is not repeated."),
+    _s("integration_test_tz", GROUP_RELIABILITY, "Nightly integration test timezone",
+       component="worker"),
     _s("schema_check_seconds", GROUP_RELIABILITY, "Schema-drift check", kind="int",
        unit="s", component="worker", help="0 disables."),
     _s("worker_liveness_check_seconds", GROUP_RELIABILITY, "Worker liveness watch",

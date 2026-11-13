@@ -102,6 +102,18 @@ class TestRunStore:
             )).mappings().first()
         return public(row) if row else None
 
+    async def recent(self, integration: str, *, trigger: str = NIGHTLY,
+                     limit: int = 5) -> list[dict[str, Any]]:
+        """The last ``limit`` runs of one integration started by ``trigger``,
+        newest first — what the nightly alert compares with."""
+        t = integration_test_run
+        async with self._engine.begin() as conn:
+            rows = (await conn.execute(
+                select(t).where(t.c.integration == integration, t.c.trigger == trigger)
+                .order_by(t.c.started_at.desc()).limit(limit)
+            )).mappings().all()
+        return [public(r) for r in rows]
+
     async def latest_all(self) -> dict[str, dict[str, Any]]:
         """The last run of each integration, keyed by integration."""
         t = integration_test_run

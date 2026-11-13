@@ -5,6 +5,35 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.326.0] — 2026-11-13
+
+**feat: the Integrations tab, phase 5 — the nightly integration test.** Runs
+only while **`INTEGRATIONS_TAB`** is on. Plan `prds/integrations-tab-plan.md`
+§ 5, ruling I8; the design Doug approved 11-13-26 (option A); `OPEN-ITEMS.md`
+#82.
+
+- **The worker runs it once a day** at `INTEGRATION_TEST_HOUR` (default 6) in
+  `INTEGRATION_TEST_TZ` (default America/New_York), both new settings in the
+  Reliability group, shown only while the tab is on so the switched-off page
+  stays exactly as before. It covers EspoCRM always, and each integration in
+  use with a feature switched on; YouTube, with no switch, never runs at
+  night. It runs as a background task, one pass at a time, so a delivery is
+  never held up. Each run is stored as `nightly`, run by nobody
+  (`integrations/nightly.py`).
+- **Option A: values only the web process is given are skipped at night,
+  never failed** — the EspoCRM provisioning account, Lob's webhook secret and
+  Google's All Members group, unless the value reached the worker through
+  `/setup`. `Context.web_only` and a night flag in `integrations/testing.py`.
+- **The alert** goes through `core/monitoring.send_alert` with a link to the
+  sub-tab, and remembers through the stored runs, so a deploy never repeats
+  one: a failure alerts when its failed checks differ from the last settled
+  night; "unknown" alerts once, on the third night in a row; a recovery is
+  reported once. `TestRunStore.recent`.
+- **Run by hand against crm-test 11-13-26** from a laptop, stored in memory
+  with alerts captured: EspoCRM passed (the provisioning check skipped at
+  night, as designed), Fathom passed, no alert due.
+- Tests: `tests/test_integration_nightly.py` (17).
+
 ## [0.325.0] — 2026-11-13
 
 **feat: the Integrations tab, phase 4 — the setup checklist.** Still dark

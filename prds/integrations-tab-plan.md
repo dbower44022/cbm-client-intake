@@ -1,6 +1,6 @@
 # Integrations tab — System Settings plan
 
-Last Updated: 11-13-26 10:30 · Revision 0.9
+Last Updated: 11-13-26 11:04 · Revision 0.10
 
 This is the design record for a new top-level **Integrations** tab on the System
 Settings page (`/setup`). It holds Doug's rulings, the contents of each
@@ -331,6 +331,7 @@ phase ends at a **stopping point**: the work pauses for Doug's go-ahead.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.10 | 11-13-26 11:04 | Claude (Claude Code) | Phase 5 built: v0.326.0, the nightly integration test. Doug's decision 11-13-26, option A: ruling I8 kept (the worker runs it); checks reading a value only the web process is given (the provisioning account, Lob's webhook secret, the All Members group) are skipped at night. § 5's cool-down is the stored runs, not the worker's memory; unknown alerts on the third night. Not pushed. |
 | 0.9 | 11-13-26 10:30 | Claude (Claude Code) | Phase 4 built: v0.325.0, the setup checklist (mapping Doug approved 11-13-26). § 4's `check:` key became `check.auto`, since `check` already held `how` and `probe`; `crm_field` dropped (no step needs it) and `mailing_connected` added; a framing row first ("Decide whether …") and last ("The integration test passes"); Fathom and the Constant Contact connection gained steps beside the four § 4 named. Not pushed. |
 | 0.8 | 11-13-26 01:42 | Claude (Claude Code) | Phase 3 built: v0.323.0, the integration test for Fathom, Constant Contact, Lob, Twilio, Anthropic and YouTube (the check lists Doug approved 11-13-26; Constant Contact refreshes only when due, option A). Changed from § 3: Fathom's account fact became the meetings' recorders (no who-am-I call); Lob's account fact dropped (no account read); Twilio gains a local sending-hours check, Constant Contact the lead-code field. Not pushed. |
 | 0.7 | 11-13-26 01:21 | Claude (Claude Code) | Phase 2 built: v0.322.0, the integration test for EspoCRM, Google Workspace and Zoom. § 9's EspoCRM version read is settled: `GET App/user` → `settings.version` (crm-test, 9.3.10). Not pushed. |

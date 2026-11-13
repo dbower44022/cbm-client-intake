@@ -377,6 +377,9 @@ async def _directory(ctx: Context) -> tuple[str, str]:
         return FAILED, f"{admin} is not a Workspace administrator."
     if provisioning:
         group = (getattr(s, "google_members_group", "") or "").strip()
+        if not group and ctx.nightly:
+            return OK, detail + (" The All Members group was not checked: at night it is "
+                                 "held by the web process only.")
         if not group:
             return FAILED, detail + " The All Members group is not set."
         gtoken = _token_for(ctx, S_DIR_GROUP, admin)

@@ -1,6 +1,6 @@
 # Build orchestrator — the Integrations tab of System Settings
 
-Last Updated: 11-13-26 10:30 · Revision 0.5 — see change log at the end.
+Last Updated: 11-13-26 11:04 · Revision 0.6 — see change log at the end.
 
 This file runs the whole build of the Integrations tab. It names the phases,
 the prompt for each one, the rules that every phase session follows, and the
@@ -28,8 +28,8 @@ stopping points where the work pauses for Doug. The design is
 | 2 | The integration test for EspoCRM, Google Workspace and Zoom | `prompts/integrations-tab-phase2-prompt-v0.1.md` | Built v0.322.0, 11-13-26; awaiting Doug's review |
 | 3 | The integration test for Fathom, Constant Contact, Lob, Twilio, Anthropic and YouTube | `prompts/integrations-tab-phase3-prompt-v0.1.md` | Built v0.323.0, 11-13-26; awaiting Doug's review |
 | 4 | The setup checklist: the step-file keys, the automatic checks, the hand ticks, the missing steps | `prompts/integrations-tab-phase4-prompt-v0.1.md` | Built v0.325.0, 11-13-26; awaiting Doug's review |
-| 5 | The nightly integration test and its alert | `prompts/integrations-tab-phase5-prompt-v0.1.md` | Draft written 11-13-26; awaiting approval |
-| 6 | The diagnosis agent and fix plans | written at the end of phase 5 | — |
+| 5 | The nightly integration test and its alert | `prompts/integrations-tab-phase5-prompt-v0.1.md` | Built v0.326.0, 11-13-26; awaiting Doug's review |
+| 6 | The diagnosis agent and fix plans | `prompts/integrations-tab-phase6-prompt-v0.1.md` | Draft written 11-13-26; awaiting approval |
 | 7 | The setup assistant and setup plans | written at the end of phase 6 | — |
 | 8 | Documentation, and the live review on crm-test | written at the end of phase 7 | — |
 
@@ -94,6 +94,7 @@ which goes to Doug as a decision.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.6 | 11-13-26 11:04 | Claude (Claude Code) | State column: phase 5 built (v0.326.0); phase 6 prompt drafted. |
 | 0.5 | 11-13-26 10:30 | Claude (Claude Code) | State column: phase 4 built (v0.325.0); phase 5 prompt drafted. |
 | 0.4 | 11-13-26 01:42 | Claude (Claude Code) | State column: phase 3 built (v0.323.0); phase 4 prompt drafted. |
 | 0.3 | 11-13-26 01:21 | Claude (Claude Code) | State column: phase 2 built (v0.322.0); phase 3 prompt drafted. |

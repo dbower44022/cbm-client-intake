@@ -25,6 +25,7 @@ Rules every check keeps (the phase 2 prompt):
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import importlib
 import time
 from dataclasses import dataclass, field
@@ -44,6 +45,13 @@ TEST_TIMEOUT_SECONDS = 30.0
 DETAIL_MAX = 400
 
 SECRET_SHOWN_AS = "(secret)"
+
+#: True while the nightly run (phase 5, integrations/nightly.py) is running a
+#: test in the worker. A check whose value only the web process is given reads
+#: it through :meth:`Context.web_only` (Doug's ruling 11-13-26, option A).
+_NIGHTLY: contextvars.ContextVar[bool] = contextvars.ContextVar("integration_nightly", default=False)
+
+NIGHT_SKIP = "Not checked at night: {what} is held by the web process only. The Test Integration button checks it."
 
 
 class Skip(Exception):
@@ -75,6 +83,17 @@ class Context:
     # Extra strings to scrub, beyond the secret settings (for example a
     # service-account key read from the stored Email Setup).
     secrets: list[str] = field(default_factory=list)
+
+    @property
+    def nightly(self) -> bool:
+        return _NIGHTLY.get()
+
+    def web_only(self, value: Any, what: str) -> None:
+        """At night, a value the worker is not given is skipped, never failed:
+        a check that can never pass in the worker would alarm every night.
+        A value present in the worker (saved at /setup) is checked as usual."""
+        if self.nightly and not str(value or "").strip():
+            raise Skip(NIGHT_SKIP.format(what=what))
 
     def fact(self, label: str, value: Any) -> None:
         text = "" if value is None else str(value)
@@ -202,14 +221,20 @@ def test_module(integ: Any) -> Optional[Any]:
     return importlib.import_module(name)
 
 
-async def run_integration_test(integ: Any, settings: Any, deps: Any = None) -> dict[str, Any]:
+async def run_integration_test(integ: Any, settings: Any, deps: Any = None, *,
+                               nightly: bool = False) -> dict[str, Any]:
     """Run ``integ``'s integration test. One at a time per integration in
-    this process: a second request while one runs raises AlreadyRunning."""
+    this process: a second request while one runs raises AlreadyRunning.
+    ``nightly`` marks the worker's nightly run (checks skip web-only values)."""
     module = test_module(integ)
     if module is None:
         raise LookupError(f"{integ.name} has no integration test yet.")
     lock = _locks.setdefault(integ.key, asyncio.Lock())
     if lock.locked():
         raise AlreadyRunning(f"An integration test of {integ.name} is already running.")
-    async with lock:
-        return await module.run(settings, deps)
+    token = _NIGHTLY.set(bool(nightly))
+    try:
+        async with lock:
+            return await module.run(settings, deps)
+    finally:
+        _NIGHTLY.reset(token)

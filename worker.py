@@ -385,6 +385,19 @@ async def main() -> None:
     next_integrity = _next_integrity(settings, datetime.now(timezone.utc), _next_local_hour)
     integrity_was_on = False
 
+    # The nightly integration test (prds/integrations-tab-plan.md § 5, phase 5):
+    # once a day at INTEGRATION_TEST_HOUR local time, while INTEGRATIONS_TAB is
+    # on. It runs as a background task, so up to a few minutes of vendor calls
+    # never hold up a delivery; one pass at a time. The hour and the time zone
+    # are read on every pass, and a changed one reschedules.
+    from integrations import nightly as _nightly
+    from integrations.store import make_test_run_store as _make_test_runs
+
+    nightly_sched = (settings.integration_test_hour, settings.integration_test_tz)
+    next_nightly = _nightly.next_run_time(settings, datetime.now(timezone.utc), _next_local_hour)
+    nightly_task: Optional[asyncio.Task] = None
+    nightly_runs = _make_test_runs(settings)
+
     # Training-sandbox reset (crm-test only): empty the app's own record tables
     # so they match the CRM the droplet restored an hour earlier. Refuses on any
     # deployment whose CRM base URL is not crm-test, whatever the flag says.
@@ -884,6 +897,16 @@ async def main() -> None:
                 log.warning("login integrity check failed: %s", exc)
             next_integrity = _next_integrity(settings, datetime.now(timezone.utc),
                                              _next_local_hour)
+
+        if (settings.integration_test_hour, settings.integration_test_tz) != nightly_sched:
+            nightly_sched = (settings.integration_test_hour, settings.integration_test_tz)
+            next_nightly = _nightly.next_run_time(settings, datetime.now(timezone.utc),
+                                                  _next_local_hour)
+        if now >= next_nightly:
+            if settings.integrations_tab and (nightly_task is None or nightly_task.done()):
+                nightly_task = asyncio.create_task(_nightly.run_nightly(settings, nightly_runs))
+            next_nightly = _nightly.next_run_time(settings, datetime.now(timezone.utc),
+                                                  _next_local_hour)
 
         if claimed == 0 and not stop.is_set():
             # Sleep until the poll interval elapses OR SIGTERM arrives, so a

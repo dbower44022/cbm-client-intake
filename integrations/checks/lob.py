@@ -102,6 +102,7 @@ async def _postcards(ctx: Context) -> tuple[str, str]:
 async def _webhook(ctx: Context) -> tuple[str, str]:
     if (ctx.settings.postal_webhook_secret or "").strip():
         return OK, "The webhook secret is set: Lob's delivery events can be verified."
+    ctx.web_only("", "the webhook secret")
     if _chosen(ctx.settings):
         return FAILED, ("The webhook secret is not set: every delivery event Lob sends is "
                         "refused. Copy it from the webhook in Lob's dashboard.")

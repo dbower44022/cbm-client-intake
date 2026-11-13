@@ -274,6 +274,10 @@ class Settings(BaseSettings):
     alert_needs_attention_threshold: int = 1  # alert when this many are stuck
     alert_pending_age_minutes: int = 30     # alert when the oldest pending is older
     alert_cooldown_seconds: int = 3600      # minimum gap between repeats of an alert
+    # The nightly integration test (prds/integrations-tab-plan.md § 5, phase 5):
+    # the worker runs it at this local hour while INTEGRATIONS_TAB is on.
+    integration_test_hour: int = 6
+    integration_test_tz: str = "America/New_York"
     schema_check_seconds: int = 3600        # CRM schema-drift cadence (0 disables)
 
     # --- Mentor assignment tool (/assignments) ---
