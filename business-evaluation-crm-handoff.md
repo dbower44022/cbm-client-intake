@@ -85,7 +85,11 @@ the image carrying this release is deployed: the applier with this plan and
 the fingerprint its own dry run prints there (production's CRM may differ from
 crm-test, so the fingerprint is read there, not copied from here), then
 `scripts/migrate_evaluation_roles.py --apply` under the admin login. Claude
-writes the step page when the slot is booked. Boston:
+writes the step page when the slot is booked. **The same slot proves the real
+send** (Doug's choice A, 11-13-26; `OPEN-ITEMS.md` #83, owed item 2): the
+switch on briefly, one evaluation from Doug's mentor login to a test
+engagement with an address Doug owns, Expire, the switch off, the test
+records marked or removed. Boston:
 `scripts/apply_plan.sh boston crm-plans/business-evaluation.json <fingerprint>`,
 then the role script against Boston.
 
