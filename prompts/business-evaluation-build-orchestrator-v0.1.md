@@ -1,6 +1,6 @@
 # Build orchestrator — Business Evaluation
 
-Last Updated: 11-13-26 13:55 · Revision 0.5 — see change log at the end.
+Last Updated: 11-13-26 14:24 · Revision 0.6 — see change log at the end.
 
 This file runs the whole build of the Business Evaluation offering. It names the
 phases, the prompt for each one, the rules that every phase session follows, and
@@ -28,7 +28,8 @@ All rulings in the plan were approved by Doug on 11-13-26.
 |---|---|---|---|
 | 1 | The foundation: the CRM plan on crm-test, the survey definition format, the business profile, Finance and Marketing survey drafts, the link store, the public survey page | `prompts/business-evaluation-phase1-prompt-v0.1.md` | Built v0.324.0, live-checked by Doug 11-13-26 |
 | 2 | The mentor side: the Evaluations tab, Send Evaluation, the email, status, resend and expire | `prompts/business-evaluation-phase2-prompt-v0.1.md` | Built v0.328.0, checked by Doug as Joe Mentor 11-13-26 |
-| 3 | The analysis: the worker job, the analysis prompts and rubrics, the report template, Retry | `prompts/business-evaluation-phase3-prompt-v0.1.md` | Draft prompt written 11-13-26; awaits Doug's approval |
+| 2b | The survey engine (ruling BE23): the engine pieces moved from `evaluation/` into `surveys/`, with Business Evaluation as the first survey purpose | `prompts/business-evaluation-phase2b-prompt-v0.1.md` | Prompt written 11-13-26; not started |
+| 3 | The analysis: the worker job, the analysis prompts and rubrics, the report template, Retry | `prompts/business-evaluation-phase3-prompt-v0.1.md` | Draft prompt written 11-13-26; awaits Doug's approval. Revised for the new paths at the close of phase 2b, then approved again. |
 | 4 | Review and approval, and scheduling the review session | written at the end of phase 3 | — |
 | 5 | Release of the client version, and action items as records | written at the end of phase 4 | — |
 | 6 | The partner and funder offering, and the anonymized roll-up | written at the end of phase 5 | — |
@@ -68,6 +69,10 @@ partner sees or receives, which goes to Doug as a decision.
   submission-token idempotency, `{{org}}` and `{{abbr}}` tokens, the shared
   wizard styles, no CRM id in any link. A link opens nothing once it has expired
   or been replaced.
+- **The survey engine (`surveys/`) holds no code specific to Business
+  Evaluation** (ruling BE23). Everything specific lives in `evaluation/`, which
+  registers itself as a survey purpose. A test fails if `surveys/` imports
+  from `evaluation/`.
 - **The draft report never reaches the client** (ruling BE17). No code path
   emails, files or shows `draftReport` to anyone but reviewers.
 - **Answers sent to the Claude API carry no contact details**: no email
@@ -112,3 +117,4 @@ partner sees or receives, which goes to Doug as a decision.
 | 0.3 | 11-13-26 10:45 | Claude (Claude Code) | Phase 1 built (v0.324.0); phase 2 draft prompt written. |
 | 0.4 | 11-13-26 11:50 | Claude (Claude Code) | Phase 2 prompt approved by Doug. |
 | 0.5 | 11-13-26 13:55 | Claude (Claude Code) | Phase 2 built (v0.328.0); phase 3 draft prompt written. |
+| 0.6 | 11-13-26 14:22 | Claude (Cowork) | Ruling BE23: phase 2b added after phase 2, before phase 3; phase 3's prompt revised at the close of phase 2b; new rule that the survey engine holds no Business Evaluation code. Merged by Claude (Claude Code) 11-13-26 14:24. |

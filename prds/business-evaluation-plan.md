@@ -1,6 +1,6 @@
 # Business Evaluation — plan
 
-Last Updated: 11-13-26 13:55 · Revision 0.4 — see change log at the end.
+Last Updated: 11-13-26 14:24 · Revision 0.5 — see change log at the end.
 
 This is the design record for the **Business Evaluation** offering. It holds
 the terms, the flow, the rulings, the CRM data model, and the build phases with
@@ -9,8 +9,8 @@ their stopping points. The build orchestrator
 build prompts are written from this file. Phase 1 is built (v0.324.0); phase 2
 is built (v0.328.0).
 
-**Status of the rulings.** All rulings, BE1 to BE22, are approved by Doug
-(11-13-26). Rulings BE1 to BE6 restate what Doug described; BE7 to BE22 were
+**Status of the rulings.** All rulings, BE1 to BE23, are approved by Doug
+(11-13-26). Rulings BE1 to BE6 restate what Doug described; BE7 to BE23 were
 proposed by Claude and approved without change.
 
 ## 1. What the offering is
@@ -66,6 +66,12 @@ agrees to six action items, which are then tracked on the engagement.
   subject matter expert is added to an engagement as a co-mentor.
 - **Action item**: one recommended step in the report, with a reason, a
   priority and a time horizon.
+- **Survey engine**: the shared package, `surveys/`, that any kind of survey
+  uses: the survey definition format and loader, the public answer page, the
+  link store, the saved answers and the submit retry (ruling BE23).
+- **Survey purpose**: one kind of survey built on the survey engine. It decides
+  which surveys a link opens, what the first screen says, and what happens on
+  submit. Business Evaluation is the first survey purpose.
 
 ## 3. The flow
 
@@ -126,6 +132,7 @@ agrees to six action items, which are then tracked on the engagement.
 | BE20 | **Action items the client agrees to become records on the engagement**, each with an owner and a due date, so later sessions can track them. Which CRM entity holds them is open question 1. | A list inside a document gets forgotten. |
 | BE21 | **Partners and funders offer it through the existing partner referral link**: `client-intake/?partner=<id>&offer=evaluation`. The member becomes a CBM client through normal intake, credited to the partner, and the engagement shows that an evaluation was requested. A later phase gives each partner and funder an anonymized roll-up of scores by area, only for groups of five or more clients. | Keeps one way into CBM and one data model. The evaluation becomes a way in to mentoring, not a separate product. |
 | BE22 | **Pilot first**: build every phase with Finance and Marketing only, run it with 5 to 10 clients, then add the other four areas as content. | Most of the risk is in question quality and report quality, not code. |
+| BE23 | **The survey definition format and loader, the public answer page, the link store, the saved answers and the submit retry are a shared survey engine**, the `surveys/` package, not part of Business Evaluation. A survey link names its survey purpose and the CRM record it points at (entity type and id). Business Evaluation is the first survey purpose; everything specific to it stays in `evaluation/`, and the engine holds no code specific to it. Added 11-13-26, after phase 1 was built and while phase 2 was running: phase 2b moves the engine pieces into `surveys/` after phase 2 and before phase 3 builds on them. | Later surveys, such as customer satisfaction after an engagement or feedback after an event, then need only their own definitions and a small purpose layer. Every later phase would make the move more expensive. The cost: one extra phase of refactoring now. |
 
 ## 5. CRM data model
 
@@ -156,8 +163,9 @@ The business profile survey answers are written to the client profile (one
 text field, `evaluationProfile`, JSON, plus `evaluationProfileAt`), since there
 is one per engagement.
 
-The application database holds the evaluation link tokens, the saved-as-you-go
-answers and the analysis job queue. None of it is business data once submitted.
+The application database holds the survey link tokens and the saved-as-you-go
+answers (both in the survey engine, BE23) and the analysis job queue. None of
+it is business data once submitted.
 
 ## 6. Build phases and stopping points
 
@@ -165,6 +173,7 @@ answers and the analysis job queue. None of it is business data once submitted.
 |---|---|---|
 | 1 | The foundation: the CRM plan applied to crm-test; the survey definition format and loader; the business profile, Finance and Marketing survey drafts; the link store; the public survey page with consent, save-as-you-go and submit to the CRM; all dark behind `BUSINESS_EVALUATION`. | (a) the CRM plan and the three survey drafts, before the page is built; (b) the survey page working on a local run. |
 | 2 | The mentor side: the Evaluations tab in Client Management, **Send Evaluation**, the email template, status display, answers view, resend and expire. | The Send dialog and email, on crm-test. |
+| 2b | The survey engine (BE23): the definition loader, link store, saved answers, submit retry and public page moved from `evaluation/` into `surveys/` behind a purpose registry, with Business Evaluation as the first survey purpose; the old `/evaluation/…` links redirect to `/survey/…`. No change a client, mentor or staff member can see. | (a) the purpose registry and the table migration, before code moves; (b) the phase 1 live check repeated on crm-test. |
 | 3 | The analysis: the worker job, the Finance and Marketing analysis prompts and rubrics, the structured output, the report template, failure and Retry, cost logging. | Sample reports written from made-up answers, reviewed by Doug before the phase closes. |
 | 4 | Review and approval: the report editor, co-mentor editing, Approve, keeping the draft beside the reviewed report, scheduling the review session. | — |
 | 5 | Release and action items: the client version, filing and email, action items as records. Needs open question 1 answered. | The client version of a sample report. |
@@ -191,6 +200,16 @@ answers and the analysis job queue. None of it is business data once submitted.
 5. **Further evaluation areas** after the pilot, for example Operations, Legal
    and Compliance, People, and Strategy.
 
+## 8. Later survey purposes — outside this build
+
+Ruling BE23 prepares for these; none is built here. Each needs its own plan
+when it is wanted. A customer satisfaction survey, for example after an
+engagement closes or after an event, would need: a general Survey Response
+record in the CRM that can attach to any record; sending to many people at
+once through the existing marketing lists; totals across responses, for
+example average scores by mentor or by event, in Analytics; and, eventually,
+surveys staff can edit without a release.
+
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
@@ -199,3 +218,4 @@ answers and the analysis job queue. None of it is business data once submitted.
 | 0.2 | 11-13-26 00:57 | Claude (Cowork) | Doug approved every ruling, BE1 to BE22, without change. |
 | 0.3 | 11-13-26 10:45 | Claude (Claude Code) | Phase 1 built, v0.324.0. Two departures from § 5, approved by Doug: `draftReport` is not Read-only, and `engagement` and `clientProfile` are required by the application. |
 | 0.4 | 11-13-26 13:55 | Claude (Claude Code) | Phase 2 built, v0.328.0: the mentor side. Doug's choices 11-13-26: the email wording lives in this repository, and Resend carries the client's answers and consent to the new link. |
+| 0.5 | 11-13-26 14:22 | Claude (Cowork) | Ruling BE23 added and approved by Doug: the shared survey engine. Status paragraph, two terms in § 2, § 5's storage sentence, phase 2b in § 6, and § 8 for later survey purposes. Merged by Claude (Claude Code) 11-13-26 14:24 from `Claude outputs/be23-plan-and-orchestrator-changes.md`. |

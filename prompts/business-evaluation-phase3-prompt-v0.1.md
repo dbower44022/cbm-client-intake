@@ -7,7 +7,7 @@ from the build orchestrator's rules and what phases 1 and 2 actually built.
 Paste everything below the line into a fresh Claude Code session rooted in
 `~/Dropbox/Projects/cbm-client-intake`.
 
-**Order.** `Claude outputs/business-evaluation-phase2b-prompt-v0.1.md` (ruling
+**Order.** `prompts/business-evaluation-phase2b-prompt-v0.1.md` (ruling
 BE23, the survey engine moving out of `evaluation/`) is written to run after
 phase 2 and before phase 3. If phase 2b runs first, read what it moved before
 using the file names below, and correct them in this prompt before it is
