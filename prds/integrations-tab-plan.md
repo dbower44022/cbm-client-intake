@@ -1,6 +1,6 @@
 # Integrations tab — System Settings plan
 
-Last Updated: 11-13-26 00:16 · Revision 0.4
+Last Updated: 11-13-26 00:36 · Revision 0.6
 
 This is the design record for a new top-level **Integrations** tab on the System
 Settings page (`/setup`). It holds Doug's rulings, the contents of each
@@ -331,6 +331,8 @@ phase ends at a **stopping point**: the work pauses for Doug's go-ahead.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.6 | 11-13-26 00:36 | Claude (Claude Code) | Phase 1 built: v0.321.0 (the registry, the tags, the "in use" settings and refusals, the sub-tab shell, the switch). Not pushed. |
+| 0.5 | 11-13-26 00:30 | Claude (Claude Code) | Phase 1 mapping approved by Doug 11-13-26 with four corrections, recorded as mapping decisions: (1) EspoCRM has no "in use" setting — it is always in use and its warnings are never hidden; (2) Lob's switch is `postal_provider = lob`, not `campaigns_enabled`, and `alert_email_from` blocks nothing; (3) a switch and the settings that only serve it stay together — `comms_digest` stays on the Settings tab with its hour, time zone and re-check, listed under Google's "Used by"; `campaign_send_report_seconds` stays with its switch; every `enrichment_ai_*` setting, the monthly budget and caps included, moves to Anthropic with `enrichment_ai`; Zoom's attendance timers move; (4) the "in use" refusals also cover the "Used by" switches whose feature cannot work at all without the integration: `campaigns_sms` (Twilio); `campaigns_email` and `campaign_send_report` (Constant Contact); `events_confirmations`, `events_reminders`, `lead_outreach` and `mentor_provision_users` (Google). Everything else as proposed. The full mapping is `core/settings_registry.INTEGRATION_TAGS`. |
 | 0.4 | 11-13-26 00:16 | Claude (Claude Code) | Ruling I13 (Doug, 11-13-26): switching a feature on is refused while its integration is marked not in use. Build orchestrator and phase 1 prompt written. |
 | 0.3 | 11-12-26 23:55 | Claude (Claude Code) | Rulings I11 (setup assistant, option B) and I12 (setup steps each confirmed; fix plans run automatic steps straight through), Doug 11-12-26. Check-on-confirm and the one-step display added; § 6.5 the setup assistant; phase 7 added, documentation becomes phase 8. |
 | 0.2 | 11-12-26 23:52 | Claude (Claude Code) | Ruling I10 (Doug, 11-12-26): the application carries out an approved fix plan; the open item removed. |

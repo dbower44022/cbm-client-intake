@@ -10,7 +10,7 @@
   "use strict";
 
   var API = "/setup/api";
-  var state = { page: null, tab: "settings", editing: null };
+  var state = { page: null, tab: "settings", editing: null, subtab: null, closed: {} };
 
   function $(id) { return document.getElementById(id); }
   function text(el, value) { el.textContent = value == null ? "" : String(value); }
@@ -258,6 +258,7 @@
   // One entry point, so a new banner cannot be forgotten by a call site.
   function renderAll() {
     renderSettings();
+    renderIntegrations();
     renderOverdue();
     renderConfirm();
   }
@@ -279,6 +280,11 @@
     var found = null;
     state.page.groups.forEach(function (g) {
       g.settings.forEach(function (r) { if (r.key === key) found = r; });
+    });
+    // With the Integrations tab on, an integration's settings live on its
+    // sub-tab and are edited by the same dialog and the same save path.
+    (state.page.integrations || []).forEach(function (i) {
+      integrationRows(i).forEach(function (r) { if (r.key === key) found = r; });
     });
     return found;
   }
@@ -429,6 +435,142 @@
     }
   }
 
+  // --- integrations (prds/integrations-tab-plan.md) ---------------------------
+  // One sub-tab per outside service, shown only while INTEGRATIONS_TAB is on.
+  // Its settings are rendered by settingRow, the Settings tab's own row, and
+  // edited by the same dialog through the same checked save path.
+
+  function integrationRows(i) {
+    var rows = (i.settings || []).slice();
+    (i.sections || []).forEach(function (s) { rows = rows.concat(s.settings || []); });
+    return rows;
+  }
+
+  function findIntegration(key) {
+    return ((state.page && state.page.integrations) || []).filter(function (i) { return i.key === key; })[0] || null;
+  }
+
+  function statusLine(i) {
+    var st = i.status || {};
+    var parts = [];
+    if (st.alwaysInUse) parts.push("always in use");
+    else parts.push(st.inUse ? "in use" : "Not used by this chapter");
+    if (i.key === "espocrm") {
+      parts.push(st.dryRun ? "dry run \u2014 nothing is written to the CRM" : "on \u2014 writing to the CRM");
+    } else if (!st.hasSwitches) {
+      parts.push("no feature switch");
+    } else {
+      parts.push(st.on ? "on (" + st.onSwitches.join(", ") + ")" : "off");
+    }
+    var missing = st.credentialsMissing || [];
+    parts.push(missing.length ? "credentials missing: " + missing.join(", ") : "credentials set");
+    parts.push("Not tested yet");
+    return '<p class="su__status' + (st.inUse === false ? " su__status--unused" : "") + '"><strong>'
+      + esc(i.name) + ":</strong> " + parts.map(esc).join(" \u00b7 ") + "</p>";
+  }
+
+  function placeholders(i) {
+    var ph = i.phases || {};
+    // Not buttons: nothing that looks clickable and does nothing.
+    return '<ul class="su__placeholders">'
+      + "<li><strong>Integration test</strong> \u2014 comes with phase " + esc(ph.test) + " of the Integrations tab build.</li>"
+      + "<li><strong>Diagnosis</strong> \u2014 comes with phase " + esc(ph.diagnosis) + ".</li>"
+      + "<li><strong>Setup checklist</strong> \u2014 comes with phase " + esc(ph.checklist) + ".</li>"
+      + "</ul>";
+  }
+
+  function settingsTable(rows) {
+    if (!rows.length) return "";
+    return '<table class="su__table su__table--settings">' + SETTINGS_HEAD + "<tbody>"
+      + rows.map(settingRow).join("") + "</tbody></table>";
+  }
+
+  function usedByBlock(i) {
+    var list = i.usedBy || [];
+    if (!list.length) return "";
+    return '<section class="su__group"><h2 class="su__h2">Used by</h2>'
+      + '<p class="su__note">These stay where they are and are changed there. '
+      + "A row marked <em>needs " + esc(i.name) + "</em> cannot work without it.</p>"
+      + '<table class="su__table su__table--usedby"><thead><tr>'
+      + '<th data-col="setting" data-sortable="false">Setting</th>'
+      + '<th data-col="value" data-sortable="false">Value</th>'
+      + '<th data-col="where" data-sortable="false">Where it is changed</th></tr></thead><tbody>'
+      + list.map(function (u) {
+          return "<tr><td>" + esc(u.label) + '<div class="su__key">' + esc(u.key) + "</div></td>"
+            + '<td class="su__valuecell">' + valueCell(u) + "</td>"
+            + '<td><a href="#settings" class="su__goto" data-goto="' + esc(u.key) + '">'
+            + (u.group ? "Settings tab, " + esc(u.group) : "Settings tab") + "</a>"
+            + (u.blocks ? ' <span class="su__chip su__chip--warn">needs ' + esc(i.name) + "</span>" : "")
+            + "</td></tr>";
+        }).join("") + "</tbody></table></section>";
+  }
+
+  function renderIntegrations() {
+    var page = state.page;
+    var on = !!(page && page.integrationsTab);
+    $("integrationsTabBtn").hidden = !on;
+    if (!on) {
+      if (state.tab === "integrations") selectTab("settings");
+      return;
+    }
+    var list = page.integrations || [];
+    if (!state.subtab || !findIntegration(state.subtab)) state.subtab = list.length ? list[0].key : null;
+    $("integrationTabs").innerHTML = list.map(function (i) {
+      var unused = i.status && i.status.inUse === false;
+      return '<button type="button" class="su__subtab' + (i.key === state.subtab ? " is-active" : "")
+        + (unused ? " is-unused" : "") + '" data-subtab="' + esc(i.key) + '" role="tab">'
+        + esc(i.name) + "</button>";
+    }).join("");
+    var i = findIntegration(state.subtab);
+    if (!i) { $("integrationBody").innerHTML = ""; return; }
+    var html = statusLine(i);
+    if (i.status && i.status.inUse === false) {
+      html += '<p class="su__note su__note--warn"><strong>Not used by this chapter.</strong> '
+        + "Its settings stay here and can still be changed. Its warnings are left out of "
+        + "Feature readiness, and none of its features can be switched on until it is "
+        + "marked in use.</p>";
+    }
+    html += placeholders(i);
+    html += '<section class="su__group"><h2 class="su__h2">Settings</h2>' + settingsTable(i.settings || []);
+    (i.sections || []).forEach(function (s) {
+      var id = i.key + "/" + s.key;
+      html += '<details class="su__section" data-section="' + esc(id) + '"'
+        + (state.closed[id] ? "" : " open") + "><summary>" + esc(s.title) + "</summary>"
+        + (settingsTable(s.settings || []) || '<p class="su__hint">Nothing here.</p>') + "</details>";
+    });
+    html += "</section>" + usedByBlock(i);
+    if ((i.runbooks || []).length) {
+      html += '<p class="su__hint">Runbook' + (i.runbooks.length === 1 ? "" : "s") + " in the repository: "
+        + i.runbooks.map(function (r) { return "<code>" + esc(r) + "</code>"; }).join(", ") + "</p>";
+    }
+    $("integrationBody").innerHTML = html;
+    Array.prototype.forEach.call($("integrationBody").querySelectorAll("table"), function (t) {
+      fitGrid(t, t.classList.contains("su__table--usedby") ? "setup.usedBy" : "setup.settings");
+    });
+  }
+
+  function selectSubtab(key) {
+    if (!findIntegration(key)) return;
+    state.subtab = key;
+    if (state.tab !== "integrations") selectTab("integrations");
+    else renderIntegrations();
+    history.replaceState(null, "", window.location.pathname + "#integrations/" + key);
+  }
+
+  // A "Used by" link: the setting is changed on the Settings tab, so go there,
+  // make sure no filter hides it, and bring its row into view.
+  function gotoSetting(key) {
+    $("filterBox").value = "";
+    $("onlyOverridden").checked = false;
+    selectTab("settings");
+    renderSettings();
+    var tr = document.querySelector('#groups tr[data-key="' + key + '"]');
+    if (!tr) return;
+    tr.scrollIntoView({ block: "center" });
+    tr.classList.add("is-flash");
+    setTimeout(function () { tr.classList.remove("is-flash"); }, 2500);
+  }
+
   // --- readiness -------------------------------------------------------------
 
   function checkIcon(ok) {
@@ -446,7 +588,11 @@
       + (data.workerHeartbeatAgeSeconds == null
           ? "never seen"
           : Math.round(data.workerHeartbeatAgeSeconds) + "s ago")
-      + (data.workerStale ? " (stale)" : ""));
+      + (data.workerStale ? " (stale)" : "")
+      + (data.counts
+          ? " \u00b7 " + data.counts.blocked + " blocked, " + data.counts.unknown + " unknown"
+            + (data.counts.notUsed ? " (" + data.counts.notUsed + " left out: not used by this chapter)" : "")
+          : ""));
 
     $("readinessRows").innerHTML = data.features.map(function (f) {
       var checks = f.checks.map(function (c) {
@@ -462,6 +608,11 @@
         + esc(f.status) + "</span>"
         + '<span class="su__chip su__chip--muted">' + esc(f.component) + "</span></h3>"
         + (f.note ? '<p class="su__rowhelp">' + esc(f.note) + "</p>" : "")
+        + (f.excludedNote ? '<p class="su__note su__note--warn">' + esc(f.excludedNote) + "</p>" : "")
+        + (f.integration
+            ? '<p class="su__rowhelp"><a href="#integrations/' + esc(f.integration) + '" data-subtab="'
+              + esc(f.integration) + '">' + esc(f.integrationName) + " settings</a></p>"
+            : "")
         + warn
         + (checks ? "<ul class=\"su__checks\">" + checks + "</ul>" : "")
         + (f.key === "mailing" ? renderMailing(data.mailing) : "")
@@ -756,8 +907,9 @@
   // --- tabs + boot -----------------------------------------------------------
 
   function selectTab(name) {
+    if (name === "integrations" && !(state.page && state.page.integrationsTab)) name = "settings";
     state.tab = name;
-    ["settings", "readiness", "diff", "jobs", "history"].forEach(function (t) {
+    ["settings", "integrations", "readiness", "diff", "jobs", "history"].forEach(function (t) {
       $("tab-" + t).hidden = t !== name;
     });
     Array.prototype.forEach.call(document.querySelectorAll(".su__tab"), function (b) {
@@ -770,6 +922,12 @@
       $("jobRows").innerHTML = '<p class="form-error">' + esc(e.message) + "</p>";
     });
     if (name === "history") loadHistory().catch(function () {});
+    if (name === "integrations") {
+      renderIntegrations();
+      history.replaceState(null, "", window.location.pathname + "#integrations/" + (state.subtab || ""));
+    } else if (window.location.hash.indexOf("#integrations") === 0) {
+      history.replaceState(null, "", window.location.pathname + (name === "settings" ? "" : "#" + name));
+    }
   }
 
   /* ---------- Website images (prds/chapter-website-plan.md, decision 4.3) ----------
@@ -890,12 +1048,21 @@
       + (state.page.writable ? "" : " · read-only (no database attached)"));
     renderAll();
     loadWebsiteImages();
-    if (announceMailingOutcome() || window.location.hash === "#readiness") selectTab("readiness");
+    var hash = window.location.hash || "";
+    if (announceMailingOutcome() || hash === "#readiness") selectTab("readiness");
+    else if (hash.indexOf("#integrations") === 0 && state.page.integrationsTab) {
+      // A deep link to one integration: /setup/#integrations/zoom
+      var sub = hash.split("/")[1] || "";
+      if (findIntegration(sub)) state.subtab = sub;
+      selectTab("integrations");
+    }
   }
 
   document.addEventListener("click", function (ev) {
     var t = ev.target;
     if (t.dataset && t.dataset.edit) { openEditor(t.dataset.edit); return; }
+    if (t.dataset && t.dataset.subtab) { ev.preventDefault(); selectSubtab(t.dataset.subtab); return; }
+    if (t.dataset && t.dataset.goto) { ev.preventDefault(); gotoSetting(t.dataset.goto); return; }
     if (t.dataset && t.dataset.confirm) { confirmSetting(t.dataset.confirm); return; }
     if (t.dataset && t.dataset.dry) { runJob(t.dataset.dry, false); return; }
     if (t.dataset && t.dataset.apply) { runJob(t.dataset.apply, true); return; }
@@ -917,6 +1084,11 @@
       if (ev.target && ev.target.dataset && ev.target.dataset.imgFile) uploadImage(ev.target);
     });
     $("filterBox").addEventListener("input", renderSettings);
+    // Remember which Google sections were folded, so a save's re-render keeps them.
+    document.addEventListener("toggle", function (ev) {
+      var d = ev.target;
+      if (d && d.dataset && d.dataset.section) state.closed[d.dataset.section] = !d.open;
+    }, true);
     $("onlyOverridden").addEventListener("change", renderSettings);
     $("reloadBtn").addEventListener("click", boot);
     $("editCancel").addEventListener("click", closeEditor);

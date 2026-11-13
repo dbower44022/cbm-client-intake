@@ -28,7 +28,7 @@ exists because "the flag is on but nothing happens" is usually this.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Literal, Optional
 
 Kind = Literal["bool", "int", "text", "csv", "choice"]
@@ -212,10 +212,24 @@ class SettingSpec:
     component: Component = "web"
     choices: tuple[str, ...] = ()
     unit: str = ""
+    # The integration whose sub-tab this setting appears on when the
+    # Integrations tab is switched on (an integrations/registry.py key), or
+    # empty. Set from INTEGRATION_TAGS below, never by hand in a spec.
+    integration: str = ""
+    # The section of that sub-tab — empty unless the integration has sections.
+    section: str = ""
 
 
 def _s(key: str, group: str, label: str, **kw) -> SettingSpec:
     return SettingSpec(key=key, group=group, label=label, **kw)
+
+
+_IN_USE_HELP = (
+    "Whether this chapter uses {name}. Off, its sub-tab says Not used by this "
+    "chapter and its warnings are left out of Feature readiness. Refused while any "
+    "{name} feature is switched on, and no {name} feature can be switched on while "
+    "this is off."
+)
 
 
 SETTINGS: tuple[SettingSpec, ...] = (
@@ -552,6 +566,30 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="Clears every mailbox cursor on worker start so the next pass re-runs the "
             "backfill. Set it, let ONE pass complete, then turn it off — left on, every "
             "restart re-reads all mailboxes. A good candidate for a temporary override."),
+    _s("integrations_tab", GROUP_FEATURES, "Integrations tab", kind="bool",
+       help="An Integrations tab on this page, one sub-tab per outside service. Each "
+            "integration's own settings and switches move there from this tab. Off, "
+            "this page is exactly as before. Read per request: no restart."),
+
+    # --- "in use", one per integration (prds/integrations-tab-plan.md, ruling
+    # I5). Shown only on the Integrations tab, first on each sub-tab. EspoCRM
+    # has none: it is always in use.
+    _s("google_workspace_in_use", GROUP_INTEGRATIONS, "Google Workspace in use", kind="bool",
+       component="both", help=_IN_USE_HELP.format(name="Google Workspace")),
+    _s("zoom_in_use", GROUP_INTEGRATIONS, "Zoom in use", kind="bool",
+       component="both", help=_IN_USE_HELP.format(name="Zoom")),
+    _s("fathom_in_use", GROUP_INTEGRATIONS, "Fathom in use", kind="bool",
+       component="both", help=_IN_USE_HELP.format(name="Fathom")),
+    _s("constant_contact_in_use", GROUP_INTEGRATIONS, "Constant Contact in use", kind="bool",
+       component="both", help=_IN_USE_HELP.format(name="Constant Contact")),
+    _s("lob_in_use", GROUP_INTEGRATIONS, "Lob in use", kind="bool",
+       component="both", help=_IN_USE_HELP.format(name="Lob")),
+    _s("twilio_in_use", GROUP_INTEGRATIONS, "Twilio in use", kind="bool",
+       component="both", help=_IN_USE_HELP.format(name="Twilio")),
+    _s("anthropic_in_use", GROUP_INTEGRATIONS, "Anthropic in use", kind="bool",
+       component="both", help=_IN_USE_HELP.format(name="Anthropic")),
+    _s("youtube_in_use", GROUP_INTEGRATIONS, "YouTube in use", kind="bool",
+       component="both", help=_IN_USE_HELP.format(name="YouTube")),
 
     # --- Integrations ------------------------------------------------------
     _s("gdrive_identity", GROUP_INTEGRATIONS, "Drive identity", kind="choice",
@@ -1042,6 +1080,115 @@ SETTINGS: tuple[SettingSpec, ...] = (
             "Read-only on purpose: a stored value would survive a restart and make "
             "this deployment misreport which build it is running. Empty means an "
             "untagged build."),
+)
+
+# --- which settings live on an integration's sub-tab -------------------------
+#
+# The mapping Doug approved on 11-13-26 (prds/integrations-tab-plan.md, change
+# log 0.5). The rule: a credential or connection setting; a feature switch for
+# a feature that cannot work without that integration and uses no other; a
+# setting that only tunes that integration's calls. A switch and the settings
+# that only serve it stay together. Everything else stays on the Settings tab.
+# Order within a sub-tab follows this table; the "in use" setting comes first.
+INTEGRATION_TAGS: dict[str, tuple[str, str]] = {
+    # EspoCRM — no "in use" setting: always in use.
+    "espo_base_url": ("espocrm", ""),
+    "espo_api_key": ("espocrm", ""),
+    "espo_dry_run": ("espocrm", ""),
+    "espo_provision_username": ("espocrm", ""),
+    "espo_provision_password": ("espocrm", ""),
+    "crm_metadata_cache_seconds": ("espocrm", ""),
+    # Google Workspace
+    "google_workspace_in_use": ("google_workspace", ""),
+    "google_service_account_json": ("google_workspace", "credentials"),
+    "google_delegated_admin": ("google_workspace", "credentials"),
+    "gdrive_docs": ("google_workspace", "drive"),
+    "gdrive_identity": ("google_workspace", "drive"),
+    "gdrive_shared_drive_id": ("google_workspace", "drive"),
+    "gdrive_entity_labels": ("google_workspace", "drive"),
+    "gdrive_doc_types": ("google_workspace", "drive"),
+    "gdrive_max_file_mb": ("google_workspace", "drive"),
+    "gdrive_reconcile_seconds": ("google_workspace", "drive"),
+    "gcal_events": ("google_workspace", "calendar"),
+    "meet_transcripts": ("google_workspace", "meet"),
+    "meet_transcripts_poll_seconds": ("google_workspace", "meet"),
+    "transcript_give_up_days": ("google_workspace", "meet"),
+    "gmail_sync": ("google_workspace", "gmail"),
+    "gmail_resync": ("google_workspace", "gmail"),
+    "gmail_sync_seconds": ("google_workspace", "gmail"),
+    "gmail_backfill": ("google_workspace", "gmail"),
+    "gmail_dead_letter_passes": ("google_workspace", "gmail"),
+    "ops_mailbox": ("google_workspace", "gmail"),
+    "ops_mailbox_name": ("google_workspace", "gmail"),
+    "ops_inbound_seconds": ("google_workspace", "gmail"),
+    "ops_inbound_window_days": ("google_workspace", "gmail"),
+    "google_directory_check": ("google_workspace", "accounts"),
+    "google_create_mailbox": ("google_workspace", "accounts"),
+    "google_members_group": ("google_workspace", "accounts"),
+    # Zoom
+    "zoom_in_use": ("zoom", ""),
+    "zoom_events": ("zoom", ""),
+    "zoom_account_id": ("zoom", ""),
+    "zoom_client_id": ("zoom", ""),
+    "zoom_client_secret": ("zoom", ""),
+    "zoom_host_email": ("zoom", ""),
+    "zoom_base_url": ("zoom", ""),
+    "events_attendance_seconds": ("zoom", ""),
+    "events_attendance_grace_minutes": ("zoom", ""),
+    "events_attendance_give_up_hours": ("zoom", ""),
+    # Fathom
+    "fathom_in_use": ("fathom", ""),
+    "fathom_transcripts": ("fathom", ""),
+    "fathom_api_key": ("fathom", ""),
+    "fathom_base_url": ("fathom", ""),
+    # Constant Contact
+    "constant_contact_in_use": ("constant_contact", ""),
+    "mailing_sync": ("constant_contact", ""),
+    "mailing_client_id": ("constant_contact", ""),
+    "mailing_client_secret": ("constant_contact", ""),
+    "mailing_list_name": ("constant_contact", ""),
+    "mailing_push_seconds": ("constant_contact", ""),
+    "mailing_pull_seconds": ("constant_contact", ""),
+    "mailing_base_url": ("constant_contact", ""),
+    # Lob
+    "lob_in_use": ("lob", ""),
+    "postal_provider": ("lob", ""),
+    "postal_api_key": ("lob", ""),
+    "postal_webhook_secret": ("lob", ""),
+    "postal_test_mode": ("lob", ""),
+    "postal_unit_cost": ("lob", ""),
+    "postal_currency": ("lob", ""),
+    # Twilio
+    "twilio_in_use": ("twilio", ""),
+    "sms_provider": ("twilio", ""),
+    "sms_account_sid": ("twilio", ""),
+    "sms_auth_token": ("twilio", ""),
+    "sms_from_number": ("twilio", ""),
+    "sms_send_hours": ("twilio", ""),
+    "sms_timezone": ("twilio", ""),
+    # Anthropic — AI research moves whole, its budget and caps included.
+    "anthropic_in_use": ("anthropic", ""),
+    "anthropic_api_key": ("anthropic", ""),
+    "summary_model": ("anthropic", ""),
+    "comms_ai_summary": ("anthropic", ""),
+    "enrichment_ai": ("anthropic", ""),
+    "enrichment_ai_model": ("anthropic", ""),
+    "enrichment_ai_fallback": ("anthropic", ""),
+    "enrichment_ai_max_searches": ("anthropic", ""),
+    "enrichment_ai_record_cap": ("anthropic", ""),
+    "enrichment_ai_max_records": ("anthropic", ""),
+    "enrichment_ai_poll_seconds": ("anthropic", ""),
+    "enrichment_monthly_budget": ("anthropic", ""),
+    # YouTube
+    "youtube_in_use": ("youtube", ""),
+    "youtube_api_key": ("youtube", ""),
+    "youtube_playlist_id": ("youtube", ""),
+}
+
+SETTINGS = tuple(
+    replace(s, integration=INTEGRATION_TAGS[s.key][0], section=INTEGRATION_TAGS[s.key][1])
+    if s.key in INTEGRATION_TAGS else s
+    for s in SETTINGS
 )
 
 BY_KEY: dict[str, SettingSpec] = {s.key: s for s in SETTINGS}

@@ -28,7 +28,11 @@ from core.settings_registry import (
     is_secret,
     spec_for,
 )
-from core.settings_store import Override, SettingsStore
+from core.settings_registry import BY_KEY, INTEGRATION_TAGS
+from core.settings_store import Override, SettingsStore, scoped_overrides
+from integrations import guard as integration_guard
+from integrations import registry as integration_registry
+from integrations.registry import IN_USE_KEYS, INTEGRATIONS
 
 SECRET_MASK = "••••••••"
 
@@ -150,9 +154,22 @@ async def page_payload(store: Optional[SettingsStore]) -> dict[str, Any]:
     env = config_module.env_values()
     overrides = await store.load() if store is not None else {}
 
+    # The Integrations tab (prds/integrations-tab-plan.md). Off: every
+    # setting renders exactly as before, and the "in use" settings — which
+    # only mean anything on that tab — are left out. On: every setting tagged
+    # with an integration leaves its group for its sub-tab, and a group left
+    # empty disappears with it.
+    tab_on = bool(settings.integrations_tab)
     groups: dict[str, list[dict[str, Any]]] = {g: [] for g in GROUP_ORDER}
+    tagged: dict[str, dict[str, Any]] = {}
     for spec in SETTINGS:
-        groups[spec.group].append(_row(spec, settings, env, overrides.get(spec.key)))
+        if spec.key in IN_USE_KEYS and not tab_on:
+            continue
+        row = _row(spec, settings, env, overrides.get(spec.key))
+        if tab_on and spec.integration:
+            tagged[spec.key] = row
+            continue
+        groups[spec.group].append(row)
 
     now = datetime.now(timezone.utc)
     overdue = [
@@ -173,7 +190,7 @@ async def page_payload(store: Optional[SettingsStore]) -> dict[str, Any]:
         }
         for o in overrides.values() if o.awaiting_confirmation
     ]
-    return {
+    payload = {
         "environment": settings.environment,
         "overridesActive": settings.overrides_active,
         # The restart-required group, summarised so the page can lead with it
@@ -206,6 +223,100 @@ async def page_payload(store: Optional[SettingsStore]) -> dict[str, Any]:
         "overdue": overdue,
         "version": config_module.overrides_version(),
     }
+    if tab_on:
+        payload["integrationsTab"] = True
+        payload["integrations"] = _integrations(settings, env, overrides, tagged)
+    return payload
+
+
+# What brings each placeholder on a sub-tab (the build phases, plan § 8).
+DIAGNOSIS_PHASE = 6
+CHECKLIST_PHASE = 4
+
+
+def _integrations(
+    settings: Settings,
+    env: dict[str, Any],
+    overrides: dict[str, Override],
+    tagged: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """One entry per integration, in registry order: its status line, its
+    settings (rendered by the same ``_row`` as the Settings tab) and its
+    "Used by" list."""
+    order = {key: i for i, key in enumerate(INTEGRATION_TAGS)}
+    scoped = scoped_overrides()
+    out: list[dict[str, Any]] = []
+    for integ in INTEGRATIONS:
+        rows = sorted(
+            (r for k, r in tagged.items() if INTEGRATION_TAGS[k][0] == integ.key),
+            key=lambda r: order[r["key"]],
+        )
+        top = [r for r in rows if not BY_KEY[r["key"]].section]
+        sections = [
+            {
+                "key": sec.key,
+                "title": sec.title,
+                "settings": [r for r in rows if BY_KEY[r["key"]].section == sec.key],
+            }
+            for sec in integ.sections
+        ]
+        used_by = []
+        for u in integ.used_by:
+            spec = BY_KEY.get(u.key)
+            if spec is None:
+                continue
+            row = _row(spec, settings, env, overrides.get(u.key))
+            used_by.append({
+                "key": u.key,
+                "label": row["label"],
+                "group": spec.group,
+                "kind": row["kind"],
+                "value": row["value"],
+                "secret": row["secret"],
+                "isSet": row["isSet"],
+                "unit": row["unit"],
+                "blocks": u.blocks,
+            })
+        on_keys = integration_guard.switches_on(integ, settings, scoped)
+        missing = [
+            branding.render_text(BY_KEY[k].label, settings) if k in BY_KEY else k
+            for k in integ.credentials if not getattr(settings, k, None)
+        ]
+        status: dict[str, Any] = {
+            "alwaysInUse": integ.always_in_use,
+            "inUse": integration_registry.in_use(integ, settings),
+            "hasSwitches": bool(integ.blocking_switches),
+            "on": bool(on_keys),
+            "onSwitches": [
+                branding.render_text(BY_KEY[k].label, settings) if k in BY_KEY else k
+                for k in on_keys
+            ],
+            "credentialsMissing": missing,
+            # Phase 2 replaces this with the last integration test's result.
+            "tested": None,
+        }
+        if integ.key == "espocrm":
+            # EspoCRM has no feature switch; what it can be is writing or not.
+            status["hasSwitches"] = True
+            status["on"] = not settings.espo_dry_run
+            status["dryRun"] = bool(settings.espo_dry_run)
+        out.append({
+            "key": integ.key,
+            "name": integ.name,
+            "inUseKey": integ.in_use_setting,
+            "status": status,
+            "settings": top,
+            "sections": sections,
+            "usedBy": used_by,
+            "features": list(integ.features),
+            "runbooks": list(integ.runbooks),
+            "phases": {
+                "test": integ.test_phase,
+                "diagnosis": DIAGNOSIS_PHASE,
+                "checklist": CHECKLIST_PHASE,
+            },
+        })
+    return out
 
 
 def describe_change(key: str, new_value: str) -> str:

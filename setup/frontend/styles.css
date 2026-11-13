@@ -176,3 +176,21 @@
 .su__imgpreview { display: block; max-width: 100%; max-height: 140px; background: #f5f5f5; margin-bottom: 0.4rem; }
 .su__imgempty { height: 80px; display: flex; align-items: center; justify-content: center; background: #f5f5f5; color: #5c5c5c; margin-bottom: 0.4rem; font-size: 0.85rem; }
 .su__imgactions { margin-top: 0.5rem; }
+
+/* Integrations tab (prds/integrations-tab-plan.md) */
+.su__subtabs { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-bottom: 0.9rem; }
+.su__subtab {
+  appearance: none; cursor: pointer; font: inherit; font-size: 0.9rem;
+  padding: 0.35rem 0.8rem; border: 1px solid var(--color-border, #d8d8d8); border-radius: 999px;
+  background: #fff; color: var(--color-text, #1c1c1c);
+}
+.su__subtab.is-active { background: var(--color-primary, #00693e); border-color: var(--color-primary, #00693e); color: #fff; font-weight: 600; }
+.su__subtab.is-unused:not(.is-active) { color: var(--color-text-muted, #777); border-style: dashed; }
+.su__status { margin: 0 0 0.6rem; padding: 0.55rem 0.8rem; border-radius: 6px; background: #eef4fb; color: #23486e; font-size: 0.92rem; }
+.su__status--unused { background: #f0f0f0; color: #555; }
+.su__placeholders { list-style: none; margin: 0 0 0.6rem; padding: 0; font-size: 0.85rem; color: var(--color-text-muted, #5c5c5c); }
+.su__placeholders li { padding: 0.1rem 0; }
+.su__section { margin: 0.6rem 0; border: 1px solid var(--color-border, #e2e2e2); border-radius: 6px; padding: 0.3rem 0.7rem 0.5rem; }
+.su__section > summary { cursor: pointer; font-weight: 600; padding: 0.3rem 0; }
+.su__goto { color: var(--color-primary, #00693e); }
+.su__table.cbm-grid tbody tr.su__row.is-flash > td, .su__row.is-flash { background-color: #fff3c4; }

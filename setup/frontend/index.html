@@ -54,6 +54,8 @@
     <section class="su__body" id="bodyView" hidden>
       <nav class="su__tabs" role="tablist">
         <button type="button" class="su__tab is-active" data-tab="settings" role="tab">Settings</button>
+        <!-- Shown only while INTEGRATIONS_TAB is on (prds/integrations-tab-plan.md). -->
+        <button type="button" class="su__tab" data-tab="integrations" role="tab" id="integrationsTabBtn" hidden>Integrations</button>
         <button type="button" class="su__tab" data-tab="readiness" role="tab">Feature readiness</button>
         <button type="button" class="su__tab" data-tab="diff" role="tab">Environment diff</button>
         <button type="button" class="su__tab" data-tab="jobs" role="tab">Operations</button>
@@ -83,6 +85,12 @@
             <tbody id="otherRows"></tbody>
           </table>
         </details>
+      </div>
+
+      <!-- Integrations: one sub-tab per outside service -->
+      <div class="su__panel" id="tab-integrations" hidden>
+        <nav class="su__subtabs" id="integrationTabs" role="tablist" aria-label="Integrations"></nav>
+        <div id="integrationBody"></div>
       </div>
 
       <!-- Feature readiness -->

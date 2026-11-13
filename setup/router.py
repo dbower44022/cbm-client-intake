@@ -23,11 +23,14 @@ from assignments.auth import current_user
 from core import action_log
 from core.config import get_settings
 from core.settings_registry import LOCKOUT_KEYS, VERIFIED_KEYS, spec_for
+from core import config as config_module
 from core.settings_store import (
     SettingsError,
     SettingsStore,
     refresh_into_config,
+    scoped_overrides,
 )
+from integrations import guard as integration_guard
 from core.config import get_settings as _get_settings
 
 from . import jobs as jobs_mod
@@ -132,6 +135,13 @@ def _revert_deadline(key: str) -> Optional[datetime]:
     return datetime.now(timezone.utc) + timedelta(minutes=CONFIRM_WINDOW_MINUTES)
 
 
+def _refuse_if_guarded(key: str, value: Any, settings: Any) -> None:
+    """The two "in use" refusals (rulings I5, I13), in the save path itself."""
+    why = integration_guard.refusal(key, value, settings, scoped_overrides())
+    if why:
+        raise HTTPException(status_code=409, detail=why)
+
+
 @router.get("/settings")
 async def get_settings_page(request: Request) -> dict:
     _require_admin(request)
@@ -168,6 +178,7 @@ async def put_setting(key: str, body: SettingIn, request: Request) -> dict:
                 "for the whole environment instead."
             ),
         )
+    _refuse_if_guarded(key, body.value, settings)
     if body.temporary and body.reviewAt is None:
         raise HTTPException(
             status_code=400,
@@ -277,6 +288,9 @@ async def delete_setting(key: str, body: ClearIn, request: Request) -> dict:
     store = _store(request)
     if store is None:
         raise HTTPException(status_code=503, detail="No database is attached.")
+    # A reset returns the setting to its deployment value, which can switch a
+    # feature on just as a save can.
+    _refuse_if_guarded(key, config_module.env_values().get(key), get_settings())
     cleared = await store.clear(key, actor=_actor(user), reason=body.reason)
     if not cleared:
         raise HTTPException(status_code=404, detail=f"'{key}' was not overridden.")

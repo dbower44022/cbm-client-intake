@@ -398,7 +398,7 @@ async def readiness_payload(
             "workerWarning": worker_warning,
         })
 
-    return {
+    payload: dict[str, Any] = {
         "features": features,
         "crmReachable": crm is not None,
         "crm": settings.espo_base_url,
@@ -408,3 +408,44 @@ async def readiness_payload(
         "workerThresholdSeconds": settings.worker_heartbeat_alert_seconds,
         "mailing": mailing,
     }
+    if settings.integrations_tab:
+        _add_integrations(payload, settings)
+    return payload
+
+
+def _add_integrations(payload: dict[str, Any], settings: Settings) -> None:
+    """With the Integrations tab on: each row names its integration's sub-tab,
+    and a not-in-use integration's warnings leave the counts (ruling I5).
+
+    Only while ``INTEGRATIONS_TAB`` is on, so the switch-off payload is exactly
+    as before. The row keeps its checks — an administrator can still read them —
+    but its status reads "not used" and it adds nothing to ``counts``.
+    """
+    from integrations.registry import in_use, integration_of_feature
+
+    counts = {"blocked": 0, "unknown": 0, "workerWarnings": 0, "notUsed": 0}
+    for row in payload["features"]:
+        integ = integration_of_feature(row["key"])
+        if integ is not None:
+            row["integration"] = integ.key
+            row["integrationName"] = integ.name
+        if integ is not None and not in_use(integ, settings):
+            row["notInUse"] = True
+            row["excludedNote"] = (
+                f"{integ.name} is marked not used by this chapter, so this row's "
+                "warnings are left out of the counts."
+            )
+            row["status"] = "not used"
+            row["unmet"] = 0
+            row["unknown"] = 0
+            row["workerWarning"] = False
+            counts["notUsed"] += 1
+            continue
+        if row["status"] == "blocked":
+            counts["blocked"] += 1
+        elif row["status"] == "unknown":
+            counts["unknown"] += 1
+        if row["workerWarning"]:
+            counts["workerWarnings"] += 1
+    payload["counts"] = counts
+    payload["integrationsTab"] = True

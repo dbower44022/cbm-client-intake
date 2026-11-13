@@ -403,6 +403,21 @@ class Settings(BaseSettings):
     # Gated to SYSTEM_MANAGEMENT_ALLOWED_TEAMS (administrators always pass).
     # Off by default; read per request.
     activity_page: bool = False
+    # INTEGRATIONS_TAB — the Integrations tab of System Settings
+    # (prds/integrations-tab-plan.md). Off: the page is exactly as before.
+    # Read per request.
+    integrations_tab: bool = False
+    # Whether this chapter uses each integration (ruling I5). Default true, so
+    # a deployment that never sets them behaves exactly as before. EspoCRM has
+    # none: it is always in use. The guard is integrations/guard.py.
+    google_workspace_in_use: bool = True
+    zoom_in_use: bool = True
+    fathom_in_use: bool = True
+    constant_contact_in_use: bool = True
+    lob_in_use: bool = True
+    twilio_in_use: bool = True
+    anthropic_in_use: bool = True
+    youtube_in_use: bool = True
     system_management_allowed_teams: str = "System Management Team"
     integrity_crm_use_report: bool = False
     integrity_shared_accounts: str = ""

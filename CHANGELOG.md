@@ -5,6 +5,47 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.321.0] — 2026-11-13
+
+**feat: the Integrations tab of System Settings, phase 1 — the framework.**
+Built dark behind **`INTEGRATIONS_TAB`** (Features group, default off, read per
+request). Plan `prds/integrations-tab-plan.md` (rulings I1–I13 and the mapping
+Doug approved 11-13-26); `OPEN-ITEMS.md` #82.
+
+- **The integration registry**, `integrations/registry.py`: EspoCRM, Google
+  Workspace, Zoom, Fathom, Constant Contact, Lob, Twilio, Anthropic, YouTube, in
+  that order. Each names its "in use" setting, its sections (Google Workspace:
+  Credentials, Drive, Calendar, Meet, Gmail and the shared mailbox, Workspace
+  accounts), its switches, its "Used by" entries, its credentials, the readiness
+  features it serves and its runbooks.
+- **Settings know their integration**: `SettingSpec` gains `integration` and
+  `section`, set from one table, `core/settings_registry.INTEGRATION_TAGS`.
+  Every setting of the old Integrations and CRM connection groups is tagged.
+- **Eight "in use" settings** (`google_workspace_in_use`, `zoom_in_use`, …;
+  bool, default true, component both). EspoCRM has none: always in use, its
+  warnings never hidden. **Two refusals, in the save and reset paths**
+  (`integrations/guard.py`, HTTP 409): marking an integration not in use while
+  any of its switches is on (the message names each), and switching a feature
+  on while its integration is not in use (rulings I5, I13). Lob's switch is
+  `postal_provider = lob`, Twilio's `sms_provider = twilio`. The used-by
+  features that cannot work without the integration count too:
+  `campaigns_sms`; `campaigns_email`, `campaign_send_report`;
+  `events_confirmations`, `events_reminders`, `lead_outreach`,
+  `mentor_provision_users`. A scoped override counts as on.
+- **With the switch on**: an Integrations tab beside Settings, one sub-tab per
+  integration with the status line (in use, on/off, credentials, "Not tested
+  yet"), one-line placeholders for the integration test, diagnosis and setup
+  checklist, the settings (the Settings tab's own rows, dialog and checked save
+  path), Google's collapsible sections, and the "Used by" list linking to the
+  Settings tab. Tagged settings leave the Settings tab; the Integrations and CRM
+  connection groups disappear. Deep links: `/setup/#integrations/zoom`. Feature
+  readiness links each row to its sub-tab, carries `counts`, and leaves a
+  not-in-use integration's warnings out of them, saying so on the row.
+- **With the switch off the page is exactly as before** — a test compares the
+  settings payload with one captured before this release
+  (`tests/fixtures/setup_payload_before_integrations.json`); the only addition
+  is the switch's own row. No outside service is called by anything here.
+
 ## [0.320.0] — 2026-11-12
 
 **feat: an event run by an outside host.** Rulings D3-3 and D3-4 (Doug,
