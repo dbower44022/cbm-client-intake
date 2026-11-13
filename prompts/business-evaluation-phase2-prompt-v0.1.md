@@ -1,6 +1,6 @@
 # Kickoff prompt — Business Evaluation, phase 2: the mentor side
 
-Last Updated: 11-13-26 10:50 · Revision 0.1 — see change log at the end.
+Last Updated: 11-13-26 11:52 · Revision 0.2 — see change log at the end.
 
 **Draft for Doug's approval.** Written at the close of phase 1 (v0.324.0) from
 the build orchestrator's rules and what phase 1 actually built. Paste
@@ -17,6 +17,13 @@ two stopping points. Between them the work proceeds without asking.
 The first reply states the operating mode and the `CLAUDE.md` files loaded,
 as the global rule requires. Open every reply with the local time from
 `date`.
+
+**Another session may be working in this checkout at the same time** (the
+Integrations tab build did, through phase 1). Before choosing a version number
+or an Alembic migration number, read `git log` and `alembic/versions/` and take
+the next free one; never take numbers from this prompt. Commit only this
+phase's lines, staged and committed in one step, then audit with
+`git show --stat`.
 
 Read, in full, before any code:
 
@@ -104,3 +111,4 @@ offering (phase 6).
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
 | 0.1 | 11-13-26 10:50 | Claude (Claude Code) | Drafted at the close of phase 1, from the orchestrator and what phase 1 built. |
+| 0.2 | 11-13-26 11:52 | Claude (Claude Code) | Added: read `git log` and `alembic/versions/` before choosing a version or migration number, because another session may work in parallel. |
