@@ -1,17 +1,13 @@
 # Kickoff prompt — Business Evaluation, phase 3: the analysis
 
-Last Updated: 11-13-26 13:58 · Revision 0.1 — see change log at the end.
+Last Updated: 11-13-26 22:58 · Revision 0.2 — see change log at the end.
 
 **Draft, awaiting Doug's approval.** Written at the close of phase 2 (v0.328.0)
-from the build orchestrator's rules and what phases 1 and 2 actually built.
-Paste everything below the line into a fresh Claude Code session rooted in
-`~/Dropbox/Projects/cbm-client-intake`.
-
-**Order.** `prompts/business-evaluation-phase2b-prompt-v0.1.md` (ruling
-BE23, the survey engine moving out of `evaluation/`) is written to run after
-phase 2 and before phase 3. If phase 2b runs first, read what it moved before
-using the file names below, and correct them in this prompt before it is
-approved.
+and revised at the close of phase 2b (v0.330.0), which moved the survey page,
+the links, the saved answers and the submit retry into the survey engine,
+`surveys/` (ruling BE23). Paste everything below the line into a fresh Claude
+Code session rooted in `~/Dropbox/Projects/cbm-client-intake`, after phase 2b
+is pushed.
 
 ---
 
@@ -37,15 +33,23 @@ Read, in full, before any code:
 - `prds/business-evaluation-plan.md`: the plan. **Its approved rulings are
   settled; do not re-open them.** This phase builds § 3 step 4 and rulings
   BE6, BE9 (the prompt and rubric versions), BE15, BE16 and BE17.
-- `evaluation/CLAUDE.md`: what phases 1 and 2 built, and their rules.
+- `evaluation/CLAUDE.md`: what phases 1, 2 and 2b built, and their rules.
+- `surveys/CLAUDE.md`: the survey engine. **The engine holds no Business
+  Evaluation code** (ruling BE23), and a test fails if `surveys/` imports
+  from `evaluation/`. The analysis is Business Evaluation's: it lives in
+  `evaluation/`, never in `surveys/`.
 - `OPEN-ITEMS.md` #83: what is owed.
 - The `claude-api` skill: load it before writing any Claude API code.
 - `comms/summarize.py`: the structured-output pattern
   (`client.messages.parse`) this phase follows, and how it reads its key and
   logs its cost.
-- `evaluation/service.py` (`answers_json`, the submit path),
+- `evaluation/service.py` (`deliver`, the CRM write the engine calls on
+  submit, which sets **Submitted**), `evaluation/purpose.py` (the
+  registration), `surveys/answers.py` (`answers_json`, `readable_html`),
   `evaluation/sending.py` (the tab's rows and the answers view) and
-  `worker.py` (the evaluation retry pass): where the analysis job joins.
+  `worker.py` (the survey engine's retry pass, one per survey purpose):
+  where the analysis job joins. The analysis job is Business Evaluation's
+  own worker pass beside the engine's, not part of the engine's retry.
 - `sessions/CLAUDE.md`, the Evaluations tab entry: where the draft report and
   Retry show.
 
@@ -113,3 +117,4 @@ the other four areas (phase 7); reading the client's website or competitors
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
 | 0.1 | 11-13-26 13:58 | Claude (Claude Code) | Drafted at the close of phase 2, from the orchestrator and what phases 1 and 2 built. |
+| 0.2 | 11-13-26 22:58 | Claude (Claude Code) | Revised at the close of phase 2b: the order note replaced; `surveys/CLAUDE.md` added to the reading; the files where the analysis joins renamed to the engine's (`surveys/answers.py`, `evaluation/purpose.py`, the engine's retry pass); the analysis stays in `evaluation/`. |

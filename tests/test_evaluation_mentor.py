@@ -4,7 +4,7 @@ feature detection, Send (records, round, assigned users, the link, the
 warning above three, the escalation of a refused create), the answers view,
 the action log, and Partner and Funder Management never carrying any of it.
 
-The application database is ``tests/evaluation_fakes.MemoryStore``."""
+The application database is ``tests/survey_fakes.MemoryStore``."""
 from __future__ import annotations
 
 import asyncio
@@ -17,10 +17,11 @@ from core.app import create_app
 from core.config import get_settings
 from core.espo import EspoError
 from evaluation import sending, service
-from evaluation.router import load_surveys
+from evaluation.purpose import load_surveys
 from forms import info_request
 from sessions.config import MENTOR, PARTNER, SPONSOR
-from tests.evaluation_fakes import MemoryStore
+from surveys.service import link_is_open
+from tests.survey_fakes import MemoryStore
 
 ENG = "6612engagement001"
 PROFILE = "6612clientprof001"
@@ -133,8 +134,8 @@ def test_send_creates_one_record_per_area_and_a_link(surveys):
         assert c["assignedUsersIds"] == ["u-mentor", "u-comentor"]
         assert c["name"].endswith("— Halstead Print Works")
     link = result["link"]
-    assert link["round"] == 1 and link["area_keys"] == ["finance", "marketing"]
-    assert link["profile_needed"] is True and link["company_name"] == "Halstead Print Works"
+    assert link["data"]["round"] == 1 and link["data"]["area_keys"] == ["finance", "marketing"]
+    assert link["data"]["profile_needed"] is True and link["display_name"] == "Halstead Print Works"
     rows = run(store.answers_for(link["id"]))
     assert sorted(r["survey_key"] for r in rows) == ["business-profile", "finance", "marketing"]
     assert {r["crm_record_id"] for r in rows if r["survey_key"] != "business-profile"} == {
@@ -150,7 +151,7 @@ def test_the_next_send_is_the_next_round_and_skips_an_answered_profile(surveys):
     result = run(sending.send(crm, store, engagement_id=ENG, area_keys=["marketing"],
                               surveys=surveys, created_by="joe.mentor", days=30))
     assert result["round"] == 2
-    assert result["link"]["profile_needed"] is False
+    assert result["link"]["data"]["profile_needed"] is False
     rows = run(store.answers_for(result["link"]["id"]))
     assert [r["survey_key"] for r in rows] == ["marketing"]
 
@@ -191,7 +192,7 @@ def test_the_tab_groups_records_by_round_and_reports_the_link_without_its_token(
     assert [r["round"] for r in rounds] == [2, 1]
     assert [x["area"] for x in rounds[0]["records"]] == ["Finance", "Marketing"]
     assert rounds[0]["link"]["state"] == "open"
-    token = run(store.links_for_engagement(ENG))[0]["token"]
+    token = run(sending.links_for_engagement(store, ENG))[0]["token"]
     assert token not in json.dumps(rounds, default=str)
 
 
@@ -218,7 +219,7 @@ def _app(monkeypatch, *, on=True, crm=None, store="memory"):
     monkeypatch.setattr("sessions.router.current_user", lambda request, key=None: _USER)
     monkeypatch.setattr("sessions.router.client_for", lambda settings, user: crm)
     app = create_app([info_request.SPEC])
-    app.state.evaluation_store = MemoryStore() if store == "memory" else store
+    app.state.survey_store = MemoryStore() if store == "memory" else store
     return app, crm
 
 
@@ -269,10 +270,10 @@ def test_send_route_records_the_action_and_puts_the_link_only_in_the_email(monke
         assert r.status_code == 200, r.text
         body = r.json()
         assert body["round"] == 1 and body["areas"] == ["Finance", "Marketing"]
-        token = next(iter(app.state.evaluation_store.links.values()))["token"]
+        token = next(iter(app.state.survey_store.links.values()))["token"]
         email = body.pop("email")
         assert token not in json.dumps(body)
-        assert f"/evaluation/{token}" in email["bodyHtml"]
+        assert f"/survey/{token}" in email["bodyHtml"]
         assert email["to"] == "pat@example.com"
         assert email["subject"] == "Your free business evaluation from " + get_settings().organization_name
         assert "Hi Pat," in email["bodyHtml"] and "Finance and Marketing" in email["bodyHtml"]
@@ -369,14 +370,14 @@ def _sent(surveys, crm=None, store=None):
 
 def test_resend_ends_the_old_link_and_carries_answers_and_consent(surveys):
     crm, store = _sent(surveys)
-    old = run(store.links_for_engagement(ENG))[0]
+    old = run(sending.links_for_engagement(store, ENG))[0]
     run(store.set_consent(old["id"], service.utcnow()))
     run(store.save_answers(old["id"], "finance", {"q": 1}, service.utcnow()))
     result = run(sending.resend(crm, store, engagement_id=ENG, round_no=1,
                                 created_by="x", days=30))
     new = result["link"]
-    assert not service.link_is_open(run(store.link_by_id(old["id"])))
-    assert service.link_is_open(new) and new["round"] == 1
+    assert not link_is_open(run(store.link_by_id(old["id"])))
+    assert link_is_open(new) and new["data"]["round"] == 1
     assert new["consent_at"] is not None
     rows = {r["survey_key"]: r for r in run(store.answers_for(new["id"]))}
     assert rows["finance"]["answers"] == {"q": 1}
@@ -407,7 +408,7 @@ def test_expire_ends_the_link_and_expires_only_open_records(surveys):
     assert result["linkEnded"] is True
     assert [u[2] for u in crm.updates] == [{"status": "Expired"}]
     assert crm.updates[0][1] == crm.records[1]["id"]
-    assert not service.link_is_open(run(store.links_for_engagement(ENG))[0])
+    assert not link_is_open(run(sending.links_for_engagement(store, ENG))[0])
 
 
 def test_decline_sets_declined_on_what_is_not_submitted(surveys):
@@ -439,7 +440,7 @@ def test_round_routes_record_old_and_new_values(monkeypatch):
         assert c.post(f"{base}/send", json={"areas": ["finance"]}).status_code == 200
         r = c.post(f"{base}/rounds/1/resend")
         assert r.status_code == 200, r.text
-        assert "/evaluation/" in r.json()["email"]["bodyHtml"]
+        assert "/survey/" in r.json()["email"]["bodyHtml"]
         r = c.post(f"{base}/rounds/1/expire")
         assert r.status_code == 200 and r.json()["changed"] == 1
         crm.records[0]["status"] = "Expired"

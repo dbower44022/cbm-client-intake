@@ -326,8 +326,9 @@ async def main() -> None:
     # nightly merge-only self-heal of mentor/co-mentor assignedUsers stamps on
     # engagement client records. Inert in dry-run / without an API key.
     next_stamps = datetime.now(timezone.utc)
-    next_evaluation = datetime.now(timezone.utc)
-    evaluation_store = None
+    # The survey engine's retry pass, one cadence per survey purpose.
+    next_survey_retry: dict[str, datetime] = {}
+    survey_store = None
 
     # Intake-receipt reconciliation (Doug's 2026-07-27 redesign): converge
     # every row's CIntakeSubmission receipt — the guarantee behind "the CRM is
@@ -851,27 +852,29 @@ async def main() -> None:
             except Exception as exc:  # noqa: BLE001 — never crashes delivery
                 log.warning("assignment stamp reconciliation failed: %s", exc)
             next_stamps = now + timedelta(seconds=settings.assignment_reconcile_seconds)
-        if (
-            settings.business_evaluation
-            and settings.evaluation_retry_seconds > 0
-            and settings.store_enabled
-            and now >= next_evaluation
-        ):
-            # Business Evaluation: a submitted survey the CRM refused at the time
-            # is written again, with backoff (plan § 3 step 3).
-            try:
-                from evaluation.router import surveys as _evaluation_surveys
-                from evaluation.service import run_retry_cycle
-                from evaluation.store import EvaluationStore
+        if settings.store_enabled:
+            # The survey engine (ruling BE23): a submitted survey its purpose
+            # refused at the time is handed on again, with backoff. Each purpose
+            # has its own switch and interval; Business Evaluation's are
+            # BUSINESS_EVALUATION and EVALUATION_RETRY_SECONDS.
+            import evaluation.purpose  # noqa: F401 — registers Business Evaluation
+            from surveys import registry as _survey_registry
+            from surveys.service import run_retry_cycle
 
-                loaded = _evaluation_surveys()
-                if loaded is not None:
-                    if evaluation_store is None:
-                        evaluation_store = EvaluationStore(settings.database_url)
-                    await run_retry_cycle(evaluation_store, _client(settings), loaded)
-            except Exception as exc:  # noqa: BLE001 — never crashes delivery
-                log.warning("evaluation retry pass failed: %s", exc)
-            next_evaluation = now + timedelta(seconds=settings.evaluation_retry_seconds)
+            for purpose in _survey_registry.all_purposes():
+                interval = int(getattr(settings, purpose.retry_seconds, 0) or 0)
+                if not _survey_registry.is_on(purpose, settings) or interval <= 0 \
+                        or now < next_survey_retry.get(purpose.key, now):
+                    continue
+                try:
+                    if survey_store is None:
+                        from surveys.store import SurveyStore
+
+                        survey_store = SurveyStore(settings.database_url)
+                    await run_retry_cycle(survey_store, purpose, _client(settings))
+                except Exception as exc:  # noqa: BLE001 — never crashes delivery
+                    log.warning("survey retry pass for %s failed: %s", purpose.key, exc)
+                next_survey_retry[purpose.key] = now + timedelta(seconds=interval)
         if sandbox_on and now >= next_sandbox:
             try:
                 from core.sandbox_reset import reset_app_tables

@@ -28,13 +28,13 @@ from datetime import datetime
 from typing import Any, Callable, Optional
 
 from core.espo import EspoError, is_forbidden
+from surveys.answers import readable_html
 
 from . import service
+from .service import ENGAGEMENT, link_data
 from .surveys import PROFILE_KEY, Survey, latest
 
 log = logging.getLogger("cbm_intake.evaluation")
-
-ENGAGEMENT = "CEngagement"
 
 STATUS_SENT = "Sent"
 STATUS_EXPIRED = "Expired"
@@ -203,9 +203,10 @@ async def send(client: Any, store: Any, *, engagement_id: str, area_keys: list[s
     rows = ([(PROFILE_KEY, profile.ref, None)] if ctx["profileNeeded"] and profile else [])
     rows += [(m["key"], m["ref"], m["id"]) for m in made]
     link = await store.create_link(
-        engagement_id=engagement_id, client_profile_id=ctx["profileId"], round_no=round_no,
-        area_keys=[s.key for s in chosen], profile_needed=ctx["profileNeeded"],
-        company_name=ctx["company"], created_by=created_by, days=days, surveys=rows, now=now)
+        purpose=service.PURPOSE, entity_type=ENGAGEMENT, record_id=engagement_id,
+        data={"client_profile_id": ctx["profileId"], "round": round_no,
+              "area_keys": [s.key for s in chosen], "profile_needed": ctx["profileNeeded"]},
+        display_name=ctx["company"], created_by=created_by, days=days, surveys=rows, now=now)
     return {
         "round": round_no,
         "records": made,
@@ -243,7 +244,7 @@ async def rounds_view(client: Any, store: Any, engagement_id: str,
     links: list[dict[str, Any]] = []
     if store is not None:
         try:
-            links = await store.links_for_engagement(engagement_id)
+            links = await links_for_engagement(store, engagement_id)
         except Exception as exc:  # noqa: BLE001 — the CRM rows still show
             log.warning("evaluation: links for %s not read: %s", engagement_id, exc)
     by_round: dict[int, list[dict[str, Any]]] = {}
@@ -255,8 +256,7 @@ async def rounds_view(client: Any, store: Any, engagement_id: str,
         })
     out = []
     for round_no in sorted(by_round, reverse=True):
-        current = max((l for l in links if l.get("round") == round_no),
-                      key=lambda l: l["created_at"], default=None)
+        current = current_link(links, round_no)
         out.append({
             "round": round_no,
             "records": sorted(by_round[round_no], key=lambda x: x["area"]),
@@ -284,7 +284,7 @@ def _profile_html(raw: str, surveys: dict[str, Survey]) -> Optional[str]:
     answers = data.get("answers") if isinstance(data, dict) else None
     if survey is None or not isinstance(answers, dict):
         return None
-    return service.readable_html(survey, answers)
+    return readable_html(survey, answers)
 
 
 async def answers_view(client: Any, engagement_id: str, record_id: str,
@@ -320,7 +320,7 @@ async def answers_view(client: Any, engagement_id: str, record_id: str,
 # --- the email (step 4) ----------------------------------------------------------
 
 def link_url(base: str, token: str) -> str:
-    return f"{(base or '').rstrip('/')}/evaluation/{token}"
+    return f"{(base or '').rstrip('/')}/survey/{token}"
 
 
 async def recipient(client: Any, contact_id: str) -> dict[str, str]:
@@ -346,21 +346,26 @@ async def compose_email(client: Any, *, org: str, base_url: str, link: dict[str,
 
     who = await recipient(client, contact_id)
     titles = []
-    for key in link.get("area_keys") or []:
+    for key in link_data(link).get("area_keys") or []:
         survey = latest(surveys, key)
         titles.append(survey.title if survey else key)
     filled = eval_email.invitation(
         org=org, first_name=who["firstName"], area_titles=titles,
         link_url=link_url(base_url, link["token"]), expires_at=link["expires_at"],
-        profile_needed=bool(link.get("profile_needed")))
+        profile_needed=bool(link_data(link).get("profile_needed")))
     return {"to": who["email"], "toName": who["name"], **filled}
 
 
 # --- Resend, Expire, Record a decline (step 5) ----------------------------------
 
+async def links_for_engagement(store: Any, engagement_id: str) -> list[dict[str, Any]]:
+    """Every Business Evaluation link made for one engagement, oldest first."""
+    return await store.links_for_record(service.PURPOSE, ENGAGEMENT, engagement_id)
+
+
 def current_link(links: list[dict[str, Any]], round_no: int) -> Optional[dict[str, Any]]:
     """The round's newest link."""
-    return max((l for l in links if l.get("round") == round_no),
+    return max((l for l in links if link_data(l).get("round") == round_no),
                key=lambda l: l["created_at"], default=None)
 
 
@@ -373,7 +378,7 @@ async def _round(client: Any, store: Any, engagement_id: str, round_no: int
                if (r.get("evaluationRound") or 0) == round_no]
     if not records:
         raise SendError(f"Round {round_no} is not on this engagement.")
-    link = current_link(await store.links_for_engagement(engagement_id), round_no)
+    link = current_link(await links_for_engagement(store, engagement_id), round_no)
     return records, link
 
 

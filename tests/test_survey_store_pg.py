@@ -1,36 +1,50 @@
-"""The Business Evaluation store against a real Postgres (migration 0044): a
-link and its answer rows, consent recorded once, saves refused once a survey
-is submitted, a repeated submit returning the first, the delivery bookkeeping
-and the due query. Runs only when TEST_DATABASE_URL is set (same Postgres as
-test_store_pg.py), migrated to head. Also checks the migration and the store
-declare the same columns, which needs no database."""
+"""The survey engine's store against a real Postgres (migrations 0044 and
+0047): a link and its answer rows, consent recorded once, saves refused once
+a survey is submitted, a repeated submit returning the first, the delivery
+bookkeeping, the due query, Resend and Expire. Runs only when
+TEST_DATABASE_URL is set (same Postgres as test_store_pg.py), migrated to
+head. Also checks the migrations and the store declare the same columns,
+which needs no database. The migration itself, up and down on tables with
+rows: ``tests/test_survey_migration_pg.py``."""
 
 from __future__ import annotations
 
 import os
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
+from datetime import timezone
 from pathlib import Path
 
 import pytest
 from sqlalchemy import text
 
-from evaluation.store import WEB_GRACE, evaluation_answer, evaluation_link
+from surveys.store import WEB_GRACE, survey_answer, survey_link
 
 _URL = os.environ.get("TEST_DATABASE_URL")
-_MIGRATION = Path(__file__).resolve().parents[1] / "alembic/versions/0044_evaluation_links.py"
+_VERSIONS = Path(__file__).resolve().parents[1] / "alembic/versions"
 T0 = datetime(2026, 11, 13, 12, 0, tzinfo=timezone.utc)
 
 
-def _migrated_columns(table: str) -> set[str]:
-    src = _MIGRATION.read_text(encoding="utf-8").split("def downgrade", 1)[0]
+def _created_columns(table: str) -> set[str]:
+    src = (_VERSIONS / "0044_evaluation_links.py").read_text(encoding="utf-8")
+    src = src.split("def downgrade", 1)[0]
     block = src.split(f'"{table}",', 1)[1].split("op.create_index", 1)[0]
     return set(re.findall(r'sa\.Column\("(\w+)"', block))
 
 
-def test_the_migration_and_the_store_declare_the_same_columns():
-    assert _migrated_columns("evaluation_link") == {c.name for c in evaluation_link.columns}
-    assert _migrated_columns("evaluation_answer") == {c.name for c in evaluation_answer.columns}
+def _engine_columns() -> set[str]:
+    """survey_link as 0044 made it, with 0047's columns added and dropped."""
+    src = (_VERSIONS / "0047_survey_engine.py").read_text(encoding="utf-8")
+    up = src.split("def upgrade", 1)[1].split("def downgrade", 1)[0]
+    added = set(re.findall(r'op\.add_column\("survey_link", sa\.Column\("(\w+)"', up))
+    dropped_block = up.split("for column in (", 2)[2].split(")", 1)[0]
+    dropped = set(re.findall(r'"(\w+)"', dropped_block))
+    return (_created_columns("evaluation_link") - dropped) | added
+
+
+def test_the_migrations_and_the_store_declare_the_same_columns():
+    assert _engine_columns() == {c.name for c in survey_link.columns}
+    assert _created_columns("evaluation_answer") == {c.name for c in survey_answer.columns}
 
 
 needs_pg = pytest.mark.skipif(not _URL, reason="set TEST_DATABASE_URL to run")
@@ -38,20 +52,22 @@ needs_pg = pytest.mark.skipif(not _URL, reason="set TEST_DATABASE_URL to run")
 
 @pytest.fixture
 async def store():
-    from evaluation.store import EvaluationStore
+    from surveys.store import SurveyStore
 
-    s = EvaluationStore(_URL)
+    s = SurveyStore(_URL)
     async with s._engine.begin() as conn:
-        await conn.execute(text("delete from evaluation_answer"))
-        await conn.execute(text("delete from evaluation_link"))
+        await conn.execute(text("delete from survey_answer"))
+        await conn.execute(text("delete from survey_link"))
     yield s
     await s.dispose()
 
 
 async def _link(store):
     return await store.create_link(
-        engagement_id="E1", client_profile_id="CP1", round_no=1, area_keys=["finance"],
-        profile_needed=True, company_name="Quarry Street Coffee", created_by="t", days=30,
+        purpose="business-evaluation", entity_type="CEngagement", record_id="E1",
+        data={"client_profile_id": "CP1", "round": 1, "area_keys": ["finance"],
+              "profile_needed": True},
+        display_name="Quarry Street Coffee", created_by="t", days=30,
         surveys=[("business-profile", "business-profile.v1", None), ("finance", "finance.v1", "BE1")],
         now=T0)
 
@@ -62,7 +78,9 @@ async def test_a_link_and_its_rows(store):
     assert len(link["token"]) == 32
     assert link["expires_at"] == T0 + timedelta(days=30)
     got = await store.link_by_token(link["token"])
-    assert got["area_keys"] == ["finance"] and got["company_name"] == "Quarry Street Coffee"
+    assert got["data"]["area_keys"] == ["finance"] and got["display_name"] == "Quarry Street Coffee"
+    assert (got["purpose"], got["entity_type"], got["record_id"]) == (
+        "business-evaluation", "CEngagement", "E1")
     rows = {r["survey_key"]: r for r in await store.answers_for(link["id"])}
     assert set(rows) == {"business-profile", "finance"}
     assert rows["finance"]["crm_record_id"] == "BE1" and rows["finance"]["answers"] == {}
@@ -108,13 +126,15 @@ async def test_resend_moves_the_answers_and_consent_and_ends_the_old_link(store)
     await store.save_answers(old["id"], "finance", {"q": 1}, T0)
     new = await store.replace_link(await store.link_by_id(old["id"]), created_by="t", days=30,
                                    now=T0 + timedelta(days=1))
-    assert new["token"] != old["token"] and new["round"] == 1 and new["consent_at"] == T0
+    assert new["token"] != old["token"] and new["data"]["round"] == 1 and new["consent_at"] == T0
+    assert new["purpose"] == "business-evaluation" and new["record_id"] == "E1"
     assert (await store.link_by_id(old["id"]))["replaced_at"] == T0 + timedelta(days=1)
     rows = {r["survey_key"]: r for r in await store.answers_for(new["id"])}
     assert rows["finance"]["answers"] == {"q": 1}
     assert await store.answers_for(old["id"]) == []
-    links = await store.links_for_engagement("E1")
+    links = await store.links_for_record("business-evaluation", "CEngagement", "E1")
     assert [l["id"] for l in links] == [old["id"], new["id"]]
+    assert await store.links_for_record("another-purpose", "CEngagement", "E1") == []
 
 
 @needs_pg

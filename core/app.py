@@ -708,16 +708,19 @@ def create_app(
     from integrations.fixplans import make_fix_plan_store
 
     app.state.fix_plan_store = make_fix_plan_store(settings)
-    # Business Evaluation (prds/business-evaluation-plan.md): the evaluation
-    # links and the answers saved as the client goes, and the CRM client the
-    # submit writes through (the org-wide key, or the dry run). The survey
-    # definitions are read and checked once, here.
-    from evaluation.router import load_surveys as _load_evaluation_surveys
-    from evaluation.store import make_evaluation_store
+    # The survey engine (surveys/, ruling BE23): the survey links and the
+    # answers saved as the person goes. Each survey purpose registers itself
+    # on import; Business Evaluation (prds/business-evaluation-plan.md) is the
+    # first, and its submit writes through the CRM client below (the org-wide
+    # key, or the dry run). Every purpose's definitions are read and checked
+    # once, here.
+    import evaluation.purpose  # noqa: F401 — registers Business Evaluation
+    from surveys import registry as _survey_registry
+    from surveys.store import make_survey_store
 
-    app.state.evaluation_store = make_evaluation_store(settings)
+    app.state.survey_store = make_survey_store(settings)
     app.state.evaluation_client = lambda: _make_client(get_settings())
-    _load_evaluation_surveys()
+    _survey_registry.load_every_purpose()
     if settings.setup_active:
         from setup.jobs import make_job_store
 
@@ -775,9 +778,9 @@ def create_app(
         if path.startswith("/api/campaigns/landing/") or path in (
                 "/api/campaigns/postal/events", "/api/campaigns/sms/inbound", "/api/campaigns/sms/status"):
             return settings.intake_max_body_mb * _mb
-        # The Business Evaluation's consent and submit (its saves are PUT and
-        # are capped by the router itself, and not counted against the limit).
-        if path.startswith("/api/evaluation/"):
+        # The survey page's consent and submit (its saves are PUT and are
+        # capped by the router itself, and not counted against the limit).
+        if path.startswith("/api/survey/"):
             return settings.intake_max_body_mb * _mb
         return None
 
@@ -786,7 +789,7 @@ def create_app(
         the campaign link resolve and the campaign-name lookup. Everything else
         the middleware throttles is a POST (build plan § 3.7)."""
         return (path.startswith("/c/") or path.startswith("/api/campaigns/public/")
-                or path.startswith("/evaluation/") or path.startswith("/api/evaluation/"))
+                or path.startswith("/survey/") or path.startswith("/api/survey/"))
 
     @app.middleware("http")
     async def _intake_limits(request: Request, call_next):
@@ -976,14 +979,21 @@ def create_app(
                 return JSONResponse(status_code=404, content={"detail": "Not Found"})
         return await call_next(request)
 
-    # Business Evaluation, built dark (BUSINESS_EVALUATION, read per request):
-    # while the switch is off every one of its addresses answers 404.
-    _evaluation_prefixes = ("/evaluation/", "/evaluation-assets/", "/api/evaluation/")
+    # The survey engine, built dark (ruling BE23): while no survey purpose's
+    # switch is on, every survey address answers 404 before any database
+    # read. Once one is on, a link whose own purpose is off answers as an
+    # unknown link (surveys/router.py). Business Evaluation's old address,
+    # /evaluation/{token}, follows its own switch, BUSINESS_EVALUATION.
+    # Both read per request.
+    _survey_prefixes = ("/survey/", "/survey-assets/", "/api/survey/")
 
     @app.middleware("http")
-    async def _dark_evaluation(request: Request, call_next):
+    async def _dark_surveys(request: Request, call_next):
         path = request.url.path
-        if (path == "/evaluation" or path.startswith(_evaluation_prefixes)) \
+        if (path == "/survey" or path.startswith(_survey_prefixes)) \
+                and not _survey_registry.any_on(get_settings()):
+            return JSONResponse(status_code=404, content={"detail": "Not Found"})
+        if (path == "/evaluation" or path.startswith("/evaluation/")) \
                 and not get_settings().business_evaluation:
             return JSONResponse(status_code=404, content={"detail": "Not Found"})
         return await call_next(request)
@@ -1204,11 +1214,14 @@ def create_app(
     from campaigns.public import public_router as campaigns_public_router
 
     app.include_router(campaigns_public_router)
-    # The Business Evaluation's public survey page and its API. Always
-    # included; the middleware above answers 404 while the switch is off.
-    from evaluation.router import FRONTEND_DIR as EVALUATION_FRONTEND_DIR
+    # The survey engine's public page and its API, and Business Evaluation's
+    # old address redirecting to it. Always included; the middleware above
+    # answers 404 while the switches are off.
     from evaluation.router import router as evaluation_router
+    from surveys.router import FRONTEND_DIR as SURVEY_FRONTEND_DIR
+    from surveys.router import router as survey_router
 
+    app.include_router(survey_router)
     app.include_router(evaluation_router)
     # The chapter website's public addresses (/api/website/…). Always included;
     # each answers 404 per request while WEBSITE_API is off.
@@ -1384,11 +1397,11 @@ def create_app(
             name="campaigns-frontend",
         )
     # The survey page's own CSS and JS, at a separate top-level path because
-    # /evaluation/{token} is a route.
+    # /survey/{token} is a route.
     app.mount(
-        "/evaluation-assets",
-        BrandedStaticFiles(directory=str(EVALUATION_FRONTEND_DIR)),
-        name="evaluation-assets",
+        "/survey-assets",
+        BrandedStaticFiles(directory=str(SURVEY_FRONTEND_DIR)),
+        name="survey-assets",
     )
     if CAMPAIGNS_LANDING_DIR.is_dir():
         # The landing page's own CSS and JS, at a separate top-level path

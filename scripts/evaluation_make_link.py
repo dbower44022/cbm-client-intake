@@ -28,8 +28,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from core.config import get_settings  # noqa: E402
 from core.espo import EspoClient, EspoError  # noqa: E402
 from evaluation import sending  # noqa: E402
-from evaluation.store import EvaluationStore  # noqa: E402
 from evaluation.surveys import load_all  # noqa: E402
+from surveys.store import SurveyStore  # noqa: E402
 
 
 async def main() -> int:
@@ -57,7 +57,7 @@ async def main() -> int:
         return 2
 
     client = EspoClient(settings.espo_base_url, settings.espo_api_key, settings.request_timeout_seconds)
-    store = EvaluationStore(settings.database_url)
+    store = SurveyStore(settings.database_url)
     try:
         if args.dry_run:
             ctx = await sending.engagement_context(client, args.engagement_id)
@@ -86,7 +86,7 @@ async def main() -> int:
         print(f"  created Business Evaluation {rec['id']} ({rec['area']})")
     link = result["link"]
     base = (args.base_url or settings.app_base_url or "http://localhost:8000").rstrip("/")
-    print(f"\nLink (expires {link['expires_at']:%Y-%m-%d %H:%M} UTC):\n{base}/evaluation/{link['token']}")
+    print(f"\nLink (expires {link['expires_at']:%Y-%m-%d %H:%M} UTC):\n{sending.link_url(base, link['token'])}")
     return 0
 
 

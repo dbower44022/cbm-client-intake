@@ -105,11 +105,12 @@ RESET_TABLES: tuple[str, ...] = (
     # (plan § 6): the sandbox starts each day with none.
     "integration_fix_plan",
     "integration_event",
-    # Business Evaluation (prds/business-evaluation-plan.md): the links and the
-    # answers saved as the client goes. They point at CRM records the restore
-    # takes away, so a link made on the sandbox lasts until the next reset.
-    "evaluation_answer",
-    "evaluation_link",
+    # The survey engine (surveys/, ruling BE23; Business Evaluation's links
+    # among them): the links and the answers saved as the person goes. They
+    # point at CRM records the restore takes away, so a link made on the
+    # sandbox lasts until the next reset.
+    "survey_answer",
+    "survey_link",
 )
 
 #: Configuration, authored artefacts and instance bookkeeping: never touched.

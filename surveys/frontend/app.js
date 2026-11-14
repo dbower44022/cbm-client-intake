@@ -1,7 +1,7 @@
-/* The Business Evaluation survey page (prds/business-evaluation-plan.md § 3 step 3).
+/* The survey page (surveys/router.py; ruling BE23). Any survey purpose uses it.
  *
  * The link's token is the last part of the address; it is the only key this page
- * holds. Answers save as the client goes (ruling BE13): on leaving a section, every
+ * holds. Answers save as the person goes (ruling BE13): on leaving a section, every
  * SAVE_EVERY_MS while something changed, and when the page is closed. Submit checks
  * the required answers here and again on the server. */
 (function () {
@@ -10,7 +10,7 @@
   var SAVE_EVERY_MS = 20000;
   var STATE_WORDS = { not_started: "Not started", in_progress: "In progress", submitted: "Submitted" };
   var token = decodeURIComponent(location.pathname.replace(/\/+$/, "").split("/").pop() || "");
-  var api = "/api/evaluation/" + encodeURIComponent(token);
+  var api = "/api/survey/" + encodeURIComponent(token);
 
   var data = null;        // the last state from the server
   var current = null;     // the survey being answered
@@ -64,8 +64,8 @@
         return;
       }
       data = res.body;
-      if (data.company) {
-        $("companyName").textContent = data.company;
+      if (data.displayName) {
+        $("companyName").textContent = data.displayName;
         $("companyLine").hidden = false;
       }
       if (!data.consentGiven) show("consentView"); else renderList();
@@ -82,12 +82,12 @@
     data.surveys.forEach(function (s) {
       if (s.state !== "submitted") allDone = false;
       var li = document.createElement("li");
-      li.className = "evaluation__item";
+      li.className = "survey__item";
       var title = document.createElement("span");
-      title.className = "evaluation__item-title";
+      title.className = "survey__item-title";
       title.textContent = s.title;
       var chip = document.createElement("span");
-      chip.className = "evaluation__chip evaluation__chip--" + s.state;
+      chip.className = "survey__chip survey__chip--" + s.state;
       chip.textContent = STATE_WORDS[s.state] || s.state;
       var btn = document.createElement("button");
       btn.type = "button";
@@ -166,7 +166,7 @@
     host.appendChild(h);
     if (section.intro) {
       var p = document.createElement("p");
-      p.className = "evaluation__section-intro";
+      p.className = "survey__section-intro";
       p.textContent = section.intro;
       host.appendChild(p);
     }
@@ -192,11 +192,11 @@
 
   function answerView(q) {
     var wrap = document.createElement("div");
-    wrap.className = "evaluation__question";
+    wrap.className = "survey__question";
     var label = document.createElement("label");
     label.textContent = q.label;
     var p = document.createElement("p");
-    p.className = "evaluation__answer";
+    p.className = "survey__answer";
     p.textContent = shown(q, answers[q.id]);
     wrap.appendChild(label);
     wrap.appendChild(p);
@@ -264,7 +264,7 @@
   function questionInput(q) {
     var choice = ["single_choice", "multiple_choice", "yes_no", "scale"].indexOf(q.type) >= 0;
     var wrap = document.createElement(choice ? "fieldset" : "div");
-    wrap.className = "evaluation__question";
+    wrap.className = "survey__question";
     wrap.id = "q_" + q.id;
     var inputId = "in_" + q.id;
     var title = document.createElement(choice ? "legend" : "label");
@@ -272,7 +272,7 @@
     if (!choice) title.htmlFor = inputId;
     if (q.required) {
       var star = document.createElement("span");
-      star.className = "evaluation__required";
+      star.className = "survey__required";
       star.textContent = "*";
       star.setAttribute("aria-label", "required");
       title.appendChild(star);
@@ -281,7 +281,7 @@
     var helpText = q.help || (q.type === "multiple_choice" && q.max ? "Choose up to " + q.max + "." : "");
     if (helpText) {
       var help = document.createElement("p");
-      help.className = "evaluation__help";
+      help.className = "survey__help";
       help.textContent = helpText;
       wrap.appendChild(help);
     }
@@ -296,7 +296,7 @@
       el.addEventListener("input", function () { changed(q, el.value.trim()); });
       if (q.type === "currency") {
         var money = document.createElement("div");
-        money.className = "evaluation__money";
+        money.className = "survey__money";
         var sign = document.createElement("span");
         sign.textContent = "$";
         money.appendChild(sign);
@@ -307,8 +307,8 @@
       }
     } else if (q.type === "scale") {
       var scale = document.createElement("div");
-      scale.className = "evaluation__scale";
-      if (q.low) { var lo = document.createElement("span"); lo.className = "evaluation__scale-end"; lo.textContent = q.low; scale.appendChild(lo); }
+      scale.className = "survey__scale";
+      if (q.low) { var lo = document.createElement("span"); lo.className = "survey__scale-end"; lo.textContent = q.low; scale.appendChild(lo); }
       [1, 2, 3, 4, 5].forEach(function (n) {
         var lab = document.createElement("label");
         var r = document.createElement("input");
@@ -319,13 +319,13 @@
         lab.appendChild(document.createTextNode(String(n)));
         scale.appendChild(lab);
       });
-      if (q.high) { var hi = document.createElement("span"); hi.className = "evaluation__scale-end"; hi.textContent = q.high; scale.appendChild(hi); }
+      if (q.high) { var hi = document.createElement("span"); hi.className = "survey__scale-end"; hi.textContent = q.high; scale.appendChild(hi); }
       wrap.appendChild(scale);
     } else {
       var options = q.type === "yes_no" ? ["Yes", "No"] : q.options;
       var multi = q.type === "multiple_choice";
       var box = document.createElement("div");
-      box.className = "evaluation__choices";
+      box.className = "survey__choices";
       options.forEach(function (o) {
         var lab = document.createElement("label");
         var input = document.createElement("input");
@@ -351,7 +351,7 @@
       wrap.appendChild(box);
     }
     var err = document.createElement("p");
-    err.className = "evaluation__qerror";
+    err.className = "survey__qerror";
     err.id = "err_" + q.id;
     err.hidden = true;
     wrap.appendChild(err);
@@ -361,14 +361,14 @@
   function showError(qid, text) {
     var wrap = $("q_" + qid), err = $("err_" + qid);
     if (!wrap || !err) return;
-    wrap.classList.add("evaluation__question--error");
+    wrap.classList.add("survey__question--error");
     err.textContent = text;
     err.hidden = false;
   }
   function clearError(qid) {
     var wrap = $("q_" + qid), err = $("err_" + qid);
     if (!wrap || !err) return;
-    wrap.classList.remove("evaluation__question--error");
+    wrap.classList.remove("survey__question--error");
     err.hidden = true;
   }
 

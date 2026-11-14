@@ -1,37 +1,43 @@
-"""In-memory twin of ``evaluation/store.EvaluationStore`` for the Business
-Evaluation tests. ``tests/test_evaluation_store_pg.py`` runs the real store;
-every other test uses this, which keeps the same contract."""
+"""In-memory twin of ``surveys/store.SurveyStore`` for the survey tests.
+``tests/test_survey_store_pg.py`` runs the real store; every other test uses
+this, which keeps the same contract."""
 from __future__ import annotations
 
 import copy
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from evaluation.store import WEB_GRACE, new_token
+from surveys.store import WEB_GRACE, new_token
 
 
 class MemoryStore:
-    """In-memory twin of EvaluationStore."""
+    """In-memory twin of SurveyStore."""
 
     def __init__(self):
         self.links: dict[str, dict] = {}
         self.rows: dict[str, dict] = {}
 
-    async def create_link(self, *, engagement_id, client_profile_id, round_no, area_keys,
-                          profile_needed, company_name, created_by, days, surveys, now=None):
+    def _new_link(self, *, purpose, entity_type, record_id, data, display_name, consent_at,
+                  created_by, days, now):
+        return {"id": str(uuid.uuid4()), "token": new_token(), "purpose": purpose,
+                "entity_type": entity_type, "record_id": record_id, "data": copy.deepcopy(data),
+                "display_name": display_name or None, "consent_at": consent_at,
+                "created_by": created_by, "created_at": now,
+                "expires_at": now + timedelta(days=days), "replaced_at": None}
+
+    async def create_link(self, *, purpose, entity_type, record_id, data, display_name,
+                          created_by, days, surveys, now=None):
         now = now or datetime.now(timezone.utc)
-        link = {"id": str(uuid.uuid4()), "token": new_token(), "engagement_id": engagement_id,
-                "client_profile_id": client_profile_id, "round": round_no,
-                "area_keys": list(area_keys), "profile_needed": profile_needed,
-                "company_name": company_name, "consent_at": None, "created_by": created_by,
-                "created_at": now, "expires_at": now + timedelta(days=days), "replaced_at": None}
+        link = self._new_link(purpose=purpose, entity_type=entity_type, record_id=record_id,
+                              data=data, display_name=display_name, consent_at=None,
+                              created_by=created_by, days=days, now=now)
         self.links[link["id"]] = link
-        for key, version, record_id in surveys:
+        for key, version, crm_id in surveys:
             rid = str(uuid.uuid4())
             self.rows[rid] = {"id": rid, "link_id": link["id"], "survey_key": key,
                               "survey_version": version, "answers": {}, "updated_at": None,
                               "submitted_at": None, "submission_token": None,
-                              "crm_record_id": record_id, "crm_started_at": None,
+                              "crm_record_id": crm_id, "crm_started_at": None,
                               "delivered_at": None, "delivery_error": None, "attempts": 0,
                               "next_attempt_at": None}
         return copy.deepcopy(link)
@@ -42,9 +48,10 @@ class MemoryStore:
     async def link_by_id(self, link_id):
         return copy.deepcopy(self.links.get(link_id))
 
-    async def links_for_engagement(self, engagement_id):
+    async def links_for_record(self, purpose, entity_type, record_id):
         return sorted((copy.deepcopy(l) for l in self.links.values()
-                       if l["engagement_id"] == engagement_id), key=lambda l: l["created_at"])
+                       if (l["purpose"], l["entity_type"], l["record_id"])
+                       == (purpose, entity_type, record_id)), key=lambda l: l["created_at"])
 
     async def end_link(self, link_id, at):
         link = self.links[link_id]
@@ -55,12 +62,11 @@ class MemoryStore:
 
     async def replace_link(self, old, *, created_by, days, now=None):
         now = now or datetime.now(timezone.utc)
-        link = {"id": str(uuid.uuid4()), "token": new_token(), "engagement_id": old["engagement_id"],
-                "client_profile_id": old["client_profile_id"], "round": old["round"],
-                "area_keys": list(old["area_keys"]), "profile_needed": old["profile_needed"],
-                "company_name": old.get("company_name"), "consent_at": old.get("consent_at"),
-                "created_by": created_by, "created_at": now,
-                "expires_at": now + timedelta(days=days), "replaced_at": None}
+        link = self._new_link(purpose=old["purpose"], entity_type=old["entity_type"],
+                              record_id=old["record_id"], data=old.get("data") or {},
+                              display_name=old.get("display_name"),
+                              consent_at=old.get("consent_at"), created_by=created_by,
+                              days=days, now=now)
         self.links[link["id"]] = link
         for row in self.rows.values():
             if row["link_id"] == old["id"]:

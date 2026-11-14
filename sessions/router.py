@@ -1021,7 +1021,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         # Management; every route answers 404 while BUSINESS_EVALUATION is off,
         # and the tab's read feature-detects CBusinessEvaluation on the CRM.
         from evaluation import sending as eval_sending
-        from evaluation.router import surveys as eval_surveys
+        from evaluation.purpose import surveys as eval_surveys
 
         def _evaluations_on() -> None:
             if not get_settings().business_evaluation:
@@ -1035,7 +1035,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             loaded = eval_surveys() or {}
             if not await eval_sending.entity_available(client):
                 return {"available": False, "reason": eval_sending.UNAVAILABLE_REASON}
-            store = getattr(request.app.state, "evaluation_store", None)
+            store = getattr(request.app.state, "survey_store", None)
             try:
                 rounds = await eval_sending.rounds_view(client, store, parent_id)
             except EspoError as exc:
@@ -1081,7 +1081,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 raise HTTPException(status_code=409, detail=eval_sending.UNAVAILABLE_REASON)
             try:
                 result = await eval_sending.send(
-                    client, getattr(request.app.state, "evaluation_store", None),
+                    client, getattr(request.app.state, "survey_store", None),
                     engagement_id=parent_id, area_keys=body.areas, surveys=loaded,
                     created_by=user.get("userName") or "", days=settings.evaluation_link_days,
                     escalate=lambda: _system_client(settings))
@@ -1124,7 +1124,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             user = _require_user(request)
             settings = get_settings()
             client = client_for(settings, user)
-            store = getattr(request.app.state, "evaluation_store", None)
+            store = getattr(request.app.state, "survey_store", None)
             try:
                 if act == "resend":
                     result = await eval_sending.resend(

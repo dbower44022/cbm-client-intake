@@ -1,11 +1,12 @@
-"""The Business Evaluation's public survey page, phase 1 (evaluation/router.py,
-evaluation/service.py): the switch, the link states, consent, saving as the
-client goes, submit with the CRM in dry run, the CRM-failure path and its
-retry, and no CRM id in anything the page receives.
+"""The Business Evaluation's public survey page, phase 1, on the survey engine
+since phase 2b (surveys/router.py, surveys/service.py, evaluation/service.py):
+the switch, the link states, consent, saving as the client goes, submit with
+the CRM in dry run, the CRM-failure path and its retry, and no CRM id in
+anything the page receives.
 
 The application database is ``MemoryStore`` here, which keeps the contract of
-``evaluation/store.EvaluationStore``; ``tests/test_evaluation_store_pg.py``
-runs the real one."""
+``surveys/store.SurveyStore``; ``tests/test_survey_store_pg.py`` runs the real
+one."""
 from __future__ import annotations
 
 import asyncio
@@ -17,11 +18,12 @@ from fastapi.testclient import TestClient
 from core.app import create_app
 from core.config import apply_overrides, get_settings
 from core.espo import DryRunEspoClient, EspoError
-from evaluation import service
-from evaluation.router import load_surveys
-from evaluation.store import new_token
+from evaluation.purpose import PURPOSE, load_surveys
 from forms import ALL_SPECS as SPECS
-from tests.evaluation_fakes import MemoryStore
+from surveys import answers as survey_answers
+from surveys import service
+from surveys.store import new_token
+from tests.survey_fakes import MemoryStore
 
 NOW = datetime.now(timezone.utc)
 
@@ -68,13 +70,14 @@ def world():
     app = create_app(SPECS)
     store = MemoryStore()
     crm = RecordingClient()
-    app.state.evaluation_store = store
+    app.state.survey_store = store
     app.state.evaluation_client = lambda: crm
     apply_overrides({"business_evaluation": "true"})
     load_surveys()
     link = asyncio.run(store.create_link(
-        engagement_id="ENG1", client_profile_id=PROFILE_ID, round_no=1,
-        area_keys=["finance", "marketing"], profile_needed=True, company_name="Quarry Street Coffee",
+        purpose="business-evaluation", entity_type="CEngagement", record_id="ENG1",
+        data={"client_profile_id": PROFILE_ID, "round": 1, "area_keys": ["finance", "marketing"],
+              "profile_needed": True}, display_name="Quarry Street Coffee",
         created_by="test", days=30, surveys=[("business-profile", "business-profile.v1", None),
                                              ("finance", "finance.v1", FINANCE_ID),
                                              ("marketing", "marketing.v1", MARKETING_ID)]))
@@ -83,7 +86,7 @@ def world():
 
 
 def _consent(client, link):
-    assert client.post(f"/api/evaluation/{link['token']}/consent",
+    assert client.post(f"/api/survey/{link['token']}/consent",
                        json={"consent": True}).status_code == 200
 
 
@@ -94,17 +97,17 @@ def test_switch_off_no_evaluation_address_answers_and_other_pages_stay():
     apply_overrides({})
     client = TestClient(create_app(SPECS))
     token = new_token()
-    assert client.get(f"/evaluation/{token}").status_code == 404
-    assert client.get(f"/api/evaluation/{token}").status_code == 404
-    assert client.post(f"/api/evaluation/{token}/consent", json={"consent": True}).status_code == 404
-    assert client.get("/evaluation-assets/app.js").status_code == 404
+    assert client.get(f"/survey/{token}").status_code == 404
+    assert client.get(f"/api/survey/{token}").status_code == 404
+    assert client.post(f"/api/survey/{token}/consent", json={"consent": True}).status_code == 404
+    assert client.get("/survey-assets/app.js").status_code == 404
     assert client.get("/client-intake/").status_code == 200
     assert client.get("/healthz").status_code == 200
 
 
 def test_switch_on_serves_the_assets(world):
     client, *_ = world
-    assert client.get("/evaluation-assets/app.js").status_code == 200
+    assert client.get("/survey-assets/app.js").status_code == 200
 
 
 # --- link states --------------------------------------------------------------------
@@ -122,26 +125,26 @@ def test_a_link_no_longer_valid_shows_one_polite_page_and_never_calls_the_crm(wo
         store.links[link["id"]]["expires_at"] = NOW - timedelta(minutes=1)
     else:
         store.links[link["id"]]["replaced_at"] = NOW
-    page = client.get(f"/evaluation/{token}")
+    page = client.get(f"/survey/{token}")
     assert page.status_code == 404
     assert "This link is no longer valid" in page.text and "contact your mentor" in page.text
     assert "Quarry" not in page.text
-    api = client.get(f"/api/evaluation/{token}")
+    api = client.get(f"/api/survey/{token}")
     assert api.status_code == 404 and api.json() == {"detail": "This link is no longer valid."}
 
 
 def test_an_open_link_serves_the_page(world):
     client, _store, _crm, link = world
-    page = client.get(f"/evaluation/{link['token']}")
+    page = client.get(f"/survey/{link['token']}")
     assert page.status_code == 200
     assert "Business Evaluation" in page.text and "{{org}}" not in page.text
 
 
 def test_the_state_lists_the_profile_first_and_carries_no_crm_id(world):
     client, _store, _crm, link = world
-    res = client.get(f"/api/evaluation/{link['token']}")
+    res = client.get(f"/api/survey/{link['token']}")
     body = res.json()
-    assert body["company"] == "Quarry Street Coffee" and body["consentGiven"] is False
+    assert body["displayName"] == "Quarry Street Coffee" and body["consentGiven"] is False
     assert [s["key"] for s in body["surveys"]] == ["business-profile", "finance", "marketing"]
     assert {s["state"] for s in body["surveys"]} == {"not_started"}
     for leak in (FINANCE_ID, MARKETING_ID, PROFILE_ID, "ENG1", link["id"]):
@@ -150,8 +153,8 @@ def test_the_state_lists_the_profile_first_and_carries_no_crm_id(world):
 
 def test_a_profile_already_answered_is_not_asked_again(world):
     client, store, _crm, link = world
-    store.links[link["id"]]["profile_needed"] = False
-    keys = [s["key"] for s in client.get(f"/api/evaluation/{link['token']}").json()["surveys"]]
+    store.links[link["id"]]["data"]["profile_needed"] = False
+    keys = [s["key"] for s in client.get(f"/api/survey/{link['token']}").json()["surveys"]]
     assert keys == ["finance", "marketing"]
 
 
@@ -160,17 +163,17 @@ def test_a_profile_already_answered_is_not_asked_again(world):
 def test_nothing_is_saved_or_submitted_before_consent(world):
     client, store, crm, link = world
     t = link["token"]
-    assert client.put(f"/api/evaluation/{t}/answers/finance",
+    assert client.put(f"/api/survey/{t}/answers/finance",
                       json={"answers": {"separate_account": "Yes"}}).status_code == 403
-    assert client.post(f"/api/evaluation/{t}/submit/finance",
+    assert client.post(f"/api/survey/{t}/submit/finance",
                        json={"answers": FINANCE_REQUIRED, "submission_token": "s1"}).status_code == 403
-    assert client.post(f"/api/evaluation/{t}/consent", json={"consent": False}).status_code == 422
+    assert client.post(f"/api/survey/{t}/consent", json={"consent": False}).status_code == 422
     assert crm.updates == []
 
 
 def test_the_consent_honeypot_records_nothing(world):
     client, store, _crm, link = world
-    res = client.post(f"/api/evaluation/{link['token']}/consent",
+    res = client.post(f"/api/survey/{link['token']}/consent",
                       json={"consent": True, "company_url": "http://spam.example"})
     assert res.status_code == 200
     assert store.links[link["id"]]["consent_at"] is None
@@ -183,11 +186,11 @@ def test_saving_keeps_the_answers_and_marks_the_area_in_progress_once(world):
     _consent(client, link)
     t = link["token"]
     for _ in range(2):
-        res = client.put(f"/api/evaluation/{t}/answers/finance",
+        res = client.put(f"/api/survey/{t}/answers/finance",
                          json={"answers": {"separate_account": "Yes", "confidence": "4",
                                            "unknown_question": "x", "paid_when": "Never heard of it"}})
         assert res.status_code == 200 and res.json()["state"] == "in_progress"
-    finance = next(s for s in client.get(f"/api/evaluation/{t}").json()["surveys"] if s["key"] == "finance")
+    finance = next(s for s in client.get(f"/api/survey/{t}").json()["surveys"] if s["key"] == "finance")
     assert finance["state"] == "in_progress"
     # Unknown ids and values outside the options are not stored.
     assert finance["answers"] == {"separate_account": "Yes", "confidence": 4}
@@ -197,7 +200,7 @@ def test_saving_keeps_the_answers_and_marks_the_area_in_progress_once(world):
 def test_a_survey_not_on_the_link_is_refused(world):
     client, _store, _crm, link = world
     _consent(client, link)
-    assert client.put(f"/api/evaluation/{link['token']}/answers/funding",
+    assert client.put(f"/api/survey/{link['token']}/answers/funding",
                       json={"answers": {}}).status_code == 404
 
 
@@ -206,7 +209,7 @@ def test_a_survey_not_on_the_link_is_refused(world):
 def test_submit_checks_required_answers_and_keeps_what_was_given(world):
     client, store, crm, link = world
     _consent(client, link)
-    res = client.post(f"/api/evaluation/{link['token']}/submit/finance",
+    res = client.post(f"/api/survey/{link['token']}/submit/finance",
                       json={"answers": {"separate_account": "No"}, "submission_token": "s1"})
     assert res.status_code == 422
     assert "bookkeeping_method" in res.json()["errors"]
@@ -220,7 +223,7 @@ def test_submit_writes_the_area_record_and_locks_the_survey(world):
     client, store, crm, link = world
     _consent(client, link)
     t = link["token"]
-    res = client.post(f"/api/evaluation/{t}/submit/finance",
+    res = client.post(f"/api/survey/{t}/submit/finance",
                       json={"answers": FINANCE_REQUIRED, "submission_token": "s1"})
     assert res.status_code == 200 and res.json() == {"state": "submitted", "delivered": True}
     [(entity, record_id, payload)] = crm.updates
@@ -231,13 +234,13 @@ def test_submit_writes_the_area_record_and_locks_the_survey(world):
     assert "Does the business have its own bank account" in payload["answersReadable"]
     assert "Not answered" in payload["answersReadable"]      # the optional last question
     # Submitted: a repeat is the same answer, a save is refused, the state says so.
-    again = client.post(f"/api/evaluation/{t}/submit/finance",
+    again = client.post(f"/api/survey/{t}/submit/finance",
                         json={"answers": {}, "submission_token": "s2"})
     assert again.json() == {"state": "submitted", "delivered": True}
     assert len(crm.updates) == 1
-    assert client.put(f"/api/evaluation/{t}/answers/finance",
+    assert client.put(f"/api/survey/{t}/answers/finance",
                       json={"answers": {"budget": "No"}}).status_code == 409
-    finance = next(s for s in client.get(f"/api/evaluation/{t}").json()["surveys"] if s["key"] == "finance")
+    finance = next(s for s in client.get(f"/api/survey/{t}").json()["surveys"] if s["key"] == "finance")
     assert finance["state"] == "submitted" and finance["answers"]["budget"] == "Only in my head"
 
 
@@ -251,7 +254,7 @@ def test_the_business_profile_goes_to_the_client_profile(world):
             answers[q.id] = (q.options[0] if q.type == "single_choice" else
                              [q.options[0]] if q.type == "multiple_choice" else
                              3 if q.type == "number" else "We roast coffee.")
-    res = client.post(f"/api/evaluation/{link['token']}/submit/business-profile",
+    res = client.post(f"/api/survey/{link['token']}/submit/business-profile",
                       json={"answers": answers, "submission_token": "p1"})
     assert res.json()["delivered"] is True
     [(entity, record_id, payload)] = crm.updates
@@ -262,7 +265,7 @@ def test_the_business_profile_goes_to_the_client_profile(world):
 def test_the_submit_honeypot_writes_nothing(world):
     client, store, crm, link = world
     _consent(client, link)
-    res = client.post(f"/api/evaluation/{link['token']}/submit/finance",
+    res = client.post(f"/api/survey/{link['token']}/submit/finance",
                       json={"answers": FINANCE_REQUIRED, "submission_token": "s1",
                             "company_url": "spam"})
     assert res.json()["state"] == "submitted"
@@ -273,7 +276,7 @@ def test_submit_works_against_the_dry_run_client(world):
     client, _store, _crm, link = world
     client.app.state.evaluation_client = lambda: DryRunEspoClient()
     _consent(client, link)
-    res = client.post(f"/api/evaluation/{link['token']}/submit/finance",
+    res = client.post(f"/api/survey/{link['token']}/submit/finance",
                       json={"answers": FINANCE_REQUIRED, "submission_token": "s1"})
     assert res.json() == {"state": "submitted", "delivered": True}
 
@@ -284,7 +287,7 @@ def test_a_crm_failure_keeps_the_answers_and_the_worker_retries(world):
     client, store, crm, link = world
     crm.fail = True
     _consent(client, link)
-    res = client.post(f"/api/evaluation/{link['token']}/submit/finance",
+    res = client.post(f"/api/survey/{link['token']}/submit/finance",
                       json={"answers": FINANCE_REQUIRED, "submission_token": "s1"})
     assert res.status_code == 200 and res.json() == {"state": "submitted", "delivered": False}
     row = store._row(link["id"], "finance")
@@ -293,11 +296,11 @@ def test_a_crm_failure_keeps_the_answers_and_the_worker_retries(world):
     assert row["next_attempt_at"] > datetime.now(timezone.utc)
 
     # Not due yet: nothing happens.
-    assert asyncio.run(service.run_retry_cycle(store, crm, load_surveys())) == {"written": 0, "refused": 0}
+    assert asyncio.run(service.run_retry_cycle(store, PURPOSE, crm, load_surveys())) == {"written": 0, "refused": 0}
     # Due, and the CRM is back.
     row["next_attempt_at"] = datetime.now(timezone.utc) - timedelta(seconds=1)
     crm.fail = False
-    assert asyncio.run(service.run_retry_cycle(store, crm, load_surveys())) == {"written": 1, "refused": 0}
+    assert asyncio.run(service.run_retry_cycle(store, PURPOSE, crm, load_surveys())) == {"written": 1, "refused": 0}
     assert store._row(link["id"], "finance")["delivered_at"]
     assert crm.updates[0][2]["status"] == "Submitted"
 
@@ -313,7 +316,7 @@ def test_the_retry_backs_off():
 
 def test_values_are_checked_by_question_type():
     survey = load_surveys()["finance.v1"]
-    kept, errors = service.clean_answers(survey, {
+    kept, errors = survey_answers.clean_answers(survey, {
         "confidence": 9, "biggest_costs": ["Wages", "Insurance", "Not sure", "Rent or a place to work"],
         "separate_account": "Maybe", "finance_worry": "  cash  ",
     })
@@ -324,13 +327,13 @@ def test_values_are_checked_by_question_type():
 
 def test_money_and_numbers_read_as_people_type_them():
     survey = load_surveys()["business-profile.v1"]
-    kept, errors = service.clean_answers(survey, {"people": "1,200"})
+    kept, errors = survey_answers.clean_answers(survey, {"people": "1,200"})
     assert kept == {"people": 1200} and not errors
-    _, errors = service.clean_answers(survey, {"people": "about ten"})
+    _, errors = survey_answers.clean_answers(survey, {"people": "about ten"})
     assert errors == {"people": "Please enter a number."}
 
 
 def test_the_readable_text_escapes_what_the_client_typed():
     survey = load_surveys()["marketing.v1"]
-    html = service.readable_html(survey, {"ideal_customer": "<script>x</script>"})
+    html = survey_answers.readable_html(survey, {"ideal_customer": "<script>x</script>"})
     assert "<script>" not in html and "&lt;script&gt;" in html

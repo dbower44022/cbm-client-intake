@@ -5,6 +5,55 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.330.0] — 2026-11-13
+
+**refactor: Business Evaluation, phase 2b — the survey engine (ruling BE23).**
+Dark behind **`BUSINESS_EVALUATION`**. Plan `prds/business-evaluation-plan.md`
+(revision 0.5); `OPEN-ITEMS.md` #83. Nothing a client, a mentor or a staff
+member sees changed: the survey page's words are phase 1's, word for word.
+
+- **The survey engine, `surveys/`**, holding no Business Evaluation code: the
+  definition format and loader (`definitions.py`, with `LoaderRules` for a
+  purpose's own keys and checks), answer checking and the readable text
+  (`answers.py`), the link store and saved answers (`store.py`), the submit
+  retry (`service.py`), and the public page (`router.py`, `frontend/`) at
+  `/survey/{token}`, `/api/survey/…` and `/survey-assets/…`. A test fails if
+  `surveys/` imports from `evaluation/`. How to add a purpose:
+  `surveys/CLAUDE.md`.
+- **The purpose registry** (`surveys/registry.py`): a survey purpose
+  declares its key, its switch, link expiry and retry settings, its
+  definitions folder and loader rules, the surveys a link opens, the page's
+  words, and its submit, first-save and client functions. **Business
+  Evaluation registers itself** in `evaluation/purpose.py`; its settings kept
+  their names (`EVALUATION_LINK_DAYS`, `EVALUATION_RETRY_SECONDS`).
+- **The switch**: while no purpose's switch is on, every survey address
+  answers 404 before any database read (`_dark_surveys` in `core/app.py`,
+  replacing `_dark_evaluation`); a link whose purpose is off answers as an
+  unknown one. The "no longer valid" page is shared by every purpose and
+  keeps phase 1's words (Doug's option A).
+- **The old address**: `/evaluation/{token}` answers 301 to `/survey/{token}`,
+  so a link already emailed still opens; the old API and asset paths are
+  gone. New emails carry `/survey/…`.
+- **Migration 0047**: `evaluation_link` and `evaluation_answer` become
+  `survey_link` and `survey_answer`; a link gains `purpose`, `entity_type`,
+  `record_id`, `data` (JSON) and `display_name`, filled on every existing row
+  as Business Evaluation's, and loses the six columns they replace. The
+  downgrade restores both tables (tested up, down and up on tables with
+  rows). The sandbox reset clears the new names.
+- **The worker** runs the engine's retry once per purpose, on each purpose's
+  own switch and interval.
+- **Tests**: Business Evaluation's tests pass with their imports and paths
+  changed, plus the setup and link-shape lines Doug approved at stopping
+  point (a); `tests/survey_fakes.py` replaces `tests/evaluation_fakes.py`.
+  New: `tests/test_survey_engine.py` (a test purpose end to end, the switch,
+  the redirect, the import guard), `tests/test_survey_migration_pg.py`,
+  `tests/test_survey_store_pg.py`. The sandbox table guard learned renames.
+- **Live-checked 11-13-26** by Doug on a local run against crm-test: an old
+  `/evaluation/…` link redirected, a new `/survey/…` link opened, Brightline
+  Bakehouse's Finance survey saved, was closed and reopened with its answers,
+  and submitted; the record read back Submitted with 16 answers, consent and
+  submit times, Joe Mentor and Matt Mentor assigned.
+
 ## [0.329.0] — 2026-11-13
 
 **feat: the Integrations tab, phase 7 — the setup assistant and setup plans.**

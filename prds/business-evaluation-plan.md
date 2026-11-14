@@ -1,13 +1,13 @@
 # Business Evaluation — plan
 
-Last Updated: 11-13-26 14:24 · Revision 0.5 — see change log at the end.
+Last Updated: 11-13-26 22:58 · Revision 0.6 — see change log at the end.
 
 This is the design record for the **Business Evaluation** offering. It holds
 the terms, the flow, the rulings, the CRM data model, and the build phases with
 their stopping points. The build orchestrator
 (`prompts/business-evaluation-build-orchestrator-v0.1.md`) and the per-phase
 build prompts are written from this file. Phase 1 is built (v0.324.0); phase 2
-is built (v0.328.0).
+is built (v0.328.0); phase 2b is built (v0.330.0).
 
 **Status of the rulings.** All rulings, BE1 to BE23, are approved by Doug
 (11-13-26). Rulings BE1 to BE6 restate what Doug described; BE7 to BE23 were
@@ -219,3 +219,4 @@ surveys staff can edit without a release.
 | 0.3 | 11-13-26 10:45 | Claude (Claude Code) | Phase 1 built, v0.324.0. Two departures from § 5, approved by Doug: `draftReport` is not Read-only, and `engagement` and `clientProfile` are required by the application. |
 | 0.4 | 11-13-26 13:55 | Claude (Claude Code) | Phase 2 built, v0.328.0: the mentor side. Doug's choices 11-13-26: the email wording lives in this repository, and Resend carries the client's answers and consent to the new link. |
 | 0.5 | 11-13-26 14:22 | Claude (Cowork) | Ruling BE23 added and approved by Doug: the shared survey engine. Status paragraph, two terms in § 2, § 5's storage sentence, phase 2b in § 6, and § 8 for later survey purposes. Merged by Claude (Claude Code) 11-13-26 14:24 from `Claude outputs/be23-plan-and-orchestrator-changes.md`. |
+| 0.6 | 11-13-26 22:58 | Claude (Claude Code) | Phase 2b built, v0.330.0: the survey engine `surveys/`, Business Evaluation its first survey purpose; `/evaluation/{token}` redirects to `/survey/{token}`. Doug's option A: the shared "no longer valid" page keeps phase 1's words. |

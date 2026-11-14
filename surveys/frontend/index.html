@@ -6,34 +6,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex, nofollow" />
   <meta name="referrer" content="no-referrer" />
-  <title>{{org}} — Business Evaluation</title>
+  <title>{{org}} — [[title]]</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/shared/tokens.css" />
   <link rel="stylesheet" href="/shared/wizard.css" />
-  <link rel="stylesheet" href="/evaluation-assets/styles.css" />
+  <link rel="stylesheet" href="/survey-assets/styles.css" />
 </head>
 <body>
-  <main class="cbm-container cbm-container--narrow intake evaluation">
+  <main class="cbm-container cbm-container--narrow intake survey">
     <header class="intake__header">
-      <p class="evaluation__org">{{org}}</p>
-      <h1>Business Evaluation</h1>
+      <p class="survey__org">{{org}}</p>
+      <h1>[[title]]</h1>
       <p class="intake__sub" id="companyLine" hidden>For <strong id="companyName"></strong></p>
     </header>
 
-    <p class="evaluation__loading" id="loading">Loading your surveys…</p>
+    <p class="survey__loading" id="loading">Loading your surveys…</p>
     <p class="form-error" id="pageError" role="alert" hidden></p>
 
-    <!-- 1. Consent (ruling BE11): nothing can be answered or submitted before it. -->
+    <!-- 1. Consent (ruling BE11): nothing can be answered or submitted before it.
+         The double-bracketed slots are the survey purpose's words (surveys/registry.PageText). -->
     <section id="consentView" hidden>
       <h2>Before you start</h2>
-      <p>Your mentor has offered you a free evaluation of your business. You will answer a
-        few short surveys. There are no right or wrong answers, and you can stop at any
-        time and come back to this page later: your answers are saved as you go.</p>
-      <p>When you submit a survey, your answers are processed by an AI service to prepare
-        a draft report. Your mentor reviews and corrects that draft before you see any of it.
-        Your answers and the report are kept with your record at {{org}}.</p>
+      [[consent_intro]]
       <form id="consentForm" novalidate>
         <div class="hp" aria-hidden="true">
           <label for="consent_company_url">Leave this empty</label>
@@ -41,8 +37,7 @@
         </div>
         <div class="cbm-field cbm-field--check">
           <label><input type="checkbox" id="consentBox" />
-            I agree that my answers may be processed by an AI service and kept with my
-            record at {{org}}, as described above.</label>
+            [[consent_label]]</label>
         </div>
         <p class="form-error" id="consentError" role="alert" hidden></p>
         <div class="wizard__nav">
@@ -54,19 +49,17 @@
     <!-- 2. The list of surveys and the state of each. -->
     <section id="listView" hidden>
       <h2>Your surveys</h2>
-      <p id="listIntro">Start with the first survey. You can stop at any time and come back
-        to this page later; your answers are saved as you go.</p>
-      <ol class="evaluation__list" id="surveyList"></ol>
-      <p class="evaluation__done" id="allDone" hidden>Thank you. You have submitted every
-        survey. Your mentor will be in touch to go through the results with you.</p>
+      <p id="listIntro">[[list_intro]]</p>
+      <ol class="survey__list" id="surveyList"></ol>
+      <p class="survey__done" id="allDone" hidden>[[all_done]]</p>
     </section>
 
     <!-- 3. One survey, a section at a time. -->
     <section id="surveyView" hidden>
-      <p><a href="#" class="evaluation__back" id="backToList">&larr; Back to your surveys</a></p>
+      <p><a href="#" class="survey__back" id="backToList">&larr; Back to your surveys</a></p>
       <h2 id="surveyTitle"></h2>
       <p id="surveyIntro"></p>
-      <p class="evaluation__submitted" id="submittedNote" hidden>You have submitted this
+      <p class="survey__submitted" id="submittedNote" hidden>You have submitted this
         survey. You can read your answers here, but they can no longer be changed.</p>
       <ol class="wizard__progress" id="progress" aria-label="Progress"></ol>
       <form id="surveyForm" novalidate>
@@ -76,13 +69,13 @@
         </div>
         <div id="sectionHost"></div>
         <p class="form-error" id="surveyError" role="alert" hidden></p>
-        <p class="evaluation__hint" id="surveyHint" aria-live="polite" hidden></p>
+        <p class="survey__hint" id="surveyHint" aria-live="polite" hidden></p>
         <div class="wizard__nav">
           <button type="button" class="cbm-button cbm-button--secondary" id="prevBtn">Back</button>
           <button type="button" class="cbm-button" id="nextBtn">Next</button>
           <button type="submit" class="cbm-button" id="submitBtn" hidden>Submit survey</button>
         </div>
-        <p class="evaluation__saved" id="savedNote" aria-live="polite"></p>
+        <p class="survey__saved" id="savedNote" aria-live="polite"></p>
       </form>
     </section>
 
@@ -101,7 +94,7 @@
   <!-- busy.js first: it wraps fetch/XHR, so it must be in place before any
        other script can start a request. -->
   <script src="/shared/busy.js"></script>
-  <script src="/evaluation-assets/app.js"></script>
+  <script src="/survey-assets/app.js"></script>
   <script src="/shared/footer.js"></script>
 </body>
 </html>

@@ -1,14 +1,42 @@
 # evaluation/ — Business Evaluation
 
-Last Updated: 11-13-26 13:55 · Revision 1.1
+Last Updated: 11-13-26 14:53 · Revision 1.2
 
-Detail for the Business Evaluation offering: the survey definitions, the
-evaluation links, and the client's public survey page at `/evaluation/{token}`.
-Claude Code loads this file only when a session works in this folder. The plan
-is `prds/business-evaluation-plan.md` (rulings BE1–BE22, all approved
-11-13-26, settled); the build runs phase by phase from
+Detail for the Business Evaluation offering. Claude Code loads this file only
+when a session works in this folder. The plan is
+`prds/business-evaluation-plan.md` (rulings BE1–BE23, all approved 11-13-26,
+settled); the build runs phase by phase from
 `prompts/business-evaluation-build-orchestrator-v0.1.md`; what is owed is
 `OPEN-ITEMS.md` #83.
+
+## Since phase 2b: a survey purpose on the survey engine (ruling BE23)
+
+The definition format and loader, the link store and saved answers, the
+submit retry and the client's public page moved to the survey engine,
+`surveys/` (see `surveys/CLAUDE.md`). **Business Evaluation is its first
+survey purpose**, registered in `purpose.py` (key `business-evaluation`,
+switch `BUSINESS_EVALUATION`, settings `EVALUATION_LINK_DAYS` and
+`EVALUATION_RETRY_SECONDS`, which kept their names). What stays here:
+
+- `purpose.py`: the registration, the page's words (phase 1's, unchanged),
+  and `surveys()` / `load_surveys()` for this purpose's definitions.
+- `surveys.py` and `surveys/*.yaml`: the definitions, with the `area` key,
+  the six areas and the required business profile as loader rules.
+- `service.py`: the surveys a link opens, the CRM write on submit
+  (`deliver`), the In Progress step on a first save.
+- `sending.py` and `email.py`: phase 2's mentor side. Links are made with
+  the engine's store: `entity_type` `CEngagement`, `record_id` the
+  engagement, `display_name` the company, and `data` holding
+  `client_profile_id`, `round`, `area_keys` and `profile_needed`.
+- `router.py`: **the old address**. `/evaluation/{token}` answers 301 to
+  `/survey/{token}`, so a link emailed before phase 2b still opens; 404
+  while the switch is off. The old `/api/evaluation/…` and
+  `/evaluation-assets/…` addresses are gone.
+- `scripts/evaluation_make_link.py`.
+
+The phase 1 and 2 notes below are as built; where they name `store.py`,
+`router.load_surveys`, the `_dark_evaluation` middleware, migration 0044's
+table names or the `/evaluation/{token}` page, read the engine's equivalent.
 
 ## What phase 1 built (v0.324.0)
 
@@ -87,7 +115,7 @@ is `prds/business-evaluation-plan.md` (rulings BE1–BE22, all approved
   categories: `CActionLog.category` is a CRM enum, and a new value would be
   refused.
 - Tests: `tests/test_evaluation_mentor.py`; the in-memory store is
-  `tests/evaluation_fakes.MemoryStore`.
+  `tests/survey_fakes.MemoryStore` (since phase 2b).
 
 ## The CRM
 
@@ -105,3 +133,4 @@ create).
 |---|---|---|---|
 | 1.0 | 11-13-26 10:40 | Claude (Claude Code) | Created at the close of phase 1 (v0.324.0). |
 | 1.1 | 11-13-26 13:55 | Claude (Claude Code) | Phase 2, the mentor side (v0.328.0). |
+| 1.2 | 11-13-26 14:53 | Claude (Claude Code) | Phase 2b: the survey engine moved out to `surveys/` (ruling BE23). |

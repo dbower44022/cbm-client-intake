@@ -661,6 +661,9 @@ The free evaluation a mentor offers a new client (`prds/business-evaluation-plan
 rulings settled), dark behind `BUSINESS_EVALUATION`. **Detail: `evaluation/CLAUDE.md`.**
 The mentor side is Client Management's Evaluations tab (`DomainConfig.evaluations_tab`).
 The link is a random token, never a CRM id; the draft report never reaches the client.
+**Its survey page, links and retry are the shared survey engine, `surveys/`**
+(ruling BE23, `surveys/CLAUDE.md`): `/survey/{token}`, any survey purpose, no
+purpose-specific code; `/evaluation/{token}` redirects there.
 
 ## Cross-cutting subsystems
 
