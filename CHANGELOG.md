@@ -5,6 +5,48 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.332.0] — 2026-11-14
+
+**feat: Business Evaluation, phase 3 — the analysis.** Dark behind
+**`BUSINESS_EVALUATION`**, and off again behind **`EVALUATION_ANALYSIS_SECONDS`**
+(default 0). Plan `prds/business-evaluation-plan.md` § 3 step 4, rulings BE6,
+BE9, BE15, BE16, BE17; `OPEN-ITEMS.md` #83.
+
+- **The prompts and rubrics** for Finance and Marketing, versioned files beside
+  the surveys (`evaluation/prompts/`, `evaluation/rubrics/`; BE9): five rubric
+  dimensions each, levels 1 to 5 described. Approved by Doug at stopping point
+  (a), revised on his review of the samples, 11-14-26: a measured voice, areas
+  worth looking at and the questions that would settle them, never a cause or
+  figure the survey cannot show.
+- **The report** (`evaluation/report.py`, BE16): one schema for the structured
+  output and one template for `draftReport` — Summary, Scores, Strengths, Gaps,
+  Recommended action items, Questions to explore, and Points to check, marked
+  `data-internal` for the client version in phase 5. A dimension the answers
+  cannot support reads "Not scored".
+- **The worker pass** (`evaluation/analysis.py`): each Submitted record, one
+  Claude API call per area (`claude-opus-5-5`, `EVALUATION_MODEL`; structured
+  output, server-side fallback), writes the draft, the reviewed copy, the
+  scores, the versions and Draft Ready. The CRM status is the queue (no table).
+  Email addresses, phone numbers and street addresses are removed before the
+  call; a test reads the request. Tokens and cost logged per call. An area
+  submitted before the business profile waits up to 24 hours for it. The
+  pass's CRM client allows 60 seconds: a draft is a large write.
+- **Failure and Retry** (BE15): a failed call sets Analysis Failed with
+  `analysisError`; **Retry draft report** in the Evaluations tab's dialog, in
+  the action log, sets Submitted again.
+- **The mentor is emailed** (Doug's choice A) from the shared mailbox to the
+  engagement mentor's `cbmEmail`, with a link to
+  `/mentorsessions/record/{id}?tab=evaluations`; the record page now opens on
+  the tab a `?tab=` names. Best-effort.
+- **The Evaluations tab** shows the draft above the answers, read-only and
+  labelled as unseen by the client (BE17), in a dialog filling 90% of the
+  window with margins (Doug, 11-14-26).
+- `scripts/evaluation_sample_reports.py`: sample reports on a crm-test
+  engagement from made-up answers. Two rounds on Brightline Bakehouse,
+  reviewed by Doug 11-14-26; about $0.12 per area.
+- Tests: `tests/test_evaluation_analysis.py` (37). The Settings page snapshot
+  gains the two settings.
+
 ## [0.331.0] — 2026-11-14
 
 **feat: the Integrations tab, phase 8 — the set-up wizard, piloted on Zoom.**

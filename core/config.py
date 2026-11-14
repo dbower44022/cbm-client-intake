@@ -115,6 +115,12 @@ class Settings(BaseSettings):
     # Seconds between the worker's passes that retry a submitted survey the
     # CRM refused (phase 1 step 8). 0 stops the pass.
     evaluation_retry_seconds: int = 300
+    # Seconds between the worker's passes that write a draft report for each
+    # submitted evaluation through the Claude API (phase 3). 0, the default,
+    # stops the analysis; it also needs ANTHROPIC_API_KEY.
+    evaluation_analysis_seconds: int = 0
+    # The Claude model that writes the draft reports.
+    evaluation_model: str = "claude-opus-5-5"
     # The chapter website's own addresses (scheme + host, comma separated).
     # Only these may fetch /api/website/* from a browser. Deliberately NOT
     # `allowed_origins`, which applies to every address of the application.

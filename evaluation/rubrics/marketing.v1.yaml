@@ -1,0 +1,62 @@
+# Marketing scoring rubric, version 1 (rulings BE9, BE22).
+# Five dimensions, each scored 1 to 5. A rubric a report has been scored on is
+# never edited: a change is a new version file, and every Business Evaluation
+# record names the rubric that scored it (rubricVersion, such as marketing.v1).
+# Draft for Doug's review, 11-14-26. "informed_by" names the survey questions
+# (marketing.v1, and business-profile.v1 where prefixed "profile.") each
+# dimension rests on.
+key: marketing
+version: 1
+area: Marketing
+dimensions:
+  - id: knowing_the_customer
+    name: Knowing the customer
+    informed_by: [ideal_customer, asked_customers, profile.customer_type]
+    levels:
+      1: The owner cannot describe a best kind of customer, or says "everyone", and has never asked customers why they buy.
+      2: The owner gives a general description of the customer and has never asked customers why they buy.
+      3: The owner clearly describes who the best customer is and has asked customers once or twice.
+      4: The owner describes who the best customer is and what they need, and has asked customers more than once.
+      5: The owner describes the best customer and their needs specifically, asks customers regularly, and the answers have shaped what the business does.
+
+  - id: reason_to_choose
+    name: A clear reason to choose this business
+    informed_by: [why_choose_you, asked_customers, reviews, repeat_customers]
+    levels:
+      1: The owner gives no reason, or only a word such as "price" or "quality" with nothing behind it.
+      2: The owner gives a general reason that any competitor could also claim.
+      3: The owner gives a believable reason, but it does not clearly set the business apart from competitors.
+      4: The owner gives a specific reason that sets the business apart.
+      5: The owner gives a specific reason that sets the business apart, and what customers say or do (asking them, reviews, repeat buying) bears it out.
+
+  - id: being_found
+    name: Being found
+    informed_by: [how_found, online_presence, reviews, posting_frequency, profile.customer_type]
+    note: For a business that sells mostly to other businesses or to government, judge whether its buyers can find it and trust it; online reviews count for less.
+    levels:
+      1: The business has no online presence, and new customers find it by chance or the owner does not know how.
+      2: The business has one online listing or account, rarely updated, and few or no reviews.
+      3: The business has a website or a Google Business Profile, updated now and then, and some reviews.
+      4: The business has a website or a Google Business Profile and at least one other channel updated monthly, and 11 to 50 reviews.
+      5: The business keeps several channels current every week, has more than 50 reviews, and the owner knows which channels bring customers.
+
+  - id: keeping_customers
+    name: Keeping customers coming back
+    informed_by: [repeat_customers, customer_list]
+    note: For a product usually bought once, judge referrals and reviews instead of repeat buying.
+    levels:
+      1: Almost no customers buy again, and the business keeps no list of customers to stay in touch with.
+      2: A few customers buy again, and there is no customer list or it is never used.
+      3: About half of customers buy again, or there is a customer list that is used now and then.
+      4: Most customers buy again, or there is a customer list the owner contacts regularly.
+      5: Most customers buy again, and the owner contacts a customer list regularly.
+
+  - id: effort_and_results
+    name: Marketing effort and knowing what works
+    informed_by: [monthly_spend, weekly_hours, tracks_results, marketing_confidence]
+    levels:
+      1: The owner puts no time or money into marketing and does not know what brings customers.
+      2: The owner puts some time or money into marketing but does not know which of it brings customers.
+      3: The owner puts steady time or money into marketing and has a good idea of what works, without tracking it.
+      4: The owner puts steady time or money into marketing and tracks which of it brings customers.
+      5: The owner tracks what brings customers and moves time and money toward what works.

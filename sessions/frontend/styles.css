@@ -1056,6 +1056,23 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
 .evl__area { display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; }
 .evl__answers h3 { font-size: 1rem; margin: 1rem 0 0.4rem; }
 .evl__answers p { margin: 0 0 0.6rem; }
+#evlModal.evl--wide .sx__modal-card {
+  width: 90vw; height: 90vh; max-width: 90vw; max-height: 90vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+#evlModal.evl--wide .sx__modal-head, #evlModal.evl--wide .sx__modal-foot { flex: 0 0 auto; }
+#evlModal.evl--wide .sx__modal-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+/* The shared .sx__modal-body has no side padding; the evaluation text needs
+   a margin from the dialog's edge (Doug, 11-14-26). */
+#evlModal .sx__modal-body { padding: 0.75rem 1.25rem 1rem; }
+#evlModal.evl--wide .sx__modal-body { padding: 1.5rem 2.5rem 2rem; }
+#evlModal.evl--wide .sx__modal-head { padding: 1rem 2.5rem 0.75rem; }
+#evlModal.evl--wide .sx__modal-foot { padding: 0.75rem 2.5rem 1rem; }
+.evl__draft { border-left: 3px solid var(--cbm-blue); padding-left: 0.8rem; margin-bottom: 1rem; }
+.evl__draft h2 { font-size: 1.1rem; margin: 0 0 0.6rem; }
+.evl__draft table { width: 100%; border-collapse: collapse; margin: 0 0 0.8rem; }
+.evl__draft th, .evl__draft td { text-align: left; vertical-align: top; padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--cbm-border); }
+.evl__draft ul { margin: 0 0 0.8rem 1.2rem; }
 .evl__rounds { display: flex; flex-direction: column; gap: 0.4rem; margin: 0.5rem 0 0.75rem; }
 .evl__round { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
 .evl__round-label { font-weight: 600; margin-right: 0.5rem; }

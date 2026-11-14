@@ -1,0 +1,60 @@
+# Finance scoring rubric, version 1 (rulings BE9, BE22).
+# Five dimensions, each scored 1 to 5. A rubric a report has been scored on is
+# never edited: a change is a new version file, and every Business Evaluation
+# record names the rubric that scored it (rubricVersion, such as finance.v1).
+# Draft for Doug's review, 11-14-26. "informed_by" names the survey questions
+# (finance.v1, and business-profile.v1 where prefixed "profile.") each
+# dimension rests on.
+key: finance
+version: 1
+area: Finance
+dimensions:
+  - id: record_keeping
+    name: Record keeping
+    informed_by: [bookkeeping_method, separate_account, accountant]
+    levels:
+      1: No records are kept, and business and personal money are mixed.
+      2: Some records are kept, such as bank statements or paper notes, but they are incomplete, or business and personal money are mixed.
+      3: Records are kept in a spreadsheet or accounting software and the business has its own bank account, but the records are brought up to date only now and then.
+      4: Records are kept in accounting software or by a bookkeeper, the business has its own bank account, and the records are current at least monthly.
+      5: Records are current in accounting software or kept by a bookkeeper, the business has its own bank account, and an accountant helps through the year, not only at tax time.
+
+  - id: knowing_the_numbers
+    name: Knowing the numbers and planning ahead
+    informed_by: [review_frequency, confidence, budget]
+    levels:
+      1: The owner rarely or never looks at what the business earns and spends, has no budget, and has little confidence reading the numbers.
+      2: The owner looks at the numbers about once a year, at tax time, and any plan exists only in the owner's head.
+      3: The owner looks every few months, or monthly with no written budget, or has a written budget that is rarely checked.
+      4: The owner looks every month and has a written budget that is checked from time to time.
+      5: The owner looks every week or month, has a written budget that is checked regularly, and is confident reading the numbers.
+
+  - id: pricing_and_profit
+    name: Pricing and profit
+    informed_by: [pricing_basis, last_price_change, biggest_costs, owner_pay, profile.profitable]
+    levels:
+      1: Prices were picked by feel or the owner is not sure how, have never been raised, and the business loses money or the owner does not know whether it makes any.
+      2: Prices follow competitors without the owner's own costs in mind, were last raised more than three years ago or never, and the business about breaks even.
+      3: Prices take costs partly into account, were raised in the last one to three years, and the business breaks even or makes a little; the owner is paid only when money is left over.
+      4: Prices are built from costs plus a profit and were reviewed in the last one to three years, and the business makes more than it spends.
+      5: Prices are built from costs plus a profit and were raised in the last 12 months, the business makes more than it spends, and the owner is paid a regular amount.
+
+  - id: cash
+    name: Cash on hand and cash flow
+    informed_by: [cash_runway, cash_shortfall, paid_when, seasonality]
+    levels:
+      1: The business could pay its bills for less than a month with no money coming in, and is often short of cash to pay a bill on time.
+      2: The business has less than a month of cash, or one to three months with a shortfall once or twice in the last year, and customers often pay late.
+      3: The business has one to three months of cash, has rarely been short, and customers mostly pay within 30 days.
+      4: The business has three to six months of cash, has not been short in the last year, and the owner knows how sales move through the year.
+      5: The business has more than six months of cash, has not been short, and customers pay at the time of sale or by subscription.
+
+  - id: debt_and_concentration
+    name: Debt and dependence on a few customers
+    informed_by: [debt, top_customer_share]
+    levels:
+      1: The business owes suppliers past their due date or carries a credit card balance from month to month, and more than half of its sales come from one customer.
+      2: The business owes suppliers past their due date or carries a credit card balance, or more than half of its sales come from one customer.
+      3: The business has a bank, government or family loan that is being repaid as agreed, and its biggest customer brings a quarter to a half of its sales.
+      4: Any debt is a planned loan being repaid as agreed, and the biggest customer brings a tenth to a quarter of sales.
+      5: The business has no debt, or only a planned loan being repaid as agreed, and no customer brings more than a tenth of sales.

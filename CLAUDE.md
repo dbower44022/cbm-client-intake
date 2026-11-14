@@ -1230,11 +1230,6 @@ the strength of it.
   regular train is Sunday 11-15. The Association's build state is
   `prds/chapter-network/deployment-guide/association-setup-plan.md` and
   `OPEN-ITEMS.md` items 72 and 76.
-- **v0.318.0 (2026-11-10) is live on both deployments and verified**
-  (pushed 11-10-26, `/healthz` read 20:48, checked on crm-test by Doug): the
-  Last Contact Date column in Client Administration, and wider column-resize
-  handles on every grid. Nothing owed. The chapters get it on the Sunday
-  11-15 train.
 - **v0.318.1–v0.318.4 (2026-11-11) are live on both deployments**
   (pushed 11-11-26, `/healthz` read 23:17): a CBM member can no longer be
   attached as a record contact (#77, closed); Client Management's *Add
@@ -1261,4 +1256,7 @@ the strength of it.
   (`BUSINESS_EVALUATION`, off in production, on at crm-test's `/setup`).
   Checked locally by Doug as Joe Mentor; the real send on crm-test is owed
   in #83.
+- **v0.332.0 (2026-11-14) committed, not pushed**: Business Evaluation
+  phase 3, the analysis (`evaluation/analysis.py`), off behind
+  `EVALUATION_ANALYSIS_SECONDS`; sample reports reviewed by Doug. Owed in #83.
 Everything else still owed is in `OPEN-ITEMS.md`.

@@ -276,6 +276,15 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="Seconds between the worker's passes that send a submitted survey the "
             "CRM refused at the time. The answers are kept until it succeeds. 0 stops "
             "the pass."),
+    _s("evaluation_analysis_seconds", GROUP_FEATURES, "Evaluation analysis interval",
+       kind="int", component="worker", unit="s",
+       help="Seconds between the worker's passes that write a draft report for each "
+            "submitted Business Evaluation through the Claude API, then email the "
+            "engagement's mentor from the shared mailbox. 0 stops the analysis. Needs "
+            "Business Evaluation on and the Anthropic API key. Each report costs "
+            "about $0.10 to $0.20."),
+    _s("evaluation_model", GROUP_FEATURES, "Evaluation analysis model", component="worker",
+       help="The Claude model that writes the Business Evaluation draft reports."),
     _s("campaigns_enabled", GROUP_FEATURES, "Marketing Management", kind="bool",
        component="both",
        help="The Marketing Management tile, the Prospects grid and import, the "
@@ -1202,6 +1211,7 @@ INTEGRATION_TAGS: dict[str, tuple[str, str]] = {
     "summary_model": ("anthropic", ""),
     "integration_agent_model": ("anthropic", ""),
     "integration_agent_monthly_budget": ("anthropic", ""),
+    "evaluation_model": ("anthropic", ""),
     "comms_ai_summary": ("anthropic", ""),
     "enrichment_ai": ("anthropic", ""),
     "enrichment_ai_model": ("anthropic", ""),

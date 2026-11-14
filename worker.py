@@ -329,6 +329,8 @@ async def main() -> None:
     # The survey engine's retry pass, one cadence per survey purpose.
     next_survey_retry: dict[str, datetime] = {}
     survey_store = None
+    # Business Evaluation's analysis pass (phase 3; EVALUATION_ANALYSIS_SECONDS).
+    next_eval_analysis = datetime.now(timezone.utc)
 
     # Intake-receipt reconciliation (Doug's 2026-07-27 redesign): converge
     # every row's CIntakeSubmission receipt — the guarantee behind "the CRM is
@@ -875,6 +877,33 @@ async def main() -> None:
                 except Exception as exc:  # noqa: BLE001 — never crashes delivery
                     log.warning("survey retry pass for %s failed: %s", purpose.key, exc)
                 next_survey_retry[purpose.key] = now + timedelta(seconds=interval)
+            # Business Evaluation's own pass, beside the engine's (phase 3): a
+            # Submitted record gets its draft report through the Claude API.
+            from evaluation import analysis as _eval_analysis
+
+            if _eval_analysis.enabled(settings) and now >= next_eval_analysis:
+                try:
+                    import anthropic
+                    from evaluation.purpose import surveys as _eval_surveys
+
+                    # A draft report is a large write: the CRM took longer
+                    # than the usual 20 seconds on crm-test 11-14-26, and a
+                    # timed-out write means the area is analyzed (and paid
+                    # for) again on the next pass.
+                    _crm = EspoClient(settings.espo_base_url, settings.espo_api_key,
+                                      max(settings.request_timeout_seconds, 60))
+                    _claude = anthropic.AsyncAnthropic(
+                        api_key=settings.anthropic_api_key, timeout=600.0, max_retries=2)
+                    try:
+                        await _eval_analysis.run_analysis_cycle(
+                            settings, _crm, _claude, surveys=_eval_surveys() or {},
+                            notify=_eval_analysis.make_notifier(settings, _crm))
+                    finally:
+                        await _claude.close()
+                except Exception as exc:  # noqa: BLE001 — never crashes delivery
+                    log.warning("evaluation analysis pass failed: %s", exc)
+                next_eval_analysis = now + timedelta(
+                    seconds=settings.evaluation_analysis_seconds)
         if sandbox_on and now >= next_sandbox:
             try:
                 from core.sandbox_reset import reset_app_tables

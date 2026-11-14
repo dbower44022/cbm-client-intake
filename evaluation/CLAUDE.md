@@ -1,6 +1,6 @@
 # evaluation/ — Business Evaluation
 
-Last Updated: 11-13-26 14:53 · Revision 1.2
+Last Updated: 11-14-26 13:35 · Revision 1.3
 
 Detail for the Business Evaluation offering. Claude Code loads this file only
 when a session works in this folder. The plan is
@@ -117,6 +117,54 @@ table names or the `/evaluation/{token}` page, read the engine's equivalent.
 - Tests: `tests/test_evaluation_mentor.py`; the in-memory store is
   `tests/survey_fakes.MemoryStore` (since phase 2b).
 
+## What phase 3 built (v0.332.0)
+
+- **The analysis prompts and rubrics are versioned files** (BE9), beside the
+  surveys: `prompts/<key>.v<n>.yaml` (the system text, `{{org}}` filled in,
+  naming its rubric) and `rubrics/<key>.v<n>.yaml` (dimensions, each with
+  levels 1 to 5 and the questions it rests on). `analysis.load_all` checks
+  them; tests check every rubric's `informed_by` names a real question, and
+  that the Finance and Marketing prompts share their rules word for word
+  except the area's own words. **A prompt or rubric a real client's report
+  was written from is never edited**: a change is a new version. Doug
+  11-14-26: they stay files through the pilot and become editable in System
+  Settings later (plan § 7 question 6).
+- **The voice is Doug's, 11-14-26**: questionnaire answers are impressions,
+  so a report names areas worth looking at, quotes what points to each and
+  asks what would settle it; it never states a cause or figure the survey
+  cannot show. Round 1 of the samples was rejected as too authoritative.
+- **The report** (`report.py`, BE16): `Report` is the structured output,
+  `render` the `draftReport` HTML. "Points to check" sits in
+  `<div data-internal="true">`, which the CRM keeps (read back on crm-test),
+  for phase 5's client version to drop. The missing-information section is
+  headed "Questions to explore".
+- **The worker pass** (`analysis.run_analysis_cycle`, in `worker.py` beside
+  the engine's retry): Submitted records, ten a pass, one
+  `client.beta.messages.parse` call per area (`EVALUATION_MODEL`, adaptive
+  thinking, effort high, `fallbacks: "default"`). **The CRM status is the
+  queue**: Draft Ready on success, Analysis Failed with `analysisError` on
+  failure, Retry sets Submitted. A CRM error leaves the record Submitted for
+  the next pass, which then pays for the call again — hence the pass's
+  60-second CRM timeout. On only when `enabled()`: the switch,
+  `EVALUATION_ANALYSIS_SECONDS` above 0, the Anthropic integration in use, a
+  key, not a dry run.
+- **No contact details reach the Claude API**: `analysis.scrub` removes email
+  addresses, phone numbers and street addresses from every answer; a test
+  reads the request sent. The company name and business profile are sent.
+- **An area submitted before the business profile waits** up to 24 hours
+  (`PROFILE_WAIT`), then is analyzed without it, flagged in Points to check.
+- **The mentor's email** (`make_notifier`, Doug's choice A): from
+  `OPS_MAILBOX` to the engagement mentor's `cbmEmail`, linking
+  `?tab=evaluations`. No shared mailbox, no email. Never fails the analysis.
+- **The draft never reaches the client** (BE17): a test fails if any module
+  besides `analysis.py`, `report.py` and `sending.py` names `draftReport`.
+- **An Anthropic key must be scoped to a workspace**: an unscoped key is
+  refused ("must include the anthropic-workspace-id header"), found 11-14-26.
+- **Samples**: `scripts/evaluation_sample_reports.py <engagement id>` sends,
+  submits made-up bakery answers and analyzes, on crm-test only; about $0.12
+  per area.
+- Tests: `tests/test_evaluation_analysis.py`.
+
 ## The CRM
 
 `crm-plans/business-evaluation.json` (fingerprint `89d89d28b53b` on crm-test)
@@ -134,3 +182,4 @@ create).
 | 1.0 | 11-13-26 10:40 | Claude (Claude Code) | Created at the close of phase 1 (v0.324.0). |
 | 1.1 | 11-13-26 13:55 | Claude (Claude Code) | Phase 2, the mentor side (v0.328.0). |
 | 1.2 | 11-13-26 14:53 | Claude (Claude Code) | Phase 2b: the survey engine moved out to `surveys/` (ruling BE23). |
+| 1.3 | 11-14-26 13:35 | Claude (Claude Code) | Phase 3, the analysis (v0.332.0). |

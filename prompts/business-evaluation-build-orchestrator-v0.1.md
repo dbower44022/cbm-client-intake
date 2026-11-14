@@ -1,6 +1,6 @@
 # Build orchestrator — Business Evaluation
 
-Last Updated: 11-13-26 23:36 · Revision 0.8 — see change log at the end.
+Last Updated: 11-14-26 13:35 · Revision 0.9 — see change log at the end.
 
 This file runs the whole build of the Business Evaluation offering. It names the
 phases, the prompt for each one, the rules that every phase session follows, and
@@ -29,8 +29,8 @@ All rulings in the plan were approved by Doug on 11-13-26.
 | 1 | The foundation: the CRM plan on crm-test, the survey definition format, the business profile, Finance and Marketing survey drafts, the link store, the public survey page | `prompts/business-evaluation-phase1-prompt-v0.1.md` | Built v0.324.0, live-checked by Doug 11-13-26 |
 | 2 | The mentor side: the Evaluations tab, Send Evaluation, the email, status, resend and expire | `prompts/business-evaluation-phase2-prompt-v0.1.md` | Built v0.328.0, checked by Doug as Joe Mentor 11-13-26 |
 | 2b | The survey engine (ruling BE23): the engine pieces moved from `evaluation/` into `surveys/`, with Business Evaluation as the first survey purpose | `prompts/business-evaluation-phase2b-prompt-v0.1.md` | Built v0.330.0, live-checked by Doug on a local run against crm-test 11-13-26 |
-| 3 | The analysis: the worker job, the analysis prompts and rubrics, the report template, Retry | `prompts/business-evaluation-phase3-prompt-v0.1.md` | Prompt approved by Doug 11-13-26 (revision 0.3); not started |
-| 4 | Review and approval, and scheduling the review session | written at the end of phase 3 | — |
+| 3 | The analysis: the worker job, the analysis prompts and rubrics, the report template, Retry | `prompts/business-evaluation-phase3-prompt-v0.1.md` | Built v0.332.0; sample reports reviewed by Doug 11-14-26 |
+| 4 | Review and approval, and scheduling the review session | `prompts/business-evaluation-phase4-prompt-v0.1.md` | Draft prompt, revision 0.1, awaiting Doug's approval |
 | 5 | Release of the client version, and action items as records | written at the end of phase 4 | — |
 | 6 | The partner and funder offering, and the anonymized roll-up | written at the end of phase 5 | — |
 | 7 | The pilot review, then the other four evaluation areas as content | written at the end of phase 6 | — |
@@ -120,3 +120,4 @@ partner sees or receives, which goes to Doug as a decision.
 | 0.6 | 11-13-26 14:22 | Claude (Cowork) | Ruling BE23: phase 2b added after phase 2, before phase 3; phase 3's prompt revised at the close of phase 2b; new rule that the survey engine holds no Business Evaluation code. Merged by Claude (Claude Code) 11-13-26 14:24. |
 | 0.7 | 11-13-26 22:58 | Claude (Claude Code) | Phase 2b built (v0.330.0); phase 3's prompt revised for the survey engine. |
 | 0.8 | 11-13-26 23:36 | Claude (Claude Code) | Phase 3 prompt approved by Doug. |
+| 0.9 | 11-14-26 13:35 | Claude (Claude Code) | Phase 3 built (v0.332.0); phase 4 draft prompt written. |

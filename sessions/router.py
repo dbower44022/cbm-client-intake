@@ -1061,6 +1061,30 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 raise HTTPException(status_code=404, detail="That evaluation is not on this engagement.")
             return view
 
+        @router.post("/records/{parent_id}/evaluations/{record_id}/retry")
+        async def record_evaluation_retry(parent_id: str, record_id: str, request: Request) -> dict:
+            """Retry (ruling BE15): an Analysis Failed record goes back to
+            Submitted, and the worker's next analysis pass writes the draft."""
+            _evaluations_on()
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            try:
+                result = await eval_sending.retry_analysis(client, parent_id, record_id)
+            except eval_sending.SendError as exc:
+                raise HTTPException(status_code=400, detail=str(exc))
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not retry the draft report")
+            await action_log.record_action(
+                client, app=cfg.title, category=action_log.CAT_STATUS,
+                action=action_log.ACT_EVALUATION_RETRIED,
+                parent_type=cfg.parent_entity, parent_id=parent_id,
+                summary=f"Business Evaluation {result['area']}: draft report retried.",
+                actor_id=user["userId"], actor_name=user["name"],
+                details={"record": record_id, "lastError": result["error"],
+                         "fields": {"status": result["status"]}},
+            )
+            return {"id": record_id, "status": result["status"]["to"]}
+
         @router.post("/records/{parent_id}/evaluations/send")
         async def record_evaluation_send(
             parent_id: str, body: EvaluationSendIn, request: Request

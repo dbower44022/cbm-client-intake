@@ -814,7 +814,11 @@
     hide($("detailNotice"));
     renderOverview(currentDetail);
     renderSessions(currentDetail);
-    activateDetailTab("overview");
+    // A record page opened with ?tab=<key> (the draft-ready email links to
+    // ?tab=evaluations) opens on that tab when the record has it.
+    var wantTab = RECORD_ID ? new URLSearchParams(location.search).get("tab") : "";
+    activateDetailTab(wantTab && document.querySelector('[data-dtab="' + wantTab.replace(/[^A-Za-z]/g, "") + '"]')
+      ? wantTab.replace(/[^A-Za-z]/g, "") : "overview");
     showDetail();
     window.scrollTo(0, 0);
   }
@@ -5030,7 +5034,10 @@
 
   fitGrid("evlTable", "evaluations", paintEvl, [{ col: "round", dir: "desc" }, { col: "area", dir: "asc" }]);
 
-  function openEvl(title) {
+  // ``wide``: the reading view (answers and draft report) fills 90% of the
+  // window (Doug, 11-14-26); the Send and confirm dialogs stay compact.
+  function openEvl(title, wide) {
+    $("evlModal").classList.toggle("evl--wide", !!wide);
     $("evlModalTitle").textContent = title || "";
     $("evlModalBody").innerHTML = ""; $("evlModalFoot").innerHTML = "";
     show($("evlModal"));
@@ -5053,15 +5060,38 @@
   // profile. Both arrive as the server's question-and-answer HTML, built
   // from escaped text (evaluation/service.readable_html).
   async function openEvlAnswers(row) {
-    openEvl(row.area + " — round " + row.round);
+    openEvl(row.area + " — round " + row.round, true);
     var body = $("evlModalBody");
     body.appendChild(evlPara("Loading…", "sx__loading"));
+    // Retry (ruling BE15) is always shown; the server names why when the
+    // draft report did not fail.
+    var retry = evlButton("Retry draft report", true, function () { evlRetry(row, retry); });
+    $("evlModalFoot").appendChild(retry);
     $("evlModalFoot").appendChild(evlButton("Close", true, closeEvl));
     try {
       var r = await api("/records/" + encodeURIComponent(currentDetail.id) + "/evaluations/" + encodeURIComponent(row.id));
       body.innerHTML = "";
       body.appendChild(evlPara("Status: " + (r.status || "—") +
         (r.submittedAt ? " · submitted " + fmtSessionDate(r.submittedAt, "short") : ""), "sx__muted"));
+      // The draft report (phase 3): reviewers only, never the client (BE17).
+      var hd = document.createElement("h4"); hd.textContent = "Draft report"; body.appendChild(hd);
+      if (r.draftHtml) {
+        body.appendChild(evlPara("Written by the AI service " +
+          (r.analyzedAt ? fmtSessionDate(r.analyzedAt, "short") + " " : "") +
+          "(" + [r.promptVersion, r.rubricVersion].filter(Boolean).join(", ") +
+          "). Your client has not seen it.", "sx__muted"));
+        var d = document.createElement("div"); d.className = "evl__answers evl__draft";
+        d.innerHTML = sanitizeHtml(String(r.draftHtml));
+        body.appendChild(d);
+      } else if (r.status === "Analysis Failed") {
+        body.appendChild(evlPara("The draft report could not be written: " +
+          (r.analysisError || "no reason was recorded.") + " Press Retry draft report to try again.",
+          "sx__notice is-error"));
+      } else if (r.status === "Submitted") {
+        body.appendChild(evlPara("The draft report is being written. It usually takes a few minutes.", "sx__muted"));
+      } else {
+        body.appendChild(evlPara("There is no draft report until the client submits this survey.", "sx__muted"));
+      }
       var h1 = document.createElement("h4"); h1.textContent = r.area + " answers"; body.appendChild(h1);
       if (r.answersHtml) {
         var a = document.createElement("div"); a.className = "evl__answers";
@@ -5083,6 +5113,21 @@
       body.innerHTML = "";
       body.appendChild(evlPara(e.message, "form-error"));
     }
+  }
+
+  async function evlRetry(row, btn) {
+    var done = window.CBMBusy ? CBMBusy.start(btn) : function () {};
+    try {
+      await api("/records/" + encodeURIComponent(currentDetail.id) + "/evaluations/" +
+        encodeURIComponent(row.id) + "/retry", { method: "POST", body: "{}" });
+      closeEvl();
+      notice("evlNotice", row.area + ": the draft report will be written again in the next few minutes.", "success");
+      renderEvaluations(true);
+    } catch (e) {
+      if (e.status === 401) { closeEvl(); showLogin(); return; }
+      var err = evlPara(e.message, "sx__notice is-error");
+      $("evlModalBody").insertBefore(err, $("evlModalBody").firstChild);
+    } finally { done(); }
   }
 
   // Send Evaluation (ruling BE10): any number of areas; two or three are

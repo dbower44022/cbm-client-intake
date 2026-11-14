@@ -1,6 +1,6 @@
 # sessions/ — Client, Partner and Funder Management
 
-Last Updated: 11-13-26 13:55 · Revision 1.10
+Last Updated: 11-14-26 13:35 · Revision 1.11
 
 Detail for the session engine behind Client Management (`/mentorsessions`), Partner Management (`/partnersessions`) and Funder Management (`/sponsorsessions`): the grids, every record tab, quick add, managers and co-mentors, and the traps of this package.
 
@@ -329,12 +329,17 @@ Watch for these when touching this package:
   puts it right after Sessions and registers `/records/{id}/evaluations…`;
   every route answers 404 while the switch is off. The logic is in
   `evaluation/sending.py`; detail in `evaluation/CLAUDE.md`. The tab
-  refetches on every visit.
+  refetches on every visit. Since v0.332.0 (phase 3) the row's dialog shows the draft
+  report above the answers, fills 90% of the window, and carries **Retry
+  draft report** (`POST …/evaluations/{record}/retry`, action-logged). **A
+  record page opens on the tab `?tab=<key>` names** when the record has it
+  (the draft-ready email links `?tab=evaluations`).
 
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.11 | 11-14-26 13:35 | Claude (Claude Code) | The Evaluations tab's draft, Retry and `?tab=` (v0.332.0). |
 | 1.10 | 11-13-26 13:55 | Claude (Claude Code) | The Evaluations tab (v0.328.0). |
 | 1.9 | 11-11-26 23:25 | Claude (Claude Code) | Attaching a CBM member refused; Client Management's named add buttons (v0.318.1–v0.318.3). |
 | 1.8 | 11-06-26 02:16 | Claude (Claude Code) | The History tab, partner and funder only, and old-and-new values (v0.312.0). |

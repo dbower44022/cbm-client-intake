@@ -293,7 +293,8 @@ async def answers_view(client: Any, engagement_id: str, record_id: str,
     the record is not this engagement's (the caller answers 404)."""
     rec = await client.get(service.ENTITY, record_id, select=(
         "id,name,evaluationArea,evaluationRound,status,sentAt,submittedAt,"
-        "engagementId,clientProfileId,answersReadable"))
+        "engagementId,clientProfileId,answersReadable,draftReport,analyzedAt,"
+        "analysisError,promptVersion,rubricVersion"))
     if rec.get("engagementId") != engagement_id:
         return None
     profile_html: Optional[str] = None
@@ -314,7 +315,38 @@ async def answers_view(client: Any, engagement_id: str, record_id: str,
         "sentAt": rec.get("sentAt"), "submittedAt": rec.get("submittedAt"),
         "answersHtml": rec.get("answersReadable") or "",
         "profileHtml": profile_html, "profileNote": profile_note,
+        # The draft report (phase 3), read-only here; reviewers only (BE17).
+        "draftHtml": rec.get("draftReport") or "",
+        "analyzedAt": rec.get("analyzedAt"),
+        "analysisError": rec.get("analysisError") or "",
+        "promptVersion": rec.get("promptVersion") or "",
+        "rubricVersion": rec.get("rubricVersion") or "",
     }
+
+
+# --- Retry a failed analysis (phase 3, ruling BE15) ------------------------------
+
+STATUS_ANALYSIS_FAILED = "Analysis Failed"
+
+
+async def retry_analysis(client: Any, engagement_id: str, record_id: str) -> dict[str, Any]:
+    """Put an Analysis Failed record back in the worker's queue: status
+    Submitted, the last error cleared. Written as the user. Raises
+    ``SendError`` naming why when the record is not this engagement's or did
+    not fail."""
+    rec = await client.get(service.ENTITY, record_id,
+                           select="id,engagementId,evaluationArea,status,analysisError")
+    if rec.get("engagementId") != engagement_id:
+        raise SendError("That evaluation is not on this engagement.")
+    status = rec.get("status") or ""
+    if status != STATUS_ANALYSIS_FAILED:
+        raise SendError(f"Retry is for a draft report that failed. This evaluation is "
+                        f"{status or 'without a status'}, so there is nothing to retry.")
+    await client.update(service.ENTITY, record_id,
+                        {"status": service.STATUS_SUBMITTED, "analysisError": ""})
+    return {"id": record_id, "area": rec.get("evaluationArea") or "",
+            "error": rec.get("analysisError") or "",
+            "status": {"from": STATUS_ANALYSIS_FAILED, "to": service.STATUS_SUBMITTED}}
 
 
 # --- the email (step 4) ----------------------------------------------------------
