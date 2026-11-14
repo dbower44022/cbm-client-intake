@@ -1,8 +1,8 @@
 # Kickoff prompt — Business Evaluation, phase 3: the analysis
 
-Last Updated: 11-13-26 22:58 · Revision 0.2 — see change log at the end.
+Last Updated: 11-13-26 23:36 · Revision 0.3 — see change log at the end.
 
-**Draft, awaiting Doug's approval.** Written at the close of phase 2 (v0.328.0)
+**Approved by Doug 11-13-26.** Written at the close of phase 2 (v0.328.0)
 and revised at the close of phase 2b (v0.330.0), which moved the survey page,
 the links, the saved answers and the submit retry into the survey engine,
 `surveys/` (ruling BE23). Paste everything below the line into a fresh Claude
@@ -118,3 +118,4 @@ the other four areas (phase 7); reading the client's website or competitors
 |---|---|---|---|
 | 0.1 | 11-13-26 13:58 | Claude (Claude Code) | Drafted at the close of phase 2, from the orchestrator and what phases 1 and 2 built. |
 | 0.2 | 11-13-26 22:58 | Claude (Claude Code) | Revised at the close of phase 2b: the order note replaced; `surveys/CLAUDE.md` added to the reading; the files where the analysis joins renamed to the engine's (`surveys/answers.py`, `evaluation/purpose.py`, the engine's retry pass); the analysis stays in `evaluation/`. |
+| 0.3 | 11-13-26 23:36 | Claude (Claude Code) | Approved by Doug. |
