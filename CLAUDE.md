@@ -1261,9 +1261,4 @@ the strength of it.
   (`BUSINESS_EVALUATION`, off in production, on at crm-test's `/setup`).
   Checked locally by Doug as Joe Mentor; the real send on crm-test is owed
   in #83.
-- **v0.330.0 (2026-11-13) is live on both deployments** (pushed 11-13-26,
-  `/healthz` read 23:13): Business Evaluation phase 2b, the survey engine
-  `surveys/` (ruling BE23); migration 0047 ran on both. A link made before
-  the push opened through the redirect on crm-test (Doug, 11-13-26). Nothing
-  owed for 2b.
 Everything else still owed is in `OPEN-ITEMS.md`.
