@@ -1,6 +1,6 @@
 # Integrations tab — System Settings plan
 
-Last Updated: 11-14-26 01:40 · Revision 0.14
+Last Updated: 11-14-26 14:10 · Revision 0.15
 
 This is the design record for a new top-level **Integrations** tab on the System
 Settings page (`/setup`). It holds Doug's rulings, the contents of each
@@ -361,6 +361,16 @@ next step based on the results of the previous step. Simple, Easy, Reliable."
 - "Does this chapter use Zoom?" is the wizard's first screen, a plain Yes/No
   question that saves the "in use" setting; No ends the wizard.
 
+**Event hosting (11-14-26).** Doug's review of the Zoom wizard pilot's first
+question led to a plan of its own, `prds/events/event-hosting-plan.md`
+(rulings EH1 to EH10): **Zoom Meetings and Zoom Webinars become separate
+integrations**, each with its own credentials (Webinars may use Meetings'
+when on the same account), one event host user per chapter, and a default
+hosting method per audience. The split is built here, in phase 9, before the
+other integrations' screens; the pilot's 14 Zoom screens are reworded for
+Zoom Webinars then. The Events side is built in a separate session
+(`prompts/event-hosting-build-prompt-v0.1.md`).
+
 **What this means for the build** (§ 8, replaced from phase 8 on; phases 1
 to 7 stand as built):
 
@@ -381,6 +391,7 @@ to 7 stand as built):
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.15 | 11-14-26 14:10 | Claude (Claude Code) | § 10: the event-hosting plan (rulings EH1 to EH10, Doug 11-14-26) splits Zoom into Zoom Meetings and Zoom Webinars; the split is phase 9's first part. |
 | 0.14 | 11-14-26 01:40 | Claude (Claude Code) | Phase 8 built: v0.331.0, the set-up wizard piloted on Zoom (14 screens approved by Doug 11-14-26). Not pushed. |
 | 0.13 | 11-14-26 00:11 | Claude (Claude Code) | § 10, the wizard: rulings W1 to W6 from Doug's review of crm-test's Zoom sub-tab after phase 7 (11-13-26 23:08 to 11-14-26). They supersede I4, I7 and I10 to I12; § 8's phases from 8 on are replaced by 8 to 11 in § 10. |
 | 0.12 | 11-13-26 17:45 | Claude (Claude Code) | Phase 7 built: v0.329.0, the setup assistant. Doug's decisions 11-13-26: three coded actions (the Google shared drive without a folder scheme — folders are made per record already; the Twilio sender number; the Zoom host); applying CRM structure from a button dropped (it would bypass the crm-test-first runbook); a setting-reset step kind for fix and setup plans. § 6.5's inferred manual steps confirmed from each vendor's documentation (the Google Cloud project and key remain inferred). Not pushed. |
