@@ -1,9 +1,9 @@
 # The deployment guide as data
 
-**Version:** 0.7
+**Version:** 0.8
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 11-13-26 10:30
+**Last Updated:** 11-14-26 02:10
 
 ---
 
@@ -61,6 +61,7 @@ steps: [...]
 | `done_when` | The finishing test, word for word from the step list. A test with several conditions is a list, one condition per item, rendered as "Done when all of these are true". Only conditions go in it. |
 | `note` | A sentence that explains the finishing test without being a condition, such as "There are two sets, not one." Printed after the conditions, and kept word for word with the step list's Note line. |
 | `check` | `how`: how a person confirms it — a sentence, or a list with one concrete check per item, each naming where to look and what must be seen. `probe`: what the app would check automatically, in plain words, or `none`. `auto` (optional): the automatic checks System Settings runs for the step on an integration's setup checklist, as a list of names from `integrations/checklist.py` — `setting_set:<setting>`, `test_passed:<integration>` or `mailing_connected`. All must pass for the box to tick itself, and a step with `auto` can never be ticked by hand. A step without it is ticked by hand. |
+| `wizard` | Optional: the screens of the Integrations tab's set-up wizard for this step (plan § 10). Each has `id`, `title`, `what`, `why`, `how`, and may have `see`, `if_not`, `copy` (values shown with a Copy button), `ask` (answers, each with `then` — `next`, `end` or a screen id — and `sets`), `enters` (a setting typed on the screen), `check` (`decided:<setting>`, `setting_set:<key>`, `test:<integration>` or `test:<integration>/<check>`; none means Done) and `when` (`<screen>=<answer>`). Not printed in the guide. |
 | `integration` | Optional: the sub-tabs of System Settings' Integrations tab whose setup checklist shows the step, as a list of integration keys (`integrations/registry.py`), for example `[zoom]`. A step on two sub-tabs is ticked once for both. |
 | `if_not` | What to do when the check fails: a sentence, or a list with one failure case per item, each naming how to recognise it. Default: stop and ask the Association. |
 | `goes_wrong` | The known failure and how to recognise it, or `nothing known yet`. |
@@ -99,6 +100,7 @@ screen is not known, say so in the action.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.8 | 11-14-26 02:10 | A step may carry `wizard`, the screens of the Integrations tab's set-up wizard (plan § 10, rulings W1 to W6). Not printed. |
 | 0.7 | 11-13-26 10:30 | A step may carry `integration` and `check.auto`, which place it on an integration's setup checklist in System Settings and name its automatic checks (prds/integrations-tab-plan.md section 4; the plan's `check:` key became `check.auto`, because `check` already held `how` and `probe`). Neither is printed in the guide. |
 | 0.6 | 11-07-26 15:21 | `central` in `who` and `by` now prints as the Association, the Business Mentors Association, in place of the central support organization. The data value keeps its spelling. |
 | 0.5 | 09-25-26 12:50 | A stage or a step may carry `summary`, what is done and why in a few sentences, printed as Summary in place of Why (Doug, 09-25-26, for stage 10). `check.how` may be a list, one concrete check per item. |

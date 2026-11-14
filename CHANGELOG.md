@@ -5,6 +5,36 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.331.0] — 2026-11-14
+
+**feat: the Integrations tab, phase 8 — the set-up wizard, piloted on Zoom.**
+Dark behind **`INTEGRATIONS_TAB`**. Plan `prds/integrations-tab-plan.md` § 10,
+rulings W1 to W6 (Doug, 11-13-26 and 11-14-26, after his review of crm-test's
+Zoom sub-tab: three overlapping lists of steps); Zoom's 14 screens approved by
+Doug 11-14-26; `OPEN-ITEMS.md` #82.
+
+- **The screens live in the guide**: a step may carry `wizard:` — one screen
+  per action, each with what, why and how, and a question (`ask:` with
+  branches), a box (`enters:`) or Done; `check:` is `decided:`, `setting_set:`
+  or `test:<integration>[/<check>]`. Step 5.5 holds Zoom's 14. Not printed: a
+  test renders every stage with and without them. Stage 5 0.20,
+  `steps/README.md` 0.8.
+- **The engine** (`integrations/wizard.py`): starts at the first screen whose
+  check fails (W5), judged from the settings and the last stored test, so
+  opening the page calls no outside service; every check passing reads "set
+  up". One screen at a time; Back; Start again. An answer's setting and a
+  box's value are saved through the checked save path; a screen's test check
+  runs the integration test at once, and a failure stays on its screen with
+  the check's words and the guide's "if not". Progress is kept for the whole
+  deployment (`integration_wizard`, migration `0048`).
+- **Ask Claude about this** on a failed screen only (W6): the agent's
+  read-only tools and the vendor's documentation, a short answer on that
+  screen (`diagnosis.explain`, `ASK_SYSTEM`), in the background; its cost in
+  `integration_agent_call` and counted against the monthly budget.
+- **The page**: a Set-up wizard panel first on the sub-tab, beside the old
+  sections until phase 10 removes them.
+- Tests: `tests/test_integration_wizard.py` (16).
+
 ## [0.330.0] — 2026-11-13
 
 **refactor: Business Evaluation, phase 2b — the survey engine (ruling BE23).**

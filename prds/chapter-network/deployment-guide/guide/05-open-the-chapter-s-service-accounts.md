@@ -1,7 +1,7 @@
 # Stage 5 — Open the chapter's service accounts
 
-**Version:** 0.19  
-**Last Updated:** 11-13-26 10:30  
+**Version:** 0.20  
+**Last Updated:** 11-14-26 02:10  
 **Generated from** `steps/stage-05.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -730,6 +730,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 | Version | Date | Change |
 |---|---|---|
+| 0.20 | 11-14-26 02:10 | Step 5.5 carries the Integrations tab's Zoom wizard: fourteen screens under a new wizard key (plan § 10, rulings W1 to W6; screens approved by Doug 11-14-26). The key is not printed, so the guide's steps read exactly as before. |
 | 0.19 | 11-13-26 10:30 | Steps 5.13 to 5.17 added, each for an outside service the applications use and no step set up: the Fathom team API key, the Lob account and keys, the Twilio account and number, the carrier registration of the number, and the Anthropic API key (mapping approved by Doug 11-13-26). No existing step number changed. Steps that belong to an integration carry the new keys integration and check.auto, read by the setup checklist on System Settings' Integrations tab (prds/integrations-tab-plan.md section 4, mapping approved by Doug 11-13-26). |
 | 0.18 | 11-10-26 10:41 | Step 5.5's status records the read-only credentials check for the Business Mentors Association (11-10-26): token issued, host found, webinar listing refused for want of the Webinars licence. Its goes wrong note says the form asks the Zoom answers only when webinars are switched on. |
 | 0.17 | 11-09-26 17:42 | Step 5.8 follows CRMBuilder's new deploy wizard (PI-600, accepted 11-09-26): it makes the two tokens and puts them in the vault, and nothing more. The engagement it used to create and the Provider credentials window are gone; the tokens are entered inside the wizard in step 9.3. Applied from CRMBuilder's handoff of 11-09-26. |

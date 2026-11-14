@@ -1,6 +1,6 @@
 # Build orchestrator — the Integrations tab of System Settings
 
-Last Updated: 11-14-26 00:11 · Revision 0.9 — see change log at the end.
+Last Updated: 11-14-26 01:40 · Revision 0.10 — see change log at the end.
 
 This file runs the whole build of the Integrations tab. It names the phases,
 the prompt for each one, the rules that every phase session follows, and the
@@ -31,8 +31,8 @@ stopping points where the work pauses for Doug. The design is
 | 5 | The nightly integration test and its alert | `prompts/integrations-tab-phase5-prompt-v0.1.md` | Built v0.326.0, 11-13-26; awaiting Doug's review |
 | 6 | The diagnosis agent and fix plans | `prompts/integrations-tab-phase6-prompt-v0.1.md` | Built v0.327.0, 11-13-26; awaiting Doug's review |
 | 7 | The setup assistant and setup plans | `prompts/integrations-tab-phase7-prompt-v0.1.md` | Built v0.329.0, 11-13-26; awaiting Doug's review |
-| 8 | The wizard, piloted on Zoom (plan § 10, rulings W1 to W6) | `prompts/integrations-tab-phase8-prompt-v0.2.md` | Draft written 11-14-26; awaiting approval. (v0.1, documentation and live review, is superseded: it becomes phase 11.) |
-| 9 | The other eight integrations' wizard screens | written at the end of phase 8 | — |
+| 8 | The wizard, piloted on Zoom (plan § 10, rulings W1 to W6) | `prompts/integrations-tab-phase8-prompt-v0.2.md` | Built v0.331.0, 11-14-26; awaiting the live pilot on crm-test (stopping point 3). (v0.1 is superseded: it becomes phase 11.) |
+| 9 | The other eight integrations' wizard screens | `prompts/integrations-tab-phase9-prompt-v0.1.md` | Draft written 11-14-26; awaiting approval |
 | 10 | The removal of the checklist display, setup plans and fix plans (ruling W4) | written at the end of phase 9 | — |
 | 11 | Documentation, and the live review on crm-test | written at the end of phase 10 | — |
 
@@ -97,6 +97,7 @@ which goes to Doug as a decision.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.10 | 11-14-26 01:40 | Claude (Claude Code) | State column: phase 8 built (v0.331.0); phase 9 prompt drafted. |
 | 0.9 | 11-14-26 00:11 | Claude (Claude Code) | The wizard (plan § 10, rulings W1 to W6, Doug 11-13/14-26): phase 8 becomes the wizard pilot on Zoom; phases 9 to 11 added. |
 | 0.8 | 11-13-26 17:45 | Claude (Claude Code) | State column: phase 7 built (v0.329.0); phase 8 prompt drafted. |
 | 0.7 | 11-13-26 12:12 | Claude (Claude Code) | State column: phase 6 built (v0.327.0); phase 7 prompt drafted. |

@@ -1,6 +1,6 @@
 # Integrations tab — System Settings plan
 
-Last Updated: 11-14-26 00:11 · Revision 0.13
+Last Updated: 11-14-26 01:40 · Revision 0.14
 
 This is the design record for a new top-level **Integrations** tab on the System
 Settings page (`/setup`). It holds Doug's rulings, the contents of each
@@ -381,6 +381,7 @@ to 7 stand as built):
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.14 | 11-14-26 01:40 | Claude (Claude Code) | Phase 8 built: v0.331.0, the set-up wizard piloted on Zoom (14 screens approved by Doug 11-14-26). Not pushed. |
 | 0.13 | 11-14-26 00:11 | Claude (Claude Code) | § 10, the wizard: rulings W1 to W6 from Doug's review of crm-test's Zoom sub-tab after phase 7 (11-13-26 23:08 to 11-14-26). They supersede I4, I7 and I10 to I12; § 8's phases from 8 on are replaced by 8 to 11 in § 10. |
 | 0.12 | 11-13-26 17:45 | Claude (Claude Code) | Phase 7 built: v0.329.0, the setup assistant. Doug's decisions 11-13-26: three coded actions (the Google shared drive without a folder scheme — folders are made per record already; the Twilio sender number; the Zoom host); applying CRM structure from a button dropped (it would bypass the crm-test-first runbook); a setting-reset step kind for fix and setup plans. § 6.5's inferred manual steps confirmed from each vendor's documentation (the Google Cloud project and key remain inferred). Not pushed. |
 | 0.11 | 11-13-26 12:12 | Claude (Claude Code) | Phase 6 built: v0.327.0, the diagnosis agent and fix plans. Doug's decisions 11-13-26: § 6.6 settled as the narrowed `integration_event` table (only each integration job's top-level handler writes, scrubbed, once an hour, 14 days); a monthly budget setting, default $25; the allowed sites as checked (Google adds `knowledge.workspace.google.com`, Anthropic drops `docs.claude.com`). § 6.1's Tool Runner became a manual loop (SDK 0.116 does not resume a paused server-tool turn). Not pushed. |

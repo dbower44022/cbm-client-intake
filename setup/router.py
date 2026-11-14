@@ -122,6 +122,13 @@ async def _checklist_state(request: Request) -> dict[str, Any]:
             out["ticksStored"] = True
         except Exception as exc:  # noqa: BLE001
             log.warning("setup checklist ticks could not be read: %s", exc)
+    wizards = _wizard_store(request)
+    if wizards is not None:
+        try:
+            out["wizards"] = await wizards.all()
+            out["wizardsStored"] = True
+        except Exception as exc:  # noqa: BLE001
+            log.warning("wizard progress could not be read: %s", exc)
     mailing = getattr(request.app.state, "mailing_store", None)
     if mailing is not None:
         try:
@@ -1096,3 +1103,195 @@ async def discard_fix_plan(key: str, plan_id: str, request: Request) -> dict:
     await _log(user, fixplans.ACT_PLAN_DISCARDED, f"{integ.name}: fix plan discarded",
                {"integration": key, "plan": plan_id})
     return {"plan": await plans.get(plan_id)}
+
+
+# --- the setup wizard (prds/integrations-tab-plan.md § 10, rulings W1 to W6) ---
+
+def _wizard_store(request: Request):
+    return getattr(request.app.state, "wizard_store", None)
+
+
+class WizardIn(BaseModel):
+    screen: str = ""
+    answer: str = ""
+    value: str = ""
+
+
+async def _wizard_context(request: Request, key: str):
+    from integrations import wizard
+
+    store = _wizard_store(request)
+    if store is None:
+        raise HTTPException(status_code=400, detail="No database is attached, so the wizard cannot keep its place.")
+    screens = wizard.screens_for(key)
+    if not screens:
+        raise HTTPException(status_code=404, detail="This integration has no wizard yet.")
+    progress = dict(wizard.blank(), **(await store.get(key) or {}))
+    return store, screens, progress
+
+
+@router.post("/integrations/{key}/wizard/{action}")
+async def wizard_action(key: str, action: str, body: WizardIn, request: Request) -> dict:
+    """One wizard action (W1 to W5): answer, enter, done, back, restart, ask.
+    A setting is saved through the checked save path as the administrator;
+    a screen's test check runs the integration test now."""
+    import asyncio
+    import uuid
+
+    from integrations import registry, wizard
+    from integrations.store import MANUAL
+    from integrations.testing import run_integration_test as _run
+
+    user = _require_admin(request)
+    integ = _integration_or_404(key)
+    store, screens, p = await _wizard_context(request, key)
+    ids = [s.id for s in screens]
+    by_id = {s.id: s for s in screens}
+    actor = _actor(user)
+    reason = "set in the setup wizard"
+
+    async def respond() -> dict:
+        await store.put(key, p, by=actor)
+        return {"page": await page_payload(_store(request), await _test_runs(request),
+                                           await _checklist_state(request))}
+
+    if action == "restart":
+        p.clear()
+        p.update(wizard.blank())
+        return await respond()
+    if action == "back":
+        if p["history"]:
+            p["current"] = p["history"].pop()
+            p["finished"], p["ended"], p["failure"] = False, "", None
+        return await respond()
+
+    screen = by_id.get(body.screen)
+    if screen is None:
+        raise HTTPException(status_code=404, detail=f"There is no screen '{body.screen}' in {integ.name}'s wizard.")
+
+    if action == "ask":
+        failure = (p.get("failure") or {}).get("reason") or "Its check did not pass."
+        settings = get_settings()
+        if not (settings.anthropic_api_key or "").strip() and getattr(request.app.state, "anthropic_client", None) is None:
+            raise HTTPException(status_code=409, detail="The Anthropic API key is not set. Set it on the Anthropic sub-tab first.")
+        plans = _plan_store(request)
+        spent = (await plans.spent_this_month() if plans is not None else 0.0) + await store.spent_this_month()
+        budget = float(settings.integration_agent_monthly_budget or 0)
+        if spent >= budget:
+            raise HTTPException(status_code=409, detail=(
+                f"Claude has spent ${spent:.2f} this month, which reaches the monthly budget of ${budget:.2f}. "
+                "Raise the Integration agent monthly budget on the Anthropic sub-tab to ask again."))
+        if (p.get("help") or {}).get("status") == "running":
+            raise HTTPException(status_code=409, detail="Claude is already answering a question about this wizard.")
+        call_id = str(uuid.uuid4())
+        snap = await _snapshot(request, integ, (await _test_store(request).latest(key)) if _test_store(request) else {})
+        p["help"] = {"status": "running", "screen": screen.id, "id": call_id}
+        await store.record_call(call_id=call_id, integration=key, screen=screen.id, status="running", asked_by=actor)
+        tasks = getattr(request.app.state, "diagnosis_tasks", None)
+        if tasks is None:
+            tasks = request.app.state.diagnosis_tasks = set()
+        task = asyncio.create_task(_run_ask(request.app, key, call_id, snap, screen.as_dict(), failure, actor))
+        tasks.add(task)
+        task.add_done_callback(tasks.discard)
+        return await respond()
+
+    if screen.id != p.get("current") and screen.id not in ids:
+        raise HTTPException(status_code=409, detail="That screen is not in this wizard.")
+    p["failure"], p["help"] = None, None
+    then = "next"
+    if action == "answer":
+        chosen = next((a for a in screen.ask if str(a.get("answer")) == body.answer), None)
+        if chosen is None:
+            raise HTTPException(status_code=400, detail=f"'{body.answer}' is not an answer to this question.")
+        for skey, svalue in (chosen.get("sets") or {}).items():
+            try:
+                await _checked_save(request, user, skey, SettingIn(value=str(svalue), reason=reason))
+            except HTTPException as exc:
+                p["current"] = screen.id
+                p["failure"] = {"screen": screen.id, "reason": str(exc.detail)}
+                return await respond()
+        p["answers"][screen.id] = body.answer
+        then = str(chosen.get("then") or "next")
+    elif action == "enter":
+        if not screen.enters:
+            raise HTTPException(status_code=400, detail="This screen has no box to fill in.")
+        if body.value.strip():
+            try:
+                res = await _checked_save(request, user, screen.enters, SettingIn(value=body.value.strip(), reason=reason))
+            except HTTPException as exc:
+                p["current"] = screen.id
+                p["failure"] = {"screen": screen.id, "reason": str(exc.detail)}
+                return await respond()
+            if res.get("reverted"):
+                p["current"] = screen.id
+                p["failure"] = {"screen": screen.id, "reason": f"Saved, then undone automatically: {res['reverted']}"}
+                return await respond()
+    elif action != "done":
+        raise HTTPException(status_code=404, detail=f"There is no wizard action '{action}'.")
+
+    # The screen's check, now.
+    if screen.check and then != wizard.END:
+        test_runs = {}
+        if screen.check.startswith("test:"):
+            target = registry.integration_for(screen.check[5:].split("/")[0])
+            result = await _run(target, get_settings())
+            runs = _test_store(request)
+            if runs is not None:
+                await runs.record(result, trigger=MANUAL, run_by_id=str(user.get("userId") or ""), run_by=actor)
+            test_runs = {target.key: result}
+        overrides = await _store(request).load() if _store(request) is not None else {}
+        state = wizard.State(settings=get_settings(), overrides=overrides, test_runs=test_runs,
+                             answers=p["answers"])
+        outcome, why = wizard.evaluate(screen, state)
+        if outcome != wizard.PASS:
+            p["current"] = screen.id
+            p["failure"] = {"screen": screen.id, "reason": why}
+            return await respond()
+
+    nxt = wizard.next_screen(screens, screen.id, p["answers"], then)
+    p["history"].append(screen.id)
+    if then == wizard.END:
+        p["current"], p["ended"] = None, f"{integ.name} is marked as not used by this chapter."
+    elif nxt is None:
+        p["current"], p["finished"] = None, True
+    else:
+        p["current"] = nxt
+    return await respond()
+
+
+async def _run_ask(app: Any, key: str, call_id: str, snap: Any, screen: dict[str, Any],
+                   failure: str, actor: str) -> None:
+    """In the background: Claude's answer about one failed screen. Never raises."""
+    from integrations import diagnosis
+    from integrations.testing import secret_values
+
+    store = app.state.wizard_store
+    settings = get_settings()
+    outcome = None
+    try:
+        factory = getattr(app.state, "anthropic_client", None)
+        if factory is None:
+            import anthropic
+
+            client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key, timeout=300.0, max_retries=2)
+        else:
+            client = factory()
+        outcome = await diagnosis.explain(client, snap, screen, failure, model=settings.integration_agent_model,
+                                          secrets=secret_values(settings))
+    except Exception as exc:  # noqa: BLE001
+        log.warning("Ask Claude for %s failed: %s", key, exc)
+    answer = (outcome.plan or {}).get("answer", "") if outcome else ""
+    error = (outcome.error if outcome else "") or ("" if answer else "Claude could not answer just now.")
+    cost = outcome.cost if outcome else 0.0
+    try:
+        await store.record_call(call_id=call_id, integration=key, screen=screen.get("id", ""),
+                                status="answered" if answer else "failed", answer=answer or error,
+                                cost=cost, asked_by=actor)
+        p = await store.get(key) or {}
+        if (p.get("help") or {}).get("id") == call_id:
+            p["help"] = {"status": "answered" if answer else "failed", "screen": screen.get("id"),
+                         "id": call_id, "text": answer or error, "cost": round(cost, 4)}
+            await store.put(key, p, by=actor)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("Ask Claude answer for %s could not be stored: %s", key, exc)
+

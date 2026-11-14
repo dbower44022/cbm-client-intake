@@ -708,6 +708,9 @@ def create_app(
     from integrations.fixplans import make_fix_plan_store
 
     app.state.fix_plan_store = make_fix_plan_store(settings)
+    from integrations.wizard import make_wizard_store
+
+    app.state.wizard_store = make_wizard_store(settings)
     # The survey engine (surveys/, ruling BE23): the survey links and the
     # answers saved as the person goes. Each survey purpose registers itself
     # on import; Business Evaluation (prds/business-evaluation-plan.md) is the

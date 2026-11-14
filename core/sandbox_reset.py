@@ -105,6 +105,9 @@ RESET_TABLES: tuple[str, ...] = (
     # (plan § 6): the sandbox starts each day with none.
     "integration_fix_plan",
     "integration_event",
+    # The setup wizard's progress and its Ask Claude calls (plan § 10).
+    "integration_wizard",
+    "integration_agent_call",
     # The survey engine (surveys/, ruling BE23; Business Evaluation's links
     # among them): the links and the answers saved as the person goes. They
     # point at CRM records the restore takes away, so a link made on the

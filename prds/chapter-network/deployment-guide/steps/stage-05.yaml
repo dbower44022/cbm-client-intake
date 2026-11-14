@@ -1,7 +1,7 @@
 stage: 5
 name: Open the chapter's service accounts
-version: "0.19"
-updated: "11-13-26 10:30"
+version: "0.20"
+updated: "11-14-26 02:10"
 why: >-
   The chapter's CRM server, its applications and their database all run in a
   hosting account, and the public webinar programme runs through a video meeting
@@ -190,6 +190,132 @@ steps:
       auto: [setting_set:zoom_account_id, setting_set:zoom_client_id, setting_set:zoom_client_secret, setting_set:zoom_host_email]
       how: The chapter's host mailbox signs in to Zoom, and the three values are recorded. The connection itself cannot be checked until the applications are deployed.
       probe: Once the applications run, the app asks Zoom for an access token with the three values.
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6, screens
+      # approved by Doug 11-14-26). One screen per action; not printed in the
+      # guide. Checks: decided:<setting>, setting_set:<key>,
+      # test:<integration>/<check>; none means the person clicks Done.
+      - id: zoom-use
+        title: Does this chapter run public webinars through Zoom?
+        what: The chapter's own Zoom account, used only to schedule its public webinars.
+        why: Mentoring sessions never use this account; each mentor uses their own meeting link. A chapter without public webinars does not need Zoom at all.
+        ask:
+          - answer: "Yes"
+            sets: {zoom_in_use: "true"}
+            then: next
+          - answer: "No"
+            sets: {zoom_in_use: "false"}
+            then: end
+        check: decided:zoom_in_use
+      - id: zoom-have-account
+        title: Does the chapter already have its Zoom account and app?
+        what: A Zoom account with a Zoom Webinars licence, and a Server-to-Server OAuth app on it.
+        why: If they exist, you only need to copy three values from the app into this application.
+        ask:
+          - answer: "Yes"
+            then: zoom-account-id
+          - answer: "No"
+            then: next
+      - id: zoom-mailbox
+        title: Create the webinar host mailbox
+        what: A licensed Google Workspace user named webinars@ on the chapter's email domain.
+        why: Zoom sends its host mail there, and the account belongs to the chapter rather than to a volunteer.
+        how: In the Google Admin console, open Directory, then Users, then Add new user. Use Webinars as the last name and webinars@ followed by the chapter's email domain as the primary email.
+        see: The new user in the Users list, with a licence.
+        if_not: Stop and ask the Association.
+      - id: zoom-signup
+        title: Sign up for Zoom
+        what: The chapter's own Zoom account, signed up with the webinars@ address.
+        why: Zoom's webinar host and its app both live on this account.
+        how: In a browser, go to https://zoom.us/signup and sign up with the webinars@ address. Put the password in the chapter's Operations vault.
+        see: Zoom's welcome page, signed in as the webinars@ address.
+        if_not: Stop and ask the Association.
+      - id: zoom-licence
+        title: Buy the Webinars licence
+        what: A paid Zoom plan with a Zoom Webinars licence, assigned to the webinars@ user.
+        why: Zoom offers the webinar permissions only to an account holding a Webinars licence. Screen 13 checks it.
+        how: In Zoom's web portal, open Plans and Billing and buy a plan with Zoom Webinars, then assign the Webinars licence to the webinars@ user. The exact wording of Zoom's billing screens has not been checked for this guide.
+        see: The webinars@ user listed with a Webinars licence.
+        if_not: Stop and ask the Association which plan to buy.
+      - id: zoom-build-app
+        title: Create the Server-to-Server OAuth app
+        what: The app this application signs in to Zoom through.
+        why: Zoom gives an application its access only through an app like this.
+        how: Signed in to Zoom as the webinars@ user, go to https://marketplace.zoom.us/user/build. Accept Zoom's terms if asked. Click the plus button beside Developer, then Build app, choose Server to server OAuth app, and click Create. Name it after the chapter, for example Akron Business Mentors Webinars.
+        see: The app's App Credentials page, with Account ID, Client ID and Client Secret, each with a Copy button.
+        if_not: Stop and ask the Association.
+      - id: zoom-information
+        title: Fill in the app's information page
+        what: The short description, the company name and the developer contact Zoom asks for.
+        why: Zoom will not activate an app without them.
+        how: On the app's Information page, fill in Short Description, Company Name (the chapter's name), and the developer contact's Name and Email (info@ followed by the chapter's email domain). The page saves by itself.
+        see: No field on the Information page marked as missing.
+        if_not: Stop and tell the Association which field Zoom marks.
+      - id: zoom-scopes
+        title: Add the scopes
+        what: The permissions the application uses in Zoom.
+        why: Each one lets the application do one thing, such as read the host user or create a webinar. Screen 12 reports any that are missing.
+        how: On the app's Scopes page, click Add scopes and add each scope below, searching for it by name.
+        copy:
+          - user:read:user:admin
+          - report:read:list_webinar_participants:admin
+          - webinar:read:webinar:admin
+          - webinar:read:list_webinars:admin
+          - webinar:write:webinar:admin
+          - webinar:update:webinar:admin
+          - webinar:write:registrant:admin
+        see: All seven scopes listed on the Scopes page.
+        if_not: If the webinar scopes are not offered, the account has no Webinars licence yet; go back to screen 5.
+      - id: zoom-activate
+        title: Activate the app
+        what: Switching the app on for the account.
+        why: An app that is not activated cannot issue a token.
+        how: On the app's Activation page, click Activate your app.
+        see: The message Your app is activated on the account.
+        if_not: Zoom names what is missing on the Activation page; fix it and click Activate your app again.
+      - id: zoom-account-id
+        title: Paste the Account ID
+        what: The number that names the chapter's Zoom account.
+        why: The application needs it, with the next two values, to sign in to Zoom.
+        how: On the app's App Credentials page, click Copy beside Account ID, paste it in the box below, and click Save.
+        enters: zoom_account_id
+        check: setting_set:zoom_account_id
+        if_not: Copy it again from the App Credentials page.
+      - id: zoom-client-id
+        title: Paste the Client ID
+        what: The name of the Zoom app this application signs in through.
+        why: The application needs it, with the account ID and the client secret, to sign in to Zoom.
+        how: On the app's App Credentials page, click Copy beside Client ID, paste it in the box below, and click Save.
+        enters: zoom_client_id
+        check: setting_set:zoom_client_id
+        if_not: Copy it again from the App Credentials page.
+      - id: zoom-client-secret
+        title: Paste the client secret
+        what: The password the application uses to sign in to the Zoom app.
+        why: Without it the application cannot get a Zoom token, so nothing else in Zoom can work.
+        how: On the app's App Credentials page, click Copy beside Client Secret, paste it in the box below, and click Save. Also put it in the chapter's Operations vault, and nowhere else.
+        enters: zoom_client_secret
+        check: test:zoom/token
+        if_not: Zoom refused the three values together. Copy all three again from the same app; the client secret changes if it was regenerated.
+      - id: zoom-host
+        title: Confirm the webinar host
+        what: The Zoom user who hosts the chapter's webinars, normally the webinars@ address.
+        why: Every webinar is created under this user, and only a user with a Webinars licence can host one.
+        how: Check the address in the box below, change it if needed, and click Save.
+        enters: zoom_host_email
+        check: test:zoom/host
+        if_not: Zoom has no such licensed user on this account. Use the address you signed up with on screen 4, and make sure the Webinars licence is assigned to it.
+      - id: zoom-switch-on
+        title: Turn webinars on?
+        what: The switch that lets the Events application create Zoom webinars.
+        why: Until it is on, nothing in the Events application uses Zoom, even with everything set up.
+        ask:
+          - answer: "Yes"
+            sets: {zoom_events: "true"}
+            then: next
+          - answer: "Not yet"
+            then: next
+        check: test:zoom
     goes_wrong: >-
       The host address setting in the software defaults to Cleveland's. A chapter
       that forgets to change it would create its webinars under Cleveland's Zoom
@@ -704,6 +830,10 @@ steps:
     source: comms/summarize.py; enrichment/runs.py; prds/integrations-tab-plan.md section 4
 
 changes:
+  - version: "0.20"
+    date: "11-14-26 02:10"
+    change: >-
+      Step 5.5 carries the Integrations tab's Zoom wizard: fourteen screens under a new wizard key (plan § 10, rulings W1 to W6; screens approved by Doug 11-14-26). The key is not printed, so the guide's steps read exactly as before.
   - version: "0.19"
     date: "11-13-26 10:30"
     change: >-

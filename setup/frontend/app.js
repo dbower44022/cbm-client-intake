@@ -710,6 +710,90 @@
     } catch (e) { diagError(e.message); }
   }
 
+  // The setup wizard (plan § 10, rulings W1 to W6): one screen at a time —
+  // what, why, how — checked before the next. The guide chooses the screens;
+  // Claude helps only when asked.
+  var wizPoll = null;
+
+  function wizardBlock(i) {
+    var w = i.wizard;
+    if (!w) return "";
+    var html = '<section class="su__group su__wiz"><h2 class="su__h2">Set-up wizard</h2>';
+    if (!w.stored) html += '<p class="su__hint">No database is attached, so the wizard cannot keep its place.</p>';
+    if (w.status === "done") {
+      return html + '<p class="su__wizdone">\u2713 ' + esc(i.name) + " is set up. Every check passes.</p>"
+        + '<p><button type="button" class="cbm-button cbm-button--secondary" data-wiz="' + esc(i.key + "|restart|") + '">Start the wizard again</button></p></section>';
+    }
+    if (w.status === "ended") {
+      return html + '<p class="su__wizdone">' + esc(w.ended) + "</p>"
+        + '<p><button type="button" class="cbm-button cbm-button--secondary" data-wiz="' + esc(i.key + "|restart|") + '">Start the wizard again</button></p></section>';
+    }
+    var s = w.screen;
+    html += '<p class="su__wizpos">Screen ' + esc(w.position) + " of " + esc(w.total) + '</p><div class="su__wizcard">'
+      + '<h3 class="su__wiztitle">' + esc(s.title) + "</h3>"
+      + (s.what ? '<p><span class="su__wizlabel">What</span>' + esc(s.what) + "</p>" : "")
+      + (s.why ? '<p><span class="su__wizlabel">Why</span>' + esc(s.why) + "</p>" : "")
+      + (s.how ? '<p><span class="su__wizlabel">How</span>' + esc(s.how) + "</p>" : "");
+    (s.copy || []).forEach(function (c, n) {
+      var cid = "wizcopy-" + n;
+      html += '<div class="su__diagcopy"><code id="' + cid + '">' + esc(c) + '</code> <button type="button" class="cbm-button cbm-button--secondary" data-copy="' + cid + '">Copy</button></div>';
+    });
+    if (s.see) html += '<p><span class="su__wizlabel">You should see</span>' + esc(s.see) + "</p>";
+    html += '<div class="su__wizact">';
+    if (s.kind === "question") {
+      s.answers.forEach(function (a) {
+        html += '<button type="button" class="cbm-button" data-wiz="' + esc(i.key + "|answer|" + s.id + "|" + a) + '">' + esc(a) + "</button> ";
+      });
+    } else if (s.kind === "enter") {
+      html += '<input type="' + (s.secret ? "password" : "text") + '" class="su__wizinput" id="wizValue" autocomplete="off" value="'
+        + esc(s.secret ? "" : (s.value || "")) + '" placeholder="' + esc(s.secret ? (s.isSet ? "Set — paste a new value to replace it" : "Paste it here") : "") + '" /> '
+        + '<button type="button" class="cbm-button" data-wiz="' + esc(i.key + "|enter|" + s.id) + '">Save and check</button>';
+    } else {
+      html += '<button type="button" class="cbm-button" data-wiz="' + esc(i.key + "|done|" + s.id) + '">Done</button>';
+    }
+    if (w.canBack) html += ' <button type="button" class="cbm-button cbm-button--secondary" data-wiz="' + esc(i.key + "|back|") + '">Back</button>';
+    html += "</div>";
+    html += '<p class="form-error" id="wizError" role="alert" hidden></p>';
+    if (w.failure) {
+      html += '<div class="su__wizfail"><p><strong>Not done yet:</strong> ' + esc(w.failure.reason) + "</p>"
+        + (s.ifNot ? "<p><strong>If not:</strong> " + esc(s.ifNot) + "</p>" : "");
+      var help = w.help;
+      if (help && help.status === "running") {
+        html += '<p class="su__hint">Claude is looking into it. This takes up to a minute; the page updates by itself.</p>';
+      } else if (help && help.text) {
+        html += '<div class="su__wizhelp"><p class="su__wizlabel">Claude</p><p>' + esc(help.text) + "</p>"
+          + (help.cost != null ? '<p class="su__diagmeta">cost ' + esc(money(help.cost)) + "</p>" : "") + "</div>";
+      } else {
+        html += '<p><button type="button" class="cbm-button cbm-button--secondary" data-wiz="' + esc(i.key + "|ask|" + s.id)
+          + '">Ask Claude about this</button></p>';
+      }
+      html += "</div>";
+    }
+    return html + "</div></section>";
+  }
+
+  async function wizardAction(spec) {
+    var a = spec.split("|");
+    var key = a[0], action = a[1], screen = a[2] || "", answer = a.slice(3).join("|");
+    var body = { screen: screen, answer: answer, value: "" };
+    if (action === "enter") { var box = $("wizValue"); body.value = box ? box.value : ""; }
+    try {
+      var r = await api("/integrations/" + encodeURIComponent(key) + "/wizard/" + action, { method: "POST", body: JSON.stringify(body) });
+      state.page = r.page;
+      renderAll();
+      var card = document.querySelector(".su__wiz");
+      if (card) card.scrollIntoView({ block: "start", behavior: "smooth" });
+    } catch (e) {
+      var err = $("wizError");
+      if (err) { err.hidden = false; text(err, e.message); }
+    }
+  }
+
+  function pollWizard() {
+    if (wizPoll) return;
+    wizPoll = setTimeout(async function () { wizPoll = null; await refreshPage(); }, 5000);
+  }
+
   // The setup checklist (plan § 4): the deployment guide's steps for this
   // integration. An automatic step ticks itself from its check and shows why;
   // a manual step has a box an administrator ticks. Folded while the
@@ -859,6 +943,8 @@
     var i = findIntegration(state.subtab);
     if (!i) { $("integrationBody").innerHTML = ""; return; }
     var html = statusLine(i);
+    html += wizardBlock(i);
+    if (i.wizard && i.wizard.help && i.wizard.help.status === "running") pollWizard();
     if (i.status && i.status.inUse === false) {
       html += '<p class="su__note su__note--warn"><strong>Not used by this chapter.</strong> '
         + "Its settings stay here and can still be changed. Its warnings are left out of "
@@ -1403,6 +1489,7 @@
     if (t.dataset && t.dataset.edit) { openEditor(t.dataset.edit); return; }
     if (t.dataset && t.dataset.test) { runTest(t.dataset.test, t); return; }
     if (t.dataset && t.dataset.tick) { tickStep(t.dataset.tick, t); return; }
+    if (t.dataset && t.dataset.wiz) { wizardAction(t.dataset.wiz); return; }
     if (t.dataset && t.dataset.diagnose) { startDiagnosis(t.dataset.diagnose, "fix"); return; }
     if (t.dataset && t.dataset.setupAsk) { startDiagnosis(t.dataset.setupAsk, "setup"); return; }
     if (t.dataset && t.dataset.planApply) {

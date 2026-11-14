@@ -343,6 +343,9 @@ def _integrations(
             # The diagnosis agent (phase 6): the last fix plan, and what
             # diagnoses have spent this month against the budget.
             "fixPlan": (cs.get("fixPlans") or {}).get(integ.key),
+            # The setup wizard (plan § 10): where it stands, or None when the
+            # integration has no screens yet.
+            "wizard": _wizard_view(integ.key, settings, overrides, test_runs, cs),
             # The setup assistant (phase 7): the last setup plan.
             "setupPlan": (cs.get("setupPlans") or {}).get(integ.key),
             "agent": {"spent": cs.get("agentSpent"),
@@ -361,6 +364,20 @@ def _integrations(
             },
         })
     return out
+
+
+def _wizard_view(key: str, settings: Settings, overrides: dict[str, Override],
+                 test_runs: dict[str, dict[str, Any]], cs: dict[str, Any]) -> Optional[dict[str, Any]]:
+    from integrations import wizard
+
+    try:
+        view = wizard.view(key, settings, overrides, test_runs, (cs.get("wizards") or {}).get(key))
+    except Exception as exc:  # noqa: BLE001 — the rest of the page still renders
+        log.warning("the %s wizard could not be read: %s", key, exc)
+        return None
+    if view is not None:
+        view["stored"] = bool(cs.get("wizardsStored"))
+    return view
 
 
 def describe_change(key: str, new_value: str) -> str:
