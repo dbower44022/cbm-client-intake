@@ -35,13 +35,16 @@ Exits 0 when everything needed for the build is available, 1 otherwise.
     PYTHONPATH=. uv run python scripts/probe_zoom.py --meetings \
         --write-test someone@example.org
 
-``ZOOM_HOST_EMAIL`` names the Zoom user the meetings belong to.
+``ZOOM_HOST_EMAIL`` names the Zoom user the meetings belong to. Run at a
+terminal, the script asks for any of the four values not in the environment,
+the secret without echo.
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
+import getpass
 import os
 import sys
 from datetime import datetime, timedelta, timezone
@@ -291,7 +294,16 @@ async def main(argv: Optional[list[str]] = None) -> int:
     account = os.environ.get("ZOOM_ACCOUNT_ID", "")
     client_id = os.environ.get("ZOOM_CLIENT_ID", "")
     secret = os.environ.get("ZOOM_CLIENT_SECRET", "")
-    host = os.environ.get("ZOOM_HOST_EMAIL", DEFAULT_HOST)
+    host = os.environ.get("ZOOM_HOST_EMAIL", "")
+
+    # Asked for at the terminal when not in the environment, so the secret
+    # never reaches the shell history; the secret is read without echo.
+    if sys.stdin.isatty():
+        account = account or input("Zoom Account ID: ").strip()
+        client_id = client_id or input("Zoom Client ID: ").strip()
+        secret = secret or getpass.getpass("Zoom Client Secret (not shown): ").strip()
+        host = host or input(f"Host email [{DEFAULT_HOST}]: ").strip()
+    host = host or DEFAULT_HOST
 
     if not (account and client_id and secret):
         print("Set ZOOM_ACCOUNT_ID, ZOOM_CLIENT_ID and ZOOM_CLIENT_SECRET.\n"
