@@ -1256,7 +1256,8 @@ the strength of it.
   (`BUSINESS_EVALUATION`, off in production, on at crm-test's `/setup`).
   Checked locally by Doug as Joe Mentor; the real send on crm-test is owed
   in #83.
-- **v0.332.0 (2026-11-14) committed, not pushed**: Business Evaluation
+- **v0.332.0 (2026-11-14) is live on both deployments** (pushed 11-14-26,
+  `/healthz` and the served `app.js` read 14:05): Business Evaluation
   phase 3, the analysis (`evaluation/analysis.py`), off behind
   `EVALUATION_ANALYSIS_SECONDS`; sample reports reviewed by Doug. Owed in #83.
 Everything else still owed is in `OPEN-ITEMS.md`.
