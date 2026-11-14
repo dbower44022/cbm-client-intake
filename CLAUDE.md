@@ -122,16 +122,30 @@ Cross-form behaviour worth knowing before changing an orchestrator:
 
 ## Deployment
 
-Three DigitalOcean App Platform apps, all building `main` from
-`dbower44022/cbm-client-intake` — **a push deploys crm-test AND prod.** Full
-runbook: `DEPLOYMENT.md`; plain-language console companion:
-`STAFF-DEPLOYMENT-GUIDE.md`.
+Four DigitalOcean App Platform apps build `main` from
+`dbower44022/cbm-client-intake` — **a push deploys the Association's test
+system, crm-test AND prod.** Full runbook: `DEPLOYMENT.md`; plain-language
+console companion: `STAFF-DEPLOYMENT-GUIDE.md`.
+
+**The test system is the Business Mentors Association's** (Doug's decision,
+option A, 11-14-26): every feature is switched on and checked there first,
+not on crm-test. Its application left the release train that day
+(`~/.config/cbm-bma/track-main.sh`; undo in that script's header).
 
 | Env | Root URL | CRM | App ID |
 |---|---|---|---|
+| **test — the Association** (`bma-intake`, doctl context `bma`) | https://apps.businessmentorsassociation.org/ | crm.businessmentorsassociation.org | `1944c6a4-ac65-4982-bad1-d3f637d91fb5` |
 | **prod** | https://apps.clevelandbusinessmentors.org/ (custom domain, primary) | production | `aa1ddf69-f359-4b53-91ba-035cbed7bd53` |
-| **crm-test** | https://cbm-client-intake-svxs3.ondigitalocean.app/ | crm-test | `509b4370-b9ca-42c7-b251-04d6820fe88e` |
+| **crm-test** (no longer the test system) | https://cbm-client-intake-svxs3.ondigitalocean.app/ | crm-test | `509b4370-b9ca-42c7-b251-04d6820fe88e` |
 | **dev** (`lobster-app`) | https://lobster-app-w6h5m.ondigitalocean.app/ | none — dry-run | `b3b28113-6113-4ba7-ae99-efd5ea633fcd` |
+
+- **The Association's `/healthz` says `environment: production`** (its CRM
+  address does not contain `crm-test`), so its footer reads *(Production)*.
+  That is the derivation, not a mistake; `OPEN-ITEMS.md` #85.
+- **The Association's CRM does not reset nightly** — its restore runs on
+  demand (`~/.config/cbm-bma/sandbox.sh restore`), so test records stay
+  until someone restores it. It also holds the training data and is reached
+  by the chapter demo website.
 
 - Config lives in **gitignored overlays**: `.do/app.prod.yaml` (crm-test) and
   `.do/app.prod-crm.yaml` (prod), applied with
@@ -173,17 +187,19 @@ runbook: `DEPLOYMENT.md`; plain-language console companion:
   watching. Getting this wrong is a common cause of "the feature is on but
   nothing happens."
 - **The chapter apps (Boston, Lakeside) track the `release` branch with
-  `deploy_on_push: true`** (read from their live specs 10-24-26). Updating
+  `deploy_on_push: true`** (read from their live specs 10-24-26; the
+  Association's tracks `main` since 11-14-26). Updating
   a chapter is `./scripts/cut_release.sh` on a clean `main`, then
   `git push origin <tag> release` — and **that one push deploys every
   chapter at once**, Boston's production included. The train is Sunday
   17:00 UTC (ruled 2026-08-26); `scripts/promote.py <app-id> --status`
   shows what each app runs and tracks.
-- **There is no branch-level review gate** — all three apps track `main` with
-  `deploy_on_push: true`, so one push builds dev, crm-test AND prod. The gate is
-  the **feature flag**: build it dark (default off), enable it on crm-test's
-  overlay, review live as a **real non-admin** in the relevant team (admins
-  bypass ACL), then add the var to the prod overlay. Rollback is flipping the
+- **There is no branch-level review gate** — all four apps track `main` with
+  `deploy_on_push: true`, so one push builds the Association, dev, crm-test
+  AND prod. The gate is the **feature flag**: build it dark (default off),
+  switch it on at the **Association's System Settings** (`/setup`), review
+  live there as a **real non-admin** in the relevant team (admins bypass
+  ACL), then add the var to the prod overlay. Rollback is flipping the
   flag back, not reverting code. Runbook: `DEPLOYMENT.md` § *Reviewing a change
   before it reaches production*.
 - To run a script inside a deployed container (the only way to reach prod
@@ -1260,4 +1276,7 @@ the strength of it.
   `/healthz` and the served `app.js` read 14:05): Business Evaluation
   phase 3, the analysis (`evaluation/analysis.py`), off behind
   `EVALUATION_ANALYSIS_SECONDS`; sample reports reviewed by Doug. Owed in #83.
+- **11-14-26: the Association's application tracks `main`** and is the
+  test system (option A). Deployment `58f014f4…` ACTIVE, `/healthz` read
+  v0.332.0 by the switch script. Owed in #85.
 Everything else still owed is in `OPEN-ITEMS.md`.

@@ -498,9 +498,14 @@ Two viable shapes — pick one:
 
 ## Reviewing a change before it reaches production
 
-**There is no branch-level gate.** All three apps track `main` with
-`deploy_on_push: true`, so one push builds dev, crm-test **and prod** at the
-same time. The review gate is therefore not the deploy — it is the **feature
+**There is no branch-level gate.** Four apps track `main` with
+`deploy_on_push: true` — the Business Mentors Association's (`bma-intake`,
+`1944c6a4-ac65-4982-bad1-d3f637d91fb5`, since 11-14-26), dev, crm-test **and
+prod** — so one push builds all four at the same time.
+
+**The test system is the Association's** (Doug's decision, 11-14-26).
+Steps 2 and 3 below happen there, not on crm-test. crm-test still receives
+every push but is no longer where a change is checked. The review gate is therefore not the deploy — it is the **feature
 flag**. This is how Events, Analytics, Documents and Gmail sync were all rolled
 out, and it is the standing process for anything CRM-backed or otherwise risky.
 
@@ -510,20 +515,19 @@ a no-op. A new CRM-facing feature should also feature-detect its fields from
 metadata, so it stays inert until the CRM side exists rather than needing a
 coordinated deploy.
 
-**2. Turn it on for crm-test only.** Add the env var to `.do/app.prod.yaml`
-(that file is the **crm-test** app, despite the name) and apply it:
-
-```bash
-doctl apps update 509b4370-b9ca-42c7-b251-04d6820fe88e --spec .do/app.prod.yaml
-```
+**2. Turn it on for the Association only.** Sign in as an administrator at
+https://apps.businessmentorsassociation.org/setup and switch the setting on
+there. That is an override in the Association's database: no configuration
+file, no redeploy. Do not apply `~/.config/cbm-bma/bma-app.yaml` — it is the
+stage 11 file and is stale (it still names the `release` branch).
 
 Set the flag on the component that actually runs the work — the **worker** for
 delivery, monitoring, Gmail sync, Drive reconciliation, transcripts and receipt
 sweeps; the **web** component for anything user-facing. Getting this wrong is a
 common cause of "the feature is on but nothing happens."
 
-**3. Review it live** at https://cbm-client-intake-svxs3.ondigitalocean.app/
-against the crm-test CRM, signed in as a **real non-admin user in the relevant
+**3. Review it live** at https://apps.businessmentorsassociation.org/
+against the Association's CRM, signed in as a **real non-admin user in the relevant
 team** — not an admin. Admin accounts bypass EspoCRM ACL entirely, which is how
 several mentor-only bugs stayed invisible until production.
 
