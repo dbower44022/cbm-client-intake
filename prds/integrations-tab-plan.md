@@ -1,6 +1,6 @@
 # Integrations tab — System Settings plan
 
-Last Updated: 11-13-26 17:45 · Revision 0.12
+Last Updated: 11-14-26 00:11 · Revision 0.13
 
 This is the design record for a new top-level **Integrations** tab on the System
 Settings page (`/setup`). It holds Doug's rulings, the contents of each
@@ -41,6 +41,8 @@ build prompts are written from this file. Nothing has been built yet.
   manual steps for a person, and a final re-test.
 
 ## 2. Rulings (Doug, 11-12-26)
+
+**Rulings I4, I7 and I10 to I12 are superseded by the wizard rulings W1 to W6 in § 10** (Doug, 11-13-26 and 11-14-26). The rest stand.
 
 | # | Ruling |
 |---|---|
@@ -327,10 +329,59 @@ phase ends at a **stopping point**: the work pauses for Doug's go-ahead.
 - ~~The EspoCRM version read~~: settled in phase 2, `GET App/user` →
   `settings.version` (9.3.10 on crm-test, 11-13-26).
 
+## 10. The wizard (rulings W1 to W6, Doug, 11-13-26 and 11-14-26)
+
+**Why.** Doug's review of crm-test's Zoom sub-tab on 11-13-26 23:08, after
+phase 7: the sub-tab answered "what should I do?" three times — the setup
+checklist, a discarded fix plan still drawn in full, and an eleven-step setup
+plan — in different words, and they read as conflicting. The setup plan asked
+to save "Zoom in use", already visibly On, because the checklist's "decide"
+row ticked only on a deliberate save (a design mistake, not the agent's).
+Doug: "It should be a wizard. One step/question at a time with an explanation
+of what/why/how. And the AI checks each step before we proceed and give the
+next step based on the results of the previous step. Simple, Easy, Reliable."
+
+| # | Ruling |
+|---|---|
+| W1 | Setting up or repairing an integration is a **wizard**: one question or one action on screen at a time, each with what it is, why it matters and how to do it. A step is checked before the next appears, and the next depends on the answers and results so far. |
+| W2 | **The guide chooses the steps; the application checks them; Claude helps.** The deployment guide's step files stay the one place every step is written. The application checks each step itself wherever it can, instantly and at no cost. Claude explains and helps at a failed screen. Claude never writes the steps. |
+| W3 | **One wizard screen per guide action**, not per guide step. An action done in a vendor's own screens is confirmed with Done; an action that produces something the application can test (a setting, a token, a host user) is checked on that screen, before moving on. |
+| W4 | **The wizard replaces** the setup checklist's display with its hand ticks, the setup assistant and its setup plans, and the diagnosis's fix plans with Approve and apply — removed once the wizard works (Doug's approval, 11-13-26, under the global rule on removing functionality). Carried over underneath: the integration tests and their checks (the wizard's checks), the agent's read-only tools and loop (the help at a failed screen), the coded actions (screens with a button), the nightly test and its alert. A later failure offers **Fix with the wizard**. The fix-plan and tick tables are dropped by a migration once the wizard has its own storage. |
+| W5 | **The wizard starts at the first screen whose check fails.** Every check passing: the integration is set up, and the wizard says so and stops. Screens before the first failing one are taken as done; **Back** revisits any of them. |
+| W6 | **Claude only when asked**: a failed screen shows the check's own words and the guide's "if not" line at once, and offers **Ask Claude about this**. Claude reads that failure, the integration's settings (never a secret's value), recent errors and the vendor's documentation, and answers on that screen. Against the monthly budget. |
+
+**Decided under them (announced 11-14-26):**
+
+- The wizard's progress is kept for the whole deployment: a second
+  administrator sees the same place.
+- Questions with branches ("Do you already have a Zoom account?") are written
+  into the step files as new keys; the rendered guide does not change.
+- Claude drafts each screen's what, why and how in the step files; Doug
+  reviews them before that integration's wizard is built.
+- "Does this chapter use Zoom?" is the wizard's first screen, a plain Yes/No
+  question that saves the "in use" setting; No ends the wizard.
+
+**What this means for the build** (§ 8, replaced from phase 8 on; phases 1
+to 7 stand as built):
+
+8. **The wizard, piloted on Zoom.** The step-file keys for screens, checks
+   and branches; the wizard engine and its storage; the Zoom screens drafted,
+   reviewed by Doug, then built; Ask Claude on a failed screen. Built beside
+   the old sections, behind the same switch. **Stop** after Doug's review of
+   the drafted screens, and again after the pilot is built.
+9. **The other eight integrations' screens**, drafted, reviewed, built.
+   **Stop.**
+10. **The removal** (ruling W4): the checklist display, setup plans, fix plans,
+    their endpoints and runner; the migration dropping their tables.
+    **Stop.**
+11. **Documentation and the live review on crm-test** (the old phase 8).
+    **Stop** before production.
+
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.13 | 11-14-26 00:11 | Claude (Claude Code) | § 10, the wizard: rulings W1 to W6 from Doug's review of crm-test's Zoom sub-tab after phase 7 (11-13-26 23:08 to 11-14-26). They supersede I4, I7 and I10 to I12; § 8's phases from 8 on are replaced by 8 to 11 in § 10. |
 | 0.12 | 11-13-26 17:45 | Claude (Claude Code) | Phase 7 built: v0.329.0, the setup assistant. Doug's decisions 11-13-26: three coded actions (the Google shared drive without a folder scheme — folders are made per record already; the Twilio sender number; the Zoom host); applying CRM structure from a button dropped (it would bypass the crm-test-first runbook); a setting-reset step kind for fix and setup plans. § 6.5's inferred manual steps confirmed from each vendor's documentation (the Google Cloud project and key remain inferred). Not pushed. |
 | 0.11 | 11-13-26 12:12 | Claude (Claude Code) | Phase 6 built: v0.327.0, the diagnosis agent and fix plans. Doug's decisions 11-13-26: § 6.6 settled as the narrowed `integration_event` table (only each integration job's top-level handler writes, scrubbed, once an hour, 14 days); a monthly budget setting, default $25; the allowed sites as checked (Google adds `knowledge.workspace.google.com`, Anthropic drops `docs.claude.com`). § 6.1's Tool Runner became a manual loop (SDK 0.116 does not resume a paused server-tool turn). Not pushed. |
 | 0.10 | 11-13-26 11:04 | Claude (Claude Code) | Phase 5 built: v0.326.0, the nightly integration test. Doug's decision 11-13-26, option A: ruling I8 kept (the worker runs it); checks reading a value only the web process is given (the provisioning account, Lob's webhook secret, the All Members group) are skipped at night. § 5's cool-down is the stored runs, not the worker's memory; unknown alerts on the third night. Not pushed. |
