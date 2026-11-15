@@ -1,8 +1,8 @@
 # Kickoff prompt — Integrations tab, phase 9: the Zoom split, then the other eight integrations' wizard screens
 
-Last Updated: 11-15-26 02:30 · Revision 0.2 (draft) — see change log at the end.
+Last Updated: 11-15-26 02:22 · Revision 0.2 (approved) — see change log at the end.
 
-**Draft.** Doug approves this prompt before the phase 9 session starts.
+**Approved by Doug 11-15-26.**
 Paste everything below the line into a fresh Claude Code session rooted in
 `~/Dropbox/Projects/cbm-client-intake`. Revision 0.1 is kept beside it for
 the record; this revision replaces it.
@@ -160,5 +160,6 @@ phase 10 prompt (the removal, ruling W4) as a draft. Then stop.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
-| 0.2 | 11-15-26 02:30 | Claude (Claude Code) | Part one added: the Zoom split (plan § 10's *Event hosting* paragraph; rulings EH1, EH5 to EH8, EH11), the five settings the event hosting build's step 4 reads, Zoom Meetings' checks from the probe of 11-15-26, two new stopping points ahead of the original three. The test system named (#85). Written by the event hosting session at Doug's request (option A, 11-15-26). |
+| 0.2 | 11-15-26 02:22 | Claude (Claude Code) | Approved by Doug (option A). |
+| 0.2 | 11-15-26 02:20 | Claude (Claude Code) | Part one added: the Zoom split (plan § 10's *Event hosting* paragraph; rulings EH1, EH5 to EH8, EH11), the five settings the event hosting build's step 4 reads, Zoom Meetings' checks from the probe of 11-15-26, two new stopping points ahead of the original three. The test system named (#85). Written by the event hosting session at Doug's request (option A, 11-15-26). |
 | 0.1 | 11-14-26 01:40 | Claude (Claude Code) | Draft written at the close of phase 8 (v0.331.0). |
