@@ -453,3 +453,92 @@ def test_entity_params_read_back_fails_when_the_setting_did_not_stick():
     app = applier.Applier(client, plan, apply=True)
     asyncio.run(app.run())
     assert app.failed == ["VERIFY entity CBusinessEvaluation still reads {'assignedUsers': None}"]
+
+
+# --- the hosting method plan (event hosting plan § 5, 11-15-26) -------------
+
+class _HostedByCrm:
+    """crm-test's CEvent.hostedBy as built 11-12-26: two options, labelled as
+    stored. ``sticky=False`` makes the CRM ignore the translations."""
+
+    _base = "https://crm-test.example/api/v1"
+
+    def __init__(self, sticky=True):
+        self.field = {"type": "enum", "options": ["CBM Zoom", "Outside host"],
+                      "default": "CBM Zoom", "isCustom": True}
+        self.labels = {"CBM Zoom": "CBM Zoom", "Outside host": "Outside host"}
+        self.tooltip = "old"
+        self.puts: list[dict] = []
+        self.sticky = sticky
+
+    async def _request(self, method, url, op="", params=None, json_body=None):
+        path = url[len(self._base) + 1:]
+        if method == "PUT":
+            self.puts.append(copy.deepcopy(json_body))
+            self.field["options"] = list(json_body["options"])
+            if self.sticky:
+                self.labels = dict(json_body.get("translatedOptions") or self.labels)
+                self.tooltip = json_body.get("tooltipText", self.tooltip)
+            return _Resp(200, {})
+        if method == "POST":
+            return _Resp(200, {})
+        if path == "Admin/fieldManager/CEvent/hostedBy":
+            return _Resp(200, {**self.field, "label": "Hosted by"})
+        if path == "I18n":
+            return _Resp(200, {"options": {"hostedBy": self.labels},
+                               "tooltips": {"hostedBy": self.tooltip}})
+        key = (params or {}).get("key", "")
+        if key == "scopes.CEvent":
+            return _Resp(200, {"isCustom": True, "entity": True})
+        if key == "entityDefs.CEvent.fields":
+            return _Resp(200, {"hostedBy": self.field})
+        return _Resp(200)
+
+
+def _hosting_plan():
+    return json.loads((ROOT / "scripts/plans/cevent-hosting-method.json").read_text())
+
+
+def test_hosting_plan_only_adds_and_relabels():
+    spec = _hosting_plan()["enumOptions"][0]
+    assert set(_hosting_plan()) == {"name", "description", "enumOptions"}
+    assert spec["add"] == ["Zoom Meetings", "Other platform"]
+    assert spec["labels"]["CBM Zoom"] == "Zoom Webinars"
+
+
+def test_hosting_plan_dry_run_writes_nothing():
+    crm = _HostedByCrm()
+    app = applier.Applier(crm, _hosting_plan(), apply=False)
+    asyncio.run(app.run())
+    assert not app.failed and crm.puts == []
+    assert len(app.actions) == 1
+    assert "add enum options to CEvent.hostedBy: Zoom Meetings, Other platform" in app.actions[0]
+    assert "'CBM Zoom' -> 'Zoom Webinars'" in app.actions[0]
+
+
+def test_hosting_plan_apply_keeps_every_option_and_reads_back():
+    crm = _HostedByCrm()
+    app = applier.Applier(crm, _hosting_plan(), apply=True)
+    asyncio.run(app.run())
+    assert not app.failed, app.failed
+    body = crm.puts[0]
+    assert body["options"] == ["CBM Zoom", "Outside host", "Zoom Meetings", "Other platform"]
+    assert body["default"] == "CBM Zoom" and body["type"] == "enum"
+    assert body["translatedOptions"]["CBM Zoom"] == "Zoom Webinars"
+    assert body["tooltipText"].startswith("How an online event is hosted.")
+    assert "verified enum CEvent.hostedBy" in app.actions
+
+
+def test_hosting_plan_second_run_is_skipped():
+    crm = _HostedByCrm()
+    asyncio.run(applier.Applier(crm, _hosting_plan(), apply=True).run())
+    again = applier.Applier(crm, _hosting_plan(), apply=False)
+    asyncio.run(again.run())
+    assert again.actions == [] and again.skipped
+
+
+def test_hosting_plan_read_back_fails_when_labels_did_not_stick():
+    crm = _HostedByCrm(sticky=False)
+    app = applier.Applier(crm, _hosting_plan(), apply=True)
+    asyncio.run(app.run())
+    assert any("VERIFY enum CEvent.hostedBy labels" in f for f in app.failed)

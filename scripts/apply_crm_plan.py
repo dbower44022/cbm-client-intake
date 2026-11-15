@@ -376,23 +376,64 @@ class Applier:
                 continue
             current = list(field.get("options") or [])
             wanted = [o for o in spec.get("add", []) if o not in current]
-            if not wanted:
+            # Labels and the tooltip live in the CRM's translations, not in
+            # the field definition, so they are compared against I18n (since
+            # 11-15-26, the event hosting plan: an existing option relabelled,
+            # "CBM Zoom" shown as "Zoom Webinars").
+            labels = dict(spec.get("labels") or {})
+            tooltip = spec.get("tooltipText")
+            have_labels, have_tooltip = await self._i18n_field(entity, stored)
+            relabel = {k: v for k, v in labels.items() if have_labels.get(k) != v}
+            retip = tooltip is not None and have_tooltip != tooltip
+            if not (wanted or relabel or retip):
                 self.skipped.append(
                     f"enum {entity}.{stored} already offers "
-                    f"{', '.join(str(o) for o in spec.get('add', [])) or '(nothing)'}")
+                    f"{', '.join(str(o) for o in spec.get('add', [])) or '(nothing)'}"
+                    + (" with its labels" if labels else ""))
                 continue
             # The fieldManager PUT needs the COMPLETE definition: an options-only
             # body is a 500 (found adding CEventRegistration.registrationSource
             # "Portal", 2026-09-29; migrate_event_schema.py already merged).
             body: dict[str, Any] = {**field, "options": current + wanted}
-            if spec.get("labels"):
-                translated = dict(field.get("translatedOptions") or {})
-                translated.update(spec["labels"])
+            if labels:
+                translated = dict(have_labels)
+                translated.update(field.get("translatedOptions") or {})
+                translated.update(labels)
                 body["translatedOptions"] = translated
+            if tooltip is not None:
+                body["tooltipText"] = tooltip
+            parts = []
+            if wanted:
+                parts.append(f"add enum options to {entity}.{stored}: "
+                             f"{', '.join(str(o) for o in wanted)}")
+            if relabel:
+                parts.append(f"label {entity}.{stored} options: " + ", ".join(
+                    f"{k!r} -> {v!r}" for k, v in sorted(relabel.items())))
+            if retip:
+                parts.append(f"set the {entity}.{stored} tooltip")
             await self._write(
-                "PUT", f"Admin/fieldManager/{entity}/{stored}", body,
-                f"add enum options to {entity}.{stored}: {', '.join(str(o) for o in wanted)}",
+                "PUT", f"Admin/fieldManager/{entity}/{stored}", body, "; ".join(parts),
             )
+
+    async def _i18n_field(self, entity: str, stored: str) -> tuple[dict[str, Any], Any]:
+        """A field's option labels and tooltip from ``GET I18n?scope=``.
+        Unreadable translations read as none, so a label in the plan is
+        written rather than wrongly taken as already there."""
+        resp = await self.c._request(
+            "GET", f"{self.c._base}/I18n", op=f"i18n {entity}",
+            params={"scope": entity},
+        )
+        if resp.status_code >= 400 or not resp.content:
+            return {}, None
+        try:
+            data = resp.json()
+        except ValueError:
+            return {}, None
+        if not isinstance(data, dict):
+            return {}, None
+        options = (data.get("options") or {}).get(stored) or {}
+        tooltip = (data.get("tooltips") or {}).get(stored)
+        return (options if isinstance(options, dict) else {}), tooltip
 
     async def rebuild(self) -> None:
         """EspoCRM caches metadata aggressively — a change that does not appear
@@ -485,6 +526,23 @@ class Applier:
             else:
                 self.actions.append(
                     f"verified link {near}.{stored_near} <-> {far}.{stored_far}")
+
+        for spec in self.plan.get("enumOptions", []):
+            entity = spec["entity"]
+            stored = await self.stored_field(entity, spec["field"])
+            have = await self._meta_field(entity, stored) or {}
+            missing = [o for o in spec.get("add", []) if o not in (have.get("options") or [])]
+            labels, tooltip = await self._i18n_field(entity, stored)
+            wrong = {k: labels.get(k) for k, v in (spec.get("labels") or {}).items()
+                     if labels.get(k) != v}
+            if missing:
+                self.failed.append(f"VERIFY enum {entity}.{stored} lacks {missing}")
+            elif wrong:
+                self.failed.append(f"VERIFY enum {entity}.{stored} labels read {wrong}")
+            elif spec.get("tooltipText") is not None and tooltip != spec["tooltipText"]:
+                self.failed.append(f"VERIFY enum {entity}.{stored} tooltip did not change")
+            else:
+                self.actions.append(f"verified enum {entity}.{stored}")
 
     # --- driving ------------------------------------------------------------
 

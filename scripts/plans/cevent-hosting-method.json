@@ -1,0 +1,18 @@
+{
+  "name": "cevent-hosting-method",
+  "description": "Event hosting plan prds/events/event-hosting-plan.md § 5 (rulings EH1–EH11, Doug 11-14/15-26): CEvent.hostedBy becomes the hosting method. Two options added, Zoom Meetings and Other platform; the stored value CBM Zoom is kept, so no event record changes, and is shown as Zoom Webinars. Nothing is removed. The Zoom identifiers serve both Zoom methods: CEvent.zoomWebinarId holds a meeting's id as it does a webinar's, and CEventRegistration's join link and registrant id serve both (the probe of 11-15-26 found the same shapes). Handoff: cevent-hosting-method-crm-handoff.md. OPEN-ITEMS #84, after #80.",
+  "enumOptions": [
+    {
+      "entity": "CEvent",
+      "field": "hostedBy",
+      "add": ["Zoom Meetings", "Other platform"],
+      "labels": {
+        "CBM Zoom": "Zoom Webinars",
+        "Zoom Meetings": "Zoom Meetings",
+        "Other platform": "Other platform",
+        "Outside host": "Outside host"
+      },
+      "tooltipText": "How an online event is hosted. Zoom Webinars and Zoom Meetings: the application creates the event in the chapter's Zoom account, takes the registrations and sends each person their own join link. Other platform: staff type one join link for everyone; the application still takes the registrations and sends the confirmation. Outside host: a partner runs it on their own platform; type the host's link, and the Register button sends visitors there. Attendance is read from Zoom for the two Zoom methods only."
+    }
+  ]
+}
