@@ -589,7 +589,9 @@
     if (!w.stored) html += '<p class="su__hint">No database is attached, so the wizard cannot keep its place.</p>';
     if (w.status === "done") {
       return html + '<p class="su__wizdone">\u2713 ' + esc(i.name) + " is set up. Every check passes.</p>"
-        + '<p><button type="button" class="cbm-button cbm-button--secondary" data-wiz="' + esc(i.key + "|restart|") + '">Start the wizard again</button></p></section>';
+        + '<p><button type="button" class="cbm-button cbm-button--secondary" data-wiz="' + esc(i.key + "|review|") + '">Review the screens</button> '
+        + '<button type="button" class="cbm-button cbm-button--secondary" data-wiz="' + esc(i.key + "|restart|") + '">Start the wizard again</button> '
+        + '<span class="su__hint">Review the screens opens the first one, so any answer can be seen and changed.</span></p></section>';
     }
     if (w.status === "ended") {
       return html + '<p class="su__wizdone">' + esc(w.ended) + "</p>"

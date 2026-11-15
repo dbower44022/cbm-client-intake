@@ -1,6 +1,6 @@
 # System Settings (`/setup`) — activation and use
 
-Last Updated: 11-15-26 13:41 · Revision 1.2 — see change log at the end.
+Last Updated: 11-15-26 15:04 · Revision 1.3 — see change log at the end.
 
 The admin-only page that changes this deployment's runtime settings from the
 browser instead of editing a deployment overlay and running `doctl`. Plan and
@@ -440,8 +440,11 @@ A screen asks for one of five things:
 fails. The screens before it are taken as done. When every check passes,
 the sub-tab says *"<integration> is set up. Every check passes."*
 
-**Back** returns to the screen before. **Start the wizard again** clears the
-wizard's place and starts again from the first failing screen. Settings
+**Back** returns to the screen before, including the screens the wizard
+opened past (v0.336.1). When the sub-tab says the integration is set up,
+**Review the screens** opens the first screen, so any answer can be seen
+and changed. **Start the wizard again** clears the wizard's place and starts
+again from the first failing screen. Settings
 already saved stay saved, and an earlier answer still chooses its branch.
 
 **The wizard's place is kept for the whole deployment.** A second
@@ -522,6 +525,7 @@ The two refusals in § 8.3 stay active with the switch off. With every
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 11-15-26 15:04 | Claude (Claude Code) | § 8.5: Back reaches the screens the wizard opened past, and Review the screens (v0.336.1). |
 | 1.2 | 11-15-26 13:41 | Claude (Claude Code) | Stale text corrected (Doug's approval 11-15-26): § 1 and § 2 name the Business Mentors Association's system as the test system; § 5 rewritten to the 08-28-26 ruling (three read-only settings; secrets and the CRM connection editable through the checked save; the 10-minute countdown); § 4's "What this page cannot switch on" became "Settings that need a restart"; the troubleshooting row follows. |
 | 1.1 | 11-15-26 13:30 | Claude (Claude Code) | § 8, the Integrations tab (v0.321.0 to v0.335.0), written from what was built: the switch, the sub-tabs, "in use" and its refusals, Test Integration, the set-up wizard, Ask Claude and its budget, the nightly test and its alert, switching it off. Revision header and change log added. |
 | 1.0 | 11-09-26 | — | The document as it stood before the revision header was added (last changed with the chapter website runbook). |

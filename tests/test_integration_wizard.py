@@ -334,3 +334,52 @@ def test_the_page_carries_the_wizard_and_the_tables_reset_nightly(monkeypatch):
     # Since phase 9 every integration has a wizard.
     assert next(i for i in page["integrations"] if i["key"] == "lob")["wizard"]["status"] == "running"
     assert {"integration_wizard", "integration_agent_call"} <= set(RESET_TABLES)
+
+
+# --- Back from where the wizard opened, and Review the screens (phase 11, option A) ----------
+
+def test_back_reaches_a_screen_taken_as_done(monkeypatch):
+    """W5: the wizard opens past a screen that passes, and Back still reaches it
+    with nothing in this run's history (Doug's finding on EspoCRM, 11-15-26)."""
+    monkeypatch.setenv("ZOOM_IN_USE", "true")
+    screens = zoom()
+    view = wizard.view("zoom", Settings(), {}, {}, None, screens)
+    assert view["screen"]["id"] == "zoom-same-account" and view["canBack"] is True
+    assert wizard.previous_screen(screens, "zoom-same-account", {}) == "zoom-use"
+    assert wizard.previous_screen(screens, "zoom-use", {}) is None
+    first = wizard.view("zoom", Settings(), {}, {}, {"current": "zoom-use"}, screens)
+    assert first["canBack"] is False
+    # A skipped branch is skipped going back too.
+    assert wizard.previous_screen(screens, "zoom-scopes", {"zoom-same-account": "Yes"}) == "zoom-licence-same"
+
+
+def test_back_with_no_history_through_the_endpoint(monkeypatch):
+    app = _app(monkeypatch)
+    monkeypatch.setenv("ZOOM_IN_USE", "true")
+    client = TestClient(app)
+    w = zoom_view(post(client, "back"))
+    assert w["screen"]["id"] == "zoom-use" and w["position"] == 1 and w["canBack"] is False
+    # Forward again from the revisited screen keeps working, and Back returns.
+    w = zoom_view(post(client, "answer", "zoom-use", "Yes"))
+    assert w["screen"]["id"] == "zoom-same-account" and w["canBack"]
+    assert zoom_view(post(client, "back"))["screen"]["id"] == "zoom-use"
+
+
+def test_review_opens_the_first_screen_when_set_up(monkeypatch):
+    app = _app(monkeypatch)
+    app.state.wizard_store.rows["zoom"] = dict(wizard.blank(), finished=True,
+                                               answers={"zoom-use": "Yes"})
+    client = TestClient(app)
+    page = client.get("/setup/api/settings").json()
+    assert next(i for i in page["integrations"] if i["key"] == "zoom")["wizard"]["status"] == "done"
+    w = zoom_view(post(client, "review"))
+    assert w["status"] == "running" and w["screen"]["id"] == "zoom-use" and w["position"] == 1
+    # The answers already given are kept.
+    assert app.state.wizard_store.rows["zoom"]["answers"] == {"zoom-use": "Yes"}
+
+
+def test_the_page_offers_review_on_a_set_up_wizard():
+    from pathlib import Path
+
+    js = Path("setup/frontend/app.js").read_text(encoding="utf-8")
+    assert '"|review|"' in js and "Review the screens" in js

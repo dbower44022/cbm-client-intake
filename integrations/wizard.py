@@ -34,6 +34,10 @@ the settings and the last stored integration test — opening the wizard never
 calls an outside service. A Done screen never fails on its own, so screens
 before the first failing one are taken as done. Every check passing: the
 integration is set up. A run in progress resumes where it was left.
+**Back** revisits any earlier screen, shown in this run or taken as done
+(:func:`previous_screen`), and **Review the screens** opens the first one
+when every check passes (:func:`first_screen`; phase 11, Doug's option A,
+11-15-26).
 
 **Progress** is kept for the whole deployment (one row per integration, in
 ``integration_wizard``), so a second administrator sees the same place.
@@ -345,6 +349,35 @@ def next_screen(screens: list[Screen], current: str, answers: dict[str, str],
     return None
 
 
+def previous_screen(screens: list[Screen], current: str, answers: dict[str, str]) -> Optional[str]:
+    """The applicable screen before ``current``, or None at the first (W5:
+    **Back** revisits any screen taken as done, shown in this run or not)."""
+    ids = [s.id for s in screens]
+    if current not in ids:
+        return None
+    for s in reversed(screens[:ids.index(current)]):
+        if _applies(s, answers):
+            return s.id
+    return None
+
+
+def first_screen(screens: list[Screen], answers: dict[str, str]) -> Optional[str]:
+    """The first applicable screen: where **Review the screens** opens."""
+    return next((s.id for s in screens if _applies(s, answers)), None)
+
+
+def shown(screens: list[Screen], state: State, progress: dict[str, Any]) -> Optional[str]:
+    """The screen the page shows now, as :func:`view` works it out; None when
+    the wizard is done or ended."""
+    p = dict(blank(), **(progress or {}))
+    if p.get("ended") or p.get("finished"):
+        return None
+    ids = [s.id for s in screens]
+    if p["current"] in ids:
+        return p["current"]
+    return start(screens, state)
+
+
 # --- progress ----------------------------------------------------------------------------------
 
 def blank() -> dict[str, Any]:
@@ -439,8 +472,10 @@ def view(integration: str, settings: Any, overrides: dict[str, Any],
         current = start(screens, state)
         if current is None:
             status = "done"
+    back_to = previous_screen(screens, current, when_answers(screens, p["answers"], settings)) \
+        if current else None
     out: dict[str, Any] = {"status": status, "total": len(screens), "ended": p.get("ended") or "",
-                           "canBack": bool(p["history"]), "help": p.get("help")}
+                           "canBack": bool(p["history"]) or back_to is not None, "help": p.get("help")}
     if current:
         screen = screens[ids.index(current)]
         result, reason = evaluate(screen, state)

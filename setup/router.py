@@ -710,7 +710,7 @@ async def _wizard_context(request: Request, key: str):
 
 @router.post("/integrations/{key}/wizard/{action}")
 async def wizard_action(key: str, action: str, body: WizardIn, request: Request) -> dict:
-    """One wizard action (W1 to W5): answer, enter, done, back, restart, ask.
+    """One wizard action (W1 to W5): answer, enter, done, back, restart, review, ask.
     A setting is saved through the checked save path as the administrator;
     a screen's test check runs the integration test now."""
     import asyncio
@@ -741,6 +741,28 @@ async def wizard_action(key: str, action: str, body: WizardIn, request: Request)
         if p["history"]:
             p["current"] = p["history"].pop()
             p["finished"], p["ended"], p["failure"] = False, "", None
+        else:
+            # W5: the screens before the one the wizard opened at were taken
+            # as done, and Back revisits them too (phase 11, option A).
+            overrides = await _store(request).load() if _store(request) is not None else {}
+            settings = get_settings()
+            state = wizard.State(settings=settings, overrides=overrides,
+                                 test_runs=await _test_runs(request), answers=p["answers"])
+            here = wizard.shown(screens, state, p)
+            prev = wizard.previous_screen(screens, here, wizard.when_answers(screens, p["answers"], settings)) \
+                if here else None
+            if prev:
+                p["current"] = prev
+                p["finished"], p["ended"], p["failure"] = False, "", None
+        return await respond()
+    if action == "review":
+        # Every check passes: open the first screen, so any answer can be
+        # seen and changed (phase 11, option A). Answers already saved stay.
+        answers = p.get("answers") or {}
+        p.clear()
+        p.update(wizard.blank())
+        p["answers"] = answers
+        p["current"] = wizard.first_screen(screens, wizard.when_answers(screens, answers, get_settings()))
         return await respond()
 
     screen = by_id.get(body.screen)

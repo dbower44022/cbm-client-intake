@@ -5,6 +5,25 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.336.1] — 2026-11-15
+
+**fix(setup): the set-up wizard's Back reaches every earlier screen, and a
+set-up integration can be reviewed.** Dark behind **`INTEGRATIONS_TAB`**.
+Doug's finding in the phase 11 live review on the Business Mentors
+Association's system: the EspoCRM wizard opened at screen 2 (screen 1
+passes, as ruling W5 says) and offered no way back to screen 1, nor to the
+question "Will the applications create mentors' CRM logins?". W5 says Back
+revisits any screen taken as done; Back worked only within the screens
+shown in this run. Fixed by Doug's option A, 11-15-26; `OPEN-ITEMS.md` #82.
+
+- **Back** from the screen the wizard opened at goes to the applicable
+  screen before it, shown in this run or not (`wizard.previous_screen`,
+  `wizard.shown`). The page offers Back on every screen but the first.
+- **Review the screens**, beside Start the wizard again on "… is set up",
+  opens the first screen, keeping the answers given. Opening it calls no
+  outside service.
+- Tests: four in `tests/test_integration_wizard.py`. 4018 passed.
+
 ## [0.336.0] — 2026-11-15
 
 **feat: Business Evaluation, phase 4 — review and approval.** Dark behind
