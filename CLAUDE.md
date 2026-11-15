@@ -1287,4 +1287,12 @@ the strength of it.
   `CEvent.hostedBy`, applied on the Association's CRM only; plan § 6 settled
   (EH11 to EH14). Scripts and documents only. Step 4 waits for Integrations
   phase 9 (prompt v0.2 approved 11-15-26).
+- **v0.333.0–v0.335.0 (2026-11-15) are pushed** (`/healthz` read v0.336.0
+  on production and the Association 11-15-26 12:46): Integrations tab
+  phases 9 and 10, switch off. Phase 10 removed the setup checklist, setup
+  plans and fix plans (ruling W4); migration `0049_drop_checklist_fix_plans`
+  ran on every deployment. **Alembic revision ids are at most 32
+  characters** (`alembic_version.version_num`), and a test now checks it.
+  Phase 11 (documentation, live review on the Association) is approved and
+  not started; #82.
 Everything else still owed is in `OPEN-ITEMS.md`.
