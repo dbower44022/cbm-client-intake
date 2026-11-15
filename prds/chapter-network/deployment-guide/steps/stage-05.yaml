@@ -1,7 +1,7 @@
 stage: 5
 name: Open the chapter's service accounts
-version: "0.20"
-updated: "11-14-26 02:10"
+version: "0.21"
+updated: "11-15-26 02:40"
 why: >-
   The chapter's CRM server, its applications and their database all run in a
   hosting account, and the public webinar programme runs through a video meeting
@@ -150,183 +150,215 @@ steps:
     source: 9-Methods-Hosting-Website-Policies.md#5.4
 
   - id: "5.5"
-    name: Create the video meeting account, or record that it is not needed
-    why: The public webinar programme schedules its meetings through the chapter's own Zoom account; mentoring sessions never use it.
+    name: Create the chapter's Zoom account for events, or record that it is not needed
+    why: The chapter's online events run on its own Zoom account, through Zoom Meetings with registration, so each registrant gets a personal join link and attendance is read afterwards. Mentoring sessions never use this account. Zoom Webinars, a paid add-on for larger events, is step 5.18.
     who: both — the chapter decides, the Association sets up the connection
     first: ["4.7"]
     needs: []
-    produces: [zoom_host_email, zoom_account_id, zoom_client_id, ZOOM_CLIENT_SECRET]
+    produces: []
     mode: guided
-    integration: [zoom]
+    integration: [zoom_meetings]
     actions:
-      - do: "Decide whether the chapter will run public webinars through the software. If not, write \"No public webinars through Zoom\" on the chapter's account list (step 5.7) and stop here. Mentoring sessions never need this account."
-      - do: "Create a licensed user for the webinar host in the chapter's Google Workspace, exactly as in step 4.7, with Last name Webinars and Primary email webinars@EMAIL-DOMAIN. Zoom will send its host mail there."
-      - do: "In a browser, go to https://zoom.us/signup and create a Zoom account with webinars@EMAIL-DOMAIN. Put the password in the chapter's Operations vault."
-      - do: "Buy a paid Zoom plan with a Zoom Webinars licence, and assign that licence to webinars@EMAIL-DOMAIN. Automatic attendance also needs the plan to allow webinar reports. Which plan the chapter needs, and its price, is not decided yet: write it as ZOOM-PLAN on the chapter's account list (step 5.7) until the Association confirms it."
-      - do: "Signed in to Zoom as webinars@EMAIL-DOMAIN, go to https://marketplace.zoom.us/user/build. Zoom first asks to accept its Marketplace Terms of Use, and then, on the first Build app, its API License and Terms of Use; the chapter's own person accepts both. Click the plus button beside Developer, then Build app, choose Server to server OAuth app, click Create, and name the app after the chapter, for example Akron Business Mentors Webinars."
+      - do: "Decide whether the chapter will hold online events on Zoom through the software. If not, write \"No events on Zoom\" on the chapter's account list (step 5.7), skip step 5.18 too, and stop here. Mentoring sessions never need this account."
+      - do: "Create a licensed user for the event host in the chapter's Google Workspace, exactly as in step 4.7, with Last name Events and Primary email events@EMAIL-DOMAIN. Every Zoom event is created under this user, and Zoom sends its host mail there."
+      - do: "In a browser, go to https://zoom.us/signup and create a Zoom account with events@EMAIL-DOMAIN. Put the password in the chapter's Operations vault."
+      - do: "Buy a Zoom Pro plan (or larger) for events@EMAIL-DOMAIN. A Basic (free) user cannot take registrations. Write the plan on the chapter's account list (step 5.7) as ZOOM-PLAN."
+      - do: "Signed in to Zoom as events@EMAIL-DOMAIN, go to https://marketplace.zoom.us/user/build. Zoom first asks to accept its Marketplace Terms of Use, and then, on the first Build app, its API License and Terms of Use; the chapter's own person accepts both. Click the plus button beside Developer, then Build app, choose Server to server OAuth app, click Create, and name the app after the chapter, for example Akron Business Mentors Events."
         see: "The app's App Credentials page, with Account ID, Client ID and Client Secret, each with a Copy button."
       - do: "On the app's Information page, fill in Short Description, Company Name (the chapter's name), and the developer contact's Name and Email (info@EMAIL-DOMAIN). The page saves by itself."
-      - do: "On the Scopes page, add the scopes the software uses:"
+      - do: "On the Scopes page, click Add Scopes and add each scope the software uses, searching for it by name inside Add Scopes. The search box on the Scopes page itself searches only the scopes already added (seen 11-15-26)."
         items:
-          - "user:read:user:admin (View a user)"
-          - "report:read:list_webinar_participants:admin (View webinar participant reports)"
-          - "webinar:read:webinar:admin, webinar:read:list_webinars:admin, webinar:write:webinar:admin and webinar:update:webinar:admin"
-          - "webinar:write:registrant:admin, and the registrant status scope"
-        see: "Zoom's scopes are granular (seen 11-08-26): click Add scopes and search each name. The webinar scopes are offered only once the account holds a Webinars licence; the Association, on Pro without the add-on, could add only the first two. The Association checks the set later with scripts/probe_zoom.py, which names any missing scope."
+          - "user:read:user:admin and user:read:settings:admin"
+          - "meeting:read:list_meetings:admin, meeting:read:meeting:admin, meeting:write:meeting:admin, meeting:update:meeting:admin and meeting:delete:meeting:admin"
+          - "meeting:write:registrant:admin, meeting:read:list_registrants:admin and meeting:update:registrant_status:admin"
+          - "report:read:list_meeting_participants:admin"
+        see: "All eleven scopes listed on the Scopes page."
       - do: "On the Activation page, click Activate your app."
         see: "Your app is activated on the account."
-      - do: "From the app's App Credentials page, copy three values:"
-        items:
-          - "Account ID: write it on the chapter information form as the Zoom account identifier"
-          - "Client ID: write it on the form as the Zoom client identifier"
-          - "Client Secret: put it only in the chapter's Operations vault, never on the form"
-      - do: "On the chapter information form, write webinars@EMAIL-DOMAIN as the Zoom host address. The software reads it as ZOOM_HOST_EMAIL, which otherwise defaults to Cleveland's host."
-        see: "The three values on the form and the secret in the vault."
+      - do: "In Zoom's web portal, signed in as events@EMAIL-DOMAIN, open Settings, then the Meeting tab, then In Meeting (Basic), and switch Co-host on. The chapter's meetings let only the host share the screen, so a co-presenter shares by being made co-host during the meeting. The exact wording of Zoom's settings screen has not been checked for this guide."
+      - do: "From the app's App Credentials page, copy the Account ID, the Client ID and the Client Secret into the chapter's Operations vault, in an item titled Zoom Meetings app."
+      - do: "Once the applications run (stage 11), open System Settings, then the Zoom Meetings sub-tab of the Integrations tab, and follow its set-up wizard: it asks for the three values and the event host user, events@EMAIL-DOMAIN, and checks each one with Zoom."
+        see: "The Zoom Meetings sub-tab's integration test passes."
     done_when: >-
-      Either the account exists with a chapter mailbox as its host address and an
-      app that lets the software schedule webinars through it, or a note records
-      that this chapter runs no public webinars.
+      Either the account exists with the chapter's events@ mailbox as its event
+      host user, on a paid plan, with an app holding the eleven scopes and
+      co-host switched on, or a note records that this chapter holds no events
+      on Zoom.
     check:
-      auto: [setting_set:zoom_account_id, setting_set:zoom_client_id, setting_set:zoom_client_secret, setting_set:zoom_host_email]
-      how: The chapter's host mailbox signs in to Zoom, and the three values are recorded. The connection itself cannot be checked until the applications are deployed.
-      probe: Once the applications run, the app asks Zoom for an access token with the three values.
+      auto: [setting_set:zoom_meetings_account_id, setting_set:zoom_meetings_client_id, setting_set:zoom_meetings_client_secret, setting_set:zoom_event_host_email]
+      how: The events@ mailbox signs in to Zoom, and the three values are in the vault. Once the applications run, the Zoom Meetings sub-tab shows them set.
+      probe: Once the applications run, the Zoom Meetings sub-tab's integration test asks Zoom for a token, compares the scopes, reads the event host user and its co-host setting.
     wizard:
-      # The Integrations tab's wizard (plan § 10, rulings W1 to W6, screens
-      # approved by Doug 11-14-26). One screen per action; not printed in the
-      # guide. Checks: decided:<setting>, setting_set:<key>,
-      # test:<integration>/<check>; none means the person clicks Done.
-      - id: zoom-use
-        title: Does this chapter run public webinars through Zoom?
-        what: The chapter's own Zoom account, used only to schedule its public webinars.
-        why: Mentoring sessions never use this account; each mentor uses their own meeting link. A chapter without public webinars does not need Zoom at all.
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; Zoom
+      # Meetings' screens approved by Doug 11-15-26, phase 9 stopping point 1).
+      - id: zoom-meetings-use
+        title: Does this chapter hold online events on Zoom Meetings?
+        what: Zoom Meetings with registration. Each registrant gets a personal join link, and attendance is read from Zoom afterwards, as with webinars.
+        why: It costs a Zoom Pro user, about $14 to $17 a month, against $67 to $89 more for Webinars, and holds about 100 people on Pro. Mentoring sessions never use this account; each mentor uses their own meeting link.
         ask:
           - answer: "Yes"
-            sets: {zoom_in_use: "true"}
+            sets: {zoom_meetings_in_use: "true"}
             then: next
           - answer: "No"
-            sets: {zoom_in_use: "false"}
+            sets: {zoom_meetings_in_use: "false"}
             then: end
-        check: decided:zoom_in_use
-      - id: zoom-have-account
-        title: Does the chapter already have its Zoom account and app?
-        what: A Zoom account with a Zoom Webinars licence, and a Server-to-Server OAuth app on it.
-        why: If they exist, you only need to copy three values from the app into this application.
+        check: decided:zoom_meetings_in_use
+      - id: zoom-meetings-have-account
+        title: Does the chapter already have a Zoom account with a Server-to-Server OAuth app?
+        what: A paid Zoom account, and an app on it through which this application signs in.
+        why: If both exist, the app only needs the meeting scopes added before its three values are copied here.
         ask:
           - answer: "Yes"
-            then: zoom-account-id
+            then: zoom-meetings-scopes
           - answer: "No"
             then: next
-      - id: zoom-mailbox
-        title: Create the webinar host mailbox
-        what: A licensed Google Workspace user named webinars@ on the chapter's email domain.
-        why: Zoom sends its host mail there, and the account belongs to the chapter rather than to a volunteer.
-        how: In the Google Admin console, open Directory, then Users, then Add new user. Use Webinars as the last name and webinars@ followed by the chapter's email domain as the primary email.
+      - id: zoom-meetings-mailbox
+        title: Create the event host mailbox
+        what: A licensed Google Workspace user named events@ on the chapter's email domain.
+        why: Every Zoom event is created under this user. Zoom sends its host mail there, and the account belongs to the chapter rather than to a volunteer.
+        how: In the Google Admin console, open Directory, then Users, then Add new user. Use Events as the last name, and events@ followed by the chapter's email domain as the primary email.
         see: The new user in the Users list, with a licence.
         if_not: Stop and ask the Association.
-      - id: zoom-signup
+      - id: zoom-meetings-signup
         title: Sign up for Zoom
-        what: The chapter's own Zoom account, signed up with the webinars@ address.
-        why: Zoom's webinar host and its app both live on this account.
-        how: In a browser, go to https://zoom.us/signup and sign up with the webinars@ address. Put the password in the chapter's Operations vault.
-        see: Zoom's welcome page, signed in as the webinars@ address.
+        what: The chapter's own Zoom account, signed up with the events@ address.
+        why: The event host and the app both live on this account.
+        how: In a browser, go to https://zoom.us/signup and sign up with the events@ address. Put the password in the chapter's Operations vault.
+        see: Zoom's welcome page, signed in as the events@ address.
         if_not: Stop and ask the Association.
-      - id: zoom-licence
-        title: Buy the Webinars licence
-        what: A paid Zoom plan with a Zoom Webinars licence, assigned to the webinars@ user.
-        why: Zoom offers the webinar permissions only to an account holding a Webinars licence. Screen 13 checks it.
-        how: In Zoom's web portal, open Plans and Billing and buy a plan with Zoom Webinars, then assign the Webinars licence to the webinars@ user. The exact wording of Zoom's billing screens has not been checked for this guide.
-        see: The webinars@ user listed with a Webinars licence.
+      - id: zoom-meetings-plan
+        title: Buy a Zoom Pro plan
+        what: A paid licence for the events@ user.
+        why: A Basic (free) user cannot take registrations. Screen 14 checks the licence.
+        how: In Zoom's web portal, open Plans and Billing and buy Pro (or larger) for the events@ user. The exact wording of Zoom's billing screens has not been checked for this guide.
+        see: The events@ user listed as Licensed.
         if_not: Stop and ask the Association which plan to buy.
-      - id: zoom-build-app
+      - id: zoom-meetings-build-app
         title: Create the Server-to-Server OAuth app
         what: The app this application signs in to Zoom through.
         why: Zoom gives an application its access only through an app like this.
-        how: Signed in to Zoom as the webinars@ user, go to https://marketplace.zoom.us/user/build. Accept Zoom's terms if asked. Click the plus button beside Developer, then Build app, choose Server to server OAuth app, and click Create. Name it after the chapter, for example Akron Business Mentors Webinars.
+        how: Signed in to Zoom as the events@ user, go to https://marketplace.zoom.us/user/build. Accept Zoom's terms if asked. Click the plus button beside Developer, then Build app, choose Server to server OAuth app, and click Create. Name it after the chapter, for example Akron Business Mentors Events.
         see: The app's App Credentials page, with Account ID, Client ID and Client Secret, each with a Copy button.
         if_not: Stop and ask the Association.
-      - id: zoom-information
+      - id: zoom-meetings-information
         title: Fill in the app's information page
         what: The short description, the company name and the developer contact Zoom asks for.
         why: Zoom will not activate an app without them.
         how: On the app's Information page, fill in Short Description, Company Name (the chapter's name), and the developer contact's Name and Email (info@ followed by the chapter's email domain). The page saves by itself.
         see: No field on the Information page marked as missing.
         if_not: Stop and tell the Association which field Zoom marks.
-      - id: zoom-scopes
-        title: Add the scopes
-        what: The permissions the application uses in Zoom.
-        why: Each one lets the application do one thing, such as read the host user or create a webinar. Screen 12 reports any that are missing.
-        how: On the app's Scopes page, click Add scopes and add each scope below, searching for it by name.
+      - id: zoom-meetings-scopes
+        title: Add the meeting scopes
+        what: The permissions the application uses in Zoom Meetings.
+        why: Each one lets the application do one thing, such as create a meeting, register someone or read who attended. Screen 13 reports any that are missing.
+        how: On the app's Scopes page, click Add Scopes, then search for each scope below by name and tick it. The search box on the Scopes page itself searches only the scopes already added; use the one inside Add Scopes.
         copy:
           - user:read:user:admin
-          - report:read:list_webinar_participants:admin
-          - webinar:read:webinar:admin
-          - webinar:read:list_webinars:admin
-          - webinar:write:webinar:admin
-          - webinar:update:webinar:admin
-          - webinar:write:registrant:admin
-        see: All seven scopes listed on the Scopes page.
-        if_not: If the webinar scopes are not offered, the account has no Webinars licence yet; go back to screen 5.
-      - id: zoom-activate
+          - user:read:settings:admin
+          - meeting:read:list_meetings:admin
+          - meeting:read:meeting:admin
+          - meeting:write:meeting:admin
+          - meeting:update:meeting:admin
+          - meeting:delete:meeting:admin
+          - meeting:write:registrant:admin
+          - meeting:read:list_registrants:admin
+          - meeting:update:registrant_status:admin
+          - report:read:list_meeting_participants:admin
+        see: All eleven listed on the Scopes page.
+        if_not: If a scope is not offered, stop and tell the Association its name.
+      - id: zoom-meetings-activate
         title: Activate the app
         what: Switching the app on for the account.
         why: An app that is not activated cannot issue a token.
-        how: On the app's Activation page, click Activate your app.
+        how: On the app's Activation page, click Activate your app. An existing app that is already active only needs the scopes saved.
         see: The message Your app is activated on the account.
-        if_not: Zoom names what is missing on the Activation page; fix it and click Activate your app again.
-      - id: zoom-account-id
+        if_not: Zoom names what is missing on the Activation page. Fix it and click Activate your app again.
+      - id: zoom-meetings-account-id
         title: Paste the Account ID
         what: The number that names the chapter's Zoom account.
         why: The application needs it, with the next two values, to sign in to Zoom.
         how: On the app's App Credentials page, click Copy beside Account ID, paste it in the box below, and click Save.
-        enters: zoom_account_id
-        check: setting_set:zoom_account_id
+        enters: zoom_meetings_account_id
+        check: setting_set:zoom_meetings_account_id
         if_not: Copy it again from the App Credentials page.
-      - id: zoom-client-id
+      - id: zoom-meetings-client-id
         title: Paste the Client ID
         what: The name of the Zoom app this application signs in through.
         why: The application needs it, with the account ID and the client secret, to sign in to Zoom.
         how: On the app's App Credentials page, click Copy beside Client ID, paste it in the box below, and click Save.
-        enters: zoom_client_id
-        check: setting_set:zoom_client_id
+        enters: zoom_meetings_client_id
+        check: setting_set:zoom_meetings_client_id
         if_not: Copy it again from the App Credentials page.
-      - id: zoom-client-secret
+      - id: zoom-meetings-client-secret
         title: Paste the client secret
         what: The password the application uses to sign in to the Zoom app.
         why: Without it the application cannot get a Zoom token, so nothing else in Zoom can work.
         how: On the app's App Credentials page, click Copy beside Client Secret, paste it in the box below, and click Save. Also put it in the chapter's Operations vault, and nowhere else.
-        enters: zoom_client_secret
-        check: test:zoom/token
+        enters: zoom_meetings_client_secret
+        check: test:zoom_meetings/token
         if_not: Zoom refused the three values together. Copy all three again from the same app; the client secret changes if it was regenerated.
-      - id: zoom-host
-        title: Confirm the webinar host
-        what: The Zoom user who hosts the chapter's webinars, normally the webinars@ address.
-        why: Every webinar is created under this user, and only a user with a Webinars licence can host one.
-        how: Check the address in the box below, change it if needed, and click Save.
-        enters: zoom_host_email
-        check: test:zoom/host
-        if_not: Zoom has no such licensed user on this account. Use the address you signed up with on screen 4, and make sure the Webinars licence is assigned to it.
-      - id: zoom-switch-on
-        title: Turn webinars on?
-        what: The switch that lets the Events application create Zoom webinars.
-        why: Until it is on, nothing in the Events application uses Zoom, even with everything set up.
+      - id: zoom-meetings-scopes-check
+        title: Check the scopes
+        what: Whether the app holds all eleven scopes.
+        why: A missing scope only shows when the application first tries that action, perhaps on the day of an event.
+        how: Click Done. The application reads the scopes from Zoom.
+        check: test:zoom_meetings/scopes
+        if_not: The scopes named above are missing. Add them as on screen 8 and click Done again.
+      - id: zoom-meetings-host
+        title: Confirm the event host user
+        what: The Zoom user every Zoom event is created under, normally the events@ address.
+        why: Only a Licensed user can take registrations. Someone signed in as this user starts each meeting.
+        how: Type the address in the box below and click Save.
+        enters: zoom_event_host_email
+        check: test:zoom_meetings/host
+        if_not: Zoom has no such Licensed user on this account. Use the address you signed up with, and check it is on a paid plan.
+      - id: zoom-meetings-co-host
+        title: Turn on co-host
+        what: Zoom's Co-host setting, on the chapter's account.
+        why: Only the host shares the screen in the chapter's meetings. A co-presenter shares by being made co-host during the meeting, which needs this setting on.
+        how: Signed in to Zoom as the events@ user, open Settings, then the Meeting tab, then In Meeting (Basic). Switch Co-host on, then click Done here. The exact wording of Zoom's settings screen has not been checked for this guide.
+        check: test:zoom_meetings/co_host
+        if_not: The setting may be locked by the account owner. Sign in as the owner and switch it on there.
+      - id: zoom-meetings-capacity
+        title: Confirm the capacity limit
+        what: The largest event the application will put on Zoom Meetings.
+        why: A fully online event with a larger capacity is refused for Zoom Meetings, with the reason. Zoom reports the account's own limit in the integration test, as Meeting capacity.
+        how: Check the number against the capacity Zoom reports, change it if the chapter's plan is larger, and click Save.
+        enters: zoom_meetings_capacity
+        check: setting_set:zoom_meetings_capacity
+      - id: zoom-meetings-default
+        title: Use Zoom Meetings by default for…
+        what: Which events start on Zoom Meetings when staff create them. Staff can still choose another method for each event.
+        why: A sensible default means staff rarely choose, and a chapter with both Zoom products does not set up a meeting by accident when it meant a webinar.
+        ask:
+          - answer: "Members-only events"
+            sets: {events_default_method_members: "Zoom Meetings"}
+            then: next
+          - answer: "All events"
+            sets: {events_default_method_public: "Zoom Meetings", events_default_method_members: "Zoom Meetings"}
+            then: next
+          - answer: "Neither"
+            then: next
+      - id: zoom-meetings-switch-on
+        title: Turn Zoom Meetings on?
+        what: The switch that lets the Events application create Zoom meetings.
+        why: Until it is on, nothing in the Events application uses Zoom Meetings, even with everything set up.
         ask:
           - answer: "Yes"
-            sets: {zoom_events: "true"}
+            sets: {zoom_meetings_events: "true"}
             then: next
           - answer: "Not yet"
             then: next
-        check: test:zoom
+        check: test:zoom_meetings
     goes_wrong: >-
-      The host address setting in the software defaults to Cleveland's. A chapter
-      that forgets to change it would create its webinars under Cleveland's Zoom
-      host. The webinar part of the Zoom connection has never been run against a
-      real Zoom account. The chapter information form asks the three Zoom answers
-      only when Zoom webinars is answered yes, so a chapter that checks its
-      credentials before buying the Webinars licence records them in its setup
-      notes until then.
+      An event host user left on Zoom's free Basic plan: Zoom then refuses every
+      registration. Co-host switched off: a co-presenter cannot share their
+      screen, because only the host shares. Zoom Meetings has been tried for
+      real only on the Business Mentors Association's account (11-15-26), with
+      the probe, not yet through the applications.
     later: unchanged
-    status: not-yet-tried — credentials checked for the Business Mentors Association, 11-10-26, with scripts/probe_zoom.py, read-only. The token was issued and the host admin@mentorsassociation.org found, licensed. Listing webinars was refused for want of the webinar scopes, as expected on Zoom Pro without the Webinars add-on. Webinars themselves are untested.
-    source: 9-Methods-Hosting-Website-Policies.md#5.5
+    status: not-yet-tried — Zoom Meetings proved on the Business Mentors Association's Zoom Pro account 11-15-26 with scripts/probe_zoom.py --meetings (personal join links, attendance matched by email, capacity 100, the scopes). The co-host setting there is still unread.
+    source: 9-Methods-Hosting-Website-Policies.md#5.5; prds/events/event-hosting-plan.md
 
   - id: "5.6"
     name: Turn on two-step sign-in for both accounts
@@ -341,7 +373,7 @@ steps:
         see: "Signing in now asks for a code."
       - do: "Save DigitalOcean's recovery codes straight into the chapter's Operations vault."
       - do: "Set up the same authenticator on a second named person's device, from the same set-up code, so one lost phone does not lock the chapter out. Or store the set-up code itself in the vault."
-      - do: "In Zoom, signed in as webinars@EMAIL-DOMAIN, open the account's security settings and turn on two-factor authentication with an authenticator app. The exact wording of Zoom's screens has not been checked for this guide."
+      - do: "In Zoom, signed in as events@EMAIL-DOMAIN (and as webinars@EMAIL-DOMAIN too, if step 5.18 opened a separate Zoom account), open the account's security settings and turn on two-factor authentication with an authenticator app. The exact wording of Zoom's screens has not been checked for this guide."
         see: "Signing in to Zoom now asks for a code."
       - do: "Save Zoom's recovery codes in the chapter's Operations vault."
       - do: "A second named person opens the vault and finds both sets of recovery codes."
@@ -829,7 +861,219 @@ steps:
     status: not-yet-tried — added 11-13-26 with the Integrations tab's setup checklist (phase 4).
     source: comms/summarize.py; enrichment/runs.py; prds/integrations-tab-plan.md section 4
 
+  - id: "5.18"
+    name: Add Zoom Webinars, or record that it is not needed
+    why: Zoom Webinars is a paid add-on for large public events, where attendees watch and cannot speak or show video. Most chapters can hold their events on Zoom Meetings (step 5.5) instead. Mentoring sessions never use it.
+    who: both — the chapter decides, the Association sets up the connection
+    first: ["5.5"]
+    needs: []
+    produces: [zoom_host_email, zoom_account_id, zoom_client_id, ZOOM_CLIENT_SECRET]
+    mode: guided
+    integration: [zoom]
+    actions:
+      - do: "Decide whether the chapter will run public webinars on Zoom Webinars. If not, write \"No Zoom Webinars\" on the chapter's account list (step 5.7) and stop here."
+      - do: "Decide whether the Webinars add-on goes on the account made in step 5.5 (the usual choice) or on a separate Zoom account, and write the answer on the chapter's account list. On the same account, the webinars use step 5.5's app and event host user, and the next five actions are not needed: buy the add-on, add the webinar scopes to step 5.5's app, and stop."
+      - do: "Separate account only: create a licensed user for the webinar host in the chapter's Google Workspace, exactly as in step 4.7, with Last name Webinars and Primary email webinars@EMAIL-DOMAIN, then go to https://zoom.us/signup and create a Zoom account with it. Put the password in the chapter's Operations vault."
+      - do: "Buy the Zoom Webinars add-on and assign it to the host: the event host user from step 5.5 on the same account, or webinars@EMAIL-DOMAIN on a separate one. Automatic attendance also needs the plan to allow webinar reports. Write the plan on the chapter's account list (step 5.7) as ZOOM-PLAN."
+      - do: "Separate account only: signed in to Zoom as webinars@EMAIL-DOMAIN, build a Server to server OAuth app at https://marketplace.zoom.us/user/build, exactly as in step 5.5, named for example Akron Business Mentors Webinars, and fill in its Information page."
+        see: "The app's App Credentials page, with Account ID, Client ID and Client Secret, each with a Copy button."
+      - do: "On the app's Scopes page (step 5.5's app on the same account), click Add Scopes and add the webinar scopes, searching for each by name inside Add Scopes:"
+        items:
+          - "user:read:user:admin (View a user)"
+          - "report:read:list_webinar_participants:admin (View webinar participant reports)"
+          - "webinar:read:webinar:admin, webinar:read:list_webinars:admin, webinar:write:webinar:admin and webinar:update:webinar:admin"
+          - "webinar:write:registrant:admin, and the registrant status scope"
+        see: "The webinar scopes are offered only once the account holds a Webinars licence (seen 11-08-26: the Association, on Pro without the add-on, could add only the first two). The Association checks the set later with scripts/probe_zoom.py, which names any missing scope."
+      - do: "Separate account only: on the Activation page, click Activate your app, then copy three values from the App Credentials page:"
+        items:
+          - "Account ID: write it on the chapter information form as the Zoom account identifier"
+          - "Client ID: write it on the form as the Zoom client identifier"
+          - "Client Secret: put it only in the chapter's Operations vault, never on the form"
+      - do: "Separate account only: on the chapter information form, write webinars@EMAIL-DOMAIN as the Zoom host address. The software reads it as ZOOM_HOST_EMAIL, which otherwise defaults to Cleveland's host."
+        see: "The three values on the form and the secret in the vault."
+    done_when: >-
+      Either the Webinars add-on is assigned to the host, on the same account
+      as Zoom Meetings or on a separate account with its own app, or a note
+      records that this chapter runs no Zoom Webinars.
+    check:
+      auto: []
+      how: The host is listed in Zoom with a Webinars licence. On a separate account, its three values are recorded. The connection itself cannot be checked until the applications are deployed.
+      probe: Once the applications run, the Zoom Webinars sub-tab's integration test asks Zoom for a token and reads the host's webinar licence.
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6). The
+      # pilot's 14 screens (approved by Doug 11-14-26) reworded for Zoom
+      # Webinars, with the same-account question (EH7); approved by Doug
+      # 11-15-26, phase 9 stopping point 1. Screen ids are the pilot's, so a
+      # stored place is kept.
+      - id: zoom-use
+        title: Does this chapter run public webinars on Zoom Webinars?
+        what: Zoom Webinars, a paid add-on for large public events where attendees watch and cannot speak or show video.
+        why: It costs about $67 to $89 a month on top of a Zoom plan. Most chapters can hold their events on Zoom Meetings instead. Mentoring sessions never use this account.
+        ask:
+          - answer: "Yes"
+            sets: {zoom_in_use: "true"}
+            then: next
+          - answer: "No"
+            sets: {zoom_in_use: "false"}
+            then: end
+        check: decided:zoom_in_use
+      - id: zoom-same-account
+        title: Is Zoom Webinars on the same Zoom account as Zoom Meetings?
+        what: Whether the Webinars add-on is bought on the account set up for Zoom Meetings, or on an account of its own.
+        why: On the same account, Zoom Webinars uses Zoom Meetings' app and event host user, so nothing needs copying twice. Answer No if the chapter does not use Zoom Meetings.
+        ask:
+          - answer: "Yes"
+            sets: {zoom_webinars_same_account: "true"}
+            then: next
+          - answer: "No"
+            sets: {zoom_webinars_same_account: "false"}
+            then: next
+        check: decided:zoom_webinars_same_account
+      - id: zoom-have-account
+        title: Does the chapter already have its Zoom Webinars account and app?
+        what: A separate Zoom account with a Zoom Webinars licence, and a Server-to-Server OAuth app on it.
+        why: If they exist, you only need to copy three values from the app into this application.
+        when: zoom-same-account=No
+        ask:
+          - answer: "Yes"
+            then: zoom-account-id
+          - answer: "No"
+            then: next
+      - id: zoom-mailbox
+        title: Create the webinar host mailbox
+        what: A licensed Google Workspace user named webinars@ on the chapter's email domain.
+        why: Zoom sends its host mail there, and the account belongs to the chapter rather than to a volunteer.
+        how: In the Google Admin console, open Directory, then Users, then Add new user. Use Webinars as the last name and webinars@ followed by the chapter's email domain as the primary email.
+        see: The new user in the Users list, with a licence.
+        if_not: Stop and ask the Association.
+        when: zoom-same-account=No
+      - id: zoom-signup
+        title: Sign up for Zoom
+        what: The separate Zoom account for webinars, signed up with the webinars@ address.
+        why: Zoom's webinar host and its app both live on this account.
+        how: In a browser, go to https://zoom.us/signup and sign up with the webinars@ address. Put the password in the chapter's Operations vault.
+        see: Zoom's welcome page, signed in as the webinars@ address.
+        if_not: Stop and ask the Association.
+        when: zoom-same-account=No
+      - id: zoom-licence-same
+        title: Buy the Webinars licence
+        what: The Zoom Webinars add-on, on the account set up for Zoom Meetings, assigned to the event host user.
+        why: Zoom offers the webinar scopes only to an account holding a Webinars licence. The last screen checks it.
+        how: In Zoom's web portal, signed in as the account owner, open Plans and Billing, buy the Zoom Webinars add-on, and assign it to the event host user. The exact wording of Zoom's billing screens has not been checked for this guide.
+        see: The event host user listed with a Webinars licence.
+        if_not: Stop and ask the Association which add-on to buy.
+        when: zoom-same-account=Yes
+      - id: zoom-licence
+        title: Buy the Webinars licence
+        what: A paid Zoom plan with a Zoom Webinars licence, assigned to the webinars@ user.
+        why: Zoom offers the webinar scopes only to an account holding a Webinars licence. The last screen checks it.
+        how: In Zoom's web portal, open Plans and Billing and buy a plan with Zoom Webinars, then assign the Webinars licence to the webinars@ user. The exact wording of Zoom's billing screens has not been checked for this guide.
+        see: The webinars@ user listed with a Webinars licence.
+        if_not: Stop and ask the Association which plan to buy.
+        when: zoom-same-account=No
+      - id: zoom-build-app
+        title: Create the Server-to-Server OAuth app
+        what: The app this application signs in to the separate Zoom account through.
+        why: Zoom gives an application its access only through an app like this.
+        how: Signed in to Zoom as the webinars@ user, go to https://marketplace.zoom.us/user/build. Accept Zoom's terms if asked. Click the plus button beside Developer, then Build app, choose Server to server OAuth app, and click Create. Name it after the chapter, for example Akron Business Mentors Webinars.
+        see: The app's App Credentials page, with Account ID, Client ID and Client Secret, each with a Copy button.
+        if_not: Stop and ask the Association.
+        when: zoom-same-account=No
+      - id: zoom-information
+        title: Fill in the app's information page
+        what: The short description, the company name and the developer contact Zoom asks for.
+        why: Zoom will not activate an app without them.
+        how: On the app's Information page, fill in Short Description, Company Name (the chapter's name), and the developer contact's Name and Email (info@ followed by the chapter's email domain). The page saves by itself.
+        see: No field on the Information page marked as missing.
+        if_not: Stop and tell the Association which field Zoom marks.
+        when: zoom-same-account=No
+      - id: zoom-scopes
+        title: Add the webinar scopes
+        what: The permissions the application uses in Zoom Webinars.
+        why: Each one lets the application do one thing, such as read the host user or create a webinar. The last screen reports a missing one.
+        how: On the app's Scopes page, click Add Scopes and add each scope below, searching for it by name inside Add Scopes. On the same account, this is the app made for Zoom Meetings. The Scopes page's own search box searches only the scopes already added.
+        copy:
+          - user:read:user:admin
+          - report:read:list_webinar_participants:admin
+          - webinar:read:webinar:admin
+          - webinar:read:list_webinars:admin
+          - webinar:write:webinar:admin
+          - webinar:update:webinar:admin
+          - webinar:write:registrant:admin
+        see: All seven scopes listed on the Scopes page.
+        if_not: If the webinar scopes are not offered, the account has no Webinars licence yet; go back to the Buy the Webinars licence screen.
+      - id: zoom-activate
+        title: Activate the app
+        what: Switching the app on for the account.
+        why: An app that is not activated cannot issue a token.
+        how: On the app's Activation page, click Activate your app.
+        see: The message Your app is activated on the account.
+        if_not: Zoom names what is missing on the Activation page; fix it and click Activate your app again.
+        when: zoom-same-account=No
+      - id: zoom-account-id
+        title: Paste the Account ID
+        what: The number that names the separate Zoom account.
+        why: The application needs it, with the next two values, to sign in to Zoom.
+        how: On the app's App Credentials page, click Copy beside Account ID, paste it in the box below, and click Save.
+        enters: zoom_account_id
+        check: setting_set:zoom_account_id
+        if_not: Copy it again from the App Credentials page.
+        when: zoom-same-account=No
+      - id: zoom-client-id
+        title: Paste the Client ID
+        what: The name of the Zoom app this application signs in through.
+        why: The application needs it, with the account ID and the client secret, to sign in to Zoom.
+        how: On the app's App Credentials page, click Copy beside Client ID, paste it in the box below, and click Save.
+        enters: zoom_client_id
+        check: setting_set:zoom_client_id
+        if_not: Copy it again from the App Credentials page.
+        when: zoom-same-account=No
+      - id: zoom-client-secret
+        title: Paste the client secret
+        what: The password the application uses to sign in to the Zoom app.
+        why: Without it the application cannot get a Zoom token, so nothing else in Zoom can work.
+        how: On the app's App Credentials page, click Copy beside Client Secret, paste it in the box below, and click Save. Also put it in the chapter's Operations vault, and nowhere else.
+        enters: zoom_client_secret
+        check: test:zoom/token
+        if_not: Zoom refused the three values together. Copy all three again from the same app; the client secret changes if it was regenerated.
+        when: zoom-same-account=No
+      - id: zoom-host
+        title: Confirm the webinar host
+        what: The Zoom user who hosts the chapter's webinars on the separate account, normally the webinars@ address.
+        why: Every webinar is created under this user, and only a user with a Webinars licence can host one.
+        how: Check the address in the box below, change it if needed, and click Save.
+        enters: zoom_host_email
+        check: test:zoom/host
+        if_not: Zoom has no such licensed user on this account. Use the address you signed up with, and make sure the Webinars licence is assigned to it.
+        when: zoom-same-account=No
+      - id: zoom-switch-on
+        title: Turn webinars on?
+        what: The switch that lets the Events application create Zoom webinars. On the same account, webinars are created under the event host user.
+        why: Until it is on, nothing in the Events application uses Zoom Webinars, even with everything set up.
+        ask:
+          - answer: "Yes"
+            sets: {zoom_events: "true"}
+            then: next
+          - answer: "Not yet"
+            then: next
+        check: test:zoom
+    goes_wrong: >-
+      The host address setting in the software defaults to Cleveland's. A chapter
+      on a separate account that forgets to change it would create its webinars
+      under Cleveland's Zoom host. The webinar part of the Zoom connection has
+      never been run against a real Zoom account. The chapter information form
+      asks the three Zoom answers only when Zoom webinars is answered yes, so a
+      chapter that checks its credentials before buying the Webinars licence
+      records them in its setup notes until then.
+    later: unchanged
+    status: not-yet-tried — credentials checked for the Business Mentors Association, 11-10-26, with scripts/probe_zoom.py, read-only. The token was issued and the host admin@mentorsassociation.org found, licensed. Listing webinars was refused for want of the webinar scopes, as expected on Zoom Pro without the Webinars add-on. Webinars themselves are untested. Split from step 5.5 on 11-15-26 (Zoom Meetings and Zoom Webinars, rulings EH1 and EH7).
+    source: 9-Methods-Hosting-Website-Policies.md#5.5; prds/events/event-hosting-plan.md
+
 changes:
+  - version: "0.21"
+    date: "11-15-26 02:40"
+    change: >-
+      Zoom is split in two (rulings EH1 and EH7, prds/events/event-hosting-plan.md; screens approved by Doug 11-15-26). Step 5.5 becomes Zoom Meetings: the chapter's Zoom account, the events@ event host user on a paid plan, the app with the eleven meeting scopes found through Add Scopes, and the co-host setting, with eighteen wizard screens; its values go in the vault and are entered on the Zoom Meetings sub-tab, not on the chapter information form. The new step 5.18 is Zoom Webinars, on the same account or a separate one, carrying the pilot's fourteen screens reworded and the same-account question. Step 5.6 names the events@ sign-in. No step number changed.
   - version: "0.20"
     date: "11-14-26 02:10"
     change: >-

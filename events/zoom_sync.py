@@ -39,7 +39,7 @@ import logging
 from datetime import datetime
 from typing import Any, Optional
 
-from core.zoom import ZoomClient, ZoomError, make_client
+from core.zoom import ZoomClient, ZoomError, make_client, webinars_account
 
 from . import config as cfg
 from . import visibility
@@ -150,7 +150,7 @@ async def sync_event_webinar(
             return {"ok": False, "disabled": True,
                     "reason": "Zoom is not enabled or not configured"}
 
-        host = (getattr(settings, "zoom_host_email", "") or "").strip()
+        host = webinars_account(settings).host
         if not host:
             return {"ok": False, "disabled": True,
                     "reason": "no Zoom host account is configured"}

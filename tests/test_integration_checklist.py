@@ -55,8 +55,12 @@ def test_every_integration_has_steps_from_the_guide():
 def test_the_approved_mapping():
     by_id = {s.id: s for s in checklist.load_steps()}
     assert by_id["8.4"].integrations == ("google_workspace", "zoom")
+    # Phase 9, the Zoom split: 5.5 is Zoom Meetings, 5.18 Zoom Webinars.
+    assert by_id["5.5"].integrations == ("zoom_meetings",)
     assert by_id["5.5"].auto == tuple(f"setting_set:{k}" for k in (
-        "zoom_account_id", "zoom_client_id", "zoom_client_secret", "zoom_host_email"))
+        "zoom_meetings_account_id", "zoom_meetings_client_id", "zoom_meetings_client_secret",
+        "zoom_event_host_email"))
+    assert by_id["5.18"].integrations == ("zoom",) and by_id["5.18"].auto == ()
     assert by_id["11.19"].auto == ("mailing_connected",)
     assert by_id["10.3"].auto == ("test_passed:google_workspace",)
     assert by_id["5.16"].manual and by_id["11.21"].manual
@@ -154,15 +158,16 @@ def test_a_manual_step_is_done_only_when_ticked_and_a_shared_step_is_one_step():
 
 
 def test_an_automatic_step_ticks_itself_only_when_every_check_passes():
-    s = Settings(zoom_account_id="a", zoom_client_id="b", zoom_client_secret="c", zoom_host_email="")
-    row = next(r for r in checklist.build(INTEGRATIONS["zoom"], st(settings=s))["rows"] if r["id"] == "5.5")
+    s = Settings(zoom_meetings_account_id="a", zoom_meetings_client_id="b",
+                 zoom_meetings_client_secret="c", zoom_event_host_email="")
+    row = next(r for r in checklist.build(INTEGRATIONS["zoom_meetings"], st(settings=s))["rows"] if r["id"] == "5.5")
     assert row["automatic"] and row["state"] == OPEN and "host" in row["reason"].lower()
-    s = Settings(zoom_account_id="a", zoom_client_id="b", zoom_client_secret="c",
-                 zoom_host_email="webinars@x.org")
-    row = next(r for r in checklist.build(INTEGRATIONS["zoom"], st(settings=s))["rows"] if r["id"] == "5.5")
+    s = Settings(zoom_meetings_account_id="a", zoom_meetings_client_id="b",
+                 zoom_meetings_client_secret="c", zoom_event_host_email="events@x.org")
+    row = next(r for r in checklist.build(INTEGRATIONS["zoom_meetings"], st(settings=s))["rows"] if r["id"] == "5.5")
     assert row["state"] == DONE
-    built = checklist.build(INTEGRATIONS["zoom"], st(settings=s))
-    assert built["total"] == 4 and built["done"] == 1
+    built = checklist.build(INTEGRATIONS["zoom_meetings"], st(settings=s))
+    assert built["total"] == 3 and built["done"] == 1
 
 
 def test_a_secret_value_never_reaches_the_checklist():
@@ -251,7 +256,7 @@ def test_ticking_a_manual_step_is_kept_logged_and_shown(monkeypatch):
 def test_an_automatic_step_and_the_framing_rows_cannot_be_ticked(monkeypatch):
     client = TestClient(_app(monkeypatch, {"INTEGRATIONS_TAB": "true"}))
     for step in ("5.5", "decide", "test"):
-        resp = client.post(f"/setup/api/integrations/zoom/checklist/{step}", json={"ticked": True})
+        resp = client.post(f"/setup/api/integrations/zoom_meetings/checklist/{step}", json={"ticked": True})
         assert resp.status_code == 409, step
         assert "ticks itself" in resp.json()["detail"]
     assert client.post("/setup/api/integrations/zoom/checklist/5.16", json={}).status_code == 404

@@ -70,7 +70,7 @@ ZOOM = INTEGRATIONS["zoom"]
 
 def test_a_new_failure_alerts_with_each_failed_check_and_the_link():
     text = nightly.message(S(), ZOOM, result(), [])
-    assert text.startswith("Integration test failed: Zoom (environment: ")
+    assert text.startswith("Integration test failed: Zoom Webinars (environment: ")
     assert "11-14-26 06:00" in text  # 11:00 UTC in New York
     assert "Failed: Host (host is wrong)" in text
     assert text.endswith("Open: https://apps.example.org/setup/#integrations/zoom")

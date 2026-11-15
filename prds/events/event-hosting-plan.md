@@ -1,6 +1,6 @@
 # Event hosting methods — plan
 
-Last Updated: 11-15-26 02:19 · Revision 0.7 — see change log at the end.
+Last Updated: 11-15-26 02:50 · Revision 0.8 — see change log at the end.
 
 This plan decides how a chapter's online events are hosted: Zoom Webinars,
 Zoom Meetings, a link to any other platform, or an outside host. It records
@@ -173,6 +173,7 @@ the Events work is.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.8 | 11-15-26 02:50 | Claude (Claude Code) | Step 2 built by the Integrations tab's phase 9 (v0.333.0): the settings step 4 reads are named in `setup/CLAUDE.md`; `core/zoom.meetings_account`, `webinars_account` and `make_meetings_client` are the way in. Zoom Webinars uses Meetings' credentials only once all three are set (Doug, option A). |
 | 0.7 | 11-15-26 02:19 | Claude (Claude Code) | Ruling EH14 (Doug, § 6 point 3, option A): the method covers the online half of a hybrid event; its capacity guard warns there. Every § 6 point is settled; step 4 waits only for step 2. |
 | 0.6 | 11-15-26 02:17 | Claude (Claude Code) | Ruling EH13 (Doug, § 6 point 2, option A): a public Other-platform event may be published, its shared link only in the confirmation. |
 | 0.5 | 11-15-26 02:14 | Claude (Claude Code) | Ruling EH12 (Doug, § 6 point 1, option A): attendance for Other platform marked by hand, with a warning before no-show emails. |

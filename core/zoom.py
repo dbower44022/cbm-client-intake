@@ -51,6 +51,7 @@ import asyncio
 import base64
 import logging
 import time
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Optional
 
@@ -332,6 +333,38 @@ class ZoomClient:
             params={"page_size": page_size, "type": kind},
         )
 
+    async def list_meetings(
+        self, user: str, *, kind: str = "upcoming", page_size: int = 1
+    ) -> dict[str, Any]:
+        """A user's meetings (``upcoming`` or ``previous_meetings``)."""
+        return await self._request(
+            "GET", f"/users/{user}/meetings",
+            params={"page_size": page_size, "type": kind},
+        )
+
+    async def list_meeting_participants(self, meeting_id: str) -> list[dict[str, Any]]:
+        """A past meeting's participant report, every page. Proved on a real
+        account 11-15-26: each row carries ``user_email``, never a
+        ``registrant_id``."""
+        from urllib.parse import quote
+
+        mid = str(meeting_id)
+        # A UUID that starts with "/" or holds "//" must be double-encoded.
+        if mid.startswith("/") or "//" in mid:
+            mid = quote(quote(mid, safe=""), safe="")
+        participants: list[dict[str, Any]] = []
+        token = ""
+        for _ in range(50):
+            params: dict[str, Any] = {"page_size": 300}
+            if token:
+                params["next_page_token"] = token
+            data = await self._request("GET", f"/report/meetings/{mid}/participants", params=params)
+            participants.extend((data or {}).get("participants") or [])
+            token = (data or {}).get("next_page_token") or ""
+            if not token:
+                break
+        return participants
+
     # --- registrants -------------------------------------------------------
 
     async def add_registrant(
@@ -410,8 +443,73 @@ def _retry_after(resp: httpx.Response) -> Optional[float]:
         return None
 
 
+# --- which Zoom account (prds/events/event-hosting-plan.md, EH7 and EH8) ----
+
+@dataclass(frozen=True)
+class ZoomAccount:
+    """The credentials and host one Zoom integration uses. ``shared`` is
+    True when Zoom Webinars is using Zoom Meetings' account."""
+
+    account_id: str
+    client_id: str
+    client_secret: str
+    host: str
+    shared: bool = False
+
+    @property
+    def credentialed(self) -> bool:
+        return bool(self.account_id and self.client_id and self.client_secret)
+
+    @property
+    def complete(self) -> bool:
+        return self.credentialed and bool(self.host)
+
+
+def _clean(settings: Any, key: str) -> str:
+    return str(getattr(settings, key, "") or "").strip()
+
+
+def meetings_account(settings: Any) -> ZoomAccount:
+    """Zoom Meetings' app and the event host user (EH8)."""
+    return ZoomAccount(
+        _clean(settings, "zoom_meetings_account_id"),
+        _clean(settings, "zoom_meetings_client_id"),
+        _clean(settings, "zoom_meetings_client_secret"),
+        _clean(settings, "zoom_event_host_email"),
+    )
+
+
+def webinars_account(settings: Any) -> ZoomAccount:
+    """The one rule for Zoom Webinars' credentials (Doug, 11-15-26, option A).
+
+    Zoom Meetings' app and event host user when "same account" is Yes (EH7,
+    the default) AND all three Zoom Meetings credentials are set; otherwise
+    Zoom Webinars' own four settings. The "otherwise" keeps a deployment that
+    holds only Webinars credentials (Cleveland's production) as it was.
+    """
+    meetings = meetings_account(settings)
+    if getattr(settings, "zoom_webinars_same_account", True) and meetings.credentialed:
+        host = meetings.host or _clean(settings, "zoom_host_email")
+        return ZoomAccount(meetings.account_id, meetings.client_id, meetings.client_secret,
+                           host, shared=True)
+    return ZoomAccount(
+        _clean(settings, "zoom_account_id"),
+        _clean(settings, "zoom_client_id"),
+        _clean(settings, "zoom_client_secret"),
+        _clean(settings, "zoom_host_email"),
+    )
+
+
+def client_for(account: ZoomAccount, settings: Any, *, timeout: int = 30) -> ZoomClient:
+    """A client for ``account``; raises ZoomAuthError when it lacks a credential."""
+    return ZoomClient(account.account_id, account.client_id, account.client_secret,
+                      base_url=getattr(settings, "zoom_base_url", "") or DEFAULT_BASE_URL,
+                      timeout=timeout)
+
+
 def make_client(settings: Any) -> Optional[ZoomClient]:
-    """Build a client from settings, or None when Zoom isn't configured.
+    """Build the Zoom Webinars client from settings, or None when Zoom
+    Webinars isn't switched on or configured.
 
     Returning None (rather than raising) lets every caller treat "Zoom is off"
     and "Zoom is broken" the same way: skip, record why, carry on.
@@ -419,12 +517,19 @@ def make_client(settings: Any) -> Optional[ZoomClient]:
     if not getattr(settings, "zoom_events", False):
         return None
     try:
-        return ZoomClient(
-            settings.zoom_account_id,
-            settings.zoom_client_id,
-            settings.zoom_client_secret,
-            base_url=getattr(settings, "zoom_base_url", DEFAULT_BASE_URL),
-        )
+        return client_for(webinars_account(settings), settings)
     except ZoomAuthError as exc:
         log.warning("Zoom is enabled but not configured: %s", exc)
+        return None
+
+
+def make_meetings_client(settings: Any) -> Optional[ZoomClient]:
+    """The Zoom Meetings client, or None when ``zoom_meetings_events`` is
+    off or Zoom Meetings is not configured."""
+    if not getattr(settings, "zoom_meetings_events", False):
+        return None
+    try:
+        return client_for(meetings_account(settings), settings)
+    except ZoomAuthError as exc:
+        log.warning("Zoom Meetings is enabled but not configured: %s", exc)
         return None

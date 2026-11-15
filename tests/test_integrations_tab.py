@@ -67,9 +67,10 @@ class FakeStore:
 
 # --- the registry ---------------------------------------------------------
 
-def test_the_integrations_are_the_nine_in_display_order():
+def test_the_integrations_are_the_ten_in_display_order():
+    # Phase 9: Zoom is split into Zoom Meetings and Zoom Webinars (EH1).
     assert [i.name for i in INTEGRATIONS] == [
-        "EspoCRM", "Google Workspace", "Zoom", "Fathom", "Constant Contact", "Lob",
+        "EspoCRM", "Google Workspace", "Zoom Meetings", "Zoom Webinars", "Fathom", "Constant Contact", "Lob",
         "Twilio", "Anthropic", "YouTube",
     ]
 
@@ -219,7 +220,9 @@ async def test_the_status_line_names_switches_and_missing_credentials():
     zoom = next(i for i in payload["integrations"] if i["key"] == "zoom")
     assert zoom["status"]["on"] is True
     assert zoom["status"]["onSwitches"] == ["Zoom webinar provisioning"]
-    assert zoom["status"]["credentialsMissing"] == ["Zoom client secret", "Zoom host"]
+    assert zoom["status"]["credentialsMissing"] == [
+        "Zoom Webinars client secret (separate account only)",
+        "Zoom Webinars host (separate account only)"]
 
 
 def test_the_guard_counts_a_scoped_switch_as_on():
@@ -257,7 +260,7 @@ def test_marking_not_in_use_is_refused_while_a_switch_is_on(monkeypatch):
     resp = client.put("/setup/api/settings/zoom_in_use", json={"value": "false"})
     assert resp.status_code == 409
     detail = resp.json()["detail"]
-    assert "Zoom cannot be marked not in use" in detail
+    assert "Zoom Webinars cannot be marked not in use" in detail
     assert "Zoom webinar provisioning (zoom_events)" in detail
 
 
@@ -280,7 +283,7 @@ def test_switching_on_is_refused_while_not_in_use(monkeypatch):
     client = TestClient(_app(monkeypatch, {"ZOOM_IN_USE": "false"}))
     resp = client.put("/setup/api/settings/zoom_events", json={"value": "true"})
     assert resp.status_code == 409
-    assert "Mark Zoom in use first" in resp.json()["detail"]
+    assert "Mark Zoom Webinars in use first" in resp.json()["detail"]
     # Switching it OFF is always allowed.
     assert client.put("/setup/api/settings/zoom_events",
                       json={"value": "false"}).status_code == 200
@@ -318,7 +321,7 @@ def test_a_reset_that_would_switch_a_feature_on_is_refused(monkeypatch):
     apply_overrides({"zoom_events": "false", "zoom_in_use": "false"})
     resp = client.request("DELETE", "/setup/api/settings/zoom_events", json={"reason": ""})
     assert resp.status_code == 409
-    assert "Mark Zoom in use first" in resp.json()["detail"]
+    assert "Mark Zoom Webinars in use first" in resp.json()["detail"]
 
 
 # --- readiness ----------------------------------------------------------------

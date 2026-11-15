@@ -1248,7 +1248,8 @@ async def wizard_action(key: str, action: str, body: WizardIn, request: Request)
             p["failure"] = {"screen": screen.id, "reason": why}
             return await respond()
 
-    nxt = wizard.next_screen(screens, screen.id, p["answers"], then)
+    nxt = wizard.next_screen(screens, screen.id,
+                             wizard.when_answers(screens, p["answers"], get_settings()), then)
     p["history"].append(screen.id)
     if then == wizard.END:
         p["current"], p["ended"] = None, f"{integ.name} is marked as not used by this chapter."

@@ -1,5 +1,10 @@
-"""The Zoom integration test (prds/integrations-tab-plan.md § 3; the check list
+"""The Zoom Webinars integration test (prds/integrations-tab-plan.md § 3; the check list
 Doug approved 11-13-26, phase 2 stopping point 1).
+
+**Which credentials** (phase 9, ruling EH7, Doug's option A 11-15-26):
+``core/zoom.webinars_account`` — Zoom Meetings' app and event host user when
+Zoom Webinars is on the same account and Zoom Meetings' three credentials are
+set, otherwise Zoom Webinars' own four settings. The first check says which.
 
 Zoom has one feature, so its checks run whether ``zoom_events`` is on or not:
 Zoom can be tested before it is switched on. Checks, in order:
@@ -15,7 +20,8 @@ Zoom can be tested before it is switched on. Checks, in order:
 5. **The host's webinars** — ``GET /users/{host}/webinars``. Fact: how many
    are scheduled.
 6. **Attendance report** — the participant report of the most recent past
-   webinar, which needs its own scope. No past webinar is unknown.
+   webinar, which needs its own scope. No past webinar is skipped (phase 9):
+   there is nothing to read yet, and a new account must be able to pass.
 
 Calls 3, 5 and 6 are the ones ``scripts/probe_zoom.py`` made against the real
 account. Every call is a read.
@@ -29,6 +35,7 @@ from typing import Any, Callable, Optional
 from integrations.testing import (
     FAILED,
     OK,
+    SKIPPED,
     UNKNOWN,
     Blocked,
     Check,
@@ -39,13 +46,16 @@ from integrations.testing import (
 LICENCES = {1: "Basic", 2: "Licensed", 3: "On-premises", 4: "Unassigned", 99: "None"}
 
 
-def _default_client(settings: Any) -> Any:
-    from core.zoom import DEFAULT_BASE_URL, ZoomClient
+def _account(settings: Any) -> Any:
+    from core.zoom import webinars_account
 
-    return ZoomClient(
-        settings.zoom_account_id, settings.zoom_client_id, settings.zoom_client_secret,
-        base_url=getattr(settings, "zoom_base_url", "") or DEFAULT_BASE_URL, timeout=10,
-    )
+    return webinars_account(settings)
+
+
+def _default_client(settings: Any) -> Any:
+    from core.zoom import client_for
+
+    return client_for(_account(settings), settings, timeout=10)
 
 
 @dataclass
@@ -73,7 +83,7 @@ def _answer(exc: Exception, what: str) -> tuple[str, str]:
 
 
 def _host(ctx: Context) -> str:
-    return (ctx.settings.zoom_host_email or "").strip()
+    return _account(ctx.settings).host
 
 
 def _needs(ctx: Context, key: str, why: str) -> None:
@@ -82,15 +92,19 @@ def _needs(ctx: Context, key: str, why: str) -> None:
 
 
 async def _settings(ctx: Context) -> tuple[str, str]:
-    s = ctx.settings
+    a = _account(ctx.settings)
+    whose = "Zoom Meetings'" if a.shared else "Zoom Webinars'"
+    ctx.fact("Credentials used", "Zoom Meetings' app and event host user (same account)"
+             if a.shared else "Zoom Webinars' own (separate account)")
     missing = [label for label, value in (
-        ("account ID", s.zoom_account_id), ("client ID", s.zoom_client_id),
-        ("client secret", s.zoom_client_secret), ("host", s.zoom_host_email),
-    ) if not (value or "").strip()]
+        ("account ID", a.account_id), ("client ID", a.client_id),
+        ("client secret", a.client_secret),
+        ("event host user" if a.shared else "host", a.host),
+    ) if not value]
     if missing:
-        return FAILED, "Not set: " + ", ".join(missing) + "."
+        return FAILED, f"Not set ({whose} settings): " + ", ".join(missing) + "."
     ctx.state["settings_ok"] = True
-    return OK, "The account ID, client ID, client secret and host are set."
+    return OK, f"{whose} account ID, client ID, client secret and host are set."
 
 
 async def _token(ctx: Context) -> tuple[str, str]:
@@ -180,7 +194,7 @@ async def _attendance(ctx: Context) -> tuple[str, str]:
         return _answer(exc, f"the past webinars of {host}")
     webinars = (past or {}).get("webinars") or []
     if not webinars:
-        return UNKNOWN, ("No past webinar to check: the attendance report can only "
+        return SKIPPED, ("No past webinar to check yet: the attendance report can "
                          "be read after the first webinar has run.")
     target = webinars[0]
     try:

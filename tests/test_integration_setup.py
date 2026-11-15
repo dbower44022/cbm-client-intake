@@ -338,9 +338,10 @@ def test_a_manual_step_linked_to_an_open_automatic_check_stays_open(monkeypatch)
     steps = [{"n": 1, "kind": "manual_step", "where": "Zoom App Marketplace", "action": "Build the app",
               "copyValue": "", "expect": "", "ifNot": "", "checklistStep": "5.5", "state": "pending"},
              {"n": 2, "kind": "retest", "state": "pending"}]
-    row = app.state.fix_plan_store.put(steps, kind="setup", diagnosis_="Sets up Zoom.")
+    row = app.state.fix_plan_store.put(steps, kind="setup", diagnosis_="Sets up Zoom.",
+                                       integration="zoom_meetings")
     client = TestClient(app)
-    base = f"/setup/api/integrations/zoom/fixplan/{row['id']}"
+    base = f"/setup/api/integrations/zoom_meetings/fixplan/{row['id']}"
     client.post(f"{base}/apply", json={"fingerprint": row["fingerprint"]})
     plan = client.post(f"{base}/steps/1/done").json()["plan"]
     assert plan["steps"][0]["state"] == "pending"

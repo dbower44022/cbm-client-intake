@@ -82,6 +82,7 @@ def _row(
         "group": spec.group,
         "kind": spec.kind,
         "choices": list(spec.choices),
+        "choiceLabels": dict(spec.choice_labels),
         "unit": spec.unit,
         "help": branding.render_text(spec.help, settings) if spec.help else spec.help,
         "restart": spec.restart,
@@ -312,6 +313,12 @@ def _integrations(
             branding.render_text(BY_KEY[k].label, settings) if k in BY_KEY else k
             for k in integ.credentials if not getattr(settings, k, None)
         ]
+        if integ.key == "zoom":
+            from core.zoom import webinars_account
+
+            if webinars_account(settings).shared:
+                # On Zoom Meetings' account (EH7): its own four are not used.
+                missing = [] if webinars_account(settings).host else ["Event host user"]
         status: dict[str, Any] = {
             "alwaysInUse": integ.always_in_use,
             "inUse": integration_registry.in_use(integ, settings),

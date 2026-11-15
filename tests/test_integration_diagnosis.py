@@ -257,8 +257,9 @@ class FakePlans:
         self.rows[row["id"]] = row
         return dict(row)
 
-    def put(self, steps, status=fixplans.PROPOSED, diagnosis_="The host is wrong.", kind="fix"):
-        row = run(self.create(integration="zoom", status=status, kind=kind))
+    def put(self, steps, status=fixplans.PROPOSED, diagnosis_="The host is wrong.", kind="fix",
+            integration="zoom"):
+        row = run(self.create(integration=integration, status=status, kind=kind))
         row.update(diagnosis=diagnosis_, steps=steps, fingerprint=fixplans.fingerprint(diagnosis_, steps))
         self.rows[row["id"]] = row
         return row

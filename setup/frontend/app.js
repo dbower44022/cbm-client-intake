@@ -88,9 +88,16 @@
     return out;
   }
 
+  // The page's name for a stored choice ("CBM Zoom" is shown as "Zoom Webinars").
+  function choiceLabel(row, value) {
+    var labels = row.choiceLabels || {};
+    return Object.prototype.hasOwnProperty.call(labels, value) ? labels[value] : value;
+  }
+
   function valueCell(row) {
     if (row.secret) return row.isSet ? "set" : "not set";
     if (row.kind === "bool") return row.value === "true" ? "On" : "Off";
+    if (row.kind === "choice" && row.value !== "") return esc(choiceLabel(row, row.value));
     return row.value === "" ? "—" : esc(row.value) + (row.unit ? " " + esc(row.unit) : "");
   }
 
@@ -304,7 +311,7 @@
         + '<option value="false">Off</option></select>';
     } else if (row.kind === "choice") {
       control.innerHTML = '<select id="editValue">'
-        + row.choices.map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + "</option>"; }).join("")
+        + row.choices.map(function (c) { return '<option value="' + esc(c) + '">' + esc(choiceLabel(row, c)) + "</option>"; }).join("")
         + "</select>";
     } else {
       control.innerHTML = '<input type="text" id="editValue" />';

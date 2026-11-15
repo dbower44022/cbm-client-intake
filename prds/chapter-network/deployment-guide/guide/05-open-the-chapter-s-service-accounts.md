@@ -1,7 +1,7 @@
 # Stage 5 — Open the chapter's service accounts
 
-**Version:** 0.20  
-**Last Updated:** 11-14-26 02:10  
+**Version:** 0.21  
+**Last Updated:** 11-15-26 02:40  
 **Generated from** `steps/stage-05.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -28,7 +28,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 - 5.2 Set up billing on the hosting account
 - 5.3 Apply for the nonprofit hosting credits
 - 5.4 Grant the Association access to the hosting account
-- 5.5 Create the video meeting account, or record that it is not needed
+- 5.5 Create the chapter's Zoom account for events, or record that it is not needed
 - 5.6 Turn on two-step sign-in for both accounts
 - 5.7 Write down every account the chapter now owns
 - 5.8 Create the two tokens CRMBuilder builds with
@@ -41,6 +41,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 - 5.15 Open the Twilio account and buy the sender number, or record that it is not needed
 - 5.16 Register the sender number with the carriers
 - 5.17 Create the Anthropic API key, or record that it is not needed
+- 5.18 Add Zoom Webinars, or record that it is not needed
 
 ---
 
@@ -177,9 +178,9 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 ---
 
-## 5.5 Create the video meeting account, or record that it is not needed
+## 5.5 Create the chapter's Zoom account for events, or record that it is not needed
 
-**Why:** The public webinar programme schedules its meetings through the chapter's own Zoom account; mentoring sessions never use it.
+**Why:** The chapter's online events run on its own Zoom account, through Zoom Meetings with registration, so each registrant gets a personal join link and attendance is read afterwards. Mentoring sessions never use this account. Zoom Webinars, a paid add-on for larger events, is step 5.18.
 
 **Who:** The chapter and the Association — the chapter decides, the Association sets up the connection
 
@@ -191,36 +192,34 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Do this:**
 
-1. Decide whether the chapter will run public webinars through the software. If not, write "No public webinars through Zoom" on the chapter's account list (step 5.7) and stop here. Mentoring sessions never need this account.
-2. Create a licensed user for the webinar host in the chapter's Google Workspace, exactly as in step 4.7, with Last name Webinars and Primary email webinars@EMAIL-DOMAIN. Zoom will send its host mail there.
-3. In a browser, go to https://zoom.us/signup and create a Zoom account with webinars@EMAIL-DOMAIN. Put the password in the chapter's Operations vault.
-4. Buy a paid Zoom plan with a Zoom Webinars licence, and assign that licence to webinars@EMAIL-DOMAIN. Automatic attendance also needs the plan to allow webinar reports. Which plan the chapter needs, and its price, is not decided yet: write it as ZOOM-PLAN on the chapter's account list (step 5.7) until the Association confirms it.
-5. Signed in to Zoom as webinars@EMAIL-DOMAIN, go to https://marketplace.zoom.us/user/build. Zoom first asks to accept its Marketplace Terms of Use, and then, on the first Build app, its API License and Terms of Use; the chapter's own person accepts both. Click the plus button beside Developer, then Build app, choose Server to server OAuth app, click Create, and name the app after the chapter, for example Akron Business Mentors Webinars.
+1. Decide whether the chapter will hold online events on Zoom through the software. If not, write "No events on Zoom" on the chapter's account list (step 5.7), skip step 5.18 too, and stop here. Mentoring sessions never need this account.
+2. Create a licensed user for the event host in the chapter's Google Workspace, exactly as in step 4.7, with Last name Events and Primary email events@EMAIL-DOMAIN. Every Zoom event is created under this user, and Zoom sends its host mail there.
+3. In a browser, go to https://zoom.us/signup and create a Zoom account with events@EMAIL-DOMAIN. Put the password in the chapter's Operations vault.
+4. Buy a Zoom Pro plan (or larger) for events@EMAIL-DOMAIN. A Basic (free) user cannot take registrations. Write the plan on the chapter's account list (step 5.7) as ZOOM-PLAN.
+5. Signed in to Zoom as events@EMAIL-DOMAIN, go to https://marketplace.zoom.us/user/build. Zoom first asks to accept its Marketplace Terms of Use, and then, on the first Build app, its API License and Terms of Use; the chapter's own person accepts both. Click the plus button beside Developer, then Build app, choose Server to server OAuth app, click Create, and name the app after the chapter, for example Akron Business Mentors Events.
    *You should see:* The app's App Credentials page, with Account ID, Client ID and Client Secret, each with a Copy button.
 6. On the app's Information page, fill in Short Description, Company Name (the chapter's name), and the developer contact's Name and Email (info@EMAIL-DOMAIN). The page saves by itself.
-7. On the Scopes page, add the scopes the software uses:
-   - user:read:user:admin (View a user)
-   - report:read:list_webinar_participants:admin (View webinar participant reports)
-   - webinar:read:webinar:admin, webinar:read:list_webinars:admin, webinar:write:webinar:admin and webinar:update:webinar:admin
-   - webinar:write:registrant:admin, and the registrant status scope
+7. On the Scopes page, click Add Scopes and add each scope the software uses, searching for it by name inside Add Scopes. The search box on the Scopes page itself searches only the scopes already added (seen 11-15-26).
+   - user:read:user:admin and user:read:settings:admin
+   - meeting:read:list_meetings:admin, meeting:read:meeting:admin, meeting:write:meeting:admin, meeting:update:meeting:admin and meeting:delete:meeting:admin
+   - meeting:write:registrant:admin, meeting:read:list_registrants:admin and meeting:update:registrant_status:admin
+   - report:read:list_meeting_participants:admin
 
-   *You should see:* Zoom's scopes are granular (seen 11-08-26): click Add scopes and search each name. The webinar scopes are offered only once the account holds a Webinars licence; the Association, on Pro without the add-on, could add only the first two. The Association checks the set later with scripts/probe_zoom.py, which names any missing scope.
+   *You should see:* All eleven scopes listed on the Scopes page.
 8. On the Activation page, click Activate your app.
    *You should see:* Your app is activated on the account.
-9. From the app's App Credentials page, copy three values:
-   - Account ID: write it on the chapter information form as the Zoom account identifier
-   - Client ID: write it on the form as the Zoom client identifier
-   - Client Secret: put it only in the chapter's Operations vault, never on the form
-10. On the chapter information form, write webinars@EMAIL-DOMAIN as the Zoom host address. The software reads it as ZOOM_HOST_EMAIL, which otherwise defaults to Cleveland's host.
-    *You should see:* The three values on the form and the secret in the vault.
+9. In Zoom's web portal, signed in as events@EMAIL-DOMAIN, open Settings, then the Meeting tab, then In Meeting (Basic), and switch Co-host on. The chapter's meetings let only the host share the screen, so a co-presenter shares by being made co-host during the meeting. The exact wording of Zoom's settings screen has not been checked for this guide.
+10. From the app's App Credentials page, copy the Account ID, the Client ID and the Client Secret into the chapter's Operations vault, in an item titled Zoom Meetings app.
+11. Once the applications run (stage 11), open System Settings, then the Zoom Meetings sub-tab of the Integrations tab, and follow its set-up wizard: it asks for the three values and the event host user, events@EMAIL-DOMAIN, and checks each one with Zoom.
+    *You should see:* The Zoom Meetings sub-tab's integration test passes.
 
-**Done when:** Either the account exists with a chapter mailbox as its host address and an app that lets the software schedule webinars through it, or a note records that this chapter runs no public webinars.
+**Done when:** Either the account exists with the chapter's events@ mailbox as its event host user, on a paid plan, with an app holding the eleven scopes and co-host switched on, or a note records that this chapter holds no events on Zoom.
 
-**How to check:** The chapter's host mailbox signs in to Zoom, and the three values are recorded. The connection itself cannot be checked until the applications are deployed.
+**How to check:** The events@ mailbox signs in to Zoom, and the three values are in the vault. Once the applications run, the Zoom Meetings sub-tab shows them set.
 
 **If it didn't work:** Stop, and ask the Association before going on.
 
-**What usually goes wrong:** The host address setting in the software defaults to Cleveland's. A chapter that forgets to change it would create its webinars under Cleveland's Zoom host. The webinar part of the Zoom connection has never been run against a real Zoom account. The chapter information form asks the three Zoom answers only when Zoom webinars is answered yes, so a chapter that checks its credentials before buying the Webinars licence records them in its setup notes until then.
+**What usually goes wrong:** An event host user left on Zoom's free Basic plan: Zoom then refuses every registration. Co-host switched off: a co-presenter cannot share their screen, because only the host shares. Zoom Meetings has been tried for real only on the Business Mentors Association's account (11-15-26), with the probe, not yet through the applications.
 
 ---
 
@@ -233,7 +232,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 **Finish first:**
 
 - step 5.1 Create the server hosting account
-- step 5.5 Create the video meeting account, or record that it is not needed
+- step 5.5 Create the chapter's Zoom account for events, or record that it is not needed
 
 > This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
 
@@ -243,7 +242,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
    *You should see:* Signing in now asks for a code.
 2. Save DigitalOcean's recovery codes straight into the chapter's Operations vault.
 3. Set up the same authenticator on a second named person's device, from the same set-up code, so one lost phone does not lock the chapter out. Or store the set-up code itself in the vault.
-4. In Zoom, signed in as webinars@EMAIL-DOMAIN, open the account's security settings and turn on two-factor authentication with an authenticator app. The exact wording of Zoom's screens has not been checked for this guide.
+4. In Zoom, signed in as events@EMAIL-DOMAIN (and as webinars@EMAIL-DOMAIN too, if step 5.18 opened a separate Zoom account), open the account's security settings and turn on two-factor authentication with an authenticator app. The exact wording of Zoom's screens has not been checked for this guide.
    *You should see:* Signing in to Zoom now asks for a code.
 5. Save Zoom's recovery codes in the chapter's Operations vault.
 6. A second named person opens the vault and finds both sets of recovery codes.
@@ -271,7 +270,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 - step 5.2 Set up billing on the hosting account
 - step 5.3 Apply for the nonprofit hosting credits
 - step 5.4 Grant the Association access to the hosting account
-- step 5.5 Create the video meeting account, or record that it is not needed
+- step 5.5 Create the chapter's Zoom account for events, or record that it is not needed
 - step 5.6 Turn on two-step sign-in for both accounts
 
 > This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
@@ -726,10 +725,55 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 ---
 
+## 5.18 Add Zoom Webinars, or record that it is not needed
+
+**Why:** Zoom Webinars is a paid add-on for large public events, where attendees watch and cannot speak or show video. Most chapters can hold their events on Zoom Meetings (step 5.5) instead. Mentoring sessions never use it.
+
+**Who:** The chapter and the Association — the chapter decides, the Association sets up the connection
+
+**Finish first:**
+
+- step 5.5 Create the chapter's Zoom account for events, or record that it is not needed
+
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
+
+**Do this:**
+
+1. Decide whether the chapter will run public webinars on Zoom Webinars. If not, write "No Zoom Webinars" on the chapter's account list (step 5.7) and stop here.
+2. Decide whether the Webinars add-on goes on the account made in step 5.5 (the usual choice) or on a separate Zoom account, and write the answer on the chapter's account list. On the same account, the webinars use step 5.5's app and event host user, and the next five actions are not needed: buy the add-on, add the webinar scopes to step 5.5's app, and stop.
+3. Separate account only: create a licensed user for the webinar host in the chapter's Google Workspace, exactly as in step 4.7, with Last name Webinars and Primary email webinars@EMAIL-DOMAIN, then go to https://zoom.us/signup and create a Zoom account with it. Put the password in the chapter's Operations vault.
+4. Buy the Zoom Webinars add-on and assign it to the host: the event host user from step 5.5 on the same account, or webinars@EMAIL-DOMAIN on a separate one. Automatic attendance also needs the plan to allow webinar reports. Write the plan on the chapter's account list (step 5.7) as ZOOM-PLAN.
+5. Separate account only: signed in to Zoom as webinars@EMAIL-DOMAIN, build a Server to server OAuth app at https://marketplace.zoom.us/user/build, exactly as in step 5.5, named for example Akron Business Mentors Webinars, and fill in its Information page.
+   *You should see:* The app's App Credentials page, with Account ID, Client ID and Client Secret, each with a Copy button.
+6. On the app's Scopes page (step 5.5's app on the same account), click Add Scopes and add the webinar scopes, searching for each by name inside Add Scopes:
+   - user:read:user:admin (View a user)
+   - report:read:list_webinar_participants:admin (View webinar participant reports)
+   - webinar:read:webinar:admin, webinar:read:list_webinars:admin, webinar:write:webinar:admin and webinar:update:webinar:admin
+   - webinar:write:registrant:admin, and the registrant status scope
+
+   *You should see:* The webinar scopes are offered only once the account holds a Webinars licence (seen 11-08-26: the Association, on Pro without the add-on, could add only the first two). The Association checks the set later with scripts/probe_zoom.py, which names any missing scope.
+7. Separate account only: on the Activation page, click Activate your app, then copy three values from the App Credentials page:
+   - Account ID: write it on the chapter information form as the Zoom account identifier
+   - Client ID: write it on the form as the Zoom client identifier
+   - Client Secret: put it only in the chapter's Operations vault, never on the form
+8. Separate account only: on the chapter information form, write webinars@EMAIL-DOMAIN as the Zoom host address. The software reads it as ZOOM_HOST_EMAIL, which otherwise defaults to Cleveland's host.
+   *You should see:* The three values on the form and the secret in the vault.
+
+**Done when:** Either the Webinars add-on is assigned to the host, on the same account as Zoom Meetings or on a separate account with its own app, or a note records that this chapter runs no Zoom Webinars.
+
+**How to check:** The host is listed in Zoom with a Webinars licence. On a separate account, its three values are recorded. The connection itself cannot be checked until the applications are deployed.
+
+**If it didn't work:** Stop, and ask the Association before going on.
+
+**What usually goes wrong:** The host address setting in the software defaults to Cleveland's. A chapter on a separate account that forgets to change it would create its webinars under Cleveland's Zoom host. The webinar part of the Zoom connection has never been run against a real Zoom account. The chapter information form asks the three Zoom answers only when Zoom webinars is answered yes, so a chapter that checks its credentials before buying the Webinars licence records them in its setup notes until then.
+
+---
+
 ## Change log
 
 | Version | Date | Change |
 |---|---|---|
+| 0.21 | 11-15-26 02:40 | Zoom is split in two (rulings EH1 and EH7, prds/events/event-hosting-plan.md; screens approved by Doug 11-15-26). Step 5.5 becomes Zoom Meetings: the chapter's Zoom account, the events@ event host user on a paid plan, the app with the eleven meeting scopes found through Add Scopes, and the co-host setting, with eighteen wizard screens; its values go in the vault and are entered on the Zoom Meetings sub-tab, not on the chapter information form. The new step 5.18 is Zoom Webinars, on the same account or a separate one, carrying the pilot's fourteen screens reworded and the same-account question. Step 5.6 names the events@ sign-in. No step number changed. |
 | 0.20 | 11-14-26 02:10 | Step 5.5 carries the Integrations tab's Zoom wizard: fourteen screens under a new wizard key (plan § 10, rulings W1 to W6; screens approved by Doug 11-14-26). The key is not printed, so the guide's steps read exactly as before. |
 | 0.19 | 11-13-26 10:30 | Steps 5.13 to 5.17 added, each for an outside service the applications use and no step set up: the Fathom team API key, the Lob account and keys, the Twilio account and number, the carrier registration of the number, and the Anthropic API key (mapping approved by Doug 11-13-26). No existing step number changed. Steps that belong to an integration carry the new keys integration and check.auto, read by the setup checklist on System Settings' Integrations tab (prds/integrations-tab-plan.md section 4, mapping approved by Doug 11-13-26). |
 | 0.18 | 11-10-26 10:41 | Step 5.5's status records the read-only credentials check for the Business Mentors Association (11-10-26): token issued, host found, webinar listing refused for want of the Webinars licence. Its goes wrong note says the form asks the Zoom answers only when webinars are switched on. |

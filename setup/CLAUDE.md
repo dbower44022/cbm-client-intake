@@ -1,6 +1,6 @@
 # setup/ — System Settings
 
-Last Updated: 10-20-26 17:30 · Revision 1.0
+Last Updated: 11-15-26 02:50 · Revision 1.1
 
 Detail for System Settings (`/setup`): the override model, the verified path, confirm-or-revert, restart-required settings, refresh, scoped rollout and the page's other panels.
 
@@ -101,8 +101,44 @@ the crm-test overlay, so every prod flag change needed `doctl`. Runbook:
   crossing the wire), and an **operations** tab whose mutating jobs are
   **dry-run → apply that exact plan**, refusing if the plan moved.
 
+## Zoom Meetings and Zoom Webinars — the settings the Events side reads
+
+Integrations tab phase 9 (v0.333.0), rulings EH1, EH5 to EH8 of
+`prds/events/event-hosting-plan.md`. Two integrations: **Zoom Meetings**
+(`zoom_meetings`) and **Zoom Webinars** (`zoom`, the key kept). Zoom Webinars
+keeps its old setting keys, relabelled, so no stored override is stranded.
+
+- **Zoom Meetings**: `zoom_meetings_in_use`; the switch
+  `zoom_meetings_events` (off by default — the Events side creates a meeting
+  only while it is on, `Settings.zoom_meetings_active`);
+  `zoom_meetings_account_id`, `zoom_meetings_client_id`,
+  `zoom_meetings_client_secret` (secret); **`zoom_event_host_email`**, the
+  event host user (EH8); `zoom_meetings_capacity` (EH6, default 100).
+- **Zoom Webinars**: `zoom_in_use`, `zoom_events`, `zoom_account_id`,
+  `zoom_client_id`, `zoom_client_secret`, `zoom_host_email` (its own, used
+  only on a separate account), and **`zoom_webinars_same_account`** (EH7,
+  default Yes).
+- **The defaults per audience** (EH5), on the Settings tab:
+  `events_default_method_public` and `events_default_method_members`, each
+  one of the CRM's stored values `CBM Zoom` (shown as Zoom Webinars), `Zoom
+  Meetings`, `Other platform`, `Outside host`; both default `CBM Zoom`. A
+  choice setting may carry `choice_labels`, which the page shows.
+- **Never read the Zoom credentials directly.** `core/zoom.meetings_account`
+  and `core/zoom.webinars_account` are the one rule (Doug, 11-15-26, option
+  A): Zoom Webinars uses Zoom Meetings' app and event host user when "same
+  account" is Yes AND all three Zoom Meetings credentials are set, otherwise
+  its own four. `core/zoom.make_client` (webinars) and
+  `make_meetings_client` build from them; the tests, readiness and the
+  status line read them too.
+- A test check that finds nothing to read yet (no past meeting or webinar)
+  is **skipped**, not unknown, so a new account can pass its whole test.
+- A wizard screen's `when:` reads a question not answered in this run from
+  the settings its answer saved (`wizard.when_answers`), so Start again keeps
+  the branch.
+
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 11-15-26 02:50 | Claude (Claude Code) | Zoom Meetings and Zoom Webinars: the settings the Events side reads (Integrations tab phase 9, v0.333.0). |
 | 1.0 | 10-20-26 17:30 | Claude (Claude Code) | Created from the root `CLAUDE.md` section, word for word (Doug's approval 10-20-26). |

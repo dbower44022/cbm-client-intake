@@ -14,7 +14,10 @@ and ``how``, and one of:
 ``check:`` is what proves the screen done: ``decided:<setting>``,
 ``setting_set:<key>``, ``test:<integration>`` or
 ``test:<integration>/<check>``; none means Done. ``when:`` (``<screen>=<answer>``)
-skips a screen unless an earlier answer matches.
+skips a screen unless an earlier answer matches. A question not answered in
+this run counts, for ``when:`` only, as the one answer whose settings match
+the settings now (:func:`when_answers`), so Start again keeps the branch a
+saved answer chose (phase 9: Zoom Webinars' same-account question).
 
 **Where it starts** (W5): at the first screen whose check fails, judged from
 the settings and the last stored integration test — opening the wizard never
@@ -141,6 +144,20 @@ def screens_for(integration: str, steps_dir: Any = None) -> list[Screen]:
     return out
 
 
+def _check_keys(integration: str) -> Optional[set[str]]:
+    """The check keys of an integration's test, or None when it has none."""
+    import importlib
+
+    from integrations.registry import integration_for
+
+    integ = integration_for(integration)
+    if integ is None or not integ.test_module:
+        return None
+    module = importlib.import_module(integ.test_module)
+    checks = getattr(module, "CHECKS", None)
+    return None if checks is None else {c.key for c in checks}
+
+
 def problems(screens: list[Screen], setting_keys: set[str], integration_keys: set[str]) -> list[str]:
     """Everything wrong with the screens' keys."""
     out, ids = [], {s.id for s in screens}
@@ -154,6 +171,16 @@ def problems(screens: list[Screen], setting_keys: set[str], integration_keys: se
             out.append(f"{s.id}: '{s.check}' names no setting")
         if kind == "test" and arg.split("/")[0] not in integration_keys:
             out.append(f"{s.id}: '{s.check}' names no integration")
+        elif kind == "test" and "/" in arg:
+            integ, _, check = arg.partition("/")
+            known = _check_keys(integ)
+            if known is not None and check not in known:
+                out.append(f"{s.id}: '{s.check}' names no check of {integ}'s test")
+        if s.when:
+            sid, _, answer = s.when.partition("=")
+            target = next((t for t in screens if t.id == sid), None)
+            if target is None or answer not in [str(a.get("answer")) for a in target.ask]:
+                out.append(f"{s.id}: when '{s.when}' names no earlier question and answer")
         if s.enters and s.enters not in setting_keys:
             out.append(f"{s.id}: enters '{s.enters}', which is no setting")
         for a in s.ask:
@@ -216,6 +243,29 @@ def evaluate(screen: Screen, state: State) -> tuple[str, str]:
     return UNKNOWN, f"Unknown check '{screen.check}'."
 
 
+def _setting_text(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value if value is not None else "").strip().lower()
+
+
+def when_answers(screens: list[Screen], answers: dict[str, str], settings: Any) -> dict[str, str]:
+    """The answers ``when:`` reads: this run's, and for a question not answered
+    in it, the one answer whose ``sets`` all match the settings now. Never used
+    for a ``decided:`` check, which must still be answered."""
+    out: dict[str, str] = {}
+    for s in screens:
+        if not s.ask or s.id in answers:
+            continue
+        matching = [str(a.get("answer")) for a in s.ask if a.get("sets") and all(
+            _setting_text(getattr(settings, k, None)) == _setting_text(v)
+            for k, v in (a.get("sets") or {}).items())]
+        if len(matching) == 1:
+            out[s.id] = matching[0]
+    out.update(answers)
+    return out
+
+
 def _applies(screen: Screen, answers: dict[str, str]) -> bool:
     if not screen.when:
         return True
@@ -225,8 +275,9 @@ def _applies(screen: Screen, answers: dict[str, str]) -> bool:
 
 def start(screens: list[Screen], state: State) -> Optional[str]:
     """The first screen whose check fails (W5), or None: every check passes."""
+    branch = when_answers(screens, state.answers, state.settings)
     for s in screens:
-        if not _applies(s, state.answers):
+        if not _applies(s, branch):
             continue
         if evaluate(s, state)[0] != PASS:
             return s.id

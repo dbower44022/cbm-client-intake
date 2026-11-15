@@ -5,6 +5,56 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.333.0] — 2026-11-15
+
+**feat(setup): the Integrations tab, phase 9 part one — Zoom splits into Zoom
+Meetings and Zoom Webinars.** Dark behind **`INTEGRATIONS_TAB`** (the sub-tabs)
+and **`ZOOM_MEETINGS_EVENTS`** (off). Rulings EH1, EH5 to EH8 and EH11 of
+`prds/events/event-hosting-plan.md`; the settings, checks and screens approved
+by Doug 11-15-26 at stopping point 1 (option A for the webinar credentials);
+`OPEN-ITEMS.md` #82 and #84. Only the System Settings side: the Events side
+(creating meetings, registrants, attendance, the event form) is the event
+hosting build's step 4.
+
+- **Two integrations** (EH1): a new **Zoom Meetings** (`zoom_meetings`) and
+  **Zoom Webinars**, the old `zoom` renamed. Zoom Webinars keeps its setting
+  keys, relabelled, so no chapter's stored override is stranded.
+- **New settings**: `zoom_meetings_in_use`; the switch
+  `zoom_meetings_events`; `zoom_meetings_account_id`, `_client_id`,
+  `_client_secret` (secret, verified tier); `zoom_event_host_email`, the event
+  host user (EH8); `zoom_meetings_capacity` (EH6, default 100);
+  `zoom_webinars_same_account` (EH7, default Yes); and on the Settings tab
+  `events_default_method_public` / `_members` (EH5), the CRM's stored values
+  with `CBM Zoom` shown as Zoom Webinars (a choice setting may now carry
+  labels the page shows). Names listed in `setup/CLAUDE.md`.
+- **One rule for the webinar credentials** (`core/zoom.webinars_account`,
+  Doug's option A): Zoom Meetings' app and event host user when "same
+  account" is Yes and all three Zoom Meetings credentials are set, otherwise
+  Zoom Webinars' own. A deployment holding only Webinars credentials —
+  Cleveland's production — is unchanged. `make_client`, the webinar sync's
+  host, `Settings.zoom_active`, readiness, the status line and the test read
+  it; `make_meetings_client` and `Settings.zoom_meetings_active` are new.
+- **Zoom Meetings' test** (`integrations/checks/zoom_meetings.py`): settings,
+  token, the eleven meeting scopes (each missing one named; Zoom's own words
+  for a code 4711 refusal), the event host user Licensed, co-host on (EH11),
+  Zoom's meeting capacity beside the limit setting, the host's meetings, the
+  attendance report. **No past meeting or webinar is now skipped, not
+  unknown**, so a new account can pass — Zoom Webinars' attendance check too.
+- **The guide**: step 5.5 becomes Zoom Meetings (the events@ host on a paid
+  plan, the app's eleven scopes through Add Scopes, co-host, the values
+  entered on the sub-tab), with 18 wizard screens; new step 5.18 is Zoom
+  Webinars, the pilot's 14 screens reworded plus the same-account question
+  and a licence screen per answer. Step 5.6 names events@. Stage 5 0.21.
+- **The wizard**: a `when:` condition reads a question not answered in this
+  run from the setting its answer saved, so Start again keeps the branch;
+  the screen check now refuses a `test:` check its test does not have and a
+  `when:` naming no question and answer.
+- Feature readiness gains a Zoom meetings row; the nightly test covers Zoom
+  Meetings once its switch is on.
+- Tests: `tests/test_zoom_split.py` (19); the Integrations tests follow the
+  rename; the Settings page snapshot gains the new settings and labels.
+  4032 passed.
+
 ## [0.332.4] — 2026-11-15
 
 **fix(setup): the Google Workspace integration test no longer fails features

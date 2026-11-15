@@ -102,9 +102,19 @@ FEATURES: tuple[Feature, ...] = (
     ),
     Feature(
         key="zoom", name="Zoom webinars", flag="zoom_events", component="both",
+        # Read through core/zoom.webinars_account (_requirement_rows): on Zoom
+        # Meetings' account these are Zoom Meetings' credentials (EH7).
         requires=("zoom_account_id", "zoom_client_id", "zoom_client_secret",
                   "zoom_host_email"),
-        note="Public webinars only — never mentor 1:1 sessions.",
+        note="Public webinars only — never mentor 1:1 sessions. On the same account "
+             "as Zoom Meetings, Zoom Meetings' app and event host user are used.",
+    ),
+    Feature(
+        key="zoom_meetings", name="Zoom meetings", flag="zoom_meetings_events",
+        component="both",
+        requires=("zoom_meetings_account_id", "zoom_meetings_client_id",
+                  "zoom_meetings_client_secret", "zoom_event_host_email"),
+        note="Events hosted on Zoom Meetings — never mentor 1:1 sessions.",
     ),
     Feature(
         key="gmail", name="Gmail sync", flag="gmail_sync", component="both",
@@ -231,10 +241,23 @@ async def _crm_snapshot(settings: Settings) -> Optional[dict[str, Any]]:
     return {"entities": present, "fields": dict(results)}
 
 
+#: Zoom Webinars' four settings, and where core/zoom.webinars_account finds
+#: each one's value.
+_WEBINAR_FIELDS = {"zoom_account_id": "account_id", "zoom_client_id": "client_id",
+                   "zoom_client_secret": "client_secret", "zoom_host_email": "host"}
+
+
 def _requirement_rows(feature: Feature, settings: Settings) -> list[dict[str, Any]]:
     rows = []
+    account = None
+    if feature.key == "zoom":
+        from core.zoom import webinars_account
+
+        account = webinars_account(settings)
     for key in feature.requires:
         value = getattr(settings, key, None)
+        if account is not None and key in _WEBINAR_FIELDS:
+            value = getattr(account, _WEBINAR_FIELDS[key])
         rows.append({
             "kind": "setting",
             "label": key,

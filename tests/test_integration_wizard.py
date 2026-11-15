@@ -46,11 +46,14 @@ def zoom():
 
 # --- the screens --------------------------------------------------------------------
 
-def test_zoom_has_the_fourteen_approved_screens_and_their_keys_are_sound():
+def test_zoom_webinars_has_the_approved_screens_and_their_keys_are_sound():
+    # Phase 9 (Doug, 11-15-26): the pilot's 14 reworded, the same-account
+    # question (EH7), and the licence screen split by its answer.
     ids = [s.id for s in zoom()]
-    assert ids == ["zoom-use", "zoom-have-account", "zoom-mailbox", "zoom-signup", "zoom-licence",
-                   "zoom-build-app", "zoom-information", "zoom-scopes", "zoom-activate", "zoom-account-id",
-                   "zoom-client-id", "zoom-client-secret", "zoom-host", "zoom-switch-on"]
+    assert ids == ["zoom-use", "zoom-same-account", "zoom-have-account", "zoom-mailbox", "zoom-signup",
+                   "zoom-licence-same", "zoom-licence", "zoom-build-app", "zoom-information", "zoom-scopes",
+                   "zoom-activate", "zoom-account-id", "zoom-client-id", "zoom-client-secret", "zoom-host",
+                   "zoom-switch-on"]
     assert wizard.problems(zoom(), set(SETTINGS_BY_KEY), set(INTEGRATIONS)) == []
     kinds = {s.id: s.kind for s in zoom()}
     assert kinds["zoom-use"] == "question" and kinds["zoom-scopes"] == "done" and kinds["zoom-host"] == "enter"
@@ -101,12 +104,20 @@ def test_where_the_wizard_starts(monkeypatch):
     screens = zoom()
     # crm-test today: the question has never been answered.
     assert wizard.start(screens, st()) == "zoom-use"
-    # Answered, credentials missing: straight to the first box (Done screens never fail).
-    assert wizard.start(screens, st(overrides={"zoom_in_use": object()})) == "zoom-account-id"
-    creds = Settings(zoom_account_id="a", zoom_client_id="b", zoom_client_secret=SECRET)
-    assert wizard.start(screens, st(creds, {"zoom_in_use": object()})) == "zoom-client-secret"
+    # In use, the same-account question not answered yet.
+    assert wizard.start(screens, st(overrides={"zoom_in_use": object()})) == "zoom-same-account"
+    both = {"zoom_in_use": object(), "zoom_webinars_same_account": object()}
+    # A separate account, credentials missing: straight to the first box (Done
+    # screens never fail). The stored "No" chooses the branch after a restart.
+    separate = Settings(zoom_webinars_same_account=False)
+    assert wizard.start(screens, st(separate, both)) == "zoom-account-id"
+    creds = Settings(zoom_webinars_same_account=False, zoom_account_id="a", zoom_client_id="b",
+                     zoom_client_secret=SECRET)
+    assert wizard.start(screens, st(creds, both)) == "zoom-client-secret"
     # Everything passing: set up.
-    assert wizard.start(screens, st(creds, {"zoom_in_use": object()}, token_run())) is None
+    assert wizard.start(screens, st(creds, both, token_run())) is None
+    # The same account: no credential screen, only the last screen's test.
+    assert wizard.start(screens, st(Settings(), both)) == "zoom-switch-on"
 
 
 def test_the_check_kinds():
@@ -123,7 +134,13 @@ def test_branches_and_the_end():
     screens = zoom()
     assert wizard.next_screen(screens, "zoom-have-account", {}, "zoom-account-id") == "zoom-account-id"
     assert wizard.next_screen(screens, "zoom-use", {}, "end") is None
-    assert wizard.next_screen(screens, "zoom-mailbox", {}) == "zoom-signup"
+    separate = {"zoom-same-account": "No"}
+    assert wizard.next_screen(screens, "zoom-mailbox", separate) == "zoom-signup"
+    assert wizard.next_screen(screens, "zoom-signup", separate) == "zoom-licence"
+    same = {"zoom-same-account": "Yes"}
+    assert wizard.next_screen(screens, "zoom-same-account", same) == "zoom-licence-same"
+    assert wizard.next_screen(screens, "zoom-licence-same", same) == "zoom-scopes"
+    assert wizard.next_screen(screens, "zoom-scopes", same) == "zoom-switch-on"
     assert wizard.next_screen(screens, "zoom-switch-on", {}) is None
 
 
@@ -133,7 +150,7 @@ def test_a_secret_box_never_carries_its_value():
     assert view["screen"]["secret"] is True and view["screen"]["isSet"] is True
     assert SECRET not in json.dumps(view)
     host = wizard.view("zoom", Settings(zoom_host_email="zweb@x.org"), {}, {}, {"current": "zoom-host"})
-    assert host["screen"]["value"] == "zweb@x.org" and host["position"] == 13 and host["total"] == 14
+    assert host["screen"]["value"] == "zweb@x.org" and host["position"] == 15 and host["total"] == 16
 
 
 # --- the endpoints ---------------------------------------------------------------------------
@@ -197,9 +214,12 @@ def test_yes_and_an_existing_account_jump_to_the_first_box(monkeypatch):
     app = _app(monkeypatch)
     client = TestClient(app)
     w = zoom_view(post(client, "answer", "zoom-use", "Yes"))
-    assert w["screen"]["id"] == "zoom-have-account" and app.state.saved == [("zoom_in_use", "true")]
+    assert w["screen"]["id"] == "zoom-same-account" and app.state.saved == [("zoom_in_use", "true")]
+    w = zoom_view(post(client, "answer", "zoom-same-account", "No"))
+    assert w["screen"]["id"] == "zoom-have-account"
+    assert app.state.saved[-1] == ("zoom_webinars_same_account", "false")
     w = zoom_view(post(client, "answer", "zoom-have-account", "Yes"))
-    assert w["screen"]["id"] == "zoom-account-id" and w["position"] == 10 and w["canBack"]
+    assert w["screen"]["id"] == "zoom-account-id" and w["position"] == 12 and w["canBack"]
     w = zoom_view(post(client, "back"))
     assert w["screen"]["id"] == "zoom-have-account"
 
@@ -207,6 +227,7 @@ def test_yes_and_an_existing_account_jump_to_the_first_box(monkeypatch):
 def test_a_done_screen_moves_on(monkeypatch):
     client = TestClient(_app(monkeypatch))
     post(client, "answer", "zoom-use", "Yes")
+    post(client, "answer", "zoom-same-account", "No")
     post(client, "answer", "zoom-have-account", "No")
     w = zoom_view(post(client, "done", "zoom-mailbox"))
     assert w["screen"]["id"] == "zoom-signup"
@@ -228,6 +249,7 @@ def test_a_box_is_saved_and_checked_at_once(monkeypatch):
     app = _app(monkeypatch)
     client = TestClient(app)
     post(client, "answer", "zoom-use", "Yes")
+    post(client, "answer", "zoom-same-account", "No")
     post(client, "answer", "zoom-have-account", "Yes")
     assert zoom_view(post(client, "enter", "zoom-account-id", value=" acc-1 "))["screen"]["id"] == "zoom-client-id"
     assert ("zoom_account_id", "acc-1") in app.state.saved

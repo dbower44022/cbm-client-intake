@@ -429,7 +429,8 @@ class Settings(BaseSettings):
     # a deployment that never sets them behaves exactly as before. EspoCRM has
     # none: it is always in use. The guard is integrations/guard.py.
     google_workspace_in_use: bool = True
-    zoom_in_use: bool = True
+    zoom_in_use: bool = True                 # Zoom Webinars
+    zoom_meetings_in_use: bool = True
     fathom_in_use: bool = True
     constant_contact_in_use: bool = True
     lob_in_use: bool = True
@@ -673,6 +674,26 @@ class Settings(BaseSettings):
     # The single licensed host every webinar runs under.
     zoom_host_email: str = "zweb@cbmentors.org"
     zoom_base_url: str = "https://api.zoom.us/v2"
+    # Zoom Meetings (prds/events/event-hosting-plan.md, rulings EH1, EH5 to
+    # EH8): a second integration beside Zoom Webinars, with its own app.
+    # ``zoom_meetings_events`` is the switch the Events side reads before it
+    # creates a meeting. The four ``zoom_*`` settings above are Zoom
+    # Webinars' own, used only when Webinars is on a separate account (EH7):
+    # ``core/zoom.webinars_account`` is the one rule.
+    zoom_meetings_events: bool = False
+    zoom_meetings_account_id: str = ""
+    zoom_meetings_client_id: str = ""
+    zoom_meetings_client_secret: str = ""   # SECRET (web + worker)
+    # The event host user (EH8): every Zoom event is created under this user,
+    # webinars too when Zoom Webinars is on the same account.
+    zoom_event_host_email: str = ""
+    zoom_webinars_same_account: bool = True
+    # EH6: a fully online event above this is refused for Zoom Meetings.
+    zoom_meetings_capacity: int = 100
+    # EH5: the hosting method a new event starts with, per audience. The
+    # CRM's stored values (CEvent.hostedBy): "CBM Zoom" is Zoom Webinars.
+    events_default_method_public: str = "CBM Zoom"
+    events_default_method_members: str = "CBM Zoom"
     # --- Mailing service (Constant Contact, Phase C of the mailing-list arc) ---
     # The CRM is the system of record; the mailing service mirrors it (plan
     # § 11.4). One account per deployment, connected from /setup through OAuth2;
@@ -1146,14 +1167,18 @@ class Settings(BaseSettings):
 
     @property
     def zoom_active(self) -> bool:
-        """Zoom calls are possible: enabled, credentialed, and a host set."""
-        return bool(
-            self.zoom_events
-            and self.zoom_account_id
-            and self.zoom_client_id
-            and self.zoom_client_secret
-            and self.zoom_host_email
-        )
+        """Zoom webinar calls are possible: enabled, credentialed, and a
+        host set — with the credentials ``core/zoom.webinars_account`` chooses."""
+        from core.zoom import webinars_account
+
+        return bool(self.zoom_events and webinars_account(self).complete)
+
+    @property
+    def zoom_meetings_active(self) -> bool:
+        """Zoom meeting calls are possible: enabled, credentialed, a host set."""
+        from core.zoom import meetings_account
+
+        return bool(self.zoom_meetings_events and meetings_account(self).complete)
 
     @property
     def events_allowed_teams_list(self) -> list[str]:

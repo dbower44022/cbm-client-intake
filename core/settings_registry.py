@@ -146,6 +146,9 @@ VERIFIED_KEYS: frozenset[str] = frozenset({
     "zoom_account_id",
     "zoom_client_id",
     "zoom_client_secret",
+    "zoom_meetings_account_id",
+    "zoom_meetings_client_id",
+    "zoom_meetings_client_secret",
     "fathom_api_key",
     "youtube_api_key",
     "setup_peer_url",
@@ -187,6 +190,7 @@ SECRET_KEYS: frozenset[str] = frozenset({
     "google_service_account_json",
     "anthropic_api_key",
     "zoom_client_secret",
+    "zoom_meetings_client_secret",
     "fathom_api_key",
     "youtube_api_key",
     "setup_peer_token",
@@ -211,6 +215,9 @@ class SettingSpec:
     readonly: bool = False
     component: Component = "web"
     choices: tuple[str, ...] = ()
+    # What the page shows for each choice, when it differs from the stored
+    # value (a CRM value such as "CBM Zoom", shown as "Zoom Webinars").
+    choice_labels: tuple[tuple[str, str], ...] = ()
     unit: str = ""
     # The integration whose sub-tab this setting appears on when the
     # Integrations tab is switched on (an integrations/registry.py key), or
@@ -218,6 +225,12 @@ class SettingSpec:
     integration: str = ""
     # The section of that sub-tab — empty unless the integration has sections.
     section: str = ""
+
+
+#: The hosting methods (CEvent.hostedBy), as the CRM stores them, and the
+#: names the page shows (prds/events/event-hosting-plan.md, EH3 and EH5).
+HOSTING_METHODS: tuple[str, ...] = ("CBM Zoom", "Zoom Meetings", "Other platform", "Outside host")
+HOSTING_METHOD_LABELS: tuple[tuple[str, str], ...] = (("CBM Zoom", "Zoom Webinars"),)
 
 
 def _s(key: str, group: str, label: str, **kw) -> SettingSpec:
@@ -236,7 +249,12 @@ SETTINGS: tuple[SettingSpec, ...] = (
     # --- Features ----------------------------------------------------------
     _s("zoom_events", GROUP_FEATURES, "Zoom webinar provisioning", kind="bool",
        component="both",
-       help="Public webinars only — mentor 1:1 sessions never use the {{abbr}} Zoom account."),
+       help="Zoom Webinars. Mentor 1:1 sessions never use the {{abbr}} Zoom account."),
+    _s("zoom_meetings_events", GROUP_FEATURES, "Zoom meeting provisioning", kind="bool",
+       component="both",
+       help="Lets the Events application create Zoom Meetings with registration for "
+            "events hosted on Zoom Meetings. Mentor 1:1 sessions never use the "
+            "{{abbr}} Zoom account."),
     _s("mailing_sync", GROUP_FEATURES, "Mailing list sync", kind="bool",
        component="worker",
        help="Pushes the CRM's opted-in contacts to the mailing service's list each "
@@ -562,6 +580,16 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="The Presenters group in the event editor and the presenter cards on "
             "the public and portal event pages. Stays hidden until the CRM has "
             "CEventPresenter, so it is safe to switch on early."),
+    _s("events_default_method_public", GROUP_FEATURES,
+       "Default hosting method, public events", kind="choice",
+       choices=HOSTING_METHODS, choice_labels=HOSTING_METHOD_LABELS, component="both",
+       help="The hosting method a new public event starts with. Staff can still "
+            "choose another for each event."),
+    _s("events_default_method_members", GROUP_FEATURES,
+       "Default hosting method, members-only events", kind="choice",
+       choices=HOSTING_METHODS, choice_labels=HOSTING_METHOD_LABELS, component="both",
+       help="The hosting method a new members-only event starts with. Staff can "
+            "still choose another for each event."),
     _s("events_confirmations", GROUP_FEATURES, "Registration confirmation emails", kind="bool",
        component="both",
        help="CBM's own confirmation to each event registrant, from the EspoCRM "
@@ -601,8 +629,10 @@ SETTINGS: tuple[SettingSpec, ...] = (
     # has none: it is always in use.
     _s("google_workspace_in_use", GROUP_INTEGRATIONS, "Google Workspace in use", kind="bool",
        component="both", help=_IN_USE_HELP.format(name="Google Workspace")),
-    _s("zoom_in_use", GROUP_INTEGRATIONS, "Zoom in use", kind="bool",
-       component="both", help=_IN_USE_HELP.format(name="Zoom")),
+    _s("zoom_in_use", GROUP_INTEGRATIONS, "Zoom Webinars in use", kind="bool",
+       component="both", help=_IN_USE_HELP.format(name="Zoom Webinars")),
+    _s("zoom_meetings_in_use", GROUP_INTEGRATIONS, "Zoom Meetings in use", kind="bool",
+       component="both", help=_IN_USE_HELP.format(name="Zoom Meetings")),
     _s("fathom_in_use", GROUP_INTEGRATIONS, "Fathom in use", kind="bool",
        component="both", help=_IN_USE_HELP.format(name="Fathom")),
     _s("constant_contact_in_use", GROUP_INTEGRATIONS, "Constant Contact in use", kind="bool",
@@ -632,7 +662,24 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("google_members_group", GROUP_INTEGRATIONS, "All Members group",
        help="Google Group a mentor's new mailbox joins when their account is created. "
             "Blank skips the group step. Needs the Directory group scope."),
-    _s("zoom_host_email", GROUP_INTEGRATIONS, "Zoom host", component="both"),
+    _s("zoom_host_email", GROUP_INTEGRATIONS, "Zoom Webinars host (separate account only)",
+       component="both",
+       help="Used only when Zoom Webinars is on a separate account from Zoom Meetings. "
+            "On the same account, webinars are created under the event host user."),
+    _s("zoom_webinars_same_account", GROUP_INTEGRATIONS,
+       "Zoom Webinars on the same account as Zoom Meetings", kind="bool", component="both",
+       help="Yes: Zoom Webinars uses Zoom Meetings' app and event host user, once all "
+            "three Zoom Meetings credentials are set; until then it uses its own. "
+            "No: Zoom Webinars uses its own account ID, client ID, client secret and host."),
+    _s("zoom_event_host_email", GROUP_INTEGRATIONS, "Event host user", component="both",
+       help="The Zoom user every Zoom event is created under, for example events@ on the "
+            "chapter's domain. Must be a Licensed user. Someone signed in as this user "
+            "starts each meeting."),
+    _s("zoom_meetings_capacity", GROUP_INTEGRATIONS, "Zoom Meetings capacity limit",
+       kind="int", unit="attendees", component="both",
+       help="A fully online event with a larger capacity is refused for Zoom Meetings; "
+            "a hybrid event is warned. The integration test shows the capacity Zoom "
+            "reports beside it."),
     _s("zoom_base_url", GROUP_INTEGRATIONS, "Zoom API base URL", component="both"),
     _s("fathom_base_url", GROUP_INTEGRATIONS, "Fathom API base URL", component="worker"),
     _s("meet_transcripts_poll_seconds", GROUP_INTEGRATIONS, "Transcript retrieval",
@@ -969,10 +1016,22 @@ SETTINGS: tuple[SettingSpec, ...] = (
             "cannot be seen from here."),
     _s("anthropic_api_key", GROUP_INTEGRATIONS, "Anthropic API key", component="worker",
        help="AI conversation summaries only."),
-    _s("zoom_account_id", GROUP_INTEGRATIONS, "Zoom account ID", component="both"),
-    _s("zoom_client_id", GROUP_INTEGRATIONS, "Zoom client ID", component="both"),
-    _s("zoom_client_secret", GROUP_INTEGRATIONS, "Zoom client secret", component="both",
-       help="Public webinars only. Mentor sessions never use the {{abbr}} Zoom account."),
+    _s("zoom_account_id", GROUP_INTEGRATIONS, "Zoom Webinars account ID (separate account only)",
+       component="both"),
+    _s("zoom_client_id", GROUP_INTEGRATIONS, "Zoom Webinars client ID (separate account only)",
+       component="both"),
+    _s("zoom_client_secret", GROUP_INTEGRATIONS,
+       "Zoom Webinars client secret (separate account only)", component="both",
+       help="Used only when Zoom Webinars is on a separate account. Mentor sessions "
+            "never use the {{abbr}} Zoom account."),
+    _s("zoom_meetings_account_id", GROUP_INTEGRATIONS, "Zoom Meetings account ID",
+       component="both"),
+    _s("zoom_meetings_client_id", GROUP_INTEGRATIONS, "Zoom Meetings client ID",
+       component="both"),
+    _s("zoom_meetings_client_secret", GROUP_INTEGRATIONS, "Zoom Meetings client secret",
+       component="both",
+       help="The Server-to-Server OAuth app's secret. Mentor sessions never use the "
+            "{{abbr}} Zoom account."),
     _s("fathom_api_key", GROUP_INTEGRATIONS, "Fathom API key", component="worker"),
     _s("mailing_client_id", GROUP_INTEGRATIONS, "Mailing service client ID", component="both",
        help="The developer application's API key (Constant Contact). One application "
@@ -1172,6 +1231,15 @@ INTEGRATION_TAGS: dict[str, tuple[str, str]] = {
     "zoom_client_secret": ("zoom", ""),
     "zoom_host_email": ("zoom", ""),
     "zoom_base_url": ("zoom", ""),
+    "zoom_webinars_same_account": ("zoom", ""),
+    # Zoom Meetings
+    "zoom_meetings_in_use": ("zoom_meetings", ""),
+    "zoom_meetings_events": ("zoom_meetings", ""),
+    "zoom_meetings_account_id": ("zoom_meetings", ""),
+    "zoom_meetings_client_id": ("zoom_meetings", ""),
+    "zoom_meetings_client_secret": ("zoom_meetings", ""),
+    "zoom_event_host_email": ("zoom_meetings", ""),
+    "zoom_meetings_capacity": ("zoom_meetings", ""),
     "events_attendance_seconds": ("zoom", ""),
     "events_attendance_grace_minutes": ("zoom", ""),
     "events_attendance_give_up_hours": ("zoom", ""),

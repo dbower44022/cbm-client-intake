@@ -167,9 +167,29 @@ INTEGRATIONS: tuple[Integration, ...] = (
         test_module="integrations.checks.google",
         doc_sites=("developers.google.com", "support.google.com", "knowledge.workspace.google.com"),
     ),
+    # Zoom Webinars and Zoom Meetings are separate integrations (ruling EH1,
+    # prds/events/event-hosting-plan.md). Zoom Webinars keeps the key "zoom"
+    # and its settings' keys, so no chapter's stored value is stranded. On the
+    # same account it uses Zoom Meetings' credentials (EH7,
+    # core/zoom.webinars_account).
     Integration(
-        key="zoom", name="Zoom", in_use_setting="zoom_in_use",
+        key="zoom_meetings", name="Zoom Meetings", in_use_setting="zoom_meetings_in_use",
+        switches=(Switch("zoom_meetings_events"),),
+        used_by=(UsedBy("events_default_method_public", on_value="zoom meetings"),
+                 UsedBy("events_default_method_members", on_value="zoom meetings")),
+        credentials=("zoom_meetings_account_id", "zoom_meetings_client_id",
+                     "zoom_meetings_client_secret", "zoom_event_host_email"),
+        features=("zoom_meetings",),
+        runbooks=("EVENTS-SETUP.md",),
+        test_phase=9,
+        test_module="integrations.checks.zoom_meetings",
+        doc_sites=("developers.zoom.us",),
+    ),
+    Integration(
+        key="zoom", name="Zoom Webinars", in_use_setting="zoom_in_use",
         switches=(Switch("zoom_events"),),
+        used_by=(UsedBy("events_default_method_public", on_value="cbm zoom"),
+                 UsedBy("events_default_method_members", on_value="cbm zoom")),
         credentials=("zoom_account_id", "zoom_client_id", "zoom_client_secret",
                      "zoom_host_email"),
         features=("zoom",),

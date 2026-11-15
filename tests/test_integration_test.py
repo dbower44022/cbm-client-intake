@@ -660,7 +660,8 @@ def test_zoom_no_webinar_licence_fails_only_while_provisioning_is_on():
 
 def test_zoom_attendance_paths():
     none = run(zoom.run(zoom_settings(), zoom_deps(FakeZoom(past=False))))
-    assert by_key(none)["attendance"]["outcome"] == UNKNOWN
+    # Phase 9: nothing to read yet is skipped, so a new account can pass.
+    assert by_key(none)["attendance"]["outcome"] == "skipped"
     assert "No past webinar" in by_key(none)["attendance"]["detail"]
     denied = ZoomError("HTTP 400 scope report:read", status_code=400)
     result = run(zoom.run(zoom_settings(), zoom_deps(FakeZoom(report_error=denied))))
