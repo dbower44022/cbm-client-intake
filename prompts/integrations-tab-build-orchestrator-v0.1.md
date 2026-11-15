@@ -1,6 +1,6 @@
 # Build orchestrator — the Integrations tab of System Settings
 
-Last Updated: 11-15-26 12:44 · Revision 0.17 — see change log at the end.
+Last Updated: 11-15-26 13:10 · Revision 0.18 — see change log at the end.
 
 This file runs the whole build of the Integrations tab. It names the phases,
 the prompt for each one, the rules that every phase session follows, and the
@@ -24,6 +24,7 @@ stopping points where the work pauses for Doug. The design is
 
 | Phase | What it builds | Prompt | State |
 |---|---|---|---|
+| 0.18 | 11-15-26 13:10 | Claude (Claude Code) | State column: phase 9 pushed 11-15-26. |
 | 1 | The framework: the integration registry, the sub-tab shell, the status line, the "in use" settings and their guard, the `INTEGRATIONS_TAB` switch, and moving the settings | `prompts/integrations-tab-phase1-prompt-v0.1.md` | Built v0.321.0, 11-13-26; reviewed by Doug 11-15-26 |
 | 2 | The integration test for EspoCRM, Google Workspace and Zoom | `prompts/integrations-tab-phase2-prompt-v0.1.md` | Built v0.322.0, 11-13-26; reviewed by Doug 11-15-26 |
 | 3 | The integration test for Fathom, Constant Contact, Lob, Twilio, Anthropic and YouTube | `prompts/integrations-tab-phase3-prompt-v0.1.md` | Built v0.323.0, 11-13-26; awaiting Doug's review |
@@ -32,7 +33,7 @@ stopping points where the work pauses for Doug. The design is
 | 6 | The diagnosis agent and fix plans | `prompts/integrations-tab-phase6-prompt-v0.1.md` | Built v0.327.0, 11-13-26; awaiting Doug's review |
 | 7 | The setup assistant and setup plans | `prompts/integrations-tab-phase7-prompt-v0.1.md` | Built v0.329.0, 11-13-26; awaiting Doug's review |
 | 8 | The wizard, piloted on Zoom (plan § 10, rulings W1 to W6) | `prompts/integrations-tab-phase8-prompt-v0.2.md` | Built v0.331.0, 11-14-26; awaiting the live pilot on crm-test (stopping point 3). (v0.1 is superseded: it becomes phase 11.) |
-| 9 | The Zoom split into Zoom Webinars and Zoom Meetings (plan `prds/events/event-hosting-plan.md`, EH1, EH5, EH7, EH8), then the other integrations' wizard screens | `prompts/integrations-tab-phase9-prompt-v0.2.md` | Built v0.333.0 (the split) and v0.334.0 (every integration's screens), 11-15-26; awaiting Doug's review |
+| 9 | The Zoom split into Zoom Webinars and Zoom Meetings (plan `prds/events/event-hosting-plan.md`, EH1, EH5, EH7, EH8), then the other integrations' wizard screens | `prompts/integrations-tab-phase9-prompt-v0.2.md` | Built v0.333.0 (the split) and v0.334.0 (every integration's screens), 11-15-26 (pushed 11-15-26); awaiting Doug's review |
 | 10 | The removal of the checklist display, setup plans and fix plans (ruling W4) | `prompts/integrations-tab-phase10-prompt-v0.1.md` | Built v0.335.0, 11-15-26 (pushed 11-15-26); awaiting Doug's review |
 | 11 | Documentation, and the live review on the Business Mentors Association's system (the test system since 11-14-26) | `prompts/integrations-tab-phase11-prompt-v0.1.md` | Prompt approved by Doug 11-15-26; not started |
 
