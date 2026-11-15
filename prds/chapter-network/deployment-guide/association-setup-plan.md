@@ -1,10 +1,10 @@
 # Correcting the guide while the Association is set up as a chapter — plan
 
 **Document:** Plan for correcting the New Chapter Deployment Guide stage by stage while the Business Mentors Association is set up as a chapter (Association rulings 71 and 72)
-**Version:** 1.23
+**Version:** 1.24
 **Status:** Approved by Doug 11-07-26 15:17, with the four recommendations of section 5 and both of section 6
 **Owner:** Doug Bower
-**Last Updated:** 11-10-26 10:41
+**Last Updated:** 11-15-26 01:34
 
 ---
 
@@ -108,7 +108,7 @@ These are recommendations, not decisions.
 **Working method changed, 11-08-26:** Doug found the stage 4 runbook's steps unclear and wrong against Google's screens, and asked Claude to do the work in his browser instead. From then on Claude works in Chrome and hands Doug only passwords, payments, two-step codes, and a yes before each change that costs money or cannot easily be undone. The stage 4 runbook (https://claude.ai/artifact/4npGt6PfSSgzw7ynCBZYxp) is superseded by the corrected guide stage 4.
 
 **Stage 4 done, 11-08-26 01:24:**
-- Google Workspace on mentorsassociation.org, Business Starter, Flexible plan ($8.40 per mailbox a month from 11-21-26; Google had started a Business Plus trial). Two mailboxes: doug.bower@ (Super Admin; created as admin@ and renamed) and info@. Groups admin@ (System Administrators; outside senders allowed, members only read, invitation only) and allmembers@.
+- Google Workspace on mentorsassociation.org, Business Starter, Flexible plan ($8.40 per mailbox a month from 11-21-26; Google had started a Business Plus trial). Two mailboxes: doug.bower@ (Super Admin; created as admin@ and renamed) and info@. Groups admin@ (System Administrators; outside senders allowed, members only read, invitation only) and allmembers@. admin@ is a group, not a mailbox, so nobody can sign in to Google as admin@ (Google answers "Couldn't find your account"); its mail is read as a member. doug.bower@ joined the admin@ group on 11-15-26 (Doug, in the Admin console), and a test message from outside reached doug.bower@'s inbox.
 - Mail records clean in Cloudflare: one MX, SPF, the current DKIM key, DMARC p=none reporting to admin@, Google's verification. Eleven stray records removed (GoDaddy's defaults and older Google records). Tested both ways: outside mail reaches admin@; a reply passes SPF, DKIM and DMARC.
 - Cloudflare's account email moved to admin@ (step 4.14). GoDaddy stays on businessmentors@dougbower.com by Doug's decision (11-08-26).
 - Guide stage 4 corrected from the real screens (version 0.7).
@@ -181,6 +181,7 @@ The closing reply reports what changed in the guide, which stages are ready for 
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.24 | 11-15-26 01:34 | Claude (Claude Code) | Stage 4 record: admin@ is a group with no sign-in; doug.bower@ joined it 11-15-26 and delivery was tested. |
 | 1.23 | 11-10-26 10:41 | Claude (Claude Code) | Zoom credentials checked; nothing put into the applications. |
 | 1.22 | 11-10-26 01:57 | Claude (Claude Code) | Test website moved to the Association's CRM. |
 | 1.21 | 11-09-26 23:59 | Claude (Claude Code) | Stage 11, steps 11.14 to 11.18. |
