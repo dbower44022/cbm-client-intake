@@ -5,6 +5,29 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.332.3] — 2026-11-15
+
+**feat(crm): the hosting method on the event record.** Event hosting plan
+`prds/events/event-hosting-plan.md` § 7 step 3; `OPEN-ITEMS.md` #84.
+
+- **`scripts/plans/cevent-hosting-method.json`** and
+  `cevent-hosting-method-crm-handoff.md`: `CEvent.hostedBy` gains Zoom
+  Meetings and Other platform; the stored `CBM Zoom` is shown as Zoom
+  Webinars; the tooltip describes all four. Nothing removed, no record
+  changed. The Zoom ids serve both Zoom methods (no meeting twin).
+- **Applied on the Business Mentors Association's CRM 11-15-26** by Doug,
+  after the Hosted by field itself (`cevent-hostedby.json`), and read back.
+  Not applied on crm-test (Doug: test on the Association, #85).
+- **`scripts/apply_crm_plan.py`** compares option labels and the tooltip
+  against the CRM's translations, so an existing option can be relabelled,
+  and its read-back now checks every enum change (options, labels,
+  tooltip); it checked none before. `I18n` answers every scope keyed by
+  name, whatever `scope` asks: the first read-back misread that.
+- **The Association's CRM has a configuration administrator, `crm.config`**,
+  made by Doug 11-15-26; the stored `admin` login had stopped working.
+  `scripts/set_admin_cred.py` writes such a credential into an env file
+  without a shell; `scripts/apply_plan.sh` knows the Association as `bma`.
+
 ## [0.332.2] — 2026-11-15
 
 **feat(scripts): the Zoom probe reports whether the co-host feature is on**

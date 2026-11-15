@@ -431,6 +431,11 @@ class Applier:
             return {}, None
         if not isinstance(data, dict):
             return {}, None
+        # ``scope`` does not narrow the answer: I18n returns every scope's
+        # translations keyed by scope name (read on the Business Mentors
+        # Association's CRM, EspoCRM 10, 11-15-26).
+        if isinstance(data.get(entity), dict):
+            data = data[entity]
         options = (data.get("options") or {}).get(stored) or {}
         tooltip = (data.get("tooltips") or {}).get(stored)
         return (options if isinstance(options, dict) else {}), tooltip

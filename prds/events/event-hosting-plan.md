@@ -1,6 +1,6 @@
 # Event hosting methods — plan
 
-Last Updated: 11-15-26 01:40 · Revision 0.3 — see change log at the end.
+Last Updated: 11-15-26 02:12 · Revision 0.4 — see change log at the end.
 
 This plan decides how a chapter's online events are hosted: Zoom Webinars,
 Zoom Meetings, a link to any other platform, or an outside host. It records
@@ -171,6 +171,7 @@ the Events work is.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.4 | 11-15-26 02:12 | Claude (Claude Code) | Step 3 done on the Business Mentors Association's CRM, the test system (Doug, 11-15-26), not on crm-test: `cevent-hosting-method-crm-handoff.md`. The Zoom ids serve both Zoom methods; `CBM Zoom` stays stored, shown as Zoom Webinars. |
 | 0.3 | 11-15-26 01:40 | Claude (Claude Code) | Ruling EH11 (Doug, § 6 point 4, option B): webinar-like meeting settings. § 6 point 5 decided in the build session: the overlap warning counts webinars and meetings under one host user. |
 | 0.2 | 11-15-26 01:25 | Claude (Claude Code) | Step 1 done: § 3 records what Zoom Meetings did on the Association's account 11-15-26 (personal join links, attendance matched by email, capacity 100, the ten scopes). § 6 points 4 and 5 put to Doug. Doug approved the plan and the build prompt by running it, 11-14-26. |
 | 0.1 | 11-14-26 14:05 | Claude (Claude Code) | Draft from Doug's design discussion of 11-14-26: rulings EH1 to EH10, the comparison of hosting methods, the open points and the build order. For Doug's review. |

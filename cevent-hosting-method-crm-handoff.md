@@ -1,6 +1,6 @@
 # CRM handoff — an event's hosting method (event hosting plan, rulings EH1 to EH11)
 
-Last Updated: 11-15-26 01:50 · Revision 0.1 (prepared, not yet applied anywhere) — change log at the end.
+Last Updated: 11-15-26 02:12 · Revision 1.0 (applied on the Business Mentors Association's CRM) — change log at the end.
 
 **What changes:** the existing choice field **Hosted by** on the event record
 (`CEvent.hostedBy`, built by `cevent-hostedby-crm-handoff.md`) becomes the
@@ -24,8 +24,10 @@ as `OPEN-ITEMS.md` #84, after #80.
 ## Prerequisite
 
 The **Hosted by** field itself must exist: `cevent-hostedby-crm-handoff.md`,
-plan `scripts/plans/cevent-hostedby.json`. On crm-test since 11-12-26; not
-on production, Boston or the Business Mentors Association's CRM (#80). Where
+plan `scripts/plans/cevent-hostedby.json`. On crm-test since 11-12-26; on the
+Business Mentors Association's CRM since 11-15-26 02:03 (Doug,
+`scripts/apply_plan.sh bma …`, fingerprint `6eb4fc2d5940`, verified; the org key
+reads it, HTTP 200); not on production or Boston (#80). Where
 it is missing, apply that plan first; this plan otherwise fails with
 "field CEvent.hostedBy not found" and changes nothing.
 
@@ -52,7 +54,16 @@ Read-only (ruling 40). The CRM's own event layout is unchanged.
 
 ## Order
 
-1. **crm-test** — the dry run reads one change (above). Apply:
+0. **The Business Mentors Association — done 11-15-26 02:06** (Doug, the
+   test system since 11-14-26, #85): `scripts/apply_plan.sh bma
+   scripts/plans/cevent-hosting-method.json dc0909bb8b7a`. The options and
+   the definition read back at once; the applier's label check failed on
+   its own misreading of `I18n` (it returns every scope, keyed by name,
+   whatever `scope` asks), fixed the same night. Read back as admin: four
+   options, `CBM Zoom` shown as Zoom Webinars, the tooltip; a second dry run
+   reads "already offers … with its labels".
+1. **crm-test** — not applied (Doug, 11-15-26: test on the Association).
+   The dry run reads one change (above). Apply:
    `scripts/apply_plan.sh test scripts/plans/cevent-hosting-method.json dc0909bb8b7a`.
 2. **The sandbox baseline** — nothing owed for the options: they live in the
    CRM's files, which the nightly reset rebuilds from. An event set to Zoom
@@ -79,4 +90,5 @@ Read-only (ruling 40). The CRM's own event layout is unchanged.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.0 | 11-15-26 02:12 | Claude (Claude Code) | Applied on the Business Mentors Association's CRM by Doug, after `cevent-hostedby.json`; read back. crm-test not applied. |
 | 0.1 | 11-15-26 01:50 | Claude (Claude Code) | Written for the event hosting plan's step 3; dry run on crm-test, fingerprint `dc0909bb8b7a`. Not applied. |

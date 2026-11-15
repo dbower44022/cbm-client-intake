@@ -39,6 +39,9 @@ in the CRM directly.
 
 1. **crm-test** — done 11-12-26 01:05: `scripts/apply_plan.sh test
    scripts/plans/cevent-hostedby.json 6eb4fc2d5940`, one change, verified.
+1a. **The Business Mentors Association** — done 11-15-26 02:03 (Doug,
+   `scripts/apply_plan.sh bma scripts/plans/cevent-hostedby.json 6eb4fc2d5940`,
+   verified; org key 200), for the event hosting build (#84).
 2. **The sandbox baseline** — nothing owed. The nightly reset empties a column
    newer than the baseline, and empty reads as CBM Zoom, the safe value. An
    event set to Outside host on crm-test therefore reverts overnight: finish a

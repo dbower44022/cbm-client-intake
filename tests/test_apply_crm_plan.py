@@ -485,8 +485,10 @@ class _HostedByCrm:
         if path == "Admin/fieldManager/CEvent/hostedBy":
             return _Resp(200, {**self.field, "label": "Hosted by"})
         if path == "I18n":
-            return _Resp(200, {"options": {"hostedBy": self.labels},
-                               "tooltips": {"hostedBy": self.tooltip}})
+            # The real shape: every scope, keyed by name, whatever ``scope`` asks.
+            return _Resp(200, {"Global": {"options": {}},
+                               "CEvent": {"options": {"hostedBy": self.labels},
+                                          "tooltips": {"hostedBy": self.tooltip}}})
         key = (params or {}).get("key", "")
         if key == "scopes.CEvent":
             return _Resp(200, {"isCustom": True, "entity": True})
