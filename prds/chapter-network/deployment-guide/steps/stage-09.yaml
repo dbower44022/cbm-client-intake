@@ -1,7 +1,7 @@
 stage: 9
 name: Build the CRM system
-version: "0.20"
-updated: "11-13-26 10:30"
+version: "0.21"
+updated: "11-15-26 11:22"
 why: >-
   The CRM is the chapter's system of record. Every client, mentor, partner,
   funder and meeting lives in it, and every application reads and writes it.
@@ -480,6 +480,64 @@ steps:
       - "curl shows 401: the key was copied wrong. Copy it again from CHAPTER-ENV-FILE. curl shows 403: a permission is missing. Run the script for real again and read its unapplyable lines."
       - "A team with no role: run the script for real again. If the team is still empty, stop the build."
       - "The permission line stops with No module named assignments: the script is older than 09-24-26. Update the application's folder with git pull and run the line again."
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: espocrm-key
+        title: The applications' CRM key
+        what: The API key the applications use to sign in to the CRM.
+        why: Without it the applications can read and write nothing.
+        how: Copy it from the vault item CRM key for the applications (step 9.7), paste it in the box below, and click Save.
+        enters: espo_api_key
+        check: test:espocrm/sign_in
+        if_not: The CRM refused the key. Check that the API user is active in the CRM, and copy the key again.
+      - id: espocrm-standard
+        title: The CRM matches the standard
+        what: The entities, fields, teams and email templates the applications use.
+        why: A missing field or template makes a feature fail when it is first used.
+        how: Click Done. The application compares the CRM with the standard.
+        check: test:espocrm/conformance
+        if_not: The missing items are named above. Step 9.7's script applies them; ask the Association.
+      - id: espocrm-read-access
+        title: The applications can read every record type
+        what: A read of each record type the applications use, as the applications' key.
+        why: A role grant missed in stage 9 shows up only when someone opens that screen.
+        how: Click Done.
+        check: test:espocrm/read_access
+        if_not: The record type named above cannot be read. A role grant was missed in stage 9.
+      - id: espocrm-enums
+        title: The forms' lists match the CRM
+        what: The options in the public forms' lists, compared with the CRM's.
+        why: An option the CRM lacks is dropped when a form is saved, so an answer is lost.
+        how: Click Done.
+        check: test:espocrm/enums
+        if_not: The lists named above have drifted. Ask the Association to sync the form lists.
+      - id: espocrm-logins
+        title: Will the applications create mentors' CRM logins?
+        what: A CRM login made for each mentor when they are approved.
+        why: EspoCRM lets only an administrator create a login, so the applications use a separate provisioning account for it.
+        ask:
+          - answer: "Yes"
+            then: next
+          - answer: "No"
+            then: espocrm-whole-test
+      - id: espocrm-provision-user
+        title: The provisioning account's name
+        what: The administrator account the applications create logins with.
+        why: Only this account may create logins.
+        how: Copy the name from the vault item CRM provisioning administrator (step 9.7), and click Save.
+        enters: espo_provision_username
+        check: setting_set:espo_provision_username
+        when: espocrm-logins=Yes
+      - id: espocrm-provision-password
+        title: The provisioning account's password
+        what: The password of that account.
+        why: The applications sign in with it each time they create a login.
+        how: Copy it from the same vault item, paste it in the box below, and click Save.
+        enters: espo_provision_password
+        check: test:espocrm/provisioning
+        if_not: The CRM refused the name and password together. Copy both again from the vault.
+        when: espocrm-logins=Yes
     goes_wrong: >-
       Creating, renaming or editing anything here by hand. Each application page
       looks for an exact team name, and a team with no role gives its members
@@ -546,6 +604,16 @@ steps:
     if_not:
       - "RESULT: DRIFT with anything other than the five event email templates: go back to the step that makes the missing item, usually step 9.7, and run it again."
       - "RESULT: UNCHECKED: the tool could not reach the CRM or its key was refused. Check the address and key in CHAPTER-ENV-FILE."
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: espocrm-whole-test
+        title: The whole EspoCRM test
+        what: Every check of the EspoCRM integration test.
+        why: It confirms the applications and the CRM agree.
+        how: Click Done.
+        check: test:espocrm
+        if_not: The failing line is shown above. Ask Claude about this.
     goes_wrong: >-
       Running the tool without --env-file. It then checks Cleveland's test system
       instead of the chapter's CRM, and reports on the wrong system.
@@ -554,6 +622,10 @@ steps:
     source: 3-Methods-CRM-Google-Applications.md#9.20
 
 changes:
+  - version: "0.21"
+    date: "11-15-26 11:22"
+    change: >-
+      Steps 9.7 and 9.9 carry EspoCRM's set-up wizard screens (Integrations tab phase 9, plan § 10, rulings W1 to W6; screens approved by Doug 11-15-26). The key is not printed, so the guide's steps read exactly as before.
   - version: "0.20"
     date: "11-13-26 10:30"
     change: >-

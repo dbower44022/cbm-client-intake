@@ -1,7 +1,7 @@
 stage: 11
 name: Deploy the chapter's applications
-version: "0.16"
-updated: "11-13-26 10:30"
+version: "0.17"
+updated: "11-15-26 11:22"
 summary: >-
   In this stage we put the chapter's applications on its own hosting account and
   prove they work. We generate the deployment settings from the reviewed chapter
@@ -830,6 +830,35 @@ steps:
           does not sit in the queue.
       probe: The app sends a test message to the mailbox and watches for it to arrive.
     if_not: If the log line is missing or names the wrong address, stop. The cause is in stage 10, not here.
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: google-gmail
+        title: Read the chapter's incoming mail?
+        what: The background worker reading the shared mailbox every few minutes and putting each message in Submission Admin. It also syncs each mentor's mail with their clients' records.
+        why: Gmail sync is the whole Communications pipeline. It takes effect when the background worker next starts.
+        ask:
+          - answer: "Yes"
+            sets: {gmail_sync: "true"}
+            then: next
+          - answer: "Not yet"
+            then: google-send-test
+        check: test:google_workspace/mailbox
+      - id: google-gmail-restart
+        title: Restart the background worker
+        what: A new start of the background worker.
+        why: The worker decides at start-up whether to read mail, so the switch reaches it only on a restart.
+        how: In the hosting account, open Apps, then the chapter's application, then Actions, then Force rebuild and deploy, or ask the Association. The exact wording of the hosting console has not been checked for this guide.
+        see: A new deployment reaching Active.
+        when: google-gmail=Yes
+      - id: google-gmail-test
+        title: Send the shared mailbox a message
+        what: A real message arriving through the whole path.
+        why: It proves the worker reads the right mailbox.
+        how: From an outside address, send a message to info@.
+        see: Within about five minutes, the message in Submission Admin as a new email submission.
+        if_not: Ask Claude about this. The worker's log names the mailbox it acts as.
+        when: google-gmail=Yes
     goes_wrong: >-
       Two deployments reading the same mailbox. Each takes roughly half the
       messages, and neither is obviously broken.
@@ -885,6 +914,15 @@ steps:
           message you sent, with the time it went. That is the application's
           own record of the send, written after Google accepted it.
       probe: The app sends a test message to an address it can read and checks the sender.
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: google-send-test
+        title: Send a test message
+        what: A message sent from a record in the application.
+        why: It proves the applications can send as the chapter.
+        how: Open a record in the application and send a message from it to an outside address you can read.
+        see: The message arriving, with the chapter's own name as the sender.
     goes_wrong: >-
       The address the software sends warnings from must also be a real licensed
       mailbox. A group or alias is refused, and the refusal reads as though the
@@ -947,6 +985,38 @@ steps:
           is a fault to report. Then set the session to Cancelled: the event
           is cancelled on the calendar.
       probe: The app creates a test event and reads it back.
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: google-calendar
+        title: Book mentors' meetings in Google Calendar?
+        what: A session saved as Scheduled puts an event, with a Meet link, on the mentor's own calendar.
+        why: Mentors and clients get the invitation without anyone typing it twice.
+        ask:
+          - answer: "Yes"
+            sets: {gcal_events: "true"}
+            then: next
+          - answer: "Not yet"
+            then: next
+        check: test:google_workspace/calendar
+      - id: google-meet
+        title: Turn on meeting transcripts?
+        what: Meet transcripts filed on each session after the meeting.
+        why: It needs the meeting scope in the grant (the first line on the grant screen). Without it, mentors see a transcription failure on every Scheduled save.
+        ask:
+          - answer: "Yes"
+            sets: {meet_transcripts: "true"}
+            then: next
+          - answer: "Not yet"
+            then: next
+        check: test:google_workspace/meet
+      - id: google-calendar-try
+        title: Try the calendar
+        what: A real session booked through the application.
+        why: It proves the whole path, from the session to the mentor's calendar.
+        how: Signed in as a mentor with a client, create a session with Status Scheduled and a start time tomorrow.
+        see: The meeting on the mentor's Google calendar, with the client's contacts invited and a Meet link.
+        when: google-calendar=Yes
     goes_wrong: >-
       The calendar permission is a separate entry in the grant from step 10.3, and
       the one most often missed, because working mail makes everything look fine.
@@ -1005,6 +1075,16 @@ steps:
           wrong identifier; one that access was refused is a machine account
           that is not a member of the drive.
       probe: The app creates and removes a test folder as the service account.
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: google-docs-try
+        title: Try the documents
+        what: A real file filed through the application.
+        why: It proves the whole path, from the Documents tab to the shared drive.
+        how: Open a client in Client Management, open its Documents tab, and upload a small test file.
+        see: The file on the Documents tab, and a folder for that client on the shared drive holding it.
+        when: google-docs-on=Yes
     goes_wrong: >-
       The service account is not a member of the shared drive, or the drive's
       identifier on the form is wrong. Both give silence, not an error.
@@ -1086,6 +1166,64 @@ steps:
           from the CRM. Then type doctl auth list and press Enter: the context
           marked current is the one used for Cleveland, not SHORT-LABEL.
       probe: The app asks Google's directory whether the test mentor's address now exists.
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: google-mentor-mailboxes
+        title: Create each new mentor's mailbox from their mentor record?
+        what: When a mentor is accepted, the application creates their mailbox on the mentors' domain and adds them to the All Members group.
+        why: It saves the administrator doing it by hand. The temporary password is shown once, to a person, never sent by the system.
+        ask:
+          - answer: "Yes"
+            then: next
+          - answer: "Not now"
+            then: google-whole-test
+      - id: google-mentor-domain
+        title: Name the mentors' email domain
+        what: The domain mentors' mailboxes are made on.
+        why: Each new mailbox is the mentor's name at this domain.
+        how: Type the domain, without @, and click Save.
+        enters: mentor_email_domain
+        check: setting_set:mentor_email_domain
+        when: google-mentor-mailboxes=Yes
+      - id: google-directory-check
+        title: Check new mentors' addresses against the directory?
+        what: Before a mailbox is created, the directory is asked whether the address is already taken.
+        why: Two people named alike would otherwise collide.
+        ask:
+          - answer: "Yes"
+            sets: {google_directory_check: "true"}
+            then: next
+          - answer: "Not yet"
+            then: next
+        check: test:google_workspace/directory
+        when: google-mentor-mailboxes=Yes
+      - id: google-create-mailboxes
+        title: Turn on mailbox creation?
+        what: The switches that create a mentor's mailbox, and their CRM login, when they are accepted.
+        why: Until they are on, both are made by hand.
+        ask:
+          - answer: "Yes"
+            sets: {google_create_mailbox: "true", mentor_provision_users: "true"}
+            then: next
+          - answer: "Not yet"
+            then: next
+        check: test:google_workspace/directory
+        when: google-mentor-mailboxes=Yes
+      - id: google-mentor-try
+        title: Try it with a test mentor
+        what: A real mailbox made by the application.
+        why: It proves the whole path, from the mentor record to a working mailbox.
+        how: In Mentor Administration, create a test mentor with a name no real mentor has and set Mentor Status to Accepted-Provisional. Copy the temporary password into the Operations vault. Sign in at mail.google.com as the new address. Then delete the test mailbox at admin.google.com, and the test mentor and its contact in the CRM.
+        see: The mailbox opens and asks for a new password.
+        when: google-create-mailboxes=Yes
+      - id: google-whole-test
+        title: The whole Google test
+        what: Every check of the Google integration test, for what is switched on.
+        why: It confirms nothing switched on is left unproved.
+        how: Click Done. The application runs the Google integration test.
+        check: test:google_workspace
+        if_not: The failing line is shown above. Ask Claude about this.
     goes_wrong: >-
       Two directory permissions are needed, reading and changing. A grant with only
       the reading one gets all the way to this step before failing. And the mentor
@@ -1125,6 +1263,35 @@ steps:
     if_not:
       - "Constant Contact says the redirect address does not match: correct the redirect address in step 5.11 so it is exactly the applications' callback address."
       - "Any other refusal: stop and ask the Association."
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: mailing-connect
+        title: Connect
+        what: The connection between the software and the chapter's Constant Contact account.
+        why: Every list and campaign call is made through it.
+        how: Click Connect. Sign in to Constant Contact as admin@ and allow the access it asks for. You come back to this screen; then click Done.
+        connect: mailing
+        check: test:constant_contact/connection
+        if_not: Constant Contact's own words are shown above. Check the redirect address matches exactly, then connect again.
+      - id: mailing-list-field
+        title: Check the list and the lead-code field
+        what: The named mailing list (the setting Mailing list name) and the field that carries a lead code.
+        why: Contacts are pushed to that list, and a lead code links a reply back to its lead.
+        how: Click Done.
+        check: test:constant_contact/list,field
+        if_not: The line above names what is missing.
+      - id: mailing-on
+        title: Turn on list sync?
+        what: The switch that keeps the mailing list in step with the CRM.
+        why: Until it is on, nothing is pushed or pulled.
+        ask:
+          - answer: "Yes"
+            sets: {mailing_sync: "true"}
+            then: next
+          - answer: "Not yet"
+            then: next
+        check: test:constant_contact
     goes_wrong: >-
       Signing in to Constant Contact as a different user from the one who created
       the developer application. The developer application is private to its
@@ -1162,6 +1329,61 @@ steps:
       auto: [setting_set:postal_webhook_secret]
       how: The Lob sub-tab shows the webhook secret as set, and its Test Integration button passes.
       probe: The app checks the secret is set. A real event is the only proof the two agree.
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: lob-webhook
+        title: Create the delivery webhook
+        what: Lob telling the software when a postcard is delivered or returned.
+        why: Without it a returned postcard looks delivered.
+        how: In Lob's webhooks page, create a webhook to the address below, for the postcard events delivered and returned to sender. The exact wording of these screens has not been checked for this guide.
+        copy:
+          - "{APP_BASE_URL}/api/campaigns/postal/events"
+        see: The webhook listed in Lob.
+      - id: lob-webhook-secret
+        title: Paste the webhook secret
+        what: The secret Lob signs each event with.
+        why: The software refuses an event it cannot prove came from Lob.
+        how: Copy the webhook's secret into the Lob item in the vault, then paste it in the box below and click Save.
+        enters: postal_webhook_secret
+        check: test:lob/webhook
+      - id: lob-on
+        title: Make Lob the mail vendor?
+        what: The setting that sends postcards through Lob.
+        why: Until then postcards are only simulated.
+        ask:
+          - answer: "Yes"
+            sets: {postal_provider: "lob"}
+            then: next
+          - answer: "Not yet"
+            then: next
+        check: test:lob
+      - id: lob-live
+        title: Send real postcards now?
+        what: Leaving test mode.
+        why: In test mode nothing is printed. Live, each postcard costs money.
+        ask:
+          - answer: "Yes"
+            then: next
+          - answer: "Not yet"
+            then: next
+      - id: lob-card
+        title: Add the chapter's card to Lob
+        what: Lob's payment method.
+        why: Lob charges for each real postcard.
+        how: In Lob's settings, add the chapter's own card as the payment method.
+        see: The card shown in Lob's billing settings.
+        when: lob-live=Yes
+      - id: lob-live-key
+        title: Paste the live key
+        what: Lob's live key, which begins live_.
+        why: Saving it also switches Mail vendor test mode off, so postcards are printed and sent.
+        how: Paste the live key from the vault in the box below and click Save.
+        enters: postal_api_key
+        sets: {postal_test_mode: "false"}
+        check: test:lob/mode
+        if_not: The key does not begin live_. Copy the live key, not the test key.
+        when: lob-live=Yes
     goes_wrong: >-
       A secret that does not match Lob's. Every delivery event is refused, and
       postcards stay at sent.
@@ -1195,6 +1417,34 @@ steps:
     check:
       how: Twilio's console shows the address on the number. A STOP reply from a test phone marks that person as not to be texted.
       probe: none — the integration test does not read the number's settings.
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: twilio-replies
+        title: Send replies to the applications
+        what: Where Twilio sends a reply to one of the chapter's texts.
+        why: A reply of STOP must reach the software, which then stops texting that person.
+        how: In Twilio's console, open the number's messaging settings. Set A message comes in to the address below, sent as HTTP POST, and save. The exact wording of these screens has not been checked for this guide.
+        copy:
+          - "{APP_BASE_URL}/api/campaigns/sms/inbound"
+        see: The address shown on the number's messaging settings.
+      - id: twilio-hours
+        title: Check the sending hours
+        what: Texting hours and Texting time zone, on this sub-tab.
+        why: No text is sent outside them.
+        how: Check both settings on this sub-tab, then click Done.
+        check: test:twilio/hours
+      - id: twilio-on
+        title: Make Twilio the texting service?
+        what: The setting that sends texts through Twilio.
+        why: Until then texts are only simulated.
+        ask:
+          - answer: "Yes"
+            sets: {sms_provider: "twilio"}
+            then: next
+          - answer: "Not yet"
+            then: next
+        check: test:twilio
     goes_wrong: >-
       Replies sent nowhere. A person who replies STOP keeps getting texts from the
       applications, though Twilio itself also blocks further texts to them.
@@ -1203,6 +1453,10 @@ steps:
     source: campaigns/public.py; core/sms.py
 
 changes:
+  - version: "0.17"
+    date: "11-15-26 11:22"
+    change: >-
+      Steps 11.14 to 11.21 carry the set-up wizard screens of Google Workspace, Constant Contact, Lob and Twilio (Integrations tab phase 9, plan § 10, rulings W1 to W6; screens approved by Doug 11-15-26). The key is not printed, so the guide's steps read exactly as before.
   - version: "0.16"
     date: "11-13-26 10:30"
     change: >-

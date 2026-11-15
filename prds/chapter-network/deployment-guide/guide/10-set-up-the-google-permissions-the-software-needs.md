@@ -1,7 +1,7 @@
 # Stage 10 — Set up the Google permissions the software needs
 
-**Version:** 0.9  
-**Last Updated:** 11-13-26 10:30  
+**Version:** 0.10  
+**Last Updated:** 11-15-26 11:22  
 **Generated from** `steps/stage-10.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -280,6 +280,7 @@ In this stage we give the applications a way to act inside the chapter's Google 
 
 | Version | Date | Change |
 |---|---|---|
+| 0.10 | 11-15-26 11:22 | Steps 10.1 to 10.3, 10.5 and 10.6 carry the set-up wizard screens of Google Workspace and YouTube (Integrations tab phase 9, plan § 10, rulings W1 to W6; screens approved by Doug 11-15-26). The key is not printed, so the guide's steps read exactly as before. |
 | 0.9 | 11-13-26 10:30 | Step 10.6 added: the YouTube key in the chapter's Google Cloud project, and the playlists (mapping approved by Doug 11-13-26). No existing step number changed. Steps that belong to an integration carry the new keys integration and check.auto, read by the setup checklist on System Settings' Integrations tab (prds/integrations-tab-plan.md section 4, mapping approved by Doug 11-13-26). |
 | 0.8 | 11-08-26 23:44 | Step 10.2 done on the Business Mentors Association: stage 10 complete. |
 | 0.7 | 11-08-26 23:41 | Step 10.2: the Association's new organization did block keys after all. The fix written out from the real screens: grant Organization Policy Administrator, override the block on the project only, check the older rule, and take the role back off. |

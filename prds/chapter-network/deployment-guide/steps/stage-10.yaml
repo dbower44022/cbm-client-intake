@@ -1,7 +1,7 @@
 stage: 10
 name: Set up the Google permissions the software needs
-version: "0.9"
-updated: "11-13-26 10:30"
+version: "0.10"
+updated: "11-15-26 11:22"
 summary: >-
   In this stage we give the applications a way to act inside the chapter's
   Google account. We create one account made for a program rather than a person,
@@ -87,6 +87,42 @@ steps:
           A service missing here is refused later with a message saying the API
           has not been used in this project or is disabled.
       probe: none
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: google-cloud-project
+        title: Create the Google Cloud project
+        what: A project holding the machine account the applications sign in to Google with.
+        why: Google gives an application its access through a machine account, called a service account, and that lives in a project.
+        how: Go to console.cloud.google.com, signed in as a Google administrator of the chapter's domain. Dismiss the free-trial banner; this costs nothing. Open the project picker at the top, choose New project, and name it after the chapter's short label followed by -apps, for example akron-apps, with the chapter's own domain as Organization.
+        see: The new project selected in the project picker. Write down its full project ID, which Google numbers, for example bma-apps-514121.
+        if_not: Stop and ask the Association.
+      - id: google-cloud-services
+        title: Switch on Google's services
+        what: The Google products the applications use.
+        why: Each service lets the applications use one Google product.
+        how: Open each address below, with the project ID in place of PROJECT-ID. Click the blue Enable button, and wait until the page moves to the service's details. The last one is only needed if meeting transcripts will be switched on.
+        copy:
+          - https://console.cloud.google.com/apis/library/admin.googleapis.com?project=PROJECT-ID
+          - https://console.cloud.google.com/apis/library/gmail.googleapis.com?project=PROJECT-ID
+          - https://console.cloud.google.com/apis/library/calendar-json.googleapis.com?project=PROJECT-ID
+          - https://console.cloud.google.com/apis/library/drive.googleapis.com?project=PROJECT-ID
+          - https://console.cloud.google.com/apis/library/meet.googleapis.com?project=PROJECT-ID
+        see: Admin SDK API, Gmail API, Google Calendar API and Google Drive API under Enabled APIs and services.
+      - id: google-service-account
+        title: Create the machine account
+        what: The service account the applications act through.
+        why: Every Google call the applications make is made as this account.
+        how: Go to the project's Create service account page. Service account name, the short label followed by -apps. Description, Machine account for the chapter applications. Click Create and close.
+        copy:
+          - https://console.cloud.google.com/iam-admin/serviceaccounts/create?project=PROJECT-ID
+        see: One account in the Service accounts list, status Enabled, with a number of about twenty digits under OAuth 2 Client ID.
+      - id: google-client-id
+        title: Keep the machine account's client ID
+        what: The OAuth 2 Client ID number in the Service accounts list.
+        why: The permission grant, a few screens on, names the machine account by this number.
+        how: Copy the number into the chapter's Operations vault, as a note named Google machine account client ID.
+        see: The note in the vault, holding the same digits as the list.
     goes_wrong: >-
       The project is created under the wrong organization, or under no
       organization at all, because the person signed in with a personal Google
@@ -160,6 +196,36 @@ steps:
           file in the vault, and delete the other, so no key exists that the vault
           does not hold.
       probe: none
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: google-key-download
+        title: Download the machine account's key
+        what: The machine account's key file.
+        why: The applications sign in to Google with it.
+        how: In the Service accounts list, click the account's email, open the Keys tab, click Add key, then Create new key, and choose JSON.
+        see: One file ending .json downloaded.
+        if_not: If Google says an Organization Policy blocks key creation, follow guide step 10.2, actions 2 to 4. They lift the block for this project only, then take the extra role back off. Then try again.
+      - id: google-key
+        title: Paste the key
+        what: The key file's whole contents.
+        why: Without it the applications cannot sign in to Google, so no Google feature can work.
+        how: Open the downloaded file in a text editor, copy everything in it, paste it in the box below, and click Save. The value is never shown again.
+        enters: google_service_account_json
+        check: test:google_workspace/key
+        if_not: Google refused the key. It may have been deleted or disabled in the console; create a new one.
+      - id: google-key-vault
+        title: Store the key in the vault
+        what: A copy of the key the chapter can reach.
+        why: The key cannot be downloaded again; a lost key means making a new one.
+        how: In the chapter's Operations vault, add an item named Google machine account key and attach the file.
+        see: The item, with a second named person able to open it.
+      - id: google-key-delete
+        title: Delete the downloaded key
+        what: The file left on this computer.
+        why: Anyone holding the file can act as the chapter's applications in Google.
+        how: Delete the .json file from the computer and empty its bin.
+        see: A search of the downloads folder for .json finds nothing.
     goes_wrong: >-
       The file stays in a downloads folder. It is not password-protected, and it
       gives whoever holds it the chapter's Google access.
@@ -240,6 +306,27 @@ steps:
           mistake: wait and try again before changing anything.
       probe: The app tries one harmless call per permission as the service account and names any that is refused.
     if_not: If a Google check in stage 11 fails later, come back to this list first, before looking anywhere else.
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: google-delegated-admin
+        title: Name the Google administrator the software acts as
+        what: A Super Admin's own address, for example the chapter administrator's.
+        why: Creating mentors' mailboxes and adding them to groups is done as this administrator. It must be a real licensed user; Google refuses a group or an alias.
+        how: Type the address and click Save.
+        enters: google_delegated_admin
+        check: setting_set:google_delegated_admin
+      - id: google-grant
+        title: Enter the permission grant
+        what: The list of what the machine account may do in the chapter's domain.
+        why: Each scope lets the applications do one thing, such as read or send mail, book a calendar event, file a document or create a mailbox.
+        how: The chapter's Google administrator goes to https://admin.google.com/ac/owl/domainwidedelegation and clicks Add new. In Client ID, paste the number kept in the vault. In OAuth scopes, paste one line below, the first if meeting transcripts will be switched on, the second if not. Leave Overwrite existing client ID unticked and click Authorize.
+        copy:
+          - https://www.googleapis.com/auth/gmail.readonly,https://www.googleapis.com/auth/gmail.send,https://www.googleapis.com/auth/calendar.events,https://www.googleapis.com/auth/drive,https://www.googleapis.com/auth/admin.directory.user.readonly,https://www.googleapis.com/auth/admin.directory.user,https://www.googleapis.com/auth/admin.directory.group,https://www.googleapis.com/auth/meetings.space.created
+          - https://www.googleapis.com/auth/gmail.readonly,https://www.googleapis.com/auth/gmail.send,https://www.googleapis.com/auth/calendar.events,https://www.googleapis.com/auth/drive,https://www.googleapis.com/auth/admin.directory.user.readonly,https://www.googleapis.com/auth/admin.directory.user,https://www.googleapis.com/auth/admin.directory.group
+        see: A row in API clients whose Client ID is that number.
+        check: test:google_workspace/grant
+        if_not: The scopes named above are missing from the grant. Check for a space after a comma, a full stop at the end, or http instead of https. Edit the row and click Authorize again. A new grant can take a few minutes to reach Google's sign-in.
     goes_wrong: >-
       A permission missed. It does not fail here. It fails later, and the error
       does not say which permission is missing. Directory access needs two
@@ -363,6 +450,48 @@ steps:
           about nineteen characters and usually begins 0A; a much longer value was
           copied from inside a folder and points at that folder, not the drive.
       probe: The app lists the shared drive as the service account.
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: google-docs
+        title: Will the chapter keep client documents in Google Drive?
+        what: The Documents tabs, which file client documents in a shared drive, with a folder for each client.
+        why: Documents stay in the chapter's own Google account, and each person sees only their own clients' folders.
+        ask:
+          - answer: "Yes"
+            sets: {gdrive_identity: "service"}
+            then: next
+          - answer: "No"
+            then: google-gmail
+      - id: google-drive-create
+        title: Create the shared drive
+        what: A shared drive named after the chapter, with the machine account as a Manager.
+        why: The machine account files every document and grants each person access to their folders.
+        how: Click the button below. The application creates the drive, or finds one of that name, adds the machine account, and saves its ID.
+        runs: google.create_shared_drive
+        check: setting_set:gdrive_shared_drive_id
+        if_not: Create it by hand as guide step 10.5 describes, click Done on the next screen's box, and paste its ID there.
+        when: google-docs=Yes
+      - id: google-drive-id
+        title: Confirm the shared drive's ID
+        what: The identifier of the shared drive the documents go to.
+        why: Every document is filed under it.
+        how: The ID is filled in when the screen before worked. Otherwise copy it from the browser's address bar, the characters after /folders/, and click Save.
+        enters: gdrive_shared_drive_id
+        check: setting_set:gdrive_shared_drive_id
+        when: google-docs=Yes
+      - id: google-docs-on
+        title: Turn on documents?
+        what: The switch for the Documents tabs.
+        why: Until it is on, the Documents tabs do not use the drive.
+        ask:
+          - answer: "Yes"
+            sets: {gdrive_docs: "true"}
+            then: next
+          - answer: "Not yet"
+            then: next
+        check: test:google_workspace/drive
+        when: google-docs=Yes
     goes_wrong: >-
       An ordinary folder in somebody's personal drive instead of a shared drive. It
       works until that person leaves.
@@ -404,6 +533,54 @@ steps:
       auto: [setting_set:youtube_api_key, setting_set:youtube_playlist_id]
       how: The YouTube sub-tab of System Settings shows both settings as set, and its Test Integration button passes, naming every playlist.
       probe: The app reads every listed playlist in one call.
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: youtube-use
+        title: Does the chapter have recorded webinars on YouTube to bring in?
+        what: The chapter's YouTube playlists of recorded webinars.
+        why: The public page's library of recorded webinars is built from them.
+        ask:
+          - answer: "Yes"
+            sets: {youtube_in_use: "true"}
+            then: next
+          - answer: "No"
+            sets: {youtube_in_use: "false"}
+            then: end
+        check: decided:youtube_in_use
+      - id: youtube-service
+        title: Switch on the YouTube service
+        what: YouTube Data API v3, in the chapter's Google Cloud project.
+        why: The software reads the playlists through it.
+        how: In the Google Cloud project from step 10.1, open APIs and services, then Library. Find YouTube Data API v3 and click Enable.
+        see: YouTube Data API v3 under Enabled APIs and services.
+      - id: youtube-key-create
+        title: Create an API key
+        what: A key for reading public YouTube data.
+        why: YouTube answers only a request carrying a key.
+        how: Open APIs and services, then Credentials. Click Create credentials, then API key.
+        see: A new key, shown in a dialog.
+      - id: youtube-key-limit
+        title: Limit the key to YouTube
+        what: The key's restriction.
+        why: A key that can call any Google service is a bigger loss if it leaks.
+        how: Edit the key, and under API restrictions allow only YouTube Data API v3. Copy the key into the chapter's Operations vault, in an item titled YouTube.
+        see: The restriction saved.
+      - id: youtube-key
+        title: Paste the API key
+        what: The YouTube API key.
+        why: The software reads the playlists with it.
+        how: Paste the key in the box below and click Save.
+        enters: youtube_api_key
+        check: setting_set:youtube_api_key
+      - id: youtube-playlists
+        title: Name the playlists
+        what: The playlists to bring in.
+        why: Each recorded webinar in them can be shown in the public library.
+        how: For each playlist, open it on YouTube and copy the part of its web address after list=. Type them in the box below, separated by commas, and click Save.
+        enters: youtube_playlist_id
+        check: test:youtube/playlists
+        if_not: The line above names each playlist YouTube does not find.
     goes_wrong: >-
       A private playlist, or an identifier copied short. YouTube does not find it,
       and the integration test names it. Cleveland's own list had one such
@@ -413,6 +590,10 @@ steps:
     source: core/youtube.py; scripts/import_youtube_events.py
 
 changes:
+  - version: "0.10"
+    date: "11-15-26 11:22"
+    change: >-
+      Steps 10.1 to 10.3, 10.5 and 10.6 carry the set-up wizard screens of Google Workspace and YouTube (Integrations tab phase 9, plan § 10, rulings W1 to W6; screens approved by Doug 11-15-26). The key is not printed, so the guide's steps read exactly as before.
   - version: "0.9"
     date: "11-13-26 10:30"
     change: >-

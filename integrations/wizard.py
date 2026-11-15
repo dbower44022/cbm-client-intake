@@ -9,11 +9,21 @@ and ``how``, and one of:
 * ``ask:`` — a question; each answer may ``sets:`` settings and says
   ``then:`` (``next``, ``end``, or a screen id);
 * ``enters:`` — a box for one setting, saved through the checked save path;
-* neither — a vendor-console action, confirmed with Done.
+  ``sets:`` beside it saves further settings with it (phase 9);
+* ``runs:`` — a button that runs a phase 7 coded action (``integrations/
+  actions.py``), saving what it proposes (phase 9);
+* ``connect: mailing`` — the mailing service's Connect button; the person
+  returns to the same screen and clicks Done (phase 9);
+* none of these — a vendor-console action, confirmed with Done.
+
+A ``copy:`` value may hold ``{APP_BASE_URL}``, filled in from the setting
+when the screen is drawn.
 
 ``check:`` is what proves the screen done: ``decided:<setting>``,
 ``setting_set:<key>``, ``test:<integration>`` or
-``test:<integration>/<check>``; none means Done. ``when:`` (``<screen>=<answer>``)
+``test:<integration>/<check>`` (several checks joined by commas must all
+pass; a check skipped because its feature is off counts as passing, since
+there is nothing to prove); none means Done. ``when:`` (``<screen>=<answer>``)
 skips a screen unless an earlier answer matches. A question not answered in
 this run counts, for ``when:`` only, as the one answer whose settings match
 the settings now (:func:`when_answers`), so Start again keeps the branch a
@@ -91,6 +101,9 @@ class Screen:
     check: str = ""
     copy: tuple[str, ...] = ()
     when: str = ""
+    runs: str = ""
+    connect: str = ""
+    sets: tuple[tuple[str, str], ...] = ()
 
     @property
     def kind(self) -> str:
@@ -98,13 +111,27 @@ class Screen:
             return "question"
         if self.enters:
             return "enter"
+        if self.runs:
+            return "action"
+        if self.connect:
+            return "connect"
         return "done"
 
     def as_dict(self) -> dict[str, Any]:
         return {"id": self.id, "step": self.step, "title": self.title, "what": self.what,
                 "why": self.why, "how": self.how, "see": self.see, "ifNot": self.if_not,
                 "answers": [str(a.get("answer")) for a in self.ask], "enters": self.enters,
-                "check": self.check, "copy": list(self.copy), "kind": self.kind}
+                "check": self.check, "copy": list(self.copy), "kind": self.kind,
+                "runs": self.runs, "runLabel": _action_label(self.runs), "connect": self.connect}
+
+
+def _action_label(name: str) -> str:
+    if not name:
+        return ""
+    from integrations.actions import ACTIONS
+
+    action = ACTIONS.get(name)
+    return action.label if action is not None else name
 
 
 _cache: dict[Any, Any] = {}
@@ -137,6 +164,8 @@ def screens_for(integration: str, steps_dir: Any = None) -> list[Screen]:
                     if_not=str(w.get("if_not") or ""), ask=tuple(w.get("ask") or ()),
                     enters=str(w.get("enters") or ""), check=str(w.get("check") or ""),
                     copy=tuple(str(c) for c in (w.get("copy") or ())), when=str(w.get("when") or ""),
+                    runs=str(w.get("runs") or ""), connect=str(w.get("connect") or ""),
+                    sets=tuple((str(k), str(v)) for k, v in (w.get("sets") or {}).items()),
                 )))
     found.sort(key=lambda x: (x[0], x[1]))
     out = [s for _, _, s in found]
@@ -172,10 +201,23 @@ def problems(screens: list[Screen], setting_keys: set[str], integration_keys: se
         if kind == "test" and arg.split("/")[0] not in integration_keys:
             out.append(f"{s.id}: '{s.check}' names no integration")
         elif kind == "test" and "/" in arg:
-            integ, _, check = arg.partition("/")
+            integ, _, checks = arg.partition("/")
             known = _check_keys(integ)
-            if known is not None and check not in known:
-                out.append(f"{s.id}: '{s.check}' names no check of {integ}'s test")
+            for check in checks.split(","):
+                if known is not None and check.strip() not in known:
+                    out.append(f"{s.id}: '{s.check}' names no check '{check}' of {integ}'s test")
+        if s.runs:
+            from integrations.actions import ACTIONS
+
+            if s.runs not in ACTIONS:
+                out.append(f"{s.id}: runs '{s.runs}', which is no coded action")
+        if s.connect and s.connect != "mailing":
+            out.append(f"{s.id}: connect '{s.connect}' is not known")
+        for key, _ in s.sets:
+            if key not in setting_keys:
+                out.append(f"{s.id}: sets '{key}', which is no setting")
+        if s.sets and not s.enters:
+            out.append(f"{s.id}: sets without a box (a question's answers carry their own)")
         if s.when:
             sid, _, answer = s.when.partition("=")
             target = next((t for t in screens if t.id == sid), None)
@@ -234,12 +276,16 @@ def evaluate(screen: Screen, state: State) -> tuple[str, str]:
         if not check:
             return (PASS, "The integration test passes.") if run.get("outcome") == "ok" \
                 else (FAIL, "The integration test does not pass yet.")
-        row = next((c for c in run.get("checks") or [] if c.get("key") == check), None)
-        if row is None:
-            return FAIL, "The integration test did not reach this check."
-        if row.get("outcome") == "ok":
-            return PASS, str(row.get("detail") or "")
-        return FAIL, str(row.get("detail") or row.get("label") or "")
+        details = []
+        for one in (c.strip() for c in check.split(",")):
+            row = next((c for c in run.get("checks") or [] if c.get("key") == one), None)
+            if row is None:
+                return FAIL, "The integration test did not reach this check."
+            # Skipped: the feature is switched off, so there is nothing to prove.
+            if row.get("outcome") not in ("ok", "skipped"):
+                return FAIL, str(row.get("detail") or row.get("label") or "")
+            details.append(str(row.get("detail") or ""))
+        return PASS, " ".join(d for d in details if d)
     return UNKNOWN, f"Unknown check '{screen.check}'."
 
 
@@ -398,7 +444,10 @@ def view(integration: str, settings: Any, overrides: dict[str, Any],
     if current:
         screen = screens[ids.index(current)]
         result, reason = evaluate(screen, state)
-        out.update(position=ids.index(current) + 1, screen=dict(screen.as_dict(), **_prefill(screen, settings)),
+        drawn = dict(screen.as_dict(), **_prefill(screen, settings))
+        base = str(getattr(settings, "app_base_url", "") or "").strip().rstrip("/") or "https://APP-ADDRESS"
+        drawn["copy"] = [c.replace("{APP_BASE_URL}", base) for c in drawn["copy"]]
+        out.update(position=ids.index(current) + 1, screen=drawn,
                    failure=p.get("failure") if (p.get("failure") or {}).get("screen") == current else None,
                    checkNow={"result": result, "reason": reason} if screen.check else None)
     return out

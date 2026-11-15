@@ -1,7 +1,7 @@
 # Stage 11 — Deploy the chapter's applications
 
-**Version:** 0.16  
-**Last Updated:** 11-13-26 10:30  
+**Version:** 0.17  
+**Last Updated:** 11-15-26 11:22  
 **Generated from** `steps/stage-11.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -849,6 +849,7 @@ In this stage we put the chapter's applications on its own hosting account and p
 
 | Version | Date | Change |
 |---|---|---|
+| 0.17 | 11-15-26 11:22 | Steps 11.14 to 11.21 carry the set-up wizard screens of Google Workspace, Constant Contact, Lob and Twilio (Integrations tab phase 9, plan § 10, rulings W1 to W6; screens approved by Doug 11-15-26). The key is not printed, so the guide's steps read exactly as before. |
 | 0.16 | 11-13-26 10:30 | Steps 11.19 to 11.21 added: connecting Constant Contact from System Settings (step 5.11's 'later' line), Lob's delivery webhook, and the Twilio number's reply address (mapping approved by Doug 11-13-26). No existing step number changed. Steps that belong to an integration carry the new keys integration and check.auto, read by the setup checklist on System Settings' Integrations tab (prds/integrations-tab-plan.md section 4, mapping approved by Doug 11-13-26). |
 | 0.15 | 11-09-26 23:59 | Steps 11.14 to 11.18 followed for the Business Mentors Association; outgoing mail (11.15) not yet confirmed, mailbox creation (11.18) skipped by ruling. |
 | 0.14 | 11-09-26 23:46 | Steps 11.2 to 11.13 followed for the Business Mentors Association (11-09-26); each step's status records what happened, chiefly that the doctl token's user must also do step 5.9 in the chapter's team. |

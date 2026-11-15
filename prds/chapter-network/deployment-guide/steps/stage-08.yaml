@@ -1,7 +1,7 @@
 stage: 8
 name: Fill in the chapter information form
-version: "0.19"
-updated: "11-13-26 10:30"
+version: "0.20"
+updated: "11-15-26 11:22"
 why: >-
   The chapter information form holds the roughly forty answers that differ from
   one chapter to the next: its name, its addresses, its Google details and its
@@ -496,6 +496,16 @@ steps:
       auto: [setting_set:espo_base_url]
       how: The section is complete, and the sending address is a real mailbox.
       probe: The page checks the CRM address begins with https://.
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: espocrm-address
+        title: The CRM's address
+        what: The web address of the chapter's CRM, beginning https://.
+        why: Every read and write the applications make goes there. A wrong address is refused before it is stored.
+        how: Type the address chosen in step 3.2, beginning https://, and click Save.
+        enters: espo_base_url
+        check: setting_set:espo_base_url
     goes_wrong: nothing known yet
     later: unchanged
     status: done-for-real — apart from the sending address and the logo; the trial chapter had neither.
@@ -815,6 +825,10 @@ steps:
     source: 5-Methods-Form-Accounts-Checks.md#8.10
 
 changes:
+  - version: "0.20"
+    date: "11-15-26 11:22"
+    change: >-
+      Step 8.5 carries EspoCRM's first set-up wizard screen (Integrations tab phase 9, plan § 10, rulings W1 to W6; screens approved by Doug 11-15-26). The key is not printed, so the guide's steps read exactly as before.
   - version: "0.19"
     date: "11-13-26 10:30"
     change: >-

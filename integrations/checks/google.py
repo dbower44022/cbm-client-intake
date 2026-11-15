@@ -10,6 +10,11 @@ Checks, in order:
    delegated token is minted for that scope. ``unauthorized_client`` means the
    domain-wide delegation grant lacks the scope: failed, naming it. Minting a
    token sends nothing.
+2a. **The whole grant** (``grant``, phase 9): a delegated token for every
+   scope of guide step 10.3's list, whatever is switched on (the meeting
+   scope only while meeting transcripts are on), as the delegated admin or,
+   with none set, the shared mailbox. The wizard's grant screen checks it, so
+   the grant is proved before any feature is switched on.
 3. **Each switched-on feature's own read**: the shared drive, the shared
    mailbox's Gmail profile, the delegated admin's calendar, the delegated
    admin's directory record (and the All Members group when provisioning is
@@ -304,6 +309,43 @@ def _delegation_check(need: Need) -> Check:
                  f"Delegation: {_scope_name(need.scope)} as {who}", run)
 
 
+#: Guide step 10.3's grant, in its order. The meeting scope is added only while
+#: meeting transcripts are on, as the guide says.
+GRANT_SCOPES: tuple[str, ...] = (S_GMAIL_READ, S_GMAIL_SEND, S_CALENDAR, S_DRIVE,
+                                 S_DIR_READ, S_DIR_USER, S_DIR_GROUP)
+
+
+async def _grant(ctx: Context) -> tuple[str, str]:
+    _needs_key(ctx)
+    if ctx.nightly:
+        # The nightly run checks only what switched-on features need; the
+        # whole grant is for the wizard and the Test Integration button.
+        raise Skip("Not checked at night: the whole grant is checked by the Test Integration button.")
+    plan: Plan = ctx.state["plan"]
+    s = ctx.settings
+    subject = plan.admin or (getattr(s, "ops_mailbox", "") or "").strip()
+    if not subject:
+        raise Skip("Not checked: no delegated admin or shared mailbox is set to check the grant as.")
+    scopes = list(GRANT_SCOPES) + ([S_MEET] if _on(s, "meet_transcripts") else [])
+    missing, unreached = [], []
+    for scope in scopes:
+        try:
+            await _mint(ctx, [scope], subject)
+        except TokenError as exc:
+            if exc.kind == "transport":
+                unreached.append(_scope_name(scope))
+            elif exc.kind == "unauthorized":
+                missing.append(_scope_name(scope))
+            else:
+                return FAILED, f"No token as {subject}: {exc}. Check that {subject} is a real, licensed account."
+    if missing:
+        return FAILED, ("Domain-wide delegation does not grant: " + ", ".join(missing)
+                        + ". Add them to the grant for this client ID.")
+    if unreached:
+        return UNKNOWN, "Google could not be reached for: " + ", ".join(unreached) + "."
+    return OK, f"All {len(scopes)} scopes of the grant are granted, checked as {subject}."
+
+
 def _token_for(ctx: Context, scope: str, subject: Optional[str]) -> str:
     token = (ctx.state.get("tokens") or {}).get((scope, subject))
     if not token:
@@ -498,6 +540,20 @@ def _per_person_on(settings: Any) -> bool:
             or (_on(s, "gdrive_docs") and getattr(s, "gdrive_identity", "user") != "service"))
 
 
+#: The fixed lines of the test, by key; the per-scope delegation lines
+#: (``scope:…``) depend on the switches and are not listed. Read by the
+#: wizard's screen check (integrations/wizard.problems).
+CHECKS: list[Check] = [
+    Check("key", "Service account key", _key),
+    Check("grant", "Delegation: the whole grant", _grant),
+    Check("drive", "Drive: the shared drive", _drive),
+    Check("mailbox", "Gmail: the shared mailbox", _mailbox),
+    Check("calendar", "Calendar", _calendar),
+    Check("meet", "Meet", _meet),
+    Check("directory", "Workspace accounts: the directory", _directory),
+]
+
+
 async def run(settings: Any, deps: Optional[Deps] = None) -> dict[str, Any]:
     deps = deps or Deps()
     ctx = Context(settings=settings, deps=deps)
@@ -505,6 +561,7 @@ async def run(settings: Any, deps: Optional[Deps] = None) -> dict[str, Any]:
     ctx.state["plan"] = plan
     checks = [Check("key", "Service account key", _key)]
     checks += [_delegation_check(n) for n in plan.needs]
+    checks += [Check("grant", "Delegation: the whole grant", _grant)]
     checks += [
         Check("drive", "Drive: the shared drive", _drive),
         Check("mailbox", "Gmail: the shared mailbox", _mailbox),

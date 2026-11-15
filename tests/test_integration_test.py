@@ -541,7 +541,26 @@ def test_google_service_mode_drive_needs_no_delegation():
     run(google.run(google_settings(gdrive_docs=True, gdrive_shared_drive_id="d1",
                                    gdrive_identity="service"), deps))
     assert ("drive", None) in deps.minted
-    assert ("drive", "admin@cbm.org") not in deps.minted
+    # The Drive feature's own line acts as the service account; only the
+    # whole-grant line (phase 9) mints Drive as the delegated admin.
+    result = run(google.run(google_settings(gdrive_docs=True, gdrive_shared_drive_id="d1",
+                                            gdrive_identity="service"), google_deps()))
+    assert any(c["key"] == "scope:drive:" for c in result["checks"])
+    assert not any(c["key"] == "scope:drive:admin@cbm.org" for c in result["checks"])
+
+
+def test_google_the_whole_grant():
+    """Phase 9: every scope of guide step 10.3, whatever is switched on."""
+    result = run(google.run(google_settings(), google_deps()))
+    line = by_key(result)["grant"]
+    assert line["outcome"] == OK and "All 7 scopes" in line["detail"]
+    denied = google_deps(refuse=("admin.directory.group",))
+    line = by_key(run(google.run(google_settings(), denied)))["grant"]
+    assert line["outcome"] == FAILED and "admin.directory.group" in line["detail"]
+    meet = by_key(run(google.run(google_settings(meet_transcripts=True), google_deps())))["grant"]
+    assert "All 8 scopes" in meet["detail"]
+    none = by_key(run(google.run(google_settings(google_delegated_admin=""), google_deps())))["grant"]
+    assert none["outcome"] == "skipped"
 
 
 def test_google_the_shared_mailbox_is_impersonated_itself():

@@ -1226,6 +1226,33 @@ async def wizard_action(key: str, action: str, body: WizardIn, request: Request)
                 p["current"] = screen.id
                 p["failure"] = {"screen": screen.id, "reason": f"Saved, then undone automatically: {res['reverted']}"}
                 return await respond()
+        for skey, svalue in (screen.sets if body.value.strip() else ()):
+            try:
+                await _checked_save(request, user, skey, SettingIn(value=svalue, reason=reason))
+            except HTTPException as exc:
+                p["current"] = screen.id
+                p["failure"] = {"screen": screen.id, "reason": f"Saved, but {skey} was refused: {exc.detail}"}
+                return await respond()
+    elif action == "run":
+        # A phase 7 coded action (phase 9): run it, save what it proposes
+        # through the checked save path, then the screen's check as usual.
+        from integrations import actions as coded
+
+        if not screen.runs:
+            raise HTTPException(status_code=400, detail="This screen has no button to run.")
+        result = await coded.run(screen.runs, get_settings(), "", dry=False)
+        if not result.ok:
+            p["current"] = screen.id
+            p["failure"] = {"screen": screen.id, "reason": result.summary}
+            return await respond()
+        for skey, svalue in result.proposes.items():
+            try:
+                await _checked_save(request, user, skey, SettingIn(value=str(svalue), reason=reason))
+            except HTTPException as exc:
+                p["current"] = screen.id
+                p["failure"] = {"screen": screen.id,
+                                "reason": f"{result.summary} But saving {skey} was refused: {exc.detail}"}
+                return await respond()
     elif action != "done":
         raise HTTPException(status_code=404, detail=f"There is no wizard action '{action}'.")
 

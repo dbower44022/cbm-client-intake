@@ -1,7 +1,7 @@
 # Stage 5 — Open the chapter's service accounts
 
-**Version:** 0.21  
-**Last Updated:** 11-15-26 02:40  
+**Version:** 0.22  
+**Last Updated:** 11-15-26 11:22  
 **Generated from** `steps/stage-05.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -773,6 +773,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 | Version | Date | Change |
 |---|---|---|
+| 0.22 | 11-15-26 11:22 | Steps 5.11 and 5.13 to 5.17 carry the set-up wizard screens of Constant Contact, Fathom, Lob, Twilio and Anthropic (Integrations tab phase 9, plan § 10, rulings W1 to W6; screens approved by Doug 11-15-26). The key is not printed, so the guide's steps read exactly as before. |
 | 0.21 | 11-15-26 02:40 | Zoom is split in two (rulings EH1 and EH7, prds/events/event-hosting-plan.md; screens approved by Doug 11-15-26). Step 5.5 becomes Zoom Meetings: the chapter's Zoom account, the events@ event host user on a paid plan, the app with the eleven meeting scopes found through Add Scopes, and the co-host setting, with eighteen wizard screens; its values go in the vault and are entered on the Zoom Meetings sub-tab, not on the chapter information form. The new step 5.18 is Zoom Webinars, on the same account or a separate one, carrying the pilot's fourteen screens reworded and the same-account question. Step 5.6 names the events@ sign-in. No step number changed. |
 | 0.20 | 11-14-26 02:10 | Step 5.5 carries the Integrations tab's Zoom wizard: fourteen screens under a new wizard key (plan § 10, rulings W1 to W6; screens approved by Doug 11-14-26). The key is not printed, so the guide's steps read exactly as before. |
 | 0.19 | 11-13-26 10:30 | Steps 5.13 to 5.17 added, each for an outside service the applications use and no step set up: the Fathom team API key, the Lob account and keys, the Twilio account and number, the carrier registration of the number, and the Anthropic API key (mapping approved by Doug 11-13-26). No existing step number changed. Steps that belong to an integration carry the new keys integration and check.auto, read by the setup checklist on System Settings' Integrations tab (prds/integrations-tab-plan.md section 4, mapping approved by Doug 11-13-26). |

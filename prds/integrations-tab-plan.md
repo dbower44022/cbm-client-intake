@@ -1,6 +1,6 @@
 # Integrations tab — System Settings plan
 
-Last Updated: 11-15-26 02:50 · Revision 0.16
+Last Updated: 11-15-26 11:23 · Revision 0.17
 
 This is the design record for a new top-level **Integrations** tab on the System
 Settings page (`/setup`). It holds Doug's rulings, the contents of each
@@ -391,6 +391,7 @@ to 7 stand as built):
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.17 | 11-15-26 11:23 | Claude (Claude Code) | Phase 9 built: v0.334.0, a set-up wizard for every integration. Doug's decision 11-15-26 (scope B): a wizard covers what the application connects to; work done before the application exists stays in the guide. Not pushed. |
 | 0.16 | 11-15-26 02:50 | Claude (Claude Code) | Phase 9 part one built: v0.333.0, the Zoom split into Zoom Meetings and Zoom Webinars (settings, checks and screens approved by Doug 11-15-26; option A, Webinars use Meetings' credentials only once they are set). Not pushed. |
 | 0.15 | 11-14-26 14:10 | Claude (Claude Code) | § 10: the event-hosting plan (rulings EH1 to EH10, Doug 11-14-26) splits Zoom into Zoom Meetings and Zoom Webinars; the split is phase 9's first part. |
 | 0.14 | 11-14-26 01:40 | Claude (Claude Code) | Phase 8 built: v0.331.0, the set-up wizard piloted on Zoom (14 screens approved by Doug 11-14-26). Not pushed. |

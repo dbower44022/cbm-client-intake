@@ -1,7 +1,7 @@
 stage: 5
 name: Open the chapter's service accounts
-version: "0.21"
-updated: "11-15-26 02:40"
+version: "0.22"
+updated: "11-15-26 11:22"
 why: >-
   The chapter's CRM server, its applications and their database all run in a
   hosting account, and the public webinar programme runs through a video meeting
@@ -627,6 +627,77 @@ steps:
       auto: [setting_set:mailing_client_id, setting_set:mailing_client_secret]
       how: The application's details page shows the redirect address ending in /api/setup/mailing/callback, and the vault item holds both values.
       probe: none
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: mailing-use
+        title: Will the chapter send mailings through Constant Contact?
+        what: Constant Contact, the mailing service.
+        why: The chapter's mailing list is kept in step with the CRM, and campaign emails go through it.
+        ask:
+          - answer: "Yes"
+            sets: {constant_contact_in_use: "true"}
+            then: next
+          - answer: "No"
+            sets: {constant_contact_in_use: "false"}
+            then: end
+        check: decided:constant_contact_in_use
+      - id: mailing-have-account
+        title: Does the chapter already have the account and its developer application?
+        what: A Constant Contact account, and a developer application on it.
+        why: If both exist, only their two values and the connection are needed.
+        ask:
+          - answer: "Yes"
+            then: mailing-client-id
+          - answer: "No"
+            then: next
+      - id: mailing-signup
+        title: Sign up
+        what: The chapter's Constant Contact account.
+        why: The mailing list and the campaigns live there.
+        how: Go to https://www.constantcontact.com/signup and sign up with admin@ on the chapter's domain. It is a free trial with no card. Put the password in the chapter's Operations vault, in an item titled Constant Contact. The exact wording of the sign-up screens has not been checked for this guide.
+        see: The account's home page.
+        if_not: Stop and ask the Association.
+      - id: mailing-mfa
+        title: Confirm the address and turn on two-step sign-in
+        what: The Verify Email message, and two-step sign-in on the account.
+        why: Constant Contact refuses to create a developer application until two-step sign-in is on.
+        how: Confirm the address from the Verify Email message sent to admin@. Then turn on two-step sign-in in the account's settings, with its codes in the Constant Contact item in the vault.
+        see: Two-step sign-in shown as on.
+      - id: mailing-plan
+        title: Choose the plan
+        what: The paid plan, before the trial ends.
+        why: The account stops sending when the trial ends.
+        how: Upgrade to the plan the Association names, with the chapter's own card.
+        see: The plan shown on the account's billing page.
+      - id: mailing-app
+        title: Create the developer application
+        what: The application the software connects through.
+        why: Constant Contact gives software its access only through such an application.
+        how: Open https://app.constantcontact.com/pages/dma/portal, click New Application, name it after the chapter, tick Authorization Code Flow and Implicit Flow, tick Rotating Refresh Tokens, and click Create.
+        see: The new application listed under Applications.
+      - id: mailing-redirect
+        title: Set its redirect address
+        what: The address Constant Contact sends the person back to after Connect.
+        why: Constant Contact refuses to return anywhere else.
+        how: Click Edit beside the application, click the pencil beside Redirect URI, replace https://localhost with the address below, click Confirm, then Save at the top of the page.
+        copy:
+          - "{APP_BASE_URL}/api/setup/mailing/callback"
+        see: Exactly that address, with https at the start and callback at the end.
+      - id: mailing-client-id
+        title: Paste the API key
+        what: The application's API Key (Client Id).
+        why: The software names the application with it when it connects.
+        how: On the application's Edit page, copy the API Key (Client Id), paste it in the box below, and click Save.
+        enters: mailing_client_id
+        check: setting_set:mailing_client_id
+      - id: mailing-client-secret
+        title: Paste the client secret
+        what: The application's secret.
+        why: The software proves it is the application with it.
+        how: Click Generate Client Secret, copy it into the Constant Contact item in the vault first, then paste it in the box below and click Save. It is shown only once.
+        enters: mailing_client_secret
+        check: setting_set:mailing_client_secret
     goes_wrong: >-
       An application created under a volunteer's own Constant Contact sign-in. Only
       that person can then connect the software, and the connection stops when they
@@ -702,6 +773,68 @@ steps:
       auto: [setting_set:fathom_api_key]
       how: The Fathom sub-tab of System Settings shows the API key as set, and its Test Integration button passes.
       probe: The app reads one page of meetings from Fathom with the key.
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: fathom-use
+        title: Will mentors record their sessions with Fathom?
+        what: Fathom, a meeting recorder used by the chapter's mentors.
+        why: Its recordings give each session a transcript and action items without the mentor typing them.
+        ask:
+          - answer: "Yes"
+            sets: {fathom_in_use: "true"}
+            then: next
+          - answer: "No"
+            sets: {fathom_in_use: "false"}
+            then: end
+        check: decided:fathom_in_use
+      - id: fathom-have-account
+        title: Does the chapter already have a Fathom team account?
+        what: A Fathom team the mentors belong to.
+        why: If it exists, only its API key is needed.
+        ask:
+          - answer: "Yes"
+            then: fathom-key-create
+          - answer: "No"
+            then: next
+      - id: fathom-signup
+        title: Create the Fathom team account
+        what: The chapter's own Fathom team.
+        why: Recordings shared with the team are what the applications read.
+        how: At https://fathom.video, sign up with admin@ on the chapter's domain. Put the password in the chapter's Operations vault, in an item titled Fathom. The exact wording of Fathom's screens has not been checked for this guide.
+        see: The team's home page.
+        if_not: Stop and ask the Association.
+      - id: fathom-share
+        title: Share every recording with the team
+        what: The team setting that shares each new recording.
+        why: A recording that is not shared never reaches the applications.
+        how: In the team's settings, set every new recording to be shared with the team.
+        see: The setting saved.
+      - id: fathom-key-create
+        title: Create the API key
+        what: The key the applications read the team's recordings with.
+        why: Without it no transcript reaches a session.
+        how: In Fathom's settings, open the API access page and create a key. Copy it straight into the Fathom item in the vault.
+        see: The key in the vault.
+      - id: fathom-key
+        title: Paste the API key
+        what: The Fathom API key.
+        why: The applications read the team's recordings with it.
+        how: Paste the key in the box below and click Save.
+        enters: fathom_api_key
+        check: test:fathom/meetings
+        if_not: Fathom refused the key, or the team has no recordings to read yet. Copy the key again.
+      - id: fathom-on
+        title: Turn on Fathom transcripts?
+        what: The switch that files each session's Fathom transcript and action items.
+        why: Until it is on, nothing is read from Fathom.
+        ask:
+          - answer: "Yes"
+            sets: {fathom_transcripts: "true"}
+            then: next
+          - answer: "Not yet"
+            then: next
+        check: test:fathom
     goes_wrong: >-
       A key made by one mentor's own Fathom user reads only that mentor's
       recordings. Make the key with the team's administrator, and keep team
@@ -742,6 +875,51 @@ steps:
       auto: [setting_set:postal_api_key]
       how: The Lob sub-tab of System Settings shows the key as set, and its Test Integration button passes.
       probe: The app lists one postcard with the key and reads test or live from the key's first letters.
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: lob-use
+        title: Will the chapter send postcards?
+        what: Lob, the postcard printing and mailing service.
+        why: Campaigns can reach a lead by post.
+        ask:
+          - answer: "Yes"
+            sets: {lob_in_use: "true"}
+            then: next
+          - answer: "No"
+            sets: {lob_in_use: "false"}
+            then: end
+        check: decided:lob_in_use
+      - id: lob-have-account
+        title: Does the chapter already have a Lob account?
+        what: A Lob account with its API keys.
+        why: If it exists, only its keys are needed.
+        ask:
+          - answer: "Yes"
+            then: lob-keys
+          - answer: "No"
+            then: next
+      - id: lob-signup
+        title: Sign up for Lob
+        what: The chapter's Lob account.
+        why: Postcards are printed and mailed from it.
+        how: Go to https://dashboard.lob.com and sign up with admin@ on the chapter's domain. Put the password in the chapter's Operations vault, in an item titled Lob, and turn on two-step sign-in. The exact wording of Lob's screens has not been checked for this guide.
+        see: Lob's dashboard.
+        if_not: Stop and ask the Association.
+      - id: lob-keys
+        title: Copy both keys into the vault
+        what: Lob's test key and live key.
+        why: The test key tries everything without printing or charging; the live key sends real postcards.
+        how: In Lob's settings, open the API keys page. Copy the test key (it begins test_) and the live key (it begins live_) into the Lob item in the vault.
+        see: Both keys in the vault.
+      - id: lob-test-key
+        title: Paste the test key
+        what: Lob's test key.
+        why: Test mode comes first; nothing is printed or charged. Mail vendor test mode stays on.
+        how: Paste the test key in the box below and click Save.
+        enters: postal_api_key
+        check: test:lob/postcards
+        if_not: Lob refused the key. Copy it again from Lob's API keys page.
     goes_wrong: >-
       A live key entered while test mode is on. Lob decides by the key alone, so
       the postcards would be printed and mailed. The Lob integration test fails
@@ -786,6 +964,79 @@ steps:
       auto: [setting_set:sms_account_sid, setting_set:sms_auth_token, setting_set:sms_from_number]
       how: The Twilio sub-tab of System Settings shows the three values as set, and its Test Integration button passes.
       probe: The app reads the account and looks up the number among the account's numbers.
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: twilio-use
+        title: Will the chapter send text messages?
+        what: Twilio, the texting service.
+        why: Campaigns and reminders can reach people by text.
+        ask:
+          - answer: "Yes"
+            sets: {twilio_in_use: "true"}
+            then: next
+          - answer: "No"
+            sets: {twilio_in_use: "false"}
+            then: end
+        check: decided:twilio_in_use
+      - id: twilio-have-account
+        title: Does the chapter already have a Twilio account with a number?
+        what: A paid Twilio account with a number that can send texts.
+        why: If it exists, only its values are needed.
+        ask:
+          - answer: "Yes"
+            then: twilio-sid
+          - answer: "No"
+            then: next
+      - id: twilio-signup
+        title: Sign up for Twilio
+        what: The chapter's Twilio account.
+        why: The chapter's texts are sent from it.
+        how: Go to https://www.twilio.com/try-twilio and sign up with admin@ on the chapter's domain. Put the password in the chapter's Operations vault, in an item titled Twilio, and turn on two-step sign-in. The exact wording of Twilio's screens has not been checked for this guide.
+        see: Twilio's console.
+        if_not: Stop and ask the Association.
+      - id: twilio-upgrade
+        title: Upgrade from trial
+        what: A paid account.
+        why: A trial account can text only numbers it has verified.
+        how: Upgrade the account with the chapter's own card.
+        see: The console no longer says Trial.
+      - id: twilio-number
+        title: Buy a number
+        what: A local United States number that can send SMS.
+        why: Every text comes from it.
+        how: In Twilio's console, buy a local United States number that can send SMS. Write it in the Twilio item in the vault in the form +12165550123.
+        see: The number listed under the account's numbers.
+      - id: twilio-sid
+        title: Paste the Account SID
+        what: The account's identifier, which begins AC.
+        why: The software names the account with it.
+        how: Copy it from the console's Account Info panel, paste it in the box below, and click Save.
+        enters: sms_account_sid
+        check: setting_set:sms_account_sid
+      - id: twilio-token
+        title: Paste the Auth Token
+        what: The account's live Auth Token.
+        why: The software proves it is the account with it.
+        how: Copy the live Auth Token from the Account Info panel, never the test credentials, paste it in the box below, and click Save.
+        enters: sms_auth_token
+        check: test:twilio/account
+        if_not: Twilio refused the token. If the test credentials were copied, copy the live Auth Token instead.
+      - id: twilio-find-number
+        title: Look up the sender number
+        what: The account's number that can send texts.
+        why: The software sends from it.
+        how: Click the button below. The application lists the account's numbers that can send texts and, when there is exactly one, saves it.
+        runs: twilio.find_sender_number
+        check: setting_set:sms_from_number
+        if_not: The account has several numbers. Type the one to use on the next screen.
+      - id: twilio-sender
+        title: Confirm the sender number
+        what: The number every text comes from.
+        why: Twilio refuses to send from a number the account does not hold.
+        how: Check the number below, in the form +12165550123, change it if needed, and click Save.
+        enters: sms_from_number
+        check: test:twilio/number
     goes_wrong: >-
       The test credentials copied in place of the live ones. Twilio refuses every
       read with them, and the integration test says so.
@@ -819,6 +1070,27 @@ steps:
     check:
       how: Twilio's console shows the campaign approved with the number attached.
       probe: none — the integration test does not read the registration.
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: twilio-brand
+        title: Register the chapter as a brand
+        what: Carrier registration (A2P 10DLC), which United States carriers require before they deliver business texts.
+        why: Texts from an unregistered number are blocked.
+        how: In Twilio's console, open the A2P 10DLC pages and register the chapter with its legal name and its employer identification number. The exact wording of these screens has not been checked for this guide.
+        see: The brand listed as registered.
+      - id: twilio-campaign
+        title: Register the campaign
+        what: A description of the texts the chapter sends.
+        why: Carriers approve the kind of texts, not only the sender.
+        how: Register one campaign. Describe the texts as invitations and reminders to people who asked for them, each saying to reply STOP to stop.
+        see: The campaign listed.
+      - id: twilio-attach
+        title: Attach the number to the campaign
+        what: The sender number, linked to the approved campaign.
+        why: Only a number in an approved campaign is delivered.
+        how: Attach the number to the campaign.
+        see: The campaign's status reads approved. Twilio may take days or weeks; the wizard keeps its place.
     goes_wrong: >-
       Texts sent before approval are blocked or filtered by the carriers, with no
       error in the applications.
@@ -854,6 +1126,79 @@ steps:
       auto: [setting_set:anthropic_api_key]
       how: The Anthropic sub-tab of System Settings shows the key as set, and its Test Integration button passes.
       probe: The app lists the models with the key. It never sends a message, so the test costs nothing.
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: anthropic-use
+        title: Will the chapter use the AI features?
+        what: Claude, from Anthropic. It writes summaries of email conversations, does research on leads, and answers Ask Claude in this wizard.
+        why: The chapter pays for what it uses, under its own monthly limit.
+        ask:
+          - answer: "Yes"
+            sets: {anthropic_in_use: "true"}
+            then: next
+          - answer: "No"
+            sets: {anthropic_in_use: "false"}
+            then: end
+        check: decided:anthropic_in_use
+      - id: anthropic-have-org
+        title: Does the chapter already have an Anthropic organization?
+        what: The chapter's account on Anthropic's console.
+        why: If it exists, only a key is needed.
+        ask:
+          - answer: "Yes"
+            then: anthropic-key-create
+          - answer: "No"
+            then: next
+      - id: anthropic-org
+        title: Create the organization
+        what: The chapter's own organization on Anthropic's console.
+        why: A key made under a volunteer's own account stops when the volunteer leaves.
+        how: Go to https://platform.claude.com and create the organization with admin@ on the chapter's domain. Put the password in the chapter's Operations vault, in an item titled Anthropic. The exact wording of the console's screens has not been checked for this guide.
+        see: The console's home page.
+        if_not: Stop and ask the Association.
+      - id: anthropic-billing
+        title: Add the card and a monthly spending limit
+        what: Billing, with a ceiling.
+        why: The limit is the board's ceiling on what Anthropic can charge.
+        how: Add the chapter's own card for billing, and set the monthly spending limit the board agrees.
+        see: The limit shown on the billing page.
+      - id: anthropic-key-create
+        title: Create the API key
+        what: The key the applications call Claude with.
+        why: Every AI feature uses it.
+        how: Create a key named after the chapter's applications, and copy it straight into the Anthropic item in the vault. It is shown only once.
+        see: The key in the vault.
+      - id: anthropic-key
+        title: Paste the API key
+        what: The Anthropic API key.
+        why: The test proves the key works and every model the settings name exists.
+        how: Paste the key in the box below and click Save.
+        enters: anthropic_api_key
+        check: test:anthropic/configured
+        if_not: The line above names the refused key or the missing model.
+      - id: anthropic-summaries
+        title: Turn on AI conversation summaries?
+        what: A short summary of each email conversation, on the record.
+        why: Staff see the gist of a long thread at once.
+        ask:
+          - answer: "Yes"
+            sets: {comms_ai_summary: "true"}
+            then: next
+          - answer: "Not yet"
+            then: next
+        check: test:anthropic
+      - id: anthropic-research
+        title: Turn on AI research on leads?
+        what: Research on each new lead's business, from public sources.
+        why: Staff start a conversation already knowing the business. It has its own monthly budget, on this sub-tab.
+        ask:
+          - answer: "Yes"
+            sets: {enrichment_ai: "true"}
+            then: next
+          - answer: "Not yet"
+            then: next
+        check: test:anthropic
     goes_wrong: >-
       A key made under a volunteer's own Anthropic account. The chapter cannot see
       or limit its spending, and the key stops when the volunteer leaves.
@@ -1070,6 +1415,10 @@ steps:
     source: 9-Methods-Hosting-Website-Policies.md#5.5; prds/events/event-hosting-plan.md
 
 changes:
+  - version: "0.22"
+    date: "11-15-26 11:22"
+    change: >-
+      Steps 5.11 and 5.13 to 5.17 carry the set-up wizard screens of Constant Contact, Fathom, Lob, Twilio and Anthropic (Integrations tab phase 9, plan § 10, rulings W1 to W6; screens approved by Doug 11-15-26). The key is not printed, so the guide's steps read exactly as before.
   - version: "0.21"
     date: "11-15-26 02:40"
     change: >-

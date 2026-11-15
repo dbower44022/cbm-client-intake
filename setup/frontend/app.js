@@ -755,6 +755,13 @@
       html += '<input type="' + (s.secret ? "password" : "text") + '" class="su__wizinput" id="wizValue" autocomplete="off" value="'
         + esc(s.secret ? "" : (s.value || "")) + '" placeholder="' + esc(s.secret ? (s.isSet ? "Set — paste a new value to replace it" : "Paste it here") : "") + '" /> '
         + '<button type="button" class="cbm-button" data-wiz="' + esc(i.key + "|enter|" + s.id) + '">Save and check</button>';
+    } else if (s.kind === "action") {
+      // A phase 7 coded action: the application does it, then checks.
+      html += '<button type="button" class="cbm-button" data-wiz="' + esc(i.key + "|run|" + s.id) + '">' + esc(s.runLabel || "Run") + "</button>";
+    } else if (s.kind === "connect") {
+      // Leaves for the vendor's sign-in and comes back to this screen.
+      html += '<a class="cbm-button" href="/api/setup/mailing/connect">Connect</a> '
+        + '<button type="button" class="cbm-button cbm-button--secondary" data-wiz="' + esc(i.key + "|done|" + s.id) + '">Done</button>';
     } else {
       html += '<button type="button" class="cbm-button" data-wiz="' + esc(i.key + "|done|" + s.id) + '">Done</button>';
     }

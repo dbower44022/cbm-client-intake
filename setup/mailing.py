@@ -53,7 +53,13 @@ def _back(outcome: str, detail: str = "") -> RedirectResponse:
         query["detail"] = detail[:300]
     # 303: the callback was a GET and the page is a GET, but never let a
     # browser replay the callback's code on a refresh of the page.
-    return RedirectResponse(f"{SETTINGS_PAGE}?{urlencode(query)}#readiness", status_code=303)
+    # With the Integrations tab on, back to Constant Contact's sub-tab, where
+    # its set-up wizard waits on the Connect screen (phase 9).
+    from core.config import get_settings
+
+    anchor = "integrations/constant_contact" if getattr(get_settings(), "integrations_tab", False) \
+        else "readiness"
+    return RedirectResponse(f"{SETTINGS_PAGE}?{urlencode(query)}#{anchor}", status_code=303)
 
 
 def _cannot_connect_reason(settings: Any, store: Any) -> str:

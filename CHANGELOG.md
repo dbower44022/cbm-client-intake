@@ -5,6 +5,42 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.334.0] — 2026-11-15
+
+**feat(setup): the Integrations tab, phase 9 part two — a set-up wizard for
+every integration.** Dark behind **`INTEGRATIONS_TAB`**. Plan
+`prds/integrations-tab-plan.md` § 10, rulings W1 to W6; Google Workspace's
+scope (B: the wizard starts from an existing Workspace account) and the
+screens of all eight approved by Doug 11-15-26 at stopping points 3 and 4
+(`prompts/integrations-tab-phase9-google-review.md`,
+`prompts/integrations-tab-phase9-seven-review.md`); `OPEN-ITEMS.md` #82.
+
+- **The screens, in the guide's step files**: EspoCRM 9 (steps 8.5, 9.7,
+  9.9), Google Workspace 44 (4.2 to 4.10, 10.1 to 10.5, 11.14 to 11.18),
+  Fathom 7, Constant Contact 12, Lob 11, Twilio 15, Anthropic 8, YouTube 6.
+  Work done before the application exists (Google's stage 4 account build,
+  the CRM server's build in stages 9.3 to 9.5) stays in the guide alone.
+  Not printed: the rendered guide changes only in each stage's revision
+  line (stages 4, 5, 8, 9, 10, 11; `steps/README.md` 0.9).
+- **New screen kinds** (`integrations/wizard.py`, `setup/router.py`, the
+  page): `runs:` runs a phase 7 coded action from a button and saves what it
+  proposes through the checked save path (Google's shared drive, Twilio's
+  sender number); `connect: mailing` shows Constant Contact's Connect, whose
+  callback now returns to the Constant Contact sub-tab while the
+  Integrations tab is on; a box may `sets:` further settings with it (Lob's
+  live key switches test mode off).
+- **Checks**: a `test:` check may join lines with commas; a line skipped
+  because its feature is off counts as passing; a `copy:` value may hold
+  `{APP_BASE_URL}`, filled in from the setting. The screen check refuses an
+  unknown coded action, Connect, `sets:` key or test line.
+- **The Google test gains `grant`**, "Delegation: the whole grant": a token
+  for every scope of guide step 10.3, whatever is switched on, as the
+  delegated admin or else the shared mailbox. Skipped at night (the nightly
+  run still checks only what switched-on features need) and with neither
+  address set.
+- Tests: `tests/test_integration_wizard_phase9.py` (13); the Google grant
+  test; the wizard tests follow every integration having screens.
+
 ## [0.333.0] — 2026-11-15
 
 **feat(setup): the Integrations tab, phase 9 part one — Zoom splits into Zoom

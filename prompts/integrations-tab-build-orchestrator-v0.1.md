@@ -1,6 +1,6 @@
 # Build orchestrator — the Integrations tab of System Settings
 
-Last Updated: 11-15-26 02:50 · Revision 0.13 — see change log at the end.
+Last Updated: 11-15-26 11:23 · Revision 0.14 — see change log at the end.
 
 This file runs the whole build of the Integrations tab. It names the phases,
 the prompt for each one, the rules that every phase session follows, and the
@@ -32,8 +32,8 @@ stopping points where the work pauses for Doug. The design is
 | 6 | The diagnosis agent and fix plans | `prompts/integrations-tab-phase6-prompt-v0.1.md` | Built v0.327.0, 11-13-26; awaiting Doug's review |
 | 7 | The setup assistant and setup plans | `prompts/integrations-tab-phase7-prompt-v0.1.md` | Built v0.329.0, 11-13-26; awaiting Doug's review |
 | 8 | The wizard, piloted on Zoom (plan § 10, rulings W1 to W6) | `prompts/integrations-tab-phase8-prompt-v0.2.md` | Built v0.331.0, 11-14-26; awaiting the live pilot on crm-test (stopping point 3). (v0.1 is superseded: it becomes phase 11.) |
-| 9 | The Zoom split into Zoom Webinars and Zoom Meetings (plan `prds/events/event-hosting-plan.md`, EH1, EH5, EH7, EH8), then the other integrations' wizard screens | `prompts/integrations-tab-phase9-prompt-v0.2.md` | Part one (the split) built v0.333.0, 11-15-26; part two (the other eight integrations) next, from stopping point 3 |
-| 10 | The removal of the checklist display, setup plans and fix plans (ruling W4) | written at the end of phase 9 | — |
+| 9 | The Zoom split into Zoom Webinars and Zoom Meetings (plan `prds/events/event-hosting-plan.md`, EH1, EH5, EH7, EH8), then the other integrations' wizard screens | `prompts/integrations-tab-phase9-prompt-v0.2.md` | Built v0.333.0 (the split) and v0.334.0 (every integration's screens), 11-15-26; awaiting Doug's review |
+| 10 | The removal of the checklist display, setup plans and fix plans (ruling W4) | `prompts/integrations-tab-phase10-prompt-v0.1.md` | Draft prompt for Doug's approval |
 | 11 | Documentation, and the live review on crm-test | written at the end of phase 10 | — |
 
 The session closing each phase updates the **State** column.
@@ -97,6 +97,7 @@ which goes to Doug as a decision.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.14 | 11-15-26 11:23 | Claude (Claude Code) | State column: phase 9 built (v0.334.0); phase 10 prompt drafted. |
 | 0.13 | 11-15-26 02:50 | Claude (Claude Code) | State column: phase 9 part one built (v0.333.0). |
 | 0.12 | 11-15-26 02:25 | Claude (Claude Code) | State column: phases 1 and 2 reviewed (Doug, 11-15-26). |
 | 0.11 | 11-14-26 14:10 | Claude (Claude Code) | Phase 9 gains the Zoom split (event-hosting plan, Doug 11-14-26); its prompt is to be rewritten. |

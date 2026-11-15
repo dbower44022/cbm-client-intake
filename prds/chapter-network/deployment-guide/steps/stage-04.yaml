@@ -1,7 +1,7 @@
 stage: 4
 name: Set up Google Workspace and the chapter's email
-version: "0.8"
-updated: "11-13-26 10:30"
+version: "0.9"
+updated: "11-15-26 11:22"
 why: >-
   Google Workspace is Google's paid service for an organization's email, calendars
   and documents. The software reads and sends the chapter's mail, creates calendar
@@ -93,6 +93,38 @@ steps:
     check:
       how: The setup contact signs in to the Google Workspace admin console.
       probe: none
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: google-use
+        title: Does this chapter use Google Workspace?
+        what: The chapter's Google account, with its mailboxes, calendars and shared drive.
+        why: The applications send the chapter's email, book mentors' meetings, file client documents and create mentors' mailboxes through it. Without it, none of those features can be switched on.
+        ask:
+          - answer: "Yes"
+            sets: {google_workspace_in_use: "true"}
+            then: next
+          - answer: "No"
+            sets: {google_workspace_in_use: "false"}
+            then: end
+        check: decided:google_workspace_in_use
+      - id: google-have-workspace
+        title: Is the chapter's Google Workspace already set up?
+        what: The account, its verified domain, mail delivered to Google, and a Super Admin who can sign in at admin.google.com (guide steps 4.2 to 4.6).
+        why: Everything after this screen happens inside that account.
+        ask:
+          - answer: "Yes"
+            then: google-ops-mailbox-create
+          - answer: "No"
+            then: next
+      - id: google-build-first
+        title: Set up Google Workspace first
+        what: Building the chapter's Google account.
+        why: It must exist, with mail flowing to it, before the application can use it.
+        how: Follow stage 4 of the deployment guide, steps 4.2 to 4.6, then 4.11 and 4.12. Come back here when a Super Admin can sign in at admin.google.com and a test message reaches a chapter mailbox.
+        see: The admin console's home page, signed in as a Super Admin.
+        if_not: Stop and ask the Association.
+        when: google-have-workspace=No
     goes_wrong: >-
       Signing up with the website domain name when the chapter chose a separate email
       domain name. The mailboxes then land on the wrong domain name.
@@ -305,6 +337,24 @@ steps:
       auto: [setting_set:ops_mailbox]
       how: The address appears in the admin console as a user with a licence.
       probe: Once stage 10 is done, the app asks Google's directory whether the address is a licensed user and not a group.
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: google-ops-mailbox-create
+        title: Create the shared operations mailbox
+        what: A licensed user named info@ on the chapter's email domain. It is a user, never a group.
+        why: The applications send their mail as this address, and read the chapter's incoming mail from it.
+        how: At admin.google.com, open Directory, then Users, then Add new user. First name, the chapter's name. Last name, Info. Primary email, info@ followed by the chapter's email domain. Click Continue, and copy the password straight into the chapter's Operations vault before leaving the page.
+        see: info@ listed under Directory, then Users, with a licence, and not under Groups.
+        if_not: A group or an alias cannot be used. Delete it and create a user.
+      - id: google-ops-mailbox
+        title: Name the shared operations mailbox
+        what: The address the applications send as and read incoming mail from.
+        why: Saving it here also starts the background worker reading that mailbox. Only one deployment may read a given mailbox, or every message is captured twice.
+        how: Type info@ followed by the chapter's email domain, and click Save.
+        enters: ops_mailbox
+        check: setting_set:ops_mailbox
+        if_not: Check the address is the user created on the screen before.
     goes_wrong: >-
       Creating the address as a group or an alias. The software can only act as a real
       mailbox, and it fails later with an error that does not name the cause. Cleveland
@@ -335,6 +385,33 @@ steps:
       auto: [setting_set:alert_email_from]
       how: The address appears in the admin console as a user with a licence.
       probe: Once stage 10 is done, the app asks Google's directory whether the address is a licensed user.
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: google-alerts-from
+        title: Send the system's warning messages from the shared mailbox?
+        what: The address the system's warning messages come from.
+        why: Cleveland sends them from its shared mailbox, which saves a licence. Alert sending address left empty means the shared mailbox.
+        ask:
+          - answer: "Yes"
+            then: google-alert-group
+          - answer: "A separate address"
+            then: next
+      - id: google-alerts-mailbox
+        title: Create the alert sending mailbox
+        what: A licensed user named alerts@ on the chapter's email domain.
+        why: The warning messages are sent as this address.
+        how: At admin.google.com, open Directory, then Users, then Add new user. First name, the chapter's name. Last name, Alerts. Primary email, alerts@ followed by the chapter's email domain. Copy the password straight into the chapter's Operations vault.
+        see: alerts@ under Directory, then Users, with a licence, and not under Groups.
+        when: google-alerts-from=A separate address
+      - id: google-alerts-from-address
+        title: Name the alert sending address
+        what: The address the warning messages come from.
+        why: Google refuses to send as an address that is not a real mailbox.
+        how: Type alerts@ followed by the chapter's email domain, and click Save.
+        enters: alert_email_from
+        check: setting_set:alert_email_from
+        when: google-alerts-from=A separate address
     goes_wrong: >-
       A group or an alias. It is refused, the same as in step 4.7.
     later: unchanged
@@ -373,6 +450,42 @@ steps:
       auto: [setting_set:alert_email_to]
       how: The named people are written down beside the address. The real test is step 12.4, once the software can send.
       probe: none
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: google-alert-group
+        title: Create the System Administrators group
+        what: A group named admin@ on the chapter's email domain.
+        why: The system's warning messages go to it, and so does the sign-in mail of every account the chapter opens, so no message depends on one person.
+        how: At admin.google.com, open Directory, then Groups, then Create group. Name, System Administrators. Group email, admin@ followed by the chapter's email domain. Group owners, the chapter administrator's address. Click Next.
+        see: The access settings page.
+        if_not: A user already holding admin@ blocks the group. Rename that user first.
+      - id: google-alert-group-access
+        title: Let outside senders post to it
+        what: The group's access settings.
+        why: The hosting provider's alerts and every account's password resets come from outside the chapter. Without External they are refused.
+        how: Under Access type choose Restricted, then in the row Who can post tick External. Under Who can join the group choose Only invited users. Click Create group.
+        see: The group listed with access type Custom.
+      - id: google-alert-group-members
+        title: Add the group's members
+        what: The people who receive the warnings and the accounts' sign-in mail.
+        why: At least two people, so nothing is missed when one is away.
+        how: Add at least two named officers of the chapter. Add a named person from the Association, by their own address, only if the chapter's access schedule says so. Write their names on the chapter's account list.
+        see: The members listed on the group's page.
+      - id: google-alert-to
+        title: Name the alert receiving address
+        what: The address the system's warning messages go to.
+        why: A warning nobody reads is no warning.
+        how: Type admin@ followed by the chapter's email domain, and click Save.
+        enters: alert_email_to
+        check: setting_set:alert_email_to
+      - id: google-alert-group-test
+        title: Test the group
+        what: A message from outside reaching every member.
+        why: It proves outside senders can post, which the warnings depend on.
+        how: From a personal account outside the chapter, send a message to admin@.
+        see: The message arrives with every member of the group.
+        if_not: Check that Who can post includes External (screen 10).
     goes_wrong: >-
       An address nobody reads. The warnings then arrive and change nothing. And a
       group that rejects outside mail: the hosting provider's alerts and every
@@ -407,6 +520,33 @@ steps:
       auto: [setting_set:google_members_group]
       how: The group appears in the admin console, and the administrator adds and removes a test member.
       probe: Once stage 10 is done, the app reads the group through Google's directory.
+    wizard:
+      # The Integrations tab's wizard (plan § 10, rulings W1 to W6; screens
+      # approved by Doug 11-15-26, phase 9 stopping points 3 and 4). Not printed.
+      - id: google-members
+        title: Should a new mentor be added to an All Members group?
+        what: A Google group of every member, which the application adds each new mentor's mailbox to.
+        why: The chapter writes to its whole membership through one address. Without it, the group step is skipped.
+        ask:
+          - answer: "Yes"
+            then: next
+          - answer: "No"
+            then: google-cloud-project
+      - id: google-members-create
+        title: Create the All Members group
+        what: The group every member belongs to.
+        why: New mentors are added to it when their mailbox is created.
+        how: At admin.google.com, open Directory, then Groups, then Create group. Name, All Members. Group email, allmembers@ followed by the chapter's email domain, or another the chapter prefers. Set who can post; only the group's own members is the usual choice.
+        see: The group listed under Groups.
+        when: google-members=Yes
+      - id: google-members-group
+        title: Name the members group
+        what: The All Members group's address.
+        why: The application adds each new mentor to it.
+        how: Type the group's address and click Save.
+        enters: google_members_group
+        check: setting_set:google_members_group
+        when: google-members=Yes
     goes_wrong: >-
       Adding members to the group needs one more permission in the software's grant
       than the rest. Step 10.3 lists it.
@@ -544,6 +684,10 @@ steps:
     source: 8-Methods-Organization-Domains-Google.md#4.14
 
 changes:
+  - version: "0.9"
+    date: "11-15-26 11:22"
+    change: >-
+      Steps 4.2, 4.7, 4.8, 4.9 and 4.10 carry Google Workspace's set-up wizard screens (Integrations tab phase 9, plan § 10, rulings W1 to W6; screens approved by Doug 11-15-26). The key is not printed, so the guide's steps read exactly as before.
   - version: "0.8"
     date: "11-13-26 10:30"
     change: >-

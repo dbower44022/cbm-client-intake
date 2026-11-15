@@ -81,9 +81,10 @@ def test_the_wizard_screens_never_change_the_rendered_guide():
         assert r.render_stage(stage) == r.render_stage(stripped), stage["stage"]
 
 
-def test_integrations_without_screens_have_no_wizard_yet():
-    assert wizard.screens_for("lob") == []
-    assert wizard.view("lob", Settings(), {}, {}, None) is None
+def test_an_integration_without_screens_has_no_wizard():
+    # Since phase 9 every integration has screens; an unknown key has none.
+    assert wizard.screens_for("nope") == []
+    assert wizard.view("nope", Settings(), {}, {}, None) is None
 
 
 # --- the checks and the start (W5) ----------------------------------------------------------
@@ -329,5 +330,6 @@ def test_the_page_carries_the_wizard_and_the_tables_reset_nightly(monkeypatch):
     page = TestClient(_app(monkeypatch)).get("/setup/api/settings").json()
     z = next(i for i in page["integrations"] if i["key"] == "zoom")
     assert z["wizard"]["screen"]["id"] == "zoom-use" and z["wizard"]["stored"] is True
-    assert next(i for i in page["integrations"] if i["key"] == "lob")["wizard"] is None
+    # Since phase 9 every integration has a wizard.
+    assert next(i for i in page["integrations"] if i["key"] == "lob")["wizard"]["status"] == "running"
     assert {"integration_wizard", "integration_agent_call"} <= set(RESET_TABLES)

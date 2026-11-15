@@ -1,7 +1,7 @@
 # Stage 9 — Build the CRM system
 
-**Version:** 0.20  
-**Last Updated:** 11-13-26 10:30  
+**Version:** 0.21  
+**Last Updated:** 11-15-26 11:22  
 **Generated from** `steps/stage-09.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -577,6 +577,7 @@ The CRM is the chapter's system of record. Every client, mentor, partner, funder
 
 | Version | Date | Change |
 |---|---|---|
+| 0.21 | 11-15-26 11:22 | Steps 9.7 and 9.9 carry EspoCRM's set-up wizard screens (Integrations tab phase 9, plan § 10, rulings W1 to W6; screens approved by Doug 11-15-26). The key is not printed, so the guide's steps read exactly as before. |
 | 0.20 | 11-13-26 10:30 | Steps that belong to an integration carry the new keys integration and check.auto, read by the setup checklist on System Settings' Integrations tab (prds/integrations-tab-plan.md section 4, mapping approved by Doug 11-13-26). The rendered guide does not change. |
 | 0.19 | 11-10-26 01:10 | Owed list: the CRM's outgoing mail, found missing on the Business Mentors Association's CRM, with Cleveland's method and DigitalOcean's SMTP block. |
 | 0.18 | 11-09-26 22:27 | Steps 9.3 to 9.9 followed for the Business Mentors Association (11-09-26); each step's status records what happened, including the 422 retry at 9.3, the EspoCRM 10 folders at 9.6 and the missing System Management Team at 9.9. |
