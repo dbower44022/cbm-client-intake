@@ -1,11 +1,11 @@
 # Kickoff prompt — Business Evaluation, phase 5: release and action items
 
-Last Updated: 11-15-26 12:20 · Revision 0.1 — see change log at the end.
+Last Updated: 11-15-26 12:45 · Revision 0.2 — see change log at the end.
 
-**Draft, awaiting Doug's approval.** Written at the close of phase 4
-(v0.336.0). When approved, start a fresh Claude Code session rooted in
+**Approved by Doug 11-15-26.** Written at the close of phase 4
+(v0.336.0). Start a fresh Claude Code session rooted in
 `~/Dropbox/Projects/cbm-client-intake` and tell it to read this file and
-follow everything below the line. Phase 4 must be pushed first.
+follow everything below the line. Phase 4 is pushed (11-15-26).
 
 ---
 
@@ -111,3 +111,4 @@ System Settings (phase 7 and later).
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
 | 0.1 | 11-15-26 12:20 | Claude (Claude Code) | Drafted at the close of phase 4, from the orchestrator and what phases 1 to 4 built. |
+| 0.2 | 11-15-26 12:45 | Claude (Claude Code) | Approved by Doug. |
