@@ -52,7 +52,8 @@ UNAVAILABLE_REASON = (
 )
 
 RECORD_SELECT = ("id,name,evaluationArea,evaluationRound,status,sentAt,submittedAt,"
-                 "engagementId,surveyVersion")
+                 "engagementId,surveyVersion,approvedAt,approvedByName,"
+                 "reviewSessionId,reviewSessionName")
 
 
 class SendError(Exception):
@@ -253,6 +254,7 @@ async def rounds_view(client: Any, store: Any, engagement_id: str,
             "id": r.get("id"), "area": r.get("evaluationArea") or "",
             "status": r.get("status") or "", "sentAt": r.get("sentAt"),
             "submittedAt": r.get("submittedAt"),
+            "approvedAt": r.get("approvedAt"), "approvedBy": r.get("approvedByName") or "",
         })
     out = []
     for round_no in sorted(by_round, reverse=True):
@@ -266,6 +268,11 @@ async def rounds_view(client: Any, store: Any, engagement_id: str,
                 "expiresAt": _iso(current["expires_at"]) if current else None,
                 "endedAt": _iso(current.get("replaced_at")) if current else None,
             },
+            # Phase 4: the round's review session, when one is linked.
+            "reviewSession": next(
+                ({"id": r["reviewSessionId"], "name": r.get("reviewSessionName") or ""}
+                 for r in records if (r.get("evaluationRound") or 0) == round_no
+                 and r.get("reviewSessionId")), None),
         })
     return out
 
@@ -294,7 +301,7 @@ async def answers_view(client: Any, engagement_id: str, record_id: str,
     rec = await client.get(service.ENTITY, record_id, select=(
         "id,name,evaluationArea,evaluationRound,status,sentAt,submittedAt,"
         "engagementId,clientProfileId,answersReadable,draftReport,analyzedAt,"
-        "analysisError,promptVersion,rubricVersion"))
+        "analysisError,promptVersion,rubricVersion,reviewedReport,approvedAt,approvedByName"))
     if rec.get("engagementId") != engagement_id:
         return None
     profile_html: Optional[str] = None
@@ -321,6 +328,10 @@ async def answers_view(client: Any, engagement_id: str, record_id: str,
         "analysisError": rec.get("analysisError") or "",
         "promptVersion": rec.get("promptVersion") or "",
         "rubricVersion": rec.get("rubricVersion") or "",
+        # Phase 4: what reviewers edit (BE17, BE18), and the approval.
+        "reviewedHtml": rec.get("reviewedReport") or "",
+        "approvedAt": rec.get("approvedAt"),
+        "approvedBy": rec.get("approvedByName") or "",
     }
 
 

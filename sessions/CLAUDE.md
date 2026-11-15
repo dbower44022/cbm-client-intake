@@ -1,6 +1,6 @@
 # sessions/ — Client, Partner and Funder Management
 
-Last Updated: 11-14-26 13:35 · Revision 1.11
+Last Updated: 11-15-26 12:20 · Revision 1.12
 
 Detail for the session engine behind Client Management (`/mentorsessions`), Partner Management (`/partnersessions`) and Funder Management (`/sponsorsessions`): the grids, every record tab, quick add, managers and co-mentors, and the traps of this package.
 
@@ -333,12 +333,17 @@ Watch for these when touching this package:
   report above the answers, fills 90% of the window, and carries **Retry
   draft report** (`POST …/evaluations/{record}/retry`, action-logged). **A
   record page opens on the tab `?tab=<key>` names** when the record has it
-  (the draft-ready email links `?tab=evaluations`).
+  (the draft-ready email links `?tab=evaluations`). **Since v0.336.0
+  (phase 4)** a row with a draft opens the review screen (the editor, then
+  the draft, answers and business profile on side tabs; Save report and
+  Approve), and each round's line carries **Schedule review session**; a
+  new session made from it is linked after `saveSession` creates it.
 
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.12 | 11-15-26 12:20 | Claude (Claude Code) | The Evaluations tab's review screen and review session (v0.336.0). |
 | 1.11 | 11-14-26 13:35 | Claude (Claude Code) | The Evaluations tab's draft, Retry and `?tab=` (v0.332.0). |
 | 1.10 | 11-13-26 13:55 | Claude (Claude Code) | The Evaluations tab (v0.328.0). |
 | 1.9 | 11-11-26 23:25 | Claude (Claude Code) | Attaching a CBM member refused; Client Management's named add buttons (v0.318.1–v0.318.3). |

@@ -4921,7 +4921,9 @@
       var line = document.createElement("div"); line.className = "evl__round";
       var label = document.createElement("span"); label.className = "evl__round-label";
       label.textContent = "Round " + round.round + " · link: " + evlLinkLabel(round.link);
+      if (round.reviewSession) label.textContent += " · review session: " + (round.reviewSession.name || "linked");
       line.appendChild(label);
+      line.appendChild(evlButton("Schedule review session", true, function () { evlReviewSession(round.round, this); }));
       line.appendChild(evlButton("Resend", true, function () { evlResend(round.round, this); }));
       line.appendChild(evlButton("Expire", true, function () {
         evlConfirm("Expire round " + round.round + "?",
@@ -5040,9 +5042,17 @@
     $("evlModal").classList.toggle("evl--wide", !!wide);
     $("evlModalTitle").textContent = title || "";
     $("evlModalBody").innerHTML = ""; $("evlModalFoot").innerHTML = "";
+    evl.closeGuard = null;
     show($("evlModal"));
   }
-  function closeEvl() { hide($("evlModal")); }
+  // A report with unsaved edits asks once before closing (phase 4): the
+  // first Close says so, the second closes. evl.closeGuard is set by the
+  // report editor and cleared by every openEvl.
+  function closeEvl() {
+    if (evl.closeGuard && !evl.closeGuard()) return;
+    evl.closeGuard = null;
+    hide($("evlModal"));
+  }
   if ($("evlClose")) {
     $("evlClose").addEventListener("click", closeEvl);
     $("evlBackdrop").addEventListener("click", closeEvl);
@@ -5073,6 +5083,9 @@
       body.innerHTML = "";
       body.appendChild(evlPara("Status: " + (r.status || "—") +
         (r.submittedAt ? " · submitted " + fmtSessionDate(r.submittedAt, "short") : ""), "sx__muted"));
+      // Phase 4: with a draft, the dialog is the review screen — the
+      // reviewed report in the editor, the draft and the answers beside it.
+      if (r.draftHtml) { evlReviewScreen(row, r, body, retry); return; }
       // The draft report (phase 3): reviewers only, never the client (BE17).
       var hd = document.createElement("h4"); hd.textContent = "Draft report"; body.appendChild(hd);
       if (r.draftHtml) {
@@ -5113,6 +5126,223 @@
       body.innerHTML = "";
       body.appendChild(evlPara(e.message, "form-error"));
     }
+  }
+
+  // --- Phase 4: review and approval (plan § 3 step 5; BE17, BE18) ---
+  // Every reviewer (the mentor and every co-mentor) edits the reviewed
+  // report; only the engagement's mentor approves, and the server says so
+  // to anyone else — Approve is never hidden or disabled. A saved change to
+  // an Approved report withdraws the approval (Doug, 11-14-26). No images:
+  // the client version is emailed, and its readers cannot reach the proxy.
+  function evlStatusLine(r) {
+    var bits = ["Status: " + (r.status || "—")];
+    if (r.submittedAt) bits.push("submitted " + fmtSessionDate(r.submittedAt, "short"));
+    if (r.status === "Approved" && r.approvedAt) {
+      bits.push("approved " + (r.approvedBy ? "by " + r.approvedBy + " " : "") +
+        fmtSessionDate(r.approvedAt, "short"));
+    }
+    return bits.join(" · ");
+  }
+
+  function evlReviewScreen(row, r, body, retry) {
+    // base: the text in the editor at the last load or save (what "unsaved
+    // changes" compares against). stored: the text as the CRM holds it, sent
+    // with each save so a save over someone else's newer one is refused.
+    var base = String(r.reviewedHtml || "");
+    var stored = base;
+    var status = evlPara(evlStatusLine(r), "sx__muted"); body.appendChild(status);
+    var msg = evlPara("", "sx__notice"); msg.hidden = true; body.appendChild(msg);
+    function say(text, kind) {
+      msg.textContent = text; msg.className = "sx__notice" + (kind ? " is-" + kind : "");
+      msg.hidden = !text;
+    }
+    var grid = document.createElement("div"); grid.className = "evl__review"; body.appendChild(grid);
+
+    var left = document.createElement("div"); left.className = "evl__review-edit"; grid.appendChild(left);
+    var lh = document.createElement("h4"); lh.textContent = "Reviewed report"; left.appendChild(lh);
+    left.appendChild(evlPara("The client reads this report after the mentor approves it and " +
+      "releases it at the review session. If you change an approved report, it must be " +
+      "approved again.", "sx__muted"));
+    var rt = window.CBMRichText && CBMRichText.create(base, {
+      minHeight: 420,
+      imageBlockedMessage: "Pictures can't go in the report: the client's copy is emailed, " +
+        "and they could not see them. Put the picture on the Documents tab instead.",
+    });
+    if (!rt) {
+      left.appendChild(evlPara("The report editor could not load. Reload the page and try again.", "form-error"));
+    } else { left.appendChild(rt); }
+    function current() { return rt ? rt._cbmRichText.getValue() : base; }
+    function dirty() { return rt && current() !== base; }
+
+    var right = document.createElement("div"); right.className = "evl__review-side"; grid.appendChild(right);
+    var tabs = document.createElement("div"); tabs.className = "evl__side-tabs"; tabs.setAttribute("role", "tablist");
+    right.appendChild(tabs);
+    var pane = document.createElement("div"); pane.className = "evl__side-pane"; right.appendChild(pane);
+    var sides = [
+      { key: "draft", label: "Draft report", fill: function () {
+        pane.appendChild(evlPara("Written by the AI service " +
+          (r.analyzedAt ? fmtSessionDate(r.analyzedAt, "short") + " " : "") +
+          "(" + [r.promptVersion, r.rubricVersion].filter(Boolean).join(", ") +
+          "). It is kept unchanged, and your client never sees it.", "sx__muted"));
+        var d = document.createElement("div"); d.className = "evl__answers evl__draft";
+        d.innerHTML = sanitizeHtml(String(r.draftHtml)); pane.appendChild(d);
+      } },
+      { key: "answers", label: r.area + " answers", fill: function () {
+        if (!r.answersHtml) { pane.appendChild(evlPara("The client has not submitted this survey yet.", "sx__muted")); return; }
+        var a = document.createElement("div"); a.className = "evl__answers";
+        a.innerHTML = sanitizeHtml(String(r.answersHtml)); pane.appendChild(a);
+      } },
+      { key: "profile", label: "Business profile", fill: function () {
+        if (!r.profileHtml) { pane.appendChild(evlPara(r.profileNote || "No business profile yet.", "sx__muted")); return; }
+        var b = document.createElement("div"); b.className = "evl__answers";
+        b.innerHTML = sanitizeHtml(String(r.profileHtml)); pane.appendChild(b);
+      } },
+    ];
+    function pick(key) {
+      Array.prototype.forEach.call(tabs.children, function (t) {
+        var on = t.dataset.key === key;
+        t.classList.toggle("is-active", on); t.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      pane.innerHTML = "";
+      sides.forEach(function (sd) { if (sd.key === key) sd.fill(); });
+    }
+    sides.forEach(function (sd) {
+      var t = document.createElement("button"); t.type = "button"; t.className = "evl__side-tab";
+      t.dataset.key = sd.key; t.textContent = sd.label; t.setAttribute("role", "tab");
+      t.addEventListener("click", function () { pick(sd.key); });
+      tabs.appendChild(t);
+    });
+    pick("draft");
+
+    var warned = false;
+    evl.closeGuard = function () {
+      if (!dirty() || warned) return true;
+      warned = true;
+      say("You have changes that are not saved. Press Save report to keep them, or close again to discard them.", "warn");
+      return false;
+    };
+
+    var foot = $("evlModalFoot"); foot.innerHTML = "";
+    var saveBtn = evlButton("Save report", false, async function () {
+      if (!rt) { say("The report editor did not load, so there is nothing to save.", "error"); return; }
+      var html = current();
+      if (html === base) { say("Nothing has changed since the report was last saved.", ""); return; }
+      var done = window.CBMBusy ? CBMBusy.start(saveBtn) : function () {};
+      try {
+        var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/evaluations/" +
+          encodeURIComponent(row.id) + "/report", { method: "PUT", body: JSON.stringify({ html: html, base: stored }) });
+        base = html; warned = false;
+        if (typeof res.stored === "string") stored = res.stored;
+        r.status = res.status;
+        if (res.approvalWithdrawn) { r.approvedAt = null; r.approvedBy = ""; }
+        status.textContent = evlStatusLine(r);
+        var text = res.approvalWithdrawn
+          ? "Report saved. You changed an approved report, so it must be approved again. Its status is back to Draft Ready."
+          : "Report saved.";
+        say(res.warning ? text + " " + res.warning : text, res.warning || res.approvalWithdrawn ? "warn" : "success");
+        renderEvaluations(true);
+      } catch (e) {
+        if (e.status === 401) { closeEvl(); showLogin(); return; }
+        say(e.message, "error");
+      } finally { done(); }
+    });
+    var approveBtn = evlButton("Approve", false, async function () {
+      if (dirty()) { say("Save your changes first: Approve approves the report as it was last saved.", "error"); return; }
+      var done = window.CBMBusy ? CBMBusy.start(approveBtn) : function () {};
+      try {
+        var ap = await api("/records/" + encodeURIComponent(currentDetail.id) + "/evaluations/" +
+          encodeURIComponent(row.id) + "/approve", { method: "POST", body: "{}" });
+        r.status = "Approved"; r.approvedAt = ap.approvedAt; r.approvedBy = ap.approvedBy || "";
+        status.textContent = evlStatusLine(r);
+        say("Approved. When every report in round " + row.round + " is approved, schedule the " +
+          "review session from the round's line on the Evaluations tab.", "success");
+        renderEvaluations(true);
+      } catch (e) {
+        if (e.status === 401) { closeEvl(); showLogin(); return; }
+        say(e.message, "error");
+      } finally { done(); }
+    });
+    foot.appendChild(saveBtn);
+    foot.appendChild(approveBtn);
+    foot.appendChild(retry);
+    foot.appendChild(evlButton("Close", true, closeEvl));
+  }
+
+  // --- The review session (plan § 3 step 6) ---
+  // Offered on every round's line. The server says whether the round is
+  // ready (every report with a draft approved); then the mentor picks an
+  // upcoming session or makes a new one in the session editor, and the
+  // session is linked to every record of the round.
+  var evlReviewRound = null;  // set while a new session is being made for a round
+
+  async function evlReviewSession(round, btn) {
+    var done = window.CBMBusy ? CBMBusy.start(btn) : function () {};
+    var res;
+    try {
+      res = await api(evlRoundPath(round, "review-session"));
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice("evlNotice", e.message, "error"); return;
+    } finally { done(); }
+    if (!res.ready) { notice("evlNotice", "Round " + round + ": " + res.message, "error"); return; }
+    openEvl("Review session — round " + round);
+    var body = $("evlModalBody");
+    body.appendChild(evlPara("Approved: " + res.approved.join(", ") + ". Choose the session where " +
+      "you will go through the results with the client.", ""));
+    if (res.current) {
+      body.appendChild(evlPara("Linked now: " + (res.current.name || "a session") +
+        ". Choosing another replaces it.", "sx__muted"));
+    }
+    var err = evlPara("", "sx__notice is-error"); err.hidden = true; body.appendChild(err);
+    var chosen = null;
+    var h = document.createElement("h4"); h.textContent = "Use an upcoming session"; body.appendChild(h);
+    if (res.upcoming && res.upcoming.length) {
+      var list = document.createElement("div"); list.className = "evl__areas evl__sessions";
+      res.upcoming.forEach(function (sx) {
+        var lab = document.createElement("label"); lab.className = "evl__area";
+        var rb = document.createElement("input"); rb.type = "radio"; rb.name = "evlReviewPick"; rb.value = sx.id;
+        rb.addEventListener("change", function () { chosen = sx.id; });
+        lab.appendChild(rb);
+        lab.appendChild(document.createTextNode(" " + fmtSessionDate(sx.dateStart, "short") + " — " + (sx.name || "Session")));
+        list.appendChild(lab);
+      });
+      body.appendChild(list);
+    } else {
+      body.appendChild(evlPara("No session is scheduled on this engagement yet.", "sx__muted"));
+    }
+    var use = evlButton("Use this session", false, async function () {
+      if (!chosen) {
+        err.textContent = res.upcoming && res.upcoming.length
+          ? "Choose one of the upcoming sessions, or press Schedule a new session."
+          : "There is no upcoming session to choose. Press Schedule a new session.";
+        err.hidden = false; return;
+      }
+      var d2 = window.CBMBusy ? CBMBusy.start(use) : function () {};
+      try {
+        var out = await evlLinkReviewSession(round, chosen);
+        closeEvl();
+        notice("evlNotice", "Round " + round + ": the review session is " + (out.session.name || "linked") + ".", "success");
+        renderEvaluations(true);
+      } catch (e) {
+        if (e.status === 401) { closeEvl(); showLogin(); return; }
+        err.textContent = e.message; err.hidden = false;
+      } finally { d2(); }
+    });
+    var fresh = evlButton("Schedule a new session", true, async function () {
+      closeEvl();
+      await openEditor(null);
+      evlReviewRound = round;
+      var nameEl = $("sessionForm") && $("sessionForm").querySelector('[data-field="name"]');
+      if (nameEl && "value" in nameEl) nameEl.value = defaultSessionName() + " - Business Evaluation review";
+    });
+    $("evlModalFoot").appendChild(use);
+    $("evlModalFoot").appendChild(fresh);
+    $("evlModalFoot").appendChild(evlButton("Cancel", true, closeEvl));
+  }
+
+  function evlLinkReviewSession(round, sessionId) {
+    return api(evlRoundPath(round, "review-session"), {
+      method: "POST", body: JSON.stringify({ sessionId: sessionId }) });
   }
 
   async function evlRetry(row, btn) {
@@ -7303,6 +7533,7 @@
   }
 
   async function openEditor(sessionId) {
+    evlReviewRound = null;  // set again by the caller when this is a review session
     editorCreateToken = sessionId ? null : newCreateToken();
     busyCache = {};  // fresh calendar-conflict data per editor open
     if (sessionId) {
@@ -8016,6 +8247,19 @@
         });
       }
       if (dkey) clearEditDraft(dkey);  // saved => the stashed draft is obsolete
+      // A new session made from an evaluation round (phase 4) is linked to the
+      // round's records; a failed link is a warning, the session stands.
+      var reviewExtra = "";
+      if (isNew && evlReviewRound && saved && saved.id) {
+        var rr = evlReviewRound; evlReviewRound = null;
+        try {
+          await evlLinkReviewSession(rr, saved.id);
+          reviewExtra = " It is the review session for evaluation round " + rr + ".";
+        } catch (le) {
+          reviewExtra = " It could not be linked as round " + rr + "'s review session (" +
+            le.message + "): link it from the Evaluations tab.";
+        }
+      }
       // Await the re-fetch: openDetail hides detailNotice while rendering, so
       // showing the notice first would get it wiped a moment later.
       await openDetail(currentDetail.id);
@@ -8064,7 +8308,7 @@
       } else {
         msg = "Session saved.";
       }
-      notice("detailNotice", msg + engExtra + warnExtra, style);
+      notice("detailNotice", msg + engExtra + reviewExtra + warnExtra, style);
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
       // A bare "Request failed (NNN)" means the server (or the platform edge —

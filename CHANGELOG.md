@@ -5,6 +5,35 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.336.0] — 2026-11-15
+
+**feat: Business Evaluation, phase 4 — review and approval.** Dark behind
+**`BUSINESS_EVALUATION`**. Plan `prds/business-evaluation-plan.md` § 3 steps 5
+and 6, rulings BE17 and BE18; `OPEN-ITEMS.md` #83.
+
+- **The review screen** on Client Management's Evaluations tab: the reviewed
+  report in the shared `CBMRichText` editor, with the draft (read-only, never
+  written), the client's answers and the business profile on tabs beside it.
+  Every reviewer (the mentor and every co-mentor) edits as themself; the CRM's
+  own access decides. Save sends only a changed report. No images (Doug's
+  choice, 11-14-26: the client version is emailed).
+- **A save over someone else's newer save is refused** (409), naming who saved.
+- **Approve**: the engagement's mentor only. A co-mentor is told why, with the
+  mentor named; the button is never hidden. Approved, `approvedAt` and
+  `approvedBy` are written. **A saved change to an approved report withdraws
+  the approval** (Doug's choice, 11-14-26; message wording his, 11-15-26).
+- **A save that drops the reviewers-only marker** on Points to check, while
+  keeping the section, is warned. The marker survives the editor and the CRM.
+- **Schedule review session** on each round's line, offered once every report
+  with a draft is approved: an upcoming session of the engagement, or a new one
+  made in the session editor, linked to every record of the round
+  (`reviewSession`).
+- Every save, approval and link in the action log (Record Edit, Status Change,
+  Session). `evaluation/review.py`; tests `tests/test_evaluation_review.py`.
+- **Checked by Doug 11-15-26** on a local run against crm-test as Joe Mentor
+  and Matt Mentor (co-mentor), Brightline Bakehouse.
+
+
 ## [0.335.0] — 2026-11-15
 
 **feat(setup): the Integrations tab, phase 10 — the set-up wizard replaces

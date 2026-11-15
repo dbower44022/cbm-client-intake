@@ -1,6 +1,6 @@
 # evaluation/ — Business Evaluation
 
-Last Updated: 11-14-26 13:35 · Revision 1.3
+Last Updated: 11-15-26 12:20 · Revision 1.4
 
 Detail for the Business Evaluation offering. Claude Code loads this file only
 when a session works in this folder. The plan is
@@ -165,6 +165,39 @@ table names or the `/evaluation/{token}` page, read the engine's equivalent.
   per area.
 - Tests: `tests/test_evaluation_analysis.py`.
 
+## What phase 4 built (v0.336.0)
+
+- **Review and approval are `review.py`** (BE17, BE18), behind the
+  Evaluations routes in `sessions/router.py`: `PUT …/evaluations/{id}/report`,
+  `POST …/{id}/approve`, `GET`/`POST …/rounds/{n}/review-session`; 404 while
+  the switch is off.
+- **Every reviewer edits `reviewedReport` as themself**: the CRM decides,
+  through the engagement's `assignedUsers` stamp and the Mentor Role's
+  edit own. `review.py` never names `draftReport`; the draft reaches the
+  page only through `sending.answers_view`, shown read-only beside the
+  editor.
+- **A save carries the text the reviewer opened** (`base`); a different
+  stored text is someone else's newer save and answers 409, naming them.
+  The response returns the text as stored, which is the next save's `base`.
+- **A saved change to an Approved report withdraws the approval** (Doug,
+  11-14-26): Draft Ready, `approvedAt` and `approvedBy` cleared. Message
+  wording approved by Doug 11-15-26.
+- **Only the engagement's mentor approves**: the login on the engagement's
+  mentor profile (read under the org-wide key, which a co-mentor may need).
+  Administrators get no exemption. `approvedBy` and `reviewSession` writes
+  refused as the user retry under the org-wide key, on a 403 only.
+- **A save that drops the `data-internal` marker but keeps the Points to
+  check heading is warned**; deleting the whole section is not. The marker
+  survives the editor and the CRM (checked 11-15-26).
+- **No images in the report** (Doug, 11-14-26): the editor has no upload
+  hook, so a pasted image is removed with a notice.
+- **The review session**: a round is ready when no record is Submitted,
+  Analysis Failed or Draft Ready and one is Approved. The dialog offers the
+  engagement's upcoming Scheduled sessions or a new one; a new one is
+  linked after its save (`evlReviewRound` in `app.js`), a failed link a
+  warning on a saved session. The session goes on every record of the round.
+- Tests: `tests/test_evaluation_review.py`.
+
 ## The CRM
 
 `crm-plans/business-evaluation.json` (fingerprint `89d89d28b53b` on crm-test)
@@ -183,3 +216,4 @@ create).
 | 1.1 | 11-13-26 13:55 | Claude (Claude Code) | Phase 2, the mentor side (v0.328.0). |
 | 1.2 | 11-13-26 14:53 | Claude (Claude Code) | Phase 2b: the survey engine moved out to `surveys/` (ruling BE23). |
 | 1.3 | 11-14-26 13:35 | Claude (Claude Code) | Phase 3, the analysis (v0.332.0). |
+| 1.4 | 11-15-26 12:20 | Claude (Claude Code) | Phase 4, review and approval (v0.336.0). |

@@ -1076,3 +1076,16 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
 .evl__rounds { display: flex; flex-direction: column; gap: 0.4rem; margin: 0.5rem 0 0.75rem; }
 .evl__round { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
 .evl__round-label { font-weight: 600; margin-right: 0.5rem; }
+/* Business Evaluation phase 4: the review screen — the reviewed report in
+   the editor, the draft and the client's answers beside it. Full width,
+   two panes side by side; one column on a narrow window. */
+.evl__review { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+@media (max-width: 1000px) { .evl__review { grid-template-columns: minmax(0, 1fr); } }
+.evl__review-edit h4, .evl__review-side h4 { margin: 0 0 0.4rem; }
+.evl__side-tabs { display: flex; flex-wrap: wrap; gap: 0.25rem; border-bottom: 1px solid var(--cbm-border); margin-bottom: 0.75rem; }
+.evl__side-tab { background: none; border: 0; border-bottom: 3px solid transparent; padding: 0.4rem 0.8rem; cursor: pointer; font: inherit; color: inherit; }
+.evl__side-tab.is-active { border-bottom-color: var(--cbm-blue); font-weight: 600; }
+.evl__review-edit .jodit-wysiwyg table { width: 100%; border-collapse: collapse; }
+.evl__review-edit .jodit-wysiwyg td, .evl__review-edit .jodit-wysiwyg th { border: 1px solid var(--cbm-border); padding: 0.3rem 0.5rem; vertical-align: top; }
+.evl__review-edit [data-internal] { background: #fdf3dc; border-left: 3px solid #b58113; padding: 0.2rem 0.6rem; }
+.evl__sessions { flex-direction: column; align-items: flex-start; }

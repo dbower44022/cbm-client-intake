@@ -110,6 +110,19 @@ class EvaluationSendIn(BaseModel):
     areas: list[str] = []
 
 
+class EvaluationReportIn(BaseModel):
+    """Save the reviewed report (Business Evaluation phase 4): the new HTML,
+    and the reviewed report as the reviewer opened it (``base``), so a save
+    over someone else's newer one is refused."""
+    html: str = ""
+    base: Optional[str] = None
+
+
+class EvaluationReviewSessionIn(BaseModel):
+    """Link a session of the engagement as a round's review session."""
+    sessionId: str = ""
+
+
 class SessionIn(BaseModel):
     changes: dict = {}
     # Contact ids for the session's attendees. None => leave attendees unchanged
@@ -1084,6 +1097,128 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                          "fields": {"status": result["status"]}},
             )
             return {"id": record_id, "status": result["status"]["to"]}
+
+        # --- Phase 4: review and approval (plan § 3 steps 5 and 6; BE17, BE18) ---
+        from evaluation import review as eval_review
+
+        def _review_failure(exc: Exception) -> HTTPException:
+            if isinstance(exc, eval_review.NotTheMentor):
+                return HTTPException(status_code=403, detail=str(exc))
+            if isinstance(exc, eval_review.Conflict):
+                return HTTPException(status_code=409, detail=str(exc))
+            return HTTPException(status_code=400, detail=str(exc))
+
+        @router.put("/records/{parent_id}/evaluations/{record_id}/report")
+        async def record_evaluation_report(
+            parent_id: str, record_id: str, body: EvaluationReportIn, request: Request
+        ) -> dict:
+            """Save the reviewed report as the user (every reviewer, BE18). A
+            change to an Approved report withdraws the approval."""
+            _evaluations_on()
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            if len(body.html.encode("utf-8")) > 1_000_000:
+                raise HTTPException(status_code=413, detail=(
+                    "The report is too long to save (over 1 MB). Shorten it and save again."))
+            try:
+                result = await eval_review.save_report(
+                    client, parent_id, record_id, html=body.html, base=body.base)
+            except eval_review.ReviewError as exc:
+                raise _review_failure(exc)
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not save the report")
+            if result["changed"]:
+                withdrawn = " The approval was withdrawn." if result["approvalWithdrawn"] else ""
+                await action_log.record_action(
+                    client, app=cfg.title, category=action_log.CAT_RECORD_EDIT,
+                    action=action_log.ACT_EVALUATION_REPORT_SAVED,
+                    parent_type=cfg.parent_entity, parent_id=parent_id,
+                    summary=f"Business Evaluation {result['area']}: reviewed report edited.{withdrawn}",
+                    actor_id=user["userId"], actor_name=user["name"],
+                    details={"record": record_id, "round": result.get("round"),
+                             "fields": result["fields"]},
+                )
+            return {"changed": result["changed"], "status": result["status"],
+                    "approvalWithdrawn": result.get("approvalWithdrawn", False),
+                    "warning": result["warning"],
+                    # The text as the CRM stored it: the page's baseline for
+                    # the next save's conflict check.
+                    "stored": result["stored"]}
+
+        @router.post("/records/{parent_id}/evaluations/{record_id}/approve")
+        async def record_evaluation_approve(parent_id: str, record_id: str, request: Request) -> dict:
+            """Approve (BE17): the engagement's mentor only; anyone else is
+            told why, with the mentor named."""
+            _evaluations_on()
+            user = _require_user(request)
+            settings = get_settings()
+            client = client_for(settings, user)
+            try:
+                result = await eval_review.approve(
+                    client, parent_id, record_id, user_id=user["userId"],
+                    escalate=lambda: _system_client(settings))
+            except eval_review.ReviewError as exc:
+                raise _review_failure(exc)
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not approve the report")
+            await action_log.record_action(
+                client, app=cfg.title, category=action_log.CAT_STATUS,
+                action=action_log.ACT_EVALUATION_APPROVED,
+                parent_type=cfg.parent_entity, parent_id=parent_id,
+                summary=f"Business Evaluation {result['area']}: report approved.",
+                actor_id=user["userId"], actor_name=user["name"],
+                details={"record": record_id, "round": result.get("round"),
+                         "fields": result["fields"]},
+            )
+            return {"id": record_id, "status": eval_review.STATUS_APPROVED,
+                    "approvedAt": result["approvedAt"], "approvedBy": user["name"]}
+
+        @router.get("/records/{parent_id}/evaluations/rounds/{round_no}/review-session")
+        async def record_evaluation_review_session(
+            parent_id: str, round_no: int, request: Request
+        ) -> dict:
+            """Whether the round is ready for its review session, the session
+            linked now, and the upcoming sessions to pick from."""
+            _evaluations_on()
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            try:
+                return await eval_review.review_session_view(client, parent_id, round_no)
+            except eval_review.ReviewError as exc:
+                raise _review_failure(exc)
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load the review session")
+
+        @router.post("/records/{parent_id}/evaluations/rounds/{round_no}/review-session")
+        async def record_evaluation_link_session(
+            parent_id: str, round_no: int, body: EvaluationReviewSessionIn, request: Request
+        ) -> dict:
+            """Link a session of this engagement to every record of the round."""
+            _evaluations_on()
+            user = _require_user(request)
+            settings = get_settings()
+            client = client_for(settings, user)
+            if not body.sessionId.strip():
+                raise HTTPException(status_code=400, detail="Choose a session first.")
+            try:
+                result = await eval_review.link_review_session(
+                    client, parent_id, round_no, body.sessionId.strip(),
+                    escalate=lambda: _system_client(settings))
+            except eval_review.ReviewError as exc:
+                raise _review_failure(exc)
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not link the review session")
+            await action_log.record_action(
+                client, app=cfg.title, category=action_log.CAT_SESSION,
+                action=action_log.ACT_EVALUATION_REVIEW_SESSION,
+                parent_type=cfg.parent_entity, parent_id=parent_id,
+                summary=(f"Business Evaluation round {round_no}: review session "
+                         f"{result['session']['name'] or result['session']['id']}."),
+                actor_id=user["userId"], actor_name=user["name"],
+                details={"round": round_no, "session": result["session"]["id"],
+                         "records": result["records"], "fields": result["fields"]},
+            )
+            return {"round": round_no, "session": result["session"]}
 
         @router.post("/records/{parent_id}/evaluations/send")
         async def record_evaluation_send(
