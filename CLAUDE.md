@@ -1279,7 +1279,9 @@ the strength of it.
 - **11-14-26: the Association's application tracks `main`** and is the
   test system (option A). Deployment `58f014f4…` ACTIVE, `/healthz` read
   v0.332.0 by the switch script. Owed in #85.
-- **v0.332.1–v0.332.3 (2026-11-15) committed, not pushed**: the event
+- **v0.332.1–v0.332.3 (2026-11-15) are live everywhere main deploys**
+  (pushed 11-15-26, `/healthz` read 02:33 on production, crm-test, dev and
+  the Association): the event
   hosting build, steps 1 and 3 (#84) — `scripts/probe_zoom.py --meetings`
   proved Zoom Meetings on the Association's account; the hosting method on
   `CEvent.hostedBy`, applied on the Association's CRM only; plan § 6 settled
