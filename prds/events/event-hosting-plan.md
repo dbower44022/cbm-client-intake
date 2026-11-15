@@ -1,6 +1,6 @@
 # Event hosting methods — plan
 
-Last Updated: 11-15-26 02:14 · Revision 0.5 — see change log at the end.
+Last Updated: 11-15-26 02:17 · Revision 0.6 — see change log at the end.
 
 This plan decides how a chapter's online events are hosted: Zoom Webinars,
 Zoom Meetings, a link to any other platform, or an outside host. It records
@@ -84,6 +84,7 @@ scopes already added.
 | EH10 | **A mentor's own Zoom stays a personal link on their mentor profile** (`preferredMeetingProvider`, `zoomPersonalLink`, ruling of 07-24-26). Nothing about it goes in System Settings; mentoring sessions never use the chapter's Zoom account. |
 | EH11 | **Every Zoom Meeting the application creates is set up like a webinar** (Doug, 11-15-26, option B of § 6 point 4): attendees join muted with cameras off; only the host may share the screen; nobody joins before the host; no waiting room, since registration already decides who holds a link; the passcode stays on, carried inside each personal join link; no automatic recording. Accepted cost: someone signed in as the event host user (EH8) starts each meeting, and makes a co-presenter co-host in the meeting so they can share (Participants → More → Make Co-Host; Zoom does not let a guest be named co-host in advance). |
 | EH12 | **Attendance for an Other-platform event is marked by hand** (Doug, 11-15-26, option A of § 6 point 1), with the Registrants tab's existing Attended / No-Show marks (source Manual, never overwritten). The Follow-up tab warns before sending no-show emails for an Other-platform event where nobody has been marked yet. An upload of the platform's attendee file is not built; it can be added if a chapter asks. |
+| EH13 | **A public Other-platform event may be published** (Doug, 11-15-26, option A of § 6 point 2), amending D3-1: it shows once staff have typed its shared join link, as D3-1 already requires of every public online event; the link goes only in the confirmation and the calendar file, never on a public page. The confirmation says the link is shared. Accepted cost: a forwarded link admits someone unregistered, kept out only by the platform's own controls. Draft wording, to review at step 4: "This join link is the same for everyone attending. Please keep it to yourself." |
 
 ## 5. What changes, by area
 
@@ -121,9 +122,9 @@ says which, in a handoff written in Entity Manager vocabulary.
 
 1. ~~**Attendance for an Other-platform event**~~ — settled as ruling EH12,
    11-15-26.
-2. **How the confirmation words a shared link**, and whether a public
-   Other-platform event may be published at all under D3-1's "the
-   confirmation is the ticket", since a shared link can be forwarded.
+2. ~~**How the confirmation words a shared link**, and whether a public
+   Other-platform event may be published~~ — settled as ruling EH13,
+   11-15-26.
 3. **Hybrid events**: whether the hosting method applies to the online half
    only (assumed).
 4. ~~**The Zoom Meetings settings a meeting is created with**~~ — settled
@@ -172,6 +173,7 @@ the Events work is.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.6 | 11-15-26 02:17 | Claude (Claude Code) | Ruling EH13 (Doug, § 6 point 2, option A): a public Other-platform event may be published, its shared link only in the confirmation. |
 | 0.5 | 11-15-26 02:14 | Claude (Claude Code) | Ruling EH12 (Doug, § 6 point 1, option A): attendance for Other platform marked by hand, with a warning before no-show emails. |
 | 0.4 | 11-15-26 02:12 | Claude (Claude Code) | Step 3 done on the Business Mentors Association's CRM, the test system (Doug, 11-15-26), not on crm-test: `cevent-hosting-method-crm-handoff.md`. The Zoom ids serve both Zoom methods; `CBM Zoom` stays stored, shown as Zoom Webinars. |
 | 0.3 | 11-15-26 01:40 | Claude (Claude Code) | Ruling EH11 (Doug, § 6 point 4, option B): webinar-like meeting settings. § 6 point 5 decided in the build session: the overlap warning counts webinars and meetings under one host user. |
