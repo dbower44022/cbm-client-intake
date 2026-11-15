@@ -1,6 +1,6 @@
 # Build orchestrator — the Integrations tab of System Settings
 
-Last Updated: 11-14-26 14:10 · Revision 0.11 — see change log at the end.
+Last Updated: 11-15-26 02:25 · Revision 0.12 — see change log at the end.
 
 This file runs the whole build of the Integrations tab. It names the phases,
 the prompt for each one, the rules that every phase session follows, and the
@@ -24,8 +24,8 @@ stopping points where the work pauses for Doug. The design is
 
 | Phase | What it builds | Prompt | State |
 |---|---|---|---|
-| 1 | The framework: the integration registry, the sub-tab shell, the status line, the "in use" settings and their guard, the `INTEGRATIONS_TAB` switch, and moving the settings | `prompts/integrations-tab-phase1-prompt-v0.1.md` | Built v0.321.0, 11-13-26; awaiting Doug's review |
-| 2 | The integration test for EspoCRM, Google Workspace and Zoom | `prompts/integrations-tab-phase2-prompt-v0.1.md` | Built v0.322.0, 11-13-26; awaiting Doug's review |
+| 1 | The framework: the integration registry, the sub-tab shell, the status line, the "in use" settings and their guard, the `INTEGRATIONS_TAB` switch, and moving the settings | `prompts/integrations-tab-phase1-prompt-v0.1.md` | Built v0.321.0, 11-13-26; reviewed by Doug 11-15-26 |
+| 2 | The integration test for EspoCRM, Google Workspace and Zoom | `prompts/integrations-tab-phase2-prompt-v0.1.md` | Built v0.322.0, 11-13-26; reviewed by Doug 11-15-26 |
 | 3 | The integration test for Fathom, Constant Contact, Lob, Twilio, Anthropic and YouTube | `prompts/integrations-tab-phase3-prompt-v0.1.md` | Built v0.323.0, 11-13-26; awaiting Doug's review |
 | 4 | The setup checklist: the step-file keys, the automatic checks, the hand ticks, the missing steps | `prompts/integrations-tab-phase4-prompt-v0.1.md` | Built v0.325.0, 11-13-26; awaiting Doug's review |
 | 5 | The nightly integration test and its alert | `prompts/integrations-tab-phase5-prompt-v0.1.md` | Built v0.326.0, 11-13-26; awaiting Doug's review |
@@ -97,6 +97,7 @@ which goes to Doug as a decision.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.12 | 11-15-26 02:25 | Claude (Claude Code) | State column: phases 1 and 2 reviewed (Doug, 11-15-26). |
 | 0.11 | 11-14-26 14:10 | Claude (Claude Code) | Phase 9 gains the Zoom split (event-hosting plan, Doug 11-14-26); its prompt is to be rewritten. |
 | 0.10 | 11-14-26 01:40 | Claude (Claude Code) | State column: phase 8 built (v0.331.0); phase 9 prompt drafted. |
 | 0.9 | 11-14-26 00:11 | Claude (Claude Code) | The wizard (plan § 10, rulings W1 to W6, Doug 11-13/14-26): phase 8 becomes the wizard pilot on Zoom; phases 9 to 11 added. |
