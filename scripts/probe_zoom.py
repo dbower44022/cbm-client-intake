@@ -102,7 +102,7 @@ def _parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         help="with --meetings: create a meeting starting now, register EMAIL "
              "and print the personal join link; the meeting is kept")
     parser.add_argument(
-        "--live-report", metavar="MEETING_ID", default="",
+        "--live-report", metavar="MEETING_ID", default="", nargs="?", const="?",
         help="with --meetings: read the kept meeting's participant report, "
              "match it to the registration, then delete the meeting")
     args = parser.parse_args(argv)
@@ -475,7 +475,10 @@ async def main(argv: Optional[list[str]] = None) -> int:
             problems += await meeting_live_start(api, host, email)
         if args.live_report:
             print("\nLive test, part 2 — the participant report:")
-            problems += await meeting_live_report(api, args.live_report)
+            meeting_id = args.live_report
+            if meeting_id == "?":  # no id on the command line: ask for it
+                meeting_id = input("Meeting id from part 1: ").strip()
+            problems += await meeting_live_report(api, meeting_id)
         print()
         if problems:
             print("BLOCKERS:")
