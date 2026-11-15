@@ -337,14 +337,19 @@ def google_settings(**kw):
     return Settings(**base)
 
 
-def google_deps(*, refuse=(), mint_error=None, responses=None, stored=None):
-    """``refuse``: scope names whose delegated token is unauthorized."""
+def google_deps(*, refuse=(), mint_error=None, responses=None, stored=None,
+                member="", bad_subjects=()):
+    """``refuse``: scope names whose delegated token is unauthorized.
+    ``member``: the mentor standing in when no delegated admin is set.
+    ``bad_subjects``: addresses Google refuses as a subject (invalid_grant)."""
     minted = []
 
     def mint(info, scopes, subject):
         minted.append((scopes[0].rsplit("/", 1)[-1], subject))
         if mint_error is not None:
             raise mint_error
+        if subject in bad_subjects:
+            raise Exception("invalid_grant: Invalid email or User ID {'error': 'invalid_grant'}")
         if subject and scopes[0].rsplit("/", 1)[-1] in refuse:
             raise Unauthorized("unauthorized_client: Client is unauthorized ... {'error': 'x'}")
         return "tok"
@@ -371,7 +376,10 @@ def google_deps(*, refuse=(), mint_error=None, responses=None, stored=None):
     async def stored_config(settings):
         return stored
 
-    deps = google.Deps(mint=mint, get=get, stored_config=stored_config)
+    async def member_of(settings):
+        return member
+
+    deps = google.Deps(mint=mint, get=get, stored_config=stored_config, member=member_of)
     deps.minted, deps.calls = minted, calls
     return deps
 
@@ -390,7 +398,7 @@ def test_google_everything_on_passes_and_reports_facts():
     assert f["Client ID (for the delegation grant)"] == "1234567890"
     assert f["Shared drive"] == "CBM Documents"
     assert f["Shared mailbox"] == "info@cbm.org (42 messages)"
-    assert "gmail.send" in f["Scopes granted"] and f["Scopes missing"] == "none"
+    assert "gmail.send" in f["Scopes granted"] and f["Scopes failed"] == "none"
     no_secret(result, PRIVATE_KEY, "MIIEsecretsecret", "kid-abcdef123", KEY)
 
 
@@ -412,7 +420,77 @@ def test_google_a_scope_not_granted_is_failed_and_named():
     scope = checks["scope:calendar.events:admin@cbm.org"]
     assert scope["outcome"] == FAILED and "does not grant calendar.events" in scope["detail"]
     assert checks["calendar"]["outcome"] == UNKNOWN
-    assert facts(result)["Scopes missing"] == "calendar.events"
+    assert facts(result)["Scopes failed"] == "calendar.events"
+
+
+# With no delegated admin, a mentor stands in for "each mentor's mailbox"
+# (Doug, option B, 11-15-26; found on crm-test, where three features read
+# failed only because no admin was set).
+
+NO_ADMIN_PERSONAL = dict(google_delegated_admin="", gmail_sync=True, gcal_events=True,
+                         lead_outreach=True)
+
+
+def test_google_a_mentor_stands_in_when_no_delegated_admin_is_set():
+    deps = google_deps(member="nina@cbm.org")
+    result = run(google.run(google_settings(**NO_ADMIN_PERSONAL), deps))
+    checks = by_key(result)
+    for scope in ("gmail.readonly", "gmail.send", "calendar.events"):
+        line = checks[f"scope:{scope}:nina@cbm.org"]
+        assert line["outcome"] == OK and "standing in" in line["detail"], line
+    assert ("calendar.events", "nina@cbm.org") in deps.minted
+    # Only a token as the mentor: their calendar is never read.
+    assert checks["calendar"]["outcome"] == UNKNOWN
+    assert "needs the delegated admin" in checks["calendar"]["detail"]
+    assert not [u for u in deps.calls if "calendar" in u]
+    f = facts(result)
+    assert f["Mentor standing in for each mentor's mailbox"] == "nina@cbm.org"
+    assert f["Scopes failed"] == "none"
+    assert result["outcome"] == UNKNOWN
+
+
+def test_google_a_stand_in_google_refuses_is_unknown_not_failed():
+    deps = google_deps(member="nina@sandbox.cbm.org", bad_subjects={"nina@sandbox.cbm.org"})
+    result = run(google.run(google_settings(**NO_ADMIN_PERSONAL), deps))
+    line = by_key(result)["scope:gmail.readonly:nina@sandbox.cbm.org"]
+    assert line["outcome"] == UNKNOWN and "Set a delegated admin" in line["detail"]
+    assert facts(result)["Scopes failed"] == "none"
+
+
+def test_google_a_scope_the_grant_lacks_still_fails_as_the_stand_in():
+    deps = google_deps(member="nina@cbm.org", refuse={"calendar.events"})
+    result = run(google.run(google_settings(**NO_ADMIN_PERSONAL), deps))
+    assert by_key(result)["scope:calendar.events:nina@cbm.org"]["outcome"] == FAILED
+    assert facts(result)["Scopes failed"] == "calendar.events"
+
+
+def test_google_with_no_admin_and_no_mentor_the_lines_fail_and_are_listed():
+    result = run(google.run(google_settings(**NO_ADMIN_PERSONAL), google_deps()))
+    line = by_key(result)["scope:gmail.readonly:"]
+    assert line["outcome"] == FAILED and "No delegated admin" in line["detail"]
+    assert "gmail.readonly" in facts(result)["Scopes failed"]
+
+
+def test_google_the_directory_still_needs_the_delegated_admin():
+    s = google_settings(google_delegated_admin="", mentor_provision_users=True,
+                        gmail_sync=True)
+    result = run(google.run(s, google_deps(member="nina@cbm.org")))
+    checks = by_key(result)
+    assert checks["scope:admin.directory.user:"]["outcome"] == FAILED
+    assert checks["scope:gmail.readonly:nina@cbm.org"]["outcome"] == OK
+
+
+def test_google_no_mentor_is_looked_up_when_an_admin_is_set():
+    looked = []
+
+    async def member_of(settings):
+        looked.append(1)
+        return "nina@cbm.org"
+
+    deps = google_deps()
+    deps.member = member_of
+    run(google.run(google_settings(gmail_sync=True), deps))
+    assert looked == []
 
 
 def test_google_key_paths():

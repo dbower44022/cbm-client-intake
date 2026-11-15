@@ -116,12 +116,32 @@ async def _default_stored_config(settings: Any) -> Optional[dict[str, Any]]:
         await store.dispose()
 
 
+async def _default_member(settings: Any) -> str:
+    """One active mentor's work address, read with the org-wide CRM key, or ""."""
+    if getattr(settings, "espo_dry_run", True) or not getattr(settings, "espo_api_key", ""):
+        return ""
+    from core.espo import EspoClient
+
+    client = EspoClient(settings.espo_base_url, settings.espo_api_key, 10)
+    envelope = await client.list(
+        "CMentorProfile",
+        where=[{"type": "equals", "attribute": "mentorStatus", "value": "Active"},
+               {"type": "isNotNull", "attribute": "cbmEmail"}],
+        select="cbmEmail", max_size=1, order_by="createdAt", order="asc",
+    )
+    rows = (envelope or {}).get("list") or []
+    return str((rows[0].get("cbmEmail") if rows else "") or "").strip()
+
+
 @dataclass
 class Deps:
     # Synchronous (google-auth is); run in a thread. Returns the token.
     mint: Callable[[dict, list[str], Optional[str]], str] = _default_mint
     get: Callable[[str, str, Optional[dict]], Awaitable[tuple[int, Any]]] = _default_get
     stored_config: Callable[[Any], Awaitable[Optional[dict[str, Any]]]] = _default_stored_config
+    # A member's mailbox to stand in for "each mentor" when no delegated admin
+    # is set (Doug, option B, 11-15-26). Only a token is minted as them.
+    member: Callable[[Any], Awaitable[str]] = _default_member
 
 
 # --- what is switched on, and what it needs ---------------------------------
@@ -135,6 +155,10 @@ class Need:
     # delegation); "" = the delegated admin is needed but not set.
     subject: Optional[str]
     features: tuple[str, ...]
+    # True when ``subject`` is a mentor standing in for "each mentor's own
+    # mailbox": a refused subject then means the stand-in is not a Google
+    # account, which says nothing about the grant (unknown, not failed).
+    stand_in: bool = False
 
 
 @dataclass
@@ -142,6 +166,7 @@ class Plan:
     info: Optional[dict[str, Any]] = None
     key_problem: str = ""
     admin: str = ""
+    member: str = ""
     needs: list[Need] = field(default_factory=list)
 
 
@@ -149,14 +174,21 @@ def _on(settings: Any, key: str) -> bool:
     return bool(getattr(settings, key, False))
 
 
-def scope_needs(settings: Any, admin: str) -> list[Need]:
-    """The (scope, subject) pairs the switched-on features need, merged."""
+def scope_needs(settings: Any, admin: str, member: str = "") -> list[Need]:
+    """The (scope, subject) pairs the switched-on features need, merged.
+
+    Gmail sync, lead outreach, Calendar, Meet and Drive in "user" mode act as
+    each mentor's own mailbox, not as the delegated admin. With no delegated
+    admin set, ``member`` (one active mentor's work address) stands in, so the
+    grant is still checked (Doug, option B, 11-15-26). The directory scopes
+    need the delegated admin itself."""
     s = settings
     mailbox = (getattr(s, "ops_mailbox", "") or "").strip()
-    sender = mailbox or admin
+    person = admin or member
+    sender = mailbox or person
     wanted: list[tuple[str, Optional[str], str]] = []  # (scope, subject, feature)
     if _on(s, "gmail_sync") or _on(s, "gmail_resync"):
-        wanted.append((S_GMAIL_READ, admin, "Gmail sync"))
+        wanted.append((S_GMAIL_READ, person, "Gmail sync"))
     if mailbox:
         wanted.append((S_GMAIL_READ, mailbox, "the shared mailbox"))
         wanted.append((S_GMAIL_SEND, mailbox, "the shared mailbox"))
@@ -166,12 +198,12 @@ def scope_needs(settings: Any, admin: str) -> list[Need]:
         if _on(s, key):
             wanted.append((S_GMAIL_SEND, sender, label))
     if _on(s, "gcal_events"):
-        wanted.append((S_CALENDAR, admin, "Calendar"))
+        wanted.append((S_CALENDAR, person, "Calendar"))
     if _on(s, "meet_transcripts"):
-        wanted.append((S_MEET, admin, "Meet transcripts"))
+        wanted.append((S_MEET, person, "Meet transcripts"))
     if _on(s, "gdrive_docs"):
         service = getattr(s, "gdrive_identity", "user") == "service"
-        wanted.append((S_DRIVE, None if service else admin, "Drive"))
+        wanted.append((S_DRIVE, None if service else person, "Drive"))
     if _on(s, "google_directory_check"):
         wanted.append((S_DIR_READ, admin, "the directory check"))
     if _on(s, "google_create_mailbox") or _on(s, "mentor_provision_users"):
@@ -183,7 +215,10 @@ def scope_needs(settings: Any, admin: str) -> list[Need]:
         labels = merged.setdefault((scope, subject), [])
         if label not in labels:
             labels.append(label)
-    return [Need(scope, subject, tuple(labels)) for (scope, subject), labels in merged.items()]
+    standing_in = bool(member) and not admin
+    return [Need(scope, subject, tuple(labels),
+                 stand_in=standing_in and bool(subject) and subject == member)
+            for (scope, subject), labels in merged.items()]
 
 
 def _scope_name(scope: str) -> str:
@@ -233,24 +268,35 @@ def _delegation_check(need: Need) -> Check:
         name = _scope_name(need.scope)
         who = "the service account itself" if need.subject is None else need.subject
         used = ", ".join(need.features)
+        failed = ctx.state.setdefault("missing", [])
         if need.subject == "":
+            if name not in failed:
+                failed.append(name)
             return FAILED, f"No delegated admin is set, so {name} cannot be checked ({used})."
         try:
             token = await _mint(ctx, [need.scope], need.subject)
         except TokenError as exc:
-            missing = ctx.state.setdefault("missing", [])
             if exc.kind == "transport":
                 return UNKNOWN, str(exc)
             if exc.kind == "unauthorized":
-                if name not in missing:
-                    missing.append(name)
+                if name not in failed:
+                    failed.append(name)
                 return FAILED, (f"Domain-wide delegation does not grant {name} "
                                 f"(needed by {used}). Add it to the grant for this client ID.")
+            if need.stand_in:
+                return UNKNOWN, (f"Not checked: {who}, the mentor standing in because no "
+                                 f"delegated admin is set, is not a Google account Google "
+                                 f"accepts ({exc}). Set a delegated admin to check {name}.")
+            if name not in failed:
+                failed.append(name)
             return FAILED, f"No token as {who}: {exc}. Check that {who} is a real, licensed account."
         ctx.state.setdefault("tokens", {})[(need.scope, need.subject)] = token
         granted = ctx.state.setdefault("granted", [])
         if name not in granted:
             granted.append(name)
+        if need.stand_in:
+            return OK, (f"Granted, as {who}, a mentor standing in because no delegated "
+                        f"admin is set; only a token was requested (needed by {used}).")
         return OK, f"Granted, as {who} (needed by {used})."
 
     who = "the service account" if need.subject is None else (need.subject or "(no admin set)")
@@ -292,6 +338,9 @@ async def _drive(ctx: Context) -> tuple[str, str]:
         return FAILED, "Drive is on, but the shared drive ID is not set."
     service = getattr(s, "gdrive_identity", "user") == "service"
     admin = ctx.state["plan"].admin
+    if not service and not admin:
+        raise Blocked("Not checked: reading the shared drive in user mode needs the "
+                      "delegated admin, and none is set. The Drive grant is checked above.")
     token = _token_for(ctx, S_DRIVE, None if service else admin)
     params = {"fields": "id,name"}
     if not service:
@@ -334,6 +383,10 @@ async def _calendar(ctx: Context) -> tuple[str, str]:
         raise Skip()
     _needs_key(ctx)
     admin = ctx.state["plan"].admin
+    if not admin:
+        # Never a mentor's calendar: the stand-in is used for a token only.
+        raise Blocked("Not checked: reading a calendar needs the delegated admin, and "
+                      "none is set. The Calendar grant is checked above.")
     token = _token_for(ctx, S_CALENDAR, admin)
     now = datetime.now(timezone.utc)
     params = {"timeMin": now.isoformat(), "timeMax": (now + timedelta(days=1)).isoformat(),
@@ -349,7 +402,8 @@ async def _meet(ctx: Context) -> tuple[str, str]:
     if not _on(ctx.settings, "meet_transcripts"):
         raise Skip()
     _needs_key(ctx)
-    _token_for(ctx, S_MEET, ctx.state["plan"].admin)
+    plan = ctx.state["plan"]
+    _token_for(ctx, S_MEET, plan.admin or plan.member)
     return OK, ("The delegation token is the whole check: Meet has no read "
                 "without a meeting code.")
 
@@ -426,8 +480,22 @@ async def _plan(settings: Any, deps: Deps, ctx: Context) -> Plan:
         if info.get(secret_field):
             ctx.secrets.append(str(info[secret_field]))
     plan.info = info
-    plan.needs = scope_needs(settings, plan.admin)
+    if not plan.admin and _per_person_on(settings):
+        try:
+            plan.member = await deps.member(settings)
+        except Exception:  # noqa: BLE001 — no stand-in: those lines say why
+            plan.member = ""
+    plan.needs = scope_needs(settings, plan.admin, plan.member)
     return plan
+
+
+def _per_person_on(settings: Any) -> bool:
+    """A switched-on feature that acts as each mentor's own mailbox."""
+    s = settings
+    return (_on(s, "gmail_sync") or _on(s, "gmail_resync") or _on(s, "gcal_events")
+            or _on(s, "meet_transcripts") or _on(s, "lead_outreach")
+            or _on(s, "events_confirmations") or _on(s, "events_reminders")
+            or (_on(s, "gdrive_docs") and getattr(s, "gdrive_identity", "user") != "service"))
 
 
 async def run(settings: Any, deps: Optional[Deps] = None) -> dict[str, Any]:
@@ -448,7 +516,10 @@ async def run(settings: Any, deps: Optional[Deps] = None) -> dict[str, Any]:
     result = await run_checks("google_workspace", checks, ctx)
     granted = ctx.state.get("granted") or []
     missing = ctx.state.get("missing") or []
+    if plan.member:
+        result["facts"].append({"label": "Mentor standing in for each mentor's mailbox",
+                                "value": plan.member})
     if plan.needs:
         result["facts"].append({"label": "Scopes granted", "value": ", ".join(granted) or "none"})
-        result["facts"].append({"label": "Scopes missing", "value": ", ".join(missing) or "none"})
+        result["facts"].append({"label": "Scopes failed", "value": ", ".join(missing) or "none"})
     return result

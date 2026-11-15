@@ -5,6 +5,32 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.332.4] — 2026-11-15
+
+**fix(setup): the Google Workspace integration test no longer fails features
+that act as each mentor's own mailbox just because no delegated admin is set.**
+Found on crm-test 11-15-26: the test failed Gmail sync, lead outreach and
+Calendar with "No delegated admin is set", although those features never use
+the delegated admin. Doug's ruling, option B (11-15-26):
+
+- **One active mentor's work address stands in** for "each mentor's mailbox"
+  when no delegated admin is set (`integrations/checks/google.py`, read with
+  the org-wide CRM key: an Active `CMentorProfile` with a `cbmEmail`). It is
+  used **for a token only**: the delegation line proves the grant, and no
+  mentor's mail, calendar or drive is read. Gmail sync, lead outreach, event
+  confirmations and reminders, Calendar, Meet, and Drive in user mode use it.
+- **A stand-in Google refuses is unknown, not failed** ("set a delegated admin
+  to check"): on crm-test every work address is a sandbox address, which
+  says nothing about the grant. A scope the grant lacks still fails.
+- The Calendar read, and the shared-drive read in user mode, need the
+  delegated admin itself; without one they now say so as unknown.
+- The directory scopes still need the delegated admin, so mentor
+  provisioning with none set still fails, correctly.
+- The fact **"Scopes missing" becomes "Scopes failed"** and lists every scope
+  line that failed, not only those the grant lacks (it said "none" beside
+  five failed lines). A new fact names the standing-in mentor.
+- Tests: six new in `tests/test_integration_test.py`.
+
 ## [0.332.3] — 2026-11-15
 
 **feat(crm): the hosting method on the event record.** Event hosting plan
