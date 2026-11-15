@@ -98,7 +98,7 @@ def _parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         "--write-test", metavar="EMAIL", default="",
         help="with --meetings: create, register on, and delete one test meeting")
     parser.add_argument(
-        "--live-start", metavar="EMAIL", default="",
+        "--live-start", metavar="EMAIL", default="", nargs="?", const="?",
         help="with --meetings: create a meeting starting now, register EMAIL "
              "and print the personal join link; the meeting is kept")
     parser.add_argument(
@@ -468,8 +468,11 @@ async def main(argv: Optional[list[str]] = None) -> int:
             print("\nWrite test — one meeting, created and deleted:")
             problems += await meeting_write_test(api, host, args.write_test)
         if args.live_start:
+            email = args.live_start
+            if email == "?":  # no address on the command line: ask for it
+                email = input("Registrant email (one you can read): ").strip()
             print("\nLive test, part 1 — a meeting starting now:")
-            problems += await meeting_live_start(api, host, args.live_start)
+            problems += await meeting_live_start(api, host, email)
         if args.live_report:
             print("\nLive test, part 2 — the participant report:")
             problems += await meeting_live_report(api, args.live_report)
