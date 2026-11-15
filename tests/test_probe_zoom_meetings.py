@@ -79,3 +79,69 @@ async def test_read_only_probe_never_writes():
     api = FakeApi()
     await probe_zoom.probe_meetings(api, "h@x.org")
     assert {c[0] for c in api.calls} == {"GET"}
+
+
+class LiveApi(FakeApi):
+    def __init__(self, report, fail_on=""):
+        super().__init__(fail_on)
+        self.report = report
+
+    async def _request(self, method, path, *, params=None, json_body=None,
+                       expect_body=True):
+        if method == "GET" and path.startswith("/report/meetings/"):
+            self.calls.append((method, path, params or {}))
+            if isinstance(self.report, Exception):
+                raise self.report
+            return {"participants": self.report}
+        if method == "GET" and path.endswith("/registrants"):
+            self.calls.append((method, path, params or {}))
+            return {"registrants": [{"id": "r1", "email": "p@x.org"}]}
+        return await super()._request(method, path, params=params,
+                                      json_body=json_body,
+                                      expect_body=expect_body)
+
+
+@pytest.mark.asyncio
+async def test_live_start_keeps_the_meeting_and_lets_the_registrant_in():
+    api = FakeApi()
+    problems = await probe_zoom.meeting_live_start(api, "h@x.org", "p@x.org")
+    assert problems == []
+    settings = api.calls[0][2]["settings"]
+    assert settings["join_before_host"] is True
+    assert settings["registrants_confirmation_email"] is False
+    assert not _deleted(api)
+
+
+@pytest.mark.asyncio
+async def test_live_start_deletes_when_registration_fails():
+    api = FakeApi(fail_on="POST /meetings/123/registrants")
+    assert await probe_zoom.meeting_live_start(api, "h@x.org", "p@x.org")
+    assert _deleted(api)
+
+
+@pytest.mark.asyncio
+async def test_live_report_matches_by_registrant_id_then_deletes():
+    api = LiveApi([{"name": "Probe", "registrant_id": "r1", "duration": 60}])
+    assert await probe_zoom.meeting_live_report(api, "123") == []
+    assert _deleted(api)
+
+
+@pytest.mark.asyncio
+async def test_live_report_unmatched_is_a_blocker():
+    api = LiveApi([{"name": "Someone", "user_email": "q@y.org"}])
+    problems = await probe_zoom.meeting_live_report(api, "123")
+    assert problems and "matched" in problems[0]
+
+
+@pytest.mark.asyncio
+async def test_live_report_not_ready_keeps_the_meeting():
+    for report in ([], ZoomError("HTTP 404 3001", status_code=404)):
+        api = LiveApi(report)
+        assert await probe_zoom.meeting_live_report(api, "123")
+        assert not _deleted(api)
+
+
+def test_one_mode_at_a_time():
+    with pytest.raises(SystemExit):
+        probe_zoom._parse_args(["--meetings", "--live-start", "a@b.c",
+                                "--live-report", "1"])

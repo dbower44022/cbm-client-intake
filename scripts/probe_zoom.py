@@ -35,6 +35,16 @@ Exits 0 when everything needed for the build is available, 1 otherwise.
     PYTHONPATH=. uv run python scripts/probe_zoom.py --meetings \
         --write-test someone@example.org
 
+    # A short real meeting, to prove attendance (Doug's choice B, 11-15-26):
+    # part 1 creates a meeting starting now, registers the address and
+    # prints the personal join link; the meeting is kept. Join it, leave,
+    # wait about 30 minutes, then part 2 reads the participant report,
+    # matches it to the registration and deletes the meeting.
+    PYTHONPATH=. uv run python scripts/probe_zoom.py --meetings \
+        --live-start someone@example.org
+    PYTHONPATH=. uv run python scripts/probe_zoom.py --meetings \
+        --live-report MEETING_ID
+
 ``ZOOM_HOST_EMAIL`` names the Zoom user the meetings belong to. Run at a
 terminal, the script asks for any of the four values not in the environment,
 the secret without echo.
@@ -87,9 +97,21 @@ def _parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     parser.add_argument(
         "--write-test", metavar="EMAIL", default="",
         help="with --meetings: create, register on, and delete one test meeting")
+    parser.add_argument(
+        "--live-start", metavar="EMAIL", default="",
+        help="with --meetings: create a meeting starting now, register EMAIL "
+             "and print the personal join link; the meeting is kept")
+    parser.add_argument(
+        "--live-report", metavar="MEETING_ID", default="",
+        help="with --meetings: read the kept meeting's participant report, "
+             "match it to the registration, then delete the meeting")
     args = parser.parse_args(argv)
-    if args.write_test and not args.meetings:
-        parser.error("--write-test needs --meetings")
+    for flag in ("write_test", "live_start", "live_report"):
+        if getattr(args, flag) and not args.meetings:
+            parser.error(f"--{flag.replace('_', '-')} needs --meetings")
+    if sum(bool(getattr(args, f)) for f in
+           ("write_test", "live_start", "live_report")) > 1:
+        parser.error("choose one of --write-test, --live-start, --live-report")
     return args
 
 
@@ -289,6 +311,123 @@ async def meeting_write_test(api: Any, host: str, email: str) -> list[str]:
             problems.append("meeting delete scope missing — test meeting left behind")
 
 
+async def meeting_live_start(api: Any, host: str, email: str) -> list[str]:
+    """Create a meeting starting now, register one person, print their link.
+
+    The meeting is KEPT: the person joins it, and part 2
+    (:func:`meeting_live_report`) reads the report and deletes it.
+    """
+    body = {
+        "topic": TEST_TOPIC,
+        "type": MEETING_TYPE_SCHEDULED,
+        "start_time": to_zoom_time(datetime.now(timezone.utc)),
+        "duration": 15,
+        "timezone": "America/New_York",
+        "settings": {
+            "approval_type": 0,
+            "registration_type": 1,
+            "registrants_confirmation_email": False,
+            "registrants_email_notification": False,
+            # The host is not there: the registrant must get in alone.
+            "join_before_host": True,
+            "jbh_time": 0,
+            "waiting_room": False,
+        },
+    }
+    try:
+        meeting = await api._request(
+            "POST", f"/users/{host}/meetings", json_body=body)
+    except ZoomError as exc:
+        print(f"[FAIL] cannot create a meeting: {exc}")
+        return ["meeting create refused"]
+    meeting_id = str(meeting.get("id"))
+    print(f"[ok]   meeting created and KEPT: {meeting_id}")
+    try:
+        reg = await api._request(
+            "POST", f"/meetings/{meeting_id}/registrants",
+            json_body={"email": email, "first_name": "Probe",
+                       "last_name": "Registrant"})
+    except ZoomError as exc:
+        print(f"[FAIL] cannot register on the meeting: {exc}")
+        await _delete_meeting(api, meeting_id)
+        return ["meeting registration refused"]
+    join = str(reg.get("join_url") or "")
+    print(f"[ok]   registrant id: {reg.get('registrant_id') or 'MISSING'}")
+    if not join:
+        await _delete_meeting(api, meeting_id)
+        return ["a meeting registrant gets no personal join link"]
+    print("       personal join link (open it in a private window):")
+    print(f"       {join}")
+    print(f"\n       meeting id for part 2: {meeting_id}")
+    return []
+
+
+async def meeting_live_report(api: Any, meeting_id: str) -> list[str]:
+    """Read the kept meeting's report, match it to the registrants, delete.
+
+    An empty or not-found report is "not ready yet": the meeting is kept so
+    part 2 can be run again.
+    """
+    try:
+        listed = await api._request(
+            "GET", f"/meetings/{meeting_id}/registrants",
+            params={"page_size": 30})
+        registrants = listed.get("registrants", [])
+    except ZoomError as exc:
+        print(f"[warn] cannot list registrants: {exc}")
+        registrants = []
+    reg_ids = {str(r.get("id")) for r in registrants if r.get("id")}
+    reg_emails = {str(r.get("email", "")).lower() for r in registrants}
+    print(f"       registrants on the meeting: {len(registrants)}")
+
+    try:
+        report = await api._request(
+            "GET", f"/report/meetings/{meeting_id}/participants",
+            params={"page_size": 300})
+        participants = report.get("participants", [])
+    except ZoomError as exc:
+        print(f"[warn] the report is not readable yet: {exc}\n"
+              "       The meeting is kept. Run part 2 again in 10 minutes.")
+        return ["the participant report was not ready"]
+    if not participants:
+        print("[warn] the report is empty — not ready yet, or nobody joined.\n"
+              "       The meeting is kept. Run part 2 again in 10 minutes.")
+        return ["the participant report was empty"]
+
+    problems: list[str] = []
+    matched = 0
+    for row in participants:
+        rid = str(row.get("registrant_id") or "")
+        mail = str(row.get("user_email") or "").lower()
+        by_id = bool(rid) and rid in reg_ids
+        by_mail = bool(mail) and mail in reg_emails
+        matched += by_id or by_mail
+        print(f"       - {row.get('name')!r}: registrant_id "
+              f"{'matches' if by_id else ('present, no match' if rid else 'absent')}, "
+              f"user_email {'matches' if by_mail else ('present, no match' if mail else 'absent')}, "
+              f"duration {row.get('duration')}s")
+    if matched:
+        print(f"[ok]   {matched} participant row(s) matched to the registration")
+    else:
+        problems.append("no participant row could be matched to the "
+                        "registration — attendance cannot be read")
+    await _delete_meeting(api, meeting_id)
+    return problems
+
+
+async def _delete_meeting(api: Any, meeting_id: str) -> None:
+    try:
+        await api._request(
+            "DELETE", f"/meetings/{meeting_id}",
+            params={"schedule_for_reminder": "false",
+                    "cancel_meeting_reminder": "false"},
+            expect_body=False)
+        print(f"[ok]   meeting {meeting_id} deleted")
+    except ZoomError as exc:
+        print(f"[FAIL] meeting {meeting_id} was NOT deleted: {exc}\n"
+              f"       Delete it by hand in Zoom: topic {TEST_TOPIC!r}")
+
+
 async def main(argv: Optional[list[str]] = None) -> int:
     args = _parse_args(argv)
     account = os.environ.get("ZOOM_ACCOUNT_ID", "")
@@ -328,6 +467,12 @@ async def main(argv: Optional[list[str]] = None) -> int:
         if args.write_test:
             print("\nWrite test — one meeting, created and deleted:")
             problems += await meeting_write_test(api, host, args.write_test)
+        if args.live_start:
+            print("\nLive test, part 1 — a meeting starting now:")
+            problems += await meeting_live_start(api, host, args.live_start)
+        if args.live_report:
+            print("\nLive test, part 2 — the participant report:")
+            problems += await meeting_live_report(api, args.live_report)
         print()
         if problems:
             print("BLOCKERS:")
