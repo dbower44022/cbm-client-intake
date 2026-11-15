@@ -17,17 +17,20 @@
 #   test        the repository's .env (crm-test)
 #   boston      ~/.config/cbm-boston/boston.env
 #   lakeside    ~/.config/cbm-lakeside/lakeside.env
+#   bma         ~/.config/cbm-bma/bma.env (the Business Mentors Association,
+#               the test system since 11-14-26; user crm.config)
 #   production  no credential here — run the applier from inside its web
 #               console instead (scripts/apply_crm_plan.py, top of file).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 chapter="${1:-}"; plan="${2:-}"; fingerprint="${3:-}"
-usage() { echo "usage: scripts/apply_plan.sh <test|boston|lakeside> <plan.json> [fingerprint]" >&2; exit 64; }
+usage() { echo "usage: scripts/apply_plan.sh <test|boston|lakeside|bma> <plan.json> [fingerprint]" >&2; exit 64; }
 [ -n "$chapter" ] && [ -n "$plan" ] || usage
 case "$chapter" in
   test)       envfile=".env" ;;
   boston)     envfile="$HOME/.config/cbm-boston/boston.env" ;;
   lakeside)   envfile="$HOME/.config/cbm-lakeside/lakeside.env" ;;
+  bma)        envfile="$HOME/.config/cbm-bma/bma.env" ;;
   production) echo "production keeps its administrator credential only inside its web container;" >&2
               echo "run scripts/apply_crm_plan.py from 'doctl apps console <app-id> web' (see its docstring)." >&2; exit 64 ;;
   *)          echo "unknown chapter '$chapter'" >&2; usage ;;
