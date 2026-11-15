@@ -106,16 +106,18 @@ def test_with_the_switch_off_the_page_is_as_before_and_reads_no_wizard(monkeypat
     assert resp.status_code == 404
 
 
-def test_fix_with_the_wizard_follows_a_failed_test_on_the_page():
+def test_fix_follows_a_failed_test_on_the_page():
+    """Since the status screen (Doug's rulings 11-15-26): a failed test makes the
+    one button Fix, which restarts the setup at the first failing step (W5).
+    The state rules themselves run in tests/test_integration_status_screen.py."""
     src = (ROOT / "setup" / "frontend" / "app.js").read_text()
-    test_block = src[src.index("function testBlock"):]
-    test_block = test_block[:test_block.index("\n  }\n")]
-    assert "Fix with the wizard" in test_block and '"|restart|"' in test_block
-    assert 'run.outcome !== "ok"' in test_block
+    action = src[src.index("async function integrationAction"):]
+    action = action[:action.index("\n  }\n")]
+    assert 'action === "fix"' in action and '"|restart|"' in action
     for gone in ("Diagnose with Claude", "Set up with Claude", "Approve and apply", "Setup checklist",
-                 "data-tick", "/fixplan", "/checklist/"):
+                 "data-tick", "/fixplan", "/checklist/", "Fix with the wizard"):
         assert gone not in src, gone
-    # The nightly alert's link scrolls to the wizard and changes nothing.
+    # The nightly alert's link opens the status screen and changes nothing.
     assert 'hash.split("/")[2] === "wizard"' in src
 
 

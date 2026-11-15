@@ -474,8 +474,12 @@ def view(integration: str, settings: Any, overrides: dict[str, Any],
             status = "done"
     back_to = previous_screen(screens, current, when_answers(screens, p["answers"], settings)) \
         if current else None
+    # A setup someone started and left partway (the status screen's "Continue
+    # setup"): a screen chosen by an action, not one worked out from the checks.
+    in_progress = status == "running" and p["current"] in ids and bool(p["history"] or p["answers"])
     out: dict[str, Any] = {"status": status, "total": len(screens), "ended": p.get("ended") or "",
-                           "canBack": bool(p["history"]) or back_to is not None, "help": p.get("help")}
+                           "canBack": bool(p["history"]) or back_to is not None, "help": p.get("help"),
+                           "inProgress": in_progress}
     if current:
         screen = screens[ids.index(current)]
         result, reason = evaluate(screen, state)

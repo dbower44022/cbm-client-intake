@@ -10,7 +10,7 @@
   "use strict";
 
   var API = "/setup/api";
-  var state = { page: null, tab: "settings", editing: null, subtab: null, closed: {} };
+  var state = { page: null, tab: "settings", editing: null, subtab: null, closed: {}, dialog: null };
 
   function $(id) { return document.getElementById(id); }
   function text(el, value) { el.textContent = value == null ? "" : String(value); }
@@ -457,13 +457,28 @@
     return ((state.page && state.page.integrations) || []).filter(function (i) { return i.key === key; })[0] || null;
   }
 
-  function statusLine(i) {
+  // Which folds the administrator left open, kept in this browser only.
+  var OPEN_KEY = "cbm.setup.open";
+  function openMap() {
+    try { return JSON.parse(window.localStorage.getItem(OPEN_KEY) || "{}") || {}; } catch (e) { return {}; }
+  }
+  function isOpen(id) { return !!openMap()[id]; }
+  function setOpen(id, open) {
+    try {
+      var m = openMap();
+      if (open) m[id] = true; else delete m[id];
+      window.localStorage.setItem(OPEN_KEY, JSON.stringify(m));
+    } catch (e) { /* not remembered: the fold opens closed next time */ }
+  }
+
+  // The status screen's one line: in use, switched on, credentials, last test.
+  function statusParts(i) {
     var st = i.status || {};
     var parts = [];
     if (st.alwaysInUse) parts.push("always in use");
-    else parts.push(st.inUse ? "in use" : "Not used by this chapter");
+    else parts.push(st.inUse ? "in use" : "not used by this chapter");
     if (i.key === "espocrm") {
-      parts.push(st.dryRun ? "dry run \u2014 nothing is written to the CRM" : "on \u2014 writing to the CRM");
+      parts.push(st.dryRun ? "dry run — nothing is written to the CRM" : "writing to the CRM");
     } else if (!st.hasSwitches) {
       parts.push("no feature switch");
     } else {
@@ -471,9 +486,55 @@
     }
     var missing = st.credentialsMissing || [];
     parts.push(missing.length ? "credentials missing: " + missing.join(", ") : "credentials set");
-    parts.push(testedText(st.tested));
-    return '<p class="su__status' + (st.inUse === false ? " su__status--unused" : "") + '"><strong>'
-      + esc(i.name) + ":</strong> " + parts.map(esc).join(" \u00b7 ") + "</p>";
+    var run = st.tested;
+    parts.push(run ? testedText(run) + (run.runBy ? ", run by " + run.runBy : "") + (run.trigger === "nightly" ? ", nightly" : "")
+      : "not tested yet");
+    return parts.join(" · ");
+  }
+
+  // Where an integration stands, and the one button that follows from it
+  // (Doug's rulings 11-15-26, after the phase 11 review): Setup when it is not
+  // set up, Fix when a result says there is a problem, Test Integration when
+  // nothing is known to be wrong. Checked in this order.
+  function integrationState(i) {
+    var st = i.status || {}, w = i.wizard || null, run = st.tested;
+    if (st.inUse === false) return { key: "unused", badge: "Not used by this chapter", action: w ? "setup" : "test" };
+    if (w && w.inProgress) {
+      return { key: "progress", badge: "Setup in progress · step " + w.position + " of " + w.total, action: "continue" };
+    }
+    if (run && run.outcome !== "ok") {
+      var failed = (run.checks || []).filter(function (c) { return c.outcome === "failed"; }).length;
+      return { key: "bad", action: w ? "fix" : "test",
+               badge: run.outcome === "failed" ? "Needs attention · " + failed + (failed === 1 ? " check fails" : " checks fail")
+                 : "Needs attention · the last test could not be completed" };
+    }
+    if (!run) {
+      if ((st.credentialsMissing || []).length && w) return { key: "none", badge: "Not set up", action: "setup" };
+      return { key: "none", badge: "Not tested yet", action: "test" };
+    }
+    if (w && w.status === "running") return { key: "none", badge: "Setup not finished", action: "setup" };
+    return { key: "ok", badge: "Set up", action: "test" };
+  }
+
+  var ACTION_LABEL = { setup: "Setup", fix: "Fix", "continue": "Continue setup", test: "Test Integration",
+                       review: "Review the setup", restart: "Start the setup again" };
+  var ACTION_HINT = {
+    test: "Run every check again now. Nothing is changed.",
+    review: "Open the setup at its first step, to see or change any answer.",
+    restart: "Open the setup at the first step that does not pass.",
+  };
+
+  function primaryLabel(i, action) {
+    if (action === "setup" || action === "fix") return ACTION_LABEL[action] + " " + i.name;
+    return ACTION_LABEL[action];
+  }
+
+  // Other Actions: everything the one button is not.
+  function otherActions(i, action) {
+    var w = i.wizard;
+    var list = { fix: ["test", "review", "restart"], setup: ["test", "review"], "continue": ["test", "review", "restart"],
+                 test: ["review", "restart"] }[action] || [];
+    return list.filter(function (a) { return a === "test" ? i.testable : !!w; });
   }
 
   // MM-DD-YY HH:MM, local time.
@@ -504,39 +565,47 @@
     return '<span class="su__unknown" title="unknown">?</span>';
   }
 
-  // The integration test (plan § 3, part 2): the button, the last result as
-  // one line per check, and the integration facts.
-  function testBlock(i) {
+  // The last test's result: failed checks first, then the rest, then the facts.
+  function checksBlock(i) {
     var run = (i.status || {}).tested;
-    var html = '<section class="su__group su__test"><h2 class="su__h2">Integration test</h2>'
-      + '<p class="su__testbar"><button type="button" class="cbm-button" data-test="' + esc(i.key) + '">Test Integration</button> '
-      + '<span class="su__hint">Every check only reads. Nothing is changed in ' + esc(i.name) + ".</span></p>"
-      + '<p class="form-error" id="testError" role="alert" hidden></p>';
-    if (!run) return html + '<p class="su__hint">Not tested yet.</p></section>';
-    html += '<p class="su__testsummary su__testsummary--' + esc(run.outcome) + '"><strong>'
-      + esc(testedText(run).replace(/^last test/, "Last test")) + "</strong>"
-      + (run.runBy ? " \u00b7 run by " + esc(run.runBy) : "")
-      + (run.trigger === "nightly" ? " \u00b7 nightly" : "")
-      + (run.durationMs != null ? " \u00b7 " + (Math.round(run.durationMs / 100) / 10) + " s" : "") + "</p>";
-    html += '<ul class="su__itestchecks">' + (run.checks || []).map(function (c) {
+    if (!run) return '<p class="su__cardline">No test has run yet. The setup runs each check as you reach its step.</p>';
+    var order = { failed: 0, unknown: 1, ok: 2, skipped: 3 };
+    var checks = (run.checks || []).slice().sort(function (a, b) {
+      return (order[a.outcome] == null ? 9 : order[a.outcome]) - (order[b.outcome] == null ? 9 : order[b.outcome]);
+    });
+    var html = '<h3 class="su__h3">Checks from the last test</h3><ul class="su__itestchecks">' + checks.map(function (c) {
       return '<li class="su__itestcheck su__itestcheck--' + esc(c.outcome) + '">' + outcomeIcon(c.outcome)
         + " <strong>" + esc(c.label) + "</strong>"
         + (c.detail ? ' <span class="su__itestdetail">' + esc(c.detail) + "</span>" : "") + "</li>";
     }).join("") + "</ul>";
-    if (run.outcome !== "ok" && i.wizard) {
-      // Fix with the wizard (ruling W4): it starts again at the first screen
-      // whose check fails (W5).
-      html += '<p class="su__testbar"><button type="button" class="cbm-button" data-wiz="' + esc(i.key + "|restart|")
-        + '">Fix with the wizard</button> <span class="su__hint">The set-up wizard opens at the first step that does not pass, '
-        + "with what it is, why it matters and how to do it.</span></p>";
-    }
     var facts = run.facts || [];
     if (facts.length) {
       html += '<h3 class="su__h3">Integration facts</h3><dl class="su__facts">' + facts.map(function (f) {
         return "<dt>" + esc(f.label) + "</dt><dd>" + esc(f.value) + "</dd>";
       }).join("") + "</dl>";
     }
-    return html + "</section>";
+    return html;
+  }
+
+  function statusCard(i) {
+    var s = integrationState(i);
+    var others = otherActions(i, s.action);
+    var html = '<section class="su__card"><div class="su__cardtop"><div class="su__cardhead">'
+      + '<div class="su__cardname"><h2 class="su__h2">' + esc(i.name) + '</h2><span class="su__badge su__badge--' + esc(s.key) + '">'
+      + esc(s.badge) + "</span></div>"
+      + '<p class="su__cardline">' + esc(statusParts(i)) + "</p></div>"
+      + '<div class="su__cardbtns"><button type="button" class="cbm-button" data-ia="' + esc(i.key + "|" + s.action) + '">'
+      + esc(primaryLabel(i, s.action)) + "</button>";
+    if (others.length) {
+      html += '<div class="su__menuwrap"><button type="button" class="cbm-button cbm-button--secondary" data-menu="' + esc(i.key)
+        + '" aria-haspopup="menu" aria-expanded="false">Other Actions ▾</button>'
+        + '<ul class="su__menu" role="menu" hidden>' + others.map(function (a) {
+          return '<li role="none"><button type="button" role="menuitem" data-ia="' + esc(i.key + "|" + a) + '">'
+            + esc(ACTION_LABEL[a]) + '<small>' + esc(ACTION_HINT[a] || "") + "</small></button></li>";
+        }).join("") + "</ul></div>";
+    }
+    html += '</div></div><p class="form-error" id="testError" role="alert" hidden></p>' + checksBlock(i) + "</section>";
+    return html;
   }
 
   async function runTest(key, btn) {
@@ -557,15 +626,6 @@
     }
   }
 
-  function placeholders(i) {
-    var ph = i.phases || {};
-    // Not buttons: nothing that looks clickable and does nothing.
-    if (i.testable) return "";
-    return '<ul class="su__placeholders">'
-      + "<li><strong>Integration test</strong> \u2014 comes with phase " + esc(ph.test) + " of the Integrations tab build.</li>"
-      + "</ul>";
-  }
-
   // Reads the whole page payload again (settings, status lines, the
   // wizards, Claude's spend) and redraws. Never throws.
   async function refreshPage() {
@@ -577,78 +637,113 @@
 
   function money(n) { return "$" + (Math.round((n || 0) * 100) / 100).toFixed(2); }
 
-  // The setup wizard (plan § 10, rulings W1 to W6): one screen at a time —
-  // what, why, how — checked before the next. The guide chooses the screens;
-  // Claude helps only when asked.
+  // The setup runs in a dialog (Doug's ruling 11-15-26): one step at a time —
+  // what, why, how — checked before the next. The guide chooses the steps
+  // (W2); Claude helps only when asked (W6). Closing keeps the place, for
+  // every administrator.
   var wizPoll = null;
 
-  function wizardBlock(i) {
+  var DIALOG_VERB = { fix: "Fix", setup: "Setup", "continue": "Setup", review: "Review the setup of", restart: "Setup" };
+
+  function openDialog(key, mode) {
+    state.dialog = { key: key, mode: mode };
+    renderDialog();
+    var first = $("wizOverlay").querySelector(".su__wizfoot .cbm-button:not(.cbm-button--secondary), .su__wizfoot button");
+    if (first) first.focus();
+  }
+
+  function closeDialog() {
+    state.dialog = null;
+    $("wizOverlay").hidden = true;
+  }
+
+  // A failure the stored test already shows, so a Fix opens with it named.
+  function upfrontFailure(w) {
+    if (w.failure) return w.failure.reason;
+    var s = w.screen || {}, now = w.checkNow;
+    if (!now || now.result !== "fail" || String(s.check || "").indexOf("test:") !== 0) return "";
+    if (/has not been run yet/.test(now.reason || "")) return "";
+    return now.reason || "";
+  }
+
+  function renderDialog() {
+    var d = state.dialog;
+    if (!d) { $("wizOverlay").hidden = true; return; }
+    var i = findIntegration(d.key);
+    if (!i || !i.wizard) { closeDialog(); return; }
     var w = i.wizard;
-    if (!w) return "";
-    var html = '<section class="su__group su__wiz"><h2 class="su__h2">Set-up wizard</h2>';
-    if (!w.stored) html += '<p class="su__hint">No database is attached, so the wizard cannot keep its place.</p>';
-    if (w.status === "done") {
-      return html + '<p class="su__wizdone">\u2713 ' + esc(i.name) + " is set up. Every check passes.</p>"
-        + '<p><button type="button" class="cbm-button cbm-button--secondary" data-wiz="' + esc(i.key + "|review|") + '">Review the screens</button> '
-        + '<button type="button" class="cbm-button cbm-button--secondary" data-wiz="' + esc(i.key + "|restart|") + '">Start the wizard again</button> '
-        + '<span class="su__hint">Review the screens opens the first one, so any answer can be seen and changed.</span></p></section>';
-    }
-    if (w.status === "ended") {
-      return html + '<p class="su__wizdone">' + esc(w.ended) + "</p>"
-        + '<p><button type="button" class="cbm-button cbm-button--secondary" data-wiz="' + esc(i.key + "|restart|") + '">Start the wizard again</button></p></section>';
+    $("wizOverlay").hidden = false;
+    text($("wizTitle"), (DIALOG_VERB[d.mode] || "Setup") + " " + i.name);
+    var body = "", foot = "";
+    var close = '<button type="button" class="cbm-button" data-wizclose="1">Close</button>';
+    if (w.status === "done" || w.status === "ended") {
+      text($("wizStep"), "");
+      $("wizBar").style.width = "100%";
+      body = '<p class="su__wizdone">' + (w.status === "done" ? "✓ " + esc(i.name) + " is set up. Every check passes." : esc(w.ended)) + "</p>";
+      $("wizBody").innerHTML = body;
+      $("wizFoot").innerHTML = "<span></span>" + close;
+      return;
     }
     var s = w.screen;
-    html += '<p class="su__wizpos">Screen ' + esc(w.position) + " of " + esc(w.total) + '</p><div class="su__wizcard">'
-      + '<h3 class="su__wiztitle">' + esc(s.title) + "</h3>"
-      + (s.what ? '<p><span class="su__wizlabel">What</span>' + esc(s.what) + "</p>" : "")
-      + (s.why ? '<p><span class="su__wizlabel">Why</span>' + esc(s.why) + "</p>" : "")
-      + (s.how ? '<p><span class="su__wizlabel">How</span>' + esc(s.how) + "</p>" : "");
+    text($("wizStep"), "Step " + w.position + " of " + w.total + " · closing keeps your place");
+    $("wizBar").style.width = Math.round(100 * w.position / Math.max(1, w.total)) + "%";
+    var failure = upfrontFailure(w);
+    var help = w.help && w.help.screen === s.id ? w.help : null;
+    var agent = i.agent || {};
+    if (failure) {
+      if (!help && agent.stored) {
+        body += '<p class="su__hint">Ask Claude has spent ' + esc(money(agent.spent)) + " of the "
+          + esc(money(agent.budget)) + " monthly budget this month.</p>";
+      }
+      body += '<div class="su__wizfail"><p><strong>Not done yet:</strong> ' + esc(failure) + "</p>"
+        + (s.ifNot ? "<p><strong>If not:</strong> " + esc(s.ifNot) + "</p>" : "") + "</div>";
+    }
+    if (help && help.status === "running") {
+      body += '<p class="su__hint">Claude is looking into it. This takes up to a minute; the dialog updates by itself.</p>';
+    } else if (help && help.text) {
+      body += '<div class="su__wizhelp"><p class="su__wizlabel">Claude</p><p>' + esc(help.text) + "</p>"
+        + (help.cost != null ? '<p class="su__diagmeta">cost ' + esc(money(help.cost)) + "</p>" : "") + "</div>";
+    }
+    body += '<h3 class="su__wiztitle">' + esc(s.title) + "</h3><dl class=\"su__wizwh\">"
+      + (s.what ? "<dt>What</dt><dd>" + esc(s.what) + "</dd>" : "")
+      + (s.why ? "<dt>Why</dt><dd>" + esc(s.why) + "</dd>" : "")
+      // After a failure the button reads Check again, so the guide's "Click Done" follows it.
+      + (s.how ? "<dt>How</dt><dd>" + esc(failure && s.kind === "done" ? s.how.replace(/\bClick Done\b/g, "Click Check again") : s.how) + "</dd>" : "")
+      + (s.see ? "<dt>You should see</dt><dd>" + esc(s.see) + "</dd>" : "") + "</dl>";
     (s.copy || []).forEach(function (c, n) {
       var cid = "wizcopy-" + n;
-      html += '<div class="su__diagcopy"><code id="' + cid + '">' + esc(c) + '</code> <button type="button" class="cbm-button cbm-button--secondary" data-copy="' + cid + '">Copy</button></div>';
+      body += '<div class="su__diagcopy"><code id="' + cid + '">' + esc(c) + '</code> <button type="button" class="cbm-button cbm-button--secondary" data-copy="' + cid + '">Copy</button></div>';
     });
-    if (s.see) html += '<p><span class="su__wizlabel">You should see</span>' + esc(s.see) + "</p>";
-    html += '<div class="su__wizact">';
+    if (s.kind === "enter") {
+      body += '<div class="su__wizbox"><input type="' + (s.secret ? "password" : "text") + '" class="su__wizinput" id="wizValue" autocomplete="off" value="'
+        + esc(s.secret ? "" : (s.value || "")) + '" placeholder="' + esc(s.secret ? (s.isSet ? "Set — paste a new value to replace it" : "Paste it here") : "")
+        + '" aria-label="' + esc(s.title) + '" /></div>';
+    }
+    body += '<p class="form-error" id="wizError" role="alert" hidden></p>';
+    $("wizBody").innerHTML = body;
+
+    foot = w.canBack ? '<button type="button" class="cbm-button cbm-button--secondary" data-wiz="' + esc(i.key + "|back|") + '">← Back</button>' : "<span></span>";
+    foot += '<div class="su__wizfootright">';
+    if (failure && !help) {
+      foot += '<button type="button" class="cbm-button cbm-button--secondary" data-wiz="' + esc(i.key + "|ask|" + s.id) + '">Ask Claude about this</button>';
+    }
     if (s.kind === "question") {
       s.answers.forEach(function (a) {
-        html += '<button type="button" class="cbm-button" data-wiz="' + esc(i.key + "|answer|" + s.id + "|" + a) + '">' + esc(a) + "</button> ";
+        foot += '<button type="button" class="cbm-button" data-wiz="' + esc(i.key + "|answer|" + s.id + "|" + a) + '">' + esc(a) + "</button>";
       });
     } else if (s.kind === "enter") {
-      html += '<input type="' + (s.secret ? "password" : "text") + '" class="su__wizinput" id="wizValue" autocomplete="off" value="'
-        + esc(s.secret ? "" : (s.value || "")) + '" placeholder="' + esc(s.secret ? (s.isSet ? "Set — paste a new value to replace it" : "Paste it here") : "") + '" /> '
-        + '<button type="button" class="cbm-button" data-wiz="' + esc(i.key + "|enter|" + s.id) + '">Save and check</button>';
+      foot += '<button type="button" class="cbm-button" data-wiz="' + esc(i.key + "|enter|" + s.id) + '">Save and check</button>';
     } else if (s.kind === "action") {
-      // A phase 7 coded action: the application does it, then checks.
-      html += '<button type="button" class="cbm-button" data-wiz="' + esc(i.key + "|run|" + s.id) + '">' + esc(s.runLabel || "Run") + "</button>";
+      foot += '<button type="button" class="cbm-button" data-wiz="' + esc(i.key + "|run|" + s.id) + '">' + esc(s.runLabel || "Run") + "</button>";
     } else if (s.kind === "connect") {
-      // Leaves for the vendor's sign-in and comes back to this screen.
-      html += '<a class="cbm-button" href="/api/setup/mailing/connect">Connect</a> '
-        + '<button type="button" class="cbm-button cbm-button--secondary" data-wiz="' + esc(i.key + "|done|" + s.id) + '">Done</button>';
+      // Leaves for the vendor's sign-in; the page reopens this step on return.
+      foot += '<button type="button" class="cbm-button cbm-button--secondary" data-wiz="' + esc(i.key + "|done|" + s.id) + '">Done</button>'
+        + '<a class="cbm-button" href="/api/setup/mailing/connect">Connect</a>';
     } else {
-      html += '<button type="button" class="cbm-button" data-wiz="' + esc(i.key + "|done|" + s.id) + '">Done</button>';
+      foot += '<button type="button" class="cbm-button" data-wiz="' + esc(i.key + "|done|" + s.id) + '">' + (failure ? "Check again" : "Done") + "</button>";
     }
-    if (w.canBack) html += ' <button type="button" class="cbm-button cbm-button--secondary" data-wiz="' + esc(i.key + "|back|") + '">Back</button>';
-    html += "</div>";
-    html += '<p class="form-error" id="wizError" role="alert" hidden></p>';
-    if (w.failure) {
-      html += '<div class="su__wizfail"><p><strong>Not done yet:</strong> ' + esc(w.failure.reason) + "</p>"
-        + (s.ifNot ? "<p><strong>If not:</strong> " + esc(s.ifNot) + "</p>" : "");
-      var help = w.help;
-      if (help && help.status === "running") {
-        html += '<p class="su__hint">Claude is looking into it. This takes up to a minute; the page updates by itself.</p>';
-      } else if (help && help.text) {
-        html += '<div class="su__wizhelp"><p class="su__wizlabel">Claude</p><p>' + esc(help.text) + "</p>"
-          + (help.cost != null ? '<p class="su__diagmeta">cost ' + esc(money(help.cost)) + "</p>" : "") + "</div>";
-      } else {
-        var agent = i.agent || {};
-        html += '<p><button type="button" class="cbm-button cbm-button--secondary" data-wiz="' + esc(i.key + "|ask|" + s.id)
-          + '">Ask Claude about this</button>'
-          + (agent.stored ? ' <span class="su__hint">Ask Claude has spent ' + esc(money(agent.spent)) + " of the "
-            + esc(money(agent.budget)) + " monthly budget this month.</span>" : "") + "</p>";
-      }
-      html += "</div>";
-    }
-    return html + "</div></section>";
+    foot += "</div>";
+    $("wizFoot").innerHTML = foot;
   }
 
   async function wizardAction(spec) {
@@ -660,12 +755,40 @@
       var r = await api("/integrations/" + encodeURIComponent(key) + "/wizard/" + action, { method: "POST", body: JSON.stringify(body) });
       state.page = r.page;
       renderAll();
-      var card = document.querySelector(".su__wiz");
-      if (card) card.scrollIntoView({ block: "start", behavior: "smooth" });
+      return true;
     } catch (e) {
-      var err = $("wizError");
+      var err = state.dialog ? $("wizError") : $("testError");
       if (err) { err.hidden = false; text(err, e.message); }
+      return false;
     }
+  }
+
+  // The status screen's button and its Other Actions.
+  async function integrationAction(spec) {
+    var a = spec.split("|"), key = a[0], action = a[1];
+    var i = findIntegration(key);
+    if (!i) return;
+    closeMenus();
+    if (action === "test") { await runTest(key); return; }
+    var w = i.wizard || {};
+    if (action === "fix" || action === "restart") {
+      if (await wizardAction(key + "|restart|")) openDialog(key, action === "fix" ? "fix" : "restart");
+      return;
+    }
+    if (action === "review") {
+      if (await wizardAction(key + "|review|")) openDialog(key, "review");
+      return;
+    }
+    if (action === "setup" && (w.status === "done" || w.status === "ended")) {
+      if (await wizardAction(key + "|restart|")) openDialog(key, "setup");
+      return;
+    }
+    openDialog(key, action);
+  }
+
+  function closeMenus() {
+    Array.prototype.forEach.call(document.querySelectorAll(".su__menu"), function (m) { m.hidden = true; });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-menu]"), function (b) { b.setAttribute("aria-expanded", "false"); });
   }
 
   function pollWizard() {
@@ -711,14 +834,15 @@
     if (!state.subtab || !findIntegration(state.subtab)) state.subtab = list.length ? list[0].key : null;
     $("integrationTabs").innerHTML = list.map(function (i) {
       var unused = i.status && i.status.inUse === false;
+      var st = integrationState(i);
       return '<button type="button" class="su__subtab' + (i.key === state.subtab ? " is-active" : "")
-        + (unused ? " is-unused" : "") + '" data-subtab="' + esc(i.key) + '" role="tab">'
+        + (unused ? " is-unused" : "") + '" data-subtab="' + esc(i.key) + '" role="tab" title="' + esc(st.badge) + '">'
+        + '<span class="su__dot su__dot--' + esc(st.key) + '" aria-hidden="true"></span>'
         + esc(i.name) + "</button>";
     }).join("");
     var i = findIntegration(state.subtab);
     if (!i) { $("integrationBody").innerHTML = ""; return; }
-    var html = statusLine(i);
-    html += wizardBlock(i);
+    var html = statusCard(i);
     if (i.wizard && i.wizard.help && i.wizard.help.status === "running") pollWizard();
     if (i.status && i.status.inUse === false) {
       html += '<p class="su__note su__note--warn"><strong>Not used by this chapter.</strong> '
@@ -726,21 +850,23 @@
         + "Feature readiness, and none of its features can be switched on until it is "
         + "marked in use.</p>";
     }
-    if (i.testable) html += testBlock(i);
-    html += placeholders(i);
-    html += '<section class="su__group"><h2 class="su__h2">Settings</h2>' + settingsTable(i.settings || []);
+    var openId = i.key + "/__settings";
+    html += '<details class="su__section su__settingsfold" data-open="' + esc(openId) + '"' + (isOpen(openId) ? " open" : "")
+      + "><summary>Settings and what uses " + esc(i.name) + '</summary><div class="su__foldbody">' + settingsTable(i.settings || []);
     (i.sections || []).forEach(function (s) {
       var id = i.key + "/" + s.key;
       html += '<details class="su__section" data-section="' + esc(id) + '"'
         + (state.closed[id] ? "" : " open") + "><summary>" + esc(s.title) + "</summary>"
         + (settingsTable(s.settings || []) || '<p class="su__hint">Nothing here.</p>') + "</details>";
     });
-    html += "</section>" + usedByBlock(i);
+    html += usedByBlock(i);
     if ((i.runbooks || []).length) {
       html += '<p class="su__hint">Runbook' + (i.runbooks.length === 1 ? "" : "s") + " in the repository: "
         + i.runbooks.map(function (r) { return "<code>" + esc(r) + "</code>"; }).join(", ") + "</p>";
     }
+    html += "</div></details>";
     $("integrationBody").innerHTML = html;
+    renderDialog();
     Array.prototype.forEach.call($("integrationBody").querySelectorAll("table"), function (t) {
       fitGrid(t, t.classList.contains("su__table--usedby") ? "setup.usedBy" : "setup.settings");
     });
@@ -1253,21 +1379,42 @@
       if (findIntegration(sub)) state.subtab = sub;
       selectTab("integrations");
       // The nightly alert's link, /setup/#integrations/zoom/wizard: the
-      // set-up wizard, where Fix with the wizard is offered. Nothing changes
-      // until a button is clicked.
+      // status screen, whose button reads Fix after a failure. Nothing
+      // changes until a button is clicked.
       if (hash.split("/")[2] === "wizard") {
-        var wiz = document.querySelector(".su__wiz") || document.querySelector(".su__test");
-        if (wiz) wiz.scrollIntoView({ block: "start" });
+        var card = document.querySelector(".su__card");
+        if (card) card.scrollIntoView({ block: "start" });
+      }
+      // Back from Constant Contact's Connect: reopen the setup on that step.
+      var back = findIntegration(state.subtab);
+      if (back && back.wizard && back.wizard.inProgress && back.wizard.screen && back.wizard.screen.kind === "connect") {
+        openDialog(back.key, "continue");
       }
     }
   }
 
   document.addEventListener("click", function (ev) {
     var t = ev.target;
+    // The status screen: its button, Other Actions and the setup dialog. These
+    // carry markup inside them, so the click is matched on the button itself.
+    var hit = t.closest ? t.closest("[data-ia],[data-menu],[data-wizclose],[data-subtab]") : null;
+    if (hit && hit.dataset.ia) { integrationAction(hit.dataset.ia); return; }
+    if (hit && hit.dataset.menu) {
+      var menu = hit.parentNode.querySelector(".su__menu");
+      var opening = menu.hidden;
+      closeMenus();
+      menu.hidden = !opening;
+      hit.setAttribute("aria-expanded", String(opening));
+      if (opening) menu.querySelector("button").focus();
+      return;
+    }
+    if (hit && hit.dataset.wizclose) { closeDialog(); return; }
+    if (hit && hit.dataset.subtab) { ev.preventDefault(); closeMenus(); selectSubtab(hit.dataset.subtab); return; }
+    if (!(t.closest && t.closest(".su__menuwrap"))) closeMenus();
+    if (t.id === "wizOverlay") { closeDialog(); return; }
     if (t.dataset && t.dataset.edit) { openEditor(t.dataset.edit); return; }
     if (t.dataset && t.dataset.test) { runTest(t.dataset.test, t); return; }
     if (t.dataset && t.dataset.wiz) { wizardAction(t.dataset.wiz); return; }
-    if (t.dataset && t.dataset.subtab) { ev.preventDefault(); selectSubtab(t.dataset.subtab); return; }
     if (t.dataset && t.dataset.goto) { ev.preventDefault(); gotoSetting(t.dataset.goto); return; }
     if (t.dataset && t.dataset.confirm) { confirmSetting(t.dataset.confirm); return; }
     if (t.dataset && t.dataset.dry) { runJob(t.dataset.dry, false); return; }
@@ -1294,7 +1441,16 @@
     document.addEventListener("toggle", function (ev) {
       var d = ev.target;
       if (d && d.dataset && d.dataset.section) state.closed[d.dataset.section] = !d.open;
+      if (d && d.dataset && d.dataset.open) setOpen(d.dataset.open, d.open);
     }, true);
+    // Escape closes an open Other Actions menu, else the setup dialog (its
+    // place is kept: closing never undoes a step).
+    document.addEventListener("keydown", function (ev) {
+      if (ev.key !== "Escape") return;
+      var open = document.querySelector(".su__menu:not([hidden])");
+      if (open) { closeMenus(); var b = open.parentNode.querySelector("[data-menu]"); if (b) b.focus(); return; }
+      if (state.dialog) closeDialog();
+    });
     $("onlyOverridden").addEventListener("change", renderSettings);
     $("reloadBtn").addEventListener("click", boot);
     $("editCancel").addEventListener("click", closeEditor);

@@ -133,6 +133,20 @@
       </div>
     </section>
 
+    <!-- The setup dialog: Setup, Fix and Review run here, one step at a time.
+         Closing keeps the place (Doug's ruling 11-15-26). -->
+    <div class="su__overlay" id="wizOverlay" hidden>
+      <div class="su__dialog su__wizdialog" role="dialog" aria-modal="true" aria-labelledby="wizTitle">
+        <div class="su__wizhead">
+          <h2 id="wizTitle">Setup</h2>
+          <button type="button" class="cbm-button cbm-button--secondary" data-wizclose="1">Close</button>
+        </div>
+        <div class="su__wizprog"><span id="wizStep"></span><span class="su__wizbar" aria-hidden="true"><i id="wizBar"></i></span></div>
+        <div class="su__wizbody" id="wizBody"></div>
+        <div class="su__wizfoot" id="wizFoot"></div>
+      </div>
+    </div>
+
     <!-- Edit dialog -->
     <div class="su__overlay" id="editOverlay" hidden>
       <div class="su__dialog" role="dialog" aria-modal="true" aria-labelledby="editTitle">

@@ -1,6 +1,6 @@
 # System Settings (`/setup`) — activation and use
 
-Last Updated: 11-15-26 15:04 · Revision 1.3 — see change log at the end.
+Last Updated: 11-15-26 18:38 · Revision 1.4 — see change log at the end.
 
 The admin-only page that changes this deployment's runtime settings from the
 browser instead of editing a deployment overlay and running `doctl`. Plan and
@@ -295,7 +295,7 @@ An integration is an outside service this application calls with its own
 credentials: EspoCRM, Google Workspace, Zoom Meetings, Zoom Webinars,
 Fathom, Constant Contact, Lob, Twilio, Anthropic and YouTube. The
 Integrations tab gives each one a sub-tab of its own. On that sub-tab an
-administrator sets the integration up with a wizard, tests it, and changes
+administrator sets the integration up in the setup dialog, tests it, and changes
 its settings. Built v0.321.0 to v0.335.0. Design and rulings:
 `prds/integrations-tab-plan.md`.
 
@@ -321,28 +321,48 @@ When the switch is **on**, four things change:
 
 A deep link opens one sub-tab: `/setup/#integrations/zoom_meetings`.
 
-### 8.2 What a sub-tab shows
+### 8.2 What a sub-tab shows: the status screen
 
-Each sub-tab shows these parts, top to bottom:
+Each sub-tab is a **status screen** (v0.337.0, Doug's rulings 11-15-26). It
+shows where the integration stands and offers one thing to do next. Every
+process runs in a dialog over it (§ 8.5).
 
-1. **The status line**, for example *"Zoom Meetings: in use · on
-   (zoom_meetings_events) · credentials set · last test passed 11-15-26
-   14:02"*. EspoCRM shows *always in use* and whether dry run is on. An
-   integration with missing credentials names each one.
-2. **The set-up wizard** (§ 8.5).
-3. **The integration test**: the Test Integration button and the last
-   result (§ 8.4).
-4. **Settings**: the integration's switches and settings. They are edited
-   exactly as on the Settings tab, through the same checked save. Google
-   Workspace's settings sit in sections that fold: Credentials, Drive,
-   Calendar, Meet, Gmail and the shared mailbox, Workspace accounts.
-5. **Used by**: settings elsewhere that depend on this integration. They
-   stay where they are, and each one links to its place on the Settings
-   tab. A row marked *needs <integration>* cannot work without it.
-6. The integration's runbooks in the repository.
+1. **The heading and its state.** The state is one of *Set up*, *Needs
+   attention* (with how many checks fail), *Not set up*, *Not tested yet*,
+   *Setup not finished*, *Setup in progress* (with the step), or *Not used by
+   this chapter*. The same state shows as a coloured dot on the sub-tab:
+   red needs attention, green is set up, amber is a setup in progress, grey
+   is not set up or not tested, and an empty ring is not used.
+2. **The status line**, for example *"in use · on (zoom_meetings_events) ·
+   credentials set · last test passed 11-15-26 14:02, run by admin"*.
+   EspoCRM shows *always in use* and whether dry run is on. Missing
+   credentials are named one by one.
+3. **One button, chosen by the state**, checked in this order:
+   - not used by this chapter: **Setup**;
+   - a setup left partway through: **Continue setup**;
+   - the last test failed or could not be completed: **Fix**;
+   - no test yet: **Setup** when credentials are missing, otherwise **Test
+     Integration**;
+   - the last test passed: **Setup** when a setup step still fails,
+     otherwise **Test Integration**.
+4. **Other Actions ▾** lists the rest, each with a line saying what it
+   does: **Test Integration**, **Review the setup** (opens the setup at its
+   first step, to see or change any answer) and **Start the setup again**
+   (opens it at the first step that does not pass). The button's own action
+   is never repeated there.
+5. **Checks from the last test**, failed checks first, then **Integration
+   facts** (§ 8.4).
+6. **Settings and what uses <integration>**, folded. It holds the
+   integration's settings, edited exactly as on the Settings tab through the
+   same checked save; Google Workspace's sections (Credentials, Drive,
+   Calendar, Meet, Gmail and the shared mailbox, Workspace accounts); the
+   **Used by** list, linking each setting to its place on the Settings tab
+   (a row marked *needs <integration>* cannot work without it); and the
+   runbooks. This browser remembers whether you left it open.
 
-Opening the page never calls an outside service. The status line and the
-wizard are worked out from the stored settings and the last stored test.
+Opening the page never calls an outside service. The state, the checks and
+the setup's place are worked out from the stored settings and the last
+stored test.
 
 ### 8.3 "In use" and its two refusals
 
@@ -404,27 +424,32 @@ for every scope of guide step 10.3, whatever is switched on. It can fail
 the button on a deployment whose grant lacks a scope that no switched-on
 feature needs. The guide grants them all. The nightly run skips this line.
 
-When a test does not pass, **Fix with the wizard** appears under it. It
-starts the wizard again at the first screen whose check fails.
+**Test Integration** runs in place, from the button or from Other Actions,
+and the status screen updates. When a test does not pass, the button
+becomes **Fix**.
 
-### 8.5 The set-up wizard
+### 8.5 The setup dialog
 
-The wizard sets an integration up, or repairs it, one screen at a time.
-Each screen is one action, with **What** it is, **Why** it matters and
-**How** to do it. A value to paste has its own **Copy** button. A screen is
-checked before the next one appears.
+**Setup**, **Fix**, **Continue setup**, **Review the setup** and **Start the
+setup again** all open the **setup dialog** over the status screen. It sets
+an integration up, or repairs it, one step at a time. Each step is one
+action, with **What** it is, **Why** it matters and **How** to do it. A
+value to paste has its own **Copy** button. A step is checked before the
+next one appears. The heading names the process and the step, for example
+*"Fix EspoCRM · Step 3 of 9"*, with a progress bar.
 
-The screens are written in the chapter deployment guide's step files
+The steps are written in the chapter deployment guide's step files
 (`prds/chapter-network/deployment-guide/steps/`), so the guide and the
-wizard cannot disagree. Work done before this application exists, such as
+setup cannot disagree. Work done before this application exists, such as
 building the Google Workspace account or the CRM server, stays in the guide
 alone.
 
-A screen asks for one of five things:
+A step asks for one of five things. The strong button sits on the right of
+the dialog's foot; **← Back** sits on the left.
 
 - **An answer** to a question, such as *Does this chapter use Zoom
-  Meetings?* An answer can save settings and choose which screens follow.
-  Answering No to the first question ends the wizard. The integration is
+  Meetings?* An answer can save settings and choose which steps follow.
+  Answering No to the first question ends the setup. The integration is
   then marked not used by this chapter.
 - **A value** in a box, then **Save and check**. A secret's box never shows
   the stored value. It shows only *Set — paste a new value to replace it*.
@@ -432,35 +457,37 @@ A screen asks for one of five things:
   drive and Twilio's sender number are the two. The value it finds is saved
   for you.
 - **Connect**, for Constant Contact. It leaves for Constant Contact's
-  sign-in, returns to the Constant Contact sub-tab, and then you click
-  **Done**.
+  sign-in. On the way back the page reopens the dialog on that step, and
+  you click **Done**.
 - **Done**, for an action carried out in the vendor's own screens.
 
-**Where it starts.** The wizard opens at the first screen whose check
-fails. The screens before it are taken as done. When every check passes,
-the sub-tab says *"<integration> is set up. Every check passes."*
+**Where it opens.** **Fix** and **Start the setup again** open at the first
+step whose check fails; the steps before it are taken as done. **Review the
+setup** opens at step 1. **Continue setup** opens where the setup was left.
+When the last step passes, the dialog says *"<integration> is set up.
+Every check passes."*
 
-**Back** returns to the screen before, including the screens the wizard
-opened past (v0.336.1). When the sub-tab says the integration is set up,
-**Review the screens** opens the first screen, so any answer can be seen
-and changed. **Start the wizard again** clears the wizard's place and starts
-again from the first failing screen. Settings
-already saved stay saved, and an earlier answer still chooses its branch.
+**← Back** returns to the step before, including the steps the setup opened
+past (v0.336.1). Settings already saved stay saved, and an earlier answer
+still chooses its branch.
 
-**The wizard's place is kept for the whole deployment.** A second
-administrator opening the sub-tab sees the same screen. Every setting the
-wizard saves goes through the checked save, as the administrator who
-clicked, with the reason *set in the setup wizard*. It shows on the History
-tab like any other change.
+**Close**, **Escape** or a click outside the dialog closes it and keeps
+its place. Closing never undoes a step. **The place is kept for the whole
+deployment**: a second administrator sees *Setup in progress* and
+**Continue setup**. Every setting a step saves goes through the checked
+save, as the administrator who clicked, with the reason *set in the setup
+wizard*. It shows on the History tab like any other change.
 
-**A failed screen** stays on screen. It shows **Not done yet:** with the
-check's own words, and **If not:** with the guide's advice for that case.
-A value that was saved and then undone automatically says so. A refusal
-from the checked save is shown in its own words.
+**A failed step** stays open. It shows **Not done yet:** with the check's
+own words, and **If not:** with the guide's advice for that case. **Fix**
+opens with the stored test's failure already shown, before anything is
+clicked. On a step that has failed, **Done** reads **Check again**. A value
+that was saved and then undone automatically says so. A refusal from the
+checked save is shown in its own words.
 
 ### 8.6 Ask Claude about this
 
-A failed screen offers **Ask Claude about this**. Claude is called only when
+A failed step offers **Ask Claude about this**, a button in the dialog's foot. Claude is called only when
 someone clicks it. It reads that failure, the integration's settings, its
 readiness rows, its last test, its recent errors, its guide steps and its
 runbook, and the vendor's own documentation sites. It answers on that
@@ -469,7 +496,7 @@ screen, normally within a minute. The page updates by itself.
 - **Claude only reads.** It cannot change a setting or call the vendor.
 - **Claude never sees a secret's value**, only whether each secret is set
   and when it last changed.
-- **It costs money**, so the button shows what Ask Claude has spent this
+- **It costs money**, so a failed step says what Ask Claude has spent this
   month against the monthly budget. Each answer shows its own cost. One
   answer stops itself at $5.
 - **Once the month's spending reaches the budget, Ask Claude is refused.**
@@ -503,7 +530,8 @@ button checks them.
 
 A failure's alert names each failed check, and ends with a link of the form
 `<application address>/setup/#integrations/<integration>/wizard`. The link
-opens the sub-tab at the wizard. Nothing changes until a button is clicked.
+opens that integration's status screen, whose button reads **Fix**. Nothing
+changes until a button is clicked.
 
 The alert remembers through the stored test runs, so a deploy or a restart
 never repeats one. Every run, manual or nightly, is kept in
@@ -514,7 +542,7 @@ reset, so its history is one day long.
 
 Set `INTEGRATIONS_TAB` back to off. The settings return to the Settings
 tab's groups with their values unchanged, the sub-tabs disappear, and the
-nightly test stops. Nothing is lost: the wizard's place, the stored test
+nightly test stops. Nothing is lost: the setup's place, the stored test
 runs and Ask Claude's spending stay in the database for when it is switched
 on again.
 
@@ -525,6 +553,7 @@ The two refusals in § 8.3 stay active with the switch off. With every
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.4 | 11-15-26 18:38 | Claude (Claude Code) | § 8.2, § 8.4 to § 8.7: each sub-tab is a status screen with one button and Other Actions ▾; Setup, Fix and Review run in the setup dialog (v0.337.0, Doug's rulings 11-15-26). |
 | 1.3 | 11-15-26 15:04 | Claude (Claude Code) | § 8.5: Back reaches the screens the wizard opened past, and Review the screens (v0.336.1). |
 | 1.2 | 11-15-26 13:41 | Claude (Claude Code) | Stale text corrected (Doug's approval 11-15-26): § 1 and § 2 name the Business Mentors Association's system as the test system; § 5 rewritten to the 08-28-26 ruling (three read-only settings; secrets and the CRM connection editable through the checked save; the 10-minute countdown); § 4's "What this page cannot switch on" became "Settings that need a restart"; the troubleshooting row follows. |
 | 1.1 | 11-15-26 13:30 | Claude (Claude Code) | § 8, the Integrations tab (v0.321.0 to v0.335.0), written from what was built: the switch, the sub-tabs, "in use" and its refusals, Test Integration, the set-up wizard, Ask Claude and its budget, the nightly test and its alert, switching it off. Revision header and change log added. |

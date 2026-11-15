@@ -5,6 +5,43 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.337.0] — 2026-11-15
+
+**feat(setup): each Integrations sub-tab becomes a status screen, and the
+setup runs in a dialog.** Dark behind **`INTEGRATIONS_TAB`**. Doug's finding
+in the phase 11 live review on the Business Mentors Association's system
+("Buttons all over the screen, no hierarchy"), and his rulings of 11-15-26:
+a status screen, every step-by-step process in a dialog, one button —
+Setup, Fix or Test Integration — and never a link styled as a button
+(Other Actions ▾ for the rest). Mock-up approved 11-15-26, with the state
+dots, Check again and Continue setup. `OPEN-ITEMS.md` #82.
+
+- **The status screen**: the integration's name and its state (Set up,
+  Needs attention, Not set up, Not tested yet, Setup not finished, Setup in
+  progress, Not used by this chapter), the status line, **one button**
+  chosen by the state (`integrationState` in `setup/frontend/app.js`),
+  **Other Actions ▾** with Test Integration, Review the setup and Start
+  the setup again, each with a line saying what it does; the last test's
+  checks with failed ones first; the facts; the settings, Google's
+  sections, Used by and the runbooks folded under one *Settings and what
+  uses …* (remembered per browser). A coloured dot on each sub-tab shows
+  its state.
+- **The setup dialog**: one step at a time, the step and a progress bar in
+  its heading, ← Back on the left of its foot, the strong button on the
+  right, Ask Claude as a button beside it. **Fix opens with the stored
+  test's failure already shown.** Done reads **Check again** on a failed
+  step, and the step's How follows it. Close, Escape or a click outside
+  closes it and keeps the place; a setup someone left shows **Continue
+  setup**. Returning from Constant Contact's Connect reopens the dialog on
+  that step.
+- **Removed**: the inline wizard panel, the separate Integration test panel
+  and its Test Integration button, and Fix with the wizard (the button is
+  Fix). The nightly alert's link opens the status screen, whose button
+  reads Fix. The engine and every endpoint are unchanged; the wizard view
+  gains `inProgress`.
+- Tests: `tests/test_integration_status_screen.py` (3, running the page's
+  state rules in node); the removal and wizard tests follow. 4021 passed.
+
 ## [0.336.1] — 2026-11-15
 
 **fix(setup): the set-up wizard's Back reaches every earlier screen, and a

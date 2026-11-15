@@ -186,26 +186,15 @@
 }
 .su__subtab.is-active { background: var(--color-primary, #00693e); border-color: var(--color-primary, #00693e); color: #fff; font-weight: 600; }
 .su__subtab.is-unused:not(.is-active) { color: var(--color-text-muted, #777); border-style: dashed; }
-.su__status { margin: 0 0 0.6rem; padding: 0.55rem 0.8rem; border-radius: 6px; background: #eef4fb; color: #23486e; font-size: 0.92rem; }
-.su__status--unused { background: #f0f0f0; color: #555; }
-.su__placeholders { list-style: none; margin: 0 0 0.6rem; padding: 0; font-size: 0.85rem; color: var(--color-text-muted, #5c5c5c); }
-.su__placeholders li { padding: 0.1rem 0; }
 .su__section { margin: 0.6rem 0; border: 1px solid var(--color-border, #e2e2e2); border-radius: 6px; padding: 0.3rem 0.7rem 0.5rem; }
 .su__section > summary { cursor: pointer; font-weight: 600; padding: 0.3rem 0; }
 .su__goto { color: var(--color-primary, #00693e); }
 .su__table.cbm-grid tbody tr.su__row.is-flash > td, .su__row.is-flash { background-color: #fff3c4; }
 
-/* The integration test (Integrations tab, phase 2) */
-.su__testbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin: 0 0 0.5rem; }
-.su__testsummary { margin: 0.2rem 0 0.4rem; padding: 0.4rem 0.7rem; border-radius: 6px; font-size: 0.92rem; }
-.su__testsummary--ok { background: #e8f4ec; color: #14603c; }
-.su__testsummary--failed { background: #fbeaea; color: #8a1f1f; }
-.su__testsummary--unknown { background: #fff6dc; color: #6b5300; }
 .su__itestchecks { list-style: none; margin: 0 0 0.6rem; padding: 0; }
 .su__itestcheck { padding: 0.2rem 0; border-bottom: 1px solid var(--color-border, #eee); font-size: 0.9rem; }
 .su__itestcheck--skipped { color: var(--color-text-muted, #777); }
 .su__itestdetail { color: var(--color-text-muted, #4a4a4a); }
-.su__test .su__h3 { font-size: 0.95rem; margin: 0.6rem 0 0.3rem; }
 .su__facts { display: grid; grid-template-columns: max-content 1fr; gap: 0.15rem 1rem; margin: 0 0 0.6rem; font-size: 0.9rem; }
 .su__facts dt { font-weight: 600; }
 .su__facts dd { margin: 0; overflow-wrap: anywhere; }
@@ -215,14 +204,60 @@
 .su__diagcopy { display: flex; align-items: center; gap: 0.5rem; margin: 0.3rem 0; }
 .su__diagcopy code { background: var(--cbm-surface-alt, #f1f3f5); padding: 0.2rem 0.4rem; border-radius: 4px; overflow-wrap: anywhere; }
 
-/* The set-up wizard (Integrations tab, plan § 10): one screen at a time. */
-.su__wiz { margin-top: 0.6rem; }
-.su__wizpos { color: var(--color-text-muted, #666); font-size: 0.85rem; margin: 0 0 0.3rem; }
-.su__wizcard { border: 1px solid var(--color-border, #dfe3e8); border-radius: 8px; padding: 0.8rem 1rem; background: var(--cbm-surface, #fff); }
-.su__wiztitle { margin: 0 0 0.5rem; font-size: 1.1rem; }
-.su__wizlabel { display: inline-block; min-width: 7.5rem; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--color-text-muted, #666); }
-.su__wizact { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0.7rem 0 0.2rem; }
-.su__wizinput { flex: 1 1 22rem; min-width: 0; padding: 0.45rem 0.6rem; font: inherit; border: 1px solid var(--color-border, #c9d0d8); border-radius: 6px; }
-.su__wizfail { margin-top: 0.6rem; border-left: 3px solid var(--cbm-warning, #b26a00); padding-left: 0.7rem; }
-.su__wizhelp { margin-top: 0.4rem; background: var(--cbm-surface-alt, #f6f8fb); border-radius: 6px; padding: 0.5rem 0.7rem; white-space: pre-wrap; }
+/* An integration's status screen (Doug's rulings 11-15-26, after the phase 11
+   review): one card, one primary button, Other Actions ▾ for the rest. */
+.su__dot { display: inline-block; width: 0.55rem; height: 0.55rem; border-radius: 50%; margin-right: 0.45rem; vertical-align: 0.05rem; }
+.su__dot--bad { background: #c62828; }
+.su__dot--ok { background: #2e8540; }
+.su__dot--progress { background: var(--cbm-gold, #CB963B); }
+.su__dot--none { background: #b8bec8; }
+.su__dot--unused { background: transparent; box-shadow: inset 0 0 0 1.5px #b8bec8; }
+.su__subtab.is-active .su__dot { box-shadow: 0 0 0 2px #fff; }
+.su__card { border: 1px solid var(--color-border, #dfe3e8); border-radius: 8px; padding: 1.1rem 1.3rem; background: #fff; margin-bottom: 0.8rem; }
+.su__cardtop { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: flex-start; }
+.su__cardhead { flex: 1 1 28rem; min-width: 0; }
+.su__cardname { display: flex; flex-wrap: wrap; align-items: center; gap: 0.7rem; }
+.su__cardname .su__h2 { margin: 0; font-size: 1.45rem; }
+.su__cardline { margin: 0.4rem 0 0; color: var(--color-text-muted, #4a5260); font-size: 0.92rem; }
+.su__badge { font-size: 0.82rem; font-weight: 600; border-radius: 999px; padding: 0.15rem 0.65rem; }
+.su__badge--bad { background: #fbeaea; color: #8a1f1f; }
+.su__badge--ok { background: #e8f4ec; color: #14603c; }
+.su__badge--progress { background: #fff3dc; color: #7a5200; }
+.su__badge--none, .su__badge--unused { background: #eef0f3; color: #4a5260; }
+.su__cardbtns { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: flex-start; }
+.su__cardbtns .cbm-button--secondary, .su__wizdialog .cbm-button--secondary {
+  background: #fff; color: var(--cbm-navy, #173B60); border: 1.5px solid var(--cbm-navy, #173B60);
+}
+.su__menuwrap { position: relative; }
+.su__menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; list-style: none; margin: 0; padding: 0.25rem 0;
+  min-width: 17rem; background: #fff; border: 1px solid var(--color-border, #d8d8d8); border-radius: 6px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12); }
+.su__menu[hidden] { display: none; }
+.su__menu button { display: block; width: 100%; text-align: left; font: inherit; background: none; border: 0; padding: 0.55rem 1rem; cursor: pointer; color: var(--color-text, #1c1c1c); }
+.su__menu button:hover, .su__menu button:focus-visible { background: #f0f5fa; }
+.su__menu small { display: block; color: var(--color-text-muted, #6b7280); font-size: 0.8rem; pointer-events: none; }
+.su__itestcheck--failed { background: #fbeaea; }
+.su__settingsfold > summary { color: var(--cbm-navy, #173B60); }
+.su__foldbody { overflow-x: auto; }
+
+/* The setup dialog: one step at a time. */
+.su__wizdialog { width: min(48rem, 100%); display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.su__wizhead { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1rem 1.3rem 0.4rem; }
+.su__wizprog { display: flex; align-items: center; gap: 0.7rem; padding: 0 1.3rem 0.8rem; border-bottom: 1px solid var(--color-border, #e2e2e2);
+  font-size: 0.85rem; color: var(--color-text-muted, #666); font-variant-numeric: tabular-nums; }
+.su__wizbar { flex: 1; height: 6px; background: #eef0f3; border-radius: 3px; overflow: hidden; min-width: 4rem; }
+.su__wizbar i { display: block; height: 100%; background: var(--cbm-navy, #173B60); }
+.su__wizbody { padding: 1rem 1.3rem; overflow-y: auto; }
+.su__wizfoot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.6rem; padding: 0.8rem 1.3rem; border-top: 1px solid var(--color-border, #e2e2e2); }
+.su__wizfootright { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; }
+.su__wiztitle { margin: 0 0 0.6rem; font-size: 1.1rem; }
+.su__wizwh { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0.4rem 1rem; margin: 0; }
+.su__wizwh dt { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-text-muted, #666); padding-top: 0.15rem; }
+.su__wizwh dd { margin: 0; }
+.su__wizlabel { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--cbm-navy, #173B60); margin: 0 0 0.2rem; }
+.su__wizbox { margin-top: 0.8rem; }
+.su__wizinput { width: 100%; max-width: 36rem; padding: 0.45rem 0.6rem; font: inherit; border: 1px solid var(--color-border, #c9d0d8); border-radius: 6px; }
+.su__wizfail { margin: 0 0 0.9rem; background: #fbeaea; border-left: 4px solid #c62828; border-radius: 4px; padding: 0.6rem 0.8rem; }
+.su__wizfail p { margin: 0 0 0.3rem; }
+.su__wizfail p:last-child { margin: 0; }
+.su__wizhelp { margin: 0 0 0.9rem; background: #f0f5fa; border-radius: 6px; padding: 0.6rem 0.8rem; white-space: pre-wrap; }
 .su__wizdone { font-weight: 600; }

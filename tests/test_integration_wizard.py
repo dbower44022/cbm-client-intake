@@ -382,4 +382,4 @@ def test_the_page_offers_review_on_a_set_up_wizard():
     from pathlib import Path
 
     js = Path("setup/frontend/app.js").read_text(encoding="utf-8")
-    assert '"|review|"' in js and "Review the screens" in js
+    assert '"|review|"' in js and "Review the setup" in js
