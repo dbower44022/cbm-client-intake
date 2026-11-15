@@ -1,8 +1,8 @@
 # Kickoff prompt — Integrations tab, phase 10: the removal (ruling W4)
 
-Last Updated: 11-15-26 11:23 · Revision 0.1 (draft) — see change log at the end.
+Last Updated: 11-15-26 11:47 · Revision 0.2 (approved) — see change log at the end.
 
-**Draft for Doug's approval.** Paste everything below the line into a fresh
+**Approved by Doug 11-15-26.** Paste everything below the line into a fresh
 Claude Code session rooted in `~/Dropbox/Projects/cbm-client-intake`.
 
 ---
@@ -110,4 +110,5 @@ Then stop.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.2 | 11-15-26 11:47 | Claude (Claude Code) | Approved by Doug. |
 | 0.1 | 11-15-26 11:23 | Claude (Claude Code) | Draft written at the close of phase 9 (v0.334.0). |
