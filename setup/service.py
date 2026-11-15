@@ -31,7 +31,6 @@ from core.settings_registry import (
 )
 from core.settings_registry import BY_KEY, INTEGRATION_TAGS
 from core.settings_store import Override, SettingsStore, scoped_overrides
-from integrations import checklist
 from integrations import guard as integration_guard
 from integrations import registry as integration_registry
 from integrations.registry import IN_USE_KEYS, INTEGRATIONS
@@ -162,7 +161,7 @@ def _readonly_rows(settings: Settings, env: dict[str, Any]) -> list[dict[str, An
 async def page_payload(
     store: Optional[SettingsStore],
     test_runs: Optional[dict[str, dict[str, Any]]] = None,
-    checklist_state: Optional[dict[str, Any]] = None,
+    page_state: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     """Everything the page renders in one call. ``test_runs`` is the last
     integration test of each integration (integrations/store.py), read only
@@ -243,13 +242,8 @@ async def page_payload(
     if tab_on:
         payload["integrationsTab"] = True
         payload["integrations"] = _integrations(settings, env, overrides, tagged,
-                                                test_runs or {}, checklist_state or {})
+                                                test_runs or {}, page_state or {})
     return payload
-
-
-# What brings each placeholder on a sub-tab (the build phases, plan § 8).
-DIAGNOSIS_PHASE = 6
-CHECKLIST_PHASE = 4
 
 
 def _integrations(
@@ -258,24 +252,14 @@ def _integrations(
     overrides: dict[str, Override],
     tagged: dict[str, dict[str, Any]],
     test_runs: dict[str, dict[str, Any]],
-    checklist_state: Optional[dict[str, Any]] = None,
+    page_state: Optional[dict[str, Any]] = None,
 ) -> list[dict[str, Any]]:
     """One entry per integration, in registry order: its status line, its
     settings (rendered by the same ``_row`` as the Settings tab) and its
     "Used by" list."""
     order = {key: i for i, key in enumerate(INTEGRATION_TAGS)}
     scoped = scoped_overrides()
-    cs = checklist_state or {}
-    state = checklist.State(
-        settings=settings, overrides=overrides, test_runs=test_runs,
-        ticks=cs.get("ticks") or {}, mailing_connected=cs.get("mailingConnected"),
-        stored_google=cs.get("storedGoogle") or {},
-    )
-    try:
-        steps = checklist.load_steps()
-    except Exception as exc:  # noqa: BLE001 — the rest of the page still renders
-        log.warning("setup checklist steps could not be read: %s", exc)
-        steps = None
+    cs = page_state or {}
     out: list[dict[str, Any]] = []
     for integ in INTEGRATIONS:
         rows = sorted(
@@ -343,18 +327,10 @@ def _integrations(
             "inUseKey": integ.in_use_setting,
             "testable": integ.testable,
             "status": status,
-            "checklist": (checklist.build(integ, state, steps) if steps is not None
-                          else {"rows": [], "done": 0, "total": 0,
-                                "error": "The deployment guide's step files could not be read."}),
-            "ticksStored": bool(cs.get("ticksStored")),
-            # The diagnosis agent (phase 6): the last fix plan, and what
-            # diagnoses have spent this month against the budget.
-            "fixPlan": (cs.get("fixPlans") or {}).get(integ.key),
-            # The setup wizard (plan § 10): where it stands, or None when the
+            # The set-up wizard (plan § 10): where it stands, or None when the
             # integration has no screens yet.
             "wizard": _wizard_view(integ.key, settings, overrides, test_runs, cs),
-            # The setup assistant (phase 7): the last setup plan.
-            "setupPlan": (cs.get("setupPlans") or {}).get(integ.key),
+            # Ask Claude (ruling W6): what it has spent this month against the budget.
             "agent": {"spent": cs.get("agentSpent"),
                       "budget": float(settings.integration_agent_monthly_budget or 0),
                       "keySet": bool((settings.anthropic_api_key or "").strip()),
@@ -364,11 +340,7 @@ def _integrations(
             "usedBy": used_by,
             "features": list(integ.features),
             "runbooks": list(integ.runbooks),
-            "phases": {
-                "test": integ.test_phase,
-                "diagnosis": DIAGNOSIS_PHASE,
-                "checklist": CHECKLIST_PHASE,
-            },
+            "phases": {"test": integ.test_phase},
         })
     return out
 

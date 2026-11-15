@@ -1,7 +1,7 @@
 stage: 9
 name: Build the CRM system
-version: "0.21"
-updated: "11-15-26 11:22"
+version: "0.22"
+updated: "11-15-26 11:49"
 why: >-
   The CRM is the chapter's system of record. Every client, mentor, partner,
   funder and meeting lives in it, and every application reads and writes it.
@@ -471,7 +471,6 @@ steps:
       - "Every team carries a role."
       - "The logo, the site address and the documentation tab are set."
     check:
-      auto: [setting_set:espo_api_key, setting_set:espo_provision_username, setting_set:espo_provision_password]
       how: Each test above showed what it should.
       probe: The conformance check compares teams, roles, templates and settings with the standard, and the app makes one read request with the key.
     if_not:
@@ -598,7 +597,6 @@ steps:
       - do: "Write each difference that is allowed on purpose, with its reason, in the chapter's entry in the list of watched systems (step 12.5)."
     done_when: The checking tool reports that the CRM matches the standard, apart from differences that are written down with their reasons.
     check:
-      auto: [test_passed:espocrm]
       how: The report lists nothing that is not written down in the list of watched systems.
       probe: The app runs the conformance check and shows its result.
     if_not:
@@ -622,6 +620,10 @@ steps:
     source: 3-Methods-CRM-Google-Applications.md#9.20
 
 changes:
+  - version: "0.22"
+    date: "11-15-26 11:49"
+    change: >-
+      The check.auto key removed from every step (Integrations tab phase 10, ruling W4): the setup checklist it fed is replaced by the set-up wizard, whose screens carry their own checks. Nothing else reads it. No step of the guide changes.
   - version: "0.21"
     date: "11-15-26 11:22"
     change: >-

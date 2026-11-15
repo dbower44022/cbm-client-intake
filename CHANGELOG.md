@@ -5,6 +5,52 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.335.0] — 2026-11-15
+
+**feat(setup): the Integrations tab, phase 10 — the set-up wizard replaces
+the setup checklist, setup plans and fix plans.** Dark behind
+**`INTEGRATIONS_TAB`**. Plan `prds/integrations-tab-plan.md` § 10, ruling
+W4 (removal approved by Doug 11-13-26); the removal list approved 11-15-26,
+option A; `OPEN-ITEMS.md` #82.
+
+- **Removed**: the setup checklist's display on every sub-tab, its hand
+  ticks, their endpoint and their History tab rows; the setup assistant
+  (Set up with Claude) and its setup plans; Diagnose with Claude and its fix
+  plans with Approve and apply, and the runner that carried them out
+  (`_carry_out`, `_execute_step`). Eight endpoints are gone
+  (`…/checklist/{step}`, `…/diagnose`, `…/setup`, `…/fixplan`,
+  `…/setupplan`, `…/fixplan/{id}/apply`, `…/steps/{n}/done`, `…/discard`),
+  with `integrations/ticks.py` and `integrations/fixplans.py`.
+- **Kept underneath**: the integration tests, the nightly test, the coded
+  actions (the wizard's button screens; their tests move to
+  `tests/test_integration_actions.py`) and, in `integrations/diagnosis.py`,
+  only what Ask Claude uses: the read-only tools, the web tools held to the
+  documentation sites, the loop. The `get_checklist` tool becomes
+  `list_guide_steps`, and `read_guide_step` reads only the integration's
+  own steps. `integrations/checklist.py` keeps only the reading of the step
+  files, which the wizard uses.
+- **Fix with the wizard**: a failed integration test on the sub-tab offers
+  it; it starts the wizard again, at the first screen whose check fails
+  (W5). The nightly alert's one link is now
+  `/setup/#integrations/<key>/wizard`, which opens the sub-tab at the wizard
+  and changes nothing on its own.
+- **The monthly budget counts Ask Claude alone**, and the Ask Claude button
+  shows what it has spent. Migration **`0049_drop_checklist_fix_plans`**
+  first copies every fix or setup plan that cost something into
+  `integration_agent_call` (status `fix plan` or `setup plan`), so this
+  month's spending is kept, then drops `integration_checklist_tick` and
+  `integration_fix_plan`. Downgrade recreates both empty and deletes the
+  copies. Run up and down on Postgres with rows.
+- **The step files lose `check.auto`** (stages 4, 5, 8, 9, 10, 11; 22 lines):
+  nothing read it once the checklist was gone. `integration:` stays.
+  `steps/README.md` 0.10; the rendered guide changes only in each stage's
+  revision line.
+- **A trap found on the way**: Alembic's `version_num` column holds 32
+  characters, and the first name chosen for 0049 had 33, which would have
+  failed every deploy's migrate job. A test now checks every revision.
+- The action log's two checklist words stay in `core/action_log.py` for now:
+  another session has uncommitted work in that file.
+
 ## [0.334.0] — 2026-11-15
 
 **feat(setup): the Integrations tab, phase 9 part two — a set-up wizard for

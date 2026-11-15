@@ -523,6 +523,13 @@
         + " <strong>" + esc(c.label) + "</strong>"
         + (c.detail ? ' <span class="su__itestdetail">' + esc(c.detail) + "</span>" : "") + "</li>";
     }).join("") + "</ul>";
+    if (run.outcome !== "ok" && i.wizard) {
+      // Fix with the wizard (ruling W4): it starts again at the first screen
+      // whose check fails (W5).
+      html += '<p class="su__testbar"><button type="button" class="cbm-button" data-wiz="' + esc(i.key + "|restart|")
+        + '">Fix with the wizard</button> <span class="su__hint">The set-up wizard opens at the first step that does not pass, '
+        + "with what it is, why it matters and how to do it.</span></p>";
+    }
     var facts = run.facts || [];
     if (facts.length) {
       html += '<h3 class="su__h3">Integration facts</h3><dl class="su__facts">' + facts.map(function (f) {
@@ -541,8 +548,8 @@
       var result = await api("/integrations/" + encodeURIComponent(key) + "/test", { method: "POST" });
       i.status.tested = result.run;
       renderIntegrations();
-      // The setup checklist and the diagnosis are worked out on the server
-      // from the stored runs: read them again so neither is left stale.
+      // The wizard is worked out on the server from the stored runs: read
+      // the page again so it is not left stale.
       await refreshPage();
     } catch (e) {
       err = $("testError");
@@ -559,20 +566,8 @@
       + "</ul>";
   }
 
-  // The diagnosis (plan § 6): after a failed test, Claude reads the failure
-  // and writes a fix plan; an administrator approves that exact plan and the
-  // application carries it out, one step at a time, ending with a re-test.
-  var CONFIDENCE_WORDS = { verified: "verified from the evidence", likely: "likely", guess: "a guess" };
-  var STATUS_WORDS = {
-    diagnosing: "Claude is diagnosing\u2026", proposed: "Waiting for approval",
-    applying: "Being applied", waiting: "Waiting for a step done by hand",
-    applied: "Applied", stopped: "Stopped: a step failed", superseded: "Replaced by a newer diagnosis",
-    discarded: "Discarded", no_plan: "No plan",
-  };
-  var diagPoll = null;
-
-  // Reads the whole page payload again (settings, status lines, setup
-  // checklists, fix plans, the agent's spend) and redraws. Never throws.
+  // Reads the whole page payload again (settings, status lines, the
+  // wizards, Claude's spend) and redraws. Never throws.
   async function refreshPage() {
     try {
       state.page = await api("/settings");
@@ -581,141 +576,6 @@
   }
 
   function money(n) { return "$" + (Math.round((n || 0) * 100) / 100).toFixed(2); }
-
-  function planStepHtml(s, current, plan) {
-    var head, body = "";
-    var setup = plan.kind === "setup";
-    var confirmBtn = function (label) {
-      return '<p><button type="button" class="cbm-button" data-plan-step="' + esc(plan.integration + "|" + plan.id + "|" + s.n)
-        + '">' + esc(label) + "</button></p>";
-    };
-    if (s.kind === "setting_change") {
-      head = "Set <strong>" + esc(s.label || s.key) + "</strong> to <code>" + esc(s.value) + "</code>";
-      if (current && setup) body = confirmBtn("Confirm \u2014 save it");
-    } else if (s.kind === "setting_reset") {
-      head = "Put <strong>" + esc(s.label || s.key) + "</strong> back to the deployment's own value";
-      if (current && setup) body = confirmBtn("Confirm \u2014 reset it");
-    } else if (s.kind === "coded_action") {
-      head = "<strong>" + esc(s.label || s.name) + "</strong>" + (s.input ? " (" + esc(s.input) + ")" : "");
-      if (current) {
-        var dry = s.dryRun || {};
-        body = '<p class="su__diagwhere"><strong>Dry run:</strong> ' + esc(dry.summary || "not run yet") + "</p>"
-          + confirmBtn("Confirm \u2014 run it");
-      }
-    } else if (s.kind === "retest") {
-      head = "Run the integration test again";
-      if (current && setup) body = confirmBtn("Confirm \u2014 run the test");
-    } else {
-      head = esc(s.action);
-      if (current) {
-        var copyId = "diagcopy-" + esc(plan.id.slice(0, 8)) + "-" + s.n;
-        body = (s.where ? '<p class="su__diagwhere"><strong>Where:</strong> ' + esc(s.where) + "</p>" : "")
-          + (s.copyValue ? '<div class="su__diagcopy"><code id="' + copyId + '">' + esc(s.copyValue)
-              + '</code> <button type="button" class="cbm-button cbm-button--secondary" data-copy="' + copyId + '">Copy</button></div>' : "")
-          + (s.expect ? '<p><strong>You should see:</strong> ' + esc(s.expect) + "</p>" : "")
-          + (s.ifNot ? '<p><strong>If not:</strong> ' + esc(s.ifNot) + "</p>" : "")
-          + confirmBtn(s.checklistStep ? "Done \u2014 check it" : "Done \u2014 continue");
-      } else if (s.where) {
-        head += ' <span class="su__diagmeta">(' + esc(s.where) + ")</span>";
-      }
-    }
-    var mark = s.state === "done" ? "\u2713" : s.state === "failed" ? "\u2717" : (current ? "\u25b8" : "\u25cb");
-    var detail = s.detail ? '<div class="su__diagdetail">' + esc(typeof s.detail === "string" ? s.detail : "") + "</div>" : "";
-    var who = s.doneBy ? '<div class="su__diagmeta">' + esc("done by " + s.doneBy + " " + stamp(s.doneAt)) + "</div>" : "";
-    return '<li class="su__diagstep su__diagstep--' + esc(s.state) + (current ? " is-current" : "") + '">'
-      + '<span class="su__diagmark">' + mark + '</span><div><span class="su__diagn">' + esc(s.n) + ".</span> " + head
-      + detail + who + body + "</div></li>";
-  }
-
-  function diagnosisBlock(i) {
-    var run = (i.status || {}).tested;
-    var plan = i.fixPlan;
-    var failed = run && run.outcome !== "ok";
-    if (!failed && !plan) return "";
-    var agent = i.agent || {};
-    var html = '<section class="su__group su__diag"><h2 class="su__h2">Diagnosis</h2>';
-    var spent = agent.stored ? "Diagnoses have spent " + money(agent.spent) + " of the " + money(agent.budget) + " monthly budget." : "";
-    var busy = plan && plan.status === "diagnosing";
-    if (failed && !busy) {
-      html += '<p class="su__testbar"><button type="button" class="cbm-button" data-diagnose="' + esc(i.key)
-        + '">Diagnose with Claude</button> <span class="su__hint">Claude reads the failed test, the settings '
-        + "(never a secret's value) and " + esc(i.name) + "'s own documentation, and writes a fix plan. Nothing changes until you approve it. "
-        + esc(spent) + "</span></p>";
-    }
-    html += '<p class="form-error" id="diagError" role="alert" hidden></p>';
-    if (!plan) return html + "</section>";
-    html += '<p class="su__diagstatus"><strong>' + esc(STATUS_WORDS[plan.status] || plan.status) + "</strong>"
-      + (plan.createdAt ? " \u00b7 asked by " + esc(plan.createdBy || "someone") + " " + esc(stamp(plan.createdAt)) : "")
-      + (plan.model ? " \u00b7 " + esc(plan.model) : "")
-      + (plan.status !== "diagnosing" ? " \u00b7 cost " + esc(money(plan.cost)) : "") + "</p>";
-    if (busy) return html + '<p class="su__hint">This takes a minute or two. The page updates by itself.</p></section>';
-    if (plan.status === "no_plan") {
-      return html + '<p class="su__note su__note--warn">' + esc(plan.error || "Claude finished without a plan.") + "</p></section>";
-    }
-    html += '<p class="su__diagtext">' + esc(plan.diagnosis) + "</p>"
-      + '<p class="su__diagmeta">Confidence: ' + esc(CONFIDENCE_WORDS[plan.confidence] || plan.confidence) + "</p>";
-    var steps = plan.steps || [];
-    var current = null;
-    if (plan.status === "waiting") current = steps.filter(function (s) { return s.state !== "done"; })[0] || null;
-    var done = steps.filter(function (s) { return s.state === "done"; }).length;
-    html += '<p class="su__diagmeta">' + done + " of " + steps.length + " steps done</p>";
-    html += '<ol class="su__diagsteps">' + steps.map(function (s) {
-      return planStepHtml(s, current && current.n === s.n, plan);
-    }).join("") + "</ol>";
-    if (plan.status === "proposed") {
-      html += '<p><button type="button" class="cbm-button" data-plan-apply="' + esc(i.key + "|" + plan.id + "|" + plan.fingerprint)
-        + '">Approve and apply</button> <button type="button" class="cbm-button cbm-button--secondary" data-plan-discard="'
-        + esc(i.key + "|" + plan.id) + '">Discard</button> <span class="su__hint">Setting changes are made at once, '
-        + "as you, through the same checks as the Settings tab. The plan stops at each step done by hand.</span></p>";
-    } else if (plan.status === "waiting") {
-      html += '<p><button type="button" class="cbm-button cbm-button--secondary" data-plan-discard="'
-        + esc(i.key + "|" + plan.id) + '">Discard the rest of this plan</button></p>';
-    }
-    return html + "</section>";
-  }
-
-  function diagError(msg, kind) {
-    var err = $(kind === "setup" ? "setupError" : "diagError") || $("diagError");
-    if (err) { err.hidden = false; text(err, msg); }
-  }
-
-  function setPlan(key, plan) {
-    var i = findIntegration(key);
-    if (i && plan && plan.kind === "setup") i.setupPlan = plan;
-    else if (i) i.fixPlan = plan;
-    renderIntegrations();
-    // The step waiting for a person comes to the top of the window (plan § 2).
-    var cur = document.querySelector(".su__diagstep.is-current");
-    if (cur) cur.scrollIntoView({ block: "start", behavior: "smooth" });
-  }
-
-  function pollDiagnosis(key, kind) {
-    if (diagPoll) clearTimeout(diagPoll);
-    diagPoll = setTimeout(async function () {
-      diagPoll = null;
-      try {
-        var r = await api("/integrations/" + encodeURIComponent(key) + (kind === "setup" ? "/setupplan" : "/fixplan"));
-        if (r.plan && r.plan.status === "diagnosing") { setPlan(key, r.plan); pollDiagnosis(key, kind); }
-        else { await refreshPage(); setPlan(key, r.plan); }
-      } catch (e) { diagError(e.message); }
-    }, 5000);
-  }
-
-  async function startDiagnosis(key, kind) {
-    try {
-      var r = await api("/integrations/" + encodeURIComponent(key) + (kind === "setup" ? "/setup" : "/diagnose"), { method: "POST" });
-      setPlan(key, r.plan);
-      pollDiagnosis(key, kind);
-    } catch (e) { diagError(e.message, kind); }
-  }
-
-  async function planAction(path, body) {
-    try {
-      var r = await api(path, { method: "POST", body: JSON.stringify(body || {}) });
-      if (r.page) { state.page = r.page; renderAll(); } else { await refreshPage(); }
-      setPlan(r.plan.integration, r.plan);
-    } catch (e) { diagError(e.message); }
-  }
 
   // The setup wizard (plan § 10, rulings W1 to W6): one screen at a time —
   // what, why, how — checked before the next. The guide chooses the screens;
@@ -778,8 +638,11 @@
         html += '<div class="su__wizhelp"><p class="su__wizlabel">Claude</p><p>' + esc(help.text) + "</p>"
           + (help.cost != null ? '<p class="su__diagmeta">cost ' + esc(money(help.cost)) + "</p>" : "") + "</div>";
       } else {
+        var agent = i.agent || {};
         html += '<p><button type="button" class="cbm-button cbm-button--secondary" data-wiz="' + esc(i.key + "|ask|" + s.id)
-          + '">Ask Claude about this</button></p>';
+          + '">Ask Claude about this</button>'
+          + (agent.stored ? ' <span class="su__hint">Ask Claude has spent ' + esc(money(agent.spent)) + " of the "
+            + esc(money(agent.budget)) + " monthly budget this month.</span>" : "") + "</p>";
       }
       html += "</div>";
     }
@@ -806,110 +669,6 @@
   function pollWizard() {
     if (wizPoll) return;
     wizPoll = setTimeout(async function () { wizPoll = null; await refreshPage(); }, 5000);
-  }
-
-  // The setup checklist (plan § 4): the deployment guide's steps for this
-  // integration. An automatic step ticks itself from its check and shows why;
-  // a manual step has a box an administrator ticks. Folded while the
-  // integration is not used by this chapter.
-  var CHECKLIST_ICON = { done: "\u2713", open: "\u25cb", unknown: "?" };
-
-  function checklistBlock(i) {
-    var cl = i.checklist || { rows: [], done: 0, total: 0 };
-    var id = i.key + "/checklist";
-    var unused = i.status && i.status.inUse === false;
-    var open = unused ? state.closed[id] === false : !state.closed[id];
-    var html = '<details class="su__section su__setupcl" data-section="' + esc(id) + '"' + (open ? " open" : "")
-      + '><summary>Setup checklist <span class="su__setupcount">' + esc(cl.done) + " of " + esc(cl.total) + " done"
-      + (unused ? " \u00b7 not used by this chapter" : "") + "</span></summary>";
-    if (cl.error) html += '<p class="su__note su__note--warn">' + esc(cl.error) + "</p>";
-    html += '<p class="form-error" id="tickError" role="alert" hidden></p>';
-    if (!i.ticksStored) {
-      html += '<p class="su__hint">No database is attached, so the boxes ticked by hand cannot be kept.</p>';
-    }
-    html += '<ol class="su__setupsteps">' + cl.rows.map(function (r) {
-      var mark;
-      if (r.automatic) {
-        mark = '<span class="su__setupauto su__setupauto--' + esc(r.state) + '" title="Ticks itself from its check">'
-          + (CHECKLIST_ICON[r.state] || "?") + "</span>";
-      } else {
-        mark = '<input type="checkbox" class="su__setupbox" data-tick="' + esc(i.key + "|" + r.id) + '"'
-          + (r.state === "done" ? " checked" : "") + ' aria-label="' + esc("Step " + r.id + " done") + '" />';
-      }
-      var where = r.stage ? '<span class="su__setupid">' + esc(r.id) + "</span> " : "";
-      var meta = [];
-      if (r.stage) meta.push("Stage " + r.stage + " \u2014 " + (r.stageName || ""));
-      if (r.automatic) meta.push("ticks itself");
-      if (r.tick) meta.push("ticked by " + (r.tick.by || "someone") + " " + stamp(r.tick.at));
-      (r.shared || []).forEach(function (k) {
-        var other = findIntegration(k);
-        meta.push("also on " + (other ? other.name : k));
-      });
-      return '<li class="su__setupstep su__setupstep--' + esc(r.state) + '">' + mark
-        + '<div class="su__setupbody"><strong>' + where + esc(r.name) + "</strong>"
-        + (r.reason ? ' <span class="su__setupreason">' + esc(r.reason) + "</span>" : "")
-        + (meta.length ? '<div class="su__setupmeta">' + meta.map(esc).join(" \u00b7 ") + "</div>" : "")
-        + "</div></li>";
-    }).join("") + "</ol>";
-    html += setupBlock(i, cl);
-    return html + '<p class="su__hint">The steps are written in the chapter deployment guide '
-      + "(<code>prds/chapter-network/deployment-guide/</code>), stage by stage.</p></details>";
-  }
-
-  // The setup assistant (plan § 6.5): Claude writes a setup plan for the open
-  // steps; every step of it waits for a person's confirmation (ruling I12).
-  function setupBlock(i, cl) {
-    var plan = i.setupPlan;
-    var open = cl.rows.some(function (r) { return r.state !== "done"; });
-    var busy = plan && plan.status === "diagnosing";
-    var html = '<div class="su__setupassist">';
-    if (open && !busy) {
-      html += '<p class="su__testbar"><button type="button" class="cbm-button" data-setup-ask="' + esc(i.key)
-        + '">Set up with Claude</button> <span class="su__hint">Claude reads the open steps, the settings (never a '
-        + "secret's value) and " + esc(i.name) + "'s documentation, and writes a setup plan. Every step waits for you.</span></p>";
-    }
-    html += '<p class="form-error" id="setupError" role="alert" hidden></p>';
-    if (!plan || ["superseded", "discarded"].indexOf(plan.status) >= 0) return html + "</div>";
-    var words = plan.status === "waiting" ? "Waiting for you to confirm the next step"
-      : plan.status === "proposed" ? "Ready to start" : (STATUS_WORDS[plan.status] || plan.status);
-    html += '<p class="su__diagstatus"><strong>Setup plan: ' + esc(words) + "</strong>"
-      + (plan.createdAt ? " \u00b7 asked by " + esc(plan.createdBy || "someone") + " " + esc(stamp(plan.createdAt)) : "")
-      + (plan.status !== "diagnosing" ? " \u00b7 cost " + esc(money(plan.cost)) : "") + "</p>";
-    if (busy) return html + '<p class="su__hint">This takes a minute or two. The page updates by itself.</p></div>';
-    if (plan.status === "no_plan") return html + '<p class="su__note su__note--warn">' + esc(plan.error || "Claude finished without a plan.") + "</p></div>";
-    html += '<p class="su__diagtext">' + esc(plan.diagnosis) + "</p>";
-    var steps = plan.steps || [];
-    var current = plan.status === "waiting" ? (steps.filter(function (s) { return s.state !== "done"; })[0] || null) : null;
-    html += '<p class="su__diagmeta">' + steps.filter(function (s) { return s.state === "done"; }).length
-      + " of " + steps.length + " steps done</p>";
-    html += '<ol class="su__diagsteps">' + steps.map(function (s) {
-      return planStepHtml(s, current && current.n === s.n, plan);
-    }).join("") + "</ol>";
-    if (plan.status === "proposed") {
-      html += '<p><button type="button" class="cbm-button" data-plan-apply="' + esc(i.key + "|" + plan.id + "|" + plan.fingerprint)
-        + '">Start this plan</button> <button type="button" class="cbm-button cbm-button--secondary" data-plan-discard="'
-        + esc(i.key + "|" + plan.id) + '">Discard</button> <span class="su__hint">Nothing is changed until you confirm each step.</span></p>';
-    } else if (plan.status === "waiting") {
-      html += '<p><button type="button" class="cbm-button cbm-button--secondary" data-plan-discard="'
-        + esc(i.key + "|" + plan.id) + '">Discard the rest of this plan</button></p>';
-    }
-    return html + "</div>";
-  }
-
-  async function tickStep(spec, box) {
-    var parts = spec.split("|");
-    var err = $("tickError");
-    if (err) err.hidden = true;
-    try {
-      var result = await api("/integrations/" + encodeURIComponent(parts[0]) + "/checklist/"
-        + encodeURIComponent(parts[1]), { method: "POST", body: JSON.stringify({ ticked: box.checked }) });
-      state.page = result.page;
-      renderIntegrations();
-    } catch (e) {
-      box.checked = !box.checked;
-      err = $("tickError");
-      if (err) { err.hidden = false; text(err, e.message); }
-    }
   }
 
   function settingsTable(rows) {
@@ -967,10 +726,6 @@
     }
     if (i.testable) html += testBlock(i);
     html += placeholders(i);
-    html += diagnosisBlock(i);
-    if (i.fixPlan && i.fixPlan.status === "diagnosing" && !diagPoll) pollDiagnosis(i.key, "fix");
-    if (i.setupPlan && i.setupPlan.status === "diagnosing" && !diagPoll) pollDiagnosis(i.key, "setup");
-    html += checklistBlock(i);
     html += '<section class="su__group"><h2 class="su__h2">Settings</h2>' + settingsTable(i.settings || []);
     (i.sections || []).forEach(function (s) {
       var id = i.key + "/" + s.key;
@@ -1495,6 +1250,13 @@
       var sub = hash.split("/")[1] || "";
       if (findIntegration(sub)) state.subtab = sub;
       selectTab("integrations");
+      // The nightly alert's link, /setup/#integrations/zoom/wizard: the
+      // set-up wizard, where Fix with the wizard is offered. Nothing changes
+      // until a button is clicked.
+      if (hash.split("/")[2] === "wizard") {
+        var wiz = document.querySelector(".su__wiz") || document.querySelector(".su__test");
+        if (wiz) wiz.scrollIntoView({ block: "start" });
+      }
     }
   }
 
@@ -1502,25 +1264,7 @@
     var t = ev.target;
     if (t.dataset && t.dataset.edit) { openEditor(t.dataset.edit); return; }
     if (t.dataset && t.dataset.test) { runTest(t.dataset.test, t); return; }
-    if (t.dataset && t.dataset.tick) { tickStep(t.dataset.tick, t); return; }
     if (t.dataset && t.dataset.wiz) { wizardAction(t.dataset.wiz); return; }
-    if (t.dataset && t.dataset.diagnose) { startDiagnosis(t.dataset.diagnose, "fix"); return; }
-    if (t.dataset && t.dataset.setupAsk) { startDiagnosis(t.dataset.setupAsk, "setup"); return; }
-    if (t.dataset && t.dataset.planApply) {
-      var a = t.dataset.planApply.split("|");
-      planAction("/integrations/" + encodeURIComponent(a[0]) + "/fixplan/" + a[1] + "/apply", { fingerprint: a[2] });
-      return;
-    }
-    if (t.dataset && t.dataset.planDiscard) {
-      var d = t.dataset.planDiscard.split("|");
-      planAction("/integrations/" + encodeURIComponent(d[0]) + "/fixplan/" + d[1] + "/discard");
-      return;
-    }
-    if (t.dataset && t.dataset.planStep) {
-      var p = t.dataset.planStep.split("|");
-      planAction("/integrations/" + encodeURIComponent(p[0]) + "/fixplan/" + p[1] + "/steps/" + p[2] + "/done");
-      return;
-    }
     if (t.dataset && t.dataset.subtab) { ev.preventDefault(); selectSubtab(t.dataset.subtab); return; }
     if (t.dataset && t.dataset.goto) { ev.preventDefault(); gotoSetting(t.dataset.goto); return; }
     if (t.dataset && t.dataset.confirm) { confirmSetting(t.dataset.confirm); return; }

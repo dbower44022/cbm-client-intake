@@ -1,7 +1,7 @@
 stage: 10
 name: Set up the Google permissions the software needs
-version: "0.10"
-updated: "11-15-26 11:22"
+version: "0.11"
+updated: "11-15-26 11:49"
 summary: >-
   In this stage we give the applications a way to act inside the chapter's
   Google account. We create one account made for a program rather than a person,
@@ -170,7 +170,6 @@ steps:
       The key file is stored as a secret and is not left on anyone's laptop or in
       email.
     check:
-      auto: [setting_set:google_service_account_json]
       how:
         - >-
           In Proton Pass, open the chapter's Operations vault. An item named Google
@@ -279,7 +278,6 @@ steps:
       standard. A missing permission fails later with a message that names nothing
       useful.
     check:
-      auto: [test_passed:google_workspace]
       how:
         - >-
           At https://admin.google.com/ac/owl/domainwidedelegation , signed in as
@@ -363,7 +361,6 @@ steps:
       The mailbox is named, and it is a real licensed mailbox rather than a group or
       an alias. A group or alias is refused.
     check:
-      auto: [setting_set:google_delegated_admin]
       how:
         - >-
           At admin.google.com, open Directory, then Users, and search for the
@@ -426,7 +423,6 @@ steps:
     done_when: >-
       The shared drive exists and the machine account is a member of it.
     check:
-      auto: [setting_set:gdrive_shared_drive_id]
       how:
         - >-
           At drive.google.com, signed in as the chapter's Google administrator,
@@ -530,7 +526,6 @@ steps:
       Settings with every playlist the chapter wants brought in, or a note records
       that this chapter has none.
     check:
-      auto: [setting_set:youtube_api_key, setting_set:youtube_playlist_id]
       how: The YouTube sub-tab of System Settings shows both settings as set, and its Test Integration button passes, naming every playlist.
       probe: The app reads every listed playlist in one call.
     wizard:
@@ -590,6 +585,10 @@ steps:
     source: core/youtube.py; scripts/import_youtube_events.py
 
 changes:
+  - version: "0.11"
+    date: "11-15-26 11:49"
+    change: >-
+      The check.auto key removed from every step (Integrations tab phase 10, ruling W4): the setup checklist it fed is replaced by the set-up wizard, whose screens carry their own checks. Nothing else reads it. No step of the guide changes.
   - version: "0.10"
     date: "11-15-26 11:22"
     change: >-

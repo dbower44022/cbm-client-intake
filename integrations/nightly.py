@@ -4,8 +4,8 @@ the design Doug approved 11-13-26, phase 5 stopping point 1, option A).
 Once a day, at ``integration_test_hour`` in ``integration_test_tz``, the worker
 runs the integration test of every integration that is in use and has at
 least one feature switched on — EspoCRM always — while ``INTEGRATIONS_TAB`` is
-on. Each run is stored with ``trigger=nightly`` and no person. The diagnosis
-agent never runs on its own.
+on. Each run is stored with ``trigger=nightly`` and no person. Claude is never
+called on its own. A failure's alert links to the set-up wizard (ruling W4).
 
 **A check whose value only the web process is given is skipped at night**, not
 failed (option A): the EspoCRM provisioning account, Lob's webhook secret and
@@ -72,9 +72,10 @@ def _local(settings: Any, iso: Optional[str]) -> str:
         return str(iso or "")[:16].replace("T", " ") + " UTC"
 
 
-def _link(settings: Any, key: str) -> str:
+def _link(settings: Any, key: str, part: str = "") -> str:
     base = (getattr(settings, "app_base_url", "") or "").strip().rstrip("/")
-    return f"{base}/setup/#integrations/{key}" if base else f"/setup/#integrations/{key}"
+    path = f"/setup/#integrations/{key}" + (f"/{part}" if part else "")
+    return f"{base}{path}"
 
 
 def _failed(run: dict[str, Any]) -> list[dict[str, Any]]:
@@ -103,7 +104,9 @@ def message(settings: Any, integ: Any, run: dict[str, Any],
         lines = [_head(settings, integ, "failed", run)]
         for c in _failed(run):
             lines.append(f"Failed: {c.get('label')} ({c.get('detail')})")
-        lines.append(open_line)
+        # Fix with the wizard (ruling W4): the link opens the sub-tab at the
+        # set-up wizard, which offers to start at the first failing screen.
+        lines.append(f"Fix it with the set-up wizard: {_link(settings, integ.key, 'wizard')}")
         return "\n".join(lines)
     if outcome == "unknown":
         streak = 1

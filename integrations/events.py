@@ -3,8 +3,8 @@ Doug's decision 11-13-26: the narrowed table), in the application's database
 (migration ``0046_integration_fix_plan``).
 
 The web process cannot read the worker's log, so the top-level error handler of
-each integration's own job writes one line here, and the diagnosis agent reads
-it through ``get_recent_errors``. Rules:
+each integration's own job writes one line here, and Ask Claude reads it
+through ``get_recent_errors``. Rules:
 
 * only top-level handlers write — a job's whole pass failed, not one record;
 * each message is scrubbed of every secret setting's value first;

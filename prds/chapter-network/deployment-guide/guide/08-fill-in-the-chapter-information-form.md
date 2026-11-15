@@ -1,7 +1,7 @@
 # Stage 8 — Fill in the chapter information form
 
-**Version:** 0.20  
-**Last Updated:** 11-15-26 11:22  
+**Version:** 0.21  
+**Last Updated:** 11-15-26 11:49  
 **Generated from** `steps/stage-08.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -675,6 +675,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 | Version | Date | Change |
 |---|---|---|
+| 0.21 | 11-15-26 11:49 | The check.auto key removed from every step (Integrations tab phase 10, ruling W4): the setup checklist it fed is replaced by the set-up wizard, whose screens carry their own checks. Nothing else reads it. No step of the guide changes. |
 | 0.20 | 11-15-26 11:22 | Step 8.5 carries EspoCRM's first set-up wizard screen (Integrations tab phase 9, plan § 10, rulings W1 to W6; screens approved by Doug 11-15-26). The key is not printed, so the guide's steps read exactly as before. |
 | 0.19 | 11-13-26 10:30 | Steps that belong to an integration carry the new keys integration and check.auto, read by the setup checklist on System Settings' Integrations tab (prds/integrations-tab-plan.md section 4, mapping approved by Doug 11-13-26). The rendered guide does not change. |
 | 0.18 | 11-09-26 01:19 | Step 8.3 brought in line with step 6.5 and Association ruling 34: the four colour questions and the colour file address are now an optional override, left empty by default, because the chapter's colours are entered in the Website group at stage 13. The questions stay on the form, unchanged in key, so the form and the values-file writer need no code change; removing them is listed in OPEN-ITEMS.md. |

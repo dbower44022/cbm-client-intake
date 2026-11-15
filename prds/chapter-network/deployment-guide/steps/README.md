@@ -1,9 +1,9 @@
 # The deployment guide as data
 
-**Version:** 0.9
+**Version:** 0.10
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 11-15-26 11:22
+**Last Updated:** 11-15-26 11:49
 
 ---
 
@@ -60,9 +60,9 @@ steps: [...]
 | `actions` | Numbered actions. Each has `do` (one action), `items` when the action involves a list (each item renders on its own line), and, where it helps, `see` (what the person should see — a sentence, or a list when there are several things to see). Click-level where the screens are known; coarser where they are not, and `status` says so. |
 | `done_when` | The finishing test, word for word from the step list. A test with several conditions is a list, one condition per item, rendered as "Done when all of these are true". Only conditions go in it. |
 | `note` | A sentence that explains the finishing test without being a condition, such as "There are two sets, not one." Printed after the conditions, and kept word for word with the step list's Note line. |
-| `check` | `how`: how a person confirms it — a sentence, or a list with one concrete check per item, each naming where to look and what must be seen. `probe`: what the app would check automatically, in plain words, or `none`. `auto` (optional): the automatic checks System Settings runs for the step on an integration's setup checklist, as a list of names from `integrations/checklist.py` — `setting_set:<setting>`, `test_passed:<integration>` or `mailing_connected`. All must pass for the box to tick itself, and a step with `auto` can never be ticked by hand. A step without it is ticked by hand. |
+| `check` | `how`: how a person confirms it — a sentence, or a list with one concrete check per item, each naming where to look and what must be seen. `probe`: what the app would check automatically, in plain words, or `none`. |
 | `wizard` | Optional: the screens of the Integrations tab's set-up wizard for this step (plan § 10). Each has `id`, `title`, `what`, `why`, `how`, and may have `see`, `if_not`, `copy` (values shown with a Copy button), `ask` (answers, each with `then` — `next`, `end` or a screen id — and `sets`), `enters` (a setting typed on the screen), `check` (`decided:<setting>`, `setting_set:<key>`, `test:<integration>` or `test:<integration>/<check>`; none means Done) and `when` (`<screen>=<answer>`). Since 0.9 a screen may instead carry `runs` (a coded action in `integrations/actions.py`, run by a button) or `connect: mailing` (Constant Contact's Connect), and a box may carry `sets` (settings saved with it); a `test:` check may join several lines with commas; a `copy` value may hold `{APP_BASE_URL}`, filled in from the setting. Not printed in the guide. |
-| `integration` | Optional: the sub-tabs of System Settings' Integrations tab whose setup checklist shows the step, as a list of integration keys (`integrations/registry.py`), for example `[zoom]`. A step on two sub-tabs is ticked once for both. |
+| `integration` | Optional: the sub-tabs of System Settings' Integrations tab whose set-up wizard reads the step's `wizard` screens, and whose Ask Claude may read the step, as a list of integration keys (`integrations/registry.py`), for example `[zoom]`. |
 | `if_not` | What to do when the check fails: a sentence, or a list with one failure case per item, each naming how to recognise it. Default: stop and ask the Association. |
 | `goes_wrong` | The known failure and how to recognise it, or `nothing known yet`. |
 | `later` | The automation that will replace a manual method, or `unchanged`. |
@@ -72,7 +72,7 @@ steps: [...]
 
 The readable guide shows `summary` (or `why`), `who`, `first`, `actions`, `done_when`,
 `check.how`, `if_not` and `goes_wrong`, plus one line when a step has never been
-done for real. `mode`, `needs`, `produces`, `probe`, `auto`, `integration`, `later` and `source` are for
+done for real. `mode`, `needs`, `produces`, `probe`, `integration`, `later` and `source` are for
 the app and the people maintaining the guide.
 
 ## Words in capitals
@@ -100,6 +100,7 @@ screen is not known, say so in the action.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.10 | 11-15-26 11:49 | `check.auto` removed (Integrations tab phase 10, ruling W4): the setup checklist it fed is replaced by the set-up wizard. `integration` stays; the wizard reads it. |
 | 0.9 | 11-15-26 11:22 | The wizard row gains `runs`, `connect`, `sets`, joined checks and `{APP_BASE_URL}` (Integrations tab phase 9). |
 | 0.8 | 11-14-26 02:10 | A step may carry `wizard`, the screens of the Integrations tab's set-up wizard (plan § 10, rulings W1 to W6). Not printed. |
 | 0.7 | 11-13-26 10:30 | A step may carry `integration` and `check.auto`, which place it on an integration's setup checklist in System Settings and name its automatic checks (prds/integrations-tab-plan.md section 4; the plan's `check:` key became `check.auto`, because `check` already held `how` and `probe`). Neither is printed in the guide. |

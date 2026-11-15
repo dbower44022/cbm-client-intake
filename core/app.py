@@ -702,12 +702,6 @@ def create_app(
     from integrations.store import make_test_run_store
 
     app.state.integration_test_store = make_test_run_store(settings)
-    from integrations.ticks import make_tick_store
-
-    app.state.integration_tick_store = make_tick_store(settings)
-    from integrations.fixplans import make_fix_plan_store
-
-    app.state.fix_plan_store = make_fix_plan_store(settings)
     from integrations.wizard import make_wizard_store
 
     app.state.wizard_store = make_wizard_store(settings)

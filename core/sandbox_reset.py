@@ -98,12 +98,8 @@ RESET_TABLES: tuple[str, ...] = (
     # Integration test runs (prds/integrations-tab-plan.md § 5): the history
     # of integration tests on the sandbox is one day long. That is expected.
     "integration_test_run",
-    # Hand ticks on the setup checklists (plan § 4): the sandbox starts each
-    # day with none, like its integration test history.
-    "integration_checklist_tick",
-    # The diagnosis agent's fix plans and the integrations' recent errors
-    # (plan § 6): the sandbox starts each day with none.
-    "integration_fix_plan",
+    # The integrations' recent errors (plan § 6.6): the sandbox starts each
+    # day with none.
     "integration_event",
     # The setup wizard's progress and its Ask Claude calls (plan § 10).
     "integration_wizard",

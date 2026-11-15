@@ -280,7 +280,8 @@ def test_ask_claude_is_offered_only_on_a_failure_and_respects_the_budget(monkeyp
     assert w["help"]["status"] == "running" and seen == {"screen": "zoom-client-secret",
                                                          "failure": "Zoom refused the credentials."}
     assert post(client, "ask", "zoom-client-secret").status_code == 409  # one at a time
-    app.state.fix_plan_store.spent = 25.0
+    # A diagnosis copied in by migration 0049 counts like an answer (Doug, 11-15-26).
+    app.state.wizard_store.calls["old"] = dict(status="fix plan", answer="", cost=25.0)
     run(app.state.wizard_store.put("zoom", dict(p, help=None)))
     resp = post(client, "ask", "zoom-client-secret")
     assert resp.status_code == 409 and "monthly budget" in resp.json()["detail"]

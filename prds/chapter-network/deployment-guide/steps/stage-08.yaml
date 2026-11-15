@@ -1,7 +1,7 @@
 stage: 8
 name: Fill in the chapter information form
-version: "0.20"
-updated: "11-15-26 11:22"
+version: "0.21"
+updated: "11-15-26 11:49"
 why: >-
   The chapter information form holds the roughly forty answers that differ from
   one chapter to the next: its name, its addresses, its Google details and its
@@ -493,7 +493,6 @@ steps:
       - "The sending address is filled in."
       - "The logo file is filled in."
     check:
-      auto: [setting_set:espo_base_url]
       how: The section is complete, and the sending address is a real mailbox.
       probe: The page checks the CRM address begins with https://.
     wizard:
@@ -825,6 +824,10 @@ steps:
     source: 5-Methods-Form-Accounts-Checks.md#8.10
 
 changes:
+  - version: "0.21"
+    date: "11-15-26 11:49"
+    change: >-
+      The check.auto key removed from every step (Integrations tab phase 10, ruling W4): the setup checklist it fed is replaced by the set-up wizard, whose screens carry their own checks. Nothing else reads it. No step of the guide changes.
   - version: "0.20"
     date: "11-15-26 11:22"
     change: >-

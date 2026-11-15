@@ -94,7 +94,7 @@ class Integration:
     # The module holding the integration test, imported only when it runs;
     # empty until ``test_phase`` is built.
     test_module: str = ""
-    # The documentation sites the diagnosis agent may search and read (ruling
+    # The documentation sites Ask Claude may search and read (ruling
     # I9; plan § 6.2, each checked to answer on 11-13-26). Hostnames only;
     # a hostname covers its subdomains.
     doc_sites: tuple[str, ...] = ()

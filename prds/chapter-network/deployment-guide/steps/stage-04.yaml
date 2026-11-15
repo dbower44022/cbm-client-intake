@@ -1,7 +1,7 @@
 stage: 4
 name: Set up Google Workspace and the chapter's email
-version: "0.9"
-updated: "11-15-26 11:22"
+version: "0.10"
+updated: "11-15-26 11:49"
 why: >-
   Google Workspace is Google's paid service for an organization's email, calendars
   and documents. The software reads and sends the chapter's mail, creates calendar
@@ -334,7 +334,6 @@ steps:
       The shared address the software reads and sends from exists as a real licensed
       mailbox, not as an alias or a group. An alias will not work.
     check:
-      auto: [setting_set:ops_mailbox]
       how: The address appears in the admin console as a user with a licence.
       probe: Once stage 10 is done, the app asks Google's directory whether the address is a licensed user and not a group.
     wizard:
@@ -382,7 +381,6 @@ steps:
       The address the software sends its warning messages from exists as a real
       licensed mailbox. An alias or a group will be refused.
     check:
-      auto: [setting_set:alert_email_from]
       how: The address appears in the admin console as a user with a licence.
       probe: Once stage 10 is done, the app asks Google's directory whether the address is a licensed user.
     wizard:
@@ -447,7 +445,6 @@ steps:
       The receiving address is decided and it reaches a person who reads it during the
       working week, not an unattended mailbox.
     check:
-      auto: [setting_set:alert_email_to]
       how: The named people are written down beside the address. The real test is step 12.4, once the software can send.
       probe: none
     wizard:
@@ -517,7 +514,6 @@ steps:
       The group exists at its own address and the administrator can add and remove
       members.
     check:
-      auto: [setting_set:google_members_group]
       how: The group appears in the admin console, and the administrator adds and removes a test member.
       probe: Once stage 10 is done, the app reads the group through Google's directory.
     wizard:
@@ -684,6 +680,10 @@ steps:
     source: 8-Methods-Organization-Domains-Google.md#4.14
 
 changes:
+  - version: "0.10"
+    date: "11-15-26 11:49"
+    change: >-
+      The check.auto key removed from every step (Integrations tab phase 10, ruling W4): the setup checklist it fed is replaced by the set-up wizard, whose screens carry their own checks. Nothing else reads it. No step of the guide changes.
   - version: "0.9"
     date: "11-15-26 11:22"
     change: >-

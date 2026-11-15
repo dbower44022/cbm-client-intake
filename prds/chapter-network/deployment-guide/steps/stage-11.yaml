@@ -1,7 +1,7 @@
 stage: 11
 name: Deploy the chapter's applications
-version: "0.17"
-updated: "11-15-26 11:22"
+version: "0.18"
+updated: "11-15-26 11:49"
 summary: >-
   In this stage we put the chapter's applications on its own hosting account and
   prove they work. We generate the deployment settings from the reviewed chapter
@@ -737,7 +737,6 @@ steps:
     done_when: >-
       A request through the application returns CRM data.
     check:
-      auto: [test_passed:espocrm]
       how:
         - >-
           At https://APP-ADDRESS, sign in with the CRM administrator account
@@ -1257,7 +1256,6 @@ steps:
       System Settings shows the mailing service connected to the chapter's own
       Constant Contact account.
     check:
-      auto: [mailing_connected]
       how: The Constant Contact sub-tab shows the connection, and its Test Integration button passes.
       probe: The app reads the stored connection and the account's summary.
     if_not:
@@ -1326,7 +1324,6 @@ steps:
       The webhook exists in Lob with the applications' address, and its secret is
       in the vault and set in System Settings.
     check:
-      auto: [setting_set:postal_webhook_secret]
       how: The Lob sub-tab shows the webhook secret as set, and its Test Integration button passes.
       probe: The app checks the secret is set. A real event is the only proof the two agree.
     wizard:
@@ -1453,6 +1450,10 @@ steps:
     source: campaigns/public.py; core/sms.py
 
 changes:
+  - version: "0.18"
+    date: "11-15-26 11:49"
+    change: >-
+      The check.auto key removed from every step (Integrations tab phase 10, ruling W4): the setup checklist it fed is replaced by the set-up wizard, whose screens carry their own checks. Nothing else reads it. No step of the guide changes.
   - version: "0.17"
     date: "11-15-26 11:22"
     change: >-

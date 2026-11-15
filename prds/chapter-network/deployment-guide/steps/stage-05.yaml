@@ -1,7 +1,7 @@
 stage: 5
 name: Open the chapter's service accounts
-version: "0.22"
-updated: "11-15-26 11:22"
+version: "0.23"
+updated: "11-15-26 11:49"
 why: >-
   The chapter's CRM server, its applications and their database all run in a
   hosting account, and the public webinar programme runs through a video meeting
@@ -185,7 +185,6 @@ steps:
       co-host switched on, or a note records that this chapter holds no events
       on Zoom.
     check:
-      auto: [setting_set:zoom_meetings_account_id, setting_set:zoom_meetings_client_id, setting_set:zoom_meetings_client_secret, setting_set:zoom_event_host_email]
       how: The events@ mailbox signs in to Zoom, and the three values are in the vault. Once the applications run, the Zoom Meetings sub-tab shows them set.
       probe: Once the applications run, the Zoom Meetings sub-tab's integration test asks Zoom for a token, compares the scopes, reads the event host user and its co-host setting.
     wizard:
@@ -624,7 +623,6 @@ steps:
       - "The API key and client secret are in the chapter's vault."
     note: "A developer application is private to the Constant Contact user who created it, so the account the software connects to must be the one that created it."
     check:
-      auto: [setting_set:mailing_client_id, setting_set:mailing_client_secret]
       how: The application's details page shows the redirect address ending in /api/setup/mailing/callback, and the vault item holds both values.
       probe: none
     wizard:
@@ -770,7 +768,6 @@ steps:
       Either the Fathom API key is stored in the vault and set in System Settings,
       or a note records that this chapter does not use Fathom.
     check:
-      auto: [setting_set:fathom_api_key]
       how: The Fathom sub-tab of System Settings shows the API key as set, and its Test Integration button passes.
       probe: The app reads one page of meetings from Fathom with the key.
     wizard:
@@ -872,7 +869,6 @@ steps:
       Settings, or a note records that this chapter sends no postcards.
     note: "Changing to the live key is a separate decision, made when the first real campaign is ready; test mode is switched off at the same moment."
     check:
-      auto: [setting_set:postal_api_key]
       how: The Lob sub-tab of System Settings shows the key as set, and its Test Integration button passes.
       probe: The app lists one postcard with the key and reads test or live from the key's first letters.
     wizard:
@@ -961,7 +957,6 @@ steps:
       values are in the vault and set in System Settings, or a note records that
       this chapter sends no texts.
     check:
-      auto: [setting_set:sms_account_sid, setting_set:sms_auth_token, setting_set:sms_from_number]
       how: The Twilio sub-tab of System Settings shows the three values as set, and its Test Integration button passes.
       probe: The app reads the account and looks up the number among the account's numbers.
     wizard:
@@ -1123,7 +1118,6 @@ steps:
       spending limit on the account, or a note records that this chapter uses no
       AI features.
     check:
-      auto: [setting_set:anthropic_api_key]
       how: The Anthropic sub-tab of System Settings shows the key as set, and its Test Integration button passes.
       probe: The app lists the models with the key. It never sends a message, so the test costs nothing.
     wizard:
@@ -1241,7 +1235,6 @@ steps:
       as Zoom Meetings or on a separate account with its own app, or a note
       records that this chapter runs no Zoom Webinars.
     check:
-      auto: []
       how: The host is listed in Zoom with a Webinars licence. On a separate account, its three values are recorded. The connection itself cannot be checked until the applications are deployed.
       probe: Once the applications run, the Zoom Webinars sub-tab's integration test asks Zoom for a token and reads the host's webinar licence.
     wizard:
@@ -1415,6 +1408,10 @@ steps:
     source: 9-Methods-Hosting-Website-Policies.md#5.5; prds/events/event-hosting-plan.md
 
 changes:
+  - version: "0.23"
+    date: "11-15-26 11:49"
+    change: >-
+      The check.auto key removed from every step (Integrations tab phase 10, ruling W4): the setup checklist it fed is replaced by the set-up wizard, whose screens carry their own checks. Nothing else reads it. No step of the guide changes.
   - version: "0.22"
     date: "11-15-26 11:22"
     change: >-

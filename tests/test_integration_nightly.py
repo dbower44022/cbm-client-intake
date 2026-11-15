@@ -73,7 +73,9 @@ def test_a_new_failure_alerts_with_each_failed_check_and_the_link():
     assert text.startswith("Integration test failed: Zoom Webinars (environment: ")
     assert "11-14-26 06:00" in text  # 11:00 UTC in New York
     assert "Failed: Host (host is wrong)" in text
-    assert text.endswith("Open: https://apps.example.org/setup/#integrations/zoom")
+    # Fix with the wizard (ruling W4, phase 10): the one link, to the wizard.
+    assert "Open:" not in text
+    assert text.endswith("Fix it with the set-up wizard: https://apps.example.org/setup/#integrations/zoom/wizard")
 
 
 def test_an_unchanged_failure_is_not_repeated_even_across_an_unknown_night():
@@ -106,7 +108,7 @@ def test_a_recovery_is_reported_once():
 
 def test_no_base_address_still_gives_the_path():
     text = nightly.message(S(app_base_url=""), ZOOM, result(), [])
-    assert text.endswith("Open: /setup/#integrations/zoom")
+    assert text.endswith("Fix it with the set-up wizard: /setup/#integrations/zoom/wizard")
 
 
 # --- one pass -------------------------------------------------------------------------------
