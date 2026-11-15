@@ -5,6 +5,32 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.332.1] — 2026-11-15
+
+**feat(scripts): the Zoom probe learns Zoom Meetings.** Event hosting plan
+`prds/events/event-hosting-plan.md` § 7 step 1; `OPEN-ITEMS.md` #84. Nothing
+the application does changed.
+
+- **`scripts/probe_zoom.py --meetings`**, read-only: the scopes Zoom granted,
+  the host's licence, meeting capacity and default meeting settings, the
+  meeting list and a past meeting's participant report.
+- **`--write-test`**: one meeting a week out with registration, one
+  registrant with Zoom's emails off, the registration cancelled, the meeting
+  deleted whatever fails on the way.
+- **`--live-start` and `--live-report`** (Doug's choice B, 11-15-26): a
+  meeting starting now with one registrant and their personal join link,
+  kept until part 2 reads the participant report, matches each row to the
+  registration by registrant id or email, and deletes it.
+- The probe asks at the terminal for any value not in the environment, the
+  secret without echo.
+- **Run on the Business Mentors Association's account 11-15-26** (Doug,
+  host `admin@mentorsassociation.org`, Pro without Webinars): ten meeting
+  scopes added to its app (twelve in all); host Licensed, meeting capacity
+  100; a meeting with registration created, Doug registered, joined through
+  his personal join link without the host, left after 90 seconds; the
+  participant report carried his `user_email`, which matched the
+  registration, and no `registrant_id`; the meeting deleted.
+
 ## [0.332.0] — 2026-11-14
 
 **feat: Business Evaluation, phase 3 — the analysis.** Dark behind

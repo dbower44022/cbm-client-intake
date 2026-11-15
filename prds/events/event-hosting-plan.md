@@ -1,6 +1,6 @@
 # Event hosting methods — plan
 
-Last Updated: 11-14-26 14:05 · Revision 0.1 (draft for Doug's review) — see change log at the end.
+Last Updated: 11-15-26 01:25 · Revision 0.2 — see change log at the end.
 
 This plan decides how a chapter's online events are hosted: Zoom Webinars,
 Zoom Meetings, a link to any other platform, or an outside host. It records
@@ -50,9 +50,23 @@ read 11-14-26).
 | Attendee camera and microphone | off (webinar) | on (meeting) | the platform's | the host's |
 | Capacity | the Webinars licence's | about 100 on Pro, more on larger plans | the platform's | the host's |
 
-Zoom Meetings' registration and participant report are read from Zoom's
-developer workflow pages and community answers, **not yet tried against a real
-account**; step 1 of the build is that check.
+**Tried against a real account 11-15-26** (step 1, the Business Mentors
+Association's Zoom Pro account, no Webinars add-on): registration on a
+meeting gives each registrant a personal join link; a registrant can join
+without the host when the meeting allows it; the participant report, read
+about 15 minutes after the meeting ended, carries the participant's
+`user_email`, which matches the registration — and **no `registrant_id`**,
+so attendance is matched by email, as `events/attendance.py` already does
+for webinars. The account's meeting capacity reads 100. The scopes the
+Meetings integration needs (ten, besides `user:read:user:admin`):
+`user:read:settings:admin`, `meeting:read:list_meetings:admin`,
+`meeting:read:meeting:admin`, `meeting:write:meeting:admin`,
+`meeting:update:meeting:admin`, `meeting:delete:meeting:admin`,
+`meeting:write:registrant:admin`, `meeting:read:list_registrants:admin`,
+`meeting:update:registrant_status:admin`,
+`report:read:list_meeting_participants:admin`. They are found through the
+Scopes page's Add Scopes button; the page's own search box searches only the
+scopes already added.
 
 ## 4. Rulings (Doug, 11-14-26)
 
@@ -148,4 +162,5 @@ the Events work is.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.2 | 11-15-26 01:25 | Claude (Claude Code) | Step 1 done: § 3 records what Zoom Meetings did on the Association's account 11-15-26 (personal join links, attendance matched by email, capacity 100, the ten scopes). § 6 points 4 and 5 put to Doug. Doug approved the plan and the build prompt by running it, 11-14-26. |
 | 0.1 | 11-14-26 14:05 | Claude (Claude Code) | Draft from Doug's design discussion of 11-14-26: rulings EH1 to EH10, the comparison of hosting methods, the open points and the build order. For Doug's review. |
