@@ -1,5 +1,7 @@
 # System Settings (`/setup`) — activation and use
 
+Last Updated: 11-15-26 13:41 · Revision 1.2 — see change log at the end.
+
 The admin-only page that changes this deployment's runtime settings from the
 browser instead of editing a deployment overlay and running `doctl`. Plan and
 the rulings behind it: `prds/system-settings-plan.md`.
@@ -10,14 +12,17 @@ the rulings behind it: `prds/system-settings-plan.md`.
 
 ## 1. What it is for
 
-There is no branch-level gate between a merge and production — all three App
-Platform apps track `main` with `deploy_on_push: true`. The gate is the feature
-flag (`DEPLOYMENT.md` § *Reviewing a change before it reaches production*), and
-this page is where you operate it:
+There is no branch-level gate between a merge and production. Four App
+Platform apps track `main` with `deploy_on_push: true`: the Business Mentors
+Association's (the test system since 11-14-26), dev, crm-test and production.
+The gate is the feature flag (`DEPLOYMENT.md` § *Reviewing a change before it
+reaches production*), and this page is where you operate it:
 
 1. merge the feature **dark** (its flag defaults off, so the production deploy
    changes nothing);
-2. switch it on **here, on crm-test**, and review it live;
+2. switch it on **here, on the Business Mentors Association's system** (the
+   test system since 11-14-26), and review it live. crm-test is no longer
+   where a change is reviewed;
 3. switch it on **here, on production**.
 
 Rollback is the same toggle. No overlay edit, no redeploy, and no chance of
@@ -25,8 +30,10 @@ tripping the `EV[…]` trap that encrypts an overlay's plaintext secrets.
 
 ## 2. Turning it on
 
-**Status: on in BOTH environments.** crm-test since v0.190; **production since
-2026-08-12** — until then `SETUP_ENABLED` had only ever been added to the
+**Status: on at the Business Mentors Association's system, crm-test and
+production** (the Association's `/healthz` read `"page": true` 11-15-26).
+crm-test since v0.190; **production since
+2026-08-12**. Until then `SETUP_ENABLED` had only ever been added to the
 crm-test overlay, so `/setup/` 404'd on prod and every prod flag change still
 needed an overlay edit plus `doctl`. Step 3 above is now done, so the promotion
 gate can be operated entirely from the browser.
@@ -131,21 +138,19 @@ because it can carry a script).
   identification number as `12-3456789`, the payment page and social media
   addresses as https.
 
-### What this page cannot switch on
+### Settings that need a restart
 
-**The master flags that mount an app are not here** — `EVENTS_ENABLED`,
-`ANALYTICS_ENABLED`, `EVENTS_PUBLIC_API`, `ASSIGNMENTS_ENABLED` — nor are the
-intake rate limits, body cap, or `LOG_LEVEL`.
+Some settings are read once, when the application starts: the master
+switches that mount an application (`EVENTS_ENABLED`, `ANALYTICS_ENABLED`,
+`EVENTS_PUBLIC_API`, `ASSIGNMENTS_ENABLED`), the intake rate limits and body
+cap, and `LOG_LEVEL`. They are in the **Restart required** group, and they
+are editable (Doug's ruling, 08-28-26: a setting that cannot be seen or
+changed here is unacceptable).
 
-`create_app` decides router mounting and builds the middleware from the
-**environment**, and the override layer only loads afterwards in the startup
-hook. An override for one of those keys can therefore never take effect — not
-even after a redeploy, because the redeploy re-runs mounting first. Offering the
-control would be a lie, so they are denylisted and appear under *Show all* as
-**Never editable**.
-
-**Change them in the deployment overlay** (§2 shows the shape), then apply with
-`doctl` and let the app restart. Everything else on the page is live.
+Each row shows the value **in force** beside the stored one. When the two
+differ, the row is badged **Waiting for restart**. The stored value takes
+effect at the next restart or deploy, because the application reads these
+overrides at the very start of its startup, before it mounts anything.
 
 **Reset to deployment value** deletes the override rather than writing the
 default back, so the setting returns to whatever the overlay says.
@@ -228,17 +233,36 @@ Every change: old value → new value, who, when, and why. Also written to
 
 ## 5. What can never be changed here
 
-Enforced on the server, not merely hidden in the UI:
+**Every setting is editable unless a change is genuinely impossible** (Doug's
+ruling, 08-28-26). Three settings are on the page, read-only, each with its
+reason. The server enforces this, not only the page:
 
-- **every secret** — API keys, passwords, the service-account JSON. They are
-  never editable and never rendered; the page shows only whether one is set;
-- **`ESPO_BASE_URL` and `ESPO_DRY_RUN`** — which CRM this app writes to and
-  whether it writes at all;
-- **`DATABASE_URL`, `SESSION_SECRET`, `APP_ENCRYPTION_KEY`** — read once at boot;
-- **`SETUP_ENABLED` and `SETTINGS_OVERRIDES`** — if the page could switch itself
-  off, recovery would need a redeploy.
+- **`DATABASE_URL`.** The override table lives inside the database it names,
+  so an override moving the application to another database would be left
+  behind in the old one.
+- **`APP_ENCRYPTION_KEY`.** Changing it makes every stored secret permanently
+  unreadable. Rotating it is an engineer's job (`DEPLOYMENT.md`).
+- **`RELEASE_TAG`.** The release stamp travels inside the image. A stored
+  override would make the deployment misreport which release it runs.
 
-Change those in the overlay.
+Everything else, including the settings that used to be locked, is editable
+through the **checked save**:
+
+- **Secrets are editable but never readable.** You can set a new value. You
+  can never read the old one back. Each secret is stored encrypted, and
+  without an encryption key it is refused, never stored in plain text.
+  History records *(secret set)*, never the value.
+- **The CRM address, the CRM key, dry run, the provisioning account and the
+  integration credentials are tried before they are stored.** A value the
+  outside service rejects is refused with the service's own error. A check
+  that cannot reach the service reads unknown, and unknown does not block
+  the save, so a fix made during an outage is not stopped by it. A change
+  that leaves the system not working is undone automatically.
+- **`SETUP_ENABLED`, `SETTINGS_OVERRIDES`, `SESSION_SECRET`, the secure-cookie
+  setting and the allowed origins apply with a 10-minute countdown.** Each
+  one undoes itself unless an administrator confirms it within 10 minutes.
+  No check can detect being locked out, because the application is working
+  and simply will not let anyone back in. The countdown is the protection.
 
 ## 6. Break-glass
 
@@ -258,9 +282,246 @@ the application.
 |---|---|---|
 | `/setup/` 404s | `SETUP_ENABLED` unset, or no `DATABASE_URL` | Both are required (§2) |
 | Tile missing on the portal | You are not an EspoCRM admin | §3 |
-| Saved a flag, nothing changed | The row is badged **Takes effect on next deploy** | Redeploy |
+| Saved a flag, nothing changed | The row is badged **Waiting for restart** | Restart or redeploy (§4, *Settings that need a restart*) |
 | Saved a worker flag, nothing happened yet | The worker refreshes on its own timer | Wait `SETUP_REFRESH_SECONDS`; compare `settingsVersion` on each component's `/healthz` |
 | Saves succeed but have no effect | Break-glass is off | §6 |
 | Diff says "No peer configured" | `SETUP_PEER_URL` / `SETUP_PEER_TOKEN` missing | §4 |
 | Diff says the peer rejected our token | The two tokens differ | Set the same value on both |
 | A job says it cannot be run | It has no dry-run mode | §4, Operations |
+
+## 8. The Integrations tab
+
+An integration is an outside service this application calls with its own
+credentials: EspoCRM, Google Workspace, Zoom Meetings, Zoom Webinars,
+Fathom, Constant Contact, Lob, Twilio, Anthropic and YouTube. The
+Integrations tab gives each one a sub-tab of its own. On that sub-tab an
+administrator sets the integration up with a wizard, tests it, and changes
+its settings. Built v0.321.0 to v0.335.0. Design and rulings:
+`prds/integrations-tab-plan.md`.
+
+### 8.1 The switch
+
+**`INTEGRATIONS_TAB`** (*Integrations tab*, in the Features group) turns it on.
+It is off by default and read on every request, so no restart is needed.
+
+While the switch is **off**, the page is exactly as it was before the tab
+existed. The integration settings stay in the Settings tab's Integrations
+and CRM connection groups, and nothing runs at night.
+
+When the switch is **on**, four things change:
+
+- An **Integrations** tab appears beside Settings, with one sub-tab per
+  integration.
+- Every integration setting **moves** to its sub-tab. The Settings tab's
+  Integrations and CRM connection groups disappear. A setting appears in
+  one place only.
+- **Feature readiness** links each row to its sub-tab, and leaves out the
+  warnings of an integration marked not in use.
+- The worker runs the **nightly integration test** (§ 8.7).
+
+A deep link opens one sub-tab: `/setup/#integrations/zoom_meetings`.
+
+### 8.2 What a sub-tab shows
+
+Each sub-tab shows these parts, top to bottom:
+
+1. **The status line**, for example *"Zoom Meetings: in use · on
+   (zoom_meetings_events) · credentials set · last test passed 11-15-26
+   14:02"*. EspoCRM shows *always in use* and whether dry run is on. An
+   integration with missing credentials names each one.
+2. **The set-up wizard** (§ 8.5).
+3. **The integration test**: the Test Integration button and the last
+   result (§ 8.4).
+4. **Settings**: the integration's switches and settings. They are edited
+   exactly as on the Settings tab, through the same checked save. Google
+   Workspace's settings sit in sections that fold: Credentials, Drive,
+   Calendar, Meet, Gmail and the shared mailbox, Workspace accounts.
+5. **Used by**: settings elsewhere that depend on this integration. They
+   stay where they are, and each one links to its place on the Settings
+   tab. A row marked *needs <integration>* cannot work without it.
+6. The integration's runbooks in the repository.
+
+Opening the page never calls an outside service. The status line and the
+wizard are worked out from the stored settings and the last stored test.
+
+### 8.3 "In use" and its two refusals
+
+Every integration except EspoCRM has an *in use* setting, for example
+*Zoom Meetings in use* (`zoom_meetings_in_use`). Its default is Yes. EspoCRM
+is always in use, and its warnings are never hidden.
+
+An integration marked **not in use** keeps its sub-tab, labelled *Not used
+by this chapter*. Its settings can still be changed. Its warnings leave
+Feature readiness, and the nightly test skips it.
+
+The save refuses two changes, with HTTP 409 and a message that names the
+setting:
+
+- **Marking an integration not in use while any of its features is
+  switched on.** The message names each switch that is on, and says to
+  switch them off first.
+- **Switching a feature on while its integration is marked not in use.** The
+  message says where to mark it in use first: *Integrations, <integration>,
+  <integration> in use*.
+
+"Its features" means the integration's own switches and the features
+elsewhere that cannot work without it. Two examples: text campaigns need
+Twilio, and event confirmations need Google Workspace. A feature switched on
+for only some teams or people counts as on. A reset to the deployment value
+is checked the same way as a save.
+
+### 8.4 Test Integration
+
+**Test Integration** runs every check needed to prove the integration works
+end to end, not only that a key is set. Every check only reads. Nothing is
+changed in the outside service.
+
+Each check shows one line with one of four results:
+
+- **✓ passed.** The check proved what it checks.
+- **✗ failed.** The service answered and the answer is wrong, for example a
+  rejected key or a missing permission. The line says what is wrong, often
+  in the vendor's own words.
+- **? unknown.** The check could not get an answer, for example a timeout or
+  a network fault. **Unknown never counts as passed.** Run the test again
+  later. A check that cannot read its answer never reports passed.
+- **– not checked.** The feature it serves is switched off, or there is
+  nothing to read yet (no past meeting, for example). It does not count
+  against the test.
+
+The summary line reads *passed*, *failed* or *could not be completed*. It
+names who ran the test, whether it was the nightly run, and how long it
+took. Below the checks, **Integration facts** report what the test learned
+about the service: the EspoCRM version, the Zoom account, the Google
+permissions granted, and the like.
+
+Each check has 12 seconds and the whole test 30. One test per integration
+runs at a time. Every detail line is cleaned of every secret's value before
+it is shown or stored. A run is recorded in the action log.
+
+**Google Workspace's *Delegation: the whole grant* line** asks for a token
+for every scope of guide step 10.3, whatever is switched on. It can fail
+the button on a deployment whose grant lacks a scope that no switched-on
+feature needs. The guide grants them all. The nightly run skips this line.
+
+When a test does not pass, **Fix with the wizard** appears under it. It
+starts the wizard again at the first screen whose check fails.
+
+### 8.5 The set-up wizard
+
+The wizard sets an integration up, or repairs it, one screen at a time.
+Each screen is one action, with **What** it is, **Why** it matters and
+**How** to do it. A value to paste has its own **Copy** button. A screen is
+checked before the next one appears.
+
+The screens are written in the chapter deployment guide's step files
+(`prds/chapter-network/deployment-guide/steps/`), so the guide and the
+wizard cannot disagree. Work done before this application exists, such as
+building the Google Workspace account or the CRM server, stays in the guide
+alone.
+
+A screen asks for one of five things:
+
+- **An answer** to a question, such as *Does this chapter use Zoom
+  Meetings?* An answer can save settings and choose which screens follow.
+  Answering No to the first question ends the wizard. The integration is
+  then marked not used by this chapter.
+- **A value** in a box, then **Save and check**. A secret's box never shows
+  the stored value. It shows only *Set — paste a new value to replace it*.
+- **A button** that the application carries out. Google Workspace's shared
+  drive and Twilio's sender number are the two. The value it finds is saved
+  for you.
+- **Connect**, for Constant Contact. It leaves for Constant Contact's
+  sign-in, returns to the Constant Contact sub-tab, and then you click
+  **Done**.
+- **Done**, for an action carried out in the vendor's own screens.
+
+**Where it starts.** The wizard opens at the first screen whose check
+fails. The screens before it are taken as done. When every check passes,
+the sub-tab says *"<integration> is set up. Every check passes."*
+
+**Back** returns to the screen before. **Start the wizard again** clears the
+wizard's place and starts again from the first failing screen. Settings
+already saved stay saved, and an earlier answer still chooses its branch.
+
+**The wizard's place is kept for the whole deployment.** A second
+administrator opening the sub-tab sees the same screen. Every setting the
+wizard saves goes through the checked save, as the administrator who
+clicked, with the reason *set in the setup wizard*. It shows on the History
+tab like any other change.
+
+**A failed screen** stays on screen. It shows **Not done yet:** with the
+check's own words, and **If not:** with the guide's advice for that case.
+A value that was saved and then undone automatically says so. A refusal
+from the checked save is shown in its own words.
+
+### 8.6 Ask Claude about this
+
+A failed screen offers **Ask Claude about this**. Claude is called only when
+someone clicks it. It reads that failure, the integration's settings, its
+readiness rows, its last test, its recent errors, its guide steps and its
+runbook, and the vendor's own documentation sites. It answers on that
+screen, normally within a minute. The page updates by itself.
+
+- **Claude only reads.** It cannot change a setting or call the vendor.
+- **Claude never sees a secret's value**, only whether each secret is set
+  and when it last changed.
+- **It costs money**, so the button shows what Ask Claude has spent this
+  month against the monthly budget. Each answer shows its own cost. One
+  answer stops itself at $5.
+- **Once the month's spending reaches the budget, Ask Claude is refused.**
+  The message says to raise the budget.
+
+Two settings on the Anthropic sub-tab control it. *Integration agent model*
+(`INTEGRATION_AGENT_MODEL`) has the default `claude-opus-5-5`. *Integration
+agent monthly budget* (`INTEGRATION_AGENT_MONTHLY_BUDGET`) has the default
+$25. Ask Claude also needs the Anthropic API key.
+
+### 8.7 The nightly integration test
+
+While the switch is on, the **worker** runs the integration test once a day.
+The hour is set by `INTEGRATION_TEST_HOUR`, default 6. The time zone is set
+by `INTEGRATION_TEST_TZ`, default America/New_York. Both are in the
+Reliability group. The run covers EspoCRM always, plus each integration
+that is in use and has at least one feature switched on. YouTube has no
+switch, so it never runs at night. Claude is never called at night.
+
+A few values are given to the web process only: the EspoCRM provisioning
+account, Lob's webhook secret, and Google's All Members group. Their checks
+are skipped at night unless the value was saved here. The Test Integration
+button checks them.
+
+**The alert** goes to the usual alert address:
+
+- **A failure** alerts when its failed checks differ from the last night's.
+  An unchanged failure is not repeated.
+- **"Could not be completed"** alerts once, on the third night in a row.
+- **A recovery** is reported once.
+
+A failure's alert names each failed check, and ends with a link of the form
+`<application address>/setup/#integrations/<integration>/wizard`. The link
+opens the sub-tab at the wizard. Nothing changes until a button is clicked.
+
+The alert remembers through the stored test runs, so a deploy or a restart
+never repeats one. Every run, manual or nightly, is kept in
+`integration_test_run`. On crm-test that table is emptied by the nightly
+reset, so its history is one day long.
+
+### 8.8 Switching it off
+
+Set `INTEGRATIONS_TAB` back to off. The settings return to the Settings
+tab's groups with their values unchanged, the sub-tabs disappear, and the
+nightly test stops. Nothing is lost: the wizard's place, the stored test
+runs and Ask Claude's spending stay in the database for when it is switched
+on again.
+
+The two refusals in § 8.3 stay active with the switch off. With every
+*in use* setting at its default of Yes they refuse nothing.
+
+## Change log
+
+| Rev | Date (MM-DD-YY HH:MM) | Author | Change |
+|---|---|---|---|
+| 1.2 | 11-15-26 13:41 | Claude (Claude Code) | Stale text corrected (Doug's approval 11-15-26): § 1 and § 2 name the Business Mentors Association's system as the test system; § 5 rewritten to the 08-28-26 ruling (three read-only settings; secrets and the CRM connection editable through the checked save; the 10-minute countdown); § 4's "What this page cannot switch on" became "Settings that need a restart"; the troubleshooting row follows. |
+| 1.1 | 11-15-26 13:30 | Claude (Claude Code) | § 8, the Integrations tab (v0.321.0 to v0.335.0), written from what was built: the switch, the sub-tabs, "in use" and its refusals, Test Integration, the set-up wizard, Ask Claude and its budget, the nightly test and its alert, switching it off. Revision header and change log added. |
+| 1.0 | 11-09-26 | — | The document as it stood before the revision header was added (last changed with the chapter website runbook). |

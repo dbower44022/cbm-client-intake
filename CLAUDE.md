@@ -611,6 +611,9 @@ packages rely on:
   `Settings` object — is what is in force for those keys.
 - A new setting read per request needs no restart; read it per request when
   you can. `SETTINGS_OVERRIDES=false` is the env-only break-glass.
+- **The Integrations tab** (`INTEGRATIONS_TAB`, off by default; v0.321.0 to
+  v0.335.0): its rules are in `setup/CLAUDE.md`, its guide is
+  `SYSTEM-SETTINGS-SETUP.md` § 8.
 
 ### Marketing Management (was Campaign Management) — `/campaigns`
 

@@ -1,6 +1,6 @@
 # setup/ — System Settings
 
-Last Updated: 11-15-26 02:50 · Revision 1.1
+Last Updated: 11-15-26 13:30 · Revision 1.2
 
 Detail for System Settings (`/setup`): the override model, the verified path, confirm-or-revert, restart-required settings, refresh, scoped rollout and the page's other panels.
 
@@ -136,9 +136,64 @@ keeps its old setting keys, relabelled, so no stored override is stranded.
   the settings its answer saved (`wizard.when_answers`), so Start again keeps
   the branch.
 
+## The Integrations tab — rules not to break
+
+Built v0.321.0 to v0.335.0, behind `INTEGRATIONS_TAB` (off by default).
+Administrator guide: `SYSTEM-SETTINGS-SETUP.md` § 8. Design and rulings:
+`prds/integrations-tab-plan.md` (I1 to I13, W1 to W6; § 4, § 6.3, § 6.5 and
+§ 7 describe what phase 10 removed).
+
+- **The registry is the one list.** `integrations/registry.py` names each
+  integration, its "in use" setting, its switches, its "Used by" entries,
+  its credentials and its test module. A setting reaches a sub-tab only by
+  its `integration=` (and `section=`) tag, set from one table,
+  `core/settings_registry.INTEGRATION_TAGS`. A new integration setting is
+  tagged there, or it stays on the Settings tab.
+- **The guard runs in the save AND the reset path**
+  (`integrations/guard.py`): no "not in use" while a feature is on, no
+  feature on while "not in use" (I5, I13). It counts the used-by features
+  that cannot work without the integration (`blocking_switches`) and a
+  scoped override as on. It is always active, switch or no switch. A new
+  write path to `app_setting` must call it, which is one more reason there
+  is only one (`_checked_save`).
+- **A check that cannot read its answer says unknown, never ok**
+  (`integrations/testing.py`). An exception or a timeout is unknown. Every
+  detail line and fact is scrubbed of every secret's value (`scrub`,
+  `secret_values`) before it is returned or stored.
+- **"Skipped" counts as passing a wizard screen** (`wizard.evaluate`): a
+  check skipped because its feature is off, or because there is nothing
+  to read yet, has nothing to prove. Unknown never passes a screen.
+- **The wizard's screens live in the guide's step files**, under a step's
+  `wizard:` key, beside `integration:`. Screen keys: `ask:` (answers with
+  `sets:` and `then:`), `enters:`, `runs:` (a coded action in
+  `integrations/actions.py`), `connect: mailing`, `sets:` (only with
+  `enters:`), `check:` (`decided:`, `setting_set:`, `test:<integration>`
+  or `test:<integration>/<check>[,<check>]`), `when:`, `copy:` (may hold
+  `{APP_BASE_URL}`), `see:`, `if_not:`. The renderer never prints them.
+  **`wizard.problems` must return nothing for every integration**
+  (`tests/test_integration_wizard_phase9.py`): it refuses an unknown
+  setting, check, test line, coded action, Connect, branch target or
+  `when:`. Run it after any step-file edit.
+- **Claude is read-only.** Ask Claude (`integrations/diagnosis.explain`,
+  `setup/router._run_ask`) gets read-only tools and the web tools held to
+  the integration's `doc_sites`. It has no tool that writes, and it is
+  never called at night. **A secret's value never reaches it**: only set
+  or not set and when it changed, and every message is scrubbed again on
+  the way out.
+- **One budget table.** `integration_agent_call` holds every call's cost,
+  including the old fix and setup plans' costs that migration 0049 copied
+  in. `WizardStore.spent_this_month` is the one sum
+  `INTEGRATION_AGENT_MONTHLY_BUDGET` is checked against. A new call to
+  Claude from this tab records its cost there.
+- **Alembic revision ids are at most 32 characters**: `version_num` is
+  `varchar(32)`, so a longer id fails every deploy's migrate job, and only
+  Postgres notices. `tests/test_integration_removal.py` checks every
+  revision.
+
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 11-15-26 13:30 | Claude (Claude Code) | The Integrations tab: the rules a future session must not break (phase 11). |
 | 1.1 | 11-15-26 02:50 | Claude (Claude Code) | Zoom Meetings and Zoom Webinars: the settings the Events side reads (Integrations tab phase 9, v0.333.0). |
 | 1.0 | 10-20-26 17:30 | Claude (Claude Code) | Created from the root `CLAUDE.md` section, word for word (Doug's approval 10-20-26). |
