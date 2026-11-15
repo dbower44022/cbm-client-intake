@@ -5,6 +5,16 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.332.2] — 2026-11-15
+
+**feat(scripts): the Zoom probe reports whether the co-host feature is on**
+(`in_meeting.co_host`). Ruling EH11 (Doug, 11-15-26, plan
+`prds/events/event-hosting-plan.md`): every Zoom Meeting the application
+creates is set up like a webinar — attendees muted with cameras off, only the
+host shares, nobody before the host, no waiting room, the passcode inside the
+personal link, no automatic recording — so a co-presenter shares by being
+made co-host, which needs that feature on the chapter's account.
+
 ## [0.332.1] — 2026-11-15
 
 **feat(scripts): the Zoom probe learns Zoom Meetings.** Event hosting plan

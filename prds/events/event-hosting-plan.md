@@ -1,6 +1,6 @@
 # Event hosting methods — plan
 
-Last Updated: 11-15-26 01:25 · Revision 0.2 — see change log at the end.
+Last Updated: 11-15-26 01:40 · Revision 0.3 — see change log at the end.
 
 This plan decides how a chapter's online events are hosted: Zoom Webinars,
 Zoom Meetings, a link to any other platform, or an outside host. It records
@@ -82,6 +82,7 @@ scopes already added.
 | EH8 | **One event host user per chapter**: every Zoom event the application creates is created under one Zoom user on the chapter's account (for example events@ on the chapter's domain). When Zoom Webinars is on a separate account, that account's host is used for webinars. |
 | EH9 | **Each chapter has its own Zoom account (or two).** One Zoom Webinars licence is not shared between chapters: it runs one webinar at a time, and Zoom's terms forbid sharing a login between organisations. |
 | EH10 | **A mentor's own Zoom stays a personal link on their mentor profile** (`preferredMeetingProvider`, `zoomPersonalLink`, ruling of 07-24-26). Nothing about it goes in System Settings; mentoring sessions never use the chapter's Zoom account. |
+| EH11 | **Every Zoom Meeting the application creates is set up like a webinar** (Doug, 11-15-26, option B of § 6 point 4): attendees join muted with cameras off; only the host may share the screen; nobody joins before the host; no waiting room, since registration already decides who holds a link; the passcode stays on, carried inside each personal join link; no automatic recording. Accepted cost: someone signed in as the event host user (EH8) starts each meeting, and makes a co-presenter co-host in the meeting so they can share (Participants → More → Make Co-Host; Zoom does not let a guest be named co-host in advance). |
 
 ## 5. What changes, by area
 
@@ -124,11 +125,19 @@ says which, in a handoff written in Entity Manager vocabulary.
    confirmation is the ticket", since a shared link can be forwarded.
 3. **Hybrid events**: whether the hosting method applies to the online half
    only (assumed).
-4. **The Zoom Meetings settings a meeting is created with**: waiting room,
-   mute on entry, who may share the screen — defaults to put to Doug after
-   the probe.
-5. **Whether one Zoom user may host a webinar and a meeting at overlapping
-   times**: the overlap warning assumes not.
+4. ~~**The Zoom Meetings settings a meeting is created with**~~ — settled
+   as ruling EH11, 11-15-26. Members-only events get the same settings for
+   now (decided in the build session, Doug may change it); editable settings
+   in System Settings are not planned. The co-host feature must be on in the
+   chapter's Zoom account: the probe reports `in_meeting.co_host` from
+   v0.332.2, and the integration test should check it.
+5. ~~**Whether one Zoom user may host a webinar and a meeting at overlapping
+   times**~~ — decided in the build session 11-15-26, not a ruling: Zoom
+   lets one user host one meeting or webinar at a time (Zoom's
+   documentation, not tried), and EH11 has the host start every meeting, so
+   the overlap warning (EH6) counts any two Zoom events under the same event
+   host user, webinars and meetings alike, from 30 minutes before each start
+   (hosts open early) to its end. It warns; it never refuses.
 
 ## 7. Build order and stopping points
 
@@ -162,5 +171,6 @@ the Events work is.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.3 | 11-15-26 01:40 | Claude (Claude Code) | Ruling EH11 (Doug, § 6 point 4, option B): webinar-like meeting settings. § 6 point 5 decided in the build session: the overlap warning counts webinars and meetings under one host user. |
 | 0.2 | 11-15-26 01:25 | Claude (Claude Code) | Step 1 done: § 3 records what Zoom Meetings did on the Association's account 11-15-26 (personal join links, attendance matched by email, capacity 100, the ten scopes). § 6 points 4 and 5 put to Doug. Doug approved the plan and the build prompt by running it, 11-14-26. |
 | 0.1 | 11-14-26 14:05 | Claude (Claude Code) | Draft from Doug's design discussion of 11-14-26: rulings EH1 to EH10, the comparison of hosting methods, the open points and the build order. For Doug's review. |
