@@ -1,6 +1,6 @@
 # events/ — Events, Webinars and the public pages
 
-Last Updated: 11-12-26 01:26 · Revision 1.3
+Last Updated: 11-15-26 02:25 · Revision 1.4
 
 Detail for Event Administration (`/events`), the public programme pages (`/webinars/`), presenters, topics, attendance, follow-ups, reporting and the portal events rail.
 
@@ -220,6 +220,17 @@ would be indistinguishable from a slug.
   host*; the register endpoint refuses with the link. No registrations, no
   confirmations, no attendance (D3-4, "for now"). CRM:
   `cevent-hostedby-crm-handoff.md`.
+- **Hosting methods** (plan `prds/events/event-hosting-plan.md`, rulings
+  EH1 to EH14, `OPEN-ITEMS.md` #84; **planned, not built** beyond the CRM
+  field). `CEvent.hostedBy` becomes the hosting method: stored `CBM Zoom`
+  (shown as Zoom Webinars), `Zoom Meetings`, `Other platform`, `Outside
+  host` (`cevent-hosting-method-crm-handoff.md`; on the Business Mentors
+  Association's CRM only so far). **Code that reads the field must treat
+  `CBM Zoom` as Zoom Webinars and never compare against the label.** The
+  Zoom ids serve both Zoom methods. Zoom Meetings' participant report carries
+  `user_email` and no `registrant_id`, so attendance matches by email as it
+  does for webinars (proved 11-15-26). Mentoring sessions never use the
+  chapter's Zoom account (EH10).
 - **Phase 6c reporting** (`events/reporting.py`): the engagement **Events tab**
   (attendance rolled up across all of a client's contacts, deduplicated by
   event), the contact **Events tab** in the directory, and programme + conversion
@@ -335,6 +346,7 @@ would be indistinguishable from a slug.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.4 | 11-15-26 02:25 | Claude (Claude Code) | Hosting methods: the stored values, the shared Zoom ids, attendance by email (event hosting plan, steps 1 and 3). |
 | 1.3 | 11-12-26 01:26 | Claude (Claude Code) | An event run by an outside host (D3-3, D3-4). |
 | 1.2 | 11-06-26 02:16 | Claude (Claude Code) | The History tab (v0.312.0). |
 | 1.1 | 11-03-26 23:59 | Claude (Claude Code) | Promote this event and the Campaigns tab (v0.303.0, M10). |

@@ -1279,4 +1279,10 @@ the strength of it.
 - **11-14-26: the Association's application tracks `main`** and is the
   test system (option A). Deployment `58f014f4…` ACTIVE, `/healthz` read
   v0.332.0 by the switch script. Owed in #85.
+- **v0.332.1–v0.332.3 (2026-11-15) committed, not pushed**: the event
+  hosting build, steps 1 and 3 (#84) — `scripts/probe_zoom.py --meetings`
+  proved Zoom Meetings on the Association's account; the hosting method on
+  `CEvent.hostedBy`, applied on the Association's CRM only; plan § 6 settled
+  (EH11 to EH14). Scripts and documents only. Step 4 waits for Integrations
+  phase 9 (prompt v0.2 approved 11-15-26).
 Everything else still owed is in `OPEN-ITEMS.md`.
