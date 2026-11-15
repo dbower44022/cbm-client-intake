@@ -1,8 +1,8 @@
 # Kickoff prompt — Integrations tab, phase 11: documentation and the live review
 
-Last Updated: 11-15-26 12:42 · Revision 0.1 (draft) — see change log at the end.
+Last Updated: 11-15-26 12:44 · Revision 0.2 (approved) — see change log at the end.
 
-**Draft for Doug's approval.** Paste everything below the line into a fresh
+**Approved by Doug 11-15-26.** Paste everything below the line into a fresh
 Claude Code session rooted in `~/Dropbox/Projects/cbm-client-intake`.
 
 ---
@@ -137,4 +137,5 @@ Close the phase as the orchestrator requires.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.2 | 11-15-26 12:44 | Claude (Claude Code) | Approved by Doug. |
 | 0.1 | 11-15-26 12:42 | Claude (Claude Code) | Draft written at the close of phase 10 (v0.335.0). The live review moves from crm-test to the Business Mentors Association's system (#85). |
