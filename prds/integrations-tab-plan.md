@@ -1,6 +1,6 @@
 # Integrations tab — System Settings plan
 
-Last Updated: 11-15-26 11:23 · Revision 0.17
+Last Updated: 11-15-26 12:42 · Revision 0.18
 
 This is the design record for a new top-level **Integrations** tab on the System
 Settings page (`/setup`). It holds Doug's rulings, the contents of each
@@ -134,6 +134,8 @@ in this order:
 
 ## 4. The setup checklist
 
+> **Removed in phase 10 (v0.335.0, ruling W4).** The set-up wizard (§ 10) replaced the checklist's display and its hand ticks; the steps' `integration:` key stays, `check.auto` was removed. The text below records what was built in phase 4.
+
 - The steps stay written in one place, the deployment guide step files
   (`prds/chapter-network/deployment-guide/steps/stage-*.yaml`). The page and the
   guide cannot disagree.
@@ -210,6 +212,8 @@ as data, never as instructions. The system prompt says so.
 
 ### 6.3 What it produces
 
+> **Removed in phase 10 (v0.335.0, ruling W4).** Fix plans, `submit_fix_plan`, approval and the runner (§ 6.3, § 6.4) are gone; the read-only tools and the loop serve Ask Claude on a failed wizard screen (W6). The text below records what was built in phase 6.
+
 The diagnosis agent finishes by calling one tool, `submit_fix_plan`, with a
 strict schema:
 
@@ -239,6 +243,8 @@ strict schema:
   step, with the check's own error shown.
 
 ### 6.5 The setup assistant (rulings I11, I12)
+
+> **Removed in phase 10 (v0.335.0, ruling W4).** The setup assistant and its setup plans are gone; the coded actions stay, run by the wizard's button screens. The text below records what was built in phase 7.
 
 - "Set up with Claude" appears on a sub-tab whose setup checklist still has
   open steps. It uses the same model, read-only tools, allowed sites and
@@ -270,6 +276,8 @@ for 14 days. The diagnosis agent reads it through its read-only tool. To be
 settled in phase 6.
 
 ## 7. Storage
+
+> **Removed in phase 10 (v0.335.0, ruling W4).** `integration_checklist_tick` and `integration_fix_plan` were dropped by migration `0049_drop_checklist_fix_plans`, which first copied every plan's cost into `integration_agent_call` (§ 10's Ask Claude table), so the monthly budget keeps it. The text below records what was built in phase 1 to 7.
 
 New tables, added by Alembic migrations:
 
@@ -391,6 +399,7 @@ to 7 stand as built):
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.18 | 11-15-26 12:42 | Claude (Claude Code) | Phase 10 built: v0.335.0, the removal (ruling W4; list approved by Doug 11-15-26, option A): the checklist display, hand ticks, setup plans and fix plans gone; Fix with the wizard; migration 0049 keeps the plans' costs in the Ask Claude table and drops their two tables; `check.auto` removed from the step files. § 4, § 6.3, § 6.5 and § 7 each open with a note naming what was removed. Pushed 11-15-26. |
 | 0.17 | 11-15-26 11:23 | Claude (Claude Code) | Phase 9 built: v0.334.0, a set-up wizard for every integration. Doug's decision 11-15-26 (scope B): a wizard covers what the application connects to; work done before the application exists stays in the guide. Not pushed. |
 | 0.16 | 11-15-26 02:50 | Claude (Claude Code) | Phase 9 part one built: v0.333.0, the Zoom split into Zoom Meetings and Zoom Webinars (settings, checks and screens approved by Doug 11-15-26; option A, Webinars use Meetings' credentials only once they are set). Not pushed. |
 | 0.15 | 11-14-26 14:10 | Claude (Claude Code) | § 10: the event-hosting plan (rulings EH1 to EH10, Doug 11-14-26) splits Zoom into Zoom Meetings and Zoom Webinars; the split is phase 9's first part. |

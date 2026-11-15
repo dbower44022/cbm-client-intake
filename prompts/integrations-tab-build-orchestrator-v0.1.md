@@ -1,6 +1,6 @@
 # Build orchestrator — the Integrations tab of System Settings
 
-Last Updated: 11-15-26 11:47 · Revision 0.15 — see change log at the end.
+Last Updated: 11-15-26 12:42 · Revision 0.16 — see change log at the end.
 
 This file runs the whole build of the Integrations tab. It names the phases,
 the prompt for each one, the rules that every phase session follows, and the
@@ -34,8 +34,8 @@ stopping points where the work pauses for Doug. The design is
 | 7 | The setup assistant and setup plans | `prompts/integrations-tab-phase7-prompt-v0.1.md` | Built v0.329.0, 11-13-26; awaiting Doug's review |
 | 8 | The wizard, piloted on Zoom (plan § 10, rulings W1 to W6) | `prompts/integrations-tab-phase8-prompt-v0.2.md` | Built v0.331.0, 11-14-26; awaiting the live pilot on crm-test (stopping point 3). (v0.1 is superseded: it becomes phase 11.) |
 | 9 | The Zoom split into Zoom Webinars and Zoom Meetings (plan `prds/events/event-hosting-plan.md`, EH1, EH5, EH7, EH8), then the other integrations' wizard screens | `prompts/integrations-tab-phase9-prompt-v0.2.md` | Built v0.333.0 (the split) and v0.334.0 (every integration's screens), 11-15-26; awaiting Doug's review |
-| 10 | The removal of the checklist display, setup plans and fix plans (ruling W4) | `prompts/integrations-tab-phase10-prompt-v0.1.md` | Prompt approved by Doug 11-15-26; not started |
-| 11 | Documentation, and the live review on crm-test | written at the end of phase 10 | — |
+| 10 | The removal of the checklist display, setup plans and fix plans (ruling W4) | `prompts/integrations-tab-phase10-prompt-v0.1.md` | Built v0.335.0, 11-15-26 (pushed 11-15-26); awaiting Doug's review |
+| 11 | Documentation, and the live review on the Business Mentors Association's system (the test system since 11-14-26) | `prompts/integrations-tab-phase11-prompt-v0.1.md` | Draft prompt for Doug's approval |
 
 The session closing each phase updates the **State** column.
 
@@ -98,6 +98,7 @@ which goes to Doug as a decision.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.16 | 11-15-26 12:42 | Claude (Claude Code) | State column: phase 10 built (v0.335.0); phase 11 prompt drafted, for the Business Mentors Association's system rather than crm-test. |
 | 0.14 | 11-15-26 11:23 | Claude (Claude Code) | State column: phase 9 built (v0.334.0); phase 10 prompt drafted. |
 | 0.13 | 11-15-26 02:50 | Claude (Claude Code) | State column: phase 9 part one built (v0.333.0). |
 | 0.12 | 11-15-26 02:25 | Claude (Claude Code) | State column: phases 1 and 2 reviewed (Doug, 11-15-26). |
