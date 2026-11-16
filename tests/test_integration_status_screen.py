@@ -103,3 +103,12 @@ def test_the_dialog_is_on_the_page_and_closing_keeps_the_place():
     assert 'id="wizOverlay"' in html and 'data-wizclose="1"' in html
     # Closing only hides the dialog: no request is made, nothing is undone.
     assert "api(" not in _function("closeDialog")
+
+
+def test_a_secret_box_can_be_viewed_but_never_holds_the_stored_secret():
+    """Doug, 11-16-26: View on a secret box, so a paste can be checked. The box
+    starts empty; the stored secret never reaches the page."""
+    dialog = _function("renderDialog")
+    assert 'data-wizreveal="1"' in dialog and ">View</button>" in dialog
+    assert 'esc(s.secret ? "" : (s.value || ""))' in dialog
+    assert 'box.type = showing ? "text" : "password"' in SRC

@@ -5,6 +5,16 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.339.1] — 2026-11-16
+
+**feat(setup): View on every secret box in the setup dialog.** Dark behind
+**`INTEGRATIONS_TAB`**. Doug's request in the phase 11 live review
+(Anthropic's Paste the API key step): a way to check that the clipboard held
+the right text before it is saved. **View** shows what is in the box and
+becomes **Hide**. It never shows the stored secret, which never reaches the
+page: a set secret's box still starts empty. Test in
+`tests/test_integration_status_screen.py`. 4075 passed. `OPEN-ITEMS.md` #82.
+
 ## [0.339.0] — 2026-11-16
 
 **feat(evaluation): Business Evaluation phase 6 — the intake survey.** Dark

@@ -717,7 +717,11 @@
     if (s.kind === "enter") {
       body += '<div class="su__wizbox"><input type="' + (s.secret ? "password" : "text") + '" class="su__wizinput" id="wizValue" autocomplete="off" value="'
         + esc(s.secret ? "" : (s.value || "")) + '" placeholder="' + esc(s.secret ? (s.isSet ? "Set — paste a new value to replace it" : "Paste it here") : "")
-        + '" aria-label="' + esc(s.title) + '" /></div>';
+        + '" aria-label="' + esc(s.title) + '" />'
+        // View: shows what is in the box, so a paste can be checked before it
+        // is saved (Doug, 11-16-26). Never the stored secret: it never reaches the page.
+        + (s.secret ? ' <button type="button" class="cbm-button cbm-button--secondary" data-wizreveal="1" aria-pressed="false">View</button>' : "")
+        + "</div>";
     }
     body += '<p class="form-error" id="wizError" role="alert" hidden></p>';
     $("wizBody").innerHTML = body;
@@ -1409,6 +1413,16 @@
       return;
     }
     if (hit && hit.dataset.wizclose) { closeDialog(); return; }
+    if (t.dataset && t.dataset.wizreveal) {
+      var box = $("wizValue");
+      if (box) {
+        var showing = box.type === "password";
+        box.type = showing ? "text" : "password";
+        t.textContent = showing ? "Hide" : "View";
+        t.setAttribute("aria-pressed", String(showing));
+      }
+      return;
+    }
     if (hit && hit.dataset.subtab) { ev.preventDefault(); closeMenus(); selectSubtab(hit.dataset.subtab); return; }
     if (!(t.closest && t.closest(".su__menuwrap"))) closeMenus();
     if (t.id === "wizOverlay") { closeDialog(); return; }
