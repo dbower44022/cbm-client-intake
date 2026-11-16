@@ -1,6 +1,6 @@
 # CRM handoff — Business Evaluation phase 5: `CActionItem`
 
-Last Updated: 11-15-26 23:20 · Revision 0.1 — see change log at the end.
+Last Updated: 11-16-26 01:10 · Revision 0.2 — see change log at the end.
 
 One new record type: one Action Item record per action item a client agreed
 to when a Business Evaluation report was released. Linked to the engagement,
@@ -22,7 +22,7 @@ one link points at `CBusinessEvaluation`.
 
 | CRM | State | Evidence |
 |---|---|---|
-| The Business Mentors Association (the test system) | **Owed**: the phase 5 check runs there (Doug's choice 11-15-26). Its CRM has neither this nor the phase 1 plan; `./scripts/evaluation_bma.sh apply` applies both and the grants. Dry run 11-15-26: fingerprint `5bf3e2de43a8` while `CBusinessEvaluation` was missing; `1dd0c354c974` once it exists (the fingerprint covers the work still to do, not the file). | The applier's dry-run output. |
+| The Business Mentors Association (the test system) | **Done 11-15-26** by Doug with `./scripts/evaluation_bma.sh apply`: both plans (phase 1's too) created and verified, the four grants read back, rebuild HTTP 200; the org-wide key reads `CActionItem` (HTTP 200). **Non-admin check passed 11-16-26**: Joe Mentor released a report with three action items and marked one Done. Dry run 11-15-26: fingerprint `5bf3e2de43a8` while `CBusinessEvaluation` was missing; `1dd0c354c974` once it exists (the fingerprint covers the work still to do, not the file). | The applier's dry-run output. |
 | crm-test | **Not applied.** Doug chose the Association for testing. | — |
 | Production | **Not applied.** At a Sunday 17:00 UTC slot with the phase 1 plan, after the Association's check. | — |
 | Boston | **Owed** with its release. | — |
@@ -81,3 +81,4 @@ header of `scripts/apply_crm_plan.py` describes.
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
 | 0.1 | 11-15-26 23:20 | Claude (Claude Code) | Created with phase 5. |
+| 0.2 | 11-16-26 01:10 | Claude (Claude Code) | Applied on the Association and checked as a non-admin. |

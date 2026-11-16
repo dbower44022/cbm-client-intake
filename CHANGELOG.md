@@ -73,6 +73,9 @@ Business Mentors Association's system rather than crm-test. `OPEN-ITEMS.md` #83.
   drafts on the Association's training system; `scripts/evaluation_bma.sh`
   wraps the check, the apply and the samples there.
 - Tests: `tests/test_evaluation_release.py` (29).
+- **Checked by Doug 11-16-26 on the Business Mentors Association's system**
+  as Joe Mentor (release, the PDF, the action items) and Matt Mentor
+  (refused). Both CRM plans and the grants applied there 11-15-26.
 
 ## [0.337.0] — 2026-11-15
 

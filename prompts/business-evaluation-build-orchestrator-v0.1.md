@@ -1,6 +1,6 @@
 # Build orchestrator — Business Evaluation
 
-Last Updated: 11-15-26 23:20 · Revision 0.13 — see change log at the end.
+Last Updated: 11-16-26 01:10 · Revision 0.14 — see change log at the end.
 
 This file runs the whole build of the Business Evaluation offering. It names the
 phases, the prompt for each one, the rules that every phase session follows, and
@@ -31,8 +31,8 @@ All rulings in the plan were approved by Doug on 11-13-26.
 | 2b | The survey engine (ruling BE23): the engine pieces moved from `evaluation/` into `surveys/`, with Business Evaluation as the first survey purpose | `prompts/business-evaluation-phase2b-prompt-v0.1.md` | Built v0.330.0, live-checked by Doug on a local run against crm-test 11-13-26 |
 | 3 | The analysis: the worker job, the analysis prompts and rubrics, the report template, Retry | `prompts/business-evaluation-phase3-prompt-v0.1.md` | Built v0.332.0; sample reports reviewed by Doug 11-14-26 |
 | 4 | Review and approval, and scheduling the review session | `prompts/business-evaluation-phase4-prompt-v0.1.md` | Built v0.336.0; checked by Doug on a local run against crm-test 11-15-26 |
-| 5 | Release of the client version, and action items as records | `prompts/business-evaluation-phase5-prompt-v0.1.md` | Built v0.338.0 (11-15-26); Doug's check on the Business Mentors Association's system owed |
-| 6 | The partner and funder offering, and the anonymized roll-up | written at the end of phase 5 | — |
+| 5 | Release of the client version, and action items as records | `prompts/business-evaluation-phase5-prompt-v0.1.md` | Built v0.338.0; checked by Doug on the Business Mentors Association's system 11-16-26 |
+| 6 | The partner and funder offering, and the anonymized roll-up | `prompts/business-evaluation-phase6-prompt-v0.1.md` | Draft prompt (revision 0.1) for Doug's approval |
 | 7 | The pilot review, then the other four evaluation areas as content | written at the end of phase 6 | — |
 | 8 | Documentation, training material, the live review on crm-test, the production handoff | written at the end of phase 7 | — |
 
@@ -125,3 +125,4 @@ partner sees or receives, which goes to Doug as a decision.
 | 0.11 | 11-15-26 12:20 | Claude (Claude Code) | Phase 4 built (v0.336.0); phase 5 draft prompt written. |
 | 0.12 | 11-15-26 12:45 | Claude (Claude Code) | Phase 5 prompt approved by Doug. |
 | 0.13 | 11-15-26 23:20 | Claude (Claude Code) | Phase 5 built (v0.338.0); its check owed. |
+| 0.14 | 11-16-26 01:10 | Claude (Claude Code) | Phase 5 checked on the Association; phase 6 draft prompt written. |
