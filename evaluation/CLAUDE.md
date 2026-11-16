@@ -239,7 +239,7 @@ table names or the `/evaluation/{token}` page, read the engine's equivalent.
 `crm-plans/business-evaluation.json` (fingerprint `89d89d28b53b` on crm-test)
 and `scripts/migrate_evaluation_roles.py`; handoff
 `business-evaluation-crm-handoff.md`. Phase 5: `crm-plans/action-item.json`
-(fingerprint `5bf3e2de43a8`), the same role script, handoff
+(fingerprint `1dd0c354c974` once `CBusinessEvaluation` exists), the same role script, handoff
 `action-item-crm-handoff.md`. **No field is Read-only**, the draft
 report included (ruling 40); `engagement` and `clientProfile` are required by
 the application, not the CRM. Multiple Assigned Users and Collaborators are

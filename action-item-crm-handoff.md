@@ -22,7 +22,7 @@ one link points at `CBusinessEvaluation`.
 
 | CRM | State | Evidence |
 |---|---|---|
-| The Business Mentors Association (the test system) | **Owed**: the phase 5 check runs there (Doug's choice 11-15-26). Its CRM has neither this nor the phase 1 plan; `./scripts/evaluation_bma.sh apply` applies both and the grants. Dry run 11-15-26: fingerprint `5bf3e2de43a8`, the business evaluation link refused until the phase 1 plan is applied (expected). | The applier's dry-run output. |
+| The Business Mentors Association (the test system) | **Owed**: the phase 5 check runs there (Doug's choice 11-15-26). Its CRM has neither this nor the phase 1 plan; `./scripts/evaluation_bma.sh apply` applies both and the grants. Dry run 11-15-26: fingerprint `5bf3e2de43a8` while `CBusinessEvaluation` was missing; `1dd0c354c974` once it exists (the fingerprint covers the work still to do, not the file). | The applier's dry-run output. |
 | crm-test | **Not applied.** Doug chose the Association for testing. | — |
 | Production | **Not applied.** At a Sunday 17:00 UTC slot with the phase 1 plan, after the Association's check. | — |
 | Boston | **Owed** with its release. | — |
@@ -59,7 +59,7 @@ doug-System-Product-Name), in `~/Dropbox/Projects/cbm-client-intake`:
 
     PYTHONPATH=. uv run python scripts/run_with_admin.py --env <the CRM's env file> \
         scripts/apply_crm_plan.py crm-plans/action-item.json              # dry run
-    ... crm-plans/action-item.json --apply --production --expect 5bf3e2de43a8
+    ... crm-plans/action-item.json --apply --production --expect 1dd0c354c974
     PYTHONPATH=. uv run python scripts/run_with_admin.py --env <the CRM's env file> \
         scripts/migrate_evaluation_roles.py --apply
 
