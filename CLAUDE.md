@@ -1301,5 +1301,7 @@ the strength of it.
 - **v0.338.0 (2026-11-15) is pushed**: Business Evaluation phase 5,
   release and action items (`BUSINESS_EVALUATION`, off in production),
   checked by Doug on the Business Mentors Association's system 11-16-26;
-  both CRM plans applied there only. Phase 6 prompt drafted. Owed in #83.
+  both CRM plans applied there only. Phase 6's prompt is approved and on
+  hold for a planning session on wider uses
+  (`prompts/business-evaluation-expansion-planning-prompt-v0.1.md`). Owed in #83.
 Everything else still owed is in `OPEN-ITEMS.md`.

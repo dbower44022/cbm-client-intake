@@ -1,13 +1,13 @@
 # Business Evaluation — plan
 
-Last Updated: 11-16-26 01:10 · Revision 0.11 — see change log at the end.
+Last Updated: 11-16-26 02:05 · Revision 0.12 — see change log at the end.
 
 This is the design record for the **Business Evaluation** offering. It holds
 the terms, the flow, the rulings, the CRM data model, and the build phases with
 their stopping points. The build orchestrator
 (`prompts/business-evaluation-build-orchestrator-v0.1.md`) and the per-phase
 build prompts are written from this file. Phase 1 is built (v0.324.0); phase 2
-is built (v0.328.0); phase 2b is built (v0.330.0); phase 3 is built (v0.332.0); phase 4 is built (v0.336.0); phase 5 is built (v0.338.0) and checked.
+is built (v0.328.0); phase 2b is built (v0.330.0); phase 3 is built (v0.332.0); phase 4 is built (v0.336.0); phase 5 is built (v0.338.0) and checked. Phase 6 is on hold for a planning session on wider uses of the evaluation (Doug, 11-16-26).
 
 **Status of the rulings.** All rulings, BE1 to BE23, are approved by Doug
 (11-13-26). Rulings BE1 to BE6 restate what Doug described; BE7 to BE23 were
@@ -235,3 +235,4 @@ surveys staff can edit without a release.
 | 0.9 | 11-15-26 12:20 | Claude (Claude Code) | Phase 4 built, v0.336.0: review and approval, and the review session. Doug's choices 11-14-26, all as recommended: every reviewer can still edit an approved report, and a saved change withdraws the approval; the draft is shown beside the editor; no images in the report; the review session is an upcoming session picked or a new one made. Checked by Doug on a local run against crm-test 11-15-26. |
 | 0.10 | 11-15-26 23:20 | Claude (Claude Code) | Phase 5 built, v0.338.0: release and action items. Doug's choices 11-15-26, all as recommended: open question 1 answered, a new `CActionItem`; the client version a PDF filed on the Documents tab with a header, the agreed action items and a closing note; one Release dialog per area; a released report is final; the release email as shown; the check on the Business Mentors Association's system, not crm-test. |
 | 0.11 | 11-16-26 01:10 | Claude (Claude Code) | Phase 5 checked by Doug on the Business Mentors Association's system 11-16-26: release as Joe Mentor, the PDF, the action items, Release refused as Matt Mentor. |
+| 0.12 | 11-16-26 02:05 | Claude (Claude Code) | Phase 6 on hold: Doug wants a planning session on wider uses of the evaluation first (`prompts/business-evaluation-expansion-planning-prompt-v0.1.md`). |
