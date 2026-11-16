@@ -340,7 +340,7 @@ to 6.
    mentor with that background review each one before the pilot?
 3. **Should the analysis read the client's website and named competitors?**
    The Claude API can search the web. It improves the Competition and Marketing
-   reports and adds cost and a source to check. Proposed for phase 7, off by
+   reports and adds cost and a source to check. Proposed for phase 11 (the pilot review, formerly phase 7), off by
    default.
 4. **Should the client attach documents**, such as financial statements? It
    improves the Finance report and means handling sensitive files. Proposed as
@@ -351,7 +351,7 @@ to 6.
    stands for the pilot (versioned files, changed through a session and a
    release), but the analysis prompts and scoring rubrics are to become
    editable in System Settings in a later phase, each save a new version.
-   To be planned at the phase 7 pilot review, when mentors' corrections show
+   To be planned at the phase 11 pilot review (formerly phase 7), when mentors' corrections show
    how often they change. It needs: an editor, version storage in the
    application database, a test run before a version goes live, and an
    amendment to BE9.
