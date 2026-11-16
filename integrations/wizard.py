@@ -380,6 +380,41 @@ def shown(screens: list[Screen], state: State, progress: dict[str, Any]) -> Opti
 
 # --- progress ----------------------------------------------------------------------------------
 
+#: Kept through Review and Start again: whether this integration's setup was
+#: ever completed (Doug's ruling 11-15-26, option A).
+KEPT = ("completed", "credsAtStart")
+
+
+def credentials_set(integration: str, settings: Any) -> bool:
+    """Every credential of the integration is set (the status line's rule)."""
+    from integrations.registry import integration_for
+
+    integ = integration_for(integration)
+    if integ is None:
+        return False
+    if integ.key == "zoom":
+        from core.zoom import webinars_account
+
+        account = webinars_account(settings)
+        if account.shared:
+            return bool(account.host)
+    return all(getattr(settings, k, None) for k in integ.credentials)
+
+
+def completed(integration: str, progress: dict[str, Any], settings: Any,
+              last_run: Optional[dict[str, Any]] = None) -> bool:
+    """Was this setup ever completed? Any one of: it reached its last step; the
+    integration's test has passed (stored as a marker, or the last run now);
+    every credential was set when the setup was first opened, which covers an
+    integration the deployment guide set up before the setup dialog existed.
+    A row from before the marker reads the credentials as they are now."""
+    if progress.get("completed") or (last_run or {}).get("outcome") == "ok":
+        return True
+    if "credsAtStart" in progress:
+        return bool(progress["credsAtStart"])
+    return credentials_set(integration, settings)
+
+
 def blank() -> dict[str, Any]:
     return {"current": None, "history": [], "answers": {}, "done": [], "finished": False,
             "ended": "", "failure": None, "help": None}
@@ -476,7 +511,9 @@ def view(integration: str, settings: Any, overrides: dict[str, Any],
         if current else None
     # A setup someone started and left partway (the status screen's "Continue
     # setup"): a screen chosen by an action, not one worked out from the checks.
-    in_progress = status == "running" and p["current"] in ids and bool(p["history"] or p["answers"])
+    # Only a setup never completed continues; once completed, a failure is Fix.
+    in_progress = status == "running" and p["current"] in ids and bool(p["history"] or p["answers"]) \
+        and not completed(integration, p, settings, test_runs.get(integration))
     out: dict[str, Any] = {"status": status, "total": len(screens), "ended": p.get("ended") or "",
                            "canBack": bool(p["history"]) or back_to is not None, "help": p.get("help"),
                            "inProgress": in_progress}

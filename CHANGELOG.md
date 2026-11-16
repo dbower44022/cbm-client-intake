@@ -5,6 +5,27 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.338.1] — 2026-11-15
+
+**fix(setup): Continue setup only for a setup never completed.** Dark behind
+**`INTEGRATIONS_TAB`**. Doug's finding in the phase 11 live review: the
+Association's EspoCRM, set up by the deployment guide and now failing on five
+missing email templates, read *Setup in progress* and **Continue setup**
+because a walk had left its setup open at step 3. His ruling, 11-15-26: once
+a setup has been completed, a later failure is **Fix**, even after the setup
+was reopened and left (option A). `OPEN-ITEMS.md` #82.
+
+- **"Completed"** is any one of: the setup reached its last step; the
+  integration's test passed (a manual test or a setup step's test stores a
+  marker; the last run passing counts too, which covers the nightly run);
+  every credential was set when the setup was first opened, which covers an
+  integration set up before the setup dialog existed. A setup row from
+  before this release reads the credentials as they are now
+  (`wizard.completed`, `wizard.credentials_set`).
+- The marker and the first-opened credentials are kept through **Review the
+  setup** and **Start the setup again** (`wizard.KEPT`).
+- Tests: three in `tests/test_integration_wizard.py`. 4053 passed.
+
 ## [0.338.0] — 2026-11-15
 
 **feat(evaluation): Business Evaluation phase 5 — release the client version,

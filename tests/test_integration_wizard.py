@@ -383,3 +383,56 @@ def test_the_page_offers_review_on_a_set_up_wizard():
 
     js = Path("setup/frontend/app.js").read_text(encoding="utf-8")
     assert '"|review|"' in js and "Review the setup" in js
+
+
+# --- Continue setup only for a setup never completed (Doug's ruling 11-15-26, option A) ---
+
+def _left(**extra):
+    return dict(wizard.blank(), current="zoom-client-id", history=["zoom-use"], answers={"zoom-use": "Yes"}, **extra)
+
+
+def test_continue_setup_only_for_a_setup_never_completed():
+    screens = zoom()
+    # Credentials missing when it was first opened, never finished, never passed: continues.
+    assert wizard.view("zoom", Settings(), {}, {}, _left(credsAtStart=False), screens)["inProgress"] is True
+    # It reached its last step once: a later stop is not "continue" (it is Fix or Setup).
+    assert wizard.view("zoom", Settings(), {}, {}, _left(credsAtStart=False, completed=True), screens)["inProgress"] is False
+    # Its test passes now.
+    assert wizard.view("zoom", Settings(), {}, {"zoom": {"outcome": "ok", "checks": []}},
+                       _left(credsAtStart=False), screens)["inProgress"] is False
+    # Every credential was set when it was first opened (set up by the guide).
+    assert wizard.view("zoom", Settings(), {}, {}, _left(credsAtStart=True), screens)["inProgress"] is False
+    # A row from before the marker reads the credentials as they are now.
+    creds = Settings(zoom_webinars_same_account=False, zoom_account_id="a", zoom_client_id="b",
+                     zoom_client_secret=SECRET, zoom_host_email="h@x.org")
+    assert wizard.view("zoom", creds, {}, {}, _left(), screens)["inProgress"] is False
+    assert wizard.view("zoom", Settings(), {}, {}, _left(), screens)["inProgress"] is True
+
+
+def test_the_marker_survives_restart_and_review_and_is_recorded_once(monkeypatch):
+    app = _app(monkeypatch)
+    client = TestClient(app)
+    post(client, "answer", "zoom-use", "Yes")
+    row = app.state.wizard_store.rows["zoom"]
+    assert row["credsAtStart"] is False
+    row["completed"] = True
+    post(client, "restart")
+    assert app.state.wizard_store.rows["zoom"]["completed"] is True
+    assert app.state.wizard_store.rows["zoom"]["credsAtStart"] is False
+    post(client, "review")
+    assert app.state.wizard_store.rows["zoom"]["completed"] is True
+
+
+def test_reaching_the_last_step_marks_the_setup_completed(monkeypatch):
+    app = _app(monkeypatch)
+    app.state.wizard_store.rows["zoom"] = dict(wizard.blank(), current="zoom-switch-on", history=["zoom-use"],
+                                               answers={"zoom-use": "Yes", "zoom-same-account": "Yes"})
+
+    async def fake_test(integ, settings, deps=None, **kw):
+        return {"outcome": "ok", "checks": [], "facts": [], "integration": integ.key}
+
+    monkeypatch.setattr("integrations.testing.run_integration_test", fake_test)
+    client = TestClient(app)
+    w = zoom_view(post(client, "answer", "zoom-switch-on", "Not yet"))
+    assert w["status"] == "done"
+    assert app.state.wizard_store.rows["zoom"]["completed"] is True

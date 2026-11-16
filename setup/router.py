@@ -511,6 +511,8 @@ async def run_integration_test(key: str, request: Request) -> dict:
             stored = True
         except Exception as exc:  # noqa: BLE001 — the result is still shown
             log.warning("integration test of %s could not be stored: %s", key, exc)
+    if result["outcome"] == "ok":
+        await _mark_completed(request, key)
     await _log(
         user, action_log.ACT_INTEGRATION_TESTED,
         f"{integ.name} integration test: {result['outcome']}",
@@ -518,6 +520,23 @@ async def run_integration_test(key: str, request: Request) -> dict:
          "checks": {c["key"]: c["outcome"] for c in result["checks"]}},
     )
     return {"run": run, "stored": stored}
+
+
+async def _mark_completed(request: Request, key: str) -> None:
+    """A passing test means this integration's setup was completed: a later
+    failure reads Fix, never Continue setup (Doug, 11-15-26). Best-effort."""
+    from integrations import wizard
+
+    store = _wizard_store(request)
+    if store is None or not wizard.screens_for(key):
+        return
+    try:
+        p = dict(wizard.blank(), **(await store.get(key) or {}))
+        if not p.get("completed"):
+            p["completed"] = True
+            await store.put(key, p)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("the %s setup could not be marked completed: %s", key, exc)
 
 
 @router.get("/integrations/{key}/test")
@@ -728,14 +747,19 @@ async def wizard_action(key: str, action: str, body: WizardIn, request: Request)
     actor = _actor(user)
     reason = "set in the setup wizard"
 
+    if "credsAtStart" not in p:
+        # The first time this setup is touched: were its credentials all set?
+        p["credsAtStart"] = wizard.credentials_set(key, get_settings())
+
     async def respond() -> dict:
         await store.put(key, p, by=actor)
         return {"page": await page_payload(_store(request), await _test_runs(request),
                                            await _page_state(request))}
 
     if action == "restart":
+        kept = {k: p[k] for k in wizard.KEPT if k in p}
         p.clear()
-        p.update(wizard.blank())
+        p.update(wizard.blank(), **kept)
         return await respond()
     if action == "back":
         if p["history"]:
@@ -759,8 +783,9 @@ async def wizard_action(key: str, action: str, body: WizardIn, request: Request)
         # Every check passes: open the first screen, so any answer can be
         # seen and changed (phase 11, option A). Answers already saved stay.
         answers = p.get("answers") or {}
+        kept = {k: p[k] for k in wizard.KEPT if k in p}
         p.clear()
-        p.update(wizard.blank())
+        p.update(wizard.blank(), **kept)
         p["answers"] = answers
         p["current"] = wizard.first_screen(screens, wizard.when_answers(screens, answers, get_settings()))
         return await respond()
@@ -865,6 +890,8 @@ async def wizard_action(key: str, action: str, body: WizardIn, request: Request)
             if runs is not None:
                 await runs.record(result, trigger=MANUAL, run_by_id=str(user.get("userId") or ""), run_by=actor)
             test_runs = {target.key: result}
+            if target.key == key and result.get("outcome") == "ok":
+                p["completed"] = True
         overrides = await _store(request).load() if _store(request) is not None else {}
         state = wizard.State(settings=get_settings(), overrides=overrides, test_runs=test_runs,
                              answers=p["answers"])
@@ -880,7 +907,7 @@ async def wizard_action(key: str, action: str, body: WizardIn, request: Request)
     if then == wizard.END:
         p["current"], p["ended"] = None, f"{integ.name} is marked as not used by this chapter."
     elif nxt is None:
-        p["current"], p["finished"] = None, True
+        p["current"], p["finished"], p["completed"] = None, True, True
     else:
         p["current"] = nxt
     return await respond()
