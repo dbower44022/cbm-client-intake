@@ -43,7 +43,8 @@
      notice(text, kind)             the page's notice line ("success"/"error")
 
    ``pre`` is what the dialog opens with: {to, subject, replyToId, quote,
-   forward, forwardCommunicationId, backToConv, bodyHtml, draftName}.
+   forward, forwardCommunicationId, backToConv, bodyHtml, draftName, documents}.
+   ``documents`` ([{documentId, filename}]) attaches record documents at open.
    ``bodyHtml`` is a message written for the person to edit before sending
    (the Business Evaluation email): it opens above the signature and counts
    as unsent work, so closing asks first. ``draftName`` keeps its draft apart
@@ -532,6 +533,11 @@
     var templateAttachments = [];   // {id, name} chips from the selected template
     var localAttachments = [];      // {filename, contentType, dataBase64, size} uploads
     var docAttachments = [];        // {documentId, filename}
+    // pre.documents: record documents attached when the dialog opens (the
+    // Business Evaluation release attaches the client's copy). Removable.
+    (pre.documents || []).forEach(function (d) {
+      if (d && d.documentId) docAttachments.push({ documentId: d.documentId, filename: d.filename || "document" });
+    });
     var fwdAttachments = [];        // {communicationId, partIndex, filename, size}
     var tplAll = [], tplConfirmEl = null, preTplSnapshot = null;
     var tplWrap = document.createElement("div"); tplWrap.className = "sx__msg-field";
@@ -788,6 +794,7 @@
     attachWrap.appendChild(attachLab); attachWrap.appendChild(chipsEl);
     attachWrap.appendChild(attachTotalEl); attachWrap.appendChild(attachLine);
     if (features.attachments) body.appendChild(attachWrap);
+    if (docAttachments.length) renderAttachChips();
     function attachTotal() {
       return localAttachments.reduce(function (n, f) { return n + (f.size || 0); }, 0) +
         fwdAttachments.reduce(function (n, f) { return n + (f.size || 0); }, 0);

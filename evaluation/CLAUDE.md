@@ -1,6 +1,6 @@
 # evaluation/ — Business Evaluation
 
-Last Updated: 11-15-26 12:20 · Revision 1.4
+Last Updated: 11-15-26 23:20 · Revision 1.5
 
 Detail for the Business Evaluation offering. Claude Code loads this file only
 when a session works in this folder. The plan is
@@ -198,11 +198,49 @@ table names or the `/evaluation/{token}` page, read the engine's equivalent.
   warning on a saved session. The session goes on every record of the round.
 - Tests: `tests/test_evaluation_review.py`.
 
+## What phase 5 built (v0.338.0)
+
+- **Release is `release.py`** (BE19, BE20), behind `GET`/`POST
+  …/evaluations/{id}/release`, `GET …/actionitems` and `PUT
+  …/actionitems/{id}` in `sessions/router.py`; 404 while the switch is off.
+  Doug's choices 11-15-26, all as recommended.
+- **Only the engagement's mentor releases, only an Approved report whose
+  round has its review session.** A released report (Reviewed with Client)
+  is final: `review.save_report` refuses it and the review screen shows it
+  read-only.
+- **The client version is made from `reviewedReport`, never the draft**:
+  `client_body` drops every element carrying `data-internal` (any tag) and
+  the report's own `<h2>`; `client_document` adds the header, *Action items
+  we agreed* and the closing note. `release.py` must not name the draft
+  field (the BE17 guard test).
+- **A PDF made by Google Docs**: `DriveClient.html_to_pdf` uploads the HTML
+  as a temporary Google Doc in the engagement's folder, exports it, deletes
+  it; `docs.service.file_generated_pdf` files it as *Evaluation report*
+  (accepted, never offered in the upload picker) and returns a same-named
+  document instead of filing a second. Release needs `GDRIVE_DOCS`.
+- **Order, for a safe retry**: the items (one with the same title already on
+  the evaluation is skipped), then the document, then the status.
+- **Action items are `CActionItem`** (`crm-plans/action-item.json`): owner is
+  a Contact, chosen from the engagement's client contacts and its mentor's
+  and co-mentors' Contacts (`owner_choices`); due dates default from the
+  item's "When" after the review session. Written as the user, a 403
+  retried under the org-wide key; stamped with the engagement's
+  `assignedUsers`; in the nightly reconciliation
+  (`stamps.related_records(…, with_action_items=True)`). Feature-detected.
+- **The email** (`email.release`, `release.v1`, wording approved 11-15-26)
+  opens in the composer with the PDF attached through the composer's new
+  `pre.documents`.
+- **Tests on the Business Mentors Association's system** (Doug, 11-15-26):
+  `scripts/evaluation_bma.sh` (check, apply, samples).
+- Tests: `tests/test_evaluation_release.py`.
+
 ## The CRM
 
 `crm-plans/business-evaluation.json` (fingerprint `89d89d28b53b` on crm-test)
 and `scripts/migrate_evaluation_roles.py`; handoff
-`business-evaluation-crm-handoff.md`. **No field is Read-only**, the draft
+`business-evaluation-crm-handoff.md`. Phase 5: `crm-plans/action-item.json`
+(fingerprint `5bf3e2de43a8`), the same role script, handoff
+`action-item-crm-handoff.md`. **No field is Read-only**, the draft
 report included (ruling 40); `engagement` and `clientProfile` are required by
 the application, not the CRM. Multiple Assigned Users and Collaborators are
 switched on through the plan's `entityParams` (an entity update, never a
@@ -217,3 +255,4 @@ create).
 | 1.2 | 11-13-26 14:53 | Claude (Claude Code) | Phase 2b: the survey engine moved out to `surveys/` (ruling BE23). |
 | 1.3 | 11-14-26 13:35 | Claude (Claude Code) | Phase 3, the analysis (v0.332.0). |
 | 1.4 | 11-15-26 12:20 | Claude (Claude Code) | Phase 4, review and approval (v0.336.0). |
+| 1.5 | 11-15-26 23:20 | Claude (Claude Code) | Phase 5, release and action items (v0.338.0). |

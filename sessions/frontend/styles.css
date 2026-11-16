@@ -1089,3 +1089,13 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
 .evl__review-edit .jodit-wysiwyg td, .evl__review-edit .jodit-wysiwyg th { border: 1px solid var(--cbm-border); padding: 0.3rem 0.5rem; vertical-align: top; }
 .evl__review-edit [data-internal] { background: #fdf3dc; border-left: 3px solid #b58113; padding: 0.2rem 0.6rem; }
 .evl__sessions { flex-direction: column; align-items: flex-start; }
+/* Business Evaluation phase 5: the Release dialog and the action items list. */
+.evl__release-items { display: flex; flex-direction: column; gap: 0.5rem; margin: 0 0 0.75rem; }
+.evl__release-item { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(10rem, 16rem) 10rem; gap: 0.25rem 0.6rem; align-items: center; }
+.evl__release-item .sx__muted { grid-column: 2 / -1; margin: 0; font-size: 0.85rem; }
+.evl__release-title { width: 100%; }
+@media (max-width: 800px) { .evl__release-item { grid-template-columns: auto minmax(0, 1fr); } }
+.evl__release-copy { margin-top: 1rem; }
+.evl__release-copy summary { cursor: pointer; font-weight: 600; margin-bottom: 0.5rem; }
+.evl__items { margin-top: 1.5rem; }
+.evl__items h4 { margin: 0 0 0.5rem; }

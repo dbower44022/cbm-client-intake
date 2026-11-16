@@ -60,6 +60,10 @@ class DocsError(Exception):
 # (email-quality plan §3.1). Not part of GDRIVE_DOC_TYPES — it never appears
 # in the upload picker, but _validate_upload accepts it for the pipeline.
 EMAIL_ATTACHMENT_DOC_TYPE = "Email attachment"
+# The client version of a Business Evaluation report, filed by Release
+# (evaluation/release.py, ruling BE19). Like the email type, never offered in
+# the upload picker; accepted only for the pipeline that makes it.
+EVALUATION_REPORT_DOC_TYPE = "Evaluation report"
 
 
 class DocsNotFound(DocsError):
@@ -229,7 +233,7 @@ def _validate_upload(
         )
     if (
         doc_type not in settings.gdrive_doc_types_list
-        and doc_type != EMAIL_ATTACHMENT_DOC_TYPE
+        and doc_type not in (EMAIL_ATTACHMENT_DOC_TYPE, EVALUATION_REPORT_DOC_TYPE)
     ):
         raise DocsError("Please choose a document type from the list.")
     return filename
@@ -354,6 +358,40 @@ async def upload_document(
             return r
     # The row was written; worst case return a minimal shape.
     return {"driveFileId": file["id"], "filename": filename, "docType": doc_type}
+
+
+async def file_generated_pdf(
+    settings: Settings,
+    store: DocumentStore,
+    drive: DriveClient,
+    *,
+    entity_type: str,
+    record_id: str,
+    record_name: str,
+    html: str,
+    filename: str,
+    doc_type: str,
+    client_id: Optional[str] = None,
+    client_name: Optional[str] = None,
+) -> dict[str, Any]:
+    """File a document the application wrote as HTML, as a PDF that Google
+    Docs renders (``DriveClient.html_to_pdf``), in the record's folder.
+    Retry-safe: an active document of the same file name already on the
+    record is returned as it is, so pressing the action again never files
+    a second copy."""
+    for row in await store.list_documents(entity_type, record_id):
+        if row.get("filename") == filename:
+            return row
+    folder_id = await ensure_record_folder(
+        settings, drive, store, entity_type, record_id, record_name,
+        client_id=client_id, client_name=client_name,
+    )
+    pdf = await drive.html_to_pdf(folder_id, html)
+    return await upload_document(
+        settings, store, drive, entity_type=entity_type, record_id=record_id,
+        record_name=record_name, filename=filename, mime_type=PDF_MIME,
+        doc_type=doc_type, data=pdf, client_id=client_id, client_name=client_name,
+    )
 
 
 async def list_documents(

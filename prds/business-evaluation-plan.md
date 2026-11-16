@@ -1,13 +1,13 @@
 # Business Evaluation — plan
 
-Last Updated: 11-15-26 12:20 · Revision 0.9 — see change log at the end.
+Last Updated: 11-15-26 23:20 · Revision 0.10 — see change log at the end.
 
 This is the design record for the **Business Evaluation** offering. It holds
 the terms, the flow, the rulings, the CRM data model, and the build phases with
 their stopping points. The build orchestrator
 (`prompts/business-evaluation-build-orchestrator-v0.1.md`) and the per-phase
 build prompts are written from this file. Phase 1 is built (v0.324.0); phase 2
-is built (v0.328.0); phase 2b is built (v0.330.0); phase 3 is built (v0.332.0); phase 4 is built (v0.336.0).
+is built (v0.328.0); phase 2b is built (v0.330.0); phase 3 is built (v0.332.0); phase 4 is built (v0.336.0); phase 5 is built (v0.338.0), its check owed.
 
 **Status of the rulings.** All rulings, BE1 to BE23, are approved by Doug
 (11-13-26). Rulings BE1 to BE6 restate what Doug described; BE7 to BE23 were
@@ -186,7 +186,9 @@ it is business data once submitted.
 1. **Which CRM entity holds action items?** The engagement's sessions have
    next steps today, but there is no action-item entity known to this plan.
    Options: a new `CActionItem` linked to the engagement, or the CRM's own Task
-   entity. Needed by phase 5.
+   entity. Needed by phase 5. **Answered by Doug 11-15-26: a new `CActionItem`**
+   (the owner is a Contact, so the client can own an item; Task's owner must
+   be a CRM login and no role reads Task today).
 2. **Who writes the survey questions and rubrics?** Phase 1 drafts the
    business profile, Finance and Marketing surveys for review. Should a CBM
    mentor with that background review each one before the pilot?
@@ -231,3 +233,4 @@ surveys staff can edit without a release.
 | 0.7 | 11-14-26 13:17 | Claude (Claude Code) | Open question 6 added: Doug's decision 11-14-26 that BE9 stands for the pilot and that prompts and rubrics become editable in System Settings later, planned at the phase 7 review. |
 | 0.8 | 11-14-26 13:35 | Claude (Claude Code) | Phase 3 built, v0.332.0: the analysis. Doug's choices 11-14-26: the mentor is told by email (A); the prompts revised to a measured voice, areas worth looking at and questions to explore; the report's section on missing information headed "Questions to explore"; the CRM status, not a database table, is the analysis queue. |
 | 0.9 | 11-15-26 12:20 | Claude (Claude Code) | Phase 4 built, v0.336.0: review and approval, and the review session. Doug's choices 11-14-26, all as recommended: every reviewer can still edit an approved report, and a saved change withdraws the approval; the draft is shown beside the editor; no images in the report; the review session is an upcoming session picked or a new one made. Checked by Doug on a local run against crm-test 11-15-26. |
+| 0.10 | 11-15-26 23:20 | Claude (Claude Code) | Phase 5 built, v0.338.0: release and action items. Doug's choices 11-15-26, all as recommended: open question 1 answered, a new `CActionItem`; the client version a PDF filed on the Documents tab with a header, the agreed action items and a closing note; one Release dialog per area; a released report is final; the release email as shown; the check on the Business Mentors Association's system, not crm-test. |

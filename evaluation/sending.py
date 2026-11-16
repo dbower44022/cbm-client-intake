@@ -301,7 +301,8 @@ async def answers_view(client: Any, engagement_id: str, record_id: str,
     rec = await client.get(service.ENTITY, record_id, select=(
         "id,name,evaluationArea,evaluationRound,status,sentAt,submittedAt,"
         "engagementId,clientProfileId,answersReadable,draftReport,analyzedAt,"
-        "analysisError,promptVersion,rubricVersion,reviewedReport,approvedAt,approvedByName"))
+        "analysisError,promptVersion,rubricVersion,reviewedReport,approvedAt,approvedByName,"
+        "releasedAt"))
     if rec.get("engagementId") != engagement_id:
         return None
     profile_html: Optional[str] = None
@@ -332,6 +333,8 @@ async def answers_view(client: Any, engagement_id: str, record_id: str,
         "reviewedHtml": rec.get("reviewedReport") or "",
         "approvedAt": rec.get("approvedAt"),
         "approvedBy": rec.get("approvedByName") or "",
+        # Phase 5: when the client version was released (the report is final).
+        "releasedAt": rec.get("releasedAt"),
     }
 
 

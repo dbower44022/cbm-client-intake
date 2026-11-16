@@ -169,6 +169,10 @@ async def save_report(client: Any, engagement_id: str, record_id: str, *, html: 
         "evaluationArea,evaluationRound,status,reviewedReport,approvedAt,approvedById,"
         "approvedByName,modifiedAt,modifiedByName"))
     status = rec.get("status") or ""
+    if status == "Reviewed with Client":
+        # Phase 5: a released report is final (Doug's choice 11-15-26).
+        raise ReviewError("This report was released to the client, so it is final and "
+                          "cannot be changed.")
     if status not in EDITABLE:
         raise ReviewError(
             f"This report cannot be edited while the evaluation is {status or 'without a status'}: "

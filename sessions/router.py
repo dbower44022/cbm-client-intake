@@ -123,6 +123,17 @@ class EvaluationReviewSessionIn(BaseModel):
     sessionId: str = ""
 
 
+class EvaluationReleaseIn(BaseModel):
+    """Release one area (phase 5): the action items the client agreed to,
+    each ``{title, reason, ownerId, due (YYYY-MM-DD), priority, timeHorizon}``."""
+    items: list[dict] = []
+
+
+class ActionItemStatusIn(BaseModel):
+    """Mark an action item Open, Done or Dropped."""
+    status: str = ""
+
+
 class SessionIn(BaseModel):
     changes: dict = {}
     # Contact ids for the session's attendees. None => leave attendees unchanged
@@ -1219,6 +1230,171 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                          "records": result["records"], "fields": result["fields"]},
             )
             return {"round": round_no, "session": result["session"]}
+
+        # --- Phase 5: release and action items (plan § 3 step 7; BE19, BE20) ---
+        from evaluation import email as eval_email
+        from evaluation import release as eval_release
+
+        @router.get("/records/{parent_id}/evaluations/{record_id}/release")
+        async def record_evaluation_release_view(
+            parent_id: str, record_id: str, request: Request
+        ) -> dict:
+            """What the Release dialog shows: whether the area can be released,
+            the client version's text, the action items and their owners."""
+            _evaluations_on()
+            user = _require_user(request)
+            settings = get_settings()
+            client = client_for(settings, user)
+            try:
+                return await eval_release.release_view(
+                    client, parent_id, record_id, org=settings.organization_name,
+                    reader=_system_client(settings))
+            except eval_review.ReviewError as exc:
+                raise _review_failure(exc)
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load the release")
+
+        @router.post("/records/{parent_id}/evaluations/{record_id}/release")
+        async def record_evaluation_release(
+            parent_id: str, record_id: str, body: EvaluationReleaseIn, request: Request
+        ) -> dict:
+            """Release (BE19, BE20): the engagement's mentor only. Writes the
+            agreed action items, files the client version as a PDF in the
+            engagement's Documents, sets Reviewed with Client, and returns
+            the email for the composer with the PDF attached."""
+            _evaluations_on()
+            user = _require_user(request)
+            settings = get_settings()
+            client = client_for(settings, user)
+            if not settings.gdrive_docs or docs_service.get_store(settings) is None:
+                raise HTTPException(status_code=400, detail=(
+                    "Release files the client's copy on the Documents tab, and the document "
+                    "integration is not switched on here. Ask a system administrator to "
+                    "switch on Google Drive documents."))
+            dstore = docs_service.get_store(settings)
+
+            async def file_document(html: str, filename: str) -> dict:
+                own_id, own_name, via_id = cfg.company_fallback[:3]
+                parent = await client.get(cfg.parent_entity, parent_id,
+                                          select=f"name,{own_id},{own_name},{via_id}")
+                await service.fill_company_fallback(cfg, client, [parent])
+                drive = await docs_service.drive_for_user(settings, client, user)
+                row = await docs_service.file_generated_pdf(
+                    settings, dstore, drive, entity_type=cfg.parent_entity,
+                    record_id=parent_id, record_name=parent.get("name") or "",
+                    html=html, filename=filename,
+                    doc_type=docs_service.EVALUATION_REPORT_DOC_TYPE,
+                    client_id=parent.get(own_id) or None,
+                    client_name=parent.get(own_name) or "")
+                await docs_service.post_upload_hooks(
+                    settings, drive, cfg.parent_entity, parent_id, row)
+                return row
+
+            try:
+                result = await eval_release.release(
+                    client, parent_id, record_id, user_id=user["userId"], items=body.items,
+                    org=settings.organization_name, file_document=file_document,
+                    escalate=lambda: _system_client(settings))
+            except eval_review.ReviewError as exc:
+                raise _review_failure(exc)
+            except docs_service.DocsError as exc:
+                raise HTTPException(status_code=400, detail=str(exc))
+            except DriveError as exc:
+                log.warning("evaluation release: Drive failed (%s): %s", parent_id, exc)
+                raise HTTPException(status_code=502, detail=(
+                    "The client's copy could not be filed in Google Drive, so the report "
+                    "was not released. Any action items already saved are kept. Press "
+                    "Release again."))
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not release the report")
+            await action_log.record_action(
+                client, app=cfg.title, category=action_log.CAT_STATUS,
+                action=action_log.ACT_EVALUATION_RELEASED,
+                parent_type=cfg.parent_entity, parent_id=parent_id,
+                summary=(f"Business Evaluation {result['area']}: released to the client, "
+                         f"{result['agreed']} action item"
+                         f"{'' if result['agreed'] == 1 else 's'} agreed."),
+                actor_id=user["userId"], actor_name=user["name"],
+                details={"record": record_id, "round": result.get("round"),
+                         "document": (result.get("document") or {}).get("id"),
+                         "fields": result["fields"]},
+            )
+            for item in result["items"]:
+                await action_log.log_action(
+                    app=cfg.title, category=action_log.CAT_RECORD_EDIT,
+                    action=action_log.ACT_ACTION_ITEM_CREATED,
+                    parent_type=cfg.parent_entity, parent_id=parent_id,
+                    summary=f"Action item agreed: {item['title']} ({item['owner']}, by {item['due']}).",
+                    actor_id=user["userId"], actor_name=user["name"],
+                    details={"actionItem": item["id"], "record": record_id,
+                             "fields": {"action item": {"from": "", "to": item["title"]},
+                                        "owner": {"from": "", "to": item["owner"]},
+                                        "due date": {"from": "", "to": item["due"]}}},
+                )
+            # The email for the composer, from the mentor's own mailbox, the
+            # client's copy attached by its Documents id.
+            eng = await client.get(cfg.parent_entity, parent_id,
+                                   select="primaryEngagementContactId")
+            who = await eval_sending.recipient(client, eng.get("primaryEngagementContactId") or "")
+            filled = eval_email.release(org=settings.organization_name,
+                                        first_name=who["firstName"], area_title=result["area"])
+            doc = result.get("document") or {}
+            return {
+                "id": record_id, "status": eval_release.STATUS_RELEASED,
+                "releasedAt": result["releasedAt"], "items": result["items"],
+                "document": {"id": doc.get("id"), "filename": doc.get("filename")},
+                "email": {"to": who["email"], "toName": who["name"], **filled,
+                          "documents": ([{"documentId": doc.get("id"),
+                                          "filename": doc.get("filename")}]
+                                        if doc.get("id") else [])},
+            }
+
+        @router.get("/records/{parent_id}/actionitems")
+        async def record_action_items(parent_id: str, request: Request) -> dict:
+            """The engagement's action items (BE20), soonest due first."""
+            _evaluations_on()
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            if not await eval_release.items_available(client):
+                return {"available": False, "reason": eval_release.ITEMS_UNAVAILABLE, "items": []}
+            try:
+                rows = await eval_release.items_for(client, parent_id)
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load the action items")
+            return {"available": True, "items": [
+                {"id": r.get("id"), "title": r.get("name") or "", "status": r.get("status") or "",
+                 "dueDate": r.get("dueDate"), "owner": r.get("ownerName") or "",
+                 "priority": r.get("priority") or "", "reason": r.get("reason") or "",
+                 "evaluationId": r.get("businessEvaluationId") or "",
+                 "evaluation": r.get("businessEvaluationName") or ""} for r in rows]}
+
+        @router.put("/records/{parent_id}/actionitems/{item_id}")
+        async def record_action_item_status(
+            parent_id: str, item_id: str, body: ActionItemStatusIn, request: Request
+        ) -> dict:
+            """Mark an action item Open, Done or Dropped, as the user."""
+            _evaluations_on()
+            user = _require_user(request)
+            settings = get_settings()
+            client = client_for(settings, user)
+            try:
+                result = await eval_release.set_item_status(
+                    client, parent_id, item_id, body.status.strip(),
+                    escalate=lambda: _system_client(settings))
+            except eval_review.ReviewError as exc:
+                raise _review_failure(exc)
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not change the action item")
+            if result["changed"]:
+                await action_log.record_action(
+                    client, app=cfg.title, category=action_log.CAT_STATUS,
+                    action=action_log.ACT_ACTION_ITEM_STATUS,
+                    parent_type=cfg.parent_entity, parent_id=parent_id,
+                    summary=f"Action item {body.status.strip()}: {result['title']}.",
+                    actor_id=user["userId"], actor_name=user["name"],
+                    details={"actionItem": item_id, "fields": result["fields"]},
+                )
+            return {"id": item_id, "status": body.status.strip()}
 
         @router.post("/records/{parent_id}/evaluations/send")
         async def record_evaluation_send(

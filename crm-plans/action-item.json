@@ -1,0 +1,33 @@
+{
+  "name": "action-item",
+  "description": "Business Evaluation phase 5 (prds/business-evaluation-plan.md § 3 step 7, ruling BE20, open question 1 answered by Doug 11-15-26: a new record type, not the CRM's Task): one CActionItem per action item a client agreed to, linked to the engagement, to the Business Evaluation it came from and to its owner (a Contact: the client's people and the mentors alike). Multiple Assigned Users and Collaborators on. Additive only. No field Read-only: the application writes them all (ruling 40). Handoff: action-item-crm-handoff.md.",
+  "entities": [
+    {"name": "ActionItem", "type": "Base",
+     "labelSingular": "Action Item", "labelPlural": "Action Items", "stream": true}
+  ],
+  "entityParams": [
+    {"entity": "CActionItem", "params": {"assignedUsers": true, "collaborators": true}}
+  ],
+  "fields": [
+    {"entity": "CActionItem", "name": "status", "type": "enum", "label": "Status", "audited": true,
+     "options": ["Open", "Done", "Dropped"], "default": "Open"},
+    {"entity": "CActionItem", "name": "dueDate", "type": "date", "label": "Due date"},
+    {"entity": "CActionItem", "name": "priority", "type": "enum", "label": "Priority",
+     "options": ["", "High", "Medium", "Low"], "default": ""},
+    {"entity": "CActionItem", "name": "timeHorizon", "type": "enum", "label": "Time horizon",
+     "options": ["", "Next 30 days", "Next 90 days", "Next 12 months"], "default": ""},
+    {"entity": "CActionItem", "name": "reason", "type": "text", "label": "Reason",
+     "tooltipText": "Why the item matters, as the evaluation report gave it."}
+  ],
+  "links": [
+    {"entity": "CActionItem", "link": "engagement", "linkType": "manyToOne",
+     "entityForeign": "CEngagement", "linkForeign": "actionItems",
+     "label": "Engagement", "labelForeign": "Action items"},
+    {"entity": "CActionItem", "link": "businessEvaluation", "linkType": "manyToOne",
+     "entityForeign": "CBusinessEvaluation", "linkForeign": "actionItems",
+     "label": "Business evaluation", "labelForeign": "Action items"},
+    {"entity": "CActionItem", "link": "owner", "linkType": "manyToOne",
+     "entityForeign": "Contact", "linkForeign": "actionItemsOwned",
+     "label": "Owner", "labelForeign": "Action items owned"}
+  ]
+}

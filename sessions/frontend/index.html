@@ -225,6 +225,25 @@
         <p class="sx__muted" id="noEvl" hidden>
           No evaluation has been sent to this client yet. Send Evaluation offers one.
         </p>
+        <!-- Action items (phase 5, ruling BE20): what the client agreed to at
+             release, one CActionItem record each. Status is changed here. -->
+        <div class="evl__items" id="evlItems" hidden>
+          <h4>Action items</h4>
+          <p class="sx__notice" id="evlItemsNotice" role="status" hidden></p>
+          <table class="sx__table" id="evlItemsTable" hidden>
+            <thead><tr>
+              <th data-col="title" scope="col">Action</th>
+              <th data-col="owner" scope="col">Who</th>
+              <th data-col="dueDate" scope="col">Due</th>
+              <th data-col="evaluation" scope="col">From</th>
+              <th data-col="status" scope="col">Status</th>
+            </tr></thead>
+            <tbody id="evlItemsBody"></tbody>
+          </table>
+          <p class="sx__muted" id="noEvlItems" hidden>
+            No action items yet. They are agreed when a report is released to the client.
+          </p>
+        </div>
       </div>
 
       <!-- Events (EV-72, mentor domain only): CBM events attended across ALL

@@ -5,6 +5,54 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.338.0] — 2026-11-15
+
+**feat(evaluation): Business Evaluation phase 5 — release the client version,
+and action items as records.** Dark behind **`BUSINESS_EVALUATION`**. Plan
+§ 3 step 7, rulings BE19 and BE20; open question 1 answered. Doug's choices
+at stopping point (a), 11-15-26, all as recommended, testing on the
+Business Mentors Association's system rather than crm-test. `OPEN-ITEMS.md` #83.
+
+- **Release to client** on the review screen, one area at a time
+  (`evaluation/release.py`, `GET`/`POST …/evaluations/{id}/release`): only
+  the engagement's mentor, only an Approved report whose round has its
+  review session. The dialog lists the action items read from the reviewed
+  report's table, each ticked if the client agreed, with an owner (the
+  client's contacts, the mentor and co-mentors) and a due date defaulting
+  from the item's "When" after the review session, plus *Add an item*; the
+  client's copy shown below.
+- **The client version** (BE19) is the reviewed report without every
+  `data-internal` element, never the draft, under a header (the
+  organisation, "{Area} evaluation: {Company}", "Prepared with you by
+  {mentor} · Reviewed together on {date}"), with *Action items we agreed*
+  and a closing note. **Filed as a PDF** on the engagement's Documents tab
+  under the new, picker-hidden type *Evaluation report*: Google Docs renders
+  it (`DriveClient.html_to_pdf`, a temporary Google Doc exported and
+  deleted; `docs.service.file_generated_pdf` reuses a same-named document,
+  so pressing Release again never files two).
+- **The release email** (`email.release`, `release.v1`, wording approved
+  11-15-26) opens in the shared composer from the mentor's own mailbox with
+  the PDF attached: the composer gained `pre.documents`.
+- **A released report is final**: Reviewed with Client is shown read-only on
+  the review screen, and a save or a second release is refused with the
+  reason.
+- **Action items are `CActionItem` records** (BE20; `crm-plans/action-item.json`,
+  `action-item-crm-handoff.md`): engagement, Business Evaluation, owner
+  (a Contact), due date, status Open/Done/Dropped, priority, time horizon,
+  reason; stamped with the engagement's `assignedUsers` and included in the
+  nightly assignment reconciliation. Listed on the Evaluations tab under
+  *Action items*, where the status is changed. Feature-detected: a CRM
+  without the record type releases without items and says so.
+- **Every release, item and status change is in the action log** with old and
+  new values (`Evaluation Released`, `Action Item Agreed`, `Action Item
+  Status Changed`).
+- `scripts/migrate_evaluation_roles.py` grants `CActionItem` (API role
+  create/read all/edit all; Mentor Role create/read own/edit own) when the
+  CRM has it. `scripts/evaluation_sample_reports.py --env-file` makes sample
+  drafts on the Association's training system; `scripts/evaluation_bma.sh`
+  wraps the check, the apply and the samples there.
+- Tests: `tests/test_evaluation_release.py` (29).
+
 ## [0.337.0] — 2026-11-15
 
 **feat(setup): each Integrations sub-tab becomes a status screen, and the

@@ -4950,6 +4950,7 @@
   function evlOpenEmail(email, round) {
     if (!email) return;
     composeMessage({ to: email.to || "", subject: email.subject || "", bodyHtml: email.bodyHtml || "",
+                     documents: email.documents || [],
                      draftName: "evaluation-r" + round + "-" + Date.now() });
   }
 
@@ -5027,12 +5028,82 @@
         });
       });
       paintEvl();
+      renderEvlItems();
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
       evl.forId = null;
       notice("evlNotice", e.message, "error");
     } finally { hide($("evlLoading")); }
   }
+
+  // --- Phase 5: action items (ruling BE20) ---
+  // The engagement's CActionItem records, agreed at release. Status is the
+  // one thing changed here (Open, Done, Dropped); the rest is in the CRM.
+  var evlItems = [];
+  var EVL_ITEM_STATUSES = ["Open", "Done", "Dropped"];
+  function evlItemSortVal(r, k) { return r[k] == null ? "" : r[k]; }
+
+  function paintEvlItems() {
+    var rows = gridOrder("evlItemsTable", evlItems.slice(), evlItemSortVal);
+    var body = $("evlItemsBody");
+    body.innerHTML = "";
+    rows.forEach(function (it) {
+      var tr = document.createElement("tr");
+      function cell(text, title) {
+        var td = document.createElement("td");
+        td.textContent = text == null || text === "" ? "—" : text;
+        if (title) td.title = title;
+        tr.appendChild(td);
+      }
+      cell(it.title, it.reason || "");
+      cell(it.owner);
+      cell(it.dueDate ? fmtDate(it.dueDate) : "");
+      cell(it.evaluation);
+      var td = document.createElement("td");
+      var sel = document.createElement("select");
+      sel.setAttribute("aria-label", "Status of " + it.title);
+      EVL_ITEM_STATUSES.forEach(function (st) {
+        var o = document.createElement("option"); o.value = st; o.textContent = st;
+        if (st === it.status) o.selected = true;
+        sel.appendChild(o);
+      });
+      sel.addEventListener("change", async function () {
+        var to = sel.value, was = it.status;
+        try {
+          await api("/records/" + encodeURIComponent(currentDetail.id) + "/actionitems/" +
+            encodeURIComponent(it.id), { method: "PUT", body: JSON.stringify({ status: to }) });
+          it.status = to;
+          notice("evlItemsNotice", "\u201c" + it.title + "\u201d is " + to + ".", "success");
+        } catch (e) {
+          if (e.status === 401) { showLogin(); return; }
+          sel.value = was;
+          notice("evlItemsNotice", e.message, "error");
+        }
+      });
+      td.appendChild(sel); tr.appendChild(td);
+      body.appendChild(tr);
+    });
+    if (rows.length) { show($("evlItemsTable")); hide($("noEvlItems")); }
+    else { hide($("evlItemsTable")); show($("noEvlItems")); }
+  }
+
+  async function renderEvlItems() {
+    if (!currentDetail || !$("evlItems")) return;
+    try {
+      var res = await busyOver("evlItemsTable",
+        api("/records/" + encodeURIComponent(currentDetail.id) + "/actionitems"));
+      if (res.available === false) { hide($("evlItems")); return; }
+      evlItems = res.items || [];
+      show($("evlItems"));
+      paintEvlItems();
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      show($("evlItems"));
+      notice("evlItemsNotice", e.message, "error");
+    }
+  }
+
+  if ($("evlItemsTable")) fitGrid("evlItemsTable", "actionitems", paintEvlItems, [{ col: "dueDate", dir: "asc" }]);
 
   fitGrid("evlTable", "evaluations", paintEvl, [{ col: "round", dir: "desc" }, { col: "area", dir: "asc" }]);
 
@@ -5160,15 +5231,24 @@
 
     var left = document.createElement("div"); left.className = "evl__review-edit"; grid.appendChild(left);
     var lh = document.createElement("h4"); lh.textContent = "Reviewed report"; left.appendChild(lh);
-    left.appendChild(evlPara("The client reads this report after the mentor approves it and " +
-      "releases it at the review session. If you change an approved report, it must be " +
-      "approved again.", "sx__muted"));
-    var rt = window.CBMRichText && CBMRichText.create(base, {
+    // Phase 5: a released report is final (Doug, 11-15-26) — shown, not edited.
+    var released = r.status === "Reviewed with Client";
+    left.appendChild(evlPara(released
+      ? "This report was released to the client" +
+        (r.releasedAt ? " on " + fmtSessionDate(r.releasedAt, "short") : "") +
+        ". A released report is final; their copy is on the Documents tab."
+      : "The client reads this report after the mentor approves it and " +
+        "releases it at the review session. If you change an approved report, it must be " +
+        "approved again.", "sx__muted"));
+    var rt = !released && window.CBMRichText && CBMRichText.create(base, {
       minHeight: 420,
       imageBlockedMessage: "Pictures can't go in the report: the client's copy is emailed, " +
         "and they could not see them. Put the picture on the Documents tab instead.",
     });
-    if (!rt) {
+    if (released) {
+      var ro = document.createElement("div"); ro.className = "evl__answers evl__draft";
+      ro.innerHTML = sanitizeHtml(base); left.appendChild(ro);
+    } else if (!rt) {
       left.appendChild(evlPara("The report editor could not load. Reload the page and try again.", "form-error"));
     } else { left.appendChild(rt); }
     function current() { return rt ? rt._cbmRichText.getValue() : base; }
@@ -5224,6 +5304,7 @@
 
     var foot = $("evlModalFoot"); foot.innerHTML = "";
     var saveBtn = evlButton("Save report", false, async function () {
+      if (released) { say("This report was released to the client, so it is final and cannot be changed.", "error"); return; }
       if (!rt) { say("The report editor did not load, so there is nothing to save.", "error"); return; }
       var html = current();
       if (html === base) { say("Nothing has changed since the report was last saved.", ""); return; }
@@ -5262,10 +5343,124 @@
         say(e.message, "error");
       } finally { done(); }
     });
+    // Release (phase 5): always shown; the server names why it cannot yet.
+    var releaseBtn = evlButton("Release to client", false, function () {
+      if (dirty()) { say("Save your changes first: the client gets the report as it was last saved and approved.", "error"); return; }
+      evlRelease(row, releaseBtn, say);
+    });
     foot.appendChild(saveBtn);
     foot.appendChild(approveBtn);
+    foot.appendChild(releaseBtn);
     foot.appendChild(retry);
     foot.appendChild(evlButton("Close", true, closeEvl));
+  }
+
+  // --- Phase 5: Release (plan § 3 step 7; rulings BE19, BE20) ---
+  // One dialog per area (Doug, 11-15-26): the action items read from the
+  // report, each ticked if the client agreed, with an owner and a due date,
+  // plus any added by hand; the client's copy below. Release writes the
+  // items, files the PDF on the Documents tab, marks the report Reviewed
+  // with Client, then opens the email with the PDF attached.
+  async function evlRelease(row, btn, say) {
+    var done = window.CBMBusy ? CBMBusy.start(btn) : function () {};
+    var v;
+    try {
+      v = await api("/records/" + encodeURIComponent(currentDetail.id) + "/evaluations/" +
+        encodeURIComponent(row.id) + "/release");
+    } catch (e) {
+      if (e.status === 401) { closeEvl(); showLogin(); return; }
+      say(e.message, "error"); return;
+    } finally { done(); }
+    if (v.blocked) { say(v.blocked, "error"); return; }
+    openEvl("Release " + v.area + " to the client", true);
+    var body = $("evlModalBody");
+    body.appendChild(evlPara("Tick each action item the client agreed to at the review session" +
+      (v.reviewSession ? " (" + v.reviewSession + ")" : "") + ", and choose who will do it and by when. " +
+      "Release then files the client's copy, a PDF, on the Documents tab, marks the report " +
+      "Reviewed with Client, and opens the email with the PDF attached for you to check and send. " +
+      "A released report cannot be changed.", ""));
+    if (!v.itemsAvailable) {
+      body.appendChild(evlPara("Action items cannot be saved on this CRM yet, so leave them all " +
+        "unticked to release the report without them.", "sx__notice is-warn"));
+    }
+    var err = evlPara("", "sx__notice is-error"); err.hidden = true; body.appendChild(err);
+    var h = document.createElement("h4"); h.textContent = "Action items"; body.appendChild(h);
+    var list = document.createElement("div"); list.className = "evl__release-items"; body.appendChild(list);
+    var lines = [];
+    function ownerSelect(chosen) {
+      var sel = document.createElement("select");
+      var blank = document.createElement("option"); blank.value = ""; blank.textContent = "Who…";
+      sel.appendChild(blank);
+      (v.owners || []).forEach(function (o) {
+        var opt = document.createElement("option"); opt.value = o.id;
+        opt.textContent = o.name + (o.kind === "mentor" ? " (mentor)" : "");
+        if (o.id === chosen) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      return sel;
+    }
+    function addLine(it, ticked) {
+      var n = lines.length + 1;
+      var line = document.createElement("div"); line.className = "evl__release-item";
+      var tick = document.createElement("input"); tick.type = "checkbox"; tick.checked = !!ticked;
+      tick.id = "evlRelTick" + n; tick.setAttribute("aria-label", "The client agreed to item " + n);
+      var title = document.createElement("input"); title.type = "text"; title.value = it.title || "";
+      title.className = "evl__release-title"; title.placeholder = "What was agreed";
+      title.setAttribute("aria-label", "Action item " + n);
+      var owner = ownerSelect(v.defaultOwner || "");
+      owner.setAttribute("aria-label", "Who does item " + n);
+      var due = document.createElement("input"); due.type = "date"; due.value = it.due || "";
+      due.setAttribute("aria-label", "Item " + n + " due by");
+      var meta = evlPara([it.priority, it.timeHorizon].filter(Boolean).join(" · "), "sx__muted");
+      line.appendChild(tick); line.appendChild(title); line.appendChild(owner); line.appendChild(due);
+      line.appendChild(meta);
+      list.appendChild(line);
+      lines.push({ it: it, tick: tick, title: title, owner: owner, due: due });
+    }
+    (v.items || []).forEach(function (it) { addLine(it, false); });
+    if (!(v.items || []).length) {
+      list.appendChild(evlPara("No action items could be read from the report. Add the ones the client agreed to.", "sx__muted"));
+    }
+    var add = evlButton("Add an item", true, function () {
+      var d = new Date(); d.setDate(d.getDate() + 30);
+      addLine({ title: "", due: d.toISOString().slice(0, 10) }, true);
+    });
+    body.appendChild(add);
+    var det = document.createElement("details"); det.className = "evl__release-copy";
+    var sum = document.createElement("summary"); sum.textContent = "The client's copy (without the reviewers-only sections)";
+    det.appendChild(sum);
+    var copy = document.createElement("div"); copy.className = "evl__answers evl__draft";
+    copy.innerHTML = sanitizeHtml(String(v.clientHtml || "")); det.appendChild(copy);
+    body.appendChild(det);
+
+    var go = evlButton("Release", false, async function () {
+      err.hidden = true;
+      var items = [];
+      for (var i = 0; i < lines.length; i++) {
+        var l = lines[i];
+        if (!l.tick.checked) continue;
+        items.push({ title: l.title.value, reason: l.it.reason || "", ownerId: l.owner.value,
+                     due: l.due.value, priority: l.it.priority || "", timeHorizon: l.it.timeHorizon || "" });
+      }
+      var d2 = window.CBMBusy ? CBMBusy.start(go) : function () {};
+      try {
+        var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/evaluations/" +
+          encodeURIComponent(row.id) + "/release", { method: "POST", body: JSON.stringify({ items: items }) });
+        closeEvl();
+        notice("evlNotice", v.area + " was released: the client's copy is on the Documents tab" +
+          (items.length ? ", and " + items.length + " action item" + (items.length === 1 ? " was" : "s were") + " saved" : "") +
+          ". Check the email and press Send.", "success");
+        renderEvaluations(true);
+        evlOpenEmail(res.email, row.round);
+      } catch (e) {
+        if (e.status === 401) { closeEvl(); showLogin(); return; }
+        err.textContent = e.message; err.hidden = false;
+        body.scrollTop = 0;
+      } finally { d2(); }
+    });
+    $("evlModalFoot").appendChild(go);
+    $("evlModalFoot").appendChild(evlButton("Back to the report", true, function () { openEvlAnswers(row); }));
+    $("evlModalFoot").appendChild(evlButton("Cancel", true, closeEvl));
   }
 
   // --- The review session (plan § 3 step 6) ---

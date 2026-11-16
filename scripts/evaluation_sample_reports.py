@@ -19,6 +19,9 @@ carries a phone number and an email address, to show they are removed
 before the Claude API sees them.
 
     PYTHONPATH=. uv run python scripts/evaluation_sample_reports.py <engagement id>
+    # the Business Mentors Association's training system (phase 5):
+    PYTHONPATH=. uv run python scripts/evaluation_sample_reports.py <engagement id> \
+        --env-file ~/.config/cbm-bma/bma.env
 
 Needs, in ``.env`` or the environment: ``ESPO_BASE_URL`` / ``ESPO_API_KEY``
 (the org-wide key; the CRM must not be production), ``DATABASE_URL``
@@ -34,6 +37,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from core.config import get_settings  # noqa: E402
 from core.espo import EspoClient, EspoError  # noqa: E402
@@ -110,10 +114,25 @@ async def main() -> int:
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("engagement_id")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--env-file", default=None,
+        help="the CRM of another training system, e.g. ~/.config/cbm-bma/bma.env for the "
+             "Business Mentors Association (read with a parser; its CRM address and key win)")
     args = parser.parse_args()
     settings = get_settings()
-    if "crm-test" not in settings.espo_base_url and "localhost" not in settings.espo_base_url:
-        print("Refused: ESPO_BASE_URL is not crm-test. Sample reports are made only there.")
+    if args.env_file:
+        # Phase 5: Doug tests on the Association's system (11-15-26). The CRM
+        # address and the applications' key come from its credential file;
+        # the database and the Anthropic key stay this machine's.
+        from sandbox.targets import api_connection
+
+        base, key, _ = api_connection(args.env_file)
+        settings = settings.model_copy(update={"espo_base_url": base, "espo_api_key": key})
+    from sandbox.targets import resolve
+
+    if resolve(settings.espo_base_url) is None and "localhost" not in settings.espo_base_url:
+        print(f"Refused: {settings.espo_base_url} is not a training system (crm-test or the "
+              "Business Mentors Association). Sample reports are made only there.")
         return 2
     missing = [n for n, v in (("ESPO_API_KEY", settings.espo_api_key),
                               ("DATABASE_URL", settings.database_url),

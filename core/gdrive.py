@@ -500,6 +500,36 @@ class DriveClient:
             except DriveError as exc:  # never fail the view over temp cleanup
                 log.warning("view-temp cleanup failed (%s): %s", temp_id, exc)
 
+    async def html_to_pdf(self, folder_id: str, html: str) -> bytes:
+        """An HTML document rendered as a PDF by Google Docs: uploaded WITH
+        conversion as a temporary Google Doc in ``folder_id`` (a shared-drive
+        folder, since the service account's own My Drive has no quota),
+        exported to PDF, and the temporary file deleted even on export
+        failure. Used for generated documents (the Business Evaluation's
+        client version); an upload of a person's file is never converted."""
+        boundary = f"cbm-{uuid.uuid4().hex}"
+        meta = json.dumps({"name": "cbm-pdf-temp", "parents": [folder_id],
+                           "mimeType": "application/vnd.google-apps.document"})
+        body = (
+            f"--{boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"
+            f"{meta}\r\n--{boundary}\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n"
+        ).encode() + html.encode("utf-8") + f"\r\n--{boundary}--".encode()
+        resp = await self._send(
+            "POST", f"{_UPLOAD_BASE}/files",
+            params={"uploadType": "multipart", "supportsAllDrives": "true", "fields": "id"},
+            content=body,
+            headers={"Content-Type": f"multipart/related; boundary={boundary}"},
+            retry=False,
+        )
+        temp_id = resp.json()["id"]
+        try:
+            return await self.export_pdf(temp_id)
+        finally:
+            try:
+                await self.delete_file(temp_id)
+            except DriveError as exc:  # never fail the document over temp cleanup
+                log.warning("pdf-temp cleanup failed (%s): %s", temp_id, exc)
+
     async def list_folder_files(self, folder_id: str) -> list[dict[str, Any]]:
         """Every non-trashed file directly inside ``folder_id`` (one
         ``files.list`` scoped to the record folder — the DOC-02 lazy

@@ -14,6 +14,12 @@ prds/business-evaluation-plan.md § 5; business-evaluation-crm-handoff.md:
   Users it reaches every record carrying the mentor in ``assignedUsers``,
   which is how co-mentors and subject matter experts see them (BE18).
 
+* **Action items** (phase 5, ``CActionItem``, ``crm-plans/action-item.json``):
+  the API role creates, reads and edits them; the Mentor Role creates, reads
+  own and edits own, so a mentor releasing a report writes the agreed items
+  as themself and marks them Done or Dropped. Skipped, with a note, on a CRM
+  that does not have the record type yet.
+
 Idempotent and merge-only: a level already at or above the wanted one is left
 alone, nothing is lowered or removed. Needs an Admin-type login::
 
@@ -37,9 +43,14 @@ from assignments.auth import login_token  # noqa: E402
 from core.espo import EspoClient  # noqa: E402
 
 ENTITY = "CBusinessEvaluation"
-GRANTS: list[tuple[str, dict[str, str]]] = [
-    ("CustomAppAPIRole", {"create": "yes", "read": "all", "edit": "all"}),
-    ("Mentor Role", {"create": "yes", "read": "own", "edit": "own", "stream": "own"}),
+ACTION_ITEM = "CActionItem"
+#: (entity, role, wanted levels). The action item grants apply only on a CRM
+#: that has CActionItem (crm-plans/action-item.json).
+GRANTS: list[tuple[str, str, dict[str, str]]] = [
+    (ENTITY, "CustomAppAPIRole", {"create": "yes", "read": "all", "edit": "all"}),
+    (ENTITY, "Mentor Role", {"create": "yes", "read": "own", "edit": "own", "stream": "own"}),
+    (ACTION_ITEM, "CustomAppAPIRole", {"create": "yes", "read": "all", "edit": "all"}),
+    (ACTION_ITEM, "Mentor Role", {"create": "yes", "read": "own", "edit": "own"}),
 ]
 LEVEL_RANK: dict[str, int] = {"no": 0, "not-set": 0, "own": 1, "team": 2, "all": 3, "yes": 3}
 
@@ -78,23 +89,32 @@ async def main() -> int:
         print(f"{ENTITY} does not exist on this CRM - apply crm-plans/business-evaluation.json first.",
               file=sys.stderr)
         return 2
+    present = {ENTITY}
+    items_meta = await client.metadata(f"entityDefs.{ACTION_ITEM}")
+    if isinstance(items_meta, dict) and items_meta.get("fields"):
+        present.add(ACTION_ITEM)
+    else:
+        print(f"Note: {ACTION_ITEM} does not exist on this CRM yet - its grants are skipped. "
+              "Apply crm-plans/action-item.json, then run this again.\n")
 
     done: list[str] = []
     skipped: list[str] = []
     failed: list[str] = []
     touched = False
-    for role_name, wanted in GRANTS:
+    for entity, role_name, wanted in GRANTS:
+        if entity not in present:
+            continue
         role = await _find_role(client, role_name)
         if role is None:
             failed.append(f"role '{role_name}' does not exist on this instance")
             continue
         data: dict[str, Any] = dict(role.get("data") or {})
-        current = dict(data.get(ENTITY) or {}) if isinstance(data.get(ENTITY), dict) else {}
+        current = dict(data.get(entity) or {}) if isinstance(data.get(entity), dict) else {}
         new_map = dict(current)
         changes = []
         for action, level in wanted.items():
             if _rank(current.get(action)) >= _rank(level):
-                skipped.append(f"{role_name}: {ENTITY}.{action} already '{current.get(action)}'")
+                skipped.append(f"{role_name}: {entity}.{action} already '{current.get(action)}'")
                 continue
             new_map[action] = level
             changes.append(f"{action}: {current.get(action, '(not set)')} -> {level}")
@@ -102,14 +122,14 @@ async def main() -> int:
             continue
         for action in ("create", "read", "edit", "delete", "stream"):
             new_map.setdefault(action, "no")
-        label = f"{role_name}: {ENTITY} {{{', '.join(changes)}}}"
+        label = f"{role_name}: {entity} {{{', '.join(changes)}}}"
         if not apply:
             done.append(f"WOULD set {label}")
             continue
-        data[ENTITY] = new_map
+        data[entity] = new_map
         try:
             await client.update("Role", role["id"], {"data": data})
-            stored = ((await client.get("Role", role["id"])).get("data") or {}).get(ENTITY) or {}
+            stored = ((await client.get("Role", role["id"])).get("data") or {}).get(entity) or {}
             short = [a for a, lv in wanted.items() if _rank(stored.get(a)) < _rank(lv)]
             if short:
                 failed.append(f"{label} - read-back is missing {short}: {stored}")

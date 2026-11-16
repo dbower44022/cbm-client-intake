@@ -42,6 +42,7 @@ CLIENT_PROFILE = "CClientProfile"
 ACCOUNT = "Account"
 MENTOR_PROFILE = "CMentorProfile"
 BUSINESS_EVALUATION = "CBusinessEvaluation"
+ACTION_ITEM = "CActionItem"
 
 # Engagements whose mentors no longer need access — skipped by default.
 TERMINAL_STATUSES = frozenset(
@@ -109,14 +110,30 @@ async def evaluations_linked(client: Any) -> bool:
     return isinstance(links, dict) and "businessEvaluations" in links
 
 
+async def action_items_linked(client: Any) -> bool:
+    """True when the CRM has the Action Item record type linked to the
+    engagement (crm-plans/action-item.json, Business Evaluation phase 5).
+    Read once per pass; a CRM without it reconciles exactly as before."""
+    read = getattr(client, "metadata", None)
+    if read is None:
+        return False
+    try:
+        links = await read(f"entityDefs.{ENGAGEMENT}.links")
+    except EspoError:
+        return False
+    return isinstance(links, dict) and "actionItems" in links
+
+
 async def related_records(client: Any, eng: dict[str, Any], *,
-                          with_evaluations: bool = False) -> list[tuple[str, str, str]]:
+                          with_evaluations: bool = False,
+                          with_action_items: bool = False) -> list[tuple[str, str, str]]:
     """(entity, id, label) for every record that should carry the stamps: the
     engagement itself, every related contact, the client profile, the
     company (``clientOrganization`` with the profile's ``linkedCompany``
     fallback — the resolution the apps use), and with ``with_evaluations``
     every Business Evaluation record of the engagement (the build
-    orchestrator's rule for that entity)."""
+    orchestrator's rule for that entity), and with ``with_action_items``
+    every Action Item of the engagement (phase 5)."""
     records: list[tuple[str, str, str]] = [(ENGAGEMENT, eng["id"], "engagement")]
     contact_ids: set[str] = set()
     if eng.get("primaryEngagementContactId"):
@@ -142,6 +159,12 @@ async def related_records(client: Any, eng: dict[str, Any], *,
         )
         records += [(BUSINESS_EVALUATION, row["id"], "business evaluation")
                     for row in evals.get("list", [])]
+    if with_action_items:
+        items = await client.list_related(
+            ENGAGEMENT, eng["id"], "actionItems", select="id", max_size=200
+        )
+        records += [(ACTION_ITEM, row["id"], "action item")
+                    for row in items.get("list", [])]
     return records
 
 
@@ -466,6 +489,7 @@ async def run_stamp_reconciliation(
         summary["errors"] += 1
         log.warning("stamp reconciliation: mentor profile listing failed: %s", exc)
     with_evaluations = await evaluations_linked(client)
+    with_action_items = await action_items_linked(client)
     for eng in await all_engagements(client):
         if not eng.get("mentorProfileId"):
             continue
@@ -484,7 +508,8 @@ async def run_stamp_reconciliation(
                 continue
             healed_here = False
             for entity, record_id, label in await related_records(
-                    client, eng, with_evaluations=with_evaluations):
+                    client, eng, with_evaluations=with_evaluations,
+                    with_action_items=with_action_items):
                 current, missing = await missing_on(client, entity, record_id, entitled)
                 if not missing:
                     continue

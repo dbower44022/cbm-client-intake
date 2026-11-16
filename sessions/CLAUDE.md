@@ -1,6 +1,6 @@
 # sessions/ — Client, Partner and Funder Management
 
-Last Updated: 11-15-26 12:20 · Revision 1.12
+Last Updated: 11-15-26 23:20 · Revision 1.13
 
 Detail for the session engine behind Client Management (`/mentorsessions`), Partner Management (`/partnersessions`) and Funder Management (`/sponsorsessions`): the grids, every record tab, quick add, managers and co-mentors, and the traps of this package.
 
@@ -338,11 +338,18 @@ Watch for these when touching this package:
   the draft, answers and business profile on side tabs; Save report and
   Approve), and each round's line carries **Schedule review session**; a
   new session made from it is linked after `saveSession` creates it.
+  **Since v0.338.0 (phase 5)** the review screen carries **Release to
+  client** (the Release dialog, `evlRelease`), a released report shows
+  read-only, and the tab lists the engagement's **Action items** under the
+  rounds, status changed in the row (shared grid `evlItemsTable`). The
+  release email opens in the composer with the PDF attached
+  (`pre.documents`).
 
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.13 | 11-15-26 23:20 | Claude (Claude Code) | Release to client and the action items on the Evaluations tab (v0.338.0). |
 | 1.12 | 11-15-26 12:20 | Claude (Claude Code) | The Evaluations tab's review screen and review session (v0.336.0). |
 | 1.11 | 11-14-26 13:35 | Claude (Claude Code) | The Evaluations tab's draft, Retry and `?tab=` (v0.332.0). |
 | 1.10 | 11-13-26 13:55 | Claude (Claude Code) | The Evaluations tab (v0.328.0). |

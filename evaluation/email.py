@@ -57,3 +57,29 @@ def invitation(*, org: str, first_name: str, area_titles: list[str], link_url: s
         "bodyHtml": "".join(f"<p>{p}</p>" for p in paragraphs),
         "version": VERSION,
     }
+
+
+# --- The release email (phase 5, ruling BE19; wording approved by Doug 11-15-26) ---
+
+RELEASE_VERSION = "release.v1"
+
+
+def release(*, org: str, first_name: str, area_title: str) -> dict[str, str]:
+    """The subject and HTML body the composer opens with when the mentor
+    releases one area's client version. The PDF rides as an attachment; the
+    composer appends the mentor's signature. Every value is escaped."""
+    esc = html.escape
+    greeting = f"Hi {esc(first_name.strip())}," if (first_name or "").strip() else "Hello,"
+    paragraphs = [
+        greeting,
+        f"Thank you for going through your {esc(area_title)} evaluation with me. The report "
+        "we discussed is attached.",
+        "The action items we agreed are at the end, each with who will do it and by when. "
+        "We will check on them at our next sessions.",
+        "If anything in the report does not look right to you, reply to this email and tell me.",
+    ]
+    return {
+        "subject": f"Your {area_title} evaluation from {org}",
+        "bodyHtml": "".join(f"<p>{p}</p>" for p in paragraphs),
+        "version": RELEASE_VERSION,
+    }
