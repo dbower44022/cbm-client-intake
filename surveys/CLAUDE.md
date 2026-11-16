@@ -1,6 +1,6 @@
 # surveys/ — the survey engine
 
-Last Updated: 11-13-26 14:53 · Revision 1.0
+Last Updated: 11-16-26 13:30 · Revision 1.1
 
 What any kind of survey uses (ruling BE23, `prds/business-evaluation-plan.md`).
 Claude Code loads this file only when a session works in this folder.
@@ -55,6 +55,13 @@ none**; `tests/test_survey_engine.py` fails if it does.
    - `first_save(ctx)`: optional; runs once per survey on its first save that
      holds an answer, best-effort.
    - `client(app)`: the client `submit` writes through.
+   - `page_for(link)`: optional; the page's words for one link (else `page`).
+   - `offer(link)` and `answer_offer(ctx)`: optional; an offer of more
+     surveys once every survey on a link is submitted (`Offer`,
+     `OfferText`), answered at `POST /api/survey/{token}/offer`. The
+     purpose records the answer in the link's data and adds the surveys
+     with `SurveyStore.extend_link`; `OfferRefused` carries a message for
+     the person. Added in Business Evaluation phase 6 for the intake survey.
 3. Import that module in `core/app.py` and in `worker.py`, beside
    `evaluation.purpose`.
 4. Make links with `SurveyStore.create_link(purpose=…, entity_type=…,
@@ -71,3 +78,4 @@ CRM, sending to many people, totals across responses, surveys staff can edit.
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
 | 1.0 | 11-13-26 14:53 | Claude (Claude Code) | Created in phase 2b (ruling BE23). |
+| 1.1 | 11-16-26 13:30 | Claude (Claude Code) | The per-link page words and the offer of more surveys (Business Evaluation phase 6). |

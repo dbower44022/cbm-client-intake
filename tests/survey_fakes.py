@@ -75,6 +75,22 @@ class MemoryStore:
             self.links[old["id"]]["replaced_at"] = now
         return copy.deepcopy(link)
 
+    async def extend_link(self, link_id, data, surveys=()):
+        link = self.links[link_id]
+        link["data"] = copy.deepcopy(data)
+        have = {r["survey_key"] for r in self.rows.values() if r["link_id"] == link_id}
+        for key, version, crm_id in surveys:
+            if key in have:
+                continue
+            rid = str(uuid.uuid4())
+            self.rows[rid] = {"id": rid, "link_id": link_id, "survey_key": key,
+                              "survey_version": version, "answers": {}, "updated_at": None,
+                              "submitted_at": None, "submission_token": None,
+                              "crm_record_id": crm_id, "crm_started_at": None,
+                              "delivered_at": None, "delivery_error": None, "attempts": 0,
+                              "next_attempt_at": None}
+        return copy.deepcopy(link)
+
     async def set_consent(self, link_id, at):
         link = self.links[link_id]
         link["consent_at"] = link["consent_at"] or at

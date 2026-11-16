@@ -52,6 +52,35 @@
       <p id="listIntro">[[list_intro]]</p>
       <ol class="survey__list" id="surveyList"></ol>
       <p class="survey__done" id="allDone" hidden>[[all_done]]</p>
+
+      <!-- An offer of more surveys (surveys/registry.Offer), once every survey
+           above is submitted. Its words come from the purpose, as text. -->
+      <div class="survey__offer" id="offerAsk" hidden>
+        <h2 id="offerQuestion"></h2>
+        <p id="offerIntro"></p>
+        <div class="wizard__nav">
+          <button type="button" class="cbm-button" id="offerYes"></button>
+          <button type="button" class="cbm-button cbm-button--secondary" id="offerNo"></button>
+        </div>
+      </div>
+      <div class="survey__offer" id="offerDeclined" hidden>
+        <p class="survey__done" id="offerDeclinedText"></p>
+        <p><a href="#" id="offerReopen"></a></p>
+      </div>
+      <form class="survey__offer" id="offerPick" novalidate hidden>
+        <div class="hp" aria-hidden="true">
+          <label for="offer_company_url">Leave this empty</label>
+          <input type="text" id="offer_company_url" name="company_url" tabindex="-1" autocomplete="off" />
+        </div>
+        <h2 id="offerPickTitle"></h2>
+        <div class="survey__choices" id="offerChoices"></div>
+        <p id="offerPickIntro"></p>
+        <p class="survey__hint" id="offerAdvice" aria-live="polite" hidden></p>
+        <p class="form-error" id="offerError" role="alert" hidden></p>
+        <div class="wizard__nav">
+          <button type="submit" class="cbm-button" id="offerContinue"></button>
+        </div>
+      </form>
     </section>
 
     <!-- 3. One survey, a section at a time. -->

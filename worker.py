@@ -199,6 +199,11 @@ async def process_one(store: SubmissionStore, settings: Settings, claimed: Claim
     # The CRM receipt reaches Completed (+ the Contact link). If the arrival-
     # time create never landed, this touch creates it (adopt-by-token first).
     await receipts.touch_safe(base, store, claimed.id)
+    # A form's best-effort after-delivery step (client intake: the intake
+    # survey email, BE24). Read the settings fresh: it is a /setup switch.
+    from core.forms import run_after_delivery
+
+    await run_after_delivery(spec, get_settings(), submission, ids, base)
     log.info(
         "delivered %s (%s token=%s) -> %s%s",
         claimed.id, claimed.form_slug, claimed.submission_token, ids,

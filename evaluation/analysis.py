@@ -451,8 +451,12 @@ async def run_analysis_cycle(settings: Any, crm: Any, claude: Any, *,
                              now: Optional[datetime] = None) -> dict[str, int]:
     """One pass: every Submitted record (up to ``BATCH``) analyzed. Returns
     counts by outcome. Never raises."""
-    counts = {"ready": 0, "failed": 0, "waiting": 0, "crmErrors": 0}
+    counts = {"ready": 0, "failed": 0, "waiting": 0, "unassigned": 0, "crmErrors": 0}
     now = now or service.utcnow()
+    # Ruling BE27: with the setting off, an area submitted before the
+    # engagement has a mentor waits as Submitted; assigning one lets it run.
+    hold = not getattr(settings, "evaluation_analyze_unassigned", False)
+    has_mentor: dict[str, bool] = {}
     try:
         prompts, rubrics = load_all()
         records = await submitted_records(crm)
@@ -464,6 +468,20 @@ async def run_analysis_cycle(settings: Any, crm: Any, claude: Any, *,
         counts["crmErrors"] += 1
         return counts
     for rec in records:
+        if hold:
+            eng_id = rec.get("engagementId") or ""
+            if eng_id not in has_mentor:
+                try:
+                    eng = await crm.get(service.ENGAGEMENT, eng_id, select="mentorProfileId")
+                    has_mentor[eng_id] = bool(eng.get("mentorProfileId"))
+                except EspoError as exc:
+                    log.warning("evaluation %s: the engagement could not be read: %s",
+                                rec.get("id"), exc)
+                    counts["crmErrors"] += 1
+                    continue
+            if not has_mentor[eng_id]:
+                counts["unassigned"] += 1
+                continue
         try:
             outcome = await analyze_record(rec, crm=crm, claude=claude, settings=settings,
                                            surveys=surveys, prompts=prompts,

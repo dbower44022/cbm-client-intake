@@ -112,9 +112,14 @@
 
   var historyEnabled = false;  // RECORD_HISTORY_TAB: the popup's History tab
   var historyPanel = null;
+  var profileEnabled = false;  // INTAKE_SURVEY: the popup's Business profile tab
+  function tabsEnabled() { return historyEnabled || profileEnabled; }
 
   function showDashboard(user) {
     historyEnabled = !!user.historyEnabled && !!window.CBMHistory;
+    profileEnabled = !!user.businessProfileEnabled;
+    document.querySelector('#modalTabs [data-mtab="history"]').hidden = !historyEnabled;
+    document.querySelector('#modalTabs [data-mtab="profile"]').hidden = !profileEnabled;
     hide($("msgView"));
     $("whoName").textContent = user.name || user.userName;
     show($("userChip"));
@@ -665,13 +670,15 @@
   // Details | History. History hides the read view and the Edit button;
   // Details brings them back. Editing always starts from Details.
   function showModalTab(which) {
-    var history = which === "history";
+    var history = which === "history", profile = which === "profile";
     Array.prototype.forEach.call(document.querySelectorAll("#modalTabs [data-mtab]"), function (b) {
       var on = b.dataset.mtab === which;
       b.classList.toggle("is-active", on); b.setAttribute("aria-selected", on ? "true" : "false");
     });
     $("modalHistory").hidden = !history;
-    $("modalView").hidden = history;
+    $("modalProfile").hidden = !profile;
+    $("modalView").hidden = history || profile;
+    if (profile && currentDetailId) loadBusinessProfile(currentDetailId);
     if (history && currentDetailId) {
       if (!historyPanel) historyPanel = CBMHistory.mount($("modalHistory"), { key: "assignments.history",
         emptyText: "No changes recorded for this engagement yet." });
@@ -681,6 +688,69 @@
   Array.prototype.forEach.call(document.querySelectorAll("#modalTabs [data-mtab]"), function (b) {
     b.addEventListener("click", function () { showModalTab(b.dataset.mtab); });
   });
+
+  // The Business profile tab (Business Evaluation phase 6, BE26): the
+  // client's business profile answers and the evaluation areas they picked,
+  // area and status only. Never a report (BE17).
+  function profilePara(text, cls) {
+    var p = document.createElement("p");
+    if (cls) p.className = cls;
+    p.textContent = text;
+    return p;
+  }
+
+  async function loadBusinessProfile(id) {
+    var host = $("modalProfile");
+    host.innerHTML = "";
+    host.appendChild(profilePara("Loading…", "bprofile__note"));
+    var data;
+    try {
+      data = await busyOver(host, api("/engagements/" + encodeURIComponent(id) + "/business-profile"));
+    } catch (e) {
+      if (currentDetailId !== id) return;
+      host.innerHTML = "";
+      host.appendChild(profilePara(e.message || "The business profile could not be loaded.", "bprofile__note is-error"));
+      return;
+    }
+    if (currentDetailId !== id) return;
+    host.innerHTML = "";
+    var h = document.createElement("h3");
+    h.className = "modal__h";
+    h.textContent = "Business profile";
+    host.appendChild(h);
+    if (data.profileHtml) {
+      if (data.profileAt) {
+        var at = new Date(String(data.profileAt).replace(" ", "T") + "Z");
+        host.appendChild(profilePara("Answered " + at.toLocaleDateString(undefined,
+          { year: "numeric", month: "long", day: "numeric" }) + ".", "bprofile__note"));
+      }
+      var answers = document.createElement("div");
+      answers.className = "bprofile__answers";
+      answers.innerHTML = data.profileHtml;  // server-built from the survey definition, escaped
+      host.appendChild(answers);
+    } else {
+      host.appendChild(profilePara(data.profileNote || "The client has not answered the business profile yet.", "bprofile__note"));
+    }
+    var h2 = document.createElement("h3");
+    h2.className = "modal__h";
+    h2.textContent = "Areas the client picked";
+    host.appendChild(h2);
+    if (data.areas && data.areas.length) {
+      var ul = document.createElement("ul");
+      ul.className = "bprofile__areas";
+      data.areas.forEach(function (a) {
+        var li = document.createElement("li");
+        li.textContent = a.area + " (" + a.status + ")" + (a.round > 1 ? ", round " + a.round : "");
+        ul.appendChild(li);
+      });
+      host.appendChild(ul);
+    } else if (data.areasNote) {
+      host.appendChild(profilePara(data.areasNote, "bprofile__note is-error"));
+    } else {
+      host.appendChild(profilePara(data.declined ? "The client chose not to pick areas."
+        : "The client has not picked any areas.", "bprofile__note"));
+    }
+  }
 
   // `force` skips the unsaved-changes guard (used after a successful save).
   function closeModal(force) {
@@ -915,7 +985,7 @@
   async function openDetail(id) {
     currentDetailId = id;
     exitEditMode();
-    $("modalTabs").hidden = !historyEnabled;
+    $("modalTabs").hidden = !tabsEnabled();
     showModalTab("view");
     $("modalTitle").textContent = "Loading…";
     $("modalStatus").hidden = true;
@@ -973,8 +1043,8 @@
   function inEditMode() { return !!editState; }
 
   function setEditMode(on) {
-    if (on && historyEnabled) showModalTab("view");
-    if (historyEnabled) $("modalTabs").hidden = on;
+    if (on && tabsEnabled()) showModalTab("view");
+    if (tabsEnabled()) $("modalTabs").hidden = on;
     $("modalView").hidden = on;
     $("modalEdit").hidden = !on;
     $("modalViewActions").hidden = on;

@@ -15,7 +15,7 @@ from typing import Any, Optional
 from core.espo import EspoError
 from surveys import registry
 
-from . import service
+from . import intake, service
 from .surveys import RULES, SURVEY_DIR, Survey
 
 PAGE = registry.PageText(
@@ -40,6 +40,8 @@ PAGE = registry.PageText(
         "Thank you. You have submitted every\n"
         "        survey. Your mentor will be in touch to go through the results with you."
     ),
+    pending=("Your answers are submitted and safe with us. We will pass them on to your "
+             "mentor shortly; there is nothing more you need to do."),
 )
 
 
@@ -63,6 +65,11 @@ PURPOSE = registry.register(registry.SurveyPurpose(
     first_save=service.first_save,
     client=_client,
     retryable=(EspoError,),
+    # Phase 6, the intake survey (BE24, BE25): an intake link's own words,
+    # and "Do you have time to provide more details?" after the profile.
+    page_for=intake.page_for,
+    offer=intake.offer,
+    answer_offer=intake.answer_offer,
 ))
 
 

@@ -167,11 +167,15 @@
         <div class="modal__tabs" id="modalTabs" role="tablist" hidden>
           <button type="button" class="modal__tab is-active" data-mtab="view" role="tab" aria-selected="true">Details</button>
           <button type="button" class="modal__tab" data-mtab="history" role="tab" aria-selected="false">History</button>
+          <!-- Business profile (Business Evaluation phase 6, BE26; INTAKE_SURVEY). -->
+          <button type="button" class="modal__tab" data-mtab="profile" role="tab" aria-selected="false" hidden>Business profile</button>
         </div>
 
         <div class="modal__body">
           <!-- History (frontend/shared/history.js) -->
           <div id="modalHistory" hidden></div>
+          <!-- Business profile: the client's answers and the areas picked. Never a report. -->
+          <div id="modalProfile" class="bprofile" hidden></div>
           <!-- Read view -->
           <div id="modalView">
             <div class="modal__contact" id="modalContact"></div>

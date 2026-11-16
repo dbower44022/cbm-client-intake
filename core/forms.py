@@ -83,3 +83,24 @@ class FormSpec:
     # form's page and its intake address answer 404, as if absent. A new
     # public form is built dark this way (prds/chapter-website-plan.md, E).
     enabled_flag: Optional[str] = None
+    # A best-effort step run once a submission is delivered, by the worker and
+    # by the immediate delivery alike: ``(settings, submission, ids, client)``.
+    # It must never raise (``run_after_delivery`` guards it anyway) and a
+    # re-driven delivery runs it again, so it must be idempotent. Client
+    # intake's emails the intake survey (Business Evaluation phase 6, BE24).
+    after_delivery: Optional[Callable[..., Awaitable[object]]] = None
+
+
+async def run_after_delivery(spec: "FormSpec", settings: object, submission: BaseSubmission,
+                             ids: dict, client: EspoApi) -> None:
+    """Run a form's after-delivery step, best-effort: it never fails the
+    delivery it follows."""
+    if spec.after_delivery is None:
+        return
+    try:
+        await spec.after_delivery(settings, submission, ids, client)
+    except Exception as exc:  # noqa: BLE001 — never fails a delivered submission
+        import logging
+
+        logging.getLogger("cbm_intake.forms").warning(
+            "%s after-delivery step failed: %s", spec.slug, exc)

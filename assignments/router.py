@@ -117,9 +117,56 @@ async def logout(request: Request) -> dict:
 @router.get("/session")
 async def session(request: Request) -> dict:
     user = _require_user(request)
+    from evaluation import intake as eval_intake
+
     return {"userName": user["userName"], "name": user["name"], "isAdmin": user["isAdmin"],
             # The History tab on the engagement popup (plan § 4.5, step 5b).
-            "historyEnabled": history.history_on()}
+            "historyEnabled": history.history_on(),
+            # The Business profile tab (Business Evaluation phase 6, BE26).
+            "businessProfileEnabled": eval_intake.enabled(get_settings())}
+
+
+def _key_client(request: Request):
+    """The org-wide key's CRM client (or the dry run), or None."""
+    factory = getattr(request.app.state, "evaluation_client", None)
+    try:
+        return factory() if factory is not None else None
+    except Exception as exc:  # noqa: BLE001 — the caller degrades without it
+        log.warning("org-wide CRM client not available: %s", exc)
+        return None
+
+
+@router.get("/engagements/{engagement_id}/business-profile")
+async def engagement_business_profile(engagement_id: str, request: Request) -> dict:
+    """The Business profile tab (BE26): the client's business profile answers
+    and the evaluation areas they picked, area and status only. The staff
+    member's own read of the engagement gates it; never a report (BE17)."""
+    from evaluation import intake as eval_intake
+
+    user = _require_user(request)
+    settings = get_settings()
+    if not eval_intake.enabled(settings):
+        raise HTTPException(status_code=404, detail="The Business profile tab is not switched on.")
+    client = client_for(settings, user)
+    try:
+        return await eval_intake.business_profile_view(
+            client, _key_client(request), getattr(request.app.state, "survey_store", None),
+            engagement_id)
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not load the business profile")
+
+
+async def _move_evaluations(request: Request, engagement_id: str, *, first: bool) -> None:
+    """Assign and Reassign move the engagement's Business Evaluation records
+    to its people (BE26) and, on a first assignment, tell the mentor of a
+    draft already written (BE27). Best-effort; never fails the assignment."""
+    try:
+        from evaluation import intake as eval_intake
+
+        await eval_intake.after_assign(get_settings(), _key_client(request), engagement_id,
+                                       first=first)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("evaluation records of %s not moved: %s", engagement_id, exc)
 
 
 @router.get("/engagements/{engagement_id}/history")
@@ -381,6 +428,7 @@ async def assign(engagement_id: str, body: AssignIn, request: Request) -> dict:
     await doc_grants.sync_record_grants_safe(
         get_settings(), service.ENGAGEMENT, engagement_id
     )
+    await _move_evaluations(request, engagement_id, first=not repaired)
     return result
 
 
@@ -427,6 +475,7 @@ async def reassign(engagement_id: str, body: AssignIn, request: Request) -> dict
     await doc_grants.sync_record_grants_safe(
         get_settings(), service.ENGAGEMENT, engagement_id
     )
+    await _move_evaluations(request, engagement_id, first=False)
     return result
 
 

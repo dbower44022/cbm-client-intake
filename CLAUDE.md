@@ -1304,4 +1304,7 @@ the strength of it.
   both CRM plans applied there only. Phase 6's prompt is approved and on
   hold for a planning session on wider uses
   (`prompts/business-evaluation-expansion-planning-prompt-v0.1.md`). Owed in #83.
+- **v0.339.0 (2026-11-16) is committed, not pushed**: Business Evaluation
+  phase 6, the intake survey (`INTAKE_SURVEY`, off; needs
+  `BUSINESS_EVALUATION`). Doug's check on the Association owed in #83.
 Everything else still owed is in `OPEN-ITEMS.md`.

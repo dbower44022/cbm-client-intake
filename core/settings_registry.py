@@ -303,6 +303,18 @@ SETTINGS: tuple[SettingSpec, ...] = (
             "about $0.10 to $0.20."),
     _s("evaluation_model", GROUP_FEATURES, "Evaluation analysis model", component="worker",
        help="The Claude model that writes the Business Evaluation draft reports."),
+    _s("intake_survey", GROUP_FEATURES, "Intake survey", kind="bool", component="both",
+       help="When a client intake is delivered, email the client a link to the "
+            "business profile survey from the shared mailbox, then offer the "
+            "evaluation areas. Client Administration's engagement popup gains a "
+            "Business profile tab. Needs Business Evaluation on and the shared "
+            "mailbox (OPS_MAILBOX). Read per delivery."),
+    _s("evaluation_analyze_unassigned", GROUP_FEATURES,
+       "Analyze evaluations before a mentor is assigned", kind="bool", component="worker",
+       help="Off: an area a client submits before the engagement has a mentor waits, "
+            "and assigning a mentor starts its analysis. On: the draft report is "
+            "written at once and waits for a reviewer. Either way the mentor is "
+            "emailed once assigned."),
     _s("campaigns_enabled", GROUP_FEATURES, "Marketing Management", kind="bool",
        component="both",
        help="The Marketing Management tile, the Prospects grid and import, the "

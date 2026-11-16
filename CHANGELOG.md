@@ -5,6 +5,49 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.339.0] — 2026-11-16
+
+**feat(evaluation): Business Evaluation phase 6 — the intake survey.** Dark
+behind the new switch **`INTAKE_SURVEY`** (default off), which needs
+**`BUSINESS_EVALUATION`** too. Plan § 3b use 1, rulings BE24 to BE27. Doug's
+choices at stopping point (a), 11-16-26, all as recommended. `OPEN-ITEMS.md` #83.
+
+- **The intake survey email** (BE24, `evaluation/intake.py`, wording
+  `intake.v1` in `evaluation/email.py`): once a client intake is delivered,
+  a link opening the business profile survey only, emailed from
+  `OPS_MAILBOX`. Best-effort: a failure is logged and never fails the
+  intake. One intake link per engagement, so a re-driven delivery sends
+  nothing. A client whose business profile is already on file gets no
+  email. No shared mailbox, no Business Evaluation record type or no
+  database: nothing is made.
+- **A form's after-delivery step** (`FormSpec.after_delivery`,
+  `core.forms.run_after_delivery`), run by the worker and by the immediate
+  delivery alike; client intake's is the intake survey.
+- **The intake link's own page words and "Do you have time to provide more
+  details?"** (BE25): the survey engine gains two general hooks, a
+  purpose's words for one link (`SurveyPurpose.page_for`) and an offer of
+  more surveys once every survey on a link is submitted
+  (`SurveyPurpose.offer` / `answer_offer`, `POST /api/survey/{token}/offer`,
+  `SurveyStore.extend_link`). No Business Evaluation code in `surveys/`
+  (BE23). A yes opens the area picker (two or three advised, more allowed);
+  each area becomes a Business Evaluation record, round 1, status Sent,
+  under the org-wide key, on the same link. A no can still become a yes
+  (Doug's choice A).
+- **Client Administration's Business profile tab** (BE26): the engagement
+  popup's third tab, read-only, the business profile answers and the areas
+  picked with their status, never a report. The staff member's own read of
+  the engagement gates it; the areas are read under the org-wide key (Doug's
+  choice A: no CRM change).
+- **Assign moves the evaluation records** (BE26): Assign and Reassign merge
+  the engagement's assigned users onto its Business Evaluation records under
+  the org-wide key; a first assignment emails the mentor about a draft
+  already written (BE27).
+- **Analyze before assignment** (BE27): `EVALUATION_ANALYZE_UNASSIGNED`,
+  default off. Off, the analysis pass skips a Submitted record whose
+  engagement has no mentor (`unassigned` on its summary line).
+- Tests: `tests/test_evaluation_intake.py` (21); the settings snapshot gains
+  the two new settings. 4074 passed.
+
 ## [0.338.1] — 2026-11-15
 
 **fix(setup): Continue setup only for a setup never completed.** Dark behind

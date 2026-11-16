@@ -45,3 +45,7 @@
 .survey__hint { margin-top: 1rem; font-weight: 600; color: var(--cbm-navy); }
 
 .survey__saved { text-align: right; color: var(--cbm-text); font-size: var(--cbm-text-sm); min-height: 1.2em; }
+
+/* An offer of more surveys (surveys/registry.Offer). */
+.survey__offer { margin-top: 1.5rem; }
+.survey__offer .survey__choices label { display: block; margin: .35rem 0; }

@@ -59,6 +59,41 @@ def invitation(*, org: str, first_name: str, area_titles: list[str], link_url: s
     }
 
 
+# --- The intake survey email (phase 6, ruling BE24; wording approved by Doug 11-16-26) ---
+
+INTAKE_VERSION = "intake.v1"
+
+
+def intake_invitation(*, org: str, first_name: str, link_url: str,
+                      expires_at: datetime) -> dict[str, str]:
+    """The subject and HTML body of the email a new client gets from the
+    shared mailbox when their intake is delivered. No mentor is assigned yet,
+    so it speaks for the organization. Every value is escaped."""
+    esc = html.escape
+    greeting = f"Hi {esc(first_name.strip())}," if (first_name or "").strip() else "Hello,"
+    paragraphs = [
+        greeting,
+        f"Thank you for asking {esc(org)} for a mentor. We have your request, and we will "
+        "be in touch soon to introduce your mentor.",
+        "While you wait, you can help us make a good match. Tell us a little more about "
+        "your business. It is about 14 short questions and takes around six minutes.",
+        f'<a href="{esc(link_url, quote=True)}">Tell us about your business</a>',
+        "At the end, you can choose to go further and answer questions about the areas you "
+        "would like help with, such as Finance or Marketing. That part is optional.",
+        f"Your answers stay with your {esc(org)} record. They are seen by our staff and by "
+        "the mentors who work with you. An AI service helps prepare a first summary for "
+        "your mentor.",
+        f"The link works until {long_date(expires_at)}. You can stop at any time and come "
+        "back to it; your answers are saved as you go.",
+        esc(org),
+    ]
+    return {
+        "subject": "While you wait: tell us about your business",
+        "bodyHtml": "".join(f"<p>{p}</p>" for p in paragraphs),
+        "version": INTAKE_VERSION,
+    }
+
+
 # --- The release email (phase 5, ruling BE19; wording approved by Doug 11-15-26) ---
 
 RELEASE_VERSION = "release.v1"

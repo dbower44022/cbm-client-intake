@@ -121,6 +121,13 @@ class Settings(BaseSettings):
     evaluation_analysis_seconds: int = 0
     # The Claude model that writes the draft reports.
     evaluation_model: str = "claude-opus-5-5"
+    # The intake survey (ruling BE24): when a client intake is delivered, the
+    # client is emailed a link to the business profile survey from the shared
+    # mailbox. Needs BUSINESS_EVALUATION too. Read per delivery.
+    intake_survey: bool = False
+    # Ruling BE27: whether an area submitted before the engagement has a mentor
+    # is analyzed at once (on) or waits for the assignment (off).
+    evaluation_analyze_unassigned: bool = False
     # The chapter website's own addresses (scheme + host, comma separated).
     # Only these may fetch /api/website/* from a browser. Deliberately NOT
     # `allowed_origins`, which applies to every address of the application.

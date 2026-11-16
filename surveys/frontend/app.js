@@ -99,9 +99,92 @@
       li.appendChild(btn);
       list.appendChild(li);
     });
-    $("allDone").hidden = !allDone;
+    renderOffer(allDone);
     show("listView");
   }
+
+  // --- an offer of more surveys (registry.Offer) -------------------------------
+
+  function renderOffer(allDone) {
+    var offer = allDone ? data.offer : null;
+    $("allDone").hidden = !allDone || !!offer;
+    $("offerAsk").hidden = !offer || offer.state !== "ask";
+    $("offerDeclined").hidden = !offer || offer.state !== "declined";
+    $("offerPick").hidden = true;
+    message($("offerError"), "");
+    if (!offer) return;
+    var t = offer.text;
+    $("offerQuestion").textContent = t.question;
+    $("offerIntro").textContent = t.intro;
+    $("offerYes").textContent = t.yes;
+    $("offerNo").textContent = t.no;
+    $("offerDeclinedText").textContent = t.declined;
+    $("offerReopen").textContent = t.reopen;
+  }
+
+  function showPicker() {
+    var offer = data.offer, t = offer.text, host = $("offerChoices");
+    host.innerHTML = "";
+    offer.choices.forEach(function (c) {
+      var lab = document.createElement("label");
+      var input = document.createElement("input");
+      input.type = "checkbox";
+      input.value = c.key;
+      input.addEventListener("change", pickChanged);
+      lab.appendChild(input);
+      lab.appendChild(document.createTextNode(c.title));
+      host.appendChild(lab);
+    });
+    $("offerPickTitle").textContent = t.pickTitle;
+    $("offerPickIntro").textContent = t.pickIntro;
+    $("offerContinue").textContent = t.continue;
+    message($("offerAdvice"), "");
+    message($("offerError"), "");
+    $("offerAsk").hidden = true;
+    $("offerDeclined").hidden = true;
+    $("offerPick").hidden = false;
+  }
+
+  function picked() {
+    return Array.prototype.filter.call($("offerChoices").querySelectorAll("input"), function (i) {
+      return i.checked;
+    }).map(function (i) { return i.value; });
+  }
+
+  function pickChanged() {
+    var n = picked().length, offer = data.offer;
+    message($("offerError"), "");
+    message($("offerAdvice"), offer.adviseMax && n > offer.adviseMax
+      ? offer.text.advice.replace("{count}", String(n)) : "");
+  }
+
+  function answerOffer(accept, keys, errorEl) {
+    return request("POST", "/offer", { accept: accept, keys: keys, company_url: $("offer_company_url").value })
+      .then(function (res) {
+        if (res.status === 404) return gone();
+        if (!res.ok) {
+          message(errorEl, (res.body && res.body.detail) || "That did not work. Please try again.");
+          return;
+        }
+        data = res.body;
+        renderList();
+      }, function () {
+        message(errorEl, "That did not reach us. Please check your connection and try again.");
+      });
+  }
+
+  $("offerYes").addEventListener("click", showPicker);
+  $("offerReopen").addEventListener("click", function (e) { e.preventDefault(); showPicker(); });
+  $("offerNo").addEventListener("click", function () { answerOffer(false, [], $("pageError")); });
+  $("offerPick").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var keys = picked();
+    if (!keys.length) {
+      message($("offerError"), data.offer.text.nonePicked);
+      return;
+    }
+    answerOffer(true, keys, $("offerError"));
+  });
 
   // --- consent ------------------------------------------------------------------
 
@@ -464,7 +547,7 @@
       current.state = "submitted";
       $("thanksText").textContent = res.body.delivered
         ? "Your " + current.title + " answers have been submitted. Thank you."
-        : "Your " + current.title + " answers are submitted and safe with us. We will pass them on to your mentor shortly; there is nothing more you need to do.";
+        : (data.pendingText || "Your answers are submitted and safe with us. We will pass them on shortly; there is nothing more you need to do.");
       show("thanksView");
       $("thanksView").focus();
     }, function () {

@@ -180,6 +180,29 @@ class SurveyStore:
                 .values(replaced_at=now))
         return link
 
+    async def extend_link(self, link_id: str, data: dict[str, Any],
+                          surveys: list[tuple[str, str, Optional[str]]] = ()) -> dict[str, Any]:
+        """Replace a link's purpose data and add one empty answer row per new
+        survey (``(survey_key, survey_version, crm_record_id)``); a survey
+        already on the link is left as it is. One transaction. Returns the
+        link as stored. Used when a person takes up an offer of more surveys
+        on the same link."""
+        async with self._engine.begin() as conn:
+            await conn.execute(update(survey_link).where(
+                survey_link.c.id == link_id).values(data=copy.deepcopy(data)))
+            have = set((await conn.execute(select(survey_answer.c.survey_key).where(
+                survey_answer.c.link_id == link_id))).scalars().all())
+            rows = [{
+                "id": str(uuid.uuid4()), "link_id": link_id, "survey_key": key,
+                "survey_version": version, "answers": {}, "crm_record_id": crm_id,
+                "attempts": 0,
+            } for key, version, crm_id in surveys if key not in have]
+            if rows:
+                await conn.execute(survey_answer.insert(), rows)
+            row = (await conn.execute(
+                select(survey_link).where(survey_link.c.id == link_id))).mappings().first()
+        return dict(row) if row else {}
+
     async def set_consent(self, link_id: str, at: datetime) -> datetime:
         """Records the first consent only; returns the stored time."""
         async with self._engine.begin() as conn:

@@ -406,6 +406,12 @@ async def _process_submission(
                 spec, submission, store_mod.STATUS_COMPLETED, result=ids
             ),
         )
+    # A form's best-effort after-delivery step (client intake: the intake
+    # survey email, BE24), in the background so the visitor never waits on it.
+    if spec.after_delivery is not None:
+        from .forms import run_after_delivery
+
+        asyncio.create_task(run_after_delivery(spec, get_settings(), submission, ids, client))
     log.info("%s ok token=%s ids=%s", spec.slug, submission.submission_token, ids)
     return {"status": "ok", **ids}
 

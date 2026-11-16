@@ -5,6 +5,7 @@
     POST /api/survey/{token}/consent        consent (ruling BE11), honeypot
     PUT  /api/survey/{token}/answers/{key}  save as the person goes (ruling BE13)
     POST /api/survey/{token}/submit/{key}   check, lock, hand to the purpose; honeypot, idempotent
+    POST /api/survey/{token}/offer          the person's answer to an offer of more surveys; honeypot
 
 The page's own CSS and JS are at ``/survey-assets/``. While no survey
 purpose's switch is on, every one of these addresses answers 404
@@ -108,26 +109,54 @@ def _survey_for(loaded: dict[str, Survey], row: Optional[dict[str, Any]]) -> Opt
     return loaded.get(row["survey_version"]) if row else None
 
 
-def page_html(purpose: SurveyPurpose) -> str:
-    """The page with the purpose's words in place, before the branding tokens."""
+def page_html(purpose: SurveyPurpose, link: Optional[dict[str, Any]] = None) -> str:
+    """The page with the purpose's words in place (its words for this link,
+    when it has some), before the branding tokens."""
+    words = registry.page_text(purpose, link) if link is not None else purpose.page
     page = (FRONTEND_DIR / "index.html").read_text(encoding="utf-8")
     for slot in _SLOTS:
-        page = page.replace(f"[[{slot}]]", getattr(purpose.page, slot))
+        page = page.replace(f"[[{slot}]]", getattr(words, slot))
     return page
 
 
 @router.get("/survey/{token}", response_class=HTMLResponse, include_in_schema=False)
 async def page(token: str, request: Request) -> HTMLResponse:
     try:
-        _store, purpose, _link, _loaded = await _open_link(request, token)
+        _store, purpose, link, _loaded = await _open_link(request, token)
     except HTTPException:
         return _invalid_page()
-    return HTMLResponse(render_page(page_html(purpose), get_settings()))
+    return HTMLResponse(render_page(page_html(purpose, link), get_settings()))
 
 
-@router.get("/api/survey/{token}")
-async def state(token: str, request: Request) -> dict[str, Any]:
-    store, purpose, link, loaded = await _open_link(request, token)
+def _offer_view(purpose: SurveyPurpose, link: dict[str, Any],
+                views: list[dict[str, Any]]) -> Optional[dict[str, Any]]:
+    """The purpose's offer of more surveys, once every survey on the link is
+    submitted; None otherwise. Never raises: a failing offer is left out."""
+    if purpose.offer is None or not views or any(v["state"] != ans.SUBMITTED for v in views):
+        return None
+    try:
+        offer = purpose.offer(link)
+    except Exception as exc:  # noqa: BLE001 — the page still serves without it
+        log.warning("survey %s: offer for link %s failed: %s", purpose.key, link.get("id"), exc)
+        return None
+    if offer is None or not offer.choices:
+        return None
+    t = offer.text
+    return {
+        "state": offer.state,
+        "choices": [{"key": k, "title": title} for k, title in offer.choices],
+        "adviseMax": offer.advise_max,
+        "text": {
+            "question": t.question, "intro": t.intro, "yes": t.yes_label, "no": t.no_label,
+            "pickTitle": t.pick_title, "pickIntro": t.pick_intro,
+            "continue": t.continue_label, "nonePicked": t.none_picked,
+            "advice": t.advice, "declined": t.declined, "reopen": t.reopen_label,
+        },
+    }
+
+
+async def _state(store: Any, purpose: SurveyPurpose, link: dict[str, Any],
+                 loaded: dict[str, Survey]) -> dict[str, Any]:
     rows = await store.answers_for(link["id"])
     views = []
     for key in purpose.surveys_for(link):
@@ -139,7 +168,15 @@ async def state(token: str, request: Request) -> dict[str, Any]:
         "displayName": link.get("display_name") or "",
         "consentGiven": bool(link.get("consent_at")),
         "surveys": views,
+        "pendingText": registry.page_text(purpose, link).pending,
+        "offer": _offer_view(purpose, link, views),
     }
+
+
+@router.get("/api/survey/{token}")
+async def state(token: str, request: Request) -> dict[str, Any]:
+    store, purpose, link, loaded = await _open_link(request, token)
+    return await _state(store, purpose, link, loaded)
 
 
 async def _json(request: Request) -> dict[str, Any]:
@@ -241,6 +278,39 @@ async def submit(token: str, key: str, request: Request) -> JSONResponse:
     delivered = await service.deliver_row(store, purpose, _client(request, purpose), link,
                                           locked, loaded)
     return JSONResponse({"state": ans.SUBMITTED, "delivered": delivered})
+
+
+@router.post("/api/survey/{token}/offer")
+async def answer_offer(token: str, request: Request) -> JSONResponse:
+    """The person's answer to the purpose's offer of more surveys: no, or yes
+    with the surveys picked. Answers with the link's new state."""
+    store, purpose, link, loaded = await _open_link(request, token)
+    body = await _json(request)
+    if str(body.get("company_url") or "").strip():
+        log.info("survey %s offer honeypot on link %s", purpose.key, link["id"])
+        return JSONResponse(await _state(store, purpose, link, loaded))
+    _needs_consent(link)
+    current = await _state(store, purpose, link, loaded)
+    if current["offer"] is None or purpose.answer_offer is None:
+        raise HTTPException(status_code=409, detail="There is nothing more to choose here.")
+    keys = body.get("keys") or []
+    if not isinstance(keys, list):
+        raise HTTPException(status_code=400, detail="That could not be read.")
+    offered = {c["key"] for c in current["offer"]["choices"]}
+    keys = [str(k) for k in keys if str(k) in offered]
+    try:
+        await purpose.answer_offer(registry.OfferContext(
+            link=link, store=store, client=_client(request, purpose),
+            accept=body.get("accept") is True, keys=keys))
+    except registry.OfferRefused as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    except purpose.retryable as exc:
+        log.warning("survey %s: offer on link %s not taken: %s", purpose.key, link["id"], exc)
+        raise HTTPException(status_code=503, detail=(
+            "Your choice could not be saved just now. Please try again in a few "
+            "minutes.")) from None
+    fresh = await store.link_by_id(link["id"])
+    return JSONResponse(await _state(store, purpose, fresh or link, loaded))
 
 
 __all__ = ["router", "FRONTEND_DIR", "page_html"]

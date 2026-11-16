@@ -277,7 +277,7 @@ async def rounds_view(client: Any, store: Any, engagement_id: str,
     return out
 
 
-def _profile_html(raw: str, surveys: dict[str, Survey]) -> Optional[str]:
+def profile_answers_html(raw: str, surveys: dict[str, Survey]) -> Optional[str]:
     """The business profile's answers as reviewer text, from the client
     profile's JSON. None when there is none or it cannot be read."""
     if not (raw or "").strip():
@@ -311,7 +311,7 @@ async def answers_view(client: Any, engagement_id: str, record_id: str,
         try:
             prof = await client.get(service.CLIENT_PROFILE, rec["clientProfileId"],
                                     select="evaluationProfile,evaluationProfileAt")
-            profile_html = _profile_html(prof.get("evaluationProfile") or "", surveys)
+            profile_html = profile_answers_html(prof.get("evaluationProfile") or "", surveys)
             if profile_html is None:
                 profile_note = "The client has not answered the business profile yet."
         except EspoError as exc:

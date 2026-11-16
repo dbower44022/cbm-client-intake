@@ -41,6 +41,60 @@ class PageText:
     consent_label: str
     list_intro: str
     all_done: str
+    #: Shown after a submit the purpose could not take at once (the answers
+    #: are kept and retried). Plain text.
+    pending: str = ("Your answers are submitted and safe with us. We will pass them on "
+                    "shortly; there is nothing more you need to do.")
+
+
+@dataclass(frozen=True)
+class OfferText:
+    """The words of an offer of more surveys on the same link (see ``Offer``).
+    Plain text, shown as text. ``advice`` may hold ``{count}``."""
+
+    question: str
+    intro: str
+    yes_label: str
+    no_label: str
+    pick_title: str
+    pick_intro: str
+    continue_label: str
+    none_picked: str
+    advice: str
+    declined: str
+    reopen_label: str
+
+
+@dataclass(frozen=True)
+class Offer:
+    """An offer of more surveys, made on a link once every survey on it is
+    submitted. ``state`` is ``ask`` (not answered yet) or ``declined`` (the
+    person said no; the offer can still be taken up). ``choices`` are
+    ``(key, title)`` pairs; ``advise_max`` is how many the page advises
+    choosing before it shows ``text.advice`` (it never refuses more)."""
+
+    state: str
+    choices: list[tuple[str, str]]
+    text: OfferText
+    advise_max: int = 0
+
+
+@dataclass
+class OfferContext:
+    """What the purpose's ``answer_offer`` receives: the link, the store, the
+    purpose's CRM client, the person's answer (``accept``) and the survey
+    keys they picked."""
+
+    link: dict[str, Any]
+    store: Any
+    client: Any
+    accept: bool
+    keys: list[str]
+
+
+class OfferRefused(Exception):
+    """An answer to an offer the purpose cannot take, with a message the
+    person can act on (shown as given)."""
 
 
 @dataclass
@@ -71,7 +125,16 @@ class SurveyPurpose:
     (``retryable`` names the exception types that count as a refusal).
     ``first_save(ctx)``: optional, best-effort, once per survey per link, on
     the first save that holds an answer; it must never raise.
-    ``client(app)``: the client ``submit`` and ``first_save`` write through."""
+    ``client(app)``: the client ``submit`` and ``first_save`` write through.
+    ``page_for(link)``: optional; the page's words for one link, or None for
+    ``page``. Lets one purpose speak differently on links made at different
+    moments.
+    ``offer(link)``: optional; an ``Offer`` of more surveys once every survey
+    on the link is submitted, or None.
+    ``answer_offer(ctx)``: the person's answer to the offer. It records the
+    answer in the link's data and, on a yes, adds the surveys to the link
+    (``store.extend_link``). Raises ``OfferRefused`` with a message, or one of
+    ``retryable`` when the CRM refuses."""
 
     key: str
     switch: str
@@ -85,6 +148,24 @@ class SurveyPurpose:
     loader: LoaderRules = field(default_factory=LoaderRules)
     first_save: Optional[Callable[[SubmitContext], Awaitable[None]]] = None
     retryable: tuple[type[BaseException], ...] = (Exception,)
+    page_for: Optional[Callable[[dict[str, Any]], Optional[PageText]]] = None
+    offer: Optional[Callable[[dict[str, Any]], Optional[Offer]]] = None
+    answer_offer: Optional[Callable[[OfferContext], Awaitable[None]]] = None
+
+
+def page_text(purpose: SurveyPurpose, link: dict[str, Any]) -> PageText:
+    """The page's words for one link: the purpose's own for that link, else
+    its usual words."""
+    if purpose.page_for is not None:
+        try:
+            own = purpose.page_for(link)
+        except Exception as exc:  # noqa: BLE001 — the usual words still serve
+            log.warning("survey %s: page words for link %s failed: %s",
+                        purpose.key, link.get("id"), exc)
+            own = None
+        if own is not None:
+            return own
+    return purpose.page
 
 
 _PURPOSES: dict[str, SurveyPurpose] = {}

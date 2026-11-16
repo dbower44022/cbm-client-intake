@@ -1,11 +1,11 @@
 # evaluation/ — Business Evaluation
 
-Last Updated: 11-15-26 23:20 · Revision 1.5
+Last Updated: 11-16-26 13:30 · Revision 1.6
 
 Detail for the Business Evaluation offering. Claude Code loads this file only
 when a session works in this folder. The plan is
-`prds/business-evaluation-plan.md` (rulings BE1–BE23, all approved 11-13-26,
-settled); the build runs phase by phase from
+`prds/business-evaluation-plan.md` (rulings BE1–BE36, approved 11-13-26 and
+11-16-26, settled); the build runs phase by phase from
 `prompts/business-evaluation-build-orchestrator-v0.1.md`; what is owed is
 `OPEN-ITEMS.md` #83.
 
@@ -234,6 +234,40 @@ table names or the `/evaluation/{token}` page, read the engine's equivalent.
   `scripts/evaluation_bma.sh` (check, apply, samples).
 - Tests: `tests/test_evaluation_release.py`.
 
+## What phase 6 built (v0.339.0)
+
+- **The intake survey is `intake.py`** (BE24 to BE27), dark behind
+  `INTAKE_SURVEY`, which needs `BUSINESS_EVALUATION`: `intake.enabled`.
+- **It runs as client intake's after-delivery step** (`FormSpec.after_delivery`
+  in `forms/client_intake/__init__.py`, `core.forms.run_after_delivery`), by
+  the worker and by the immediate delivery. Best-effort, never raises
+  (`on_delivered` returns one word: `sent`, `already`, `off`, …).
+- **One intake link per engagement**: `data["intake"]` marks it, and a
+  re-driven delivery finds it and sends nothing. A failed send is not
+  retried, by the same rule. A profile already on file sends nothing (Doug,
+  11-16-26).
+- **The email is `email.intake_invitation`** (`intake.v1`), from
+  `OPS_MAILBOX`, wording approved by Doug 11-16-26.
+- **The page** speaks for the organization on an intake link
+  (`intake.PAGE`, through the engine's `page_for`), and after the profile
+  offers the areas (`intake.offer` / `answer_offer`, through the engine's
+  offer hook). `data["details"]` is `declined` or `yes`; a declined offer
+  can still be taken up (Doug's choice A). A yes creates the records,
+  round 1, Sent, under the org-wide key, reusing one already made for that
+  area and round.
+- **Client Administration's Business profile tab**
+  (`intake.business_profile_view`, `GET
+  /assignments/api/engagements/{id}/business-profile`): the profile as the
+  staff member, the areas under the org-wide key, only area, round and
+  status. `intake.py` must never name a report field (a test checks).
+- **Assign and Reassign call `intake.after_assign`** (merge the engagement's
+  assigned users onto the records; on a first assignment, email the mentor
+  of each Draft Ready record).
+- **`EVALUATION_ANALYZE_UNASSIGNED`** (BE27), read in
+  `analysis.run_analysis_cycle`: off, a Submitted record whose engagement
+  has no mentor is skipped and counted `unassigned`.
+- Tests: `tests/test_evaluation_intake.py`.
+
 ## The CRM
 
 `crm-plans/business-evaluation.json` (fingerprint `89d89d28b53b` on crm-test)
@@ -256,3 +290,4 @@ create).
 | 1.3 | 11-14-26 13:35 | Claude (Claude Code) | Phase 3, the analysis (v0.332.0). |
 | 1.4 | 11-15-26 12:20 | Claude (Claude Code) | Phase 4, review and approval (v0.336.0). |
 | 1.5 | 11-15-26 23:20 | Claude (Claude Code) | Phase 5, release and action items (v0.338.0). |
+| 1.6 | 11-16-26 13:30 | Claude (Claude Code) | Phase 6, the intake survey (v0.339.0). |
