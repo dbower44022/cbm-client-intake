@@ -409,6 +409,7 @@ def test_release_route_refuses_a_co_mentor(monkeypatch, recorded):
     assert r.status_code == 403 and "Joe Mentor" in r.json()["detail"]
     assert crm.updates == [] and crm.items == [] and filed == [] and recorded == []
     assert view.status_code == 200 and len(view.json()["items"]) == 2
+    assert view.json()["blocked"].startswith("Only the engagement's mentor, Joe Mentor")
 
 
 def test_action_item_routes(monkeypatch, recorded):

@@ -1248,7 +1248,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             try:
                 return await eval_release.release_view(
                     client, parent_id, record_id, org=settings.organization_name,
-                    reader=_system_client(settings))
+                    reader=_system_client(settings), user_id=user["userId"])
             except eval_review.ReviewError as exc:
                 raise _review_failure(exc)
             except EspoError as exc:

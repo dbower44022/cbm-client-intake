@@ -272,18 +272,31 @@ async def owner_choices(client: Any, engagement_id: str,
     return out
 
 
+def not_the_mentor_message(mentor: dict[str, Any]) -> str:
+    name = mentor["name"] or "the engagement's mentor"
+    return f"Only the engagement's mentor, {name}, can release a report to the client."
+
+
 async def release_view(client: Any, engagement_id: str, record_id: str, *,
                        org: str, reader: Optional[Any] = None,
+                       user_id: Optional[str] = None,
                        today: Optional[date] = None) -> dict[str, Any]:
     """What the Release dialog shows: whether the area can be released (and
-    why not), the client version's text, the action items read from the
-    report with their default due dates, and who can own one."""
+    why not: someone other than the engagement's mentor, given ``user_id``,
+    is told so here, before the dialog opens), the client version's text,
+    the action items read from the report with their default due dates, and
+    who can own one."""
     rec = await _record(client, engagement_id, record_id)
-    try:
-        _check_releasable(rec)
-        blocked = ""
-    except ReleaseError as exc:
-        blocked = str(exc)
+    blocked = ""
+    if user_id is not None:
+        mentor = await review.engagement_mentor(client, engagement_id, reader=reader)
+        if not review.is_mentor(mentor, user_id):
+            blocked = not_the_mentor_message(mentor)
+    if not blocked:
+        try:
+            _check_releasable(rec)
+        except ReleaseError as exc:
+            blocked = str(exc)
     today = today or service.utcnow().date()
     day = (await _session_day(client, rec["reviewSessionId"], today)
            if rec.get("reviewSessionId") else today)
@@ -381,9 +394,7 @@ async def release(client: Any, engagement_id: str, record_id: str, *, user_id: s
     reader = escalate() if escalate else None
     mentor = await review.engagement_mentor(client, engagement_id, reader=reader)
     if not review.is_mentor(mentor, user_id):
-        name = mentor["name"] or "the engagement's mentor"
-        raise review.NotTheMentor(
-            f"Only the engagement's mentor, {name}, can release a report to the client.")
+        raise review.NotTheMentor(not_the_mentor_message(mentor))
     _check_releasable(rec)
     owners = await owner_choices(client, engagement_id, reader=reader)
     agreed = check_items(items, owners)
