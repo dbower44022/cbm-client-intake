@@ -1,8 +1,8 @@
 # Kickoff prompt — Business Evaluation, phase 6: the intake survey
 
-Last Updated: 11-16-26 11:59 · Revision 0.1 — see change log at the end.
+Last Updated: 11-16-26 12:08 · Revision 0.2 — see change log at the end.
 
-**Draft, awaiting Doug's approval.** Written by the planning session on wider
+**Approved by Doug 11-16-26.** Written by the planning session on wider
 uses (11-16-26), from plan revision 0.14. Start a fresh Claude Code session
 rooted in `~/Dropbox/Projects/cbm-client-intake`, tell it to read this file,
 and tell it to follow everything below the line.
@@ -101,3 +101,4 @@ offering and co-branding (phase 10).
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
 | 0.1 | 11-16-26 11:59 | Claude (Claude Code) | Drafted by the planning session on wider uses, from plan revision 0.14. |
+| 0.2 | 11-16-26 12:08 | Claude (Claude Code) | Approved by Doug. |

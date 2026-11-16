@@ -1,6 +1,6 @@
 # Build orchestrator — Business Evaluation
 
-Last Updated: 11-16-26 11:59 · Revision 0.17 — see change log at the end.
+Last Updated: 11-16-26 12:08 · Revision 0.18 — see change log at the end.
 
 This file runs the whole build of the Business Evaluation offering. It names the
 phases, the prompt for each one, the rules that every phase session follows, and
@@ -32,7 +32,7 @@ All rulings in the plan were approved by Doug on 11-13-26.
 | 3 | The analysis: the worker job, the analysis prompts and rubrics, the report template, Retry | `prompts/business-evaluation-phase3-prompt-v0.1.md` | Built v0.332.0; sample reports reviewed by Doug 11-14-26 |
 | 4 | Review and approval, and scheduling the review session | `prompts/business-evaluation-phase4-prompt-v0.1.md` | Built v0.336.0; checked by Doug on a local run against crm-test 11-15-26 |
 | 5 | Release of the client version, and action items as records | `prompts/business-evaluation-phase5-prompt-v0.1.md` | Built v0.338.0; checked by Doug on the Business Mentors Association's system 11-16-26 |
-| 6 | The intake survey: sent when a client intake is delivered, "more details?" and the area picker, the answers in Client Administration, Assign moving the records (BE24 to BE27) | `prompts/business-evaluation-phase6-intake-survey-prompt-v0.1.md` | Draft prompt written 11-16-26, awaiting Doug's approval |
+| 6 | The intake survey: sent when a client intake is delivered, "more details?" and the area picker, the answers in Client Administration, Assign moving the records (BE24 to BE27) | `prompts/business-evaluation-phase6-intake-survey-prompt-v0.1.md` | Prompt approved by Doug 11-16-26 (revision 0.2); not started |
 | 7 | The mentor match: the AI analysis button in Client Administration (BE28) | written at the end of phase 6 | — |
 | 8 | Feedback surveys, the foundation: the `feedback` purpose, the 0-to-10 question, the Survey Response record, on-demand send, the mentor's view, low-score alerts, the quiet period (BE29, BE31 to BE33) | written at the end of phase 7 | — |
 | 9 | Feedback moments and Analytics: the four automatic moments, starter panels (BE30) | written at the end of phase 8 | — |
@@ -136,3 +136,4 @@ partner sees or receives, which goes to Doug as a decision.
 | 0.15 | 11-16-26 01:22 | Claude (Claude Code) | Phase 6 prompt approved by Doug. |
 | 0.16 | 11-16-26 02:05 | Claude (Claude Code) | Phase 6 on hold: Doug wants a planning session on wider uses of the evaluation first. |
 | 0.17 | 11-16-26 11:59 | Claude (Claude Code) | The phases re-cut to plan revision 0.13: new phases 6 to 9 (the intake survey, the mentor match, feedback surveys, feedback moments); the partner offering moved to phase 10 and on hold, its approved prompt superseded; the pilot and documentation phases renumbered 11 and 12. One rule added: each new use has its own switch. |
+| 0.18 | 11-16-26 12:08 | Claude (Claude Code) | Phase 6 (the intake survey) prompt approved by Doug. |
