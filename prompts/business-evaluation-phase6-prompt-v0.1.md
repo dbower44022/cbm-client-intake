@@ -1,6 +1,13 @@
 # Kickoff prompt — Business Evaluation, phase 6: the partner and funder offering
 
-Last Updated: 11-16-26 01:22 · Revision 0.2 — see change log at the end.
+Last Updated: 11-16-26 11:59 · Revision 0.3 — see change log at the end.
+
+> **Superseded, do not run (11-16-26).** Plan revision 0.13 moved the partner
+> and funder offering to **phase 10** and changed it: rulings BE34 to BE36
+> (the link skips "more details?", co-branding with the partner's logo, the
+> recommendation score in the roll-up). This prompt is rewritten as phase
+> 10's at the close of phase 9, from what phases 6 to 9 built. The text
+> below is kept as approved on 11-16-26, for that rewrite.
 
 **Approved by Doug 11-16-26.** Written at the close of phase 5
 (v0.338.0, checked by Doug on the Business Mentors Association's system
@@ -125,3 +132,4 @@ editable in System Settings (plan § 7 question 6, planned at phase 7).
 |---|---|---|---|
 | 0.1 | 11-16-26 01:10 | Claude (Claude Code) | Drafted at the close of phase 5, from the orchestrator and what phases 1 to 5 built. |
 | 0.2 | 11-16-26 01:22 | Claude (Claude Code) | Approved by Doug. |
+| 0.3 | 11-16-26 11:59 | Claude (Claude Code) | Superseded by plan revision 0.13: the partner offering is phase 10, to be rewritten at the close of phase 9. Body unchanged. |
