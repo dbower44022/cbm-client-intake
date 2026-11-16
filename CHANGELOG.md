@@ -5,6 +5,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.339.2] — 2026-11-16
+
+**fix(setup): Zoom's token is tried before the host is entered.** Dark behind
+**`INTEGRATIONS_TAB`**. Doug's finding in the phase 11 live review: Zoom
+Meetings' setup step 12, *Paste the client secret*, could never pass. Its check
+is the token, and the token waited for every setting, the event host user
+included, which the setup asks for three steps later. Zoom Webinars had the
+same order. The token now needs only the account ID, client ID and client
+secret; the host checks say "Not checked: the event host user is not set"
+until it is. *Settings present* still fails while the host is missing, so the
+whole test still fails until it is set. Tests in `tests/test_zoom_split.py`
+and `tests/test_integration_test.py`. 4077 passed. `OPEN-ITEMS.md` #82.
+
 ## [0.339.1] — 2026-11-16
 
 **feat(setup): View on every secret box in the setup dialog.** Dark behind

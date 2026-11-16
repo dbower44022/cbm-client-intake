@@ -855,3 +855,12 @@ def test_the_table_is_cleared_by_the_sandbox_reset():
     from core.sandbox_reset import RESET_TABLES
 
     assert "integration_test_run" in RESET_TABLES
+
+
+def test_zoom_webinars_token_is_tried_before_the_host_is_entered():
+    """Phase 11 live review, 11-16-26: Zoom Webinars' setup also asks for the
+    host after the client secret, so the token must not wait for it."""
+    result = run(zoom.run(zoom_settings(zoom_host_email=""), zoom_deps(FakeZoom())))
+    by = {c["key"]: c for c in result["checks"]}
+    assert by["settings"]["outcome"] == "failed" and by["token"]["outcome"] == "ok"
+    assert by["host"]["outcome"] != "ok" and "not set" in by["host"]["detail"]

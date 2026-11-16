@@ -264,3 +264,14 @@ async def test_the_status_line_on_the_same_account():
     assert default["choiceLabels"] == {"CBM Zoom": "Zoom Webinars"}
 
 
+
+
+def test_the_token_is_tried_before_the_host_is_entered():
+    """Phase 11 live review, 11-16-26: the setup asks for the client secret
+    (its check: the token) before the event host user, so the token must not
+    wait for the host. The host checks wait instead."""
+    checks, _, result = test_meetings(FakeZoom(), zoom_event_host_email="")
+    assert checks["settings"]["outcome"] == FAILED and "event host user" in checks["settings"]["detail"]
+    assert checks["token"]["outcome"] == OK and checks["scopes"]["outcome"] == OK
+    assert checks["host"]["outcome"] == "skipped" or "not set" in checks["host"]["detail"]
+    assert result["outcome"] == "failed"

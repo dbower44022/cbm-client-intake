@@ -109,6 +109,10 @@ async def _settings(ctx: Context) -> tuple[str, str]:
         ("account ID", a.account_id), ("client ID", a.client_id),
         ("client secret", a.client_secret), ("event host user", a.host),
     ) if not value]
+    if a.account_id and a.client_id and a.client_secret:
+        # The token needs only the three credentials: the setup asks for the
+        # host after the secret (phase 11 live review, 11-16-26).
+        ctx.state["creds_ok"] = True
     if missing:
         return FAILED, "Not set: " + ", ".join(missing) + "."
     ctx.state["settings_ok"] = True
@@ -116,7 +120,7 @@ async def _settings(ctx: Context) -> tuple[str, str]:
 
 
 async def _token(ctx: Context) -> tuple[str, str]:
-    _needs(ctx, "settings_ok", "a setting is missing (check 1)")
+    _needs(ctx, "creds_ok", "a credential is missing (check 1)")
     client = ctx.deps.client(ctx.settings)
     ctx.state["client"] = client
     try:
@@ -150,6 +154,8 @@ async def _scopes(ctx: Context) -> tuple[str, str]:
 async def _host_user(ctx: Context) -> tuple[str, str]:
     _needs(ctx, "token_ok", "no Zoom token (check 2)")
     host = _host(ctx)
+    if not host:
+        raise Blocked("Not checked: the event host user is not set (check 1).")
     try:
         user = await ctx.state["client"].get_user(host)
     except Exception as exc:  # noqa: BLE001
