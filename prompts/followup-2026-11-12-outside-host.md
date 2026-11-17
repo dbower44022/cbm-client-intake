@@ -1,8 +1,10 @@
 # Kickoff — live check of v0.320.0, an event run by an outside host
 
-Last Updated: 11-13-26 00:20 · Revision 1.1
+Last Updated: 11-17-26 00:09 · Revision 1.2
 
 Operating mode: DETAIL.
+
+> **Superseded 11-17-26.** The test system is now the Business Mentors Association's, not crm-test (`OPEN-ITEMS.md` #85), and outside host is one hosting method in the event hosting build (#84). Do the v0.320.0 live check there, as part of #84's live check, from `prompts/event-hosting-build-prompt-v0.1.md`. The Zoom step page linked below targets crm-test and is out of date: Zoom was proven on the Association's own account (#84 step 1).
 
 Paste this into a fresh Claude Code session in `~/Dropbox/Projects/cbm-client-intake`.
 
@@ -26,5 +28,6 @@ Never `git stash` in this working copy: parallel sessions share it.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 11-17-26 00:09 | Claude (Claude Code) | Marked superseded: the live check moves to the Association, inside #84. |
 | 1.1 | 11-13-26 00:20 | Claude (Claude Code) | Zoom step page noted. |
 | 1.0 | 11-12-26 10:54 | Claude (Claude Code) | Created at the close of the 11-12-26 session. |
