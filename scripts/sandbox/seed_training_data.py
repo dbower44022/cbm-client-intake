@@ -22,7 +22,7 @@ read-rich, not write-heavy):
 
 **Containment.**  Every seeded ``cbmEmail`` goes on ``--email-domain``
 (default: the training system's own, from ``targets.py`` — ``sandbox.cbmentors.org``
-on crm-test, ``sandbox.mentorsassociation.org`` on the Association's system), a
+on crm-test, ``bma.test`` on the Association's system (ruling 79)), a
 domain with no Workspace mailboxes.
 Outbound mail and calendar invites both impersonate that address by delegation,
 so an accidental Save fails harmlessly instead of reaching a real person.  It
@@ -70,7 +70,7 @@ TRAINING_MENTOR = "Joe Mentor"
 #: Profiles wired to a real login, so someone can actually sign in as them.
 #: (display name, the sign-in's user name before the @, mentorStatus). The part
 #: after the @ is the training system's login domain (``targets.py``):
-#: ``joe.mentor@cbmentors.org`` on crm-test, ``joe.mentor@sandbox.mentorsassociation.org``
+#: ``joe.mentor@cbmentors.org`` on crm-test, ``joe.mentor@bma.test``
 #: on the Association's system.
 MENTORS_WITH_LOGINS: tuple[tuple[str, str, str], ...] = (
     ("Joe Mentor", "joe.mentor", "Active"),
