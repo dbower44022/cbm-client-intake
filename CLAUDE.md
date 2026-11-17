@@ -1312,5 +1312,5 @@ the strength of it.
   (See Profile, shuffled cards, whole-profile search) and one shared mentor
   profile drawn by `website/content.profile_html` for the website and, behind
   `MENTOR_PREVIEW_SHARED` (off), My Mentor Profile's preview (decision 4.5
-  answered again: B). Still owed in #86: the cache steps in the guide.
+  answered again: B). #86 resolved 11-17-26.
 Everything else still owed is in `OPEN-ITEMS.md`.
