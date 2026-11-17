@@ -5,6 +5,14 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.342.1] — 2026-11-17
+
+**fix(events): the check before creating an event names no Zoom event.**
+Creating an event never calls Zoom: only a later save with "Show this event"
+ticked, or the Zoom button, does. Before this fix, the check before a create
+said "This creates a Zoom Meeting, not a webinar" when nothing would be
+created. Found while writing the step 6 runbook. A test pins it.
+
 ## [0.342.0] — 2026-11-17
 
 **feat(events): the hosting method on the event form — event hosting step

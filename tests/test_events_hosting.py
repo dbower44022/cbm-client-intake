@@ -711,3 +711,17 @@ def test_the_editor_offers_the_method_with_its_line_and_checks_before_saving():
     assert "checkBeforeSave(raw.id, changes)" in source and "checkBeforeSave(null, changes)" in source
     # Zoom Meetings' link is Zoom's: the Join URL box is not shown for it.
     assert 'if (method === "Zoom Meetings") joinWrap.hidden = true;' in source
+
+
+async def test_a_new_events_check_names_no_zoom_event():
+    """Creating an event never calls Zoom, so its check must not say it does;
+    the first save with "Show this event" ticked is where the words appear."""
+    class Ready(FormSettings):
+        zoom_meetings_active = True
+    crm = HostedEspo([])
+    result = await service.check_event(
+        crm, None, {"name": "New", "audience": "Public", "format": cfg.FORMAT_VIRTUAL,
+                    "hostedBy": "Zoom Meetings", "publishToWebsite": True},
+        settings=Ready())
+    assert result["zoom"]["words"] == ""
+    assert not any("creates a Zoom" in line for line in result["confirm"])

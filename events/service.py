@@ -1215,13 +1215,13 @@ async def check_event(
     except EventError as exc:
         refusal = str(exc)
 
-    # A new event is never synced on create; the check names what its first
-    # save as shown would do, so publishing is never a surprise.
     action, _ = zoom_sync.decide(after, previous=current if event_id else None,
                                  force=force)
     had = zoom_sync.existing_product(after, current if event_id else None)
     product = hosting.zoom_product(after)
-    words = hosting.publish_words(action, product, had)
+    # Creating an event never calls Zoom (the create endpoint does not sync),
+    # so a new event's check names nothing; its first save as shown does.
+    words = hosting.publish_words(action, product, had) if event_id else ""
     if words and action in ("create", "replace") and not hosting.ready(
             hosting.method(after), settings):
         words = (f"{hosting.label(hosting.method(after))} is not set up in System "
