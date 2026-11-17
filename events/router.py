@@ -33,6 +33,7 @@ from core.config import get_settings
 from core.espo import EspoError, forbidden_hint, is_forbidden, validation_failure
 
 from . import config as cfg
+from . import hosting
 from . import notify
 from . import reporting
 from . import service
@@ -167,6 +168,7 @@ async def session(request: Request) -> dict[str, Any]:
         "name": user.get("name"),
         "crmUrl": settings.espo_base_url,
         "zoomEnabled": settings.zoom_active,
+        "zoomMeetingsEnabled": settings.zoom_meetings_active,
         "publicBaseUrl": settings.events_public_base_url,
         "websiteLive": settings.events_public_api,
         # M10: the Promote button and the Campaigns tab (ruling 97).
@@ -244,7 +246,11 @@ async def fields(request: Request) -> dict[str, Any]:
             for f in service.editor_fields(available)
         ],
         "options": options,
-        "optionLabels": labels,
+        # The hosting method's labels are the application's, with the
+        # not-set-up reason on a method whose integration is off (EH4).
+        "optionLabels": {**labels, cfg.HOSTED_BY_FIELD: hosting.option_labels(settings_now)},
+        # EH4/EH5: each method's explanation and readiness, and the defaults.
+        "hosting": hosting.methods_payload(settings_now),
         "chapterKey": get_settings().chapter_key,
     }
 
@@ -309,6 +315,18 @@ async def get_event(event_id: str, request: Request) -> dict[str, Any]:
                 # D3-3: the Registrants and Follow-up tabs say registrations
                 # are taken on the host's site.
                 "outsideHost": visibility.hosted_outside(raw),
+                # The event's hosting method as it counts, and the Zoom
+                # product behind it, for the Zoom button's words (EH6).
+                "hosting": {
+                    "method": hosting.method(raw),
+                    "label": hosting.label(hosting.method(raw))
+                    if hosting.method(raw) in hosting.LABELS else "",
+                    "product": hosting.zoom_product(raw)
+                    or (hosting.stored_product(raw)
+                        if (raw.get("zoomWebinarId") or "").strip() else ""),
+                    "ready": hosting.ready(hosting.method(raw), settings)
+                    if hosting.zoom_product(raw) else True,
+                },
             },
         },
         "counts": counts,
@@ -334,7 +352,40 @@ async def create_event(payload: EventIn, request: Request) -> dict[str, Any]:
         actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
     )
     return {"event": service.public_event_detail(event), "raw": event,
-            "warnings": visibility.save_warnings(event)}
+            "warnings": await _save_warnings(client, event)}
+
+
+async def _save_warnings(client: Any, event: dict[str, Any]) -> list[str]:
+    """Every warning a save reports: visibility's, the hosting method's (not
+    set up, the hybrid capacity), and the Zoom overlap (EH6). Never blocking."""
+    settings = get_settings()
+    return (visibility.save_warnings(event) + hosting.warnings(event, settings)
+            + await service.overlap_warnings(client, event, settings))
+
+
+@api_router.post("/events/check")
+async def check_new_event(payload: EventIn, request: Request) -> dict[str, Any]:
+    """The check before creating an event: refusal, warnings, and what its
+    publishing would create in Zoom, in words (EH6). Writes nothing."""
+    _, client = await _actor(request)
+    try:
+        return await service.check_event(client, None, payload.changes,
+                                         settings=get_settings())
+    except EspoError as exc:
+        raise _crm_failure(exc, "check the event") from exc
+
+
+@api_router.post("/events/{event_id}/check")
+async def check_event(event_id: str, payload: EventIn, request: Request,
+                      force: bool = False) -> dict[str, Any]:
+    """The check before saving an event (or, with ``force``, before the Zoom
+    button): the same answers as for a new one. Writes nothing."""
+    _, client = await _actor(request)
+    try:
+        return await service.check_event(client, event_id, payload.changes,
+                                         settings=get_settings(), force=force)
+    except EspoError as exc:
+        raise _crm_failure(exc, "check the event") from exc
 
 
 @api_router.put("/events/{event_id}")
@@ -371,7 +422,7 @@ async def update_event(
         details={"fields": moved, "zoom": zoom.get("action")},
     )
     return {"event": service.public_event_detail(event), "raw": event, "zoom": zoom,
-            "warnings": visibility.save_warnings(event)}
+            "warnings": await _save_warnings(client, event)}
 
 
 @api_router.put("/events/{event_id}/sponsors")
@@ -430,7 +481,8 @@ async def sync_zoom(event_id: str, request: Request) -> dict[str, Any]:
         await record_action(
             client, app=APP_EVENTS, category=CAT_STATUS, action="Zoom Webinar Synced",
             parent_type=cfg.EVENT, parent_id=event_id,
-            summary=f"Zoom webinar {result.get('action')}",
+            summary=(f"Zoom {'meeting' if result.get('product') == 'meeting' else 'webinar'} "
+                     f"{result.get('action')}"),
             actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
             details=result,
         )

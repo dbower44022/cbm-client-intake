@@ -1076,6 +1076,14 @@ async def create_event(
     _check_host_link(payload, {})
     if cfg.AUDIENCE_FIELD in available and not payload.get(cfg.AUDIENCE_FIELD):
         payload[cfg.AUDIENCE_FIELD] = cfg.AUDIENCE_PUBLIC
+    # EH5: a new event without a chosen method starts on its audience's
+    # default. The form sends one; this covers any other caller.
+    if cfg.HOSTED_BY_FIELD in available and not payload.get(cfg.HOSTED_BY_FIELD):
+        from . import hosting
+
+        audience = payload.get(cfg.AUDIENCE_FIELD) or cfg.AUDIENCE_PUBLIC
+        payload[cfg.HOSTED_BY_FIELD] = hosting.default_for(audience)
+    _check_capacity(payload, {})
     if cfg.REACH_FIELD in available and not payload.get(cfg.REACH_FIELD):
         payload[cfg.REACH_FIELD] = cfg.REACH_THIS
     await _clean_multi_enums(client, payload)
@@ -1127,6 +1135,108 @@ def _check_host_link(payload: dict[str, Any], current: dict[str, Any]) -> None:
             f"The {whose} link must start with https:// — paste the full address "
             "of the join or registration page."
         )
+
+
+def _check_capacity(payload: dict[str, Any], current: dict[str, Any]) -> None:
+    """EH6: a fully online event on Zoom Meetings above the plan's capacity is
+    refused, with the reason. A hybrid one is warned after the save (EH14)."""
+    from . import hosting
+
+    kind, message = hosting.capacity_check({**current, **payload})
+    if kind == "refuse":
+        raise EventError(message)
+
+
+async def overlap_warnings(
+    client: EspoApi, event: dict[str, Any], settings: Any = None
+) -> list[str]:
+    """EH6 and plan § 6 point 5: the other Zoom events under the same event
+    host user whose times meet this one's. A warning, never a refusal; a failed
+    read warns of nothing rather than failing the save."""
+    from datetime import timedelta
+
+    from . import hosting
+
+    window = hosting.busy_window(event)
+    if window is None or not hosting.host_of(event, settings):
+        return []
+    lead = timedelta(minutes=hosting.OVERLAP_LEAD_MINUTES)
+    try:
+        rows = await _all_events(
+            client, select=cfg.PUBLIC_SELECT,
+            where=[
+                {"type": "before", "attribute": "dateStart",
+                 "value": to_crm_datetime(window[1] + lead)},
+                {"type": "after", "attribute": "dateEnd",
+                 "value": to_crm_datetime(window[0])},
+                {"type": "in", "attribute": "format", "value": list(cfg.ONLINE_FORMATS)},
+                {"type": "notEquals", "attribute": "status", "value": cfg.STATUS_CANCELLED},
+            ],
+            limit=200,
+        )
+    except EspoError as exc:
+        log.warning("event %s: the overlap check could not read events: %s",
+                    event.get("id"), exc)
+        return []
+    message = hosting.overlap_warning(event, hosting.overlaps(event, rows, settings), settings)
+    return [message] if message else []
+
+
+async def check_event(
+    client: EspoApi, event_id: Optional[str], changes: dict[str, Any],
+    *, settings: Any = None, force: bool = False,
+) -> dict[str, Any]:
+    """The check before a save (the event form's step 5): what the save would
+    do in Zoom, named in words (EH6), the refusal it would meet, and its
+    warnings. Writes nothing.
+
+    ``{"zoom": {"action", "product", "words"}, "refusal": str, "confirm": [...]}``
+    """
+    from . import hosting, zoom_sync
+
+    available = await live_event_fields(client)
+    current: dict[str, Any] = {}
+    if event_id:
+        current = dict(await client.get(cfg.EVENT, event_id, select=cfg.PUBLIC_SELECT) or {})
+    payload = _blank_enums_to_null(_writable(changes, available=available, current=current))
+    if not event_id and cfg.HOSTED_BY_FIELD in available and not payload.get(cfg.HOSTED_BY_FIELD):
+        payload[cfg.HOSTED_BY_FIELD] = hosting.default_for(
+            payload.get(cfg.AUDIENCE_FIELD) or cfg.AUDIENCE_PUBLIC, settings)
+    after = {**current, **payload}
+    if not event_id and cfg.AUDIENCE_FIELD in available and not after.get(cfg.AUDIENCE_FIELD):
+        after[cfg.AUDIENCE_FIELD] = cfg.AUDIENCE_PUBLIC
+
+    refusal = ""
+    try:
+        _check_host_link(payload, current)
+        _check_capacity(payload, current)
+        if event_id:
+            await _refuse_method_change_with_registrants(client, event_id, payload, current)
+    except EventError as exc:
+        refusal = str(exc)
+
+    # A new event is never synced on create; the check names what its first
+    # save as shown would do, so publishing is never a surprise.
+    action, _ = zoom_sync.decide(after, previous=current if event_id else None,
+                                 force=force)
+    had = zoom_sync.existing_product(after, current if event_id else None)
+    product = hosting.zoom_product(after)
+    words = hosting.publish_words(action, product, had)
+    if words and action in ("create", "replace") and not hosting.ready(
+            hosting.method(after), settings):
+        words = (f"{hosting.label(hosting.method(after))} is not set up in System "
+                 "Settings, so no Zoom event is created yet.")
+
+    # What staff confirm before the save goes ahead: the platform in words
+    # and the hosting warnings. Visibility's warnings keep arriving after the
+    # save, as they always have.
+    confirm = ([words] if words else []) + hosting.warnings(after, settings)
+    confirm += await overlap_warnings(client, after, settings)
+    return {
+        "zoom": {"action": action, "product": product, "words": words},
+        "refusal": refusal,
+        "confirm": confirm,
+    }
 
 
 async def _refuse_method_change_with_registrants(
@@ -1186,6 +1296,7 @@ async def update_event(
     if "name" in payload and not (payload["name"] or "").strip():
         raise EventError("An event needs a title.")
     _check_host_link(payload, current)
+    _check_capacity(payload, current)
     await _refuse_method_change_with_registrants(client, event_id, payload, current)
     await _clean_multi_enums(client, payload)
     await _include_own_chapter(client, payload, current, available=available,

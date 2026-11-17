@@ -1,6 +1,6 @@
 # events/ — Events, Webinars and the public pages
 
-Last Updated: 11-17-26 11:20 · Revision 1.5
+Last Updated: 11-17-26 11:55 · Revision 1.6
 
 Detail for Event Administration (`/events`), the public programme pages (`/webinars/`), presenters, topics, attendance, follow-ups, reporting and the portal events rail.
 
@@ -253,6 +253,17 @@ would be indistinguishable from a slug.
   - **EH4 on the server** (`service._refuse_method_change_with_registrants`):
     changing the stored method is refused while anyone is Registered or
     Waitlisted. D3-3's Outside host refusal is the first case of this rule.
+  - **The event form** (step 5, v0.342.0): the choice on every online event,
+    with each method's line, readiness and the defaults from
+    `hosting.methods_payload` (in `/fields`). Before a save the editor calls
+    `service.check_event` (`POST …/check`), which writes nothing. Anything
+    in its `confirm` list (the platform in words, a method not set up, the
+    hybrid capacity, the overlap) needs a second click. The Zoom button
+    works the same way. A fully online meeting above `zoom_meetings_capacity`
+    is refused (`_check_capacity`). The overlap check
+    (`service.overlap_warnings`) only warns, and a failed read warns of
+    nothing. The form never types the stored `CBM Zoom`: the branding guard
+    refuses the acronym, so it reads `hosting.webinars` from the payload.
   - Zoom Meetings' participant report carries `user_email` and no
     `registrant_id`, so attendance matches by email (proved 11-15-26).
     Mentoring sessions never use the chapter's Zoom account (EH10).
@@ -371,6 +382,7 @@ would be indistinguishable from a slug.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.6 | 11-17-26 11:55 | Claude (Claude Code) | Hosting methods, step 5: the event form and the check before a save. |
 | 1.5 | 11-17-26 11:20 | Claude (Claude Code) | Hosting methods, step 4 built: `events/hosting.py`, members-only Zoom Meetings (option B), Other platform's switch, EH4 on the server. |
 | 1.4 | 11-15-26 02:25 | Claude (Claude Code) | Hosting methods: the stored values, the shared Zoom ids, attendance by email (event hosting plan, steps 1 and 3). |
 | 1.3 | 11-12-26 01:26 | Claude (Claude Code) | An event run by an outside host (D3-3, D3-4). |

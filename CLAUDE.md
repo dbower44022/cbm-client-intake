@@ -1327,4 +1327,9 @@ the strength of it.
   plus Other platform's registrations and confirmation. Dark behind
   `ZOOM_MEETINGS_EVENTS` and `EVENTS_OTHER_PLATFORM`; `events/hosting.py` is
   the one rule. Owed in #84.
+- **v0.342.0 (2026-11-17) is committed, not pushed**: event hosting step
+  5, the event form. The method on every online event, its line and
+  readiness, defaults per audience, and a check before saving that names the
+  platform, refuses an over-capacity meeting and warns of Zoom overlaps. Owed
+  in #84.
 Everything else still owed is in `OPEN-ITEMS.md`.

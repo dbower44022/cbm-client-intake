@@ -201,3 +201,232 @@ def product_name(product: str) -> str:
 
 def not_ready_reason(product: str) -> str:
     return f"{product_name(product)} is not switched on or not set up in System Settings"
+
+
+# --- the event form (plan § 7 step 5: EH4 to EH6, EH14) -------------------------
+
+#: The order the form offers them in.
+METHOD_ORDER = (WEBINARS, MEETINGS, OTHER, OUTSIDE)
+
+NOT_SET_UP = "Not set up — set it up in System Settings."
+
+#: Hosts open a meeting early: a Zoom event's busy window starts this long
+#: before its start (plan § 6 point 5).
+OVERLAP_LEAD_MINUTES = 30
+
+
+def _settings(settings: Any) -> Any:
+    if settings is None:
+        from core.config import get_settings
+
+        return get_settings()
+    return settings
+
+
+def meetings_capacity(settings: Any = None) -> int:
+    try:
+        return int(getattr(_settings(settings), "zoom_meetings_capacity", 100) or 0)
+    except (TypeError, ValueError):
+        return 100
+
+
+def ready(value: str, settings: Any = None) -> bool:
+    """Whether a method's integration or switch is set up (EH4's reason)."""
+    s = _settings(settings)
+    if value == MEETINGS:
+        return bool(getattr(s, "zoom_meetings_active", False))
+    if value == OTHER:
+        return other_platform_on(s)
+    if value == OUTSIDE:
+        return True
+    return bool(getattr(s, "zoom_active", False))
+
+
+def explain(value: str, *, members: bool, capacity: int = 100) -> str:
+    """EH4: one line on what the method means for attendees. A members-only
+    event is hosted by the application only on Zoom Meetings; on any other
+    choice members join by the link staff paste."""
+    if members and value != MEETINGS:
+        if value == WEBINARS:
+            return ("Zoom Webinars are for public events. On a members-only event, "
+                    "members join by the link you paste below.")
+        return "Members join by the link you paste below."
+    if value == MEETINGS:
+        line = ("Attendees register with us and each gets their own Zoom link. They "
+                "join muted with cameras off, and may unmute. "
+                f"Up to {capacity} can join.")
+        if members:
+            line += (" If the event takes no registrations, every member sees one "
+                     "link instead.")
+        return line
+    if value == OTHER:
+        return ("Attendees register with us and get one shared link, which you paste "
+                "below (Teams, Google Meet, another Zoom account). Attendance is "
+                "marked by hand.")
+    if value == OUTSIDE:
+        return ("A partner runs it on their own platform. Visitors register on the "
+                "host's site; we take no registrations and record no attendance.")
+    return ("Attendees register with us and each gets their own Zoom link. Only "
+            "presenters are seen and heard.")
+
+
+def methods_payload(settings: Any = None) -> dict[str, Any]:
+    """What the event form needs to offer the methods: each one's label,
+    readiness and explanations, and the two defaults per audience (EH5)."""
+    s = _settings(settings)
+    cap = meetings_capacity(s)
+    methods = []
+    for value in METHOD_ORDER:
+        is_ready = ready(value, s)
+        methods.append({
+            "value": value,
+            "label": LABELS[value],
+            "ready": is_ready,
+            "reason": "" if is_ready else NOT_SET_UP,
+            "explain": explain(value, members=False, capacity=cap),
+            "explainMembers": explain(value, members=True, capacity=cap),
+        })
+    return {
+        "methods": methods,
+        "defaults": {
+            cfg.AUDIENCE_PUBLIC: getattr(s, "events_default_method_public", WEBINARS) or WEBINARS,
+            cfg.AUDIENCE_INTERNAL: getattr(s, "events_default_method_members", WEBINARS) or WEBINARS,
+        },
+        "meetingsCapacity": cap,
+        # The stored value that means Zoom Webinars, so the form never types
+        # it (the branding guard refuses the acronym in served files).
+        "webinars": WEBINARS,
+    }
+
+
+def option_labels(settings: Any = None) -> dict[str, str]:
+    """The select's labels: the method's name, and the not-set-up reason."""
+    s = _settings(settings)
+    return {
+        value: LABELS[value] + ("" if ready(value, s) else " (not set up)")
+        for value in METHOD_ORDER
+    }
+
+
+def default_for(audience: str, settings: Any = None) -> str:
+    s = _settings(settings)
+    if audience == cfg.AUDIENCE_INTERNAL:
+        return getattr(s, "events_default_method_members", WEBINARS) or WEBINARS
+    return getattr(s, "events_default_method_public", WEBINARS) or WEBINARS
+
+
+def capacity_check(event: dict[str, Any], settings: Any = None) -> tuple[str, str]:
+    """EH6 and EH14: ``("refuse"|"warn"|"", message)``.
+
+    A fully online event on Zoom Meetings whose capacity is above the plan's
+    limit is refused; a hybrid one is warned, since its one capacity counts
+    the room too."""
+    if method(event) != MEETINGS:
+        return "", ""
+    try:
+        capacity = int(event.get("venueCapacity") or 0)
+    except (TypeError, ValueError):
+        return "", ""
+    limit = meetings_capacity(settings)
+    if not limit or capacity <= limit:
+        return "", ""
+    if (event.get("format") or "") == cfg.FORMAT_HYBRID:
+        return "warn", (f"Capacity {capacity} is above Zoom Meetings' {limit}. If more "
+                        f"than {limit} join online, the rest cannot get in.")
+    return "refuse", (f"Capacity {capacity} is above Zoom Meetings' {limit} on this "
+                      "chapter's Zoom plan. Lower the capacity, or host the event on "
+                      "Zoom Webinars.")
+
+
+def warnings(event: dict[str, Any], settings: Any = None) -> list[str]:
+    """Hosting warnings after a save or in the check before one: the method's
+    integration not set up, and the hybrid capacity warning. Never blocking."""
+    out: list[str] = []
+    m = method(event)
+    if m and m not in (MEMBERS_LINK,) and not ready(m, settings):
+        what = {WEBINARS: "no webinar is created", MEETINGS: "no meeting is created",
+                OTHER: "its shared link cannot be filled in"}.get(m, "")
+        out.append(f"{LABELS[m]} is not set up in System Settings, so {what} "
+                   "until it is.")
+    kind, message = capacity_check(event, settings)
+    if kind == "warn":
+        out.append(message)
+    return out
+
+
+def busy_window(event: dict[str, Any]) -> Optional[tuple[Any, Any]]:
+    """The time a Zoom event occupies its host: from 30 minutes before the
+    start to the end (plan § 6 point 5). None without a start."""
+    from datetime import timedelta
+
+    from .service import parse_crm_datetime
+
+    start = parse_crm_datetime(event.get("dateStart"))
+    if start is None:
+        return None
+    end = parse_crm_datetime(event.get("dateEnd")) or start + timedelta(hours=1)
+    return start - timedelta(minutes=OVERLAP_LEAD_MINUTES), end
+
+
+def host_of(event: dict[str, Any], settings: Any = None) -> str:
+    """The Zoom user the event's Zoom event runs under, lower-cased, or ""."""
+    product = zoom_product(event)
+    if not product:
+        return ""
+    return (zoom_host(_settings(settings), product) or "").strip().lower()
+
+
+def overlaps(event: dict[str, Any], others: list[dict[str, Any]],
+             settings: Any = None) -> list[dict[str, Any]]:
+    """The other Zoom events under the same event host user whose busy windows
+    meet this one's. Webinars and meetings alike: one Zoom user hosts one at a
+    time (Zoom's documentation, not tried). Cancelled events never count."""
+    host = host_of(event, settings)
+    window = busy_window(event)
+    if not host or window is None or event.get("status") == cfg.STATUS_CANCELLED:
+        return []
+    found = []
+    for other in others:
+        if other.get("id") and other.get("id") == event.get("id"):
+            continue
+        if other.get("status") == cfg.STATUS_CANCELLED:
+            continue
+        if host_of(other, settings) != host:
+            continue
+        theirs = busy_window(other)
+        if theirs and theirs[0] < window[1] and window[0] < theirs[1]:
+            found.append(other)
+    return found
+
+
+def overlap_warning(event: dict[str, Any], clashes: list[dict[str, Any]],
+                    settings: Any = None) -> str:
+    if not clashes:
+        return ""
+    from .service import parse_crm_datetime, to_local
+
+    def name(e: dict[str, Any]) -> str:
+        start = parse_crm_datetime(e.get("dateStart"))
+        when = to_local(start).strftime("%a %b %-d, %-I:%M %p") if start else ""
+        return f"“{e.get('name') or 'an event'}” ({when})" if when else f"“{e.get('name')}”"
+
+    listed = ", ".join(name(e) for e in clashes[:3])
+    more = f" and {len(clashes) - 3} more" if len(clashes) > 3 else ""
+    return (f"This overlaps {listed}{more}, also run by the Zoom user "
+            f"{host_of(event, settings)}. One Zoom user can host only one meeting or "
+            "webinar at a time, counting from 30 minutes before each start.")
+
+
+def publish_words(action: str, product: str, had: str = "") -> str:
+    """EH6: the platform in words, before a save that makes or ends a Zoom event."""
+    if action == "create":
+        return ("This creates a Zoom Meeting, not a webinar." if product == PRODUCT_MEETING
+                else "This creates a Zoom webinar.")
+    if action == "replace":
+        return (f"This cancels the {'Zoom Meeting' if had == PRODUCT_MEETING else 'Zoom webinar'} "
+                f"and creates a {'Zoom Meeting' if product == PRODUCT_MEETING else 'Zoom webinar'} "
+                "in its place.")
+    if action == "cancel":
+        return ("This cancels the event's "
+                f"{'Zoom Meeting' if had == PRODUCT_MEETING else 'Zoom webinar'}.")
+    return ""

@@ -526,3 +526,188 @@ async def test_the_preview_carries_the_warning():
         settings_on(), None, event, notify.BY_KIND[notify.KIND_NO_SHOW],
         registrations=[reg()], dry_run=True)
     assert result["warning"]
+
+
+# === Step 5: the event form (EH4 to EH6, EH14) ======================================
+
+
+class FormSettings:
+    zoom_active = True
+    zoom_meetings_active = False
+    events_other_platform = False
+    zoom_meetings_capacity = 100
+    events_default_method_public = "CBM Zoom"
+    events_default_method_members = "Zoom Meetings"
+    zoom_events = True
+    zoom_meetings_events = True
+    zoom_host_email = "events@example.org"
+    zoom_event_host_email = "events@example.org"
+
+
+def test_every_method_is_offered_with_its_reason_never_hidden():
+    payload = hosting.methods_payload(FormSettings())
+    by = {m["value"]: m for m in payload["methods"]}
+    assert list(by) == ["CBM Zoom", "Zoom Meetings", "Other platform", "Outside host"]
+    assert by["CBM Zoom"]["ready"] and by["CBM Zoom"]["label"] == "Zoom Webinars"
+    assert not by["Zoom Meetings"]["ready"]
+    assert by["Zoom Meetings"]["reason"].startswith("Not set up")
+    assert not by["Other platform"]["ready"] and by["Outside host"]["ready"]
+    assert "Up to 100" in by["Zoom Meetings"]["explain"]
+    assert payload["defaults"] == {"Public": "CBM Zoom", "Internal": "Zoom Meetings"}
+    labels = hosting.option_labels(FormSettings())
+    assert labels["Zoom Meetings"] == "Zoom Meetings (not set up)"
+    assert labels["CBM Zoom"] == "Zoom Webinars"
+
+
+def test_a_members_only_event_explains_the_typed_link():
+    assert "link you paste below" in hosting.explain("CBM Zoom", members=True)
+    assert "Zoom Webinars are for public events" in hosting.explain("CBM Zoom", members=True)
+    assert "every member sees one link" in hosting.explain("Zoom Meetings", members=True)
+
+
+@pytest.mark.parametrize("fmt, capacity, expected", [
+    (cfg.FORMAT_VIRTUAL, 140, "refuse"),
+    (cfg.FORMAT_HYBRID, 140, "warn"),     # EH14: the room counts too
+    (cfg.FORMAT_VIRTUAL, 100, ""),
+    (cfg.FORMAT_VIRTUAL, None, ""),
+])
+def test_the_capacity_guard(fmt, capacity, expected):
+    event = public(hostedBy="Zoom Meetings", format=fmt, venueCapacity=capacity)
+    kind, message = hosting.capacity_check(event, FormSettings())
+    assert kind == expected
+    if expected == "warn":
+        assert message == ("Capacity 140 is above Zoom Meetings' 100. If more than 100 "
+                           "join online, the rest cannot get in.")
+
+
+def test_the_capacity_guard_is_for_zoom_meetings_only():
+    assert hosting.capacity_check(public(venueCapacity=500), FormSettings()) == ("", "")
+
+
+async def test_a_fully_online_meeting_above_capacity_is_refused_on_save():
+    crm = HostedEspo([public_online(format=cfg.FORMAT_VIRTUAL)])
+    with pytest.raises(service.EventError, match="Capacity 140 is above Zoom Meetings' 100"):
+        await service.update_event(crm, "ev1", {"hostedBy": "Zoom Meetings",
+                                                "venueCapacity": 140})
+    assert crm.updated == []
+    # Hybrid: saved, and warned.
+    crm = HostedEspo([public_online(format=cfg.FORMAT_HYBRID)])
+    await service.update_event(crm, "ev1", {"hostedBy": "Zoom Meetings", "venueCapacity": 140})
+    assert crm.updated[-1]["venueCapacity"] == 140
+
+
+def test_hosting_warnings_name_a_method_not_set_up():
+    [warning] = hosting.warnings(public(hostedBy="Zoom Meetings"), FormSettings())
+    assert warning.startswith("Zoom Meetings is not set up")
+    # A members-only event on the typed link has nothing to set up.
+    assert hosting.warnings(members(hostedBy="CBM Zoom"), FormSettings()) == []
+
+
+async def test_a_new_event_starts_on_its_audiences_default(monkeypatch):
+    monkeypatch.setattr(hosting, "default_for",
+                        lambda audience, settings=None: FormSettings.events_default_method_members
+                        if audience == "Internal" else FormSettings.events_default_method_public)
+    crm = HostedEspo([])
+    await service.create_event(crm, {"name": "Roundtable", "audience": "Internal",
+                                     "format": cfg.FORMAT_VIRTUAL}, chapter_key="cleveland")
+    assert crm.created[-1]["hostedBy"] == "Zoom Meetings"
+    crm = HostedEspo([])
+    await service.create_event(crm, {"name": "Webinar", "format": cfg.FORMAT_VIRTUAL},
+                               chapter_key="cleveland")
+    assert crm.created[-1]["hostedBy"] == "CBM Zoom"
+    # A chosen method is kept.
+    crm = HostedEspo([])
+    await service.create_event(crm, {"name": "Partner", "format": cfg.FORMAT_VIRTUAL,
+                                     "hostedBy": "Outside host"}, chapter_key="cleveland")
+    assert crm.created[-1]["hostedBy"] == "Outside host"
+
+
+def _at(start, end, **over):
+    return public(dateStart=start, dateEnd=end, **over)
+
+
+def test_two_zoom_events_under_one_host_overlap_from_half_an_hour_before():
+    mine = _at("2026-12-01 18:00:00", "2026-12-01 19:00:00", id="a")
+    # Starts 20 minutes after mine ends — but its host opens 30 minutes early.
+    near = _at("2026-12-01 19:20:00", "2026-12-01 20:00:00", id="b",
+               hostedBy="Zoom Meetings", name="Roundtable")
+    far = _at("2026-12-01 19:40:00", "2026-12-01 20:30:00", id="c")
+    gone = _at("2026-12-01 18:00:00", "2026-12-01 19:00:00", id="d",
+               status=cfg.STATUS_CANCELLED)
+    other = _at("2026-12-01 18:00:00", "2026-12-01 19:00:00", id="e",
+                hostedBy="Other platform")
+    clashes = hosting.overlaps(mine, [mine, near, far, gone, other], FormSettings())
+    assert [c["id"] for c in clashes] == ["b"]
+    text = hosting.overlap_warning(mine, clashes, FormSettings())
+    assert "“Roundtable”" in text and "events@example.org" in text
+
+
+def test_webinars_on_their_own_account_do_not_clash_with_meetings():
+    class Separate(FormSettings):
+        zoom_webinars_same_account = False
+        zoom_meetings_account_id = zoom_meetings_client_id = zoom_meetings_client_secret = "m"
+        zoom_host_email = "webinars@example.org"
+    mine = _at("2026-12-01 18:00:00", "2026-12-01 19:00:00", id="a")
+    meeting = _at("2026-12-01 18:00:00", "2026-12-01 19:00:00", id="b",
+                  hostedBy="Zoom Meetings")
+    assert hosting.overlaps(mine, [meeting], Separate()) == []
+
+
+async def test_the_overlap_check_reads_the_crm_and_warns():
+    clash = _at("2026-12-01 18:30:00", "2026-12-01 19:30:00", id="b", name="Other talk")
+    crm = HostedEspo([clash])
+    mine = _at("2026-12-01 18:00:00", "2026-12-01 19:00:00", id="a")
+    [warning] = await service.overlap_warnings(crm, mine, FormSettings())
+    assert "“Other talk”" in warning
+
+
+async def test_the_check_names_the_platform_before_publishing(monkeypatch):
+    """EH6: "This creates a Zoom Meeting, not a webinar"."""
+    class Ready(FormSettings):
+        zoom_meetings_active = True
+    crm = HostedEspo([public_online(publishToWebsite=False, virtualMeetingUrl="",
+                                    zoomWebinarId="")])
+    result = await service.check_event(
+        crm, "ev1", {"hostedBy": "Zoom Meetings", "publishToWebsite": True},
+        settings=Ready())
+    assert result["zoom"]["action"] == "create"
+    assert result["confirm"][0] == "This creates a Zoom Meeting, not a webinar."
+    assert result["refusal"] == ""
+
+
+async def test_the_check_says_when_the_method_is_not_set_up():
+    crm = HostedEspo([public_online(publishToWebsite=False, virtualMeetingUrl="",
+                                    zoomWebinarId="")])
+    result = await service.check_event(
+        crm, "ev1", {"hostedBy": "Zoom Meetings", "publishToWebsite": True},
+        settings=FormSettings())
+    assert "not set up in System Settings" in result["confirm"][0]
+
+
+async def test_the_check_reports_the_refusal_and_writes_nothing():
+    crm = HostedEspo([public_online(format=cfg.FORMAT_VIRTUAL)],
+                     registrations=[{"attendanceStatus": "Registered"}])
+    result = await service.check_event(crm, "ev1", {"hostedBy": "Zoom Meetings"},
+                                       settings=FormSettings())
+    assert "registered for this event" in result["refusal"]
+    assert crm.updated == [] and crm.created == []
+
+
+async def test_the_check_names_a_replacement():
+    class Ready(FormSettings):
+        zoom_meetings_active = True
+    crm = HostedEspo([public_online(zoomWebinarId="111",
+                                    virtualMeetingUrl="https://zoom.us/w/111")])
+    result = await service.check_event(crm, "ev1", {"hostedBy": "Zoom Meetings"},
+                                       settings=Ready())
+    assert result["confirm"][0] == ("This cancels the Zoom webinar and creates a Zoom "
+                                    "Meeting in its place.")
+
+
+def test_the_editor_offers_the_method_with_its_line_and_checks_before_saving():
+    from pathlib import Path
+    source = (Path(__file__).resolve().parents[1] / "events" / "frontend" / "app.js").read_text()
+    assert "function hostingControls(" in source
+    assert "checkBeforeSave(raw.id, changes)" in source and "checkBeforeSave(null, changes)" in source
+    # Zoom Meetings' link is Zoom's: the Join URL box is not shown for it.
+    assert 'if (method === "Zoom Meetings") joinWrap.hidden = true;' in source

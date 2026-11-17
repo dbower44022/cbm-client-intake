@@ -1291,8 +1291,105 @@
     });
     sponsorshipGroup(host, raw);
     presentersGroup(host, raw);
+    hostingControls(host, raw);
     applyShowWhen(host);
     host.addEventListener("change", function () { applyShowWhen(host); });
+  }
+
+  /* The hosting method (event hosting plan step 5, rulings EH4 and EH5). Under
+     the choice, one line on what it means for attendees, with the reason when
+     its integration is not set up — a method is never hidden for that. A new
+     event starts on its audience's default and follows the audience until
+     staff pick a method themselves. Once anyone has registered the line says
+     the choice is fixed; the server refuses a change (EH4). */
+  function hostingMeta(value) {
+    var list = (state.hosting && state.hosting.methods) || [];
+    for (var i = 0; i < list.length; i++) if (list[i].value === value) return list[i];
+    return null;
+  }
+
+  function liveRegistrations() {
+    return ((state.current && state.current.registrations) || []).filter(function (r) {
+      return r.attendanceStatus === "Registered" || r.attendanceStatus === "Waitlisted";
+    }).length;
+  }
+
+  function hostingControls(host, raw) {
+    var sel = host.querySelector('[name="hostedBy"]');
+    if (!sel || !state.hosting) return;
+    var audienceSel = host.querySelector('[name="audience"]');
+    var isNew = !raw.id;
+    var touched = false;
+    var live = isNew ? 0 : liveRegistrations();
+    function audience() { return (audienceSel && audienceSel.value) || "Public"; }
+    function offered(value) {
+      return Array.prototype.some.call(sel.options, function (o) { return o.value === value; });
+    }
+    function applyDefault() {
+      var d = (state.hosting.defaults || {})[audience()];
+      if (d && offered(d)) sel.value = d;
+    }
+    var webinars = state.hosting.webinars;   // the stored value for Zoom Webinars
+    if (isNew) applyDefault();
+    else if (!sel.value && offered(webinars)) sel.value = webinars;   // empty is Zoom Webinars
+
+    var line = document.createElement("p");
+    line.className = "ev__hosting-explain";
+    sel.closest(".ev__field").appendChild(line);
+
+    function update() {
+      var meta = hostingMeta(sel.value || webinars);
+      var members = audience() === "Internal";
+      var text = meta ? (members ? meta.explainMembers : meta.explain) : "";
+      // On a members-only event only Zoom Meetings is the application's to set up.
+      var counts = meta && (!members || meta.value === "Zoom Meetings");
+      var notReady = !!counts && !meta.ready;
+      if (notReady) text += " " + meta.reason;
+      if (live) {
+        text += " Fixed: " + live + (live === 1 ? " person is" : " people are")
+          + " registered. To change it, cancel their registrations first.";
+      }
+      line.textContent = text;
+      line.classList.toggle("ev__hosting-explain--warn", notReady);
+    }
+    sel.addEventListener("change", function () { touched = true; update(); });
+    if (audienceSel) {
+      // Runs before the form's own change listener, so the show-when rules
+      // see the new default.
+      audienceSel.addEventListener("change", function () {
+        if (isNew && !touched) applyDefault();
+        update();
+      });
+    }
+    update();
+  }
+
+  /* The check before a save (EH6): the platform in words when the save makes
+     or ends a Zoom event, the capacity and overlap warnings, and a refusal the
+     save would meet. Anything to confirm turns Save into a second click; a
+     change to the form re-checks. */
+  var pendingCheck = null;
+
+  async function checkBeforeSave(eventId, changes) {
+    var key = (eventId || "new") + "|" + JSON.stringify(changes);
+    if (pendingCheck === key) { pendingCheck = null; return true; }
+    var res = await api(eventId ? "/events/" + eventId + "/check" : "/events/check", {
+      method: "POST", body: JSON.stringify({ changes: changes }),
+    });
+    var msg = $("modalMsg");
+    if (res.refusal) {
+      pendingCheck = null;
+      msg.className = "ev__modal-msg";
+      msg.textContent = res.refusal;
+      return false;
+    }
+    var lines = res.confirm || [];
+    if (!lines.length) return true;
+    pendingCheck = key;
+    msg.className = "ev__modal-msg ev__modal-msg--warn ev__modal-msg--lines";
+    msg.textContent = lines.join("\n");
+    $("modalSave").textContent = (res.zoom && res.zoom.words) ? "Save and go ahead" : "Save anyway";
+    return false;
   }
 
   /* Phase B — who sponsors this event. One checkbox list per link the live CRM
@@ -1436,14 +1533,21 @@
       return rule.all ? rule.all.every(holds) : (rule.any || []).some(holds);
     }
     wraps.forEach(function (wrap) { wrap.hidden = !isShown(wrap); });
-    // D3-3: on an Outside host event the Join URL is the host's link.
+    // The Join URL by hosting method: the host's link on an Outside host
+    // event (D3-3), the shared link on Other platform (EH13), and Zoom's own —
+    // never typed, so not shown — on Zoom Meetings, members-only included.
     var join = controlOf("virtualMeetingUrl");
     var hosted = controlOf("hostedBy");
     if (join) {
-      var caption = join.closest(".ev__field").querySelector("span");
-      var outside = !!hosted && hosted.value === "Outside host"
-        && !hosted.closest(".ev__field").hidden;
-      if (caption) caption.textContent = outside ? "Host's link (join or registration page)" : "Join URL";
+      var joinWrap = join.closest(".ev__field");
+      var caption = joinWrap.querySelector("span");
+      var method = hosted && !hosted.closest(".ev__field").hidden ? hosted.value : "";
+      if (method === "Zoom Meetings") joinWrap.hidden = true;
+      if (caption) {
+        caption.textContent = method === "Outside host" ? "Host's link (join or registration page)"
+          : method === "Other platform" ? "Shared join link (sent to registrants only)"
+          : "Join URL";
+      }
     }
   }
 
@@ -1901,12 +2005,14 @@
   /* ---------- actions ---------- */
 
   function newEvent() {
+    pendingCheck = null;
     openModal("New event", function (host) { eventForm(host, {}); }, async function () {
       var changes = collectForm();
       if (!changes.name || !changes.name.trim()) {
         $("modalMsg").textContent = "An event needs a title.";
         return false;
       }
+      if (!(await checkBeforeSave(null, changes))) return false;
       var picked = collectLinks();
       var result = await api("/events", {
         method: "POST", body: JSON.stringify({ changes: changes }),
@@ -1924,12 +2030,14 @@
 
   function editEvent() {
     var raw = state.current.event.raw || {};
+    pendingCheck = null;
     openModal("Edit event", function (host) { eventForm(host, raw); }, async function () {
       var changes = collectForm();
       if (!changes.name || !changes.name.trim()) {
         $("modalMsg").textContent = "An event needs a title.";
         return false;
       }
+      if (!(await checkBeforeSave(raw.id, changes))) return false;
       var picked = collectLinks();
       var result = await api("/events/" + raw.id, {
         method: "PUT", body: JSON.stringify({ changes: changes }),
@@ -1941,8 +2049,9 @@
       if (sponsorError) notice("Saved, but the partners and funders were not: " + sponsorError.message, "error");
       var zoom = result.zoom || {};
       noticeWithWarnings(zoom.ok && zoom.action && zoom.action !== "skipped"
-        ? "Saved. Zoom webinar " + zoom.action + "."
-        : "Saved.", result.warnings);
+        ? "Saved. " + zoomNoun(zoom.product) + " " + zoom.action + "."
+        : (zoom.disabled && zoom.reason ? "Saved. " + zoom.reason + "." : "Saved."),
+        result.warnings);
       await refreshDetail();
     }, "Save", { wide: true });
   }
@@ -1985,18 +2094,49 @@
     });
   }
 
+  function zoomNoun(product) {
+    return product === "meeting" ? "Zoom Meeting" : "Zoom webinar";
+  }
+
+  /* The Zoom button. It names the platform before it acts (EH6): the first
+     click asks the check what it would do and says so in words; the second,
+     within the minute, goes ahead. */
+  var zoomArmed = 0;
+
   async function syncZoom() {
+    var raw = state.current.event.raw || {};
+    var info = (state.current.event.visibility || {}).hosting || {};
     // Never disabled: explain rather than grey out (product-wide ruling).
-    if (!state.session.zoomEnabled) {
-      notice("Zoom is not connected yet, so no webinar can be created. "
-           + "Ask an administrator to finish the Zoom setup.", "error");
+    if (!info.product) {
+      notice(info.method === "Other platform" || info.method === "Outside host"
+        ? "This event is hosted on another platform, so it has no Zoom event."
+        : "This event has no Zoom event to make: a members-only event gets one only "
+          + "on Zoom Meetings, and an in-person event never does.", "error");
+      return;
+    }
+    if (info.ready === false) {
+      notice((info.label || zoomNoun(info.product)) + " is not set up yet, so no Zoom "
+           + "event can be made. Ask an administrator to set it up in System Settings.",
+             "error");
       return;
     }
     try {
-      var result = await api("/events/" + state.current.event.raw.id + "/zoom",
-                             { method: "POST" });
+      if (Date.now() - zoomArmed > 60000) {
+        var check = await api("/events/" + raw.id + "/check?force=true", {
+          method: "POST", body: JSON.stringify({ changes: {} }),
+        });
+        var words = (check.zoom || {}).words;
+        if (words) {
+          zoomArmed = Date.now();
+          noticeWithWarnings(words + " Click the Zoom button again to go ahead.",
+                             (check.confirm || []).slice(1));
+          return;
+        }
+      }
+      zoomArmed = 0;
+      var result = await api("/events/" + raw.id + "/zoom", { method: "POST" });
       var zoom = result.zoom || {};
-      notice(zoom.ok ? "Zoom webinar " + zoom.action + "."
+      notice(zoom.ok ? zoomNoun(zoom.product || info.product) + " " + zoom.action + "."
                      : (zoom.error || zoom.reason || "Zoom did nothing."),
              zoom.ok ? "ok" : "error");
       await refreshDetail();
@@ -2071,6 +2211,9 @@
       state.presenters = fieldData.presenters || { enabled: false, available: false };
       state.options = fieldData.options || {};
       state.optionLabels = fieldData.optionLabels || {};
+      // Event hosting plan step 5: each method's explanation, readiness, and
+      // the defaults per audience (EH4, EH5).
+      state.hosting = fieldData.hosting || null;
       state.chapterKey = fieldData.chapterKey || "";
       await loadEvents();
       if (!state.session.websiteLive) {

@@ -1,5 +1,7 @@
 # Event Administration — user guide
 
+Last Updated: 11-17-26 11:55 · Revision 1.1 — change log at the end.
+
 The staff tool for CBM's **workshop and webinar programme**: create events, take
 registrations, track who actually turned up, and publish the recording. It is
 **not** a public form — the public side is the website's Webinars page.
@@ -163,30 +165,70 @@ across the screen.
 
 ---
 
-## Getting a Zoom webinar
+## How an online event is hosted
 
-**Create / sync Zoom webinar** on the event screen provisions the webinar under
-CBM's shared Zoom host and stores the webinar ID and join link on the event.
+A Virtual or Hybrid event has a **Hosting method**. It sits in the Place &
+capacity group of the event form, and each choice has one line under it
+saying what it means for attendees.
 
-- Only for *Virtual* and *Hybrid* events.
-- Registration is enabled and auto-approved, so people who sign up on the
-  website are added to the webinar automatically.
-- **Zoom sends its own confirmation email** with each person's unique join
-  link — that has to come from Zoom, nobody else can send it.
-- **Zoom's reminder emails are switched off** on purpose, so registrants don't
-  get two of everything once CBM's own reminders exist.
+- **Zoom Webinars**: the application creates the webinar. Each registrant gets
+  their own join link in our confirmation email. Only presenters are seen and
+  heard.
+- **Zoom Meetings**: the application creates a Zoom Meeting set up like a
+  webinar. Attendees register with us and each gets their own link. They join
+  muted with cameras off, and may unmute. Someone signed in as the chapter's
+  Zoom event host starts the meeting. A co-presenter is made co-host inside
+  the meeting (Participants → More → Make Co-Host).
+- **Other platform**: Teams, Google Meet, or a Zoom account the application
+  does not drive. You paste one shared join link. Registrants get it in their
+  confirmation, and it never appears on a public page. Attendance is marked by
+  hand on the Registrants tab.
+- **Outside host**: a partner runs it on their own platform. The Register
+  button sends visitors to the host's site, and we take no registrations.
 
-Afterwards, editing the **title, time, duration or summary** updates the Zoom
-webinar too. Changing something Zoom doesn't care about (capacity, topic,
-publishing) deliberately leaves it alone — otherwise Zoom emails every
-registrant that "the host updated this event".
+A members-only event can be hosted on Zoom Meetings too. If the event takes
+registrations, each member who registers gets their own link. If it takes
+none, every member sees one link. On any other choice, members join by the
+link you paste.
 
-Setting the event's **Status to Cancelled** cancels the Zoom webinar and tells
-registrants. Switching a Virtual event to **In-Person** also cancels it, so
-nobody is left holding a link to a room nobody will host.
+**The choice to start with.** A new event starts on the default for its
+audience, which an administrator sets in System Settings. The default follows
+the audience until you pick a method yourself.
 
-If Zoom isn't connected yet, the button says so when you click it. It is never
-greyed out.
+**A method that is not set up is still offered.** Its line says "Not set up —
+set it up in System Settings", and no Zoom event is created until it is.
+
+**Fixed once anyone has registered.** Changing the method after that is
+refused. Cancel the registrations first.
+
+**Before you save.** If the save will create, replace or cancel a Zoom event,
+the form names it in words, for example "This creates a Zoom Meeting, not a
+webinar". The Save button then reads **Save and go ahead**; click it again to
+save. The form also warns, without stopping you, in two cases:
+
+- the event overlaps another Zoom event under the same Zoom user, counting
+  from 30 minutes before each start;
+- a hybrid event's capacity is above the Zoom Meetings limit.
+
+A fully online Zoom Meetings event above that limit is refused, with the
+reason.
+
+**Create / sync Zoom event** on the event screen does the same thing on
+demand. Its first click names what it will do, and the second click, within a
+minute, does it.
+
+After a Zoom event exists, editing the **title, time, duration or summary**
+updates it in Zoom too. Changing something Zoom doesn't care about (capacity,
+topic, publishing) deliberately leaves it alone; otherwise Zoom emails every
+registrant that "the host updated this event". Zoom's own registrant emails
+are off: our confirmation is the only one.
+
+Setting the event's **Status to Cancelled** cancels the Zoom event and tells
+registrants. So does switching a Virtual event to **In-Person**, so nobody is
+left holding a link to a room nobody will host.
+
+If the method's Zoom integration isn't set up, the button says so when you
+click it. It is never greyed out.
 
 ---
 
@@ -461,9 +503,18 @@ No, by design. Events are **Cancelled** and registrations are **Cancelled** —
 nothing is destroyed, so the history stays honest.
 
 **The Zoom button did nothing.**
-It will have shown a message saying why — most likely Zoom isn't connected yet,
-or the event is In-Person.
+It will have shown a message saying why. Most likely the event's Zoom
+integration isn't set up yet, the event is In-Person, or it is hosted on
+another platform. The first click only names what it will do; click again to
+go ahead.
 
 **Someone turned up who never registered.**
 **+ Add walk-in** on the Check-in tab. They're recorded as an attendee and, if
 you have their email, become a Contact.
+
+## Change log
+
+| Rev | Date (MM-DD-YY HH:MM) | Author | Change |
+|---|---|---|---|
+| 1.1 | 11-17-26 11:55 | Claude (Claude Code) | "Getting a Zoom webinar" replaced by "How an online event is hosted": the four hosting methods, the defaults, the not-set-up reason, the check before saving (event hosting plan step 5, v0.342.0). Revision block added. |
+| 1.0 | — | — | The guide as it stood before this change log. |

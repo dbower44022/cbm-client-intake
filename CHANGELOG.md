@@ -5,6 +5,54 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.342.0] — 2026-11-17
+
+**feat(events): the hosting method on the event form — event hosting step
+5.** Plan `prds/events/event-hosting-plan.md` § 7 step 5 (rulings EH4 to EH6,
+EH14); `OPEN-ITEMS.md` #84. No new switch. The new parts appear only where the
+CRM has `CEvent.hostedBy`, and a method whose integration is off is offered
+with its reason.
+
+- **The Hosting method choice** (renamed from *Hosted by*) is offered on every
+  Virtual or Hybrid event, members-only included. Under it, one line says
+  what the choice means for attendees. A method whose integration is not set
+  up is never hidden: its option reads "(not set up)" and its line ends "Not
+  set up — set it up in System Settings" (EH4). Once anyone has registered,
+  the line says the choice is fixed; the server already refuses the change.
+- **Defaults per audience** (EH5). A new event starts on its audience's
+  default. The default follows the audience until staff pick a method
+  themselves. The server applies the same default when a create carries no
+  method.
+- **The check before a save** (`POST /events/api/events/check` and
+  `/events/{id}/check`, `service.check_event`; writes nothing).
+  - It returns the refusal the save would meet, and what staff confirm: the
+    platform in words ("This creates a Zoom Meeting, not a webinar", EH6), a
+    method not set up, the hybrid capacity warning and the Zoom overlap.
+  - With anything to confirm, Save becomes **Save and go ahead**, and a second
+    click saves. Changing the form checks again.
+  - The **Create / sync Zoom event** button (renamed from *… webinar*) works
+    the same way: its first click names the platform, and the second click,
+    within a minute, acts.
+- **Capacity guard** (EH6, EH14): a fully online Zoom Meetings event above
+  `zoom_meetings_capacity` is refused with the reason. A hybrid one is saved
+  and warned: "Capacity 140 is above Zoom Meetings' 100. If more than 100 join
+  online, the rest cannot get in."
+- **Overlap warning** (EH6, plan § 6 point 5): another Zoom event, webinar or
+  meeting, under the same event host user, counting from 30 minutes before
+  each start. It warns before the save and after it, and never refuses.
+  Webinars on their own account do not clash with meetings.
+- **Join URL**: hidden on a Zoom Meetings event, members-only included, since
+  Zoom fills it. On an Other-platform event it is labelled *Shared join link
+  (sent to registrants only)*. This closes #84 item 5c.
+- Saves report the hosting warnings as well as visibility's. The save notice
+  names the Zoom product, or says why nothing was created.
+- Guides: `event-administration.md` § "How an online event is hosted" (with a
+  revision block added), and `EVENTS-SETUP.md` 1.2.
+- Tests: 18 more in `tests/test_events_hosting.py` (72 in all). The form was
+  checked in a browser against stubbed data: defaults, explanations, the
+  refusal, the two-click confirm, and the Join URL rules. Full suite: 4161
+  passed.
+
 ## [0.341.0] — 2026-11-17
 
 **feat(events): Zoom Meetings and Other platform in Events — event hosting

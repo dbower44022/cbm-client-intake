@@ -307,7 +307,7 @@ EVENT_FIELDS: list[EventField] = [
                help="The short blurb shown on the website calendar card."),
     EventField("eventType", "Event type", "enum", "Event"),
     EventField("format", "Format", "enum", "Event",
-               help="Virtual or Hybrid events get a Zoom webinar."),
+               help="Virtual or Hybrid events choose a hosting method below."),
     EventField("topic", "Topic", "enum", "Event",
                help="Subject category used by the website's recorded-webinar search.",
                retired_by=TOPICS_FIELD),
@@ -330,14 +330,16 @@ EVENT_FIELDS: list[EventField] = [
     # Place & capacity
     EventField("location", "Location", "text", "Place & capacity",
                help="Venue for in-person and hybrid events."),
-    # D3-3: who runs an online Public event. Shown only for one, because an
-    # Internal event's link is typed anyway and an in-person event has none.
-    EventField(HOSTED_BY_FIELD, "Hosted by", "enum", "Place & capacity",
-               show_when=(("audience", (AUDIENCE_PUBLIC,)), ("format", ONLINE_FORMATS)),
-               help="CBM Zoom: the webinar is created for you and visitors register "
-                    "with us. Outside host: a partner runs it on their own platform. "
-                    "Paste their link below; the Register button sends visitors "
-                    "there, and we do not take registrations or record attendance."),
+    # The hosting method (plan prds/events/event-hosting-plan.md, EH3/EH4):
+    # offered on every online event, members-only included, since Zoom
+    # Meetings hosts those too (Doug, 11-17-26, option B). The form adds one
+    # line on what the choice means for attendees and the not-set-up reason
+    # (``hosting.methods_payload``); a new event starts on its audience's
+    # default (EH5).
+    EventField(HOSTED_BY_FIELD, "Hosting method", "enum", "Place & capacity",
+               show_when=("format", ONLINE_FORMATS),
+               help="How attendees join online. The choice is fixed once anyone "
+                    "has registered."),
     # Zoom fills this for Public webinars and owns it there. An Internal event
     # never gets a webinar (F2/F3 design D2), so for one the staff member types
     # the meeting link themselves and the member page shows it as "Join online"
@@ -350,12 +352,13 @@ EVENT_FIELDS: list[EventField] = [
                app_managed=True,
                editable_when=(("audience", (AUDIENCE_INTERNAL,)),
                               (HOSTED_BY_FIELD, (HOSTED_OUTSIDE, HOSTED_OTHER))),
-               help="Internal events: paste the meeting link members should join "
-                    "(Google Meet, Zoom, Teams); shown to everyone when the event "
-                    "takes no registrations, and only to registered members when "
-                    "it does. Outside host: paste the host's link, either the join "
-                    "link or their registration page. CBM Zoom webinars get theirs "
-                    "from Zoom."),
+               help="Members-only events: paste the meeting link members should "
+                    "join (Google Meet, Zoom, Teams); shown to everyone when the event "
+                    "takes no registrations, and only to registered members when it "
+                    "does. Other platform: the one link every registrant gets in "
+                    "their confirmation, never shown on a public page. Outside host: "
+                    "the host's join link or registration page. Zoom Webinars and "
+                    "Zoom Meetings get theirs from Zoom."),
     EventField("venueCapacity", "Capacity", "int", "Place & capacity",
                help="Seat cap. Leave empty or 0 for unlimited."),
 
@@ -405,7 +408,9 @@ EVENT_FIELDS: list[EventField] = [
                help="Paste the YouTube link once the recording is published."),
 
     # Zoom (app-managed)
-    EventField("zoomWebinarId", "Zoom webinar ID", "varchar", "Zoom", app_managed=True),
+    # One id for both Zoom products (cevent-hosting-method-crm-handoff.md).
+    EventField("zoomWebinarId", "Zoom webinar or meeting ID", "varchar", "Zoom",
+               app_managed=True),
     EventField("registrationUrl", "Zoom registration URL", "url", "Zoom",
                app_managed=True),
 ]

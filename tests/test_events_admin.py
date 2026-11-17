@@ -549,11 +549,12 @@ async def test_an_outside_host_event_already_switched_is_not_refused_again():
     assert crm.updated[-1]["name"] == "Renamed"
 
 
-def test_editor_offers_hosted_by_for_public_online_events_only():
+def test_editor_offers_the_hosting_method_for_every_online_event():
+    """Step 5 of the event hosting plan: members-only events too, since Zoom
+    Meetings hosts them (Doug, 11-17-26, option B)."""
     spec = next(f for f in cfg.EVENT_FIELDS if f.name == "hostedBy")
     assert spec.type == "enum"
-    assert cfg.rules_of(spec.show_when) == (
-        ("audience", ("Public",)), ("format", cfg.ONLINE_FORMATS))
+    assert cfg.rules_of(spec.show_when) == (("format", cfg.ONLINE_FORMATS),)
     assert "hostedBy" in cfg.DETECTED_FIELDS
     assert "hostedBy" in cfg.PUBLIC_SELECT.split(",")
 

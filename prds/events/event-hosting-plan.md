@@ -1,6 +1,6 @@
 # Event hosting methods — plan
 
-Last Updated: 11-17-26 11:20 · Revision 0.9 — see change log at the end.
+Last Updated: 11-17-26 11:55 · Revision 0.10 — see change log at the end.
 
 This plan decides how a chapter's online events are hosted: Zoom Webinars,
 Zoom Meetings, a link to any other platform, or an outside host. It records
@@ -162,7 +162,7 @@ says which, in a handoff written in Entity Manager vocabulary.
    confirmation (with § 6's points 1 and 2 settled). **Stop.** **Built
    v0.341.0 (11-17-26), dark**, members-only events included (Doug, option B).
 5. **The event form**: the choice, the defaults per audience, the
-   explanations, the guards. **Stop.**
+   explanations, the guards. **Stop.** **Built v0.342.0 (11-17-26).**
 6. **The live check on crm-test** with a real Zoom Meetings account, from a
    runbook page, then production and the chapters at the Sunday slot.
    **Stop.**
@@ -174,6 +174,7 @@ the Events work is.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.10 | 11-17-26 11:55 | Claude (Claude Code) | Step 5 built (v0.342.0). The method choice is offered on every online event. Before a save, a check names the platform and gives the guards, confirmed with a second click. The overlap warning covers webinars and meetings under one host user. No new switch. |
 | 0.9 | 11-17-26 11:20 | Claude (Claude Code) | Step 4 built (v0.341.0, dark). Doug, 11-17-26, option B: Zoom Meetings also hosts members-only events. A members-only meeting takes registration only when the event does. Any other method on a members-only event keeps the typed link, so D2 stands for webinars. EH4's refusal is enforced on the server in step 4. In EH11, who may share the screen is not a per-meeting setting in Zoom's API: it is the event host user's own setting. Other platform runs behind `EVENTS_OTHER_PLATFORM`. |
 | 0.8 | 11-15-26 02:50 | Claude (Claude Code) | Step 2 built by the Integrations tab's phase 9 (v0.333.0): the settings step 4 reads are named in `setup/CLAUDE.md`; `core/zoom.meetings_account`, `webinars_account` and `make_meetings_client` are the way in. Zoom Webinars uses Meetings' credentials only once all three are set (Doug, option A). |
 | 0.7 | 11-15-26 02:19 | Claude (Claude Code) | Ruling EH14 (Doug, § 6 point 3, option A): the method covers the online half of a hybrid event; its capacity guard warns there. Every § 6 point is settled; step 4 waits only for step 2. |

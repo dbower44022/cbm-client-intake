@@ -1,6 +1,6 @@
 # Events & Webinars — activation and testing runbook
 
-Last Updated: 11-13-26 00:20 · Revision 1.1 — change log at the end.
+Last Updated: 11-17-26 11:55 · Revision 1.2 — change log at the end.
 
 How to switch the Events feature on and drive it end to end. Written for
 **crm-test first**; production is a separate, later pass.
@@ -250,8 +250,8 @@ PYTHONPATH=. uv run python scripts/probe_zoom.py
    *Feature readiness → Zoom webinars* then lists nothing missing.
 
 4. **Test pass** (the step page's sections D to G):
-   - A Public, Virtual, shown event → **Create / sync Zoom webinar** → the
-     notice *Zoom webinar created.*; the Overview carries the webinar ID and a
+   - A Public, Virtual, shown event → **Create / sync Zoom event** (twice:
+     the first click names the platform) → the notice *Zoom webinar created.*; the Overview carries the webinar ID and a
      zoom.us Join URL. A new event does not provision on save — the create
      endpoint never calls Zoom; the button (or a later save) does.
    - In Zoom: the webinar exists under `zweb@`, registration required and
@@ -504,5 +504,6 @@ Honest list, so nothing surprises you mid-test:
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 11-17-26 11:55 | Claude (Claude Code) | The Zoom button is now *Create / sync Zoom event* and names the platform on its first click (event hosting plan step 5, v0.342.0). |
 | 1.1 | 11-13-26 00:20 | Claude (Claude Code) | § 5 Zoom rewritten: settings live in System Settings (both processes), granular scope names (unconfirmed), ruling D3-2's one-email test pass, the In-Person clean-up, the same-day deadline; points to the step page. Revision block added. |
 | 1.0 | 2026-07-26 | Claude (Claude Code) | Original runbook (no revision block until 1.1). |

@@ -178,6 +178,10 @@ body { margin: 0; background: var(--cbm-bg, #f6f7f9); color: var(--cbm-text, #21
 .ev__modal-msg { flex: 1; color: #b3261e; font-size: .88rem; }
 .ev__modal-msg--ok { color: #1b5e20; }
 .ev__modal-msg--warn { color: #6b4a05; }
+/* The check before a save: one line per point (event hosting plan step 5). */
+.ev__modal-msg--lines { white-space: pre-line; }
+.ev__hosting-explain { margin: .35rem 0 0; font-size: .85rem; color: var(--cbm-text, #5B6676); }
+.ev__hosting-explain--warn { color: #6b4a05; }
 
 /* --- form groups: packed full width, no column cap ------------------------
    A grid rather than a wrapping flex row, so the panel gains COLUMNS as the
