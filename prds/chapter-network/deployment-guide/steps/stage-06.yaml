@@ -391,7 +391,7 @@ steps:
       before the CRM held any mentors, and Workshops and Events and Recorded
       Webinars were the same age.
     later: The chapter connector tells the cache itself not to keep its pages.
-    status: in progress for the Association — /mentors/* added 11-16-26 (Doug); the other five owed (OPEN-ITEMS.md item 86).
+    status: done for the Association 11-17-26 — all six exclusions in place, added by Doug (/mentors/* 11-16-26, the other five 11-17-26); read 11-17-26 00:07 and again 00:10 — /mentors/, a mentor profile, /events/ and /recordings/ answer with no x-cache line (OPEN-ITEMS.md item 86, resolved).
     source: OPEN-ITEMS.md item 86 (3)
 
 changes:
