@@ -1,10 +1,10 @@
 # Loading the training data into the Association's system — plan
 
 **Document:** Plan for loading crm-test's invented training data into the Business Mentors Association's customer relationship management system, under Association ruling 77 (guide stage 15, with the training sign-ins of stage 14)
-**Version:** 1.5
+**Version:** 1.6
 **Status:** Done — approved by Doug 11-12-26 00:33 (option A); closed 11-13-26 00:24, owed work in `OPEN-ITEMS.md` item 81
 **Owner:** Doug Bower
-**Last Updated:** 11-13-26 00:24
+**Last Updated:** 11-17-26 02:10
 
 ---
 
@@ -155,12 +155,15 @@ Recommendation: A, because the Association is both a real chapter and the traini
 
 **Session closed, 11-13-26 00:24.** Doug tested on the Association's system 11-12-26 and reported it all works; the restore to the baseline has not been run. He began entering the Zoom and Constant Contact settings at `/setup`; `MAILING-SETUP.md` revision 0.9 now carries the Association's redirect address and where the developer portal is. Everything still owed: `OPEN-ITEMS.md` item 81.
 
+**Amended 11-17-26 (Association ruling 79, amending ruling 77).** The invented addresses and the training sign-ins moved from `sandbox.mentorsassociation.org` to `bma.test`, a name reserved for testing, so a trainee signs in as `joe.mentor@bma.test`; `tt` became `tommy.tranell` and `mentoradmin` became `mentor.admin`. Moved by `scripts/sandbox/move_sandbox_domain.py` (138 records), the Sandbox address domain setting changed to `bma.test`, and sign-ins checked by Doug as Joe Mentor and Kitty Cat. Where this plan names `sandbox.mentorsassociation.org`, read `bma.test`. The baseline re-capture is owed: `OPEN-ITEMS.md` item 87.
+
 ---
 
 ## Change log
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.6 | 11-17-26 02:10 | Claude (Claude Code) | Amended by Association ruling 79: the domain is `bma.test`. |
 | 1.5 | 11-13-26 00:24 | Claude (Claude Code) | Closed: testing done, restore not run, Zoom and Constant Contact settings begun. |
 | 1.4 | 11-12-26 11:16 | Claude (Claude Code) | The baseline for a day of testing. |
 | 1.3 | 11-12-26 01:28 | Claude (Claude Code) | Stop 4 and Work 4: the load done. |

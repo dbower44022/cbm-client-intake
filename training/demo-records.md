@@ -1,6 +1,6 @@
 # Demo records — what to open, for each kind of user
 
-Last Updated: 10-22-26 21:21 · Revision 1.2 — change log at the end.
+Last Updated: 11-17-26 02:10 · Revision 1.3 — change log at the end.
 
 The training sandbox is **crm-test**: the app at
 `https://cbm-client-intake-svxs3.ondigitalocean.app` over the CRM at
@@ -40,6 +40,13 @@ Every address in the sandbox ends `@sandbox.cbmentors.org`, which has no
 mailboxes behind it. That is deliberate: nothing anyone clicks can send a real
 email or put an invitation in a real calendar. It is also the quickest way to
 tell at a glance that you are not in production.
+
+**On the Business Mentors Association's system** (`https://apps.businessmentorsassociation.org`),
+the same people sign in on `bma.test` (Association ruling 79, 11-17-26):
+`joe.mentor@bma.test`, `kitty.cat@bma.test`, `mentor.admin@bma.test`,
+`partner.manager@bma.test`, `sally.sponsor@bma.test`,
+`mark.marketing@bma.test`, and `tommy.tranell@bma.test` for Tommy Tranell.
+Every invented address there ends `@bma.test`, a name reserved for testing.
 
 ---
 
@@ -180,6 +187,15 @@ is the only profile filled in enough to do it justice — hero, professional
 lane, "Get to know them", availability. The Companies, Contacts and Partners
 grids are all populated (30 companies, 56 contacts, 8 partners).
 
+**On the Association's system, twelve mentors are finished profiles** —
+Joe Mentor, Matt Mentor, Marta Delgado, Ray Okonkwo, Priya Raman, Gordon
+Whitfield, Nina Barsotti, Curtis Boyle, Helena Vance, Dmitri Sokolov, Angela
+Fournier and Beatrice Nolan — with a title, summary, About text, expertise,
+industries, languages and a machine-generated photo, and all twelve show on
+the chapter demo website's Find a Mentor page. Gordon, Helena and Dmitri are
+not taking new clients, so their pages show that note. Made by
+`scripts/sandbox/seed_mentor_directory.py` (11-17-26).
+
 ## Events — `/events`
 
 Five published workshops: two held (`Pricing for Profit`,
@@ -303,6 +319,7 @@ can be seeded before the next baseline is captured.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 11-17-26 02:10 | Claude (Claude Code) | The Association's sign-ins on `bma.test` and its twelve finished mentor profiles. |
 | 1.2 | 10-22-26 21:21 | Claude (Claude Code) | The section renamed Marketing Management, the app's new name (v0.278.0). |
 | 1.1 | 10-20-26 00:20 | Claude (Claude Code) | Campaign Management section: the six demo campaigns, the five postcard card addresses, the leads, two referring partners and the additional managers. Revision control added. |
 | 1.0 | — | — | The page before revision control. |

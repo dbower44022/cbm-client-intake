@@ -1,6 +1,6 @@
 # The training sandbox — nightly reset runbook
 
-Last Updated: 11-12-26 11:16 · Revision 1.5 — change log at the end.
+Last Updated: 11-17-26 02:05 · Revision 1.6 — change log at the end.
 
 crm-test does three jobs now: it is the **pre-production review gate**, the
 **training sandbox**, and the **release-test environment**. This document is
@@ -309,15 +309,19 @@ Association rulings 15 and 77 make the Business Mentors Association's system
 (crm.businessmentorsassociation.org) the shared training system for every
 chapter. It was loaded on 11-12-26 with the same seeders, which accept exactly
 two CRM systems, crm-test and this one (`scripts/sandbox/targets.py`), and
-refuse every other. Its invented addresses sit on
-`sandbox.mentorsassociation.org`, a domain with no mailboxes.
+refuse every other. Its invented addresses and its training sign-ins sit on
+`bma.test` (Association ruling 79, 11-17-26), a name reserved for testing that
+can never have a mailbox; a trainee signs in as `joe.mentor@bma.test`. They
+were loaded on `sandbox.mentorsassociation.org` and moved on 11-17-26 by
+`scripts/sandbox/move_sandbox_domain.py`, which also renamed `tt` to
+`tommy.tranell` and `mentoradmin` to `mentor.admin`.
 
 **It is contained differently.** It is a real chapter too, so its shared
 mailbox, Drive and members group stay on. The applications' setting **Sandbox
 address domain** (System Settings → Email) is what keeps the invented
 addresses in: nothing is sent to, shared with, added to a group as, or put on
 a mailing list as an address on that domain. It must read
-`sandbox.mentorsassociation.org`; the containment check reminds you.
+`bma.test` (set 11-17-26); the containment check reminds you.
 
 **The same run, against it** — every script takes the Association's
 credential file:
@@ -330,6 +334,7 @@ uv run python scripts/sandbox/enrich_training_data.py --env-file $E --apply
 uv run python scripts/sandbox/deepen_showcase_records.py --env-file $E --apply
 uv run python scripts/sandbox/seed_outreach_data.py --env-file $E --apply
 uv run python scripts/sandbox/audit_showcase_records.py --env-file $E
+uv run python scripts/sandbox/seed_mentor_directory.py --env-file $E --apply   # the website's 12 mentor profiles
 uv run python scripts/sandbox/check_containment.py --env-file $E
 ```
 
@@ -347,6 +352,23 @@ in one line. No cron entry, and the application half still refuses everything
 but crm-test, so a restore leaves the applications' own database (the
 Submission Admin queue, discussion comments, the Drive index) and anything
 filed in Drive as it is. Arming it nightly is `OPEN-ITEMS.md` item 81.
+
+**⚠ The 11-12-26 baseline is out of date — re-capture owed** (`OPEN-ITEMS.md`
+item 87). It predates two changes of 11-17-26: the website's twelve finished
+mentor profiles and the move to `bma.test`. The re-capture waits until the
+real-address test records made since 11-12-26 are cleared, because a baseline
+keeps whatever the CRM holds (Doug, 11-17-26, option C). **Until then, after
+any `sandbox.sh restore`, run both of these straight away** — the records are
+back on the old domain, which the Sandbox address domain setting no longer
+guards:
+
+```bash
+E=~/.config/cbm-bma/bma.env
+uv run python scripts/sandbox/move_sandbox_domain.py --env-file $E --apply
+uv run python scripts/sandbox/seed_mentor_directory.py --env-file $E --apply
+```
+
+Each is safe to rerun; a dry run of each afterwards must report nothing left.
 
 ## Containment — assume somebody saves
 
@@ -409,6 +431,7 @@ than by default.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.6 | 11-17-26 02:05 | Claude (Claude Code) | The Association's addresses and sign-ins moved to `bma.test` (ruling 79); the mentor directory seeder; the re-capture owed, and the two scripts to rerun after any restore until then. |
 | 1.5 | 11-12-26 11:16 | Claude (Claude Code) | The Association's baseline captured; its restore on demand. |
 | 1.4 | 11-12-26 01:28 | Claude (Claude Code) | A second training system: the Association's, loaded 11-12-26 under Association ruling 77 — the commands, its sandbox address domain, and its restore not yet armed. |
 | 1.3 | 10-25-26 19:30 | Claude (Claude Code) | The fifth seeder (`seed_import_templates.py`, the import tool's demo template) and why it runs where the application database is reachable; the worker and the Operations job restore the template too. |

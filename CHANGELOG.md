@@ -5,6 +5,41 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.340.2] — 2026-11-17
+
+**chore(sandbox): the Association's mentor directory and short training
+sign-ins.** Scripts, tests and documents only; nothing the applications run
+changed.
+
+- **`scripts/sandbox/seed_mentor_directory.py`** (Doug, 11-17-26, option B):
+  twelve of the training seed's Active mentors get finished website profiles
+  — title, summary, About text, expertise, industries, languages, years,
+  sector, LinkedIn on the Contact, a photograph — and the public-profile tick.
+  The photographs (`scripts/sandbox/mentor-photos/`) are machine-generated
+  faces with their metadata stripped (option A), so no real person is shown
+  as an invented mentor. Joe Mentor's and Matt Mentor's website text and
+  photo are replaced; Matt's had been a real person's biography and a phone
+  photo carrying its GPS location (#88). Converges rather than null-fills;
+  `--preview` draws the page through `website/content` with no CRM.
+  Applied on the Association's CRM 11-17-26: the website lists 12 mentors.
+- **The Association's training domain is `bma.test`** (Association ruling 79,
+  amending ruling 77; Doug, 11-17-26, option A): `targets.py`'s target, with
+  `tt` → `tommy.tranell` and `mentoradmin` → `mentor.admin` on that system
+  only (`Target.login_renames`, used by `seed_training_data.py` and
+  `training_logins.py`). **`scripts/sandbox/move_sandbox_domain.py`** moved
+  the records already loaded — logins, every email address, member emails,
+  leads, the website address, email messages, action log entries and stream
+  posts — as the CRM administrator: 138 records 11-17-26, a second dry run
+  reporting none. The Sandbox address domain setting changed to `bma.test`
+  at the Association's `/setup`; sign-ins checked by Doug.
+- The baseline re-capture is owed and deliberately waits (#87); until then,
+  rerun both scripts after any restore (`SANDBOX-RESET.md` 1.6).
+- Tests: `tests/test_sandbox_seed_scripts.py` — each target's sign-in names,
+  the seeder finding a renamed sign-in, and the move renaming only a whole
+  local part (`matt@` never becomes `matommy.tranell@`).
+- The Sandbox address domain's help text still gives the old domain as its
+  example: a snapshot test pins what staff see.
+
 ## [0.340.1] — 2026-11-16
 
 **fix(evaluation): the Business profile tab's answers stand out from the

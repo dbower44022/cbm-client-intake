@@ -1316,4 +1316,10 @@ the strength of it.
   `BUSINESS_EVALUATION`). Doug's check on the Association owed in #83.
 - **v0.340.1 (2026-11-16) is pushed**: the Business profile tab's answers
   stand out from the questions (`INTAKE_SURVEY`); see `CHANGELOG.md`.
+- **v0.340.2 (2026-11-17) is committed, not pushed** (scripts and documents):
+  the Association's twelve website mentors and its training domain moved to
+  `bma.test` (ruling 79), both applied there. **⚠ Its baseline re-capture is
+  owed — raise it with Doug at the start of any session that touches the
+  Association** (`OPEN-ITEMS.md` #87); after any restore before then, rerun
+  the two scripts in `SANDBOX-RESET.md` § *A second training system*.
 Everything else still owed is in `OPEN-ITEMS.md`.

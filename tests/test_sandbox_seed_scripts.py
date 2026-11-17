@@ -226,12 +226,13 @@ def test_crm_test_is_written_exactly_as_before_and_the_association_gets_its_own_
               "nested": ("rosa@sandbox.cbmentors.org", ["Cleveland Orchestra"])}
     assert t.localise(record, crm_test) == record
     out = t.localise(record, bma)
-    assert out["email"] == "dana@sandbox.mentorsassociation.org"
+    assert out["email"] == "dana@bma.test"
     assert out["text"] == ("Business Mentors Association: see "
                            "https://apps.businessmentorsassociation.org/c/x")
-    assert out["nested"] == ("rosa@sandbox.mentorsassociation.org", ["Cleveland Orchestra"])
+    assert out["nested"] == ("rosa@bma.test", ["Cleveland Orchestra"])
     # Invented content stays: ruling 77 wants the same records on both systems.
-    assert all(x.email_domain.startswith("sandbox.") for x in t.TARGETS)
+    # Association ruling 79: the Association's is the reserved .test name.
+    assert [x.email_domain for x in t.TARGETS] == ["sandbox.cbmentors.org", "bma.test"]
 
 
 def test_the_seeder_finds_sign_ins_by_the_target_login_domain():
@@ -241,16 +242,51 @@ def test_the_seeder_finds_sign_ins_by_the_target_login_domain():
     class Users:
         async def list(self, entity, **_):
             return {"list": [
-                {"id": "u1", "userName": "joe.mentor@sandbox.mentorsassociation.org"},
+                {"id": "u1", "userName": "joe.mentor@bma.test"},
+                {"id": "u4", "userName": "tommy.tranell@bma.test"},
+                {"id": "u5", "userName": "tt@cbmentors.org"},
                 {"id": "u2", "userName": "joe.mentor@cbmentors.org"},
                 {"id": "u3", "userName": "admin"},
             ]}
 
     import asyncio
 
-    bma = seed.Seeder(Users(), domain="sandbox.mentorsassociation.org", apply=False,
-                      login_domain="sandbox.mentorsassociation.org")
-    assert asyncio.run(bma.user_ids()) == {"joe.mentor": "u1"}
+    target = _targets().TARGETS[1]
+    bma = seed.Seeder(Users(), domain="bma.test", apply=False,
+                      login_domain=target.login_domain, login_renames=target.login_renames)
+    # tommy.tranell on the Association is the scripts' "tt".
+    assert asyncio.run(bma.user_ids()) == {"joe.mentor": "u1", "tt": "u4"}
     cle = seed.Seeder(Users(), domain="sandbox.cbmentors.org", apply=False)
-    assert asyncio.run(cle.user_ids()) == {"joe.mentor": "u2"}
+    assert asyncio.run(cle.user_ids()) == {"joe.mentor": "u2", "tt": "u5"}
     assert all("@" not in login for _, login, _ in seed.MENTORS_WITH_LOGINS)
+
+
+def test_each_target_names_its_sign_ins():
+    t = _targets()
+    crm_test, bma = t.TARGETS
+    assert crm_test.login("tt") == "tt@cbmentors.org"
+    assert crm_test.login("mentoradmin") == "mentoradmin@cbmentors.org"
+    assert bma.login("tt") == "tommy.tranell@bma.test"
+    assert bma.login("mentoradmin") == "mentor.admin@bma.test"
+    assert bma.login("joe.mentor") == "joe.mentor@bma.test"
+
+
+def test_the_domain_move_rewrites_addresses_and_renamed_sign_ins():
+    _targets()
+    move = _load("move_sandbox_domain")
+    renames = {"tt": "tommy.tranell", "mentoradmin": "mentor.admin"}
+    old = "sandbox.mentorsassociation.org"
+    assert move.move_text(f"joe.mentor@{old}", "bma.test", renames) == "joe.mentor@bma.test"
+    assert move.move_text(f"tt@{old}", "bma.test", renames) == "tommy.tranell@bma.test"
+    assert move.move_text(f"mentoradmin@{old}", "bma.test", renames) == "mentor.admin@bma.test"
+    # Only the whole local part is renamed: matt@ is not tt@.
+    assert move.move_text(f"matt@{old}", "bma.test", renames) == "matt@bma.test"
+    assert move.move_text(f"https://brightline.{old}", "bma.test", renames) == \
+        "https://brightline.bma.test"
+    assert move.move_text("nothing here", "bma.test", renames) == "nothing here"
+
+
+def test_the_domain_move_refuses_every_crm_but_the_associations():
+    _targets()
+    move = _load("move_sandbox_domain")
+    assert move.ASSOCIATION == "crm.businessmentorsassociation.org"

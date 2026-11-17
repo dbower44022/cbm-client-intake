@@ -205,10 +205,13 @@ FUNDERS: tuple[tuple[str, str, str], ...] = (
 
 class Seeder:
     def __init__(self, client: EspoClient, *, domain: str, apply: bool,
-                 login_domain: str = "cbmentors.org") -> None:
+                 login_domain: str = "cbmentors.org",
+                 login_renames: tuple[tuple[str, str], ...] = ()) -> None:
         self.client = client
         self.domain = domain
         self.login_domain = login_domain.lower()
+        #: this system's sign-in name -> the scripts' own (``targets.Target.login_renames``)
+        self.login_back = {theirs: ours for ours, theirs in login_renames}
         self.apply = apply
         self.created: dict[str, int] = {}
         self.reused: dict[str, int] = {}
@@ -250,7 +253,8 @@ class Seeder:
         data = await self.client.list("User", select="userName", max_size=200)
         suffix = "@" + self.login_domain
         return {
-            r["userName"][: -len(suffix)]: r["id"]
+            self.login_back.get(r["userName"][: -len(suffix)].lower(),
+                                r["userName"][: -len(suffix)]): r["id"]
             for r in data.get("list", [])
             if (r.get("userName") or "").lower().endswith(suffix)
         }
@@ -782,14 +786,14 @@ async def main() -> int:
 
     client = EspoClient(base, api_key, timeout)
     seeder = Seeder(client, domain=email_domain, apply=args.apply,
-                    login_domain=target.login_domain)
+                    login_domain=target.login_domain, login_renames=target.login_renames)
     users = await seeder.user_ids()
 
     if args.check:
         print(f"\n{len(users)} training logins on {base}\n")
         for name, username, _ in MENTORS_WITH_LOGINS:
             mark = "ok  " if username in users else "MISSING"
-            print(f"  [{mark}] {name:20} {username}@{target.login_domain}")
+            print(f"  [{mark}] {name:20} {target.login(username)}")
         return 0
 
     print(f"\nSeeding {base}")

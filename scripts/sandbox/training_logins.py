@@ -92,7 +92,7 @@ async def main() -> int:
         return 1
 
     for local, first, last, team_names in LOGINS:
-        user_name = f"{local}@{target.login_domain}"
+        user_name = target.login(local)
         existing = users.get(user_name)
         team_ids = [teams[t] for t in team_names]
         if args.set_passwords:

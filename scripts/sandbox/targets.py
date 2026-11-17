@@ -47,16 +47,27 @@ class Target:
     login_domain: str    # the training sign-ins' user names
     org_name: str
     app_url: str
+    #: Sign-ins whose name on this system differs from the scripts' own
+    #: (script name, this system's name). Empty for crm-test.
+    login_renames: tuple[tuple[str, str], ...] = ()
+
+    def login(self, local: str) -> str:
+        """The full sign-in name on this system for the scripts' ``local``."""
+        return f"{dict(self.login_renames).get(local, local)}@{self.login_domain}"
 
 
 TARGETS: tuple[Target, ...] = (
     Target("crm-test", "crm-test.clevelandbusinessmentors.org",
            WRITTEN_DOMAIN, "cbmentors.org", WRITTEN_ORG, WRITTEN_APP_URL),
-    # sandbox.mentorsassociation.org: Google answered "Domain not found" and no
-    # mail exchange record existed, 11-12-26. It must never become real.
+    # bma.test (Association ruling 79, 11-17-26, replacing
+    # sandbox.mentorsassociation.org): ".test" is reserved for testing (RFC
+    # 2606), so it can never be registered or given a mailbox, and the sign-ins
+    # are short enough to type. scripts/sandbox/move_sandbox_domain.py moved the
+    # records already loaded.
     Target("Business Mentors Association", "crm.businessmentorsassociation.org",
-           "sandbox.mentorsassociation.org", "sandbox.mentorsassociation.org",
-           "Business Mentors Association", "https://apps.businessmentorsassociation.org"),
+           "bma.test", "bma.test",
+           "Business Mentors Association", "https://apps.businessmentorsassociation.org",
+           login_renames=(("tt", "tommy.tranell"), ("mentoradmin", "mentor.admin"))),
 )
 
 
