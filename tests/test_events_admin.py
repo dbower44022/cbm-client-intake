@@ -377,10 +377,10 @@ def test_join_url_is_app_managed_but_unlocked_for_internal_events():
     spec = next(f for f in cfg.EVENT_FIELDS if f.name == "virtualMeetingUrl")
     assert spec.app_managed
     assert cfg.rules_of(spec.editable_when) == (
-        ("audience", ("Internal",)), ("hostedBy", ("Outside host",)))
+        ("audience", ("Internal",)), ("hostedBy", ("Outside host", "Other platform")))
     assert "virtualMeetingUrl" not in cfg.EVENT_EDIT_NAMES
     assert cfg.EVENT_CONDITIONAL_EDITS == {"virtualMeetingUrl": (
-        ("audience", ("Internal",)), ("hostedBy", ("Outside host",)))}
+        ("audience", ("Internal",)), ("hostedBy", ("Outside host", "Other platform")))}
 
 
 async def test_internal_event_takes_a_typed_join_url():

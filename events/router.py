@@ -231,8 +231,12 @@ async def fields(request: Request) -> dict[str, Any]:
                     {"field": name, "values": list(values)}
                     for name, values in cfg.rules_of(f.show_when)
                 ] or None,
+                # Other platform unlocks the Join URL only while its switch
+                # is on (EH3); the server applies the same rule.
                 "editableWhen": [
-                    {"field": name, "values": list(values)}
+                    {"field": name, "values": [
+                        v for v in values
+                        if v != cfg.HOSTED_OTHER or settings_now.events_other_platform]}
                     for name, values in cfg.rules_of(f.editable_when)
                 ] or None,
             }

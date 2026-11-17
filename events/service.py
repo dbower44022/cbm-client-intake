@@ -621,7 +621,11 @@ def public_event_detail(event: dict[str, Any], **kwargs: Any) -> dict[str, Any]:
     payload = public_event(event, **kwargs)
     payload["overview"] = event.get("eventOverview") or ""
     payload["syllabus"] = event.get("eventSyllabus") or ""
-    payload["joinUrl"] = event.get("virtualMeetingUrl") or ""
+    # EH13: an Other platform's shared link never reaches a public page, and a
+    # Zoom Meeting's general link would register people behind our back.
+    from . import hosting
+
+    payload["joinUrl"] = hosting.public_join_url(event)
     return payload
 
 
@@ -739,6 +743,29 @@ async def cancel_registration(
     }
 
 
+def registrant_zoom(settings: Any, event: dict[str, Any]) -> tuple[Any, str, str]:
+    """``(api, product, reason)`` for registering people on the event's Zoom
+    event. ``api`` is None with the reason when there is nothing to register
+    on: no Zoom id, a method that keeps no Zoom registrations, or that Zoom
+    integration off. The product is the one the stored id belongs to
+    (``hosting.stored_product``), so a registration always lands where the id
+    points."""
+    from . import hosting
+
+    webinar_id = (event.get("zoomWebinarId") or "").strip()
+    product = hosting.stored_product(event)
+    if not webinar_id:
+        return None, product, "the event has no Zoom webinar or meeting"
+    if hosting.zoom_product(event) and not hosting.zoom_registration(event):
+        return None, product, "the event's Zoom meeting takes no registrations"
+    if settings is None:
+        return None, product, "no settings"
+    api = hosting.zoom_client(settings, product)
+    if api is None:
+        return None, product, hosting.not_ready_reason(product)
+    return api, product, ""
+
+
 async def _remove_from_zoom(
     client: EspoApi, registration: dict[str, Any], settings: Any
 ) -> None:
@@ -748,21 +775,16 @@ async def _remove_from_zoom(
     if not registrant_id or settings is None:
         return
     try:
-        from core.zoom import make_client
-
-        api = make_client(settings)
-        if api is None:
-            return
         # The webinar id lives on the EVENT — a registration only knows its own
         # id, so it has to be fetched (reading it off the registration returns
         # nothing and the Zoom seat would silently never be freed).
         event = await client.get(cfg.EVENT, registration.get("eventId") or "")
-        webinar_id = ((event or {}).get("zoomWebinarId") or "").strip()
-        if not webinar_id:
+        api, product, _ = registrant_zoom(settings, event or {})
+        if api is None:
             return
         await api.cancel_registrant(
-            webinar_id, registrant_id=registrant_id,
-            email=registration.get("email") or "",
+            event["zoomWebinarId"].strip(), registrant_id=registrant_id,
+            email=registration.get("email") or "", product=product,
         )
     except Exception as exc:  # noqa: BLE001
         log.warning("registration %s: could not cancel the Zoom registrant: %s",
@@ -772,26 +794,24 @@ async def _remove_from_zoom(
 async def push_registration_to_zoom(
     settings: Any, client: EspoApi, event: dict[str, Any], registration: dict[str, Any],
 ) -> dict[str, Any]:
-    """Register one existing CRM registration with the event's Zoom webinar and
-    store the person's own join link on the row. Best-effort: a failure leaves
-    the registration as it was and is reported, never raised. The public
-    door's orchestrator does the same at delivery from the submission; this
-    is for a row that already exists (a waitlist promotion)."""
-    webinar_id = (event.get("zoomWebinarId") or "").strip()
-    if not webinar_id:
-        return {"ok": False, "reason": "the event has no Zoom webinar"}
+    """Register one existing CRM registration with the event's Zoom webinar or
+    meeting and store the person's own join link on the row. Best-effort: a
+    failure leaves the registration as it was and is reported, never raised.
+    The public door's orchestrator does the same at delivery from the
+    submission; this is for a row that already exists (a waitlist promotion,
+    a member's portal registration)."""
     if (registration.get("zoomJoinUrl") or "").strip():
         return {"ok": True, "reason": "already registered with Zoom"}
+    api, product, reason = registrant_zoom(settings, event)
+    if api is None:
+        return {"ok": False, "reason": reason}
     try:
-        from core.zoom import make_client
-        api = make_client(settings)
-        if api is None:
-            return {"ok": False, "reason": "Zoom is not enabled"}
         result = await api.add_registrant(
-            webinar_id,
+            event["zoomWebinarId"].strip(),
             email=registration.get("email") or "",
             first_name=registration.get("firstName") or "",
             last_name=registration.get("lastName") or "",
+            product=product,
         )
         updates = {
             "zoomRegistrantId": str(result.get("registrant_id") or ""),
@@ -953,14 +973,25 @@ def _writable(
     if not allow_managed:
         present = set(available)
         stored = current or {}
+        from . import hosting
+
+        after = {**stored, **changes}
         for name, rules in cfg.EVENT_CONDITIONAL_EDITS.items():
             for decider, values in rules:
                 if decider in cfg.DETECTED_FIELDS and decider not in present:
                     continue
                 value = changes[decider] if decider in changes else stored.get(decider)
+                # EH3: Other platform's link is typed only while its switch is
+                # on; off, the event stays without a link and so unshown.
+                if value == cfg.HOSTED_OTHER and not hosting.other_platform_on():
+                    continue
                 if value in values:
                     allowed.add(name)
                     break
+        # An event on Zoom Meetings — members-only included, where the
+        # audience rule above would otherwise unlock it — has Zoom's link.
+        if "virtualMeetingUrl" in allowed and hosting.zoom_owns_link(after):
+            allowed.discard("virtualMeetingUrl")
     return {k: v for k, v in changes.items() if k in allowed}
 
 
@@ -1080,42 +1111,67 @@ def _blank_enums_to_null(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _check_host_link(payload: dict[str, Any], current: dict[str, Any]) -> None:
-    """D3-3: an Outside host's link must be a web address a visitor's browser
-    can open safely. Checked only for an event that is, as saved, run by an
-    outside host; an Internal event's typed link keeps its old rules."""
+    """D3-3 and EH13: an Outside host's link, or an Other platform's shared
+    link, must be a web address a browser can open safely. Checked only for an
+    event that is, as saved, on one of those methods; an Internal event's
+    typed link keeps its old rules."""
+    from . import hosting
+
     after = {**current, **payload}
-    if not visibility.hosted_outside(after):
+    if hosting.method(after) not in (hosting.OUTSIDE, hosting.OTHER):
         return
     link = (payload.get("virtualMeetingUrl") or "").strip()
     if link and not link.lower().startswith("https://"):
+        whose = "host's" if hosting.method(after) == hosting.OUTSIDE else "join"
         raise EventError(
-            "The host's link must start with https:// — paste the full address "
-            "of the host's join or registration page."
+            f"The {whose} link must start with https:// — paste the full address "
+            "of the join or registration page."
         )
 
 
-async def _refuse_outside_host_with_registrants(
+async def _refuse_method_change_with_registrants(
     client: EspoApi, event_id: str, payload: dict[str, Any], current: dict[str, Any]
 ) -> None:
-    """D3-3 (approved 11-12-26): switching an event to Outside host while
-    people are registered with us would leave them holding our join links for
-    a webinar that is then cancelled. Refused, naming how many."""
-    before = visibility.hosted_outside(current)
-    after = visibility.hosted_outside({**current, **payload})
-    if before or not after:
+    """EH4: the hosting method is fixed once anyone has registered.
+
+    Changing it would cancel the Zoom event their personal links point at, or
+    leave them holding a link for a platform the event no longer uses. Refused
+    while anyone is Registered or Waitlisted, naming how many. Only a change
+    of the stored method counts, and only when the method as it COUNTS
+    (``hosting.method``) changes with it — an audience or format edit is not
+    this rule's business. The D3-3 refusal for Outside host is the first case of
+    this rule (approved 11-12-26)."""
+    from . import hosting
+
+    if cfg.HOSTED_BY_FIELD not in payload or hosting.stored(payload) == hosting.stored(current):
+        return  # only a change of the method itself is refused
+    before = hosting.method(current)
+    after = hosting.method({**current, **payload})
+    if before == after or not before or not after:
         return
     rows = await list_registrations(client, event_id)
     live = [r for r in rows
             if r.get("attendanceStatus") in (cfg.REG_REGISTERED, cfg.REG_WAITLISTED)]
-    if live:
-        count = len(live)
-        people = "1 person is" if count == 1 else f"{count} people are"
-        raise EventError(
-            f"{people} registered for this event with us. Switching it to Outside "
-            "host would cancel our webinar and leave them with a link that no "
-            "longer works. Cancel their registrations on the Registrants tab "
-            "first, or keep CBM Zoom."
-        )
+    if not live:
+        return
+    count = len(live)
+    people = "1 person is" if count == 1 else f"{count} people are"
+    def name(m: str) -> str:
+        return "members' link" if m == hosting.MEMBERS_LINK else hosting.label(m)
+    if after == hosting.OUTSIDE:
+        consequence = ("would cancel our webinar and leave them with a link that no "
+                       "longer works")
+    else:
+        consequence = "would leave them with join links that no longer work"
+    raise EventError(
+        f"{people} registered for this event with us. Switching it from "
+        f"{name(before)} to {name(after)} {consequence}. Cancel their "
+        f"registrations on the Registrants tab first, or keep {name(before)}."
+    )
+
+
+#: The D3-3 name, kept for the callers and tests that know it.
+_refuse_outside_host_with_registrants = _refuse_method_change_with_registrants
 
 
 async def update_event(
@@ -1130,7 +1186,7 @@ async def update_event(
     if "name" in payload and not (payload["name"] or "").strip():
         raise EventError("An event needs a title.")
     _check_host_link(payload, current)
-    await _refuse_outside_host_with_registrants(client, event_id, payload, current)
+    await _refuse_method_change_with_registrants(client, event_id, payload, current)
     await _clean_multi_enums(client, payload)
     await _include_own_chapter(client, payload, current, available=available,
                                chapter_key=chapter_key)

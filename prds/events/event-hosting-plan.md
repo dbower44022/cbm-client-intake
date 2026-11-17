@@ -1,6 +1,6 @@
 # Event hosting methods — plan
 
-Last Updated: 11-15-26 02:50 · Revision 0.8 — see change log at the end.
+Last Updated: 11-17-26 11:20 · Revision 0.9 — see change log at the end.
 
 This plan decides how a chapter's online events are hosted: Zoom Webinars,
 Zoom Meetings, a link to any other platform, or an outside host. It records
@@ -159,7 +159,8 @@ says which, in a handoff written in Entity Manager vocabulary.
    `scripts/apply_crm_plan.py`, applied to crm-test only. **Stop.**
 4. **Zoom Meetings in Events**: create, update, cancel, register, attendance;
    the confirmation for both Zoom methods; Other platform's registrations and
-   confirmation (with § 6's points 1 and 2 settled). **Stop.**
+   confirmation (with § 6's points 1 and 2 settled). **Stop.** **Built
+   v0.341.0 (11-17-26), dark**, members-only events included (Doug, option B).
 5. **The event form**: the choice, the defaults per audience, the
    explanations, the guards. **Stop.**
 6. **The live check on crm-test** with a real Zoom Meetings account, from a
@@ -173,6 +174,7 @@ the Events work is.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.9 | 11-17-26 11:20 | Claude (Claude Code) | Step 4 built (v0.341.0, dark). Doug, 11-17-26, option B: Zoom Meetings also hosts members-only events. A members-only meeting takes registration only when the event does. Any other method on a members-only event keeps the typed link, so D2 stands for webinars. EH4's refusal is enforced on the server in step 4. In EH11, who may share the screen is not a per-meeting setting in Zoom's API: it is the event host user's own setting. Other platform runs behind `EVENTS_OTHER_PLATFORM`. |
 | 0.8 | 11-15-26 02:50 | Claude (Claude Code) | Step 2 built by the Integrations tab's phase 9 (v0.333.0): the settings step 4 reads are named in `setup/CLAUDE.md`; `core/zoom.meetings_account`, `webinars_account` and `make_meetings_client` are the way in. Zoom Webinars uses Meetings' credentials only once all three are set (Doug, option A). |
 | 0.7 | 11-15-26 02:19 | Claude (Claude Code) | Ruling EH14 (Doug, § 6 point 3, option A): the method covers the online half of a hybrid event; its capacity guard warns there. Every § 6 point is settled; step 4 waits only for step 2. |
 | 0.6 | 11-15-26 02:17 | Claude (Claude Code) | Ruling EH13 (Doug, § 6 point 2, option A): a public Other-platform event may be published, its shared link only in the confirmation. |

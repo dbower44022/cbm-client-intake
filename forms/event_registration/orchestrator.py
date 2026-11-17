@@ -201,27 +201,24 @@ async def _push_to_zoom(
     settings: Any, client: EspoApi, event: dict[str, Any],
     registration_id: str, sub: EventRegistration,
 ) -> dict[str, Any]:
-    """Register the person with Zoom so Zoom emails them the join link.
+    """Register the person on the event's Zoom webinar or meeting and keep
+    their personal join link, which our confirmation carries.
 
     Best-effort: a failure leaves a complete CRM record, logs, and is picked up
     by a redrive. Nothing about the registration depends on it succeeding.
     """
-    webinar_id = (event.get("zoomWebinarId") or "").strip()
-    if not webinar_id:
-        return {"ok": False, "reason": "the event has no Zoom webinar"}
+    api, product, reason = events_service.registrant_zoom(settings, event)
+    if api is None:
+        return {"ok": False, "reason": reason}
     try:
-        from core.zoom import make_client
-
-        api = make_client(settings)
-        if api is None:
-            return {"ok": False, "reason": "Zoom is not enabled"}
         result = await api.add_registrant(
-            webinar_id,
+            event["zoomWebinarId"].strip(),
             email=str(sub.email),
             first_name=sub.first_name,
             last_name=sub.last_name or "",
             phone=e164_or_none(sub.phone) or "",
             zip_code=sub.zip_code or "",
+            product=product,
         )
         updates = {
             "zoomRegistrantId": str(result.get("registrant_id") or ""),

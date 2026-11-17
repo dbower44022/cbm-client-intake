@@ -706,6 +706,11 @@ class Settings(BaseSettings):
     # CRM's stored values (CEvent.hostedBy): "CBM Zoom" is Zoom Webinars.
     events_default_method_public: str = "CBM Zoom"
     events_default_method_members: str = "CBM Zoom"
+    # EH3, EH12, EH13: an event on "Other platform" — staff type one shared
+    # join link, the application keeps the registrations and its confirmation
+    # carries the link. Off: such an event's link cannot be typed, so a public
+    # one is never shown (D3-1). Read per request (events/hosting.py).
+    events_other_platform: bool = False
     # --- Mailing service (Constant Contact, Phase C of the mailing-list arc) ---
     # The CRM is the system of record; the mailing service mirrors it (plan
     # § 11.4). One account per deployment, connected from /setup through OAuth2;

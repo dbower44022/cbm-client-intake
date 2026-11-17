@@ -150,6 +150,27 @@ def plan_sends(
     return send, skip
 
 
+def attendance_warning(
+    event: dict[str, Any], follow_up: FollowUp, registrations: list[dict[str, Any]]
+) -> str:
+    """EH12 (Doug, 11-15-26): an Other-platform event's attendance is marked by
+    hand, so before the no-show email goes out, say so when nobody has been
+    marked yet — otherwise the empty list reads as "everyone came". "" when
+    there is nothing to warn about."""
+    from . import hosting
+
+    if follow_up.kind != KIND_NO_SHOW or hosting.method(event) != hosting.OTHER:
+        return ""
+    marked = any(r.get("attendanceStatus") in (cfg.REG_ATTENDED, cfg.REG_NO_SHOW)
+                 for r in registrations)
+    if marked:
+        return ""
+    return ("This event was hosted on another platform, so attendance is not "
+            "read from Zoom and nobody has been marked Attended or No-Show yet. "
+            "Mark attendance on the Registrants tab first; until then nobody "
+            "receives this email.")
+
+
 async def _ledger_options(client: EspoApi) -> Optional[list[str]]:
     try:
         return await client.metadata_enum_options(cfg.REGISTRATION, "followUpsSent")
@@ -202,6 +223,7 @@ async def send_follow_up(
     if registrations is None:
         registrations = await service.list_registrations(client, event["id"])
     recipients, skipped = plan_sends(follow_up, registrations)
+    warning = attendance_warning(event, follow_up, registrations)
     result: dict[str, Any] = {
         "kind": follow_up.kind,
         "template": follow_up.template,
@@ -215,6 +237,7 @@ async def send_follow_up(
         "sent": 0,
         "errors": [],
         "dryRun": dry_run,
+        "warning": warning,
     }
     if dry_run or not recipients:
         return result

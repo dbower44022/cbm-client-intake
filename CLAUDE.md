@@ -1322,4 +1322,9 @@ the strength of it.
   owed — raise it with Doug at the start of any session that touches the
   Association** (`OPEN-ITEMS.md` #87); after any restore before then, rerun
   the two scripts in `SANDBOX-RESET.md` § *A second training system*.
+- **v0.341.0 (2026-11-17) is committed, not pushed**: event hosting step
+  4. Zoom Meetings in Events, members-only events included (Doug, option B),
+  plus Other platform's registrations and confirmation. Dark behind
+  `ZOOM_MEETINGS_EVENTS` and `EVENTS_OTHER_PLATFORM`; `events/hosting.py` is
+  the one rule. Owed in #84.
 Everything else still owed is in `OPEN-ITEMS.md`.

@@ -19,8 +19,15 @@ Four rules this module exists to hold:
 * **Nothing is denormalised (EV-35).** No totals are stored; counts and
   show-rates stay computed from the rows, as they already are.
 
-Inert unless Zoom is configured — with ``ZOOM_EVENTS`` off there is no report to
-pull and the cycle is a no-op.
+Both Zoom products (event hosting plan, EH2): a webinar's report and a
+meeting's, the product chosen by the event's stored method
+(``hosting.stored_product``). A meeting's report carries ``user_email`` and no
+``registrant_id`` (proved 11-15-26), so the email match serves both unchanged.
+An Other-platform event has no report: attendance is marked by hand (EH12).
+
+Inert unless a Zoom integration is configured — with both ``ZOOM_EVENTS`` and
+``ZOOM_MEETINGS_EVENTS`` off there is no report to pull and the cycle is a
+no-op; with one off, that product's events are left alone.
 """
 
 from __future__ import annotations
@@ -31,10 +38,10 @@ from typing import Any, Optional
 
 from core.config import Settings
 from core.espo import EspoApi, EspoError
-from core.zoom import make_client as make_zoom_client
-from core.zoom import parse_zoom_time
+from core.zoom import PRODUCT_MEETING, PRODUCT_WEBINAR, parse_zoom_time
 
 from . import config as cfg
+from . import hosting
 from . import service
 
 log = logging.getLogger("cbm_intake.events.attendance")
@@ -223,6 +230,13 @@ async def apply_attendance(
     return summary
 
 
+async def _report(zoom: Any, event: dict[str, Any]) -> list[dict[str, Any]]:
+    """The participant report for the event's Zoom webinar or meeting."""
+    if hosting.stored_product(event) == PRODUCT_MEETING:
+        return await zoom.list_meeting_participants(event["zoomWebinarId"])
+    return await zoom.list_participants(event["zoomWebinarId"])
+
+
 async def resolve_event(
     client: EspoApi, zoom: Any, event: dict[str, Any]
 ) -> Optional[dict[str, int]]:
@@ -230,7 +244,7 @@ async def resolve_event(
     registrations = await service.list_registrations(client, event["id"])
     if _is_resolved(registrations):
         return None
-    participants = await zoom.list_participants(event["zoomWebinarId"])
+    participants = await _report(zoom, event)
     if not participants:
         # EV-31: empty means "not published yet", NOT "nobody came". Marking the
         # roster No-Show here would be a lie that staff then have to undo.
@@ -252,8 +266,12 @@ async def run_attendance_cycle(
     # events_active is false there (as notify.notify_active, 11-04-26).
     if not settings.events_enabled or settings.espo_dry_run:
         return totals
-    zoom = zoom or make_zoom_client(settings)
-    if zoom is None:
+    # One client per product; ``zoom`` (a test seam) serves both.
+    clients = {
+        product: zoom or hosting.zoom_client(settings, product)
+        for product in (PRODUCT_WEBINAR, PRODUCT_MEETING)
+    }
+    if not any(clients.values()):
         return totals              # Zoom not configured — nothing to pull
     if client is None:
         from core.espo import EspoClient
@@ -268,10 +286,11 @@ async def run_attendance_cycle(
         totals["errors"] += 1
         return totals
 
+    candidates = [e for e in candidates if clients.get(hosting.stored_product(e))]
     totals["events"] = len(candidates)
     for event in candidates:
         try:
-            result = await resolve_event(client, zoom, event)
+            result = await resolve_event(client, clients[hosting.stored_product(event)], event)
         except Exception as exc:  # noqa: BLE001 — one bad event never stops the rest
             totals["errors"] += 1
             log.warning(

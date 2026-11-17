@@ -1,6 +1,6 @@
 # events/ — Events, Webinars and the public pages
 
-Last Updated: 11-15-26 02:25 · Revision 1.4
+Last Updated: 11-17-26 11:20 · Revision 1.5
 
 Detail for Event Administration (`/events`), the public programme pages (`/webinars/`), presenters, topics, attendance, follow-ups, reporting and the portal events rail.
 
@@ -221,16 +221,41 @@ would be indistinguishable from a slug.
   confirmations, no attendance (D3-4, "for now"). CRM:
   `cevent-hostedby-crm-handoff.md`.
 - **Hosting methods** (plan `prds/events/event-hosting-plan.md`, rulings
-  EH1 to EH14, `OPEN-ITEMS.md` #84; **planned, not built** beyond the CRM
-  field). `CEvent.hostedBy` becomes the hosting method: stored `CBM Zoom`
-  (shown as Zoom Webinars), `Zoom Meetings`, `Other platform`, `Outside
-  host` (`cevent-hosting-method-crm-handoff.md`; on the Business Mentors
-  Association's CRM only so far). **Code that reads the field must treat
-  `CBM Zoom` as Zoom Webinars and never compare against the label.** The
-  Zoom ids serve both Zoom methods. Zoom Meetings' participant report carries
-  `user_email` and no `registrant_id`, so attendance matches by email as it
-  does for webinars (proved 11-15-26). Mentoring sessions never use the
-  chapter's Zoom account (EH10).
+  EH1 to EH14, `OPEN-ITEMS.md` #84; step 4 built v0.341.0, dark).
+  `CEvent.hostedBy` is the hosting method: stored `CBM Zoom` (shown as Zoom
+  Webinars), `Zoom Meetings`, `Other platform`, `Outside host`
+  (`cevent-hosting-method-crm-handoff.md`; on the Business Mentors
+  Association's CRM only so far). **`events/hosting.py` is the one rule.**
+  Read the method through `hosting.method`, never from the field. Compare
+  against the stored value, never the label.
+  - **Members-only events are hosted on Zoom Meetings too** (Doug, 11-17-26,
+    option B). A members-only meeting takes registration only when the event
+    does; otherwise it has one link for every member. Any other value on a
+    members-only event is `hosting.MEMBERS_LINK`, the typed link, so D2 still
+    keeps webinars public-only. "Members-only" means an audience someone SET
+    (`hosting.members_only`), the D2 carry-over.
+  - **One id field serves both Zoom products.** The method held before the
+    save says which product the id belongs to (`hosting.stored_product`).
+    Moving between the two products replaces the Zoom event. Moving to Other
+    platform or Outside host cancels it, keeping a link the same save typed.
+    Each product needs its own integration on: `ZOOM_EVENTS` for webinars,
+    `ZOOM_MEETINGS_EVENTS` for meetings. A meeting never falls back to the
+    webinars client.
+  - **The confirmation's link is `hosting.confirmation_link`.** Both Zoom
+    methods send the personal link, or the confirmation waits. Other platform
+    sends the shared link with EH13's line. A members-only typed link is
+    shared, as before.
+  - **Other platform** sits behind `EVENTS_OTHER_PLATFORM`. Off, its link
+    cannot be typed (`_writable` and the editor's `editableWhen`), so a public
+    one stays unshown. Its link and a Zoom Meeting's never reach a public
+    payload (`hosting.public_join_url`). Attendance is marked by hand (EH12);
+    the no-show preview warns until someone is marked.
+  - **EH4 on the server** (`service._refuse_method_change_with_registrants`):
+    changing the stored method is refused while anyone is Registered or
+    Waitlisted. D3-3's Outside host refusal is the first case of this rule.
+  - Zoom Meetings' participant report carries `user_email` and no
+    `registrant_id`, so attendance matches by email (proved 11-15-26).
+    Mentoring sessions never use the chapter's Zoom account (EH10).
 - **Phase 6c reporting** (`events/reporting.py`): the engagement **Events tab**
   (attendance rolled up across all of a client's contacts, deduplicated by
   event), the contact **Events tab** in the directory, and programme + conversion
@@ -346,6 +371,7 @@ would be indistinguishable from a slug.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.5 | 11-17-26 11:20 | Claude (Claude Code) | Hosting methods, step 4 built: `events/hosting.py`, members-only Zoom Meetings (option B), Other platform's switch, EH4 on the server. |
 | 1.4 | 11-15-26 02:25 | Claude (Claude Code) | Hosting methods: the stored values, the shared Zoom ids, attendance by email (event hosting plan, steps 1 and 3). |
 | 1.3 | 11-12-26 01:26 | Claude (Claude Code) | An event run by an outside host (D3-3, D3-4). |
 | 1.2 | 11-06-26 02:16 | Claude (Claude Code) | The History tab (v0.312.0). |

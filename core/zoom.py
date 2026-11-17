@@ -24,10 +24,9 @@ accurate, it is what the next person will trust):
 * **Registration** — ``settings.approval_type: 0`` means "register, approved
   automatically", which is what makes the registrants endpoint usable. With
   ``2`` (no registration) adding a registrant fails.
-* **Emails (EV-24)** — Zoom's *confirmation* stays ON, because the join link is
-  per-registrant and only Zoom can send it (D-13). Zoom's *reminder* and
-  *follow-up* emails are turned OFF, because CBM sends branded ones; leaving
-  both on sends registrants two of everything.
+* **Emails** — every Zoom registrant email is OFF: the confirmation carrying
+  the personal join link is CBM's own (ruling D3-2, 10-22-26), and so are the
+  reminders and follow-ups (EV-24).
 * **Update** — ``PATCH /webinars/{id}`` returns **204 No Content**, not a body.
 * **Cancel** — ``DELETE /webinars/{id}``. ``cancel_webinar_reminder=true`` makes
   Zoom notify registrants that it is off.
@@ -39,6 +38,16 @@ accurate, it is what the next person will trust):
   ``next_page_token``). Needs a paid plan and the report scope; the report is not
   available the instant a webinar ends, so callers retry within a window rather
   than treating an empty result as "nobody came".
+* **Meetings** (event hosting plan, ruling EH2; proved on a Zoom Pro account
+  11-15-26 by ``scripts/probe_zoom.py --meetings``) — the same shapes under
+  ``/meetings``: ``POST /users/{host}/meetings`` with ``type: 2`` (scheduled),
+  ``PATCH /meetings/{id}`` (204), ``DELETE /meetings/{id}``,
+  ``POST /meetings/{id}/registrants`` (``registrant_id`` + a personal
+  ``join_url``), ``PUT /meetings/{id}/registrants/status``, and
+  ``GET /report/meetings/{id}/participants``, whose rows carry ``user_email``
+  and never a ``registrant_id``. ``approval_type: 2`` makes a meeting with no
+  registration (a members-only event that takes none). The settings a meeting
+  is created with are :func:`meeting_settings` (ruling EH11).
 
 429 and 5xx are retried with backoff honouring ``Retry-After``. Every failure
 raises :class:`ZoomError`; callers treat Zoom as best-effort and never fail a
@@ -66,6 +75,16 @@ TOKEN_URL = "https://zoom.us/oauth/token"
 WEBINAR_TYPE_SINGLE = 5
 #: ``approval_type`` 0 = registration required, automatically approved.
 APPROVAL_AUTOMATIC = 0
+#: ``approval_type`` 2 = no registration (meetings only).
+APPROVAL_NONE = 2
+#: A scheduled (single-occurrence) meeting.
+MEETING_TYPE_SCHEDULED = 2
+#: ``registration_type`` 1 = attendees register once (single occurrence).
+REGISTRATION_ONCE = 1
+
+#: The two Zoom products an event can be hosted on, as the Events code names them.
+PRODUCT_WEBINAR = "webinar"
+PRODUCT_MEETING = "meeting"
 
 #: Refresh this many seconds before the token actually expires.
 _TOKEN_SKEW = 120
@@ -131,6 +150,41 @@ def webinar_settings(*, cbm_sends_reminders: bool = True) -> dict[str, Any]:
             "follow_up_attendees_email_notification": off,
             "follow_up_absentees_email_notification": off,
         })
+    return settings
+
+
+def meeting_settings(*, registration: bool = True) -> dict[str, Any]:
+    """The settings block for a chapter's Zoom Meeting — set up like a webinar
+    (ruling EH11, Doug 11-15-26, option B).
+
+    Attendees join muted with their cameras off; nobody joins before the host;
+    no waiting room, since registration already decides who holds a link; no
+    automatic recording. The passcode is left to the account's default (on),
+    and Zoom carries it inside each personal join link. Every Zoom registrant
+    email is off, as for webinars (D3-2): the confirmation is ours.
+
+    Two parts of EH11 are not per-meeting settings in Zoom's API and so are not
+    here: who may share the screen is the event host user's own setting
+    (``in_meeting.who_can_share_screen``, set to Host in Zoom), and the
+    co-host feature is the account's (``in_meeting.co_host``), which the Zoom
+    Meetings integration test reads.
+
+    ``registration`` False makes a meeting without registration — a
+    members-only event that takes none, whose one link every member sees.
+    """
+    settings: dict[str, Any] = {
+        "approval_type": APPROVAL_AUTOMATIC if registration else APPROVAL_NONE,
+        "host_video": True,
+        "participant_video": False,
+        "join_before_host": False,
+        "mute_upon_entry": True,
+        "waiting_room": False,
+        "auto_recording": "none",
+        "registrants_confirmation_email": False,
+        "registrants_email_notification": False,
+    }
+    if registration:
+        settings["registration_type"] = REGISTRATION_ONCE
     return settings
 
 
@@ -365,6 +419,79 @@ class ZoomClient:
                 break
         return participants
 
+    # --- meetings (ruling EH2) ---------------------------------------------
+
+    async def create_meeting(
+        self,
+        host: str,
+        *,
+        topic: str,
+        start: datetime,
+        duration_minutes: int,
+        agenda: str = "",
+        timezone_name: str = "America/New_York",
+        registration: bool = True,
+    ) -> dict[str, Any]:
+        """Create a scheduled meeting set up like a webinar (EH11)."""
+        body = {
+            "topic": topic[:200],
+            "type": MEETING_TYPE_SCHEDULED,
+            "start_time": to_zoom_time(start),
+            "duration": max(1, int(duration_minutes)),
+            "timezone": timezone_name,
+            "agenda": (agenda or "")[:2000],
+            "settings": meeting_settings(registration=registration),
+        }
+        return await self._request("POST", f"/users/{host}/meetings", json_body=body)
+
+    async def update_meeting(
+        self,
+        meeting_id: str,
+        *,
+        topic: Optional[str] = None,
+        start: Optional[datetime] = None,
+        duration_minutes: Optional[int] = None,
+        agenda: Optional[str] = None,
+        registration: Optional[bool] = None,
+    ) -> None:
+        """Patch a meeting. Zoom answers 204 with no body. ``registration``
+        switches registration on or off (a members-only event whose
+        "Takes registrations" changed)."""
+        body: dict[str, Any] = {}
+        if topic is not None:
+            body["topic"] = topic[:200]
+        if start is not None:
+            body["start_time"] = to_zoom_time(start)
+        if duration_minutes is not None:
+            body["duration"] = max(1, int(duration_minutes))
+        if agenda is not None:
+            body["agenda"] = agenda[:2000]
+        if registration is not None:
+            body["settings"] = {
+                "approval_type": APPROVAL_AUTOMATIC if registration else APPROVAL_NONE,
+            }
+            if registration:
+                body["settings"]["registration_type"] = REGISTRATION_ONCE
+        if not body:
+            return
+        await self._request(
+            "PATCH", f"/meetings/{meeting_id}", json_body=body, expect_body=False
+        )
+
+    async def delete_meeting(
+        self, meeting_id: str, *, notify_registrants: bool = True
+    ) -> None:
+        """Cancel a meeting. Zoom emails registrants when notify is on."""
+        await self._request(
+            "DELETE",
+            f"/meetings/{meeting_id}",
+            params={"cancel_meeting_reminder": str(notify_registrants).lower()},
+            expect_body=False,
+        )
+
+    async def get_meeting(self, meeting_id: str) -> dict[str, Any]:
+        return await self._request("GET", f"/meetings/{meeting_id}")
+
     # --- registrants -------------------------------------------------------
 
     async def add_registrant(
@@ -376,11 +503,13 @@ class ZoomClient:
         last_name: str = "",
         phone: str = "",
         zip_code: str = "",
+        product: str = PRODUCT_WEBINAR,
     ) -> dict[str, Any]:
-        """Register someone. Zoom emails them the unique join link.
+        """Register someone on a webinar, or on a meeting when ``product`` is
+        :data:`PRODUCT_MEETING`, and return their personal join link.
 
-        Returns Zoom's response; note ``id`` there is the WEBINAR id — the
-        registrant's own id is ``registrant_id``.
+        Returns Zoom's response; note ``id`` there is the WEBINAR (or meeting)
+        id — the registrant's own id is ``registrant_id``.
         """
         body: dict[str, Any] = {
             "email": email,
@@ -393,11 +522,12 @@ class ZoomClient:
         if zip_code:
             body["zip"] = zip_code
         return await self._request(
-            "POST", f"/webinars/{webinar_id}/registrants", json_body=body
+            "POST", f"/{_collection(product)}/{webinar_id}/registrants", json_body=body
         )
 
     async def cancel_registrant(
-        self, webinar_id: str, *, registrant_id: str, email: str = ""
+        self, webinar_id: str, *, registrant_id: str, email: str = "",
+        product: str = PRODUCT_WEBINAR,
     ) -> None:
         """Cancel one registration, freeing the seat."""
         entry: dict[str, Any] = {"id": registrant_id}
@@ -405,7 +535,7 @@ class ZoomClient:
             entry["email"] = email
         await self._request(
             "PUT",
-            f"/webinars/{webinar_id}/registrants/status",
+            f"/{_collection(product)}/{webinar_id}/registrants/status",
             json_body={"action": "cancel", "registrants": [entry]},
             expect_body=False,
         )
@@ -433,6 +563,11 @@ class ZoomClient:
             if not token:
                 break
         return participants
+
+
+def _collection(product: str) -> str:
+    """The API path segment for a product: ``webinars`` or ``meetings``."""
+    return "meetings" if product == PRODUCT_MEETING else "webinars"
 
 
 def _retry_after(resp: httpx.Response) -> Optional[float]:

@@ -606,6 +606,13 @@ SETTINGS: tuple[SettingSpec, ...] = (
        choices=HOSTING_METHODS, choice_labels=HOSTING_METHOD_LABELS, component="both",
        help="The hosting method a new members-only event starts with. Staff can "
             "still choose another for each event."),
+    _s("events_other_platform", GROUP_FEATURES, "Events on another platform", kind="bool",
+       component="both",
+       help="Lets an event be hosted on another platform (Teams, Google Meet, a "
+            "Zoom account the application does not drive): staff type one join "
+            "link for everyone, the application keeps the registrations, and the "
+            "confirmation carries the link. Off, such an event cannot be given a "
+            "link, so it is not shown."),
     _s("events_confirmations", GROUP_FEATURES, "Registration confirmation emails", kind="bool",
        component="both",
        help="CBM's own confirmation to each event registrant, from the EspoCRM "

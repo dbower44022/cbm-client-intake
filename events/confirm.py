@@ -5,11 +5,13 @@ Three single-recipient sends, siblings of the five fan-out follow-ups in
 not, which is why this is not a reuse of ``send_follow_up``):
 
 * **Confirmation** — the ticket. Sent at delivery to a registrant who holds a
-  seat. For an online public event it carries the person's OWN Zoom join link
-  (``CEventRegistration.zoomJoinUrl``, returned when the registrant is pushed to
-  Zoom); for an in-person event the venue; for an Internal event that takes
+  seat. For an event on Zoom Webinars or Zoom Meetings it carries the person's
+  OWN Zoom join link (``CEventRegistration.zoomJoinUrl``, returned when the
+  registrant is pushed to Zoom); for an Other-platform event the shared link
+  staff typed, with a line asking them to keep it to themselves (EH13); for
+  an in-person event the venue; for an Internal event that takes
   registrations the event's Join URL (the member rule, Portal Calendar design
-  D2). Zoom's own registrant emails are switched off (ruling D3-2), so this
+  D2). ``hosting.confirmation_link`` decides which. Zoom's own registrant emails are switched off (ruling D3-2), so this
   send is the thing the registrant depends on — which is why a public online
   registration **without a personal join link yet is not confirmed at all**:
   the send is skipped with a reason, and the next delivery attempt (a redrive)
@@ -53,6 +55,7 @@ from core.config import Settings
 from core.espo import EspoApi, EspoError
 
 from . import config as cfg
+from . import hosting
 from . import ics as ics_mod
 from . import notify
 from . import service
@@ -91,20 +94,35 @@ def active(settings: Settings) -> bool:
 
 # --- what goes into the email -----------------------------------------------
 
-def join_url_for(event: dict[str, Any], registration: dict[str, Any]) -> str:
-    """The link THIS registrant joins by.
+def join_url_for(
+    event: dict[str, Any], registration: dict[str, Any], settings: Any = None
+) -> str:
+    """The link THIS registrant joins by — ``hosting.confirmation_link``.
 
-    The personal Zoom link first. Failing that, only an Internal event lends its
-    shared Join URL (members registered for it see it on the member page, so the
-    email may carry it too). A Public online event's shared link is never sent:
-    the personal one is the ticket, and if it is missing the send waits.
+    A personal link where the event is on a Zoom method with registration:
+    that and nothing else, and if it is missing the send waits. The event's
+    shared Join URL for an Other-platform event (EH13) and for a members-only
+    event's typed link (the member rule, Portal Calendar design D2). A public
+    online event on any other method never lends its shared link.
     """
     personal = (registration.get("zoomJoinUrl") or "").strip()
-    if personal:
-        return personal
-    if visibility.effective_audience(event) == cfg.AUDIENCE_INTERNAL:
-        return (event.get("virtualMeetingUrl") or "").strip()
-    return ""
+    rule = hosting.confirmation_link(event, settings)
+    if rule == hosting.LINK_SHARED:
+        return personal or (event.get("virtualMeetingUrl") or "").strip()
+    return personal
+
+
+def join_block(event: dict[str, Any], join: str) -> str:
+    """The ``{{joinBlock}}`` HTML: the link, and under a shared Other-platform
+    link EH13's line asking the registrant to keep it to themselves."""
+    if not join:
+        return ""
+    block = (f'<p>Join online: <a href="{html.escape(join, quote=True)}">'
+             f"{html.escape(join)}</a></p>")
+    note = hosting.shared_link_note(event)
+    if note:
+        block += f"<p>{html.escape(note)}</p>"
+    return block
 
 
 def when_text(event: dict[str, Any]) -> str:
@@ -144,7 +162,7 @@ def app_tokens(
     """Every ``{{token}}`` value for one registrant on one event."""
     from core import branding
 
-    join = join_url_for(event, registration) if kind != KIND_WAITLISTED else ""
+    join = join_url_for(event, registration, settings) if kind != KIND_WAITLISTED else ""
     cancel = ""
     secret = getattr(settings, "session_secret", "") or ""
     base = (getattr(settings, "app_base_url", "") or "").strip()
@@ -157,10 +175,7 @@ def app_tokens(
         "when": when_text(event),
         "where": where_text(event),
         "joinUrl": join,
-        "joinBlock": (
-            f'<p>Join online: <a href="{html.escape(join, quote=True)}">'
-            f"{html.escape(join)}</a></p>" if join else ""
-        ),
+        "joinBlock": join_block(event, join),
         "cancelUrl": cancel,
         "eventUrl": event_url(settings, event),
         "recordingUrl": (event.get("recordingUrl") or "").strip(),
@@ -238,12 +253,15 @@ def skip_reason(
         return "registration cancelled"
     if already_sent(registration, kind):
         return "already sent"
-    if kind in (KIND_CONFIRMATION, KIND_SEAT_OFFERED) and visibility.effective_audience(
-            event) == cfg.AUDIENCE_PUBLIC and (event.get("format") or "") in cfg.ONLINE_FORMATS:
-        if not (registration.get("zoomJoinUrl") or "").strip():
+    if kind in (KIND_CONFIRMATION, KIND_SEAT_OFFERED):
+        rule = hosting.confirmation_link(event, settings)
+        if rule == hosting.LINK_PERSONAL and not (registration.get("zoomJoinUrl") or "").strip():
             # D3-2: ours is the only email, so a ticket without a way in is
             # worse than a late ticket. The redrive pushes to Zoom and retries.
             return "no personal join link yet"
+        if (rule == hosting.LINK_SHARED and hosting.method(event) == hosting.OTHER
+                and not (event.get("virtualMeetingUrl") or "").strip()):
+            return "the event has no join link yet"
     return None
 
 

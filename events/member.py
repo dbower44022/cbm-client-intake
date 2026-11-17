@@ -39,6 +39,7 @@ from core.espo import EspoApi, EspoError
 
 from . import config as cfg
 from . import service
+from . import hosting
 from . import visibility
 
 log = logging.getLogger("cbm_intake.events.member")
@@ -140,13 +141,19 @@ def join_url_for(event: dict[str, Any], my_registration: Optional[dict[str, Any]
     """D2 (ruled 09-30-26): an online Internal event's join link goes to every
     member when the event takes no registrations, and only to registered
     members when it does. A Public event's link is never served here — the
-    member signs up on the website and is told there."""
+    member signs up on the website and is told there. On Zoom Meetings with
+    registration, a registered member's link is their own."""
     if visibility.effective_audience(event) != cfg.AUDIENCE_INTERNAL:
         return ""
     if event.get(cfg.TAKES_REGISTRATIONS_FIELD):
         summary = registration_summary(my_registration)
         if not summary or summary["status"] == cfg.REG_WAITLISTED:
             return ""
+        # A members-only event on Zoom Meetings (Doug, 11-17-26, option B):
+        # the member's own join link, and nothing else — the meeting's general
+        # link only leads to Zoom's registration page.
+        if hosting.confirmation_link(event) == hosting.LINK_PERSONAL:
+            return ((my_registration or {}).get("zoomJoinUrl") or "").strip()
     return (event.get("virtualMeetingUrl") or "").strip()
 
 
@@ -468,6 +475,11 @@ async def register_member(
             payload["attendanceStatus"] = status
         else:
             status = existing.get("attendanceStatus")
+        if existing.get("attendanceStatus") == cfg.REG_CANCELLED:
+            # The cancellation freed the Zoom seat, so the old personal link
+            # no longer admits anyone: register with Zoom afresh below.
+            payload["zoomJoinUrl"] = ""
+            payload["zoomRegistrantId"] = ""
         await client.update(cfg.REGISTRATION, existing["id"], payload)
         registration_id, outcome = existing["id"], "updated"
     else:
@@ -479,6 +491,14 @@ async def register_member(
         # associations, decision 3). Best-effort.
         from core.partner_links import stamp_registration_company
         await stamp_registration_company(client, registration_id, payload.get("contactId"))
+    # A members-only event on Zoom Meetings: register the member with Zoom
+    # for their own join link before confirming (a waitlisted member is pushed
+    # when a seat is offered). Best-effort; without the link the confirmation
+    # waits, as it does on the public door.
+    zoom: Optional[dict[str, Any]] = None
+    if status == cfg.REG_REGISTERED and hosting.confirmation_link(event) == hosting.LINK_PERSONAL:
+        row = {**(existing or {}), **payload, "id": registration_id}
+        zoom = await service.push_registration_to_zoom(settings, client, event, row)
     # D3: the member's confirmation, with the event's Join URL (D2: a registered
     # member sees it). Best-effort by construction.
     from . import confirm
@@ -492,6 +512,7 @@ async def register_member(
         "contactLinked": bool(who["contactId"]),
         "event": {"id": event["id"], "name": event.get("name")},
         "confirmation": confirmation,
+        "zoom": zoom,
     }
 
 

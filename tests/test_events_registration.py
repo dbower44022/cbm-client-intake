@@ -318,7 +318,7 @@ async def test_zoom_failure_still_leaves_a_complete_registration():
 async def test_no_webinar_means_no_zoom_attempt():
     crm = FakeCrm(events=[make_event(zoomWebinarId="")])
     ids = await deliver(submission(), crm, settings=NoZoom())
-    assert ids["zoom"]["reason"] == "the event has no Zoom webinar"
+    assert ids["zoom"]["reason"] == "the event has no Zoom webinar or meeting"
 
 
 # --- cancellation tokens (EV-16, EV-83) -----------------------------------

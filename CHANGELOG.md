@@ -5,6 +5,59 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.341.0] — 2026-11-17
+
+**feat(events): Zoom Meetings and Other platform in Events — event hosting
+step 4.** Plan `prds/events/event-hosting-plan.md` § 7 step 4 (rulings EH2 to
+EH4, EH11 to EH13); `OPEN-ITEMS.md` #84. Dark: Zoom Meetings behind
+`ZOOM_MEETINGS_EVENTS` (step 2's switch), Other platform behind the new
+`EVENTS_OTHER_PLATFORM`; both off. The CRM options exist only on the Business
+Mentors Association's CRM.
+
+- **One rule for the hosting method**, `events/hosting.py`. Stored `CBM Zoom`
+  is Zoom Webinars; empty or unknown on a public event is Zoom Webinars, as
+  before. **Members-only events are hosted on Zoom Meetings too** (Doug,
+  11-17-26, option B); any other value on a members-only event keeps the
+  typed link, so a team meeting stored as `CBM Zoom` never gets a webinar (D2).
+- **Zoom Meetings** (`core/zoom.py`): create, update, cancel, get, and the
+  registrant calls on `/meetings`. Every meeting is set up like a webinar
+  (EH11): muted, cameras off, nobody before the host, no waiting room, no
+  recording, every Zoom email off. Who may share the screen and the co-host
+  feature are not per-meeting settings in Zoom's API. They stay the event host
+  user's and the account's settings, and are not set here. A members-only
+  meeting takes registration only when the event does; otherwise every member
+  sees its one link. Switching registrations on or off later changes the
+  meeting in Zoom to match.
+- **The Zoom sync** (`events/zoom_sync.py`) works with both products. Moving an
+  event from one Zoom product to the other cancels the old Zoom event and
+  creates the new one. Moving it to Other platform or Outside host cancels it,
+  keeping a link the same save typed and clearing Zoom's own. Each product
+  needs its own integration on; a meeting never falls back to webinars.
+- **Registrations**: the public door, waitlist promotion and the portal
+  register on the meeting and keep the personal join link. A member
+  re-registering after a cancellation is registered with Zoom again. Cancelling
+  frees the meeting seat (`service.registrant_zoom`). The member page shows a
+  registered member their own meeting link.
+- **Attendance** reads a meeting's participant report, matched by email as
+  for webinars. Each product's events are pulled only while its integration
+  is on.
+- **The confirmation** (`hosting.confirmation_link`) carries the personal link
+  for both Zoom methods and waits without one. For Other platform it carries
+  the shared link with EH13's line, "This join link is the same for everyone
+  attending. Please keep it to yourself."
+- **Other platform**: staff type the shared link (`https://` required) only
+  while the switch is on. Off, the event has no link and stays unshown (D3-1).
+  The public event payload no longer carries the Join URL of an Other-platform
+  or Zoom Meetings event (EH13). Event Administration shows "Public, other
+  platform", and the save warning says what is missing.
+- **EH4 on the server**: once anyone is Registered or Waitlisted, changing the
+  hosting method is refused. This widens D3-3's refusal, which covered only a
+  switch to Outside host. An audience edit is not a method change.
+- **EH12**: the no-show follow-up's preview warns when an Other-platform event
+  has nobody marked Attended or No-Show.
+- New setting `events_other_platform` (Features). Tests:
+  `tests/test_events_hosting.py` (54). Full suite: 4143 passed.
+
 ## [0.340.3] — 2026-11-17
 
 **fix(tokens): main buttons and body text readable — the gold and grey

@@ -216,6 +216,10 @@ def staff_state(event: dict[str, Any], now: Optional[datetime] = None) -> dict[s
         return {"key": "awaiting_link", "label": "Awaiting join link"}
     if hosted_outside(event):
         return {"key": "public", "label": "Public, outside host"}
+    if (event.get(cfg.HOSTED_BY_FIELD) or "") == cfg.HOSTED_OTHER and (
+            effective_audience(event) == cfg.AUDIENCE_PUBLIC
+            and (event.get("format") or "") in cfg.ONLINE_FORMATS):
+        return {"key": "public", "label": "Public, other platform"}
     if effective_audience(event) == cfg.AUDIENCE_PUBLIC:
         return {"key": "public", "label": "Public"}
     if team_limit(event):
@@ -247,8 +251,23 @@ def save_warnings(event: dict[str, Any], now: Optional[datetime] = None) -> list
             "it is not shown until the link is filled in."
         )
     elif is_ticked(event) and needs_join_link(event):
-        warnings.append(
-            "This is an online public event with no join link yet, so it is not "
-            "shown and takes no registrations until its Zoom webinar exists."
-        )
+        # Local import: hosting imports this module.
+        from . import hosting
+
+        method = hosting.method(event)
+        if method == hosting.OTHER:
+            warnings.append(
+                "This event is hosted on another platform and has no join link "
+                "yet, so it is not shown and takes no registrations until the link "
+                "is filled in."
+                + ("" if hosting.other_platform_on() else
+                   " Events on another platform are switched off in System "
+                   "Settings, so the link cannot be filled in yet.")
+            )
+        else:
+            kind = "Zoom meeting" if method == hosting.MEETINGS else "Zoom webinar"
+            warnings.append(
+                "This is an online public event with no join link yet, so it is "
+                f"not shown and takes no registrations until its {kind} exists."
+            )
     return warnings

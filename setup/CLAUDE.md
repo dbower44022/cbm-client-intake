@@ -1,6 +1,6 @@
 # setup/ — System Settings
 
-Last Updated: 11-15-26 13:30 · Revision 1.2
+Last Updated: 11-17-26 11:20 · Revision 1.3
 
 Detail for System Settings (`/setup`): the override model, the verified path, confirm-or-revert, restart-required settings, refresh, scoped rollout and the page's other panels.
 
@@ -123,6 +123,9 @@ keeps its old setting keys, relabelled, so no stored override is stranded.
   one of the CRM's stored values `CBM Zoom` (shown as Zoom Webinars), `Zoom
   Meetings`, `Other platform`, `Outside host`; both default `CBM Zoom`. A
   choice setting may carry `choice_labels`, which the page shows.
+- **`events_other_platform`** (Features, v0.341.0): the switch for the Other
+  platform hosting method (event hosting plan step 4). Read per request
+  through `events/hosting.other_platform_on`.
 - **Never read the Zoom credentials directly.** `core/zoom.meetings_account`
   and `core/zoom.webinars_account` are the one rule (Doug, 11-15-26, option
   A): Zoom Webinars uses Zoom Meetings' app and event host user when "same
@@ -194,6 +197,7 @@ Administrator guide: `SYSTEM-SETTINGS-SETUP.md` § 8. Design and rulings:
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 11-17-26 11:20 | Claude (Claude Code) | `events_other_platform`, the Other platform switch (v0.341.0). |
 | 1.2 | 11-15-26 13:30 | Claude (Claude Code) | The Integrations tab: the rules a future session must not break (phase 11). |
 | 1.1 | 11-15-26 02:50 | Claude (Claude Code) | Zoom Meetings and Zoom Webinars: the settings the Events side reads (Integrations tab phase 9, v0.333.0). |
 | 1.0 | 10-20-26 17:30 | Claude (Claude Code) | Created from the root `CLAUDE.md` section, word for word (Doug's approval 10-20-26). |

@@ -103,8 +103,14 @@ AUDIENCE_FIELDS: tuple[str, ...] = (
 # behaves exactly as before. Empty reads as CBM Zoom. Every rule that reads it
 # lives in events/visibility.py (``hosted_outside``).
 HOSTED_BY_FIELD = "hostedBy"
+#: Stored ``CBM Zoom``, shown as Zoom Webinars. Never compare against the label.
 HOSTED_CBM_ZOOM = "CBM Zoom"
 HOSTED_OUTSIDE = "Outside host"
+# The hosting methods (prds/events/event-hosting-plan.md, EH2/EH3;
+# ``cevent-hosting-method-crm-handoff.md``). Every rule that reads them lives
+# in events/hosting.py.
+HOSTED_ZOOM_MEETINGS = "Zoom Meetings"
+HOSTED_OTHER = "Other platform"
 HOSTING_FIELDS: tuple[str, ...] = (HOSTED_BY_FIELD,)
 
 # --- Presenters (Track F, F4) -----------------------------------------------
@@ -336,11 +342,14 @@ EVENT_FIELDS: list[EventField] = [
     # never gets a webinar (F2/F3 design D2), so for one the staff member types
     # the meeting link themselves and the member page shows it as "Join online"
     # under the F5 join-link rule (Portal Calendar design D3, Doug 10-07-26).
-    # An Outside host event (D3-3) takes the host's link here too.
+    # An Outside host event (D3-3) takes the host's link here too, and an
+    # Other platform event (EH13) its shared link — only while that switch is
+    # on. An event on Zoom Meetings, Internal included, gets Zoom's link and
+    # it is never typed (events/hosting.py, ``zoom_owns_link``).
     EventField("virtualMeetingUrl", "Join URL", "url", "Place & capacity",
                app_managed=True,
                editable_when=(("audience", (AUDIENCE_INTERNAL,)),
-                              (HOSTED_BY_FIELD, (HOSTED_OUTSIDE,))),
+                              (HOSTED_BY_FIELD, (HOSTED_OUTSIDE, HOSTED_OTHER))),
                help="Internal events: paste the meeting link members should join "
                     "(Google Meet, Zoom, Teams); shown to everyone when the event "
                     "takes no registrations, and only to registered members when "

@@ -648,6 +648,13 @@
 
     function showPlan(plan) {
       result.innerHTML = "";
+      if (plan.warning) {
+        // EH12: an Other-platform event whose attendance nobody has marked.
+        var warn = document.createElement("p");
+        warn.className = "ev__fu-error";
+        warn.textContent = plan.warning;
+        result.appendChild(warn);
+      }
       var head = document.createElement("p");
       var n = (plan.recipients || []).length, m = (plan.skipped || []).length;
       head.textContent = n + (n === 1 ? " registrant would receive it" : " registrants would receive it")
