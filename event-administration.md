@@ -1,6 +1,6 @@
 # Event Administration — user guide
 
-Last Updated: 11-17-26 11:55 · Revision 1.1 — change log at the end.
+Last Updated: 11-17-26 12:25 · Revision 1.2 — change log at the end.
 
 The staff tool for CBM's **workshop and webinar programme**: create events, take
 registrations, track who actually turned up, and publish the recording. It is
@@ -223,9 +223,10 @@ topic, publishing) deliberately leaves it alone; otherwise Zoom emails every
 registrant that "the host updated this event". Zoom's own registrant emails
 are off: our confirmation is the only one.
 
-Setting the event's **Status to Cancelled** cancels the Zoom event and tells
-registrants. So does switching a Virtual event to **In-Person**, so nobody is
-left holding a link to a room nobody will host.
+Switching a Virtual event to **In-Person** cancels its Zoom event and tells
+registrants, so nobody is left holding a link to a room nobody will host. The
+event form has no Status field. An event set to Cancelled in the CRM itself
+has its Zoom event cancelled at its next save here.
 
 If the method's Zoom integration isn't set up, the button says so when you
 click it. It is never greyed out.
@@ -516,5 +517,6 @@ you have their email, become a Contact.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 11-17-26 12:25 | Claude (Claude Code) | The Zoom cancellation by Status corrected: the form has no Status field; In-Person cancels, and a CRM-side Cancelled reaches Zoom at the next save. |
 | 1.1 | 11-17-26 11:55 | Claude (Claude Code) | "Getting a Zoom webinar" replaced by "How an online event is hosted": the four hosting methods, the defaults, the not-set-up reason, the check before saving (event hosting plan step 5, v0.342.0). Revision block added. |
 | 1.0 | — | — | The guide as it stood before this change log. |
