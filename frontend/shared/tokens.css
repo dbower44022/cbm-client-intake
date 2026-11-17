@@ -24,8 +24,12 @@
 :root {
   /* --- Brand palette --- */
   --cbm-navy: #173B60;        /* primary — headings, primary brand */
-  --cbm-gold: #CB963B;        /* secondary — buttons, key accents */
-  --cbm-text: #7A7A7A;        /* default body text */
+  --cbm-gold: #8F6420;        /* secondary — buttons, key accents. Darkened from
+                                 Cleveland's #CB963B so white button text reaches
+                                 4.5:1 (5.2:1); Doug's ruling 11-17-26,
+                                 prds/home-page-plan.md ruling 8 */
+  --cbm-gold-light: #CB963B;  /* the original gold — decoration that carries no text */
+  --cbm-text: #5B6676;        /* default body text (5.8:1 on white; was #7A7A7A, 4.3:1) */
   --cbm-green: #61CE70;       /* accent — use sparingly */
 
   /* --- Neutrals / system (Astra) --- */
@@ -74,7 +78,7 @@
 
   /* --- Buttons (gold, radius 5px, ~15px 30px) --- */
   --cbm-btn-bg: var(--cbm-gold);
-  --cbm-btn-bg-hover: #b8842f;     /* gold, darkened ~10% */
+  --cbm-btn-bg-hover: #7A5518;     /* gold, darkened ~15% */
   --cbm-btn-color: var(--cbm-white);
   --cbm-btn-radius: 5px;
   --cbm-btn-pad-y: 15px;

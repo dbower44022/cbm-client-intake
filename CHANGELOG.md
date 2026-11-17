@@ -5,6 +5,27 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.340.3] — 2026-11-17
+
+**fix(tokens): main buttons and body text readable — the gold and grey
+design tokens darkened for contrast.** Doug's ruling 11-17-26
+(`prds/home-page-plan.md` ruling 8, option A). White text on Cleveland's gold
+`#CB963B`, on every main action button, measured 2.6 to 1, and the body text
+grey `#7A7A7A` 4.3 to 1; the accessibility minimum for normal text is 4.5 to 1.
+No switch: every page that does not load a chapter colour file changes.
+
+- `frontend/shared/tokens.css`: `--cbm-gold` `#8F6420` (white text 5.2 to 1),
+  `--cbm-btn-bg-hover` `#7A5518`, `--cbm-text` `#5B6676` (5.8 to 1). New
+  `--cbm-gold-light` keeps the original `#CB963B` for decoration that carries
+  no text; nothing uses it yet. `--cbm-gold` itself is changed because most
+  buttons read it directly (20 uses, against 3 of `--cbm-btn-bg`).
+- Marketing Management's list-members gold button hovered to a fixed
+  `#b8842f`, lighter than the new gold; it now reads `--cbm-btn-bg-hover`.
+- `chapter-colours.md` revision 1.2: the new values, and a contrast check for
+  each chapter's button colour. Boston's fails it (`OPEN-ITEMS.md` #89).
+- Also new: `prds/home-page-plan.md`, the plan for the home page, its
+  design-system rules and Chapter News.
+
 ## [0.340.2] — 2026-11-17
 
 **chore(sandbox): the Association's mentor directory and short training

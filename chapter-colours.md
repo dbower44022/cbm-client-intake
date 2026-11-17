@@ -1,6 +1,6 @@
 # Changing a chapter's colours
 
-Last Updated: 11-07-26 11:41 · Revision 1.1 — see the change log at the end.
+Last Updated: 11-17-26 01:30 · Revision 1.2 — see the change log at the end.
 
 A deployment's colours come from one small stylesheet, called **the colour
 file**, that the chapter hosts on the web. The setting `CHAPTER_TOKENS_URL`
@@ -33,7 +33,9 @@ every page in a browser.
   application except System Settings.
 - The header bar and hero banner of the public webinar page.
 
-**Button colour** — design token `--cbm-gold`, Cleveland's value `#CB963B`.
+**Button colour** — design token `--cbm-gold`, Cleveland's value `#8F6420`
+(darkened from `#CB963B` in v0.340.3 so white button text is readable; the
+original gold remains as `--cbm-gold-light`, for decoration only).
 
 - Every main action button, such as Next and Submit Request on the intake
   forms and Save in the edit dialogs.
@@ -42,16 +44,24 @@ every page in a browser.
 - The strapline band and the menu underline on the public webinar page.
 
 **Button hover colour** — design token `--cbm-btn-bg-hover`, Cleveland's value
-`#b8842f`.
+`#7A5518`.
 
 - Main action buttons while the mouse pointer is over them. Nowhere else.
 
-**Body text colour** — design token `--cbm-text`, Cleveland's value `#7A7A7A`.
+**Body text colour** — design token `--cbm-text`, Cleveland's value `#5B6676`
+(was `#7A7A7A` before v0.340.3).
 
 - The default text colour of every page.
 - Secondary text in Client Administration, Mentor Administration, Workspace
   Directories, My Mentor Profile, Submission Admin and the address paste
   helper.
+
+**Check the button colour's contrast.** White text sits on the button colour,
+so the two must reach a contrast ratio of at least **4.5 to 1**, the
+accessibility minimum for normal text. Check the pair in any online contrast
+checker before publishing the colour file. Cleveland's original gold
+(`#CB963B`) measured 2.6 to 1, which is why it was darkened. The same check
+applies to the body text colour on white.
 
 ### What the colour file does not change
 
@@ -237,5 +247,6 @@ makes every browser fetch the new colours at once.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 11-17-26 01:30 | Claude (Cowork) | Cleveland's button, button hover and body text values darkened for contrast (v0.340.3, `prds/home-page-plan.md` ruling 8); the contrast check added. |
 | 1.1 | 11-07-26 11:41 | Claude (Claude Code) | The setting is now in the Website group of System Settings, not Presentation (v0.314.0, plan decision 4.2). |
 | 1.0 | 10-07-26 03:48 | Claude (Claude Code) | First version, from the colour sweep of 09-29-26 against v0.232.0. Chosen by Doug over a tokens.css fix for the second-rank hover colour, which is still owed. |

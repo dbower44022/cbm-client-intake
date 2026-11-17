@@ -4,7 +4,7 @@ Last Updated: 11-17-26 01:30 · Revision 1.0 — change log at the end.
 
 **Status: designed 11-16-26 to 11-17-26 in a Cowork session with Doug; every
 decision below is his. Phase 0 (the contrast fix to the design tokens) is
-built as v0.340.2. Phases 1 to 7 are not started.**
+built as v0.340.3. Phases 1 to 7 are not started.**
 
 Mockups: the design canvas *CBM Home Page — Looks*
 (https://claude.ai/artifact/D6Gm6i9qYgBsYmMtUSfAmY). The **Mix** artboard is
@@ -294,7 +294,7 @@ Each phase is one release, behind its own switch, off by default, except
 phase 0. **Each phase ends at a stop: Doug's check on crm-test before the next
 phase starts.**
 
-- **Phase 0 — the contrast fix (built, v0.340.2).** `tokens.css`: the three
+- **Phase 0 — the contrast fix (built, v0.340.3).** `tokens.css`: the three
   changed values and `--cbm-gold-light`; Marketing Management's list-members
   gold button hover reads `--cbm-btn-bg-hover` instead of a fixed colour;
   `chapter-colours.md` gains the new values and asks each chapter to check
@@ -340,4 +340,4 @@ phase starts.**
 
 | Revision | Last Updated | Change |
 |---|---|---|
-| 1.0 | 11-17-26 01:30 | Created from the 11-16-26 to 11-17-26 design session: rulings 1 to 9, the home page, the design-system rules, Chapter News, and the build plan. Phase 0 built as v0.340.2. |
+| 1.0 | 11-17-26 01:30 | Created from the 11-16-26 to 11-17-26 design session: rulings 1 to 9, the home page, the design-system rules, Chapter News, and the build plan. Phase 0 built as v0.340.3. |

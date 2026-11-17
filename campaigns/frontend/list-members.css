@@ -15,7 +15,7 @@ body.lm { margin: 0; background: #fff; color: #1F2933; font-family: var(--cbm-fo
   border: 1px solid #5B7FA6; background: transparent; color: #fff; cursor: pointer; text-decoration: none; white-space: nowrap; }
 .lm__btn:hover { background: rgba(255, 255, 255, .08); }
 .lm__btn--gold { background: var(--cbm-gold, #CB963B); border-color: var(--cbm-gold, #CB963B); color: #fff; }
-.lm__btn--gold:hover { background: #b8842f; }
+.lm__btn--gold:hover { background: var(--cbm-btn-bg-hover); }
 .lm__btn--light { background: #fff; color: var(--cbm-navy, #173B60); border-color: #C3CDD8; min-height: 2rem; padding: .3rem .75rem; }
 .lm__btn--light:hover { background: #F4F8FC; }
 .lm__notice { margin: .7rem 1.25rem 0; padding: .6rem .9rem; border-radius: 8px; font-weight: 500; }
