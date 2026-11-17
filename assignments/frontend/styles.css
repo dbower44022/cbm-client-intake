@@ -662,11 +662,24 @@ body { display: flex; flex-direction: column; }
 .modal__tab:focus-visible { outline: 2px solid var(--cbm-navy, #173B60); outline-offset: -2px; }
 
 /* The Business profile tab (Business Evaluation phase 6, BE26). Wide screens
-   pack the answers into columns rather than capping the width. */
+   pack the sections into columns rather than capping the width. Questions are
+   small grey labels; answers are dark, in a tinted box (Doug 11-16-26). */
 .bprofile { padding: .25rem 0 1rem; }
 .bprofile__note { color: var(--cbm-slate-700, #334155); margin: .25rem 0 .75rem; }
 .bprofile__note.is-error { color: var(--cbm-red, #B91C1C); }
-.bprofile__answers { columns: 28rem; column-gap: 2rem; }
-.bprofile__answers h3 { font-size: var(--cbm-text-sm, .9rem); margin: .75rem 0 .25rem; break-after: avoid; }
-.bprofile__answers p { margin: 0 0 .6rem; break-inside: avoid; }
+.bprofile__answers { columns: 26rem; column-gap: 2rem; }
+.bprofile__section { break-inside: avoid-column; margin: 0 0 1.25rem; }
+.bprofile__sectitle { font-size: var(--cbm-text-sm, .9rem); text-transform: uppercase; letter-spacing: .04em;
+  color: var(--cbm-navy, #173B60); margin: 0 0 .5rem; padding-bottom: .25rem;
+  border-bottom: 1px solid var(--cbm-slate-200, #E2E8F0); }
+.bprofile__qa { margin: 0 0 .7rem; break-inside: avoid; }
+.bprofile__q { font-size: .82rem; font-weight: 400; color: var(--cbm-slate-500, #64748B); margin: 0 0 .2rem; line-height: 1.35; }
+.bprofile__a { font-size: 1.02rem; font-weight: 600; color: var(--cbm-slate-900, #0F172A); line-height: 1.4;
+  background: var(--cbm-slate-50, #F1F5F9); border-left: 3px solid var(--cbm-navy, #173B60);
+  border-radius: 0 4px 4px 0; padding: .35rem .6rem; white-space: pre-wrap; }
+.bprofile__a.is-blank { font-weight: 400; font-style: italic; color: var(--cbm-slate-400, #94A3B8);
+  background: none; border-left-color: var(--cbm-slate-200, #E2E8F0); }
+.bprofile__chip { display: inline-block; font-size: .92rem; font-weight: 600; margin: .1rem .35rem .1rem 0;
+  padding: .1rem .55rem; border-radius: 999px; background: #fff; border: 1px solid var(--cbm-navy, #173B60);
+  color: var(--cbm-navy, #173B60); white-space: normal; }
 .bprofile__areas { margin: .25rem 0 0; padding-left: 1.25rem; }

@@ -5,6 +5,21 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.340.1] — 2026-11-16
+
+**fix(evaluation): the Business profile tab's answers stand out from the
+questions.** Behind **`INTAKE_SURVEY`**. Doug's finding in the phase 6 check on
+the Business Mentors Association's system, 11-16-26: the questions were bold
+and the answers plain grey; his choice B.
+
+- Each question is a small grey label; each answer is dark, larger, in a
+  tinted box with a coloured left edge; a multi-select answer is one chip
+  per choice; "Not answered" is pale italics. Sections keep their headings.
+- The tab now receives the answers as data (`surveys.answers.answer_sections`,
+  `evaluation.intake.profile_sections`) instead of HTML, and draws them itself.
+  The mentor's Evaluations tab keeps its look.
+- Tests: `tests/test_evaluation_intake.py` checks the structure and the chips.
+
 ## [0.340.0] — 2026-11-16
 
 **feat(website): the mentor directory and one shared mentor profile.** Doug's

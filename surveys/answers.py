@@ -125,6 +125,27 @@ def _shown(q: Question, value: Any) -> str:
     return str(value)
 
 
+def answer_sections(survey: Survey, answers: dict[str, Any]) -> list[dict[str, Any]]:
+    """The answers as data for a page that draws them itself: each section's
+    title and, per question, its label, whether it was answered, and the
+    answer as a list of shown values (one per choice ticked, else one)."""
+    out = []
+    for section in survey.sections:
+        items = []
+        for q in section.questions:
+            value = answers.get(q.id)
+            if _blank(value):
+                values: list[str] = []
+            elif isinstance(value, list):
+                values = [str(v) for v in value if not _blank(v)]
+            else:
+                values = [_shown(q, value)]
+            items.append({"label": q.label, "answered": bool(values), "values": values,
+                          "multiple": q.type == "multiple_choice"})
+        out.append({"title": section.title, "items": items})
+    return out
+
+
 def readable_html(survey: Survey, answers: dict[str, Any]) -> str:
     """The answers as question-and-answer text for the people who read them."""
     parts = [f"<p><em>{html.escape(survey.title)} survey, version {survey.version}</em></p>"]

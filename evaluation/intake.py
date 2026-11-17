@@ -39,7 +39,7 @@ from surveys import registry
 from . import service
 from .sending import (
     ADVISED_MAX, SendError, area_choices, choose_areas, entity_available,
-    links_for_engagement, list_records, profile_answers_html, STATUS_SENT,
+    links_for_engagement, list_records, STATUS_SENT,
 )
 from .surveys import PROFILE_KEY, Survey, latest
 
@@ -280,6 +280,27 @@ async def _on_delivered(settings: Any, submission: Any, ids: dict[str, Any], cli
 
 # --- Client Administration's Business profile tab (BE26) -------------------------
 
+def profile_sections(raw: str, surveys: dict[str, Survey]) -> Optional[list[dict[str, Any]]]:
+    """The business profile's answers as sections of questions and answers,
+    for the tab to draw (Doug 11-16-26: answers must stand out from the
+    questions). None when there is none or it cannot be read."""
+    import json
+
+    from surveys.answers import answer_sections
+
+    if not (raw or "").strip():
+        return None
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        return None
+    if not isinstance(data, dict) or not isinstance(data.get("answers"), dict):
+        return None
+    survey = surveys.get(data.get("survey") or "") or latest(surveys, PROFILE_KEY)
+    if survey is None:
+        return None
+    return answer_sections(survey, data["answers"])
+
 async def business_profile_view(user_client: Any, key_client: Any, store: Any,
                                 engagement_id: str) -> dict[str, Any]:
     """What the tab shows. The staff member's own read of the engagement
@@ -287,20 +308,20 @@ async def business_profile_view(user_client: Any, key_client: Any, store: Any,
     client profile is read as them too; the areas are read under the org-wide
     key and only area, round and status are kept."""
     eng = await user_client.get(service.ENGAGEMENT, engagement_id, select="engagementClientId")
-    out: dict[str, Any] = {"profileHtml": None, "profileAt": None, "profileNote": "",
+    out: dict[str, Any] = {"profile": None, "profileAt": None, "profileNote": "",
                            "areas": [], "declined": False, "areasNote": ""}
     profile_id = eng.get("engagementClientId")
     if profile_id:
         try:
             prof = await user_client.get(service.CLIENT_PROFILE, profile_id,
                                          select="evaluationProfile,evaluationProfileAt")
-            out["profileHtml"] = profile_answers_html(prof.get("evaluationProfile") or "",
+            out["profile"] = profile_sections(prof.get("evaluationProfile") or "",
                                               _definitions())
             out["profileAt"] = prof.get("evaluationProfileAt")
         except EspoError as exc:
             log.warning("business profile tab %s: profile not read: %s", engagement_id, exc)
             out["profileNote"] = "The business profile could not be read with your access."
-    if out["profileHtml"] is None and not out["profileNote"]:
+    if out["profile"] is None and not out["profileNote"]:
         out["profileNote"] = "The client has not answered the business profile yet."
     if key_client is not None:
         try:

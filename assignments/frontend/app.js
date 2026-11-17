@@ -699,6 +699,48 @@
     return p;
   }
 
+  // Each question a small grey label; each answer dark, in a tinted box; a
+  // multi-select answer as one chip per choice; "Not answered" pale
+  // (Doug 11-16-26: the answers must stand out from the questions).
+  function profileAnswers(sections) {
+    var wrap = document.createElement("div");
+    wrap.className = "bprofile__answers";
+    sections.forEach(function (sec) {
+      var block = document.createElement("section");
+      block.className = "bprofile__section";
+      var h = document.createElement("h4");
+      h.className = "bprofile__sectitle";
+      h.textContent = sec.title;
+      block.appendChild(h);
+      sec.items.forEach(function (it) {
+        var qa = document.createElement("div");
+        qa.className = "bprofile__qa";
+        var q = document.createElement("p");
+        q.className = "bprofile__q";
+        q.textContent = it.label;
+        qa.appendChild(q);
+        var a = document.createElement("div");
+        a.className = "bprofile__a" + (it.answered ? "" : " is-blank");
+        if (!it.answered) {
+          a.textContent = "Not answered";
+        } else if (it.multiple) {
+          it.values.forEach(function (v) {
+            var chip = document.createElement("span");
+            chip.className = "bprofile__chip";
+            chip.textContent = v;
+            a.appendChild(chip);
+          });
+        } else {
+          a.textContent = it.values.join(", ");
+        }
+        qa.appendChild(a);
+        block.appendChild(qa);
+      });
+      wrap.appendChild(block);
+    });
+    return wrap;
+  }
+
   async function loadBusinessProfile(id) {
     var host = $("modalProfile");
     host.innerHTML = "";
@@ -718,16 +760,13 @@
     h.className = "modal__h";
     h.textContent = "Business profile";
     host.appendChild(h);
-    if (data.profileHtml) {
+    if (data.profile) {
       if (data.profileAt) {
         var at = new Date(String(data.profileAt).replace(" ", "T") + "Z");
         host.appendChild(profilePara("Answered " + at.toLocaleDateString(undefined,
           { year: "numeric", month: "long", day: "numeric" }) + ".", "bprofile__note"));
       }
-      var answers = document.createElement("div");
-      answers.className = "bprofile__answers";
-      answers.innerHTML = data.profileHtml;  // server-built from the survey definition, escaped
-      host.appendChild(answers);
+      host.appendChild(profileAnswers(data.profile));
     } else {
       host.appendChild(profilePara(data.profileNote || "The client has not answered the business profile yet.", "bprofile__note"));
     }

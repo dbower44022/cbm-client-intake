@@ -306,7 +306,8 @@ def test_a_mentor_link_is_unchanged():
 
 def _answered_profile():
     return json.dumps({"survey": "business-profile.v1",
-                       "answers": {"what_you_sell": "Bread to cafés"}})
+                       "answers": {"what_you_sell": "Bread to cafés",
+                                   "where_you_sell": ["Online", "At markets, events or pop-ups"]}})
 
 
 def test_the_tab_shows_the_answers_and_the_areas_and_never_a_report():
@@ -315,7 +316,15 @@ def test_the_tab_shows_the_answers_and_the_areas_and_never_a_report():
                 "reviewedReport": DRAFT, "answersReadable": "<p>private</p>"}]
     crm = Crm(profile=_answered_profile(), records=records)
     view = run(intake.business_profile_view(crm, crm, None, ENG))
-    assert "Bread to cafés" in view["profileHtml"]
+    first = view["profile"][0]["items"][0]
+    assert first == {"label": "In a sentence or two, what does your business sell, and to whom?",
+                     "answered": True, "values": ["Bread to cafés"], "multiple": False}
+    # A multi-select answer: one value per choice ticked, drawn as chips.
+    assert view["profile"][0]["items"][3] == {
+        "label": "Where do you sell?", "answered": True, "multiple": True,
+        "values": ["Online", "At markets, events or pop-ups"]}
+    assert view["profile"][0]["items"][1]["answered"] is False
+    assert view["profile"][0]["items"][1]["values"] == []
     assert view["areas"] == [{"area": "Finance", "round": 1, "status": "Draft Ready"}]
     assert "SECRET DRAFT" not in json.dumps(view) and "private" not in json.dumps(view)
 
@@ -328,7 +337,7 @@ def test_the_tab_says_when_nothing_is_answered_or_the_client_said_no():
     run(intake.answer_offer(OfferContext(link=link, store=store, client=crm, accept=False,
                                          keys=[])))
     view = run(intake.business_profile_view(crm, crm, store, ENG))
-    assert view["profileHtml"] is None
+    assert view["profile"] is None
     assert view["profileNote"] == "The client has not answered the business profile yet."
     assert view["areas"] == [] and view["declined"] is True
 
@@ -359,7 +368,8 @@ def test_the_tab_is_dark_while_the_switch_is_off(monkeypatch):
                                 INTAKE_SURVEY="true")) as c:
         assert c.get("/assignments/api/session").json()["businessProfileEnabled"] is True
         res = c.get(f"/assignments/api/engagements/{ENG}/business-profile")
-        assert res.status_code == 200 and "Bread to cafés" in res.json()["profileHtml"]
+        assert res.status_code == 200
+        assert res.json()["profile"][0]["items"][0]["values"] == ["Bread to cafés"]
     get_settings.cache_clear()
 
 
