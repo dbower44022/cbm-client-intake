@@ -1,6 +1,6 @@
 # The home page and Chapter News — plan
 
-Last Updated: 11-17-26 01:30 · Revision 1.0 — change log at the end.
+Last Updated: 11-17-26 02:30 · Revision 1.1 — change log at the end.
 
 **Status: designed 11-16-26 to 11-17-26 in a Cowork session with Doug; every
 decision below is his. Phase 0 (the contrast fix to the design tokens) is
@@ -291,15 +291,19 @@ exist.
 ## 8. Build plan
 
 Each phase is one release, behind its own switch, off by default, except
-phase 0. **Each phase ends at a stop: Doug's check on crm-test before the next
-phase starts.**
+phase 0. **Each phase ends at a stop: Doug's check on the test system, the
+Business Mentors Association's (root `CLAUDE.md` § Deployment), before the
+next phase starts.** A push to `main` deploys the test system, crm-test and
+production together; every phase after 0 is behind a switch that is off, so
+production changes only when its switch is turned on there. Phase 0 has no
+switch: its push changes production's colours at once, which is intended.
 
 - **Phase 0 — the contrast fix (built, v0.340.3).** `tokens.css`: the three
   changed values and `--cbm-gold-light`; Marketing Management's list-members
   gold button hover reads `--cbm-btn-bg-hover` instead of a fixed colour;
   `chapter-colours.md` gains the new values and asks each chapter to check
   that white text on its button colour reaches 4.5 to 1. **Stop 0**: Doug
-  looks at an intake form, a staff application and the portal on crm-test.
+  looks at an intake form, a staff application and the portal on the test system.
 - **Phase 1 — the page frame.** Switch `HOME_V2`; off keeps today's page. The
   new tokens and `frontend/shared/panel.css`; the header with the
   applications row; the greeting; empty section frames that self-gate; collapse
@@ -311,13 +315,13 @@ phase starts.**
   and the threshold setting. **My Email gains a link that opens one
   conversation** (`/myemail/?conversation=<id>`), so the Email rows can point
   at it; the four other applications already open on a record from a link.
-  **Stop 3**: one example of each kind on crm-test.
+  **Stop 3**: one example of each kind on the test system.
 - **Phase 4 — At the chapter.** Year-to-date numbers from the analytics
   portal panel's sources, the events rail's upcoming workshops, and open asks
   from Marketing Management's running call campaigns. A presenter-wanted ask
   has no data source yet and is left out until one exists. **Stop 4**.
 - **Phase 5 — Chapter News core.** Switch `CHAPTER_NEWS`. The handoff and both
-  entities on crm-test first; the News section with dismiss, acknowledge,
+  entities on the test system's CRM first; the News section with dismiss, acknowledge,
   pinned ordering, audience and the call-to-action button; past news; the
   Chapter News page with the editor, preview and withdraw; the publisher team
   setting. **Stop 5**: Doug publishes one item of each importance and reads
@@ -327,7 +331,7 @@ phase starts.**
   emails each member with unread items one list, from the shared mailbox
   (`OPS_MAILBOX`), items that must be acknowledged always included; the
   `news.digest` opt-out; nothing sent to a member with nothing unread.
-  **Stop 7**: a digest received on crm-test.
+  **Stop 7**: a digest received on the test system.
 
 ## 9. Open questions, decided in their phase
 
@@ -340,4 +344,5 @@ phase starts.**
 
 | Revision | Last Updated | Change |
 |---|---|---|
+| 1.1 | 11-17-26 02:30 | The stops are checks on the test system, the Business Mentors Association's, not crm-test; § 8 says what a push deploys. |
 | 1.0 | 11-17-26 01:30 | Created from the 11-16-26 to 11-17-26 design session: rulings 1 to 9, the home page, the design-system rules, Chapter News, and the build plan. Phase 0 built as v0.340.3. |
