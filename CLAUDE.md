@@ -452,6 +452,13 @@ block in styles.css in sync if the website template changes.** Rendered at the
 site's 1200px desktop width and scaled to fit; the mobile media block is
 deliberately omitted.
 
+- **The shared preview** (`MENTOR_PREVIEW_SHARED`, off by default; on at the
+  Association since 11-16-26, never planned for Cleveland's production for
+  now): the preview is drawn by the chapter website's own mentor profile,
+  `website/content.profile_html`, from the mentor's unsaved values
+  (`POST /mentorprofile/api/preview`). That function is the ONE drawing of a
+  mentor profile — change the website profile there, never in a copy
+  (decision 4.5 of `prds/chapter-website-plan.md`, answered B 11-16-26).
 - **Always "me"** — no record id from the client. Every endpoint resolves the
   caller's own profile server-side via `resolve_manager_profile`.
 - **`PROFILE_FIELDS`** is the layout + whitelist and is deliberately
@@ -1307,10 +1314,6 @@ the strength of it.
 - **v0.339.0 (2026-11-16) is committed, not pushed**: Business Evaluation
   phase 6, the intake survey (`INTAKE_SURVEY`, off; needs
   `BUSINESS_EVALUATION`). Doug's check on the Association owed in #83.
-- **v0.340.0–v0.340.1 (2026-11-16) are pushed and checked on the
-  Association** (Stop 2 done 11-16-26, connector 0.2.7 installed): the mentor directory
-  (See Profile, shuffled cards, whole-profile search) and one shared mentor
-  profile drawn by `website/content.profile_html` for the website and, behind
-  `MENTOR_PREVIEW_SHARED` (off), My Mentor Profile's preview (decision 4.5
-  answered again: B). #86 resolved 11-17-26.
+- **v0.340.1 (2026-11-16) is pushed**: the Business profile tab's answers
+  stand out from the questions (`INTAKE_SURVEY`); see `CHANGELOG.md`.
 Everything else still owed is in `OPEN-ITEMS.md`.

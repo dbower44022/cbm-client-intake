@@ -1,6 +1,14 @@
 # Public mentor pages — replacing the WordPress mentor listing with the app
 
-**Status: PLAN — not built.**
+**Status: PLAN — partly superseded (11-17-26).** The public directory and
+profile were built for chapter websites instead of as the pages below: the
+`website/` package serves Find a Mentor and each profile to the chapter
+connector (v0.315.0), with See Profile cards, a shuffled order, whole-profile
+search and one shared profile drawing that My Mentor Profile's preview also
+uses (v0.340.0; `prds/chapter-website-plan.md` decision 4.5, `OPEN-ITEMS.md`
+#86, resolved). The "who appears" rule here is the one used. Cleveland's own
+WordPress listing is unchanged, and the readiness, backfill and retirement
+phases below are not built.
 
 Doug's direction (2026-08-14): **eliminate the spreadsheet and the WordPress
 pages that display mentors**, and replace 100% of that functionality with app
