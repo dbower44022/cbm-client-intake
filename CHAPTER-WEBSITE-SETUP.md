@@ -1,10 +1,10 @@
 # Connecting a chapter website to the chapter applications
 
 **Document:** Runbook: setting up the chapter applications' side of a chapter website
-**Version:** 1.0
+**Version:** 1.1
 **Status:** Current
 **Owner:** Doug Bower
-**Last Updated:** 11-09-26 11:59
+**Last Updated:** 11-16-26 23:58
 
 The steps a chapter's technical person takes in the chapter applications so that the chapter website, running the Association's chapter connector (the WordPress add-on that places the applications' content into the website's pages), can show the chapter's look, its key pages and its forms. The website's own side (hosting, WordPress, the chapter connector) is the Association's setup runbook, `~/Dropbox/Projects/business-mentors-association/docs/setup-runbook.md`. Design and decisions: `prds/chapter-website-plan.md`.
 
@@ -613,6 +613,31 @@ Our Partners, Our Sponsors and Client Stories cannot be switched on yet: System 
    You should see: The dialog closes, and the **Key page — Recordings** row shows the new value and the chip **Override**. If a message says the value is not valid, it names the reason: correct the value and click Save again. If anything else appears, stop and tell the central support organization exactly what you see.
    What it does: Shows the key page and its menu entry on the website.
 
+13. On the Settings tab of the System Settings page, click the **Filter settings…** box, select anything already in it, and type the text below.
+   ```
+   website_cache_seconds
+   ```
+   You should see: One row, **Key page refresh**, under the heading Website. If not, stop and tell the central support organization exactly what you see. If the row already shows exactly the value the next steps give, skip those two steps.
+   What it does: Finds the setting.
+
+14. On the **Key page refresh** row, click the name **Key page refresh**.
+   You should see: A dialog titled **Key page refresh**. If not, stop and tell the central support organization exactly what you see.
+   What it does: Opens the setting.
+
+15. In the **Key page refresh** dialog, click the **Value** box, clear it and type the value below. Click the **Reason** box and type the reason below. Leave **Temporary — remind me to review it** unticked and both boxes under **Roll out to specific teams or people only** empty. Click **Save**.
+   - **Value**:
+     ```
+     30
+     ```
+   - **Reason**:
+     ```
+     Chapter website: an edit reaches the website within about 90 seconds
+     ```
+   You should see: The dialog closes, and the **Key page refresh** row shows 30 and the chip **Override**. If a message says the value is not valid, it names the reason: correct the value and click Save again. If anything else appears, stop and tell the central support organization exactly what you see.
+   What it does: The applications keep what they read from the CRM for 30 seconds instead of 300, so a mentor's or an event's change reaches the website within about 90 seconds (Doug's decision for the Association, 11-16-26, option A).
+
+The website's host must not keep its own copy of the key pages either: on Cloudways that is one Varnish exclusion per key page, step 6.9 of the New Chapter Deployment Guide (`prds/chapter-network/deployment-guide/guide/06-build-the-chapter-s-public-website.md`). Without it, a key page can show a copy up to a week old whatever this setting says.
+
 **Checkpoint.** Send back: nothing; section 6 checks the switches.
 
 ## Section 6 · In the browser: check what the website receives
@@ -778,4 +803,5 @@ Only when undoing. Each switch is independent and takes effect within a minute. 
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 11-16-26 23:58 | Claude (Claude Code) | Section 5 steps 13 to 15: Key page refresh set to 30 seconds; a pointer to guide step 6.9, the host cache exclusions (OPEN-ITEMS.md item 86). |
 | 1.0 | 11-09-26 11:59 | Claude (Claude Code) | First version, for v0.317.1: pieces A to E of `prds/chapter-website-plan.md`. |

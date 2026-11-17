@@ -1,7 +1,7 @@
 stage: 6
 name: Build the chapter's public website
-version: "0.11"
-updated: "11-09-26 17:33"
+version: "0.12"
+updated: "11-16-26 23:58"
 summary: >-
   The chapter's public website is a WordPress site built from the Association's
   template, on the host the chapter chose at step 5.10, with the Association's
@@ -340,7 +340,67 @@ steps:
     status: in progress for the Association — site added and snippet live 11-09-26 17:32; the visit count is checked an hour later.
     source: Association ruling 63 (business-mentors-association, DECISIONS.md)
 
+  - id: "6.9"
+    name: Keep the server cache off the key pages
+    summary: >-
+      Cloudways keeps a copy of every page in its server cache (Varnish) for about
+      a week. The key pages the chapter connector draws from the CRM, such as Find
+      a Mentor and Workshops and Events, must be read fresh, or a new mentor or a
+      new event does not appear for days. One cache rule per key page tells the
+      cache to skip it; the chapter applications keep their own short copy, so the
+      CRM is not asked on every visit.
+    who: chapter
+    first: ["6.2"]
+    needs: [website_base_url]
+    produces: []
+    mode: guided
+    actions:
+      - do: "In the Cloudways console, open the chapter website's application, then Application Settings, then the Varnish tab."
+        see: An Add New Exclusion button and a rules table with the columns Type, Method, Value and Action.
+      - do: "Add one exclusion for each key page: click Add New Exclusion, choose Type URL, type the value, and click Save. The six values:"
+        items:
+          - "/mentors/*"
+          - "/events/*"
+          - "/recordings/*"
+          - "/partners/*"
+          - "/sponsors/*"
+          - "/stories/*"
+        see: Six rows in the rules table, each Type URL with one of the six values.
+      - do: "On another host, use its own cache settings to exclude the same six paths."
+      - do: "Once the key pages are switched on (stage 13), run exactly, in a terminal:"
+        items:
+          - "curl -sI https://WEBSITE-DOMAIN/events/ | grep -i x-cache"
+        see: "Nothing printed. An x-cache: HIT line means the page still comes from the cache."
+    done_when: >-
+      The server cache skips every key page.
+    note: >-
+      Partners, Sponsors and Client Stories cannot be switched on yet; their rules
+      are added now so nothing is forgotten when they can.
+    check:
+      how:
+        - "The Varnish tab lists the six rules."
+        - "A key page's response carries no x-cache: HIT line and no large age line."
+      probe: The app fetches each switched-on key page and checks its response does not come from the cache.
+    if_not: >-
+      If a key page still shows an old copy after the rules are saved, purge the
+      whole cache once: Application Settings, the General tab, Purge under Purge
+      Site Cache.
+    goes_wrong: >-
+      Leaving the cache on. Found on the Association's website 11-16-26: Find a
+      Mentor served a copy 572,883 seconds old (about six and a half days), made
+      before the CRM held any mentors, and Workshops and Events and Recorded
+      Webinars were the same age.
+    later: The chapter connector tells the cache itself not to keep its pages.
+    status: in progress for the Association — /mentors/* added 11-16-26 (Doug); the other five owed (OPEN-ITEMS.md item 86).
+    source: OPEN-ITEMS.md item 86 (3)
+
 changes:
+  - version: "0.12"
+    date: "11-16-26 23:58"
+    change: >-
+      Step 6.9 added: one Varnish exclusion per key page, because the Cloudways
+      server cache kept Find a Mentor, Workshops and Events and Recorded Webinars
+      for about a week on the Association's website (OPEN-ITEMS.md item 86).
   - version: "0.11"
     date: "11-09-26 17:33"
     change: >-

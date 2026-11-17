@@ -1,7 +1,7 @@
 # Stage 6 — Build the chapter's public website
 
-**Version:** 0.11  
-**Last Updated:** 11-09-26 17:33  
+**Version:** 0.12  
+**Last Updated:** 11-16-26 23:58  
 **Generated from** `steps/stage-06.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -30,6 +30,7 @@ The chapter's public website is a WordPress site built from the Association's te
 - 6.6 Produce the chapter's logo image
 - 6.7 Decide where the chapter's help documentation lives
 - 6.8 Turn on visitor statistics without cookies
+- 6.9 Keep the server cache off the key pages
 
 ---
 
@@ -338,10 +339,57 @@ The chapter's public website is a WordPress site built from the Association's te
 
 ---
 
+## 6.9 Keep the server cache off the key pages
+
+**Summary:** Cloudways keeps a copy of every page in its server cache (Varnish) for about a week. The key pages the chapter connector draws from the CRM, such as Find a Mentor and Workshops and Events, must be read fresh, or a new mentor or a new event does not appear for days. One cache rule per key page tells the cache to skip it; the chapter applications keep their own short copy, so the CRM is not asked on every visit.
+
+**Who:** The chapter
+
+**Finish first:**
+
+- step 6.2 Publish the website
+
+> This step has not yet been done on a real chapter. Follow it, and tell the Association anything that differs.
+
+**Do this:**
+
+1. In the Cloudways console, open the chapter website's application, then Application Settings, then the Varnish tab.
+   *You should see:* An Add New Exclusion button and a rules table with the columns Type, Method, Value and Action.
+2. Add one exclusion for each key page: click Add New Exclusion, choose Type URL, type the value, and click Save. The six values:
+   - /mentors/*
+   - /events/*
+   - /recordings/*
+   - /partners/*
+   - /sponsors/*
+   - /stories/*
+
+   *You should see:* Six rows in the rules table, each Type URL with one of the six values.
+3. On another host, use its own cache settings to exclude the same six paths.
+4. Once the key pages are switched on (stage 13), run exactly, in a terminal:
+   - curl -sI https://WEBSITE-DOMAIN/events/ | grep -i x-cache
+
+   *You should see:* Nothing printed. An x-cache: HIT line means the page still comes from the cache.
+
+**Done when:** The server cache skips every key page.
+
+**Note:** Partners, Sponsors and Client Stories cannot be switched on yet; their rules are added now so nothing is forgotten when they can.
+
+**How to check:**
+
+- The Varnish tab lists the six rules.
+- A key page's response carries no x-cache: HIT line and no large age line.
+
+**If it didn't work:** If a key page still shows an old copy after the rules are saved, purge the whole cache once: Application Settings, the General tab, Purge under Purge Site Cache.
+
+**What usually goes wrong:** Leaving the cache on. Found on the Association's website 11-16-26: Find a Mentor served a copy 572,883 seconds old (about six and a half days), made before the CRM held any mentors, and Workshops and Events and Recorded Webinars were the same age.
+
+---
+
 ## Change log
 
 | Version | Date | Change |
 |---|---|---|
+| 0.12 | 11-16-26 23:58 | Step 6.9 added: one Varnish exclusion per key page, because the Cloudways server cache kept Find a Mentor, Workshops and Events and Recorded Webinars for about a week on the Association's website (OPEN-ITEMS.md item 86). |
 | 0.11 | 11-09-26 17:33 | Step 6.8 worked for the Association and its actions rewritten from the screens: the Cloudflare menu path and the Add a site choice for an address Cloudflare does not proxy; the parent domain's automatic setup does not cover it; the snippet goes in the footer as a Custom HTML block; the Cloudways server cache must be purged afterwards; a curl check added. |
 | 0.10 | 11-09-26 17:23 | Steps 6.4, 6.5 and 6.7 worked for the Association. Step 6.4: the Username and Email boxes both take the address, and Send User Notification gives the person their own password link; a step added for that email. Step 6.5 done with the template's defaults. Step 6.7: the chapter information form has no question for docs_site_url, and an empty answer leaves Cleveland's documentation as the default, so "none yet" cannot be expressed yet (OPEN-ITEMS.md item 75). |
 | 0.9 | 11-09-26 16:18 | Steps 6.2 and 6.3 done for the Association and corrected from the screens: HTTPS Redirection is in Application Settings, General tab, not on the certificate page; the cache Purge button is in the same place; Cloudways now runs at unified.cloudways.com. |

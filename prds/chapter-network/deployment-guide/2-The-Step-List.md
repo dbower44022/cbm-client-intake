@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — The Step List
 
 **Document:** The bare list of steps, with no methods yet
-**Version:** 0.29
+**Version:** 0.30
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 11-13-26 10:30
+**Last Updated:** 11-16-26 23:58
 
 ---
 
@@ -351,6 +351,11 @@ link to this address, so it cannot be left undecided.
 **6.8 Turn on visitor statistics without cookies.**
 Done when: Cloudflare Web Analytics counts the website's visits, and the site sets no
 tracking cookie.
+
+**6.9 Keep the server cache off the key pages.**
+Done when: the server cache skips every key page.
+Note: Partners, Sponsors and Client Stories cannot be switched on yet; their rules
+are added now so nothing is forgotten when they can.
 
 ---
 
@@ -915,6 +920,7 @@ Done when: a date is booked to review how the first months have gone.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.30 | 11-16-26 23:58 | Step 6.9 added, Keep the server cache off the key pages (OPEN-ITEMS.md item 86): the Cloudways server cache kept the Association's key pages for about a week. |
 | 0.29 | 11-13-26 10:30 | Nine steps added for the outside services the applications use and no step set up: 5.13 Fathom, 5.14 Lob, 5.15 and 5.16 Twilio and its carrier registration, 5.17 Anthropic, 10.6 YouTube, and 11.19 to 11.21 for connecting Constant Contact, Lob's delivery webhook and the Twilio number's replies. They feed the setup checklist on System Settings' Integrations tab (mapping approved by Doug 11-13-26). No existing step number changed. |
 | 0.28 | 11-09-26 22:32 | Step 5.8: the tokens are entered in CRMBuilder's deploy wizard at step 9.3, not at 5.8 (CRMBuilder PI-600, handoff of 11-09-26). |
 | 0.27 | 11-09-26 14:21 | Step 5.10: the chapter chooses its website host (Association ruling 75, replacing ruling 29); a new finishing test, that the host does the five things any host must do. |
