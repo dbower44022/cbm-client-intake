@@ -5,6 +5,29 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.340.0] — 2026-11-16
+
+**feat(website): the mentor directory and one shared mentor profile.** Doug's
+request 11-16-26, and decision 4.5 of `prds/chapter-website-plan.md` answered
+again: B, one shared template, replacing the 11-07-26 answer A. Find a Mentor
+(behind `WEBSITE_API` and the Find a Mentor page switch, as before): every card
+is one link to the profile and ends in a **See Profile** button; the cards are
+shuffled in the visitor's browser on each visit, so no cache can freeze the
+order; and the search reads the whole About text as well as the name, title,
+summary, expertise, industries and languages, and says when nothing matches.
+The profile is drawn by one function, `website/content.profile_html`, in the
+My Mentor Profile layout (top band with photo, name and title; side column
+with summary, request and LinkedIn buttons, industry and languages; expertise
+and About; a closing panel), still `cmw-` classes in the chapter's colours.
+Cleveland's "Questions?" block is left out (dead links, Cleveland's address).
+A bare `linkedin.com/…` gains `https://`; any other scheme is dropped. **My
+Mentor Profile's preview is drawn by the same function** from the mentor's
+unsaved values (`POST /mentorprofile/api/preview`, the website's stylesheet at
+`/mentorprofile/api/preview.css`, the Website group's colours), dark behind the
+new **`MENTOR_PREVIEW_SHARED`** (off; read per request), so Cleveland keeps its
+former preview until it is switched on. Tests in `tests/test_website_pages.py`
+and `tests/test_mentorprofile.py`. 4086 passed. `OPEN-ITEMS.md` #86.
+
 ## [0.339.2] — 2026-11-16
 
 **fix(setup): Zoom's token is tried before the host is entered.** Dark behind

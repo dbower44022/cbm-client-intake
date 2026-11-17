@@ -123,6 +123,46 @@ async def _list_all(client: Any, entity: str, **kwargs: Any) -> list[dict[str, A
         offset += _PAGE
 
 
+def _link(value: Any) -> str:
+    """A stored web address as a link: a bare ``linkedin.com/…`` gains
+    ``https://``; any other scheme (``http:``, ``javascript:``…) is dropped."""
+    v = str(value or "").strip()
+    if v and not re.match(r"^[a-z][a-z0-9+.-]*:", v, re.IGNORECASE):
+        v = "https://" + v
+    return v if v.lower().startswith("https://") else ""
+
+
+def mentor_record(rec: dict[str, Any], contact: dict[str, Any], has_summary: bool) -> Optional[dict[str, Any]]:
+    """One mentor as the pages draw them, from a profile record and its
+    contact. Used for the website's roster and for My Mentor Profile's preview,
+    so both read a mentor the same way (Doug, 11-16-26, ruling 4.5 option B)."""
+    name = " ".join(x for x in (str(contact.get("firstName") or "").strip(),
+                                str(contact.get("lastName") or "").strip()) if x)
+    name = name or str(rec.get("name") or "").strip()
+    if not name:
+        return None
+    about_html = clean_rich_text(rec.get("aboutMentor") or "")
+    about_text = plain_text(about_html)
+    own_summary = str(rec.get(SUMMARY_FIELD) or "").strip() if has_summary else ""
+    return {
+        "id": rec.get("id") or "",
+        "name": name,
+        "firstName": str(contact.get("firstName") or "").strip() or name.split()[0],
+        "title": str(rec.get("mentorTitle") or "").strip(),
+        "summary": own_summary or first_words(about_text),
+        "ownSummary": own_summary,
+        "about": about_html,
+        "aboutText": about_text,
+        "expertise": _as_list(rec.get("areaOfExpertise")),
+        "industries": _as_list(rec.get("industryExperience")),
+        "languages": _as_list(rec.get("fluentLanguages")),
+        "accepting": bool(rec.get("acceptingNewClients")),
+        "photoId": rec.get("profilePhotoId") or "",
+        "linkedin": _link(contact.get("cLinkedInProfile")),
+        "slug": slugify(name) or "mentor",
+    }
+
+
 async def load_mentors(client: Any) -> list[dict[str, Any]]:
     """Every mentor the website shows, in name order, each with a unique slug."""
     select = list(_MENTOR_SELECT)
@@ -145,28 +185,9 @@ async def load_mentors(client: Any) -> list[dict[str, Any]]:
 
     mentors: list[dict[str, Any]] = []
     for rec in records:
-        contact = contacts.get(rec.get("contactRecordId") or "", {})
-        name = " ".join(x for x in (str(contact.get("firstName") or "").strip(),
-                                    str(contact.get("lastName") or "").strip()) if x)
-        name = name or str(rec.get("name") or "").strip()
-        if not name:
-            continue
-        about_html = clean_rich_text(rec.get("aboutMentor") or "")
-        summary = str(rec.get(SUMMARY_FIELD) or "").strip() if has_summary else ""
-        mentors.append({
-            "id": rec["id"],
-            "name": name,
-            "firstName": str(contact.get("firstName") or "").strip() or name.split()[0],
-            "title": str(rec.get("mentorTitle") or "").strip(),
-            "summary": summary or first_words(plain_text(about_html)),
-            "about": about_html,
-            "expertise": _as_list(rec.get("areaOfExpertise")),
-            "industries": _as_list(rec.get("industryExperience")),
-            "languages": _as_list(rec.get("fluentLanguages")),
-            "accepting": bool(rec.get("acceptingNewClients")),
-            "photoId": rec.get("profilePhotoId") or "",
-            "linkedin": str(contact.get("cLinkedInProfile") or "").strip(),
-        })
+        m = mentor_record(rec, contacts.get(rec.get("contactRecordId") or "", {}), has_summary)
+        if m is not None:
+            mentors.append(m)
     mentors.sort(key=lambda m: m["name"].lower())
     taken: dict[str, int] = {}
     for m in mentors:
@@ -177,12 +198,13 @@ async def load_mentors(client: Any) -> list[dict[str, Any]]:
 
 
 def search(mentors: list[dict[str, Any]], q: str) -> list[str]:
-    """Slugs of the mentors matching every word of ``q``; all of them for an
-    empty search."""
+    """Slugs of the mentors matching every word of ``q`` anywhere in what the
+    pages show — name, title, summary, About text, expertise, industries and
+    languages; all of them for an empty search."""
     words = (q or "").lower().split()
     out = []
     for m in mentors:
-        hay = " ".join([m["name"], m["title"], m["summary"], *m["expertise"],
+        hay = " ".join([m["name"], m["title"], m["summary"], m["aboutText"], *m["expertise"],
                         *m["industries"], *m["languages"]]).lower()
         if all(w in hay for w in words):
             out.append(m["slug"])
@@ -192,23 +214,32 @@ def search(mentors: list[dict[str, Any]], q: str) -> list[str]:
 # --- the pages --------------------------------------------------------------------
 
 
-def _photo(base: str, m: dict[str, Any], cls: str, size: int) -> str:
-    if not m["photoId"]:
-        return f'<div class="{cls} {cls}--none" role="img" aria-label="No photograph"></div>'
-    return (f'<img class="{cls}" src="{esc(base)}/api/website/mentors/{esc(m["slug"])}/photo" '
+def _photo(src: str, m: dict[str, Any], cls: str, size: int) -> str:
+    if not src:
+        return f'<span class="{cls} {cls}--none" role="img" aria-label="No photograph"></span>'
+    return (f'<img class="{cls}" src="{esc(src)}" '
             f'alt="Photograph of {esc(m["name"])}" width="{size}" height="{size}" loading="lazy">')
 
 
+def photo_src(base: str, m: dict[str, Any]) -> str:
+    """The website's address for a mentor's photograph, or "" for none."""
+    return f'{base}/api/website/mentors/{m["slug"]}/photo' if m["photoId"] else ""
+
+
 def mentor_card(base: str, m: dict[str, Any]) -> str:
-    languages = f'<p class="cmw-card__meta">Speaks {esc(", ".join(m["languages"]))}</p>' if m["languages"] else ""
+    """One card in the directory. The whole card is one link to the profile,
+    ending in a See Profile button (Doug, 11-16-26)."""
+    languages = f'<span class="cmw-card__meta">Speaks {esc(", ".join(m["languages"]))}</span>' if m["languages"] else ""
+    title = f'<span class="cmw-card__title">{esc(m["title"])}</span>' if m["title"] else ""
     return (
-        '<li class="cmw-card">'
+        f'<li class="cmw-card" data-cmw-slug="{esc(m["slug"])}">'
         f'<a class="cmw-card__link" href="/mentors/{esc(m["slug"])}/">'
-        f'{_photo(base, m, "cmw-card__photo", 160)}'
-        f'<span class="cmw-card__name">{esc(m["name"])}</span></a>'
-        f'<span class="cmw-card__title">{esc(m["title"])}</span>'
-        f'<p class="cmw-card__summary">{esc(m["summary"])}</p>'
-        f"{languages}</li>"
+        f'{_photo(photo_src(base, m), m, "cmw-card__photo", 160)}'
+        f'<span class="cmw-card__name">{esc(m["name"])}</span>{title}'
+        f'<span class="cmw-card__summary">{esc(m["summary"])}</span>'
+        f'{languages}'
+        '<span class="cmw-card__more">See Profile</span>'
+        "</a></li>"
     )
 
 
@@ -219,8 +250,10 @@ def page_mentors(base: str, mentors: list[dict[str, Any]]) -> dict[str, str]:
     body = (
         f'<div class="cmw-root cmw-directory" data-cmw-search="{esc(base)}/api/website/mentors.json">'
         '<p class="cmw-lead">Every mentor volunteers their time. Mentoring is free and confidential.</p>'
-        '<label class="cmw-search"><span class="cmw-search__label">Search by name, skill, industry or language</span>'
-        '<input class="cmw-search__input" type="search" autocomplete="off"></label>'
+        '<label class="cmw-search"><span class="cmw-search__label">Search the mentors\' profiles</span>'
+        '<input class="cmw-search__input" type="search" autocomplete="off" '
+        'placeholder="A name, skill, industry, language or any word"></label>'
+        '<p class="cmw-search__none" hidden>No mentor matches that search.</p>'
         f"{grid}"
         '<p class="cmw-cta"><a class="cmw-button" href="/request-a-mentor/">Request a mentor</a></p>'
         "</div>"
@@ -230,41 +263,93 @@ def page_mentors(base: str, mentors: list[dict[str, Any]]) -> dict[str, str]:
             "html": body}
 
 
-def _tags(items: list[str]) -> str:
-    return '<ul class="cmw-tags">' + "".join(f'<li class="cmw-tag">{esc(x)}</li>' for x in items) + "</ul>"
+def _expertise(items: list[str]) -> str:
+    """The expertise list: a value written "Label: description" shows its
+    description after the label, as the mentor page always has."""
+    rows = []
+    for item in items:
+        label, sep, desc = item.partition(":")
+        text = f'<span class="cmw-expertise__label">{esc(label.strip())}{":" if sep and desc.strip() else ""}</span>'
+        if sep and desc.strip():
+            text += f' <span class="cmw-expertise__desc">{esc(desc.strip())}</span>'
+        rows.append(f'<li class="cmw-expertise__item">{text}</li>')
+    return '<ul class="cmw-expertise">' + "".join(rows) + "</ul>"
+
+
+def profile_html(m: dict[str, Any], src: str) -> str:
+    """The mentor profile. The ONE drawing of it: the website's profile page and
+    My Mentor Profile's preview both come from here (Doug, 11-16-26, ruling 4.5
+    option B, replacing option A), laid out as the My Profile page was: a top
+    band, a side column, the expertise and About, and a closing panel."""
+    first = m["firstName"]
+    about_who = f"About {first}" if first else "About"
+    request = f"/request-a-mentor/?mentor={m['slug']}"
+
+    side = [f'<p class="cmw-profile__label">{esc(about_who)}</p>']
+    if m["ownSummary"]:
+        side.append(f'<p class="cmw-profile__summary">{esc(m["ownSummary"])}</p>')
+    if m["accepting"]:
+        side.append(f'<p class="cmw-p"><a class="cmw-button" href="{esc(request)}">'
+                    f'Request {esc(first)} as your mentor</a></p>')
+    else:
+        # The button stays; it says why it leads to the general form.
+        side.append(f'<p class="cmw-note">{esc(first)} is not taking new clients right now. '
+                    "We will match you with another mentor.</p>"
+                    '<p class="cmw-p"><a class="cmw-button" href="/request-a-mentor/">Request a mentor</a></p>')
+    if m["linkedin"]:
+        side.append(f'<p class="cmw-p"><a class="cmw-button cmw-button--outline" href="{esc(m["linkedin"])}" '
+                    f'rel="nofollow noopener">{esc(first)} on LinkedIn</a></p>')
+    if m["industries"]:
+        side.append('<div class="cmw-profile__facts"><span class="cmw-profile__factlabel">Industry experience</span>'
+                    f'<span class="cmw-profile__factvalue">{esc("; ".join(m["industries"]))}</span></div>')
+    if m["languages"]:
+        side.append('<div class="cmw-profile__facts"><span class="cmw-profile__factlabel">Languages</span>'
+                    f'<span class="cmw-profile__factvalue">{esc(", ".join(m["languages"]))}</span></div>')
+
+    main = []
+    if m["expertise"]:
+        main.append(f'<h2 class="cmw-h">Areas of expertise</h2>{_expertise(m["expertise"])}')
+    if m["about"]:
+        main.append(f'<section class="cmw-profile__aboutbox"><h2 class="cmw-h">{esc(about_who)}</h2>'
+                    f'<div class="cmw-profile__about">{m["about"]}</div></section>')
+
+    if m["accepting"]:
+        connect = (f'<h2 class="cmw-h">Ready to connect with {esc(first)}?</h2>'
+                   "<p class=\"cmw-p\">Request a free, confidential mentoring session. No fees, no contracts.</p>"
+                   f'<p class="cmw-p"><a class="cmw-button" href="{esc(request)}">Request a session</a></p>')
+    else:
+        connect = ('<h2 class="cmw-h">Ready to connect?</h2>'
+                   "<p class=\"cmw-p\">Request a free, confidential mentoring session and we will match you "
+                   "with a mentor. No fees, no contracts.</p>"
+                   '<p class="cmw-p"><a class="cmw-button" href="/request-a-mentor/">Request a session</a></p>')
+    title = f'<p class="cmw-profile__title">{esc(m["title"])}</p>' if m["title"] else ""
+    return (
+        '<article class="cmw-root cmw-profile">'
+        '<div class="cmw-profile__hero">'
+        f'{_photo(src, m, "cmw-profile__photo", 160)}'
+        '<div class="cmw-profile__heading">'
+        '<a class="cmw-back" href="/mentors/">All mentors</a>'
+        f'<p class="cmw-profile__name">{esc(m["name"])}</p>{title}'
+        "</div></div>"
+        '<div class="cmw-profile__grid">'
+        f'<div class="cmw-profile__side">{"".join(side)}</div>'
+        f'<div class="cmw-profile__main">{"".join(main)}</div>'
+        "</div>"
+        '<div class="cmw-profile__connect">'
+        f'<div class="cmw-profile__block">{connect}</div>'
+        '<div class="cmw-profile__block"><h2 class="cmw-h">Meet all our mentors</h2>'
+        "<p class=\"cmw-p\">Browse our full team of experienced volunteer mentors across every "
+        "industry and business stage.</p>"
+        '<p class="cmw-p"><a class="cmw-button cmw-button--outline" href="/mentors/">View all mentors</a></p></div>'
+        "</div></article>"
+    )
 
 
 def page_mentor(base: str, m: dict[str, Any]) -> dict[str, str]:
-    parts = [f'<p class="cmw-profile__title">{esc(m["title"])}</p>' if m["title"] else ""]
-    if m["about"]:
-        parts.append(f'<div class="cmw-profile__about">{m["about"]}</div>')
-    if m["expertise"]:
-        parts.append(f'<h2 class="cmw-h">Areas of expertise</h2>{_tags(m["expertise"])}')
-    if m["industries"]:
-        parts.append(f'<h2 class="cmw-h">Industries</h2>{_tags(m["industries"])}')
-    if m["languages"]:
-        parts.append(f'<h2 class="cmw-h">Languages</h2><p class="cmw-p">{esc(", ".join(m["languages"]))}</p>')
-    if m["linkedin"].startswith("https://"):
-        parts.append(f'<p class="cmw-p"><a href="{esc(m["linkedin"])}" rel="nofollow noopener">'
-                     f'{esc(m["firstName"])} on LinkedIn</a></p>')
-    if m["accepting"]:
-        parts.append(f'<p class="cmw-cta"><a class="cmw-button" href="/request-a-mentor/?mentor={esc(m["slug"])}">'
-                     f'Request {esc(m["firstName"])} as your mentor</a></p>')
-    else:
-        # The button stays; it says why it leads to the general form.
-        parts.append(f'<p class="cmw-note">{esc(m["firstName"])} is not taking new clients right now. '
-                     "We will match you with another mentor.</p>"
-                     '<p class="cmw-cta"><a class="cmw-button" href="/request-a-mentor/">Request a mentor</a></p>')
-    parts.append('<p class="cmw-p"><a class="cmw-back" href="/mentors/">All mentors</a></p>')
-    body = (
-        '<article class="cmw-root cmw-profile">'
-        f'{_photo(base, m, "cmw-profile__photo", 240)}'
-        f'<div class="cmw-profile__body">{"".join(parts)}</div></article>'
-    )
     description = " — ".join(x for x in (m["name"], m["title"]) if x)
     if m["summary"]:
         description += ". " + m["summary"]
-    return {"title": m["name"], "description": description, "html": body}
+    return {"title": m["name"], "description": description, "html": profile_html(m, photo_src(base, m))}
 
 
 def page_events(events: list[dict[str, Any]]) -> dict[str, str]:

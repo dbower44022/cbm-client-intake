@@ -97,6 +97,7 @@
     try {
       var who = await api("/session");
       $("whoName").textContent = who.name || who.userName;
+      if (who.sharedPreview) useSharedPreview();
       var f = await api("/fields");
       fieldSpec = f.fields || []; fieldOptions = f.options || {}; requiredNames = f.required || [];
       var result = await api("/profile");
@@ -540,6 +541,7 @@
     var thumbPh = $("photoPh"), removeBtn = $("photoRemove");
     if (thumbPh) thumbPh.hidden = !!src;
     if (removeBtn) removeBtn.hidden = !src;
+    if (sharedPreview) refreshPreview();
   }
 
   function loadPhoto(photoId) {
@@ -643,12 +645,49 @@
     $("pvAbout").innerHTML = html;
   }
 
+  // --- the shared preview (MENTOR_PREVIEW_SHARED): the application draws the
+  //     page with the website's own renderer, from the unsaved form values ---
+  var sharedPreview = false, sharedSeq = 0, sharedTimer = null;
+
+  function useSharedPreview() {
+    sharedPreview = true;
+    hide($("pvCard")); show($("pvShared"));
+    var link = document.createElement("link");
+    link.rel = "stylesheet"; link.href = API + "/preview.css";
+    link.addEventListener("load", fitPreview);
+    document.head.appendChild(link);
+    $("pvNote").textContent = "Your page exactly as the website's Find a Mentor shows it "
+      + "(desktop layout, scaled to fit). It updates as you type.";
+  }
+
+  function renderShared(v) {
+    clearTimeout(sharedTimer);
+    sharedTimer = setTimeout(async function () {
+      var seq = ++sharedSeq;
+      var values = Object.assign({}, record || {}, v);
+      try {
+        var res = await api("/preview", { method: "POST", body: JSON.stringify({ values: values }) });
+        if (seq !== sharedSeq) return;  // a later keystroke already asked again
+        var box = $("pvShared");
+        box.innerHTML = res.html || "";
+        Object.keys(res.colors || {}).forEach(function (slug) {
+          box.style.setProperty("--wp--preset--color--" + slug, res.colors[slug]);
+        });
+        fitPreview();
+      } catch (e) {
+        if (e.status === 401) { showLogin(); return; }
+        notice("The preview could not be drawn: " + e.message, "error");
+      }
+    }, 250);
+  }
+
   function refreshPreview() {
     var v = currentFormValues();
     // Unpublished banner + dimmed page (the preview still renders).
     var published = !!v.publicProfile;
     $("pvUnpub").hidden = published;
     $("pvViewport").classList.toggle("is-unpublished", !published);
+    if (sharedPreview) { renderShared(v); return; }
     // Hero: name + title
     var first = (v.firstName || "").trim();
     var name = (first + " " + (v.lastName || "").trim()).trim();
@@ -703,6 +742,15 @@
     if (!a) return;
     var isLinkedIn = a.id === "pvLinkedin" && (a.getAttribute("href") || "").trim();
     if (!isLinkedIn) ev.preventDefault();
+  });
+  // The shared preview: only an outside address (the LinkedIn button) opens,
+  // in a new tab; the website's own links go nowhere from here.
+  $("pvShared").addEventListener("click", function (ev) {
+    var a = ev.target.closest && ev.target.closest("a");
+    if (!a) return;
+    ev.preventDefault();
+    var href = a.getAttribute("href") || "";
+    if (/^https:\/\//i.test(href)) window.open(href, "_blank", "noopener");
   });
 
   // --- drag splitter (resize the form/preview split; full-width layout) ---

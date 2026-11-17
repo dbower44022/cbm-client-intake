@@ -716,3 +716,43 @@ def test_signature_logo_config_defaults_empty(monkeypatch):
 def test_organization_logo_url_setting_defaults_empty():
     from core.config import Settings
     assert Settings().organization_logo_url == ""
+
+
+# --- the shared website preview (MENTOR_PREVIEW_SHARED; Doug, 11-16-26) ---
+
+_PREVIEW = {"values": {"firstName": "Ada", "lastName": "Lovelace", "mentorTitle": "Engineer",
+                       "aboutMentor": "<p>I build things.</p>", "acceptingNewClients": True,
+                       "areaOfExpertise": ["Finance"], "profilePhotoId": "att9"}}
+
+
+def test_preview_is_off_by_default(monkeypatch):
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch)) as c:
+        assert c.get("/mentorprofile/api/session").json()["sharedPreview"] is False
+        assert c.post("/mentorprofile/api/preview", json=_PREVIEW).status_code == 404
+        assert c.get("/mentorprofile/api/preview.css").status_code == 404
+
+
+def test_preview_needs_a_signed_in_mentor(monkeypatch):
+    monkeypatch.setenv("MENTOR_PREVIEW_SHARED", "true")
+    with TestClient(_app(monkeypatch)) as c:
+        assert c.post("/mentorprofile/api/preview", json=_PREVIEW).status_code == 401
+
+
+def test_preview_is_the_websites_own_drawing(monkeypatch):
+    from website import content
+
+    monkeypatch.setenv("MENTOR_PREVIEW_SHARED", "true")
+    monkeypatch.setenv("WEBSITE_COLOR_ACCENT_1", "#123456")
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch)) as c:
+        assert c.get("/mentorprofile/api/session").json()["sharedPreview"] is True
+        res = c.post("/mentorprofile/api/preview", json=_PREVIEW).json()
+        css = c.get("/mentorprofile/api/preview.css")
+    v = _PREVIEW["values"]
+    expected = content.profile_html(
+        content.mentor_record(v, {"firstName": "Ada", "lastName": "Lovelace"}, True),
+        "/mentorprofile/api/photo?v=att9")
+    assert res["html"] == expected
+    assert res["colors"].get("accent-1") == "#123456"
+    assert css.status_code == 200 and ".cmw-profile__hero" in css.text

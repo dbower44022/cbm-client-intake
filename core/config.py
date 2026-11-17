@@ -423,6 +423,11 @@ class Settings(BaseSettings):
     # own record notes (core/history.py). Never in Client Management. Off by
     # default; read per request.
     record_history_tab: bool = False
+    # MENTOR_PREVIEW_SHARED: My Mentor Profile's preview drawn by the website's
+    # own mentor profile (website/content.profile_html) instead of the copy of
+    # Cleveland's WordPress page (Doug, 11-16-26, chapter-website-plan § 4.5
+    # option B). Off by default; read per request.
+    mentor_preview_shared: bool = False
     # Step 6: ACTIVITY_PAGE — the activity page (/activity/): every change by
     # one person, or in a date range, across every record, with a CSV export.
     # Gated to SYSTEM_MANAGEMENT_ALLOWED_TEAMS (administrators always pass).

@@ -43,7 +43,7 @@
         <aside class="mp__previewcol" aria-label="Website preview">
           <div class="mp__pv-head">
             <h2>Website preview</h2>
-            <p class="mp__pv-note">An exact rendering of your page on clevelandbusinessmentors.org (desktop layout, scaled to fit).</p>
+            <p class="mp__pv-note" id="pvNote">An exact rendering of your page on clevelandbusinessmentors.org (desktop layout, scaled to fit).</p>
           </div>
           <div class="mp__unpub" id="pvUnpub" hidden>
             Your profile is currently <strong>not shown</strong> on the website. Tick
@@ -57,6 +57,10 @@
                desktop width and scaled to fit the pane. -->
           <div class="mp__pv-viewport" id="pvViewport">
             <div class="mp__pv-scale" id="pvScale">
+              <!-- MENTOR_PREVIEW_SHARED on: the website's own mentor profile,
+                   drawn by the application (website/content.profile_html) —
+                   the same drawing Find a Mentor shows. -->
+              <div class="mp__pv-shared" id="pvShared" hidden></div>
               <div class="cbm-wrap" id="pvCard">
 
                 <!-- HERO -->

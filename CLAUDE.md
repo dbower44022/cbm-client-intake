@@ -1307,4 +1307,9 @@ the strength of it.
 - **v0.339.0 (2026-11-16) is committed, not pushed**: Business Evaluation
   phase 6, the intake survey (`INTAKE_SURVEY`, off; needs
   `BUSINESS_EVALUATION`). Doug's check on the Association owed in #83.
+- **v0.340.0 (2026-11-16) is committed, not pushed**: the mentor directory
+  (See Profile, shuffled cards, whole-profile search) and one shared mentor
+  profile drawn by `website/content.profile_html` for the website and, behind
+  `MENTOR_PREVIEW_SHARED` (off), My Mentor Profile's preview (decision 4.5
+  answered again: B). Stop 2 on the Association owed in #86.
 Everything else still owed is in `OPEN-ITEMS.md`.

@@ -1,10 +1,10 @@
 # Chapter website — the applications' side
 
 **Document:** Plan for the chapter applications' side of the chapter website
-**Version:** 0.11
+**Version:** 0.12
 **Status:** Approved 11-07-26; pieces A to E reviewed; Stop 6 passed on the test website 11-09-26 except the newsletter signup, which the website lacks (`OPEN-ITEMS.md` #72)
 **Owner:** Doug Bower
-**Last Updated:** 11-09-26 17:06
+**Last Updated:** 11-16-26 22:58
 
 ---
 
@@ -91,7 +91,9 @@ Recommended: **A**, because "which button brings clients" is a question about ne
 
 Recommended: **A**, because ruling 33 and WT-44 require every class to start with `cmw-`, and the template is Cleveland's design rather than the Association's.
 
-**Answered by Doug 11-07-26: A.** Mentor page content is written fresh with `cmw-` class names, using the field mapping and publish-readiness rules of `prds/public-mentor-pages-plan.md`.
+~~**Answered by Doug 11-07-26: A.** Mentor page content is written fresh with `cmw-` class names, using the field mapping and publish-readiness rules of `prds/public-mentor-pages-plan.md`.~~ **Replaced 11-16-26.**
+
+**Answered again by Doug 11-16-26: B, as one shared template.** This replaces the 11-07-26 answer A. The website's mentor profile shows the same profile as My Mentor Profile, and the two can never drift apart, because one function draws both: `website/content.profile_html`, laid out as the My Profile page was (a top band with the photo, name and title; a side column with the summary, the request and LinkedIn buttons and the industry box; the expertise list and the About box; a closing panel). Its class names still start with `cmw-` (ruling 33, WT-44), and it takes the chapter's colours. My Mentor Profile's preview is drawn by that function behind the switch `MENTOR_PREVIEW_SHARED` (off by default), so Cleveland keeps its former preview until the switch is on. The "Questions?" block of Cleveland's page is left out: its two links went nowhere and its email address was Cleveland's. Built in v0.340.0, with the directory changes Doug asked for the same day: every card one link ending in a See Profile button, the cards shuffled on each visit, and the search reading the whole About text.
 
 ## 5. What is built
 
@@ -161,6 +163,7 @@ Work pauses for Doug's go-ahead at each stop. Between two stops it proceeds with
 
 | Version | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.12 | 11-16-26 22:58 | Claude (Claude Code) | Decision 4.5 answered again by Doug, 11-16-26: B as one shared template, replacing the 11-07-26 answer A. Built in v0.340.0 with the directory changes (See Profile, shuffle, whole-profile search). |
 | 0.11 | 11-09-26 17:06 | Claude (Claude Code) | Stop 6 run: passed but for the newsletter signup the website lacks; findings in `OPEN-ITEMS.md` #72 (6) and (7). |
 | 0.10 | 11-09-26 14:40 | Claude (Claude Code) | Piece F: the test website is built by the deployment-guide session's stage 6; crm-test names it. |
 | 0.9 | 11-09-26 11:59 | Claude (Claude Code) | Step 10's runbook written: `CHAPTER-WEBSITE-SETUP.md`. |

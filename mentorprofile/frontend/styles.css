@@ -144,6 +144,8 @@ body.mp--resizing { cursor: col-resize; user-select: none; }
   background: var(--cbm-white); transition: opacity .2s ease; }
 .mp__pv-viewport.is-unpublished { opacity: 0.55; }
 .mp__pv-scale { width: 1200px; transform-origin: top left; }
+.mp__pv-scale > [hidden] { display: none !important; }
+.mp__pv-shared { background: #fff; color: #222; padding: 32px; font-size: 16px; }
 /* Neutralize the app font-size so the copied page renders at its own scale. */
 .mp__pv-scale .cbm-wrap { font-size: 16px; font-family: 'Montserrat', sans-serif;
   color: #333; line-height: 1.6; }

@@ -565,6 +565,10 @@ SETTINGS: tuple[SettingSpec, ...] = (
             "Management) and an event (Event Administration). It lists the "
             "applications' recorded actions and the CRM's own record changes, newest "
             "first, with old and new values. Never shown in Client Management."),
+    _s("mentor_preview_shared", GROUP_FEATURES, "My Mentor Profile — website profile preview", kind="bool",
+       help="My Mentor Profile previews the mentor's page exactly as the chapter "
+            "website's Find a Mentor draws it, in the website's colours. Off: the "
+            "preview copies Cleveland's former website page."),
     _s("activity_page", GROUP_FEATURES, "Activity page", kind="bool",
        help="A page listing every change by one person, or in a date range, across "
             "every record, with a CSV export. For the System Management Team; "

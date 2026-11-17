@@ -36,6 +36,12 @@ class PhotoIn(BaseModel):
     dataBase64: str = Field(min_length=1, max_length=service.MAX_PHOTO_B64_CHARS)
 
 
+class PreviewIn(BaseModel):
+    # The form's unsaved values over the loaded record. 256 KB covers a long
+    # About text many times over.
+    values: dict = Field(default_factory=dict)
+
+
 class SignatureIn(BaseModel):
     # 64 KB is far beyond any reasonable signature; guards against abuse.
     signature: str = Field(default="", max_length=65536)
@@ -94,7 +100,8 @@ def _crm_failure(request: Request, exc: EspoError, message: str) -> HTTPExceptio
 @router.get("/session")
 async def session(request: Request) -> dict:
     user = _require_user(request)
-    return {"userName": user["userName"], "name": user["name"], "isAdmin": user["isAdmin"]}
+    return {"userName": user["userName"], "name": user["name"], "isAdmin": user["isAdmin"],
+            "sharedPreview": bool(get_settings().mentor_preview_shared)}
 
 
 @router.post("/logout")
@@ -294,3 +301,51 @@ async def photo_delete(request: Request) -> dict:
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not remove your photo")
     return {"status": "ok"}
+
+
+# --- the website profile preview (MENTOR_PREVIEW_SHARED) -------------------------
+# The preview is drawn by the website's own mentor profile renderer, so what a
+# mentor sees here is what Find a Mentor shows (Doug, 11-16-26, chapter
+# website plan § 4.5 option B). Nothing is read from or written to the CRM:
+# the values are the mentor's own unsaved form, and the photo is their own.
+
+_PREVIEW_MAX_CHARS = 262144
+
+
+def _require_preview(request: Request) -> dict:
+    user = _require_user(request)
+    if not get_settings().mentor_preview_shared:
+        raise HTTPException(status_code=404, detail="Not Found")
+    return user
+
+
+@router.post("/preview")
+async def preview(body: PreviewIn, request: Request) -> dict:
+    from website import content
+    from website.service import COLOR_SLUGS, _clean
+
+    _require_preview(request)
+    values = body.values or {}
+    if len(str(values)) > _PREVIEW_MAX_CHARS:
+        raise HTTPException(status_code=413, detail="The profile is too long to preview.")
+    contact = {k: values.get(k) for k in ("firstName", "lastName", "cLinkedInProfile")}
+    mentor = content.mentor_record(values, contact, has_summary=True)
+    if mentor is None:
+        mentor = content.mentor_record(values, {"firstName": "Your", "lastName": "Name"}, has_summary=True)
+    photo = values.get("profilePhotoId") or ""
+    src = f"/mentorprofile/api/photo?v={photo}" if photo else ""
+    settings = get_settings()
+    colors = {slug: v for slug, key in COLOR_SLUGS.items() if (v := _clean(settings, key))}
+    return {"html": content.profile_html(mentor, src), "colors": colors}
+
+
+@router.get("/preview.css")
+async def preview_css(request: Request) -> Response:
+    """The website's own stylesheet, for the preview — the website's address
+    for it answers only while the website connection is on."""
+    from fastapi.responses import FileResponse
+    from website.router import _STATIC
+
+    _require_preview(request)
+    return FileResponse(_STATIC / "website.css", media_type="text/css",
+                        headers={"Cache-Control": "no-cache"})

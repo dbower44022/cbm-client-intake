@@ -272,3 +272,55 @@ def test_events_and_recordings_pages(monkeypatch):
     assert "Cash flow basics" in events["html"] and ">Register</a>" in events["html"]
     recs = client.get("/api/website/pages/recordings").json()
     assert "Pricing" in recs["html"] and "How to price." in recs["html"]
+
+
+# --- the directory and the shared profile (Doug, 11-16-26; plan § 4.5 option B) ---
+
+def test_every_card_is_one_link_ending_in_see_profile(monkeypatch):
+    html = _client(monkeypatch).get("/api/website/pages/mentors").json()["html"]
+    cards = re.findall(r'<li class="cmw-card"[^>]*>(.*?)</li>', html)
+    assert len(cards) == 3
+    for card in cards:
+        assert card.startswith('<a class="cmw-card__link" href="/mentors/') and card.endswith("</a>")
+        assert card.count("<a ") == 1  # nothing in the card escapes the one link
+        assert '<span class="cmw-card__more">See Profile</span>' in card
+
+
+def test_the_directory_is_shuffled_in_the_visitors_browser():
+    js = (_STATIC / "search.js").read_text(encoding="utf-8")
+    assert "Math.random" in js and "appendChild" in js
+
+
+def test_the_search_reads_the_whole_about_text():
+    rec = {"id": "x", "name": "Ann Example", "mentorSummary": "Short line.",
+           "aboutMentor": "<p>" + "word " * 60 + "astronomy</p>"}
+    m = content.mentor_record(rec, {"firstName": "Ann", "lastName": "Example"}, has_summary=True)
+    assert "astronomy" not in m["summary"]
+    assert content.search([m], "astronomy") == ["ann-example"]
+    assert content.search([m], "astronomy cooking") == []
+
+
+def test_the_profile_has_the_my_profile_layout(monkeypatch):
+    html = _client(monkeypatch).get("/api/website/pages/mentors/ada-lovelace").json()["html"]
+    order = ["cmw-profile__hero", "cmw-profile__name", "cmw-profile__side", "cmw-profile__label",
+             "Request Ada as your mentor", "Ada on LinkedIn", "Industry experience",
+             "cmw-profile__main", "Areas of expertise", "cmw-profile__aboutbox",
+             "cmw-profile__connect", "Ready to connect with Ada?", "Meet all our mentors"]
+    positions = [html.index(x) for x in order]
+    assert positions == sorted(positions)
+
+
+def test_a_bare_linkedin_address_gains_https_and_anything_else_is_dropped():
+    m = content.mentor_record({"name": "A B"}, {"firstName": "A", "lastName": "B",
+                                                "cLinkedInProfile": "linkedin.com/in/ab"}, True)
+    assert m["linkedin"] == "https://linkedin.com/in/ab"
+    m = content.mentor_record({"name": "A B"}, {"cLinkedInProfile": "javascript:alert(1)"}, True)
+    assert m["linkedin"] == ""
+
+
+def test_an_expertise_description_follows_its_label():
+    rec = {"name": "A B", "areaOfExpertise": ["Finance: Budgets and cash flow", "Marketing"]}
+    html = content.profile_html(content.mentor_record(rec, {}, True), "")
+    assert ('<span class="cmw-expertise__label">Finance:</span> '
+            '<span class="cmw-expertise__desc">Budgets and cash flow</span>') in html
+    assert '<span class="cmw-expertise__label">Marketing</span>' in html
