@@ -1,11 +1,11 @@
 # The home page and Chapter News — plan
 
-Last Updated: 11-18-26 01:10 · Revision 1.2 — change log at the end.
+Last Updated: 11-18-26 01:45 · Revision 1.3 — change log at the end.
 
 **Status: designed 11-16-26 to 11-17-26 in a Cowork session with Doug; every
 decision below is his. Phase 0 (the contrast fix to the design tokens) is
 built as v0.340.3. Phase 1 (the page frame) is built as v0.343.0, dark
-behind `HOME_V2`; its stop waits on Doug's check. Phases 2 to 7 are not
+behind `HOME_V2`, and passed stop 1 on 11-18-26. Phases 2 to 7 are not
 started.**
 
 Mockups: the design canvas *CBM Home Page — Looks*
@@ -311,7 +311,7 @@ switch: its push changes production's colours at once, which is intended.
   applications row; the greeting; empty section frames that self-gate; collapse
   and hide with the `home.sections` preference. **Stop 1**: the frame as a
   mentor, a staff member and an administrator.
-  **Built v0.343.0 (11-18-26).** Doug's answers at the phase's first stop:
+  **Built v0.343.0 (11-18-26); stop 1 passed 11-18-26.** Doug's answers at the phase's first stop:
   the page is a second view inside today's `portal/frontend/index.html`;
   the events rail and the analytics panel sit in At the chapter, the CRM and
   Documentation links in the header, the public pages in a last frame;
@@ -353,6 +353,7 @@ switch: its push changes production's colours at once, which is intended.
 
 | Revision | Last Updated | Change |
 |---|---|---|
+| 1.3 | 11-18-26 01:45 | Stop 1 passed. |
 | 1.2 | 11-18-26 01:10 | Phase 1 built as v0.343.0; the status line and § 8 record Doug's three answers at its first stop. |
 | 1.1 | 11-17-26 02:30 | The stops are checks on the test system, the Business Mentors Association's, not crm-test; § 8 says what a push deploys. |
 | 1.0 | 11-17-26 01:30 | Created from the 11-16-26 to 11-17-26 design session: rulings 1 to 9, the home page, the design-system rules, Chapter News, and the build plan. Phase 0 built as v0.340.3. |
