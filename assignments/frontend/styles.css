@@ -336,10 +336,10 @@ body { display: flex; flex-direction: column; }
      1040px, which on the 4K screens these grids are worked on left the popup
      occupying a third of the display while its own columns wrapped — the
      width cap the product-wide rule exists to prevent. */
-  width: 90vw;
-  height: 90vh;
-  max-width: 96vw;
-  max-height: 94vh;
+  width: calc(90 * var(--cbm-vw, 1vw));
+  height: calc(90 * var(--cbm-vh, 1vh));
+  max-width: calc(96 * var(--cbm-vw, 1vw));
+  max-height: calc(94 * var(--cbm-vh, 1vh));
   min-width: 20rem;
   min-height: 14rem;
   overflow: auto;
@@ -348,7 +348,7 @@ body { display: flex; flex-direction: column; }
 }
 /* Available Mentors is a wide roster grid — a couple of points wider still, so
    more columns are visible without resizing. The corner drag overrides both. */
-#mentorModal .modal__dialog { width: 96vw; }
+#mentorModal .modal__dialog { width: calc(96 * var(--cbm-vw, 1vw)); }
 
 /* The engagement popup is a flex COLUMN: title bar and action footer pinned,
    only the middle scrolls. That is what keeps Edit / Save / Cancel on screen

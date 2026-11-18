@@ -3,7 +3,7 @@
    cr__-prefixed comms UI ported from the session tools' Communications tab.
    No page-width caps (product rule). */
 
-.cr { min-height: 100vh; display: flex; flex-direction: column; }
+.cr { min-height: calc(100 * var(--cbm-vh, 1vh)); display: flex; flex-direction: column; }
 
 /* Tabs */
 .cr__tabs { display: flex; gap: 0.25rem; border-bottom: 2px solid var(--cbm-border); margin: 0 0 0.9rem; }
@@ -57,7 +57,7 @@
 }
 
 /* Comm modal (thread + compose): a big workspace. */
-.cr__comm-card { width: min(78rem, 96vw); height: 92vh; }
+.cr__comm-card { width: min(78rem, calc(96 * var(--cbm-vw, 1vw))); height: calc(92 * var(--cbm-vh, 1vh)); }
 .cr__comm-kind { margin: 0; color: var(--cbm-slate-700); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
 
 /* Thread view */
@@ -82,7 +82,7 @@
 .cr__orig-meta { background: var(--cbm-surface); border: 1px solid var(--cbm-border); border-radius: var(--cbm-radius); padding: 0.5rem 0.8rem; margin-bottom: 0.5rem; font-size: 0.9rem; }
 .cr__orig-l { font-weight: 600; color: var(--cbm-navy); }
 .cr__orig-atts { color: var(--cbm-slate-700); font-size: 0.85rem; margin-bottom: 0.5rem; }
-.cr__orig-frame { width: 100%; flex: 1 1 auto; min-height: 55vh; border: 1px solid var(--cbm-border); border-radius: var(--cbm-radius); background: #fff; }
+.cr__orig-frame { width: 100%; flex: 1 1 auto; min-height: calc(55 * var(--cbm-vh, 1vh)); border: 1px solid var(--cbm-border); border-radius: var(--cbm-radius); background: #fff; }
 
 /* Compose */
 .cr__fact { display: flex; gap: 0.6rem; margin: 0 0 0.5rem; font-size: 0.9rem; }

@@ -1,13 +1,14 @@
 # The home page and Chapter News — plan
 
-Last Updated: 11-18-26 01:50 · Revision 1.4 — change log at the end.
+Last Updated: 11-18-26 02:15 · Revision 1.5 — change log at the end.
 
 **Status: designed 11-16-26 to 11-17-26 in a Cowork session with Doug; every
 decision below is his. Phase 0 (the contrast fix to the design tokens) is
 built as v0.340.3. Phase 1 (the page frame) is built as v0.343.0, dark
 behind `HOME_V2`, and passed stop 1 on 11-18-26. Phase 2 (Today and My
-clients) is built as v0.346.0, dark behind `HOME_V2`; stop 2 is owed.
-Phases 3 to 7 are not started.**
+clients) is built as v0.346.0, dark behind `HOME_V2`, and passed stop 2 on
+11-18-26; Doug's three changes after it are v0.348.0 (§ 8). Phases 3 to 7
+are not started.**
 
 Mockups: the design canvas *CBM Home Page — Looks*
 (https://claude.ai/artifact/D6Gm6i9qYgBsYmMtUSfAmY). The **Mix** artboard is
@@ -107,7 +108,8 @@ order:
 4. **My clients**: one row per active engagement: client, status, last
    contact, next session.
 5. **At the chapter**: chapter numbers for the year beside the member's own,
-   upcoming workshops, and open asks such as call lists.
+   upcoming workshops, and open asks such as call lists. **Upcoming events**
+   is a panel of its own beside it (Doug, 11-18-26).
 
 Today and Needs you sit side by side on a wide screen and stack on a narrow
 one. Every section fails quietly on its own, as the attention badges do today:
@@ -330,7 +332,14 @@ switch: its push changes production's colours at once, which is intended.
   sit in the same list, marked "co-mentor"; one new endpoint,
   `GET /api/portal/home/mentoring`, calling `list_records` as the member.
   Today lists Scheduled sessions only, and its last line covers the next
-  seven days as "Coming up".
+  seven days as "Coming up". **Stop 2 passed 11-18-26** ("The new features
+  worked great"). Doug's three changes after it, built as v0.348.0: the four
+  directories are one *Directories* menu in the bar; Upcoming events is its
+  own panel beside At the chapter, which keeps the Analytics numbers; and a
+  **text size** (Standard, Large, Larger) for older mentors, chosen on the
+  home page, kept as the member's preference `ui.textSize` and applied on
+  every staff and mentor page (option A of three; B was one chapter-wide
+  size in System Settings, C the home page only).
 - **Phase 3 — Needs you.** Every kind in § 4.2, the staff counts folded in,
   and the threshold setting. **My Email gains a link that opens one
   conversation** (`/myemail/?conversation=<id>`), so the Email rows can point
@@ -364,6 +373,7 @@ switch: its push changes production's colours at once, which is intended.
 
 | Revision | Last Updated | Change |
 |---|---|---|
+| 1.5 | 11-18-26 02:15 | Stop 2 passed; Doug's three changes after it (Directories menu, Upcoming events panel, text size) recorded in § 4.1 and § 8, built as v0.348.0. |
 | 1.4 | 11-18-26 01:50 | Phase 2 built as v0.346.0; § 8 records Doug's answers at its first stop. |
 | 1.3 | 11-18-26 01:45 | Stop 1 passed. |
 | 1.2 | 11-18-26 01:10 | Phase 1 built as v0.343.0; the status line and § 8 record Doug's three answers at its first stop. |

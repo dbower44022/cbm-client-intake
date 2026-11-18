@@ -1149,6 +1149,12 @@ ordered do-this-next list for the grant build on crm-test.
   *Loading…* pill while a page opens and a spinner on a link that opens a
   page; **wrap every grid or panel that waits on the server in
   `CBMBusy.loading(el, promise)`**.
+- **Every staff and mentor page loads `frontend/shared/textsize.js` right
+  after `busy.js`** (v0.348.0, Doug's ruling 11-18-26): the member's text
+  size, chosen on the home page, scales the page with CSS `zoom`. Because
+  zoom enlarges window units too, **never write a bare `vh` or `vw` in a
+  staff page's CSS or JS** — write `calc(90 * var(--cbm-vh, 1vh))`. A test
+  fails on either omission. Public pages do not load it.
 - **Every grid uses the shared grid** (Doug's ruling 10-27-26, option B):
   `frontend/shared/grid.js` + `grid.css` — `CBMGrid.enhance(table, {key,
   onSort})` gives resizable columns, alternating rows and multi-column

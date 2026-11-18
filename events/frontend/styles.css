@@ -6,7 +6,7 @@
 body { margin: 0; background: var(--cbm-bg, #f6f7f9); color: var(--cbm-text, #21252b);
        font-family: Roboto, system-ui, sans-serif; }
 
-.ev { display: flex; flex-direction: column; min-height: 100vh; box-sizing: border-box;
+.ev { display: flex; flex-direction: column; min-height: calc(100 * var(--cbm-vh, 1vh)); box-sizing: border-box;
       padding: 1.25rem 1.5rem 0; gap: var(--ev-gap); }
 
 /* --- top bar --- */
@@ -151,17 +151,17 @@ body { margin: 0; background: var(--cbm-bg, #f6f7f9); color: var(--cbm-text, #21
    buttons. Same shape as the session tools' compose window. */
 .ev__modal-overlay { position: fixed; inset: 0; background: rgba(16, 22, 32, .55);
   display: flex; align-items: flex-start; justify-content: center;
-  padding: 3vh 1rem; z-index: 50; }
+  padding: calc(3 * var(--cbm-vh, 1vh)) 1rem; z-index: 50; }
 .ev__modal-overlay[hidden] { display: none !important; }
 .ev__modal { background: #fff; border-radius: 10px; position: relative;
-  width: min(48rem, 96vw); max-width: 96vw; max-height: 92vh;
+  width: min(48rem, calc(96 * var(--cbm-vw, 1vw))); max-width: calc(96 * var(--cbm-vw, 1vw)); max-height: calc(92 * var(--cbm-vh, 1vh));
   min-width: 20rem; min-height: 12rem;
   resize: both; overflow: hidden;
   display: flex; flex-direction: column;
   box-shadow: 0 14px 44px rgba(16, 22, 32, .3); }
 /* The event form is a record editor with five panels — open it at the size of
    the screen it is being worked on, not at dialog size. */
-.ev__modal--wide { width: 80vw; height: 86vh; }
+.ev__modal--wide { width: calc(80 * var(--cbm-vw, 1vw)); height: calc(86 * var(--cbm-vh, 1vh)); }
 .ev__modal h3 { flex: 0 0 auto; margin: 0; padding: 1rem 3rem .75rem 1.4rem;
   border-bottom: 1px solid #eef1f5; font-family: "Roboto Slab", Georgia, serif;
   color: var(--cbm-navy, #00205B); }

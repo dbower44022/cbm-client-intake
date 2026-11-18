@@ -10,7 +10,7 @@
      starving the page of width. */
   width: 100%;
   margin: 0;
-  padding: 0 clamp(1.25rem, 2.5vw, 2.5rem) 3rem;
+  padding: 0 clamp(1.25rem, calc(2.5 * var(--cbm-vw, 1vw)), 2.5rem) 3rem;
 }
 
 /* ---- hero ---------------------------------------------------------------- */

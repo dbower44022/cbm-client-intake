@@ -7,13 +7,13 @@
    own stylesheet so the page's overrides still win. */
 
 /* --- the dialog shell ---------------------------------------------------- */
-.sx__modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-start; justify-content: center; padding: 4vh 1rem; }
+.sx__modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-start; justify-content: center; padding: calc(4 * var(--cbm-vh, 1vh)) 1rem; }
 /* The base display:flex overrides the browser's [hidden]{display:none}; restore
    it so the modal stays hidden until opened (was covering the whole screen). */
 .sx__modal[hidden] { display: none; }
 .sx__modal-backdrop { position: fixed; inset: 0; background: rgba(18, 28, 42, 0.45); }
 .sx__modal-card {
-  position: relative; z-index: 1; width: 100%; max-width: 30rem; max-height: 88vh; overflow: auto;
+  position: relative; z-index: 1; width: 100%; max-width: 30rem; max-height: calc(88 * var(--cbm-vh, 1vh)); overflow: auto;
   background: var(--cbm-surface, #fff); border-radius: var(--cbm-radius, 10px);
   box-shadow: 0 12px 40px rgba(18, 28, 42, 0.25);
 }
@@ -34,7 +34,7 @@
    person can RESIZE it from the bottom-right grip. Flex column so the header
    and the Send/Cancel footer stay pinned while only the body scrolls. */
 .sx__modal--compose .sx__modal-card {
-  width: 90vw; height: 90vh; max-width: 96vw; max-height: 94vh;
+  width: calc(90 * var(--cbm-vw, 1vw)); height: calc(90 * var(--cbm-vh, 1vh)); max-width: calc(96 * var(--cbm-vw, 1vw)); max-height: calc(94 * var(--cbm-vh, 1vh));
   min-width: 22rem; min-height: 16rem;
   resize: both; overflow: hidden;
   display: flex; flex-direction: column;

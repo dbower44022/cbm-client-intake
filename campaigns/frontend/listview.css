@@ -68,7 +68,7 @@
 
 /* --- Preview ------------------------------------------------------------------ */
 .lv__preview { flex: 1 1 24rem; min-width: 0; max-width: 34rem; background: #fff; border: 1px solid var(--lv-line); border-radius: 10px;
-  position: sticky; top: .75rem; max-height: calc(100vh - 1.5rem); overflow-y: auto; }
+  position: sticky; top: .75rem; max-height: calc(calc(100 * var(--cbm-vh, 1vh)) - 1.5rem); overflow-y: auto; }
 .lv__ph { padding: 1rem 1.2rem .9rem; border-bottom: 1px solid var(--lv-soft); }
 .lv__ptitle { font-family: var(--cbm-font-serif, "Roboto Slab", Georgia, serif); font-size: 1.15rem; font-weight: 600; color: var(--cbm-navy, #173B60);
   margin: .4rem 0 0; line-height: 1.35; overflow-wrap: anywhere; }

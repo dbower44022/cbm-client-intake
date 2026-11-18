@@ -206,3 +206,81 @@ def test_the_page_fills_the_two_frames_from_the_one_read():
     assert '"sessions"' in js and '"cbm-rec-mentorsessions-"' in js
     # The stored next-session field is never read by the page.
     assert "nextSessionDateTime" not in js
+
+
+# --- 11-18-26 changes: Directories menu, Upcoming events panel, text size -------
+
+STAFF_PAGES = (
+    "activity/frontend/index.html", "analytics/frontend/index.html",
+    "assignments/frontend/index.html", "campaigns/frontend/index.html",
+    "campaigns/frontend/list-members.html", "directory/frontend/index.html",
+    "directory/frontend/mentor.html", "directory/frontend/record.html",
+    "events/frontend/index.html", "mentoradmin/frontend/index.html",
+    "mentorprofile/frontend/index.html", "myemail/frontend/index.html",
+    "ops/frontend/index.html", "portal/frontend/event.html",
+    "portal/frontend/index.html", "sessions/frontend/index.html",
+    "setup/frontend/index.html",
+)
+
+
+@pytest.mark.parametrize("page", STAFF_PAGES)
+def test_every_staff_page_applies_the_text_size_right_after_busy_js(page):
+    html = (ROOT / page).read_text()
+    assert "/shared/textsize.js" in html, page
+    assert html.index("/shared/busy.js") < html.index("/shared/textsize.js")
+
+
+def test_public_pages_do_not_load_the_text_size():
+    for page in ("forms/client_intake/frontend/index.html", "events/public_frontend/index.html",
+                 "surveys/frontend/index.html"):
+        assert "/shared/textsize.js" not in (ROOT / page).read_text(), page
+
+
+def test_no_staff_stylesheet_sizes_by_the_window_without_the_zoom_correction():
+    """Under a text size zoom, a bare 90vh is 117% of the window at Larger."""
+    import re
+
+    bare = re.compile(r"(?<![\w.#-])\d+(?:\.\d+)?d?v[hw]\b")
+    roots = ("frontend/shared", "portal", "sessions", "assignments", "mentoradmin",
+             "mentorprofile", "myemail", "ops", "campaigns/frontend", "directory",
+             "events/frontend", "analytics", "setup", "activity")
+    found = []
+    for r in roots:
+        for p in (ROOT / r).rglob("*"):
+            if p.suffix not in (".css", ".js") or "vendor" in p.parts or p.name == "textsize.js":
+                continue
+            for line in p.read_text().splitlines():
+                code = line.split("//")[0] if p.suffix == ".js" else line
+                if "/*" in code or code.strip().startswith("*"):
+                    continue
+                if bare.search(code.replace("1vh", "").replace("1vw", "").replace("1dvh", "")):
+                    found.append(f"{p.relative_to(ROOT)}: {line.strip()}")
+    assert not found, found
+
+
+def test_the_text_size_is_a_member_preference(monkeypatch):
+    with TestClient(_app(monkeypatch)) as c:
+        _sign_in(monkeypatch, c, _standard_client())
+        assert c.get("/api/portal/preferences/ui.textSize").status_code == 200
+        assert c.get("/api/portal/preferences/ui.fontSize").status_code == 404
+
+
+def test_the_events_rail_has_its_own_frame_when_the_calendar_is_on(monkeypatch):
+    from portal.router import _home_sections
+
+    monkeypatch.setenv("HOME_V2", "true")
+    get_settings.cache_clear()
+    user = {"teams": [MENTOR_TEAM], "isAdmin": False}
+    off = _home_sections(user, get_settings())
+    assert "events" not in off
+    monkeypatch.setattr(type(get_settings()), "portal_calendar_active", property(lambda s: True))
+    on = _home_sections(user, get_settings())
+    assert on.index("chapter") + 1 == on.index("events")
+    js = (ROOT / "portal/frontend/home.js").read_text()
+    assert 'moveIn(frames.events._body, "eventsRail"' in js
+    assert 'moveIn(frames.chapter._body, "analyticsSection"' in js
+
+
+def test_the_directories_are_one_menu_in_the_bar():
+    js = (ROOT / "portal/frontend/home.js").read_text()
+    assert '"Directories "' in js and "directoriesMenu(data.directories)" in js

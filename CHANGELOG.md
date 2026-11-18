@@ -5,6 +5,35 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.348.0] — 2026-11-18
+
+**feat(home): a Directories menu, Upcoming events in its own panel, and a
+text size for every application page.** Doug's changes after stop 2 of the
+home page's phase 2, 11-18-26 (the text size: option A).
+
+- **Directories**: the four directory links in the home page's bar are one
+  *Directories* menu (Companies, Contacts, Mentors, Partners). On a narrow
+  screen it opens in place inside the Applications menu.
+- **Upcoming events** is its own panel, beside *At the chapter* (two to one)
+  on a wide screen and below it on a narrow one; *At the chapter* keeps the
+  Analytics numbers. Shown where the portal calendar is on; it collapses
+  and hides like every panel.
+- **Text size**: Standard, Large or Larger, chosen in the home page's bar,
+  kept as the member's preference `ui.textSize` (so it follows them to any
+  computer) and applied on every staff and mentor page by the new
+  `frontend/shared/textsize.js`, loaded right after `busy.js`. Public pages
+  do not load it. It scales the whole page with CSS `zoom` (1.15 and 1.3),
+  because the pages size text partly in px and partly in rem. Standard
+  changes nothing.
+- **Window-relative sizes survive the zoom.** Zoom enlarges `vh` and `vw`
+  too (measured in Chrome: a 100vh box is 130% of the window at 1.3), so
+  every one of the 80 in the staff pages' stylesheets and `quickmail.js` is
+  written `calc(N * var(--cbm-vh, 1vh))`; the script sets `--cbm-vh` to
+  `1vh` divided by the zoom. A test fails on a bare `vh` or `vw` there.
+- Tests: `tests/test_home_mentoring.py` (every staff page loads the script,
+  public pages do not, no bare window unit, the preference key, the events
+  frame, the menu).
+
 ## [0.347.0] — 2026-11-18
 
 **feat(setup): fix buttons on the Event hosting card.** Plan

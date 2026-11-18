@@ -119,16 +119,14 @@ body.home2-on main.portal.cbm-container { padding-top: 0; padding-bottom: 2rem; 
 .home2__caret { display: inline-block; transition: transform .15s ease; }
 .cbm-panel--collapsed .home2__caret { transform: rotate(-90deg); }
 
-/* At the chapter: the analytics panel and the events rail, moved in from
-   today's page. Side by side when there is room. */
-.home2__chapter {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 2.5rem;
-  padding: 0 16px 12px;
-}
-.home2__chapter > #analyticsSection { flex: 1 1 40rem; min-width: 0; }
-.home2__chapter > #eventsRail { flex: 0 1 22rem; min-width: 0; }
+/* At the chapter (the analytics panel) and Upcoming events (the events
+   rail), moved in from today's page: two panels side by side, the numbers
+   wider (Doug, 11-18-26). */
+.home2__pair--chapter { grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); }
+@media (max-width: 899px) { .home2__pair--chapter { grid-template-columns: minmax(0, 1fr); } }
+.home2__chapter { padding: 0 16px 12px; min-width: 0; }
+.home2__chapter > #analyticsSection,
+.home2__chapter > #eventsRail { min-width: 0; }
 .home2__chapter h2 {
   margin: 14px 0 8px;
   font-family: var(--cbm-font-heading);
@@ -136,8 +134,10 @@ body.home2-on main.portal.cbm-container { padding-top: 0; padding-bottom: 2rem; 
   font-weight: 600;
   color: var(--cbm-navy);
 }
-@media (max-width: 767px) {
-  .home2__chapter > #eventsRail { flex-basis: 100%; }
+/* The panel's own label names the rail; its heading stays for screen readers. */
+.home2__chapter #eventsHeading {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
 }
 
 /* The public pages: a plain list of links, each with its shortcut. */
@@ -192,3 +192,34 @@ body.home2-on main.portal.cbm-container { padding-top: 0; padding-bottom: 2rem; 
 .home2__client { font-weight: 500; color: var(--cbm-navy); text-decoration: none; }
 .home2__client:hover { text-decoration: underline; }
 .home2__co { margin-left: 8px; font-size: 12px; color: var(--cbm-text-muted); }
+
+/* --- The Directories menu and the text size (11-18-26) --------------------- */
+.home2__dirs { position: relative; }
+.home2__dirbtn { border: 0; background: transparent; cursor: pointer; font: inherit; font-size: 14px; }
+.home2__dirmenu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  padding: 4px;
+  background: var(--cbm-panel);
+  border: 1px solid var(--cbm-panel-border);
+  border-radius: var(--cbm-panel-radius);
+}
+.home2__dirmenu[hidden] { display: none; }
+@media (max-width: 719px) {
+  .home2__dirmenu { position: static; border: 0; padding: 0 0 0 16px; }
+}
+.home2__textsize { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.home2__textsize select {
+  min-height: 40px;
+  padding: 0 8px;
+  border: 1px solid var(--cbm-panel-border);
+  border-radius: 6px;
+  background: var(--cbm-panel);
+  color: var(--cbm-text-strong);
+  font: inherit;
+}

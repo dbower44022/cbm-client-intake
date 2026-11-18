@@ -166,8 +166,8 @@
       "align-items:center;justify-content:center;padding:16px;z-index:1000}" +
       // A resizable 90% workspace: flex column, pinned footer, body scrolls.
       ".qm-box{background:var(--cbm-surface,#fff);color:var(--cbm-text,#1a202c);border-radius:10px;" +
-      "box-shadow:0 18px 50px rgba(0,0,0,.28);width:90vw;height:90vh;" +
-      "max-width:96vw;max-height:94vh;min-width:320px;min-height:260px;" +
+      "box-shadow:0 18px 50px rgba(0,0,0,.28);width:calc(90 * var(--cbm-vw, 1vw));height:calc(90 * var(--cbm-vh, 1vh));" +
+      "max-width:calc(96 * var(--cbm-vw, 1vw));max-height:calc(94 * var(--cbm-vh, 1vh));min-width:320px;min-height:260px;" +
       "resize:both;overflow:hidden;display:flex;flex-direction:column;" +
       "font-family:var(--cbm-font-body,system-ui,sans-serif)}" +
       ".qm-head{padding:16px 22px 10px;border-bottom:1px solid var(--cbm-border,#e6eaef)}" +

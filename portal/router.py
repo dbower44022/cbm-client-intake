@@ -204,6 +204,10 @@ def _home_sections(user: dict[str, Any], settings: Settings) -> list[str]:
     if mentoring:
         sections.append("clients")
     sections.append("chapter")
+    # The events rail has its own frame (Doug, 11-18-26), shown where the
+    # portal calendar is on.
+    if settings.portal_calendar_active:
+        sections.append("events")
     sections.append("pages")
     return sections
 
@@ -489,6 +493,9 @@ PREFERENCE_KEYS = frozenset({
     # The new home page's collapsed and hidden sections (HOME_V2),
     # {"collapsed": [...], "hidden": [...]} of section keys.
     "home.sections",
+    # The member's text size on every application page: "standard",
+    # "large" or "larger" (/shared/textsize.js; Doug, 11-18-26, option A).
+    "ui.textSize",
 })
 #: A preference is a few choices, never a document.
 MAX_PREFERENCE_BYTES = 2048

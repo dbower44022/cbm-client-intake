@@ -171,9 +171,12 @@
     var waits = [];
     if (data.analyticsEnabled) waits.push(loadPortalDashboard());
     if (data.eventsCalendar) waits.push(loadEventsRail());
-    var settled = Promise.all(waits).then(function () { CBMHome.chapterSettled(drawn.chapterBody); },
-                                          function () { CBMHome.chapterSettled(drawn.chapterBody); });
-    if (drawn.chapterBody && window.CBMBusy && CBMBusy.loading) CBMBusy.loading(drawn.chapterBody, settled);
+    var settled = Promise.all(waits).then(function () { CBMHome.chapterSettled(); },
+                                          function () { CBMHome.chapterSettled(); });
+    if (window.CBMBusy && CBMBusy.loading) {
+      if (drawn.chapterBody) CBMBusy.loading(drawn.chapterBody, settled);
+      if (drawn.eventsBody) CBMBusy.loading(drawn.eventsBody, settled);
+    }
   }
 
   function renderHome(data) {

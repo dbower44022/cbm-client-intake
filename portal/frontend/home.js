@@ -27,8 +27,10 @@
       note: "What needs you will show here. Until then, the counts stay on the applications in the bar above." },
     { key: "clients", title: "My clients", link: { title: "Open Client Management", url: "/mentorsessions/", target: "cbm-mentorsessions" },
       note: "Your active clients will show here." },
-    { key: "chapter", title: "At the chapter",
-      note: "Chapter numbers and upcoming events will show here." },
+    { key: "chapter", title: "At the chapter", pair2: true,
+      note: "Chapter numbers will show here." },
+    { key: "events", title: "Upcoming events", pair2: true,
+      note: "There are no upcoming events to show." },
     { key: "pages", title: "Public pages",
       note: "There are no public pages on this deployment." },
   ];
@@ -66,6 +68,65 @@
     });
     return a;
   }
+  // The directories, as one "Directories" menu in the bar (Doug, 11-18-26:
+  // four links took too much room). On a narrow screen the menu opens in
+  // place inside the Applications list.
+  function directoriesMenu(dirs) {
+    var wrap = el("div", "home2__dirs");
+    var btn = el("button", "home2__app home2__dirbtn");
+    btn.type = "button";
+    btn.appendChild(document.createTextNode("Directories "));
+    btn.appendChild(el("span", "home2__caret", "▾")).setAttribute("aria-hidden", "true");
+    btn.setAttribute("aria-expanded", "false");
+    btn.setAttribute("aria-controls", "home2Dirs");
+    var menu = el("div", "home2__dirmenu");
+    menu.id = "home2Dirs";
+    menu.hidden = true;
+    dirs.forEach(function (d) {
+      var a = appLink(d);
+      a.addEventListener("click", function () { shut(); });
+      menu.appendChild(a);
+    });
+    function shut() { menu.hidden = true; btn.setAttribute("aria-expanded", "false"); }
+    btn.addEventListener("click", function () {
+      var open = menu.hidden;
+      menu.hidden = !open;
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+    document.addEventListener("click", function (ev) { if (!wrap.contains(ev.target)) shut(); });
+    wrap.addEventListener("keydown", function (ev) {
+      if (ev.key === "Escape" && !menu.hidden) { shut(); btn.focus(); }
+    });
+    wrap.appendChild(btn);
+    wrap.appendChild(menu);
+    return wrap;
+  }
+
+  // The member's text size (Doug, 11-18-26, option A): /shared/textsize.js
+  // applies it on every application page; this is where it is chosen.
+  function textSizeControl() {
+    var ts = window.CBMTextSize;
+    if (!ts) return null;
+    var label = el("label", "home2__textsize");
+    label.appendChild(document.createTextNode("Text size "));
+    var sel = el("select");
+    sel.id = "home2TextSize";
+    ts.sizes.forEach(function (o) {
+      var opt = el("option", null, o.label);
+      opt.value = o.key;
+      sel.appendChild(opt);
+    });
+    sel.value = ts.get();
+    sel.addEventListener("change", function () {
+      message("");
+      ts.set(sel.value).catch(function (e) {
+        message("Your text size applies on this screen but was not saved: " + e.message + ".");
+      });
+    });
+    label.appendChild(sel);
+    return label;
+  }
+
   function header(data) {
     var bar = el("header", "home2__bar");
     bar.appendChild(el("span", "home2__org", org()));
@@ -85,13 +146,7 @@
     nav.id = "home2Nav";
     nav.setAttribute("aria-label", "Applications");
     (data.apps || []).forEach(function (a) { nav.appendChild(appLink(a)); });
-    if ((data.directories || []).length) {
-      if ((data.apps || []).length) {
-        var sep = el("span", "home2__sep"); sep.setAttribute("aria-hidden", "true");
-        nav.appendChild(sep);
-      }
-      data.directories.forEach(function (d) { nav.appendChild(appLink(d)); });
-    }
+    if ((data.directories || []).length) nav.appendChild(directoriesMenu(data.directories));
     if (!nav.children.length) nav.appendChild(el("span", "home2__who", "No applications are open to you yet."));
     bar.appendChild(nav);
 
@@ -103,6 +158,8 @@
     }
     if (data.crmUrl) outLink("{{abbr}} CRM", data.crmUrl);
     if (data.docsUrl) outLink("{{abbr}} Documentation", data.docsUrl);
+    var size = textSizeControl();
+    if (size) me.appendChild(size);
     me.appendChild(el("span", "home2__who", data.user.name || data.user.userName));
     var out = el("button", "cbm-action--second", "Sign out");
     out.type = "button";
@@ -370,15 +427,14 @@
     });
   }
 
-  // At the chapter: today's analytics panel and events rail, moved in by id.
-  function fillChapter(body) {
+  // At the chapter holds today's analytics panel and Upcoming events holds
+  // the events rail, each moved in by id (Doug, 11-18-26: separate panels).
+  function moveIn(body, id, def) {
     var box = el("div", "home2__chapter");
-    ["analyticsSection", "eventsRail"].forEach(function (id) {
-      var node = document.getElementById(id);
-      if (node) box.appendChild(node);
-    });
+    var node = document.getElementById(id);
+    if (node) box.appendChild(node);
     body.appendChild(box);
-    note(body, FRAMES[3].note);
+    note(body, def.note);
   }
 
   // --- collapse and hide --------------------------------------------------------
@@ -474,15 +530,18 @@
 
     var pair = el("div", "home2__pair");
     main.appendChild(pair);
+    var pair2 = el("div", "home2__pair home2__pair--chapter");
     var frames = {};
     FRAMES.forEach(function (f) {
       if (allowed.indexOf(f.key) < 0) return;
       var sec = frame(f);
       frames[f.key] = sec;
-      (f.pair ? pair : main).appendChild(sec);
+      if (f.pair2 && !pair2.parentNode) main.appendChild(pair2);
+      (f.pair ? pair : f.pair2 ? pair2 : main).appendChild(sec);
     });
     if (frames.needs) note(frames.needs._body, frames.needs._def.note);
-    if (frames.chapter) fillChapter(frames.chapter._body);
+    if (frames.chapter) moveIn(frames.chapter._body, "analyticsSection", frames.chapter._def);
+    if (frames.events) moveIn(frames.events._body, "eventsRail", frames.events._def);
     if (frames.pages) fillPages(frames.pages._body, data.forms);
 
     var msg = el("p", "home2__msg"); msg.setAttribute("role", "status"); msg.hidden = true;
@@ -499,19 +558,22 @@
     var waiting = loadPrefs();
     if (window.CBMBusy && CBMBusy.loading) CBMBusy.loading(main, waiting);
     loadMentoring(frames, greetLine, now);
-    return { chapterBody: frames.chapter ? frames.chapter._body : null };
+    return { chapterBody: frames.chapter ? frames.chapter._body : null,
+             eventsBody: frames.events ? frames.events._body : null };
   }
 
-  // The At the chapter frame says its one plain line only when neither piece
-  // it holds came up (the analytics panel and the rail self-gate).
-  function chapterSettled(body) {
-    if (!body) return;
-    var shown = ["analyticsSection", "eventsRail"].some(function (id) {
-      var n = document.getElementById(id);
-      return n && !n.hidden && body.contains(n);
+  // At the chapter and Upcoming events each say their one plain line only
+  // when the piece they hold did not come up (the analytics panel and the
+  // rail self-gate).
+  function chapterSettled() {
+    [["chapter", "analyticsSection"], ["events", "eventsRail"]].forEach(function (pair) {
+      var sec = state.view && state.view.querySelector('.home2__frame[data-section="' + pair[0] + '"]');
+      if (!sec) return;
+      var n = document.getElementById(pair[1]);
+      var shown = !!(n && !n.hidden && sec._body.contains(n));
+      var p = sec._body.querySelector(".cbm-panel__note");
+      if (p) p.hidden = shown;
     });
-    var p = body.querySelector(".cbm-panel__note");
-    if (p) p.hidden = shown;
   }
 
   // Back to the signed-out page: the moved pieces return to today's page, so

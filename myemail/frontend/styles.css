@@ -41,10 +41,10 @@
 .me__date { color: var(--cbm-slate-700, #667); white-space: nowrap; }
 
 /* Thread modal — pinned head/foot, scrolling body (the compose-shell pattern). */
-.me__modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 3vh 1.5rem; }
+.me__modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: calc(3 * var(--cbm-vh, 1vh)) 1.5rem; }
 .me__modal[hidden] { display: none !important; }
 .me__modal-backdrop { position: fixed; inset: 0; background: rgba(18, 28, 42, 0.45); }
-.me__modal-card { position: relative; z-index: 1; width: min(80rem, 94vw); height: 88vh; max-height: 92vh; min-width: 22rem; min-height: 16rem; resize: both; overflow: hidden; display: flex; flex-direction: column; background: var(--cbm-surface, #fff); border-radius: 10px; box-shadow: 0 12px 40px rgba(18, 28, 42, 0.25); }
+.me__modal-card { position: relative; z-index: 1; width: min(80rem, calc(94 * var(--cbm-vw, 1vw))); height: calc(88 * var(--cbm-vh, 1vh)); max-height: calc(92 * var(--cbm-vh, 1vh)); min-width: 22rem; min-height: 16rem; resize: both; overflow: hidden; display: flex; flex-direction: column; background: var(--cbm-surface, #fff); border-radius: 10px; box-shadow: 0 12px 40px rgba(18, 28, 42, 0.25); }
 .me__modal-head { flex: 0 0 auto; display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; padding: 0.9rem 1rem 0.6rem; border-bottom: 1px solid var(--cbm-border, #eef1f4); }
 .me__modal-kind { margin: 0; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--cbm-slate-700, #667); }
 .me__modal-name { margin: 0.1rem 0 0; }

@@ -327,7 +327,7 @@ td.sxd__actions { text-align: right; white-space: nowrap; }
 .sx__overall-body :first-child { margin-top: 0; } .sx__overall-body :last-child { margin-bottom: 0; }
 /* Long notes: cap the panel at half the page by default (scrolls inside);
    the drag bar below adjusts the cap (JS sets an explicit max-height). */
-.sx__overall-clip { max-height: 50vh; overflow-y: auto; }
+.sx__overall-clip { max-height: calc(50 * var(--cbm-vh, 1vh)); overflow-y: auto; }
 .sx__overall-resize {
   height: 10px; margin: 0.35rem -0.4rem 0; cursor: ns-resize; border-radius: 5px;
   background: linear-gradient(var(--cbm-border, #e3e7ec), var(--cbm-border, #e3e7ec)) center / 44px 3px no-repeat;
@@ -351,7 +351,7 @@ td.sxd__actions { text-align: right; white-space: nowrap; }
 .sx__disc-head .sx__overall-h { margin: 0; color: var(--cbm-navy, #123); font-size: 1.05rem; }
 .sx__disc-hint { font-size: 11px; color: var(--cbm-slate-700, #667); flex: none; }
 .sx__disc-list { padding: 0.75rem 0.85rem; display: flex; flex-direction: column;
-  gap: 0.85rem; flex: 1; max-height: 60vh; overflow-y: auto; }
+  gap: 0.85rem; flex: 1; max-height: calc(60 * var(--cbm-vh, 1vh)); overflow-y: auto; }
 .sx__comment { display: flex; gap: 0.6rem; }
 .sx__comment-body { flex: 1; min-width: 0; }
 .sx__comment-meta { font-size: 12px; margin-bottom: 0.1rem; }
@@ -385,7 +385,7 @@ td.sxd__actions { text-align: right; white-space: nowrap; }
 .sx__notesview { align-items: center; }
 .sx__notesview-card {
   position: relative; z-index: 1; display: flex; flex-direction: column;
-  width: 92vw; height: 86vh; min-width: 24rem; min-height: 14rem;  /* full page — no width cap (Doug's ruling) */
+  width: calc(92 * var(--cbm-vw, 1vw)); height: calc(86 * var(--cbm-vh, 1vh)); min-width: 24rem; min-height: 14rem;  /* full page — no width cap (Doug's ruling) */
   background: #fff; border-radius: var(--cbm-radius, 8px);
   box-shadow: 0 18px 48px rgba(18, 28, 42, 0.35);
   resize: both; overflow: hidden;  /* resize needs non-visible overflow */
@@ -458,7 +458,7 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
 .sx__badge--editable:hover { filter: brightness(0.97); box-shadow: 0 0 0 2px rgba(4, 107, 210, 0.18); }
 .sx__badge-caret { margin-left: 4px; font-size: 0.72em; opacity: 0.7; }
 .sx__statusmenu {
-  position: absolute; z-index: 80; min-width: 12rem; max-height: 60vh; overflow: auto;
+  position: absolute; z-index: 80; min-width: 12rem; max-height: calc(60 * var(--cbm-vh, 1vh)); overflow: auto;
   background: #fff; border: 1px solid var(--cbm-border, #dbe2ec); border-radius: 8px;
   box-shadow: 0 6px 20px rgba(31, 58, 95, 0.18); padding: 4px;
 }
@@ -612,7 +612,7 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
 .sx__orig-meta { margin: 0 0 0.5rem; font-size: 0.85rem; color: #333; }
 .sx__orig-meta .sx__orig-l { font-weight: 700; color: var(--cbm-navy, #123); }
 .sx__orig-atts { margin: 0 0 0.5rem; font-size: 0.82rem; color: #555; }
-.sx__orig-frame { width: 100%; height: 62vh; border: 1px solid #ddd; border-radius: 6px; background: #fff; }
+.sx__orig-frame { width: 100%; height: calc(62 * var(--cbm-vh, 1vh)); border: 1px solid #ddd; border-radius: 6px; background: #fff; }
 .sx__comm-acts { display: inline-flex; gap: 0.5rem; }
 /* Live conversation thread view: summary block + per-message cards. */
 .sx__conv-summary { padding: 0.6rem 1rem 0.4rem; border-bottom: 1px solid var(--cbm-border, #eef1f4); }
@@ -704,7 +704,7 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
   font-weight: 400; letter-spacing: normal; text-transform: none;
 }
 .sx__tcount { font-size: 12px; color: var(--cbm-slate-700, #556); text-transform: none; letter-spacing: normal; }
-.sx__transcript { max-height: 46vh; overflow-y: auto; }
+.sx__transcript { max-height: calc(46 * var(--cbm-vh, 1vh)); overflow-y: auto; }
 .sx__transcript mark { background: #ffe9a8; padding: 0 1px; }
 .sx__attwrap { overflow-x: auto; }
 
@@ -859,7 +859,7 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
 /* --- In-app document viewer (DOC-MGMT Phase 2, DOC-03) --- */
 /* A workspace-sized overlay: the document gets nearly the whole screen. */
 .sx__modal-card--doc {
-  max-width: min(90rem, 96vw); width: 96vw; height: 92vh; max-height: 92vh;
+  max-width: min(90rem, calc(96 * var(--cbm-vw, 1vw))); width: calc(96 * var(--cbm-vw, 1vw)); height: calc(92 * var(--cbm-vh, 1vh)); max-height: calc(92 * var(--cbm-vh, 1vh));
   display: flex; flex-direction: column; overflow: hidden;
 }
 .sx__modal-card--doc .sx__modal-head { flex: 0 0 auto; }
@@ -919,7 +919,7 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
 }
 .ctb__tag--up { background: #e3ecfa; color: var(--cbm-navy, #00205B); }
 /* Editor modal: roomier than a peek, grouped panels pack full width. */
-.ctb__modal-card { max-width: min(64rem, 94vw); width: 94vw; }
+.ctb__modal-card { max-width: min(64rem, calc(94 * var(--cbm-vw, 1vw))); width: calc(94 * var(--cbm-vw, 1vw)); }
 .ctb__form { display: block; }
 .ctb__group {
   border: 1px solid var(--cbm-border, #d7dce2); border-radius: var(--cbm-radius, 6px);
@@ -949,7 +949,7 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
 /* No margin-left:auto here — #refreshBtn already carries it, and a second one
    splits the free space between the two buttons (it stranded Refresh in the
    middle of the toolbar). Refresh takes the space; Add sits beside it. */
-.qadd__modal-card { max-width: min(64rem, 94vw); width: 94vw; }
+.qadd__modal-card { max-width: min(64rem, calc(94 * var(--cbm-vw, 1vw))); width: calc(94 * var(--cbm-vw, 1vw)); }
 .qadd__form { display: block; }
 .qadd__group {
   border: 1px solid var(--cbm-border, #d7dce2); border-radius: var(--cbm-radius, 6px);
@@ -988,7 +988,7 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
    the Contributions form primitives (.ctb__group / .ctb__line / .ctb__field)
    so the two editors stay visibly the same tool. */
 #grtModal .sx__modal-card {
-  width: 90vw; height: 90vh; max-width: 96vw; max-height: 94vh;
+  width: calc(90 * var(--cbm-vw, 1vw)); height: calc(90 * var(--cbm-vh, 1vh)); max-width: calc(96 * var(--cbm-vw, 1vw)); max-height: calc(94 * var(--cbm-vh, 1vh));
   min-width: 22rem; min-height: 16rem;
   resize: both; overflow: hidden;
   display: flex; flex-direction: column;
@@ -1057,7 +1057,7 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
 .evl__answers h3 { font-size: 1rem; margin: 1rem 0 0.4rem; }
 .evl__answers p { margin: 0 0 0.6rem; }
 #evlModal.evl--wide .sx__modal-card {
-  width: 90vw; height: 90vh; max-width: 90vw; max-height: 90vh;
+  width: calc(90 * var(--cbm-vw, 1vw)); height: calc(90 * var(--cbm-vh, 1vh)); max-width: calc(90 * var(--cbm-vw, 1vw)); max-height: calc(90 * var(--cbm-vh, 1vh));
   display: flex; flex-direction: column; overflow: hidden;
 }
 #evlModal.evl--wide .sx__modal-head, #evlModal.evl--wide .sx__modal-foot { flex: 0 0 auto; }

@@ -3,7 +3,7 @@
 
 /* Use most of the viewport — the edit form (esp. the long Expertise lists)
    benefits from the extra width. */
-.ma { padding-top: 2rem; padding-bottom: 3rem; max-width: min(1480px, 96vw); }
+.ma { padding-top: 2rem; padding-bottom: 3rem; max-width: min(1480px, calc(96 * var(--cbm-vw, 1vw))); }
 .ma__header h1 { color: var(--cbm-navy); font-family: var(--cbm-font-serif); margin-bottom: 0.25rem; }
 .ma__sub { color: var(--cbm-text); margin-top: 0; }
 
@@ -201,7 +201,7 @@
 .ma__teams-actions { display: flex; }
 
 /* "Update Mentor Status" verification results */
-.modal-card--wide { max-width: 960px; max-height: 88vh; display: flex; flex-direction: column; }
+.modal-card--wide { max-width: 960px; max-height: calc(88 * var(--cbm-vh, 1vh)); display: flex; flex-direction: column; }
 .verify-tablewrap { overflow: auto; margin: 0.4rem 0 0.8rem; border: 1px solid var(--cbm-border);
   border-radius: var(--cbm-radius); }
 .verify-table { margin: 0; }
@@ -245,7 +245,7 @@
 /* In-app document viewer (DOC-MGMT Phase 2, DOC-03) — a workspace-sized
    overlay: the document gets nearly the whole screen. */
 .modal-card--doc {
-  max-width: min(90rem, 96vw); width: 96vw; height: 92vh; max-height: 92vh;
+  max-width: min(90rem, calc(96 * var(--cbm-vw, 1vw))); width: calc(96 * var(--cbm-vw, 1vw)); height: calc(92 * var(--cbm-vh, 1vh)); max-height: calc(92 * var(--cbm-vh, 1vh));
   padding: 0.9rem 1rem 1rem; display: flex; flex-direction: column; overflow: hidden;
 }
 .ma__docview-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin: 0 0 0.6rem; }
