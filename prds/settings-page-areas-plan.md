@@ -1,6 +1,6 @@
 # System Settings — finding a setting
 
-Last Updated: 11-18-26 01:39 · Revision 0.3 · **Built (v0.345.0); Stop 2 — Doug's review on the Association**
+Last Updated: 11-18-26 02:03 · Revision 0.4 · **Built (v0.345.0); Stop 2 passed 11-18-26; Stop 3 — production — next**
 
 ## 1. What this changes
 
@@ -41,7 +41,7 @@ Work pauses for Doug at each of these. Between them it proceeds without asking.
 
 1. **Stop 1 — rulings.** Doug rules on § 6 and corrects the appendix. The plan becomes revision 0.2.
 2. Build: the registry fields and guard tests; the server payload; the sub-tabs, order, search and remembered sub-tab; the documentation (`SYSTEM-SETTINGS-SETUP.md`, `setup/CLAUDE.md`, `CHANGELOG.md`) and the version bump. Committed locally, tests passing.
-3. **Stop 2 — review.** Doug pushes, switches it on at the Association's System Settings and uses it. Corrections go in before production.
+3. **Stop 2 — review.** Doug pushes, switches it on at the Association's System Settings and uses it. Corrections go in before production. **Passed 11-18-26**: Doug switched it on at the Association and every check on the review page looked right; no setting to move.
 4. **Stop 3 — production.** Switched on at production's System Settings. The removal of the old layout is a separate, later release.
 
 ## 6. Rulings
@@ -528,6 +528,7 @@ Generated from `core/settings_registry.py` on 11-18-26. The first heading of eac
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.4 | 11-18-26 02:03 | Claude (Claude Code) | Stop 2 passed: Doug's review on the Association's system, 11-18-26, no corrections. |
 | 0.3 | 11-18-26 01:39 | Claude (Claude Code) | Built as v0.345.0 (steps 2 complete); the appendix notes where the build differs from the draft list. |
 | 0.2 | 11-18-26 01:02 | Claude (Claude Code) | § 6 rewritten as the eight rulings, all option A (Doug, 11-18-26). Q3 corrected: the four integrity switches were in Features, not Email. Q8's two-places behaviour written into § 6. |
 | 0.1 | 11-18-26 00:25 | Claude (Claude Code) | First draft after Doug chose option A (sub-tabs, fixed order, word-by-word search). Draft assignment of all 286 settings; eight rulings asked. |
