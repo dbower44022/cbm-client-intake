@@ -1063,8 +1063,17 @@
 
     $("readinessRows").innerHTML = data.features.map(function (f) {
       var checks = f.checks.map(function (c) {
+        // A line the application can fix offers a button (event hosting plan
+        // § 8 item 3, ruling R2): the first click says exactly what changes,
+        // the second does it. Never disabled, never hidden.
+        var fix = c.fix
+          ? ' <button type="button" class="cbm-button cbm-button--secondary su__mini" data-fix="'
+            + esc(c.fix.action) + '" data-fix-confirm="' + esc(c.fix.confirm) + '">'
+            + esc(c.fix.button) + "</button>"
+            + ' <span class="su__fixmsg" data-fix-msg="' + esc(c.fix.action) + '"></span>'
+          : "";
         return "<li>" + checkIcon(c.ok) + " " + esc(c.label)
-          + ' <span class="su__muted">' + esc(c.detail) + "</span></li>";
+          + ' <span class="su__muted">' + esc(c.detail) + "</span>" + fix + "</li>";
       }).join("");
       var warn = f.workerWarning
         ? '<p class="su__disagree">This runs on the worker, and the worker has not '
@@ -1145,6 +1154,32 @@
     } catch (e) {
       var range = document.createRange(); range.selectNodeContents(el);
       var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+    }
+  }
+
+  // --- the Event hosting card's fixes (plan § 8 item 3, ruling R2) ------------
+  var fixArmed = { action: "", at: 0 };
+
+  async function runFix(btn) {
+    var action = btn.dataset.fix;
+    var msgs = document.querySelectorAll('[data-fix-msg="' + action + '"]');
+    function say(t) { Array.prototype.forEach.call(msgs, function (m) { text(m, t); }); }
+    var now = Date.now();
+    if (fixArmed.action !== action || now - fixArmed.at > 15000) {
+      fixArmed = { action: action, at: now };
+      say(btn.dataset.fixConfirm);
+      return;
+    }
+    fixArmed = { action: "", at: 0 };
+    say("Working…");
+    try {
+      var r = await api("/readiness/fix", {
+        method: "POST", body: JSON.stringify({ action: action }),
+      });
+      say(r.message);
+      if (r.ok) setTimeout(function () { loadReadiness().catch(function () {}); }, 2500);
+    } catch (e) {
+      say(e.message);
     }
   }
 
@@ -1578,6 +1613,7 @@
     if (t.dataset && t.dataset.run) { toggleRunOutput(t.dataset.run); return; }
     if (t.dataset && t.dataset.copy) { copyText(t.dataset.copy, t); return; }
     if (t.dataset && t.dataset.mailingDisconnect) { disconnectMailing(t); return; }
+    if (t.dataset && t.dataset.fix) { runFix(t); return; }
     if (t.dataset && t.dataset.mailingConnect) { connectMailing(ev); return; }
     if (t.dataset && t.dataset.imgUpload) {
       var input = document.querySelector('input[data-img-file="' + t.dataset.imgUpload + '"]');

@@ -105,7 +105,7 @@ async def test_missing_templates_are_named():
     """The Association had none of the eight, 11-18-26."""
     row = await hosting_readiness.template_row(Crm(templates=("EventConfirmation",)))
     assert row["ok"] is False and row["detail"].startswith("7 of 8 missing")
-    assert "scripts/seed_templates.sh" in row["detail"]
+    assert row["fix"]["action"] == "templates"
     ok = await hosting_readiness.template_row(Crm(templates=hosting_readiness.TEMPLATE_NAMES))
     assert ok["ok"] is True
     assert (await hosting_readiness.template_row(Crm(fail=True)))["ok"] is None
@@ -219,3 +219,101 @@ async def test_with_events_off_the_card_reads_off(monkeypatch):
     monkeypatch.setattr(setup_readiness, "_crm_snapshot", _none)
     payload = await setup_readiness.readiness_payload(Settings(events_enabled=False), None, None)
     assert payload["features"][0]["status"] == "off"
+
+
+# --- item 3: the fixes (ruling R2) ---------------------------------------------------
+
+
+async def test_the_not_ready_lines_offer_their_fix():
+    row = await hosting_readiness.template_row(Crm(templates=("EventConfirmation",)))
+    assert row["fix"]["action"] == "templates"
+    assert "EventWaitlisted" in row["fix"]["confirm"] and "Click again" in row["fix"]["confirm"]
+    rows = await _zoom_rows(screen_sharing=True, who_can_share_screen="all", co_host=True)
+    fix = rows["Screen sharing"]["fix"]
+    assert fix["action"] == "zoom_sharing"
+    assert "events@example.org" in fix["confirm"] and "every meeting" in fix["confirm"]
+    ready = await _zoom_rows(screen_sharing=True, who_can_share_screen="host", co_host=True)
+    assert "fix" not in ready["Screen sharing"] and "fix" not in ready["Co-host"]
+
+
+class AdminCrm:
+    def __init__(self, names):
+        self.names = list(names)
+        self.created = []
+
+    async def list(self, entity, **kw):
+        return {"total": len(self.names), "list": [{"name": n, "id": n} for n in self.names]}
+
+    async def create(self, entity, payload):
+        self.created.append(payload["name"])
+        return {"id": payload["name"]}
+
+
+async def test_the_templates_fix_creates_only_the_missing():
+    admin = AdminCrm(["EventConfirmation", "EventSurvey"])
+
+    async def factory():
+        return admin
+    result = await hosting_readiness.fix("templates", Settings(), admin_factory=factory)
+    assert result["ok"] and result["message"].startswith("Created 6:")
+    assert "EventConfirmation" not in admin.created and len(admin.created) == 6
+
+
+async def test_the_templates_fix_without_an_administrator_says_so():
+    result = await hosting_readiness.fix("templates", Settings(espo_dry_run=True))
+    assert result["ok"] is False and "seed_templates.sh" in result["message"]
+
+
+class ZoomFix(Zoom):
+    def __init__(self, after, error=None):
+        super().__init__({})
+        self.after = after
+        self.error = error
+        self.patched = []
+
+    async def update_user_settings(self, user, body):
+        if self.error:
+            raise self.error
+        self.patched.append((user, body))
+
+    async def get_user_settings(self, user):
+        return {"in_meeting": self.after}
+
+
+async def test_the_zoom_fix_changes_the_host_and_reads_it_back():
+    zoom = ZoomFix({"screen_sharing": True, "who_can_share_screen": "host", "co_host": True})
+    result = await hosting_readiness.fix("zoom_sharing", ZoomOn(), zoom=zoom)
+    assert result["ok"] and "read back from Zoom" in result["message"]
+    user, body = zoom.patched[0]
+    assert user == "events@example.org"
+    assert body == {"in_meeting": {"screen_sharing": True, "who_can_share_screen": "host",
+                                   "co_host": True}}
+
+
+async def test_zoom_accepting_without_changing_is_reported():
+    """Zoom has been reported answering 204 without applying the change."""
+    zoom = ZoomFix({"screen_sharing": True, "who_can_share_screen": "all", "co_host": True})
+    result = await hosting_readiness.fix("zoom_sharing", ZoomOn(), zoom=zoom)
+    assert result["ok"] is False and "still reports" in result["message"]
+
+
+async def test_a_missing_zoom_permission_is_named():
+    from core.zoom import ZoomError
+    err = ZoomError('Zoom PATCH failed: HTTP 400 {"code":4711,"message":"Invalid access '
+                    'token, does not contain scopes:[user:update:settings:admin]."}',
+                    status_code=400)
+    result = await hosting_readiness.fix("zoom_sharing", ZoomOn(), zoom=ZoomFix({}, error=err))
+    assert result["ok"] is False and "user:update:settings:admin" in result["message"]
+    assert "Add Scopes" in result["message"]
+
+
+async def test_an_unknown_fix_is_refused_in_words():
+    result = await hosting_readiness.fix("drop_tables", Settings())
+    assert result["ok"] is False and "no fix called" in result["message"]
+
+
+def test_the_page_offers_the_fix_with_two_clicks():
+    from pathlib import Path
+    source = (Path(__file__).resolve().parents[1] / "setup" / "frontend" / "app.js").read_text()
+    assert "data-fix=" in source and "async function runFix(" in source
+    assert '"/readiness/fix"' in source

@@ -29,11 +29,8 @@ from . import hosting
 log = logging.getLogger("cbm_intake.events.readiness")
 
 #: The eight EspoCRM email templates every event email is sent from
-#: (scripts/seed_event_templates.py creates any that are missing).
-TEMPLATE_NAMES: tuple[str, ...] = (
-    "EventConfirmation", "EventWaitlisted", "EventSeatOffered", "EventReminder",
-    "EventRecordingAvailable", "EventNoShow", "EventMentorCTA", "EventSurvey",
-)
+#: (events/email_templates.py holds their wording and creates missing ones).
+from .email_templates import NAMES as TEMPLATE_NAMES  # noqa: E402
 
 #: Zoom's value for "Who can share?" set to Host Only. ``"all"`` is
 #: documented; ``"host"`` is the expected counterpart, not yet confirmed
@@ -42,8 +39,38 @@ SHARE_HOST = "host"
 SHARE_ALL = "all"
 
 
-def _row(label: str, ok: Optional[bool], detail: str) -> dict[str, Any]:
-    return {"kind": "hosting", "label": label, "ok": ok, "detail": detail}
+def _row(label: str, ok: Optional[bool], detail: str,
+         fix: Optional[dict[str, str]] = None) -> dict[str, Any]:
+    row = {"kind": "hosting", "label": label, "ok": ok, "detail": detail}
+    if fix:
+        row["fix"] = fix
+    return row
+
+
+#: The fix buttons (item 3, ruling R2): each names exactly what it changes and
+#: acts only on a second click. ``confirm`` is what the first click shows.
+FIX_TEMPLATES = "templates"
+FIX_ZOOM_SHARING = "zoom_sharing"
+
+
+def _templates_fix(missing: list[str]) -> dict[str, str]:
+    return {
+        "action": FIX_TEMPLATES,
+        "button": "Create the missing templates",
+        "confirm": (f"Creates {len(missing)} email template(s) in the CRM with default "
+                    f"wording: {', '.join(missing)}. Templates that exist are not touched. "
+                    "Click again to create them."),
+    }
+
+
+def _zoom_fix(host: str) -> dict[str, str]:
+    return {
+        "action": FIX_ZOOM_SHARING,
+        "button": "Set host-only sharing and co-host",
+        "confirm": (f"Changes the Zoom user {host}: screen sharing on, Who can share? set "
+                    "to Host Only, co-host on. This applies to every meeting that Zoom user "
+                    "hosts, not only events. Click again to change it."),
+    }
 
 
 # --- the worker ----------------------------------------------------------------
@@ -103,8 +130,7 @@ async def template_row(crm: Any) -> dict[str, Any]:
         return _row(label, True, "all 8 present")
     return _row(label, False,
                 f"{len(missing)} of 8 missing ({', '.join(missing)}): every send of those "
-                "kinds refuses until they exist. Create them with "
-                "scripts/seed_templates.sh, or in the CRM under Email Templates.")
+                "kinds refuses until they exist.", _templates_fix(missing))
 
 
 async def option_rows(crm: Any) -> list[dict[str, Any]]:
@@ -175,13 +201,13 @@ async def zoom_rows(settings: Any, zoom: Any = None) -> list[dict[str, Any]]:
     if sharing_on is False:
         rows.append(_row("Screen sharing", False,
                          "off for the event host user, so not even a co-presenter can "
-                         "share. Turn it on with Who can share? set to Host Only."))
+                         "share.", _zoom_fix(account_host)))
     elif who == SHARE_HOST:
         rows.append(_row("Screen sharing", True, "host only"))
     elif who == SHARE_ALL:
         rows.append(_row("Screen sharing", False,
-                         "all participants: any attendee can share their screen. Set Who "
-                         "can share? to Host Only for the event host user (ruling EH11)."))
+                         "all participants: any attendee can share their screen (ruling "
+                         "EH11 wants host only).", _zoom_fix(account_host)))
     else:
         rows.append(_row("Screen sharing", None,
                          f"Zoom reported who can share as {who!r}, which this check does "
@@ -194,7 +220,7 @@ async def zoom_rows(settings: Any, zoom: Any = None) -> list[dict[str, Any]]:
     elif co_host is False:
         rows.append(_row("Co-host", False,
                          "off: a co-presenter cannot be made co-host, so only the host "
-                         "can share"))
+                         "can share", _zoom_fix(account_host)))
     else:
         rows.append(_row("Co-host", None, "Zoom did not report it"))
     return rows
@@ -221,3 +247,75 @@ async def checks(
     rows.extend(await option_rows(crm))
     rows.extend(await zoom_rows(settings, zoom))
     return rows
+
+
+# --- the fixes (item 3, ruling R2) -------------------------------------------------
+
+#: Zoom's error when the app lacks a permission names it; this is what to add.
+ZOOM_UPDATE_SCOPE = "user:update:settings:admin"
+
+
+async def fix(action: str, settings: Any, *, admin_factory: Any = None,
+              zoom: Any = None) -> dict[str, Any]:
+    """Run one fix. ``{"ok": bool, "message": str}`` in words; never raises.
+    Called only after the administrator's second click."""
+    try:
+        if action == FIX_TEMPLATES:
+            return await _fix_templates(settings, admin_factory)
+        if action == FIX_ZOOM_SHARING:
+            return await _fix_zoom_sharing(settings, zoom)
+        return {"ok": False, "message": f"There is no fix called {action!r}."}
+    except Exception as exc:  # noqa: BLE001 — the page shows the reason, never a 500
+        log.warning("readiness fix %s failed: %s", action, exc)
+        return {"ok": False, "message": f"The fix failed: {exc}"}
+
+
+async def _fix_templates(settings: Any, admin_factory: Any) -> dict[str, Any]:
+    from core.admin_client import admin_client_factory
+
+    from . import email_templates
+
+    factory = admin_factory or admin_client_factory(settings)
+    if factory is None:
+        return {"ok": False, "message": (
+            "Creating email templates needs a CRM administrator, and this deployment "
+            "has no provisioning administrator (ESPO_PROVISION_USERNAME and "
+            "ESPO_PROVISION_PASSWORD). Run scripts/seed_templates.sh instead.")}
+    admin = await factory()
+    result = await email_templates.create_missing(admin)
+    if not result["created"]:
+        return {"ok": True, "message": "All 8 templates were already there; nothing was created."}
+    return {"ok": True, "message": (f"Created {len(result['created'])}: "
+                                    f"{', '.join(result['created'])}. Edit their wording in "
+                                    "the CRM under Email Templates.")}
+
+
+async def _fix_zoom_sharing(settings: Any, zoom: Any) -> dict[str, Any]:
+    from core.zoom import ZoomError
+
+    host = hosting.zoom_host(settings, PRODUCT_MEETING)
+    api = zoom or hosting.zoom_client(settings, PRODUCT_MEETING)
+    if api is None or not host:
+        return {"ok": False, "message": "Zoom Meetings is not switched on or not set up."}
+    body = {"in_meeting": {"screen_sharing": True, "who_can_share_screen": SHARE_HOST,
+                           "co_host": True}}
+    try:
+        await api.update_user_settings(host, body)
+    except ZoomError as exc:
+        text = str(exc)
+        if exc.status_code in (400, 401, 403) and "scope" in text.lower():
+            return {"ok": False, "message": (
+                f"Zoom refused: the Zoom Meetings app lacks the permission "
+                f"{ZOOM_UPDATE_SCOPE}. Add it on the app's Scopes page in Zoom's App "
+                "Marketplace (Add Scopes), then click the button again.")}
+        return {"ok": False, "message": f"Zoom refused the change: {text[:300]}"}
+    after = (await api.get_user_settings(host) or {}).get("in_meeting") or {}
+    if after.get("who_can_share_screen") == SHARE_HOST and after.get("co_host") is True \
+            and after.get("screen_sharing") is not False:
+        return {"ok": True, "message": (f"Done: {host} now has host-only screen sharing and "
+                                        "co-host on, read back from Zoom.")}
+    return {"ok": False, "message": (
+        f"Zoom accepted the change but still reports who can share as "
+        f"{after.get('who_can_share_screen')!r} and co-host as {after.get('co_host')!r}. "
+        "The account's own settings may lock them: an account owner can change them in "
+        "Zoom under Account Settings.")}

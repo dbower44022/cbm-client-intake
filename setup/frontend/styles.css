@@ -266,3 +266,6 @@
 .su__wizfail p:last-child { margin: 0; }
 .su__wizhelp { margin: 0 0 0.9rem; background: #f0f5fa; border-radius: 6px; padding: 0.6rem 0.8rem; white-space: pre-wrap; }
 .su__wizdone { font-weight: 600; }
+
+/* The Event hosting card's fix message (plan § 8 item 3). */
+.su__fixmsg { display: block; margin: .25rem 0 0; font-size: .85rem; color: var(--cbm-text, #5B6676); }

@@ -379,6 +379,14 @@ class ZoomClient:
     async def get_user_settings(self, user: str) -> dict[str, Any]:
         return await self._request("GET", f"/users/{user}/settings")
 
+    async def update_user_settings(self, user: str, body: dict[str, Any]) -> None:
+        """``PATCH /users/{user}/settings`` (204). Needs the scope
+        ``user:update:settings:admin`` (read from a mirror of Zoom's reference,
+        11-18-26, not Zoom's own page). Zoom has been reported answering 204
+        without applying a change, so callers read the settings back."""
+        await self._request("PATCH", f"/users/{user}/settings", json_body=body,
+                            expect_body=False)
+
     async def list_webinars(
         self, user: str, *, kind: str = "scheduled", page_size: int = 1
     ) -> dict[str, Any]:

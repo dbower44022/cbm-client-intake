@@ -560,6 +560,24 @@ async def get_readiness(request: Request) -> dict:
     )
 
 
+class FixIn(BaseModel):
+    action: str
+
+
+@router.post("/readiness/fix")
+async def readiness_fix(payload: FixIn, request: Request) -> dict:
+    """One of the Event hosting card's fix buttons, after the administrator's
+    second click (prds/events/event-hosting-plan.md § 8 item 3, ruling R2).
+    Answers in words; a refusal is ``ok: false``, never an error page."""
+    user = _require_admin(request)
+    from events import readiness as hosting_readiness
+
+    result = await hosting_readiness.fix(payload.action, get_settings())
+    await _log(user, "Readiness Fix", f"{payload.action}: {result['message']}",
+               {"action": payload.action, "ok": result["ok"]})
+    return result
+
+
 @router.get("/diff")
 async def get_diff(request: Request) -> dict:
     _require_admin(request)
