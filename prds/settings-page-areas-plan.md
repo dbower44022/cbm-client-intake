@@ -1,6 +1,6 @@
 # System Settings — finding a setting
 
-Last Updated: 11-18-26 00:25 · Revision 0.1 · **Draft — awaiting Doug's rulings in § 6**
+Last Updated: 11-18-26 01:02 · Revision 0.2 · **Rulings settled (§ 6); appendix review open**
 
 ## 1. What this changes
 
@@ -24,7 +24,7 @@ Marketing Management (47), Events (26), Business Evaluation (7), Staff and mento
 
 - **Registry.** Each `SettingSpec` in `core/settings_registry.py` gains two fields: `area` and `heading`. Each area names its main switch per heading. The existing `group` field and `GROUP_ORDER` stay while the old layout is still served (§ 4), and are removed at the end.
 - **Order.** The server sends each area's headings in the registry's order and each heading's settings already sorted: the main switch first, then A to Z by label. The browser does not re-sort.
-- **Restart-required settings** show a *Restart required* badge on their row in their own area, and *Waiting for restart* when the stored value and the value in force differ, as today. The summary at the top of the page that lists every setting waiting for a restart stays, and each name in it opens that setting. Subject to ruling Q1.
+- **Restart-required settings** show a *Restart required* badge on their row in their own area, and *Waiting for restart* when the stored value and the value in force differ, as today. The summary at the top of the page that lists every setting waiting for a restart stays, and each name in it opens that setting. Ruling Q1.
 - **The website images panel** moves with the Website and branding area.
 - **Only overridden** and the search both work across every sub-tab.
 - **Opening a setting by name** (the History tab and the restart summary do this, `setup/frontend/app.js:890`) selects its sub-tab first, then scrolls to it.
@@ -44,25 +44,25 @@ Work pauses for Doug at each of these. Between them it proceeds without asking.
 3. **Stop 2 — review.** Doug pushes, switches it on at the Association's System Settings and uses it. Corrections go in before production.
 4. **Stop 3 — production.** Switched on at production's System Settings. The removal of the old layout is a separate, later release.
 
-## 6. Rulings needed
+## 6. Rulings
 
-Each has a recommendation. Doug can answer "all as recommended" or name the ones to change.
+All eight decided by Doug on 11-18-26, each as recommended (option A), after one-at-a-time discussion.
 
-**Q1. Where do restart-required settings go?** Today they are one group of nine, by Doug's ruling of 08-28-26 that they be shown together and explain themselves. Recommendation: each moves to its own area (*Events & Webinars* to Events, *Analytics* to Staff and mentor tools, *Log level* to Platform), with a badge on the row, and the summary at the top keeps listing every one that is waiting. Cost: the nine no longer sit side by side. The alternative is a tenth sub-tab, *Restart required*, which keeps them together but splits *Events & Webinars* away from every other Events setting.
+**Q1. Restart-required settings go to their own areas.** Each of the nine moves to the area of the application it controls (*Events & Webinars* and *Public events API* to Events, *Analytics* and *Staff applications* to Staff and mentor tools, the other five to Platform). Each row keeps its *Restart required* badge and its *Waiting for restart* marker, and the summary at the top of the page keeps listing every restart that is waiting, each name opening its setting. This keeps the honesty of the 08-28-26 ruling; only the side-by-side group goes.
 
-**Q2. Credentials apart from their feature.** Recommendation: as § 2 says, outside-service account details live in Connected services. Cost: switching on *Campaign texts* and entering the Twilio account are on two different sub-tabs. The help text on the feature names where its service is set.
+**Q2. An outside service's account details live in Connected services.** One heading per service: its *in use* switch, account details, keys and web addresses. A feature's own behaviour stays with the feature. A feature that needs a service says so in its help text, naming Connected services.
 
-**Q3. Login integrity settings** (the ten `integrity_*` and `login_integrity_*` settings, now in Email because they send a digest) move to Staff and mentor tools, under *Login integrity check*. Recommendation: move them. Cost: an admin who knew them under Email looks there first once.
+**Q3. The login integrity check's ten settings go to Staff and mentor tools,** under *Login integrity check*: the four switches (now in Features) and the six details (now in Email).
 
-**Q4. Alert recipients and sender** (`alert_email_to`, `alert_email_from`, `alert_webhook_url`, now in Email) move to Platform, under *Alerts and checks*, beside the alert thresholds. Recommendation: move them.
+**Q4. The seven alert settings go to Platform,** under *Alerts and checks*: the three addresses (now in Email) and the four thresholds (now in Reliability).
 
-**Q5. Promote this event** needs Marketing Management but is a button in Event Administration. Recommendation: Events.
+**Q5. *Promote this event* goes to Events.** The rule: a setting lives where its screen is. Its help text says it needs Marketing Management.
 
-**Q6. Personal outreach to leads** sends email, but from a lead's page in Marketing Management. Recommendation: Marketing Management.
+**Q6. *Personal outreach to leads* goes to Marketing Management,** under *Leads and fit scores*, by the Q5 rule. Its help text names Gmail sync as a requirement.
 
-**Q7. Mentor mailbox checks** (*Verify CBM mailbox exists*, *Create missing mailboxes*) use Google Workspace but are part of mentor provisioning. Recommendation: Staff and mentor tools, under *Mentor logins*.
+**Q7. *Verify CBM mailbox exists* and *Create missing mailboxes* go to Staff and mentor tools,** under *Mentor logins*, by the Q2 rule: they are feature behaviour, not account details.
 
-**Q8. The Integrations tab, when it is switched on.** Today it takes every setting tagged with an outside service off the Settings tab, which would empty parts of Marketing Management (AI research), Events (Zoom) and Email (Gmail). Recommendation: with sub-tabs on, the **Connected services** sub-tab is hidden while the Integrations tab is on, because that tab holds the same settings. Feature settings stay in their own areas, and also still appear on the Integrations tab as today. Cost: some settings are editable in two places. Both show the same stored value, so they cannot disagree.
+**Q8. With the Integrations tab on, feature settings stay in their areas** and also appear on their service's sub-tab of the Integrations tab. Only the Connected services sub-tab is hidden while the Integrations tab is on, because that tab holds the same settings. A setting shown in two places shows the same stored value, and a save in either updates both. With sub-tabs off, the Integrations tab behaves exactly as today.
 
 ## Appendix — draft assignment of every setting
 
@@ -520,4 +520,5 @@ Generated from `core/settings_registry.py` on 11-18-26. The first heading of eac
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.2 | 11-18-26 01:02 | Claude (Claude Code) | § 6 rewritten as the eight rulings, all option A (Doug, 11-18-26). Q3 corrected: the four integrity switches were in Features, not Email. Q8's two-places behaviour written into § 6. |
 | 0.1 | 11-18-26 00:25 | Claude (Claude Code) | First draft after Doug chose option A (sub-tabs, fixed order, word-by-word search). Draft assignment of all 286 settings; eight rulings asked. |
