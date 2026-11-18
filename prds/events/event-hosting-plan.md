@@ -1,6 +1,6 @@
 # Event hosting methods — plan
 
-Last Updated: 11-18-26 01:35 · Revision 0.12 — see change log at the end.
+Last Updated: 11-18-26 01:27 · Revision 0.13 — see change log at the end.
 
 This plan decides how a chapter's online events are hosted: Zoom Webinars,
 Zoom Meetings, a link to any other platform, or an outside host. It records
@@ -225,10 +225,10 @@ shrinks to the handful of steps that need a person.
 
 ### Open decisions
 
-- **R1. Where the readiness check lives.** Recommended: a card on System
-  Settings → Feature readiness, because event hosting spans the CRM, the
-  worker, Google and Zoom. The alternative is inside the Zoom Meetings test on
-  the Integrations tab.
+- ~~**R1. Where the readiness check lives.**~~ **Ruled (Doug, 11-18-26,
+  option A):** a card on System Settings → Feature readiness, because event
+  hosting spans the CRM, the worker, Google and Zoom; not inside the Zoom
+  Meetings test on the Integrations tab.
 - **R2. How the Zoom host's settings are fixed.** Recommended: a fix button an
   administrator confirms, since the setting changes every meeting that Zoom
   user hosts. The alternative is the application setting it silently each time
@@ -255,6 +255,7 @@ until the spec carries `EVENTS_ENABLED` on the worker (#84).
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.13 | 11-18-26 01:27 | Claude (Claude Code) | R1 ruled, option A: the readiness check is a card on Feature readiness. |
 | 0.12 | 11-18-26 01:35 | Claude (Claude Code) | § 8 added, a draft: step 5a, a readiness check before the live check (Doug, 11-18-26, after the step 6 run stopped at section 5 on four failures, none in the hosting build). Open decisions R1 and R2. |
 | 0.11 | 11-17-26 23:18 | Claude (Claude Code) | EH11 kept (Doug, 11-17-26, option A, asked because several people often share in one meeting). Zoom's Host Only setting still lets co-hosts share, so each co-presenter shares once the host makes them co-host. That comes from Zoom's documentation; the step 6 runbook's section 8 tries it for the first time. |
 | 0.10 | 11-17-26 11:55 | Claude (Claude Code) | Step 5 built (v0.342.0). The method choice is offered on every online event. Before a save, a check names the platform and gives the guards, confirmed with a second click. The overlap warning covers webinars and meetings under one host user. No new switch. |
