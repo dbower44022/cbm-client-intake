@@ -1338,4 +1338,7 @@ the strength of it.
   readiness, defaults per audience, and a check before saving that names the
   platform, refuses an over-capacity meeting and warns of Zoom overlaps. Owed
   in #84.
+- **v0.344.0 (2026-11-18) is committed, not pushed**: the Event hosting card
+  on Feature readiness, and the worker reports its switches (plan § 8 items
+  1 and 2; migration 0050). Owed in #84.
 Everything else still owed is in `OPEN-ITEMS.md`.

@@ -5,6 +5,40 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.344.0] — 2026-11-18
+
+**feat(setup): the Event hosting card on Feature readiness, and the worker
+reports its switches.** Plan `prds/events/event-hosting-plan.md` § 8, items 1
+and 2 (ruling R1, Doug 11-18-26: a card on Feature readiness). Read-only
+throughout; no switch.
+
+- **The worker reports what it runs with.** Each heartbeat carries the
+  worker's switches: Events, confirmations, reminders, Gmail sync, whether
+  the shared mailbox is set, Zoom Webinars, Zoom Meetings, the attendance pull
+  and dry run (`core/worker_switches.py`; migration `0050_heartbeat_switches`
+  adds one column). Feature readiness compares them with the web part's. A
+  difference is shown as a not-ready line on that feature, in words: "Events
+  & Webinars is on for the web part and off for the worker." That was the
+  first failure on the Association's system, 11-18-26, and nothing on System
+  Settings could show it.
+- **The Event hosting card**, first on Feature readiness (`events/readiness.py`).
+  It reads live:
+  - the worker's Events switch and everything the confirmation needs;
+  - the eight event email templates;
+  - the CRM's hosting method options and the Portal registration source;
+  - with Zoom Meetings on, the event host user's screen sharing (host only)
+    and co-host.
+
+  Each line reads ready, not ready with the reason and what to do, or unknown.
+  Zoom's "all participants" reads not ready. "Host only" is expected as
+  `"host"`, not yet confirmed against Zoom's reference, so any other value
+  reads unknown, never ready.
+- Against the Association's CRM (read-only, as its administrator, before
+  deploying), all three CRM lines read ready: the templates created on
+  11-18-26, the four methods, and the Portal source.
+- Tests: `tests/test_hosting_readiness.py` (16) and a database test for the
+  heartbeat's switches. Full suite: 4198 passed.
+
 ## [0.343.0] — 2026-11-18
 
 **feat(portal): the new home page, phase 1 — the frame.** Plan

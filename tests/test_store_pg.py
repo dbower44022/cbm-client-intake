@@ -186,6 +186,21 @@ async def test_redrive_guard_and_acted_by():
     await store.dispose()
 
 
+async def test_heartbeat_carries_the_workers_switches():
+    """Plan § 8 item 1: the worker's switches ride its beat, and a beat
+    without them leaves the last report in place."""
+    store = PostgresStore(_URL)
+    await store.create_all()
+    await store.heartbeat(switches={"events_enabled": False, "gmail_sync": True})
+    report = await store.worker_report()
+    assert report["switches"] == {"events_enabled": False, "gmail_sync": True}
+    assert report["ageSeconds"] < 60
+    await store.heartbeat()
+    assert (await store.worker_report())["switches"] == {"events_enabled": False,
+                                                        "gmail_sync": True}
+    await store.dispose()
+
+
 async def test_heartbeat_and_stranded_metrics():
     """P1-6: the worker's heartbeat upsert + the stranded (lease-expired
     processing) count both surface in metrics()."""

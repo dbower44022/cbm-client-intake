@@ -1,6 +1,6 @@
 # events/ — Events, Webinars and the public pages
 
-Last Updated: 11-17-26 11:55 · Revision 1.6
+Last Updated: 11-18-26 01:38 · Revision 1.7
 
 Detail for Event Administration (`/events`), the public programme pages (`/webinars/`), presenters, topics, attendance, follow-ups, reporting and the portal events rail.
 
@@ -264,6 +264,13 @@ would be indistinguishable from a slug.
     (`service.overlap_warnings`) only warns, and a failed read warns of
     nothing. The form never types the stored `CBM Zoom`: the branding guard
     refuses the acronym, so it reads `hosting.webinars` from the payload.
+  - **Readiness before a live check** (plan § 8, v0.344.0): the Event hosting
+    card first on System Settings → Feature readiness, read live by
+    `events/readiness.py`. It covers the worker's own switches (from its
+    heartbeat, `core/worker_switches.py`), the eight templates, the CRM's
+    options and the Zoom host's sharing and co-host. Run it, and read it
+    yourself where you can, before writing any live-check runbook: the step 6
+    run met four failures this card would have shown first.
   - Zoom Meetings' participant report carries `user_email` and no
     `registrant_id`, so attendance matches by email (proved 11-15-26).
     Mentoring sessions never use the chapter's Zoom account (EH10).
@@ -382,6 +389,7 @@ would be indistinguishable from a slug.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.7 | 11-18-26 01:38 | Claude (Claude Code) | Readiness before a live check: the Event hosting card (plan § 8). |
 | 1.6 | 11-17-26 11:55 | Claude (Claude Code) | Hosting methods, step 5: the event form and the check before a save. |
 | 1.5 | 11-17-26 11:20 | Claude (Claude Code) | Hosting methods, step 4 built: `events/hosting.py`, members-only Zoom Meetings (option B), Other platform's switch, EH4 on the server. |
 | 1.4 | 11-15-26 02:25 | Claude (Claude Code) | Hosting methods: the stored values, the shared Zoom ids, attendance by email (event hosting plan, steps 1 and 3). |

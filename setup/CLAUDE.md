@@ -1,6 +1,6 @@
 # setup/ — System Settings
 
-Last Updated: 11-17-26 11:20 · Revision 1.3
+Last Updated: 11-18-26 01:38 · Revision 1.4
 
 Detail for System Settings (`/setup`): the override model, the verified path, confirm-or-revert, restart-required settings, refresh, scoped rollout and the page's other panels.
 
@@ -126,6 +126,12 @@ keeps its old setting keys, relabelled, so no stored override is stranded.
 - **`events_other_platform`** (Features, v0.341.0): the switch for the Other
   platform hosting method (event hosting plan step 4). Read per request
   through `events/hosting.other_platform_on`.
+- **Feature readiness reads the worker's own switches** (v0.344.0): the
+  worker writes `core/worker_switches.snapshot` with each heartbeat
+  (`worker_heartbeat.switches`, migration 0050) and the page names any switch
+  that differs from the web part's. This page's settings are the web part's;
+  never assume the worker matches them. The Event hosting card
+  (`events/readiness.py`) comes first.
 - **Never read the Zoom credentials directly.** `core/zoom.meetings_account`
   and `core/zoom.webinars_account` are the one rule (Doug, 11-15-26, option
   A): Zoom Webinars uses Zoom Meetings' app and event host user when "same
@@ -197,6 +203,7 @@ Administrator guide: `SYSTEM-SETTINGS-SETUP.md` § 8. Design and rulings:
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.4 | 11-18-26 01:38 | Claude (Claude Code) | Feature readiness reads the worker's switches; the Event hosting card. |
 | 1.3 | 11-17-26 11:20 | Claude (Claude Code) | `events_other_platform`, the Other platform switch (v0.341.0). |
 | 1.2 | 11-15-26 13:30 | Claude (Claude Code) | The Integrations tab: the rules a future session must not break (phase 11). |
 | 1.1 | 11-15-26 02:50 | Claude (Claude Code) | Zoom Meetings and Zoom Webinars: the settings the Events side reads (Integrations tab phase 9, v0.333.0). |

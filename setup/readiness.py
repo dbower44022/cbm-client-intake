@@ -387,10 +387,28 @@ async def readiness_payload(
         heartbeat_age is None or heartbeat_age > settings.worker_heartbeat_alert_seconds
     )
 
+    # What the worker itself runs with (plan § 8 item 1): a switch can be on for
+    # the web part and off for the worker, which this page could not see.
+    from core import worker_switches
+
+    worker_report: Optional[dict[str, Any]] = None
+    if store is not None and hasattr(store, "worker_report"):
+        try:
+            worker_report = await store.worker_report()
+        except Exception as exc:  # noqa: BLE001 — best effort
+            log.debug("readiness: worker report unavailable: %s", exc)
+    mismatched = {
+        row["key"]: row
+        for row in worker_switches.mismatches(settings, (worker_report or {}).get("switches"))
+    }
+
     features = []
     for feature in FEATURES:
         on = bool(getattr(settings, feature.flag, False)) if feature.flag else True
         checks = _requirement_rows(feature, settings) + _crm_rows(feature, crm)
+        if feature.flag in mismatched:
+            checks.append({"kind": "worker", "label": "the worker",
+                           "ok": False, "detail": worker_switches.words(mismatched[feature.flag])})
         if feature.key == "mailing":
             checks.append(mailing["check"])
             if settings.campaign_list_sync and mailing.get("fieldCheck"):
@@ -421,6 +439,8 @@ async def readiness_payload(
             "workerWarning": worker_warning,
         })
 
+    features.insert(0, await _event_hosting_row(settings, worker_report, worker_stale))
+
     payload: dict[str, Any] = {
         "features": features,
         "crmReachable": crm is not None,
@@ -430,10 +450,50 @@ async def readiness_payload(
         "workerStale": worker_stale,
         "workerThresholdSeconds": settings.worker_heartbeat_alert_seconds,
         "mailing": mailing,
+        "workerSwitchMismatches": [worker_switches.words(r) for r in mismatched.values()],
     }
     if settings.integrations_tab:
         _add_integrations(payload, settings)
     return payload
+
+
+async def _event_hosting_row(
+    settings: Settings, worker_report: Optional[dict[str, Any]], worker_stale: bool,
+) -> dict[str, Any]:
+    """The Event hosting card (plan § 8 item 2, ruling R1): live, read-only
+    checks that event hosting can work — the worker's switches, the email
+    templates, the CRM's options, the Zoom host's settings."""
+    from events import readiness as hosting_readiness
+
+    def crm_factory() -> EspoClient:
+        return EspoClient(settings.espo_base_url, settings.espo_api_key,
+                          min(10, settings.request_timeout_seconds))
+
+    on = bool(settings.events_enabled)
+    try:
+        checks = await hosting_readiness.checks(
+            settings, worker=worker_report, crm_factory=crm_factory)
+    except Exception as exc:  # noqa: BLE001 — never an error page
+        log.warning("readiness: event hosting checks failed: %s", exc)
+        checks = [{"kind": "hosting", "label": "Event hosting", "ok": None,
+                   "detail": "the checks could not be run"}]
+    unmet = [c for c in checks if c["ok"] is False]
+    unknown = [c for c in checks if c["ok"] is None]
+    return {
+        "key": "event_hosting",
+        "name": "Event hosting",
+        "flag": "events_enabled",
+        "on": on,
+        "component": "both",
+        "note": ("Whether an online event can take registrations, confirm them and "
+                 "run: read live from the worker, the CRM and Zoom. Read-only."),
+        "checks": checks,
+        "unmet": len(unmet),
+        "unknown": len(unknown),
+        "status": ("off" if not on else "blocked" if unmet
+                   else "unknown" if unknown else "ready"),
+        "workerWarning": on and worker_stale,
+    }
 
 
 def _add_integrations(payload: dict[str, Any], settings: Settings) -> None:

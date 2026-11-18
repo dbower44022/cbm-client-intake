@@ -192,6 +192,9 @@ worker_heartbeat = Table(
     metadata,
     Column("id", String(16), primary_key=True),
     Column("beat_at", DateTime(timezone=True), nullable=False),
+    # The switches the worker runs with (core/worker_switches.py, migration
+    # 0050): Feature readiness compares them with the web part's.
+    Column("switches", JSONB, nullable=True),
 )
 
 # --- Submission Admin collaboration (2026-07-22) ---------------------------
@@ -462,7 +465,9 @@ class SubmissionStore(Protocol):
     async def metrics(self) -> dict[str, Any]: ...
     async def ping(self) -> bool: ...
     # Worker liveness (P1-6):
-    async def heartbeat(self) -> None: ...
+    async def heartbeat(self, switches: Optional[dict[str, Any]] = None) -> None: ...
+
+    async def worker_report(self) -> Optional[dict[str, Any]]: ...
     async def dispose(self) -> None: ...
 
 
@@ -1555,18 +1560,39 @@ class PostgresStore:
             ),
         }
 
-    async def heartbeat(self) -> None:
-        """Stamp worker liveness (one fixed row, upserted each loop iteration)."""
+    async def heartbeat(self, switches: Optional[dict[str, Any]] = None) -> None:
+        """Stamp worker liveness (one fixed row, upserted each loop iteration),
+        with the switches the worker runs with when given."""
+        values: dict[str, Any] = {"id": WORKER_HEARTBEAT_ID, "beat_at": _now()}
+        if switches is not None:
+            values["switches"] = switches
         async with self._engine.begin() as conn:
-            stmt = pg_insert(worker_heartbeat).values(
-                id=WORKER_HEARTBEAT_ID, beat_at=_now()
-            )
+            stmt = pg_insert(worker_heartbeat).values(**values)
+            update: dict[str, Any] = {"beat_at": stmt.excluded.beat_at}
+            if switches is not None:
+                update["switches"] = stmt.excluded.switches
             await conn.execute(
                 stmt.on_conflict_do_update(
-                    index_elements=[worker_heartbeat.c.id],
-                    set_={"beat_at": stmt.excluded.beat_at},
+                    index_elements=[worker_heartbeat.c.id], set_=update,
                 )
             )
+
+    async def worker_report(self) -> Optional[dict[str, Any]]:
+        """The last beat and the switches the worker reported with it:
+        ``{"beatAt", "ageSeconds", "switches"}``, or None before any beat."""
+        async with self._engine.connect() as conn:
+            row = (await conn.execute(
+                select(worker_heartbeat.c.beat_at, worker_heartbeat.c.switches)
+                .where(worker_heartbeat.c.id == WORKER_HEARTBEAT_ID)
+            )).first()
+        if row is None:
+            return None
+        beat, switches = row
+        return {
+            "beatAt": beat.isoformat() if beat else None,
+            "ageSeconds": (_now() - beat).total_seconds() if beat else None,
+            "switches": switches,
+        }
 
     async def ping(self) -> bool:
         """Liveness check for the database connection (``/healthz``)."""

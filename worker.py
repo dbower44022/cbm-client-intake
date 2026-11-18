@@ -771,7 +771,11 @@ async def main() -> None:
         # Liveness heartbeat (P1-6): one upserted row per iteration; /healthz
         # reports its age so an external check can see a dead/wedged worker.
         try:
-            await store.heartbeat()
+            # With the switches this process runs with, so System Settings can
+            # say when the worker's differ from the web part's (plan § 8).
+            from core.worker_switches import snapshot as switch_snapshot
+
+            await store.heartbeat(switches=switch_snapshot(get_settings()))
         except Exception as exc:  # noqa: BLE001 — liveness must never crash the worker
             log.warning("heartbeat write failed: %s", exc)
 
