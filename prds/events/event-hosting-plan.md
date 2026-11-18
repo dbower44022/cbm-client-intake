@@ -1,6 +1,6 @@
 # Event hosting methods — plan
 
-Last Updated: 11-18-26 01:38 · Revision 0.15 — see change log at the end.
+Last Updated: 11-18-26 01:58 · Revision 0.16 — see change log at the end.
 
 This plan decides how a chapter's online events are hosted: Zoom Webinars,
 Zoom Meetings, a link to any other platform, or an outside host. It records
@@ -223,7 +223,7 @@ shrinks to the handful of steps that need a person.
    check reads ready. Every read-only check is made by Claude before the page
    is written.
 
-**Items 1 and 2 built v0.344.0 (11-18-26):** `core/worker_switches.py`, migration
+**Item 3 built v0.347.0 (11-18-26)**: the fix buttons. **Items 1 and 2 built v0.344.0 (11-18-26):** `core/worker_switches.py`, migration
 `0050_heartbeat_switches`, `events/readiness.py`, the card first on Feature
 readiness.
 
@@ -259,6 +259,7 @@ until the spec carries `EVENTS_ENABLED` on the worker (#84).
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.16 | 11-18-26 01:58 | Claude (Claude Code) | § 8 item 3 built (v0.347.0): the fix buttons for the templates and the Zoom host's sharing. |
 | 0.15 | 11-18-26 01:38 | Claude (Claude Code) | § 8 items 1 and 2 built (v0.344.0): the worker reports its switches, and the Event hosting card on Feature readiness. |
 | 0.14 | 11-18-26 01:26 | Claude (Claude Code) | R2 ruled, option A: a confirmed fix button for the Zoom host's settings. Revision 0.13's time corrected from a guessed 01:27 to the clock's 01:25. |
 | 0.13 | 11-18-26 01:25 | Claude (Claude Code) | R1 ruled, option A: the readiness check is a card on Feature readiness. |

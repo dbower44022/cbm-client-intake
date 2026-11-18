@@ -1344,4 +1344,6 @@ the strength of it.
 - **v0.344.0 (2026-11-18) is committed, not pushed**: the Event hosting card
   on Feature readiness, and the worker reports its switches (plan § 8 items
   1 and 2; migration 0050). Owed in #84.
+- **v0.347.0 (2026-11-18) is committed, not pushed**: fix buttons on the
+  Event hosting card (plan § 8 item 3). Owed in #84.
 Everything else still owed is in `OPEN-ITEMS.md`.

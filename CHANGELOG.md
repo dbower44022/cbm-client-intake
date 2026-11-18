@@ -5,6 +5,28 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.347.0] — 2026-11-18
+
+**feat(setup): fix buttons on the Event hosting card.** Plan
+`prds/events/event-hosting-plan.md` § 8 item 3 (ruling R2, Doug 11-18-26: a
+fix an administrator confirms, never set silently). A not-ready line that the
+application can fix offers a button. The first click says exactly what will
+change; a second click within 15 seconds does it (`POST
+/api/setup/readiness/fix`, recorded in the action history).
+
+- **Create the missing templates.** It creates every missing event email
+  template with default wording, as the provisioning administrator; existing
+  ones are never touched. The wording moved to `events/email_templates.py`,
+  which `scripts/seed_event_templates.py` now reads too.
+- **Set host-only sharing and co-host** for the event host user, through
+  Zoom: `PATCH /users/{id}/settings`, setting screen sharing on, Who can
+  share? to Host Only, and co-host on. The new settings are read back. If
+  Zoom accepts the change but still reports the old value, the button says
+  so; Zoom has been reported doing that. If the Zoom app lacks the
+  permission, the button names it: `user:update:settings:admin`, read from a
+  mirror of Zoom's reference, not Zoom's own page.
+- Tests: 9 more in `tests/test_hosting_readiness.py`. Full suite: 4214 passed.
+
 ## [0.346.0] — 2026-11-18
 
 **feat(home): Today and My clients on the new home page.** Plan
