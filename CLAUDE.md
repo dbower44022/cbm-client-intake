@@ -387,7 +387,10 @@ enforces their ACL and records them as modifier. The dev app (no
   `prds/home-page-plan.md`): a second view inside `portal/frontend/index.html`
   drawn by `home.js`, which moves the events rail and the analytics panel in
   by element id. Its look is `frontend/shared/panel.css`, the shared panel
-  standard for every screen reworked after it.
+  standard for every screen reworked after it. **Today and My clients read
+  `GET /api/portal/home/mentoring`**, which calls Client Management's own
+  `sessions.service.list_records` as the member — never a second way to
+  find a mentor's engagements.
 - **The events rail and the member page** (`PORTAL_CALENDAR`, off by
   default): what the rail selects is `events/service.portal_calendar` +
   `events/visibility.py` — never re-filter in the portal. Detail in

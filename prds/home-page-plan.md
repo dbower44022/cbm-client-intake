@@ -1,12 +1,13 @@
 # The home page and Chapter News — plan
 
-Last Updated: 11-18-26 01:45 · Revision 1.3 — change log at the end.
+Last Updated: 11-18-26 01:50 · Revision 1.4 — change log at the end.
 
 **Status: designed 11-16-26 to 11-17-26 in a Cowork session with Doug; every
 decision below is his. Phase 0 (the contrast fix to the design tokens) is
 built as v0.340.3. Phase 1 (the page frame) is built as v0.343.0, dark
-behind `HOME_V2`, and passed stop 1 on 11-18-26. Phases 2 to 7 are not
-started.**
+behind `HOME_V2`, and passed stop 1 on 11-18-26. Phase 2 (Today and My
+clients) is built as v0.346.0, dark behind `HOME_V2`; stop 2 is owed.
+Phases 3 to 7 are not started.**
 
 Mockups: the design canvas *CBM Home Page — Looks*
 (https://claude.ai/artifact/D6Gm6i9qYgBsYmMtUSfAmY). The **Mix** artboard is
@@ -320,6 +321,16 @@ switch: its push changes production's colours at once, which is intended.
   `cbm-action`, because `cbm-chip` and `cbm-btn` are taken.
 - **Phase 2 — Today and My clients.** Both read the member's own sessions and
   engagements as the member. **Stop 2**: against a mentor with real sessions.
+  **Built v0.346.0 (11-18-26); stop 2 owed.** Doug's answers at the phase's
+  first stop, all as recommended: My clients lists the four active statuses
+  (Active green, Assigned navy, Pending Acceptance and On-Hold amber); Open
+  lands on the record's Sessions tab and the client's name on its Overview,
+  each in the record's own named tab; Join shows whenever a session has a
+  video meeting link, the next one to start in gold; co-mentored clients
+  sit in the same list, marked "co-mentor"; one new endpoint,
+  `GET /api/portal/home/mentoring`, calling `list_records` as the member.
+  Today lists Scheduled sessions only, and its last line covers the next
+  seven days as "Coming up".
 - **Phase 3 — Needs you.** Every kind in § 4.2, the staff counts folded in,
   and the threshold setting. **My Email gains a link that opens one
   conversation** (`/myemail/?conversation=<id>`), so the Email rows can point
@@ -353,6 +364,7 @@ switch: its push changes production's colours at once, which is intended.
 
 | Revision | Last Updated | Change |
 |---|---|---|
+| 1.4 | 11-18-26 01:50 | Phase 2 built as v0.346.0; § 8 records Doug's answers at its first stop. |
 | 1.3 | 11-18-26 01:45 | Stop 1 passed. |
 | 1.2 | 11-18-26 01:10 | Phase 1 built as v0.343.0; the status line and § 8 record Doug's three answers at its first stop. |
 | 1.1 | 11-17-26 02:30 | The stops are checks on the test system, the Business Mentors Association's, not crm-test; § 8 says what a push deploys. |

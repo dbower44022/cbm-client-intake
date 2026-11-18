@@ -396,6 +396,89 @@ async def attention(request: Request) -> dict:
     return {"items": items}
 
 
+# --- the new home page: Today and My clients (HOME_V2, phase 2) ---------------
+
+#: How far ahead the Today section's "Coming up" line looks, plus a day's
+#: margin for every UTC offset; the browser picks the member's own days.
+HOME_SESSION_DAYS_AHEAD = 8
+
+
+def _home_client_name(row: dict[str, Any]) -> str:
+    """The name a mentor knows the client by: the company, else the client
+    profile, else the engagement's own name."""
+    return row.get("company") or row.get("client") or row.get("name") or "(unnamed)"
+
+
+def _home_mentoring(result: dict[str, Any]) -> dict[str, Any]:
+    """Client Management's own list (``sessions.service.list_records``, read
+    as the member) cut down to what Today and My clients show.
+
+    My clients: the engagements in an active status (``ACTIVE_CLIENT_STATUSES``,
+    Doug's ruling 2026-09-29; phase 2 question 1, option A), each marked
+    ``coMentor`` when its mentor is not the member's own profile. Today: every
+    Scheduled session of any of the member's engagements, from 36 hours ago to
+    ``HOME_SESSION_DAYS_AHEAD`` days ahead, as UTC stamps; the browser decides
+    which fall on the member's today. The next session per client comes from
+    those same sessions, never ``CEngagement.nextSessionDateTime``."""
+    from datetime import datetime, timedelta, timezone
+
+    from assignments.service import ACTIVE_CLIENT_STATUSES
+
+    if result.get("profileChoice", {}).get("blocked"):
+        return {"profile": "blocked", "clients": [], "sessions": []}
+    if result.get("profileFound") is False:
+        return {"profile": "none", "clients": [], "sessions": []}
+    own = result.get("profileId")
+    until = (datetime.now(timezone.utc) + timedelta(days=HOME_SESSION_DAYS_AHEAD)).strftime(
+        "%Y-%m-%d %H:%M:%S")
+    clients: list[dict[str, Any]] = []
+    sessions: list[dict[str, Any]] = []
+    for row in result.get("records") or []:
+        name = _home_client_name(row)
+        scheduled = [s for s in row.get("upcomingSessions") or [] if s.get("status") == "Scheduled"]
+        for s in scheduled:
+            if (s.get("dateStart") or "") <= until:
+                sessions.append({**s, "recordId": row["id"], "client": name})
+        if row.get("status") in ACTIVE_CLIENT_STATUSES:
+            clients.append({
+                "id": row["id"],
+                "name": name,
+                "status": row.get("status"),
+                "lastContact": row.get("lastContact"),
+                "coMentor": bool(own and row.get("mentorId") and row["mentorId"] != own),
+                "sessions": [s.get("dateStart") for s in scheduled if s.get("dateStart")],
+            })
+    sessions.sort(key=lambda s: s.get("dateStart") or "")
+    return {"profile": "found", "clients": clients, "sessions": sessions}
+
+
+@router.get("/home/mentoring")
+async def home_mentoring(request: Request) -> dict:
+    """Today and My clients for the new home page (prds/home-page-plan.md
+    § 4.1; phase 2 question 5, option A). One call of Client Management's own
+    list, as the member: their token, their ACL, owned and co-mentored. Not
+    there while ``HOME_V2`` is off; refused to a member outside the mentor
+    team, whose page draws neither section."""
+    settings = get_settings()
+    if not settings.home_v2:
+        raise HTTPException(status_code=404, detail="Not found.")
+    user = current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    if not is_member(user, settings.session_mentor_allowed_teams_list):
+        raise HTTPException(status_code=403, detail="Your clients show here for members of the mentor team.")
+    from core.espo import EspoError
+    from sessions import service as sessions_service
+    from sessions.config import MENTOR
+
+    try:
+        result = await sessions_service.list_records(MENTOR, client_for(settings, user), user)
+    except EspoError as exc:
+        log.warning("home mentoring read failed for %s: %s", user.get("userName"), exc)
+        raise HTTPException(status_code=502, detail="Your clients could not be read from the CRM just now.")
+    return _home_mentoring(result)
+
+
 # --- per-user preferences (F3) ------------------------------------------------
 
 #: The preferences a member may store. A whitelist, so the table holds only

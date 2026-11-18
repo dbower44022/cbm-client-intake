@@ -157,3 +157,38 @@ body.home2-on main.portal.cbm-container { padding-top: 0; padding-bottom: 2rem; 
 .home2__hidden[hidden] { display: none; }
 .home2__msg { margin: 0; font-size: 14px; color: #9B1C1C; }
 .home2__msg[hidden] { display: none; }
+
+/* --- Today and My clients (phase 2) ---------------------------------------- */
+.home2__headlink { font-size: 13px; color: var(--cbm-navy); white-space: nowrap; }
+.home2__today .cbm-row { gap: 14px; padding: 10px 16px; }
+.home2__time {
+  flex: 0 0 72px;
+  font-weight: 600;
+  color: var(--cbm-text-strong);
+  white-space: nowrap;
+}
+.home2__what { flex: 1 1 auto; min-width: 0; }
+.home2__sub { font-size: 13px; color: var(--cbm-text-muted); }
+.home2__acts { display: flex; flex-wrap: wrap; gap: 8px; flex: 0 0 auto; }
+.home2__later { border-top: 1px solid var(--cbm-panel-border); font-size: 13px; }
+.home2__later a { color: var(--cbm-navy); }
+
+.home2__tablewrap { overflow-x: auto; }
+.home2__clients { width: 100%; border-collapse: collapse; font-size: 14px; }
+.home2__clients th {
+  padding: 8px 16px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--cbm-text-muted);
+  border-bottom: 1px solid var(--cbm-panel-border);
+}
+.home2__clients td {
+  padding: 10px 16px;
+  color: var(--cbm-text);
+  border-bottom: 1px solid var(--cbm-panel-border);
+}
+.home2__clients tbody tr:last-child td { border-bottom: 0; }
+.home2__client { font-weight: 500; color: var(--cbm-navy); text-decoration: none; }
+.home2__client:hover { text-decoration: underline; }
+.home2__co { margin-left: 8px; font-size: 12px; color: var(--cbm-text-muted); }

@@ -26,6 +26,36 @@ read per request); off, the page is exactly as before.
 - The last sub-tab opened is remembered in the browser; opening a setting by
   name (History, "Used by", the restart notice) selects its sub-tab first.
 
+## [0.346.0] — 2026-11-18
+
+**feat(home): Today and My clients on the new home page.** Plan
+`prds/home-page-plan.md` § 4.1 and § 8, phase 2; Doug's answers at the
+phase's first stop, 11-18-26, all as recommended. Dark behind `HOME_V2`.
+
+- **One read, as the member.** `GET /api/portal/home/mentoring` calls Client
+  Management's own `sessions.service.list_records` with the member's token:
+  owned and co-mentored engagements, the member's ACL. About five CRM calls
+  (inferred from the code; the `timing` log line measures it). 404 while the
+  switch is off; 403 outside the mentor team. A member with no linked mentor
+  profile, or one the strict rule refuses, gets one plain line; a failing
+  read empties only the two sections, with a line.
+- **Today**: the member's Scheduled sessions on their own day, by time, with
+  the client, the session's name and type, **Join** when the session has a
+  video meeting link (the next one to start is the gold button; opens the
+  link in a new tab) and **Open**, the record on its Sessions tab in its own
+  named tab. Then "Coming up", the next seven days. The greeting's date line
+  gains "N sessions today".
+- **My clients**: the engagements in the four active statuses
+  (`ACTIVE_CLIENT_STATUSES`), on the shared grid, sortable. Status pills:
+  Active green, Assigned navy, Pending Acceptance and On-Hold amber. A
+  co-mentored engagement says "co-mentor" after the name. The name opens the
+  record on Overview; **Open Client Management** heads the section. The next
+  session comes from real sessions only, never `nextSessionDateTime`.
+- `sessions.service._attach_sessions_near_now` now reads each session's id,
+  name, type and video meeting link as well, and `list_records` names the
+  profile it read as (`profileId`). Client Management's grid ignores both.
+- Tests: `tests/test_home_mentoring.py`.
+
 ## [0.344.0] — 2026-11-18
 
 **feat(setup): the Event hosting card on Feature readiness, and the worker

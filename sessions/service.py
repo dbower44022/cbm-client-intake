@@ -588,6 +588,10 @@ async def list_records(
     records.sort(key=lambda x: (x.get("createdAt") or ""), reverse=True)
     await _attach_sessions_near_now(cfg, client, records)
     result: dict[str, Any] = {"records": records, "profileFound": True}
+    if not cfg.list_all:
+        # The profile this list was read as: the home page marks a row whose
+        # manager is someone else as co-mentored.
+        result["profileId"] = profile_id
     if not cfg.list_all and len(candidates) > 1:
         # A login linked to SEVERAL profiles is a data fault the person can
         # see but not fix: name the profiles and the one this page acts as,
@@ -687,8 +691,8 @@ async def _attach_sessions_near_now(
     cfg: DomainConfig, client: SessionClient, records: list[dict[str, Any]]
 ) -> None:
     """Stamp each grid row with its sessions from now−36h onward
-    (``upcomingSessions``: ``[{dateStart, status}, ...]``, UTC stamps, soonest
-    first).
+    (``upcomingSessions``: ``[{id, dateStart, status, name, sessionType,
+    videoMeetingLink}, ...]``, UTC stamps, soonest first).
 
     Two grid features read this: the "session scheduled TODAY" flag and the
     Next Session column (the stored ``CEngagement.nextSessionDateTime`` is
@@ -705,7 +709,7 @@ async def _attach_sessions_near_now(
     try:
         data = await client.list(
             SESSION,
-            select=f"dateStart,status,{cfg.session_parent_fk}",
+            select=f"name,sessionType,dateStart,status,videoMeetingLink,{cfg.session_parent_fk}",
             where=[{"type": "after", "attribute": "dateStart", "value": horizon}],
             order_by="dateStart",
             order="asc",
@@ -718,8 +722,12 @@ async def _attach_sessions_near_now(
     for s in data.get("list", []):
         pid = s.get(cfg.session_parent_fk)
         if pid:
+            # name, type and the video meeting link serve the home page's
+            # Today section (HOME_V2, phase 2); the grid reads only the two.
             by_parent.setdefault(pid, []).append(
-                {"dateStart": s.get("dateStart"), "status": s.get("status")}
+                {"id": s.get("id"), "dateStart": s.get("dateStart"), "status": s.get("status"),
+                 "name": s.get("name"), "sessionType": s.get("sessionType"),
+                 "videoMeetingLink": s.get("videoMeetingLink") or ""}
             )
     for r in records:
         near = by_parent.get(r["id"])

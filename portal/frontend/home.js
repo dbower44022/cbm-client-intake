@@ -1,4 +1,5 @@
-/* The new home page (HOME_V2, phase 1: the frame). Plan:
+/* The new home page (HOME_V2; phase 1 the frame, phase 2 Today and My
+   clients). Plan:
    prds/home-page-plan.md § 4 and § 8; look: /shared/panel.css.
 
    app.js keeps sign-in, the session, the ?next= redirect and the birthday
@@ -24,7 +25,7 @@
       note: "Your sessions for today will show here." },
     { key: "needs", title: "Needs you", pair: true,
       note: "What needs you will show here. Until then, the counts stay on the applications in the bar above." },
-    { key: "clients", title: "My clients",
+    { key: "clients", title: "My clients", link: { title: "Open Client Management", url: "/mentorsessions/", target: "cbm-mentorsessions" },
       note: "Your active clients will show here." },
     { key: "chapter", title: "At the chapter",
       note: "Chapter numbers and upcoming events will show here." },
@@ -122,6 +123,16 @@
     var h = el("h2", "cbm-label", f.title); h.id = hid;
     head.appendChild(h);
 
+    if (f.link) {
+      var go = el("a", "home2__headlink", f.link.title);
+      go.href = f.link.url;
+      go.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        state.hooks.openWindow(f.link.url, f.link.target);
+      });
+      head.appendChild(go);
+    }
+
     var fold = el("button", "cbm-action--quiet");
     fold.type = "button";
     fold.setAttribute("aria-controls", bid);
@@ -169,6 +180,194 @@
       ul.appendChild(li);
     });
     body.appendChild(ul);
+  }
+
+  // --- Today and My clients (phase 2) -------------------------------------------
+  // One read as the member (GET /api/portal/home/mentoring: Client
+  // Management's own list). CRM stamps are UTC; "today" is the member's own
+  // day in this browser, as Client Management's grid decides it.
+  var MENTORING_URL = "/api/portal/home/mentoring";
+  var CM = "/mentorsessions/";
+  //: The status pill's colour for each active status (plan § 5.3; phase 2
+  //: question 1: Pending Acceptance waits on the mentor, so amber).
+  var PILL = { "Active": "green", "Assigned": "navy",
+               "Pending Acceptance": "amber", "On-Hold": "amber" };
+
+  function utc(stamp) {
+    if (!stamp) return null;
+    var s = String(stamp);
+    var d = new Date(s.length <= 10 ? s + "T00:00:00" : s.replace(" ", "T") + "Z");
+    return isNaN(d.getTime()) ? null : d;
+  }
+  function dayKey(d) { return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); }
+  function timeText(d) { return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }); }
+  function dateText(d) { return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }); }
+  function whenText(d, now) {
+    if (dayKey(d) === dayKey(now)) return "Today " + timeText(d);
+    return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }) + ", " + timeText(d);
+  }
+  function recordUrl(id, tab) {
+    return CM + "record/" + encodeURIComponent(id) + (tab ? "?tab=" + tab : "");
+  }
+  function openRecord(id, tab) {
+    state.hooks.openWindow(recordUrl(id, tab), "cbm-rec-mentorsessions-" + id);
+  }
+  function recordLink(text, id, tab, cls) {
+    var a = el("a", cls || null, text);
+    a.href = recordUrl(id, tab);
+    a.addEventListener("click", function (ev) { ev.preventDefault(); openRecord(id, tab); });
+    return a;
+  }
+  function clearBody(body) { while (body.firstChild) body.removeChild(body.firstChild); }
+
+  function profileLine(data) {
+    if (data.profile === "none") {
+      return "No mentor profile is linked to your sign-in, so your clients and sessions cannot be shown. "
+        + "Ask an administrator to link your profile in Mentor Administration.";
+    }
+    if (data.profile === "blocked") {
+      return "Your sign-in is linked to more than one mentor profile, so your clients and sessions are not shown. "
+        + "Ask an administrator to remove the extra links in Mentor Administration.";
+    }
+    return "";
+  }
+
+  function fillToday(body, data, now) {
+    clearBody(body);
+    var why = profileLine(data);
+    if (why) { note(body, why); return 0; }
+    var today = [], later = [];
+    var weekEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 8);
+    (data.sessions || []).forEach(function (s) {
+      var d = utc(s.dateStart);
+      if (!d) return;
+      if (dayKey(d) === dayKey(now)) today.push({ s: s, d: d });
+      else if (d > now && d < weekEnd) later.push({ s: s, d: d });
+    });
+    if (!today.length) note(body, "You have no sessions today.");
+    else {
+      var ul = el("ul", "cbm-rows home2__today");
+      var goldGiven = false;
+      today.forEach(function (t) {
+        var s = t.s;
+        var li = el("li", "cbm-row");
+        li.appendChild(el("span", "home2__time", timeText(t.d)));
+        var what = el("div", "home2__what");
+        what.appendChild(el("div", "cbm-row__name", s.client));
+        var sub = [s.name, s.sessionType].filter(function (x) { return x; });
+        if (sub.length) what.appendChild(el("div", "home2__sub", sub.join(" · ")));
+        li.appendChild(what);
+        var acts = el("div", "home2__acts");
+        if (s.videoMeetingLink) {
+          // The next session to start gets the main button (phase 2 question 3).
+          var main = !goldGiven && t.d.getTime() > now.getTime() - 3600 * 1000;
+          if (main) goldGiven = true;
+          var join = el("a", main ? "cbm-action" : "cbm-action--second", "Join");
+          join.href = s.videoMeetingLink; join.target = "_blank"; join.rel = "noopener";
+          join.setAttribute("aria-label", "Join the session with " + s.client);
+          acts.appendChild(join);
+        }
+        var open = recordLink("Open", s.recordId, "sessions", "cbm-action--second");
+        open.setAttribute("aria-label", "Open " + s.client + " in Client Management");
+        acts.appendChild(open);
+        li.appendChild(acts);
+        ul.appendChild(li);
+      });
+      body.appendChild(ul);
+    }
+    if (later.length) {
+      var p = el("p", "cbm-panel__note home2__later");
+      p.appendChild(document.createTextNode("Coming up: "));
+      later.forEach(function (t, i) {
+        if (i) p.appendChild(document.createTextNode(" · "));
+        p.appendChild(document.createTextNode(
+          t.d.toLocaleDateString(undefined, { weekday: "short" }) + " " + timeText(t.d) + " "));
+        p.appendChild(recordLink(t.s.client, t.s.recordId, "sessions"));
+      });
+      body.appendChild(p);
+    }
+    return today.length;
+  }
+
+  function nextSession(c, now) {
+    var best = null;
+    (c.sessions || []).forEach(function (stamp) {
+      var d = utc(stamp);
+      if (!d || (d < now && dayKey(d) !== dayKey(now))) return;
+      if (!best || d < best) best = d;
+    });
+    return best;
+  }
+  function cell(tr, content, sortValue) {
+    var td = el("td");
+    if (typeof content === "string") td.textContent = content; else td.appendChild(content);
+    if (sortValue !== undefined) td.dataset.sort = sortValue;
+    tr.appendChild(td);
+    return td;
+  }
+
+  function fillClients(body, data, now) {
+    clearBody(body);
+    var why = profileLine(data);
+    if (why) { note(body, why); return; }
+    var clients = data.clients || [];
+    if (!clients.length) { note(body, "You have no active clients."); return; }
+    var wrap = el("div", "home2__tablewrap");
+    var table = el("table", "home2__clients");
+    var thead = el("thead"), hr = el("tr");
+    [["client", "Client"], ["status", "Status"], ["last", "Last contact"], ["next", "Next session"]]
+      .forEach(function (h) { var th = el("th", null, h[1]); th.dataset.col = h[0]; th.scope = "col"; hr.appendChild(th); });
+    thead.appendChild(hr); table.appendChild(thead);
+    var tbody = el("tbody");
+    clients.forEach(function (c) {
+      var tr = el("tr");
+      var who = el("span");
+      who.appendChild(recordLink(c.name, c.id, null, "home2__client"));
+      if (c.coMentor) who.appendChild(el("span", "home2__co", "co-mentor"));
+      cell(tr, who, c.name);
+      cell(tr, el("span", "cbm-pill cbm-tone--" + (PILL[c.status] || "navy"), c.status || "—"), c.status || "");
+      var last = utc(c.lastContact);
+      cell(tr, last ? dateText(last) : "—", last ? last.toISOString() : "");
+      var nxt = nextSession(c, now);
+      cell(tr, nxt ? whenText(nxt, now) : "—", nxt ? nxt.toISOString() : "");
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    body.appendChild(wrap);
+    if (window.CBMGrid && CBMGrid.enhance) {
+      CBMGrid.enhance(table, { key: "home.clients", sort: [{ col: "client", dir: "asc" }] });
+    }
+  }
+
+  function loadMentoring(frames, greetLine, now) {
+    var bodies = ["today", "clients"].filter(function (k) { return frames[k]; })
+      .map(function (k) { return frames[k]._body; });
+    if (!bodies.length) return;
+    var read = fetch(MENTORING_URL, { credentials: "same-origin" }).then(function (r) {
+      return r.json().catch(function () { return null; }).then(function (d) {
+        if (!r.ok) throw new Error((d && d.detail) || ("the server answered " + r.status));
+        return d;
+      });
+    });
+    bodies.forEach(function (b) { if (window.CBMBusy && CBMBusy.loading) CBMBusy.loading(b, read); });
+    read.then(function (data) {
+      if (frames.today) {
+        var n = fillToday(frames.today._body, data, now);
+        if (data.profile === "found") {
+          greetLine.textContent = today(now) + " · " + n + (n === 1 ? " session" : " sessions") + " today";
+        }
+      }
+      if (frames.clients) fillClients(frames.clients._body, data, now);
+    }).catch(function (e) {
+      // A failed read empties only these two sections, with a line; the
+      // rest of the page stands (§ 4.1).
+      bodies.forEach(function (b) {
+        clearBody(b);
+        note(b, "Your clients and sessions could not be read just now: " + e.message
+          + ". Reload the page to try again.");
+      });
+    });
   }
 
   // At the chapter: today's analytics panel and events rail, moved in by id.
@@ -269,7 +468,8 @@
     var main = el("div", "home2__main");
     var greet = el("div", "home2__greet");
     greet.appendChild(el("h1", null, greeting(now) + ", " + (home.firstName || data.user.name || "")));
-    greet.appendChild(el("p", null, today(now)));
+    var greetLine = el("p", null, today(now));
+    greet.appendChild(greetLine);
     main.appendChild(greet);
 
     var pair = el("div", "home2__pair");
@@ -281,9 +481,7 @@
       frames[f.key] = sec;
       (f.pair ? pair : main).appendChild(sec);
     });
-    ["today", "needs", "clients"].forEach(function (k) {
-      if (frames[k]) note(frames[k]._body, frames[k]._def.note);
-    });
+    if (frames.needs) note(frames.needs._body, frames.needs._def.note);
     if (frames.chapter) fillChapter(frames.chapter._body);
     if (frames.pages) fillPages(frames.pages._body, data.forms);
 
@@ -300,6 +498,7 @@
     apply();
     var waiting = loadPrefs();
     if (window.CBMBusy && CBMBusy.loading) CBMBusy.loading(main, waiting);
+    loadMentoring(frames, greetLine, now);
     return { chapterBody: frames.chapter ? frames.chapter._body : null };
   }
 
