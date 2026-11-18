@@ -1,6 +1,6 @@
 # System Settings — finding a setting
 
-Last Updated: 11-18-26 01:02 · Revision 0.2 · **Rulings settled (§ 6); appendix review open**
+Last Updated: 11-18-26 01:39 · Revision 0.3 · **Built (v0.345.0); Stop 2 — Doug's review on the Association**
 
 ## 1. What this changes
 
@@ -65,6 +65,14 @@ All eight decided by Doug on 11-18-26, each as recommended (option A), after one
 **Q8. With the Integrations tab on, feature settings stay in their areas** and also appear on their service's sub-tab of the Integrations tab. Only the Connected services sub-tab is hidden while the Integrations tab is on, because that tab holds the same settings. A setting shown in two places shows the same stored value, and a save in either updates both. With sub-tabs off, the Integrations tab behaves exactly as today.
 
 ## Appendix — draft assignment of every setting
+
+> **As built, `core/settings_areas.py` is the authority**, not this list. It
+> differs from the list below in three places: *Campaign texts* moved under
+> *Text messages* as that heading's main switch; the Zoom heading split into
+> *Zoom Meetings* and *Zoom Webinars*, each led by its *in use* switch; and two
+> settings added since were placed — *New home page* (`home_v2`) in Staff and
+> mentor tools, and *Settings page sub-tabs* (`settings_areas`) in Platform,
+> under *This deployment*.
 
 Generated from `core/settings_registry.py` on 11-18-26. The first heading of each area is its main switch heading. Order within a heading here is the registry's, not the final A-to-Z order. "now in" names today's group. The new switch `SETTINGS_AREAS` itself goes in Platform, under *This deployment*.
 
@@ -520,5 +528,6 @@ Generated from `core/settings_registry.py` on 11-18-26. The first heading of eac
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.3 | 11-18-26 01:39 | Claude (Claude Code) | Built as v0.345.0 (steps 2 complete); the appendix notes where the build differs from the draft list. |
 | 0.2 | 11-18-26 01:02 | Claude (Claude Code) | § 6 rewritten as the eight rulings, all option A (Doug, 11-18-26). Q3 corrected: the four integrity switches were in Features, not Email. Q8's two-places behaviour written into § 6. |
 | 0.1 | 11-18-26 00:25 | Claude (Claude Code) | First draft after Doug chose option A (sub-tabs, fixed order, word-by-word search). Draft assignment of all 286 settings; eight rulings asked. |

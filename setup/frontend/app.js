@@ -10,7 +10,7 @@
   "use strict";
 
   var API = "/setup/api";
-  var state = { page: null, tab: "settings", editing: null, subtab: null, closed: {}, dialog: null };
+  var state = { page: null, tab: "settings", editing: null, subtab: null, area: "", closed: {}, dialog: null };
 
   function $(id) { return document.getElementById(id); }
   function text(el, value) { el.textContent = value == null ? "" : String(value); }
@@ -182,11 +182,148 @@
     return el && window.CBMBusy && window.CBMBusy.loading ? window.CBMBusy.loading(el, promise) : promise;
   }
 
+  /* ---------- the Settings tab in sub-tabs (SETTINGS_AREAS) ----------
+   * prds/settings-page-areas-plan.md. One sub-tab per application; under
+   * each heading the server has already put the main switch first and the
+   * rest A to Z. The search matches each word on its own, in any order, and
+   * spans every sub-tab: while it holds text the page lists the matches of
+   * every area, and each sub-tab's label carries its count. */
+  var AREA_KEY = "setup.settingsArea";
+
+  function rememberedArea() {
+    try { return window.localStorage.getItem(AREA_KEY) || ""; } catch (e) { return ""; }
+  }
+
+  function rememberArea(name) {
+    try { window.localStorage.setItem(AREA_KEY, name); } catch (e) { /* private window */ }
+  }
+
+  function findArea(name) {
+    return ((state.page && state.page.areas) || []).filter(function (a) { return a.name === name; })[0] || null;
+  }
+
+  function areaOfKey(key) {
+    var found = null;
+    ((state.page && state.page.areas) || []).forEach(function (a) {
+      a.headings.forEach(function (h) {
+        h.settings.forEach(function (r) { if (r.key === key) found = a.name; });
+      });
+    });
+    return found;
+  }
+
+  function searchWords() {
+    return ($("filterBox").value || "").toLowerCase().split(/\s+/).filter(Boolean);
+  }
+
+  function rowMatches(row, words, onlyOverridden) {
+    if (onlyOverridden && !row.overridden) return false;
+    if (!words.length) return true;
+    var hay = (row.label + " " + row.key + " " + (row.help || "") + " "
+      + (row.area || "") + " " + (row.heading || "")).toLowerCase();
+    return words.every(function (w) { return hay.indexOf(w) >= 0; });
+  }
+
+  // Every waiting restart, named and linked, above the sub-tabs (ruling Q1:
+  // the nine no longer sit in one group, so the summary has to lead).
+  function restartNotice() {
+    var r = (state.page && state.page.restart) || {};
+    var html = "";
+    if (r.bootOutcome === "failed") {
+      html += '<p class="su__note su__note--warn"><strong>Stored settings could not be '
+        + "read when this app started</strong>, so none of the restart-required ones are "
+        + "in force here \u2014 the app is running on its deployment configuration. "
+        + esc(r.bootDetail || "") + "</p>";
+    }
+    if (r.count) {
+      html += '<p class="su__note su__note--warn"><strong>' + r.count + " change"
+        + (r.count === 1 ? " is" : "s are") + " waiting for a restart:</strong> "
+        + r.pending.map(function (x) {
+            return '<a href="#settings" class="su__goto" data-goto="' + esc(x.key) + '">'
+              + esc(x.label) + "</a>";
+          }).join(", ")
+        + ". These are read once, while the app starts; the running app keeps the value "
+        + "it started with until it restarts. Restart from the DigitalOcean console, or redeploy.</p>";
+    }
+    return html;
+  }
+
+  function areaSection(area, words, onlyOverridden, withTitle) {
+    var body = "";
+    area.headings.forEach(function (h) {
+      var rows = h.settings.filter(function (r) { return rowMatches(r, words, onlyOverridden); });
+      if (!rows.length) return;
+      body += '<h3 class="su__h3">' + esc(h.name) + "</h3>"
+        + '<table class="su__table su__table--settings">' + SETTINGS_HEAD + "<tbody>"
+        + rows.map(settingRow).join("") + "</tbody></table>";
+    });
+    if (!body) return "";
+    return '<section class="su__group" data-area-section="' + esc(area.name) + '">'
+      + (withTitle ? '<h2 class="su__h2">' + esc(area.name) + "</h2>" : "")
+      + body + "</section>";
+  }
+
+  function renderAreas() {
+    var page = state.page;
+    var areas = page.areas || [];
+    var words = searchWords();
+    var onlyOverridden = $("onlyOverridden").checked;
+    var searching = words.length > 0 || onlyOverridden;
+    if (!findArea(state.area)) state.area = findArea(rememberedArea()) ? rememberedArea() : (areas[0] ? areas[0].name : "");
+
+    $("areaTabs").hidden = false;
+    $("areaTabs").innerHTML = areas.map(function (a) {
+      var count = 0;
+      if (searching) {
+        a.headings.forEach(function (h) {
+          count += h.settings.filter(function (r) { return rowMatches(r, words, onlyOverridden); }).length;
+        });
+      }
+      var active = !searching && a.name === state.area;
+      return '<button type="button" class="su__subtab' + (active ? " is-active" : "")
+        + (searching && !count ? " is-empty" : "") + '" data-area="' + esc(a.name) + '" role="tab"'
+        + ' aria-selected="' + (active ? "true" : "false") + '">' + esc(a.name)
+        + (searching ? ' <span class="su__count">(' + count + ")</span>" : "") + "</button>";
+    }).join("");
+    $("areaNotice").innerHTML = restartNotice();
+
+    var html = "";
+    if (searching) {
+      areas.forEach(function (a) { html += areaSection(a, words, onlyOverridden, true); });
+    } else {
+      var area = findArea(state.area);
+      if (area) html = areaSection(area, [], false, false);
+    }
+    var showImages = searching ? html.indexOf('data-area-section="Website and branding"') >= 0
+                               : state.area === "Website and branding";
+    if (showImages) html += '<div id="websiteImages" class="su__images"></div>';
+    $("groups").innerHTML = html || '<p class="su__hint">Nothing matches that search.</p>';
+  }
+
+  function selectArea(name) {
+    if (!findArea(name)) return;
+    var words = searchWords();
+    if (words.length || $("onlyOverridden").checked) {
+      // While searching every area is listed: go to this one's matches.
+      var sec = document.querySelector('[data-area-section="' + name.replace(/"/g, '\\"') + '"]');
+      if (sec) sec.scrollIntoView({ block: "start" });
+      return;
+    }
+    state.area = name;
+    rememberArea(name);
+    renderSettings();
+  }
+
   function renderSettings() {
     var page = state.page;
     var filter = ($("filterBox").value || "").toLowerCase();
     var onlyOverridden = $("onlyOverridden").checked;
     var html = "";
+    if (page.areas) {
+      renderAreas();
+    } else {
+    $("areaTabs").hidden = true;
+    $("areaNotice").innerHTML = "";
     page.groups.forEach(function (group) {
       var rows = group.settings.filter(function (r) {
         if (onlyOverridden && !r.overridden) return false;
@@ -202,6 +339,7 @@
             + "</section>";
     });
     $("groups").innerHTML = html || '<p class="su__hint">Nothing matches that filter.</p>';
+    }
     renderWebsiteImages();
     Array.prototype.forEach.call($("groups").querySelectorAll("table"), function (t) {
       fitGrid(t, "setup.settings");
@@ -820,7 +958,7 @@
           return "<tr><td>" + esc(u.label) + '<div class="su__key">' + esc(u.key) + "</div></td>"
             + '<td class="su__valuecell">' + valueCell(u) + "</td>"
             + '<td><a href="#settings" class="su__goto" data-goto="' + esc(u.key) + '">'
-            + (u.group ? "Settings tab, " + esc(u.group) : "Settings tab") + "</a>"
+            + ((state.page.areas ? u.area : u.group) ? "Settings tab, " + esc(state.page.areas ? u.area : u.group) : "Settings tab") + "</a>"
             + (u.blocks ? ' <span class="su__chip su__chip--warn">needs ' + esc(i.name) + "</span>" : "")
             + "</td></tr>";
         }).join("") + "</tbody></table></section>";
@@ -889,6 +1027,8 @@
   function gotoSetting(key) {
     $("filterBox").value = "";
     $("onlyOverridden").checked = false;
+    var area = areaOfKey(key);
+    if (area) { state.area = area; rememberArea(area); }
     selectTab("settings");
     renderSettings();
     var tr = document.querySelector('#groups tr[data-key="' + key + '"]');
@@ -1424,6 +1564,8 @@
       return;
     }
     if (hit && hit.dataset.subtab) { ev.preventDefault(); closeMenus(); selectSubtab(hit.dataset.subtab); return; }
+    var areaBtn = t.closest ? t.closest("[data-area]") : null;
+    if (areaBtn) { selectArea(areaBtn.dataset.area); return; }
     if (!(t.closest && t.closest(".su__menuwrap"))) closeMenus();
     if (t.id === "wizOverlay") { closeDialog(); return; }
     if (t.dataset && t.dataset.edit) { openEditor(t.dataset.edit); return; }

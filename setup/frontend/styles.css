@@ -186,6 +186,10 @@
 }
 .su__subtab.is-active { background: var(--color-primary, #00693e); border-color: var(--color-primary, #00693e); color: #fff; font-weight: 600; }
 .su__subtab.is-unused:not(.is-active) { color: var(--color-text-muted, #777); border-style: dashed; }
+/* The Settings tab's sub-tabs while searching: a sub-tab with no match is
+   dimmed, never hidden, and each carries its count. */
+.su__subtab.is-empty { color: var(--color-text-muted, #777); opacity: 0.6; }
+.su__count { font-weight: 400; }
 .su__section { margin: 0.6rem 0; border: 1px solid var(--color-border, #e2e2e2); border-radius: 6px; padding: 0.3rem 0.7rem 0.5rem; }
 .su__section > summary { cursor: pointer; font-weight: 600; padding: 0.3rem 0; }
 .su__goto { color: var(--color-primary, #00693e); }

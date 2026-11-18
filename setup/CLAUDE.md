@@ -1,6 +1,6 @@
 # setup/ — System Settings
 
-Last Updated: 11-18-26 01:38 · Revision 1.4
+Last Updated: 11-18-26 01:39 · Revision 1.5
 
 Detail for System Settings (`/setup`): the override model, the verified path, confirm-or-revert, restart-required settings, refresh, scoped rollout and the page's other panels.
 
@@ -145,6 +145,19 @@ keeps its old setting keys, relabelled, so no stored override is stranded.
   the settings its answer saved (`wizard.when_answers`), so Start again keeps
   the branch.
 
+## The Settings tab's sub-tabs — the rule for a new setting
+
+`SETTINGS_AREAS` (off by default; plan `prds/settings-page-areas-plan.md`,
+rulings Q1 to Q8). **Every new setting is placed in
+`core/settings_areas.py`** — an area and a heading — or
+`tests/test_settings_areas.py` fails. The rule: a setting lives where its
+screen is; an outside service's own account details go under Connected
+services; feature behaviour stays with the feature, even when it calls a
+service. A heading's main switch is named as its `lead`; the server sorts the
+rest A to Z by label, so the order keys are written in does not matter. The
+old `group` stays on every spec until the switch and the old layout are
+removed.
+
 ## The Integrations tab — rules not to break
 
 Built v0.321.0 to v0.335.0, behind `INTEGRATIONS_TAB` (off by default).
@@ -203,6 +216,7 @@ Administrator guide: `SYSTEM-SETTINGS-SETUP.md` § 8. Design and rulings:
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.5 | 11-18-26 01:39 | Claude (Claude Code) | The Settings tab's sub-tabs: every new setting is placed in `core/settings_areas.py` (v0.345.0). |
 | 1.4 | 11-18-26 01:38 | Claude (Claude Code) | Feature readiness reads the worker's switches; the Event hosting card. |
 | 1.3 | 11-17-26 11:20 | Claude (Claude Code) | `events_other_platform`, the Other platform switch (v0.341.0). |
 | 1.2 | 11-15-26 13:30 | Claude (Claude Code) | The Integrations tab: the rules a future session must not break (phase 11). |

@@ -1202,6 +1202,20 @@
      "scopable": false,
      "secret": false,
      "unit": ""
+    },
+    {
+     "choices": [],
+     "component": "web",
+     "editable": true,
+     "group": "Features",
+     "help": "Arranges this Settings tab into sub-tabs, one per application, with each feature's main switch first and the rest A to Z, and a search that matches each word you type. Off, this tab is exactly as before. Read per request: no restart.",
+     "key": "settings_areas",
+     "kind": "bool",
+     "label": "Settings page sub-tabs",
+     "restart": false,
+     "scopable": true,
+     "secret": false,
+     "unit": ""
     }
    ]
   },

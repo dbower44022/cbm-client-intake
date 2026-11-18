@@ -1,6 +1,6 @@
 # System Settings (`/setup`) — activation and use
 
-Last Updated: 11-15-26 18:38 · Revision 1.4 — see change log at the end.
+Last Updated: 11-18-26 01:39 · Revision 1.5 — see change log at the end.
 
 The admin-only page that changes this deployment's runtime settings from the
 browser instead of editing a deployment overlay and running `doctl`. Plan and
@@ -77,6 +77,32 @@ Non-admins get a 403 that says so, and the portal tile does not appear for them.
 
 Curated groups — Features, Integrations, Email, Reliability, Team gates,
 Presentation, Website — with everything else visible read-only behind **Show all**.
+
+**Sub-tabs** (switch: *Settings page sub-tabs*, `SETTINGS_AREAS`, off by
+default, no restart). With it on, the groups give way to ten sub-tabs, one per
+application: Marketing Management, Events, Business Evaluation, Staff and
+mentor tools, Email, Documents, calendar and meetings, Website and branding,
+Team gates, Connected services and Platform. A setting sits where the screen it
+changes is. An outside service's own account details (its *in use* switch,
+keys, account numbers) are under Connected services; how a feature behaves is
+with the feature. Inside a sub-tab, settings fall under short headings; each
+heading shows its feature's main on/off switch first and the rest A to Z.
+
+- **Search** matches each word you type on its own, in any order, against the
+  setting's name, key, help, sub-tab and heading. While the box holds text, or
+  *Only overridden* is ticked, the page lists the matches from every sub-tab,
+  and each sub-tab's label shows its count; clicking one goes to its matches.
+- **Settings that need a restart** sit in their own sub-tab with their badge.
+  Any change waiting for a restart is named above the sub-tabs, and each name
+  opens its setting.
+- **With the Integrations tab on**, Connected services is left out (that tab
+  holds the same settings). A feature setting that uses a service stays in its
+  sub-tab and also shows on the service's own sub-tab; both show the same
+  stored value.
+- The page remembers the last sub-tab you opened, in this browser.
+
+Switching it off puts the page back exactly as before. Plan and rulings:
+`prds/settings-page-areas-plan.md`.
 
 Each row shows where its value came from:
 
@@ -553,6 +579,7 @@ The two refusals in § 8.3 stay active with the switch off. With every
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.5 | 11-18-26 01:39 | Claude (Claude Code) | § 4: the Settings tab's sub-tabs, word-by-word search, and where restart-required and service settings go (`SETTINGS_AREAS`, v0.345.0). |
 | 1.4 | 11-15-26 18:38 | Claude (Claude Code) | § 8.2, § 8.4 to § 8.7: each sub-tab is a status screen with one button and Other Actions ▾; Setup, Fix and Review run in the setup dialog (v0.337.0, Doug's rulings 11-15-26). |
 | 1.3 | 11-15-26 15:04 | Claude (Claude Code) | § 8.5: Back reaches the screens the wizard opened past, and Review the screens (v0.336.1). |
 | 1.2 | 11-15-26 13:41 | Claude (Claude Code) | Stale text corrected (Doug's approval 11-15-26): § 1 and § 2 name the Business Mentors Association's system as the test system; § 5 rewritten to the 08-28-26 ruling (three read-only settings; secrets and the CRM connection editable through the checked save; the 10-minute countdown); § 4's "What this page cannot switch on" became "Settings that need a restart"; the troubleshooting row follows. |

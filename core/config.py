@@ -437,6 +437,10 @@ class Settings(BaseSettings):
     # (prds/integrations-tab-plan.md). Off: the page is exactly as before.
     # Read per request.
     integrations_tab: bool = False
+    # SETTINGS_AREAS — the Settings tab of System Settings in sub-tabs, one per
+    # application (prds/settings-page-areas-plan.md). Off: the tab is exactly
+    # as before. Read per request.
+    settings_areas: bool = False
     # Whether this chapter uses each integration (ruling I5). Default true, so
     # a deployment that never sets them behaves exactly as before. EspoCRM has
     # none: it is always in use. The guard is integrations/guard.py.

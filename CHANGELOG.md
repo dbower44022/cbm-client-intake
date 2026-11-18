@@ -5,6 +5,27 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.345.0] — 2026-11-18
+
+**feat(setup): the Settings tab in sub-tabs, one per application.** Plan
+`prds/settings-page-areas-plan.md`, rulings Q1 to Q8 (Doug, 11-18-26, all
+option A). Dark behind **`SETTINGS_AREAS`** (*Settings page sub-tabs*, off,
+read per request); off, the page is exactly as before.
+
+- **Ten sub-tabs**: Marketing Management, Events, Business Evaluation, Staff
+  and mentor tools, Email, Documents, calendar and meetings, Website and
+  branding, Team gates, Connected services, Platform. Every setting is placed
+  in `core/settings_areas.py`; a test fails on one that is not.
+- **Main switch first, then A to Z** under each heading, sorted on the server.
+- **Search matches each word** in any order, across every sub-tab, with a
+  count on each sub-tab's label.
+- **Restart-required settings** live in their own sub-tabs (Q1); a waiting
+  restart is named above the sub-tabs, each name linked to its setting.
+- **With the Integrations tab on**, Connected services is left out and feature
+  settings stay in their sub-tabs, as well as on the service's sub-tab (Q8).
+- The last sub-tab opened is remembered in the browser; opening a setting by
+  name (History, "Used by", the restart notice) selects its sub-tab first.
+
 ## [0.344.0] — 2026-11-18
 
 **feat(setup): the Event hosting card on Feature readiness, and the worker

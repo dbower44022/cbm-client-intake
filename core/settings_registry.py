@@ -31,6 +31,8 @@ import re
 from dataclasses import dataclass, replace
 from typing import Literal, Optional
 
+from core.settings_areas import PLACEMENT
+
 Kind = Literal["bool", "int", "text", "csv", "choice"]
 Component = Literal["web", "worker", "both"]
 
@@ -225,6 +227,11 @@ class SettingSpec:
     integration: str = ""
     # The section of that sub-tab — empty unless the integration has sections.
     section: str = ""
+    # Where the setting sits when the Settings tab shows sub-tabs
+    # (SETTINGS_AREAS, prds/settings-page-areas-plan.md). Set from
+    # core/settings_areas.PLACEMENT below, never by hand in a spec.
+    area: str = ""
+    heading: str = ""
 
 
 #: The hosting methods (CEvent.hostedBy), as the CRM stores them, and the
@@ -647,6 +654,11 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="Clears every mailbox cursor on worker start so the next pass re-runs the "
             "backfill. Set it, let ONE pass complete, then turn it off — left on, every "
             "restart re-reads all mailboxes. A good candidate for a temporary override."),
+    _s("settings_areas", GROUP_FEATURES, "Settings page sub-tabs", kind="bool",
+       help="Arranges this Settings tab into sub-tabs, one per application, with each "
+            "feature's main switch first and the rest A to Z, and a search that matches "
+            "each word you type. Off, this tab is exactly as before. Read per request: "
+            "no restart."),
     _s("integrations_tab", GROUP_FEATURES, "Integrations tab", kind="bool",
        help="An Integrations tab on this page, one sub-tab per outside service. Each "
             "integration's own settings and switches move there from this tab. Off, "
@@ -1326,6 +1338,12 @@ INTEGRATION_TAGS: dict[str, tuple[str, str]] = {
 SETTINGS = tuple(
     replace(s, integration=INTEGRATION_TAGS[s.key][0], section=INTEGRATION_TAGS[s.key][1])
     if s.key in INTEGRATION_TAGS else s
+    for s in SETTINGS
+)
+
+SETTINGS = tuple(
+    replace(s, area=PLACEMENT[s.key][0], heading=PLACEMENT[s.key][1])
+    if s.key in PLACEMENT else s
     for s in SETTINGS
 )
 

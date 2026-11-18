@@ -30,6 +30,7 @@ from core.settings_registry import (
     spec_for,
 )
 from core.settings_registry import BY_KEY, INTEGRATION_TAGS
+from core.settings_areas import AREA_CONNECTED, AREAS
 from core.settings_store import Override, SettingsStore, scoped_overrides
 from integrations import guard as integration_guard
 from integrations import registry as integration_registry
@@ -79,6 +80,8 @@ def _row(
         "key": key,
         "label": branding.render_text(spec.label, settings),
         "group": spec.group,
+        "area": spec.area,
+        "heading": spec.heading,
         "kind": spec.kind,
         "choices": list(spec.choices),
         "choiceLabels": dict(spec.choice_labels),
@@ -178,10 +181,12 @@ async def page_payload(
     tab_on = bool(settings.integrations_tab)
     groups: dict[str, list[dict[str, Any]]] = {g: [] for g in GROUP_ORDER}
     tagged: dict[str, dict[str, Any]] = {}
+    shown: list[dict[str, Any]] = []
     for spec in SETTINGS:
         if (spec.key in IN_USE_KEYS or spec.key in TAB_ONLY_KEYS) and not tab_on:
             continue
         row = _row(spec, settings, env, overrides.get(spec.key))
+        shown.append(row)
         if tab_on and spec.integration:
             tagged[spec.key] = row
             continue
@@ -239,11 +244,42 @@ async def page_payload(
         "overdue": overdue,
         "version": config_module.overrides_version(),
     }
+    if settings.settings_areas:
+        payload["areas"] = _areas(shown, tab_on)
     if tab_on:
         payload["integrationsTab"] = True
         payload["integrations"] = _integrations(settings, env, overrides, tagged,
                                                 test_runs or {}, page_state or {})
     return payload
+
+
+def _areas(rows: list[dict[str, Any]], tab_on: bool) -> list[dict[str, Any]]:
+    """The Settings tab in sub-tabs (prds/settings-page-areas-plan.md).
+
+    Each area's headings in the order core/settings_areas.py gives them; under
+    each heading its main switch first, then A to Z by the label as shown.
+    Ruling Q8: with the Integrations tab on, a feature setting stays in its
+    area (it shows on its service's sub-tab as well), and only Connected
+    services is left out, because that tab holds the same settings. Empty
+    headings and areas are left out."""
+    by_key = {r["key"]: r for r in rows}
+    out: list[dict[str, Any]] = []
+    for area in AREAS:
+        if tab_on and area.name == AREA_CONNECTED:
+            continue
+        headings = []
+        for h in area.headings:
+            present = [by_key[k] for k in h.keys if k in by_key]
+            if not present:
+                continue
+            # An "in use" switch is hidden while the Integrations tab is off,
+            # so a heading can be shown without its main switch.
+            lead = h.lead if h.lead in by_key else None
+            present.sort(key=lambda r: (r["key"] != lead, r["label"].casefold()))
+            headings.append({"name": h.title, "lead": lead, "settings": present})
+        if headings:
+            out.append({"name": area.name, "headings": headings})
+    return out
 
 
 def _integrations(
@@ -285,6 +321,7 @@ def _integrations(
                 "key": u.key,
                 "label": row["label"],
                 "group": spec.group,
+                "area": spec.area,
                 "kind": row["kind"],
                 "value": row["value"],
                 "secret": row["secret"],
