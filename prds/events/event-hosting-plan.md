@@ -1,6 +1,6 @@
 # Event hosting methods — plan
 
-Last Updated: 11-17-26 23:18 · Revision 0.11 — see change log at the end.
+Last Updated: 11-18-26 01:35 · Revision 0.12 — see change log at the end.
 
 This plan decides how a chapter's online events are hosted: Zoom Webinars,
 Zoom Meetings, a link to any other platform, or an outside host. It records
@@ -170,10 +170,92 @@ says which, in a handoff written in Entity Manager vocabulary.
 Everything is built dark, behind a switch per new capability, as the rest of
 the Events work is.
 
+## 8. Readiness before the live check (step 5a, draft)
+
+Doug, 11-18-26: "Let's stop this and build a better process with better
+tools." The step 6 run on the Business Mentors Association's system
+(11-17/18-26) stopped after section 5. Four failures were found one at a time,
+each by a person following a runbook. None was in the hosting build:
+
+- the worker ran with Events off, because the spec set `EVENTS_ENABLED` on the
+  web part only;
+- the eight event email templates had never been created;
+- no confirmation sent by the worker had ever rendered (`ResumableClient`,
+  fixed in v0.342.2);
+- an attendee could share their screen, so EH11's Host Only was not in effect.
+
+The first three were discoverable before anyone registered, with read-only
+checks. The aim of step 5a: **the system says whether event hosting can work,
+on one screen, with a fix offered for what it can fix**. The live check then
+shrinks to the handful of steps that need a person.
+
+### What gets built
+
+1. **The worker reports what it runs with.** The heartbeat row gains the
+   worker's effective switches: Events, the confirmation switch, Gmail sync,
+   whether the shared mailbox is set, Zoom Meetings, and the attendance pull.
+   Feature readiness compares them with the web part's and names a mismatch
+   in words, for example "Events is on for the web part and off for the
+   worker". A migration adds the column.
+2. **An event hosting readiness check, live, read-only.** It checks:
+   - the worker's switches (item 1);
+   - the eight templates, read from the CRM;
+   - the confirmation's send path: the switch, the shared mailbox, Gmail;
+   - the hosting method's options on `CEvent.hostedBy`, and the Portal
+     registration source;
+   - for Zoom Meetings: the credentials, the scopes, the licensed host, co-host
+     on, screen sharing set to host only. Zoom's API reads all of these from
+     the event host user's settings; the field names for sharing are to be
+     confirmed against Zoom's reference.
+
+   Each line reads ready, not ready with the reason, or unknown, never a bare
+   error.
+3. **Fixes offered where the application can make them**, each confirmed
+   before it acts (the wizard's rule):
+   - create the missing templates (the seeding script, as a button);
+   - set the event host user's screen sharing to host only and co-host on,
+     through Zoom's API. This needs one more scope on the Zoom app, to be
+     confirmed.
+4. **Tests for the class of defect found.** A delivery run through the real
+   `ResumableClient` end to end, confirmation included, so a missing
+   pass-through fails a test rather than a live run.
+5. **The live check rewritten** to about 15 steps, run only after the readiness
+   check reads ready. Every read-only check is made by Claude before the page
+   is written.
+
+### Open decisions
+
+- **R1. Where the readiness check lives.** Recommended: a card on System
+  Settings → Feature readiness, because event hosting spans the CRM, the
+  worker, Google and Zoom. The alternative is inside the Zoom Meetings test on
+  the Integrations tab.
+- **R2. How the Zoom host's settings are fixed.** Recommended: a fix button an
+  administrator confirms, since the setting changes every meeting that Zoom
+  user hosts. The alternative is the application setting it silently each time
+  it creates a meeting.
+
+### Stopping points
+
+After R1 and R2 are ruled; after items 1 and 2 (seen on the Association's
+system, run by Claude where it can be); after item 3; after item 5's live run.
+
+### Left on the Association's system from the 11-17/18-26 run
+
+- Two Zoom Meetings: the public one held at 1:00 AM, and the members-only one
+  still scheduled.
+- The three test events, still shown.
+- Doug's contact and registration.
+- The overrides: Zoom meeting provisioning, Events on another platform, the
+  two defaults, and Events & Webinars for the worker.
+
+The rewritten live check cleans them up. The worker's Events override stays
+until the spec carries `EVENTS_ENABLED` on the worker (#84).
+
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.12 | 11-18-26 01:35 | Claude (Claude Code) | § 8 added, a draft: step 5a, a readiness check before the live check (Doug, 11-18-26, after the step 6 run stopped at section 5 on four failures, none in the hosting build). Open decisions R1 and R2. |
 | 0.11 | 11-17-26 23:18 | Claude (Claude Code) | EH11 kept (Doug, 11-17-26, option A, asked because several people often share in one meeting). Zoom's Host Only setting still lets co-hosts share, so each co-presenter shares once the host makes them co-host. That comes from Zoom's documentation; the step 6 runbook's section 8 tries it for the first time. |
 | 0.10 | 11-17-26 11:55 | Claude (Claude Code) | Step 5 built (v0.342.0). The method choice is offered on every online event. Before a save, a check names the platform and gives the guards, confirmed with a second click. The overlap warning covers webinars and meetings under one host user. No new switch. |
 | 0.9 | 11-17-26 11:20 | Claude (Claude Code) | Step 4 built (v0.341.0, dark). Doug, 11-17-26, option B: Zoom Meetings also hosts members-only events. A members-only meeting takes registration only when the event does. Any other method on a members-only event keeps the typed link, so D2 stands for webinars. EH4's refusal is enforced on the server in step 4. In EH11, who may share the screen is not a per-meeting setting in Zoom's API: it is the event host user's own setting. Other platform runs behind `EVENTS_OTHER_PLATFORM`. |
