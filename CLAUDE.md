@@ -383,6 +383,11 @@ enforces their ACL and records them as modifier. The dev app (no
 - "Forgot your password?" proxies EspoCRM's own unauthenticated
   `User/passwordChangeRequest` — the CRM matches, throttles and emails its
   standard recovery link; the app never sees or sets a password.
+- **The new home page** (`HOME_V2`, off by default; plan
+  `prds/home-page-plan.md`): a second view inside `portal/frontend/index.html`
+  drawn by `home.js`, which moves the events rail and the analytics panel in
+  by element id. Its look is `frontend/shared/panel.css`, the shared panel
+  standard for every screen reworked after it.
 - **The events rail and the member page** (`PORTAL_CALENDAR`, off by
   default): what the rail selects is `events/service.portal_calendar` +
   `events/visibility.py` — never re-filter in the portal. Detail in

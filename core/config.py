@@ -889,6 +889,11 @@ class Settings(BaseSettings):
     # Texts go out only inside these hours, chapter time ("9-20" = 9:00–19:59).
     sms_send_hours: str = "9-20"
     sms_timezone: str = "America/New_York"
+    # --- The home page, phase 1 (prds/home-page-plan.md § 8) ---
+    # The new signed-in home page: a header with the member's applications,
+    # a greeting and the section frames. Off keeps today's page. Read per
+    # request, so /setup switches it without a restart.
+    home_v2: bool = False
     # --- F5: the portal calendar (prds/events/CBM_Events_Portal_Calendar_Design.md) ---
     # The rail of upcoming events on the portal home page and the member page
     # behind it. Off by default so crm-test can show it to a real member first:

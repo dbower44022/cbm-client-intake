@@ -42,6 +42,15 @@
   --cbm-ink: #111111;         /* near-black headings on light */
   --cbm-border: #D1D5DB;
 
+  /* --- Panels (the home page and every screen reworked after it;
+         prds/home-page-plan.md § 5.1, used by /shared/panel.css) --- */
+  --cbm-page: #F4F6F9;          /* the page background behind the panels */
+  --cbm-panel: #FFFFFF;         /* a panel's background */
+  --cbm-panel-border: #E3E8EF;  /* a panel's border and its row dividers */
+  --cbm-panel-radius: 8px;      /* a panel's corners */
+  --cbm-text-strong: #111827;   /* names and titles inside panels (17.7:1 on white) */
+  --cbm-text-muted: #4B5563;    /* section labels, secondary lines (7.6:1 on white) */
+
   /* status colors (Astra/Bootstrap-derived, used on alerts) */
   --cbm-info: #5BC0DE;
   --cbm-success: #5CB85C;

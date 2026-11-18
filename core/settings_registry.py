@@ -588,6 +588,11 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="The rail of upcoming events beside the portal's tiles, and the member "
             "page each one opens. Members see Internal events (to their teams, if "
             "limited) and this chapter's Public webinars. Needs Events & Webinars on."),
+    _s("home_v2", GROUP_FEATURES, "New home page", kind="bool",
+       help="The new signed-in home page: the member's applications in a header row, "
+            "a greeting, and sections that can be collapsed and hidden. Off shows "
+            "today's home page. Phase 1 builds the frame; the sections fill in later "
+            "releases."),
     _s("portal_events_window_days", GROUP_FEATURES, "Portal calendar window", kind="int",
        unit="days",
        help="How many days ahead the rail lists in full; events beyond fold behind "

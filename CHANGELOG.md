@@ -5,6 +5,48 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.343.0] — 2026-11-18
+
+**feat(portal): the new home page, phase 1 — the frame.** Plan
+`prds/home-page-plan.md` § 8 phase 1 (rulings 1 to 9); `OPEN-ITEMS.md` #89.
+Dark behind the new switch **`HOME_V2`** (System Settings → Features, *New
+home page*), read per request. Off, today's home page is unchanged: its
+markup gains two stylesheet links and one script, all of which apply only
+once the switch has drawn the new page.
+
+Doug's answers at stopping point (a), 11-18-26, all as recommended:
+the new page is a second view inside today's `portal/frontend/index.html`
+(one sign-in, no second copy of the session code); the events rail and the
+analytics panel move into At the chapter, the CRM and Documentation links
+into the header, the public pages into a last frame; the application row
+wraps on a wide screen and collapses into one *Applications* menu below
+720 px.
+
+- **The tokens** of plan § 5.1 in `frontend/shared/tokens.css`:
+  `--cbm-page`, `--cbm-panel`, `--cbm-panel-border`, `--cbm-panel-radius`,
+  `--cbm-text-strong`, `--cbm-text-muted`.
+- **`frontend/shared/panel.css`**: panel, section label, count, row, chip
+  (`cbm-kind-chip`), status pill, the three buttons (`cbm-action`,
+  `--second`, `--quiet`) and the five colour meanings as `cbm-tone--*`.
+  Named to avoid the `cbm-chip` and `cbm-btn` classes already used by
+  Marketing Management, the session tools and My Mentor Profile.
+- **The page** (`portal/frontend/home.js`, `home.css`): the header with the
+  organisation name, the member's applications and directories from the
+  same entitlement lists as today's tiles, each in its stable named tab,
+  with today's attention badges on them; the greeting with the first name
+  and today's date; the frames Today, Needs you, My clients, At the chapter
+  and Public pages, each shown only when the member's teams entitle them
+  to it (`home.sections` in the session payload). Frames with nothing yet
+  say so in one line. The birthday overlay is unchanged.
+- **Collapse and hide**: each frame collapses from its header and can be
+  hidden; hidden frames come back from a line at the foot of the page. The
+  choice is the new preference key `home.sections`.
+- **Tests** (`tests/test_home_v2.py`): off serves today's page and payload;
+  on, the sections follow the teams; the preference and its size limit;
+  every text-on-background pair in `panel.css` and the new tokens reach
+  4.5 to 1. The System Settings snapshot fixture gains the switch, and the
+  sandbox address help line that `7be3782b` changed without updating it.
+
 ## [0.342.2] — 2026-11-18
 
 **fix(events): the confirmation sent at delivery renders, and a repeat

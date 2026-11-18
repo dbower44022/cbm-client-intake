@@ -1,0 +1,187 @@
+/* Panels — the shared look of the new home page, and of every screen as it
+   is next reworked (prds/home-page-plan.md § 5, the Mix artboard, Doug's
+   ruling 7). Builds on /shared/tokens.css; load it after tokens.css.
+
+   The rules, in short:
+   - A panel is white, a 1px border, 8px corners, no shadow. Rows inside are
+     separated by 1px dividers, never by gaps.
+   - Colour is reserved for status and urgency (§ 5.3). Everything else is
+     navy, grey or white. Colour never carries meaning alone: every chip and
+     pill also says its meaning in words.
+   - Every text-on-background pair here reaches 4.5 to 1.
+     tests/test_shared_panel.py measures each rule that sets both.
+   - Buttons are never disabled and never hidden (the root CLAUDE.md
+     convention); touch targets are at least 40px high.
+
+   The five colour meanings are FIXED values, not design tokens, so that a
+   chapter's colour file cannot change what a colour means. */
+
+/* --- The page behind the panels ------------------------------------------ */
+.cbm-page {
+  background: var(--cbm-page);
+  color: var(--cbm-text);
+}
+
+/* --- Panel ---------------------------------------------------------------- */
+.cbm-panel {
+  background: var(--cbm-panel);
+  color: var(--cbm-text);
+  border: 1px solid var(--cbm-panel-border);
+  border-radius: var(--cbm-panel-radius);
+  min-width: 0;
+}
+.cbm-panel__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 0 16px;
+  min-height: 44px;
+  border-bottom: 1px solid var(--cbm-panel-border);
+}
+.cbm-panel--collapsed .cbm-panel__head { border-bottom: 0; }
+.cbm-panel--collapsed .cbm-panel__body { display: none; }
+.cbm-panel__body { min-width: 0; }
+.cbm-panel__pad { padding: 12px 16px; }
+/* One plain line where a panel has nothing to show yet. */
+.cbm-panel__note {
+  margin: 0;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: var(--cbm-text-muted);
+}
+
+/* --- Section label -------------------------------------------------------- */
+.cbm-label {
+  margin: 0;
+  font-family: var(--cbm-font-body);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cbm-text-muted);
+}
+/* A count after a label: a small pill. Its tone class gives its colour. */
+.cbm-count {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  vertical-align: 1px;
+}
+
+/* --- Rows ----------------------------------------------------------------- */
+.cbm-rows { list-style: none; margin: 0; padding: 0; }
+.cbm-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 16px;
+  font-size: 14px;
+  color: var(--cbm-text);
+  border-bottom: 1px solid var(--cbm-panel-border);
+  text-decoration: none;
+}
+.cbm-row:last-child { border-bottom: 0; }
+a.cbm-row:hover { background: var(--cbm-page); text-decoration: none; }
+.cbm-row__name { font-weight: 600; color: var(--cbm-text-strong); }
+/* The single most urgent row of a list, and no other row. */
+.cbm-row--urgent {
+  background: #FFF7F7;
+  color: var(--cbm-text);
+}
+
+/* --- Chips and status pills ------------------------------------------------ */
+.cbm-kind-chip {
+  display: inline-block;
+  flex: 0 0 auto;
+  min-width: 58px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+}
+.cbm-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* --- The five colour meanings (§ 5.3), for chips, pills and counts --------- */
+/* Overdue or at risk. */
+.cbm-tone--red    { background: #FDECEC; color: #9B1C1C; }
+/* Missing, waiting, or must be acknowledged. */
+.cbm-tone--amber  { background: #FFF0D6; color: #7A4A00; }
+/* Informational: email, summary, new, pinned. */
+.cbm-tone--navy   { background: #E8EEF6; color: #173B60; }
+/* Healthy: Active. */
+.cbm-tone--green  { background: #E6F6EA; color: #1D6B34; }
+/* Staff work queue. */
+.cbm-tone--purple { background: #EDE9FE; color: #5B21B6; }
+
+/* --- Buttons --------------------------------------------------------------- */
+.cbm-action,
+.cbm-action--second,
+.cbm-action--quiet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 6px;
+  font-family: var(--cbm-font-button);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+}
+/* The main action: gold with white text. */
+.cbm-action {
+  border: 0;
+  background: var(--cbm-btn-bg);
+  color: var(--cbm-btn-color);
+}
+.cbm-action:hover {
+  background: var(--cbm-btn-bg-hover);
+  color: var(--cbm-btn-color);
+  text-decoration: none;
+}
+/* A second action: white with a border. */
+.cbm-action--second {
+  border: 1px solid var(--cbm-panel-border);
+  background: var(--cbm-panel);
+  color: var(--cbm-text-strong);
+}
+.cbm-action--second:hover {
+  border-color: var(--cbm-text-muted);
+  background: var(--cbm-panel);
+  color: var(--cbm-text-strong);
+  text-decoration: none;
+}
+/* A quiet control inside a panel's head (collapse, hide). */
+.cbm-action--quiet {
+  border: 0;
+  padding: 0 10px;
+  background: transparent;
+  color: var(--cbm-text-muted);
+}
+.cbm-action--quiet:hover {
+  background: var(--cbm-page);
+  color: var(--cbm-text-strong);
+}
+.cbm-action:focus-visible,
+.cbm-action--second:focus-visible,
+.cbm-action--quiet:focus-visible {
+  outline: 2px solid var(--cbm-navy);
+  outline-offset: 2px;
+}

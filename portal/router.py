@@ -179,8 +179,53 @@ async def _extra_tiles(payload: dict, user: dict[str, Any], settings: Settings) 
     return payload
 
 
+def _home_sections(user: dict[str, Any], settings: Settings) -> list[str]:
+    """The new home page's section frames this member is entitled to, in the
+    plan's order (prds/home-page-plan.md § 4.1, ruling 2: one page that adapts
+    by role). Today and My clients are a mentor's; Needs you is a mentor's or a
+    staff queue's; At the chapter is everyone's. Chapter News has no frame
+    until phase 5, and the public pages frame shows when there are pages."""
+    mentoring = is_member(user, settings.session_mentor_allowed_teams_list)
+    queues = any(
+        is_member(user, teams)
+        for teams in (
+            settings.assign_allowed_teams_list,
+            settings.mentor_admin_allowed_teams_list,
+            settings.ops_allowed_teams_list,
+            settings.session_partner_allowed_teams_list,
+            settings.session_sponsor_allowed_teams_list,
+        )
+    )
+    sections = []
+    if mentoring:
+        sections.append("today")
+    if mentoring or queues:
+        sections.append("needs")
+    if mentoring:
+        sections.append("clients")
+    sections.append("chapter")
+    sections.append("pages")
+    return sections
+
+
 def _home_payload(user: dict[str, Any], request: Request, settings: Settings) -> dict:
     mentor = is_member(user, [settings.mentor_team_name])
+    payload = _home_payload_v1(user, request, settings, mentor)
+    # The new home page (HOME_V2, phase 1). Read per request; off, the page
+    # renders exactly as before and only this flag is added.
+    payload["homeV2"] = bool(settings.home_v2)
+    if settings.home_v2:
+        name = (user.get("name") or user["userName"]).strip()
+        payload["home"] = {
+            "firstName": name.split()[0] if name else user["userName"],
+            "sections": _home_sections(user, settings),
+        }
+    return payload
+
+
+def _home_payload_v1(
+    user: dict[str, Any], request: Request, settings: Settings, mentor: bool
+) -> dict:
     return {
         "user": {
             "userName": user["userName"],
@@ -354,8 +399,14 @@ async def attention(request: Request) -> dict:
 # --- per-user preferences (F3) ------------------------------------------------
 
 #: The preferences a member may store. A whitelist, so the table holds only
-#: what some screen reads back — the portal calendar's filter, for now.
-PREFERENCE_KEYS = frozenset({"events.calendar"})
+#: what some screen reads back: the portal calendar's filter and the home
+#: page's sections.
+PREFERENCE_KEYS = frozenset({
+    "events.calendar",
+    # The new home page's collapsed and hidden sections (HOME_V2),
+    # {"collapsed": [...], "hidden": [...]} of section keys.
+    "home.sections",
+})
 #: A preference is a few choices, never a document.
 MAX_PREFERENCE_BYTES = 2048
 

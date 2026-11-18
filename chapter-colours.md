@@ -1,6 +1,6 @@
 # Changing a chapter's colours
 
-Last Updated: 11-17-26 01:30 · Revision 1.2 — see the change log at the end.
+Last Updated: 11-18-26 01:10 · Revision 1.3 — see the change log at the end.
 
 A deployment's colours come from one small stylesheet, called **the colour
 file**, that the chapter hosts on the web. The setting `CHAPTER_TOKENS_URL`
@@ -62,6 +62,23 @@ accessibility minimum for normal text. Check the pair in any online contrast
 checker before publishing the colour file. Cleveland's original gold
 (`#CB963B`) measured 2.6 to 1, which is why it was darkened. The same check
 applies to the body text colour on white.
+
+**Panel colours** — the new home page (v0.343.0, switch `HOME_V2`) and every
+screen reworked after it draw panels from six design tokens. A colour file may
+set any of them; each one it leaves out keeps the value shown.
+
+- `--cbm-page`, `#F4F6F9`: the grey page behind the panels.
+- `--cbm-panel`, `#FFFFFF`: a panel's background.
+- `--cbm-panel-border`, `#E3E8EF`: a panel's border and the lines between its rows.
+- `--cbm-panel-radius`, `8px`: a panel's corners.
+- `--cbm-text-strong`, `#111827`: names and titles inside a panel.
+- `--cbm-text-muted`, `#4B5563`: section labels and secondary lines.
+
+The two text colours must reach 4.5 to 1 on both the page colour and the
+panel colour. **The five status colours** of the panels (red, amber, navy,
+green and purple tints, `frontend/shared/panel.css`) are fixed values, not
+design tokens: a colour file cannot change them, so a colour means the same
+thing in every chapter.
 
 ### What the colour file does not change
 
@@ -247,6 +264,7 @@ makes every browser fetch the new colours at once.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 11-18-26 01:10 | Claude (Claude Code) | The six panel colour tokens of the new home page (v0.343.0), and why the status colours are fixed. |
 | 1.2 | 11-17-26 01:30 | Claude (Cowork) | Cleveland's button, button hover and body text values darkened for contrast (v0.340.3, `prds/home-page-plan.md` ruling 8); the contrast check added. |
 | 1.1 | 11-07-26 11:41 | Claude (Claude Code) | The setting is now in the Website group of System Settings, not Presentation (v0.314.0, plan decision 4.2). |
 | 1.0 | 10-07-26 03:48 | Claude (Claude Code) | First version, from the colour sweep of 09-29-26 against v0.232.0. Chosen by Doug over a tokens.css fix for the second-rank hover colour, which is still owed. |

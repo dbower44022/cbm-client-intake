@@ -1,0 +1,159 @@
+/* The new home page (HOME_V2) — its layout only. The look itself (panels,
+   labels, chips, buttons) is /shared/panel.css; plan prds/home-page-plan.md
+   § 4 and § 5. Nothing here applies until home.js adds the `home2-on` class
+   to <body>, so today's page is untouched while the switch is off.
+
+   No width cap (the standing ruling): the page fills the window. */
+
+body.home2-on { margin: 0; background: var(--cbm-page); }
+/* The old page's own header and frame step aside; its footer stays. */
+body.home2-on .portal__header,
+body.home2-on #homeView { display: none; }
+body.home2-on main.portal.cbm-container { padding-top: 0; padding-bottom: 2rem; }
+
+.home2[hidden] { display: none; }
+
+/* --- The header bar -------------------------------------------------------- */
+.home2__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  padding: 8px 2.5rem;
+  background: var(--cbm-panel);
+  border-bottom: 1px solid var(--cbm-panel-border);
+}
+.home2__org {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--cbm-navy);
+  white-space: nowrap;
+}
+.home2__nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.home2__app {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--cbm-text-muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.home2__app:hover { background: var(--cbm-page); color: var(--cbm-text-strong); text-decoration: none; }
+.home2__app .portal__tile-badge { margin-left: 6px; font-size: 11px; }
+.home2__sep {
+  width: 1px;
+  height: 20px;
+  margin: 0 6px;
+  background: var(--cbm-panel-border);
+}
+.home2__me {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  font-size: 14px;
+  color: var(--cbm-text-muted);
+}
+.home2__me a { color: var(--cbm-navy); }
+.home2__who { color: var(--cbm-text-muted); }
+/* The "Applications" button exists only on a narrow screen (ruling at
+   phase 1's stopping point (a), option C: wrap on wide screens, one menu
+   below 720px). */
+.home2__menu { display: none; }
+
+@media (max-width: 719px) {
+  .home2__bar { padding: 8px 16px; }
+  .home2__menu { display: inline-flex; margin-left: auto; }
+  .home2__nav {
+    display: none;
+    order: 5;
+    flex-basis: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .home2__bar--open .home2__nav { display: flex; }
+  .home2__sep { width: auto; height: 1px; margin: 4px 0; }
+  .home2__me { order: 6; flex-basis: 100%; }
+}
+
+/* --- The page body --------------------------------------------------------- */
+.home2__main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px 2.5rem 8px;
+}
+@media (max-width: 719px) { .home2__main { padding: 16px 16px 8px; } }
+
+.home2__greet h1 {
+  margin: 0;
+  font-family: var(--cbm-font-heading);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--cbm-navy);
+}
+.home2__greet p { margin: 2px 0 0; font-size: 14px; color: var(--cbm-text-muted); }
+
+/* Today and Needs you side by side on a wide screen, stacked on a narrow one. */
+.home2__pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 719px) { .home2__pair { grid-template-columns: minmax(0, 1fr); } }
+.home2__pair:empty { display: none; }
+
+.home2__frame[hidden] { display: none; }
+.home2__frame .cbm-label { flex: 1 1 auto; }
+.home2__caret { display: inline-block; transition: transform .15s ease; }
+.cbm-panel--collapsed .home2__caret { transform: rotate(-90deg); }
+
+/* At the chapter: the analytics panel and the events rail, moved in from
+   today's page. Side by side when there is room. */
+.home2__chapter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 2.5rem;
+  padding: 0 16px 12px;
+}
+.home2__chapter > #analyticsSection { flex: 1 1 40rem; min-width: 0; }
+.home2__chapter > #eventsRail { flex: 0 1 22rem; min-width: 0; }
+.home2__chapter h2 {
+  margin: 14px 0 8px;
+  font-family: var(--cbm-font-heading);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--cbm-navy);
+}
+@media (max-width: 767px) {
+  .home2__chapter > #eventsRail { flex-basis: 100%; }
+}
+
+/* The public pages: a plain list of links, each with its shortcut. */
+.home2__pages a { color: var(--cbm-navy); }
+.home2__pages .shortcut { margin-left: 6px; }
+
+/* Hidden sections, and the way back to each. */
+.home2__hidden {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+  color: var(--cbm-text-muted);
+}
+.home2__hidden[hidden] { display: none; }
+.home2__msg { margin: 0; font-size: 14px; color: #9B1C1C; }
+.home2__msg[hidden] { display: none; }

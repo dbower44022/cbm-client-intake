@@ -45,6 +45,7 @@
   }
 
   function showLogin() {
+    if (window.CBMHome) CBMHome.leave();   // the new home page (HOME_V2), if shown
     hide($("homeView")); hide($("forgotView")); show($("loginView"));
     setPasswordVisible(false);
     $("username").focus();
@@ -112,7 +113,8 @@
   // the Mentor Administration tile), so it never hides the tile's own count.
   function badgeTile(url, n, title, kind) {
     if (!n) return;
-    var tile = document.querySelector('.portal__tile[data-url="' + url + '"]');
+    // A tile on today's page, or an application in the new home page's bar.
+    var tile = document.querySelector('.portal__tile[data-url="' + url + '"], .home2__app[data-url="' + url + '"]');
     var cls = kind === "fault" ? "portal__tile-badge portal__tile-badge--fault" : "portal__tile-badge";
     var sel = kind === "fault" ? ".portal__tile-badge--fault" : ".portal__tile-badge:not(.portal__tile-badge--fault)";
     if (!tile || tile.querySelector(sel)) return;
@@ -158,7 +160,24 @@
     if (entries.length) show($(sectionId)); else hide($(sectionId));
   }
 
+  // The new home page (HOME_V2, prds/home-page-plan.md phase 1): home.js
+  // draws the frame; the badges, the analytics panel and the events rail
+  // are today's code, finding their elements by id wherever they now sit.
+  function renderHomeV2(data) {
+    hide($("loginView"));
+    var drawn = CBMHome.render(data, { openWindow: openWindow, signOut: signOut });
+    badgeMyEmailTile();
+    badgeAttentionTiles();
+    var waits = [];
+    if (data.analyticsEnabled) waits.push(loadPortalDashboard());
+    if (data.eventsCalendar) waits.push(loadEventsRail());
+    var settled = Promise.all(waits).then(function () { CBMHome.chapterSettled(drawn.chapterBody); },
+                                          function () { CBMHome.chapterSettled(drawn.chapterBody); });
+    if (drawn.chapterBody && window.CBMBusy && CBMBusy.loading) CBMBusy.loading(drawn.chapterBody, settled);
+  }
+
   function renderHome(data) {
+    if (data.homeV2 && window.CBMHome) { renderHomeV2(data); return; }
     hide($("loginView"));
     $("whoName").textContent = data.user.name || data.user.userName;
     fillTiles("directoriesSection", "directoriesList", data.directories || []);
@@ -443,8 +462,8 @@
   }
   function loadPortalDashboard() {
     var sec = $("analyticsSection"), grid = $("portalDash");
-    if (!grid || typeof CBMCharts === "undefined") return;
-    fetch("/analytics/api/portal")
+    if (!grid || typeof CBMCharts === "undefined") return Promise.resolve();
+    return fetch("/analytics/api/portal")
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (body) {
         if (!body || !body.available || !(body.panels || []).length) return;
@@ -572,10 +591,11 @@
     } finally { $("forgotBtn").disabled = false; }
   });
 
-  $("logoutBtn").addEventListener("click", async function () {
+  async function signOut() {
     try { await api("/logout", { method: "POST" }); } catch (e) {}
     showLogin();
-  });
+  }
+  $("logoutBtn").addEventListener("click", signOut);
 
   (async function init() {
     try { enter(await api("/session")); }
