@@ -1,14 +1,15 @@
 # The home page and Chapter News — plan
 
-Last Updated: 11-18-26 02:15 · Revision 1.5 — change log at the end.
+Last Updated: 11-18-26 18:00 · Revision 1.6 — change log at the end.
 
 **Status: designed 11-16-26 to 11-17-26 in a Cowork session with Doug; every
 decision below is his. Phase 0 (the contrast fix to the design tokens) is
 built as v0.340.3. Phase 1 (the page frame) is built as v0.343.0, dark
 behind `HOME_V2`, and passed stop 1 on 11-18-26. Phase 2 (Today and My
 clients) is built as v0.346.0, dark behind `HOME_V2`, and passed stop 2 on
-11-18-26; Doug's three changes after it are v0.348.0 (§ 8). Phases 3 to 7
-are not started.**
+11-18-26; Doug's three changes after it are v0.348.0 (§ 8), checked by
+him the same day, which closed the phase. Phases 3 to 7 are not started;
+phase 3's prompt is `prompts/home-page-phase3-prompt-v0.1.md`.**
 
 Mockups: the design canvas *CBM Home Page — Looks*
 (https://claude.ai/artifact/D6Gm6i9qYgBsYmMtUSfAmY). The **Mix** artboard is
@@ -339,7 +340,8 @@ switch: its push changes production's colours at once, which is intended.
   **text size** (Standard, Large, Larger) for older mentors, chosen on the
   home page, kept as the member's preference `ui.textSize` and applied on
   every staff and mentor page (option A of three; B was one chapter-wide
-  size in System Settings, C the home page only).
+  size in System Settings, C the home page only). **Checked by Doug on the
+  test system 11-18-26; phase 2 closed.**
 - **Phase 3 — Needs you.** Every kind in § 4.2, the staff counts folded in,
   and the threshold setting. **My Email gains a link that opens one
   conversation** (`/myemail/?conversation=<id>`), so the Email rows can point
@@ -373,6 +375,7 @@ switch: its push changes production's colours at once, which is intended.
 
 | Revision | Last Updated | Change |
 |---|---|---|
+| 1.6 | 11-18-26 18:00 | v0.348.0 checked by Doug; phase 2 closed; phase 3's prompt written. |
 | 1.5 | 11-18-26 02:15 | Stop 2 passed; Doug's three changes after it (Directories menu, Upcoming events panel, text size) recorded in § 4.1 and § 8, built as v0.348.0. |
 | 1.4 | 11-18-26 01:50 | Phase 2 built as v0.346.0; § 8 records Doug's answers at its first stop. |
 | 1.3 | 11-18-26 01:45 | Stop 1 passed. |
