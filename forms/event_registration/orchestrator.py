@@ -327,7 +327,20 @@ async def deliver(
         **attr.result(),
     }
 
-    if status == cfg.REG_REGISTERED:
+    # A repeat sign-up from someone who already holds a live personal link
+    # keeps it: Zoom returns the same link for the same address, and it allows
+    # only three registrant calls per address per day (HTTP 429, seen on the
+    # Association 11-18-26), so asking again can only fail. A reinstated
+    # cancellation is asked again: its seat was freed in Zoom.
+    held_link = (
+        existing
+        and existing.get("attendanceStatus") != cfg.REG_CANCELLED
+        and (existing.get("zoomJoinUrl") or "").strip()
+    )
+    if status == cfg.REG_REGISTERED and held_link:
+        ids["zoom"] = {"ok": True, "reason": "already registered with Zoom",
+                       "zoomJoinUrl": existing["zoomJoinUrl"]}
+    elif status == cfg.REG_REGISTERED:
         zoom_result = await _push_to_zoom(
             settings, client, event, registration_id, sub
         )

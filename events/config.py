@@ -211,6 +211,10 @@ REGISTRATION_SELECT = ",".join([
     "attendanceStatus", "attendanceSource", "registrationDate",
     "registrationSource", "minutesAttended", "joinTime", "leaveTime",
     "marketingOptIn", "zoomRegistrantId", "unmatchedParticipant",
+    # The personal join link: the member page shows it (Zoom Meetings on a
+    # members-only event), and a repeat sign-up keeps it rather than asking
+    # Zoom again (three registrant calls per address per day).
+    "zoomJoinUrl",
     # The email ledger the Registrants tab shows (D3 / Phase 6b).
     "followUpsSent", "confirmationSentAt",
 ])

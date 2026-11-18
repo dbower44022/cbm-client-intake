@@ -725,3 +725,24 @@ async def test_a_new_events_check_names_no_zoom_event():
         settings=Ready())
     assert result["zoom"]["words"] == ""
     assert not any("creates a Zoom" in line for line in result["confirm"])
+
+
+# --- found on the live check, 11-18-26 ----------------------------------------------
+
+
+def test_the_registration_read_carries_the_personal_link():
+    """The member page and the repeat-sign-up check both read it."""
+    assert "zoomJoinUrl" in cfg.REGISTRATION_SELECT.split(",")
+
+
+async def test_the_delivery_wrapper_renders_templates():
+    """Every worker confirmation failed: ResumableClient had no
+    email_template_prepare, so the render raised AttributeError."""
+    from core.resumable import ResumableClient
+
+    class Inner:
+        async def email_template_prepare(self, template_id, **kw):
+            return {"subject": "s", "bodyHtml": "b", "id": template_id}
+
+    wrapper = ResumableClient(Inner())
+    assert (await wrapper.email_template_prepare("t1"))["id"] == "t1"

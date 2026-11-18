@@ -5,6 +5,26 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.342.2] — 2026-11-18
+
+**fix(events): the confirmation sent at delivery renders, and a repeat
+sign-up keeps its Zoom link.** Found on the step 6 live check on the
+Business Mentors Association's system (worker log, 11-18-26 05:57 UTC).
+
+- **Every confirmation a worker tried to send failed.** `core/resumable.py`'s
+  `ResumableClient`, which wraps the CRM client during delivery, had no
+  `email_template_prepare`, so the template render raised
+  `'ResumableClient' object has no attribute 'email_template_prepare'`. It
+  now passes through; it writes nothing. This is the first confirmation a
+  worker had ever attempted: the D3 live pass was never run.
+- **A repeat sign-up no longer asks Zoom again** while the registration holds
+  a live personal link. Zoom allows three registrant calls per address per
+  day and answered the fourth with HTTP 429. A reinstated cancellation is
+  still registered again, because its seat was freed in Zoom.
+- **`REGISTRATION_SELECT` reads `zoomJoinUrl`.** The member page's personal
+  link (v0.341.0) and the check above both depend on it; without it the
+  member page showed no link.
+
 ## [0.342.1] — 2026-11-17
 
 **fix(events): the check before creating an event names no Zoom event.**

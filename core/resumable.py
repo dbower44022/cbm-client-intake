@@ -112,6 +112,14 @@ class ResumableClient:
     async def list_related(self, *args: Any, **kwargs: Any):
         return await self._inner.list_related(*args, **kwargs)
 
+    # Renders an email template; writes nothing. The event confirmation sent
+    # at delivery (events/confirm.py) renders through it, and without it every
+    # worker delivery's confirmation failed with "no attribute
+    # email_template_prepare" (found on the Association 11-18-26, the first
+    # confirmation ever attempted by a worker).
+    async def email_template_prepare(self, *args: Any, **kwargs: Any):
+        return await self._inner.email_template_prepare(*args, **kwargs)
+
 
 async def run_step_once(client: Any, name: str, action: Callable[[], Awaitable[Any]]) -> bool:
     """Run ``action`` at most once per delivery, guarded by a named progress
