@@ -419,6 +419,7 @@ async def _list_select(cfg: DomainConfig, client: SessionClient) -> str:
     """The grid's select, plus each optional attribute the live CRM has
     (``DomainConfig.list_optional_select``)."""
     extra = await _optional_present(cfg, client, cfg.list_optional_select)
+    extra = [*extra, *cfg.list_passthrough]
     return ",".join([cfg.list_select, *extra]) if extra else cfg.list_select
 
 
@@ -426,6 +427,8 @@ def _grid_row(cfg: DomainConfig, r: dict[str, Any]) -> dict[str, Any]:
     row = {"id": r["id"], "createdAt": r.get("createdAt")}
     for col in cfg.list_columns:
         row[col.key] = r.get(col.attr)
+    for attr in cfg.list_passthrough:
+        row[attr] = r.get(attr)
     if cfg.list_date_column:  # optional trailing date column (Start Date / Created)
         dkey, _, dattr = cfg.list_date_column
         row[dkey] = r.get(dattr)

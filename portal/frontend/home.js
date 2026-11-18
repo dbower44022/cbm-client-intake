@@ -1,5 +1,5 @@
 /* The new home page (HOME_V2; phase 1 the frame, phase 2 Today and My
-   clients). Plan:
+   clients, phase 3 Needs you). Plan:
    prds/home-page-plan.md § 4 and § 8; look: /shared/panel.css.
 
    app.js keeps sign-in, the session, the ?next= redirect and the birthday
@@ -24,7 +24,7 @@
     { key: "today", title: "Today", pair: true,
       note: "Your sessions for today will show here." },
     { key: "needs", title: "Needs you", pair: true,
-      note: "What needs you will show here. Until then, the counts stay on the applications in the bar above." },
+      note: "Nothing needs you right now." },
     { key: "clients", title: "My clients", link: { title: "Open Client Management", url: "/mentorsessions/", target: "cbm-mentorsessions" },
       note: "Your active clients will show here." },
     { key: "chapter", title: "At the chapter", pair2: true,
@@ -35,7 +35,8 @@
       note: "There are no public pages on this deployment." },
   ];
 
-  var state = { prefs: { collapsed: [], hidden: [] }, view: null, hooks: {} };
+  var state = { prefs: { collapsed: [], hidden: [] }, view: null, hooks: {},
+                greet: { line: null, now: null, sessions: null, needs: null } };
 
   function el(tag, cls, text) {
     var e = document.createElement(tag);
@@ -411,9 +412,7 @@
     read.then(function (data) {
       if (frames.today) {
         var n = fillToday(frames.today._body, data, now);
-        if (data.profile === "found") {
-          greetLine.textContent = today(now) + " · " + n + (n === 1 ? " session" : " sessions") + " today";
-        }
+        if (data.profile === "found") { state.greet.sessions = n; greetText(); }
       }
       if (frames.clients) fillClients(frames.clients._body, data, now);
     }).catch(function (e) {
@@ -424,6 +423,82 @@
         note(b, "Your clients and sessions could not be read just now: " + e.message
           + ". Reload the page to try again.");
       });
+    });
+  }
+
+  // The greeting's line (§ 4.1): the date, then "2 sessions today", then
+  // "5 items need you", each part as its read arrives.
+  function greetText() {
+    var g = state.greet;
+    if (!g.line) return;
+    var parts = [today(g.now)];
+    if (g.sessions !== null) parts.push(g.sessions + (g.sessions === 1 ? " session" : " sessions") + " today");
+    if (g.needs) parts.push(g.needs + (g.needs === 1 ? " item needs you" : " items need you"));
+    g.line.textContent = parts.join(" · ");
+  }
+
+  // --- Needs you (phase 3) --------------------------------------------------------
+  // One read (GET /api/portal/home/needs), sorted by the server: most urgent
+  // kind first, then the oldest. Each row's link opens the owning
+  // application on the record, in its own named tab (ruling 1). Nothing is
+  // acted on here: an item leaves when its application resolves it.
+  var NEEDS_URL = "/api/portal/home/needs";
+
+  function needRow(it) {
+    var li = el("li", "cbm-row home2__need" + (it.urgent ? " cbm-row--urgent" : ""));
+    li.appendChild(el("span", "cbm-kind-chip cbm-tone--" + it.tone, it.chip));
+    var what = el("div", "home2__what");
+    var a = el("a", "cbm-row__name", it.name);
+    a.href = it.url;
+    a.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      state.hooks.openWindow(it.url, it.target || null);
+    });
+    what.appendChild(a);
+    what.appendChild(el("div", "home2__sub", it.reason));
+    li.appendChild(what);
+    return li;
+  }
+
+  function fillNeeds(body, data) {
+    clearBody(body);
+    var items = data.items || [];
+    if (!items.length) note(body, "Nothing needs you right now.");
+    else {
+      var ul = el("ul", "cbm-rows home2__needs");
+      items.forEach(function (it) { ul.appendChild(needRow(it)); });
+      body.appendChild(ul);
+    }
+    if ((data.unavailable || []).length) {
+      var p = el("p", "cbm-panel__note home2__partial",
+        "Some items could not be read just now and are not shown. Reload the page to try again.");
+      body.appendChild(p);
+    }
+    return items.length;
+  }
+
+  function loadNeeds(frames) {
+    if (!frames.needs) { if (state.hooks.badgesFallback) state.hooks.badgesFallback(); return; }
+    var body = frames.needs._body;
+    var read = fetch(NEEDS_URL, { credentials: "same-origin" }).then(function (r) {
+      return r.json().catch(function () { return null; }).then(function (d) {
+        if (!r.ok) throw new Error((d && d.detail) || ("the server answered " + r.status));
+        return d;
+      });
+    });
+    if (window.CBMBusy && CBMBusy.loading) CBMBusy.loading(body, read);
+    read.then(function (data) {
+      state.greet.needs = fillNeeds(body, data);
+      greetText();
+      // My Email's unread count came from the same inbox run.
+      var n = data.unreadTotal;
+      if (n && state.hooks.badge) state.hooks.badge("/myemail/", n, n + " unread conversation" + (n === 1 ? "" : "s"));
+    }).catch(function (e) {
+      // The panel says one line; the rest of the page stands (§ 4.1). The
+      // counts go back on the applications in the bar, so none is lost.
+      clearBody(body);
+      note(body, "What needs you could not be read just now: " + e.message + ". Reload the page to try again.");
+      if (state.hooks.badgesFallback) state.hooks.badgesFallback();
     });
   }
 
@@ -526,6 +601,7 @@
     greet.appendChild(el("h1", null, greeting(now) + ", " + (home.firstName || data.user.name || "")));
     var greetLine = el("p", null, today(now));
     greet.appendChild(greetLine);
+    state.greet = { line: greetLine, now: now, sessions: null, needs: null };
     main.appendChild(greet);
 
     var pair = el("div", "home2__pair");
@@ -539,7 +615,6 @@
       if (f.pair2 && !pair2.parentNode) main.appendChild(pair2);
       (f.pair ? pair : f.pair2 ? pair2 : main).appendChild(sec);
     });
-    if (frames.needs) note(frames.needs._body, frames.needs._def.note);
     if (frames.chapter) moveIn(frames.chapter._body, "analyticsSection", frames.chapter._def);
     if (frames.events) moveIn(frames.events._body, "eventsRail", frames.events._def);
     if (frames.pages) fillPages(frames.pages._body, data.forms);
@@ -558,6 +633,7 @@
     var waiting = loadPrefs();
     if (window.CBMBusy && CBMBusy.loading) CBMBusy.loading(main, waiting);
     loadMentoring(frames, greetLine, now);
+    loadNeeds(frames);
     return { chapterBody: frames.chapter ? frames.chapter._body : null,
              eventsBody: frames.events ? frames.events._body : null };
   }

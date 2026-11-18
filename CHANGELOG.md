@@ -5,6 +5,55 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.349.0] — 2026-11-18
+
+**feat(home): Needs you — the home page's attention list.** Phase 3 of
+`prds/home-page-plan.md`, dark behind `HOME_V2`; Doug's eight answers at
+the phase's first stop, 11-18-26, all as recommended.
+
+- **One list, most urgent first**, each row a coloured chip with its word,
+  the client's name, a short reason and a link that opens the owning
+  application on the record in its own named tab. Nothing is acted on in
+  place: a row leaves when its application resolves it. The single most
+  urgent row is tinted red when it is a red row.
+- **Five mentoring kinds**, read as the member, owned and co-mentored
+  engagements alike: **no contact** past the threshold (red, the day
+  count; from the last contact, else the assignment; never On-Hold);
+  **Notes** (amber: a Completed session of the last 30 days with neither
+  session notes nor next steps and no meeting summary); **Email** (navy:
+  My Email's own awaiting-reply rule, once the message has waited a working
+  day); **Summary** (navy: a Completed session of the last 14 days with a
+  meeting summary and empty session notes; only the session notes count,
+  because the note taker writes its action items into an empty next steps
+  field); **New** (navy: Pending Acceptance, or assigned in the last 7
+  days). **Closing is left out**: the CRM's close date is stamped when an
+  engagement closes (ruling 70), so no planned end date exists to warn
+  about.
+- **Staff rows** (purple): today's attention counts, one row per queue with
+  items, after every mentoring row, largest first. Ruling 3 holds: the
+  waiting-clients row is Client Administration's alone.
+- **The threshold** is a System Settings value, *No-contact threshold*
+  (`HOME_NO_CONTACT_DAYS`, default 21 days, read per request; 0 leaves the
+  kind out).
+- **One new read**, `GET /api/portal/home/needs`, separate from Today's, so
+  a failure in one never empties the other. Each kind fails on its own: a
+  failed kind is left out, logged and named in `unavailable`, and the panel
+  says one line. **The engagement read is shared** with
+  `GET /api/portal/home/mentoring` for 20 seconds per sign-in, so Needs you
+  adds one CRM call for the Completed sessions; the Email rows and My
+  Email's unread badge come from one run of My Email's inbox.
+- **The bar's count badges** move into the list while Needs you holds them;
+  they come back on the applications if its read fails.
+- **The greeting** adds "N items need you" after the session count.
+- **My Email opens one conversation from a link**:
+  `/myemail/?conversation=<id>`; signing in on the way keeps the link.
+- Client Management's list passes `engagementAssignedDate` through on each
+  row (`DomainConfig.list_passthrough`); its grid is unchanged.
+- Tests: `tests/test_home_needs.py` (each kind, co-mentored rows, the sort,
+  ruling 3, the threshold, a failing kind, the shared read, the inbox run,
+  the page and the My Email link); the setting's row in the System Settings
+  fixture.
+
 ## [0.348.0] — 2026-11-18
 
 **feat(home): a Directories menu, Upcoming events in its own panel, and a

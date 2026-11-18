@@ -898,6 +898,9 @@ class Settings(BaseSettings):
     # a greeting and the section frames. Off keeps today's page. Read per
     # request, so /setup switches it without a restart.
     home_v2: bool = False
+    # Needs you (phase 3): a client with no contact for longer than this many
+    # days is listed. Read per request; 0 leaves the kind out.
+    home_no_contact_days: int = 21
     # --- F5: the portal calendar (prds/events/CBM_Events_Portal_Calendar_Design.md) ---
     # The rail of upcoming events on the portal home page and the member page
     # behind it. Off by default so crm-test can show it to a real member first:

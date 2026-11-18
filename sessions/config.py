@@ -354,6 +354,10 @@ class DomainConfig:
     #: the CRM only when its live metadata has them. An Overview fact on such
     #: an attribute is left out until the field exists.
     detail_optional_select: tuple[str, ...] = ()
+    #: Attributes the list reads and passes through on each row as they are,
+    #: under their own names, with no grid column: the home page's Needs you
+    #: list reads ``engagementAssignedDate`` (HOME_V2, phase 3).
+    list_passthrough: tuple[str, ...] = ()
 
     # --- Last contact date (Doug's request 2026-07-25). The record field that is
     # advanced to the contact date whenever an outbound email is sent from the
@@ -677,6 +681,7 @@ MENTOR = DomainConfig(
         "nextSessionDateTime,engagementStartDate,lastContactDate,"
         "mentorProfileName,mentorProfileId,createdAt"
     ),
+    list_passthrough=("engagementAssignedDate",),
     # Order: Engagement, Status, Primary contact, Next session, Start date,
     # Company, Client, Assigned Mentor (far right — so a co-mentor can see
     # who the primary mentor is, 2026-07-16). Both date columns are laid out

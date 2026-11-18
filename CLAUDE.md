@@ -390,7 +390,11 @@ enforces their ACL and records them as modifier. The dev app (no
   standard for every screen reworked after it. **Today and My clients read
   `GET /api/portal/home/mentoring`**, which calls Client Management's own
   `sessions.service.list_records` as the member — never a second way to
-  find a mentor's engagements.
+  find a mentor's engagements. **Needs you reads `GET
+  /api/portal/home/needs`** (phase 3): its rules are `portal/needs.py`, it
+  shares that same engagement read for 20 seconds per sign-in, and its
+  staff rows are the attention counts (`_attention_items`), so the bar's
+  badges show only when its read fails.
 - **The events rail and the member page** (`PORTAL_CALENDAR`, off by
   default): what the rail selects is `events/service.portal_calendar` +
   `events/visibility.py` — never re-filter in the portal. Detail in
@@ -1352,4 +1356,7 @@ the strength of it.
   1 and 2; migration 0050). Owed in #84.
 - **v0.347.0 (2026-11-18) is committed, not pushed**: fix buttons on the
   Event hosting card (plan § 8 item 3). Owed in #84.
+- **v0.349.0 (2026-11-18) is committed, not pushed**: the home page's
+  phase 3, Needs you (`HOME_V2`, off; threshold `HOME_NO_CONTACT_DAYS`).
+  Stop 3 owed in #89.
 Everything else still owed is in `OPEN-ITEMS.md`.

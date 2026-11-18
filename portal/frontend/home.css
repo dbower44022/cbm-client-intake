@@ -173,6 +173,13 @@ body.home2-on main.portal.cbm-container { padding-top: 0; padding-bottom: 2rem; 
 .home2__later { border-top: 1px solid var(--cbm-panel-border); font-size: 13px; }
 .home2__later a { color: var(--cbm-navy); }
 
+/* --- Needs you (phase 3) --------------------------------------------------- */
+.home2__need { gap: 12px; align-items: flex-start; }
+.home2__need .cbm-kind-chip { min-width: 64px; margin-top: 1px; }
+.home2__need .cbm-row__name { text-decoration: none; }
+.home2__need .cbm-row__name:hover { text-decoration: underline; }
+.home2__partial { border-top: 1px solid var(--cbm-panel-border); font-size: 13px; }
+
 .home2__tablewrap { overflow-x: auto; }
 .home2__clients { width: 100%; border-collapse: collapse; font-size: 14px; }
 .home2__clients th {

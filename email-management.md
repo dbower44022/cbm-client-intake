@@ -118,6 +118,9 @@ on the thread, the subject, and when the last message arrived.
 - Clicking a row opens the thread. To reply, use **"Open in record — reply
   there"** — replies happen on the record page, where the full compose
   (contact linking, templates, documents) lives.
+- **A link can open one conversation**: `/myemail/?conversation=<id>`
+  opens My Email with that thread already open. The new home page's
+  *Needs you* list uses it for each client email waiting for your reply.
 
 ### Unread mail follows you to where you work
 

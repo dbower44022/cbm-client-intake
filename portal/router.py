@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -345,8 +345,15 @@ async def attention(request: Request) -> dict:
     user = current_user(request)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated.")
-    settings = get_settings()
+    return {"items": await _attention_items(request, user, get_settings())}
 
+
+async def _attention_items(request: Request, user: dict[str, Any],
+                           settings: Settings) -> list[dict[str, Any]]:
+    """The staff queue counts this member's teams entitle them to: the bar's
+    badges on today's page, the purple Staff rows of Needs you on the new
+    one (HOME_V2, phase 3). Ruling 3 holds here: the waiting-clients count
+    is Client Administration's alone."""
     wanted: list[attn.AttentionType] = []
     if is_member(user, settings.assign_allowed_teams_list, settings.assign_allowed_roles_list):
         wanted.append(attn.ENGAGEMENTS)
@@ -397,7 +404,7 @@ async def attention(request: Request) -> dict:
         except Exception as exc:  # noqa: BLE001
             log.warning("attention count failed (ops) for %s: %s",
                         user.get("userName"), exc)
-    return {"items": items}
+    return items
 
 
 # --- the new home page: Today and My clients (HOME_V2, phase 2) ---------------
@@ -449,6 +456,7 @@ def _home_mentoring(result: dict[str, Any]) -> dict[str, Any]:
                 "name": name,
                 "status": row.get("status"),
                 "lastContact": row.get("lastContact"),
+                "assignedDate": row.get("engagementAssignedDate"),
                 "coMentor": bool(own and row.get("mentorId") and row["mentorId"] != own),
                 "sessions": [s.get("dateStart") for s in scheduled if s.get("dateStart")],
             })
@@ -472,15 +480,177 @@ async def home_mentoring(request: Request) -> dict:
     if not is_member(user, settings.session_mentor_allowed_teams_list):
         raise HTTPException(status_code=403, detail="Your clients show here for members of the mentor team.")
     from core.espo import EspoError
-    from sessions import service as sessions_service
-    from sessions.config import MENTOR
 
     try:
-        result = await sessions_service.list_records(MENTOR, client_for(settings, user), user)
+        result = await _member_records(request, settings, user)
     except EspoError as exc:
         log.warning("home mentoring read failed for %s: %s", user.get("userName"), exc)
         raise HTTPException(status_code=502, detail="Your clients could not be read from the CRM just now.")
     return _home_mentoring(result)
+
+
+#: How long one member's Client Management list is shared between the home
+#: page's two reads (Today and My clients, and Needs you), which the page
+#: starts together. Short: a sign-in, not a cache.
+HOME_SHARED_READ_SECONDS = 20
+
+
+async def _member_records(request: Request, settings: Settings,
+                          user: dict[str, Any]) -> dict[str, Any]:
+    """Client Management's own list for this member, read once and shared
+    by the home page's two reads (phase 3, answer 8: Needs you adds no
+    second engagement read). Kept on the application per sign-in token for
+    ``HOME_SHARED_READ_SECONDS``; a failed read is never kept."""
+    import time
+
+    from sessions import service as sessions_service
+    from sessions.config import MENTOR
+
+    memo = request.app.state.__dict__.setdefault("home_shared_reads", {})
+    now = time.monotonic()
+    for k in [k for k, (at, _) in memo.items() if now - at > HOME_SHARED_READ_SECONDS]:
+        memo.pop(k, None)
+    key = (user.get("userId"), user.get("token"))
+    hit = memo.get(key)
+    if hit is None:
+        task = asyncio.ensure_future(
+            sessions_service.list_records(MENTOR, client_for(settings, user), user))
+        memo[key] = hit = (now, task)
+    try:
+        return await asyncio.shield(hit[1])
+    except Exception:
+        memo.pop(key, None)
+        raise
+
+
+# --- the new home page: Needs you (HOME_V2, phase 3) --------------------------
+
+#: How far back the Completed-session read looks (the Notes kind's window,
+#: the widest of the two session kinds).
+HOME_SESSION_DAYS_BACK = 30
+
+
+async def _needs_sessions(settings: Settings, user: dict[str, Any],
+                          names: dict[str, str], now) -> list[dict[str, Any]]:
+    """The Notes and Summary rows: one read of the member's Completed
+    sessions of the last ``HOME_SESSION_DAYS_BACK`` days, kept to their own
+    engagements (an administrator's read would return everyone's)."""
+    from datetime import timedelta
+
+    from portal import needs
+    from sessions.config import AI_SUMMARY_FIELD
+
+    if not names:
+        return []
+    client = client_for(settings, user)
+    try:
+        fields = await client.metadata("entityDefs.CSession.fields") or {}
+    except Exception:  # noqa: BLE001 — no summary field known: Notes only
+        fields = {}
+    summary = AI_SUMMARY_FIELD if isinstance(fields, dict) and AI_SUMMARY_FIELD in fields else None
+    since = (now - timedelta(days=HOME_SESSION_DAYS_BACK)).strftime("%Y-%m-%d %H:%M:%S")
+    select = "name,status,dateStart,engagementId,sessionNotes,nextSteps" + (f",{summary}" if summary else "")
+    data = await client.list(
+        "CSession",
+        select=select,
+        where=[{"type": "equals", "attribute": "status", "value": "Completed"},
+               {"type": "after", "attribute": "dateStart", "value": since}],
+        order_by="dateStart",
+        order="desc",
+        max_size=200,
+    )
+    mine = [s for s in data.get("list") or [] if s.get("engagementId") in names]
+    return needs.session_items(mine, names, now, summary_field=summary)
+
+
+async def _needs_email(settings: Settings, user: dict[str, Any]) -> tuple[list[dict[str, Any]], Optional[int]]:
+    """The Email rows and the My Email badge's unread count, from ONE run
+    of My Email's own inbox (answer 3). Nothing where My Email is not open
+    to this member."""
+    from datetime import datetime, timezone
+
+    from comms import service as comms_service
+    from myemail import service as myemail_service
+    from portal import needs
+
+    if not settings.gmail_sync or not any(
+        is_member(user, getattr(settings, attr))
+        for attr in ("session_mentor_allowed_teams_list",
+                     "session_partner_allowed_teams_list",
+                     "session_sponsor_allowed_teams_list")):
+        return [], None
+    store = comms_service.get_store(settings)
+    if store is None:
+        return [], None
+    data = await myemail_service.build_inbox(settings, client_for(settings, user), store, user)
+    convs = data.get("conversations") or []
+    unread = sum(1 for c in convs if c.get("unread"))
+    return needs.email_items(convs, datetime.now(timezone.utc)), unread
+
+
+@router.get("/home/needs")
+async def home_needs(request: Request) -> dict:
+    """Needs you for the new home page (prds/home-page-plan.md § 4.2; phase 3,
+    answer 8: its own read, so a failure here never takes Today down). Every
+    kind is read as the member and fails on its own: a kind whose read fails
+    is left out with a logged warning, and named in ``unavailable``.
+
+    ``items``: the rows, most urgent first (``portal.needs.ordered``).
+    ``unreadTotal``: My Email's unread count from the same inbox run, so the
+    page badges My Email without a second run; null when not read."""
+    from datetime import datetime, timezone
+
+    from portal import needs
+
+    settings = get_settings()
+    if not settings.home_v2:
+        raise HTTPException(status_code=404, detail="Not found.")
+    user = current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    now = datetime.now(timezone.utc)
+    items: list[dict[str, Any]] = []
+    unavailable: list[str] = []
+
+    def failed(kind: str, exc: BaseException) -> None:
+        log.warning("needs you: %s failed for %s: %s", kind, user.get("userName"), exc)
+        unavailable.append(kind)
+
+    async def mentoring() -> None:
+        if not is_member(user, settings.session_mentor_allowed_teams_list):
+            return
+        try:
+            mine = _home_mentoring(await _member_records(request, settings, user))
+        except Exception as exc:  # noqa: BLE001 — this kind only
+            failed("clients", exc)
+            return
+        clients = mine["clients"]
+        items.extend(needs.no_contact_items(clients, now, settings.home_no_contact_days))
+        items.extend(needs.new_items(clients, now))
+        names = {c["id"]: c["name"] for c in clients}
+        try:
+            items.extend(await _needs_sessions(settings, user, names, now))
+        except Exception as exc:  # noqa: BLE001
+            failed("sessions", exc)
+
+    async def email() -> Optional[int]:
+        try:
+            rows, unread = await _needs_email(settings, user)
+        except Exception as exc:  # noqa: BLE001
+            failed("email", exc)
+            return None
+        items.extend(rows)
+        return unread
+
+    async def staff() -> None:
+        try:
+            items.extend(needs.staff_items(await _attention_items(request, user, settings)))
+        except Exception as exc:  # noqa: BLE001
+            failed("staff", exc)
+
+    _, unread, _ = await asyncio.gather(mentoring(), email(), staff())
+    return {"items": needs.ordered(items), "unreadTotal": unread,
+            "unavailable": sorted(unavailable)}
 
 
 # --- per-user preferences (F3) ------------------------------------------------

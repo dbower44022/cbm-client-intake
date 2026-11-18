@@ -36,7 +36,8 @@
     return data;
   }
 
-  function showLogin() { location.href = "/?next=" + encodeURIComponent("/myemail/"); }
+  // Signing in returns to this address, the ?conversation= link included.
+  function showLogin() { location.href = "/?next=" + encodeURIComponent("/myemail/" + location.search); }
   function showMessage(text) {
     hide($("inboxView")); $("msgText").textContent = text; show($("msgView"));
   }
@@ -86,6 +87,7 @@
       }
       show($("inboxView"));
       await loadInbox();
+      openLinkedConversation();
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
       showMessage(e.message || "The server isn't responding right now.");
@@ -125,6 +127,17 @@
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && !$("threadModal").hidden) closeThread();
   });
+
+  // /myemail/?conversation=<id> opens that one conversation (the home
+  // page's Needs you Email rows link here; HOME_V2, phase 3). Its inbox row
+  // when the list has it, else the thread alone: the thread read is the
+  // member's own CRM read, so a conversation they cannot see says so.
+  function openLinkedConversation() {
+    var id = new URLSearchParams(location.search).get("conversation");
+    if (!id) return;
+    var row = rows.filter(function (r) { return r.id === id; })[0];
+    openThread(row || { id: id, records: [], subject: "" });
+  }
 
   async function loadInbox() {
     hide($("notice"));

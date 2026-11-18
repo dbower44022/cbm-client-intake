@@ -165,9 +165,13 @@
   // are today's code, finding their elements by id wherever they now sit.
   function renderHomeV2(data) {
     hide($("loginView"));
-    var drawn = CBMHome.render(data, { openWindow: openWindow, signOut: signOut });
-    badgeMyEmailTile();
-    badgeAttentionTiles();
+    // The staff counts are rows of Needs you now (phase 3, answer 8), and
+    // the My Email count comes from the same read; home.js calls
+    // badgesFallback when that read fails or the member has no Needs you.
+    var drawn = CBMHome.render(data, {
+      openWindow: openWindow, signOut: signOut, badge: badgeTile,
+      badgesFallback: function () { badgeMyEmailTile(); badgeAttentionTiles(); },
+    });
     var waits = [];
     if (data.analyticsEnabled) waits.push(loadPortalDashboard());
     if (data.eventsCalendar) waits.push(loadEventsRail());

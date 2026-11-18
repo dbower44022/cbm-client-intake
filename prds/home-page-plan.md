@@ -1,6 +1,6 @@
 # The home page and Chapter News — plan
 
-Last Updated: 11-18-26 18:00 · Revision 1.6 — change log at the end.
+Last Updated: 11-18-26 18:20 · Revision 1.7 — change log at the end.
 
 **Status: designed 11-16-26 to 11-17-26 in a Cowork session with Doug; every
 decision below is his. Phase 0 (the contrast fix to the design tokens) is
@@ -8,8 +8,9 @@ built as v0.340.3. Phase 1 (the page frame) is built as v0.343.0, dark
 behind `HOME_V2`, and passed stop 1 on 11-18-26. Phase 2 (Today and My
 clients) is built as v0.346.0, dark behind `HOME_V2`, and passed stop 2 on
 11-18-26; Doug's three changes after it are v0.348.0 (§ 8), checked by
-him the same day, which closed the phase. Phases 3 to 7 are not started;
-phase 3's prompt is `prompts/home-page-phase3-prompt-v0.1.md`.**
+him the same day, which closed the phase. Phase 3 (Needs you) is built as
+v0.349.0, dark behind `HOME_V2`; stop 3 is owed. Phases 4 to 7 are not
+started.**
 
 Mockups: the design canvas *CBM Home Page — Looks*
 (https://claude.ai/artifact/D6Gm6i9qYgBsYmMtUSfAmY). The **Mix** artboard is
@@ -124,15 +125,19 @@ are sorted by urgency, then by age. The kinds, and where each comes from:
 
 | Kind | Chip | Source |
 |---|---|---|
-| A client with no contact for longer than the threshold | the day count, red | `CEngagement.lastContactDate` |
-| A session held with no notes | Notes, amber | the member's completed sessions — the exact field to be confirmed against `sessions/CLAUDE.md` in phase 3 |
-| A meeting summary waiting for review | Summary, navy | the session's AI summary field |
-| A client email waiting for a reply | Email, navy | My Email's conversations |
-| An engagement near its close date | Closing, amber | `CEngagement.closeDate` |
-| A newly assigned client | New, navy | the engagement's assignment |
-| A staff work queue with items | Staff, purple | today's `GET /api/portal/attention` counts, folded into the list |
+| A client with no contact for longer than the threshold | the day count, red | `CEngagement.lastContactDate`, else `engagementAssignedDate`; Active, Assigned and Pending Acceptance, never On-Hold |
+| A session held with no notes | Notes, amber | a Completed session of the last 30 days with empty `sessionNotes` and `nextSteps` and no meeting summary |
+| A meeting summary waiting for review | Summary, navy | a Completed session of the last 14 days with `sessionAiSummary` and empty `sessionNotes` |
+| A client email waiting for a reply | Email, navy | My Email's own awaiting-reply rule, the message at least one working day old |
+| A newly assigned client | New, navy | Pending Acceptance, or `engagementAssignedDate` in the last 7 days |
+| A staff work queue with items | Staff, purple | today's attention counts, one row per queue, after every mentoring row |
 
-The no-contact threshold is a System Settings value, default 21 days.
+The no-contact threshold is a System Settings value, default 21 days
+(`HOME_NO_CONTACT_DAYS`). The order, most urgent first: no contact, Notes,
+Email, Summary, New, Staff; within a kind, the oldest first, and for Staff
+the largest queue first. **Closing** (an engagement near its close date)
+is left out: `CEngagement.closeDate` is stamped when an engagement closes
+(ruling 70), so no planned end date exists (phase 3, answer 4).
 
 ### 4.3 Collapsing and hiding
 
@@ -347,6 +352,20 @@ switch: its push changes production's colours at once, which is intended.
   conversation** (`/myemail/?conversation=<id>`), so the Email rows can point
   at it; the four other applications already open on a record from a link.
   **Stop 3**: one example of each kind on the test system.
+  **Built v0.349.0 (11-18-26); stop 3 owed.** Doug's eight answers at the
+  phase's first stop, all as recommended: (1) Notes is a Completed session
+  of the last 30 days with neither session notes nor next steps, a meeting
+  summary not counting as notes; (2) nothing in the CRM records a review,
+  so a summary waits while the session notes are empty, for 14 days (no
+  new field); (3) Email reuses My Email's rule, after one working day, from
+  the same inbox run as My Email's badge; (4) Closing is dropped for now,
+  since the close date is stamped at closing; (5) New is Pending Acceptance
+  or assigned in the last 7 days; (6) one threshold, On-Hold never listed;
+  (7) the order above, staff rows after the mentoring rows; (8) one new
+  endpoint, `GET /api/portal/home/needs`, sharing the engagement read with
+  Today's for 20 seconds, and the bar's count badges move into the list.
+  Built on the way: Summary looks at the session notes only, because the
+  note taker writes its action items into an empty next steps field.
 - **Phase 4 — At the chapter.** Year-to-date numbers from the analytics
   portal panel's sources, the events rail's upcoming workshops, and open asks
   from Marketing Management's running call campaigns. A presenter-wanted ask
@@ -366,8 +385,12 @@ switch: its push changes production's colours at once, which is intended.
 
 ## 9. Open questions, decided in their phase
 
-- The exact field that marks a session as having no notes (phase 3).
-- Whether the no-contact threshold differs by engagement status (phase 3).
+- ~~The exact field that marks a session as having no notes (phase 3).~~
+  Decided 11-18-26: both `sessionNotes` and `nextSteps` empty (§ 8).
+- ~~Whether the no-contact threshold differs by engagement status (phase 3).~~
+  Decided 11-18-26: one value; On-Hold is never listed.
+- A planned end date for an engagement, which the Closing kind needs
+  (phase 3 left it out).
 - A data source for presenter-wanted asks (phase 4 or later).
 - The digest's day and hour (phase 7).
 
@@ -375,6 +398,7 @@ switch: its push changes production's colours at once, which is intended.
 
 | Revision | Last Updated | Change |
 |---|---|---|
+| 1.7 | 11-18-26 18:20 | Phase 3 built as v0.349.0: § 4.2's kinds as decided, Closing left out, § 8's answers, § 9's two phase 3 questions closed and the end-date question added. |
 | 1.6 | 11-18-26 18:00 | v0.348.0 checked by Doug; phase 2 closed; phase 3's prompt written. |
 | 1.5 | 11-18-26 02:15 | Stop 2 passed; Doug's three changes after it (Directories menu, Upcoming events panel, text size) recorded in § 4.1 and § 8, built as v0.348.0. |
 | 1.4 | 11-18-26 01:50 | Phase 2 built as v0.346.0; § 8 records Doug's answers at its first stop. |
