@@ -1,6 +1,6 @@
 # The home page and Chapter News — plan
 
-Last Updated: 11-18-26 18:20 · Revision 1.7 — change log at the end.
+Last Updated: 11-18-26 22:50 · Revision 1.8 — change log at the end.
 
 **Status: designed 11-16-26 to 11-17-26 in a Cowork session with Doug; every
 decision below is his. Phase 0 (the contrast fix to the design tokens) is
@@ -10,7 +10,7 @@ clients) is built as v0.346.0, dark behind `HOME_V2`, and passed stop 2 on
 11-18-26; Doug's three changes after it are v0.348.0 (§ 8), checked by
 him the same day, which closed the phase. Phase 3 (Needs you) is built as
 v0.349.0, dark behind `HOME_V2`; stop 3 is owed. Phases 4 to 7 are not
-started.**
+started; phase 4's prompt is `prompts/home-page-phase4-prompt-v0.1.md`.**
 
 Mockups: the design canvas *CBM Home Page — Looks*
 (https://claude.ai/artifact/D6Gm6i9qYgBsYmMtUSfAmY). The **Mix** artboard is
@@ -398,6 +398,7 @@ switch: its push changes production's colours at once, which is intended.
 
 | Revision | Last Updated | Change |
 |---|---|---|
+| 1.8 | 11-18-26 22:50 | Phase 4's prompt written, before stop 3. |
 | 1.7 | 11-18-26 18:20 | Phase 3 built as v0.349.0: § 4.2's kinds as decided, Closing left out, § 8's answers, § 9's two phase 3 questions closed and the end-date question added. |
 | 1.6 | 11-18-26 18:00 | v0.348.0 checked by Doug; phase 2 closed; phase 3's prompt written. |
 | 1.5 | 11-18-26 02:15 | Stop 2 passed; Doug's three changes after it (Directories menu, Upcoming events panel, text size) recorded in § 4.1 and § 8, built as v0.348.0. |
