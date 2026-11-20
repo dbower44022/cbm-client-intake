@@ -1,6 +1,6 @@
 # The home page and Chapter News — plan
 
-Last Updated: 11-20-26 01:05 · Revision 1.12 — change log at the end.
+Last Updated: 11-20-26 01:30 · Revision 1.13 — change log at the end.
 
 **Status: designed 11-16-26 to 11-17-26 in a Cowork session with Doug; every
 decision below is his. Phase 0 (the contrast fix to the design tokens) is
@@ -11,8 +11,9 @@ clients) is built as v0.346.0, dark behind `HOME_V2`, and passed stop 2 on
 him the same day, which closed the phase. Phase 3 (Needs you) is built as
 v0.349.0, with Doug's two changes at its stop as v0.349.1 and v0.350.1,
 dark behind `HOME_V2`; stop 3 passed on 11-20-26, which closed the phase.
-Phase 4 (At the chapter) is built as v0.351.0, dark behind `HOME_V2`;
-stop 4 is owed. Phases 5 to 7 are not started.**
+Phase 4 (At the chapter) is built as v0.351.0, dark behind `HOME_V2`,
+and passed stop 4 on 11-20-26, which closed the phase. Phases 5 to 7 are
+not started; phase 5's prompt is `prompts/home-page-phase5-prompt-v0.1.md`.**
 
 Mockups: the design canvas *CBM Home Page — Looks*
 (https://claude.ai/artifact/D6Gm6i9qYgBsYmMtUSfAmY). The **Mix** artboard is
@@ -382,7 +383,9 @@ switch: its push changes production's colours at once, which is intended.
   portal panel's sources, the events rail's upcoming workshops, and open asks
   from Marketing Management's running call campaigns. A presenter-wanted ask
   has no data source yet and is left out until one exists. **Stop 4**.
-  **Built v0.351.0 (11-20-26); stop 4 owed.** Doug's eight answers at the
+  **Built v0.351.0 (11-20-26); stop 4 passed 11-20-26** ("Runbook
+  completed successfully"; Marketing Management and Campaign calls switched
+  on at the Association for it and left on, Doug's choice B). Doug's eight answers at the
   phase's first stop, all as recommended: (1) three numbers, clients served
   (engagements with a Completed session), sessions held and hours mentored,
   from one read of the year's Completed sessions; (2) the calendar year, in
@@ -423,6 +426,7 @@ switch: its push changes production's colours at once, which is intended.
 
 | Revision | Last Updated | Change |
 |---|---|---|
+| 1.13 | 11-20-26 01:30 | Stop 4 passed; phase 4 closed; phase 5's prompt written. |
 | 1.12 | 11-20-26 01:05 | Phase 4 built as v0.351.0: § 4.1's At the chapter as decided, § 8's answers. |
 | 1.11 | 11-20-26 00:55 | Stop 3 passed; phase 3 closed; phase 4 started. |
 | 1.10 | 11-20-26 00:10 | Stop 3 change: whole rows open (v0.350.1). |

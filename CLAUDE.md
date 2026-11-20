@@ -1366,8 +1366,11 @@ the strength of it.
   `HOME_NO_CONTACT_DAYS`), with Doug's two changes at stop 3 (an Email row
   opens the conversation on the record; whole rows open). **Stop 3 passed
   11-20-26; phase 3 closed.**
-- **v0.351.0 (2026-11-20) is committed, not pushed**: the home page's
-  phase 4, At the chapter (`HOME_V2`, off). Stop 4 owed in #89.
+- **v0.351.0 (2026-11-20) is live everywhere main deploys** (`/healthz`
+  read 0.351.0 on the Association 11-20-26 01:27): the home page's phase
+  4, At the chapter (`HOME_V2`, off). **Stop 4 passed 11-20-26; phase 4
+  closed.** Marketing Management and Campaign calls are on at the
+  Association (Doug, choice B).
 - **v0.350.0 (2026-11-19) and its two follow-ups are pushed; phase 7
   checked on the Association 11-20-26**: Business Evaluation's mentor match
   (`MENTOR_MATCH`, off; migration 0051). Phase 8's prompt is a draft (#83).
