@@ -92,7 +92,7 @@
     var table = el("table", "nw__table");
     var hr = el("tr");
     [["title", "Title"], ["status", "Status"], ["importance", "Importance"], ["audience", "Audience"],
-     ["publish", "Publish at"], ["expires", "Expires"]].forEach(function (h) {
+     ["publish", "Publish at"], ["expires", "Expires"], ["read", "Read"]].forEach(function (h) {
       var th = el("th", null, h[1]); th.dataset.col = h[0]; th.scope = "col"; hr.appendChild(th);
     });
     var thead = el("thead"); thead.appendChild(hr); table.appendChild(thead);
@@ -110,6 +110,9 @@
       cell(tr, (it.audienceTeams || []).length ? it.audienceTeams.join(", ") : "Every member");
       cell(tr, el("span", "nw__nowrap", when(it.publishAt)), it.publishAt || "");
       cell(tr, el("span", "nw__nowrap", it.expiresAt ? when(it.expiresAt) : "—"), it.expiresAt || "");
+      var rc = it.readCount;
+      cell(tr, el("span", "nw__nowrap", rc ? rc.read + " of " + rc.of : (state.readUnavailable && it.status !== "Draft" ? "?" : "—")),
+           rc ? String(rc.of ? rc.read / rc.of : 0) : "");
       tbody.appendChild(tr);
     });
     table.appendChild(tbody);
@@ -121,7 +124,11 @@
   }
 
   function loadList() {
-    var read = api("/items").then(function (d) { state.items = d.items || []; drawList(); });
+    var read = api("/items").then(function (d) {
+      state.items = d.items || [];
+      state.readUnavailable = !!d.readUnavailable;
+      drawList();
+    });
     if (window.CBMBusy && CBMBusy.loading) CBMBusy.loading($("listBody"), read);
     return read.catch(function (e) {
       $("listBody").innerHTML = "";
@@ -188,6 +195,7 @@
     say("");
     preview();
     drawList();
+    loadReport();
   }
 
   function bodyValue() {
@@ -265,6 +273,48 @@
     }).catch(function (e) { done(); say("Not withdrawn: " + e.message, true); });
   }
 
+  // --- the read report (phase 6) -----------------------------------------------
+  // § 6.2: how many of the audience have read the item, out of how many, and
+  // who has not; for an item to acknowledge, who acknowledged and when.
+  function people(title, rows, withWhen) {
+    var box = el("div", "nw__people");
+    box.appendChild(el("h3", "cbm-label nw__peoplehead", title + " (" + rows.length + ")"));
+    if (!rows.length) { box.appendChild(el("p", "nw__hint", "No one.")); return box; }
+    var ul = el("ul", "nw__names");
+    rows.forEach(function (r) {
+      var li = el("li", null, r.name);
+      if (withWhen && r.at) li.appendChild(el("span", "nw__when", " " + when(r.at)));
+      ul.appendChild(li);
+    });
+    box.appendChild(ul);
+    return box;
+  }
+
+  function loadReport() {
+    var cur = state.current, panel = $("reportPanel"), body = $("reportBody");
+    if (!cur || cur.status === "Draft") { panel.hidden = true; return; }
+    panel.hidden = false;
+    var read = api("/items/" + encodeURIComponent(cur.id) + "/report");
+    if (window.CBMBusy && CBMBusy.loading) CBMBusy.loading(body, read);
+    read.then(function (r) {
+      if (state.current !== cur) return;
+      body.innerHTML = "";
+      var line = el("p", "nw__readline");
+      line.appendChild(el("strong", null, r.read + " of " + r.of));
+      line.appendChild(document.createTextNode(
+        " in the audience have " + (r.mustAcknowledge ? "read or acknowledged" : "read") + " this item."));
+      body.appendChild(line);
+      var cols = el("div", "nw__peoplecols");
+      if (r.mustAcknowledge) cols.appendChild(people("Acknowledged", r.acknowledged, true));
+      cols.appendChild(people(r.mustAcknowledge ? "Not acknowledged yet" : "Not read yet", r.notRead, false));
+      if (r.dismissed.length || !r.mustAcknowledge) cols.appendChild(people("Dismissed", r.dismissed, true));
+      body.appendChild(cols);
+    }).catch(function (e) {
+      body.innerHTML = "";
+      body.appendChild(el("p", "cbm-panel__note", "Who has read it could not be read just now: " + e.message + "."));
+    });
+  }
+
   function open(id) {
     var read = api("/items/" + encodeURIComponent(id)).then(fill);
     if (window.CBMBusy && CBMBusy.loading) CBMBusy.loading($("editor"), read);
@@ -292,6 +342,7 @@
       $("draftBtn").addEventListener("click", function () { save("Draft", $("draftBtn")); });
       $("publishBtn").addEventListener("click", function () { save("Published", $("publishBtn")); });
       $("withdrawBtn").addEventListener("click", function () { withdraw($("withdrawBtn")); });
+      $("reportRefresh").addEventListener("click", loadReport);
       fill(null);
       loadList().then(function () {
         var id = (window.location.hash || "").slice(1);

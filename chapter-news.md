@@ -1,6 +1,6 @@
 # Chapter News — a guide for publishers
 
-Last Updated: 11-20-26 04:15 · Revision 1.0 — change log at the end.
+Last Updated: 11-20-26 07:30 · Revision 1.1 — change log at the end.
 
 Chapter News is news you write once and every member sees on their home page
 when they sign in. You decide who it is for, how prominent it is, and whether
@@ -56,6 +56,18 @@ It stays on your list, marked Withdrawn, and can be published again.
 Every save, publish and withdraw is recorded in the action history with your
 name.
 
+## Who has read it
+
+The list's **Read** column says, for each item that has gone out, how many of
+its audience have read it, out of how many. Open an item to see its **Read
+report** under the preview: who has not read it yet, who dismissed it, and,
+for an item to acknowledge, who acknowledged it and when. **Refresh** reads
+it again.
+
+The audience is counted from the CRM's members as they are now: every
+active login in a team the item is for (every login, for an item to every
+member). A member who has since left the audience is not counted.
+
 ## What members do
 
 On the home page, Chapter News is the first section. Each item shows its
@@ -68,4 +80,5 @@ Dismissed, Acknowledged, Unread, Expired, or Not acknowledged.
 
 | Revision | Last Updated | Change |
 |---|---|---|
+| 1.1 | 11-20-26 07:30 | Who has read it (phase 6, v0.355.0). |
 | 1.0 | 11-20-26 04:15 | First version, with phase 5 (v0.353.0). |

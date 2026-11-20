@@ -5,6 +5,28 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.355.0] — 2026-11-20
+
+**feat(news): read reports on the Chapter News page.** Phase 6 of
+`prds/home-page-plan.md` (§ 6.2), behind `CHAPTER_NEWS`.
+
+- **A Read column** in the list: for each item that has gone out, how many of
+  its audience have read it, out of how many ("3 of 12"). A draft shows "—".
+- **A Read report** under the preview for the open item: the count in words,
+  and who has not read it yet; for an item to acknowledge, who acknowledged
+  and when, and who has not. Refresh reads it again.
+- **The audience is counted from the CRM's members** under the org-wide key:
+  every active login of type regular, and an administrator in at least one
+  team, whose teams meet the item's audience. The service accounts (no team)
+  and portal users are left out. A receipt from someone no longer in the
+  audience is not counted. The member list is kept for the process for five
+  minutes; receipts are read per request.
+- `GET /news/api/items` gains `readCount` (and `readUnavailable` when the
+  counts fail on their own); `GET /news/api/items/{id}/report`.
+- Tests: `tests/test_chapter_news.py` (who is a member, the counts, the
+  routes).
+
+
 ## [0.354.0] — 2026-11-20
 
 **feat(feedback): feedback surveys, with the recommendation score, alerts,

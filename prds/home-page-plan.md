@@ -1,6 +1,6 @@
 # The home page and Chapter News — plan
 
-Last Updated: 11-20-26 04:30 · Revision 1.15 — change log at the end.
+Last Updated: 11-20-26 07:30 · Revision 1.16 — change log at the end.
 
 **Status: designed 11-16-26 to 11-17-26 in a Cowork session with Doug; every
 decision below is his. Phase 0 (the contrast fix to the design tokens) is
@@ -14,7 +14,7 @@ dark behind `HOME_V2`; stop 3 passed on 11-20-26, which closed the phase.
 Phase 4 (At the chapter) is built as v0.351.0, dark behind `HOME_V2`,
 and passed stop 4 on 11-20-26, which closed the phase. Doug asked for phases 5 to 7 in one session with the fixed header bar and
 one big test (11-20-26): `prompts/home-page-phases5-7-autonomous-prompt-v0.1.md`.
-The fixed header bar is v0.352.0; phase 5 (Chapter News core) is v0.353.0,
+The fixed header bar is v0.352.0; phase 5 (Chapter News core) is v0.353.0, phase 6 (read reports) v0.355.0,
 dark behind `CHAPTER_NEWS`, its CRM build on the Business Mentors
 Association's CRM only. The decisions that session took on Doug's behalf are
 listed under phase 5 in § 8. One stop, the big test, closes all three.**
@@ -434,6 +434,14 @@ switch: its push changes production's colours at once, which is intended.
   administrator outside it sees the item only on the Chapter News page),
   and editing a published item resets no one's read status (§ 6.3).
 - **Phase 6 — read reports.** On the Chapter News page. **Stop 6**.
+  **Built v0.355.0 (11-20-26)**: a Read column in the list ("3 of 12") and a
+  Read report for the open item (who acknowledged and when, who has not,
+  who dismissed). Taken in the build: the audience is counted from the
+  CRM's members, every active regular login and every administrator in at
+  least one team (the service accounts are in none); a receipt from someone
+  who has left the audience is not counted. Cost: a member is counted by
+  their teams today, so a member who joined late counts against an old
+  item.
 - **Phase 7 — the weekly digest.** Switch `NEWS_DIGEST`. A weekly worker job
   emails each member with unread items one list, from the shared mailbox
   (`OPS_MAILBOX`), items that must be acknowledged always included; the
@@ -455,6 +463,7 @@ switch: its push changes production's colours at once, which is intended.
 
 | Revision | Last Updated | Change |
 |---|---|---|
+| 1.16 | 11-20-26 07:30 | Phase 6 built (v0.355.0). |
 | 1.15 | 11-20-26 04:30 | Fixed header bar built (v0.352.0); phase 5 built (v0.353.0) with its decisions in § 8; `audienceTeams` is a multi-select of team names. |
 | 1.14 | 11-20-26 01:40 | Phases 5 to 7 and the fixed header to be built in one session (Doug, 11-20-26); its prompt written. |
 | 1.13 | 11-20-26 01:30 | Stop 4 passed; phase 4 closed; phase 5's prompt written. |

@@ -190,6 +190,92 @@ async def record_receipt(client, item: dict[str, Any], user: dict[str, Any], act
             "actedAt": when}, True
 
 
+# --- members and the read report (phase 6) ----------------------------------------------
+
+#: How long the member list (for "out of how many") is kept for the process.
+MEMBERS_SECONDS = 300
+_members: dict[str, Any] = {"at": 0.0, "task": None}
+
+
+def _member_row(u: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """A CRM user as a news member, or None for an account that is not one.
+
+    A member is an active login of type regular, or an administrator in at
+    least one team: the service accounts (the CRM configuration and
+    provisioning administrators, the API user) are in no team and are left
+    out, as are portal users."""
+    names = u.get("teamsNames") or {}
+    teams = [n for n in (names.values() if isinstance(names, dict) else names) if n]
+    kind = u.get("type")
+    if kind not in ("regular", "admin") or (kind == "admin" and not teams):
+        return None
+    return {"id": u.get("id"), "name": u.get("name") or u.get("userName") or "",
+            "userName": u.get("userName") or "", "teams": sorted(teams),
+            "email": u.get("emailAddress") or ""}
+
+
+async def members(client) -> list[dict[str, Any]]:
+    """Every news member, kept ``MEMBERS_SECONDS`` for the process."""
+    now = time.monotonic()
+    task = _members["task"]
+    if task is None or now - _members["at"] > MEMBERS_SECONDS:
+        async def load() -> list[dict[str, Any]]:
+            rows = await _paged(client, "User",
+                                "id,name,userName,type,isActive,teamsIds,teamsNames,emailAddress",
+                                [{"type": "isTrue", "attribute": "isActive"}], "userName", 5000)
+            return [m for m in (_member_row(u) for u in rows) if m]
+        task = asyncio.ensure_future(load())
+        _members.update(at=now, task=task)
+    try:
+        return await asyncio.shield(task)
+    except Exception:
+        if _members["task"] is task:
+            _members.update(at=0.0, task=None)
+        raise
+
+
+async def all_receipts(client) -> list[dict[str, Any]]:
+    """Every receipt (the list's read counts), read per request."""
+    return await _paged(client, RECEIPT, RECEIPT_FIELDS, [], "actedAt", 50000)
+
+
+def read_count(item: dict[str, Any], audience: list[dict[str, Any]],
+               receipts: list[dict[str, Any]]) -> dict[str, int]:
+    """How many of the item's audience have read it, out of how many."""
+    ids = {m["id"] for m in audience}
+    read = {r.get("memberId") for r in receipts
+            if r.get("newsId") == item.get("id") and r.get("memberId") in ids}
+    return {"read": len(read), "of": len(ids)}
+
+
+def report(item: dict[str, Any], audience: list[dict[str, Any]],
+           receipts: list[dict[str, Any]]) -> dict[str, Any]:
+    """§ 6.2: how many of the audience have read the item, out of how many,
+    and who has not; for an item to acknowledge, who acknowledged and when.
+    A receipt from someone no longer in the audience is not counted."""
+    by_member: dict[str, dict[str, Any]] = {}
+    for r in receipts:
+        mid = r.get("memberId")
+        if r.get("newsId") != item.get("id") or not mid:
+            continue
+        if mid not in by_member or r.get("action") == rules.ACKNOWLEDGED:
+            by_member[mid] = r
+    read, not_read = [], []
+    for m in sorted(audience, key=lambda m: m["name"].lower()):
+        r = by_member.get(m["id"])
+        if r:
+            read.append({"name": m["name"], "action": r.get("action"), "at": r.get("actedAt")})
+        else:
+            not_read.append({"name": m["name"]})
+    return {
+        "of": len(audience), "read": len(read),
+        "mustAcknowledge": rules.must_acknowledge(item),
+        "acknowledged": [x for x in read if x["action"] == rules.ACKNOWLEDGED],
+        "dismissed": [x for x in read if x["action"] != rules.ACKNOWLEDGED],
+        "notRead": not_read,
+    }
+
+
 # --- what a member is shown ----------------------------------------------------------
 
 def image_ids(body: Any) -> set[str]:

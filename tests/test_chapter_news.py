@@ -160,7 +160,7 @@ def test_a_member_gets_a_safe_body_with_images_through_the_proxy():
 class FakeCrm:
     def __init__(self, built=True):
         self.built = built
-        self.rows = {service.NEWS: {}, service.RECEIPT: {}}
+        self.rows = {service.NEWS: {}, service.RECEIPT: {}, "User": {}}
         self.ids = itertools.count(1)
         self.creates = []
 
@@ -203,6 +203,7 @@ def _fresh():
     get_settings.cache_clear()
     service.invalidate()
     service._available.update(ok=None, at=0.0)
+    service._members.update(at=0.0, task=None)
     yield
     get_settings.cache_clear()
     service.invalidate()
@@ -383,3 +384,70 @@ def test_the_pages_load_their_files_in_order():
     js = (ROOT / "portal/frontend/home.js").read_text()
     # The Hide button stays and explains itself while an item waits (§ 4.3).
     assert "can't be hidden while an item asks you to confirm" in js
+
+
+# --- phase 6: the read report ------------------------------------------------------------
+
+USERS = [
+    {"id": "U1", "userName": "joe", "name": "Joe Mentor", "type": "regular", "isActive": True,
+     "teamsNames": {"t1": "Mentor Team"}, "emailAddress": "joe@x.test"},
+    {"id": "U2", "userName": "kitty", "name": "Kitty Cat", "type": "regular", "isActive": True,
+     "teamsNames": {"t2": "Client Administration Team"}, "emailAddress": "kitty@x.test"},
+    {"id": "U3", "userName": "amy", "name": "Amy Mentor", "type": "regular", "isActive": True,
+     "teamsNames": {"t1": "Mentor Team"}, "emailAddress": "amy@x.test"},
+    # Service accounts and portal users are not members.
+    {"id": "S1", "userName": "crm.config", "name": "Config", "type": "admin", "isActive": True,
+     "teamsNames": {}},
+    {"id": "P1", "userName": "client", "name": "Portal", "type": "portal", "isActive": True,
+     "teamsNames": {"t1": "Mentor Team"}},
+]
+
+
+def test_a_member_is_a_login_in_a_team_or_a_regular_user():
+    rows = [service._member_row(u) for u in USERS]
+    assert [r["id"] for r in rows if r] == ["U1", "U2", "U3"]
+
+
+def test_the_report_counts_the_audience_and_names_who_has_not_read():
+    members = [service._member_row(u) for u in USERS[:3]]
+    it = item("A", importance=rules.ACKNOWLEDGE, audienceTeams=["Mentor Team"])
+    receipts = [{"newsId": "A", "memberId": "U1", "action": "Acknowledged", "actedAt": "2026-11-20 08:00:00"},
+                # Kitty is outside the audience: her receipt is not counted.
+                {"newsId": "A", "memberId": "U2", "action": "Acknowledged", "actedAt": "2026-11-20 08:01:00"},
+                {"newsId": "B", "memberId": "U3", "action": "Dismissed"}]
+    audience = rules.audience_members(it, members, NOW)
+    rep = service.report(it, audience, receipts)
+    assert (rep["read"], rep["of"]) == (1, 2)
+    assert rep["acknowledged"] == [{"name": "Joe Mentor", "action": "Acknowledged",
+                                    "at": "2026-11-20 08:00:00"}]
+    assert rep["notRead"] == [{"name": "Amy Mentor"}] and rep["mustAcknowledge"] is True
+    assert service.read_count(it, audience, receipts) == {"read": 1, "of": 2}
+
+
+def test_the_list_and_the_report_routes(monkeypatch):
+    crm = FakeCrm()
+    crm.rows["User"] = {u["id"]: u for u in USERS}
+    _seed(crm, item("A", publishAt=True), item("D", publishAt=True, status=rules.DRAFT))
+    real_list = crm.list
+
+    async def users_list(entity, **kw):
+        if entity == "User":
+            kw = {**kw, "where": []}
+        return await real_list(entity, **kw)
+
+    crm.list = users_list
+    service._members.update(at=0.0, task=None)
+    with TestClient(_app(monkeypatch, crm)) as c:
+        _login(monkeypatch, c, MENTOR)
+        c.post("/api/portal/home/news/A/dismiss")
+        _login(monkeypatch, c, ADMIN)
+        rows = {r["id"]: r for r in c.get("/news/api/items").json()["items"]}
+        assert rows["A"]["readCount"] == {"read": 1, "of": 3}
+        assert "readCount" not in rows["D"]             # a draft has gone to no one
+        rep = c.get("/news/api/items/A/report").json()
+        assert rep["dismissed"][0]["name"] == "Joe Mentor"
+        assert [p["name"] for p in rep["notRead"]] == ["Amy Mentor", "Kitty Cat"]
+        assert c.get("/news/api/items/nope/report").status_code == 404
+        _login(monkeypatch, c, MENTOR)
+        assert c.get("/news/api/items/A/report").status_code == 403
+    service._members.update(at=0.0, task=None)

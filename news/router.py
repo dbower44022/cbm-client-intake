@@ -236,12 +236,42 @@ async def session(request: Request) -> dict:
 
 @router.get("/items")
 async def items(request: Request) -> dict:
+    """Every item, with its read count (phase 6) where it has gone out. The
+    counts fail on their own: the list still comes, with ``readUnavailable``."""
     user, settings, client = await _publisher_client(request)
     try:
         rows = await service.all_items(client)
     except Exception as exc:  # noqa: BLE001
         raise await _crm_failure("read the news", exc)
-    return {"items": [_listing(i) for i in rows]}
+    out = [_listing(i) for i in rows]
+    try:
+        members = await service.members(client)
+        receipts = await service.all_receipts(client)
+    except Exception as exc:  # noqa: BLE001 — the counts only
+        log.warning("chapter news: read counts unavailable: %s", exc)
+        return {"items": out, "readUnavailable": True}
+    for row, it in zip(out, rows):
+        if it.get("status") != rules.DRAFT:
+            row["readCount"] = service.read_count(it, rules.audience_members(it, members, _now()),
+                                                  receipts)
+    return {"items": out, "readUnavailable": False}
+
+
+@router.get("/items/{news_id}/report")
+async def read_report(news_id: str, request: Request) -> dict:
+    """The read report for one item (§ 6.2; phase 6)."""
+    user, settings, client = await _publisher_client(request)
+    try:
+        found = service.find(await service.all_items(client), news_id)
+        if found is None:
+            raise HTTPException(status_code=404, detail=NOT_FOUND)
+        members = await service.members(client)
+        receipts = await service.item_receipts(client, news_id)
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        raise await _crm_failure("read who has read it", exc)
+    return service.report(found, rules.audience_members(found, members, _now()), receipts)
 
 
 @router.get("/items/{news_id}")
