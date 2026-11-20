@@ -1,6 +1,6 @@
 # evaluation/ — Business Evaluation
 
-Last Updated: 11-16-26 13:30 · Revision 1.6
+Last Updated: 11-19-26 22:35 · Revision 1.7
 
 Detail for the Business Evaluation offering. Claude Code loads this file only
 when a session works in this folder. The plan is
@@ -267,6 +267,15 @@ table names or the `/evaluation/{token}` page, read the engine's equivalent.
   `analysis.run_analysis_cycle`: off, a Submitted record whose engagement
   has no mentor is skipped and counted `unassigned`.
 - Tests: `tests/test_evaluation_intake.py`.
+- **The tab draws the answers itself** (v0.340.1, Doug's finding in the
+  check, choice B): the server sends `profile_sections` (built on
+  `surveys.answers.answer_sections`), and the tab shows each question as a
+  small grey label, each answer dark in a tinted box, a multi-select answer
+  as chips, "Not answered" pale. **Answers must stand out from questions**
+  wherever answers are shown to staff; the mentor's Evaluations tab still
+  uses `readable_html` and has the old look.
+- **Checked by Doug on the Business Mentors Association's system 11-19-26**;
+  `INTAKE_SURVEY` stays on there (Doug).
 
 ## The CRM
 
@@ -291,3 +300,4 @@ create).
 | 1.4 | 11-15-26 12:20 | Claude (Claude Code) | Phase 4, review and approval (v0.336.0). |
 | 1.5 | 11-15-26 23:20 | Claude (Claude Code) | Phase 5, release and action items (v0.338.0). |
 | 1.6 | 11-16-26 13:30 | Claude (Claude Code) | Phase 6, the intake survey (v0.339.0). |
+| 1.7 | 11-19-26 22:35 | Claude (Claude Code) | The tab's answer look (v0.340.1); phase 6 checked. |

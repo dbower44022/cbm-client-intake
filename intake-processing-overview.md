@@ -62,6 +62,17 @@ A repeat submitter is matched by email: the existing Contact is reused (empty
 fields back-filled, never overwritten), and an info-request appends its
 message to the existing Contact's description.
 
+**A client intake can also send the intake survey** (added 11-19-26,
+Business Evaluation phase 6, switch *Intake survey*, `INTAKE_SURVEY`, with
+*Business Evaluation* on). Once the intake is delivered, the client is
+emailed a link from the shared mailbox to a short business profile survey,
+and may then pick evaluation areas to answer. Client Administration reads the
+answers and the areas picked on the engagement popup's **Business profile**
+tab before assigning a mentor; Assign hands the evaluation records to the
+mentor. Nothing is sent when the switch is off, when there is no shared
+mailbox, or when the client's business profile is already on file. Detail:
+`evaluation/CLAUDE.md`.
+
 **The partner/funder review path is deliberate and long-term** (Doug's ruling
 2026-07-22): unlike clients (assignment queue) and mentors (approval screen),
 partner and funder candidates have no dedicated approval tool — the Partner /
