@@ -1332,7 +1332,7 @@ the strength of it.
   offering is phase 10, on hold. Owed in #83.
 - **v0.339.0 and v0.340.1 are pushed; phase 6 checked on the Association
   11-19-26**: Business Evaluation's intake survey (`INTAKE_SURVEY`, off;
-  needs `BUSINESS_EVALUATION`). Phase 7's prompt is a draft (#83).
+  needs `BUSINESS_EVALUATION`). Phase 7's prompt is approved, not started (#83).
 - **v0.340.1 (2026-11-16) is pushed**: the Business profile tab's answers
   stand out from the questions (`INTAKE_SURVEY`); see `CHANGELOG.md`.
 - **v0.340.2 (2026-11-17) is pushed** (11-17-26; scripts and documents):

@@ -1,10 +1,9 @@
 # Kickoff prompt — Business Evaluation, phase 7: the mentor match
 
-Last Updated: 11-19-26 22:35 · Revision 0.1 — see change log at the end.
+Last Updated: 11-19-26 22:40 · Revision 0.2 — see change log at the end.
 
-**Draft for Doug's approval.** Written by the session that closed phase 6
-(11-19-26), from plan revision 0.16 and what phase 6 actually built. Once
-approved, start a fresh Claude Code session rooted in
+**Approved by Doug 11-19-26.** Written by the session that closed phase 6
+(11-19-26), from plan revision 0.16 and what phase 6 actually built. Start a fresh Claude Code session rooted in
 `~/Dropbox/Projects/cbm-client-intake`, tell it to read this file, and tell
 it to follow everything below the line.
 
@@ -108,3 +107,4 @@ surveys (phases 8 and 9); the partner offering (phase 10).
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
 | 0.1 | 11-19-26 22:35 | Claude (Claude Code) | Drafted at the close of phase 6, from plan revision 0.16. |
+| 0.2 | 11-19-26 22:40 | Claude (Claude Code) | Approved by Doug. |
