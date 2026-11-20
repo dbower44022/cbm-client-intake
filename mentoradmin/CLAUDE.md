@@ -1,6 +1,6 @@
 # mentoradmin/ — Mentor Administration
 
-Last Updated: 11-06-26 02:16 · Revision 1.6
+Last Updated: 11-20-26 03:20 · Revision 1.7
 
 Detail for the Mentor Administration application (`/mentoradmin`): the roster, the editable mentor record, completeness, provisioning and the status sweep.
 
@@ -113,12 +113,19 @@ detail screen that edits any whitelisted field on `CMentorProfile`.
   the fields an action moves in `details["fields"]`** — a new action that
   writes tracked fields without them shows its CRM note as "In the CRM
   directly". `_same_value` is `history.same_value`.
+- **The Feedback tab** (feedback surveys, phases 8 and 9,
+  `FEEDBACK_SURVEYS`): every response about the mentor's engagements, read
+  as the staff member; **Mark follow-up done** with a required note
+  (action-logged, old and new values); a mentoring or evaluation survey sent
+  by hand from the shared mailbox. A follow-up alert links
+  `?mentor=<id>&tab=feedback&response=<id>`. Detail in `feedback/CLAUDE.md`.
 - Functional reference for staff: `mentor-administration.md`.
 
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.7 | 11-20-26 03:20 | Claude (Claude Code) | The Feedback tab (feedback surveys, phases 8 and 9). |
 | 1.6 | 11-06-26 02:16 | Claude (Claude Code) | The History tab (v0.311.0). |
 | 1.5 | 11-05-26 22:49 | Claude (Claude Code) | The login fault list (v0.308.0). |
 | 1.4 | 11-05-26 18:05 | Claude (Claude Code) | The CBM email lock (v0.306.0). |

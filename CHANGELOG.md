@@ -5,6 +5,84 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.354.0] — 2026-11-20
+
+**feat(feedback): feedback surveys, with the recommendation score, alerts,
+the quiet period, four automatic moments and the Feedback page in Analytics.**
+Business Evaluation phases 8 and 9, built in one session (Doug's choice B,
+11-20-26). Rulings BE29 to BE33. All eight decisions were taken by Doug at
+stopping point (a) on 11-20-26, every one as recommended; they are listed in
+`feedback/CLAUDE.md`. **Dark** behind the new switch `FEEDBACK_SURVEYS`, with
+one switch per automatic moment, all default off. Off, every page is as
+before and every route answers 404. The combined check on the Business
+Mentors Association's system is owed (`OPEN-ITEMS.md` #83).
+
+- **The `feedback` survey purpose** (`feedback/`): the second purpose on the
+  survey engine, with three surveys as versioned files: mentoring feedback,
+  event feedback and evaluation feedback. Each opens with the required 0-to-10
+  recommendation score; every other question is optional. Each question
+  carries its `# For:` line.
+- **The 0-to-10 question type**, `score`, in the survey engine: eleven
+  buttons with a word at each end, checked on the server, shown as "4 out of
+  10". Survey text may now use `{{org}}`, filled in on the page.
+- **The Survey Response record** (`crm-plans/survey-response.json`,
+  `scripts/migrate_feedback_roles.py`, `survey-response-crm-handoff.md`).
+  - Submit writes the score, the answers as text and as JSON, the moment,
+    and links to the engagement and its mentor at the time, or the event,
+    and the contact.
+  - A response about an engagement carries the engagement's
+    `assignedUsers`, and the nightly reconciliation includes it.
+  - The Mentor Role reads own only. The Mentor Administration Role and the
+    Marketing Admin Role read and edit every response.
+  - The plan is not applied anywhere yet; the Association's dry run reads
+    fingerprint `b3aff8f4964e`.
+- **Follow-up**:
+  - A score of 6 or below, a yes to "contact me", or a yes to an event's
+    "talk with a mentor" sets `needsFollowUp`.
+  - Each member of the responsible team gets one email at once, from the
+    shared mailbox: the Mentor Administration Team for mentoring and
+    evaluation feedback, the Marketing Admin Team for event feedback.
+  - The home page's Needs you list gains a *Feedback to follow up* row.
+  - **Mark follow-up done** needs a note and is recorded in the action log
+    with old and new values.
+- **Where people work**:
+  - A **Feedback** tab in Client Management: a mentor reads their
+    engagement's responses and sends the mentoring survey from their own
+    mailbox, through the composer.
+  - A **Feedback** tab on a mentor in Mentor Administration: staff read
+    every response about the mentor's engagements, close follow-ups, and
+    send a survey from the shared mailbox.
+  - A **Feedback** tab on an event in Event Administration. While feedback
+    surveys are on, the Follow-up tab's **Survey** card sends each attendee
+    their own link.
+  - All three are drawn by one shared panel, `frontend/shared/feedback.js`.
+- **The quiet period** (`FEEDBACK_QUIET_DAYS`, 30): an address sent any
+  feedback survey in that time is skipped by the automatic sends, and the
+  skip is recorded. It never stops the closing survey or a survey sent by
+  hand.
+- **The four automatic moments**, found by a worker sweep every
+  `FEEDBACK_SWEEP_SECONDS`, each with its own switch:
+  - an engagement closes, with at least one Completed session;
+  - the `FEEDBACK_SESSION_COUNT`-th Completed session (default 3), the day
+    after it;
+  - a Public event, 24 hours to 14 days after it ends, to each attendee;
+  - an evaluation round, 3 days after its first release.
+
+  Only moments from the last `FEEDBACK_LOOKBACK_DAYS` (7) count. A moment
+  is never sent twice (table `feedback_send`, migration
+  `0052_feedback_send`), and the sweep retries failed alerts.
+- **Analytics**:
+  - A **Feedback** page for the Analytics Admin, Mentor Administration and
+    Marketing Admin teams. It shows responses, the net promoter score with
+    the average, each survey's average by month, by mentor (Mentor
+    Administration and Analytics Admin only), by event (Marketing Admin and
+    Analytics Admin only), and the open follow-ups.
+  - Two panels on the mentor's record tab.
+  - Survey Responses in the metric builder.
+  - Mentors see no figures.
+- Tests: `tests/test_feedback.py` (39) and `tests/test_feedback_store_pg.py`
+  (the store against the local Postgres; migration up, down and up checked).
+
 ## [0.353.0] — 2026-11-20
 
 **feat(news): Chapter News — the News section, past news and the publishers'

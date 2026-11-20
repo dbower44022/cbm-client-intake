@@ -80,6 +80,11 @@ def check_value(q: Question, value: Any) -> tuple[Any, Optional[str]]:
         if number is None or number not in (1, 2, 3, 4, 5):
             return None, "Please choose a number from 1 to 5."
         return int(number), None
+    if q.type == "score":
+        number = _number(value)
+        if number is None or number not in range(0, 11):
+            return None, "Please choose a number from 0 to 10."
+        return int(number), None
     number = _number(value)
     if number is None:
         return None, "Please enter a number."
@@ -122,6 +127,9 @@ def _shown(q: Question, value: Any) -> str:
     if q.type == "scale":
         ends = f" ({q.low} to {q.high})" if q.low and q.high else ""
         return f"{value} out of 5{ends}"
+    if q.type == "score":
+        ends = f" ({q.low} to {q.high})" if q.low and q.high else ""
+        return f"{value} out of 10{ends}"
     return str(value)
 
 

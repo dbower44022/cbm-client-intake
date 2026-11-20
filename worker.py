@@ -336,6 +336,7 @@ async def main() -> None:
     survey_store = None
     # Business Evaluation's analysis pass (phase 3; EVALUATION_ANALYSIS_SECONDS).
     next_eval_analysis = datetime.now(timezone.utc)
+    next_feedback_sweep = datetime.now(timezone.utc)
 
     # Intake-receipt reconciliation (Doug's 2026-07-27 redesign): converge
     # every row's CIntakeSubmission receipt — the guarantee behind "the CRM is
@@ -869,6 +870,7 @@ async def main() -> None:
             # has its own switch and interval; Business Evaluation's are
             # BUSINESS_EVALUATION and EVALUATION_RETRY_SECONDS.
             import evaluation.purpose  # noqa: F401 — registers Business Evaluation
+            import feedback.purpose  # noqa: F401 — registers feedback surveys (BE29)
             from surveys import registry as _survey_registry
             from surveys.service import run_retry_cycle
 
@@ -913,6 +915,22 @@ async def main() -> None:
                     log.warning("evaluation analysis pass failed: %s", exc)
                 next_eval_analysis = now + timedelta(
                     seconds=settings.evaluation_analysis_seconds)
+            # Feedback surveys (phases 8 and 9, ruling BE30): the sweep finds the
+            # automatic moments switched on and sends each once; it also
+            # retries follow-up alerts that failed. Never fails the loop.
+            if settings.feedback_surveys and settings.feedback_sweep_seconds > 0 \
+                    and now >= next_feedback_sweep:
+                try:
+                    from feedback import runtime as _fb_runtime
+                    from feedback.moments import run_sweep as _fb_sweep
+                    from feedback.purpose import surveys as _fb_surveys
+
+                    await _fb_sweep(settings, _client(settings),
+                                    _fb_runtime.feedback_store(settings),
+                                    _fb_runtime.survey_store(settings), _fb_surveys() or {})
+                except Exception as exc:  # noqa: BLE001 — never crashes delivery
+                    log.warning("feedback sweep failed: %s", exc)
+                next_feedback_sweep = now + timedelta(seconds=settings.feedback_sweep_seconds)
         if sandbox_on and now >= next_sandbox:
             try:
                 from core.sandbox_reset import reset_app_tables

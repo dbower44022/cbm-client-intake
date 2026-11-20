@@ -1,6 +1,6 @@
 # sessions/ — Client, Partner and Funder Management
 
-Last Updated: 11-15-26 23:20 · Revision 1.13
+Last Updated: 11-20-26 03:20 · Revision 1.14
 
 Detail for the session engine behind Client Management (`/mentorsessions`), Partner Management (`/partnersessions`) and Funder Management (`/sponsorsessions`): the grids, every record tab, quick add, managers and co-mentors, and the traps of this package.
 
@@ -24,6 +24,7 @@ one shared frontend that derives its domain from the first segment of its URL.
 
 | slug | parent | owned-records link on the user's `CMentorProfile` | co-mentors |
 |---|---|---|---|
+| 1.14 | 11-20-26 03:20 | Claude (Claude Code) | The Feedback tab (feedback surveys, phases 8 and 9). |
 | `mentorsessions` | `CEngagement` | `engagements1` (+ `engagements` for co-mentored) | yes |
 | `partnersessions` | `CPartnerProfile` | `managedPartners` | no |
 | `sponsorsessions` | `CSponsorProfile` | `managedSponsors` | no |
@@ -344,6 +345,13 @@ Watch for these when touching this package:
   rounds, status changed in the row (shared grid `evlItemsTable`). The
   release email opens in the composer with the PDF attached
   (`pre.documents`).
+- **The Feedback tab — Client Management only** (feedback surveys, phases 8
+  and 9, `FEEDBACK_SURVEYS`): `DomainConfig.feedback_tab` puts it right after
+  Evaluations and registers `/records/{id}/feedback…`; 404 while the switch
+  is off. Reads run as the mentor (the CRM shows only responses stamped with
+  them). **Send feedback survey** opens the composer from the mentor's own
+  mailbox. Drawn by `frontend/shared/feedback.js`; detail in
+  `feedback/CLAUDE.md`.
 
 ## Change log
 

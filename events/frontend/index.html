@@ -19,6 +19,8 @@
   <script src="/shared/grid.js"></script>
   <script src="/shared/history.js"></script>
   <link rel="stylesheet" href="/shared/history.css" />
+  <script src="/shared/feedback.js"></script>
+  <link rel="stylesheet" href="/shared/feedback.css" />
 </head>
 <body>
   <main class="ev">
@@ -142,6 +144,7 @@
         <button type="button" class="ev__tab" data-tab="checkin">Check-in</button>
         <button type="button" class="ev__tab" data-tab="followups">Follow-up</button>
         <button type="button" class="ev__tab" data-tab="campaigns" id="campaignsTabBtn" hidden>Campaigns</button>
+        <button type="button" class="ev__tab" data-tab="feedback" id="feedbackTabBtn" hidden>Feedback</button>
         <button type="button" class="ev__tab" data-tab="history" id="historyTabBtn" hidden>History</button>
       </nav>
 
@@ -219,6 +222,10 @@
         <p class="ev__fu-note" id="fuNote"></p>
         <div class="ev__fu-cards" id="fuCards"></div>
       </div>
+
+      <!-- Feedback (feedback surveys, phases 8 and 9): the event's responses,
+           drawn by frontend/shared/feedback.js; staff mark follow-ups done. -->
+      <div class="ev__tabpanel" data-panel="feedback" id="eventFeedback" hidden></div>
 
       <!-- History (mentor login integrity step 5b): frontend/shared/history.js -->
       <div class="ev__tabpanel" data-panel="history" id="eventHistory" hidden></div>

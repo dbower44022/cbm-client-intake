@@ -248,10 +248,13 @@ async def render_page(
 ) -> dict[str, Any]:
     """Resolve every panel the viewer may see; panels compute concurrently."""
     lookup = metric_lookup or get_metric
+    from .registry import switched_off
+
     visible = [
         p
         for p in page.panels
-        if not p.visibility or is_member(user, list(p.visibility))
+        if (not p.visibility or is_member(user, list(p.visibility)))
+        and not switched_off(p.metric_key, settings)
     ]
 
     async def _one(panel):

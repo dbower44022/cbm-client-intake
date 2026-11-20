@@ -1,0 +1,47 @@
+# Mentoring feedback survey, version 1 (ruling BE29).
+# Sent when an engagement reaches its session milestone, when it closes, and
+# on demand by the mentor or Mentor Administration staff. Only the score is
+# required, so a person who answers one question still gives the measure.
+# Approved by Doug as written, 11-20-26 (phases 8 and 9, decision 2). A file
+# someone has answered is never edited: a change is a new version.
+# Each "# For:" line says what the answer is used for.
+key: mentoring-feedback
+version: 1
+title: Your mentoring
+introduction: >-
+  A few questions about your mentoring with {{org}}. It takes about two
+  minutes, and only the first question is needed.
+sections:
+  - title: Your mentoring
+    questions:
+      # For: the recommendation score, totalled by mentor and over time in Analytics; 6 or below alerts staff.
+      - id: recommend
+        label: How likely are you to recommend {{org}}'s mentoring to another business owner?
+        type: score
+        required: true
+        low: Not at all likely
+        high: Extremely likely
+      # For: the mentor's responsiveness, the most common complaint a programme hears.
+      - id: mentor_responsive
+        label: Has your mentor been responsive when you reached out?
+        type: yes_no
+      # For: whether the match fits, for Mentor Administration's review of the mentor.
+      - id: mentor_understands
+        label: Does your mentor understand your business and your goals?
+        type: yes_no
+      # For: whether the mentoring is producing results, the programme's purpose.
+      - id: made_progress
+        label: Has the mentoring helped you make progress on what you came to us for?
+        type: yes_no
+      # For: what works, in the client's own words, for the mentor and for training.
+      - id: most_helpful
+        label: What has helped you most?
+        type: long_text
+      # For: what to fix, in the client's own words.
+      - id: do_better
+        label: What could we do better?
+        type: long_text
+      # For: a yes sets the follow-up flag and alerts staff, whatever the score.
+      - id: contact_me
+        label: Would you like someone from {{org}} to contact you about your experience?
+        type: yes_no

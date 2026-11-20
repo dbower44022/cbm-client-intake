@@ -389,6 +389,11 @@ class DomainConfig:
     #: ``BUSINESS_EVALUATION`` switch, read per request, and the endpoint
     #: feature-detects ``CBusinessEvaluation`` on the live CRM.
     evaluations_tab: bool = False
+    # Feedback surveys (phases 8 and 9, decision 3): the Feedback tab, the
+    # responses about this engagement and Send feedback survey from the
+    # mentor's own mailbox. Client Management only; FEEDBACK_SURVEYS decides
+    # per request, and every route answers 404 while it is off.
+    feedback_tab: bool = False
 
     # --- Quick add (Doug's request 2026-08-12). See :class:`CreateSpec`. The
     # mentor domain deliberately has none: a client engagement arrives through
@@ -672,6 +677,7 @@ MENTOR = DomainConfig(
     events_tab=True,
     # Business Evaluation phase 2: the Evaluations tab and Send Evaluation.
     evaluations_tab=True,
+    feedback_tab=True,
     primary_contact_id_attr="primaryEngagementContactId",
     default_session_type="Client Session",
     list_select=(

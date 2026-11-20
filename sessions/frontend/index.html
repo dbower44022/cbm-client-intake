@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="/shared/compose.css" />
   <link rel="stylesheet" href="/shared/grid.css" />
   <link rel="stylesheet" href="/shared/history.css" />
+  <link rel="stylesheet" href="/shared/feedback.css" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -198,6 +199,14 @@
         <p class="sx__muted" id="noRcl" hidden>No referred clients.</p>
       </div>
 
+      <!-- Feedback (feedback surveys, phases 8 and 9, Client Management only,
+           behind FEEDBACK_SURVEYS): the responses about this engagement,
+           drawn by frontend/shared/feedback.js, and Send feedback survey,
+           which opens the composer from the mentor's own mailbox. -->
+      <div class="sx__dpanel" data-dpanel="feedback" hidden>
+        <div class="sx__comm-head"><h3>Feedback</h3></div>
+        <div id="fbPanel"></div>
+      </div>
       <!-- Evaluations (Business Evaluation phase 2, Client Management only,
            behind BUSINESS_EVALUATION): one row per Business Evaluation
            record, grouped by round, newest round first. A row opens the
@@ -775,6 +784,7 @@
   <script src="/shared/textsize.js"></script>
   <script src="/shared/grid.js"></script>
   <script src="/shared/history.js"></script>
+  <script src="/shared/feedback.js"></script>
   <script src="/shared/phone-format.js"></script>
   <script src="/shared/quickmail.js"></script>
   <script src="/shared/vendor/jodit/jodit.min.js"></script>

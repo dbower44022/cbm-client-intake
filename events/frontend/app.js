@@ -276,6 +276,28 @@
       p.hidden = p.dataset.panel !== name;
     });
     if (name === "history") renderEventHistory();
+    if (name === "feedback") renderEventFeedback();
+  }
+
+  /* ---------- Feedback tab (feedback surveys, phases 8 and 9) ---------- */
+  var feedbackOpenId = null;  // ?tab=feedback&response=<id>: an alert's link
+  function feedbackOn() { return !!(state.session && state.session.feedbackEnabled && window.CBMFeedback); }
+  function renderEventFeedback() {
+    var raw = state.current && state.current.event && state.current.event.raw;
+    if (!feedbackOn() || !raw || !raw.id) return;
+    var id = raw.id;
+    CBMFeedback.mount($("eventFeedback"), {
+      key: "events.feedback",
+      about: "event",
+      openId: feedbackOpenId,
+      load: function () { return api("/events/" + encodeURIComponent(id) + "/feedback"); },
+      detail: function (rid) { return api("/feedback/" + encodeURIComponent(rid)); },
+      markDone: function (rid, note) {
+        return api("/feedback/" + encodeURIComponent(rid) + "/done",
+                   { method: "POST", body: JSON.stringify({ note: note }) });
+      },
+    });
+    feedbackOpenId = null;
   }
 
   /* ---------- History tab (mentor login integrity step 5b) ---------- */
@@ -624,8 +646,16 @@
     card.appendChild(desc);
     var meta = document.createElement("p");
     meta.className = "ev__fu-meta";
-    meta.textContent = "Template " + kind.template + " · goes to " + (kind.statuses || []).join(", ")
-      + (kind.needsOptIn ? " · marketing opt-in required" : "");
+    var fbSurvey = kind.kind === "Survey" && !!(state.followups || {}).feedbackSurveys;
+    if (fbSurvey) {
+      // Feedback surveys on (decisions 3 and 7): each attendee gets their own
+      // survey link from the shared mailbox; no marketing opt-in needed.
+      desc.textContent = "The event feedback survey: each attendee gets their own link, with a 0-to-10 recommendation score.";
+      meta.textContent = "The feedback survey's own email · goes to Attended · no marketing opt-in needed · never sent twice to one person";
+    } else {
+      meta.textContent = "Template " + kind.template + " · goes to " + (kind.statuses || []).join(", ")
+        + (kind.needsOptIn ? " · marketing opt-in required" : "");
+    }
     card.appendChild(meta);
     var actions = document.createElement("div");
     actions.className = "ev__fu-actions";
@@ -713,7 +743,7 @@
           notice("Nobody would receive the " + kind.kind + " email right now — see the skipped reasons.", "warn");
           return;
         }
-        if (!(state.followups || {}).enabled) {
+        if (!fbSurvey && !(state.followups || {}).enabled) {
           notice("Sending is not configured on this deployment (Events, Gmail sync and the shared mailbox are all needed).", "error");
           return;
         }
@@ -2205,6 +2235,7 @@
       $("promoteBtn").hidden = !promoteOn();
       $("campaignsTabBtn").hidden = !promoteOn();
       $("historyTabBtn").hidden = !historyOn();
+      $("feedbackTabBtn").hidden = !feedbackOn();
       var fieldData = await api("/fields");
       state.fields = fieldData.fields || [];
       state.links = fieldData.links || [];
@@ -2224,7 +2255,13 @@
       // address the Campaign Management Responses tab uses for a registration
       // (the registrants are on the event's own Registrants tab).
       var wanted = deepLinkedEvent();
-      if (wanted) await openEvent(wanted);
+      if (wanted) {
+        var q = new URLSearchParams(window.location.search);
+        var toFeedback = q.get("tab") === "feedback" && feedbackOn();
+        if (toFeedback) feedbackOpenId = q.get("response") || null;
+        await openEvent(wanted);
+        if (toFeedback) showTab("feedback");
+      }
     } catch (e) {
       notice(e.message, "error");
     }

@@ -37,6 +37,7 @@ from .builder import (
 from .registry import (
     COMPATIBLE_VIZ,
     METRIC_REGISTRY,
+    switched_off,
     PAGE_REGISTRY,
     MetricSpec,
     PageSpec,
@@ -68,9 +69,17 @@ BUILDER_ENTITIES = [
     ("CSession", "Sessions"),
     ("CContribution", "Contributions"),
     ("CInformationRequest", "Information Requests"),
+    ("CSurveyResponse", "Survey Responses"),
     ("COutreachCampaign", "Campaigns"),
 ]
 _BUILDER_ENTITY_SET = {e for e, _ in BUILDER_ENTITIES}
+
+
+def _builder_entities() -> list[tuple[str, str]]:
+    """The builder's record types; Survey Responses only while feedback
+    surveys are on (FEEDBACK_SURVEYS), so the switch off changes nothing."""
+    on = get_settings().feedback_surveys
+    return [(e, lbl) for e, lbl in BUILDER_ENTITIES if on or e != "CSurveyResponse"]
 
 # Field types the builder surfaces, tagged by role.
 _NUMERIC_TYPES = {"int", "float", "currency", "currencyConverted"}
@@ -79,6 +88,15 @@ _ENUM_TYPES = {"enum", "multiEnum"}
 _FIELD_TYPES = _NUMERIC_TYPES | _DATE_TYPES | _ENUM_TYPES | {
     "varchar", "text", "bool", "url", "phone", "email",
 }
+
+
+def feedback_viewer(user: dict, settings: Settings) -> bool:
+    """Feedback surveys (phases 8 and 9, decision 8): while FEEDBACK_SURVEYS is
+    on, the Mentor Administration and Marketing Admin teams may open
+    Analytics for the Feedback page. Every other page keeps its own gate, so
+    they see only the pages their teams are named on."""
+    return bool(settings.feedback_surveys) and is_member(
+        user, settings.mentor_admin_allowed_teams_list + settings.ops_allowed_teams_list)
 
 
 def _require_user(request: Request, *, admin: bool = False) -> dict:
@@ -91,7 +109,7 @@ def _require_user(request: Request, *, admin: bool = False) -> dict:
         if admin
         else settings.analytics_view_allowed_teams_list
     )
-    if not is_member(user, teams):
+    if not is_member(user, teams) and not (not admin and feedback_viewer(user, settings)):
         raise HTTPException(
             status_code=403,
             detail=(
@@ -103,6 +121,10 @@ def _require_user(request: Request, *, admin: bool = False) -> dict:
 
 
 def _can_view_page(user: dict, page: PageSpec, settings: Settings) -> bool:
+    from .registry import page_switched_off
+
+    if page_switched_off(page, settings):
+        return False
     gate = list(page.team_gate) if page.team_gate else settings.analytics_view_allowed_teams_list
     return is_member(user, gate)
 
@@ -438,7 +460,7 @@ async def _log_authoring(user: dict, action: str, key: str, summary: str) -> Non
 @router.get("/admin/entities")
 async def admin_entities(request: Request) -> dict:
     _admin(request)
-    return {"entities": [{"entity": e, "label": lbl} for e, lbl in BUILDER_ENTITIES]}
+    return {"entities": [{"entity": e, "label": lbl} for e, lbl in _builder_entities()]}
 
 
 @router.get("/admin/fields")
@@ -569,6 +591,7 @@ async def admin_list_metrics(request: Request) -> dict:
          "customized": s.key in db_keys}
         for s in METRIC_REGISTRY.values()
         if s.key not in db_keys and s.key not in suppressed
+        and not switched_off(s.key, get_settings())
     ]
     # Deleted (hidden) built-ins, so an admin can restore one.
     hidden = [
@@ -576,7 +599,7 @@ async def admin_list_metrics(request: Request) -> dict:
         for k in sorted(suppressed) if get_metric(k) is not None
     ]
     return {"metrics": metrics, "builtins": code, "hiddenBuiltins": hidden,
-            "recordTypes": [{"entity": e, "label": lbl} for e, lbl in BUILDER_ENTITIES]}
+            "recordTypes": [{"entity": e, "label": lbl} for e, lbl in _builder_entities()]}
 
 
 @router.post("/admin/metrics")

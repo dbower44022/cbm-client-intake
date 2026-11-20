@@ -105,6 +105,11 @@ async def _create_token_lock(key: str) -> asyncio.Lock:
         return entry[1]
 
 
+class FeedbackSendIn(BaseModel):
+    """Send feedback survey (phases 8 and 9): the client contact to ask."""
+    contactId: str = ""
+
+
 class EvaluationSendIn(BaseModel):
     """Send Evaluation (Business Evaluation phase 2): the chosen area keys."""
     areas: list[str] = []
@@ -313,6 +318,11 @@ def _detail_tabs(
         tabs.insert(idx + 1, {"key": "referredClients", "label": "Referred Clients"})
     if cfg.events_tab:
         tabs.insert(idx + 1, {"key": "events", "label": "Events"})
+    # Feedback surveys (phases 8 and 9): after Evaluations (else after
+    # Sessions), Client Management only, while FEEDBACK_SURVEYS is on. Inserted
+    # first so Evaluations, inserted at the same place next, comes before it.
+    if cfg.feedback_tab and get_settings().feedback_surveys:
+        tabs.insert(idx + 1, {"key": "feedback", "label": "Feedback"})
     # Business Evaluation phase 2: right after Sessions, Client Management only,
     # and only while BUSINESS_EVALUATION is on (read per request).
     if cfg.evaluations_tab and get_settings().business_evaluation:
@@ -1038,6 +1048,98 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 return await service.list_referred_clients(cfg, client, parent_id)
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not load referred clients")
+
+    if cfg.feedback_tab:
+        # Feedback surveys (phases 8 and 9, decision 3; feedback/views.py and
+        # feedback/sending.py). Client Management only; every route answers
+        # 404 while FEEDBACK_SURVEYS is off. Reads run as the mentor, so the
+        # CRM shows them only the responses stamped with them (read own).
+        from feedback import runtime as fb_runtime
+        from feedback import sending as fb_sending
+        from feedback import service as fb_service
+        from feedback import views as fb_views
+        from feedback.purpose import surveys as fb_surveys
+
+        def _feedback_on() -> None:
+            if not get_settings().feedback_surveys:
+                raise HTTPException(status_code=404, detail="Not found.")
+
+        @router.get("/records/{parent_id}/feedback")
+        async def record_feedback(parent_id: str, request: Request) -> dict:
+            _feedback_on()
+            user = _require_user(request)
+            settings = get_settings()
+            client = client_for(settings, user)
+            if not await fb_service.entity_available(client):
+                return {"available": False, "reason": fb_views.UNAVAILABLE}
+            try:
+                await client.get(cfg.parent_entity, parent_id, select="id")
+                responses = await fb_views.list_responses(client, "engagementId", parent_id)
+                contacts = await fb_views.engagement_contacts(client, parent_id)
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load the feedback")
+            return {"available": True, "responses": responses, "contacts": contacts,
+                    "storeReady": fb_runtime.feedback_store(settings) is not None}
+
+        @router.get("/records/{parent_id}/feedback/{response_id}")
+        async def record_feedback_detail(parent_id: str, response_id: str,
+                                         request: Request) -> dict:
+            _feedback_on()
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            try:
+                view = await fb_views.detail(client, response_id)
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load the response")
+            if view["engagementId"] != parent_id:
+                raise HTTPException(status_code=404, detail="That response is not on this engagement.")
+            return view
+
+        @router.post("/records/{parent_id}/feedback/send")
+        async def record_feedback_send(parent_id: str, body: FeedbackSendIn,
+                                       request: Request) -> dict:
+            """Send feedback survey: the link and the email for the mentor's
+            composer, from their own mailbox (decision 3). The link's address
+            leaves the server only inside the email."""
+            _feedback_on()
+            user = _require_user(request)
+            settings = get_settings()
+            client = client_for(settings, user)
+            store = fb_runtime.feedback_store(settings)
+            survey_store = getattr(request.app.state, "survey_store", None) \
+                or fb_runtime.survey_store(settings)
+            loaded = fb_surveys()
+            if store is None or survey_store is None or not loaded:
+                raise HTTPException(status_code=503, detail=(
+                    "Feedback surveys cannot be sent from this server (no database or "
+                    f"no survey definitions). Tell {abbr()} staff."))
+            if not body.contactId:
+                raise HTTPException(status_code=400, detail="Choose the client contact to ask.")
+            try:
+                contacts = await fb_views.engagement_contacts(client, parent_id)
+                if body.contactId not in {c["id"] for c in contacts}:
+                    raise HTTPException(status_code=400, detail=(
+                        "That person is not a client contact on this engagement."))
+                eng = await client.get(cfg.parent_entity, parent_id, select=(
+                    "name,clientOrganizationName,mentorProfileId,mentorProfileName"))
+                who = await fb_sending.contact_recipient(client, body.contactId)
+                email = await fb_sending.prepare_for_composer(
+                    settings, store=store, survey_store=survey_store, surveys=loaded,
+                    engagement_id=parent_id, who=who, eng=eng,
+                    created_by=user.get("userName") or "")
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc))
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not make the feedback survey")
+            await action_log.record_action(
+                client, app=cfg.title, category=action_log.CAT_COMMUNICATION,
+                action=action_log.ACT_FEEDBACK_SENT,
+                parent_type=cfg.parent_entity, parent_id=parent_id,
+                summary=f"Mentoring feedback survey made for {who.get('name') or 'a client contact'}.",
+                actor_id=user["userId"], actor_name=user["name"],
+                details={"contactId": body.contactId, "survey": "mentoring-feedback"},
+            )
+            return {"email": email}
 
     if cfg.evaluations_tab:
         # Business Evaluation phase 2 (prds/business-evaluation-plan.md § 3

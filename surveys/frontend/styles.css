@@ -33,6 +33,22 @@
 .survey__scale { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 .survey__scale label { font-weight: 400; display: flex; flex-direction: column; align-items: center; gap: 0.15rem; }
 .survey__scale-end { color: var(--cbm-text); font-size: var(--cbm-text-sm); }
+/* The 0-to-10 recommendation score (ruling BE29). */
+.survey__score { display: grid; gap: 0.35rem; }
+.survey__score-row { display: grid; grid-template-columns: repeat(11, minmax(2.5rem, 1fr)); gap: 0.35rem; }
+.survey__score-btn { position: relative; display: block; cursor: pointer; }
+.survey__score-btn input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.survey__score-btn span {
+  display: block; text-align: center; padding: 0.55rem 0; font-weight: 600;
+  border: 1px solid var(--cbm-border); border-radius: var(--cbm-radius); color: var(--cbm-navy);
+  background: #fff;
+}
+.survey__score-btn input:checked + span { background: var(--cbm-navy); color: #fff; border-color: var(--cbm-navy); }
+.survey__score-btn input:focus-visible + span { outline: 3px solid var(--cbm-gold); outline-offset: 2px; }
+.survey__score-ends { display: flex; justify-content: space-between; color: var(--cbm-text); font-size: var(--cbm-text-sm); }
+@media (max-width: 560px) {
+  .survey__score-row { grid-template-columns: repeat(6, 1fr); }
+}
 .survey__money { display: flex; align-items: center; gap: 0.35rem; }
 .survey__question input[type="text"], .survey__question textarea { width: 100%; }
 .survey__question textarea { min-height: 6rem; }

@@ -134,7 +134,9 @@ def _apps_for(user: dict[str, Any], settings: Settings) -> list[dict[str, str]]:
     # Analytics — dashboards over the CRM + operational data. Shown only where
     # the app is enabled and the user may view it (per-panel visibility is
     # applied inside the app on top of this).
-    if settings.analytics_active and is_member(user, settings.analytics_view_allowed_teams_list):
+    if settings.analytics_active and (
+            is_member(user, settings.analytics_view_allowed_teams_list)
+            or _analytics_feedback_viewer(user, settings)):
         apps.append({"title": "Analytics", "url": "/analytics/", "target": "cbm-analytics"})
     # The activity page — every change by a person or in a date range
     # (mentor login integrity step 6). Read per request.
@@ -410,6 +412,12 @@ async def _attention_items(request: Request, user: dict[str, Any],
             log.warning("attention count failed (login faults) for %s: %s",
                         user.get("userName"), exc)
 
+    # Feedback to follow up (feedback surveys, phases 8 and 9, decision 4):
+    # the Mentor Administration Team's mentoring and evaluation responses,
+    # the Marketing Admin Team's event responses. The row opens the oldest.
+    if settings.feedback_surveys:
+        items.extend(await _feedback_items(user, settings))
+
     store = getattr(request.app.state, "submission_store", None)
     if store is not None and is_member(user, settings.ops_allowed_teams_list):
         try:
@@ -420,6 +428,41 @@ async def _attention_items(request: Request, user: dict[str, Any],
             log.warning("attention count failed (ops) for %s: %s",
                         user.get("userName"), exc)
     return items
+
+
+def _analytics_feedback_viewer(user: dict[str, Any], settings: Settings) -> bool:
+    """The Analytics tile for the Feedback page's teams (decision 8)."""
+    from analytics.router import feedback_viewer
+
+    return feedback_viewer(user, settings)
+
+
+async def _feedback_items(user: dict[str, Any], settings: Settings) -> list[dict[str, Any]]:
+    from feedback import config as fb_cfg
+    from feedback import views as fb_views
+    from feedback.alerts import response_path
+
+    groups = []
+    if is_member(user, settings.mentor_admin_allowed_teams_list):
+        groups.append((fb_cfg.SURVEY_MENTORING, fb_cfg.SURVEY_EVALUATION))
+    if is_member(user, settings.ops_allowed_teams_list):
+        groups.append((fb_cfg.SURVEY_EVENT,))
+    out: list[dict[str, Any]] = []
+    if not groups:
+        return out
+    client = client_for(settings, user)
+    for keys in groups:
+        try:
+            count, oldest = await fb_views.oldest_open(client, keys)
+        except Exception as exc:  # noqa: BLE001 — a row never breaks the portal
+            log.warning("attention count failed (feedback) for %s: %s",
+                        user.get("userName"), exc)
+            continue
+        if count and oldest:
+            url = response_path(oldest)
+            out.append({"url": url, "kind": "feedback", "count": count,
+                        "label": "Feedback to follow up"})
+    return out
 
 
 # --- the new home page: Today and My clients (HOME_V2, phase 2) ---------------

@@ -76,7 +76,7 @@ async def refresh_system_metrics(settings: Settings) -> dict[str, Any]:
     errors = 0
     try:
         for page in pages:
-            if page.scope != "system":
+            if page.scope != "system" or (page.switch and not getattr(settings, page.switch, False)):
                 continue
             tr = build_time_range(page.default_range)
             for panel in page.panels:

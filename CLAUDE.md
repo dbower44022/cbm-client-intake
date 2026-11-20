@@ -715,6 +715,13 @@ The link is a random token, never a CRM id; the draft report never reaches the c
 (ruling BE23, `surveys/CLAUDE.md`): `/survey/{token}`, any survey purpose, no
 purpose-specific code; `/evaluation/{token}` redirects there.
 
+**Feedback surveys are the engine's second purpose, `feedback/`** (rulings
+BE29 to BE33, v0.354.0, dark behind `FEEDBACK_SURVEYS`; **detail:
+`feedback/CLAUDE.md`**): a 0-to-10 recommendation score, a
+`CSurveyResponse` per answer, follow-up alerts to staff, a quiet period, four
+automatic moments in the worker and a Feedback page in Analytics. Mentors
+read their own responses and see no figures.
+
 ## Cross-cutting subsystems
 
 ### Email
@@ -1386,4 +1393,8 @@ the strength of it.
   home page's fixed header bar and Chapter News core (phase 5,
   `CHAPTER_NEWS`, off), built in one session with phases 6 and 7 (Doug's
   prompt of 11-20-26); one big test at the end checks all of them (#89).
+- **v0.354.0 (2026-11-20) is committed, not pushed**: Business Evaluation
+  phases 8 and 9, feedback surveys (`FEEDBACK_SURVEYS`, off; one switch per
+  moment; migration 0052). The combined check on the Association is owed in
+  #83.
 Everything else still owed is in `OPEN-ITEMS.md`.

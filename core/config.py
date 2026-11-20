@@ -134,6 +134,29 @@ class Settings(BaseSettings):
     mentor_match: bool = False
     # The Claude model that writes the mentor match.
     mentor_match_model: str = "claude-opus-5-5"
+    # Feedback surveys (rulings BE29 to BE33): the second survey purpose,
+    # `feedback/`. Off, no feedback address answers, no tab shows and the
+    # sweep sends nothing. Read per request.
+    feedback_surveys: bool = False
+    # Days a feedback survey link stays open after it is made.
+    feedback_link_days: int = 30
+    # Seconds between the worker's passes that hand on a submitted feedback
+    # survey the CRM refused at the time. 0 stops the pass.
+    feedback_retry_seconds: int = 300
+    # The quiet period (BE33): days after any feedback survey during which the
+    # same email address is not sent an automatic one. 0 turns it off.
+    feedback_quiet_days: int = 30
+    # Seconds between the worker's feedback sweeps (BE30). 0 stops the sweep.
+    feedback_sweep_seconds: int = 3600
+    # How far back the sweep looks for a moment, in days (decision 6, 11-20-26).
+    feedback_lookback_days: int = 7
+    # The number of Completed sessions that sends the session milestone survey.
+    feedback_session_count: int = 3
+    # One switch per automatic moment (BE30), each default off.
+    feedback_on_close: bool = False
+    feedback_on_sessions: bool = False
+    feedback_on_event: bool = False
+    feedback_on_evaluation: bool = False
     # The chapter website's own addresses (scheme + host, comma separated).
     # Only these may fetch /api/website/* from a browser. Deliberately NOT
     # `allowed_origins`, which applies to every address of the application.

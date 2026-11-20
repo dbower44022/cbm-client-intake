@@ -14,6 +14,9 @@
   var analyticsEnabled = false; // ANALYTICS_ENABLED: shows the Analytics tab
   var integrityFaults = false; // INTEGRITY_DIGEST: shows the Login faults list
   var historyEnabled = false; // RECORD_HISTORY_TAB: shows the History tab
+  var feedbackEnabled = false; // FEEDBACK_SURVEYS: shows the Feedback tab
+  var feedbackOpen = null;     // ?response=<id>: open that response at once (an alert's link)
+  var feedbackPanel = null;
   var historyPanel = null;    // the CBMHistory panel for the open mentor
   var filter = { q: "", status: "", record: "", type: "" };
 
@@ -78,6 +81,7 @@
     docsEnabled = !!user.docsEnabled;
     analyticsEnabled = !!user.analyticsEnabled;
     historyEnabled = !!user.historyEnabled && !!window.CBMHistory;
+    feedbackEnabled = !!user.feedbackEnabled && !!window.CBMFeedback;
     $("setupBtn").hidden = !isAdmin;
     integrityFaults = !!user.integrityFaults;
     $("faultsBtn").hidden = !integrityFaults;
@@ -594,11 +598,103 @@
       historyPanel = CBMHistory.mount(hpanel, { key: "mentoradmin.history",
         emptyText: "No changes recorded for this mentor yet." });
     }
+    // Feedback (feedback surveys, phases 8 and 9; decisions 3 and 4) — a
+    // non-field tab: every response about this mentor's engagements, Mark
+    // follow-up done, and a survey sent by hand from the shared mailbox.
+    if (feedbackEnabled) {
+      var fbtn = document.createElement("button");
+      fbtn.type = "button"; fbtn.className = "ma__tab"; fbtn.textContent = "Feedback";
+      fbtn.dataset.tab = "__feedback"; fbtn.setAttribute("role", "tab");
+      fbtn.addEventListener("click", function () { activateTab("__feedback"); loadMentorFeedback(); });
+      tabs.appendChild(fbtn);
+      var fpanel = document.createElement("div");
+      fpanel.className = "tab-panel"; fpanel.dataset.panel = "__feedback";
+      fpanel.id = "maFeedback";
+      form.appendChild(fpanel);
+      feedbackPanel = null;
+    }
     // Paste a whole address into Street and it splits across City/State/ZIP.
     // These are the linked Contact's fields; `addressStreet` is a textarea, so
     // a unit ("Suite 200") becomes its second line the way the CRM stores it.
     if (window.CBMAddress) window.CBMAddress.attachByFields(form, "address");
     if (order.length) activateTab(order[0]);
+  }
+
+  // --- Feedback tab (feedback surveys, phases 8 and 9) ------------------------
+  function loadMentorFeedback() {
+    if (!current || !$("maFeedback") || !window.CBMFeedback) return;
+    var id = current.id;
+    var base = "/mentors/" + encodeURIComponent(id) + "/feedback";
+    var engagements = [];
+    var send = document.createElement("button");
+    send.type = "button"; send.className = "cbm-button"; send.textContent = "Send a survey";
+    feedbackPanel = CBMFeedback.mount($("maFeedback"), {
+      key: "mentoradmin.feedback",
+      about: "mentor",
+      toolbar: [send],
+      openId: feedbackOpen,
+      load: function () {
+        return api(base).then(function (res) { engagements = res.engagements || []; return res; });
+      },
+      detail: function (rid) { return api("/feedback/" + encodeURIComponent(rid)); },
+      markDone: function (rid, note) {
+        return api("/feedback/" + encodeURIComponent(rid) + "/done",
+                   { method: "POST", body: JSON.stringify({ note: note }) });
+      },
+      onError: function (e) { if (e && e.status === 401) { showLogin(); return true; } },
+    });
+    feedbackOpen = null;
+    send.addEventListener("click", function () { feedbackSendDialog(base, engagements); });
+  }
+
+  function feedbackSendDialog(base, engagements) {
+    var dlg = document.createElement("dialog"); dlg.className = "fb__dialog";
+    var body = document.createElement("div"); body.className = "fb__dbody";
+    function add(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; body.appendChild(e); return e; }
+    add("h3", "fb__dtitle", "Send a feedback survey");
+    add("p", "", "The survey goes at once from the shared mailbox to the engagement's primary " +
+      "client contact. The quiet period does not apply to a survey sent by hand.");
+    var l1 = add("label", "fb__label", "Engagement"); l1.htmlFor = "fbEng";
+    var eng = add("select", ""); eng.id = "fbEng";
+    var o0 = document.createElement("option"); o0.value = ""; o0.textContent = "Choose an engagement"; eng.appendChild(o0);
+    engagements.forEach(function (e) {
+      var o = document.createElement("option"); o.value = e.id;
+      o.textContent = e.name + (e.status ? " (" + e.status + ")" : ""); eng.appendChild(o);
+    });
+    var l2 = add("label", "fb__label", "Survey"); l2.htmlFor = "fbSurvey";
+    var sv = add("select", ""); sv.id = "fbSurvey";
+    [["mentoring-feedback", "Mentoring feedback"], ["evaluation-feedback", "Evaluation feedback"]].forEach(function (x) {
+      var o = document.createElement("option"); o.value = x[0]; o.textContent = x[1]; sv.appendChild(o);
+    });
+    var err = add("p", "fb__notice is-error"); err.hidden = true;
+    var foot = document.createElement("div"); foot.className = "fb__dfoot";
+    var go = document.createElement("button"); go.type = "button"; go.className = "cbm-button"; go.textContent = "Send";
+    var cancel = document.createElement("button"); cancel.type = "button";
+    cancel.className = "cbm-button cbm-button--secondary"; cancel.textContent = "Cancel";
+    function close() { dlg.close(); dlg.remove(); }
+    cancel.addEventListener("click", close);
+    go.addEventListener("click", async function () {
+      if (!eng.value) {
+        err.textContent = engagements.length ? "Choose the engagement to ask about."
+          : "This mentor has no engagements to ask about.";
+        err.hidden = false; return;
+      }
+      var done = window.CBMBusy ? CBMBusy.start(go) : function () {};
+      try {
+        var res = await api(base + "/send", { method: "POST",
+          body: JSON.stringify({ engagementId: eng.value, survey: sv.value }) });
+        close();
+        if (feedbackPanel) feedbackPanel.say("Survey sent to " + (res.sentTo || "the client") + ".", "success");
+      } catch (e) {
+        if (e.status === 401) { close(); showLogin(); return; }
+        err.textContent = e.message; err.hidden = false;
+      } finally { done(); }
+    });
+    foot.appendChild(go); foot.appendChild(cancel);
+    dlg.appendChild(body); dlg.appendChild(foot);
+    document.body.appendChild(dlg);
+    dlg.addEventListener("cancel", function () { setTimeout(close, 0); });
+    dlg.showModal();
   }
 
   // --- History tab ----------------------------------------------------------
@@ -1774,7 +1870,14 @@
       var u = await api("/session"); setUser(u); await bootList();
       refreshFaultCount();
       var q = new URLSearchParams(location.search);
-      if (q.get("mentor")) openMentor(q.get("mentor"));
+      if (q.get("mentor")) {
+        // ?tab=feedback&response=<id>: a follow-up alert's link.
+        if (q.get("tab") === "feedback" && feedbackEnabled) feedbackOpen = q.get("response") || null;
+        await openMentor(q.get("mentor"));
+        if (q.get("tab") === "feedback" && feedbackEnabled && $("maFeedback")) {
+          activateTab("__feedback"); loadMentorFeedback();
+        }
+      }
       else if (q.get("faults") && integrityFaults) openFaults();
     }
     catch (e) { bootFail(e); }

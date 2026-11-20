@@ -329,6 +329,59 @@ SETTINGS: tuple[SettingSpec, ...] = (
             "Anthropic API key. Each run costs a few cents. Read per request."),
     _s("mentor_match_model", GROUP_FEATURES, "Mentor match model", component="web",
        help="The Claude model that writes the mentor match."),
+    _s("feedback_surveys", GROUP_FEATURES, "Feedback surveys", kind="bool",
+       component="both",
+       help="Feedback surveys with a 0-to-10 recommendation score: the Feedback tab "
+            "in Client Management and Mentor Administration, the feedback survey on "
+            "Event Administration's Follow-up tab, follow-up alerts to staff and the "
+            "automatic moments below. Off, every feedback address answers 404 and "
+            "nothing is sent. Needs the CSurveyResponse entity in the CRM "
+            "(survey-response-crm-handoff.md) and the shared mailbox. Read per request."),
+    _s("feedback_link_days", GROUP_FEATURES, "Feedback link lifetime", kind="int",
+       unit="days",
+       help="Days a feedback survey link stays open after it is made."),
+    _s("feedback_retry_seconds", GROUP_FEATURES, "Feedback retry interval", kind="int",
+       component="worker", unit="s",
+       help="Seconds between the worker's passes that hand on a submitted feedback "
+            "survey the CRM refused at the time. 0 stops the pass."),
+    _s("feedback_quiet_days", GROUP_FEATURES, "Feedback quiet period", kind="int",
+       component="worker", unit="days",
+       help="A person sent any feedback survey in this many days is not sent an "
+            "automatic one; the skip is recorded. The engagement-closing survey and "
+            "surveys sent by hand always go. Counted per email address. 0 turns the "
+            "quiet period off."),
+    _s("feedback_sweep_seconds", GROUP_FEATURES, "Feedback sweep interval", kind="int",
+       component="worker", unit="s",
+       help="Seconds between the worker's passes that look for the automatic "
+            "feedback moments switched on below. 0 stops the sweep."),
+    _s("feedback_lookback_days", GROUP_FEATURES, "Feedback look-back", kind="int",
+       component="worker", unit="days",
+       help="Only a moment from the last this-many days sends a survey, so switching "
+            "a moment on never surveys everyone from before. A moment missed while "
+            "the worker was down longer than this is not sent."),
+    _s("feedback_session_count", GROUP_FEATURES, "Feedback session milestone", kind="int",
+       component="worker", unit="sessions",
+       help="The number of Completed sessions on an engagement that sends the "
+            "mentoring feedback survey (the Session Milestone moment), once per "
+            "engagement, the day after that session."),
+    _s("feedback_on_close", GROUP_FEATURES, "Feedback when an engagement closes",
+       kind="bool", component="worker",
+       help="Send the mentoring feedback survey to the primary client contact when "
+            "an engagement moves to Completed, Inactive or Abandoned after at least "
+            "one Completed session. The quiet period does not apply."),
+    _s("feedback_on_sessions", GROUP_FEATURES, "Feedback at the session milestone",
+       kind="bool", component="worker",
+       help="Send the mentoring feedback survey to the primary client contact the "
+            "day after the engagement's session milestone (the number above)."),
+    _s("feedback_on_event", GROUP_FEATURES, "Feedback after an event", kind="bool",
+       component="worker",
+       help="Send the event feedback survey to each attendee of a public event, from "
+            "24 hours after it ends until 14 days after."),
+    _s("feedback_on_evaluation", GROUP_FEATURES, "Feedback after an evaluation",
+       kind="bool", component="worker",
+       help="Send the evaluation feedback survey to the primary client contact three "
+            "days after a Business Evaluation round's first report is released; one "
+            "survey per round."),
     _s("campaigns_enabled", GROUP_FEATURES, "Marketing Management", kind="bool",
        component="both",
        help="The Marketing Management tile, the Prospects grid and import, the "

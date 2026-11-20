@@ -207,6 +207,8 @@ async def session(request: Request) -> dict:
         "integrityFaults": _integrity_on(),
         # True => the History tab (mentor login integrity step 5, plan § 4.5).
         "historyEnabled": history.history_on(),
+        # True => the Feedback tab (feedback surveys, phases 8 and 9).
+        "feedbackEnabled": get_settings().feedback_surveys,
     }
 
 
@@ -382,6 +384,141 @@ async def mentor_history(mentor_id: str, request: Request) -> dict:
         return await history.record_history(client, service.MENTOR_PROFILE, mentor_id, viewer=user)
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not load the history")
+
+
+# --- Feedback (feedback surveys, phases 8 and 9; decisions 3 and 4) -------------
+# Every response about the mentor's engagements, read as the staff member (the
+# Mentor Administration Role reads every response, decision 1); one response's
+# answers; Mark follow-up done; and a survey sent by hand to one of the
+# mentor's engagements, from the shared mailbox. 404 while FEEDBACK_SURVEYS is off.
+
+
+class FeedbackDoneIn(BaseModel):
+    note: str = ""
+
+
+class FeedbackSendIn(BaseModel):
+    engagementId: str = ""
+    survey: str = "mentoring-feedback"
+
+
+def _feedback_on() -> None:
+    if not get_settings().feedback_surveys:
+        raise HTTPException(status_code=404, detail="Not found.")
+
+
+@router.get("/mentors/{mentor_id}/feedback")
+async def mentor_feedback(mentor_id: str, request: Request) -> dict:
+    from feedback import service as fb_service
+    from feedback import views as fb_views
+
+    _feedback_on()
+    user = _require_user(request)
+    client = client_for(get_settings(), user)
+    if not await fb_service.entity_available(client):
+        return {"available": False, "reason": fb_views.UNAVAILABLE}
+    try:
+        responses = await fb_views.list_responses(client, "mentorProfileId", mentor_id)
+        page = await client.list("CEngagement", where=[
+            {"type": "equals", "attribute": "mentorProfileId", "value": mentor_id}],
+            select="id,name,clientOrganizationName,engagementStatus", max_size=200)
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not load the feedback")
+    engagements = sorted(({"id": e["id"], "name": e.get("clientOrganizationName") or e.get("name") or "",
+                           "status": e.get("engagementStatus") or ""}
+                          for e in page.get("list", [])), key=lambda e: e["name"].lower())
+    return {"available": True, "responses": responses, "engagements": engagements}
+
+
+@router.get("/feedback/{response_id}")
+async def feedback_detail(response_id: str, request: Request) -> dict:
+    from feedback import views as fb_views
+
+    _feedback_on()
+    user = _require_user(request)
+    client = client_for(get_settings(), user)
+    try:
+        return await fb_views.detail(client, response_id)
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not load the response")
+
+
+@router.post("/feedback/{response_id}/done")
+async def feedback_done(response_id: str, body: FeedbackDoneIn, request: Request) -> dict:
+    from feedback import views as fb_views
+
+    _feedback_on()
+    user = _require_user(request)
+    client = client_for(get_settings(), user)
+    try:
+        result = await fb_views.mark_done(client, response_id, body.note)
+    except fb_views.FollowUpError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not mark the follow-up done")
+    await action_log.record_action(
+        client, app="Mentor Administration", category=action_log.CAT_RECORD_EDIT,
+        action=action_log.ACT_FEEDBACK_FOLLOW_UP_DONE,
+        parent_type="CSurveyResponse", parent_id=response_id,
+        summary=f"Follow-up done on {result['name'] or 'a feedback response'}.",
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+        details={"fields": result["fields"]},
+    )
+    return {"response": result["response"]}
+
+
+@router.post("/mentors/{mentor_id}/feedback/send")
+async def mentor_feedback_send(mentor_id: str, body: FeedbackSendIn, request: Request) -> dict:
+    """A staff member sends the mentoring or the evaluation survey to one of
+    the mentor's engagements, from the shared mailbox (decision 3). The quiet
+    period does not apply to a send by hand (BE33)."""
+    from feedback import config as fb_cfg
+    from feedback import runtime as fb_runtime
+    from feedback import sending as fb_sending
+    from feedback.purpose import surveys as fb_surveys
+
+    _feedback_on()
+    user = _require_user(request)
+    settings = get_settings()
+    client = client_for(settings, user)
+    if body.survey not in (fb_cfg.SURVEY_MENTORING, fb_cfg.SURVEY_EVALUATION):
+        raise HTTPException(status_code=400, detail="Choose the mentoring or the evaluation survey.")
+    if not body.engagementId:
+        raise HTTPException(status_code=400, detail="Choose the engagement to ask about.")
+    store = fb_runtime.feedback_store(settings)
+    survey_store = getattr(request.app.state, "survey_store", None) or fb_runtime.survey_store(settings)
+    loaded = fb_surveys()
+    if store is None or survey_store is None or not loaded:
+        raise HTTPException(status_code=503, detail=(
+            f"Feedback surveys cannot be sent from this server. Tell {abbr()} staff."))
+    try:
+        eng, who = await fb_sending.engagement_recipient(client, body.engagementId, settings)
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not read the engagement")
+    if (eng.get("mentorProfileId") or "") != mentor_id:
+        raise HTTPException(status_code=400, detail="That engagement is not this mentor's.")
+    data = {"engagement_id": body.engagementId, "mentor_profile_id": mentor_id}
+    outcome = await fb_sending.send(
+        settings, store=store, survey_store=survey_store, surveys=loaded,
+        send_key=fb_sending.on_demand_key(), survey_key=body.survey,
+        moment=fb_cfg.MOMENT_ON_DEMAND, entity_type=fb_cfg.ENGAGEMENT,
+        record_id=body.engagementId, who=who, data=data,
+        display_name=eng.get("clientOrganizationName") or eng.get("name") or "",
+        context={"mentorFirst": fb_sending.mentor_first_name(eng),
+                 "company": eng.get("clientOrganizationName") or ""},
+        quiet=False, created_by=user.get("userName") or "")
+    if outcome != "sent":
+        why = outcome.split(":", 1)[1] if ":" in outcome else "the email could not be sent"
+        raise HTTPException(status_code=409, detail=f"Not sent: {why}.")
+    await action_log.record_action(
+        client, app="Mentor Administration", category=action_log.CAT_COMMUNICATION,
+        action=action_log.ACT_FEEDBACK_SENT,
+        parent_type="CEngagement", parent_id=body.engagementId,
+        summary=f"{fb_cfg.survey_title(body.survey)} survey sent to {who.get('name') or who.get('email')}.",
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+        details={"survey": body.survey, "contactId": who.get("contactId") or ""},
+    )
+    return {"sentTo": who.get("name") or who.get("email") or ""}
 
 
 @router.get("/fields")

@@ -5,6 +5,8 @@
 #   ./scripts/evaluation_bma.sh check            # dry runs: both CRM plans and the role grants
 #   ./scripts/evaluation_bma.sh apply            # apply them (changes the Association's CRM)
 #   ./scripts/evaluation_bma.sh samples <engagement id>   # sample drafts, Finance and Marketing
+#   ./scripts/evaluation_bma.sh feedback-check   # dry runs: the Survey Response plan and its grants
+#   ./scripts/evaluation_bma.sh feedback-apply   # apply them (changes the Association's CRM)
 #
 # Credentials come from ~/.config/cbm-bma/bma.env, read by a parser and never
 # echoed. "samples" uses this computer's database container
@@ -23,6 +25,9 @@ BE_PRINT=89d89d28b53b
 AI_PLAN=crm-plans/action-item.json
 AI_PRINT=1dd0c354c974
 NOTHING=4f53cda18c2b
+# Feedback surveys (phases 8 and 9): read on the Association 11-20-26.
+SR_PLAN=crm-plans/survey-response.json
+SR_PRINT=b3aff8f4964e
 
 admin() { "${RUN[@]}" scripts/run_with_admin.py --env "$ENV_FILE" "$@"; }
 
@@ -46,6 +51,19 @@ case "${1:-}" in
     done
     admin scripts/migrate_evaluation_roles.py --apply
     ;;
+  feedback-check)
+    admin scripts/apply_crm_plan.py "$SR_PLAN" || true
+    admin scripts/migrate_feedback_roles.py || true
+    ;;
+  feedback-apply)
+    now="$(admin scripts/apply_crm_plan.py "$SR_PLAN" | sed -n 's/^Plan fingerprint: //p')"
+    if [ "$now" = "$NOTHING" ]; then
+      echo "$SR_PLAN: already applied, nothing to do."
+    else
+      admin scripts/apply_crm_plan.py "$SR_PLAN" --apply --production --expect "$SR_PRINT"
+    fi
+    admin scripts/migrate_feedback_roles.py --apply
+    ;;
   samples)
     [ -n "${2:-}" ] || { echo "Give the engagement id." >&2; exit 2; }
     export DATABASE_URL="postgresql+asyncpg://cbm:cbm@localhost:5432/cbm_intake"
@@ -53,5 +71,5 @@ case "${1:-}" in
     "${RUN[@]}" scripts/evaluation_sample_reports.py "$2" --env-file "$ENV_FILE"
     ;;
   *)
-    sed -n '2,12p' "$0"; exit 2 ;;
+    sed -n '2,14p' "$0"; exit 2 ;;
 esac

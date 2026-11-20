@@ -1,6 +1,6 @@
 # surveys/ — the survey engine
 
-Last Updated: 11-16-26 13:30 · Revision 1.1
+Last Updated: 11-20-26 03:20 · Revision 1.2
 
 What any kind of survey uses (ruling BE23, `prds/business-evaluation-plan.md`).
 Claude Code loads this file only when a session works in this folder.
@@ -9,6 +9,9 @@ Claude Code loads this file only when a session works in this folder.
   `<key>.v<n>.yaml`, one survey per file; the format is in the module's
   docstring. A file someone has answered is never edited: a change is a new
   version file.
+- **Question types** include `score`, 0 to 10, with `low` and `high` end words
+  (feedback surveys, ruling BE29). A survey's own text may use `{{org}}` and
+  `{{abbr}}`; the page fills them in (`router._survey_view`).
 - **Answers** (`answers.py`): each value checked by question type, the
   required answers, a survey's state, and the readable question-and-answer
   text and version-stamped JSON.
@@ -63,15 +66,16 @@ none**; `tests/test_survey_engine.py` fails if it does.
      with `SurveyStore.extend_link`; `OfferRefused` carries a message for
      the person. Added in Business Evaluation phase 6 for the intake survey.
 3. Import that module in `core/app.py` and in `worker.py`, beside
-   `evaluation.purpose`.
+   `evaluation.purpose` (feedback surveys, `feedback.purpose`, are the second).
 4. Make links with `SurveyStore.create_link(purpose=…, entity_type=…,
    record_id=…, data=…, display_name=…, …)` and find them again with
    `links_for_record`.
 5. Tests: a definitions test that loads every shipped file, and the
    purpose's own submit. The engine's behaviour is already tested.
 
-Not in the engine yet (plan § 8): a general Survey Response record in the
-CRM, sending to many people, totals across responses, surveys staff can edit.
+The second purpose is feedback surveys (`feedback/`, phases 8 and 9). Its
+Survey Response record, its sends and its totals live there, not here. Not in
+the engine yet: surveys staff can edit.
 
 ## Change log
 
@@ -79,3 +83,4 @@ CRM, sending to many people, totals across responses, surveys staff can edit.
 |---|---|---|---|
 | 1.0 | 11-13-26 14:53 | Claude (Claude Code) | Created in phase 2b (ruling BE23). |
 | 1.1 | 11-16-26 13:30 | Claude (Claude Code) | The per-link page words and the offer of more surveys (Business Evaluation phase 6). |
+| 1.2 | 11-20-26 03:20 | Claude (Claude Code) | The `score` question type and `{{org}}` in survey text; feedback surveys the second purpose (phases 8 and 9). |

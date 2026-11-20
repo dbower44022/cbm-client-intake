@@ -25,7 +25,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from core.branding import render_page
+from core.branding import render_page, render_text
 from core.config import get_settings
 
 from . import answers as ans
@@ -88,18 +88,22 @@ def _row_for(rows: list[dict[str, Any]], key: str) -> Optional[dict[str, Any]]:
 
 
 def _survey_view(survey: Survey, row: Optional[dict[str, Any]]) -> dict[str, Any]:
+    """One survey for the page. A survey's own text may use the branding
+    tokens ``{{org}}`` and ``{{abbr}}`` (the feedback surveys do); they are
+    filled in here, as the page's own words are."""
+    t = render_text
     return {
         "key": survey.key,
-        "title": survey.title,
-        "introduction": survey.introduction,
+        "title": t(survey.title),
+        "introduction": t(survey.introduction),
         "state": ans.state_of(row),
         "answers": (row or {}).get("answers") or {},
         "sections": [{
-            "title": s.title, "intro": s.intro,
+            "title": t(s.title), "intro": t(s.intro),
             "questions": [{
-                "id": q.id, "label": q.label, "help": q.help, "type": q.type,
+                "id": q.id, "label": t(q.label), "help": t(q.help), "type": q.type,
                 "required": q.required, "options": list(q.options), "max": q.max,
-                "low": q.low, "high": q.high,
+                "low": t(q.low), "high": t(q.high),
             } for q in s.questions],
         } for s in survey.sections],
     }

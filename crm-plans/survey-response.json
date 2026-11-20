@@ -1,0 +1,52 @@
+{
+  "name": "survey-response",
+  "description": "Business Evaluation phases 8 and 9 (prds/business-evaluation-plan.md § 5 'Added 11-16-26', rulings BE29 to BE33; decision 1 approved by Doug 11-20-26): one CSurveyResponse per submitted feedback survey, linked to what it is about (the engagement and its mentor at the time, the event, or the released Business Evaluation) and to the contact who answered. Multiple Assigned Users and Collaborators on: a response about an engagement carries the engagement's assignedUsers, which is how its mentor reads it. Additive only. No field Read-only: the application writes them all (ruling 40). Handoff: survey-response-crm-handoff.md. Role grants: scripts/migrate_feedback_roles.py.",
+  "entities": [
+    {"name": "SurveyResponse", "type": "Base",
+     "labelSingular": "Survey Response", "labelPlural": "Survey Responses", "stream": true}
+  ],
+  "entityParams": [
+    {"entity": "CSurveyResponse", "params": {"assignedUsers": true, "collaborators": true}}
+  ],
+  "fields": [
+    {"entity": "CSurveyResponse", "name": "surveyKey", "type": "varchar", "maxLength": 64,
+     "label": "Survey", "tooltipText": "Which feedback survey was answered, such as mentoring-feedback."},
+    {"entity": "CSurveyResponse", "name": "surveyVersion", "type": "varchar", "maxLength": 64,
+     "label": "Survey version", "tooltipText": "The survey definition answered, such as mentoring-feedback.v1."},
+    {"entity": "CSurveyResponse", "name": "moment", "type": "enum", "label": "Moment",
+     "options": ["", "Engagement Closed", "Session Milestone", "Event", "Evaluation Released", "On Demand"],
+     "default": "", "tooltipText": "What sent the survey."},
+    {"entity": "CSurveyResponse", "name": "recommendScore", "type": "int", "label": "Recommendation score",
+     "min": 0, "max": 10,
+     "tooltipText": "How likely the person is to recommend us, 0 to 10. 6 or below is a low score."},
+    {"entity": "CSurveyResponse", "name": "answers", "type": "text", "label": "Answers (data)",
+     "tooltipText": "The submitted answers as JSON. People read Answers instead."},
+    {"entity": "CSurveyResponse", "name": "answersReadable", "type": "wysiwyg", "label": "Answers"},
+    {"entity": "CSurveyResponse", "name": "needsFollowUp", "type": "bool", "label": "Needs follow-up",
+     "audited": true,
+     "tooltipText": "Set by the application for a low score, or when the person asked to be contacted or to talk with a mentor."},
+    {"entity": "CSurveyResponse", "name": "followUpDone", "type": "bool", "label": "Follow-up done",
+     "audited": true},
+    {"entity": "CSurveyResponse", "name": "followUpNote", "type": "text", "label": "Follow-up note"},
+    {"entity": "CSurveyResponse", "name": "followUpDoneAt", "type": "datetime", "label": "Follow-up done at"},
+    {"entity": "CSurveyResponse", "name": "consentAt", "type": "datetime", "label": "Consent given"},
+    {"entity": "CSurveyResponse", "name": "submittedAt", "type": "datetime", "label": "Submitted"}
+  ],
+  "links": [
+    {"entity": "CSurveyResponse", "link": "engagement", "linkType": "manyToOne",
+     "entityForeign": "CEngagement", "linkForeign": "surveyResponses",
+     "label": "Engagement", "labelForeign": "Survey responses"},
+    {"entity": "CSurveyResponse", "link": "mentorProfile", "linkType": "manyToOne",
+     "entityForeign": "CMentorProfile", "linkForeign": "surveyResponses",
+     "label": "Mentor", "labelForeign": "Survey responses"},
+    {"entity": "CSurveyResponse", "link": "event", "linkType": "manyToOne",
+     "entityForeign": "CEvent", "linkForeign": "surveyResponses",
+     "label": "Event", "labelForeign": "Survey responses"},
+    {"entity": "CSurveyResponse", "link": "contact", "linkType": "manyToOne",
+     "entityForeign": "Contact", "linkForeign": "surveyResponses",
+     "label": "Contact", "labelForeign": "Survey responses"},
+    {"entity": "CSurveyResponse", "link": "businessEvaluation", "linkType": "manyToOne",
+     "entityForeign": "CBusinessEvaluation", "linkForeign": "surveyResponses",
+     "label": "Business evaluation", "labelForeign": "Survey responses"}
+  ]
+}

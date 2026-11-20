@@ -1,0 +1,45 @@
+# Evaluation feedback survey, version 1 (ruling BE29).
+# Sent after a Business Evaluation round's report is released to the client,
+# and on demand by Mentor Administration staff. Only the score is required.
+# Approved by Doug as written, 11-20-26 (phases 8 and 9, decision 2).
+# Each "# For:" line says what the answer is used for.
+key: evaluation-feedback
+version: 1
+title: Your business evaluation
+introduction: >-
+  A few questions about the business evaluation you received from {{org}}.
+  It takes about two minutes, and only the first question is needed.
+sections:
+  - title: Your business evaluation
+    questions:
+      # For: the recommendation score for the evaluation offering, in Analytics; 6 or below alerts staff.
+      - id: recommend
+        label: How likely are you to recommend {{org}}'s free business evaluation to another business owner?
+        type: score
+        required: true
+        low: Not at all likely
+        high: Extremely likely
+      # For: the survey questions' burden, for the pilot review (BE22).
+      - id: questions_reasonable
+        label: Were the evaluation's questions reasonable to answer?
+        type: yes_no
+      # For: the analysis prompts' accuracy, for the pilot review.
+      - id: report_accurate
+        label: Did the report describe your business accurately?
+        type: yes_no
+      # For: the report's value to the client.
+      - id: report_useful
+        label: Was the report useful?
+        type: yes_no
+      # For: the review session's value, the mentor's part of the offering.
+      - id: review_helped
+        label: Did going through the report with your mentor help?
+        type: yes_no
+      # For: the evaluation's effect, in the client's own words.
+      - id: will_change
+        label: What, if anything, will you do differently because of the evaluation?
+        type: long_text
+      # For: what to fix, in the client's own words.
+      - id: do_better
+        label: What could we do better?
+        type: long_text

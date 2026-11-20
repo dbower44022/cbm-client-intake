@@ -133,6 +133,10 @@ ACT_EVALUATION_REPORT_SAVED = "Evaluation Report Edited"
 ACT_EVALUATION_APPROVED = "Evaluation Approved"
 ACT_EVALUATION_REVIEW_SESSION = "Evaluation Review Session Linked"
 ACT_EVALUATION_RELEASED = "Evaluation Released"
+# Feedback surveys (phases 8 and 9): a survey sent by hand, and a follow-up
+# marked done (BE32, decision 4).
+ACT_FEEDBACK_SENT = "Feedback Survey Sent"
+ACT_FEEDBACK_FOLLOW_UP_DONE = "Feedback Follow-up Done"
 ACT_ACTION_ITEM_CREATED = "Action Item Agreed"
 ACT_ACTION_ITEM_STATUS = "Action Item Status Changed"
 ACT_ANALYTICS_METRIC_SAVED = "Analytics Metric Saved"

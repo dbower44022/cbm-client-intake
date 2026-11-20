@@ -301,6 +301,7 @@
     if (tab === "referredClients") renderReferredClients();
     if (tab === "events") renderEvents();
     if (tab === "evaluations") renderEvaluations(true);  // always fresh: statuses move as the client answers
+    if (tab === "feedback") renderFeedback();
     if (tab === "sponsoredEvents") renderSponsoredEvents();
     if (tab === "sponsoredCampaigns") renderSponsoredCampaigns();
     if (tab === "communications") renderComms();
@@ -5012,6 +5013,88 @@
     if (link.state === "expired" && link.expiresAt) return "Expired " + fmtDate(link.expiresAt);
     if (link.state === "ended" && link.endedAt) return "Ended " + fmtDate(link.endedAt);
     return word;
+  }
+
+  // --- Feedback (feedback surveys, phases 8 and 9; decision 3) ---
+  // The responses about this engagement, as the mentor reads them (the CRM
+  // shows only those stamped with them), and Send feedback survey: pick a
+  // client contact, then the composer opens from the mentor's own mailbox.
+  function renderFeedback() {
+    if (!currentDetail || !$("fbPanel") || !window.CBMFeedback) return;
+    var base = "/records/" + encodeURIComponent(currentDetail.id) + "/feedback";
+    var send = document.createElement("button");
+    send.type = "button"; send.className = "cbm-button";
+    send.textContent = "Send feedback survey";
+    var contacts = [];
+    var panel = CBMFeedback.mount($("fbPanel"), {
+      key: SLUG + ".feedback",
+      about: "engagement",
+      toolbar: [send],
+      load: function () {
+        return api(base).then(function (res) { contacts = res.contacts || []; return res; });
+      },
+      detail: function (id) { return api(base + "/" + encodeURIComponent(id)); },
+      onError: function (e) { if (e && e.status === 401) { showLogin(); return true; } },
+    });
+    send.addEventListener("click", function () { fbSendDialog(base, contacts, panel); });
+  }
+
+  function fbSendDialog(base, contacts, panel) {
+    var dlg = document.createElement("dialog");
+    dlg.className = "fb__dialog";
+    var body = document.createElement("div"); body.className = "fb__dbody";
+    var h = document.createElement("h3"); h.className = "fb__dtitle";
+    h.textContent = "Send the mentoring feedback survey";
+    body.appendChild(h);
+    var p = document.createElement("p");
+    p.textContent = "Choose the client contact to ask. The email opens in the composer, " +
+      "from your own mailbox, so you can read and change it before you press Send.";
+    body.appendChild(p);
+    var label = document.createElement("label"); label.className = "fb__label";
+    label.textContent = "Client contact"; label.htmlFor = "fbContact";
+    var sel = document.createElement("select"); sel.id = "fbContact";
+    var none = document.createElement("option"); none.value = ""; none.textContent = "Choose a contact";
+    sel.appendChild(none);
+    contacts.forEach(function (c) {
+      var o = document.createElement("option"); o.value = c.id;
+      o.textContent = c.name + (c.primary ? " (primary)" : "");
+      sel.appendChild(o);
+    });
+    if (contacts.length === 1) sel.value = contacts[0].id;
+    body.appendChild(label); body.appendChild(sel);
+    var err = document.createElement("p"); err.className = "fb__notice is-error"; err.hidden = true;
+    body.appendChild(err);
+    var foot = document.createElement("div"); foot.className = "fb__dfoot";
+    var go = document.createElement("button"); go.type = "button"; go.className = "cbm-button";
+    go.textContent = "Open the email";
+    var cancel = document.createElement("button"); cancel.type = "button";
+    cancel.className = "cbm-button cbm-button--secondary"; cancel.textContent = "Cancel";
+    function close() { dlg.close(); dlg.remove(); }
+    cancel.addEventListener("click", close);
+    go.addEventListener("click", async function () {
+      if (!sel.value) {
+        err.textContent = contacts.length ? "Choose the client contact to ask."
+          : "This engagement has no client contact to ask. Add one with Add Client Contacts.";
+        err.hidden = false; return;
+      }
+      var done = window.CBMBusy ? CBMBusy.start(go) : function () {};
+      try {
+        var res = await api(base + "/send", { method: "POST", body: JSON.stringify({ contactId: sel.value }) });
+        close();
+        var e = res.email || {};
+        composeMessage({ to: e.to || "", subject: e.subject || "", bodyHtml: e.bodyHtml || "",
+                         draftName: "feedback-" + Date.now() });
+        panel.say("The survey's link is in the email. Press Send in the composer to give it to the client.", "success");
+      } catch (ex) {
+        if (ex.status === 401) { close(); showLogin(); return; }
+        err.textContent = ex.message; err.hidden = false;
+      } finally { done(); }
+    });
+    foot.appendChild(go); foot.appendChild(cancel);
+    dlg.appendChild(body); dlg.appendChild(foot);
+    document.body.appendChild(dlg);
+    dlg.addEventListener("cancel", function () { setTimeout(close, 0); });
+    dlg.showModal();
   }
 
   async function renderEvaluations(force) {

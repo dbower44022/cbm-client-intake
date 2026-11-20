@@ -719,6 +719,7 @@ def create_app(
     # key, or the dry run). Every purpose's definitions are read and checked
     # once, here.
     import evaluation.purpose  # noqa: F401 — registers Business Evaluation
+    import feedback.purpose  # noqa: F401 — registers feedback surveys (BE29)
     from surveys import registry as _survey_registry
     from surveys.store import make_survey_store
 

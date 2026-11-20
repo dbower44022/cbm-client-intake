@@ -270,6 +270,7 @@
     if (Array.isArray(v)) return v.join("; ");
     if (q.type === "currency") return "$" + Number(v).toLocaleString();
     if (q.type === "scale") return v + " out of 5";
+    if (q.type === "score") return v + " out of 10";
     return String(v);
   }
 
@@ -345,7 +346,7 @@
   }
 
   function questionInput(q) {
-    var choice = ["single_choice", "multiple_choice", "yes_no", "scale"].indexOf(q.type) >= 0;
+    var choice = ["single_choice", "multiple_choice", "yes_no", "scale", "score"].indexOf(q.type) >= 0;
     var wrap = document.createElement(choice ? "fieldset" : "div");
     wrap.className = "survey__question";
     wrap.id = "q_" + q.id;
@@ -388,6 +389,38 @@
       } else {
         wrap.appendChild(el);
       }
+    } else if (q.type === "score") {
+      // The recommendation score (ruling BE29): eleven buttons, 0 to 10, a
+      // word at each end. Radio inputs underneath, so the keyboard works.
+      var score = document.createElement("div");
+      score.className = "survey__score";
+      var row = document.createElement("div");
+      row.className = "survey__score-row";
+      for (var n = 0; n <= 10; n++) {
+        (function (n) {
+          var lab = document.createElement("label");
+          lab.className = "survey__score-btn";
+          var r = document.createElement("input");
+          r.type = "radio"; r.name = inputId; r.value = String(n);
+          r.checked = value !== undefined && value !== null && value !== "" && Number(value) === n;
+          r.addEventListener("change", function () { changed(q, n); });
+          var num = document.createElement("span");
+          num.textContent = String(n);
+          lab.appendChild(r);
+          lab.appendChild(num);
+          row.appendChild(lab);
+        })(n);
+      }
+      score.appendChild(row);
+      if (q.low || q.high) {
+        var ends = document.createElement("div");
+        ends.className = "survey__score-ends";
+        var lo2 = document.createElement("span"); lo2.textContent = q.low || "";
+        var hi2 = document.createElement("span"); hi2.textContent = q.high || "";
+        ends.appendChild(lo2); ends.appendChild(hi2);
+        score.appendChild(ends);
+      }
+      wrap.appendChild(score);
     } else if (q.type === "scale") {
       var scale = document.createElement("div");
       scale.className = "survey__scale";

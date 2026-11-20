@@ -1,6 +1,6 @@
 # events/ — Events, Webinars and the public pages
 
-Last Updated: 11-18-26 01:38 · Revision 1.7
+Last Updated: 11-20-26 03:20 · Revision 1.8
 
 Detail for Event Administration (`/events`), the public programme pages (`/webinars/`), presenters, topics, attendance, follow-ups, reporting and the portal events rail.
 
@@ -250,6 +250,14 @@ would be indistinguishable from a slug.
     one stays unshown. Its link and a Zoom Meeting's never reach a public
     payload (`hosting.public_join_url`). Attendance is marked by hand (EH12);
     the no-show preview warns until someone is marked.
+- **Feedback surveys** (phases 8 and 9, `FEEDBACK_SURVEYS`): while on, the
+  Follow-up tab's **Survey** card sends each attendee their own feedback link
+  from the shared mailbox (`feedback/event_send.py`) in place of the
+  `EventSurvey` template, with no marketing opt-in needed (decision 7), and
+  shares its send key with the automatic event moment, so nobody is surveyed
+  twice. The event's **Feedback** tab lists its responses; staff mark
+  follow-ups done there (`?event=<id>&tab=feedback&response=<id>`). Detail
+  in `feedback/CLAUDE.md`.
   - **EH4 on the server** (`service._refuse_method_change_with_registrants`):
     changing the stored method is refused while anyone is Registered or
     Waitlisted. D3-3's Outside host refusal is the first case of this rule.
@@ -389,6 +397,7 @@ would be indistinguishable from a slug.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.8 | 11-20-26 03:20 | Claude (Claude Code) | Feedback surveys: the Survey card and the Feedback tab. |
 | 1.7 | 11-18-26 01:38 | Claude (Claude Code) | Readiness before a live check: the Event hosting card (plan § 8). |
 | 1.6 | 11-17-26 11:55 | Claude (Claude Code) | Hosting methods, step 5: the event form and the check before a save. |
 | 1.5 | 11-17-26 11:20 | Claude (Claude Code) | Hosting methods, step 4 built: `events/hosting.py`, members-only Zoom Meetings (option B), Other platform's switch, EH4 on the server. |

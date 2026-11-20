@@ -175,6 +175,8 @@ async def session(request: Request) -> dict[str, Any]:
         "promote": promote_mod.is_on(settings),
         # The History tab (mentor login integrity step 5b, plan § 4.5).
         "historyEnabled": history.history_on(settings),
+        # Feedback surveys (phases 8 and 9): the event's Feedback tab.
+        "feedbackEnabled": settings.feedback_surveys,
     }
 
 
@@ -551,6 +553,8 @@ async def followup_catalogue(request: Request) -> dict[str, Any]:
     settings = get_settings()
     from . import confirm
     return {
+        # Feedback surveys on: the Survey card sends the feedback survey.
+        "feedbackSurveys": settings.feedback_surveys,
         "kinds": notify.catalogue(),
         "enabled": notify.notify_active(settings),
         "remindersAutomatic": settings.events_reminders,
@@ -577,9 +581,28 @@ async def send_followup(
         event = await client.get(cfg.EVENT, event_id, select=cfg.PUBLIC_SELECT)
         if not event:
             raise HTTPException(status_code=404, detail="Event not found.")
-        result = await notify.send_follow_up(
-            get_settings(), client, event, follow_up, dry_run=payload.preview
-        )
+        settings = get_settings()
+        if follow_up.kind == notify.KIND_SURVEY and settings.feedback_surveys:
+            # Feedback surveys (phases 8 and 9, decision 3): the Survey card
+            # sends each attendee their own feedback link, from the shared
+            # mailbox, in place of the EventSurvey template.
+            from feedback import event_send as fb_event
+            from feedback import runtime as fb_runtime
+            from feedback.purpose import surveys as fb_surveys
+
+            result = await fb_event.follow_up_survey(
+                settings, client, event,
+                store=fb_runtime.feedback_store(settings),
+                survey_store=getattr(request.app.state, "survey_store", None)
+                or fb_runtime.survey_store(settings),
+                surveys=fb_surveys() or {},
+                registrations=await service.list_registrations(client, event_id),
+                dry_run=payload.preview, created_by=user.get("userName") or "",
+                record_sent=notify.record_sent)
+        else:
+            result = await notify.send_follow_up(
+                settings, client, event, follow_up, dry_run=payload.preview
+            )
     except EspoError as exc:
         raise _crm_failure(exc, "send the follow-up") from exc
     if not payload.preview and result.get("sent"):
@@ -591,6 +614,72 @@ async def send_followup(
             actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
         )
     return result
+
+
+# --- feedback (feedback surveys, phases 8 and 9; decisions 3 and 4) --------
+# The event's responses, read as the staff member (the Marketing Admin Role
+# reads every response, decision 1), one response's answers, and Mark
+# follow-up done. 404 while FEEDBACK_SURVEYS is off.
+
+
+class FeedbackDoneIn(BaseModel):
+    note: str = ""
+
+
+def _feedback_on() -> None:
+    if not get_settings().feedback_surveys:
+        raise HTTPException(status_code=404, detail="Not found.")
+
+
+@api_router.get("/events/{event_id}/feedback")
+async def event_feedback(event_id: str, request: Request) -> dict[str, Any]:
+    from feedback import service as fb_service
+    from feedback import views as fb_views
+
+    _feedback_on()
+    _, client = await _actor(request)
+    if not await fb_service.entity_available(client):
+        return {"available": False, "reason": fb_views.UNAVAILABLE}
+    try:
+        return {"available": True,
+                "responses": await fb_views.list_responses(client, "eventId", event_id)}
+    except EspoError as exc:
+        raise _crm_failure(exc, "load the feedback") from exc
+
+
+@api_router.get("/feedback/{response_id}")
+async def event_feedback_detail(response_id: str, request: Request) -> dict[str, Any]:
+    from feedback import views as fb_views
+
+    _feedback_on()
+    _, client = await _actor(request)
+    try:
+        return await fb_views.detail(client, response_id)
+    except EspoError as exc:
+        raise _crm_failure(exc, "load the response") from exc
+
+
+@api_router.post("/feedback/{response_id}/done")
+async def event_feedback_done(response_id: str, payload: FeedbackDoneIn,
+                              request: Request) -> dict[str, Any]:
+    from feedback import views as fb_views
+
+    _feedback_on()
+    user, client = await _actor(request)
+    try:
+        result = await fb_views.mark_done(client, response_id, payload.note)
+    except fb_views.FollowUpError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except EspoError as exc:
+        raise _crm_failure(exc, "mark the follow-up done") from exc
+    await record_action(
+        client, app=APP_EVENTS, category=CAT_RECORD_EDIT, action="Feedback Follow-up Done",
+        parent_type="CSurveyResponse", parent_id=response_id,
+        summary=f"Follow-up done on {result['name'] or 'a feedback response'}.",
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+        details={"fields": result["fields"]},
+    )
+    return {"response": result["response"]}
 
 
 # --- reporting (Phase 6c) --------------------------------------------------

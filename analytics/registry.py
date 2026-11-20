@@ -192,9 +192,26 @@ class PageSpec:
     portal_dashboard: bool = False       # render on the portal home (Phase D)
     default_range: str = "last12mo"
     panels: list[PanelSpec] = field(default_factory=list)
+    # A Settings attribute that must be on for this built-in page to exist
+    # (feedback surveys: FEEDBACK_SURVEYS). Empty => always.
+    switch: str = ""
 
 
 PAGE_REGISTRY: dict[str, PageSpec] = {}
+
+#: Built-in metrics that exist only while a Settings switch is on (metric key
+#: -> Settings attribute). Off, the metric is out of the library and its
+#: panels are left off every page, so the page looks exactly as before.
+SWITCHED_METRICS: dict[str, str] = {}
+
+
+def switched_off(metric_key: str, settings: Any) -> bool:
+    switch = SWITCHED_METRICS.get(metric_key)
+    return bool(switch) and not getattr(settings, switch, False)
+
+
+def page_switched_off(page: "PageSpec", settings: Any) -> bool:
+    return bool(page.switch) and not getattr(settings, page.switch, False)
 
 
 def register_page(page: PageSpec) -> PageSpec:

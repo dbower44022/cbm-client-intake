@@ -1,0 +1,52 @@
+/* The Feedback panel (frontend/shared/feedback.js; feedback surveys, phases
+   8 and 9). Answers stand out from questions (Doug 11-16-26): the same look
+   as Client Administration's Business profile tab. */
+
+.fb__head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.fb__summary { margin: .25rem 0; color: var(--cbm-slate-700, #334155); font-weight: 600; }
+.fb__tools { display: flex; gap: .5rem; flex-wrap: wrap; }
+.fb__notice { margin: .5rem 0; padding: .45rem .7rem; border-radius: 4px; background: var(--cbm-slate-50, #F1F5F9); }
+.fb__notice.is-success { background: #E7F5EC; color: #14532D; }
+.fb__notice.is-error { background: #FDECEC; color: var(--cbm-red, #B91C1C); }
+.fb__empty { color: var(--cbm-slate-500, #64748B); }
+.fb__table { width: 100%; border-collapse: collapse; margin-top: .5rem; }
+.fb__table th, .fb__table td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid var(--cbm-slate-200, #E2E8F0); }
+.fb__row { cursor: pointer; }
+.fb__row:hover, .fb__row:focus { background: var(--cbm-slate-50, #F1F5F9); outline: none; }
+.fb__row.is-open td:last-child { color: var(--cbm-red, #B91C1C); font-weight: 600; }
+
+.fb__score { display: inline-block; min-width: 2.2rem; text-align: center; font-weight: 700;
+  padding: .05rem .45rem; border-radius: 999px; border: 1px solid transparent; }
+.fb__score.is-low { background: #FDECEC; color: #991B1B; border-color: #F5C2C2; }
+.fb__score.is-mid { background: #FEF6E4; color: #7A5518; border-color: #F1DDB0; }
+.fb__score.is-high { background: #E7F5EC; color: #14532D; border-color: #BFE3CB; }
+.fb__score.is-none { color: var(--cbm-slate-400, #94A3B8); }
+
+.fb__dialog { width: min(70rem, calc(96 * var(--cbm-vw, 1vw))); max-height: calc(90 * var(--cbm-vh, 1vh));
+  border: 0; border-radius: 8px; padding: 0; box-shadow: 0 10px 40px rgba(15, 23, 42, .3); }
+.fb__dialog::backdrop { background: rgba(15, 23, 42, .45); }
+.fb__dbody { padding: 1.25rem 1.5rem; overflow: auto; max-height: calc(78 * var(--cbm-vh, 1vh)); }
+.fb__dfoot { display: flex; justify-content: flex-end; gap: .5rem; padding: .75rem 1.5rem;
+  border-top: 1px solid var(--cbm-slate-200, #E2E8F0); }
+.fb__dtitle { margin: 0 0 .25rem; color: var(--cbm-navy, #173B60); }
+.fb__facts { margin: 0 0 .75rem; color: var(--cbm-slate-500, #64748B); }
+.fb__scoreline { display: flex; align-items: center; gap: .5rem; font-weight: 600; margin: 0 0 1rem; }
+.fb__follow { border: 1px solid #F5C2C2; background: #FFF7F7; border-radius: 6px; padding: .75rem 1rem; margin: 0 0 1rem; }
+.fb__follow.is-done { border-color: #BFE3CB; background: #F4FBF6; }
+.fb__follow-head { margin: 0 0 .35rem; font-weight: 700; }
+.fb__follow-why, .fb__follow-note { margin: 0 0 .5rem; }
+.fb__label { display: block; font-weight: 600; margin: .5rem 0 .25rem; }
+.fb__note { width: 100%; margin-bottom: .5rem; }
+
+.fb__answers { columns: 26rem; column-gap: 2rem; }
+.fb__section { break-inside: avoid-column; margin: 0 0 1.25rem; }
+.fb__sectitle { font-size: var(--cbm-text-sm, .9rem); text-transform: uppercase; letter-spacing: .04em;
+  color: var(--cbm-navy, #173B60); margin: 0 0 .5rem; padding-bottom: .25rem;
+  border-bottom: 1px solid var(--cbm-slate-200, #E2E8F0); }
+.fb__qa { margin: 0 0 .7rem; break-inside: avoid; }
+.fb__q { font-size: .82rem; color: var(--cbm-slate-500, #64748B); margin: 0 0 .2rem; line-height: 1.35; }
+.fb__a { font-size: 1.02rem; font-weight: 600; color: var(--cbm-slate-900, #0F172A); line-height: 1.4;
+  background: var(--cbm-slate-50, #F1F5F9); border-left: 3px solid var(--cbm-navy, #173B60);
+  border-radius: 0 4px 4px 0; padding: .35rem .6rem; white-space: pre-wrap; }
+.fb__a.is-blank { font-weight: 400; font-style: italic; color: var(--cbm-slate-400, #94A3B8);
+  background: none; border-left-color: var(--cbm-slate-200, #E2E8F0); }

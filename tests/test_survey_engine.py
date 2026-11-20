@@ -188,7 +188,7 @@ def test_the_old_address_redirects_permanently():
 
 def test_the_engine_imports_nothing_from_a_survey_purpose():
     """Ruling BE23: everything specific to a purpose lives in its own package."""
-    purposes = {"evaluation"}
+    purposes = {"evaluation", "feedback"}
     for path in sorted((ROOT / "surveys").rglob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):

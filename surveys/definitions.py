@@ -23,8 +23,8 @@ The format::
             required: true                 # optional, default false
             options: [...]                 # single_choice / multiple_choice only
             max: 3                         # multiple_choice only, optional
-            low: Not at all                # scale only, optional
-            high: Completely               # scale only, optional
+            low: Not at all                # scale and score only, optional
+            high: Completely               # scale and score only, optional
 
 A survey purpose may add top-level keys of its own and checks of its own
 through ``LoaderRules``: each extra key is read as optional text and passed
@@ -50,7 +50,10 @@ QUESTION_TYPES = (
     "currency",         # dollars
     "scale",            # 1 to 5
     "yes_no",           # yes or no
+    "score",            # 0 to 10: the recommendation score (ruling BE29)
 )
+#: The question types that take the two end words ``low`` and ``high``.
+ENDS_TYPES = ("scale", "score")
 CHOICE_TYPES = ("single_choice", "multiple_choice")
 
 _FILE = re.compile(r"^(?P<key>[a-z][a-z0-9-]*)\.v(?P<version>[1-9][0-9]*)\.yaml$")
@@ -161,8 +164,8 @@ def _question(raw: Any, where: str) -> Question:
                          or isinstance(most, bool) or not 1 <= most < len(options)):
         raise SurveyError(f"{where}: 'max' is for a multiple_choice question, "
                           f"between 1 and one fewer than its options")
-    if qtype != "scale" and ("low" in raw or "high" in raw):
-        raise SurveyError(f"{where}: only a scale question takes 'low' and 'high'")
+    if qtype not in ENDS_TYPES and ("low" in raw or "high" in raw):
+        raise SurveyError(f"{where}: only a scale or score question takes 'low' and 'high'")
     return Question(
         id=qid, label=text(raw, "label", where), type=qtype, required=required,
         help=text(raw, "help", where, required=False),

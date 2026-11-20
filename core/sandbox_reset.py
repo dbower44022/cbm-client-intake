@@ -113,6 +113,11 @@ RESET_TABLES: tuple[str, ...] = (
     # The mentor match runs (Business Evaluation phase 7): they point at
     # engagements the restore takes away.
     "mentor_match",
+    # Feedback surveys (phases 8 and 9): what was sent or skipped for each
+    # moment, and the follow-up alerts sent. They point at CRM records the
+    # restore takes away.
+    "feedback_send",
+    "feedback_alert",
 )
 
 #: Configuration, authored artefacts and instance bookkeeping: never touched.
