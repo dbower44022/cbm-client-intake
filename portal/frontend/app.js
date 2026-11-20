@@ -178,7 +178,7 @@
     var settled = Promise.all(waits).then(function () { CBMHome.chapterSettled(); },
                                           function () { CBMHome.chapterSettled(); });
     if (window.CBMBusy && CBMBusy.loading) {
-      if (drawn.chapterBody) CBMBusy.loading(drawn.chapterBody, settled);
+      if (drawn.analyticsBody) CBMBusy.loading(drawn.analyticsBody, settled);
       if (drawn.eventsBody) CBMBusy.loading(drawn.eventsBody, settled);
     }
   }

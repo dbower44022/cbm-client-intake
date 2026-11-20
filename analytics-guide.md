@@ -55,7 +55,9 @@ Each dashboard has:
 
 If a dashboard has been marked **"Show on portal home"**, its panels also appear on
 the portal landing page (above your app tiles), so the key numbers greet you when
-you sign in. Only people who can view that dashboard see it there; everyone else's
+you sign in. On the new home page (when it is switched on) the dashboard is the
+**Analytics** panel at the end of the page; the chapter's own numbers for the year
+are in **At the chapter**, which every member sees. Only people who can view that dashboard see it there; everyone else's
 home page is unchanged. There's an **"Open Analytics →"** link to jump to the full
 app.
 

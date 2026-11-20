@@ -1,6 +1,6 @@
 # The home page and Chapter News — plan
 
-Last Updated: 11-20-26 00:55 · Revision 1.11 — change log at the end.
+Last Updated: 11-20-26 01:05 · Revision 1.12 — change log at the end.
 
 **Status: designed 11-16-26 to 11-17-26 in a Cowork session with Doug; every
 decision below is his. Phase 0 (the contrast fix to the design tokens) is
@@ -11,9 +11,8 @@ clients) is built as v0.346.0, dark behind `HOME_V2`, and passed stop 2 on
 him the same day, which closed the phase. Phase 3 (Needs you) is built as
 v0.349.0, with Doug's two changes at its stop as v0.349.1 and v0.350.1,
 dark behind `HOME_V2`; stop 3 passed on 11-20-26, which closed the phase.
-Phase 4 (At the chapter) started 11-20-26 from
-`prompts/home-page-phase4-prompt-v0.1.md`; phases 5 to 7 are not
-started.**
+Phase 4 (At the chapter) is built as v0.351.0, dark behind `HOME_V2`;
+stop 4 is owed. Phases 5 to 7 are not started.**
 
 Mockups: the design canvas *CBM Home Page — Looks*
 (https://claude.ai/artifact/D6Gm6i9qYgBsYmMtUSfAmY). The **Mix** artboard is
@@ -112,9 +111,12 @@ order:
 3. **Needs you**: the attention list (§ 4.2).
 4. **My clients**: one row per active engagement: client, status, last
    contact, next session.
-5. **At the chapter**: chapter numbers for the year beside the member's own,
-   upcoming workshops, and open asks such as call lists. **Upcoming events**
-   is a panel of its own beside it (Doug, 11-18-26).
+5. **At the chapter**: the chapter's clients served, sessions held and hours
+   mentored for the calendar year, each with the member's own beside it,
+   and open asks (the running call campaigns the member's team is named
+   in). **Upcoming events** is a panel of its own beside it (Doug,
+   11-18-26) and holds the workshops; the **Analytics** dashboard is a
+   panel of its own at the end of the page (phase 4).
 
 Today and Needs you sit side by side on a wide screen and stack on a narrow
 one. Every section fails quietly on its own, as the attention badges do today:
@@ -380,6 +382,19 @@ switch: its push changes production's colours at once, which is intended.
   portal panel's sources, the events rail's upcoming workshops, and open asks
   from Marketing Management's running call campaigns. A presenter-wanted ask
   has no data source yet and is left out until one exists. **Stop 4**.
+  **Built v0.351.0 (11-20-26); stop 4 owed.** Doug's eight answers at the
+  phase's first stop, all as recommended: (1) three numbers, clients served
+  (engagements with a Completed session), sessions held and hours mentored,
+  from one read of the year's Completed sessions; (2) the calendar year, in
+  the chapter's time zone; (3) every member sees the chapter's figures,
+  read with the chapter-wide key as totals; (4) "yours" for mentors with a
+  profile, owned and co-mentored engagements of every status; (5) the
+  Analytics dashboard moves into its own panel at the end, shown only
+  where it comes up; (6) workshops stay in Upcoming events; (7) asks are
+  the Running call campaigns naming the member's team, with the calls left
+  as the Calls tab counts them; (8) one new endpoint,
+  `GET /api/portal/home/chapter`, the chapter's figures and the campaigns
+  kept for everyone for 15 minutes.
 - **Phase 5 — Chapter News core.** Switch `CHAPTER_NEWS`. The handoff and both
   entities on the test system's CRM first; the News section with dismiss, acknowledge,
   pinned ordering, audience and the call-to-action button; past news; the
@@ -408,6 +423,7 @@ switch: its push changes production's colours at once, which is intended.
 
 | Revision | Last Updated | Change |
 |---|---|---|
+| 1.12 | 11-20-26 01:05 | Phase 4 built as v0.351.0: § 4.1's At the chapter as decided, § 8's answers. |
 | 1.11 | 11-20-26 00:55 | Stop 3 passed; phase 3 closed; phase 4 started. |
 | 1.10 | 11-20-26 00:10 | Stop 3 change: whole rows open (v0.350.1). |
 | 1.9 | 11-19-26 23:55 | Stop 3 change: Email rows and My Email's reply button open the conversation on the record (v0.349.1). |

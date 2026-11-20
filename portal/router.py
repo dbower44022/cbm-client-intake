@@ -209,6 +209,11 @@ def _home_sections(user: dict[str, Any], settings: Settings) -> list[str]:
     if settings.portal_calendar_active:
         sections.append("events")
     sections.append("pages")
+    # The Analytics dashboard has its own panel at the end (phase 4,
+    # answer 5); it self-gates, and the page hides the frame when it does
+    # not come up for this member.
+    if settings.analytics_active:
+        sections.append("analytics")
     return sections
 
 
@@ -724,3 +729,153 @@ async def put_preference(key: str, body: PreferenceIn, request: Request) -> dict
 async def logout(request: Request) -> dict:
     clear_session(request)
     return {"status": "ok"}
+
+
+# --- the new home page: At the chapter (HOME_V2, phase 4) ---------------------
+
+#: How long the chapter's figures and its running call campaigns are kept for
+#: every member (phase 4, answer 8): they are the same for everyone.
+HOME_CHAPTER_SECONDS = 15 * 60
+
+
+def _org_client(settings: Settings):
+    """The chapter-wide CRM key's client (the Mentors directory's
+    availability is the precedent): totals with no names. None where there
+    is no key."""
+    if settings.espo_dry_run or not settings.espo_api_key:
+        return None
+    from core.espo import EspoClient
+
+    return EspoClient(settings.espo_base_url, settings.espo_api_key,
+                      settings.request_timeout_seconds)
+
+
+async def _shared(request: Request, key: str, load):
+    """One value for the whole application, kept ``HOME_CHAPTER_SECONDS``;
+    concurrent first reads share one load, and a failed load is never kept."""
+    import time
+
+    memo = request.app.state.__dict__.setdefault("home_chapter_shared", {})
+    now = time.monotonic()
+    hit = memo.get(key)
+    if hit is None or now - hit[0] > HOME_CHAPTER_SECONDS:
+        hit = (now, asyncio.ensure_future(load()))
+        memo[key] = hit
+    try:
+        return await asyncio.shield(hit[1])
+    except Exception:
+        if memo.get(key) is hit:
+            memo.pop(key, None)
+        raise
+
+
+async def _year_sessions(client, since: str) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    offset = 0
+    while True:
+        data = await client.list(
+            "CSession",
+            select="dateStart,dateEnd,engagementId",
+            where=[{"type": "equals", "attribute": "status", "value": "Completed"},
+                   {"type": "after", "attribute": "dateStart", "value": since}],
+            order_by="dateStart", order="asc", max_size=200, offset=offset,
+        )
+        page = data.get("list") or []
+        rows.extend(page)
+        if len(page) < 200 or len(rows) >= 20000:
+            return rows
+        offset += 200
+
+
+@router.get("/home/chapter")
+async def home_chapter(request: Request) -> dict:
+    """At the chapter for the new home page (prds/home-page-plan.md § 4.1;
+    phase 4). Three parts, each failing on its own and named in
+    ``unavailable``: the chapter's figures for the calendar year (every
+    member, the chapter-wide key, kept 15 minutes for everyone), the
+    member's own (mentors, from Client Management's list shared with Today),
+    and the asks (Running call campaigns naming the member's team)."""
+    from datetime import datetime, timezone
+
+    from portal import chapter
+
+    settings = get_settings()
+    if not settings.home_v2:
+        raise HTTPException(status_code=404, detail="Not found.")
+    user = current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    year, since = chapter.year_start(datetime.now(timezone.utc))
+    out: dict[str, Any] = {"year": year, "chapter": None, "own": None, "asks": None,
+                           "unavailable": []}
+
+    def failed(part: str, exc: BaseException) -> None:
+        log.warning("at the chapter: %s failed for %s: %s", part, user.get("userName"), exc)
+        out["unavailable"].append(part)
+
+    org = _org_client(settings)
+    facts = None
+    if org is not None:
+        try:
+            facts = await _shared(request, f"sessions:{since}", lambda: _facts(org, since))
+            out["chapter"] = chapter.figures(facts)
+        except Exception as exc:  # noqa: BLE001 — this part only
+            failed("chapter", exc)
+
+    if facts is not None and is_member(user, settings.session_mentor_allowed_teams_list):
+        try:
+            result = await _member_records(request, settings, user)
+            if result.get("profileFound") and not result.get("profileChoice", {}).get("blocked"):
+                mine = {r["id"] for r in result.get("records") or []}
+                out["own"] = chapter.figures(facts, mine)
+        except Exception as exc:  # noqa: BLE001
+            failed("own", exc)
+
+    if org is not None and settings.campaigns_active and settings.campaigns_calls:
+        try:
+            out["asks"] = await _asks(request, settings, user, org)
+        except Exception as exc:  # noqa: BLE001
+            failed("asks", exc)
+    return out
+
+
+async def _facts(client, since: str) -> list[tuple[str, float]]:
+    from portal import chapter
+
+    return chapter.session_facts(await _year_sessions(client, since))
+
+
+async def _asks(request: Request, settings: Settings, user: dict[str, Any], org) -> list[dict[str, Any]]:
+    """The Running call campaigns naming one of the member's teams, each
+    with the calls still to make, read as the member (as the Calls tab
+    reads them)."""
+    from campaigns import calls
+    from campaigns import config as ccfg
+    from portal import chapter
+
+    campaigns = await _shared(request, "call-campaigns", lambda: calls.running_call_campaigns(org))
+    default = settings.campaigns_allowed_teams_list
+    mine = [c for c in campaigns if calls.may_call(user, calls.campaign_team_names(c, default))]
+    if not mine:
+        return []
+    client = client_for(settings, user)
+    rows = []
+    for c in mine:
+        touches: list[dict[str, Any]] = []
+        offset = 0
+        while True:
+            data = await client.list(
+                ccfg.TOUCH, select="touchStatus,assignedUserId", max_size=200, offset=offset,
+                where=[{"type": "equals", "attribute": "outreachCampaignId", "value": c["id"]},
+                       {"type": "equals", "attribute": "touchStatus", "value": ccfg.TOUCH_PLANNED}],
+            )
+            page = data.get("list") or []
+            touches.extend(page)
+            if len(page) < 200 or len(touches) >= 5000:
+                break
+            offset += 200
+        n = chapter.calls_to_make(touches, user.get("userId") or "")
+        if n:
+            rows.append(chapter.ask_row(c, n))
+    rows.sort(key=lambda r: (-r["calls"], r["name"]))
+    return rows

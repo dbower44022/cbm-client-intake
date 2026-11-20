@@ -28,11 +28,14 @@
     { key: "clients", title: "My clients", link: { title: "Open Client Management", url: "/mentorsessions/", target: "cbm-mentorsessions" },
       note: "Your active clients will show here." },
     { key: "chapter", title: "At the chapter", pair2: true,
-      note: "Chapter numbers will show here." },
+      note: "The chapter's numbers are not available just now." },
     { key: "events", title: "Upcoming events", pair2: true,
       note: "There are no upcoming events to show." },
     { key: "pages", title: "Public pages",
       note: "There are no public pages on this deployment." },
+    // The Analytics dashboard, at the end (phase 4, answer 5). It self-gates:
+    // the frame is left out when the dashboard does not come up.
+    { key: "analytics", title: "Analytics", note: "" },
   ];
 
   var state = { prefs: { collapsed: [], hidden: [] }, view: null, hooks: {},
@@ -515,7 +518,66 @@
     });
   }
 
-  // At the chapter holds today's analytics panel and Upcoming events holds
+  // --- At the chapter (phase 4) ----------------------------------------------------
+  // One read (GET /api/portal/home/chapter): the chapter's numbers for the
+  // calendar year beside the member's own, and where the member is needed.
+  var CHAPTER_URL = "/api/portal/home/chapter";
+  var STATS = [["clients", "Clients served"], ["sessions", "Sessions held"], ["hours", "Hours mentored"]];
+
+  function num(n) { return Number(n || 0).toLocaleString(); }
+
+  function fillChapter(body, data) {
+    clearBody(body);
+    var shown = false;
+    if (data.chapter) {
+      var grid = el("div", "home2__stats");
+      STATS.forEach(function (s) {
+        var box = el("div", "home2__stat");
+        box.appendChild(el("div", "home2__statlabel", s[1] + " in " + data.year));
+        var line = el("div", "home2__statline");
+        line.appendChild(el("span", "home2__statnum", num(data.chapter[s[0]])));
+        if (data.own) line.appendChild(el("span", "home2__statown", "yours " + num(data.own[s[0]])));
+        box.appendChild(line);
+        grid.appendChild(box);
+      });
+      body.appendChild(grid);
+      shown = true;
+    }
+    if ((data.asks || []).length) {
+      body.appendChild(el("h3", "cbm-label home2__sublabel", "Where you're needed"));
+      var ul = el("ul", "cbm-rows home2__asks");
+      data.asks.forEach(function (it) { ul.appendChild(needRow({
+        tone: "navy", chip: "Calls", name: it.name, reason: it.reason,
+        url: it.url, target: it.target, urgent: false })); });
+      body.appendChild(ul);
+      shown = true;
+    }
+    if ((data.unavailable || []).length) {
+      note(body, shown
+        ? "Part of this panel could not be read just now. Reload the page to try again."
+        : "The chapter's numbers could not be read just now. Reload the page to try again.");
+    } else if (!shown) {
+      note(body, "The chapter's numbers are not available just now.");
+    }
+  }
+
+  function loadChapter(frames) {
+    if (!frames.chapter) return;
+    var body = frames.chapter._body;
+    var read = fetch(CHAPTER_URL, { credentials: "same-origin" }).then(function (r) {
+      return r.json().catch(function () { return null; }).then(function (d) {
+        if (!r.ok) throw new Error((d && d.detail) || ("the server answered " + r.status));
+        return d;
+      });
+    });
+    if (window.CBMBusy && CBMBusy.loading) CBMBusy.loading(body, read);
+    read.then(function (data) { fillChapter(body, data); }).catch(function (e) {
+      clearBody(body);
+      note(body, "The chapter's numbers could not be read just now: " + e.message + ". Reload the page to try again.");
+    });
+  }
+
+  // The Analytics frame holds today's analytics panel and Upcoming events holds
   // the events rail, each moved in by id (Doug, 11-18-26: separate panels).
   function moveIn(body, id, def) {
     var box = el("div", "home2__chapter");
@@ -550,8 +612,8 @@
       sec._fold.setAttribute("aria-expanded", collapsed ? "false" : "true");
       sec._fold.querySelector(".home2__foldword").textContent = collapsed ? "Expand" : "Collapse";
       sec._fold.setAttribute("aria-label", (collapsed ? "Expand " : "Collapse ") + sec._def.title);
-      sec.hidden = hidden;
-      if (hidden) hiddenNames.push(sec._def);
+      sec.hidden = hidden || !!sec._absent;
+      if (hidden && !sec._absent) hiddenNames.push(sec._def);
     });
     var bar = view.querySelector(".home2__hidden");
     bar.innerHTML = "";
@@ -628,7 +690,7 @@
       if (f.pair2 && !pair2.parentNode) main.appendChild(pair2);
       (f.pair ? pair : f.pair2 ? pair2 : main).appendChild(sec);
     });
-    if (frames.chapter) moveIn(frames.chapter._body, "analyticsSection", frames.chapter._def);
+    if (frames.analytics) moveIn(frames.analytics._body, "analyticsSection", frames.analytics._def);
     if (frames.events) moveIn(frames.events._body, "eventsRail", frames.events._def);
     if (frames.pages) fillPages(frames.pages._body, data.forms);
 
@@ -647,7 +709,8 @@
     if (window.CBMBusy && CBMBusy.loading) CBMBusy.loading(main, waiting);
     loadMentoring(frames, greetLine, now);
     loadNeeds(frames);
-    return { chapterBody: frames.chapter ? frames.chapter._body : null,
+    loadChapter(frames);
+    return { analyticsBody: frames.analytics ? frames.analytics._body : null,
              eventsBody: frames.events ? frames.events._body : null };
   }
 
@@ -655,13 +718,16 @@
   // when the piece they hold did not come up (the analytics panel and the
   // rail self-gate).
   function chapterSettled() {
-    [["chapter", "analyticsSection"], ["events", "eventsRail"]].forEach(function (pair) {
+    [["analytics", "analyticsSection"], ["events", "eventsRail"]].forEach(function (pair) {
       var sec = state.view && state.view.querySelector('.home2__frame[data-section="' + pair[0] + '"]');
       if (!sec) return;
       var n = document.getElementById(pair[1]);
       var shown = !!(n && !n.hidden && sec._body.contains(n));
       var p = sec._body.querySelector(".cbm-panel__note");
       if (p) p.hidden = shown;
+      // The Analytics frame has no line of its own: a member the dashboard
+      // does not come up for never sees the frame.
+      if (pair[0] === "analytics") { sec._absent = !shown; apply(); }
     });
   }
 

@@ -5,6 +5,40 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.351.0] — 2026-11-20
+
+**feat(home): At the chapter — the chapter's year beside the member's own,
+and where the member is needed.** Phase 4 of `prds/home-page-plan.md`, dark
+behind `HOME_V2`; Doug's eight answers at the phase's first stop, 11-20-26,
+all as recommended.
+
+- **Three numbers for the calendar year**, from 1 January in the chapter's
+  own time zone: *clients served* (engagements with a Completed session
+  this year; a client with two engagements counts twice), *sessions held*
+  (Completed sessions) and *hours mentored* (their total length). Every
+  member sees the chapter's, read with the chapter-wide CRM key as totals
+  with no names.
+- **"yours" beside each**, for members of the mentor team with a profile:
+  the same three over their owned and co-mentored engagements, closed ones
+  included (a co-mentored session counts for both mentors). It reuses
+  Today's engagement read; no extra CRM call.
+- **Where you're needed**: each Running call campaign naming one of the
+  member's teams (the Calls tab's rule), with the calls still to make as
+  the Calls tab counts them, opening the Calls tab in Marketing
+  Management's tab. A row opens on a click anywhere. Presenter-wanted asks
+  stay out until a data source exists.
+- **The Analytics dashboard has its own panel**, *Analytics*, at the end of
+  the page, shown only where it comes up for the member; At the chapter
+  no longer holds it. Upcoming workshops stay in the Upcoming events panel.
+- **One new read**, `GET /api/portal/home/chapter`; each part fails on its
+  own and is named in `unavailable`. The chapter's figures and the running
+  call campaigns are kept for every member for 15 minutes; the asks cost
+  one CRM call per allowed campaign at each sign-in.
+- Tests: `tests/test_home_chapter.py` (the year boundary, the figures, the
+  calls count, every member's chapter figure, the member's own with
+  co-mentored and closed engagements, a failing read, the shared figures,
+  the asks' team rule, the Analytics frame, the page).
+
 ## [0.350.1] — 2026-11-20
 
 **fix(home, myemail): a click anywhere on a row opens it.** Doug at stop 3

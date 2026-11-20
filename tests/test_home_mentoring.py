@@ -278,7 +278,8 @@ def test_the_events_rail_has_its_own_frame_when_the_calendar_is_on(monkeypatch):
     assert on.index("chapter") + 1 == on.index("events")
     js = (ROOT / "portal/frontend/home.js").read_text()
     assert 'moveIn(frames.events._body, "eventsRail"' in js
-    assert 'moveIn(frames.chapter._body, "analyticsSection"' in js
+    # The analytics panel moved to its own frame in phase 4 (answer 5).
+    assert 'moveIn(frames.analytics._body, "analyticsSection"' in js
 
 
 def test_the_directories_are_one_menu_in_the_bar():
