@@ -73,6 +73,7 @@ CAT_CONFIG = "Config"
 # --- action verbs (`actionType` — free-text over this vocabulary) -----------
 ACT_MENTOR_ASSIGNED = "Mentor Assigned"
 ACT_MENTOR_REASSIGNED = "Mentor Reassigned"
+ACT_MENTOR_MATCH_RUN = "Mentor Match Run"
 ACT_ASSIGNMENT_REPAIRED = "Assignment Repaired"
 ACT_ENGAGEMENT_ACCEPTED = "Engagement Accepted"
 ACT_ENGAGEMENT_ACTIVATED = "Engagement Activated"

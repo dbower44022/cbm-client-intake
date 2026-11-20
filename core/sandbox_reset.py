@@ -110,6 +110,9 @@ RESET_TABLES: tuple[str, ...] = (
     # sandbox lasts until the next reset.
     "survey_answer",
     "survey_link",
+    # The mentor match runs (Business Evaluation phase 7): they point at
+    # engagements the restore takes away.
+    "mentor_match",
 )
 
 #: Configuration, authored artefacts and instance bookkeeping: never touched.

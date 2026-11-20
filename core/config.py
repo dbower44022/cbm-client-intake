@@ -128,6 +128,12 @@ class Settings(BaseSettings):
     # Ruling BE27: whether an area submitted before the engagement has a mentor
     # is analyzed at once (on) or waits for the assignment (off).
     evaluation_analyze_unassigned: bool = False
+    # The mentor match (ruling BE28): Client Administration's AI analysis on an
+    # engagement waiting for a mentor. Needs the Anthropic integration and key,
+    # not BUSINESS_EVALUATION. Read per request.
+    mentor_match: bool = False
+    # The Claude model that writes the mentor match.
+    mentor_match_model: str = "claude-opus-5-5"
     # The chapter website's own addresses (scheme + host, comma separated).
     # Only these may fetch /api/website/* from a browser. Deliberately NOT
     # `allowed_origins`, which applies to every address of the application.

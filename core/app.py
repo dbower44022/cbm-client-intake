@@ -722,6 +722,10 @@ def create_app(
     from surveys.store import make_survey_store
 
     app.state.survey_store = make_survey_store(settings)
+    # The mentor match runs (Business Evaluation phase 7, BE28): every run kept.
+    from evaluation.match_store import make_match_store
+
+    app.state.mentor_match_store = make_match_store(settings)
     app.state.evaluation_client = lambda: _make_client(get_settings())
     _survey_registry.load_every_purpose()
     if settings.setup_active:

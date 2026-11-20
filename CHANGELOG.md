@@ -5,6 +5,49 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.350.0] — 2026-11-19
+
+**feat(evaluation): the mentor match — Client Administration's AI analysis.**
+Business Evaluation phase 7, ruling BE28, dark behind the new switch
+`MENTOR_MATCH` (default off; needs the Anthropic key, not
+`BUSINESS_EVALUATION`). Doug's choices at stopping point (a), 11-19-26, all
+as recommended.
+
+- **A fourth tab, *Mentor match*,** in the engagement popup (choice A). *Run
+  AI analysis* returns what the client needs, the kind of mentor who would
+  suit, up to three named mentors with a reason and their room, and points
+  to check. **Advice only**: the result has no Assign action; a mentor's
+  name opens the read-only mentor popup. On an engagement that already has
+  a mentor the button explains that the match is for engagements waiting
+  for one.
+- **What is sent** (choice A): the company name, the intake's focus areas
+  and needs, the business profile answers and the areas picked; for each
+  eligible mentor (the Assign list's rule) the profile lists, the three
+  website texts (Headline, Short summary, About you; HTML removed), the date
+  last given a new client and the room, app-computed. **No contact
+  details**: no mentor email address, `analysis.scrub` on every free text,
+  and the client's primary contact's name replaced by `[name]` in their own
+  text. A mentor at capacity is sent, marked, and suggested only when
+  clearly the best fit (prompt rule 2, choice A).
+- **The prompt is a versioned file**, `evaluation/match_prompts/mentor-match.v1.yaml`
+  (BE9), approved by Doug as drafted. Structured output through
+  `client.beta.messages.parse`, adaptive thinking at effort medium, the
+  server-side fallback on a refusal. A suggestion naming a mentor who was not
+  sent is dropped, and a mentor id written into the text is shown as the
+  mentor's name (the samples did it).
+- **Every run is kept** (choice A): table `mentor_match`, migration
+  `0051_mentor_match`, emptied by the sandbox reset; the tab opens on the
+  latest run, saying when and by whom, with *Run again*.
+- **The action log** records every run that reached the AI service (Mentor
+  Match Run, category Assignment, the cost and the mentors suggested); no
+  stream note, because a mentor reads the engagement's stream.
+- A refused or failed call is a message on the tab, never a 500.
+- `scripts/evaluation_match_samples.py`: sample matches from four made-up
+  clients against the Association's eligible mentors (read only), and three
+  against a made-up roster of 50 for the hard rules and the cost.
+- Settings `MENTOR_MATCH` and `MENTOR_MATCH_MODEL` (`claude-opus-5-5`).
+- Tests: `tests/test_evaluation_match.py`.
+
 ## [0.349.1] — 2026-11-19
 
 **fix(home): an email waiting for a reply opens where the reply is written.**

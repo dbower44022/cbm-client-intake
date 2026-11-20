@@ -322,6 +322,13 @@ SETTINGS: tuple[SettingSpec, ...] = (
             "and assigning a mentor starts its analysis. On: the draft report is "
             "written at once and waits for a reviewer. Either way the mentor is "
             "emailed once assigned."),
+    _s("mentor_match", GROUP_FEATURES, "Mentor match", kind="bool", component="web",
+       help="Client Administration's engagement popup gains a Mentor match tab: an AI "
+            "analysis of an engagement waiting for a mentor that suggests up to three "
+            "mentors with a reason each. Advice only; staff still Assign. Needs the "
+            "Anthropic API key. Each run costs a few cents. Read per request."),
+    _s("mentor_match_model", GROUP_FEATURES, "Mentor match model", component="web",
+       help="The Claude model that writes the mentor match."),
     _s("campaigns_enabled", GROUP_FEATURES, "Marketing Management", kind="bool",
        component="both",
        help="The Marketing Management tile, the Prospects grid and import, the "
@@ -1325,6 +1332,7 @@ INTEGRATION_TAGS: dict[str, tuple[str, str]] = {
     "integration_agent_model": ("anthropic", ""),
     "integration_agent_monthly_budget": ("anthropic", ""),
     "evaluation_model": ("anthropic", ""),
+    "mentor_match_model": ("anthropic", ""),
     "comms_ai_summary": ("anthropic", ""),
     "enrichment_ai": ("anthropic", ""),
     "enrichment_ai_model": ("anthropic", ""),

@@ -683,3 +683,20 @@ body { display: flex; flex-direction: column; }
   padding: .1rem .55rem; border-radius: 999px; background: #fff; border: 1px solid var(--cbm-navy, #173B60);
   color: var(--cbm-navy, #173B60); white-space: normal; }
 .bprofile__areas { margin: .25rem 0 0; padding-left: 1.25rem; }
+
+/* The Mentor match tab (Business Evaluation phase 7, BE28). Advice only. */
+.mmatch { padding: .25rem 0 1rem; }
+.mmatch__head { display: flex; align-items: center; gap: 1rem; justify-content: space-between; flex-wrap: wrap; }
+.mmatch__msg { margin: .5rem 0; color: var(--cbm-slate-700, #334155); }
+.mmatch__msg.is-error { color: var(--cbm-red, #B91C1C); }
+.mmatch__help { font-size: .85rem; color: var(--cbm-slate-500, #64748B); margin: 0 0 .75rem; }
+.mmatch__text { font-size: 1.02rem; color: var(--cbm-slate-900, #0F172A); line-height: 1.45; margin: 0 0 1rem; }
+.mmatch__list { margin: .25rem 0 1rem; padding-left: 1.5rem; }
+.mmatch__item { margin: 0 0 .9rem; }
+.mmatch__who { display: flex; align-items: baseline; gap: .75rem; flex-wrap: wrap; }
+.mmatch__name { font-size: 1.05rem; font-weight: 600; }
+.mmatch__room { font-size: .85rem; padding: .05rem .5rem; border-radius: 999px;
+  background: var(--cbm-slate-50, #F1F5F9); color: var(--cbm-slate-700, #334155); }
+.mmatch__room.is-full { background: #FEF3C7; color: #92400E; font-weight: 600; }
+.mmatch__reason { margin: .25rem 0 0; line-height: 1.45; color: var(--cbm-slate-900, #0F172A); }
+.mmatch__points { margin: .25rem 0 0; padding-left: 1.25rem; }

@@ -169,6 +169,8 @@
           <button type="button" class="modal__tab" data-mtab="history" role="tab" aria-selected="false">History</button>
           <!-- Business profile (Business Evaluation phase 6, BE26; INTAKE_SURVEY). -->
           <button type="button" class="modal__tab" data-mtab="profile" role="tab" aria-selected="false" hidden>Business profile</button>
+          <!-- Mentor match (Business Evaluation phase 7, BE28; MENTOR_MATCH). Advice only. -->
+          <button type="button" class="modal__tab" data-mtab="match" role="tab" aria-selected="false" hidden>Mentor match</button>
         </div>
 
         <div class="modal__body">
@@ -176,6 +178,8 @@
           <div id="modalHistory" hidden></div>
           <!-- Business profile: the client's answers and the areas picked. Never a report. -->
           <div id="modalProfile" class="bprofile" hidden></div>
+          <!-- Mentor match: the AI analysis's latest run. Advice only; never assigns. -->
+          <div id="modalMatch" class="mmatch" hidden></div>
           <!-- Read view -->
           <div id="modalView">
             <div class="modal__contact" id="modalContact"></div>

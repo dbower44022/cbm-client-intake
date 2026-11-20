@@ -1,6 +1,6 @@
 # assignments/ — Client Administration
 
-Last Updated: 11-16-26 13:30 · Revision 1.3
+Last Updated: 11-19-26 23:36 · Revision 1.4
 
 Detail for the Client Administration application (`/assignments`): the engagement grid, Assign and Reassign, the mentor roster and the editable engagement popup.
 
@@ -120,11 +120,17 @@ full-height grid with a status multi-select, and assigns each to a mentor.
   never a report (BE17, BE26). Detail: `evaluation/CLAUDE.md`. **Assign and
   Reassign also move the engagement's Business Evaluation records**
   (`_move_evaluations`, best-effort, under the org-wide key).
+- **The Mentor match tab** (v0.350.0, Business Evaluation phase 7,
+  `MENTOR_MATCH`): the popup's fourth tab, an AI analysis of an engagement
+  waiting for a mentor. **Advice only: nothing in it assigns.** It sends the
+  Assign list's mentors, never their email addresses. Detail:
+  `evaluation/CLAUDE.md`.
 
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.4 | 11-19-26 23:36 | Claude (Claude Code) | The Mentor match tab (v0.350.0). |
 | 1.3 | 11-16-26 13:30 | Claude (Claude Code) | The Business profile tab; Assign moves evaluation records (v0.339.0). |
 | 1.2 | 11-10-26 20:25 | Claude (Claude Code) | The Last Contact Date column (v0.318.0). |
 | 1.1 | 11-06-26 02:16 | Claude (Claude Code) | The History tab and old-and-new values (v0.312.0). |

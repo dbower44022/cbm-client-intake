@@ -123,7 +123,9 @@ async def session(request: Request) -> dict:
             # The History tab on the engagement popup (plan § 4.5, step 5b).
             "historyEnabled": history.history_on(),
             # The Business profile tab (Business Evaluation phase 6, BE26).
-            "businessProfileEnabled": eval_intake.enabled(get_settings())}
+            "businessProfileEnabled": eval_intake.enabled(get_settings()),
+            # The Mentor match tab (Business Evaluation phase 7, BE28).
+            "mentorMatchEnabled": bool(get_settings().mentor_match)}
 
 
 def _key_client(request: Request):
@@ -154,6 +156,119 @@ async def engagement_business_profile(engagement_id: str, request: Request) -> d
             engagement_id)
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not load the business profile")
+
+
+def _match_claude(request: Request, settings: Any) -> Any:
+    """The Claude client for one mentor match run (a test may set
+    ``app.state.mentor_match_claude``, a factory)."""
+    factory = getattr(request.app.state, "mentor_match_claude", None)
+    if factory is not None:
+        return factory()
+    import anthropic
+
+    return anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key, timeout=180.0,
+                                    max_retries=1)
+
+
+def _require_match(request: Request) -> tuple[dict, Any]:
+    from evaluation import match as eval_match
+
+    user = _require_user(request)
+    settings = get_settings()
+    if not eval_match.switched_on(settings):
+        raise HTTPException(status_code=404, detail="The mentor match is not switched on.")
+    return user, settings
+
+
+@router.get("/engagements/{engagement_id}/mentor-match")
+async def engagement_mentor_match(engagement_id: str, request: Request) -> dict:
+    """The Mentor match tab (BE28): the latest kept run, or none. The staff
+    member's own read of the engagement gates it."""
+    user, settings = _require_match(request)
+    client = client_for(settings, user)
+    try:
+        eng = await client.get(service.ENGAGEMENT, engagement_id,
+                               select="mentorProfileId,mentorProfileName")
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not load the mentor match")
+    store = getattr(request.app.state, "mentor_match_store", None)
+    latest = None
+    if store is not None:
+        try:
+            latest = await store.latest(engagement_id)
+        except Exception as exc:  # noqa: BLE001 — the tab still offers a run
+            log.warning("mentor match %s: kept run not read: %s", engagement_id, exc)
+    return {"latest": latest, "kept": store is not None,
+            "assignedTo": eng.get("mentorProfileName") if eng.get("mentorProfileId") else None}
+
+
+@router.post("/engagements/{engagement_id}/mentor-match")
+async def run_mentor_match(engagement_id: str, request: Request) -> dict:
+    """Run the AI analysis (BE28). Advice only: nothing is assigned. A
+    refused or failed run answers with a message, never a 500. Every run,
+    failed or not, is in the action log with its cost."""
+    from evaluation import match as eval_match
+
+    user, settings = _require_match(request)
+    client = client_for(settings, user)
+    cost, outcome, summary, run = 0.0, "Success", "", None
+    try:
+        try:
+            claude = _match_claude(request, settings) if not eval_match.ready_message(settings) else None
+            result, call, prompt = await eval_match.run(
+                settings, user_client=client, key_client=_key_client(request), claude=claude,
+                engagement_id=engagement_id)
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not run the mentor match")
+        except eval_match.MatchError as exc:
+            if exc.cost is not None:  # the AI service was called: record what it cost
+                cost, outcome = exc.cost, "Failed"
+                summary = f"Mentor match failed: {exc} (${exc.cost:.2f})"
+            raise HTTPException(status_code=400, detail=str(exc))
+        except HTTPException:
+            raise
+        except Exception as exc:  # noqa: BLE001 — the AI service's own errors
+            log.warning("mentor match %s failed (user=%s): %s", engagement_id,
+                        user.get("userName"), exc)
+            outcome = "Failed"
+            summary = f"Mentor match failed: {type(exc).__name__}"
+            raise HTTPException(status_code=502, detail=(
+                "The AI service could not be reached or refused the request. Nothing was "
+                "changed; try again in a minute."))
+        cost = call.cost
+        names = ", ".join(s["name"] for s in result["suggestions"]) or "no mentor"
+        summary = f"Mentor match run: suggested {names} (${cost:.2f})."
+        store = getattr(request.app.state, "mentor_match_store", None)
+        if store is not None:
+            try:
+                run = await store.add(
+                    engagement_id=engagement_id, run_by_id=user.get("userId") or "",
+                    run_by_name=user.get("name") or "", model=call.model,
+                    prompt_version=prompt.ref, input_tokens=call.input_tokens,
+                    output_tokens=call.output_tokens, cost=cost, result=result)
+            except Exception as exc:  # noqa: BLE001 — the result still shows
+                log.warning("mentor match %s: run not kept: %s", engagement_id, exc)
+        if run is None:
+            from datetime import datetime, timezone
+
+            run = {"id": None, "engagementId": engagement_id,
+                   "runAt": datetime.now(timezone.utc).isoformat(),
+                   "runByName": user.get("name") or "", "model": call.model,
+                   "promptVersion": prompt.ref, "cost": cost, "result": result,
+                   "notKept": True}
+        return {"latest": run}
+    finally:
+        if summary:
+            await action_log.log_action(
+                app=action_log.APP_CLIENT_ADMIN, category=action_log.CAT_ASSIGNMENT,
+                action=action_log.ACT_MENTOR_MATCH_RUN, parent_type=service.ENGAGEMENT,
+                parent_id=engagement_id, summary=summary, actor_id=user.get("userId") or "",
+                actor_name=user.get("name") or "",
+                details={"cost": round(cost, 4),
+                         "promptVersion": (run or {}).get("promptVersion"),
+                         "suggested": [s["mentorProfileId"] for s in
+                                       ((run or {}).get("result") or {}).get("suggestions", [])]},
+                outcome=outcome)
 
 
 async def _move_evaluations(request: Request, engagement_id: str, *, first: bool) -> None:

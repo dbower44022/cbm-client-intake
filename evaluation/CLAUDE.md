@@ -1,6 +1,6 @@
 # evaluation/ — Business Evaluation
 
-Last Updated: 11-19-26 22:35 · Revision 1.7
+Last Updated: 11-19-26 23:36 · Revision 1.8
 
 Detail for the Business Evaluation offering. Claude Code loads this file only
 when a session works in this folder. The plan is
@@ -277,6 +277,37 @@ table names or the `/evaluation/{token}` page, read the engine's equivalent.
 - **Checked by Doug on the Business Mentors Association's system 11-19-26**;
   `INTAKE_SURVEY` stays on there (Doug).
 
+## What phase 7 built (v0.350.0)
+
+- **The mentor match is `match.py`** (BE28), dark behind `MENTOR_MATCH`
+  (needs only the Anthropic key, not `BUSINESS_EVALUATION`): `GET`/`POST
+  /assignments/api/engagements/{id}/mentor-match`, 404 while off. Doug's
+  choices at stopping point (a), 11-19-26, all as recommended.
+- **Advice only.** The result never assigns and offers no Assign action
+  (a test reads the tab's code); a mentor's name opens the read-only mentor
+  popup with no engagement in context. An engagement that already has a
+  mentor is refused, naming the mentor.
+- **What is sent**: the client's company, the intake's focus areas and needs,
+  the business profile answers, the areas picked (area only, org-wide key);
+  each eligible mentor from `assignments.service.list_eligible_mentors`
+  (the Assign list, as the staff member) plus Headline, Short summary,
+  About you and languages (feature-detected). **Never an email address**;
+  `analysis.scrub` on every free text; **the client's primary contact's name
+  becomes `[name]`** in their own text (`people_names`, `redact_names`).
+- **The prompt is `match_prompts/mentor-match.v<n>.yaml`** (BE9; never
+  edited once a kept run names it). Effort medium, adaptive thinking, the
+  server-side fallback. A suggestion naming a mentor not sent is dropped;
+  a mentor id in the reply's text becomes the name (`_ids_to_names`).
+- **Every run is kept** in `mentor_match` (`match_store.py`, migration 0051,
+  a sandbox reset table); the tab opens on the latest. With no database a
+  run still shows, marked as not saved.
+- **The action log** gets every run that reached the AI service (Mentor Match
+  Run, category Assignment, cost, mentors suggested), failed ones included;
+  no stream note.
+- **Samples**: `scripts/evaluation_match_samples.py --env-file
+  ~/.config/cbm-bma/bma.env --out <folder>`, read only.
+- Tests: `tests/test_evaluation_match.py`.
+
 ## The CRM
 
 `crm-plans/business-evaluation.json` (fingerprint `89d89d28b53b` on crm-test)
@@ -301,3 +332,4 @@ create).
 | 1.5 | 11-15-26 23:20 | Claude (Claude Code) | Phase 5, release and action items (v0.338.0). |
 | 1.6 | 11-16-26 13:30 | Claude (Claude Code) | Phase 6, the intake survey (v0.339.0). |
 | 1.7 | 11-19-26 22:35 | Claude (Claude Code) | The tab's answer look (v0.340.1); phase 6 checked. |
+| 1.8 | 11-19-26 23:36 | Claude (Claude Code) | Phase 7, the mentor match (v0.350.0). |

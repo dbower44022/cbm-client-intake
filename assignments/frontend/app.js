@@ -31,7 +31,7 @@
     // message instead of silence. Falls back to plain fetch if busy.js
     // somehow did not load.
     var resp = await (window.CBMBusy && CBMBusy.fetch
-      ? CBMBusy.fetch(API + path, opts)
+      ? CBMBusy.fetch(API + path, opts, opts.timeoutMs)
       : fetch(API + path, opts));
     var data = null;
     try { data = await resp.json(); } catch (e) { /* no body */ }
@@ -113,13 +113,16 @@
   var historyEnabled = false;  // RECORD_HISTORY_TAB: the popup's History tab
   var historyPanel = null;
   var profileEnabled = false;  // INTAKE_SURVEY: the popup's Business profile tab
-  function tabsEnabled() { return historyEnabled || profileEnabled; }
+  var matchEnabled = false;    // MENTOR_MATCH: the popup's Mentor match tab
+  function tabsEnabled() { return historyEnabled || profileEnabled || matchEnabled; }
 
   function showDashboard(user) {
     historyEnabled = !!user.historyEnabled && !!window.CBMHistory;
     profileEnabled = !!user.businessProfileEnabled;
     document.querySelector('#modalTabs [data-mtab="history"]').hidden = !historyEnabled;
     document.querySelector('#modalTabs [data-mtab="profile"]').hidden = !profileEnabled;
+    matchEnabled = !!user.mentorMatchEnabled;
+    document.querySelector('#modalTabs [data-mtab="match"]').hidden = !matchEnabled;
     hide($("msgView"));
     $("whoName").textContent = user.name || user.userName;
     show($("userChip"));
@@ -670,15 +673,17 @@
   // Details | History. History hides the read view and the Edit button;
   // Details brings them back. Editing always starts from Details.
   function showModalTab(which) {
-    var history = which === "history", profile = which === "profile";
+    var history = which === "history", profile = which === "profile", match = which === "match";
     Array.prototype.forEach.call(document.querySelectorAll("#modalTabs [data-mtab]"), function (b) {
       var on = b.dataset.mtab === which;
       b.classList.toggle("is-active", on); b.setAttribute("aria-selected", on ? "true" : "false");
     });
     $("modalHistory").hidden = !history;
     $("modalProfile").hidden = !profile;
-    $("modalView").hidden = history || profile;
+    $("modalMatch").hidden = !match;
+    $("modalView").hidden = history || profile || match;
     if (profile && currentDetailId) loadBusinessProfile(currentDetailId);
+    if (match && currentDetailId) loadMentorMatch(currentDetailId);
     if (history && currentDetailId) {
       if (!historyPanel) historyPanel = CBMHistory.mount($("modalHistory"), { key: "assignments.history",
         emptyText: "No changes recorded for this engagement yet." });
@@ -788,6 +793,147 @@
     } else {
       host.appendChild(profilePara(data.declined ? "The client chose not to pick areas."
         : "The client has not picked any areas.", "bprofile__note"));
+    }
+  }
+
+  // The Mentor match tab (Business Evaluation phase 7, BE28): the AI
+  // analysis's latest kept run and a button to run it. Advice only: nothing
+  // here assigns (Doug 11-19-26). A mentor's name opens the read-only mentor
+  // popup, whose own footer button only explains how to assign.
+  function matchSection(title) {
+    var h = document.createElement("h3");
+    h.className = "modal__h";
+    h.textContent = title;
+    return h;
+  }
+
+  function renderMentorMatch(host, id, data, message) {
+    host.innerHTML = "";
+    var head = document.createElement("div");
+    head.className = "mmatch__head";
+    var h = document.createElement("h3");
+    h.className = "modal__h";
+    h.textContent = "Mentor match";
+    head.appendChild(h);
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "cbm-button";
+    btn.textContent = data && data.latest ? "Run again" : "Run AI analysis";
+    btn.addEventListener("click", function () { runMentorMatch(id, btn); });
+    head.appendChild(btn);
+    host.appendChild(head);
+    var msg = document.createElement("p");
+    msg.className = "mmatch__msg" + (message ? " is-error" : "");
+    msg.id = "mmatchMsg";
+    msg.textContent = message || "";
+    msg.hidden = !message;
+    host.appendChild(msg);
+    var run = data && data.latest;
+    if (!run) {
+      host.appendChild(profilePara(data && data.assignedTo
+        ? "This engagement is already assigned to " + data.assignedTo + ". The mentor match is for engagements waiting for a mentor."
+        : "No AI analysis has been run for this engagement yet. Run it to get the client's needs, the kind of mentor that would suit, and up to three mentors with a reason each. It takes about half a minute.",
+        "bprofile__note"));
+      host.appendChild(profilePara("Advice only: you choose the mentor and use Assign. Mentors with fuller profiles are easier to match, so a mentor with a thin profile may be a better fit than the advice suggests.", "mmatch__help"));
+      return;
+    }
+    var r = run.result || {};
+    var when = formatDateTime(String(run.runAt || "").replace("T", " ").slice(0, 19)) || "";
+    host.appendChild(profilePara("Run " + when + (run.runByName ? " by " + run.runByName : "") +
+      ". Mentors' room is as it was then; run again for today's numbers." +
+      (run.notKept ? " This run was not saved." : ""), "bprofile__note"));
+    host.appendChild(profilePara("Advice only: you choose the mentor and use Assign. Mentors with fuller profiles are easier to match, so a mentor with a thin profile may be a better fit than the advice suggests.", "mmatch__help"));
+    (r.notes || []).forEach(function (n) { host.appendChild(profilePara(n, "bprofile__note is-error")); });
+    host.appendChild(matchSection("What this client needs"));
+    host.appendChild(profilePara(r.clientNeeds || "", "mmatch__text"));
+    host.appendChild(matchSection("The kind of mentor who would suit"));
+    host.appendChild(profilePara(r.mentorKind || "", "mmatch__text"));
+    host.appendChild(matchSection("Suggested mentors"));
+    var list = r.suggestions || [];
+    if (!list.length) host.appendChild(profilePara("The analysis did not suggest a mentor. See the points to check.", "bprofile__note"));
+    var ol = document.createElement("ol");
+    ol.className = "mmatch__list";
+    list.forEach(function (sg) {
+      var li = document.createElement("li");
+      li.className = "mmatch__item";
+      var top = document.createElement("div");
+      top.className = "mmatch__who";
+      var name = document.createElement("button");
+      name.type = "button";
+      name.className = "mentor-name-link mmatch__name";
+      name.textContent = sg.name || "(unnamed)";
+      name.title = "Open this mentor's profile";
+      name.addEventListener("click", function () {
+        mentorReviewCtx = null;   // view only: the popup's own button explains how to assign
+        openMentorDetail({ id: sg.mentorProfileId, name: sg.name,
+          activeClients: typeof sg.activeClients === "number" ? sg.activeClients : null,
+          maxCapacity: typeof sg.maximumClients === "number" ? sg.maximumClients : (sg.maximumClients === "no limit" ? -1 : null),
+          availableCapacity: typeof sg.available === "number" ? sg.available : (sg.available === "no limit" ? -1 : null) });
+      });
+      top.appendChild(name);
+      var room = document.createElement("span");
+      room.className = "mmatch__room" + (sg.atCapacity ? " is-full" : "");
+      room.textContent = sg.available === "no limit" ? sg.activeClients + " clients, no limit"
+        : sg.activeClients + " of " + sg.maximumClients + " clients" +
+          (sg.atCapacity ? ", at capacity" : (typeof sg.available === "number" ? ", " + sg.available + " available" : ""));
+      top.appendChild(room);
+      li.appendChild(top);
+      li.appendChild(profilePara(sg.reason || "", "mmatch__reason"));
+      ol.appendChild(li);
+    });
+    host.appendChild(ol);
+    var pts = r.pointsToCheck || [];
+    if (pts.length) {
+      host.appendChild(matchSection("Points to check"));
+      var ul = document.createElement("ul");
+      ul.className = "mmatch__points";
+      pts.forEach(function (p) {
+        var li = document.createElement("li");
+        li.textContent = p;
+        ul.appendChild(li);
+      });
+      host.appendChild(ul);
+    }
+  }
+
+  async function loadMentorMatch(id) {
+    var host = $("modalMatch");
+    host.innerHTML = "";
+    host.appendChild(profilePara("Loading…", "bprofile__note"));
+    var data;
+    try {
+      data = await busyOver(host, api("/engagements/" + encodeURIComponent(id) + "/mentor-match"));
+    } catch (e) {
+      if (currentDetailId !== id) return;
+      if (e.status === 401) { showLogin(); return; }
+      host.innerHTML = "";
+      host.appendChild(profilePara(e.message || "The mentor match could not be loaded.", "bprofile__note is-error"));
+      return;
+    }
+    if (currentDetailId !== id) return;
+    renderMentorMatch(host, id, data, "");
+  }
+
+  var matchRunning = false;
+  async function runMentorMatch(id, btn) {
+    if (matchRunning) return;
+    matchRunning = true;
+    var msg = $("mmatchMsg");
+    if (msg) { msg.hidden = false; msg.className = "mmatch__msg"; msg.textContent = "Running the AI analysis. This takes about half a minute…"; }
+    var done = window.CBMBusy ? CBMBusy.start(btn) : function () {};
+    try {
+      var data = await api("/engagements/" + encodeURIComponent(id) + "/mentor-match",
+        { method: "POST", body: "{}", timeoutMs: 200000 });
+      if (currentDetailId === id) renderMentorMatch($("modalMatch"), id, data, "");
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      if (currentDetailId === id && msg) {
+        msg.className = "mmatch__msg is-error";
+        msg.textContent = e.message || "The AI analysis could not be run.";
+      }
+    } finally {
+      matchRunning = false;
+      done();
     }
   }
 

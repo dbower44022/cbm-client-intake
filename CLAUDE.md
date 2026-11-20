@@ -1359,4 +1359,7 @@ the strength of it.
 - **v0.349.0 (2026-11-18) is committed, not pushed**: the home page's
   phase 3, Needs you (`HOME_V2`, off; threshold `HOME_NO_CONTACT_DAYS`).
   Stop 3 owed in #89.
+- **v0.350.0 (2026-11-19) is committed, not pushed**: Business Evaluation
+  phase 7, the mentor match (`MENTOR_MATCH`, off; migration 0051). The
+  sample review and Doug's check on the Association are owed in #83.
 Everything else still owed is in `OPEN-ITEMS.md`.

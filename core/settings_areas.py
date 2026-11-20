@@ -94,7 +94,8 @@ AREAS: tuple[Area, ...] = (
     Area(AREA_EVALUATION, (
         _h("Business Evaluation",
            "business_evaluation evaluation_link_days evaluation_retry_seconds "
-           "evaluation_analysis_seconds evaluation_model evaluation_analyze_unassigned intake_survey",
+           "evaluation_analysis_seconds evaluation_model evaluation_analyze_unassigned intake_survey "
+           "mentor_match mentor_match_model",
            lead="business_evaluation"),
     )),
     Area(AREA_STAFF, (
