@@ -5,6 +5,23 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.352.0] — 2026-11-20
+
+**feat(home): the header bar never scrolls away.** `OPEN-ITEMS.md` #89 part
+(8) (Doug, 11-19-26: "If there is a scroll bar, the menu at the top (sign
+out row) should never disappear"); dark behind `HOME_V2`.
+
+- The new home page's white bar (the applications, the Directories menu,
+  the text size and Sign out) is sticky at the top of the window. It sits
+  directly in the page body beside the sections, so the footer cannot push
+  it off at the bottom of the page.
+- On a narrow screen an open Applications menu taller than the window
+  scrolls inside the bar, so Sign out stays reachable.
+- Checked in a browser at a wide and a narrow width at Standard, Large and
+  Larger, with the Applications and Directories menus open.
+- Test: `tests/test_home_v2.py::test_the_header_bar_never_scrolls_away`.
+
+
 ## [0.351.0] — 2026-11-20
 
 **feat(home): At the chapter — the chapter's year beside the member's own,

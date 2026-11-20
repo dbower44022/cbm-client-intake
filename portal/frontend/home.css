@@ -22,6 +22,11 @@ body.home2-on main.portal.cbm-container { padding-top: 0; padding-bottom: 2rem; 
   padding: 8px 2.5rem;
   background: var(--cbm-panel);
   border-bottom: 1px solid var(--cbm-panel-border);
+  /* It never scrolls away (#89 part 8; Doug, 11-19-26). home.js puts the
+     bar directly in <body>, so it stays down to the footer. */
+  position: sticky;
+  top: 0;
+  z-index: 30;
 }
 .home2__org {
   font-weight: 700;
@@ -82,6 +87,13 @@ body.home2-on main.portal.cbm-container { padding-top: 0; padding-bottom: 2rem; 
     align-items: stretch;
   }
   .home2__bar--open .home2__nav { display: flex; }
+  /* An open menu taller than the window scrolls inside the bar, so its
+     last application and Sign out can still be reached. */
+  .home2__bar--open {
+    box-sizing: border-box;
+    max-height: calc(100 * var(--cbm-vh, 1vh));
+    overflow-y: auto;
+  }
   .home2__sep { width: auto; height: 1px; margin: 4px 0; }
   .home2__me { order: 6; flex-basis: 100%; }
 }

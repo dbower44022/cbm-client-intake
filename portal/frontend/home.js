@@ -670,7 +670,11 @@
     var now = new Date();
 
     var view = el("div", "home2"); view.id = "home2View";
-    view.appendChild(header(data));
+    // The header bar never scrolls away (#89 part 8; Doug, 11-19-26). It is
+    // sticky, and it sits directly in <body> beside the view rather than
+    // inside it, so it stays at the top down to the footer: a sticky bar
+    // inside the view would be pushed off by the footer below the view.
+    var bar = header(data); bar.id = "home2Bar";
     var main = el("div", "home2__main");
     var greet = el("div", "home2__greet");
     greet.appendChild(el("h1", null, greeting(now) + ", " + (home.firstName || data.user.name || "")));
@@ -701,6 +705,7 @@
     view.appendChild(main);
 
     var host = document.querySelector("main.portal");
+    host.parentNode.insertBefore(bar, host);
     host.parentNode.insertBefore(view, host);
     document.body.classList.add("home2-on");
     state.view = view;
@@ -742,6 +747,8 @@
     if (rail && body && !body.contains(rail)) body.insertBefore(rail, body.firstChild);
     if (ana && main && !main.contains(ana)) main.insertBefore(ana, main.firstChild);
     if (view) view.parentNode.removeChild(view);
+    var bar = document.getElementById("home2Bar");
+    if (bar) bar.parentNode.removeChild(bar);
     document.body.classList.remove("home2-on");
     state.view = null;
   }

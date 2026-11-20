@@ -219,3 +219,22 @@ def test_the_new_tokens_read_on_the_page_and_the_panel(fg, bg):
     f = _resolve(f"var({fg})", tokens)
     b = _resolve(f"var({bg})", tokens)
     assert _ratio(f, b) >= 4.5
+
+
+# --- the fixed header bar (#89 part 8; Doug, 11-19-26) -----------------------------
+
+def test_the_header_bar_never_scrolls_away():
+    css = (ROOT / "portal/frontend/home.css").read_text()
+    bar = re.search(r"\.home2__bar \{([^}]*)\}", css).group(1)
+    assert "position: sticky" in bar and "top: 0" in bar and "z-index" in bar
+    # An open narrow-screen menu scrolls inside the bar instead of running
+    # past the bottom of the window; written with --cbm-vh, never a bare vh.
+    opened = re.search(r"\.home2__bar--open \{([^}]*)\}", css).group(1)
+    assert "max-height: calc(100 * var(--cbm-vh, 1vh))" in opened
+    assert "overflow-y: auto" in opened
+    js = (ROOT / "portal/frontend/home.js").read_text()
+    # The bar sits directly in <body>, beside the view, so the footer below
+    # the view cannot push it off; leave() takes it away again.
+    assert 'bar.id = "home2Bar"' in js
+    assert "insertBefore(bar, host)" in js
+    assert 'getElementById("home2Bar")' in js
