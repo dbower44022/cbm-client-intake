@@ -1,6 +1,6 @@
 # The home page and Chapter News — plan
 
-Last Updated: 11-20-26 02:46 · Revision 1.17 — change log at the end.
+Last Updated: 11-20-26 18:59 · Revision 1.18 — change log at the end.
 
 **Status: designed 11-16-26 to 11-17-26 in a Cowork session with Doug; every
 decision below is his. Phase 0 (the contrast fix to the design tokens) is
@@ -17,7 +17,7 @@ one big test (11-20-26): `prompts/home-page-phases5-7-autonomous-prompt-v0.1.md`
 The fixed header bar is v0.352.0; phase 5 (Chapter News core) is v0.353.0, phase 6 (read reports) v0.355.0, phase 7 (the weekly digest) v0.356.0,
 dark behind `CHAPTER_NEWS`, its CRM build on the Business Mentors
 Association's CRM only. The decisions that session took on Doug's behalf are
-listed under phase 5 in § 8. One stop, the big test, closes all three.**
+listed under phase 5 in § 8. One stop, the big test, closes all three. **Big test run by Doug 11-20-26 on v0.356.3: the fixed header bar and phases 5 and 6 passed (stops 5 and 6 closed); the digest's delivery is untested (Doug, option C), so stop 7 stays open.**
 
 Mockups: the design canvas *CBM Home Page — Looks*
 (https://claude.ai/artifact/D6Gm6i9qYgBsYmMtUSfAmY). The **Mix** artboard is
@@ -472,6 +472,7 @@ switch: its push changes production's colours at once, which is intended.
 
 | Revision | Last Updated | Change |
 |---|---|---|
+| 1.18 | 11-20-26 18:59 | Big test run: header bar, phases 5 and 6 passed; stop 7 open (digest untested, option C); fixes v0.356.2 and v0.356.3. |
 | 1.17 | 11-20-26 02:46 | Phase 7 built (v0.356.0); § 9's digest question closed. |
 | 1.16 | 11-20-26 02:33 | Phase 6 built (v0.355.0). |
 | 1.15 | 11-20-26 02:12 | Fixed header bar built (v0.352.0); phase 5 built (v0.353.0) with its decisions in § 8; `audienceTeams` is a multi-select of team names. |

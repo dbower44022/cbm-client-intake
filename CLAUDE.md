@@ -1389,11 +1389,12 @@ the strength of it.
 - **v0.350.0 (2026-11-19) and its two follow-ups are pushed; phase 7
   checked on the Association 11-20-26**: Business Evaluation's mentor match
   (`MENTOR_MATCH`, off; migration 0051). Phase 8's prompt is a draft (#83).
-- **v0.352.0, v0.353.0, v0.355.0 and v0.356.0 (2026-11-20) are committed, not pushed**: the
-  home page's fixed header bar, Chapter News core (phase 5,
-  `CHAPTER_NEWS`, off), its read reports (phase 6) and the weekly digest
-  (phase 7, `NEWS_DIGEST`, off; worker job `news/digest.py`), built in one session with phases 6 and 7 (Doug's
-  prompt of 11-20-26); one big test at the end checks all of them (#89).
+- **v0.352.0 to v0.356.3 (2026-11-20) are pushed and live on the
+  Association**: the home page's fixed header bar, Chapter News core
+  (phase 5, `CHAPTER_NEWS`, off), its read reports (phase 6) and the weekly
+  digest (phase 7, `NEWS_DIGEST`, off; worker job `news/digest.py`). Doug's
+  big test 11-20-26 passed the header bar and phases 5 and 6; the digest's
+  delivery is untested (Doug, option C), so stop 7 stays open (#89).
 - **v0.354.0 (2026-11-20) is committed, not pushed**: Business Evaluation
   phases 8 and 9, feedback surveys (`FEEDBACK_SURVEYS`, off; one switch per
   moment; migration 0052). The combined check on the Association is owed in
