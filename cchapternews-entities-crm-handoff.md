@@ -1,6 +1,6 @@
 # Chapter News — CRM handoff: `CChapterNews` and `CChapterNewsReceipt`
 
-Last Updated: 11-20-26 04:10 · Revision 1.0 — change log at the end.
+Last Updated: 11-20-26 02:12 · Revision 1.0 — change log at the end.
 
 **What this adds.** Two record types for Chapter News (plan
 `prds/home-page-plan.md` § 6.4, rulings 4 to 6): a **Chapter News Item**,
@@ -115,4 +115,4 @@ publisher.
 
 | Revision | Last Updated | Change |
 |---|---|---|
-| 1.0 | 11-20-26 04:10 | Written with the build; applied on the Business Mentors Association's CRM the same day. |
+| 1.0 | 11-20-26 02:12 | Written with the build; applied on the Business Mentors Association's CRM the same day. |

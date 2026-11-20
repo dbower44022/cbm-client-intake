@@ -1,6 +1,6 @@
 # The home page and Chapter News — plan
 
-Last Updated: 11-20-26 08:10 · Revision 1.17 — change log at the end.
+Last Updated: 11-20-26 02:46 · Revision 1.17 — change log at the end.
 
 **Status: designed 11-16-26 to 11-17-26 in a Cowork session with Doug; every
 decision below is his. Phase 0 (the contrast fix to the design tokens) is
@@ -472,9 +472,9 @@ switch: its push changes production's colours at once, which is intended.
 
 | Revision | Last Updated | Change |
 |---|---|---|
-| 1.17 | 11-20-26 08:10 | Phase 7 built (v0.356.0); § 9's digest question closed. |
-| 1.16 | 11-20-26 07:30 | Phase 6 built (v0.355.0). |
-| 1.15 | 11-20-26 04:30 | Fixed header bar built (v0.352.0); phase 5 built (v0.353.0) with its decisions in § 8; `audienceTeams` is a multi-select of team names. |
+| 1.17 | 11-20-26 02:46 | Phase 7 built (v0.356.0); § 9's digest question closed. |
+| 1.16 | 11-20-26 02:33 | Phase 6 built (v0.355.0). |
+| 1.15 | 11-20-26 02:12 | Fixed header bar built (v0.352.0); phase 5 built (v0.353.0) with its decisions in § 8; `audienceTeams` is a multi-select of team names. |
 | 1.14 | 11-20-26 01:40 | Phases 5 to 7 and the fixed header to be built in one session (Doug, 11-20-26); its prompt written. |
 | 1.13 | 11-20-26 01:30 | Stop 4 passed; phase 4 closed; phase 5's prompt written. |
 | 1.12 | 11-20-26 01:05 | Phase 4 built as v0.351.0: § 4.1's At the chapter as decided, § 8's answers. |

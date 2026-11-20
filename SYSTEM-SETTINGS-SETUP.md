@@ -1,6 +1,6 @@
 # System Settings (`/setup`) — activation and use
 
-Last Updated: 11-20-26 08:10 · Revision 1.7 — see change log at the end.
+Last Updated: 11-20-26 02:46 · Revision 1.7 — see change log at the end.
 
 The admin-only page that changes this deployment's runtime settings from the
 browser instead of editing a deployment overlay and running `doctl`. Plan and
@@ -602,8 +602,8 @@ The two refusals in § 8.3 stay active with the switch off. With every
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
-| 1.7 | 11-20-26 08:10 | Claude (Claude Code) | § 4: the Chapter News weekly digest and its day and hour (v0.356.0). |
-| 1.6 | 11-20-26 04:20 | Claude (Claude Code) | § 4: Chapter News, its switch and its publishers' team (v0.353.0). |
+| 1.7 | 11-20-26 02:46 | Claude (Claude Code) | § 4: the Chapter News weekly digest and its day and hour (v0.356.0). |
+| 1.6 | 11-20-26 02:12 | Claude (Claude Code) | § 4: Chapter News, its switch and its publishers' team (v0.353.0). |
 | 1.5 | 11-18-26 01:39 | Claude (Claude Code) | § 4: the Settings tab's sub-tabs, word-by-word search, and where restart-required and service settings go (`SETTINGS_AREAS`, v0.345.0). |
 | 1.4 | 11-15-26 18:38 | Claude (Claude Code) | § 8.2, § 8.4 to § 8.7: each sub-tab is a status screen with one button and Other Actions ▾; Setup, Fix and Review run in the setup dialog (v0.337.0, Doug's rulings 11-15-26). |
 | 1.3 | 11-15-26 15:04 | Claude (Claude Code) | § 8.5: Back reaches the screens the wizard opened past, and Review the screens (v0.336.1). |

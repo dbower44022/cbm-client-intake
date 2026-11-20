@@ -1,6 +1,6 @@
 # Chapter News — a guide for publishers
 
-Last Updated: 11-20-26 08:10 · Revision 1.2 — change log at the end.
+Last Updated: 11-20-26 02:46 · Revision 1.2 — change log at the end.
 
 Chapter News is news you write once and every member sees on their home page
 when they sign in. You decide who it is for, how prominent it is, and whether
@@ -93,6 +93,6 @@ Dismissed, Acknowledged, Unread, Expired, or Not acknowledged.
 
 | Revision | Last Updated | Change |
 |---|---|---|
-| 1.2 | 11-20-26 08:10 | The weekly digest (phase 7, v0.356.0). |
-| 1.1 | 11-20-26 07:30 | Who has read it (phase 6, v0.355.0). |
-| 1.0 | 11-20-26 04:15 | First version, with phase 5 (v0.353.0). |
+| 1.2 | 11-20-26 02:46 | The weekly digest (phase 7, v0.356.0). |
+| 1.1 | 11-20-26 02:33 | Who has read it (phase 6, v0.355.0). |
+| 1.0 | 11-20-26 02:12 | First version, with phase 5 (v0.353.0). |
