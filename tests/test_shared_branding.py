@@ -40,7 +40,7 @@ ROOT = Path(__file__).resolve().parent.parent
 #: copies of a specific WordPress site and are retired by plan phase 4, not
 #: parameterized (plan § *Phase 0*, item 8).
 APP_FRONTEND_ROOTS = ("activity", "analytics", "assignments", "campaigns", "directory", "events", "forms", "mentoradmin",
-    "mentorprofile", "myemail", "ops", "portal", "sessions", "setup", "surveys",
+    "mentorprofile", "myemail", "news", "ops", "portal", "sessions", "setup", "surveys",
     "frontend/shared",
 )
 

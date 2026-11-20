@@ -5,6 +5,58 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.353.0] — 2026-11-20
+
+**feat(news): Chapter News — the News section, past news and the publishers'
+page.** Phase 5 of `prds/home-page-plan.md` (§ 6), dark behind the new
+switch `CHAPTER_NEWS` and, for the home page's part, `HOME_V2`. Built in one
+session with phases 6 and 7 at Doug's direction (11-20-26); the decisions
+taken in advance are recorded in the plan's § 8.
+
+- **The CRM build**: `CChapterNews` (title, summary, body, status, publish
+  and expiry times, importance, audience teams, call to action) and
+  `CChapterNewsReceipt` (item, member, Dismissed or Acknowledged, when).
+  `cchapternews-entities-crm-handoff.md`; built by
+  `scripts/migrate_chapter_news_schema.py` from `crm-plans/chapter-news.json`,
+  which refuses every CRM but the Business Mentors Association's. **Applied
+  there on 11-20-26** and read back; the API role creates, reads and edits
+  both; a real write under the key was probed and removed. **The audience is
+  a multi-select of team names, not a link to Team**: EspoCRM refuses any
+  link to Team (not customizable; read from its own `LinkManager` on the
+  Association's CRM), so decision 2's fallback was built. The script keeps
+  the options in step with the CRM's teams.
+- **One rule, `news/rules.py`**, which every surface calls: Published, its
+  publish time come, the member in its audience (an empty audience is every
+  member; being an administrator does not widen it); live until it expires;
+  unread until dismissed or acknowledged; ordered must acknowledge, pinned,
+  the rest, newest first. Teams are read now, so a member who joins later
+  sees the team's live items.
+- **The News section**, first on the home page: title and summary, opened by
+  a click to the body and its call-to-action button; **Dismiss**, or **I have
+  read this** for an item to acknowledge; with nothing unread, one line and
+  **Past news**. The section cannot be hidden or collapsed while an item to
+  acknowledge waits (the Hide button stays and says why). **Past news**
+  lists every item the member could see with its state: Dismissed,
+  Acknowledged, Unread, Expired or Not acknowledged.
+- **The Chapter News page** (`/news/`, a tile and named tab for publishers
+  only, `NEWS_PUBLISH_ALLOWED_TEAMS`, default System Management Team): the
+  list in the shared grid, the editor (`CBMRichText` with images stored as
+  inline attachments on the item's body, `CBMDateTime` for the two times),
+  a live preview drawn by the member's own renderer (`frontend/shared/news.js`),
+  and **Withdraw**. Every save, publish and withdraw is written to the action
+  log naming the publisher.
+- **Reads**: `GET /api/portal/home/news` and `/past`; the items are kept for
+  the whole process for 60 seconds and dropped at once when a publisher
+  saves or withdraws; a member's receipts are read per request. Members'
+  images come through `/api/portal/home/news/{id}/images/{attachment}`,
+  served only for an item the member may see and an image its body
+  references; an item a member may not see answers 404 in the same words
+  as an unknown id. Everything runs under the org-wide key: no member or
+  publisher role changes.
+- Docs: `chapter-news.md` (publishers' guide), `SYSTEM-SETTINGS-SETUP.md` § 4.
+- Tests: `tests/test_chapter_news.py`.
+
+
 ## [0.352.0] — 2026-11-20
 
 **feat(home): the header bar never scrolls away.** `OPEN-ITEMS.md` #89 part

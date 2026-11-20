@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="cbm-org" content="{{org}}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{org}} — Chapter News</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="/shared/panel.css" />
+  <link rel="stylesheet" href="/shared/grid.css" />
+  <link rel="stylesheet" href="/shared/datetime.css" />
+  <link rel="stylesheet" href="/shared/vendor/jodit/jodit.min.css" />
+  <link rel="stylesheet" href="/shared/news.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="cbm-container nw">
+    <header class="nw__header">
+      <div>
+        <h1>Chapter News</h1>
+        <p class="nw__sub">Write news for {{org}}'s members. Published items show on every member's home page, to the teams you choose.</p>
+      </div>
+      <div class="nw__user">
+        <span>Signed in as <strong id="whoName"></strong></span>
+        <button type="button" class="cbm-action--second" id="logoutBtn">Sign out</button>
+      </div>
+    </header>
+
+    <section id="msgView" hidden>
+      <p class="form-error" id="msgText" role="alert"></p>
+      <p><a href="/">Return to the sign-in page</a></p>
+    </section>
+
+    <section id="pageView" class="nw__page" hidden>
+      <div class="cbm-panel nw__list">
+        <div class="cbm-panel__head">
+          <h2 class="cbm-label">News items</h2>
+          <button type="button" class="cbm-action" id="newBtn">New item</button>
+        </div>
+        <div class="cbm-panel__body" id="listBody"></div>
+      </div>
+
+      <div class="nw__work">
+        <form class="cbm-panel nw__editor" id="editor" autocomplete="off" novalidate>
+          <div class="cbm-panel__head">
+            <h2 class="cbm-label" id="editorTitle">New item</h2>
+            <span class="cbm-pill cbm-tone--navy" id="editorStatus">Draft</span>
+          </div>
+          <div class="nw__fields">
+            <label class="nw__f nw__f--wide"><span>Title</span>
+              <input type="text" id="fTitle" maxlength="150" /></label>
+            <label class="nw__f nw__f--wide"><span>Summary <em>shown before the item is opened, and in the weekly digest</em></span>
+              <textarea id="fSummary" rows="2" maxlength="500"></textarea></label>
+            <div class="nw__f nw__f--wide"><span>Body</span><div id="fBody"></div></div>
+            <label class="nw__f"><span>Importance</span>
+              <select id="fImportance">
+                <option value="Normal">Normal</option>
+                <option value="Pinned">Pinned (shown above the rest)</option>
+                <option value="Must acknowledge">Must acknowledge (members confirm they have read it)</option>
+              </select></label>
+            <fieldset class="nw__f nw__teams"><legend>Audience <em>no team chosen means every member</em></legend>
+              <div id="fTeams"></div></fieldset>
+            <div class="nw__f"><span>Publish at <em>empty: when you publish</em></span><div id="fPublish"></div></div>
+            <div class="nw__f"><span>Expires at <em>optional</em></span><div id="fExpires"></div></div>
+            <label class="nw__f"><span>Button text <em>optional call to action</em></span>
+              <input type="text" id="fCtaLabel" maxlength="60" /></label>
+            <label class="nw__f"><span>Button address</span>
+              <input type="text" id="fCtaUrl" placeholder="https://… or /mentorsessions/" /></label>
+          </div>
+          <p class="nw__msg" id="editorMsg" role="status" hidden></p>
+          <div class="nw__buttons">
+            <button type="button" class="cbm-action--second" id="draftBtn">Save draft</button>
+            <button type="button" class="cbm-action" id="publishBtn">Publish</button>
+            <button type="button" class="cbm-action--second nw__withdraw" id="withdrawBtn">Withdraw</button>
+          </div>
+        </form>
+
+        <div class="cbm-panel nw__preview">
+          <div class="cbm-panel__head"><h2 class="cbm-label">Preview — as a member sees it</h2></div>
+          <div class="cbm-panel__body">
+            <p class="nw__previewnote">On the home page, before it is opened:</p>
+            <ul class="cbm-rows" id="previewClosed"></ul>
+            <p class="nw__previewnote">Opened:</p>
+            <ul class="cbm-rows" id="previewOpen"></ul>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <footer class="cbm-footer">
+      <p>&copy; <span data-cbm-year>2026</span> {{org}}.<span class="cbm-footer__version" data-cbm-version></span></p>
+    </footer>
+  </main>
+
+  <!-- busy.js first: it wraps fetch/XHR, so it must be in place before any
+       other script can start a request. -->
+  <script src="/shared/busy.js"></script>
+  <script src="/shared/textsize.js"></script>
+  <script src="/shared/grid.js"></script>
+  <script src="/shared/datetime.js"></script>
+  <script src="/shared/vendor/jodit/jodit.min.js"></script>
+  <script src="/shared/richtext.js"></script>
+  <script src="/shared/news.js"></script>
+  <script src="app.js"></script>
+  <script src="/shared/footer.js"></script>
+</body>
+</html>

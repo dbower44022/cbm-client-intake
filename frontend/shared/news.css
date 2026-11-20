@@ -1,0 +1,34 @@
+/* One Chapter News item (/shared/news.js): the home page's News section,
+   past news and the Chapter News page's preview. Built on /shared/panel.css
+   (rows, chips, pills, buttons); plan prds/home-page-plan.md § 5 and § 6. */
+
+.news-item { gap: 12px; align-items: flex-start; }
+.news-item .cbm-kind-chip { min-width: 96px; margin-top: 2px; }
+/* The single item waiting to be confirmed carries the amber tint. */
+.news-item--ack { background: #FFF8EA; }
+.news-item__what { flex: 1 1 auto; min-width: 0; }
+.news-item__title {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cbm-text-strong);
+  text-align: left;
+  cursor: pointer;
+}
+.news-item__title:hover { text-decoration: underline; }
+.news-item__sub { font-size: 13px; color: var(--cbm-text-muted); }
+.news-item__body[hidden] { display: none; }
+.news-item__body { margin-top: 8px; }
+.news-item__html { font-size: 14px; color: var(--cbm-text); line-height: 1.5; overflow-wrap: anywhere; }
+.news-item__html img { max-width: 100%; height: auto; }
+.news-item__html p { margin: 0 0 8px; }
+.news-item__cta { display: inline-flex; margin-top: 4px; }
+.news-item__acts { display: flex; flex-wrap: wrap; gap: 8px; flex: 0 0 auto; }
+@media (max-width: 559px) {
+  .news-item { flex-wrap: wrap; }
+  .news-item__acts { flex-basis: 100%; }
+}

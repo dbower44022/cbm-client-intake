@@ -1,0 +1,44 @@
+{
+  "name": "chapter-news",
+  "description": "Chapter News, phase 5 of prds/home-page-plan.md (§ 6.4; rulings 4 to 6): CChapterNews, one news item, and CChapterNewsReceipt, one member's Dismissed or Acknowledged on one item. Audience is a multi-select of the CRM's team names (audienceTeams), not a link: EspoCRM refuses a link to Team, which is not customizable (LinkManager, read on the Association 11-20-26). The build script fills audienceTeams' options from the CRM's teams. Additive only. No field Read-only: the application writes them all (ruling 40). Handoff: cchapternews-entities-crm-handoff.md. Built by scripts/migrate_chapter_news_schema.py, never by apply_crm_plan.py alone (it fills the team options).",
+  "entities": [
+    {"name": "ChapterNews", "type": "Base",
+     "labelSingular": "Chapter News Item", "labelPlural": "Chapter News", "stream": false},
+    {"name": "ChapterNewsReceipt", "type": "Base",
+     "labelSingular": "Chapter News Receipt", "labelPlural": "Chapter News Receipts", "stream": false}
+  ],
+  "fields": [
+    {"entity": "CChapterNews", "name": "summary", "type": "text", "label": "Summary",
+     "maxLength": 500, "rowsMin": 2,
+     "tooltipText": "Shown on the home page before the item is opened, and in the weekly digest."},
+    {"entity": "CChapterNews", "name": "body", "type": "wysiwyg", "label": "Body",
+     "tooltipText": "The full item: formatted text and images."},
+    {"entity": "CChapterNews", "name": "status", "type": "enum", "label": "Status", "audited": true,
+     "options": ["Draft", "Published", "Withdrawn"], "default": "Draft",
+     "tooltipText": "Only Published items reach members. A Withdrawn item disappears for everyone, past news included."},
+    {"entity": "CChapterNews", "name": "publishAt", "type": "datetime", "label": "Publish at",
+     "tooltipText": "A Published item reaches members from this time."},
+    {"entity": "CChapterNews", "name": "expiresAt", "type": "datetime", "label": "Expires at",
+     "tooltipText": "Optional. The item leaves the home page and the digest at this time and stays in past news."},
+    {"entity": "CChapterNews", "name": "importance", "type": "enum", "label": "Importance",
+     "options": ["Normal", "Pinned", "Must acknowledge"], "default": "Normal"},
+    {"entity": "CChapterNews", "name": "audienceTeams", "type": "multiEnum", "label": "Audience teams",
+     "options": [],
+     "tooltipText": "The teams the item is for. Empty means every member. The options are the CRM's team names, kept in step by scripts/migrate_chapter_news_schema.py."},
+    {"entity": "CChapterNews", "name": "ctaLabel", "type": "varchar", "maxLength": 60, "label": "Button text",
+     "tooltipText": "Optional call to action: the button's words."},
+    {"entity": "CChapterNews", "name": "ctaUrl", "type": "url", "label": "Button address",
+     "tooltipText": "Optional call to action: where the button goes."},
+    {"entity": "CChapterNewsReceipt", "name": "action", "type": "enum", "label": "Action",
+     "options": ["Dismissed", "Acknowledged"], "default": "Dismissed"},
+    {"entity": "CChapterNewsReceipt", "name": "actedAt", "type": "datetime", "label": "Acted at"}
+  ],
+  "links": [
+    {"entity": "CChapterNewsReceipt", "link": "news", "linkType": "manyToOne",
+     "entityForeign": "CChapterNews", "linkForeign": "receipts",
+     "label": "News item", "labelForeign": "Receipts"},
+    {"entity": "CChapterNewsReceipt", "link": "member", "linkType": "manyToOne",
+     "entityForeign": "User", "linkForeign": "chapterNewsReceipts",
+     "label": "Member", "labelForeign": "Chapter news receipts"}
+  ]
+}

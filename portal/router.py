@@ -140,6 +140,10 @@ def _apps_for(user: dict[str, Any], settings: Settings) -> list[dict[str, str]]:
     # (mentor login integrity step 6). Read per request.
     if settings.activity_page and is_member(user, settings.system_management_allowed_teams_list):
         apps.append({"title": "Activity", "url": "/activity/", "target": "cbm-activity"})
+    # Chapter News (prds/home-page-plan.md § 6.2): its own page, shown only
+    # to publishers. Read per request.
+    if settings.chapter_news and is_member(user, settings.news_publish_allowed_teams_list):
+        apps.append({"title": "Chapter News", "url": "/news/", "target": "cbm-news"})
     # System Settings — EspoCRM administrators only (ruling 1). Not team-gated:
     # this page can reconfigure the platform, so the smallest audience wins.
     if settings.setup_active and user.get("isAdmin"):
@@ -182,9 +186,10 @@ async def _extra_tiles(payload: dict, user: dict[str, Any], settings: Settings) 
 def _home_sections(user: dict[str, Any], settings: Settings) -> list[str]:
     """The new home page's section frames this member is entitled to, in the
     plan's order (prds/home-page-plan.md § 4.1, ruling 2: one page that adapts
-    by role). Today and My clients are a mentor's; Needs you is a mentor's or a
-    staff queue's; At the chapter is everyone's. Chapter News has no frame
-    until phase 5, and the public pages frame shows when there are pages."""
+    by role). Chapter News is everyone's (phase 5, behind CHAPTER_NEWS); Today
+    and My clients are a mentor's; Needs you is a mentor's or a staff queue's;
+    At the chapter is everyone's; the public pages frame shows when there are
+    pages."""
     mentoring = is_member(user, settings.session_mentor_allowed_teams_list)
     queues = any(
         is_member(user, teams)
@@ -197,6 +202,11 @@ def _home_sections(user: dict[str, Any], settings: Settings) -> list[str]:
         )
     )
     sections = []
+    # Chapter News, first on the page (§ 4.1; decision 9 of the phases 5 to 7
+    # prompt). Every member; the section hides itself where the CRM has no
+    # Chapter News yet.
+    if settings.chapter_news:
+        sections.append("news")
     if mentoring:
         sections.append("today")
     if mentoring or queues:

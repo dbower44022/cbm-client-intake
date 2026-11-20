@@ -21,6 +21,9 @@
   //: The frames, in the plan's order. `note` is the one plain line a frame
   //: shows while it has nothing to show yet.
   var FRAMES = [
+    // Chapter News, first (§ 4.1; phase 5). It cannot be hidden while an
+    // item to acknowledge waits (§ 4.3).
+    { key: "news", title: "Chapter News", note: "" },
     { key: "today", title: "Today", pair: true,
       note: "Your sessions for today will show here." },
     { key: "needs", title: "Needs you", pair: true,
@@ -38,7 +41,7 @@
     { key: "analytics", title: "Analytics", note: "" },
   ];
 
-  var state = { prefs: { collapsed: [], hidden: [] }, view: null, hooks: {},
+  var state = { prefs: { collapsed: [], hidden: [] }, view: null, hooks: {}, newsBlocks: false,
                 greet: { line: null, now: null, sessions: null, needs: null } };
 
   function el(tag, cls, text) {
@@ -209,6 +212,11 @@
     hide.type = "button";
     hide.setAttribute("aria-label", "Hide " + f.title);
     hide.addEventListener("click", function () {
+      // The button stays (never disabled or hidden); it says why not.
+      if (f.key === "news" && state.newsBlocks) {
+        message("Chapter News can't be hidden while an item asks you to confirm you have read it.");
+        return;
+      }
       toggleList("hidden", f.key, true);
       apply(); save();
     });
@@ -587,6 +595,110 @@
     note(body, def.note);
   }
 
+  // --- Chapter News (phase 5) -------------------------------------------------------
+  // GET /api/portal/home/news: the member's unread items, in order (the
+  // server's news/rules.py decides). Dismiss and I have read this act in
+  // place (ruling 1); Past news opens below the list.
+  var NEWS_URL = "/api/portal/home/news";
+
+  function readJson(r) {
+    return r.json().catch(function () { return null; }).then(function (d) {
+      if (!r.ok) throw new Error((d && d.detail) || ("the server answered " + r.status));
+      return d;
+    });
+  }
+
+  function newsAct(sec, it, action, btn) {
+    var done = window.CBMBusy && CBMBusy.start ? CBMBusy.start(btn) : function () {};
+    message("");
+    fetch(NEWS_URL + "/" + encodeURIComponent(it.id) + "/" + action, {
+      method: "POST", credentials: "same-origin",
+    }).then(readJson).then(function () {
+      done();
+      var li = btn.closest("li");
+      if (li && li.parentNode) li.parentNode.removeChild(li);
+      loadNews(sec, true);
+    }).catch(function (e) {
+      done();
+      message("That could not be recorded: " + e.message + ".");
+    });
+  }
+
+  function pastBlock(sec) {
+    var wrap = el("div", "home2__past");
+    wrap.hidden = true;
+    var toggle = el("button", "cbm-action--quiet home2__pastbtn", "Past news");
+    toggle.type = "button";
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.addEventListener("click", function () {
+      var open = wrap.hidden;
+      wrap.hidden = !open;
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      toggle.textContent = open ? "Hide past news" : "Past news";
+      if (open) loadPast(wrap);
+    });
+    sec._pastToggle = toggle;
+    return { toggle: toggle, wrap: wrap };
+  }
+
+  function loadPast(wrap) {
+    clearBody(wrap);
+    var read = fetch(NEWS_URL + "/past", { credentials: "same-origin" }).then(readJson);
+    if (window.CBMBusy && CBMBusy.loading) CBMBusy.loading(wrap, read);
+    read.then(function (d) {
+      clearBody(wrap);
+      wrap.appendChild(el("h3", "cbm-label home2__sublabel", "Past news"));
+      var items = d.items || [];
+      if (!items.length) { note(wrap, "There is no past news yet."); return; }
+      var ul = el("ul", "cbm-rows home2__news");
+      items.forEach(function (it) { ul.appendChild(CBMNews.item(it, { past: true })); });
+      wrap.appendChild(ul);
+    }).catch(function (e) {
+      clearBody(wrap);
+      note(wrap, "Past news could not be read just now: " + e.message + ". Try again in a moment.");
+    });
+  }
+
+  function fillNews(sec, data) {
+    var body = sec._body;
+    clearBody(body);
+    var items = data.items || [];
+    state.newsBlocks = !!data.blocksHiding;
+    if (items.length) {
+      var ul = el("ul", "cbm-rows home2__news");
+      items.forEach(function (it) {
+        ul.appendChild(CBMNews.item(it, {
+          onAct: function (item, action, btn) { newsAct(sec, item, action, btn); },
+        }));
+      });
+      body.appendChild(ul);
+    }
+    var past = pastBlock(sec);
+    var line = el("p", "cbm-panel__note home2__newsline");
+    if (!items.length) line.appendChild(document.createTextNode("No unread news. "));
+    line.appendChild(past.toggle);
+    body.appendChild(line);
+    body.appendChild(past.wrap);
+    var count = sec.querySelector(".home2__newscount");
+    if (count) { count.textContent = items.length ? items.length + " unread" : ""; count.hidden = !items.length; }
+    apply();
+  }
+
+  function loadNews(sec, quiet) {
+    if (!sec) return;
+    var read = fetch(NEWS_URL, { credentials: "same-origin" }).then(readJson);
+    if (!quiet && window.CBMBusy && CBMBusy.loading) CBMBusy.loading(sec._body, read);
+    read.then(function (data) {
+      // The CRM has no Chapter News yet: the frame stays away.
+      if (!data.available) { sec._absent = true; state.newsBlocks = false; apply(); return; }
+      sec._absent = false;
+      fillNews(sec, data);
+    }).catch(function (e) {
+      clearBody(sec._body);
+      note(sec._body, "The news could not be read just now: " + e.message + ". Reload the page to try again.");
+    });
+  }
+
   // --- collapse and hide --------------------------------------------------------
   function toggleList(which, key, on) {
     var list = state.prefs[which].filter(function (k) { return k !== key; });
@@ -606,8 +718,11 @@
     var hiddenNames = [];
     view.querySelectorAll(".home2__frame").forEach(function (sec) {
       var key = sec.dataset.section;
-      var collapsed = state.prefs.collapsed.indexOf(key) >= 0;
-      var hidden = state.prefs.hidden.indexOf(key) >= 0;
+      // An item to acknowledge keeps Chapter News open and shown (§ 4.3),
+      // whatever the member chose before; the choice itself is kept.
+      var forced = key === "news" && state.newsBlocks;
+      var collapsed = !forced && state.prefs.collapsed.indexOf(key) >= 0;
+      var hidden = !forced && state.prefs.hidden.indexOf(key) >= 0;
       sec.classList.toggle("cbm-panel--collapsed", collapsed);
       sec._fold.setAttribute("aria-expanded", collapsed ? "false" : "true");
       sec._fold.querySelector(".home2__foldword").textContent = collapsed ? "Expand" : "Collapse";
@@ -692,6 +807,9 @@
       var sec = frame(f);
       frames[f.key] = sec;
       if (f.pair2 && !pair2.parentNode) main.appendChild(pair2);
+      // Chapter News comes before Today and Needs you (§ 4.1), whose pair
+      // is already on the page.
+      if (f.key === "news") { main.insertBefore(sec, pair); return; }
       (f.pair ? pair : f.pair2 ? pair2 : main).appendChild(sec);
     });
     if (frames.analytics) moveIn(frames.analytics._body, "analyticsSection", frames.analytics._def);
@@ -712,6 +830,11 @@
     apply();
     var waiting = loadPrefs();
     if (window.CBMBusy && CBMBusy.loading) CBMBusy.loading(main, waiting);
+    if (frames.news) {
+      var cnt = el("span", "cbm-count home2__newscount"); cnt.hidden = true;
+      frames.news.querySelector(".cbm-label").appendChild(cnt);
+      loadNews(frames.news);
+    }
     loadMentoring(frames, greetLine, now);
     loadNeeds(frames);
     loadChapter(frames);

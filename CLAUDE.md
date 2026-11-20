@@ -398,7 +398,15 @@ enforces their ACL and records them as modifier. The dev app (no
   /api/portal/home/chapter`** (phase 4): rules in `portal/chapter.py`; the
   year's figures and the running call campaigns are kept for the whole
   application for 15 minutes (`_shared`), read with the chapter-wide key;
-  the Analytics dashboard sits in its own last panel.
+  the Analytics dashboard sits in its own last panel. **The header bar is
+  sticky and sits in `<body>` beside the view** (v0.352.0), so the footer
+  cannot push it off. **Chapter News** (`CHAPTER_NEWS`, phase 5; package
+  `news/`): who sees an item is `news/rules.py` alone — never re-filter
+  news elsewhere; everything runs under the org-wide key (members' receipts
+  and publishers' items alike, the publisher gate is
+  `NEWS_PUBLISH_ALLOWED_TEAMS`); the member's renderer
+  `frontend/shared/news.js` also draws the publisher's preview. The CRM
+  record types exist on the Association's CRM only.
 - **The events rail and the member page** (`PORTAL_CALENDAR`, off by
   default): what the rail selects is `events/service.portal_calendar` +
   `events/visibility.py` — never re-filter in the portal. Detail in
@@ -1374,4 +1382,8 @@ the strength of it.
 - **v0.350.0 (2026-11-19) and its two follow-ups are pushed; phase 7
   checked on the Association 11-20-26**: Business Evaluation's mentor match
   (`MENTOR_MATCH`, off; migration 0051). Phase 8's prompt is a draft (#83).
+- **v0.352.0 and v0.353.0 (2026-11-20) are committed, not pushed**: the
+  home page's fixed header bar and Chapter News core (phase 5,
+  `CHAPTER_NEWS`, off), built in one session with phases 6 and 7 (Doug's
+  prompt of 11-20-26); one big test at the end checks all of them (#89).
 Everything else still owed is in `OPEN-ITEMS.md`.

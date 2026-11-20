@@ -217,7 +217,7 @@ STAFF_PAGES = (
     "directory/frontend/mentor.html", "directory/frontend/record.html",
     "events/frontend/index.html", "mentoradmin/frontend/index.html",
     "mentorprofile/frontend/index.html", "myemail/frontend/index.html",
-    "ops/frontend/index.html", "portal/frontend/event.html",
+    "news/frontend/index.html", "ops/frontend/index.html", "portal/frontend/event.html",
     "portal/frontend/index.html", "sessions/frontend/index.html",
     "setup/frontend/index.html",
 )
@@ -243,7 +243,7 @@ def test_no_staff_stylesheet_sizes_by_the_window_without_the_zoom_correction():
     bare = re.compile(r"(?<![\w.#-])\d+(?:\.\d+)?d?v[hw]\b")
     roots = ("frontend/shared", "portal", "sessions", "assignments", "mentoradmin",
              "mentorprofile", "myemail", "ops", "campaigns/frontend", "directory",
-             "events/frontend", "analytics", "setup", "activity")
+             "events/frontend", "analytics", "setup", "activity", "news")
     found = []
     for r in roots:
         for p in (ROOT / r).rglob("*"):

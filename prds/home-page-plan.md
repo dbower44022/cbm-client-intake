@@ -1,6 +1,6 @@
 # The home page and Chapter News — plan
 
-Last Updated: 11-20-26 01:40 · Revision 1.14 — change log at the end.
+Last Updated: 11-20-26 04:30 · Revision 1.15 — change log at the end.
 
 **Status: designed 11-16-26 to 11-17-26 in a Cowork session with Doug; every
 decision below is his. Phase 0 (the contrast fix to the design tokens) is
@@ -12,9 +12,12 @@ him the same day, which closed the phase. Phase 3 (Needs you) is built as
 v0.349.0, with Doug's two changes at its stop as v0.349.1 and v0.350.1,
 dark behind `HOME_V2`; stop 3 passed on 11-20-26, which closed the phase.
 Phase 4 (At the chapter) is built as v0.351.0, dark behind `HOME_V2`,
-and passed stop 4 on 11-20-26, which closed the phase. Phases 5 to 7 are
-not started; Doug asked for them in one session with the fixed header bar
-and one big test (11-20-26): `prompts/home-page-phases5-7-autonomous-prompt-v0.1.md`.**
+and passed stop 4 on 11-20-26, which closed the phase. Doug asked for phases 5 to 7 in one session with the fixed header bar and
+one big test (11-20-26): `prompts/home-page-phases5-7-autonomous-prompt-v0.1.md`.
+The fixed header bar is v0.352.0; phase 5 (Chapter News core) is v0.353.0,
+dark behind `CHAPTER_NEWS`, its CRM build on the Business Mentors
+Association's CRM only. The decisions that session took on Doug's behalf are
+listed under phase 5 in § 8. One stop, the big test, closes all three.**
 
 Mockups: the design canvas *CBM Home Page — Looks*
 (https://claude.ai/artifact/D6Gm6i9qYgBsYmMtUSfAmY). The **Mix** artboard is
@@ -272,7 +275,7 @@ publisher action is recorded through `core/action_log.py`.
 | `publishAt` | Date-time | Goes live at this time |
 | `expiresAt` | Date-time, optional | Leaves the News section at this time |
 | `importance` | Enum | Normal, Pinned, Must acknowledge |
-| `audienceTeams` | Link-multiple to Team | Empty means every member |
+| `audienceTeams` | Multi-enum of team names | Empty means every member. Built as a multi-select, not a link: EspoCRM refuses any link to Team (not customizable); the build script keeps its options in step with the CRM's teams |
 | `ctaLabel` | Varchar, optional | The button's text |
 | `ctaUrl` | URL, optional | Where the button goes |
 
@@ -405,6 +408,31 @@ switch: its push changes production's colours at once, which is intended.
   Chapter News page with the editor, preview and withdraw; the publisher team
   setting. **Stop 5**: Doug publishes one item of each importance and reads
   them as a mentor.
+  **Built v0.353.0 (11-20-26), one session with phases 6 and 7; the stop is
+  the big test at the end of that session.** CRM build applied on the
+  Association's CRM only (`scripts/migrate_chapter_news_schema.py`, which
+  refuses any other). The decisions taken in advance at Doug's direction of
+  11-20-26, each with its cost: (1) one release per phase (four version
+  numbers); (2) audience by team — **changed**: EspoCRM's own code refuses a
+  link to Team, so the fallback was built, a multi-select of team names kept
+  in step by the build script (a team renamed later needs the options
+  updated, and items keep the old name); (3) members and publishers write
+  under the org-wide key, gated by this application (the CRM's history
+  names the API user; the action log names the publisher); (4) publishers
+  are `NEWS_PUBLISH_ALLOWED_TEAMS`, default System Management Team (on the
+  Association only Doug's account is in it); (5) publishing is its own
+  application, Chapter News at `/news/`; (6) images are inline attachments
+  on the body, shown to members through a proxy that serves only an image
+  the item's body references, for an item the member may see; (7) an
+  expired item to acknowledge stops prompting and says "Not acknowledged"
+  in past news; (8) the items are kept 60 seconds for the whole process and
+  dropped at once on a publish, edit or withdraw (another web process can
+  show a withdrawn item for up to a minute); (9) the News section is first
+  on the page and cannot be hidden **or collapsed** while an item to
+  acknowledge waits (collapsing would hide the item as surely). Taken in the
+  build: being an administrator does not widen an audience (an
+  administrator outside it sees the item only on the Chapter News page),
+  and editing a published item resets no one's read status (§ 6.3).
 - **Phase 6 — read reports.** On the Chapter News page. **Stop 6**.
 - **Phase 7 — the weekly digest.** Switch `NEWS_DIGEST`. A weekly worker job
   emails each member with unread items one list, from the shared mailbox
@@ -427,6 +455,7 @@ switch: its push changes production's colours at once, which is intended.
 
 | Revision | Last Updated | Change |
 |---|---|---|
+| 1.15 | 11-20-26 04:30 | Fixed header bar built (v0.352.0); phase 5 built (v0.353.0) with its decisions in § 8; `audienceTeams` is a multi-select of team names. |
 | 1.14 | 11-20-26 01:40 | Phases 5 to 7 and the fixed header to be built in one session (Doug, 11-20-26); its prompt written. |
 | 1.13 | 11-20-26 01:30 | Stop 4 passed; phase 4 closed; phase 5's prompt written. |
 | 1.12 | 11-20-26 01:05 | Phase 4 built as v0.351.0: § 4.1's At the chapter as decided, § 8's answers. |

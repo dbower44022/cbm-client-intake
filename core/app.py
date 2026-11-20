@@ -65,6 +65,7 @@ SESSIONS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "sessions" / "f
 DIRECTORY_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "directory" / "frontend"
 MYEMAIL_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "myemail" / "frontend"
 ACTIVITY_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "activity" / "frontend"
+NEWS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "news" / "frontend"
 EVENTS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "events" / "frontend"
 CAMPAIGNS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "campaigns" / "frontend"
 CAMPAIGNS_LANDING_DIR = Path(__file__).resolve().parent.parent / "campaigns" / "landing_frontend"
@@ -1125,6 +1126,14 @@ def create_app(
         # The activity page (mentor login integrity step 6). Always mounted;
         # ACTIVITY_PAGE is read per request, so /setup switches it live.
         app.include_router(activity_router)
+        # Chapter News (prds/home-page-plan.md § 6): the home page's News
+        # section and the publishers' page. Always mounted; CHAPTER_NEWS and
+        # HOME_V2 are read per request.
+        from news import api_router as news_router
+        from news import member_router as news_member_router
+
+        app.include_router(news_member_router)
+        app.include_router(news_router)
         app.include_router(assignments_router)
         app.include_router(ops_router)
         app.include_router(mentoradmin_router)
@@ -1450,6 +1459,12 @@ def create_app(
             "/activity",
             BrandedStaticFiles(directory=str(ACTIVITY_FRONTEND_DIR), html=True),
             name="activity-frontend",
+        )
+    if settings.assignments_active and NEWS_FRONTEND_DIR.is_dir():
+        app.mount(
+            "/news",
+            BrandedStaticFiles(directory=str(NEWS_FRONTEND_DIR), html=True),
+            name="news-frontend",
         )
     if settings.assignments_active and MYEMAIL_FRONTEND_DIR.is_dir():
         app.mount(

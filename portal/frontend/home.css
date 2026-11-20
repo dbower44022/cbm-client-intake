@@ -261,3 +261,12 @@ body.home2-on main.portal.cbm-container { padding-top: 0; padding-bottom: 2rem; 
   color: var(--cbm-text-strong);
   font: inherit;
 }
+
+/* --- Chapter News (phase 5) ------------------------------------------------ */
+.home2__newscount { margin-left: 8px; }
+.home2__newscount[hidden] { display: none; }
+.home2__newsline { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.home2__news + .home2__newsline { border-top: 1px solid var(--cbm-panel-border); }
+.home2__pastbtn { padding-left: 0; padding-right: 0; color: var(--cbm-navy); }
+.home2__past[hidden] { display: none; }
+.home2__past { border-top: 1px solid var(--cbm-panel-border); }

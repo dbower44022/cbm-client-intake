@@ -612,6 +612,11 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="On the new home page, a client with no contact for longer than this "
             "is listed under Needs you. On-Hold clients are never listed. 0 leaves "
             "the kind out."),
+    _s("chapter_news", GROUP_FEATURES, "Chapter News", kind="bool",
+       help="News that publishers write and every member sees on the new home page, "
+            "with past news, items to acknowledge and the Chapter News page for "
+            "publishers. Needs the new home page on, and the CRM's Chapter News "
+            "record types (it stays dark until they exist)."),
     _s("portal_events_window_days", GROUP_FEATURES, "Portal calendar window", kind="int",
        unit="days",
        help="How many days ahead the rail lists in full; events beyond fold behind "
@@ -909,6 +914,9 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("system_management_allowed_teams", GROUP_GATES, "System Management", kind="csv",
        help="The team whose members see the activity page (and later System Management functions). Copy the team's name "
             "exactly; administrators always pass."),
+    _s("news_publish_allowed_teams", GROUP_GATES, "Chapter News — publishers", kind="csv",
+       help="The team whose members write and publish Chapter News. Copy the team's "
+            "name exactly; administrators always pass."),
     _s("mentor_profile_allowed_teams", GROUP_GATES, "My Mentor Profile", kind="csv"),
     _s("ops_allowed_teams", GROUP_GATES, "Submission Admin", kind="csv"),
     _s("session_mentor_allowed_teams", GROUP_GATES, "Client Management", kind="csv"),

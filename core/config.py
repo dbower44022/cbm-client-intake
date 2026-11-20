@@ -907,6 +907,14 @@ class Settings(BaseSettings):
     # Needs you (phase 3): a client with no contact for longer than this many
     # days is listed. Read per request; 0 leaves the kind out.
     home_no_contact_days: int = 21
+    # --- Chapter News (prds/home-page-plan.md § 6; phase 5) ---
+    # The News section on the new home page, past news and the Chapter News
+    # page for publishers. Needs HOME_V2 for the home page's part, and the
+    # CRM's CChapterNews and CChapterNewsReceipt (detected from metadata; the
+    # feature stays dark until they exist). Read per request.
+    chapter_news: bool = False
+    # Who may write and publish news (§ 6.3). Administrators always pass.
+    news_publish_allowed_teams: str = "System Management Team"
     # --- F5: the portal calendar (prds/events/CBM_Events_Portal_Calendar_Design.md) ---
     # The rail of upcoming events on the portal home page and the member page
     # behind it. Off by default so crm-test can show it to a real member first:
@@ -1116,6 +1124,10 @@ class Settings(BaseSettings):
     @property
     def assign_allowed_roles_list(self) -> list[str]:
         return [r.strip() for r in self.assign_allowed_roles.split(",") if r.strip()]
+
+    @property
+    def news_publish_allowed_teams_list(self) -> list[str]:
+        return [t.strip() for t in self.news_publish_allowed_teams.split(",") if t.strip()]
 
     @property
     def system_management_allowed_teams_list(self) -> list[str]:
