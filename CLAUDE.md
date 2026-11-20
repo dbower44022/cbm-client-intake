@@ -394,7 +394,11 @@ enforces their ACL and records them as modifier. The dev app (no
   /api/portal/home/needs`** (phase 3): its rules are `portal/needs.py`, it
   shares that same engagement read for 20 seconds per sign-in, and its
   staff rows are the attention counts (`_attention_items`), so the bar's
-  badges show only when its read fails.
+  badges show only when its read fails. **At the chapter reads `GET
+  /api/portal/home/chapter`** (phase 4): rules in `portal/chapter.py`; the
+  year's figures and the running call campaigns are kept for the whole
+  application for 15 minutes (`_shared`), read with the chapter-wide key;
+  the Analytics dashboard sits in its own last panel.
 - **The events rail and the member page** (`PORTAL_CALENDAR`, off by
   default): what the rail selects is `events/service.portal_calendar` +
   `events/visibility.py` — never re-filter in the portal. Detail in
@@ -1362,6 +1366,8 @@ the strength of it.
   `HOME_NO_CONTACT_DAYS`), with Doug's two changes at stop 3 (an Email row
   opens the conversation on the record; whole rows open). **Stop 3 passed
   11-20-26; phase 3 closed.**
+- **v0.351.0 (2026-11-20) is committed, not pushed**: the home page's
+  phase 4, At the chapter (`HOME_V2`, off). Stop 4 owed in #89.
 - **v0.350.0 (2026-11-19) and its two follow-ups are pushed; phase 7
   checked on the Association 11-20-26**: Business Evaluation's mentor match
   (`MENTOR_MATCH`, off; migration 0051). Phase 8's prompt is a draft (#83).
