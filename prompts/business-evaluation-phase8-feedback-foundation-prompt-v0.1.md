@@ -1,10 +1,10 @@
 # Kickoff prompt — Business Evaluation, phase 8: feedback surveys, the foundation
 
-Last Updated: 11-20-26 00:59 · Revision 0.1 — see change log at the end.
+Last Updated: 11-20-26 01:10 · Revision 0.2 — see change log at the end.
 
-**Draft, for Doug's approval.** Written by the session that closed phase 7
+**Approved by Doug 11-20-26.** Written by the session that closed phase 7
 (11-20-26), from plan revision 0.18 and what phases 6 and 7 actually built.
-Once approved, start a fresh Claude Code session rooted in
+Start a fresh Claude Code session rooted in
 `~/Dropbox/Projects/cbm-client-intake`, tell it to read this file, and tell
 it to follow everything below the line.
 
@@ -133,3 +133,4 @@ The partner offering: phase 10. A staff survey builder: later (BE29).
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
 | 0.1 | 11-20-26 00:59 | Claude (Claude Code) | Drafted at the close of phase 7, from plan revision 0.18. |
+| 0.2 | 11-20-26 01:10 | Claude (Claude Code) | Approved by Doug. |
