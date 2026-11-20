@@ -34,9 +34,14 @@ docker pull -q "nginx:$tag" || { echo "STOP: nginx:$tag could not be pulled; not
 echo "Testing the server's own configuration with the new image ..."
 mounts="$(docker inspect -f '{{range .Mounts}}-v {{.Source}}:{{.Destination}}:ro {{end}}' espocrm-nginx)"
 net="$(docker inspect -f '{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}' espocrm-nginx | awk '{print $1}')"
-# Same network as the live container, so the upstream names in the config resolve.
+# Same network as the live container, so the upstream names in the config resolve,
+# and the same environment, so the image's template step fills in the same values
+# (the CRMBuilder config uses $NGINX_HOST and friends).
+envfile="$(mktemp)"; trap 'rm -f "$envfile"' EXIT
+docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' espocrm-nginx \
+  | grep -v -E '^$|^(PATH|NGINX_VERSION|NJS_VERSION|NJS_RELEASE|PKG_RELEASE|DYNPKG_RELEASE)=' > "$envfile"
 # shellcheck disable=SC2086
-if ! docker run --rm --network "$net" $mounts "nginx:$tag" nginx -t 2>&1 | tail -3; then
+if ! docker run --rm --network "$net" --env-file "$envfile" $mounts "nginx:$tag" nginx -t 2>&1 | tail -3; then
   echo "STOP: the configuration does not pass nginx -t with nginx:$tag; nothing was changed." >&2; exit 1
 fi
 
