@@ -1362,7 +1362,7 @@ the strength of it.
   `HOME_NO_CONTACT_DAYS`), with Doug's two changes at stop 3 (an Email row
   opens the conversation on the record; whole rows open). **Stop 3 passed
   11-20-26; phase 3 closed.**
-- **v0.350.0 (2026-11-19) is committed, not pushed**: Business Evaluation
-  phase 7, the mentor match (`MENTOR_MATCH`, off; migration 0051). The
-  sample review and Doug's check on the Association are owed in #83.
+- **v0.350.0 (2026-11-19) and its two follow-ups are pushed; phase 7
+  checked on the Association 11-20-26**: Business Evaluation's mentor match
+  (`MENTOR_MATCH`, off; migration 0051). Phase 8's prompt is a draft (#83).
 Everything else still owed is in `OPEN-ITEMS.md`.
