@@ -1,6 +1,6 @@
 # mentoradmin/ — Mentor Administration
 
-Last Updated: 11-20-26 03:20 · Revision 1.7
+Last Updated: 11-20-26 02:20 · Revision 1.7
 
 Detail for the Mentor Administration application (`/mentoradmin`): the roster, the editable mentor record, completeness, provisioning and the status sweep.
 
@@ -125,7 +125,7 @@ detail screen that edits any whitelisted field on `CMentorProfile`.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
-| 1.7 | 11-20-26 03:20 | Claude (Claude Code) | The Feedback tab (feedback surveys, phases 8 and 9). |
+| 1.7 | 11-20-26 02:20 | Claude (Claude Code) | The Feedback tab (feedback surveys, phases 8 and 9). |
 | 1.6 | 11-06-26 02:16 | Claude (Claude Code) | The History tab (v0.311.0). |
 | 1.5 | 11-05-26 22:49 | Claude (Claude Code) | The login fault list (v0.308.0). |
 | 1.4 | 11-05-26 18:05 | Claude (Claude Code) | The CBM email lock (v0.306.0). |

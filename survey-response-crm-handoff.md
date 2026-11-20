@@ -1,6 +1,6 @@
 # CRM handoff — feedback surveys (Business Evaluation phases 8 and 9): `CSurveyResponse`
 
-Last Updated: 11-20-26 03:20 · Revision 0.1 — see change log at the end.
+Last Updated: 11-20-26 02:20 · Revision 0.1 — see change log at the end.
 
 One new record type: one Survey Response record per submitted feedback
 survey. Each response is linked to what it is about, which is one of:
@@ -102,4 +102,4 @@ CRM.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
-| 0.1 | 11-20-26 03:20 | Claude (Claude Code) | Created with phases 8 and 9. |
+| 0.1 | 11-20-26 02:20 | Claude (Claude Code) | Created with phases 8 and 9. |

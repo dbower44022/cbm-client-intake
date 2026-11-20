@@ -1,6 +1,6 @@
 # events/ — Events, Webinars and the public pages
 
-Last Updated: 11-20-26 03:20 · Revision 1.8
+Last Updated: 11-20-26 02:20 · Revision 1.8
 
 Detail for Event Administration (`/events`), the public programme pages (`/webinars/`), presenters, topics, attendance, follow-ups, reporting and the portal events rail.
 
@@ -397,7 +397,7 @@ would be indistinguishable from a slug.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
-| 1.8 | 11-20-26 03:20 | Claude (Claude Code) | Feedback surveys: the Survey card and the Feedback tab. |
+| 1.8 | 11-20-26 02:20 | Claude (Claude Code) | Feedback surveys: the Survey card and the Feedback tab. |
 | 1.7 | 11-18-26 01:38 | Claude (Claude Code) | Readiness before a live check: the Event hosting card (plan § 8). |
 | 1.6 | 11-17-26 11:55 | Claude (Claude Code) | Hosting methods, step 5: the event form and the check before a save. |
 | 1.5 | 11-17-26 11:20 | Claude (Claude Code) | Hosting methods, step 4 built: `events/hosting.py`, members-only Zoom Meetings (option B), Other platform's switch, EH4 on the server. |

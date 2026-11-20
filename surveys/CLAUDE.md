@@ -1,6 +1,6 @@
 # surveys/ — the survey engine
 
-Last Updated: 11-20-26 03:20 · Revision 1.2
+Last Updated: 11-20-26 02:20 · Revision 1.2
 
 What any kind of survey uses (ruling BE23, `prds/business-evaluation-plan.md`).
 Claude Code loads this file only when a session works in this folder.
@@ -83,4 +83,4 @@ the engine yet: surveys staff can edit.
 |---|---|---|---|
 | 1.0 | 11-13-26 14:53 | Claude (Claude Code) | Created in phase 2b (ruling BE23). |
 | 1.1 | 11-16-26 13:30 | Claude (Claude Code) | The per-link page words and the offer of more surveys (Business Evaluation phase 6). |
-| 1.2 | 11-20-26 03:20 | Claude (Claude Code) | The `score` question type and `{{org}}` in survey text; feedback surveys the second purpose (phases 8 and 9). |
+| 1.2 | 11-20-26 02:20 | Claude (Claude Code) | The `score` question type and `{{org}}` in survey text; feedback surveys the second purpose (phases 8 and 9). |

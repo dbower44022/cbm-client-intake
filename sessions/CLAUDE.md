@@ -1,6 +1,6 @@
 # sessions/ — Client, Partner and Funder Management
 
-Last Updated: 11-20-26 03:20 · Revision 1.14
+Last Updated: 11-20-26 02:20 · Revision 1.14
 
 Detail for the session engine behind Client Management (`/mentorsessions`), Partner Management (`/partnersessions`) and Funder Management (`/sponsorsessions`): the grids, every record tab, quick add, managers and co-mentors, and the traps of this package.
 
@@ -24,7 +24,7 @@ one shared frontend that derives its domain from the first segment of its URL.
 
 | slug | parent | owned-records link on the user's `CMentorProfile` | co-mentors |
 |---|---|---|---|
-| 1.14 | 11-20-26 03:20 | Claude (Claude Code) | The Feedback tab (feedback surveys, phases 8 and 9). |
+| 1.14 | 11-20-26 02:20 | Claude (Claude Code) | The Feedback tab (feedback surveys, phases 8 and 9). |
 | `mentorsessions` | `CEngagement` | `engagements1` (+ `engagements` for co-mentored) | yes |
 | `partnersessions` | `CPartnerProfile` | `managedPartners` | no |
 | `sponsorsessions` | `CSponsorProfile` | `managedSponsors` | no |

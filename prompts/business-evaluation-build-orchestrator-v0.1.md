@@ -1,6 +1,6 @@
 # Build orchestrator — Business Evaluation
 
-Last Updated: 11-20-26 03:40 · Revision 0.27 — see change log at the end.
+Last Updated: 11-20-26 02:20 · Revision 0.27 — see change log at the end.
 
 This file runs the whole build of the Business Evaluation offering. It names the
 phases, the prompt for each one, the rules that every phase session follows, and
@@ -146,4 +146,4 @@ partner sees or receives, which goes to Doug as a decision.
 | 0.24 | 11-20-26 01:10 | Claude (Claude Code) | Phase 8 (feedback surveys, the foundation) prompt approved by Doug. |
 | 0.25 | 11-20-26 01:16 | Claude (Claude Code) | Doug's choice B: phases 8 and 9 in one session, all decisions first, one combined check; the combined prompt drafted, the phase 8 prompt superseded. |
 | 0.26 | 11-20-26 01:27 | Claude (Claude Code) | The combined phase 8 and 9 prompt approved by Doug. |
-| 0.27 | 11-20-26 03:40 | Claude (Claude Code) | Phases 8 and 9 built (v0.354.0); the combined check owed. Phase 10 stays on hold; its prompt is rewritten when Doug lifts the hold. |
+| 0.27 | 11-20-26 02:20 | Claude (Claude Code) | Phases 8 and 9 built (v0.354.0); the combined check owed. Phase 10 stays on hold; its prompt is rewritten when Doug lifts the hold. |
