@@ -32,7 +32,9 @@ echo "Pulling nginx:$tag ..."
 docker pull -q "nginx:$tag" || { echo "STOP: nginx:$tag could not be pulled; nothing was changed." >&2; exit 1; }
 
 echo "Testing the server's own configuration with the new image ..."
-mounts="$(docker inspect -f '{{range .Mounts}}-v {{.Source}}:{{.Destination}}:ro {{end}}' espocrm-nginx)"
+# Everything read-only, except the log folder: the test gets a scratch one, so it
+# can open its log files without writing to the live server's logs.
+mounts="$(docker inspect -f '{{range .Mounts}}{{if ne .Destination "/var/log/nginx"}}-v {{.Source}}:{{.Destination}}:ro {{end}}{{end}}' espocrm-nginx) --tmpfs /var/log/nginx"
 net="$(docker inspect -f '{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}' espocrm-nginx | awk '{print $1}')"
 # Same network as the live container, so the upstream names in the config resolve,
 # and the same environment, so the image's template step fills in the same values
