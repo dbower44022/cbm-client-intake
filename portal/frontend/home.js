@@ -446,12 +446,25 @@
 
   function needRow(it) {
     var li = el("li", "cbm-row home2__need" + (it.urgent ? " cbm-row--urgent" : ""));
+    // A click or double click anywhere on the row opens the item, as the
+    // bold name does (Doug, 11-20-26). A double click opens it once.
+    var lastOpen = 0;
+    li.addEventListener("click", function (ev) {
+      if (ev.target.closest && ev.target.closest("a")) return;   // the name's own handler
+      var now = Date.now();
+      if (now - lastOpen < 800) return;
+      lastOpen = now;
+      state.hooks.openWindow(it.url, it.target || null);
+    });
     li.appendChild(el("span", "cbm-kind-chip cbm-tone--" + it.tone, it.chip));
     var what = el("div", "home2__what");
     var a = el("a", "cbm-row__name", it.name);
     a.href = it.url;
     a.addEventListener("click", function (ev) {
       ev.preventDefault();
+      var now = Date.now();
+      if (now - lastOpen < 800) return;
+      lastOpen = now;
       state.hooks.openWindow(it.url, it.target || null);
     });
     what.appendChild(a);

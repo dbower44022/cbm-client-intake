@@ -103,7 +103,7 @@ glance".)
 
 The portal's **My Email** tile opens one inbox covering **every record you
 manage** — client engagements, partners, and funders together. Each row
-shows the record it belongs to (click the chip to open that record), who's
+shows the record it belongs to, who's
 on the thread, the subject, and when the last message arrived.
 
 - **Unread** rows are bold with a blue dot: the conversation has a message
@@ -115,8 +115,9 @@ on the thread, the subject, and when the last message arrived.
 - **Awaiting your reply** (amber chip): the last message in the conversation
   is *theirs*. Reading it doesn't clear the chip — replying does. This is
   the "don't drop the ball" view; there's a filter tab for it, with a count.
-- Clicking a row opens the thread. To reply, use **"Open in record — reply
-  there"** — replies happen on the record page, where the full compose
+- Clicking anywhere on a row opens the thread, the record's name
+  included (since v0.350.1; the record opens from the thread's button).
+  To reply, use **"Open in record — reply there"** — replies happen on the record page, where the full compose
   (contact linking, templates, documents) lives.
 - **A link can open one conversation**: `/myemail/?conversation=<id>`
   opens My Email with that thread already open.

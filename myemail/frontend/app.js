@@ -239,15 +239,14 @@
       }
 
       var c1 = document.createElement("td");
+      // The record's name is a label, not a link: a click anywhere on the
+      // row opens the email (Doug, 11-20-26). The record opens from the
+      // email's window, with its "reply there" button.
       (r.records || []).forEach(function (rec) {
-        var a = document.createElement("a");
-        a.className = "me__rec";
-        a.href = rec.href || ("/" + rec.slug + "/record/" + encodeURIComponent(rec.id));
-        a.target = "_blank"; a.rel = "noopener";
-        a.title = "Open " + (rec.name || "the record");
-        a.textContent = rec.name || rec.id;
-        a.addEventListener("click", function (e) { e.stopPropagation(); });
-        c1.appendChild(a);
+        var tag = document.createElement("span");
+        tag.className = "me__rec";
+        tag.textContent = rec.name || rec.id;
+        c1.appendChild(tag);
       });
 
       var c2 = document.createElement("td"); c2.className = "me__party";

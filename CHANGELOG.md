@@ -5,6 +5,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.350.1] — 2026-11-20
+
+**fix(home, myemail): a click anywhere on a row opens it.** Doug at stop 3
+of the home page's phase 3, 11-20-26.
+
+- **Needs you**: a click or double click anywhere on a row opens the item,
+  exactly as the bold name does; a double click opens it once.
+- **My Email**: the record's name in a row is a label, no longer a link to
+  the record, so a click anywhere on the row opens the email. The record
+  still opens from the email's window ("Open … — reply there", which lands
+  on its Communications tab with the conversation open, v0.349.1).
+- Tests: `tests/test_home_needs.py`.
+
 ## [0.350.0] — 2026-11-19
 
 **feat(evaluation): the mentor match — Client Administration's AI analysis.**

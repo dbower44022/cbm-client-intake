@@ -430,6 +430,19 @@ def test_my_emails_reply_there_button_opens_the_conversation_on_the_record():
     assert '"cbm-rec-" + rec.slug + "-" + rec.id' in js
 
 
+def test_a_click_anywhere_on_a_needs_you_row_opens_it_once():
+    js = (ROOT / "portal/frontend/home.js").read_text()
+    row = js[js.index("function needRow"):js.index("function fillNeeds")]
+    assert 'li.addEventListener("click"' in row
+    assert row.count("now - lastOpen < 800") == 2       # the row and the name share one guard
+
+
+def test_my_emails_record_name_is_a_label_so_the_row_opens_the_email():
+    js = (ROOT / "myemail/frontend/app.js").read_text()
+    rows = js[js.index("visible.forEach(function (r) {"):js.index("var c2 = ")]
+    assert 'createElement("a")' not in rows and 'createElement("span")' in rows
+
+
 def test_my_email_opens_one_conversation_from_a_link():
     js = (ROOT / "myemail/frontend/app.js").read_text()
     assert 'URLSearchParams(location.search).get("conversation")' in js

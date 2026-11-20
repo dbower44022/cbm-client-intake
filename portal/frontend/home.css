@@ -174,7 +174,8 @@ body.home2-on main.portal.cbm-container { padding-top: 0; padding-bottom: 2rem; 
 .home2__later a { color: var(--cbm-navy); }
 
 /* --- Needs you (phase 3) --------------------------------------------------- */
-.home2__need { gap: 12px; align-items: flex-start; }
+.home2__need { gap: 12px; align-items: flex-start; cursor: pointer; }
+.home2__need:hover { background: var(--cbm-page); }
 .home2__need .cbm-kind-chip { min-width: 64px; margin-top: 1px; }
 .home2__need .cbm-row__name { text-decoration: none; }
 .home2__need .cbm-row__name:hover { text-decoration: underline; }
