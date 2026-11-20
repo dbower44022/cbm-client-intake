@@ -607,3 +607,21 @@ def test_the_worker_reports_the_digest_switch():
     from core.worker_switches import LABELS
 
     assert LABELS["news_digest"] == "Chapter News weekly digest"
+
+
+def test_the_test_digest_reaches_an_administrator_in_no_team(monkeypatch):
+    crm = _digest_crm()
+    crm.rows["User"]["U9"] = {"id": "U9", "userName": "doug", "name": "Doug", "type": "admin",
+                              "isActive": True, "teamsNames": {}, "emailAddress": "doug@real.example"}
+    _seed(crm, item("A", publishAt=True))
+    sent = []
+
+    async def fake_send(settings, to, subject, body):
+        sent.append(to)
+
+    monkeypatch.setattr(digest, "_send", fake_send)
+    with TestClient(_app(monkeypatch, crm, OPS_MAILBOX="info@x.test")) as c:
+        _login(monkeypatch, c, ADMIN)
+        r = c.post("/news/api/digest/test")
+        assert r.status_code == 200, r.text
+    assert sent == ["doug@real.example"]

@@ -217,6 +217,13 @@ async def send_test(settings: Settings, client, user: dict[str, Any], send=None)
                             "so there is nothing to send the digest from.")
     me = next((m for m in await service.members(client) if m["id"] == user.get("userId")), None)
     to = ((me or {}).get("email") or "").strip()
+    if not to and user.get("userId"):
+        # An administrator in no team is not a news member, but may publish:
+        # read their own login's address.
+        try:
+            to = str((await client.get("User", user["userId"])).get("emailAddress") or "").strip()
+        except Exception as exc:  # noqa: BLE001 — answered as "no address" below
+            log.warning("news digest: could not read %s's address: %s", user.get("userName"), exc)
     if not to:
         raise DigestRefused("Your login has no email address in the CRM to send the test to.")
     if is_sandbox_address(to):

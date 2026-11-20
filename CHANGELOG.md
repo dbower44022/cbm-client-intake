@@ -5,6 +5,14 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.356.1] — 2026-11-20
+
+**fix(news): Send me a test digest reaches an administrator in no team.**
+An administrator login in no team is not counted as a news member, so the
+test digest found no address for it and refused. It now reads that login's
+own address from the CRM. Test: `tests/test_chapter_news.py`.
+
+
 ## [0.356.0] — 2026-11-20
 
 **feat(news): the weekly Chapter News digest.** Phase 7 of
