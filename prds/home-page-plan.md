@@ -1,6 +1,6 @@
 # The home page and Chapter News — plan
 
-Last Updated: 11-20-26 00:10 · Revision 1.10 — change log at the end.
+Last Updated: 11-20-26 00:55 · Revision 1.11 — change log at the end.
 
 **Status: designed 11-16-26 to 11-17-26 in a Cowork session with Doug; every
 decision below is his. Phase 0 (the contrast fix to the design tokens) is
@@ -9,8 +9,11 @@ behind `HOME_V2`, and passed stop 1 on 11-18-26. Phase 2 (Today and My
 clients) is built as v0.346.0, dark behind `HOME_V2`, and passed stop 2 on
 11-18-26; Doug's three changes after it are v0.348.0 (§ 8), checked by
 him the same day, which closed the phase. Phase 3 (Needs you) is built as
-v0.349.0, dark behind `HOME_V2`; stop 3 is owed. Phases 4 to 7 are not
-started; phase 4's prompt is `prompts/home-page-phase4-prompt-v0.1.md`.**
+v0.349.0, with Doug's two changes at its stop as v0.349.1 and v0.350.1,
+dark behind `HOME_V2`; stop 3 passed on 11-20-26, which closed the phase.
+Phase 4 (At the chapter) started 11-20-26 from
+`prompts/home-page-phase4-prompt-v0.1.md`; phases 5 to 7 are not
+started.**
 
 Mockups: the design canvas *CBM Home Page — Looks*
 (https://claude.ai/artifact/D6Gm6i9qYgBsYmMtUSfAmY). The **Mix** artboard is
@@ -352,7 +355,7 @@ switch: its push changes production's colours at once, which is intended.
   conversation** (`/myemail/?conversation=<id>`), so the Email rows can point
   at it; the four other applications already open on a record from a link.
   **Stop 3**: one example of each kind on the test system.
-  **Built v0.349.0 (11-18-26); stop 3 owed.** Doug's eight answers at the
+  **Built v0.349.0 (11-18-26); stop 3 passed 11-20-26 ("All points done").** Doug's eight answers at the
   phase's first stop, all as recommended: (1) Notes is a Completed session
   of the last 30 days with neither session notes nor next steps, a meeting
   summary not counting as notes; (2) nothing in the CRM records a review,
@@ -405,6 +408,7 @@ switch: its push changes production's colours at once, which is intended.
 
 | Revision | Last Updated | Change |
 |---|---|---|
+| 1.11 | 11-20-26 00:55 | Stop 3 passed; phase 3 closed; phase 4 started. |
 | 1.10 | 11-20-26 00:10 | Stop 3 change: whole rows open (v0.350.1). |
 | 1.9 | 11-19-26 23:55 | Stop 3 change: Email rows and My Email's reply button open the conversation on the record (v0.349.1). |
 | 1.8 | 11-18-26 22:50 | Phase 4's prompt written, before stop 3. |
