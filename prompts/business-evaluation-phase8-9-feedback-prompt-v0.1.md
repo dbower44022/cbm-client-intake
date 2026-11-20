@@ -1,14 +1,14 @@
 # Kickoff prompt — Business Evaluation, phases 8 and 9: feedback surveys
 
-Last Updated: 11-20-26 01:16 · Revision 0.1 — see change log at the end.
+Last Updated: 11-20-26 01:27 · Revision 0.2 — see change log at the end.
 
-**Draft, for Doug's approval.** Doug's choice B, 11-20-26: phases 8 and 9
+**Approved by Doug 11-20-26.** Doug's choice B, 11-20-26: phases 8 and 9
 run as **one session**. Every decision for both phases is put to him first,
 then both are built without stopping, then one combined check is made on the
 Association's system. This prompt replaces the approved phase 8 prompt
 (`prompts/business-evaluation-phase8-feedback-foundation-prompt-v0.1.md`,
 revision 0.2, now superseded). Written from plan revision 0.18 and what
-phases 6 and 7 actually built. Once approved, start a fresh Claude Code
+phases 6 and 7 actually built. Start a fresh Claude Code
 session rooted in `~/Dropbox/Projects/cbm-client-intake`, tell it to read
 this file, and tell it to follow everything below the line.
 
@@ -190,3 +190,4 @@ The partner offering: phase 10, on hold. A staff survey builder: later
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
 | 0.1 | 11-20-26 01:16 | Claude (Claude Code) | Drafted on Doug's choice B (11-20-26): phases 8 and 9 in one session, all decisions first, one combined check. Replaces the phase 8 prompt, revision 0.2. |
+| 0.2 | 11-20-26 01:27 | Claude (Claude Code) | Approved by Doug. |
