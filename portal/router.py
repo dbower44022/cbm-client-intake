@@ -240,6 +240,9 @@ def _home_payload(user: dict[str, Any], request: Request, settings: Settings) ->
         payload["home"] = {
             "firstName": name.split()[0] if name else user["userName"],
             "sections": _home_sections(user, settings),
+            # The News section offers the digest opt-out only while the
+            # weekly digest is on (phase 7).
+            "newsDigest": bool(settings.chapter_news and settings.news_digest),
         }
     return payload
 
@@ -721,6 +724,9 @@ PREFERENCE_KEYS = frozenset({
     # The new home page's collapsed and hidden sections (HOME_V2),
     # {"collapsed": [...], "hidden": [...]} of section keys.
     "home.sections",
+    # Whether the weekly Chapter News digest is emailed to the member
+    # (phase 7): {"weekly": false} is the opt-out; absent means yes.
+    "news.digest",
     # The member's text size on every application page: "standard",
     # "large" or "larger" (/shared/textsize.js; Doug, 11-18-26, option A).
     "ui.textSize",

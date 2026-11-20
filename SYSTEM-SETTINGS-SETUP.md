@@ -1,6 +1,6 @@
 # System Settings (`/setup`) — activation and use
 
-Last Updated: 11-20-26 04:20 · Revision 1.6 — see change log at the end.
+Last Updated: 11-20-26 08:10 · Revision 1.7 — see change log at the end.
 
 The admin-only page that changes this deployment's runtime settings from the
 browser instead of editing a deployment overlay and running `doctl`. Plan and
@@ -166,7 +166,7 @@ because it can carry a script).
 
 ### Chapter News — news members see at sign-in
 
-Two settings, both read per request (no restart). Publishers' guide:
+Five settings, all read per request or per worker pass (no restart). Publishers' guide:
 `chapter-news.md`; plan `prds/home-page-plan.md` § 6.
 
 - **Features → Chapter News** (`CHAPTER_NEWS`, off): the News section on the
@@ -178,6 +178,14 @@ Two settings, both read per request (no restart). Publishers' guide:
   default System Management Team): who sees the Chapter News tile and may
   write, publish and withdraw. Administrators always pass. Copy the team's
   name exactly.
+- **Features → Chapter News weekly digest** (`NEWS_DIGEST`, off): once a
+  week the worker emails each member with unread news one list from the
+  shared mailbox (`OPS_MAILBOX`, which must be set). Needs Chapter News.
+  Set it for the web component too, or the home page does not offer the
+  opt-out; Feature readiness names a difference between the two.
+- **Features → Digest day** (`NEWS_DIGEST_WEEKDAY`, 0 Monday … 6 Sunday,
+  default 0) and **Digest hour** (`NEWS_DIGEST_HOUR`, default 8), in the
+  chapter's own time zone. Worker settings.
 
 ### Settings that need a restart
 
@@ -594,6 +602,7 @@ The two refusals in § 8.3 stay active with the switch off. With every
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.7 | 11-20-26 08:10 | Claude (Claude Code) | § 4: the Chapter News weekly digest and its day and hour (v0.356.0). |
 | 1.6 | 11-20-26 04:20 | Claude (Claude Code) | § 4: Chapter News, its switch and its publishers' team (v0.353.0). |
 | 1.5 | 11-18-26 01:39 | Claude (Claude Code) | § 4: the Settings tab's sub-tabs, word-by-word search, and where restart-required and service settings go (`SETTINGS_AREAS`, v0.345.0). |
 | 1.4 | 11-15-26 18:38 | Claude (Claude Code) | § 8.2, § 8.4 to § 8.7: each sub-tab is a status screen with one button and Other Actions ▾; Setup, Fix and Review run in the setup dialog (v0.337.0, Doug's rulings 11-15-26). |

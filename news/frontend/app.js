@@ -315,6 +315,22 @@
     });
   }
 
+  // --- Send me a test digest (phase 7) --------------------------------------------
+  function listSay(text, bad) {
+    var m = $("listMsg");
+    m.textContent = text || ""; m.hidden = !text;
+    m.classList.toggle("nw__msg--bad", !!bad);
+  }
+  function testDigest(btn) {
+    var done = window.CBMBusy && CBMBusy.start ? CBMBusy.start(btn) : function () {};
+    listSay("");
+    api("/digest/test", { method: "POST" }).then(function (r) {
+      done();
+      listSay("Sent to " + r.to + ": " + r.items + (r.items === 1 ? " item" : " items")
+        + (r.unread ? "." : " (you have nothing unread, so it lists every live item you may see)."));
+    }).catch(function (e) { done(); listSay("Not sent: " + e.message, true); });
+  }
+
   function open(id) {
     var read = api("/items/" + encodeURIComponent(id)).then(fill);
     if (window.CBMBusy && CBMBusy.loading) CBMBusy.loading($("editor"), read);
@@ -343,6 +359,7 @@
       $("publishBtn").addEventListener("click", function () { save("Published", $("publishBtn")); });
       $("withdrawBtn").addEventListener("click", function () { withdraw($("withdrawBtn")); });
       $("reportRefresh").addEventListener("click", loadReport);
+      $("testDigestBtn").addEventListener("click", function () { testDigest($("testDigestBtn")); });
       fill(null);
       loadList().then(function () {
         var id = (window.location.hash || "").slice(1);

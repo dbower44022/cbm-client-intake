@@ -938,6 +938,13 @@ class Settings(BaseSettings):
     chapter_news: bool = False
     # Who may write and publish news (§ 6.3). Administrators always pass.
     news_publish_allowed_teams: str = "System Management Team"
+    # The weekly digest of unread news (phase 7): the worker emails each
+    # member with unread items one list from OPS_MAILBOX, once a week on
+    # NEWS_DIGEST_WEEKDAY (0 Monday ... 6 Sunday) at NEWS_DIGEST_HOUR in the
+    # chapter's own time zone. Needs CHAPTER_NEWS. Read per pass.
+    news_digest: bool = False
+    news_digest_weekday: int = 0
+    news_digest_hour: int = 8
     # --- F5: the portal calendar (prds/events/CBM_Events_Portal_Calendar_Design.md) ---
     # The rail of upcoming events on the portal home page and the member page
     # behind it. Off by default so crm-test can show it to a real member first:

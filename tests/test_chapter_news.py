@@ -451,3 +451,159 @@ def test_the_list_and_the_report_routes(monkeypatch):
         _login(monkeypatch, c, MENTOR)
         assert c.get("/news/api/items/A/report").status_code == 403
     service._members.update(at=0.0, task=None)
+
+
+# --- phase 7: the weekly digest ----------------------------------------------------------
+
+from news import digest  # noqa: E402
+
+
+class FakeStore:
+    def __init__(self):
+        self.prefs = {}
+
+    async def get_user_preference(self, uid, key):
+        return self.prefs.get((uid, key))
+
+    async def set_user_preference(self, uid, key, value):
+        self.prefs[(uid, key)] = value
+
+
+def _digest_settings(monkeypatch, **env):
+    base = {"CHAPTER_NEWS": "true", "NEWS_DIGEST": "true", "OPS_MAILBOX": "info@x.test",
+            "DATABASE_URL": "postgresql+asyncpg://x/y", "SANDBOX_ADDRESS_DOMAIN": "bma.test"}
+    for k, v in {**base, **env}.items():
+        monkeypatch.setenv(k, v)
+    get_settings.cache_clear()
+    return get_settings()
+
+
+def _digest_crm():
+    crm = FakeCrm()
+    crm.rows["User"] = {u["id"]: dict(u) for u in USERS}
+    crm.rows["User"]["U3"]["emailAddress"] = "amy@bma.test"          # a training address
+    crm.rows["User"]["U4"] = {"id": "U4", "userName": "nell", "name": "Nell", "type": "regular",
+                              "isActive": True, "teamsNames": {"t1": "Mentor Team"},
+                              "emailAddress": ""}
+    real_list = crm.list
+
+    async def users_list(entity, **kw):
+        if entity == "User":
+            kw = {**kw, "where": []}
+        return await real_list(entity, **kw)
+
+    crm.list = users_list
+    return crm
+
+
+@pytest.mark.asyncio
+async def test_the_digest_goes_to_each_member_with_unread_news_once_a_week(monkeypatch):
+    settings = _digest_settings(monkeypatch)
+    crm = _digest_crm()
+    now = datetime.now(timezone.utc)
+    crm.rows[service.NEWS] = {
+        "A": item("A", publishAt=rules.stamp(now - timedelta(days=1)), importance=rules.ACKNOWLEDGE,
+                  summary="Read the code"),
+        "M": item("M", publishAt=rules.stamp(now - timedelta(days=1)), audienceTeams=["Mentor Team"]),
+        "X": item("X", publishAt=rules.stamp(now - timedelta(days=9)),
+                  expiresAt=rules.stamp(now - timedelta(days=1)), importance=rules.ACKNOWLEDGE),
+    }
+    # Kitty has read the only item she may see.
+    crm.rows[service.RECEIPT]["r1"] = {"id": "r1", "newsId": "A", "memberId": "U2",
+                                       "action": "Acknowledged"}
+    store, sent = FakeStore(), []
+
+    async def fake_send(settings, to, subject, body):
+        sent.append((to, subject, body))
+
+    counts = await digest.run_weekly(settings, crm, store, now, send=fake_send)
+    assert [s[0] for s in sent] == ["joe@x.test"]
+    to, subject, body = sent[0]
+    assert "2 unread items, 1 to confirm" in subject
+    # Items to acknowledge first; the expired one has stopped prompting.
+    assert body.index("Item A") < body.index("Item M") and "Item X" not in body
+    assert "Please confirm you have read it" in body
+    assert counts["nothingUnread"] == 1           # Kitty
+    assert counts["trainingAddress"] == 1          # Amy, on bma.test: counted, never sent
+    assert counts["noAddress"] == 1 and counts["failed"] == 0
+    # A second run in the same week (a worker restart) sends nothing.
+    again = await digest.run_weekly(settings, crm, store, now, send=fake_send)
+    assert len(sent) == 1 and again["alreadySent"] == 1
+
+
+@pytest.mark.asyncio
+async def test_a_member_who_opted_out_gets_no_digest_and_the_switch_off_sends_none(monkeypatch):
+    crm = _digest_crm()
+    now = datetime.now(timezone.utc)
+    crm.rows[service.NEWS] = {"A": item("A", publishAt=rules.stamp(now - timedelta(days=1)))}
+    store, sent = FakeStore(), []
+
+    async def fake_send(settings, to, subject, body):
+        sent.append(to)
+
+    store.prefs[("U1", digest.OPT_OUT_KEY)] = {"weekly": False}
+    counts = await digest.run_weekly(_digest_settings(monkeypatch), crm, store, now, send=fake_send)
+    assert counts["optedOut"] == 1 and "joe@x.test" not in sent
+    service.invalidate()
+    for off in ({"NEWS_DIGEST": "false"}, {"CHAPTER_NEWS": "false"}, {"OPS_MAILBOX": ""}):
+        sent.clear()
+        counts = await digest.run_weekly(_digest_settings(monkeypatch, **off), crm, FakeStore(),
+                                         now, send=fake_send)
+        assert sent == [] and counts["sent"] == 0
+
+
+def test_the_weekly_hour_in_the_chapters_time_zone(monkeypatch):
+    settings = _digest_settings(monkeypatch, NEWS_DIGEST_WEEKDAY="0", NEWS_DIGEST_HOUR="8")
+    # Wed 18 Nov 2026 15:00 UTC -> Monday 23 Nov 08:00 New York = 13:00 UTC.
+    assert digest.next_run(settings, datetime(2026, 11, 18, 15, tzinfo=timezone.utc)) == \
+        datetime(2026, 11, 23, 13, tzinfo=timezone.utc)
+    # A worker started two hours after this Monday's hour catches up at once...
+    started = datetime(2026, 11, 23, 15, tzinfo=timezone.utc)
+    assert digest.next_run(settings, started) == started
+    # ...but not a day later.
+    assert digest.next_run(settings, datetime(2026, 11, 24, 15, tzinfo=timezone.utc)) == \
+        datetime(2026, 11, 30, 13, tzinfo=timezone.utc)
+    assert digest.week_key(datetime(2026, 11, 23, 13, tzinfo=timezone.utc)) == "2026-W48"
+
+
+def test_the_test_digest_goes_to_the_publisher_at_once(monkeypatch):
+    crm = _digest_crm()
+    crm.rows["User"]["U9"] = {"id": "U9", "userName": "doug", "name": "Doug", "type": "admin",
+                              "isActive": True, "teamsNames": {"s": "System Management Team"},
+                              "emailAddress": "doug@real.example"}
+    _seed(crm, item("A", publishAt=True))
+    sent = []
+
+    async def fake_send(settings, to, subject, body):
+        sent.append((to, subject))
+
+    monkeypatch.setattr(digest, "_send", fake_send)
+    with TestClient(_app(monkeypatch, crm, OPS_MAILBOX="info@x.test",
+                         SANDBOX_ADDRESS_DOMAIN="bma.test")) as c:
+        _login(monkeypatch, c, ADMIN)
+        r = c.post("/news/api/digest/test")
+        assert r.status_code == 200, r.text
+        assert r.json() == {"to": "doug@real.example", "items": 1, "unread": 1}
+        assert sent[0][1].startswith("[Test] ")
+        _login(monkeypatch, c, {**MENTOR, "userId": "U3", "teams": ["System Management Team"]})
+        r = c.post("/news/api/digest/test")
+        assert r.status_code == 400 and "training address" in r.json()["detail"]
+
+
+def test_the_digest_choice_is_a_preference_and_the_home_page_offers_it(monkeypatch):
+    from portal.router import PREFERENCE_KEYS
+
+    assert "news.digest" in PREFERENCE_KEYS
+    crm = FakeCrm()
+    with TestClient(_app(monkeypatch, crm, NEWS_DIGEST="true")) as c:
+        assert _login(monkeypatch, c, MENTOR)["home"]["newsDigest"] is True
+    with TestClient(_app(monkeypatch, crm, NEWS_DIGEST="false")) as c:
+        assert _login(monkeypatch, c, MENTOR)["home"]["newsDigest"] is False
+    js = (ROOT / "portal/frontend/home.js").read_text()
+    assert "/api/portal/preferences/news.digest" in js and "weekly: want" in js
+
+
+def test_the_worker_reports_the_digest_switch():
+    from core.worker_switches import LABELS
+
+    assert LABELS["news_digest"] == "Chapter News weekly digest"

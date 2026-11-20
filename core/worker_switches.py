@@ -26,6 +26,7 @@ SWITCHES: tuple[tuple[str, str], ...] = (
     ("zoom_events", "Zoom webinar provisioning"),
     ("zoom_meetings_events", "Zoom meeting provisioning"),
     ("events_attendance", "Attendance pull"),       # events_attendance_seconds > 0
+    ("news_digest", "Chapter News weekly digest"),
     ("espo_dry_run", "CRM dry run"),
 )
 LABELS = dict(SWITCHES)

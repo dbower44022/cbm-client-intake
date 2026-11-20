@@ -385,6 +385,25 @@ async def withdraw_item(news_id: str, request: Request) -> dict:
     return _full(saved)
 
 
+@router.post("/digest/test")
+async def test_digest(request: Request) -> dict:
+    """Send me a test digest (phase 7): the publisher's own weekly digest,
+    sent to them at once from the shared mailbox, so a check needs no wait
+    for the weekly hour. Not recorded as the week's digest."""
+    from . import digest
+
+    user, settings, client = await _publisher_client(request)
+    try:
+        result = await digest.send_test(settings, client, user)
+    except digest.DigestRefused as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:  # noqa: BLE001
+        raise await _crm_failure("send the test digest", exc)
+    await _log(user, "Sent test digest", {"id": ""},
+               f"{user.get('name') or user.get('userName')} sent themself a test Chapter News digest")
+    return result
+
+
 class ImageIn(BaseModel):
     filename: str = "pasted-image"
     contentType: str

@@ -412,6 +412,14 @@ async def main() -> None:
 
     nightly_sched = (settings.integration_test_hour, settings.integration_test_tz)
     next_nightly = _nightly.next_run_time(settings, datetime.now(timezone.utc), _next_local_hour)
+
+    # The weekly Chapter News digest (prds/home-page-plan.md phase 7): the
+    # day and hour are read on every pass, and a change reschedules; a
+    # once-a-week record per member stops a restart sending twice.
+    from news import digest as _news_digest
+
+    news_sched = (settings.news_digest_weekday, settings.news_digest_hour)
+    next_news = _news_digest.next_run(settings, datetime.now(timezone.utc))
     nightly_task: Optional[asyncio.Task] = None
     nightly_runs = _make_test_runs(settings)
 
@@ -978,6 +986,20 @@ async def main() -> None:
                 log.warning("login integrity check failed: %s", exc)
             next_integrity = _next_integrity(settings, datetime.now(timezone.utc),
                                              _next_local_hour)
+
+        if (settings.news_digest_weekday, settings.news_digest_hour) != news_sched:
+            news_sched = (settings.news_digest_weekday, settings.news_digest_hour)
+            next_news = _news_digest.next_run(settings, datetime.now(timezone.utc))
+        if now >= next_news:
+            if _news_digest.enabled(settings) and not settings.espo_dry_run:
+                try:
+                    from news.service import key_client as _news_client
+
+                    await _news_digest.run_weekly(settings, _news_client(settings), store)
+                except Exception as exc:  # noqa: BLE001 — never crashes delivery
+                    log.warning("news digest failed: %s", exc)
+            next_news = _news_digest.next_run(
+                settings, datetime.now(timezone.utc) + timedelta(hours=_news_digest.CATCH_UP_HOURS + 1))
 
         if (settings.integration_test_hour, settings.integration_test_tz) != nightly_sched:
             nightly_sched = (settings.integration_test_hour, settings.integration_test_tz)

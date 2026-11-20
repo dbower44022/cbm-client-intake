@@ -95,7 +95,8 @@ def test_on_the_payload_carries_the_sections(monkeypatch):
     with TestClient(_app(monkeypatch, HOME_V2="true")) as c:
         data = _login(monkeypatch, c, name="Kim Sarver")
     assert data["homeV2"] is True
-    assert data["home"] == {"firstName": "Kim", "sections": ["chapter", "pages"]}
+    assert data["home"] == {"firstName": "Kim", "sections": ["chapter", "pages"],
+                            "newsDigest": False}
 
 
 @pytest.mark.parametrize("teams, sections", [

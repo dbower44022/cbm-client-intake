@@ -670,6 +670,17 @@ SETTINGS: tuple[SettingSpec, ...] = (
             "with past news, items to acknowledge and the Chapter News page for "
             "publishers. Needs the new home page on, and the CRM's Chapter News "
             "record types (it stays dark until they exist)."),
+    _s("news_digest", GROUP_FEATURES, "Chapter News weekly digest", kind="bool",
+       component="both",
+       help="Once a week the worker emails each member with unread Chapter News one "
+            "list from the shared mailbox, items to confirm always included. Nothing "
+            "goes to a member with nothing unread, or to one who has unticked the "
+            "digest on their home page. Needs Chapter News and the shared mailbox."),
+    _s("news_digest_weekday", GROUP_FEATURES, "Digest day", kind="int", component="worker",
+       help="The day the weekly news digest goes out: 0 is Monday, 6 is Sunday."),
+    _s("news_digest_hour", GROUP_FEATURES, "Digest hour", kind="int", component="worker",
+       help="The hour the weekly news digest goes out (0 to 23), in the chapter's "
+            "own time zone."),
     _s("portal_events_window_days", GROUP_FEATURES, "Portal calendar window", kind="int",
        unit="days",
        help="How many days ahead the rail lists in full; events beyond fold behind "

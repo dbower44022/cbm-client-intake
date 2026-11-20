@@ -5,6 +5,41 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.356.0] — 2026-11-20
+
+**feat(news): the weekly Chapter News digest.** Phase 7 of
+`prds/home-page-plan.md` (§ 6.3, § 8), dark behind the new switch
+`NEWS_DIGEST` (and `CHAPTER_NEWS`).
+
+- **Once a week the worker emails each member one list** of their unread
+  news, from the shared mailbox (`OPS_MAILBOX`): exactly the home page's News
+  section (`news/rules.unread`), items to confirm first and named so. Nothing
+  goes to a member with nothing unread. An expired item to acknowledge has
+  stopped prompting and is not listed.
+- **When**: `NEWS_DIGEST_WEEKDAY` (0 Monday … 6 Sunday, default 0) at
+  `NEWS_DIGEST_HOUR` (default 8) in the chapter's own time zone; both read on
+  every pass, and a change reschedules. A worker started within 12 hours
+  after the hour sends that week's digest at once.
+- **Once a week, whatever happens**: each member's last sent week is kept in
+  the application database (the per-user store, key `news.digest.sent`,
+  never exposed by the preferences API), so a restart or a second run in the
+  week sends nothing twice.
+- **Training addresses are never mailed**: an address on the sandbox
+  domain (`core/sandbox_addresses.py`) is counted and logged, never sent and
+  never an error. The worker logs one line a week with every count.
+- **The member's opt-out**: *Email me a weekly digest of unread news* under
+  Chapter News on the home page, shown while the digest is on; the
+  preference `news.digest` (`{"weekly": false}` stops it).
+- **Send me a test digest** on the Chapter News page: the publisher's own
+  digest, sent at once to their own address (with nothing unread it lists
+  every live item they may see), so a check needs no wait for the weekly
+  hour. It is not counted as the week's digest. Recorded in the action log.
+- The worker reports the switch on Feature readiness (`core/worker_switches.py`).
+- Tests: `tests/test_chapter_news.py` (who gets what, the once-a-week
+  record, the opt-out, the switches off, the training-address guard, the
+  weekly hour in the chapter's time zone, the test digest).
+
+
 ## [0.355.0] — 2026-11-20
 
 **feat(news): read reports on the Chapter News page.** Phase 6 of

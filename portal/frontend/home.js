@@ -677,11 +677,43 @@
     var line = el("p", "cbm-panel__note home2__newsline");
     if (!items.length) line.appendChild(document.createTextNode("No unread news. "));
     line.appendChild(past.toggle);
+    if (state.newsDigest) line.appendChild(digestChoice());
     body.appendChild(line);
     body.appendChild(past.wrap);
     var count = sec.querySelector(".home2__newscount");
     if (count) { count.textContent = items.length ? items.length + " unread" : ""; count.hidden = !items.length; }
     apply();
+  }
+
+  // The weekly digest's opt-out (phase 7): the preference news.digest,
+  // {weekly: false} to stop it. Shown only while the digest is on.
+  var DIGEST_PREF = "/api/portal/preferences/news.digest";
+  var digestWanted = null;
+  function digestChoice() {
+    var lab = el("label", "home2__digest");
+    var cb = el("input"); cb.type = "checkbox";
+    cb.checked = digestWanted !== false;
+    lab.appendChild(cb);
+    lab.appendChild(document.createTextNode(" Email me a weekly digest of unread news"));
+    if (digestWanted === null) {
+      fetch(DIGEST_PREF, { credentials: "same-origin" }).then(readJson).then(function (d) {
+        digestWanted = !(d && d.value && d.value.weekly === false);
+        cb.checked = digestWanted;
+      }).catch(function () { /* the box shows ticked: the default */ });
+    }
+    cb.addEventListener("change", function () {
+      var want = cb.checked;
+      message("");
+      fetch(DIGEST_PREF, {
+        method: "PUT", credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value: { weekly: want } }),
+      }).then(readJson).then(function () { digestWanted = want; }).catch(function (e) {
+        cb.checked = !want;
+        message("Your digest choice was not saved: " + e.message + ".");
+      });
+    });
+    return lab;
   }
 
   function loadNews(sec, quiet) {
@@ -827,6 +859,7 @@
     host.parentNode.insertBefore(view, host);
     document.body.classList.add("home2-on");
     state.view = view;
+    state.newsDigest = !!home.newsDigest;
     apply();
     var waiting = loadPrefs();
     if (window.CBMBusy && CBMBusy.loading) CBMBusy.loading(main, waiting);

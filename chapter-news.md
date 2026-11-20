@@ -1,6 +1,6 @@
 # Chapter News — a guide for publishers
 
-Last Updated: 11-20-26 07:30 · Revision 1.1 — change log at the end.
+Last Updated: 11-20-26 08:10 · Revision 1.2 — change log at the end.
 
 Chapter News is news you write once and every member sees on their home page
 when they sign in. You decide who it is for, how prominent it is, and whether
@@ -68,6 +68,19 @@ The audience is counted from the CRM's members as they are now: every
 active login in a team the item is for (every login, for an item to every
 member). A member who has since left the audience is not counted.
 
+## The weekly digest
+
+With *Chapter News weekly digest* on (System Settings → Features), once a
+week, Monday at 08:00 chapter time unless changed there, every member with
+unread news gets one email from the shared mailbox listing it, items to
+confirm first. A member with nothing unread gets nothing. A member can
+untick *Email me a weekly digest of unread news* under Chapter News on their
+home page. Training addresses are never mailed.
+
+**Send me a test digest**, above the list, sends your own digest to you at
+once, so you can see it without waiting for Monday. With nothing unread it
+lists every live item you may see.
+
 ## What members do
 
 On the home page, Chapter News is the first section. Each item shows its
@@ -80,5 +93,6 @@ Dismissed, Acknowledged, Unread, Expired, or Not acknowledged.
 
 | Revision | Last Updated | Change |
 |---|---|---|
+| 1.2 | 11-20-26 08:10 | The weekly digest (phase 7, v0.356.0). |
 | 1.1 | 11-20-26 07:30 | Who has read it (phase 6, v0.355.0). |
 | 1.0 | 11-20-26 04:15 | First version, with phase 5 (v0.353.0). |

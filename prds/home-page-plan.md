@@ -1,6 +1,6 @@
 # The home page and Chapter News — plan
 
-Last Updated: 11-20-26 07:30 · Revision 1.16 — change log at the end.
+Last Updated: 11-20-26 08:10 · Revision 1.17 — change log at the end.
 
 **Status: designed 11-16-26 to 11-17-26 in a Cowork session with Doug; every
 decision below is his. Phase 0 (the contrast fix to the design tokens) is
@@ -14,7 +14,7 @@ dark behind `HOME_V2`; stop 3 passed on 11-20-26, which closed the phase.
 Phase 4 (At the chapter) is built as v0.351.0, dark behind `HOME_V2`,
 and passed stop 4 on 11-20-26, which closed the phase. Doug asked for phases 5 to 7 in one session with the fixed header bar and
 one big test (11-20-26): `prompts/home-page-phases5-7-autonomous-prompt-v0.1.md`.
-The fixed header bar is v0.352.0; phase 5 (Chapter News core) is v0.353.0, phase 6 (read reports) v0.355.0,
+The fixed header bar is v0.352.0; phase 5 (Chapter News core) is v0.353.0, phase 6 (read reports) v0.355.0, phase 7 (the weekly digest) v0.356.0,
 dark behind `CHAPTER_NEWS`, its CRM build on the Business Mentors
 Association's CRM only. The decisions that session took on Doug's behalf are
 listed under phase 5 in § 8. One stop, the big test, closes all three.**
@@ -447,6 +447,14 @@ switch: its push changes production's colours at once, which is intended.
   (`OPS_MAILBOX`), items that must be acknowledged always included; the
   `news.digest` opt-out; nothing sent to a member with nothing unread.
   **Stop 7**: a digest received on the test system.
+  **Built v0.356.0 (11-20-26)**, dark behind `NEWS_DIGEST`. Decided in
+  advance (decisions 10 and 11): Monday at 08:00 in the chapter's time zone,
+  both System Settings values; once per member per week, recorded in the
+  application database; training addresses counted, never mailed. Taken in
+  the build: the digest goes to the address on the member's CRM login (a
+  mentor's login address is their chapter address); a worker started within
+  12 hours after the hour catches up that week; the publisher's **Send me a
+  test digest** is not counted as the week's digest.
 
 ## 9. Open questions, decided in their phase
 
@@ -457,12 +465,14 @@ switch: its push changes production's colours at once, which is intended.
 - A planned end date for an engagement, which the Closing kind needs
   (phase 3 left it out).
 - A data source for presenter-wanted asks (phase 4 or later).
-- The digest's day and hour (phase 7).
+- ~~The digest's day and hour (phase 7).~~ Decided 11-20-26: Monday 08:00
+  in the chapter's time zone, changeable at System Settings.
 
 ## Change log
 
 | Revision | Last Updated | Change |
 |---|---|---|
+| 1.17 | 11-20-26 08:10 | Phase 7 built (v0.356.0); § 9's digest question closed. |
 | 1.16 | 11-20-26 07:30 | Phase 6 built (v0.355.0). |
 | 1.15 | 11-20-26 04:30 | Fixed header bar built (v0.352.0); phase 5 built (v0.353.0) with its decisions in § 8; `audienceTeams` is a multi-select of team names. |
 | 1.14 | 11-20-26 01:40 | Phases 5 to 7 and the fixed header to be built in one session (Doug, 11-20-26); its prompt written. |
