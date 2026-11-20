@@ -821,6 +821,7 @@
       ? wantTab.replace(/[^A-Za-z]/g, "") : "overview");
     showDetail();
     window.scrollTo(0, 0);
+    openLinkedConversation(wantTab);
   }
 
   // --- Overview tab: facts rail + aggregated session-notes feed ---
@@ -2264,6 +2265,19 @@
       "</style><base target=\"_blank\"></head><body>" +
       (o.bodyHtml || "<p>(no content)</p>") + "</body></html>";
     body.appendChild(frame);
+  }
+
+  // ?tab=communications&conversation=<id> opens that conversation's window,
+  // with its Reply buttons, as the record page opens (the home page's Needs
+  // you Email rows and My Email's "reply there" button link here; Doug,
+  // 11-19-26: a reply within one or two clicks). Once per page load: the
+  // record re-renders after a save and must not reopen it.
+  var linkedConversationDone = false;
+  function openLinkedConversation(wantTab) {
+    if (linkedConversationDone || wantTab !== "communications" || !commsOn()) return;
+    linkedConversationDone = true;
+    var id = new URLSearchParams(location.search).get("conversation");
+    if (id) viewConversation(id);
   }
 
   async function viewConversation(convId) {

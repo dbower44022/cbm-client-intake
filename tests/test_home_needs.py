@@ -124,20 +124,35 @@ def test_without_the_summary_field_a_session_is_judged_on_notes_alone():
 def test_email_reuses_my_emails_flag_after_one_working_day():
     conv = lambda cid, at, waiting=True: {  # noqa: E731
         "id": cid, "subject": f"Re: {cid}", "awaitingReply": waiting, "lastMessageAt": at,
-        "records": [{"name": "Engagement e1", "id": "e1"}]}
+        "records": [{"name": "Engagement e1", "id": "e1", "entity": "CEngagement", "slug": "mentorsessions"}]}
     rows = needs.email_items([
         conv("c1", _ago(2)),                         # Monday: listed on Wednesday
         conv("c2", _ago(0.2)),                       # today: not yet
         conv("c3", _ago(5), waiting=False),          # the member replied last
     ], NOW)
-    assert [r["url"] for r in rows] == ["/myemail/?conversation=c1"]
-    assert rows[0]["target"] == "cbm-myemail"
+    # The record's Communications tab with the conversation open (option C).
+    assert [r["url"] for r in rows] == [
+        "/mentorsessions/record/e1?tab=communications&conversation=c1"]
+    assert rows[0]["target"] == "cbm-rec-mentorsessions-e1"
     assert rows[0]["reason"] == "Waiting for your reply: Re: c1"
     # A Friday message waits over the weekend: not listed on Sunday.
     sunday = datetime(2026, 11, 22, 12, 0, tzinfo=timezone.utc)
     friday = (sunday - timedelta(days=2)).strftime("%Y-%m-%d %H:%M:%S")
     assert needs.email_items([conv("c4", friday)], sunday) == []
     assert len(needs.email_items([conv("c4", friday)], sunday + timedelta(days=1))) == 1
+
+
+def test_an_email_on_several_records_opens_the_engagement_and_none_opens_my_email():
+    partner = {"name": "Alliance", "id": "p1", "entity": "CPartnerProfile",
+               "slug": "partnersessions"}
+    engagement = {"name": "Engagement e1", "id": "e1", "entity": "CEngagement",
+                  "slug": "mentorsessions"}
+    link = needs.conversation_link("c9", [partner, engagement])
+    assert link["url"] == "/mentorsessions/record/e1?tab=communications&conversation=c9"
+    link = needs.conversation_link("c9", [partner])
+    assert link == {"url": "/partnersessions/record/p1?tab=communications&conversation=c9",
+                    "target": "cbm-rec-partnersessions-p1"}
+    assert needs.conversation_link("c9", [])["url"] == "/myemail/?conversation=c9"
 
 
 def test_staff_rows_come_from_the_attention_counts():
@@ -366,7 +381,7 @@ def test_email_rows_and_the_unread_count_come_from_one_inbox_run(monkeypatch):
         return {"profileFound": True, "conversations": [
             {"id": "c1", "subject": "Pricing", "awaitingReply": True, "unread": True,
              "lastMessageAt": _stamp(timedelta(days=-4)),
-             "records": [{"name": "Engagement e1", "id": "e1"}]},
+             "records": [{"name": "Engagement e1", "id": "e1", "entity": "CEngagement", "slug": "mentorsessions"}]},
             {"id": "c2", "subject": "Thanks", "awaitingReply": False, "unread": True,
              "lastMessageAt": _stamp(timedelta(days=-1)), "records": []},
         ]}
@@ -375,7 +390,8 @@ def test_email_rows_and_the_unread_count_come_from_one_inbox_run(monkeypatch):
     monkeypatch.setattr("comms.service.get_store", lambda settings: object())
     data = _needs(monkeypatch, _standard(), GMAIL_SYNC="true")
     email = [i for i in data["items"] if i["kind"] == "email"]
-    assert [e["url"] for e in email] == ["/myemail/?conversation=c1"]
+    assert [e["url"] for e in email] == [
+        "/mentorsessions/record/e1?tab=communications&conversation=c1"]
     assert data["unreadTotal"] == 2
     assert runs == [1]
 
@@ -400,6 +416,18 @@ def test_the_page_fills_needs_you_and_the_greeting():
     v2 = app[app.index("function renderHomeV2"):app.index("function renderHome(")]
     assert "badgesFallback" in v2 and "badge: badgeTile" in v2
     assert "badgesFallback()" in js
+
+
+def test_the_record_page_opens_a_linked_conversation_once():
+    js = (ROOT / "sessions/frontend/app.js").read_text()
+    assert "openLinkedConversation(wantTab);" in js
+    assert 'get("conversation")' in js and "linkedConversationDone = true" in js
+
+
+def test_my_emails_reply_there_button_opens_the_conversation_on_the_record():
+    js = (ROOT / "myemail/frontend/app.js").read_text()
+    assert '"?tab=communications&conversation=" + encodeURIComponent(row.id)' in js
+    assert '"cbm-rec-" + rec.slug + "-" + rec.id' in js
 
 
 def test_my_email_opens_one_conversation_from_a_link():

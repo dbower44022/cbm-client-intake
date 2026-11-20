@@ -1,6 +1,6 @@
 # The home page and Chapter News — plan
 
-Last Updated: 11-18-26 22:50 · Revision 1.8 — change log at the end.
+Last Updated: 11-19-26 23:55 · Revision 1.9 — change log at the end.
 
 **Status: designed 11-16-26 to 11-17-26 in a Cowork session with Doug; every
 decision below is his. Phase 0 (the contrast fix to the design tokens) is
@@ -366,6 +366,11 @@ switch: its push changes production's colours at once, which is intended.
   Today's for 20 seconds, and the bar's count badges move into the list.
   Built on the way: Summary looks at the session notes only, because the
   note taker writes its action items into an empty next steps field.
+  **Changed at stop 3 (v0.349.1, Doug 11-19-26, option C):** My Email's
+  window cannot reply, so an Email row opens the record's Communications
+  tab with the conversation's window open (Reply one click away), the
+  engagement first when the conversation is on several records; My
+  Email's "Open … — reply there" button opens the same place.
 - **Phase 4 — At the chapter.** Year-to-date numbers from the analytics
   portal panel's sources, the events rail's upcoming workshops, and open asks
   from Marketing Management's running call campaigns. A presenter-wanted ask
@@ -398,6 +403,7 @@ switch: its push changes production's colours at once, which is intended.
 
 | Revision | Last Updated | Change |
 |---|---|---|
+| 1.9 | 11-19-26 23:55 | Stop 3 change: Email rows and My Email's reply button open the conversation on the record (v0.349.1). |
 | 1.8 | 11-18-26 22:50 | Phase 4's prompt written, before stop 3. |
 | 1.7 | 11-18-26 18:20 | Phase 3 built as v0.349.0: § 4.2's kinds as decided, Closing left out, § 8's answers, § 9's two phase 3 questions closed and the end-date question added. |
 | 1.6 | 11-18-26 18:00 | v0.348.0 checked by Doug; phase 2 closed; phase 3's prompt written. |

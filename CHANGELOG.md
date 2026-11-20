@@ -5,6 +5,26 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.349.1] — 2026-11-19
+
+**fix(home): an email waiting for a reply opens where the reply is written.**
+Doug at stop 3 of the home page's phase 3, 11-19-26 (option C): My Email's
+conversation window cannot reply, and its "Open … — reply there" button
+landed on the record's Overview tab, so a mentor had to hunt for the email.
+
+- **Needs you's Email rows** open the record's Communications tab with the
+  conversation's window already open: **↩ Reply** is one click away. A
+  conversation on several records opens on the engagement first, then a
+  partner, then a funder; My Email's own link only when no record has a
+  page (`portal/needs.conversation_link`).
+- **My Email's "Open … — reply there" button** opens the same place, in the
+  record's own named tab: two clicks from My Email to a reply.
+- **A record page opened with `?tab=communications&conversation=<id>`**
+  opens that conversation's window once, as the page opens (Client,
+  Partner and Funder Management alike).
+- Tests: `tests/test_home_needs.py` (the row's link, the engagement first,
+  the fallback, the record page, My Email's button).
+
 ## [0.349.0] — 2026-11-18
 
 **feat(home): Needs you — the home page's attention list.** Phase 3 of

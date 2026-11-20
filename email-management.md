@@ -119,8 +119,12 @@ on the thread, the subject, and when the last message arrived.
   there"** — replies happen on the record page, where the full compose
   (contact linking, templates, documents) lives.
 - **A link can open one conversation**: `/myemail/?conversation=<id>`
-  opens My Email with that thread already open. The new home page's
-  *Needs you* list uses it for each client email waiting for your reply.
+  opens My Email with that thread already open.
+- **"Open … — reply there" opens the conversation on the record**: the
+  record's Communications tab with the same conversation's window open, so
+  **↩ Reply** is the next click. A record page opened with
+  `?tab=communications&conversation=<id>` does this; the new home page's
+  *Needs you* Email rows use the same link.
 
 ### Unread mail follows you to where you work
 

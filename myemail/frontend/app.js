@@ -318,8 +318,13 @@
       if (!rec.slug && !rec.href) return;
       var a = document.createElement("a");
       a.className = "cbm-button";
-      a.href = rec.href || ("/" + rec.slug + "/record/" + encodeURIComponent(rec.id));
-      a.target = "_blank"; a.rel = "noopener";
+      // Opens the record's Communications tab with this conversation's
+      // window open, Reply one click away (Doug, 11-19-26), in the record's
+      // own named tab.
+      a.href = rec.href || ("/" + rec.slug + "/record/" + encodeURIComponent(rec.id)
+        + "?tab=communications&conversation=" + encodeURIComponent(row.id));
+      a.target = rec.href ? "_blank" : "cbm-rec-" + rec.slug + "-" + rec.id;
+      if (rec.href) a.rel = "noopener";
       a.textContent = "Open " + (rec.name || "record") + " — reply there";
       recWrap.appendChild(a);
     });

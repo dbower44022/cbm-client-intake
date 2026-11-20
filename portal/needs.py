@@ -14,7 +14,9 @@ The kinds, most urgent first (answer 7):
 2. **Notes** (amber): a Completed session of the last 30 days with neither
    session notes nor next steps, and no meeting summary (answer 1).
 3. **Email** (navy): a conversation My Email marks awaiting a reply whose
-   last message is at least one working day old (answer 3).
+   last message is at least one working day old (answer 3). The row opens
+   the record's Communications tab with the conversation open, so Reply is
+   one click away (Doug, 11-19-26).
 4. **Summary** (navy): a Completed session of the last 14 days with a
    meeting summary and empty session notes (answer 2). Only the session
    notes count here: the note taker writes its action items into an empty
@@ -183,6 +185,27 @@ def session_items(sessions: Iterable[dict[str, Any]], names: dict[str, str],
     return out
 
 
+#: Which record a conversation on several records opens on: the client's
+#: engagement first (Needs you is mainly about clients).
+RECORD_ORDER = ("CEngagement", "CPartnerProfile", "CSponsorProfile")
+
+
+def conversation_link(conversation_id: str, records: list[dict[str, Any]]) -> dict[str, str]:
+    """Where an Email row opens: the record's Communications tab with the
+    conversation's window already open, so Reply is one click away (Doug,
+    11-19-26, option C). My Email's own link only when no record has a page."""
+    usable = [r for r in records if r.get("slug") and r.get("id")]
+    if not usable:
+        return {"url": f"/myemail/?conversation={conversation_id}", "target": "cbm-myemail"}
+    rank = {e: i for i, e in enumerate(RECORD_ORDER)}
+    rec = min(usable, key=lambda r: rank.get(r.get("entity"), len(rank)))
+    return {
+        "url": (f"/{rec['slug']}/record/{rec['id']}"
+                f"?tab=communications&conversation={conversation_id}"),
+        "target": f"cbm-rec-{rec['slug']}-{rec['id']}",
+    }
+
+
 def email_items(conversations: Iterable[dict[str, Any]], now: datetime) -> list[dict[str, Any]]:
     """My Email's own rows (``build_inbox``): awaiting a reply, and waiting
     at least one working day."""
@@ -197,7 +220,7 @@ def email_items(conversations: Iterable[dict[str, Any]], now: datetime) -> list[
         name = (records[0].get("name") if records else "") or "A conversation"
         subject = (c.get("subject") or c.get("name") or "").strip()
         reason = "Waiting for your reply" + (f": {subject}" if subject else "")
-        link = {"url": f"/myemail/?conversation={c['id']}", "target": "cbm-myemail"}
+        link = conversation_link(c["id"], records)
         out.append(_item("email", name, reason, link, age=_days(now, last)))
     return out
 
