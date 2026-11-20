@@ -5,6 +5,28 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.356.3] — 2026-11-20
+
+**fix(news): a button address on this application saves; a refused value
+says what to correct; publisher actions reach the action log.** Found by
+Doug in the big test (11-20-26), from the test system's log.
+
+- **Publish answered 504 for an item whose button address was
+  `/mentorsessions/`.** The CRM's address field takes only a full address,
+  refused it (HTTP 400), and the application passed that on as a server
+  fault. An address starting with `/` is now stored in full, from
+  `APP_BASE_URL` (on the test system,
+  `https://apps.businessmentorsassociation.org/mentorsessions/`).
+- **A value the CRM refuses now answers 400 with the field in the page's own
+  words** ("The CRM did not accept the button address. Correct it and save
+  again."), never a server error.
+- **Every Chapter News action-log write was refused** (HTTP 400): the CRM's
+  action log cannot point at a Chapter News item. The entries are now written
+  without a record link, the item's id in their details and its title in the
+  summary.
+- Tests: `tests/test_chapter_news.py`.
+
+
 ## [0.356.2] — 2026-11-20
 
 **fix(news): large pictures, and a click anywhere on a news row.** Doug's two

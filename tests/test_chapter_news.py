@@ -360,7 +360,9 @@ def test_a_publisher_publishes_and_withdraws_and_each_is_logged(monkeypatch):
         assert c.get("/api/portal/home/news").json()["items"] == []
         assert c.get("/api/portal/home/news/past").json()["items"] == []
     assert [k["action"] for k in logged] == ["Published", "Withdrew"]
-    assert all(k["actor_name"] == "Doug" and k["parent_type"] == "CChapterNews" for k in logged)
+    assert all(k["actor_name"] == "Doug" and k["details"]["newsId"] == nid for k in logged)
+    # The CRM's action log refuses a record link to CChapterNews (11-20-26).
+    assert all(k["parent_type"] == "" and k["parent_id"] == "" for k in logged)
 
 
 def test_the_publisher_image_proxy_serves_only_news_images(monkeypatch):
@@ -641,3 +643,30 @@ def test_a_large_picture_is_shrunk_before_upload():
     js = (ROOT / "news/frontend/app.js").read_text()
     assert "MAX_SIDE = 1600" in js and 'toDataURL("image/jpeg", 0.85)' in js
     assert "return shrink(dataUri).then(send);" in js
+
+
+def test_a_button_address_on_this_application_is_stored_in_full():
+    f = service.clean_item({"title": "T", "ctaLabel": "Go", "ctaUrl": "/mentorsessions/"}, TEAMS,
+                           "https://apps.example.org/")
+    assert f["ctaUrl"] == "https://apps.example.org/mentorsessions/"
+    with pytest.raises(service.NewsError) as exc:
+        service.clean_item({"title": "T", "ctaLabel": "Go", "ctaUrl": "/x/"}, TEAMS, "")
+    assert "full address" in str(exc.value)
+
+
+def test_a_value_the_crm_refuses_is_the_publishers_to_correct(monkeypatch):
+    from core.espo import EspoError
+
+    crm = FakeCrm()
+
+    async def refuse(entity, payload):
+        raise EspoError("create CChapterNews failed: HTTP 400 [Field validation failure; "
+                        "entityType: CChapterNews, field: ctaUrl, type: valid.]")
+
+    crm.create = refuse
+    with TestClient(_app(monkeypatch, crm)) as c:
+        _login(monkeypatch, c, ADMIN)
+        r = c.post("/news/api/items", json={"title": "T", "ctaLabel": "Go",
+                                            "ctaUrl": "https://x.example/"})
+    assert r.status_code == 400
+    assert r.json()["detail"] == "The CRM did not accept the button address. Correct it and save again."

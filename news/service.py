@@ -317,7 +317,7 @@ def _url_ok(url: str) -> bool:
     return url.startswith(("https://", "http://", "/")) and not url.startswith("//")
 
 
-def clean_item(data: dict[str, Any], teams: list[str]) -> dict[str, Any]:
+def clean_item(data: dict[str, Any], teams: list[str], base_url: str = "") -> dict[str, Any]:
     """A publisher's item, checked: the fields the CRM is sent, or a
     :class:`NewsError` naming what is wrong. The body is kept as written
     (the editor sanitizes it); members get it through ``member_body``."""
@@ -353,6 +353,14 @@ def clean_item(data: dict[str, Any], teams: list[str]) -> dict[str, Any]:
         raise NewsError(f"The button's words are longer than {CTA_LABEL_MAX} characters.")
     if url and not _url_ok(url):
         raise NewsError("The button's address must start with https://, http:// or /.")
+    if url.startswith("/"):
+        # The CRM's address field takes only a full address (it refused
+        # "/mentorsessions/" with HTTP 400, 11-20-26): an address on this
+        # application is stored in full, from APP_BASE_URL.
+        root = (base_url or "").strip().rstrip("/")
+        if not root:
+            raise NewsError("Give the button's full address, starting with https://.")
+        url = root + url
     return {
         "name": title,
         "summary": summary or None,

@@ -299,16 +299,33 @@ class ItemIn(BaseModel):
     ctaUrl: Optional[str] = None
 
 
+#: The CRM field names a publisher knows by the page's own words.
+_FIELD_WORDS = {"ctaUrl": "button address", "ctaLabel": "button text", "name": "title",
+                "summary": "summary", "body": "body", "publishAt": "publish time",
+                "expiresAt": "expiry time", "audienceTeams": "audience",
+                "importance": "importance", "status": "status"}
+
+
+def _refused_field(exc: Exception) -> str:
+    import re
+
+    m = re.search(r"field: (\w+), type: valid", str(exc))
+    return _FIELD_WORDS.get(m.group(1), m.group(1)) if m else ""
+
+
 async def _log(user: dict[str, Any], action: str, item: dict[str, Any], summary: str,
                details: Optional[dict[str, Any]] = None) -> None:
     from core.action_log import log_action
 
     await log_action(
         app=APP, category="Chapter News", action=action,
-        parent_type=service.NEWS, parent_id=item.get("id") or "",
+        # No record reference: the CRM's action log cannot point at a
+        # Chapter News item (its record link refuses CChapterNews, HTTP 400,
+        # 11-20-26), so the item is named in the summary and the details.
+        parent_type="", parent_id="",
         summary=summary, actor_id=user.get("userId") or "",
         actor_name=user.get("name") or user.get("userName") or "",
-        details=details)
+        details={**(details or {}), "newsId": item.get("id") or ""})
 
 
 def _changed(before: Optional[dict[str, Any]], after: dict[str, Any]) -> dict[str, Any]:
@@ -330,7 +347,7 @@ async def _save(request: Request, news_id: Optional[str], body: ItemIn) -> dict:
         if news_id and before is None:
             raise HTTPException(status_code=404, detail=NOT_FOUND)
         teams = await service.audience_options(client)
-        fields = service.clean_item(body.model_dump(), teams)
+        fields = service.clean_item(body.model_dump(), teams, settings.app_base_url)
     except service.NewsError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except HTTPException:
@@ -340,6 +357,11 @@ async def _save(request: Request, news_id: Optional[str], body: ItemIn) -> dict:
     try:
         saved = await service.save_item(client, news_id, fields)
     except Exception as exc:  # noqa: BLE001
+        refused = _refused_field(exc)
+        if refused:
+            # The CRM refused a value: the publisher's to correct, not a fault.
+            raise HTTPException(status_code=400, detail=(
+                f"The CRM did not accept the {refused}. Correct it and save again."))
         raise await _crm_failure("save the item", exc)
     was = (before or {}).get("status")
     if fields["status"] == rules.PUBLISHED and was != rules.PUBLISHED:
