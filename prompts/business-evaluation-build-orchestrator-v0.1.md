@@ -1,6 +1,6 @@
 # Build orchestrator — Business Evaluation
 
-Last Updated: 11-20-26 01:10 · Revision 0.24 — see change log at the end.
+Last Updated: 11-20-26 01:16 · Revision 0.25 — see change log at the end.
 
 This file runs the whole build of the Business Evaluation offering. It names the
 phases, the prompt for each one, the rules that every phase session follows, and
@@ -21,6 +21,7 @@ All rulings in the plan were approved by Doug on 11-13-26.
 - **One session on this build at a time.** Parallel sessions share one git index
   ([[parallel-sessions-share-one-git-index]]).
 - **Doug moves the pointer.** No session starts the next phase on its own.
+- **The exception, phases 8 and 9** (Doug's choice B, 11-20-26): one session builds both. Every decision for both phases comes first, at one stopping point; both are built without stopping; one combined check closes both. Phase 9's prompt is therefore not written after phase 8's review.
 
 ## The phases
 
@@ -34,8 +35,8 @@ All rulings in the plan were approved by Doug on 11-13-26.
 | 5 | Release of the client version, and action items as records | `prompts/business-evaluation-phase5-prompt-v0.1.md` | Built v0.338.0; checked by Doug on the Business Mentors Association's system 11-16-26 |
 | 6 | The intake survey: sent when a client intake is delivered, "more details?" and the area picker, the answers in Client Administration, Assign moving the records (BE24 to BE27) | `prompts/business-evaluation-phase6-intake-survey-prompt-v0.1.md` | Built v0.339.0; checked by Doug on the Association 11-19-26 (tab look fixed v0.340.1) |
 | 7 | The mentor match: the AI analysis button in Client Administration (BE28) | `prompts/business-evaluation-phase7-mentor-match-prompt-v0.1.md` | Built v0.350.0; samples reviewed and checked by Doug on the Association 11-20-26 |
-| 8 | Feedback surveys, the foundation: the `feedback` purpose, the 0-to-10 question, the Survey Response record, on-demand send, the mentor's view, low-score alerts, the quiet period (BE29, BE31 to BE33) | `prompts/business-evaluation-phase8-feedback-foundation-prompt-v0.1.md` | Prompt approved by Doug 11-20-26 (revision 0.2); not started |
-| 9 | Feedback moments and Analytics: the four automatic moments, starter panels (BE30) | written at the end of phase 8 | — |
+| 8 | Feedback surveys, the foundation: the `feedback` purpose, the 0-to-10 question, the Survey Response record, on-demand send, the mentor's view, low-score alerts, the quiet period (BE29, BE31 to BE33) | `prompts/business-evaluation-phase8-9-feedback-prompt-v0.1.md`, with phase 9 (Doug's choice B, 11-20-26); the phase 8 prompt, revision 0.2, is superseded | Combined draft prompt, revision 0.1, awaiting Doug's approval |
+| 9 | Feedback moments and Analytics: the four automatic moments, starter panels (BE30) | the same prompt as phase 8 (one session) | As phase 8 |
 | 10 | The partner and funder offering, co-branding, the anonymized roll-up (BE21, BE34 to BE36); formerly phase 6 | `prompts/business-evaluation-phase6-prompt-v0.1.md` (revision 0.2, approved 11-16-26) is superseded: rewritten at the end of phase 9 | **On hold** for the expansion plan (plan revision 0.14) |
 | 11 | The pilot review, then the other four evaluation areas as content; formerly phase 7 | written at the end of phase 10 | — |
 | 12 | Documentation, training material, the live review, the production handoff; formerly phase 8 | written at the end of phase 11 | — |
@@ -143,3 +144,4 @@ partner sees or receives, which goes to Doug as a decision.
 | 0.22 | 11-19-26 23:36 | Claude (Claude Code) | Phase 7 built (v0.350.0); its check owed. |
 | 0.23 | 11-20-26 00:59 | Claude (Claude Code) | Phase 7 checked on the Association; phase 8 draft prompt written. |
 | 0.24 | 11-20-26 01:10 | Claude (Claude Code) | Phase 8 (feedback surveys, the foundation) prompt approved by Doug. |
+| 0.25 | 11-20-26 01:16 | Claude (Claude Code) | Doug's choice B: phases 8 and 9 in one session, all decisions first, one combined check; the combined prompt drafted, the phase 8 prompt superseded. |

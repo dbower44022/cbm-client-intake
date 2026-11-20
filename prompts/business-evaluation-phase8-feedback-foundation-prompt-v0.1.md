@@ -1,6 +1,8 @@
 # Kickoff prompt — Business Evaluation, phase 8: feedback surveys, the foundation
 
-Last Updated: 11-20-26 01:10 · Revision 0.2 — see change log at the end.
+Last Updated: 11-20-26 01:16 · Revision 0.3 — see change log at the end.
+
+**Superseded 11-20-26** by `prompts/business-evaluation-phase8-9-feedback-prompt-v0.1.md` (Doug's choice B: phases 8 and 9 in one session). Do not start a session from this file.
 
 **Approved by Doug 11-20-26.** Written by the session that closed phase 7
 (11-20-26), from plan revision 0.18 and what phases 6 and 7 actually built.
@@ -134,3 +136,4 @@ The partner offering: phase 10. A staff survey builder: later (BE29).
 |---|---|---|---|
 | 0.1 | 11-20-26 00:59 | Claude (Claude Code) | Drafted at the close of phase 7, from plan revision 0.18. |
 | 0.2 | 11-20-26 01:10 | Claude (Claude Code) | Approved by Doug. |
+| 0.3 | 11-20-26 01:16 | Claude (Claude Code) | Superseded by the combined phase 8 and 9 prompt (Doug's choice B). |
