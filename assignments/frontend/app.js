@@ -877,6 +877,17 @@
         : sg.activeClients + " of " + sg.maximumClients + " clients" +
           (sg.atCapacity ? ", at capacity" : (typeof sg.available === "number" ? ", " + sg.available + " available" : ""));
       top.appendChild(room);
+      // The last time this mentor was given a new client (Doug 11-20-26): between
+      // two close matches, staff may pick the one who has waited longer.
+      if (sg.lastAssigned) {
+        var last = document.createElement("span");
+        last.className = "mmatch__last";
+        var d = /^\d{4}-\d{2}-\d{2}$/.test(sg.lastAssigned)
+          ? new Date(sg.lastAssigned + "T12:00:00Z").toLocaleDateString(undefined,
+              { year: "numeric", month: "short", day: "numeric" }) : "";
+        last.textContent = d ? "Last new client " + d : "No new client recorded";
+        top.appendChild(last);
+      }
       li.appendChild(top);
       li.appendChild(profilePara(sg.reason || "", "mmatch__reason"));
       ol.appendChild(li);

@@ -460,7 +460,10 @@ def shape_result(reply: MatchReply, mentors: list[dict[str, Any]],
         seen.add(m["id"])
         out.append({"mentorProfileId": m["id"], "name": m["name"], "reason": s.reason,
                     "activeClients": m["active_clients"], "maximumClients": m["maximum_clients"],
-                    "available": m["available"], "atCapacity": m["at_capacity"]})
+                    "available": m["available"], "atCapacity": m["at_capacity"],
+                    # Doug 11-20-26: between two close matches, staff may choose
+                    # the mentor who has waited longest for a new client.
+                    "lastAssigned": m.get("last_given_a_new_client") or "not recorded"})
         if len(out) == MAX_SUGGESTIONS:
             break
     if dropped:

@@ -286,7 +286,8 @@ table names or the `/evaluation/{token}` page, read the engine's equivalent.
 - **Advice only.** The result never assigns and offers no Assign action
   (a test reads the tab's code); a mentor's name opens the read-only mentor
   popup with no engagement in context. An engagement that already has a
-  mentor is refused, naming the mentor.
+  mentor is refused, naming the mentor. Each suggestion shows when the
+  mentor was last given a new client (Doug, 11-20-26).
 - **What is sent**: the client's company, the intake's focus areas and needs,
   the business profile answers, the areas picked (area only, org-wide key);
   each eligible mentor from `assignments.service.list_eligible_mentors`

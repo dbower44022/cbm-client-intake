@@ -697,6 +697,7 @@ body { display: flex; flex-direction: column; }
 .mmatch__name { font-size: 1.05rem; font-weight: 600; }
 .mmatch__room { font-size: .85rem; padding: .05rem .5rem; border-radius: 999px;
   background: var(--cbm-slate-50, #F1F5F9); color: var(--cbm-slate-700, #334155); }
+.mmatch__last { font-size: .85rem; color: var(--cbm-slate-500, #64748B); font-variant-numeric: tabular-nums; }
 .mmatch__room.is-full { background: #FEF3C7; color: #92400E; font-weight: 600; }
 .mmatch__reason { margin: .25rem 0 0; line-height: 1.45; color: var(--cbm-slate-900, #0F172A); }
 .mmatch__points { margin: .25rem 0 0; padding-left: 1.25rem; }

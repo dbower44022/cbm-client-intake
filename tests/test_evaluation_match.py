@@ -46,7 +46,7 @@ def _mentor(mid, name, *, active=True, accepting=True, user="u", cap=3, **kw):
 
 
 MENTORS = [
-    _mentor("m1", "Joe Mentor", cap=3),
+    _mentor("m1", "Joe Mentor", cap=3, lastClientAssignedDate="2026-11-18"),
     _mentor("m2", "Ann Full", cap=2),                      # two active clients: at capacity
     _mentor("m3", "Ivan Inactive", active=False),
     _mentor("m4", "Paula Paused", accepting=False),
@@ -204,6 +204,9 @@ def test_a_run_suggests_named_mentors_with_their_room_and_is_logged(monkeypatch)
         assert [s["name"] for s in r["suggestions"]] == ["Joe Mentor", "Ann Full"]
         assert r["suggestions"][0]["available"] == 2 and r["suggestions"][0]["atCapacity"] is False
         assert r["suggestions"][1]["atCapacity"] is True
+        # Doug 11-20-26: each suggestion carries when the mentor last got a new client.
+        assert r["suggestions"][0]["lastAssigned"] == "2026-11-18"
+        assert r["suggestions"][1]["lastAssigned"] == "not recorded"
         assert r["dropped"] == 1                       # m99 was never sent
         assert run["runByName"] == "Kitty Cat" and run["promptVersion"] == "mentor-match.v1"
         # Kept: the tab opens on the latest run.
