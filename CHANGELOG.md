@@ -29,8 +29,10 @@ as recommended.
 - **A fourth tab, *Mentor match*,** in the engagement popup (choice A). *Run
   AI analysis* returns what the client needs, the kind of mentor who would
   suit, up to three named mentors with a reason and their room, and points
-  to check. **Advice only**: the result has no Assign action; a mentor's
-  name opens the read-only mentor popup. Each suggestion also shows when the
+  to check. **Advice only**: the tab itself has no Assign action. A
+  mentor's name opens the read-only mentor popup with this engagement in
+  context, so its *Assign this mentor* button assigns through the usual
+  confirmation (Doug, 11-20-26: a button that only explained was confusing). Each suggestion also shows when the
   mentor was last given a new client (Doug, 11-20-26), so staff can prefer the
   one who has waited longer between two close matches. On an engagement that already has
   a mentor the button explains that the match is for engagements waiting

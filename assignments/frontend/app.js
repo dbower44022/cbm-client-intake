@@ -864,7 +864,13 @@
       name.textContent = sg.name || "(unnamed)";
       name.title = "Open this mentor's profile";
       name.addEventListener("click", function () {
-        mentorReviewCtx = null;   // view only: the popup's own button explains how to assign
+        // The popup's Assign this mentor button completes the assignment on THIS
+        // engagement (Doug 11-20-26: a button that only explains was confusing).
+        // Staff still choose; the usual confirmation follows.
+        var eng = engRows.filter(function (e) { return e.id === id; })[0] ||
+          { id: id, name: $("modalTitle").textContent || "" };
+        mentorReviewCtx = { tr: document.querySelector('tr[data-eng-id="' + id + '"]'),
+                            eng: eng, mode: "assign", fromMatch: true };
         openMentorDetail({ id: sg.mentorProfileId, name: sg.name,
           activeClients: typeof sg.activeClients === "number" ? sg.activeClients : null,
           maxCapacity: typeof sg.maximumClients === "number" ? sg.maximumClients : (sg.maximumClients === "no limit" ? -1 : null),
@@ -1855,6 +1861,9 @@
     }
     hide($("mentorDetailModal"));
     hide($("mentorModal"));
+    // From the Mentor match tab: close the engagement popup so the grid shows
+    // the result of the assignment.
+    if (ctx.fromMatch) { mentorReviewCtx = null; closeModal(true); }
     if (ctx.mode === "reassign") doReassign(ctx.tr, ctx.eng, m.id, m.name);
     else doAssign(ctx.tr, ctx.eng, m.id, m.name || "this mentor");
   });

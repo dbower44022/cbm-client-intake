@@ -122,7 +122,9 @@ full-height grid with a status multi-select, and assigns each to a mentor.
   (`_move_evaluations`, best-effort, under the org-wide key).
 - **The Mentor match tab** (v0.350.0, Business Evaluation phase 7,
   `MENTOR_MATCH`): the popup's fourth tab, an AI analysis of an engagement
-  waiting for a mentor. **Advice only: nothing in it assigns.** It sends the
+  waiting for a mentor. **Advice only: the tab has no Assign button**; a
+  suggested mentor's name opens the mentor popup with this engagement in
+  context, whose *Assign this mentor* assigns (Doug, 11-20-26). It sends the
   Assign list's mentors, never their email addresses. Detail:
   `evaluation/CLAUDE.md`.
 

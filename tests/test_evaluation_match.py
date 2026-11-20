@@ -282,12 +282,18 @@ def test_without_a_key_the_run_says_so(monkeypatch):
     assert claude.calls == []
 
 
-def test_the_result_never_offers_an_assign_action():
+def test_the_result_assigns_only_through_the_mentor_popup_and_its_confirmation():
+    """Doug 11-20-26: a suggested mentor's name opens the mentor popup with this
+    engagement in context, so its Assign this mentor button assigns (through the
+    usual confirmation). The tab itself carries no Assign button or call."""
     js = (ROOT / "assignments/frontend/app.js").read_text(encoding="utf-8")
     block = js[js.index("function renderMentorMatch"):js.index("async function loadMentorMatch")]
     assert "/assign" not in block and "performAssign" not in block and "doReassign" not in block
-    assert "mentorReviewCtx = null" in block    # the mentor popup opens view-only
+    assert 'mode: "assign", fromMatch: true' in block
     assert not re.search(r"textContent\s*=\s*\"Assign", block)
+    handler = js[js.index('$("mentorDetailAssignBtn").addEventListener'):]
+    handler = handler[:handler.index("});")]
+    assert "doAssign(" in handler and "closeModal(true)" in handler
 
 
 def test_the_prompt_file_loads_and_names_its_version():

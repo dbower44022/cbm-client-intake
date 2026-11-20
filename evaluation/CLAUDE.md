@@ -283,9 +283,11 @@ table names or the `/evaluation/{token}` page, read the engine's equivalent.
   (needs only the Anthropic key, not `BUSINESS_EVALUATION`): `GET`/`POST
   /assignments/api/engagements/{id}/mentor-match`, 404 while off. Doug's
   choices at stopping point (a), 11-19-26, all as recommended.
-- **Advice only.** The result never assigns and offers no Assign action
-  (a test reads the tab's code); a mentor's name opens the read-only mentor
-  popup with no engagement in context. An engagement that already has a
+- **Advice only.** The tab itself has no Assign action (a test reads the
+  tab's code). A mentor's name opens the read-only mentor popup **with this
+  engagement in context** (`fromMatch`), so the popup's *Assign this mentor*
+  assigns through the usual confirmation and closes the engagement popup
+  (Doug, 11-20-26). An engagement that already has a
   mentor is refused, naming the mentor. Each suggestion shows when the
   mentor was last given a new client (Doug, 11-20-26).
 - **What is sent**: the client's company, the intake's focus areas and needs,
