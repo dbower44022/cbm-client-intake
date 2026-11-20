@@ -1330,9 +1330,9 @@ the strength of it.
   revision 0.14, pushed 11-16-26): the intake survey, the mentor match and
   feedback surveys are phases 6 to 9 (rulings BE24 to BE36); the partner
   offering is phase 10, on hold. Owed in #83.
-- **v0.339.0 (2026-11-16) is committed, not pushed**: Business Evaluation
-  phase 6, the intake survey (`INTAKE_SURVEY`, off; needs
-  `BUSINESS_EVALUATION`). Doug's check on the Association owed in #83.
+- **v0.339.0 and v0.340.1 are pushed; phase 6 checked on the Association
+  11-19-26**: Business Evaluation's intake survey (`INTAKE_SURVEY`, off;
+  needs `BUSINESS_EVALUATION`). Phase 7's prompt is a draft (#83).
 - **v0.340.1 (2026-11-16) is pushed**: the Business profile tab's answers
   stand out from the questions (`INTAKE_SURVEY`); see `CHANGELOG.md`.
 - **v0.340.2 (2026-11-17) is pushed** (11-17-26; scripts and documents):
