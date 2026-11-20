@@ -32,3 +32,8 @@
   .news-item { flex-wrap: wrap; }
   .news-item__acts { flex-basis: 100%; }
 }
+/* The whole row opens the item (11-20-26). */
+.news-item { cursor: pointer; }
+.news-item:hover { background: var(--cbm-page); }
+.news-item--ack:hover { background: #FFF0D6; }
+.news-item__body { cursor: auto; }

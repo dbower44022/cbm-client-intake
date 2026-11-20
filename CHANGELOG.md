@@ -5,6 +5,26 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.356.2] — 2026-11-20
+
+**fix(news): large pictures, and a click anywhere on a news row.** Doug's two
+findings during the big test (11-20-26).
+
+- **A large picture no longer vanishes from the editor.** A phone photo
+  was over the 5 MB image limit, so the upload was refused (HTTP 400, seen
+  three times in the test system's log) and the editor removed it. The
+  Chapter News page now redraws any picture over 1,600 pixels on its longest
+  side, or over 1 MB, as a JPEG of at most 1,600 pixels before it uploads
+  (a 46 MB test picture went up as 922 KB). A picture the browser cannot
+  read (such as HEIC) is refused with a message saying to save it as a JPEG
+  or PNG.
+- **A click or double click anywhere on a news row opens the item**, on the
+  home page, in past news and in the publisher's preview. A second click
+  within 0.6 seconds is the same gesture, so a double click leaves the item
+  open. Clicks on the buttons, links and the opened body are left alone.
+- Tests: `tests/test_chapter_news.py`.
+
+
 ## [0.356.1] — 2026-11-20
 
 **fix(news): Send me a test digest reaches an administrator in no team.**

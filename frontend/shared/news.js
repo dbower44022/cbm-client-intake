@@ -18,6 +18,7 @@
   "use strict";
 
   var ACK = "Must acknowledge", PINNED = "Pinned";
+  var DOUBLE_MS = 600;
 
   function el(tag, cls, text) {
     var e = document.createElement(tag);
@@ -82,7 +83,22 @@
       li.classList.toggle("news-item--open", open);
     }
     setOpen(!!opts.open);
-    title.addEventListener("click", function () { setOpen(body.hidden); });
+    // A click or double click anywhere on the row opens it (Doug, 11-20-26),
+    // as the title does. A second click within DOUBLE_MS is the same gesture,
+    // so a double click leaves the item open rather than closing it again.
+    // Clicks on the buttons and links, and inside the opened body (to select
+    // text or follow a link), are left to themselves.
+    var lastToggle = 0;
+    li.addEventListener("click", function (ev) {
+      var t = ev.target;
+      if (t.closest && t !== title && (t.closest("a, input, select, textarea, label")
+          || (t.closest("button") && t.closest("button") !== title)
+          || t.closest(".news-item__body"))) return;
+      var now = Date.now();
+      if (now - lastToggle < DOUBLE_MS) return;
+      lastToggle = now;
+      setOpen(body.hidden);
+    });
 
     var acts = el("div", "news-item__acts");
     if (opts.past) {

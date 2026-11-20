@@ -625,3 +625,19 @@ def test_the_test_digest_reaches_an_administrator_in_no_team(monkeypatch):
         r = c.post("/news/api/digest/test")
         assert r.status_code == 200, r.text
     assert sent == ["doug@real.example"]
+
+
+# --- 11-20-26: Doug's two changes during the big test -------------------------------------
+
+def test_a_click_anywhere_on_a_row_opens_the_item_and_a_double_click_keeps_it_open():
+    js = (ROOT / "frontend/shared/news.js").read_text()
+    assert 'li.addEventListener("click"' in js and "DOUBLE_MS" in js
+    # Buttons, links and the opened body are left to themselves.
+    assert 'closest(".news-item__body")' in js
+    assert ".news-item { cursor: pointer; }" in (ROOT / "frontend/shared/news.css").read_text()
+
+
+def test_a_large_picture_is_shrunk_before_upload():
+    js = (ROOT / "news/frontend/app.js").read_text()
+    assert "MAX_SIDE = 1600" in js and 'toDataURL("image/jpeg", 0.85)' in js
+    assert "return shrink(dataUri).then(send);" in js

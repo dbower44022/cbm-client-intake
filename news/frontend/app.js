@@ -55,9 +55,43 @@
   function toDisplay(html) { return String(html || "").replace(STORED_RE, API + "/attachments/$1"); }
   function toStored(html) { return String(html || "").replace(PROXY_RE, "?entryPoint=attachment&amp;id=$1"); }
 
+  // A picture larger than this on its longest side, or heavier than SHRINK_BYTES,
+  // is redrawn smaller before upload (Doug, 11-20-26: a phone photo was over
+  // the 5 MB image limit, refused, and vanished from the editor).
+  var MAX_SIDE = 1600, SHRINK_BYTES = 1024 * 1024;
+
+  function shrink(dataUri) {
+    return new Promise(function (resolve, reject) {
+      var img = new Image();
+      img.onload = function () {
+        var w = img.naturalWidth, h = img.naturalHeight;
+        var bytes = Math.floor((dataUri.length - dataUri.indexOf(",") - 1) * 3 / 4);
+        if (Math.max(w, h) <= MAX_SIDE && bytes <= SHRINK_BYTES) { resolve(dataUri); return; }
+        var k = Math.min(1, MAX_SIDE / Math.max(w, h));
+        var c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
+        var g = c.getContext("2d");
+        g.fillStyle = "#FFFFFF";              // a transparent PNG becomes white-backed JPEG
+        g.fillRect(0, 0, c.width, c.height);
+        g.drawImage(img, 0, 0, c.width, c.height);
+        resolve(c.toDataURL("image/jpeg", 0.85));
+      };
+      img.onerror = function () {
+        reject(new Error("This picture's format cannot be shown in a browser. "
+          + "Save it as a JPEG or PNG and add it again."));
+      };
+      img.src = dataUri;
+    });
+  }
+
   function uploadImage(dataUri) {
+    if (!/^data:([^;,]+);base64,(.+)$/.test(dataUri || "")) return Promise.resolve(null);
+    return shrink(dataUri).then(send);
+  }
+
+  function send(dataUri) {
     var m = /^data:([^;,]+);base64,(.+)$/.exec(dataUri || "");
-    if (!m) return Promise.resolve(null);
+    if (!m) return null;
     return api("/inlineimages", {
       method: "POST",
       body: JSON.stringify({ filename: "news-image", contentType: m[1], dataBase64: m[2] }),
