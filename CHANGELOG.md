@@ -5,6 +5,25 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.356.4] — 2026-11-20
+
+**fix(ops): a script that patches each CRM server against NGINX2Root
+(CVE-2026-123007, CVE-2026-123633; disclosed 11-18-26, critical, public
+exploit code).** Scripts only; nothing in the application changes.
+
+- **Every CRM server ran an affected NGINX with HTTP/2 on** (read 11-20-26):
+  crm-test 1.29.7, production 1.31.1, Boston 1.31.6, Lakeside 1.31.4, the
+  Association 1.31.8. CRMBuilder writes the bare `nginx` image, so each
+  server kept whatever was latest when it was built.
+- **`scripts/patch_nginx2root.sh`** pins `espocrm-nginx` to `nginx:1.31.9`
+  (Doug's ruling 11-20-26, option A), after pulling the image and passing
+  the server's own configuration through `nginx -t`, and recreates only that
+  container. Undo is in the script's header.
+- **`scripts/on_crm.sh` reaches the Association's CRM** as `bma`.
+- Owed: the docs server's NGINX (inside the BookStack container) is not yet
+  checked, and the CRMBuilder installer still writes the bare image.
+
+
 ## [0.356.3] — 2026-11-20
 
 **fix(news): a button address on this application saves; a refused value
