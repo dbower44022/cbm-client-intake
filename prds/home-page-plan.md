@@ -1,6 +1,6 @@
 # The home page and Chapter News — plan
 
-Last Updated: 11-20-26 01:30 · Revision 1.13 — change log at the end.
+Last Updated: 11-20-26 01:40 · Revision 1.14 — change log at the end.
 
 **Status: designed 11-16-26 to 11-17-26 in a Cowork session with Doug; every
 decision below is his. Phase 0 (the contrast fix to the design tokens) is
@@ -13,7 +13,8 @@ v0.349.0, with Doug's two changes at its stop as v0.349.1 and v0.350.1,
 dark behind `HOME_V2`; stop 3 passed on 11-20-26, which closed the phase.
 Phase 4 (At the chapter) is built as v0.351.0, dark behind `HOME_V2`,
 and passed stop 4 on 11-20-26, which closed the phase. Phases 5 to 7 are
-not started; phase 5's prompt is `prompts/home-page-phase5-prompt-v0.1.md`.**
+not started; Doug asked for them in one session with the fixed header bar
+and one big test (11-20-26): `prompts/home-page-phases5-7-autonomous-prompt-v0.1.md`.**
 
 Mockups: the design canvas *CBM Home Page — Looks*
 (https://claude.ai/artifact/D6Gm6i9qYgBsYmMtUSfAmY). The **Mix** artboard is
@@ -426,6 +427,7 @@ switch: its push changes production's colours at once, which is intended.
 
 | Revision | Last Updated | Change |
 |---|---|---|
+| 1.14 | 11-20-26 01:40 | Phases 5 to 7 and the fixed header to be built in one session (Doug, 11-20-26); its prompt written. |
 | 1.13 | 11-20-26 01:30 | Stop 4 passed; phase 4 closed; phase 5's prompt written. |
 | 1.12 | 11-20-26 01:05 | Phase 4 built as v0.351.0: § 4.1's At the chapter as decided, § 8's answers. |
 | 1.11 | 11-20-26 00:55 | Stop 3 passed; phase 3 closed; phase 4 started. |
