@@ -1,6 +1,6 @@
 # assignments/ — Client Administration
 
-Last Updated: 11-19-26 23:36 · Revision 1.4
+Last Updated: 11-21-26 01:01 · Revision 1.5
 
 Detail for the Client Administration application (`/assignments`): the engagement grid, Assign and Reassign, the mentor roster and the editable engagement popup.
 
@@ -132,6 +132,7 @@ full-height grid with a status multi-select, and assigns each to a mentor.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.5 | 11-21-26 01:01 | Claude (Claude Code) | The Mentor match tab: Assign this mentor from a suggested mentor's popup (Doug, 11-20-26). |
 | 1.4 | 11-19-26 23:36 | Claude (Claude Code) | The Mentor match tab (v0.350.0). |
 | 1.3 | 11-16-26 13:30 | Claude (Claude Code) | The Business profile tab; Assign moves evaluation records (v0.339.0). |
 | 1.2 | 11-10-26 20:25 | Claude (Claude Code) | The Last Contact Date column (v0.318.0). |

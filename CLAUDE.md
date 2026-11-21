@@ -1377,7 +1377,8 @@ the strength of it.
   Event hosting card (plan § 8 item 3). Owed in #84.
 - **v0.350.0 (2026-11-19) and its two follow-ups are pushed; phase 7
   checked on the Association 11-20-26**: Business Evaluation's mentor match
-  (`MENTOR_MATCH`, off; migration 0051). Phase 8's prompt is a draft (#83).
+  (`MENTOR_MATCH`, off; migration 0051). Phases 8 and 9 run as one session
+  (Doug's choice B); their prompt is approved, not started (#83).
 - **v0.352.0 to v0.356.3 (2026-11-20) are pushed and live on the
   Association**: the home page's fixed header bar, Chapter News core
   (phase 5, `CHAPTER_NEWS`, off), its read reports (phase 6) and the weekly

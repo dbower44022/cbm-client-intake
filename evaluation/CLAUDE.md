@@ -1,6 +1,6 @@
 # evaluation/ — Business Evaluation
 
-Last Updated: 11-19-26 23:36 · Revision 1.8
+Last Updated: 11-21-26 01:01 · Revision 1.9
 
 Detail for the Business Evaluation offering. Claude Code loads this file only
 when a session works in this folder. The plan is
@@ -336,3 +336,4 @@ create).
 | 1.6 | 11-16-26 13:30 | Claude (Claude Code) | Phase 6, the intake survey (v0.339.0). |
 | 1.7 | 11-19-26 22:35 | Claude (Claude Code) | The tab's answer look (v0.340.1); phase 6 checked. |
 | 1.8 | 11-19-26 23:36 | Claude (Claude Code) | Phase 7, the mentor match (v0.350.0). |
+| 1.9 | 11-21-26 01:01 | Claude (Claude Code) | Phase 7 checked on the Association; the last-new-client date and Assign this mentor from the mentor popup (Doug, 11-20-26). |
