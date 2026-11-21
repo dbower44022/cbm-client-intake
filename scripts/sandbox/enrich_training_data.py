@@ -505,6 +505,115 @@ async def add_notes_and_referrals(e: Enricher) -> None:
             )
 
 
+#: The Ambassador Program on the showcase mentor (prds/Ambassador Program/
+#: ambassador-program-prd.md): one of each thing the screens show. Keyed by
+#: the reference each record carries, so a re-run never duplicates one.
+AMBASSADOR_REFERRAL = ("Rita", "Referral", "rita.referral@sandbox.cbmentors.org", "Lakeview Florist")
+
+
+async def add_ambassador_activity(e: Enricher, now: datetime) -> None:
+    """Joe Mentor's ambassador reports: a shared post, a partner contact with
+    its Ambassador Contact session, an event with an open follow-up (the review
+    list's demo row) and a referred potential client, credited to him.
+    Skipped on a CRM without the Ambassador Activity record type."""
+    try:
+        fields = await e.client.metadata("entityDefs.CAmbassadorActivity.fields")
+    except EspoError:
+        fields = None
+    if not (isinstance(fields, dict) and fields):
+        await e.note("! no Ambassador Activity record type — ambassador reports skipped")
+        return
+    mentor = await e.client.list("CMentorProfile", max_size=1, select="id,name,assignedUsersIds",
+                                 where=[{"type": "equals", "attribute": "name",
+                                         "value": SHOWCASE["mentor"]}])
+    mentor = (mentor.get("list") or [None])[0]
+    if not mentor:
+        await e.note("! no showcase mentor — ambassador reports skipped")
+        return
+    users = list(mentor.get("assignedUsersIds") or [])
+    partner = await e.client.list("CPartnerProfile", max_size=1,
+                                  select="id,name,primaryPartnercontactId,assignedUsersIds,teamsIds",
+                                  where=[{"type": "equals", "attribute": "name",
+                                          "value": SHOWCASE["partner"]}])
+    partner = (partner.get("list") or [None])[0]
+
+    def day(n: int) -> str:
+        return (now - timedelta(days=n)).strftime("%Y-%m-%d")
+
+    async def exists(ref: str) -> bool:
+        got = await e.client.list("CAmbassadorActivity", max_size=1, select="id",
+                                  where=[{"type": "equals", "attribute": "submissionReference",
+                                          "value": ref}])
+        return bool(got.get("list"))
+
+    async def report(ref: str, values: dict) -> str | None:
+        if await exists(ref):
+            await e.note(f"ambassador report {ref} already there")
+            return None
+        await e.note(f"add ambassador report {ref}: {values['activityType']}")
+        if not e.apply:
+            return None
+        body = {"name": f"{values['activityType']} — {mentor['name']} — {values['activityDate']}",
+                "mentorProfileId": mentor["id"], "assignedUsersIds": users,
+                "submissionReference": ref, "followUpDone": False,
+                "receivedAt": f"{values['activityDate']} 15:00:00", **values}
+        return (await e.client.create("CAmbassadorActivity", body))["id"]
+
+    await report("AMB-SEED0001", {"activityDate": day(20), "activityType": "Liked or shared a post",
+                                  "matchStatus": "No contact"})
+
+    if partner and partner.get("primaryPartnercontactId"):
+        contact = await e.client.get("Contact", partner["primaryPartnercontactId"], select="id,name")
+        rid = await report("AMB-SEED0002", {
+            "activityDate": day(12), "activityType": "Made a community introduction",
+            "personKind": "Existing organization", "enteredName": contact.get("name"),
+            "contactId": contact["id"], "matchStatus": "Matched",
+            "note": "Introduced them to the county's new small-business grant officer.",
+            "routedTo": f"Ambassador contact session on partner {partner['name']}"})
+        if rid:
+            await e.client.create("CSession", {
+                "name": f"Ambassador contact by {mentor['name']}",
+                "sessionType": "Ambassador Contact", "status": "Completed",
+                "dateStart": f"{day(12)} 12:00:00", "dateEnd": f"{day(12)} 12:30:00",
+                "sessionNotes": "<p>Made a community introduction — reported by "
+                                f"{mentor['name']}, an ambassador.</p>",
+                "partnerSessionId": partner["id"],
+                "assignedUsersIds": list(partner.get("assignedUsersIds") or []),
+                "teamsIds": list(partner.get("teamsIds") or [])})
+    else:
+        await e.note("! no showcase partner contact — the partner report skipped")
+
+    await report("AMB-SEED0003", {
+        "activityDate": day(5), "activityType": "Represented us at an event",
+        "personKind": "Someone else", "enteredName": "Marcus Hale",
+        "enteredOrganization": "Westside Makers Fair", "matchStatus": "Not matched",
+        "followUpRequested": True,
+        "note": "The fair's organiser would like a mentor to run a table at the spring fair."})
+
+    first, last, email, org = (sandbox_targets.localise(v, TARGET) for v in AMBASSADOR_REFERRAL)
+    if await exists("AMB-SEED0004"):
+        await e.note("ambassador report AMB-SEED0004 already there")
+        return
+    await e.note(f"add referred contact {first} {last} and report AMB-SEED0004")
+    if not e.apply:
+        return
+    company = await e.by_name("Account", org)
+    company_id = company["id"] if company else (await e.client.create(
+        "Account", {"name": org, "assignedUsersIds": users}))["id"]
+    found = await e.client.find_one("Contact", "emailAddress", email, select="id")
+    contact_id = found["id"] if found else (await e.client.create("Contact", {
+        "firstName": first, "lastName": last, "emailAddress": email, "accountId": company_id,
+        "cContactType": ["Prospect"], "cReferredById": mentor["id"],
+        "assignedUsersIds": users}))["id"]
+    await report("AMB-SEED0004", {
+        "activityDate": day(2), "activityType": "Referred someone",
+        "personKind": "Potential client", "enteredName": f"{first} {last}",
+        "enteredEmail": email, "enteredOrganization": org, "contactId": contact_id,
+        "companyId": company_id, "matchStatus": "Created", "referralOutcome": "Not yet",
+        "marketingAgreed": True,
+        "note": "Opening a second shop next spring and wants help with the lease."})
+
+
 async def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--apply", action="store_true", help="actually write")
@@ -533,6 +642,7 @@ async def main() -> int:
         await add_events(e, now)
         await add_event_showcase(e)
         await add_notes_and_referrals(e)
+        await add_ambassador_activity(e, now)
     except EspoError as exc:
         print(f"\nSTOPPED: {exc}")
         return 1
