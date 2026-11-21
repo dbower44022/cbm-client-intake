@@ -5,6 +5,21 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.360.2] — 2026-11-21
+
+**fix(ambassador): Mark done and the review outcomes are stored.** Found by
+Claude reading the Association's CRM after Doug's check, 11-21-26: Doug's
+Mark done at 16:29:41 UTC reached the CRM (the action log has it, the
+record names him as its last editor) but `followUpDone`, `followUpNote` and
+`followUpBy` were not stored, nor was Lee Ortiz's review outcome. Doug's
+account is also in the Mentor Team, so the Mentor Role's field rules
+(mentors may not edit the follow-up fields or see the review fields) applied
+to him, and the CRM dropped those fields while answering 200. Every write on
+the review list now runs under the org-wide key, as the delivery does, with
+the staff member named in the record and the action log; and each write is
+read back, so a field that is still dropped shows a message instead of
+passing silently.
+
 ## [0.360.1] — 2026-11-21
 
 **fix(ambassador): the analytics page counts today's reports.** Found by

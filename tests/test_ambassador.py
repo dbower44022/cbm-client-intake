@@ -526,3 +526,30 @@ def test_analytics_range_counts_a_report_dated_today():
     assert where == {"after": "2025-11-20", "before": "2026-11-22"}
     stamps = {w["type"]: w["value"] for w in _range_where(ctx, "dateStart")}
     assert stamps == {"after": "2025-11-21 00:00:00", "before": "2026-11-21 17:30:00"}
+
+
+@pytest.mark.asyncio
+async def test_a_dropped_field_is_reported_not_swallowed(sent):
+    """A field rule makes the CRM answer 200 and store nothing (the Mentor
+    Role's rules on a staff member also in the Mentor Team; found on the
+    Association 11-21-26). The read-back turns that into a message."""
+    crm = FakeCrm()
+    a = crm.add(cfg.ACTIVITY, activityType=cfg.INTRODUCTION, followUpRequested=True,
+                followUpDone=False, mentorProfileId="mp-amb")
+    original = crm.update
+
+    async def stripping_update(entity, rid, payload):
+        return await original(entity, rid, {k: v for k, v in payload.items()
+                                            if not k.startswith("followUp")})
+    crm.update = stripping_update
+    with pytest.raises(service.WriteDropped):
+        await service.mark_done(crm, None, settings(), a["id"], "Called them.", "Doug")
+    crm.update = original
+    before, after = await service.mark_done(crm, None, settings(), a["id"], "Called them.", "Doug")
+    assert crm.data[cfg.ACTIVITY][a["id"]]["followUpDone"] is True
+    assert crm.data[cfg.ACTIVITY][a["id"]]["followUpBy"] == "Doug"
+
+
+def test_review_writes_run_under_the_key():
+    text = (ROOT / "ambassador/router.py").read_text()
+    assert "service.set_review(client_for" not in text and "mark_done(client_for" not in text

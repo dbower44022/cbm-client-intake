@@ -1,6 +1,6 @@
 # ambassador/ — the Ambassador Program
 
-Last Updated: 11-21-26 03:01 · Revision 1.0
+Last Updated: 11-21-26 11:47 · Revision 1.1
 
 Members log how they spread the word; each report is recorded on the right
 partner, funder or client, and referrals are credited. Decisions AM1 to AM7
@@ -55,6 +55,11 @@ Claude Code loads this file only when a session works in this folder.
   on the same company, has Referred by, has no manager and still has its
   starting status (`referrals.referred_candidate`).
 - **No possessive of the organization's name** in any wording.
+- **The review list writes under the org-wide key, read back**
+  (`service.write_checked`, v0.360.2). Staff are usually in the Mentor Team
+  too, and the Mentor Role's field rules then drop the follow-up and review
+  fields with an HTTP 200 (found on the Association 11-21-26). Never move
+  those writes back to the staff member's own sign-in.
 
 Tests: `tests/test_ambassador.py`; fakes in `tests/ambassador_fakes.py`.
 
@@ -62,4 +67,5 @@ Tests: `tests/test_ambassador.py`; fakes in `tests/ambassador_fakes.py`.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 11-21-26 11:47 | Claude (Claude Code) | The review list writes under the key (v0.360.2). |
 | 1.0 | 11-21-26 03:01 | Claude (Claude Code) | Created with the build (v0.360.0). |

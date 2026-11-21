@@ -391,11 +391,13 @@ async def mark_done(activity_id: str, body: NoteIn, request: Request) -> dict:
     key = await _built(settings)
     row = await _row(key, activity_id)
     try:
-        before, after = await service.mark_done(client_for(settings, user), key, settings,
+        before, after = await service.mark_done(key, key, settings,
                                                 activity_id, body.note,
                                                 user.get("name") or user.get("userName") or "")
     except service.CorrectionRefused as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+    except service.WriteDropped as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
     except EspoError as exc:
         raise _crm_failure("mark the follow-up done", exc)
     await _log(user, action="Follow-up done", record_id=activity_id,
@@ -412,7 +414,7 @@ async def dismiss(activity_id: str, body: NoteIn, request: Request) -> dict:
         raise HTTPException(status_code=400, detail="Say why it is dismissed.")
     row = await _row(key, activity_id)
     try:
-        before, after = await service.set_review(client_for(settings, user), activity_id,
+        before, after = await service.set_review(key, activity_id,
                                                  cfg.R_DISMISSED, body.note,
                                                  user.get("name") or user.get("userName") or "")
     except EspoError as exc:
@@ -431,7 +433,7 @@ async def seen(activity_id: str, request: Request) -> dict:
     key = await _built(settings)
     row = await _row(key, activity_id)
     try:
-        before, after = await service.set_review(client_for(settings, user), activity_id,
+        before, after = await service.set_review(key, activity_id,
                                                  cfg.R_SEEN, "", user.get("name") or user.get("userName") or "")
     except EspoError as exc:
         raise _crm_failure("record that", exc)
@@ -465,7 +467,7 @@ async def link(activity_id: str, body: LinkIn, request: Request) -> dict:
     row = await _row(key, activity_id)
     try:
         line = await service.link_to(key, settings, row, body.kind, body.recordId)
-        before, after = await service.set_review(client_for(settings, user), activity_id,
+        before, after = await service.set_review(key, activity_id,
                                                  cfg.R_LINKED, line,
                                                  user.get("name") or user.get("userName") or "")
     except service.CorrectionRefused as exc:
@@ -489,7 +491,7 @@ async def create(activity_id: str, body: CreateIn, request: Request) -> dict:
     row = await _row(key, activity_id)
     try:
         made = await service.create_from(key, settings, row, body.kind)
-        before, after = await service.set_review(client_for(settings, user), activity_id,
+        before, after = await service.set_review(key, activity_id,
                                                  cfg.R_CREATED, f"New {body.kind} referral",
                                                  user.get("name") or user.get("userName") or "")
     except service.CorrectionRefused as exc:

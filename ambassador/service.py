@@ -6,10 +6,12 @@
   page never says who is a client (AM3 item 3).
 * **A mentor's correction** is a save as the mentor, of the date, the
   activity and the note only, inside ``AMBASSADOR_EDIT_DAYS``.
-* **The review list** and its actions are the program team's. Mark done is
-  saved as the staff member; linking or creating runs under the
-  organization-wide key, as the delivery does, and each is recorded in the
-  action log by the router.
+* **The review list** and its actions are the program team's. Every one of
+  its writes runs under the organization-wide key and is read back
+  (:func:`write_checked`): a staff member who is also in the Mentor Team
+  carries the Mentor Role's field rules, which silently drop the follow-up
+  and review fields. The staff member is named on the record and in the
+  action log, written by the router.
 """
 
 from __future__ import annotations
@@ -241,17 +243,39 @@ def _stamp() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
 
+class WriteDropped(CorrectionRefused):
+    """The CRM answered 200 but did not store a field: a field-level rule."""
+
+
+async def write_checked(client: Any, activity_id: str, values: dict[str, Any]) -> None:
+    """Update the activity and read it back. The CRM drops a field a role's
+    field rule forbids and still answers 200; a staff member who is also in
+    the Mentor Team carries the Mentor Role's rules, which is how Mark done
+    and the review outcome were silently lost on the Association (11-21-26).
+    The program team's writes therefore run under the org-wide key, and a
+    field that still did not store raises ``WriteDropped``."""
+    await client.update(cfg.ACTIVITY, activity_id, values)
+    got = await client.get(cfg.ACTIVITY, activity_id, select=",".join(values))
+    dropped = [k for k, v in values.items()
+               if v not in (None, "") and (got.get(k) if not isinstance(v, bool) else bool(got.get(k))) != v]
+    if dropped:
+        raise WriteDropped("The CRM did not store " + ", ".join(dropped)
+                           + ". The application's role is missing an edit grant on these fields.")
+
+
 async def mark_done(staff_client: Any, key: Any, settings: Any, activity_id: str, note: str,
                     staff_name: str) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Mark a follow-up done, as the staff member, and tell the mentor
-    (PRD § 14 item 5). ``(before, after)`` for the action log."""
+    """Mark a follow-up done and tell the mentor (PRD § 14 item 5).
+    ``staff_client`` is the org-wide key (see :func:`write_checked`); the
+    staff member is named in ``followUpBy`` and in the action log.
+    ``(before, after)`` for the action log."""
     note = (note or "").strip()
     if not note:
         raise CorrectionRefused("Write a note saying what was done before marking it done.")
     row = await staff_client.get(cfg.ACTIVITY, activity_id, select=ACTIVITY_SELECT)
     after = {"followUpDone": True, "followUpNote": note, "followUpDoneAt": _stamp(),
              "followUpBy": staff_name or ""}
-    await staff_client.update(cfg.ACTIVITY, activity_id, after)
+    await write_checked(staff_client, activity_id, after)
     before = {k: row.get(k) for k in after}
     if key is not None:
         address, _n, first = await notify.profile_mailbox(key, row.get("mentorProfileId") or "")
@@ -270,7 +294,7 @@ async def set_review(staff_client: Any, activity_id: str, outcome: str, note: st
     row = await staff_client.get(cfg.ACTIVITY, activity_id, select=ACTIVITY_SELECT)
     after = {"reviewOutcome": outcome, "reviewNote": (note or "").strip() or None,
              "reviewedBy": staff_name or "", "reviewedAt": _stamp(), **(extra or {})}
-    await staff_client.update(cfg.ACTIVITY, activity_id, after)
+    await write_checked(staff_client, activity_id, after)
     return {k: row.get(k) for k in after}, after
 
 
