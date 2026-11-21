@@ -1,8 +1,8 @@
 # Chapter News publisher page — redesign plan
 
-Last Updated: 11-21-26 00:18 · Revision 1.2 — change log at the end.
+Last Updated: 11-21-26 01:28 · Revision 1.3 — change log at the end.
 
-**Status: approved 11-20-26 (Doug). Stop 1 built as v0.357.0 (pushed 11-20-26); stop 2 built as v0.358.0 (pushed 11-21-26); stop 3 built as v0.359.0.**
+**Status: CLOSED 11-21-26.** All three stops built (v0.357.0 to v0.359.0), pushed, and checked by Doug on the Business Mentors Association's system 11-21-26: every step of the check matched.
 
 ## 1. The request
 
@@ -74,6 +74,7 @@ checked on the Business Mentors Association's system.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 11-21-26 01:28 | Claude (Claude Code) | Closed: Doug ran the 38-step check (runbook https://claude.ai/artifact/7BZJ1otQKQf8xGv1UPj9gb) on the Association 11-21-26, "all matched". |
 | 1.2 | 11-21-26 00:18 | Claude (Claude Code) | Stop 3 built (v0.359.0). Made on the way: the View screen has its own Actions menu (no View or digest entry), Escape returns to the grid, and an item now carries who created and last changed it. |
 | 1.1 | 11-20-26 23:33 | Claude (Claude Code) | Stop 2 built (v0.358.0). Made on the way: a withdrawn item cannot be edited (Edit says to duplicate it); Withdraw left the form for Actions; the pop-up is a div, not a dialog element, so the editor's own pop-ups stay on top. |
 | 1.0 | 11-20-26 20:08 | Claude (Claude Code) | Plan approved by Doug in chat, with ruling R1; stop 1 built. |

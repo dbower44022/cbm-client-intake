@@ -1390,13 +1390,7 @@ the strength of it.
   surveys (`FEEDBACK_SURVEYS`, off; one switch per moment; migration 0052).
   Fixes from the check: v0.358.1, v0.359.1 and v0.359.2, all pushed
   (11-21-26). What is still owed is in #83.
-- **v0.356.5 and v0.357.0 (2026-11-20) are pushed** (11-20-26 23:23;
-  the Association's `/healthz` and served `news/app.js` read 0.357.0 at
-  23:25): a training address's calendar note, and stop 1 of the Chapter
-  News publisher redesign (`prds/news-publisher-redesign-plan.md`).
-- **v0.358.0 (stop 2, the create and edit pop-up) is pushed** (11-21-26,
-  live on the Association 00:16). **v0.359.0 (stop 3, View) is pushed**
-  (11-21-26 00:27; the Association's served `news/app.js` and production's
-  `/healthz` read 0.359.0 at 00:29). Doug's check of all three stops on the
-  Association is owed.
+- **v0.356.5 (2026-11-20) is live everywhere** (pushed 11-20-26 23:23): an
+  invented training address gets a plain calendar note. Owed: the check as
+  Joe Mentor on the Association (a Completed session with a next date).
 Everything else still owed is in `OPEN-ITEMS.md`.
