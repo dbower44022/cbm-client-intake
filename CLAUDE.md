@@ -1388,4 +1388,9 @@ the strength of it.
   phases 8 and 9, feedback surveys (`FEEDBACK_SURVEYS`, off; one switch per
   moment; migration 0052). The combined check on the Association is owed in
   #83.
+- **v0.356.5 and v0.357.0 (2026-11-20) are pushed** (11-20-26 23:23;
+  the Association's `/healthz` and served `news/app.js` read 0.357.0 at
+  23:25): a training address's calendar note, and stop 1 of the Chapter
+  News publisher redesign (`prds/news-publisher-redesign-plan.md`). Stops
+  2 (the create and edit pop-up) and 3 (View) wait for Doug's check of stop 1.
 Everything else still owed is in `OPEN-ITEMS.md`.
