@@ -1387,8 +1387,8 @@ the strength of it.
 - **v0.354.0 (2026-11-20) is live everywhere main deploys; phases 8 and 9
   checked on the Association 11-21-26**: Business Evaluation's feedback
   surveys (`FEEDBACK_SURVEYS`, off; one switch per moment; migration 0052).
-  Fixes from the check: v0.358.1 and v0.359.1 pushed, v0.359.2 committed,
-  not pushed. What is still owed is in #83.
+  Fixes from the check: v0.358.1, v0.359.1 and v0.359.2, all pushed
+  (11-21-26). What is still owed is in #83.
 - **v0.356.5 and v0.357.0 (2026-11-20) are pushed** (11-20-26 23:23;
   the Association's `/healthz` and served `news/app.js` read 0.357.0 at
   23:25): a training address's calendar note, and stop 1 of the Chapter
