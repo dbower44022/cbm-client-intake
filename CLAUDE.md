@@ -1412,6 +1412,6 @@ the strength of it.
   invented training address gets a plain calendar note. Owed: the check as
   Joe Mentor on the Association (a Completed session with a next date).
 - **v0.360.0 (2026-11-21) is committed, not pushed**: the Ambassador
-  Program, dark behind `AMBASSADOR_PROGRAM`; no CRM has its record type
-  yet. Owed in #91.
+  Program, dark behind `AMBASSADOR_PROGRAM`; its CRM build is applied on
+  the Association's CRM only (11-21-26). Owed in #91.
 Everything else still owed is in `OPEN-ITEMS.md`.
