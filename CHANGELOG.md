@@ -40,6 +40,10 @@ exploit code).** Scripts only; nothing in the application changes.
   the server's own configuration through `nginx -t`, and recreates only that
   container. Undo is in the script's header.
 - **`scripts/on_crm.sh` reaches the Association's CRM** as `bma`.
+- **Applied 11-20-26 to all five CRM servers** (crm-test, the Association,
+  Lakeside, Boston, production): each reported `RESULT: patched (nginx
+  1.31.9)`, and the four with known addresses answered 200 over HTTP/2 from
+  outside.
 - Owed: the docs server's NGINX (inside the BookStack container) is not yet
   checked, and the CRMBuilder installer still writes the bare image.
 
