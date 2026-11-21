@@ -37,7 +37,19 @@ fixed "$new" || { echo "STOP: the newest $image still carries nginx $new (fix: 1
 
 dump="/root/pre-nginx2root-bookstack-$stamp.sql.gz"
 echo "Dumping the database to $dump ..."
-docker exec bookstack_db sh -c 'mariadb-dump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --all-databases 2>/dev/null || mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --all-databases' | gzip > "$dump"
+# Dump with BookStack's OWN database login, read from its container: that is the
+# login the site works with today. (The database container's root password
+# variable is only used when the database is first created, and on this server
+# it no longer matches — refused 11-20-26.) The password travels as MYSQL_PWD,
+# never on a command line.
+benv() { docker exec bookstack printenv "$1" 2>/dev/null || true; }
+db_user="$(benv DB_USERNAME)"; [ -n "$db_user" ] || db_user="$(benv DB_USER)"
+db_pass="$(benv DB_PASSWORD)"; [ -n "$db_pass" ] || db_pass="$(benv DB_PASS)"
+db_name="$(benv DB_DATABASE)"
+[ -n "$db_user" ] && [ -n "$db_name" ] || { echo "STOP: BookStack's database login is not in its container settings; nothing was changed." >&2; exit 1; }
+if ! docker exec -e MYSQL_PWD="$db_pass" bookstack_db mariadb-dump -u"$db_user" --single-transaction --no-tablespaces "$db_name" | gzip > "$dump"; then
+  echo "STOP: the database dump failed; nothing was changed." >&2; exit 1
+fi
 [ "$(gzip -dc "$dump" | head -c 4096 | wc -c)" -gt 100 ] || { echo "STOP: the dump is empty; nothing was changed." >&2; exit 1; }
 echo "Dump OK: $(du -h "$dump" | cut -f1)"
 
