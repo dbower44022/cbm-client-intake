@@ -1411,7 +1411,7 @@ the strength of it.
 - **v0.356.5 (2026-11-20) is live everywhere** (pushed 11-20-26 23:23): an
   invented training address gets a plain calendar note. Owed: the check as
   Joe Mentor on the Association (a Completed session with a next date).
-- **v0.360.0 (2026-11-21) is committed, not pushed**: the Ambassador
+- **v0.360.0 (2026-11-21) is pushed** (11-21-26; the Association's `/healthz` and served `/ambassador/app.js` read 10:49): the Ambassador
   Program, dark behind `AMBASSADOR_PROGRAM`; its CRM build is applied on
   the Association's CRM only (11-21-26). Owed in #91.
 Everything else still owed is in `OPEN-ITEMS.md`.
