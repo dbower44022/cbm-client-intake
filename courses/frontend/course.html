@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="cbm-org" content="{{org}}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{org}} — Training course</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="/shared/panel.css" />
+  <link rel="stylesheet" href="/shared/signin.css" />
+  <link rel="stylesheet" href="/courses/assets/styles.css" />
+</head>
+<body>
+  <main class="cbm-container tc">
+    <header class="tc__header">
+      <div>
+        <h1 id="courseTitle">Training course</h1>
+        <p class="tc__sub" id="revisionLine"></p>
+      </div>
+      <div class="tc__user" id="userBar" hidden>
+        <span>Signed in as <strong id="whoName"></strong></span>
+        <a class="cbm-action--second" href="/courses/">All my courses</a>
+        <a class="cbm-action--second" href="/">Home</a>
+      </div>
+    </header>
+
+    <div id="signin" hidden></div>
+
+    <section id="msgView" hidden>
+      <p class="tc__error" id="msgText" role="alert"></p>
+      <p><a href="/courses/">Return to your courses</a></p>
+    </section>
+
+    <section id="courseView" hidden>
+      <div class="tc__bar" id="bar">
+        <span class="tc__count" id="count"></span>
+        <span class="tc__barmsg tc__error" id="barMsg" role="alert"></span>
+        <button type="button" class="cbm-button" id="completeTop">Complete course</button>
+      </div>
+      <p class="tc__notice" id="notice" hidden></p>
+      <p class="tc__done" id="doneBanner" hidden></p>
+      <div class="course" id="course"></div>
+      <div class="tc__end">
+        <button type="button" class="cbm-button" id="completeEnd">Complete course</button>
+      </div>
+      <div class="tc__missing" id="missing" role="alert" hidden></div>
+    </section>
+
+    <footer class="cbm-footer">
+      <p>&copy; <span data-cbm-year>2026</span> {{org}}.<span class="cbm-footer__version" data-cbm-version></span></p>
+    </footer>
+  </main>
+
+  <script src="/shared/busy.js"></script>
+  <script src="/shared/textsize.js"></script>
+  <script src="/shared/signin.js"></script>
+  <script src="/courses/assets/course.js"></script>
+  <script src="/shared/footer.js"></script>
+</body>
+</html>

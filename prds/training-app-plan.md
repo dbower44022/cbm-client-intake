@@ -1,9 +1,9 @@
 # The training application — plan
 
-Last Updated: 11-21-26 11:55 · Revision 0.4 — see change log at the end.
+Last Updated: 11-21-26 12:17 · Revision 0.5 — see change log at the end.
 
 **Status: reviewed by Doug; phase 1's prompt approved as written 11-21-26**
-(`prompts/training-app-phase-1-prompt-v0.1.md`, revision 1.0). Elicited 11-21-26 from the planning
+(`prompts/training-app-phase-1-prompt-v0.1.md`, revision 1.0); **phase 1 built 11-21-26** (v0.362.0), stop 1 owed. Elicited 11-21-26 from the planning
 prompt `prompts/training-app-planning-prompt-v0.1.md`. Rulings TR1 to TR12
 are Doug's answers. The design, the data model and the phases are proposals
 that follow from them; nothing is built. Open item `OPEN-ITEMS.md` #92.
@@ -416,6 +416,7 @@ served by the training application carry one.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.5 | 11-21-26 12:17 | Claude (Claude Code) | Phase 1 built (v0.362.0). As built: the migration is `0054_training_courses` (0053 was taken); it creates the four tables of phases 1 to 4, `training_help` comes with phase 5; the four tables are kept by the sandbox reset (real people's records); `TRAINING_SIGNINS` is one line, entries separated by semicolons, each `role \| username \| password`, since the settings page has no multi-line box. |
 | 0.4 | 11-21-26 11:55 | Claude (Claude Code) | Status: Doug approved phase 1's prompt as written. |
 | 0.3 | 11-21-26 11:53 | Claude (Claude Code) | TR11 and TR12, the help agent (raised by Doug after revision 0.2): term, decisions 13 to 15, design § 5.6, three settings, the `training_help` table, phase 5; documentation becomes phase 6. |
 | 0.2 | 11-21-26 11:46 | Claude (Claude Code) | TR2 to TR10 recorded; purpose, terms, the twelve decisions taken in the session, design, data model, five phases with their stops, scope and open questions added. |

@@ -1416,4 +1416,8 @@ the strength of it.
 - **v0.360.0 (2026-11-21) is pushed** (11-21-26; the Association's `/healthz` and served `/ambassador/app.js` read 10:49): the Ambassador
   Program, dark behind `AMBASSADOR_PROGRAM`; its CRM build is applied on
   the Association's CRM only (11-21-26). Owed in #91.
+- **v0.362.0 (2026-11-21) is committed, not pushed**: training courses
+  phase 1, the course page (`TRAINING_COURSES`, off; migration
+  `0054_training_courses`; package `courses/`, content in `training/`).
+  Owed: stop 1, Doug's check on the Association (#92).
 Everything else still owed is in `OPEN-ITEMS.md`.

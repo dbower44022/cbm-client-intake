@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="cbm-org" content="{{org}}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{org}} — Training</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="/shared/panel.css" />
+  <link rel="stylesheet" href="/shared/signin.css" />
+  <link rel="stylesheet" href="/courses/assets/styles.css" />
+</head>
+<body>
+  <main class="cbm-container tc">
+    <header class="tc__header">
+      <div>
+        <h1>Training</h1>
+        <p class="tc__sub">The {{org}} courses for the applications you use. Your progress is saved as you go, so you can stop and come back on any computer.</p>
+      </div>
+      <div class="tc__user" id="userBar" hidden>
+        <span>Signed in as <strong id="whoName"></strong></span>
+        <a class="cbm-action--second" href="/">Home</a>
+      </div>
+    </header>
+
+    <div id="signin" hidden></div>
+
+    <section id="msgView" hidden>
+      <p class="tc__error" id="msgText" role="alert"></p>
+      <p><a href="/">Return to the home page</a></p>
+    </section>
+
+    <section id="listView" hidden>
+      <h2 class="tc__group" id="appHeading" hidden></h2>
+      <div class="tc__list" id="appList"></div>
+      <h2 class="tc__group" id="otherHeading" hidden></h2>
+      <div class="tc__list" id="otherList"></div>
+      <p id="noneText" hidden>There are no courses for the applications you use yet.</p>
+    </section>
+
+    <footer class="cbm-footer">
+      <p>&copy; <span data-cbm-year>2026</span> {{org}}.<span class="cbm-footer__version" data-cbm-version></span></p>
+    </footer>
+  </main>
+
+  <script src="/shared/busy.js"></script>
+  <script src="/shared/textsize.js"></script>
+  <script src="/shared/signin.js"></script>
+  <script src="/courses/assets/list.js"></script>
+  <script src="/shared/footer.js"></script>
+</body>
+</html>

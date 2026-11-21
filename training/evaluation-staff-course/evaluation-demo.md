@@ -1,10 +1,10 @@
 # Business Evaluation — the training demo
 
-Last Updated: 11-21-26 10:51 · Revision 0.2 — see change log at the end.
+Last Updated: 11-21-26 12:04 · Revision 0.3 — see change log at the end.
 
 A step-by-step demo for training new staff on the evaluation journey. The trainee plays every part in turn: the client, the Client Administration staff member who assigns a mentor, the mentor, and the Mentor Administration staff member who closes a follow-up. It runs on the Business Mentors Association's training system and takes about 90 minutes. The background is in `business-evaluation-guide.md` at the repository root.
 
-**Status.** Draft for Doug's review, not yet run end to end. **Trainees use the step-by-step page** made from this file (Doug's choice A, 11-21-26): https://claude.ai/artifact/TVxJtFYFi4h3oqytAszX2t. This file is its one source: after an edit, rebuild it with `uv run python scripts/build_runbook.py training/evaluation-staff-course/evaluation-demo.md --out <page.html> --title "Evaluation Training Demo"` and publish the page again.
+**Status.** Draft for Doug's review, not yet run end to end. Where Training courses is switched on, trainees take it in the application, at `/courses/evaluation-demo`, where their ticks and answers are saved and their completion recorded. Until then they use the step-by-step page made from this file (Doug's choice A, 11-21-26): https://claude.ai/artifact/TVxJtFYFi4h3oqytAszX2t. This file is the one source of both: after an edit, rebuild the page with `uv run python scripts/build_runbook.py training/evaluation-staff-course/evaluation-demo.md --out <page.html> --title "Evaluation Training Demo"` and publish it again.
 
 Every value to type is in its own box. On the documentation site each box has a copy button: copy it and paste it rather than typing.
 
@@ -16,7 +16,10 @@ Every value to type is in its own box. On the documentation site each box has a 
 
 - Chrome, with private windows allowed.
 - **Their own real email address.** The client's emails go there, because the training system's own addresses cannot receive mail.
-- Three training sign-ins, from the trainer: the **Client Administration** login (Kitty Cat), the **mentor** login (Joe Mentor) and the **Mentor Administration** login (Mentor Admin). They are not listed here, because this page is public.
+- Three training sign-ins. The course page in the application fills them in below; a page made from this file names them only, because it is public, so ask the trainer.
+  - **Client Administration** login (Kitty Cat): {{signin:Client Administration}}
+  - **Mentor** login (Joe Mentor): {{signin:Mentor}}
+  - **Mentor Administration** login (Mentor Admin): {{signin:Mentor Administration}}
 - About 90 minutes. Each run costs about $0.30 in AI analysis, and leaves a made-up client on the training system until it is next restored.
 
 **The business everyone uses** is *Riverside Candle Co.*, a one-person candle maker. Add your initials to its name, so that two trainees' clients never mix.
@@ -29,7 +32,7 @@ Every value to type is in its own box. On the documentation site each box has a 
 - **Action:** paste the address below into the address bar and press Enter.
 
 ```
-https://apps.businessmentorsassociation.org/client-intake/
+{{training_url}}/client-intake/
 ```
 
 - **You should see:** the page *Request a Mentor*, on its first step, *About You*.
@@ -129,7 +132,7 @@ Number of Employees:
 - **If not:** stop and tell the trainer the message shown.
 - **What it does:** creates the client, the business and an engagement waiting for a mentor.
 
-**Checkpoint:** tell the trainer the reference number shown.
+**Checkpoint:** type the reference number shown on the *Thank you!* page.
 
 ## 2. The client answers the intake survey
 
@@ -230,7 +233,7 @@ I do not know which candles actually make money once the wholesale discount and 
 - **You should see:** *Your Finance answers have been submitted. Thank you.*
 - **What it does:** the Finance record waits, Submitted, for a mentor. Close this tab.
 
-**Checkpoint:** tell the trainer that both surveys are submitted.
+**Checkpoint:** type the names of the two surveys you submitted.
 
 ## 3. Client Administration chooses the mentor
 
@@ -268,7 +271,7 @@ Riverside Candle
 - **You should see:** a green line starting *Assigned "…" to Joe Mentor — status now Pending Acceptance*.
 - **What it does:** the engagement and its records move to Joe Mentor, and the Finance analysis can now start.
 
-**Checkpoint:** tell the trainer the mentors the match suggested, and that Joe Mentor is assigned.
+**Checkpoint:** type the names of the mentors the match suggested, separated by commas.
 
 ## 4. The mentor reviews the draft report
 
@@ -298,7 +301,7 @@ We agreed in our first session to start with a simple monthly cash plan before l
 - **You should see:** *Approved. When every report in round 1 is approved, schedule the review session from the round's line on the Evaluations tab.*
 - **What it does:** only the engagement's mentor can approve.
 
-**Checkpoint:** tell the trainer that the Finance report is approved.
+**Checkpoint:** type the Status the Finance row shows on the Evaluations tab after you approved it.
 
 ## 5. The review session
 
@@ -309,7 +312,7 @@ We agreed in our first session to start with a simple monthly cash plan before l
 - **You should see:** the session saved, and on the Evaluations tab the round's line ends *review session: … Business Evaluation review*.
 - **What it does:** the session where the mentor goes through the results with the client. For the demo, we record it as held.
 
-**Checkpoint:** tell the trainer that the round's line names the review session.
+**Checkpoint:** type the review session's title, as the round's line shows it.
 
 ## 6. Release the client's copy
 
@@ -333,7 +336,7 @@ We agreed in our first session to start with a simple monthly cash plan before l
 - **You should see:** on Documents, an *Evaluation report* PDF. On Evaluations, the Finance row reads **Reviewed with Client**, and under *Action items* the two items, each with its owner and due date. Change one item's Status to **Done**.
 - **What it does:** a released report is final. The action items are followed up in later sessions.
 
-**Checkpoint:** tell the trainer the two action items and their owners.
+**Checkpoint:** type the two action items, each with its owner.
 
 ## 7. The client gives feedback
 
@@ -355,7 +358,7 @@ The report was useful but I would have liked the session sooner.
 - **You should see:** a thank-you.
 - **What it does:** a score of 4 is a low score. The response is flagged for follow-up, and the Mentor Administration Team is emailed at once.
 
-**Checkpoint:** tell the trainer that the survey is submitted with a 4.
+**Checkpoint:** type the score you gave on the 0-to-10 row.
 
 ## 8. Mentor Administration closes the follow-up
 
@@ -383,7 +386,7 @@ Called Morgan to apologise for the wait and booked the next session for next wee
 - **You should see:** responses received, the net promoter score with the average, the monthly charts, *By mentor* and *Open follow-ups*.
 - **What it does:** the totals staff use. Mentors never see these figures.
 
-**Checkpoint:** tell the trainer the net promoter score the Feedback page shows.
+**Checkpoint:** type the net promoter score the Feedback page shows.
 
 ## What to tell the trainee at the end
 
@@ -397,3 +400,4 @@ Called Morgan to apologise for the wait and booked the next session for next wee
 |---|---|---|---|
 | 0.1 | 11-21-26 02:29 | Claude (Claude Code) | Drafted on Doug's decisions of 11-21-26: the whole journey for staff (A), on the documentation site (A), each trainee starting a new client from the intake form (A). |
 | 0.2 | 11-21-26 10:51 | Claude (Claude Code) | One line per paragraph (Doug saw hard breaks); the step-by-step page built from this file by `scripts/build_runbook.py` (Doug's choice A). |
+| 0.3 | 11-21-26 12:04 | Claude (Claude Code) | Served in the application (training app phase 1): `course.yaml` added; the training system's address written as `{{training_url}}` and the three sign-ins as `{{signin:…}}`; each checkpoint worded as something the trainee types. Minor revision: still a draft (decision 9). |

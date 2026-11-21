@@ -67,6 +67,7 @@ MYEMAIL_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "myemail" / "fro
 ACTIVITY_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "activity" / "frontend"
 NEWS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "news" / "frontend"
 AMBASSADOR_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "ambassador" / "frontend"
+COURSES_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "courses" / "frontend"
 EVENTS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "events" / "frontend"
 CAMPAIGNS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "campaigns" / "frontend"
 CAMPAIGNS_LANDING_DIR = Path(__file__).resolve().parent.parent / "campaigns" / "landing_frontend"
@@ -1141,6 +1142,11 @@ def create_app(
         from ambassador import api_router as ambassador_router
 
         app.include_router(ambassador_router)
+        # Training courses (prds/training-app-plan.md). Always mounted;
+        # TRAINING_COURSES is read per request.
+        from courses import api_router as courses_router
+
+        app.include_router(courses_router)
         app.include_router(assignments_router)
         app.include_router(ops_router)
         app.include_router(mentoradmin_router)
@@ -1478,6 +1484,36 @@ def create_app(
             "/ambassador",
             BrandedStaticFiles(directory=str(AMBASSADOR_FRONTEND_DIR), html=True),
             name="ambassador-frontend",
+        )
+    if settings.assignments_active and COURSES_FRONTEND_DIR.is_dir():
+        # Training courses (prds/training-app-plan.md § 5.2): the member's list
+        # at /courses/ and one course at /courses/{id}, whose route is
+        # registered BEFORE the mount so the static files do not shadow it.
+        # Assets sit under /courses/assets/, two segments, so the course route
+        # never catches them. TRAINING_COURSES is read per request: off, both
+        # pages answer 404 (decision 11). The pages are shells; every read
+        # they make is gated by the API.
+        @app.get("/courses/{course_id}", response_class=HTMLResponse, include_in_schema=False)
+        async def course_page_shell(course_id: str) -> HTMLResponse:
+            live = get_settings()
+            if not live.training_courses:
+                raise HTTPException(status_code=404, detail="Not found.")
+            html = render_branding(
+                (COURSES_FRONTEND_DIR / "course.html").read_text(encoding="utf-8"), live)
+            return HTMLResponse(html, headers={"Cache-Control": "no-store"})
+
+        class _CoursesSwitch(BrandedStaticFiles):
+            async def __call__(self, scope, receive, send):  # type: ignore[override]
+                if not get_settings().training_courses:
+                    from starlette.responses import PlainTextResponse
+                    await PlainTextResponse("Not Found", status_code=404)(scope, receive, send)
+                    return
+                await super().__call__(scope, receive, send)
+
+        app.mount(
+            "/courses",
+            _CoursesSwitch(directory=str(COURSES_FRONTEND_DIR), html=True),
+            name="courses-frontend",
         )
     if settings.assignments_active and MYEMAIL_FRONTEND_DIR.is_dir():
         app.mount(

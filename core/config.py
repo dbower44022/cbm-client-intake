@@ -966,6 +966,17 @@ class Settings(BaseSettings):
     ambassador_edit_days: int = 14
     # How often the worker delivers reports the web could not (seconds).
     ambassador_delivery_seconds: int = 60
+    # --- Training courses (prds/training-app-plan.md) ---
+    # The course pages (/courses/) and their saved progress. Off: the pages and
+    # their API answer 404. Read per request (decision 11).
+    training_courses: bool = False
+    # The training system's address, for {{training_url}} in a course (TR8).
+    training_system_url: str = ""
+    # The training sign-ins, shown only on course pages (TR7). One entry per
+    # line, or entries separated by ";": "role | username | password".
+    training_signins: str = ""
+    # Course ids this deployment hides (TR8), comma-separated.
+    training_hidden_courses: str = ""
     # --- F5: the portal calendar (prds/events/CBM_Events_Portal_Calendar_Design.md) ---
     # The rail of upcoming events on the portal home page and the member page
     # behind it. Off by default so crm-test can show it to a real member first:
@@ -1175,6 +1186,11 @@ class Settings(BaseSettings):
     @property
     def assign_allowed_roles_list(self) -> list[str]:
         return [r.strip() for r in self.assign_allowed_roles.split(",") if r.strip()]
+
+    @property
+    def training_hidden_courses_set(self) -> frozenset[str]:
+        return frozenset(c.strip().lower() for c in self.training_hidden_courses.split(",")
+                         if c.strip())
 
     @property
     def ambassador_allowed_teams_list(self) -> list[str]:

@@ -5,6 +5,36 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.362.0] — 2026-11-21
+
+**feat(courses): the training application, phase 1 — the course page.**
+`prds/training-app-plan.md` § 7, dark behind `TRAINING_COURSES` (off). A
+course is a folder under `training/` with its Markdown and a `course.yaml`
+(id, title, minutes, applications); the application reads them once per
+process, and the revision comes from the Markdown's `Last Updated` line
+only. The new `courses/` package serves `/courses/` (the member's list,
+`?app=<route>` first) and `/courses/{course}`: a tick box per step and a text
+box per checkpoint, each saved as it is made, a progress count in a sticky
+bar, collapse-and-scroll to the next open item, and **Complete course**,
+which names the steps not ticked and the checkpoints not answered, then
+records the completion with the answers copied in. A member may take a
+course when they can open one of its applications (the portal's own rule);
+any other course answers 404 like an unknown one. A minor revision keeps
+ticks; ticks from an earlier significant revision are cleared, and the page
+says so. The Markdown reader moved from `scripts/build_runbook.py` into
+`courses/render.py`; the script imports it and makes a byte-identical page
+from the same Markdown. Tokens `{{training_url}}` and `{{signin:<role>}}`:
+the course page fills in the address and the sign-ins, the script's public
+page prints the role's name only. Settings: `TRAINING_COURSES`,
+`TRAINING_SYSTEM_URL`, `TRAINING_SIGNINS` (secret; `role | username |
+password`, entries separated by semicolons) and `TRAINING_HIDDEN_COURSES`.
+Migration `0054_training_courses` (0053 was taken by the Ambassador
+report): `training_progress`, `training_completion`, `training_dismissal`
+and `training_onboarding_write`, kept by the sandbox reset because they are
+real people's records. The evaluation demo becomes the first course
+(revision 0.3, still a draft): its `course.yaml`, the tokens, and each
+checkpoint worded as something to type.
+
 ## [0.361.0] — 2026-11-21
 
 **feat(portal): the portal signs in through the shared sign-in box.** The

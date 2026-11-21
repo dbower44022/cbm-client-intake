@@ -146,6 +146,13 @@ KEEP_TABLES: frozenset[str] = frozenset(
         # The chapter website's logo and header graphic, uploaded in System
         # Settings — configuration like the settings beside them.
         "website_image",
+        # Training courses (prds/training-app-plan.md § 6): real people's
+        # progress and completions, credited in the live application (TR7),
+        # never training data.
+        "training_progress",
+        "training_completion",
+        "training_dismissal",
+        "training_onboarding_write",
     }
 )
 

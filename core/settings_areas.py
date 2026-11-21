@@ -103,7 +103,7 @@ AREAS: tuple[Area, ...] = (
     )),
     Area(AREA_STAFF, (
         _h("Staff and mentor tools",
-           "assignments_enabled home_v2 home_no_contact_days chapter_news news_digest news_digest_weekday news_digest_hour ambassador_program ambassador_free_mail_domains ambassador_edit_days ambassador_delivery_seconds record_quick_add record_history_tab activity_page "
+           "assignments_enabled home_v2 home_no_contact_days chapter_news news_digest news_digest_weekday news_digest_hour ambassador_program ambassador_free_mail_domains ambassador_edit_days ambassador_delivery_seconds training_courses training_system_url training_signins training_hidden_courses record_quick_add record_history_tab activity_page "
            "mentor_preview_shared grants_enabled",
            lead="assignments_enabled"),
         _h("Mentor logins",

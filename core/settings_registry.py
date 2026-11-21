@@ -200,6 +200,8 @@ SECRET_KEYS: frozenset[str] = frozenset({
     "postal_api_key",
     "postal_webhook_secret",
     "sms_auth_token",
+    # Shown on course pages to members by ruling TR7, and never on this page.
+    "training_signins",
 })
 
 
@@ -699,6 +701,25 @@ SETTINGS: tuple[SettingSpec, ...] = (
        kind="int", component="worker", unit="seconds",
        help="How often the worker records reports in the CRM that could not be "
             "recorded at once."),
+    _s("training_courses", GROUP_FEATURES, "Training courses", kind="bool",
+       help="The training courses inside the application: each member's list of "
+            "courses, the course pages with their tick boxes and checkpoint answers, "
+            "saved as they go, and the completion record. Off, the course pages "
+            "answer Not found."),
+    _s("training_system_url", GROUP_FEATURES, "Training system address",
+       help="The address of the system the course exercises run on, such as "
+            "https://apps.businessmentorsassociation.org. A course writes it as "
+            "{{training_url}}, so a chapter with its own training system needs no "
+            "copy of the course."),
+    _s("training_signins", GROUP_FEATURES, "Training sign-ins",
+       help="The shared logins on the training system, shown on course pages only. "
+            "One per role, separated by semicolons, each written role | username | "
+            "password, for example: Client Administration | trainee.admin | secret1; "
+            "Mentor | trainee.mentor | secret2. A password may not hold a semicolon."),
+    _s("training_hidden_courses", GROUP_FEATURES, "Hidden training courses", kind="csv",
+       help="The course ids this deployment does not offer, separated by commas, "
+            "such as evaluation-demo. A hidden course is not listed and its page "
+            "answers Not found."),
     _s("portal_events_window_days", GROUP_FEATURES, "Portal calendar window", kind="int",
        unit="days",
        help="How many days ahead the rail lists in full; events beyond fold behind "

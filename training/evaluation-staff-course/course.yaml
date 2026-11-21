@@ -1,0 +1,9 @@
+# The evaluation demo as a course served by the application
+# (prds/training-app-plan.md, decision 3). The revision is read from the
+# Markdown's Last Updated line, never written here.
+id: evaluation-demo
+title: Business Evaluation — the training demo
+minutes: 90
+markdown: evaluation-demo.md
+# Client Administration, Client Management and Mentor Administration (TR3).
+applications: [assignments, mentorsessions, mentoradmin]
