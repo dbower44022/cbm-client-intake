@@ -1421,5 +1421,5 @@ the strength of it.
   (`TRAINING_COURSES`, off in production; migration `0054_training_courses`;
   package `courses/`, content in `training/`). v0.362.2 refuses a save when
   the browser's sign-in is not the person the course page was opened for
-  (409). Phase 2's prompt is drafted, not approved (#92).
+  (409). Phase 2's prompt is approved, not started (#92).
 Everything else still owed is in `OPEN-ITEMS.md`.

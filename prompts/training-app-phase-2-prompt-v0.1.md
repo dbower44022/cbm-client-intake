@@ -1,8 +1,8 @@
 # Kickoff prompt — the training application, phase 2: the Training button and the reminder
 
-Last Updated: 11-21-26 15:58 · Revision 0.1 — see change log at the end.
+Last Updated: 11-21-26 15:59 · Revision 1.0 — see change log at the end.
 
-**Draft for Doug's review.** When approved, start a fresh Claude Code
+**Approved by Doug as written, 11-21-26.** Start a fresh Claude Code
 session rooted in `~/Dropbox/Projects/cbm-client-intake`, tell it to read
 this file, and tell it to follow everything below the line.
 
@@ -75,4 +75,5 @@ the phase.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.0 | 11-21-26 15:59 | Doug | Approved as written. |
 | 0.1 | 11-21-26 15:58 | Claude (Claude Code) | Drafted at the close of phase 1 (stop 1 passed 11-21-26). |
