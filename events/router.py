@@ -674,10 +674,10 @@ async def event_feedback_done(response_id: str, payload: FeedbackDoneIn,
         raise _crm_failure(exc, "mark the follow-up done") from exc
     await record_action(
         client, app=APP_EVENTS, category=CAT_RECORD_EDIT, action="Feedback Follow-up Done",
-        parent_type="CSurveyResponse", parent_id=response_id,
+        parent_type=result["parentType"], parent_id=result["parentId"],
         summary=f"Follow-up done on {result['name'] or 'a feedback response'}.",
         actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
-        details={"fields": result["fields"]},
+        details={"responseId": response_id, "fields": result["fields"]},
     )
     return {"response": result["response"]}
 

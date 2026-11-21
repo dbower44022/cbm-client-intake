@@ -1384,10 +1384,11 @@ the strength of it.
   digest (phase 7, `NEWS_DIGEST`, off; worker job `news/digest.py`). Doug's
   big test 11-20-26 passed the header bar and phases 5 and 6; the digest's
   delivery is untested (Doug, option C), so stop 7 stays open (#89).
-- **v0.354.0 (2026-11-20) is committed, not pushed**: Business Evaluation
-  phases 8 and 9, feedback surveys (`FEEDBACK_SURVEYS`, off; one switch per
-  moment; migration 0052). The combined check on the Association is owed in
-  #83.
+- **v0.354.0 (2026-11-20) is live everywhere main deploys; phases 8 and 9
+  checked on the Association 11-21-26**: Business Evaluation's feedback
+  surveys (`FEEDBACK_SURVEYS`, off; one switch per moment; migration 0052).
+  Fixes from the check: v0.358.1 and v0.359.1 pushed, v0.359.2 committed,
+  not pushed. What is still owed is in #83.
 - **v0.356.5 and v0.357.0 (2026-11-20) are pushed** (11-20-26 23:23;
   the Association's `/healthz` and served `news/app.js` read 0.357.0 at
   23:25): a training address's calendar note, and stop 1 of the Chapter

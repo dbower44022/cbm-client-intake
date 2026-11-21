@@ -5,6 +5,22 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.359.2] — 2026-11-21
+
+**fix(feedback): a follow-up marked done is in the action log, and a
+training address is a recorded skip.** Both found in the combined check on
+the Business Mentors Association's system, which closed phases 8 and 9
+(`OPEN-ITEMS.md` #83).
+
+- The action log's record link cannot name a Survey Response (its entity
+  list is fixed), so every *Feedback Follow-up Done* entry was refused
+  without a word. It now points at the response's engagement, else its
+  event, else the mentor (`feedback/views.action_parent`), and names the
+  response in its details.
+- An automatic survey to an address on the Sandbox address domain is
+  skipped with the reason "an invented training address" instead of being
+  tried three times and failing (`feedback/sending.skip_reason`).
+
 ## [0.359.1] — 2026-11-21
 
 **fix(feedback): a follow-up alert reaches the real team members, and a

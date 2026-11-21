@@ -655,3 +655,22 @@ def test_a_shorter_sweep_interval_takes_effect_at_once():
     assert feedback_sweep_due(None, NOW, 3600)
     assert not feedback_sweep_due(ran, NOW + timedelta(minutes=5), 3600)
     assert feedback_sweep_due(ran, NOW + timedelta(minutes=5), 60)
+
+
+def test_a_follow_up_is_logged_on_a_record_the_action_log_can_name():
+    """The action log's record link cannot name a Survey Response (found on
+    the Association 11-21-26): the engagement, else the event."""
+    crm = _world()
+    _responses(crm)
+    result = run(views.mark_done(crm, "rj", "Phoned Dana.", now=NOW))
+    assert (result["parentType"], result["parentId"]) == ("CEngagement", ENG)
+    assert views.action_parent({"eventId": "ev1"}) == ("CEvent", "ev1")
+
+
+def test_a_training_address_is_a_recorded_skip_not_a_failure():
+    store = MemoryFeedbackStore()
+    out = Outbox()
+    assert _send(store, key="t", quiet=False, email="dana.whitcomb@bma.test", out=out,
+                 s=settings(sandbox_address_domain="bma.test")) \
+        == "skipped:an invented training address"
+    assert store.sends["t"]["outcome"] == "skipped" and out.sent == []

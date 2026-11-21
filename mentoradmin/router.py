@@ -459,10 +459,10 @@ async def feedback_done(response_id: str, body: FeedbackDoneIn, request: Request
     await action_log.record_action(
         client, app="Mentor Administration", category=action_log.CAT_RECORD_EDIT,
         action=action_log.ACT_FEEDBACK_FOLLOW_UP_DONE,
-        parent_type="CSurveyResponse", parent_id=response_id,
+        parent_type=result["parentType"], parent_id=result["parentId"],
         summary=f"Follow-up done on {result['name'] or 'a feedback response'}.",
         actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
-        details={"fields": result["fields"]},
+        details={"responseId": response_id, "fields": result["fields"]},
     )
     return {"response": result["response"]}
 

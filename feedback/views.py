@@ -123,6 +123,20 @@ async def detail(client: Any, response_id: str) -> dict[str, Any]:
     return view
 
 
+def action_parent(response: dict[str, Any]) -> tuple[str, str]:
+    """Where a follow-up's action-log entry points: the action log's record
+    link cannot name a Survey Response (its entity list is fixed; found on
+    the Association 11-21-26, where every such entry was refused), so the
+    engagement, else the event, else the mentor."""
+    if response.get("engagementId"):
+        return cfg.ENGAGEMENT, response["engagementId"]
+    if response.get("eventId"):
+        return cfg.EVENT, response["eventId"]
+    if response.get("mentorProfileId"):
+        return "CMentorProfile", response["mentorProfileId"]
+    return "", ""
+
+
 def _stamp(at: datetime) -> str:
     return at.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
@@ -143,8 +157,10 @@ async def mark_done(client: Any, response_id: str, note: str,
     changes = {"followUpDone": True, "followUpNote": note, "followUpDoneAt": at}
     await client.update(cfg.ENTITY, response_id, changes)
     fields = {k: {"from": before.get(k), "to": v} for k, v in changes.items()}
+    parent_type, parent_id = action_parent(before)
     return {"response": row_view({**before, **changes}), "fields": fields,
-            "name": before.get("name") or ""}
+            "name": before.get("name") or "", "parentType": parent_type,
+            "parentId": parent_id}
 
 
 async def engagement_contacts(client: Any, engagement_id: str) -> list[dict[str, Any]]:

@@ -1,13 +1,13 @@
 # Business Evaluation — plan
 
-Last Updated: 11-20-26 02:20 · Revision 0.19 — see change log at the end.
+Last Updated: 11-21-26 00:55 · Revision 0.20 — see change log at the end.
 
 This is the design record for the **Business Evaluation** offering. It holds
 the terms, the flow, the rulings, the CRM data model, and the build phases with
 their stopping points. The build orchestrator
 (`prompts/business-evaluation-build-orchestrator-v0.1.md`) and the per-phase
 build prompts are written from this file. Phase 1 is built (v0.324.0); phase 2
-is built (v0.328.0); phase 2b is built (v0.330.0); phase 3 is built (v0.332.0); phase 4 is built (v0.336.0); phase 5 is built (v0.338.0) and checked; phase 6 is built (v0.339.0) and checked; phase 7 is built (v0.350.0) and checked; phases 8 and 9 are built together (v0.354.0), their combined check owed. The planning session on wider uses (11-16-26) added three uses, § 3b, rulings BE24 to BE36, and re-cut the phases from 6 onward (§ 6); the partner offering, once phase 6, is now phase 10.
+is built (v0.328.0); phase 2b is built (v0.330.0); phase 3 is built (v0.332.0); phase 4 is built (v0.336.0); phase 5 is built (v0.338.0) and checked; phase 6 is built (v0.339.0) and checked; phase 7 is built (v0.350.0) and checked; phases 8 and 9 are built together (v0.354.0) and checked. The planning session on wider uses (11-16-26) added three uses, § 3b, rulings BE24 to BE36, and re-cut the phases from 6 onward (§ 6); the partner offering, once phase 6, is now phase 10.
 
 **Status of the rulings.** All rulings, BE1 to BE23, are approved by Doug
 (11-13-26). Rulings BE1 to BE6 restate what Doug described; BE7 to BE23 were
@@ -403,3 +403,4 @@ surveys staff can edit without a release.
 | 0.17 | 11-19-26 23:36 | Claude (Claude Code) | Phase 7 built, v0.350.0: the mentor match (BE28), behind `MENTOR_MATCH`. Doug's choices at stopping point (a) 11-19-26, all as recommended: the profile lists, the website texts and the last-assigned date sent (A); the prompt as drafted, a mentor at capacity suggested only when clearly best (A); a fourth tab, *Mentor match* (A); every run kept (A); samples on the Association plus a made-up roster of 50 (A). |
 | 0.18 | 11-20-26 00:59 | Claude (Claude Code) | Phase 7 checked by Doug on the Business Mentors Association's system 11-20-26 ("worked great"). Added at his request during the check: each suggestion shows the mentor's last new client date, and *Assign this mentor* in the mentor popup assigns. |
 | 0.19 | 11-20-26 02:20 | Claude (Claude Code) | Phases 8 and 9 built together, v0.354.0: feedback surveys. Doug's eight decisions at stopping point (a) 11-20-26, all as recommended, with one addition (the session count a setting). § 5 records what was settled. The combined check on the Association is owed. |
+| 0.20 | 11-21-26 00:55 | Claude (Claude Code) | Phases 8 and 9 checked by Doug on the Business Mentors Association's system 11-21-26 (runbook https://claude.ai/artifact/3RsLLq4KxuMm8dcQcJ4nhw): every moment, the quiet period, the low score, a non-admin closing the follow-up, the Feedback page. Three faults fixed during it: v0.358.1, v0.359.1, v0.359.2. |

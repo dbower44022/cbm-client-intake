@@ -84,6 +84,15 @@ async def contact_recipient(client: Any, contact_id: str) -> dict[str, Any]:
             "types": types if isinstance(types, list) else [types]}
 
 
+def _training_address(settings: Any, email: str) -> bool:
+    """An address on the Sandbox address domain, which this system never
+    sends to (``core/sandbox_addresses``): a skip, not a failure to retry."""
+    from core.sandbox_addresses import is_sandbox_address
+
+    domain = (getattr(settings, "sandbox_address_domain", "") or "").strip().lower().lstrip("@.")
+    return bool(domain) and is_sandbox_address(email, domain)
+
+
 def is_member(settings: Any, who: dict[str, Any]) -> bool:
     """A CBM member is never surveyed (decision 7): a Mentor-typed contact, or
     an address on the organization's own mail domain."""
@@ -226,6 +235,8 @@ async def skip_reason(settings: Any, store: Any, who: dict[str, Any], *, quiet: 
         return "no email address"
     if is_member(settings, who):
         return "a member of the organization"
+    if _training_address(settings, who.get("email") or ""):
+        return "an invented training address"
     if who.get("optedOut"):
         return "the address is opted out of email"
     if quiet and await in_quiet_period(store, settings, who["email"], now):

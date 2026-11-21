@@ -1,6 +1,6 @@
 # feedback/ — feedback surveys
 
-Last Updated: 11-20-26 02:20 · Revision 1.0
+Last Updated: 11-21-26 00:55 · Revision 1.1
 
 Feedback surveys are the second survey purpose on the survey engine. The
 rulings are BE29 to BE33 in `prds/business-evaluation-plan.md`. This package
@@ -102,6 +102,15 @@ Claude Code loads this file only when a session works in this folder.
   page (`surveys/router._survey_view`), and `service.deliver` fills it in in
   `answersReadable`.
 
+- **Checked on the Association 11-21-26.** Three lessons, each now a rule:
+  - the sweep keeps when it **last** ran (`worker.feedback_sweep_due`), so a
+    shorter interval set at `/setup` takes effect at once;
+  - alerts and automatic sends **leave out training addresses** (the Sandbox
+    address domain): an alert goes to the real members, a send is a recorded
+    skip; a failed alert is retried hourly for a day;
+  - **the action log cannot name a Survey Response**: a follow-up entry
+    points at the engagement, else the event (`views.action_parent`).
+
 Tests: `tests/test_feedback.py`, `tests/test_feedback_store_pg.py`; fakes in
 `tests/feedback_fakes.py`.
 
@@ -110,3 +119,4 @@ Tests: `tests/test_feedback.py`, `tests/test_feedback_store_pg.py`; fakes in
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
 | 1.0 | 11-20-26 02:20 | Claude (Claude Code) | Created with phases 8 and 9. |
+| 1.1 | 11-21-26 00:55 | Claude (Claude Code) | The combined check on the Association and its three fixes. |
