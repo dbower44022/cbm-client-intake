@@ -610,3 +610,14 @@ def test_the_feedback_teams_open_analytics_for_the_feedback_page_only_while_on()
     assert _can_view_page(staff, PAGE_REGISTRY["feedback"], on)
     assert not _can_view_page(staff, PAGE_REGISTRY["system-overview"], on)
     assert not _can_view_page(mentor, PAGE_REGISTRY["feedback"], on)
+
+
+def test_a_shorter_sweep_interval_takes_effect_at_once():
+    """Found on the Association 11-21-26: switched on with the default hour,
+    then set to a minute, the sweep still waited the hour."""
+    from worker import feedback_sweep_due
+
+    ran = NOW
+    assert feedback_sweep_due(None, NOW, 3600)
+    assert not feedback_sweep_due(ran, NOW + timedelta(minutes=5), 3600)
+    assert feedback_sweep_due(ran, NOW + timedelta(minutes=5), 60)

@@ -7,6 +7,7 @@
 #   ./scripts/evaluation_bma.sh samples <engagement id>   # sample drafts, Finance and Marketing
 #   ./scripts/evaluation_bma.sh feedback-check   # dry runs: the Survey Response plan and its grants
 #   ./scripts/evaluation_bma.sh feedback-apply   # apply them (changes the Association's CRM)
+#   ./scripts/evaluation_bma.sh feedback-attendee   # one attendee on a past public event (the check)
 #
 # Credentials come from ~/.config/cbm-bma/bma.env, read by a parser and never
 # echoed. "samples" uses this computer's database container
@@ -64,6 +65,9 @@ case "${1:-}" in
     fi
     admin scripts/migrate_feedback_roles.py --apply
     ;;
+  feedback-attendee)
+    admin scripts/feedback_bma_attendee.py --apply
+    ;;
   samples)
     [ -n "${2:-}" ] || { echo "Give the engagement id." >&2; exit 2; }
     export DATABASE_URL="postgresql+asyncpg://cbm:cbm@localhost:5432/cbm_intake"
@@ -71,5 +75,5 @@ case "${1:-}" in
     "${RUN[@]}" scripts/evaluation_sample_reports.py "$2" --env-file "$ENV_FILE"
     ;;
   *)
-    sed -n '2,14p' "$0"; exit 2 ;;
+    sed -n '2,15p' "$0"; exit 2 ;;
 esac

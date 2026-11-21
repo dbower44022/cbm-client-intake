@@ -5,6 +5,23 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.358.1] — 2026-11-21
+
+**fix(feedback): a shorter sweep interval takes effect at once.** Found in
+the combined check on the Business Mentors Association's system
+(`OPEN-ITEMS.md` #83): feedback surveys were switched on while the sweep
+interval was still the default hour, the worker swept once, found no
+moment on, and booked its next pass an hour out; setting the interval to a
+minute did not move that booking, so the event moment switched on next
+waited until a restart. The worker now keeps when the sweep last ran and
+compares it with the interval in force on every pass
+(`worker.feedback_sweep_due`, tested).
+
+- `scripts/feedback_bma_attendee.py` and `./scripts/evaluation_bma.sh
+  feedback-attendee`: one attendee on a past public event for the check
+  (the CRM's own Create Event Registration form has no Event or Email
+  field). Runs only against the Association's CRM.
+
 ## [0.358.0] — 2026-11-20
 
 **feat(news): create and edit in one pop-up** (stop 2 of

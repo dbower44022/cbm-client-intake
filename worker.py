@@ -44,6 +44,12 @@ def _client(settings: Settings) -> EspoApi:
     )
 
 
+def feedback_sweep_due(last: Optional[datetime], now: datetime, seconds: int) -> bool:
+    """Whether the feedback sweep is due: never run yet, or the CURRENT
+    interval has passed since it last ran."""
+    return last is None or now >= last + timedelta(seconds=max(1, int(seconds)))
+
+
 def _next_local_hour(hour: int, tz_name: str, after: datetime, *, label: str) -> datetime:
     """The next UTC instant at local ``hour`` in ``tz_name``, strictly after
     ``after`` — so a daily job lands at the same wall-clock time and a worker
@@ -336,7 +342,11 @@ async def main() -> None:
     survey_store = None
     # Business Evaluation's analysis pass (phase 3; EVALUATION_ANALYSIS_SECONDS).
     next_eval_analysis = datetime.now(timezone.utc)
-    next_feedback_sweep = datetime.now(timezone.utc)
+    # The feedback sweep keeps when it LAST ran, not when it is next due, so a
+    # shorter FEEDBACK_SWEEP_SECONDS set at /setup takes effect at once: a due
+    # time booked under the old interval (an hour) would otherwise hold
+    # (found on the Association 11-21-26).
+    last_feedback_sweep: Optional[datetime] = None
 
     # Intake-receipt reconciliation (Doug's 2026-07-27 redesign): converge
     # every row's CIntakeSubmission receipt — the guarantee behind "the CRM is
@@ -927,7 +937,8 @@ async def main() -> None:
             # automatic moments switched on and sends each once; it also
             # retries follow-up alerts that failed. Never fails the loop.
             if settings.feedback_surveys and settings.feedback_sweep_seconds > 0 \
-                    and now >= next_feedback_sweep:
+                    and feedback_sweep_due(last_feedback_sweep, now,
+                                           settings.feedback_sweep_seconds):
                 try:
                     from feedback import runtime as _fb_runtime
                     from feedback.moments import run_sweep as _fb_sweep
@@ -938,7 +949,7 @@ async def main() -> None:
                                     _fb_runtime.survey_store(settings), _fb_surveys() or {})
                 except Exception as exc:  # noqa: BLE001 — never crashes delivery
                     log.warning("feedback sweep failed: %s", exc)
-                next_feedback_sweep = now + timedelta(seconds=settings.feedback_sweep_seconds)
+                last_feedback_sweep = now
         if sandbox_on and now >= next_sandbox:
             try:
                 from core.sandbox_reset import reset_app_tables
