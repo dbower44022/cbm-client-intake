@@ -5,6 +5,16 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.359.3] — 2026-11-21
+
+**fix(feedback): no possessive of the organization's name.** Doug,
+11-21-26: "{{org}}'s" read "Cleveland Business Mentors's". The three
+surveys gain version 2 files whose score question reads "mentoring with
+{{org}}", "the workshops and webinars from {{org}}" and "the free business
+evaluation from {{org}}"; version 1 stays for the answers already given to
+it on the Business Mentors Association's system. The emails (`feedback.v2`)
+say "the staff of {org}". A test fails on the possessive.
+
 ## [0.359.2] — 2026-11-21
 
 **fix(feedback): a follow-up marked done is in the action log, and a

@@ -1,11 +1,13 @@
 """The feedback survey emails (decision 7, wording approved by Doug 11-20-26).
 
 The wording lives in this repository, versioned, as the evaluation emails do
-(ruling BE9). A wording change bumps ``VERSION``. Every value is escaped.
+(ruling BE9). A wording change bumps ``VERSION``. Every value is escaped. Version 2
+(11-21-26, Doug): no possessive of the organization's name ("the staff of
+{org}", not "{org}'s staff").
 
 The automatic emails go from the shared mailbox (decision 7). They promise
-the client who reads the answers: "Your answers go to {org}'s staff and to
-your mentor." Keep that line wherever a mentor will read the answers.
+the client who reads the answers: "Your answers go to the staff of {org}
+and to your mentor." Keep that line wherever a mentor will read the answers.
 
 Two further fillings follow the approved wording for sends the decisions
 placed but did not word (noted for Doug's review at the closing):
@@ -24,7 +26,7 @@ import html
 from datetime import datetime
 from typing import Optional
 
-VERSION = "feedback.v1"
+VERSION = "feedback.v2"
 
 
 def _greeting(first_name: str) -> str:
@@ -67,7 +69,7 @@ def session_milestone(*, org: str, first_name: str, mentor_first: str, company: 
         f"You have been working{working}{when}, and we would like to know how it is going. "
         "The survey takes about two minutes, and only the first question is needed.",
         _link(link_url),
-        f"Your answers go to {esc(org)}'s staff and to your mentor.",
+        f"Your answers go to the staff of {esc(org)} and to your mentor.",
         f"Thank you,<br>{esc(org)}",
     ]
     return {"subject": "How is your mentoring going?", "bodyHtml": _body(paragraphs),
@@ -84,7 +86,7 @@ def engagement_closed(*, org: str, first_name: str, mentor_first: str, company: 
         f"Your mentoring{working} has come to an end, and we would like to know how it went. "
         "The survey takes about two minutes, and only the first question is needed.",
         _link(link_url),
-        f"Your answers go to {esc(org)}'s staff and to your mentor.",
+        f"Your answers go to the staff of {esc(org)} and to your mentor.",
         f"Thank you,<br>{esc(org)}",
     ]
     return {"subject": f"How was your mentoring with {org}?", "bodyHtml": _body(paragraphs),
@@ -101,7 +103,7 @@ def evaluation_released(*, org: str, first_name: str, mentor_first: str,
         "to know how useful it was. The survey takes about two minutes, and only the first "
         "question is needed.",
         _link(link_url),
-        f"Your answers go to {esc(org)}'s staff and to your mentor.",
+        f"Your answers go to the staff of {esc(org)} and to your mentor.",
         f"Thank you,<br>{esc(org)}",
     ]
     return {"subject": "How useful was your business evaluation?",
@@ -135,7 +137,7 @@ def mentor_on_demand(*, org: str, first_name: str, company: str,
         f"I would like to know how our work together{on} is going. The survey takes about "
         "two minutes, and only the first question is needed.",
         _link(link_url),
-        f"Your answers go to me and to {esc(org)}'s staff.",
+        f"Your answers go to me and to the staff of {esc(org)}.",
     ]
     return {"subject": "How is your mentoring going?", "bodyHtml": _body(paragraphs),
             "version": VERSION}

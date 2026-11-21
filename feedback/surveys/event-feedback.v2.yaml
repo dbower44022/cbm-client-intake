@@ -1,0 +1,52 @@
+# Event feedback survey, version 2 (ruling BE29).
+# Sent to attendees after a public event or webinar ends, and from Event
+# Administration's Follow-up tab. The page names the event. Only the score is
+# required. Approved by Doug as written, 11-20-26 (phases 8 and 9, decision 2).
+# Version 2 (11-21-26, Doug): the score question names the organization
+# without a possessive ("mentoring with {{org}}"), since "Cleveland Business
+# Mentors's" reads badly. Version 1 keeps the answers given to it.
+# Each "# For:" line says what the answer is used for.
+key: event-feedback
+version: 2
+title: The event
+introduction: >-
+  A few questions about the event you attended. It takes about two minutes,
+  and only the first question is needed.
+sections:
+  - title: The event
+    questions:
+      # For: the recommendation score, totalled by event and over time in Analytics; 6 or below alerts staff.
+      - id: recommend
+        label: How likely are you to recommend the workshops and webinars from {{org}} to another business owner?
+        type: score
+        required: true
+        low: Not at all likely
+        high: Extremely likely
+      # For: whether the topic met attendees' needs, for planning the programme.
+      - id: useful
+        label: Was this event useful for your business?
+        type: yes_no
+      # For: the presenter's delivery, for choosing presenters again.
+      - id: presenter_clear
+        label: Was the presenter clear and easy to follow?
+        type: yes_no
+      # For: whether the event leads to action, the programme's purpose.
+      - id: will_act
+        label: Will you put something from this event into practice?
+        type: yes_no
+      # For: what to keep, in the attendee's own words.
+      - id: most_useful
+        label: What was most useful?
+        type: long_text
+      # For: the next programme's topics.
+      - id: next_topics
+        label: What topics would you like us to cover next?
+        type: long_text
+      # For: a yes sets the follow-up flag and alerts the Marketing Admin Team: a lead for mentoring.
+      - id: talk_to_mentor
+        label: Would you like to talk with a mentor about your business?
+        type: yes_no
+      # For: a yes sets the follow-up flag and alerts staff, whatever the score.
+      - id: contact_me
+        label: Would you like someone from {{org}} to contact you about your experience?
+        type: yes_no

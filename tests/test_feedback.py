@@ -42,7 +42,7 @@ def stamp(at: datetime) -> str:
 
 def test_the_three_surveys_load_and_open_with_the_required_score():
     loaded = load_all(SURVEY_DIR, RULES)
-    assert sorted(s.key for s in loaded.values()) == sorted(cfg.SURVEY_KEYS)
+    assert {s.key for s in loaded.values()} == set(cfg.SURVEY_KEYS)
     for survey in loaded.values():
         first = survey.sections[0].questions[0]
         assert (first.id, first.type, first.required) == ("recommend", "score", True)
@@ -175,7 +175,7 @@ def test_submit_writes_the_response_with_its_links_and_the_engagement_stamp(monk
     assert payload["engagementId"] == ENG and payload["mentorProfileId"] == MENTOR_PROFILE
     assert payload["contactId"] == "c-dana" and payload["assignedUsersIds"] == ["u-joe", "u-matt"]
     assert payload["moment"] == cfg.MOMENT_SESSIONS
-    assert payload["surveyVersion"] == "mentoring-feedback.v1"
+    assert payload["surveyVersion"] == "mentoring-feedback.v2"
     assert payload["name"] == "Mentoring feedback — Dana Testbaker"
     assert json.loads(payload["answers"])["answers"]["recommend"] == 9
     assert "{{org}}" not in payload["answersReadable"]
@@ -331,7 +331,7 @@ def test_the_email_says_who_reads_the_answers_and_carries_the_link():
     mail = out.sent[0]
     assert mail["subject"] == "How is your mentoring going?"
     assert "Joe on Brightline Bakehouse for a few sessions now" in mail["body"]
-    assert "Example Mentors's staff and to your mentor" in mail["body"]
+    assert "the staff of Example Mentors and to your mentor" in mail["body"]
     assert "https://apps.example.org/survey/" in mail["body"]
 
 
@@ -674,3 +674,15 @@ def test_a_training_address_is_a_recorded_skip_not_a_failure():
                  s=settings(sandbox_address_domain="bma.test")) \
         == "skipped:an invented training address"
     assert store.sends["t"]["outcome"] == "skipped" and out.sent == []
+
+
+def test_no_possessive_of_the_organization_name_in_what_is_sent_now():
+    """Doug 11-21-26: "mentoring with {{org}}", never "{{org}}'s", which reads
+    "Cleveland Business Mentors's". Version 1 keeps the answers given to it."""
+    for key in cfg.SURVEY_KEYS:
+        survey = latest(surveys(), key)
+        assert survey.version == 2
+        assert "{{org}}'s" not in survey.questions["recommend"].label
+    assert "(org)}'s" not in (ROOT / "feedback" / "email.py").read_text(encoding="utf-8")
+    assert latest(surveys(), cfg.SURVEY_MENTORING).questions["recommend"].label == (
+        "How likely are you to recommend mentoring with {{org}} to another business owner?")

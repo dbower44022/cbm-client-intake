@@ -1,6 +1,6 @@
 # feedback/ — feedback surveys
 
-Last Updated: 11-21-26 00:55 · Revision 1.1
+Last Updated: 11-21-26 00:56 · Revision 1.2
 
 Feedback surveys are the second survey purpose on the survey engine. The
 rulings are BE29 to BE33 in `prds/business-evaluation-plan.md`. This package
@@ -111,6 +111,10 @@ Claude Code loads this file only when a session works in this folder.
   - **the action log cannot name a Survey Response**: a follow-up entry
     points at the engagement, else the event (`views.action_parent`).
 
+- **No possessive of the organization's name** (Doug, 11-21-26): "mentoring
+  with {{org}}", "the staff of {org}", never "{{org}}'s". Version 2 of each
+  survey; version 1 keeps the answers given on the Association.
+
 Tests: `tests/test_feedback.py`, `tests/test_feedback_store_pg.py`; fakes in
 `tests/feedback_fakes.py`.
 
@@ -120,3 +124,4 @@ Tests: `tests/test_feedback.py`, `tests/test_feedback_store_pg.py`; fakes in
 |---|---|---|---|
 | 1.0 | 11-20-26 02:20 | Claude (Claude Code) | Created with phases 8 and 9. |
 | 1.1 | 11-21-26 00:55 | Claude (Claude Code) | The combined check on the Association and its three fixes. |
+| 1.2 | 11-21-26 00:56 | Claude (Claude Code) | No possessive of the organization's name (version 2 of the surveys). |
