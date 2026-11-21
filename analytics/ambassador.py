@@ -12,6 +12,7 @@ Ambassador Activity record type reads as an unavailable panel, never a 500.
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import Any, Optional
 
 from core.session_kinds import AMBASSADOR_SESSION_TYPE
@@ -52,14 +53,27 @@ KINDS = (("Potential client", "Clients"), ("Potential partner", "Partners"),
 
 
 def _range_where(ctx: MetricContext, field: str = "activityDate") -> list[dict[str, Any]]:
+    """The range as CRM filters, both ends included.
+
+    The CRM's "after" and "before" are strict, and on a date field they
+    compare whole days: "before 2026-11-21" leaves out everything dated
+    the 21st, which is how every report logged today read as zero on the
+    Association (11-21-26). A date field is therefore bounded by the day
+    before the start and the day after the end; a date-and-time field by
+    the exact instants."""
     tr = ctx.time_range
     where: list[dict[str, Any]] = []
-    if tr is not None and tr.start is not None:
-        where.append({"type": "after", "attribute": field,
-                      "value": tr.start.strftime("%Y-%m-%d")})
-    if tr is not None and tr.end is not None:
-        where.append({"type": "before", "attribute": field,
-                      "value": tr.end.strftime("%Y-%m-%d")})
+    if tr is None:
+        return where
+    is_date = field == "activityDate"
+    if tr.start is not None:
+        value = ((tr.start - timedelta(days=1)).strftime("%Y-%m-%d") if is_date
+                 else tr.start.strftime("%Y-%m-%d %H:%M:%S"))
+        where.append({"type": "after", "attribute": field, "value": value})
+    if tr.end is not None:
+        value = ((tr.end + timedelta(days=1)).strftime("%Y-%m-%d") if is_date
+                 else tr.end.strftime("%Y-%m-%d %H:%M:%S"))
+        where.append({"type": "before", "attribute": field, "value": value})
     return where
 
 

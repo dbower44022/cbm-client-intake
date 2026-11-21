@@ -509,3 +509,20 @@ def test_no_possessive_of_the_organization_name():
                 "ambassador/frontend/review/index.html"):
         text = (ROOT / rel).read_text()
         assert "{org}'s" not in text and "{{org}}'s" not in text and "(org)}'s" not in text, rel
+
+
+def test_analytics_range_counts_a_report_dated_today():
+    """The CRM's "before" is strict and compares whole days on a date field:
+    a range ending today must still count today's reports (found on the
+    Association 11-21-26, every figure read zero)."""
+    from types import SimpleNamespace
+
+    from analytics.ambassador import _range_where
+
+    start = datetime(2025, 11, 21, 0, 0, tzinfo=timezone.utc)
+    end = datetime(2026, 11, 21, 17, 30, tzinfo=timezone.utc)
+    ctx = SimpleNamespace(time_range=SimpleNamespace(start=start, end=end))
+    where = {w["type"]: w["value"] for w in _range_where(ctx)}
+    assert where == {"after": "2025-11-20", "before": "2026-11-22"}
+    stamps = {w["type"]: w["value"] for w in _range_where(ctx, "dateStart")}
+    assert stamps == {"after": "2025-11-21 00:00:00", "before": "2026-11-21 17:30:00"}

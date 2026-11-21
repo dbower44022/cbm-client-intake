@@ -5,6 +5,17 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.360.1] — 2026-11-21
+
+**fix(ambassador): the analytics page counts today's reports.** Found by
+Doug's check on the Association 11-21-26: Active ambassadors and Activities
+reported read zero with seven reports logged. The range filter asked the CRM
+for activities *before* today's date, and on a date field the CRM's "before"
+leaves the whole of that day out, so a report dated today was never counted.
+The range is now bounded by the day before its start and the day after its
+end; the session count uses exact instants. A figure computed before the fix
+stays cached for up to an hour: the page's Refresh recomputes it.
+
 ## [0.360.0] — 2026-11-21
 
 **feat(ambassador): the Ambassador Program, dark behind `AMBASSADOR_PROGRAM`.**
