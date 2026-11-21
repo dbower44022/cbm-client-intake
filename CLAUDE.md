@@ -1375,17 +1375,6 @@ the strength of it.
   1 and 2; migration 0050). Owed in #84.
 - **v0.347.0 (2026-11-18) is committed, not pushed**: fix buttons on the
   Event hosting card (plan § 8 item 3). Owed in #84.
-- **v0.349.0–v0.350.1 (2026-11-18 to 11-20) are live everywhere main
-  deploys** (`/healthz` read 0.350.1 on the Association 11-20-26 00:52):
-  the home page's phase 3, Needs you (`HOME_V2`, off; threshold
-  `HOME_NO_CONTACT_DAYS`), with Doug's two changes at stop 3 (an Email row
-  opens the conversation on the record; whole rows open). **Stop 3 passed
-  11-20-26; phase 3 closed.**
-- **v0.351.0 (2026-11-20) is live everywhere main deploys** (`/healthz`
-  read 0.351.0 on the Association 11-20-26 01:27): the home page's phase
-  4, At the chapter (`HOME_V2`, off). **Stop 4 passed 11-20-26; phase 4
-  closed.** Marketing Management and Campaign calls are on at the
-  Association (Doug, choice B).
 - **v0.350.0 (2026-11-19) and its two follow-ups are pushed; phase 7
   checked on the Association 11-20-26**: Business Evaluation's mentor match
   (`MENTOR_MATCH`, off; migration 0051). Phase 8's prompt is a draft (#83).
