@@ -1,6 +1,6 @@
 # Chapter News — a guide for publishers
 
-Last Updated: 11-20-26 02:46 · Revision 1.2 — change log at the end.
+Last Updated: 11-21-26 01:45 · Revision 1.3 — change log at the end.
 
 Chapter News is news you write once and every member sees on their home page
 when they sign in. You decide who it is for, how prominent it is, and whether
@@ -9,7 +9,7 @@ members must confirm they have read it. Everything is stored in the CRM.
 ## Who can publish
 
 Members of the publishers' team, set at System Settings → Team gates →
-*Chapter News — publishers* (default: System Management Team).
+*Chapter News — publishers* (default: Marketing Admin Team).
 Administrators can always publish. A publisher sees a **Chapter News** tile on
 the home page; it opens the Chapter News page in its own tab.
 
@@ -93,6 +93,7 @@ Dismissed, Acknowledged, Unread, Expired, or Not acknowledged.
 
 | Revision | Last Updated | Change |
 |---|---|---|
+| 1.3 | 11-21-26 01:45 | Publishers' default team: Marketing Admin Team (v0.359.4). |
 | 1.2 | 11-20-26 02:46 | The weekly digest (phase 7, v0.356.0). |
 | 1.1 | 11-20-26 02:33 | Who has read it (phase 6, v0.355.0). |
 | 1.0 | 11-20-26 02:12 | First version, with phase 5 (v0.353.0). |

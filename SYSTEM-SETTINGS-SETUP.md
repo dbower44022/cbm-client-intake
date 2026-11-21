@@ -175,8 +175,8 @@ Five settings, all read per request or per worker pass (no restart). Publishers'
   News record types (`cchapternews-entities-crm-handoff.md`); until the CRM
   has them the section stays away and the page says so.
 - **Team gates → Chapter News — publishers** (`NEWS_PUBLISH_ALLOWED_TEAMS`,
-  default System Management Team): who sees the Chapter News tile and may
-  write, publish and withdraw. Administrators always pass. Copy the team's
+  default Marketing Admin Team, Doug's ruling 11-21-26): who sees the
+  Chapter News tile and may write, publish and withdraw. Administrators always pass. Copy the team's
   name exactly.
 - **Features → Chapter News weekly digest** (`NEWS_DIGEST`, off): once a
   week the worker emails each member with unread news one list from the

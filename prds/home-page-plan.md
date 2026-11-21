@@ -1,6 +1,6 @@
 # The home page and Chapter News — plan
 
-Last Updated: 11-20-26 18:59 · Revision 1.18 — change log at the end.
+Last Updated: 11-21-26 01:45 · Revision 1.19 — change log at the end.
 
 **Status: designed 11-16-26 to 11-17-26 in a Cowork session with Doug; every
 decision below is his. Phase 0 (the contrast fix to the design tokens) is
@@ -260,7 +260,8 @@ publisher action is recorded through `core/action_log.py`.
 - Editing a published item resets no one's read status. A material change,
   such as a corrected policy, is published as a new item.
 - Who may publish is a new team setting, `NEWS_PUBLISH_ALLOWED_TEAMS`,
-  default System Management Team.
+  default System Management Team. **Superseded 11-21-26 (Doug): the
+  default is Marketing Admin Team.**
 
 ### 6.4 Data — all in the CRM
 
@@ -420,7 +421,8 @@ switch: its push changes production's colours at once, which is intended.
   under the org-wide key, gated by this application (the CRM's history
   names the API user; the action log names the publisher); (4) publishers
   are `NEWS_PUBLISH_ALLOWED_TEAMS`, default System Management Team (on the
-  Association only Doug's account is in it); (5) publishing is its own
+  Association only Doug's account is in it; **superseded 11-21-26: default
+  Marketing Admin Team**); (5) publishing is its own
   application, Chapter News at `/news/`; (6) images are inline attachments
   on the body, shown to members through a proxy that serves only an image
   the item's body references, for an item the member may see; (7) an
@@ -472,6 +474,7 @@ switch: its push changes production's colours at once, which is intended.
 
 | Revision | Last Updated | Change |
 |---|---|---|
+| 1.19 | 11-21-26 01:45 | Publishers' default team is Marketing Admin Team, in place of System Management Team (Doug, 11-21-26; v0.359.4). |
 | 1.18 | 11-20-26 18:59 | Big test run: header bar, phases 5 and 6 passed; stop 7 open (digest untested, option C); fixes v0.356.2 and v0.356.3. |
 | 1.17 | 11-20-26 02:46 | Phase 7 built (v0.356.0); § 9's digest question closed. |
 | 1.16 | 11-20-26 02:33 | Phase 6 built (v0.355.0). |

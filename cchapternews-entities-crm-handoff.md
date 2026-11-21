@@ -1,6 +1,6 @@
 # Chapter News — CRM handoff: `CChapterNews` and `CChapterNewsReceipt`
 
-Last Updated: 11-20-26 02:12 · Revision 1.0 — change log at the end.
+Last Updated: 11-21-26 01:45 · Revision 1.1 — change log at the end.
 
 **What this adds.** Two record types for Chapter News (plan
 `prds/home-page-plan.md` § 6.4, rulings 4 to 6): a **Chapter News Item**,
@@ -96,7 +96,8 @@ for an existing receipt before it makes one.
 Receipt — create yes, read all, edit all, delete no. No other role changes:
 members read news and write their receipts through the application under the
 key, and publishers write items under the key, gated in the application by
-`NEWS_PUBLISH_ALLOWED_TEAMS` (decision 3, 11-20-26). The CRM's own history
+`NEWS_PUBLISH_ALLOWED_TEAMS` (decision 3, 11-20-26; default Marketing Admin
+Team since 11-21-26). The CRM's own history
 therefore names the API user; the application's action log names the
 publisher.
 
@@ -115,4 +116,5 @@ publisher.
 
 | Revision | Last Updated | Change |
 |---|---|---|
+| 1.1 | 11-21-26 01:45 | The publishers' default team is now Marketing Admin Team (v0.359.4); no CRM change. |
 | 1.0 | 11-20-26 02:12 | Written with the build; applied on the Business Mentors Association's CRM the same day. |

@@ -936,8 +936,9 @@ class Settings(BaseSettings):
     # CRM's CChapterNews and CChapterNewsReceipt (detected from metadata; the
     # feature stays dark until they exist). Read per request.
     chapter_news: bool = False
-    # Who may write and publish news (§ 6.3). Administrators always pass.
-    news_publish_allowed_teams: str = "System Management Team"
+    # Who may write and publish news (§ 6.3; Doug, 11-21-26: the marketing
+    # team, in place of System Management Team). Administrators always pass.
+    news_publish_allowed_teams: str = "Marketing Admin Team"
     # The weekly digest of unread news (phase 7): the worker emails each
     # member with unread items one list from OPS_MAILBOX, once a week on
     # NEWS_DIGEST_WEEKDAY (0 Monday ... 6 Sunday) at NEWS_DIGEST_HOUR in the

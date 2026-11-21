@@ -5,6 +5,16 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.359.4] — 2026-11-21
+
+**fix(news): Chapter News is published by the marketing team.** Doug,
+11-21-26: the default for System Settings → Team gates → *Chapter News —
+publishers* (`NEWS_PUBLISH_ALLOWED_TEAMS`) is now **Marketing Admin Team**,
+in place of System Management Team. Administrators still always publish. No
+CRM change: publishers write under the org-wide key. A deployment that
+stores its own value for the setting at `/setup` keeps that value; clear it
+there to take the new default.
+
 ## [0.359.3] — 2026-11-21
 
 **fix(feedback): no possessive of the organization's name.** Doug,

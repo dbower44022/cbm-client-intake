@@ -280,7 +280,7 @@ def test_news_is_the_first_section_and_the_tile_is_for_publishers(monkeypatch):
         assert data["home"]["sections"][0] == "news"
         assert "Chapter News" not in [a["title"] for a in data["apps"]]
         assert c.get("/news/api/session").status_code == 403
-        pub = _login(monkeypatch, c, {**STAFF, "teams": ["System Management Team"]})
+        pub = _login(monkeypatch, c, {**STAFF, "teams": ["Marketing Admin Team"]})
         assert "Chapter News" in [a["title"] for a in pub["apps"]]
         assert c.get("/news/api/session").json()["built"] is True
         _login(monkeypatch, c, ADMIN)
@@ -571,7 +571,7 @@ def test_the_weekly_hour_in_the_chapters_time_zone(monkeypatch):
 def test_the_test_digest_goes_to_the_publisher_at_once(monkeypatch):
     crm = _digest_crm()
     crm.rows["User"]["U9"] = {"id": "U9", "userName": "doug", "name": "Doug", "type": "admin",
-                              "isActive": True, "teamsNames": {"s": "System Management Team"},
+                              "isActive": True, "teamsNames": {"s": "Marketing Admin Team"},
                               "emailAddress": "doug@real.example"}
     _seed(crm, item("A", publishAt=True))
     sent = []
@@ -587,7 +587,7 @@ def test_the_test_digest_goes_to_the_publisher_at_once(monkeypatch):
         assert r.status_code == 200, r.text
         assert r.json() == {"to": "doug@real.example", "items": 1, "unread": 1}
         assert sent[0][1].startswith("[Test] ")
-        _login(monkeypatch, c, {**MENTOR, "userId": "U3", "teams": ["System Management Team"]})
+        _login(monkeypatch, c, {**MENTOR, "userId": "U3", "teams": ["Marketing Admin Team"]})
         r = c.post("/news/api/digest/test")
         assert r.status_code == 400 and "training address" in r.json()["detail"]
 
