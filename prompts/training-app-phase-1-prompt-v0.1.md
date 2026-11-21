@@ -1,6 +1,6 @@
 # Kickoff prompt — the training application, phase 1: the course page
 
-Last Updated: 11-21-26 11:47 · Revision 0.1 — see change log at the end.
+Last Updated: 11-21-26 11:54 · Revision 0.2 — see change log at the end.
 
 **Draft for Doug's approval.** Once approved, start a fresh Claude Code
 session rooted in `~/Dropbox/Projects/cbm-client-intake`, tell it to read
@@ -24,7 +24,7 @@ push; Doug pushes.
 
 ## Read first
 
-- `prds/training-app-plan.md` in full: the rulings TR1 to TR10, the twelve
+- `prds/training-app-plan.md` in full: the rulings TR1 to TR12, the
   decisions in § 4, the design § 5, the data model § 6, phase 1 in § 7.
 - `training/CLAUDE.md`, `training/evaluation-staff-course/evaluation-demo.md`
   and `scripts/build_runbook.py`.
@@ -67,7 +67,10 @@ push; Doug pushes.
    a version bump.
 
 Not in phase 1: the Training button, the reminder and dismissal (phase 2);
-Needs you and the report (phase 3); the mentor onboarding tick (phase 4).
+Needs you and the report (phase 3); the mentor onboarding tick (phase 4);
+the help agent (phase 5). Leave room for phase 5: each step on the course
+page will gain an **I need help** button, so give a step a stable element
+and key the agent can be pointed at.
 
 ## Stop 1
 
@@ -82,4 +85,5 @@ Wait for his result before closing the phase.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.2 | 11-21-26 11:54 | Claude (Claude Code) | Plan revision 0.3: TR11 and TR12 (the help agent, phase 5) named as out of scope, with room left for its button. |
 | 0.1 | 11-21-26 11:47 | Claude (Claude Code) | Drafted at the close of the planning session, from plan revision 0.2. |

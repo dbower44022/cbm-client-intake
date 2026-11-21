@@ -1,9 +1,9 @@
 # The training application — plan
 
-Last Updated: 11-21-26 11:46 · Revision 0.2 — see change log at the end.
+Last Updated: 11-21-26 11:53 · Revision 0.3 — see change log at the end.
 
 **Status: draft for Doug's review.** Elicited 11-21-26 from the planning
-prompt `prompts/training-app-planning-prompt-v0.1.md`. Rulings TR1 to TR10
+prompt `prompts/training-app-planning-prompt-v0.1.md`. Rulings TR1 to TR12
 are Doug's answers. The design, the data model and the phases are proposals
 that follow from them; nothing is built. Open item `OPEN-ITEMS.md` #92.
 
@@ -44,6 +44,8 @@ records nothing and needs a Claude session to update.
   (TR5).
 - **Mentor onboarding course**: a course marked as counting toward the
   mentor profile's Training completed box (TR10).
+- **Help agent**: the AI agent a trainee opens from a step with **I need
+  help**, which answers questions about that step (TR11).
 
 ## 3. Doug's rulings
 
@@ -148,6 +150,31 @@ system. Cost, accepted: dormant until a mentor onboarding course is
 written. Owed at build: read the field live to confirm it is not built
 Read-only, which would drop every API write silently.
 
+**TR11 — A help agent on every step, which knows the course and its guides
+and reads the training system** (11-21-26, option B; raised by Doug after
+revision 0.2: "a button … that would launch a chat window with an AI agent
+and answer questions about the step"). The agent is given the step on
+screen, the whole course and the user guides of the course's applications,
+and has read-only tools that look up the trainee's own records on the
+training system, so it can answer "what went wrong" with facts ("your
+engagement is still Pending Acceptance, so the analysis has not run") as
+well as "why". It follows the Integrations tab's Ask Claude pattern: no tool
+that writes, no secret's value, its own monthly budget. Cost, accepted: a
+real build (read-only tools scoped to the training system and a sign-in for
+the agent there), three to five times the cost per answer of a course-only
+agent, and the live application reaching the training system's CRM, which
+nothing did before.
+
+**TR12 — Help conversations are kept, and shown on the training report by
+step without names** (11-21-26, option C). Each question and the agent's
+answer are stored with the course, revision and step, never with the
+person. The report shows them under their step, so a step many trainees
+are stuck at, and a wrong answer from the agent, can both be found. The
+chat window says the questions are kept and read by the report team, since
+a question naming the trainee's own client can identify them. Cost,
+accepted: no follow-up with the one person who asked; the report's progress
+column still shows who is stuck.
+
 ## 4. Decisions taken in the session (announced, not asked)
 
 Each follows from the rulings and has one workable answer, or is a routine
@@ -199,6 +226,22 @@ choice. Doug may reverse any of them at the first phase's stop.
 12. **The action log** records only what changes the CRM: the TR10 tick on a
     mentor profile, with old and new values. Ticks, answers, completions and
     dismissals are the application's own data and are their own record.
+13. **The help button is labelled I need help** (Doug's words), one on
+    every step. The chat opens in a side panel that never covers the step,
+    and keeps that step as its subject until the trainee moves on.
+14. **The help agent has its own budget**, `TRAINING_HELP_MONTHLY_BUDGET`,
+    default $25 a month, the integration agent's figure, and its own
+    switch, `TRAINING_HELP`, off by default. With the month's budget spent
+    the button stays visible and says help is unavailable until the first
+    of the month and to ask the trainer (buttons are never hidden).
+15. **The agent reads the training system as a read-only API user** of its
+    own on the training system's CRM, whose role reads and never writes. It
+    is told the trainee's initials and looks for their records first; it
+    may read any training record, since all of them are made up. The API
+    key is a secret setting, `TRAINING_SYSTEM_API_KEY`, beside
+    `TRAINING_SYSTEM_URL`, so a chapter with its own training system points
+    at its own. Creating that user and role is a CRM change on the
+    Association, applied by the `espo-crm-changes` procedure.
 
 ## 5. Design
 
@@ -255,7 +298,20 @@ with old and new values. Best effort: a refused write is reported on the
 completion screen and retried at the person's next completion, never
 failing the completion itself.
 
-### 5.6 System Settings
+### 5.6 The help agent (TR11, TR12)
+
+**I need help** on a step opens the side panel. Each question goes to
+`POST /api/courses/{course}/help` with the step number; the server builds
+the agent's material (the step, the course, the guides its `course.yaml`
+lists under `guides:`) and gives it read-only tools over the training
+system's CRM (search and read records; nothing that writes). Like Ask
+Claude on the Integrations tab, no secret's value reaches it, the training
+sign-ins included, and every answer is scrubbed on the way out. Each call's
+cost is recorded and checked against the month's budget before the next
+call. The question and answer are stored without the person (TR12); the
+report shows them under their step, newest first.
+
+### 5.7 System Settings
 
 | Setting | Default | What it does |
 |---|---|---|
@@ -264,13 +320,16 @@ failing the completion itself.
 | `TRAINING_SYSTEM_URL` | empty | `{{training_url}}` in courses (TR8) |
 | `TRAINING_SIGNINS` | empty, secret | One line per role: role, username, password (TR7) |
 | `TRAINING_HIDDEN_COURSES` | empty | Course ids this deployment hides (TR8) |
+| `TRAINING_HELP` | off | The help agent's switch (decision 14) |
+| `TRAINING_HELP_MONTHLY_BUDGET` | 25.0 | Dollars a month (decision 14) |
+| `TRAINING_SYSTEM_API_KEY` | empty, secret | The agent's read-only key on the training system (decision 15) |
 
 Each new setting needs its row in
 `tests/fixtures/setup_payload_before_integrations.json`.
 
 ## 6. Data model
 
-Four tables in the application's database (TR9), one migration
+Five tables in the application's database (TR9), one migration
 (`0053_training_courses`, revision id under 32 characters). People are keyed
 by their CRM user id, with the name kept for the report.
 
@@ -283,6 +342,8 @@ by their CRM user id, with the name kept for the report.
   and revision.
 - **`training_dismissal`**: user id, course id, the significant revision
   dismissed (the N of N.M), dismissed at. Unique on user, course, N.
+- **`training_help`**: course id, revision, step number, question, answer,
+  cost, asked at. No user id (TR12).
 - **`training_onboarding_write`**: user id, mentor profile id, written at,
   outcome. The record of TR10 writes and failures for the retry.
 
@@ -316,10 +377,15 @@ Doug's check on the Association's system, as a real non-admin.
   Needs one course marked onboarding; a short test course serves until a
   real one is written. **Stop 4**: a test mentor's box ticked, with its
   History tab row.
-- **Phase 5 — documentation.** `training/CLAUDE.md` (the course format, the
+- **Phase 5 — the help agent.** TR11 and TR12: the read-only API user on
+  the Association's CRM first, then the side panel, the agent, its tools,
+  the budget, and the questions on the report. **Stop 5**: as Kitty Cat,
+  one "why" question and one "what went wrong" question asked at step 4.1
+  of the evaluation course, then both read on the report without her name.
+- **Phase 6 — documentation.** `training/CLAUDE.md` (the course format, the
   tokens, the training system now being the Association's), a staff guide to
   the Training button and the report, and retiring the evaluation demo's
-  Claude page. **Stop 5**: Doug's review.
+  Claude page. **Stop 6**: Doug's review.
 
 ## 8. Not in this arc
 
@@ -336,7 +402,9 @@ separate artifact until it is rewritten as steps or this arc is extended.
 - Whether the report offers a download of its grid (phase 3).
 - Which courses are mentor onboarding; none exists (phase 4 or later).
 - Whether the events marketing manager course is rewritten as steps (after
-  phase 5).
+  phase 6).
+- Which model the help agent uses, and whether a course's `guides:` may name
+  pages on the documentation site as well as repository files (phase 5).
 
 **Superseded by this arc:** the 11-04-26 ruling in
 `training/events-marketing-manager/PLAN.md` that a course "carries no
@@ -347,5 +415,6 @@ served by the training application carry one.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.3 | 11-21-26 11:53 | Claude (Claude Code) | TR11 and TR12, the help agent (raised by Doug after revision 0.2): term, decisions 13 to 15, design § 5.6, three settings, the `training_help` table, phase 5; documentation becomes phase 6. |
 | 0.2 | 11-21-26 11:46 | Claude (Claude Code) | TR2 to TR10 recorded; purpose, terms, the twelve decisions taken in the session, design, data model, five phases with their stops, scope and open questions added. |
 | 0.1 | 11-21-26 11:13 | Claude (Claude Code) | Started during elicitation; TR1 recorded. |
