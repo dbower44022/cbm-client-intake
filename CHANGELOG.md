@@ -90,8 +90,12 @@ exploit code).** Scripts only; nothing in the application changes.
   Lakeside, Boston, production): each reported `RESULT: patched (nginx
   1.31.9)`, and the four with known addresses answered 200 over HTTP/2 from
   outside.
-- Owed: the docs server's NGINX (inside the BookStack container) is not yet
-  checked, and the CRMBuilder installer still writes the bare image.
+- **The docs server** (11-20-26): BookStack's built-in NGINX 1.30.4 was not
+  reachable from outside (Caddy answers the public), and was updated anyway
+  at Doug's request: `scripts/update_bookstack_nginx2root.sh` took BookStack
+  to v26.09.3 with NGINX 1.30.7, after a database dump.
+- Owed: EspoCRM's installer, run by CRMBuilder, still writes the bare
+  image; `prompts/crmbuilder-pin-nginx-prompt-v0.1.md` hands it over.
 
 
 ## [0.356.3] — 2026-11-20
