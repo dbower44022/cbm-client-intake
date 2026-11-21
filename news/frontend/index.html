@@ -34,16 +34,51 @@
     </section>
 
     <section id="pageView" class="nw__page" hidden>
-      <div class="cbm-panel nw__list">
-        <div class="cbm-panel__head">
-          <h2 class="cbm-label">News items</h2>
-          <button type="button" class="cbm-action--second" id="testDigestBtn">Send me a test digest</button>
-          <button type="button" class="cbm-action" id="newBtn">New item</button>
+      <!-- The grid (plan prds/news-publisher-redesign-plan.md, stop 1).
+           Toolbar: Filter (left) · Search (centre) · Create, Edit, Actions (right). -->
+      <div id="gridView" class="nw__gridview">
+        <div class="nw__toolbar">
+          <div class="nw__tb nw__tb--left">
+            <button type="button" class="cbm-action--second" id="filterBtn" aria-expanded="false" aria-controls="filterPanel">Filter</button>
+            <div class="nw__chips" id="filterChips"></div>
+          </div>
+          <div class="nw__tb nw__tb--center">
+            <input type="search" id="search" class="nw__search" placeholder="Search titles and summaries…" autocomplete="off" aria-label="Search news" />
+          </div>
+          <div class="nw__tb nw__tb--right">
+            <button type="button" class="cbm-action" id="createBtn">Create</button>
+            <button type="button" class="cbm-action--second" id="editBtn">Edit</button>
+            <div class="nw__menuwrap">
+              <button type="button" class="cbm-action--second" id="actionsBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="actionsMenu">Actions ▾</button>
+              <ul class="nw__menu" id="actionsMenu" role="menu" hidden>
+                <li role="none"><button type="button" role="menuitem" data-act="view">View</button></li>
+                <li role="none"><button type="button" role="menuitem" data-act="publish">Publish</button></li>
+                <li role="none"><button type="button" role="menuitem" data-act="draft">Move back to draft</button></li>
+                <li role="none"><button type="button" role="menuitem" data-act="duplicate">Duplicate as a new draft</button></li>
+                <li role="none"><button type="button" role="menuitem" data-act="withdraw" class="nw__menu--danger">Withdraw…</button></li>
+                <li role="separator" class="nw__menusep"></li>
+                <li role="none"><button type="button" role="menuitem" data-act="digest">Send me a test digest</button></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="nw__filterpanel" id="filterPanel" hidden></div>
+
+        <div class="nw__confirm" id="confirmBar" role="alertdialog" aria-labelledby="confirmText" hidden>
+          <span id="confirmText"></span>
+          <button type="button" class="cbm-action nw__danger" id="confirmYes">Withdraw</button>
+          <button type="button" class="cbm-action--second" id="confirmNo">Keep it</button>
         </div>
         <p class="nw__msg" id="listMsg" role="status" hidden></p>
-        <div class="cbm-panel__body" id="listBody"></div>
+
+        <div class="nw__gridscroll" id="listBody"></div>
+        <p class="nw__count" id="listCount"></p>
       </div>
 
+      <!-- Create, edit and view open here until stops 2 and 3 replace it. -->
+      <div id="workView" class="nw__workview" hidden>
+        <p><button type="button" class="cbm-action--quiet" id="backBtn">← Back to news</button></p>
       <div class="nw__work">
         <form class="cbm-panel nw__editor" id="editor" autocomplete="off" novalidate>
           <div class="cbm-panel__head">
@@ -97,6 +132,7 @@
           <div class="cbm-panel__body" id="reportBody"></div>
         </div>
 
+      </div>
       </div>
     </section>
 

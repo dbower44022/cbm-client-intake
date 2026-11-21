@@ -5,6 +5,27 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.357.0] — 2026-11-20
+
+**feat(news): the publishers' page opens on a standard grid** (stop 1 of
+`prds/news-publisher-redesign-plan.md`, approved by Doug 11-20-26).
+
+- **Toolbar as the Workspace Directories**: Filter with chips (left),
+  search over title and summary (centre), Create · Edit · Actions ▾ (right).
+- **Columns**: Title with its summary, Status, Importance, Audience,
+  Publish at, Expires, Read (count and bar), Last changed — on the shared
+  grid. A click selects; a double-click or Enter opens the item.
+- **Shown status** adds Scheduled and Expired, worked out from the dates;
+  the CRM is unchanged. Withdrawn is hidden by default; the filters are
+  remembered in the browser.
+- **Actions ▾**: View, Publish, Move back to draft, Duplicate as a new
+  draft, Withdraw… (confirmed in the page), Send me a test digest. Every
+  action that cannot apply says why; nothing is switched off.
+- `GET /news/api/items` now carries each item's summary, for the search.
+- Until stop 2, Create, Edit and View open the previous editor in place of
+  the grid, and a save returns to the grid with the row selected.
+
+
 ## [0.356.5] — 2026-11-20
 
 **fix(sessions): an invented training address gets a plain note, not

@@ -205,7 +205,7 @@ def _remember_upload(attachment_id: str) -> None:
 def _listing(item: dict[str, Any]) -> dict[str, Any]:
     return {k: item.get(k) for k in ("id", "status", "importance", "publishAt", "expiresAt",
                                      "audienceTeams", "createdAt", "modifiedAt")} | {
-        "title": item.get("name") or ""}
+        "title": item.get("name") or "", "summary": item.get("summary") or ""}
 
 
 def _full(item: dict[str, Any]) -> dict[str, Any]:

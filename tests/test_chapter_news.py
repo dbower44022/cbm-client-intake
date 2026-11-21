@@ -670,3 +670,25 @@ def test_a_value_the_crm_refuses_is_the_publishers_to_correct(monkeypatch):
                                             "ctaUrl": "https://x.example/"})
     assert r.status_code == 400
     assert r.json()["detail"] == "The CRM did not accept the button address. Correct it and save again."
+
+
+# --- the publishers' grid (prds/news-publisher-redesign-plan.md, stop 1) -------------
+
+def test_the_publishers_page_opens_on_the_standard_grid():
+    page = (ROOT / "news/frontend/index.html").read_text()
+    # Filter left · Search centre · Create, Edit, Actions right, in that order.
+    order = [page.index(f'id="{i}"') for i in ("filterBtn", "search", "createBtn", "editBtn", "actionsBtn")]
+    assert order == sorted(order)
+    for act in ("view", "publish", "draft", "duplicate", "withdraw", "digest"):
+        assert f'data-act="{act}"' in page
+    js = (ROOT / "news/frontend/app.js").read_text()
+    assert 'CBMGrid.enhance(table, { key: "news.items"' in js
+    # Buttons are never switched off: a missing selection is answered in words.
+    assert "Select a news item in the grid first" in js
+    assert ".disabled = true" not in js
+
+
+def test_the_listing_carries_the_summary_for_the_search():
+    from news import router as news_router
+    row = news_router._listing({"id": "n1", "name": "T", "summary": "S"})
+    assert row["title"] == "T" and row["summary"] == "S"
