@@ -1,0 +1,30 @@
+/* The Training button and the course reminder bar (frontend/shared/training.js).
+ * The bar is in the page's flow under the header: it pushes the application
+ * down and never covers a control (prds/training-app-plan.md TR2). */
+
+.cbm-training-slot { display: inline-flex; align-items: center; }
+.cbm-training-slot:empty { display: none; }
+.cbm-training-btn { text-decoration: none; white-space: nowrap; }
+
+.cbm-training-bar {
+  margin: 0.5rem 0 1rem;
+  border: 1px solid var(--cbm-gold, #c9a227);
+  border-left-width: 6px;
+  border-radius: var(--cbm-radius, 6px);
+  background: #fbf4dc;
+  background: color-mix(in srgb, var(--cbm-gold, #c9a227) 12%, var(--cbm-white, #fff));
+  color: var(--cbm-ink, #1b2733);
+}
+.cbm-training-bar__row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem;
+  padding: 0.6rem 0.9rem;
+}
+.cbm-training-bar__row + .cbm-training-bar__row { border-top: 1px solid var(--cbm-gold, #c9a227); }
+.cbm-training-bar__text { flex: 1 1 24rem; min-width: 0; }
+.cbm-training-bar__len { color: var(--cbm-text-muted, #556); }
+.cbm-training-bar__change { margin-top: 0.3rem; }
+.cbm-training-bar__label { font-weight: 600; }
+.cbm-training-bar__acts { display: inline-flex; flex-wrap: wrap; gap: 0.5rem; }
+.cbm-training-bar__go { text-decoration: none; }
+.cbm-training-bar__msg { flex-basis: 100%; margin: 0; color: var(--cbm-danger, #b00020); }
+.cbm-training-bar__msg:empty { display: none; }

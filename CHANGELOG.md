@@ -5,7 +5,41 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
-## [0.362.2] — 2026-11-21
+## [0.363.0] — 2026-11-21
+
+**feat(courses): the Training button and the course reminder** (training
+application phase 2, `prds/training-app-plan.md` § 5.1; dark behind
+`TRAINING_COURSES`). Every application a course lists now loads
+`frontend/shared/training.js` right after `textsize.js`:
+
+- **The Training button** sits in the header beside *Signed in as* in
+  Client Administration and Client Management. Mentor Administration's
+  header gains a right-hand corner for it, so it shows on the list and on
+  an open mentor alike (Doug's option A, 11-21-26). It opens
+  `/courses/?app=<route>` in its own named tab. It is drawn only where a
+  course lists the application; with the switch off, signed out or no
+  database, nothing is drawn.
+- **The reminder bar** sits under the header for each course that is due:
+  the course's name and length, **Start** or **Continue**, and **Don't
+  remind me again**. It is in the page's flow, so it never covers a control.
+  A course due again after a significant revision says so and shows that
+  revision's change log entry.
+- **Due** (plan § 6) is computed by `courses/service.due`: the member can
+  take the course, it is not hidden, it is at 1.0 or later, and it has no
+  completion and no dismissal at the current significant revision.
+  `GET /api/courses/mine` gives each course its `reminder` and the member's
+  id.
+- **`POST /api/courses/{course}/dismiss`** writes `training_dismissal` at
+  the current significant revision, with the same-person check every save
+  carries. The dismissal belongs to the course, so it clears the reminder in
+  every application the course lists, and in other open tabs of the same
+  browser at once.
+- **A test course, `training/reminder-test/`** (revision 1.0), is listed in
+  all three applications for stop 2. Hide it on every other deployment with
+  `TRAINING_HIDDEN_COURSES=reminder-test`.
+
+A test fails when a course lists an application whose page does not load
+`training.js` or has no slot in its header.
 
 **fix(courses): a course save is never recorded for another person.** Found
 at stop 1 on the Association, 11-21-26: Doug's 40 saves all answered 200,

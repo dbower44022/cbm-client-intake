@@ -15,6 +15,7 @@ class MemoryCourseStore:
     def __init__(self) -> None:
         self.rows: list[dict[str, Any]] = []
         self.done: list[dict[str, Any]] = []
+        self.dismissed: list[dict[str, Any]] = []
 
     async def progress(self, user_id: str, course_id: str) -> list[dict[str, Any]]:
         return [dict(r) for r in self.rows if r["user_id"] == user_id and r["course_id"] == course_id]
@@ -59,3 +60,16 @@ class MemoryCourseStore:
     async def completions(self, user_id: str) -> list[dict[str, Any]]:
         return sorted((dict(r) for r in self.done if r["user_id"] == user_id),
                       key=lambda r: r["completed_at"], reverse=True)
+
+    async def dismissals(self, user_id: str) -> list[dict[str, Any]]:
+        return [dict(r) for r in self.dismissed if r["user_id"] == user_id]
+
+    async def dismiss(self, user_id: str, course_id: str, major: int,
+                      now: Optional[datetime] = None) -> dict:
+        for r in self.dismissed:
+            if (r["user_id"], r["course_id"], r["major"]) == (user_id, course_id, major):
+                return dict(r)
+        row = {"id": str(uuid.uuid4()), "user_id": user_id, "course_id": course_id,
+               "major": major, "dismissed_at": now or _now()}
+        self.dismissed.append(row)
+        return dict(row)

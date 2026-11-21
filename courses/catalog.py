@@ -48,6 +48,8 @@ class Course:
     markdown: Path
     revision: str               # "N.M"
     onboarding: str = ""
+    #: The change log, revision to entry (TR4's returning reminder).
+    changes: dict = field(default_factory=dict, compare=False, repr=False)
     doc: dict = field(default_factory=dict, compare=False, repr=False)
 
     @property
@@ -95,7 +97,8 @@ def load_course(folder: Path) -> Optional[Course]:
     if md_path is None or not md_path.is_file():
         log.warning("courses: %s names no Markdown file that exists", meta_path)
         return None
-    doc = render.parse(md_path.read_text(encoding="utf-8"))
+    md_text = md_path.read_text(encoding="utf-8")
+    doc = render.parse(md_text)
     revision = render.revision_number(doc)
     if not revision:
         log.warning("courses: %s has no 'Revision N.M' on its Last Updated line", md_path)
@@ -113,7 +116,8 @@ def load_course(folder: Path) -> Optional[Course]:
         minutes = 0
     return Course(id=cid, title=str(meta.get("title") or doc["title"]).strip(),
                   minutes=minutes, applications=apps, markdown=md_path, revision=revision,
-                  onboarding=str(meta.get("onboarding") or "").strip(), doc=doc)
+                  onboarding=str(meta.get("onboarding") or "").strip(),
+                  changes=render.change_log(md_text), doc=doc)
 
 
 def discover(root: Path = TRAINING_DIR) -> dict[str, Course]:

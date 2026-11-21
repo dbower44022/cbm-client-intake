@@ -7,7 +7,7 @@
   checkpoint answers copied in, so a later edit of the course never changes
   what was recorded.
 - ``training_dismissal``: a reminder dismissed until the next significant
-  revision (phase 2 writes it).
+  revision (phase 2): one row per user, course and N.
 - ``training_onboarding_write``: the TR10 writes and their outcome (phase 4).
 
 Real people's records, so the sandbox reset keeps them
@@ -175,6 +175,31 @@ class CourseStore:
                 training_completion.c.user_id == user_id)
                 .order_by(training_completion.c.completed_at.desc()))).mappings().all()
         return [_completion(r) for r in rows]
+
+    async def dismissals(self, user_id: str) -> list[dict[str, Any]]:
+        """Every reminder one person dismissed."""
+        async with self._engine.begin() as conn:
+            rows = (await conn.execute(select(training_dismissal).where(
+                training_dismissal.c.user_id == user_id))).mappings().all()
+        return [dict(r) for r in rows]
+
+    async def dismiss(self, user_id: str, course_id: str, major: int,
+                      now: Optional[datetime] = None) -> dict[str, Any]:
+        """Dismiss the reminder at significant revision ``major``; a second
+        dismissal at the same N keeps the first."""
+        row = {"id": str(uuid.uuid4()), "user_id": user_id, "course_id": course_id,
+               "major": major, "dismissed_at": now or _now()}
+        async with self._engine.begin() as conn:
+            got = (await conn.execute(
+                pg_insert(training_dismissal).values(**row)
+                .on_conflict_do_nothing(constraint="uq_training_dismissal")
+                .returning(training_dismissal))).mappings().first()
+            if got is None:
+                got = (await conn.execute(select(training_dismissal).where(and_(
+                    training_dismissal.c.user_id == user_id,
+                    training_dismissal.c.course_id == course_id,
+                    training_dismissal.c.major == major)))).mappings().first()
+        return dict(got)
 
 
 _stores: dict[str, CourseStore] = {}

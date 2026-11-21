@@ -1,0 +1,9 @@
+# A test course for the Training button and the reminder (training app
+# phase 2, stop 2). It is at revision 1.0 or later so that it can come due
+# (a 0.x draft never does). Hide it on every deployment but the training
+# system with TRAINING_HIDDEN_COURSES=reminder-test.
+id: reminder-test
+title: Training reminder test
+minutes: 2
+markdown: reminder-test.md
+applications: [assignments, mentorsessions, mentoradmin]

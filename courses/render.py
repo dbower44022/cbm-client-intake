@@ -140,6 +140,26 @@ def revision_number(doc: dict) -> str:
     return f"{m.group(1)}.{m.group(2)}" if m else ""
 
 
+def change_log(md: str) -> dict[str, str]:
+    """The ``## Change log`` table, as revision ``N.M`` to its Change cell
+    (the last column), in the course's own words. A returning reminder shows
+    the current revision's entry (TR4). Rows that are not ``| N.M | …`` are
+    skipped; a course with no change log gives an empty dict."""
+    out: dict[str, str] = {}
+    inside = False
+    for line in md.split("\n"):
+        if line.startswith("## "):
+            inside = line[3:].strip() == "Change log"
+            continue
+        if not inside or not line.strip().startswith("|"):
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        m = re.fullmatch(r"(\d+)\.(\d+)", cells[0]) if cells else None
+        if m and len(cells) >= 2:
+            out.setdefault(f"{m.group(1)}.{m.group(2)}", cells[-1])
+    return out
+
+
 def step_key(step: dict) -> str:
     """The key a step's tick is saved under: its number (``3.2``)."""
     return step["num"] or step["title"]

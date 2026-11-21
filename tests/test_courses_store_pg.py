@@ -51,3 +51,13 @@ async def test_a_completion_is_recorded_once_per_revision():
     assert not created and again["id"] == row["id"]
     await store.complete("u1", "Kitty", "c", "2.0", {})
     assert [c["revision"] for c in await store.completions("u1")] == ["2.0", "1.0"]
+
+
+async def test_a_dismissal_is_recorded_once_per_significant_revision():
+    store = await _fresh()
+    first = await store.dismiss("u1", "c", 1)
+    again = await store.dismiss("u1", "c", 1)
+    assert again["id"] == first["id"]
+    await store.dismiss("u1", "c", 2)
+    await store.dismiss("u2", "c", 1)
+    assert sorted(d["major"] for d in await store.dismissals("u1")) == [1, 2]

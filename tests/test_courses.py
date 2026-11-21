@@ -409,3 +409,120 @@ def test_the_pages_follow_the_conventions():
         assert scripts[0] == '<script src="/shared/busy.js"></script>'
         assert scripts[1] == '<script src="/shared/textsize.js"></script>'
         assert '<meta name="cbm-org" content="{{org}}" />' in html
+
+
+# --- phase 2: the due rule, the dismissal and the Training button --------------------------
+
+def _due(c, app="assignments"):
+    body = c.get(f"/api/courses/mine?app={app}").json()
+    return {x["id"]: x["reminder"] for x in body["courses"]}
+
+
+def test_the_change_log_is_read_by_revision():
+    md = COURSE_MD.format(rev="2.0") + "| 1.0 | d | a | First. |\n| 2.0 | d | a | Step 1.2 rewritten. |\n"
+    assert render.change_log(md) == {"1.0": "First.", "2.0": "Step 1.2 rewritten."}
+    assert render.change_log("# T\n\nno log") == {}
+
+
+def test_a_course_is_due_until_completed(monkeypatch, tmp_path, store):
+    c = _client(monkeypatch, tmp_path, user=KITTY)
+    assert _due(c)["small"] == {"due": True, "again": False, "change": ""}
+    assert c.get("/api/courses/mine").json()["user"] == {"id": "u-kitty", "name": "Kitty Cat"}
+    for key, body in (("1.1", {"done": True}), ("1.2", {"done": True}),
+                      ("cp-1", {"answer": "R-1"}), ("2.1", {"done": True}),
+                      ("cp-2", {"answer": "9"})):
+        assert c.put(f"/api/courses/small/items/{key}", json={**AS, **body}).status_code == 200
+    assert c.post("/api/courses/small/complete", json=AS).json()["completed"] is True
+    assert _due(c)["small"]["due"] is False
+
+
+def test_a_draft_is_never_due(monkeypatch, tmp_path, store):
+    _write_course(tmp_path, cid="small", rev="0.9")
+    c = _client(monkeypatch, tmp_path, user=KITTY, courses=discover(tmp_path))
+    assert _due(c)["small"]["due"] is False
+
+
+def test_dismissing_stops_the_reminder_in_every_application(monkeypatch, tmp_path, store):
+    _write_course(tmp_path, cid="small", apps="assignments, mentoradmin")
+    admin = {**KITTY, "isAdmin": True}
+    c = _client(monkeypatch, tmp_path, user=admin, courses=discover(tmp_path))
+    r = c.post("/api/courses/small/dismiss", json=AS)
+    assert r.status_code == 200 and r.json()["dismissed"] is True
+    assert c.post("/api/courses/small/dismiss", json=AS).status_code == 200
+    assert len(store.dismissed) == 1 and store.dismissed[0]["major"] == 1
+    assert _due(c, "assignments")["small"]["due"] is False
+    assert _due(c, "mentoradmin")["small"]["due"] is False
+    # A minor revision keeps the dismissal.
+    _write_course(tmp_path, cid="small", rev="1.4", apps="assignments, mentoradmin")
+    monkeypatch.setattr(service, "catalog", lambda: discover(tmp_path))
+    assert _due(c)["small"]["due"] is False
+
+
+def test_a_significant_revision_brings_it_back_with_its_change(monkeypatch, tmp_path, store):
+    c = _client(monkeypatch, tmp_path, user=KITTY)
+    c.post("/api/courses/small/dismiss", json=AS)
+    d = _write_course(tmp_path, cid="small", rev="2.0")
+    md = d / "small.md"
+    md.write_text(md.read_text() + "| 2.0 | d | a | Section 2 is new. |\n", encoding="utf-8")
+    monkeypatch.setattr(service, "catalog", lambda: discover(tmp_path))
+    assert _due(c)["small"] == {"due": True, "again": True, "change": "Section 2 is new."}
+    # The same after a completion at 1.0 rather than a dismissal.
+    store.dismissed.clear()
+    store.done.append({"id": "x", "user_id": "u-kitty", "user_name": "", "course_id": "small",
+                       "revision": "1.3", "answers": {},
+                       "completed_at": datetime(2026, 11, 1, tzinfo=timezone.utc)})
+    assert _due(c)["small"]["again"] is True
+
+
+def test_a_dismissal_for_another_person_is_refused(monkeypatch, tmp_path, store):
+    c = _client(monkeypatch, tmp_path, user={**JOE, "isAdmin": True})
+    assert c.post("/api/courses/small/dismiss", json=AS).status_code == 409
+    assert c.post("/api/courses/small/dismiss").status_code == 409
+    assert store.dismissed == []
+
+
+def test_dismissing_is_gated_like_the_course(monkeypatch, tmp_path, store):
+    c = _client(monkeypatch, tmp_path, user=JOE)
+    r = c.post("/api/courses/small/dismiss", json={"asUser": "u-joe", "asName": "Joe Mentor"})
+    assert r.status_code == 404 and store.dismissed == []
+    off = _client(monkeypatch, tmp_path, on=False, user=KITTY)
+    assert off.post("/api/courses/small/dismiss", json=AS).status_code == 404
+
+
+#: Each application a course may list, and the page that draws it.
+APP_PAGES = {
+    "assignments": "assignments/frontend/index.html",
+    "mentorsessions": "sessions/frontend/index.html",
+    "partnersessions": "sessions/frontend/index.html",
+    "sponsorsessions": "sessions/frontend/index.html",
+    "mentoradmin": "mentoradmin/frontend/index.html",
+}
+
+
+def test_every_application_a_course_lists_loads_the_training_button():
+    """A course naming an application not in APP_PAGES fails here: add the
+    page, load training.js after textsize.js and give its header the slot."""
+    for course in discover().values():
+        for app in course.applications:
+            assert app in APP_PAGES, f"{course.id} lists {app}, which has no page here"
+            html = (ROOT / APP_PAGES[app]).read_text()
+            scripts = [line.strip() for line in html.splitlines() if "<script src=" in line]
+            assert scripts[:3] == ['<script src="/shared/busy.js"></script>',
+                                   '<script src="/shared/textsize.js"></script>',
+                                   '<script src="/shared/training.js"></script>'], app
+            head = html[html.index("<header"):html.index("</header>")]
+            assert "data-training-slot" in head, app
+
+
+def test_the_reminder_test_course_can_come_due():
+    course = discover()["reminder-test"]
+    assert not course.draft and course.changes.get(course.revision)
+    assert set(course.applications) == {"assignments", "mentorsessions", "mentoradmin"}
+
+
+def test_the_training_script_draws_nothing_it_was_not_told_to():
+    js = (ROOT / "frontend" / "shared" / "training.js").read_text()
+    assert "/api/courses/mine?app=" in js and "/dismiss" in js and "asUser" in js
+    assert "disabled" not in js and "position: fixed" not in js
+    css = (ROOT / "frontend" / "shared" / "training.css").read_text()
+    assert "position: fixed" not in css and "position:fixed" not in css

@@ -19,8 +19,12 @@
 <body>
   <main class="cbm-container ma">
     <header class="ma__header">
-      <h1>Mentor Administration</h1>
-      <p class="ma__sub">Review and edit any mentor's profile, status, and details.</p>
+      <div>
+        <h1>Mentor Administration</h1>
+        <p class="ma__sub">Review and edit any mentor's profile, status, and details.</p>
+      </div>
+      <!-- The Training button's corner (training plan phase 2, Doug's option A, 11-21-26). -->
+      <span class="cbm-training-slot ma__header-side" data-training-slot></span>
     </header>
 
     <!-- Sign-in happens at the portal (/); this shows access/server errors. -->
@@ -218,6 +222,7 @@
        other script can start a request. -->
   <script src="/shared/busy.js"></script>
   <script src="/shared/textsize.js"></script>
+  <script src="/shared/training.js"></script>
   <script src="/shared/grid.js"></script>
   <script src="/shared/history.js"></script>
   <script src="/shared/feedback.js"></script>

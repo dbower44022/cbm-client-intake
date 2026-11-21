@@ -4,6 +4,9 @@
 /* Use most of the viewport — the edit form (esp. the long Expertise lists)
    benefits from the extra width. */
 .ma { padding-top: 2rem; padding-bottom: 3rem; max-width: min(1480px, calc(96 * var(--cbm-vw, 1vw))); }
+.ma__header { display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 1rem; flex-wrap: wrap; }
+.ma__header-side { margin-left: auto; }
 .ma__header h1 { color: var(--cbm-navy); font-family: var(--cbm-font-serif); margin-bottom: 0.25rem; }
 .ma__sub { color: var(--cbm-text); margin-top: 0; }
 

@@ -11,6 +11,11 @@ completing it needs. The router calls these; nothing else decides them.
 - **Progress across revisions** (decision 6): a minor revision keeps the
   trainee's ticks; ticks made against an earlier significant revision are
   cleared, and the page says so.
+- **Due** (plan § 6, phase 2): a course the member can take, not hidden,
+  at 1.0 or later, with no completion and no dismissal at the current N.
+  Computed, never stored. **Due again** is due after a completion or a
+  dismissal at an earlier N, and carries the current revision's change log
+  entry (TR4).
 - **Completed** (TR1): every step ticked and every checkpoint answered. The
   answers are copied into the completion; they are not marked.
 """
@@ -85,6 +90,27 @@ def status(course: Course, rows: list[dict[str, Any]],
     else:
         state, words = "not_started", "Not started"
     return {"state": state, "words": words, "done": done, "total": total}
+
+
+def dismissed(course: Course, dismissals: list[dict[str, Any]]) -> bool:
+    """The member dismissed this course's reminder at its current N."""
+    return any(d["course_id"] == course.id and int(d["major"]) == course.major
+               for d in dismissals)
+
+
+def due(course: Course, completions: list[dict[str, Any]],
+        dismissals: list[dict[str, Any]]) -> dict[str, Any]:
+    """Whether the reminder shows for this course (the caller has already
+    checked that the member can take it and that it is not hidden):
+    ``{"due", "again", "change"}``. ``change`` is the current revision's
+    change log entry, given only when the course is due again."""
+    if course.draft or current_completion(course, completions) or dismissed(course, dismissals):
+        return {"due": False, "again": False, "change": ""}
+    earlier = any(c["course_id"] == course.id and major_of(c["revision"]) < course.major
+                  for c in completions) or any(
+        d["course_id"] == course.id and int(d["major"]) < course.major for d in dismissals)
+    return {"due": True, "again": earlier,
+            "change": course.changes.get(course.revision, "") if earlier else ""}
 
 
 def summary(course: Course, settings: Settings) -> dict[str, Any]:

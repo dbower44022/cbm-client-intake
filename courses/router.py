@@ -96,12 +96,16 @@ def _completion_view(row: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
 @router.get("/mine")
 async def mine(request: Request, app: str = "") -> dict:
     """The member's courses (decision 8): those of ``app`` first, then the
-    others they can take, each with its status."""
+    others they can take, each with its status and its ``reminder`` (due,
+    due again, and the change log entry when due again; phase 2). The
+    Training button and the reminder bar (``/shared/training.js``) read
+    this once per page open."""
     user, settings = _member(request)
     store = _store(settings)
     routes = service.routes_for(user, settings)
     progress = await store.progress_counts(_uid(user))
     completions = await store.completions(_uid(user))
+    dismissals = await store.dismissals(_uid(user))
     app = (app or "").strip().strip("/")
     first, rest = [], []
     for course in service.courses(settings).values():
@@ -109,9 +113,10 @@ async def mine(request: Request, app: str = "") -> dict:
             continue
         row = {**service.summary(course, settings),
                "status": service.status(course, progress.get(course.id, []), completions),
+               "reminder": service.due(course, completions, dismissals),
                "forApp": bool(app) and app in course.applications}
         (first if row["forApp"] else rest).append(row)
-    return {"user": {"name": user.get("name") or user.get("userName") or ""},
+    return {"user": {"id": _uid(user), "name": _name(user)},
             "app": app, "courses": first + rest}
 
 
@@ -199,3 +204,18 @@ async def complete(course_id: str, request: Request, body: Optional[CompleteIn] 
     if created:
         log.info("courses: %s completed %s at %s", _uid(user), course.id, course.revision)
     return {"completed": True, "completion": _completion_view(row)}
+
+
+@router.post("/{course_id}/dismiss")
+async def dismiss(course_id: str, request: Request, body: Optional[CompleteIn] = None) -> dict:
+    """Don't remind me again: the reminder stops, in every application the
+    course lists (TR3), until the course's next significant revision (TR4).
+    Carries the same-person check as every save."""
+    user, settings = _member(request)
+    body = body or CompleteIn()
+    _same_person(user, body.asUser, body.asName)
+    store = _store(settings)
+    course = _course(course_id, user, settings)
+    await store.dismiss(_uid(user), course.id, course.major)
+    log.info("courses: %s dismissed %s at %s", _uid(user), course.id, course.major)
+    return {"dismissed": True, "course": course.id, "revision": course.revision}
