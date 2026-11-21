@@ -1,10 +1,10 @@
 # Business Evaluation — the training demo
 
-Last Updated: 11-21-26 02:29 · Revision 0.1 — see change log at the end.
+Last Updated: 11-21-26 10:51 · Revision 0.2 — see change log at the end.
 
 A step-by-step demo for training new staff on the evaluation journey. The trainee plays every part in turn: the client, the Client Administration staff member who assigns a mentor, the mentor, and the Mentor Administration staff member who closes a follow-up. It runs on the Business Mentors Association's training system and takes about 90 minutes. The background is in `business-evaluation-guide.md` at the repository root.
 
-**Status.** Draft for Doug's review, not yet run end to end or published.
+**Status.** Draft for Doug's review, not yet run end to end. **Trainees use the step-by-step page** made from this file (Doug's choice A, 11-21-26): https://claude.ai/artifact/TVxJtFYFi4h3oqytAszX2t. This file is its one source: after an edit, rebuild it with `uv run python scripts/build_runbook.py training/evaluation-staff-course/evaluation-demo.md --out <page.html> --title "Evaluation Training Demo"` and publish the page again.
 
 Every value to type is in its own box. On the documentation site each box has a copy button: copy it and paste it rather than typing.
 
@@ -396,3 +396,4 @@ Called Morgan to apologise for the wait and booked the next session for next wee
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
 | 0.1 | 11-21-26 02:29 | Claude (Claude Code) | Drafted on Doug's decisions of 11-21-26: the whole journey for staff (A), on the documentation site (A), each trainee starting a new client from the intake form (A). |
+| 0.2 | 11-21-26 10:51 | Claude (Claude Code) | One line per paragraph (Doug saw hard breaks); the step-by-step page built from this file by `scripts/build_runbook.py` (Doug's choice A). |
