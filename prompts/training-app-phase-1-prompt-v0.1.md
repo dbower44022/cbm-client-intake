@@ -1,8 +1,8 @@
 # Kickoff prompt — the training application, phase 1: the course page
 
-Last Updated: 11-21-26 11:54 · Revision 0.2 — see change log at the end.
+Last Updated: 11-21-26 11:55 · Revision 1.0 — see change log at the end.
 
-**Draft for Doug's approval.** Once approved, start a fresh Claude Code
+**Approved by Doug as written, 11-21-26.** Start a fresh Claude Code
 session rooted in `~/Dropbox/Projects/cbm-client-intake`, tell it to read
 this file, and tell it to follow everything below the line.
 
@@ -85,5 +85,6 @@ Wait for his result before closing the phase.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.0 | 11-21-26 11:55 | Doug | Approved as written. |
 | 0.2 | 11-21-26 11:54 | Claude (Claude Code) | Plan revision 0.3: TR11 and TR12 (the help agent, phase 5) named as out of scope, with room left for its button. |
 | 0.1 | 11-21-26 11:47 | Claude (Claude Code) | Drafted at the close of the planning session, from plan revision 0.2. |
