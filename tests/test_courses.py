@@ -211,6 +211,7 @@ def test_a_blank_answer_is_not_an_answer(tmp_path):
 
 KITTY = {"userId": "u-kitty", "userName": "kitty", "name": "Kitty Cat", "token": "t",
          "teams": ["Client Administration Team"]}
+AS = {"asUser": "u-kitty", "asName": "Kitty Cat"}
 JOE = {"userId": "u-joe", "userName": "joe", "name": "Joe Mentor", "token": "t",
        "teams": ["Mentor Team"]}
 
@@ -304,10 +305,10 @@ def test_the_course_page_fills_the_tokens(monkeypatch, tmp_path, store):
 
 def test_tick_answer_resume_and_complete(monkeypatch, tmp_path, store):
     c = _client(monkeypatch, tmp_path, user=KITTY)
-    assert c.put("/api/courses/small/items/1.1", json={"done": True}).json()["saved"] is True
-    assert c.put("/api/courses/small/items/cp-1", json={"answer": " REF-42 "}).json()["saved"]
-    assert c.put("/api/courses/small/items/9.9", json={"done": True}).status_code == 404
-    early = c.post("/api/courses/small/complete").json()
+    assert c.put("/api/courses/small/items/1.1", json={**AS, "done": True}).json()["saved"] is True
+    assert c.put("/api/courses/small/items/cp-1", json={**AS, "answer": " REF-42 "}).json()["saved"]
+    assert c.put("/api/courses/small/items/9.9", json={**AS, "done": True}).status_code == 404
+    early = c.post("/api/courses/small/complete", json=AS).json()
     assert early["completed"] is False
     assert [s["key"] for s in early["missing"]["steps"]] == ["1.2", "2.1"]
     assert [x["key"] for x in early["missing"]["checkpoints"]] == ["cp-2"]
@@ -317,30 +318,31 @@ def test_tick_answer_resume_and_complete(monkeypatch, tmp_path, store):
     assert set(page["progress"]) == {"1.1", "cp-1"} and page["progress"]["cp-1"]["answer"] == "REF-42"
     assert c.get("/api/courses/mine").json()["courses"][0]["status"]["words"] == "In progress, 2 of 5"
     for key in ("1.2", "2.1"):
-        c.put(f"/api/courses/small/items/{key}", json={"done": True})
-    c.put("/api/courses/small/items/cp-2", json={"answer": "4"})
-    done = c.post("/api/courses/small/complete").json()
+        c.put(f"/api/courses/small/items/{key}", json={**AS, "done": True})
+    c.put("/api/courses/small/items/cp-2", json={**AS, "answer": "4"})
+    done = c.post("/api/courses/small/complete", json=AS).json()
     assert done["completed"] is True and done["completion"]["revision"] == "1.0"
     assert store.done[0]["answers"]["cp-1"]["answer"] == "REF-42"
     assert store.done[0]["user_name"] == "Kitty Cat"
-    again = c.post("/api/courses/small/complete").json()
+    again = c.post("/api/courses/small/complete", json=AS).json()
     assert again["completed"] is True and len(store.done) == 1
     assert c.get("/api/courses/small").json()["completion"]["revision"] == "1.0"
+    assert c.get("/api/courses/small").json()["user"] == {"id": "u-kitty", "name": "Kitty Cat"}
 
 
 def test_unticking_and_clearing_an_answer(monkeypatch, tmp_path, store):
     c = _client(monkeypatch, tmp_path, user=KITTY)
-    c.put("/api/courses/small/items/1.1", json={"done": True})
-    c.put("/api/courses/small/items/cp-1", json={"answer": "x"})
-    assert c.put("/api/courses/small/items/1.1", json={"done": False}).json()["saved"] is False
-    assert c.put("/api/courses/small/items/cp-1", json={"answer": "   "}).json()["saved"] is False
+    c.put("/api/courses/small/items/1.1", json={**AS, "done": True})
+    c.put("/api/courses/small/items/cp-1", json={**AS, "answer": "x"})
+    assert c.put("/api/courses/small/items/1.1", json={**AS, "done": False}).json()["saved"] is False
+    assert c.put("/api/courses/small/items/cp-1", json={**AS, "answer": "   "}).json()["saved"] is False
     assert store.rows == []
-    assert c.put("/api/courses/small/items/cp-1", json={"answer": "x" * 2001}).status_code == 422
+    assert c.put("/api/courses/small/items/cp-1", json={**AS, "answer": "x" * 2001}).status_code == 422
 
 
 def test_a_significant_revision_clears_old_ticks_and_says_so(monkeypatch, tmp_path, store):
     c = _client(monkeypatch, tmp_path, user=KITTY)
-    c.put("/api/courses/small/items/1.1", json={"done": True})
+    c.put("/api/courses/small/items/1.1", json={**AS, "done": True})
     store.done.append({"id": "x", "user_id": "u-kitty", "user_name": "", "course_id": "small",
                        "revision": "1.0", "answers": {},
                        "completed_at": datetime(2026, 11, 1, tzinfo=timezone.utc)})
@@ -354,6 +356,27 @@ def test_a_significant_revision_clears_old_ticks_and_says_so(monkeypatch, tmp_pa
     page = c.get("/api/courses/small").json()
     assert "changed significantly" in page["notice"] and page["progress"] == {}
     assert page["completion"] is None and store.rows == []
+
+
+def test_a_save_for_another_person_is_refused(monkeypatch, tmp_path, store):
+    """Found at stop 1 (11-21-26): the browser signed in to an exercise as
+    another login, and the course page's saves went in as that login."""
+    c = _client(monkeypatch, tmp_path, user={**JOE, "isAdmin": True})
+    r = c.put("/api/courses/small/items/1.1", json={**AS, "done": True})
+    assert r.status_code == 409
+    assert r.json()["detail"].startswith(
+        "This course is Kitty Cat's, but this browser is now signed in as Joe Mentor.")
+    assert c.put("/api/courses/small/items/cp-1", json={**AS, "answer": "x"}).status_code == 409
+    assert c.post("/api/courses/small/complete", json=AS).status_code == 409
+    assert store.rows == [] and store.done == []
+
+
+def test_a_save_from_an_old_page_is_refused(monkeypatch, tmp_path, store):
+    c = _client(monkeypatch, tmp_path, user=KITTY)
+    r = c.put("/api/courses/small/items/1.1", json={"done": True})
+    assert r.status_code == 409 and "out of date" in r.json()["detail"]
+    assert c.post("/api/courses/small/complete").status_code == 409
+    assert store.rows == []
 
 
 # --- the settings and the database --------------------------------------------------------

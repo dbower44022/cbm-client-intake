@@ -9,6 +9,14 @@ as an unknown id, like every other gated record in this application.
 
 Ticks, answers and completions are the application's own data (decision
 12): no CRM call and no action log entry.
+
+**A save is refused when the browser's sign-in is no longer the person the
+page was opened for** (v0.362.2, found at stop 1, 11-21-26). One browser
+holds one sign-in per site, and where the training system is this same
+application (the Association), signing in to an exercise as a training
+login used to send the course page's next save in as that login. Every
+save and Complete course carry ``asUser``, the person the page was opened
+for; a different session answers 409 and nothing is written.
 """
 from __future__ import annotations
 
@@ -62,6 +70,22 @@ def _uid(user: dict[str, Any]) -> str:
     return user.get("userId") or ""
 
 
+def _name(user: dict[str, Any]) -> str:
+    return user.get("name") or user.get("userName") or ""
+
+
+def _same_person(user: dict[str, Any], as_user: Optional[str], as_name: Optional[str]) -> None:
+    """409 unless the session is still the person the page was opened for."""
+    if not as_user:
+        raise HTTPException(status_code=409, detail=(
+            "This course page is out of date. Reload it, then tick the step again."))
+    if as_user != _uid(user):
+        raise HTTPException(status_code=409, detail=(
+            f"This course is {as_name or 'another person'}'s, but this browser is now signed in "
+            f"as {_name(user) or 'someone else'}. Nothing was saved. Keep the course in a normal "
+            "window and sign in to the exercises in a private window, then reload this page."))
+
+
 def _completion_view(row: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
     if not row:
         return None
@@ -110,7 +134,7 @@ async def course_page(course_id: str, request: Request) -> dict:
     completion = service.current_completion(course, await store.completions(_uid(user)))
     return {
         **service.page(course, settings),
-        "user": {"name": user.get("name") or user.get("userName") or ""},
+        "user": {"id": _uid(user), "name": _name(user)},
         "progress": {r["item_key"]: {"answer": r.get("answer"), "at": r["done_at"].isoformat()}
                      for r in live},
         "completion": _completion_view(completion),
@@ -121,6 +145,13 @@ async def course_page(course_id: str, request: Request) -> dict:
 class ItemIn(BaseModel):
     done: bool = True
     answer: Optional[str] = Field(default=None, max_length=MAX_ANSWER)
+    asUser: Optional[str] = Field(default=None, max_length=64)
+    asName: Optional[str] = Field(default=None, max_length=255)
+
+
+class CompleteIn(BaseModel):
+    asUser: Optional[str] = Field(default=None, max_length=64)
+    asName: Optional[str] = Field(default=None, max_length=255)
 
 
 @router.put("/{course_id}/items/{item_key}")
@@ -128,6 +159,7 @@ async def save_item(course_id: str, item_key: str, body: ItemIn, request: Reques
     """Save one tick (``done``) or one checkpoint answer (``answer``; blank
     clears it) as the trainee goes (decision 6)."""
     user, settings = _member(request)
+    _same_person(user, body.asUser, body.asName)
     store = _store(settings)
     course = _course(course_id, user, settings)
     item = next((i for i in course.items if i["key"] == item_key), None)
@@ -148,11 +180,13 @@ async def save_item(course_id: str, item_key: str, body: ItemIn, request: Reques
 
 
 @router.post("/{course_id}/complete")
-async def complete(course_id: str, request: Request) -> dict:
+async def complete(course_id: str, request: Request, body: Optional[CompleteIn] = None) -> dict:
     """Complete the course (TR1). Pressed early, nothing is written and the
     answer names the steps not ticked and the checkpoints not answered
     (decision 7)."""
     user, settings = _member(request)
+    body = body or CompleteIn()
+    _same_person(user, body.asUser, body.asName)
     store = _store(settings)
     course = _course(course_id, user, settings)
     rows = await store.progress(_uid(user), course.id)
@@ -160,7 +194,7 @@ async def complete(course_id: str, request: Request) -> dict:
     if gaps["steps"] or gaps["checkpoints"]:
         return {"completed": False, "missing": gaps}
     row, created = await store.complete(
-        _uid(user), user.get("name") or user.get("userName") or "", course.id, course.revision,
+        _uid(user), _name(user), course.id, course.revision,
         service.answers(course, rows))
     if created:
         log.info("courses: %s completed %s at %s", _uid(user), course.id, course.revision)

@@ -1419,5 +1419,8 @@ the strength of it.
 - **v0.362.0 (2026-11-21) is committed, not pushed**: training courses
   phase 1, the course page (`TRAINING_COURSES`, off; migration
   `0054_training_courses`; package `courses/`, content in `training/`).
-  Owed: stop 1, Doug's check on the Association (#92).
+  Owed: stop 1, Doug's check on the Association (#92). **v0.362.2 is
+  committed, not pushed**: its fix from the first stop 1 run, saves refused
+  when the browser's sign-in is not the person the course page was opened
+  for (409).
 Everything else still owed is in `OPEN-ITEMS.md`.

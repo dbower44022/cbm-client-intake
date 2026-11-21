@@ -9,7 +9,12 @@
    never disabled: pressed early it names what is missing (decision 7).
 
    Each step is section.step[data-key] with id "step-<key>", the anchor the
-   phase 5 help button will use. */
+   phase 5 help button will use.
+
+   Every save names the person the page was opened for (asUser). If this
+   browser has since signed in as someone else, the server refuses with 409
+   and the page says so and offers a reload (v0.362.2): one browser holds one
+   sign-in per site, and on the Association the exercises are this same site. */
 (function () {
   "use strict";
 
@@ -49,6 +54,27 @@
   }
 
   function barMsg(text) { $("barMsg").textContent = text || ""; }
+
+  /* The body of every save: who the page is for (see the header comment). */
+  function who(extra) {
+    var body = { asUser: S.data.user.id, asName: S.data.user.name };
+    Object.keys(extra || {}).forEach(function (k) { body[k] = extra[k]; });
+    return body;
+  }
+
+  /* A save refused because the browser's sign-in changed: say so, offer a reload. */
+  function wrongPerson(e) {
+    if (e.status !== 409) return false;
+    var bar = $("barMsg");
+    bar.textContent = e.message + " ";
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "cbm-action--second";
+    b.textContent = "Reload this page";
+    b.addEventListener("click", function () { window.location.reload(); });
+    bar.appendChild(b);
+    return true;
+  }
 
   function steps() { return Array.prototype.slice.call(document.querySelectorAll("#course .step")); }
   function checkpoints() { return Array.prototype.slice.call(document.querySelectorAll("#course .checkpoint")); }
@@ -98,13 +124,13 @@
       barMsg("");
       if (on) bringToTop(nextOpen(card));
       api("/" + encodeURIComponent(courseId) + "/items/" + encodeURIComponent(key),
-          { method: "PUT", body: { done: on } }).then(function () {
+          { method: "PUT", body: who({ done: on }) }).then(function () {
         if (on) S.progress[key] = {}; else delete S.progress[key];
       }).catch(function (e) {
         box.checked = !on;
         card.classList.toggle("done", !on);
         paint();
-        barMsg("Step " + key + " was not saved: " + e.message + " Tick it again.");
+        if (!wrongPerson(e)) barMsg("Step " + key + " was not saved: " + e.message + " Tick it again.");
       });
     });
   }
@@ -123,13 +149,14 @@
       if (value === sent) return;
       said.textContent = "Saving…";
       api("/" + encodeURIComponent(courseId) + "/items/" + encodeURIComponent(key),
-          { method: "PUT", body: { answer: value } }).then(function () {
+          { method: "PUT", body: who({ answer: value }) }).then(function () {
         sent = value;
         cp.classList.toggle("answered", !!value);
         said.textContent = value ? "Saved." : "Answer cleared.";
         paint();
       }).catch(function (e) {
-        said.textContent = "Not saved: " + e.message;
+        said.textContent = "Not saved.";
+        if (!wrongPerson(e)) said.textContent = "Not saved: " + e.message;
       });
     }
     area.addEventListener("input", function () {
@@ -210,7 +237,7 @@
     });
     var done = window.CBMBusy ? CBMBusy.start(btn) : function () {};
     setTimeout(function () {
-      api("/" + encodeURIComponent(courseId) + "/complete", { method: "POST" }).then(function (d) {
+      api("/" + encodeURIComponent(courseId) + "/complete", { method: "POST", body: who() }).then(function (d) {
         done();
         if (!d.completed) {
           showMissing(d.missing);
@@ -223,7 +250,7 @@
         window.scrollTo(0, 0);
       }).catch(function (e) {
         done();
-        barMsg("The course was not completed: " + e.message);
+        if (!wrongPerson(e)) barMsg("The course was not completed: " + e.message);
       });
     }, 300);
   }

@@ -5,6 +5,22 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.362.2] — 2026-11-21
+
+**fix(courses): a course save is never recorded for another person.** Found
+at stop 1 on the Association, 11-21-26: Doug's 40 saves all answered 200,
+yet Complete course listed 25 steps missing. The browser had signed in to
+the exercises as Kitty Cat, then Joe Mentor, then Mentor Admin, and on the
+Association the course page and the exercises are the same site, so each
+save went in as whoever was signed in last (the web log's sign-ins at 17:41,
+17:47 and 17:57 UTC match the split exactly). Every save and Complete course
+now carry the person the page was opened for, and the server answers 409,
+writing nothing, when the browser's sign-in is someone else; the page names
+both people and offers a reload. A page loaded before this release is
+refused the same way and asked to reload. The evaluation course (revision
+0.4) tells the trainee to keep the course in a normal window and every
+exercise in a private one.
+
 ## [0.362.1] — 2026-11-21
 
 **fix(email): Cancel closes the email window.** Found by Doug in Client

@@ -1,6 +1,6 @@
 # Business Evaluation — the training demo
 
-Last Updated: 11-21-26 12:04 · Revision 0.3 — see change log at the end.
+Last Updated: 11-21-26 13:47 · Revision 0.4 — see change log at the end.
 
 A step-by-step demo for training new staff on the evaluation journey. The trainee plays every part in turn: the client, the Client Administration staff member who assigns a mentor, the mentor, and the Mentor Administration staff member who closes a follow-up. It runs on the Business Mentors Association's training system and takes about 90 minutes. The background is in `business-evaluation-guide.md` at the repository root.
 
@@ -15,6 +15,7 @@ Every value to type is in its own box. On the documentation site each box has a 
 **Each trainee needs:**
 
 - Chrome, with private windows allowed.
+- **Keep this course page in a normal window, and do every exercise in a private window.** A browser holds one sign-in per site in its normal windows and another in its private windows. Where the training system is the same site as this course, signing in to an exercise in the window that holds the course would sign the course out of your name.
 - **Their own real email address.** The client's emails go there, because the training system's own addresses cannot receive mail.
 - Three training sign-ins. The course page in the application fills them in below; a page made from this file names them only, because it is public, so ask the trainer.
   - **Client Administration** login (Kitty Cat): {{signin:Client Administration}}
@@ -401,3 +402,4 @@ Called Morgan to apologise for the wait and booked the next session for next wee
 | 0.1 | 11-21-26 02:29 | Claude (Claude Code) | Drafted on Doug's decisions of 11-21-26: the whole journey for staff (A), on the documentation site (A), each trainee starting a new client from the intake form (A). |
 | 0.2 | 11-21-26 10:51 | Claude (Claude Code) | One line per paragraph (Doug saw hard breaks); the step-by-step page built from this file by `scripts/build_runbook.py` (Doug's choice A). |
 | 0.3 | 11-21-26 12:04 | Claude (Claude Code) | Served in the application (training app phase 1): `course.yaml` added; the training system's address written as `{{training_url}}` and the three sign-ins as `{{signin:…}}`; each checkpoint worded as something the trainee types. Minor revision: still a draft (decision 9). |
+| 0.4 | 11-21-26 13:47 | Claude (Claude Code) | *Before you start*: keep the course page in a normal window and every exercise in a private window (found at stop 1: on the Association, signing in to an exercise in the course's window sent the course's saves in as the training login). Minor revision. |
