@@ -5,6 +5,27 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.359.0] — 2026-11-21
+
+**feat(news): View is a reading screen** (stop 3, the last, of
+`prds/news-publisher-redesign-plan.md`).
+
+- **The header**: the title, its status and importance, the summary, and
+  Edit and Actions ▾ (Publish, Move back to draft, Duplicate as a new
+  draft, Withdraw…). "← Back to news" or Escape returns to the grid, on
+  the same row.
+- **A strip of facts**: audience, when it was or goes live, when it
+  expires, the button and its address, and who created and last changed
+  it, when.
+- **The item as members see it, opened**, beside **who has read it**: the
+  count with a percentage and a bar, then the name lists; a draft says no
+  member sees it yet, a withdrawn item says the counts have stopped.
+- An action taken on the View screen redraws it and keeps its message
+  there; the withdraw confirmation shows there too.
+- `GET /news/api/items/{id}` now carries `createdByName` and
+  `modifiedByName`.
+
+
 ## [0.358.1] — 2026-11-21
 
 **fix(feedback): a shorter sweep interval takes effect at once.** Found in

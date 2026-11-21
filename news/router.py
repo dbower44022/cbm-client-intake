@@ -209,7 +209,8 @@ def _listing(item: dict[str, Any]) -> dict[str, Any]:
 
 
 def _full(item: dict[str, Any]) -> dict[str, Any]:
-    return _listing(item) | {k: item.get(k) or "" for k in ("summary", "body", "ctaLabel", "ctaUrl")}
+    return _listing(item) | {k: item.get(k) or "" for k in ("summary", "body", "ctaLabel", "ctaUrl",
+                                                            "createdByName", "modifiedByName")}
 
 
 @router.post("/logout")

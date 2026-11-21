@@ -369,12 +369,40 @@
   }
 
   // --- the Actions menu -------------------------------------------------------------
-  function menu(open) {
-    var m = $("actionsMenu");
+  /* The grid's Actions menu, or the View screen's (``prefix`` "view"). */
+  function menu(open, prefix) {
+    prefix = prefix || "";
+    var m = $(prefix ? prefix + "ActionsMenu" : "actionsMenu");
+    var btn = $(prefix ? prefix + "ActionsBtn" : "actionsBtn");
     if (open === undefined) open = m.hidden;
     m.hidden = !open;
-    $("actionsBtn").setAttribute("aria-expanded", open ? "true" : "false");
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
     if (open) { var first = m.querySelector("button"); if (first) first.focus(); }
+  }
+  function closeMenus() { menu(false); menu(false, "view"); }
+  function wireMenu(prefix) {
+    var m = $(prefix ? prefix + "ActionsMenu" : "actionsMenu");
+    var btn = $(prefix ? prefix + "ActionsBtn" : "actionsBtn");
+    btn.addEventListener("click", function (ev) { ev.stopPropagation(); menu(undefined, prefix); });
+    m.addEventListener("click", function (ev) {
+      var b = ev.target.closest("button[data-act]");
+      if (b) act(b.dataset.act, b);
+    });
+    m.addEventListener("keydown", function (ev) {
+      var items = Array.prototype.slice.call(m.querySelectorAll("button"));
+      var at = items.indexOf(document.activeElement);
+      if (ev.key === "Escape") { ev.stopPropagation(); menu(false, prefix); btn.focus(); }
+      else if (ev.key === "ArrowDown") { ev.preventDefault(); items[(at + 1) % items.length].focus(); }
+      else if (ev.key === "ArrowUp") { ev.preventDefault(); items[(at - 1 + items.length) % items.length].focus(); }
+    });
+  }
+
+  /* After an action, the View screen (when it is showing) is drawn again. */
+  function afterAction(saved) {
+    return loadList().then(function () {
+      select(saved.id);
+      if (!$("workView").hidden) return viewItem(saved.id, true);
+    });
   }
 
   function needSelection(what) {
@@ -396,8 +424,7 @@
       return api("/items/" + encodeURIComponent(it.id), { method: "PUT", body: JSON.stringify(d) });
     }).then(function (saved) {
       done();
-      return loadList().then(function () {
-        select(saved.id);
+      return afterAction(saved).then(function () {
         listSay(status === "Published"
           ? "“" + saved.title + "” is published" + (shownStatus(saved) === "Scheduled"
               ? ", and goes live on " + when(saved.publishAt) + "." : ". Members see it on their home page.")
@@ -414,17 +441,16 @@
       var done = window.CBMBusy && CBMBusy.start ? CBMBusy.start($("confirmYes")) : function () {};
       api("/items/" + encodeURIComponent(it.id) + "/withdraw", { method: "POST" }).then(function (saved) {
         done(); $("confirmBar").hidden = true;
-        return loadList().then(function () {
-          select(saved.id);
+        return afterAction(saved).then(function () {
           listSay("“" + saved.title + "” is withdrawn. It has gone from every member's home page and past news."
-            + (filters.status.indexOf("Withdrawn") < 0 ? " The Status filter hides withdrawn items." : ""));
+            + ($("workView").hidden && filters.status.indexOf("Withdrawn") < 0 ? " The Status filter hides withdrawn items." : ""));
         });
       }).catch(function (e) { done(); listSay("Not withdrawn: " + e.message, true); });
     };
   }
 
   function act(name, btn) {
-    menu(false);
+    closeMenus();
     listSay("");
     var it;
     if (name === "digest") { testDigest(btn || $("actionsBtn")); return; }
@@ -710,19 +736,33 @@
   }
 
   function loadReport() {
-    var cur = state.viewing, panel = $("reportPanel"), body = $("reportBody");
-    if (!cur || cur.status === "Draft") { panel.hidden = true; return; }
-    panel.hidden = false;
+    var cur = state.viewing, body = $("reportBody");
+    body.innerHTML = "";
+    if (!cur) return;
+    if (cur.status === "Draft") {
+      body.appendChild(el("p", "nw__readnote", "A draft is seen by no member, so nobody has read it yet. "
+        + "Who has read it shows here once it is published."));
+      return;
+    }
     var read = api("/items/" + encodeURIComponent(cur.id) + "/report");
     if (window.CBMBusy && CBMBusy.loading) CBMBusy.loading(body, read);
     read.then(function (r) {
       if (state.viewing !== cur) return;
       body.innerHTML = "";
-      var line = el("p", "nw__readline");
-      line.appendChild(el("strong", null, r.read + " of " + r.of));
-      line.appendChild(document.createTextNode(
-        " in the audience have " + (r.mustAcknowledge ? "read or acknowledged" : "read") + " this item."));
-      body.appendChild(line);
+      var pct = r.of ? Math.round(100 * r.read / r.of) : 0;
+      var stat = el("div", "nw__readstat");
+      var big = el("p", "nw__readbig");
+      big.appendChild(el("strong", null, r.read + " of " + r.of));
+      big.appendChild(document.createTextNode(" " + (r.mustAcknowledge ? "have read or acknowledged it" : "have read it")
+        + (r.of ? " (" + pct + "%)" : "")));
+      stat.appendChild(big);
+      var bar = el("span", "nw__bar nw__bar--big");
+      var fillEl = el("span", "nw__barfill");
+      fillEl.style.width = pct + "%";
+      bar.appendChild(fillEl);
+      stat.appendChild(bar);
+      if (cur.status === "Withdrawn") stat.appendChild(el("p", "nw__readnote", "Withdrawn: members no longer see it. The counts stop where they were."));
+      body.appendChild(stat);
       var cols = el("div", "nw__peoplecols");
       if (r.mustAcknowledge) cols.appendChild(people("Acknowledged", r.acknowledged, true));
       cols.appendChild(people(r.mustAcknowledge ? "Not acknowledged yet" : "Not read yet", r.notRead, false));
@@ -733,6 +773,7 @@
       body.appendChild(el("p", "cbm-panel__note", "Who has read it could not be read just now: " + e.message + "."));
     });
   }
+
 
   // --- Send me a test digest (phase 7) --------------------------------------------
   function listSay(text, bad) {
@@ -752,15 +793,22 @@
 
   // --- switching between the grid and the View screen --------------------------------
   // Stop 3 replaces the View screen with the full reading screen.
+  // The grid's message and confirm bar follow the screen that is showing.
   function showWork() {
+    $("confirmBar").hidden = true;
+    $("viewMsgSlot").appendChild($("msgBox"));
     $("gridView").hidden = true;
     $("workView").hidden = false;
     window.scrollTo(0, 0);
   }
   function showGrid() {
+    $("confirmBar").hidden = true;
+    $("gridMsgSlot").appendChild($("msgBox"));
+    closeMenus();
     $("workView").hidden = true;
     $("gridView").hidden = false;
     state.viewing = null;
+    document.title = state.pageTitle || document.title;
     if (window.location.hash) history.replaceState(null, "", window.location.pathname);
   }
 
@@ -770,15 +818,61 @@
     read.catch(function (e) { listSay("That item could not be opened: " + e.message, true); });
     return read;
   }
-  function viewItem(id) {
+  function fact(dl, term, value) {
+    var wrap = el("div", "nw__fact");
+    wrap.appendChild(el("dt", null, term));
+    var dd = el("dd");
+    if (typeof value === "string") dd.textContent = value; else dd.appendChild(value);
+    wrap.appendChild(dd);
+    dl.appendChild(wrap);
+  }
+  function byWhen(name, stamp) {
+    return when(stamp) + (name ? " by " + name : "");
+  }
+  function drawView(it) {
+    var shown = shownStatus(it);
+    $("viewTitle").textContent = it.title || "(no title)";
+    var pills = $("viewPills");
+    pills.innerHTML = "";
+    pills.appendChild(el("span", "cbm-pill cbm-tone--" + (STATUS_TONE[shown] || "navy"), shown));
+    if (it.importance && it.importance !== "Normal") pills.appendChild(el("span", "cbm-pill cbm-tone--amber", it.importance));
+    $("viewSummary").textContent = it.summary || "";
+    $("viewSummary").hidden = !it.summary;
+    var dl = $("viewFacts");
+    dl.innerHTML = "";
+    fact(dl, "Audience", (it.audienceTeams || []).length ? it.audienceTeams.join(", ") : EVERY);
+    fact(dl, shown === "Scheduled" ? "Goes live" : "Published",
+         it.status === "Draft" ? (it.publishAt ? "Set for " + when(it.publishAt) + ", once published" : "When it is published")
+                               : when(it.publishAt));
+    fact(dl, shown === "Expired" ? "Expired" : "Expires", it.expiresAt ? when(it.expiresAt) : "Never");
+    if (it.ctaLabel && it.ctaUrl) {
+      var a = el("a", null, it.ctaLabel);
+      a.href = it.ctaUrl; a.target = "_blank"; a.rel = "noopener";
+      var box = el("span");
+      box.appendChild(a);
+      box.appendChild(el("span", "nw__factnote", " " + it.ctaUrl));
+      fact(dl, "Button", box);
+    } else {
+      fact(dl, "Button", "None");
+    }
+    fact(dl, "Created", byWhen(it.createdByName, it.createdAt));
+    fact(dl, "Last changed", byWhen(it.modifiedByName, it.modifiedAt || it.createdAt));
+    var ul = $("viewOpen");
+    ul.innerHTML = "";
+    ul.appendChild(memberDrawing(it, true));
+    document.title = (it.title || "News item") + " — Chapter News";
+  }
+  /* ``quiet`` keeps the message on screen (a redraw after an action). */
+  function viewItem(id, quiet) {
     return fetchItem(id).then(function (it) {
       state.viewing = it;
-      var ul = $("viewOpen");
-      ul.innerHTML = "";
-      ul.appendChild(memberDrawing(it, true));
+      select(id);
+      if (!quiet) listSay("");
+      drawView(it);
       showWork();
       history.replaceState(null, "", "#" + id);
       loadReport();
+      if (!quiet) $("backBtn").focus();
     });
   }
   function editItem(id) {
@@ -812,6 +906,7 @@
         return;
       }
       state.teams = s.teams || [];
+      state.pageTitle = document.title;
       $("pageView").hidden = false;
       ["fTitle", "fSummary", "fImportance", "fCtaLabel", "fCtaUrl", "fPublish", "fExpires"].forEach(function (id) {
         $(id).addEventListener("input", preview);
@@ -835,26 +930,28 @@
         var it = needSelection("Edit");
         if (it) editItem(it.id);
       });
-      $("backBtn").addEventListener("click", showGrid);
+      $("backBtn").addEventListener("click", function () {
+        showGrid();
+        var row = $("listBody").querySelector("tr.is-selected");
+        if (row) row.focus();
+      });
       $("filterBtn").addEventListener("click", function () { toggleFilters(); });
       var searchTimer = null;
       $("search").addEventListener("input", function () {
         clearTimeout(searchTimer); searchTimer = setTimeout(drawList, 150);
       });
-      $("actionsBtn").addEventListener("click", function (ev) { ev.stopPropagation(); menu(); });
-      $("actionsMenu").addEventListener("click", function (ev) {
-        var b = ev.target.closest("button[data-act]");
-        if (b) act(b.dataset.act, b);
-      });
-      $("actionsMenu").addEventListener("keydown", function (ev) {
-        var items = Array.prototype.slice.call($("actionsMenu").querySelectorAll("button"));
-        var at = items.indexOf(document.activeElement);
-        if (ev.key === "Escape") { menu(false); $("actionsBtn").focus(); }
-        else if (ev.key === "ArrowDown") { ev.preventDefault(); items[(at + 1) % items.length].focus(); }
-        else if (ev.key === "ArrowUp") { ev.preventDefault(); items[(at - 1 + items.length) % items.length].focus(); }
-      });
+      wireMenu("");
+      wireMenu("view");
       document.addEventListener("click", function (ev) {
-        if (!ev.target.closest(".nw__menuwrap")) menu(false);
+        if (!ev.target.closest(".nw__menuwrap")) closeMenus();
+      });
+      // Escape on the View screen goes back to the grid.
+      document.addEventListener("keydown", function (ev) {
+        if (ev.key !== "Escape" || $("workView").hidden || !$("editorOverlay").hidden) return;
+        if (!$("viewActionsMenu").hidden || !$("confirmBar").hidden) return;
+        showGrid();
+        var row = $("listBody").querySelector("tr.is-selected");
+        if (row) row.focus();
       });
       $("confirmNo").addEventListener("click", function () { $("confirmBar").hidden = true; });
       $("draftBtn").addEventListener("click", function () { save("Draft", $("draftBtn")); });

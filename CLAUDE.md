@@ -1391,6 +1391,8 @@ the strength of it.
 - **v0.356.5 and v0.357.0 (2026-11-20) are pushed** (11-20-26 23:23;
   the Association's `/healthz` and served `news/app.js` read 0.357.0 at
   23:25): a training address's calendar note, and stop 1 of the Chapter
-  News publisher redesign (`prds/news-publisher-redesign-plan.md`). Stops
-  2 (the create and edit pop-up) and 3 (View) wait for Doug's check of stop 1.
+  News publisher redesign (`prds/news-publisher-redesign-plan.md`).
+- **v0.358.0 (stop 2, the create and edit pop-up) is pushed** (11-21-26,
+  live on the Association 00:16). **v0.359.0 (stop 3, View) is committed,
+  not pushed.** Doug's check of all three stops on the Association is owed.
 Everything else still owed is in `OPEN-ITEMS.md`.

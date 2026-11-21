@@ -103,10 +103,35 @@ body { background: var(--cbm-page); }
 .nw__bar { display: block; height: 4px; border-radius: 2px; background: var(--cbm-panel-border); overflow: hidden; }
 .nw__barfill { display: block; height: 100%; background: #1D6B34; }
 
-/* The View screen (stop 3 replaces it). */
-.nw__viewbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-.nw__work { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 24px; align-items: start; }
-@media (max-width: 1099px) { .nw__work { grid-template-columns: minmax(0, 1fr); } }
+/* The View screen (stop 3): a reading screen, not a form. */
+.nw__viewbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+#viewMsgSlot .nw__msgbox, #gridMsgSlot .nw__msgbox { display: flex; flex-direction: column; gap: 8px; }
+#viewMsgSlot .nw__msgbox { margin-bottom: 12px; }
+#viewMsgSlot .nw__msg { margin: 0; }
+.nw__view { display: flex; flex-direction: column; gap: 16px; }
+.nw__viewhead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.nw__viewhead h2 { margin: 0; font-family: var(--cbm-font-heading); font-size: 26px; line-height: 1.25; color: var(--cbm-navy); }
+.nw__viewpills { display: flex; gap: 6px; }
+.nw__viewsummary { flex-basis: 100%; margin: 0; font-size: 16px; color: var(--cbm-text); }
+.nw__viewsummary[hidden] { display: none; }
+.nw__facts {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 12px 24px;
+  margin: 0; padding: 14px 18px; background: var(--cbm-panel);
+  border: 1px solid var(--cbm-panel-border); border-radius: 8px;
+}
+.nw__fact { min-width: 0; }
+.nw__fact dt { margin: 0 0 2px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--cbm-text-muted); }
+.nw__fact dd { margin: 0; font-size: 15px; color: var(--cbm-text-strong); overflow-wrap: anywhere; }
+.nw__fact a { font-weight: 600; color: var(--cbm-blue); }
+.nw__factnote { display: block; font-size: 13px; color: var(--cbm-text-muted); }
+.nw__viewcols { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 24px; align-items: start; }
+@media (max-width: 1099px) { .nw__viewcols { grid-template-columns: minmax(0, 1fr); } }
+.nw__readstat { padding: 14px 16px 4px; }
+.nw__readbig { margin: 0 0 8px; font-size: 15px; color: var(--cbm-text); }
+.nw__readbig strong { font-size: 24px; color: var(--cbm-text-strong); margin-right: 4px; }
+.nw__bar--big { height: 8px; border-radius: 4px; }
+.nw__readnote { margin: 0; padding: 14px 16px; font-size: 14px; color: var(--cbm-text-muted); }
+.nw__readstat .nw__readnote { padding: 8px 0 0; }
 
 /* The create and edit pop-up (stop 2). Nearly the whole window; the form
    on the left, the member's preview on the right. Heights come from the

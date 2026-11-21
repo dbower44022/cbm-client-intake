@@ -33,7 +33,7 @@ log = logging.getLogger("cbm_intake.news")
 NEWS = "CChapterNews"
 RECEIPT = "CChapterNewsReceipt"
 ITEM_FIELDS = ("id,name,summary,body,status,publishAt,expiresAt,importance,"
-               "audienceTeams,ctaLabel,ctaUrl,createdAt,modifiedAt")
+               "audienceTeams,ctaLabel,ctaUrl,createdAt,modifiedAt,createdByName,modifiedByName")
 RECEIPT_FIELDS = "id,newsId,memberId,memberName,action,actedAt"
 #: How long the items are kept for every member of this process.
 ITEMS_SECONDS = 60

@@ -65,37 +65,64 @@
 
         <div class="nw__filterpanel" id="filterPanel" hidden></div>
 
+        <div id="gridMsgSlot">
+        <div class="nw__msgbox" id="msgBox">
         <div class="nw__confirm" id="confirmBar" role="alertdialog" aria-labelledby="confirmText" hidden>
           <span id="confirmText"></span>
           <button type="button" class="cbm-action nw__danger" id="confirmYes">Withdraw</button>
           <button type="button" class="cbm-action--second" id="confirmNo">Keep it</button>
         </div>
         <p class="nw__msg" id="listMsg" role="status" hidden></p>
+        </div>
+        </div>
 
         <div class="nw__gridscroll" id="listBody"></div>
         <p class="nw__count" id="listCount"></p>
       </div>
 
-      <!-- View (stop 3 replaces this with the reading screen): the item as a
-           member sees it, opened, and its read report. -->
+      <!-- View (stop 3): a reading screen, not a form. The header with its
+           buttons, a strip of facts, the item as members see it and the read
+           report. The grid's message and confirm bar move in while it shows. -->
       <div id="workView" class="nw__workview" hidden>
         <div class="nw__viewbar">
           <button type="button" class="cbm-action--quiet" id="backBtn">← Back to news</button>
-          <button type="button" class="cbm-action" id="viewEditBtn">Edit</button>
-        </div>
-        <div class="nw__work">
-          <div class="cbm-panel">
-            <div class="cbm-panel__head"><h2 class="cbm-label">As a member sees it, opened</h2></div>
-            <div class="cbm-panel__body"><ul class="cbm-rows" id="viewOpen"></ul></div>
-          </div>
-          <div class="cbm-panel nw__report" id="reportPanel" hidden>
-            <div class="cbm-panel__head">
-              <h2 class="cbm-label">Read report</h2>
-              <button type="button" class="cbm-action--quiet" id="reportRefresh">Refresh</button>
+          <div class="nw__tb">
+            <button type="button" class="cbm-action" id="viewEditBtn">Edit</button>
+            <div class="nw__menuwrap">
+              <button type="button" class="cbm-action--second" id="viewActionsBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="viewActionsMenu">Actions ▾</button>
+              <ul class="nw__menu" id="viewActionsMenu" role="menu" hidden>
+                <li role="none"><button type="button" role="menuitem" data-act="publish">Publish</button></li>
+                <li role="none"><button type="button" role="menuitem" data-act="draft">Move back to draft</button></li>
+                <li role="none"><button type="button" role="menuitem" data-act="duplicate">Duplicate as a new draft</button></li>
+                <li role="none"><button type="button" role="menuitem" data-act="withdraw" class="nw__menu--danger">Withdraw…</button></li>
+              </ul>
             </div>
-            <div class="cbm-panel__body" id="reportBody"></div>
           </div>
         </div>
+        <div id="viewMsgSlot"></div>
+
+        <article class="nw__view" aria-labelledby="viewTitle">
+          <header class="nw__viewhead">
+            <h2 id="viewTitle"></h2>
+            <div class="nw__viewpills" id="viewPills"></div>
+            <p class="nw__viewsummary" id="viewSummary"></p>
+          </header>
+          <dl class="nw__facts" id="viewFacts"></dl>
+
+          <div class="nw__viewcols">
+            <section class="cbm-panel" aria-labelledby="viewAsMember">
+              <div class="cbm-panel__head"><h3 class="cbm-label" id="viewAsMember">As members see it, opened</h3></div>
+              <div class="cbm-panel__body"><ul class="cbm-rows" id="viewOpen"></ul></div>
+            </section>
+            <section class="cbm-panel nw__report" id="reportPanel" aria-labelledby="reportHead">
+              <div class="cbm-panel__head">
+                <h3 class="cbm-label" id="reportHead">Who has read it</h3>
+                <button type="button" class="cbm-action--quiet" id="reportRefresh">Refresh</button>
+              </div>
+              <div class="cbm-panel__body" id="reportBody"></div>
+            </section>
+          </div>
+        </article>
       </div>
 
       <!-- Create and edit: one pop-up (stop 2; ruling R1). A div, not a dialog element:

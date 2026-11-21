@@ -713,3 +713,23 @@ def test_create_and_edit_share_one_popup_that_returns_to_the_grid():
     # Closing with changes asks inside the page, never with a browser dialog.
     assert "You have changes that are not saved" in page
     assert "window.confirm" not in js and " confirm(" not in js
+
+
+# --- the View screen (stop 3) ----------------------------------------------------------
+
+def test_view_is_a_reading_screen_not_a_form():
+    page = (ROOT / "news/frontend/index.html").read_text()
+    view = page[page.index('id="workView"'):page.index('id="editorOverlay"')]
+    assert "<input" not in view and "<textarea" not in view and "<form" not in view
+    for need in ('id="viewTitle"', 'id="viewFacts"', 'id="viewOpen"', 'id="reportBody"',
+                 'id="viewEditBtn"', 'id="viewActionsBtn"', 'id="backBtn"'):
+        assert need in view
+    js = (ROOT / "news/frontend/app.js").read_text()
+    assert 'fact(dl, "Created"' in js and 'fact(dl, "Last changed"' in js
+
+
+def test_an_item_carries_who_created_and_last_changed_it():
+    from news import router as news_router
+    assert "createdByName" in service.ITEM_FIELDS and "modifiedByName" in service.ITEM_FIELDS
+    full = news_router._full({"id": "n1", "name": "T", "createdByName": "Doug", "modifiedByName": "Pat"})
+    assert full["createdByName"] == "Doug" and full["modifiedByName"] == "Pat"
