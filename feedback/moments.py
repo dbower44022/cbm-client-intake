@@ -262,7 +262,7 @@ class Sweep:
         from .alerts import alert_once
         from .service import answers_of
 
-        for rid in await self.store.failed_alerts():
+        for rid in await self.store.failed_alerts(self.now):
             try:
                 r = await self.client.get(cfg.ENTITY, rid, select=(
                     "id,name,surveyKey,recommendScore,eventId,eventName,engagementId,"

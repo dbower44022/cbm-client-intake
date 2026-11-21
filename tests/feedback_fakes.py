@@ -10,7 +10,8 @@ from types import SimpleNamespace
 from typing import Any, Optional
 
 from core.espo import EspoError
-from feedback.store import FAILED, MAX_ATTEMPTS, PENDING, SENT, STALE_PENDING, norm_email
+from feedback.store import (ALERT_RETRY_EVERY, ALERT_RETRY_FOR, FAILED, MAX_ATTEMPTS, PENDING, SENT,
+                            STALE_PENDING, norm_email)
 
 
 class MemoryFeedbackStore:
@@ -53,20 +54,25 @@ class MemoryFeedbackStore:
         return copy.deepcopy(row) if row else None
 
     async def claim_alert(self, response_id, now=None):
+        now = now or datetime.now(timezone.utc)
         row = self.alerts.get(response_id)
         if row is None:
-            self.alerts[response_id] = {"outcome": PENDING}
+            self.alerts[response_id] = {"outcome": PENDING, "created_at": now, "updated_at": now}
             return True
         if row["outcome"] == FAILED:
-            row["outcome"] = PENDING
+            row.update(outcome=PENDING, updated_at=now)
             return True
         return False
 
     async def finish_alert(self, response_id, outcome, reason=None, now=None):
-        self.alerts[response_id] = {"outcome": outcome, "reason": reason}
+        row = self.alerts.setdefault(response_id, {"created_at": now or datetime.now(timezone.utc)})
+        row.update(outcome=outcome, reason=reason, updated_at=now or datetime.now(timezone.utc))
 
-    async def failed_alerts(self):
-        return [k for k, v in self.alerts.items() if v["outcome"] == FAILED]
+    async def failed_alerts(self, now=None):
+        now = now or datetime.now(timezone.utc)
+        return [k for k, v in self.alerts.items() if v["outcome"] == FAILED
+                and v["updated_at"] <= now - ALERT_RETRY_EVERY
+                and v["created_at"] >= now - ALERT_RETRY_FOR]
 
 
 def _match(row: dict, clause: dict) -> bool:

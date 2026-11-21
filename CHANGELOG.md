@@ -5,6 +5,21 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.359.1] — 2026-11-21
+
+**fix(feedback): a follow-up alert reaches the real team members, and a
+failed one is retried hourly for a day.** Found in the combined check on
+the Business Mentors Association's system (`OPEN-ITEMS.md` #83): the
+Mentor Administration Team there includes invented training addresses (on
+`bma.test`), and the Sandbox address guard refused the whole alert, so the
+real member got nothing; the worker then retried it every minute.
+
+- `feedback/alerts.deliverable` leaves out every address on the Sandbox
+  address domain (logged) and sends to the rest; with no one left, the
+  alert is recorded as skipped, never retried.
+- A failed alert is tried again once an hour, for a day after its first
+  try (`feedback/store.failed_alerts`); then it stays failed.
+
 ## [0.359.0] — 2026-11-21
 
 **feat(news): View is a reading screen** (stop 3, the last, of

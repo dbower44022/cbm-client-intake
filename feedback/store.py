@@ -40,6 +40,9 @@ PENDING, SENT, SKIPPED, FAILED = "pending", "sent", "skipped", "failed"
 MAX_ATTEMPTS = 3
 #: A row left pending this long (a worker that died mid-send) may be claimed again.
 STALE_PENDING = timedelta(minutes=30)
+#: A failed follow-up alert is tried again this often, for this long.
+ALERT_RETRY_EVERY = timedelta(hours=1)
+ALERT_RETRY_FOR = timedelta(days=1)
 
 feedback_send = Table(
     "feedback_send",
@@ -174,10 +177,16 @@ class FeedbackStore:
                                .where(feedback_alert.c.response_id == response_id)
                                .values(outcome=outcome, reason=reason, updated_at=now or _now()))
 
-    async def failed_alerts(self) -> list[str]:
+    async def failed_alerts(self, now: Optional[datetime] = None) -> list[str]:
+        """Failed alerts due another try: once an hour, for a day after the
+        first try (``ALERT_RETRY_EVERY``, ``ALERT_RETRY_FOR``), so an alert
+        that can never go is not tried every minute for ever."""
+        now = now or _now()
         async with self._engine.begin() as conn:
-            rows = (await conn.execute(select(feedback_alert.c.response_id)
-                                       .where(feedback_alert.c.outcome == FAILED))).all()
+            rows = (await conn.execute(select(feedback_alert.c.response_id).where(and_(
+                feedback_alert.c.outcome == FAILED,
+                feedback_alert.c.updated_at <= now - ALERT_RETRY_EVERY,
+                feedback_alert.c.created_at >= now - ALERT_RETRY_FOR)))).all()
         return [r[0] for r in rows]
 
 

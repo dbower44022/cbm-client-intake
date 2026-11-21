@@ -68,6 +68,22 @@ async def team_addresses(client: Any, team_name: str) -> list[str]:
     return out
 
 
+def deliverable(settings: Any, addresses: list[str], rid: str = "") -> list[str]:
+    """The addresses an alert may go to: an invented training address (the
+    Sandbox address domain, ``core/sandbox_addresses``) is left out, logged,
+    so one such team member never stops the alert reaching the real ones
+    (found on the Association 11-21-26)."""
+    from core.sandbox_addresses import is_sandbox_address, sandbox_domain
+
+    domain = sandbox_domain(settings) if hasattr(settings, "sandbox_address_domain") else ""
+    kept = [a for a in addresses if not is_sandbox_address(a, domain)]
+    dropped = [a for a in addresses if a not in kept]
+    if dropped:
+        log.info("feedback alert %s: left out %d training address(es) on %s", rid,
+                 len(dropped), domain)
+    return kept
+
+
 async def alert_once(settings: Any, client: Any, store: Any, response: dict[str, Any], *,
                      about: str, who: str, reasons: list[str],
                      sender: Optional[Sender] = None) -> str:
@@ -88,13 +104,14 @@ async def alert_once(settings: Any, client: Any, store: Any, response: dict[str,
             await store.finish_alert(rid, "failed", "no shared mailbox")
             return "no-mailbox"
         team = cfg.alert_team(settings, response.get("surveyKey") or "")
-        to = await team_addresses(client, team)
+        to = deliverable(settings, await team_addresses(client, team), rid)
         if not to:
-            to = list(getattr(settings, "alert_email_to_list", None) or [])
+            to = deliverable(settings, list(getattr(settings, "alert_email_to_list", None) or []), rid)
             log.warning("feedback alert %s: team %r has no members with an address; "
                         "sent to the alert address instead", rid, team)
         if not to:
-            await store.finish_alert(rid, "failed", f"no recipients for {team}")
+            # Nothing a retry could change: recorded as skipped, not failed.
+            await store.finish_alert(rid, "skipped", f"no recipients for {team}")
             return "no-recipients"
         filled = fb_email.alert(
             org=settings.organization_name,

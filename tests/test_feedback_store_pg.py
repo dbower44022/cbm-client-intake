@@ -90,5 +90,8 @@ async def test_an_alert_is_claimed_once_and_a_failed_one_again(store):
     assert await store.claim_alert("R1") is True
     assert await store.claim_alert("R1") is False
     await store.finish_alert("R1", FAILED, "no")
-    assert await store.failed_alerts() == ["R1"]
+    assert await store.failed_alerts() == []                     # tried again hourly
+    later = datetime.now(timezone.utc) + timedelta(hours=2)
+    assert await store.failed_alerts(later) == ["R1"]
+    assert await store.failed_alerts(later + timedelta(days=2)) == []
     assert await store.claim_alert("R1") is True

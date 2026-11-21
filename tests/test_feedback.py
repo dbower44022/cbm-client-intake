@@ -218,12 +218,46 @@ def test_event_feedback_carries_no_stamp_and_alerts_the_marketing_admin_team(mon
 def test_a_failed_alert_never_fails_the_submit_and_the_sweep_retries_it(monkeypatch):
     crm, store = _world(), MemoryFeedbackStore()
     _submit(crm, store, Outbox(fail=True), {"recommend": 2}, monkeypatch=monkeypatch)
-    assert len(crm.created) == 1 and run(store.failed_alerts())
+    assert len(crm.created) == 1 and next(iter(store.alerts.values()))["outcome"] == "failed"
     out = Outbox()
-    counts = run(moments.run_sweep(settings(feedback_on_close=False, feedback_on_sessions=False,
-                                            feedback_on_event=False, feedback_on_evaluation=False),
-                                   crm, store, MemoryStore(), surveys(), sender=out, now=NOW))
+    quiet = settings(feedback_on_close=False, feedback_on_sessions=False,
+                     feedback_on_event=False, feedback_on_evaluation=False)
+    soon = datetime.now(timezone.utc) + timedelta(minutes=5)
+    assert run(moments.run_sweep(quiet, crm, store, MemoryStore(), surveys(), sender=out,
+                                 now=soon)) == {}          # not every minute: hourly
+    later = datetime.now(timezone.utc) + timedelta(hours=2)
+    counts = run(moments.run_sweep(quiet, crm, store, MemoryStore(), surveys(), sender=out,
+                                   now=later))
     assert counts.get("alert-sent") == 1 and out.sent[0]["to"] == ["kitty@example.org"]
+
+
+def test_a_failed_alert_stops_being_retried_after_a_day():
+    store = MemoryFeedbackStore()
+    t0 = datetime.now(timezone.utc)
+    run(store.claim_alert("r1", now=t0))
+    run(store.finish_alert("r1", "failed", "no", now=t0))
+    assert run(store.failed_alerts(t0 + timedelta(hours=2))) == ["r1"]
+    assert run(store.failed_alerts(t0 + timedelta(days=2))) == []
+
+
+def test_training_addresses_are_left_out_of_an_alert_and_never_block_it(monkeypatch):
+    from feedback.alerts import alert_once
+
+    crm, store, out = _world(), MemoryFeedbackStore(), Outbox()
+    crm.add("User", {"id": "u-fake", "name": "Kitty Test", "emailAddress": "kitty.cat@bma.test",
+                     "isActive": True})
+    crm.links[("Team", "t-ma", "users")] = ["u-kitty", "u-fake"]
+    s = settings(sandbox_address_domain="bma.test")
+    word = run(alert_once(s, crm, store, {"id": "r1", "surveyKey": cfg.SURVEY_MENTORING,
+                                          "recommendScore": 3},
+                          about="X", who="Y", reasons=["a low recommendation score"], sender=out))
+    assert word == "sent" and out.sent[0]["to"] == ["kitty@example.org"]
+    # Only training addresses, and no alert address: skipped, never retried.
+    crm.links[("Team", "t-ma", "users")] = ["u-fake"]
+    word = run(alert_once(s, crm, store, {"id": "r2", "surveyKey": cfg.SURVEY_MENTORING,
+                                          "recommendScore": 3},
+                          about="X", who="Y", reasons=["a low recommendation score"], sender=out))
+    assert word == "no-recipients" and store.alerts["r2"]["outcome"] == "skipped"
 
 
 def test_a_team_with_no_members_falls_back_to_the_alert_address(monkeypatch):
